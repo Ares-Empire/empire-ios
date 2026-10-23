@@ -57,11 +57,81 @@ struct WidgetTests {
         #expect(WidgetSnapshot(dashboard: try Dashboard.decode(JSONSerialization.data(withJSONObject: json))) == nil)
     }
 
-    private func snapshot(_ categories: [(String, Double)]) throws -> WidgetSnapshot {
-        let json: [String: Any] = ["monthKey": "2026-10", "monthLabel": "October 2026", "daysInMonth": 31,
+    private func snapshot(_ categories: [(String, Double)], monthKey: String = "2026-10",
+                          monthLabel: String = "October 2026", newestTransactionDate: String? = nil) throws -> WidgetSnapshot {
+        var json: [String: Any] = ["monthKey": monthKey, "monthLabel": monthLabel, "daysInMonth": 31,
                                   "dayExpenseRunning": [99.25], "expense": 99.25,
                                   "categories": categories.map { ["name": $0.0, "total": $0.1, "icon": "Tag", "color": "#FFFFFF"] }]
+        json["newestTransactionDate"] = newestTransactionDate
         return try JSONDecoder().decode(WidgetSnapshot.self, from: JSONSerialization.data(withJSONObject: json))
+    }
+
+    @Test func sameCalendarMonthKeepsNormalWidgetContent() throws {
+        let saved = try snapshot([("Groceries", 99.25)], newestTransactionDate: "2026-10-22")
+        let now = try #require(WidgetFormatting.date("2026-10-24"))
+        #expect(WidgetMonthNote(snapshot: saved, now: now, calendar: WidgetFormatting.calendar) == nil)
+    }
+
+    @Test(arguments: ["2026-11-01", "2026-11-24"])
+    func nextCalendarMonthShowsNoteWithMonthAndLastData(now: String) throws {
+        let saved = try snapshot([("Groceries", 99.25)], newestTransactionDate: "2026-10-30")
+        let date = try #require(WidgetFormatting.date(now))
+        let note = try #require(WidgetMonthNote(snapshot: saved, now: date,
+                                               calendar: WidgetFormatting.calendar))
+        #expect(note.monthLabel == "November 2026")
+        #expect(note.message == "Nothing imported for November yet")
+        #expect(note.lastData == "last data 30 Oct")
+    }
+
+    @Test func twoMonthsOldStillShowsCurrentMonthAndOriginalLastData() throws {
+        let saved = try snapshot([("Groceries", 99.25)], newestTransactionDate: "2026-10-30")
+        let now = try #require(WidgetFormatting.date("2026-12-01"))
+        let note = try #require(WidgetMonthNote(snapshot: saved, now: now,
+                                               calendar: WidgetFormatting.calendar))
+        #expect(note.monthLabel == "December 2026")
+        #expect(note.message == "Nothing imported for December yet")
+        #expect(note.lastData == "last data 30 Oct")
+    }
+
+    @Test func decemberToJanuaryShowsNewYear() throws {
+        let saved = try snapshot([], monthKey: "2026-12", monthLabel: "December 2026", newestTransactionDate: "2026-12-31")
+        let now = try #require(WidgetFormatting.date("2027-01-01"))
+        let note = try #require(WidgetMonthNote(snapshot: saved, now: now,
+                                               calendar: WidgetFormatting.calendar))
+        #expect(note.monthLabel == "January 2027")
+        #expect(note.message == "Nothing imported for January yet")
+        #expect(note.lastData == "last data 31 Dec")
+    }
+
+    @Test func monthBoundaryUsesInjectedDeviceTimeZoneAndKeepsTransactionDate() throws {
+        let saved = try snapshot([], newestTransactionDate: "2026-10-30")
+        let utcMidnight = try #require(WidgetFormatting.date("2026-11-01"))
+        var calendar = WidgetFormatting.calendar
+        calendar.timeZone = try #require(TimeZone(secondsFromGMT: 2 * 3600))
+        let note = try #require(WidgetMonthNote(snapshot: saved, now: utcMidnight.addingTimeInterval(-3600), calendar: calendar))
+        #expect(note.monthLabel == "November 2026")
+        #expect(note.lastData == "last data 30 Oct")
+        calendar.timeZone = try #require(TimeZone(secondsFromGMT: -7 * 3600))
+        #expect(WidgetMonthNote(snapshot: saved, now: utcMidnight, calendar: calendar) == nil)
+    }
+
+    @Test func monthRefreshUsesSavedSnapshotWithoutAppPublishingAgain() throws {
+        let root = try directory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = WidgetSnapshotStore(directory: root)
+        let saved = try snapshot([("Groceries", 99.25)], newestTransactionDate: "2026-10-30")
+        try store.save(saved)
+        let calendar = WidgetFormatting.calendar
+        let now = try #require(WidgetFormatting.date("2026-10-31"))
+        #expect(WidgetMonthNote(snapshot: saved, now: now, calendar: calendar) == nil)
+        let entryDate = store.read().nextRefresh(after: now, calendar: calendar)
+        #expect(entryDate == WidgetFormatting.date("2026-11-01"))
+        let reloaded = try #require(store.read().snapshot)
+        #expect(reloaded == saved)
+        let note = try #require(WidgetMonthNote(snapshot: reloaded, now: entryDate, calendar: calendar))
+        #expect(note.monthLabel == "November 2026")
+        #expect(note.message == "Nothing imported for November yet")
+        #expect(note.lastData == "last data 30 Oct")
     }
 
     @Test func defaultsPreferGroceriesAndDrogerieEvenAtZero() throws {
@@ -205,6 +275,9 @@ struct WidgetTests {
         #expect(WidgetFormatting.freshness("2026-10-22") == "up to 22 Oct")
         #expect(WidgetFormatting.freshness(nil) == nil)
         #expect(WidgetFormatting.freshness("invalid") == nil)
+        #expect(WidgetFormatting.lastData("2026-10-30") == "last data 30 Oct")
+        #expect(WidgetFormatting.lastData(nil) == nil)
+        #expect(WidgetFormatting.lastData("invalid") == nil)
         #expect(Money.precise(51.68) == "€51.68")
         #expect(CategorySymbol.name(for: "Trash2") == "trash")
     }
@@ -213,6 +286,9 @@ struct WidgetTests {
     @Test func renderWidgetImages() throws {
         AppFont.register()
         let sample = try #require(WidgetSnapshot.sample)
+        let sampleDate = try #require(WidgetFormatting.date("2026-10-24"))
+        let noteDate = try #require(WidgetFormatting.date("2026-11-01"))
+        let noteSnapshot = try snapshot([("Groceries", 99.25), ("Drogerie", 12.50)], newestTransactionDate: "2026-10-30")
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
             .deletingLastPathComponent().appendingPathComponent("build")
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
@@ -227,14 +303,18 @@ struct WidgetTests {
             #expect(data.count > 1000)
             try data.write(to: root.appendingPathComponent(name + ".png"))
         }
-        try render(SpendingWidgetView(snapshot: sample, theme: .dark), name: "05-medium", width: 364)
-        try render(CategoriesWidgetView(snapshot: sample, firstCategory: nil, secondCategory: nil, theme: .dark),
+        try render(SpendingWidgetView(snapshot: sample, theme: .dark, date: sampleDate), name: "05-medium", width: 364)
+        try render(CategoriesWidgetView(snapshot: sample, firstCategory: nil, secondCategory: nil, theme: .dark, date: sampleDate),
                    name: "05-small", width: 170)
-        try render(CategoriesWidgetView(snapshot: nil, firstCategory: nil, secondCategory: nil, theme: .dark),
+        try render(CategoriesWidgetView(snapshot: nil, firstCategory: nil, secondCategory: nil, theme: .dark, date: sampleDate),
                    name: "05-empty", width: 170)
+        try render(SpendingWidgetView(snapshot: noteSnapshot, theme: .dark, date: noteDate, calendar: WidgetFormatting.calendar),
+                   name: "07-medium-note", width: 364)
+        try render(CategoriesWidgetView(snapshot: noteSnapshot, firstCategory: nil, secondCategory: nil, theme: .dark,
+                                        date: noteDate, calendar: WidgetFormatting.calendar), name: "07-small-note", width: 170)
         for theme in [AppTheme.light, .red] {
-            try render(SpendingWidgetView(snapshot: sample, theme: theme), name: "05-medium-" + theme.rawValue, width: 364, theme: theme)
-            try render(CategoriesWidgetView(snapshot: sample, firstCategory: "Uncategorised", secondCategory: "Dining", theme: theme),
+            try render(SpendingWidgetView(snapshot: sample, theme: theme, date: sampleDate), name: "05-medium-" + theme.rawValue, width: 364, theme: theme)
+            try render(CategoriesWidgetView(snapshot: sample, firstCategory: "Uncategorised", secondCategory: "Dining", theme: theme, date: sampleDate),
                        name: "05-small-" + theme.rawValue, width: 170, theme: theme)
         }
     }

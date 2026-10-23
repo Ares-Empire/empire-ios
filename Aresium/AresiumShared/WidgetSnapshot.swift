@@ -55,6 +55,27 @@ nonisolated struct WidgetSnapshot: Codable, Equatable {
     static var sample: WidgetSnapshot? { try? WidgetSnapshot(dashboard: Dashboard.sample()) }
 }
 
+/// A note replaces saved amounts only when the device's calendar month is newer.
+nonisolated struct WidgetMonthNote: Equatable {
+    let monthLabel: String
+    let message: String
+    let lastData: String?
+
+    init?(snapshot: WidgetSnapshot, now: Date, calendar: Calendar) {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_GB")
+        formatter.calendar = calendar
+        formatter.timeZone = calendar.timeZone
+        formatter.dateFormat = "yyyy-MM"
+        guard snapshot.monthKey < formatter.string(from: now) else { return nil }
+        formatter.dateFormat = "MMMM yyyy"
+        monthLabel = formatter.string(from: now)
+        formatter.dateFormat = "MMMM"
+        message = "Nothing imported for \(formatter.string(from: now)) yet"
+        lastData = WidgetFormatting.lastData(snapshot.newestTransactionDate)
+    }
+}
+
 nonisolated enum WidgetFormatting {
     static var calendar: Calendar {
         var calendar = Calendar(identifier: .gregorian)
@@ -75,11 +96,19 @@ nonisolated enum WidgetFormatting {
     }
 
     static func freshness(_ value: String?) -> String? {
+        transactionDateLabel(value).map { "up to " + $0 }
+    }
+
+    static func lastData(_ value: String?) -> String? {
+        transactionDateLabel(value).map { "last data " + $0 }
+    }
+
+    private static func transactionDateLabel(_ value: String?) -> String? {
         guard let value, let date = date(value) else { return nil }
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_GB")
         formatter.timeZone = calendar.timeZone
         formatter.dateFormat = "d MMM"
-        return "up to " + formatter.string(from: date)
+        return formatter.string(from: date)
     }
 }

@@ -6,11 +6,15 @@ import WidgetKit
 struct SpendingWidgetView: View {
     let snapshot: WidgetSnapshot?
     let theme: AppTheme
+    let date: Date
+    var calendar: Calendar = .current
     private var palette: Palette { Palette(theme: theme) }
 
     var body: some View {
         Group {
-            if let snapshot {
+            if let snapshot, let note = WidgetMonthNote(snapshot: snapshot, now: date, calendar: calendar) {
+                WidgetMonthNoteView(note: note, palette: palette, compact: false)
+            } else if let snapshot {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(alignment: .firstTextBaseline) {
                         Text(snapshot.monthLabel).font(AppFont.text(14))
@@ -59,11 +63,15 @@ struct CategoriesWidgetView: View {
     let firstCategory: String?
     let secondCategory: String?
     let theme: AppTheme
+    let date: Date
+    var calendar: Calendar = .current
     private var palette: Palette { Palette(theme: theme) }
 
     var body: some View {
         Group {
-            if let snapshot {
+            if let snapshot, let note = WidgetMonthNote(snapshot: snapshot, now: date, calendar: calendar) {
+                WidgetMonthNoteView(note: note, palette: palette, compact: true)
+            } else if let snapshot {
                 VStack(alignment: .leading, spacing: 10) {
                     Text(snapshot.monthLabel).font(AppFont.text(12)).foregroundStyle(palette.secondary)
                         .lineLimit(1).minimumScaleFactor(0.8)
@@ -97,6 +105,33 @@ struct CategoriesWidgetView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
         }.buttonStyle(.plain)
+    }
+}
+
+private struct WidgetMonthNoteView: View {
+    let note: WidgetMonthNote
+    let palette: Palette
+    let compact: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(note.monthLabel).font(AppFont.text(compact ? 12 : 14))
+                .foregroundStyle(compact ? palette.secondary : palette.ink)
+                .lineLimit(1).minimumScaleFactor(0.8)
+            Spacer(minLength: 0)
+            Text(note.message).font(AppFont.text(13)).foregroundStyle(palette.ink)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+            HStack {
+                if !compact {
+                    Text("ARESIUM").tracking(2).font(AppFont.text(8))
+                    Spacer()
+                }
+                if let lastData = note.lastData {
+                    Text(lastData).font(AppFont.text(10))
+                }
+            }.foregroundStyle(palette.secondary)
+        }.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 }
 
