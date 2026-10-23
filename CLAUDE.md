@@ -10,6 +10,9 @@ Read `README.md` first, then the decision record in the ares-empire repo
 - Design language: the Ares Empire "crown language" in `ares-empire/EMPIRE.md`
   (near-black, polished gold accent, Space Grotesk / JetBrains Mono).
 - Append a line to the Chronicle in `ares-empire/EMPIRE.md` after meaningful work.
+- Structure before patches: logic lives on the service's server, the app only displays. If a service's
+  structure would force duplicate logic or awkward fixes in the app, restructure the service first
+  (`ares-empire/EMPIRE.md` → "How we build apps").
 
 ## Workflow (Codex month, until about 2026-11-20)
 
