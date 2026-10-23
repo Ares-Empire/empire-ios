@@ -22,8 +22,12 @@ adapted for Xcode on the MacBook. Codex's own rules: `AGENTS.md`.
 | Who | Does | Does not |
 |---|---|---|
 | **Patrik** | Decisions, Apple account and App Store Connect, tries TestFlight builds on the phone | Relay prompts between tools |
-| **Claude** | Plans, sets up the Xcode project, anything touching login or tokens, writes briefs, runs Codex, builds and runs the app on the simulator, commits, merges, TestFlight uploads | Bulk typing Codex can do from a clear brief |
-| **Codex** (run by Claude) | Bounded builds from a brief: screens, models, the API client, widget code, unit tests; second opinions and council seats | Decide the API contract or the login flow; edit `project.pbxproj` unless the brief says so; merge |
+| **Claude** | Plans, sets up the Xcode project, anything touching login or tokens, **the look of every screen** (design and visual polish), writes briefs, runs Codex, builds and runs the app on the simulator, commits, merges, TestFlight uploads | Bulk typing Codex can do from a clear brief |
+| **Codex** (run by Claude) | Bounded builds from a brief: data, models, the API client, flows and state, widget plumbing, unit tests; screens only as structure for Claude to style; second opinions and council seats | Decide the API contract or the login flow; own a screen's look; edit `project.pbxproj` unless the brief says so; merge |
+
+**Design stays with Claude** (Patrik, 2026-10-24, after the phone hub: Codex's screens looked generic and "cheap"
+twice; Claude's rebuild from the desktop's own components was approved at once). Codex may build a screen's
+structure and logic; Claude does the look, starting from the existing website/app components, not from new decoration.
 
 **Delegate** when the task fits a brief with a clear "done" (it compiles, these tests pass, this screen
 shows this data) and the build is clearly bigger than the brief. Otherwise Claude does it.
