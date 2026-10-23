@@ -1,0 +1,15 @@
+# Xcode
+xcuserdata/
+*.xcuserstate
+DerivedData/
+build/
+*.ipa
+*.dSYM.zip
+*.dSYM
+# Swift Package Manager
+.build/
+.swiftpm/
+# App Store Connect API keys — never commit
+*.p8
+# macOS
+.DS_Store
