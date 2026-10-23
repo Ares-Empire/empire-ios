@@ -4,8 +4,8 @@ The iPhone apps of the **Ares Empire**. Native SwiftUI apps that talk to the exi
 services' APIs and log in with an Empire account. Installed via **TestFlight**.
 
 Why and how this was decided (incl. verified TestFlight facts):
-[`ares-empire/docs/IPHONE-APPS.md`](https://github.com/carlsenares/ares-empire/blob/main/docs/IPHONE-APPS.md).
-The login they use: [`ares-empire/docs/ACCOUNTS.md`](https://github.com/carlsenares/ares-empire/blob/main/docs/ACCOUNTS.md).
+[`ares-empire/docs/IPHONE-APPS.md`](https://github.com/Ares-Empire/ares-empire/blob/main/docs/IPHONE-APPS.md).
+The login they use: [`ares-empire/docs/ACCOUNTS.md`](https://github.com/Ares-Empire/ares-empire/blob/main/docs/ACCOUNTS.md).
 
 ## Apps
 
