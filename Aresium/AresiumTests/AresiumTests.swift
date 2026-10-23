@@ -726,7 +726,12 @@ struct AresiumTests {
         let imports = ImportStore(dashboard: sampleStore())
         imports.showSampleUnavailable()
         #expect(imports.banner != nil)
-        try await Task.sleep(for: .milliseconds(4700))
+        // Rendering tests can delay the dismissal task's initial scheduling on the main actor.
+        let clock = ContinuousClock()
+        let deadline = clock.now.advanced(by: .seconds(7))
+        while imports.banner != nil, clock.now < deadline {
+            try await clock.sleep(for: .milliseconds(50))
+        }
         #expect(imports.banner == nil)
     }
 

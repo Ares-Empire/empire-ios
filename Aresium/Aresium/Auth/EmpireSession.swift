@@ -48,11 +48,14 @@ final class EmpireSession {
     private(set) var needsRestoreRetry = false
     private let storage: any TokenStorage
     private let client: EmpireAuthClient
+    let widgetPublisher: WidgetSnapshotPublisher
     private var generation = 0
 
-    init(storage: any TokenStorage = TokenKeychain(), client: EmpireAuthClient = EmpireAuthClient(), restoreOnLaunch: Bool = true) {
+    init(storage: any TokenStorage = TokenKeychain(), client: EmpireAuthClient = EmpireAuthClient(), restoreOnLaunch: Bool = true,
+         widgetPublisher: WidgetSnapshotPublisher = WidgetSnapshotPublisher()) {
         self.storage = storage
         self.client = client
+        self.widgetPublisher = widgetPublisher
         isRestoring = restoreOnLaunch
     }
 
@@ -112,5 +115,6 @@ final class EmpireSession {
         needsRestoreRetry = false
         error = nil
         do { try storage.delete() } catch { self.error = error.localizedDescription }
+        do { try widgetPublisher.clear() } catch { self.error = error.localizedDescription }
     }
 }

@@ -3,6 +3,15 @@
 <!-- Merged with the generated Info.plist (GENERATE_INFOPLIST_FILE). Only what build settings cannot express. -->
 <plist version="1.0">
 <dict>
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLName</key>
+            <string>de.ares-empire.aresium</string>
+            <key>CFBundleURLSchemes</key>
+            <array><string>aresium</string></array>
+        </dict>
+    </array>
 	<!-- Bank (VR Bank) and PayPal exports: lets the share sheet offer "Aresium" for .csv and CAMT .xml files. -->
 	<key>CFBundleDocumentTypes</key>
 	<array>

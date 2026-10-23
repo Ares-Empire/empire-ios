@@ -108,17 +108,28 @@ struct ContentView: View {
             }
             .onChange(of: theme.theme) { _, value in
                 if !store.isSample { rememberedTheme = value.rawValue }
+                store.setWidgetTheme(value)
             }
             .onChange(of: theme.previousTheme) { _, value in
                 if !store.isSample { rememberedPreviousTheme = value.rawValue }
             }
             .task { if !store.isSample { await session.restore() } }
+            .task { store.setWidgetTheme(theme.theme) }
             .onChange(of: session.token) { _, token in
                 if token == nil { store.clear(); path = [] }
                 Task { await imports.sessionChanged() }
             }
             .onOpenURL { url in
                 if url.isFileURL { Task { await imports.receive([url]) } }
+                else if let destination = AresiumURL(url: url) {
+                    current = true
+                    side = .expenses
+                    graph = false
+                    switch destination {
+                    case .start: path = []
+                    case .category(let name): path = [DashboardRoute(category: name, side: .expenses)]
+                    }
+                }
             }
             .overlay(alignment: .bottom) {
                 ImportFeedback(store: imports, palette: palette)

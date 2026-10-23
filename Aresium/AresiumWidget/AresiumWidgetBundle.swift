@@ -1,28 +1,58 @@
 import SwiftUI
 import WidgetKit
 
-/// Placeholder until brief 05 builds the real widgets (prompts/05-aresium-widgets.md).
 @main
 struct AresiumWidgetBundle: WidgetBundle {
+    init() { AppFont.register() }
+
     var body: some Widget {
-        PlaceholderWidget()
+        MonthlySpendingWidget()
+        SpendingCategoriesWidget()
     }
 }
 
-struct PlaceholderWidget: Widget {
+struct MonthlySpendingWidget: Widget {
     var body: some WidgetConfiguration {
-        StaticConfiguration(kind: "AresiumPlaceholder", provider: PlaceholderProvider()) { _ in
-            Text("Aresium").containerBackground(.black, for: .widget)
+        StaticConfiguration(kind: "AresiumMonthlySpending", provider: SpendingProvider()) { entry in
+            SpendingWidgetView(snapshot: entry.snapshot, theme: entry.theme)
+                .containerBackground(for: .widget) { Wall(palette: Palette(theme: entry.theme)) }
+                .environment(\.colorScheme, entry.theme == .light ? .light : .dark)
         }
+        .configurationDisplayName("Monthly spending")
+        .description("This month's spending, up to your latest transaction.")
+        .supportedFamilies([.systemMedium])
+    }
+}
+
+struct SpendingCategoriesWidget: Widget {
+    var body: some WidgetConfiguration {
+        AppIntentConfiguration(kind: "AresiumSpendingCategories", intent: SpendingCategoriesIntent.self,
+                               provider: CategoriesProvider()) { entry in
+            CategoriesWidgetView(snapshot: entry.snapshot, firstCategory: entry.firstCategory,
+                                 secondCategory: entry.secondCategory, theme: entry.theme)
+                .containerBackground(for: .widget) { Wall(palette: Palette(theme: entry.theme)) }
+                .environment(\.colorScheme, entry.theme == .light ? .light : .dark)
+        }
+        .configurationDisplayName("Spending categories")
+        .description("Two categories for this month. Long press to choose them.")
         .supportedFamilies([.systemSmall])
     }
 }
 
-struct PlaceholderProvider: TimelineProvider {
-    struct Entry: TimelineEntry { let date: Date }
-    func placeholder(in context: Context) -> Entry { Entry(date: .now) }
-    func getSnapshot(in context: Context, completion: @escaping (Entry) -> Void) { completion(Entry(date: .now)) }
-    func getTimeline(in context: Context, completion: @escaping (Timeline<Entry>) -> Void) {
-        completion(Timeline(entries: [Entry(date: .now)], policy: .never))
-    }
+#Preview("Monthly spending", as: .systemMedium) {
+    MonthlySpendingWidget()
+} timeline: {
+    SpendingEntry(date: .now, snapshot: .sample, theme: .dark)
+}
+
+#Preview("Spending categories", as: .systemSmall) {
+    SpendingCategoriesWidget()
+} timeline: {
+    CategoriesEntry(date: .now, snapshot: .sample, theme: .dark, firstCategory: nil, secondCategory: nil)
+}
+
+#Preview("Open Aresium", as: .systemSmall) {
+    SpendingCategoriesWidget()
+} timeline: {
+    CategoriesEntry(date: .now, snapshot: nil, theme: .dark, firstCategory: nil, secondCategory: nil)
 }

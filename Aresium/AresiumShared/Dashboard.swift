@@ -1,6 +1,6 @@
 import Foundation
 
-struct Dashboard: Codable {
+nonisolated struct Dashboard: Codable {
     let version: Int
     let months: [Month]
     let categories: [Category]
@@ -27,7 +27,7 @@ struct Dashboard: Codable {
     }
 }
 
-struct CategoryChoices: Codable {
+nonisolated struct CategoryChoices: Codable {
     let spend: [String]
     let income: [String]
 }
@@ -40,7 +40,7 @@ extension Dashboard {
     }
 }
 
-struct Month: Codable, Identifiable {
+nonisolated struct Month: Codable, Identifiable {
     let key: String
     let label: String
     let short: String
@@ -51,7 +51,7 @@ struct Month: Codable, Identifiable {
     var id: String { key }
 }
 
-struct Category: Codable, Identifiable {
+nonisolated struct Category: Codable, Identifiable {
     enum Kind: String, Codable { case spend, income, transfer }
     let name: String
     let icon: String
@@ -60,7 +60,7 @@ struct Category: Codable, Identifiable {
     var id: String { name }
 }
 
-struct Transaction: Codable, Identifiable {
+nonisolated struct Transaction: Codable, Identifiable {
     let id: String
     let date: String
     let day: Int
@@ -74,32 +74,33 @@ struct Transaction: Codable, Identifiable {
     let incomeBuckets: [String]
 }
 
-struct Overview: Codable {
+nonisolated struct Overview: Codable {
     let expense: [Double]
     let income: [Double]
     let balance: [Double]
 }
 
-struct CategoryTotal: Codable, Identifiable {
+nonisolated struct CategoryTotal: Codable, Identifiable {
     let name: String
     let total: Double
     var id: String { name }
 }
 
-struct Totals: Codable {
+nonisolated struct Totals: Codable {
     let expense: Double
     let income: Double
     let categories: [CategoryTotal]
     let incomeBuckets: [CategoryTotal]
 }
 
-struct MonthData: Codable {
+nonisolated struct MonthData: Codable {
     let expense: Double
     let income: Double
     let categories: [CategoryTotal]
     let incomeBuckets: [CategoryTotal]
     let endBalance: Double
     let dayExpense: [Double]
+    let dayExpenseRunning: [Double]
     let dayIncome: [Double]
     let dayBalance: [Double]
 
@@ -108,12 +109,12 @@ struct MonthData: Codable {
     }
 }
 
-struct Series: Codable {
+nonisolated struct Series: Codable {
     let months: [Double]
     let days: [String: [Double]]
 }
 
-enum DashboardError: LocalizedError {
+nonisolated enum DashboardError: LocalizedError {
     case unsupportedVersion, missingSample
     var errorDescription: String? {
         switch self {

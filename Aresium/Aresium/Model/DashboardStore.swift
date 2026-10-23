@@ -66,6 +66,7 @@ final class DashboardStore {
             }
             guard generation == self.generation else { return }
             dashboard = loaded
+            try session.widgetPublisher.publish(loaded)
         } catch {
             guard generation == self.generation else { return }
             self.error = error.localizedDescription
@@ -84,6 +85,11 @@ final class DashboardStore {
         isLoading = false
         dashboard = nil
         error = nil
+        do { try session.widgetPublisher.clear() } catch { self.error = error.localizedDescription }
+    }
+
+    func setWidgetTheme(_ theme: AppTheme) {
+        do { try session.widgetPublisher.setTheme(theme) } catch { self.error = error.localizedDescription }
     }
 
     func transactionDetailStore(for transaction: Transaction) -> TransactionDetailStore {
