@@ -65,6 +65,12 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		ABE6259C5F842B964D3E03BF /* Shared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			name = Shared;
+			path = ../Shared;
+			sourceTree = "<group>";
+		};
 		131AF6F7DF88102047D77E0B /* AresiumShared */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = AresiumShared;
@@ -122,6 +128,7 @@
 			isa = PBXGroup;
 			children = (
 				4276F417974F4EDACEDA269F /* Aresium */,
+				ABE6259C5F842B964D3E03BF /* Shared */,
 				131AF6F7DF88102047D77E0B /* AresiumShared */,
 				D54F8B58486C3B211C945FB5 /* AresiumWidget */,
 				8A79A9F3D4C59DD5E91D6F9B /* AresiumTests */,
@@ -155,6 +162,7 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
+				ABE6259C5F842B964D3E03BF /* Shared */,
 				D54F8B58486C3B211C945FB5 /* AresiumWidget */,
 				131AF6F7DF88102047D77E0B /* AresiumShared */,
 			);
@@ -180,6 +188,7 @@
 				704558FDEE0FC95C9095D195 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
+				ABE6259C5F842B964D3E03BF /* Shared */,
 				131AF6F7DF88102047D77E0B /* AresiumShared */,
 				4276F417974F4EDACEDA269F,
 			);

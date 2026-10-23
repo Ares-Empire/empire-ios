@@ -10,15 +10,20 @@ protocol TokenStorage {
 struct TokenKeychain: TokenStorage {
     let service: String
     let account: String
+    /// nil: the app's own Keychain (tests). The default is the group every Empire app shares: one login for all.
+    let accessGroup: String?
 
-    init(service: String = "de.ares-empire.aresium.auth", account: String = "empire-token") {
+    init(service: String = "de.ares-empire.session", account: String = "empire-token",
+         accessGroup: String? = EmpireShared.keychainAccessGroup) {
         self.service = service
         self.account = account
+        self.accessGroup = accessGroup
     }
 
     private var query: [String: Any] {
         [kSecClass as String: kSecClassGenericPassword,
          kSecAttrService as String: service, kSecAttrAccount as String: account]
+            .merging(accessGroup.map { [kSecAttrAccessGroup as String: $0] } ?? [:]) { _, new in new }
     }
 
     func read() throws -> String? {
@@ -54,9 +59,11 @@ struct KeychainError: LocalizedError {
     var errorDescription: String? { "Secure token storage failed (\(status)). Please try again." }
 }
 
-/// The install flag is deliberately separate from the Keychain, which survives uninstall.
+/// A token left in the Keychain by an earlier install is wiped on the first launch. "First" means: no Empire app has
+/// run since all of them were removed. The flag therefore lives in the shared App Group (`EmpireShared.defaults`),
+/// which iOS deletes only with the last Empire app; installing a second app keeps the login of the first.
 enum FirstLaunchTokenReset {
-    static let key = "aresium.hasLaunched"
+    static let key = "empire.hasLaunched"
     static func run(storage: any TokenStorage, defaults: UserDefaults) throws {
         guard !defaults.bool(forKey: key) else { return }
         try storage.delete()

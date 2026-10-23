@@ -10,10 +10,10 @@ enum DebugLaunch {
     static func testingSession() -> EmpireSession {
         let tokens = Tokens()
         tokens.token = nil
-        return EmpireSession(storage: tokens, restoreOnLaunch: false, widgetPublisher: .temporary())
+        return EmpireSession(app: .aresium, storage: tokens, restoreOnLaunch: false)
     }
     static func unavailableSession() -> EmpireSession {
-        EmpireSession(storage: Tokens(), client: EmpireAuthClient(transport: Unavailable()), widgetPublisher: .temporary())
+        EmpireSession(app: .aresium, storage: Tokens(), client: EmpireAuthClient(transport: Unavailable()))
     }
     private final class Tokens: TokenStorage {
         var token: String? = "fictional-screenshot-token"

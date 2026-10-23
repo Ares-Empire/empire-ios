@@ -107,7 +107,7 @@ struct AresiumTests {
 
     @Test func APIUnauthorizedLogsOutAndDeletesStoredToken() async throws {
         let storage = MemoryTokenStorage()
-        let session = EmpireSession(storage: storage, client: EmpireAuthClient(transport: FakeTransport(data: authResponse())))
+        let session = EmpireSession(app: .aresium, storage: storage, client: EmpireAuthClient(transport: FakeTransport(data: authResponse())))
         await session.login(email: "fictional@example.invalid", password: "fictional-password")
         #expect(session.token != nil)
         var unauthorized = false
@@ -138,7 +138,7 @@ struct AresiumTests {
     @Test func loginUsesPocketBaseBodyAndSecureStorage() async throws {
         let storage = MemoryTokenStorage()
         let transport = FakeTransport(data: authResponse())
-        let session = EmpireSession(storage: storage, client: EmpireAuthClient(transport: transport))
+        let session = EmpireSession(app: .aresium, storage: storage, client: EmpireAuthClient(transport: transport))
         await session.login(email: "fictional@example.invalid", password: "fictional-password")
         let request = try #require(transport.requests.first)
         #expect(request.url?.path == "/api/collections/users/auth-with-password")
@@ -154,7 +154,7 @@ struct AresiumTests {
     @Test func restoreRenewsWithRawAuthorizationHeader() async throws {
         let storage = MemoryTokenStorage(token: "old-fictional-token")
         let transport = FakeTransport(data: authResponse())
-        let session = EmpireSession(storage: storage, client: EmpireAuthClient(transport: transport))
+        let session = EmpireSession(app: .aresium, storage: storage, client: EmpireAuthClient(transport: transport))
         await session.restore()
         let request = try #require(transport.requests.first)
         #expect(request.url?.path == "/api/collections/users/auth-refresh")
@@ -167,7 +167,7 @@ struct AresiumTests {
 
     @Test(arguments: [400, 401]) func expiredRefreshDeletesToken(status: Int) async {
         let storage = MemoryTokenStorage(token: "old-fictional-token")
-        let session = EmpireSession(storage: storage, client: EmpireAuthClient(transport: FakeTransport(status: status)))
+        let session = EmpireSession(app: .aresium, storage: storage, client: EmpireAuthClient(transport: FakeTransport(status: status)))
         await session.restore()
         #expect(storage.token == nil)
         #expect(session.token == nil)
@@ -179,7 +179,7 @@ struct AresiumTests {
         let storage = MemoryTokenStorage(token: "old-fictional-token")
         let transport = FakeTransport()
         transport.failure = URLError(.notConnectedToInternet)
-        let session = EmpireSession(storage: storage, client: EmpireAuthClient(transport: transport))
+        let session = EmpireSession(app: .aresium, storage: storage, client: EmpireAuthClient(transport: transport))
         await session.restore()
         #expect(storage.token == "old-fictional-token")
         #expect(session.token == nil)
@@ -189,26 +189,27 @@ struct AresiumTests {
     }
 
     @Test func loginShowsPocketBaseMessage() async {
-        let session = EmpireSession(storage: MemoryTokenStorage(), client: EmpireAuthClient(transport:
+        let session = EmpireSession(app: .aresium, storage: MemoryTokenStorage(), client: EmpireAuthClient(transport:
             FakeTransport(status: 403, data: Data(#"{"message":"Confirm your email first."}"#.utf8))))
         await session.login(email: "fictional@example.invalid", password: "fictional-password")
         #expect(session.error == "Confirm your email first.")
         #expect(session.token == nil)
     }
 
-    @Test func accountWithoutAresiumAccessIsNotStored() async {
+    /// The login is saved for all Empire apps (it is valid), but Aresium itself stays closed for this account.
+    @Test func accountWithoutAresiumAccessKeepsSharedLoginButIsDenied() async {
         let storage = MemoryTokenStorage()
         let response = Data(#"{"token":"fictional-token","record":{"id":"fictional-user","approved":true,"services":["empire"]}}"#.utf8)
-        let session = EmpireSession(storage: storage, client: EmpireAuthClient(transport: FakeTransport(data: response)))
+        let session = EmpireSession(app: .aresium, storage: storage, client: EmpireAuthClient(transport: FakeTransport(data: response)))
         await session.login(email: "fictional@example.invalid", password: "fictional-password")
-        #expect(session.token == nil)
-        #expect(storage.token == nil)
+        #expect(storage.token == "fictional-token")
+        #expect(session.isDenied && !session.isSignedIn)
         #expect(session.error == "This account has no access to Aresium.")
     }
 
     @Test func failedReloadPreservesStaleDashboard() async throws {
         let transport = FakeTransport(data: try JSONEncoder().encode(Dashboard.sample()))
-        let session = EmpireSession(storage: MemoryTokenStorage(), client: EmpireAuthClient(transport: FakeTransport(data: authResponse())))
+        let session = EmpireSession(app: .aresium, storage: MemoryTokenStorage(), client: EmpireAuthClient(transport: FakeTransport(data: authResponse())))
         await session.login(email: "fictional@example.invalid", password: "fictional-password")
         let store = DashboardStore(session: session, client: APIClient(transport: transport))
         await store.reload()
@@ -237,7 +238,7 @@ struct AresiumTests {
     }
 
     @Test func lateUnauthorizedResponseCannotLogOutANewerSession() async throws {
-        let session = EmpireSession(storage: MemoryTokenStorage(), client: EmpireAuthClient(transport: FakeTransport(data: authResponse())))
+        let session = EmpireSession(app: .aresium, storage: MemoryTokenStorage(), client: EmpireAuthClient(transport: FakeTransport(data: authResponse())))
         await session.login(email: "fictional@example.invalid", password: "fictional-password")
         let transport = PendingAPITransport(data: try JSONEncoder().encode(Dashboard.sample()))
         let store = DashboardStore(session: session, client: APIClient(transport: transport))
@@ -498,7 +499,7 @@ struct AresiumTests {
 
     private func liveDetailStore() async throws -> (DashboardStore, FakeTransport, TransactionDetailStore) {
         let transport = FakeTransport(data: try JSONEncoder().encode(Dashboard.sample()))
-        let session = EmpireSession(storage: MemoryTokenStorage(), client: EmpireAuthClient(transport: FakeTransport(data: authResponse())))
+        let session = EmpireSession(app: .aresium, storage: MemoryTokenStorage(), client: EmpireAuthClient(transport: FakeTransport(data: authResponse())))
         await session.login(email: "fictional@example.invalid", password: "fictional-password")
         let dashboard = DashboardStore(session: session, client: APIClient(transport: transport))
         await dashboard.reload()
@@ -509,7 +510,7 @@ struct AresiumTests {
     }
 
     private func sampleStore() -> DashboardStore {
-        DashboardStore(session: EmpireSession(storage: MemoryTokenStorage()), sample: true)
+        DashboardStore(session: EmpireSession(app: .aresium, storage: MemoryTokenStorage()), sample: true)
     }
 
     @Test func importRequestSendsTwoFilesAndBearer() async throws {
@@ -639,7 +640,7 @@ struct AresiumTests {
     }
 
     @Test func filesReceivedBeforeLoginAreRetainedAndImportedTogetherAfterLogin() async throws {
-        let session = EmpireSession(storage: MemoryTokenStorage(), client: EmpireAuthClient(transport: FakeTransport(data: authResponse())), restoreOnLaunch: false)
+        let session = EmpireSession(app: .aresium, storage: MemoryTokenStorage(), client: EmpireAuthClient(transport: FakeTransport(data: authResponse())), restoreOnLaunch: false)
         let dashboardTransport = FakeTransport(data: try JSONEncoder().encode(Dashboard.sample()))
         let store = DashboardStore(session: session, client: APIClient(transport: dashboardTransport))
         let transport = FakeTransport(data: importResponse(includingPayPal: true))
@@ -756,34 +757,43 @@ struct AresiumTests {
         }
     }
 
+    /// 403 from the account server's refresh: the login itself is gone, everywhere. 503: keep everything, retry.
+    /// 200 without the `aresium` service: the shared login stays (other Empire apps), Aresium forgets its data.
     @Test(arguments: [403, 503, 200])
     func revokedOrUnavailableRestoreHandlesSavedSessionAndWidget(status: Int) async throws {
         let storage = MemoryTokenStorage()
         let transport = FakeTransport(data: authResponse())
-        let session = EmpireSession(storage: storage, client: EmpireAuthClient(transport: transport))
+        let session = EmpireSession(app: .aresium, storage: storage, client: EmpireAuthClient(transport: transport))
+        let store = DashboardStore(session: session)
         await session.login(email: "fictional@example.invalid", password: "fictional")
-        try session.widgetPublisher.publish(Dashboard.sample())
+        try store.widgetPublisher.publish(Dashboard.sample())
         transport.status = status
         transport.data = status == 200
             ? Data(#"{"token":"fictional-new","record":{"id":"fictional","approved":true,"services":["empire"]}}"#.utf8)
             : Data(#"{"error":"Aresium access revoked"}"#.utf8)
         await session.restore()
-        if status == 503 {
+        switch status {
+        case 503:
             #expect(session.token != nil && storage.token != nil)
-            #expect(session.widgetPublisher.store.load() != nil)
+            #expect(store.widgetPublisher.store.load() != nil)
             #expect(session.error == "Login service unavailable, try again")
             #expect(session.needsRestoreRetry)
-        } else {
+        case 403:
             #expect(session.token == nil && storage.token == nil)
-            #expect(session.widgetPublisher.store.load() == nil)
+            #expect(store.widgetPublisher.store.load() == nil)
             #expect(!session.needsRestoreRetry)
-            #expect(session.error == (status == 403 ? "Aresium access revoked" : "This account has no access to Aresium."))
+            #expect(session.error == "Aresium access revoked")
+        default:
+            #expect(storage.token == "fictional-new")
+            #expect(session.isDenied && !session.isSignedIn)
+            #expect(store.widgetPublisher.store.load() == nil)
+            #expect(session.error == "This account has no access to Aresium.")
         }
     }
 
     @Test func coldRestore503RetainsStoredTokenAndOffersRetry() async {
         let storage = MemoryTokenStorage(token: "fictional")
-        let session = EmpireSession(storage: storage, client: EmpireAuthClient(transport: FakeTransport(status: 503)))
+        let session = EmpireSession(app: .aresium, storage: storage, client: EmpireAuthClient(transport: FakeTransport(status: 503)))
         await session.restore()
         #expect(storage.token == "fictional")
         #expect(session.error == "Login service unavailable, try again")
@@ -799,15 +809,17 @@ struct AresiumTests {
         transport.status = status
         transport.data = Data(#"{"error":"No access to Aresium"}"#.utf8)
         await dashboard.reload()
-        #expect((session.token != nil) == (status == 503))
+        // 403 from Aresium: no access to THIS app; the shared login stays, Aresium forgets its data and widget.
+        #expect(session.token != nil)
+        #expect(session.isSignedIn == (status == 503))
         #expect((dashboard.dashboard != nil) == (status == 503))
-        #expect((session.widgetPublisher.store.load() != nil) == (status == 503))
+        #expect((dashboard.widgetPublisher.store.load() != nil) == (status == 503))
         #expect(status == 503 ? dashboard.error == "Login service unavailable, try again" : session.error == "No access to Aresium")
     }
 
     @Test func foregroundRefreshUsesFiveMinutesAndTwelveHours() async throws {
         let auth = FakeTransport(data: authResponse())
-        let session = EmpireSession(storage: MemoryTokenStorage(), client: EmpireAuthClient(transport: auth))
+        let session = EmpireSession(app: .aresium, storage: MemoryTokenStorage(), client: EmpireAuthClient(transport: auth))
         await session.login(email: "fictional@example.invalid", password: "fictional")
         let transport = FakeTransport(data: try JSONEncoder().encode(Dashboard.sample()))
         let dashboard = DashboardStore(session: session, client: APIClient(transport: transport))
@@ -842,7 +854,7 @@ struct AresiumTests {
 
     @Test func foregroundRestore503StopsFetchAndPreservesData() async throws {
         let auth = FakeTransport(data: authResponse())
-        let session = EmpireSession(storage: MemoryTokenStorage(), client: EmpireAuthClient(transport: auth))
+        let session = EmpireSession(app: .aresium, storage: MemoryTokenStorage(), client: EmpireAuthClient(transport: auth))
         await session.login(email: "fictional@example.invalid", password: "fictional")
         let transport = FakeTransport(data: try JSONEncoder().encode(Dashboard.sample()))
         let dashboard = DashboardStore(session: session, client: APIClient(transport: transport))
@@ -850,7 +862,7 @@ struct AresiumTests {
         auth.status = 503
         await dashboard.refreshOnForeground(now: Date.now.addingTimeInterval(13 * 3600))
         #expect(transport.requests.count == 1)
-        #expect(session.token != nil && dashboard.dashboard != nil && session.widgetPublisher.store.load() != nil)
+        #expect(session.token != nil && dashboard.dashboard != nil && dashboard.widgetPublisher.store.load() != nil)
         #expect(session.needsRestoreRetry)
     }
 
@@ -887,7 +899,7 @@ struct AresiumTests {
 
     @Test func tokenRenewalDoesNotDropDetailSave() async throws {
         let auth = FakeTransport(data: authResponse())
-        let session = EmpireSession(storage: MemoryTokenStorage(), client: EmpireAuthClient(transport: auth))
+        let session = EmpireSession(app: .aresium, storage: MemoryTokenStorage(), client: EmpireAuthClient(transport: auth))
         await session.login(email: "fictional@example.invalid", password: "fictional")
         let transport = FakeTransport(data: try JSONEncoder().encode(Dashboard.sample()))
         let dashboard = DashboardStore(session: session, client: APIClient(transport: transport))
@@ -941,7 +953,8 @@ struct AresiumTests {
             transport.status = status
             transport.data = Data(#"{"error":"No access to Aresium"}"#.utf8)
             if saving { await detail.save() } else { await detail.load() }
-            #expect((dashboard.session.token != nil) == (status == 503))
+            #expect(dashboard.session.token != nil)
+            #expect(dashboard.session.isSignedIn == (status == 503))
             if status == 503 {
                 #expect(dashboard.dashboard != nil && detail.detail != nil)
                 #expect((saving ? detail.saveError : detail.loadError) == "Login service unavailable, try again")
@@ -990,7 +1003,9 @@ struct AresiumTests {
         await imports.receive([file])
         await imports.importPendingFiles()
         let retained = status == 413 || status == 503
-        #expect((session.token != nil) == retained)
+        // 401 ends the login everywhere; 403 closes only Aresium (the shared login stays); both drop the batch.
+        #expect((session.token != nil) == (status != 401))
+        #expect(session.isSignedIn == retained)
         #expect(imports.waitingCount == (retained ? 1 : 0))
         if retained { #expect(imports.canRetry && imports.banner?.success == false) }
     }
@@ -1171,31 +1186,34 @@ struct AresiumTests {
     }
 
     @Test func accessRevocationReasonSurvivesCleanupFailure() async {
-        let session = EmpireSession(storage: FailingTokenDeletion(), client: EmpireAuthClient(transport:
+        let session = EmpireSession(app: .aresium, storage: FailingTokenDeletion(), client: EmpireAuthClient(transport:
             FakeTransport(status: 403, data: Data(#"{"error":"No access to Aresium"}"#.utf8))))
         await session.restore()
         #expect(session.error == "No access to Aresium")
         #expect(session.token == nil && !session.needsRestoreRetry)
     }
 
+    /// A failed login (other credentials, or the account server unreachable) never ends an existing login: other
+    /// Empire apps share it.
     @Test(arguments: [401, 403, 503])
     func loginAuthFailuresRespectExistingSession(status: Int) async throws {
         let storage = MemoryTokenStorage()
         let auth = FakeTransport(data: authResponse())
-        let session = EmpireSession(storage: storage, client: EmpireAuthClient(transport: auth))
+        let session = EmpireSession(app: .aresium, storage: storage, client: EmpireAuthClient(transport: auth))
+        let store = DashboardStore(session: session)
         await session.login(email: "fictional@example.invalid", password: "fictional")
-        try session.widgetPublisher.publish(Dashboard.sample())
+        try store.widgetPublisher.publish(Dashboard.sample())
         auth.status = status
         auth.data = Data(#"{"error":"No access to Aresium"}"#.utf8)
         await session.login(email: "fictional@example.invalid", password: "fictional")
-        #expect((session.token != nil) == (status == 503))
-        #expect((storage.token != nil) == (status == 503))
-        #expect((session.widgetPublisher.store.load() != nil) == (status == 503))
+        #expect(session.token != nil && storage.token != nil && session.isSignedIn)
+        #expect(store.widgetPublisher.store.load() != nil)
         #expect(session.loginUnavailable == (status == 503))
+        #expect(session.error != nil)
     }
 
     private func importSession() async -> EmpireSession {
-        let session = EmpireSession(storage: MemoryTokenStorage(), client: EmpireAuthClient(transport: FakeTransport(data: authResponse())))
+        let session = EmpireSession(app: .aresium, storage: MemoryTokenStorage(), client: EmpireAuthClient(transport: FakeTransport(data: authResponse())))
         await session.login(email: "fictional@example.invalid", password: "fictional-password")
         return session
     }
@@ -1297,7 +1315,7 @@ struct ServerSampleMatchesWebsiteTests {
     }
 
     @Test func listsMatchTheWebsiteForEveryCategoryBucketAndMonth() async throws {
-        let session = EmpireSession(storage: MemoryTokenStorage(), client: EmpireAuthClient(transport: FakeTransport(data: authResponse())))
+        let session = EmpireSession(app: .aresium, storage: MemoryTokenStorage(), client: EmpireAuthClient(transport: FakeTransport(data: authResponse())))
         await session.login(email: "fictional@example.invalid", password: "fictional-password")
         let store = DashboardStore(session: session, client: APIClient(transport: FakeTransport(data: try fixture("server-dashboard.sample.json"))))
         await store.reload()

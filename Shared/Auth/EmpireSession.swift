@@ -1,6 +1,14 @@
 import Foundation
 import Observation
 
+/// Which Empire app this is: the service its account must have, and its name for messages.
+struct EmpireAppIdentity: Equatable, Sendable {
+    let service: String
+    let name: String
+    static let aresium = EmpireAppIdentity(service: "aresium", name: "Aresium")
+    static let empire = EmpireAppIdentity(service: "empire", name: "the Ares Empire")
+}
+
 struct EmpireRecord: Decodable {
     let id: String
     let approved: Bool
@@ -37,9 +45,20 @@ struct EmpireAuthClient {
     }
 }
 
+/// One Empire login for every Empire app on the device (docs/EMPIRE-APP.md in ares-empire → "One login for all").
+/// The token lives in a Keychain item the apps share, so logging in or out in one app does it in all of them.
+/// - The login itself is invalid (401, or the account server refuses the refresh: expired, unapproved): log out,
+///   everywhere.
+/// - The account is fine but may not use THIS app (its `services` lack this app's service, or the app's server
+///   answers 403): `access = .denied` in this app only; this app forgets its own data (`onAppDataReset`), the shared
+///   login stays for the other apps.
 @MainActor @Observable
 final class EmpireSession {
+    enum Access: Equatable { case unknown, granted, denied(String) }
+
+    let app: EmpireAppIdentity
     private(set) var token: String?
+    private(set) var access: Access = .unknown
     private(set) var isRestoring = true
     private(set) var isBusy = false
     private(set) var error: String?
@@ -48,34 +67,44 @@ final class EmpireSession {
     private let storage: any TokenStorage
     private let client: EmpireAuthClient
     private let installDefaults: UserDefaults?
-    let widgetPublisher: WidgetSnapshotPublisher
     private(set) var generation = 0
     private(set) var lastRenewedAt: Date?
     private var logoutHandlers: [() -> Void] = []
+    private var appDataResetHandlers: [() -> Void] = []
 
+    /// This app may not be used with the current login.
+    var isDenied: Bool { if case .denied = access { true } else { false } }
+    /// Logged in AND allowed into this app.
+    var isSignedIn: Bool { token != nil && !isDenied }
+
+    /// Called on logout (the shared login ends).
     func onLogout(_ action: @escaping () -> Void) { logoutHandlers.append(action) }
+    /// Called whenever this app must forget its own data: on logout and when access to this app is denied.
+    func onAppDataReset(_ action: @escaping () -> Void) { appDataResetHandlers.append(action) }
 
     func handleAuthFailure(_ failure: Error, generation: Int) {
         guard generation == self.generation else { return }
         switch failure {
         case HTTPError.unauthorized: logOut()
-        case HTTPError.server(403, let message): logOut(reason: message ?? "This account has no access to Aresium.")
+        case HTTPError.server(403, let message): deny(message ?? noAccessMessage)
         default: break
         }
     }
 
-    init(storage: any TokenStorage = TokenKeychain(), client: EmpireAuthClient = EmpireAuthClient(), restoreOnLaunch: Bool = true,
-         widgetPublisher: WidgetSnapshotPublisher = .temporary(), installDefaults: UserDefaults? = nil) {
+    init(app: EmpireAppIdentity, storage: any TokenStorage = TokenKeychain(), client: EmpireAuthClient = EmpireAuthClient(),
+         restoreOnLaunch: Bool = true, installDefaults: UserDefaults? = nil) {
+        self.app = app
         self.installDefaults = installDefaults
         self.storage = storage
         self.client = client
-        self.widgetPublisher = widgetPublisher
         isRestoring = restoreOnLaunch
         if let installDefaults {
             do { try FirstLaunchTokenReset.run(storage: storage, defaults: installDefaults) }
             catch { self.error = error.localizedDescription }
         }
     }
+
+    private var noAccessMessage: String { "This account has no access to \(app.name)." }
 
     func restore() async {
         guard !isBusy else { return }
@@ -97,6 +126,7 @@ final class EmpireSession {
             guard generation == self.generation else { return }
             logOut()
         } catch HTTPError.server(let status, let message) where status == 400 || status == 401 || status == 403 {
+            // The account server refused the refresh itself (expired, unapproved): the login is gone everywhere.
             guard generation == self.generation else { return }
             logOut(reason: message)
         } catch {
@@ -121,32 +151,47 @@ final class EmpireSession {
             self.generation += 1
             needsRestoreRetry = false
         } catch {
+            // A failed login concerns only the credentials just typed: an existing login (used by the other Empire
+            // apps) stays as it is.
             guard generation == self.generation else { return }
             if case HTTPError.server(503, _) = error { loginUnavailable = true }
-            handleAuthFailure(error, generation: generation)
             self.error = error.localizedDescription
         }
     }
 
+    /// A valid login is saved for all apps even when this app is not allowed; access is decided per app.
     private func accept(_ response: AuthResponse) throws {
-        guard !response.token.isEmpty, response.record.approved, response.record.services.contains("aresium") else {
-            throw HTTPError.server(403, "This account has no access to Aresium.")
+        guard !response.token.isEmpty, response.record.approved else {
+            throw HTTPError.server(403, "This account is not approved yet.")
         }
         try storage.save(response.token)
         token = response.token
         lastRenewedAt = .now
+        if response.record.services.contains(app.service) {
+            access = .granted
+        } else {
+            deny(noAccessMessage)
+        }
+    }
+
+    /// This app may not be used with this account: forget its data, keep the shared login.
+    private func deny(_ message: String) {
+        access = .denied(message)
+        error = message
+        appDataResetHandlers.forEach { $0() }
     }
 
     func logOut(reason: String? = nil) {
         generation += 1
         token = nil
+        access = .unknown
         lastRenewedAt = nil
         isRestoring = false
         needsRestoreRetry = false
         error = reason
         loginUnavailable = false
         logoutHandlers.forEach { $0() }
+        appDataResetHandlers.forEach { $0() }
         do { try storage.delete() } catch { self.error = self.error ?? error.localizedDescription }
-        do { try widgetPublisher.clear() } catch { self.error = self.error ?? error.localizedDescription }
     }
 }

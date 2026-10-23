@@ -49,15 +49,16 @@ struct ContentView: View {
         pausedIntroProgress = pausedProgress
         restoresOnLaunch = !sample && !skipRestore
         #if DEBUG
-        var session = EmpireSession(restoreOnLaunch: !sample && !skipRestore,
-                                    widgetPublisher: debugLaunch ? .temporary() : WidgetSnapshotPublisher(),
-                                    installDefaults: debugLaunch ? nil : .standard)
+        var session = EmpireSession(app: .aresium, restoreOnLaunch: !sample && !skipRestore,
+                                    installDefaults: debugLaunch ? nil : EmpireShared.defaults)
         if DebugLaunch.isTesting { session = DebugLaunch.testingSession() }
         if arguments.contains("-sampleAuthUnavailable") { session = DebugLaunch.unavailableSession() }
+        let publisher: WidgetSnapshotPublisher = debugLaunch ? .temporary() : WidgetSnapshotPublisher()
         #else
-        let session = EmpireSession(widgetPublisher: WidgetSnapshotPublisher(), installDefaults: .standard)
+        let session = EmpireSession(app: .aresium, installDefaults: EmpireShared.defaults)
+        let publisher = WidgetSnapshotPublisher()
         #endif
-        let store = DashboardStore(session: session, sample: sample)
+        let store = DashboardStore(session: session, sample: sample, widgetPublisher: publisher)
         let imports = ImportStore(dashboard: store)
         _store = State(initialValue: store)
         _imports = State(initialValue: imports)
@@ -88,7 +89,7 @@ struct ContentView: View {
     var body: some View {
         GeometryReader { geometry in
             Group {
-                if sampleActive || session.token != nil {
+                if sampleActive || session.isSignedIn {
                     NavigationStack(path: $path) {
                         VStack(spacing: 0) {
                             header()
@@ -146,7 +147,7 @@ struct ContentView: View {
             }
             .task { store.setWidgetTheme(theme.theme) }
             .onChange(of: session.generation) { _, _ in
-                if session.token == nil { path = [] }
+                if !session.isSignedIn { path = [] }
                 Task { await imports.sessionChanged() }
             }
             .onOpenURL { url in
@@ -226,8 +227,9 @@ struct ContentView: View {
             store.clear()
             if sampleActive {
                 sampleActive = false
-                store = DashboardStore(session: EmpireSession(restoreOnLaunch: false, widgetPublisher: WidgetSnapshotPublisher(),
-                                                              installDefaults: .standard))
+                store = DashboardStore(session: EmpireSession(app: .aresium, restoreOnLaunch: false,
+                                                              installDefaults: EmpireShared.defaults),
+                                       widgetPublisher: WidgetSnapshotPublisher())
                 imports = ImportStore(dashboard: store)
             }
             else { session.logOut() }

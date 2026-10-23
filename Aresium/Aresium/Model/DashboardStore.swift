@@ -39,17 +39,23 @@ final class DashboardStore {
     private(set) var error: String?
     let session: EmpireSession
     let isSample: Bool
+    /// Aresium's widget snapshot (App Group). The default writes to a temporary folder (tests, previews); the app
+    /// passes the real one.
+    let widgetPublisher: WidgetSnapshotPublisher
     private let client: APIClient
     var generation: Int { session.generation }
     private var fetchGeneration = 0
     private(set) var lastSuccessfulLoad: Date?
     private var foregroundRefreshing = false
 
-    init(session: EmpireSession, client: APIClient = APIClient(), sample: Bool = false) {
+    init(session: EmpireSession, client: APIClient = APIClient(), sample: Bool = false,
+         widgetPublisher: WidgetSnapshotPublisher = .temporary()) {
         self.session = session
         self.client = client
+        self.widgetPublisher = widgetPublisher
         isSample = sample
-        session.onLogout { [weak self] in self?.clear(clearWidget: false) }
+        // Logout, or no access to Aresium with this login: forget the dashboard and the widget's numbers.
+        session.onAppDataReset { [weak self] in self?.clear() }
     }
 
     func reload() async {
@@ -72,7 +78,7 @@ final class DashboardStore {
             guard generation == self.generation, fetch == fetchGeneration else { return }
             dashboard = loaded
             lastSuccessfulLoad = .now
-            try session.widgetPublisher.publish(loaded)
+            try widgetPublisher.publish(loaded)
         } catch {
             guard generation == self.generation, fetch == fetchGeneration else { return }
             session.handleAuthFailure(error, generation: generation)
@@ -95,12 +101,12 @@ final class DashboardStore {
         lastSuccessfulLoad = nil
         error = nil
         if clearWidget {
-            do { try session.widgetPublisher.clear() } catch { self.error = error.localizedDescription }
+            do { try widgetPublisher.clear() } catch { self.error = error.localizedDescription }
         }
     }
 
     func setWidgetTheme(_ theme: AppTheme) {
-        do { try session.widgetPublisher.setTheme(theme) } catch { self.error = error.localizedDescription }
+        do { try widgetPublisher.setTheme(theme) } catch { self.error = error.localizedDescription }
     }
 
     func transactionDetailStore(for transaction: Transaction) -> TransactionDetailStore {

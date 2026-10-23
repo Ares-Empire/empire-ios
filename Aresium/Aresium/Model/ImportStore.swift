@@ -50,7 +50,7 @@ final class ImportStore {
 
     var isBusy: Bool { readingCount > 0 || isImporting || batchScheduled }
     var waitingCount: Int { pending.count + attempted.count }
-    var canRetry: Bool { !attempted.isEmpty && !isImporting && (dashboard.session.token != nil || dashboard.isSample) }
+    var canRetry: Bool { !attempted.isEmpty && !isImporting && (dashboard.session.isSignedIn || dashboard.isSample) }
 
     init(dashboard: DashboardStore, client: APIClient = APIClient(),
          background: any ImportBackgroundActivity = ApplicationImportActivity(),
@@ -59,7 +59,7 @@ final class ImportStore {
         self.client = client
         self.background = background
         self.maximumRequestBytes = maximumRequestBytes
-        dashboard.session.onLogout { [weak self] in self?.discard() }
+        dashboard.session.onAppDataReset { [weak self] in self?.discard() }
     }
 
     func showSampleUnavailable() { show("Not available with sample data", success: false) }
@@ -109,14 +109,14 @@ final class ImportStore {
     }
 
     func sessionChanged() async {
-        if dashboard.session.token != nil { await importPendingFiles() }
+        if dashboard.session.isSignedIn { await importPendingFiles() }
     }
 
     func importPendingFiles() async {
         batchTask?.cancel()
         batchTask = nil
         batchScheduled = false
-        guard !isImporting, readingCount == 0, let token = dashboard.session.token else { return }
+        guard !isImporting, readingCount == 0, dashboard.session.isSignedIn, let token = dashboard.session.token else { return }
         if attempted.isEmpty { attempted = pending; pending.removeAll() }
         guard !attempted.isEmpty else { return }
         isImporting = true
@@ -182,7 +182,7 @@ final class ImportStore {
 
     private func schedulePendingImport() {
         guard attempted.isEmpty, !pending.isEmpty, readingCount == 0, !isImporting,
-              dashboard.session.token != nil else { return }
+              dashboard.session.isSignedIn else { return }
         batchTask?.cancel()
         batchScheduled = true
         batchTask = Task { [weak self] in

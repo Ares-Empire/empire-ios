@@ -31,6 +31,9 @@
 			</array>
 		</dict>
 	</array>
+	<!-- The team prefix of the shared Keychain group (Shared/EmpireShared.swift). -->
+	<key>AppIdentifierPrefix</key>
+	<string>$(AppIdentifierPrefix)</string>
 	<!-- Only standard HTTPS: exempt, so App Store Connect stops asking about encryption on every build. -->
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>

@@ -171,8 +171,8 @@ struct WidgetTests {
         let files = WidgetSnapshotStore(directory: root)
         var reloads = 0
         let publisher = WidgetSnapshotPublisher(store: files, reloadTimelines: { reloads += 1 })
-        let session = EmpireSession(storage: WidgetMemoryTokens(), restoreOnLaunch: false, widgetPublisher: publisher)
-        let dashboard = DashboardStore(session: session, sample: true)
+        let session = EmpireSession(app: .aresium, storage: WidgetMemoryTokens(), restoreOnLaunch: false)
+        let dashboard = DashboardStore(session: session, sample: true, widgetPublisher: publisher)
         #expect(files.load() == nil)
         await dashboard.reload()
         #expect(dashboard.error == nil)
@@ -215,11 +215,11 @@ struct WidgetTests {
         var reloads = 0
         let publisher = WidgetSnapshotPublisher(store: files, reloadTimelines: { reloads += 1 })
         let transport = WidgetTestTransport(data: try JSONEncoder().encode(serverDashboard()))
-        let session = EmpireSession(storage: WidgetMemoryTokens(), client: EmpireAuthClient(transport: transport),
-                                    restoreOnLaunch: false, widgetPublisher: publisher)
+        let session = EmpireSession(app: .aresium, storage: WidgetMemoryTokens(), client: EmpireAuthClient(transport: transport),
+                                    restoreOnLaunch: false)
         await session.login(email: "fictional@example.invalid", password: "fictional-password")
         #expect(session.token != nil)
-        let dashboard = DashboardStore(session: session, client: APIClient(transport: transport))
+        let dashboard = DashboardStore(session: session, client: APIClient(transport: transport), widgetPublisher: publisher)
         await dashboard.reload()
         let saved = try #require(files.load())
         #expect(saved == WidgetSnapshot(dashboard: try serverDashboard()))
@@ -261,9 +261,9 @@ struct WidgetTests {
         if case .failed = unavailable.read() {} else { Issue.record("Unavailable container must retry") }
     }
 
-    @Test func defaultSessionPublisherIsIsolatedFromAppGroup() throws {
-        let first = EmpireSession(storage: WidgetMemoryTokens(), restoreOnLaunch: false)
-        let second = EmpireSession(storage: WidgetMemoryTokens(), restoreOnLaunch: false)
+    @Test func defaultStorePublisherIsIsolatedFromAppGroup() throws {
+        let first = DashboardStore(session: EmpireSession(app: .aresium, storage: WidgetMemoryTokens(), restoreOnLaunch: false))
+        let second = DashboardStore(session: EmpireSession(app: .aresium, storage: WidgetMemoryTokens(), restoreOnLaunch: false))
         try first.widgetPublisher.publish(Dashboard.sample())
         #expect(first.widgetPublisher.store.load() != nil)
         #expect(second.widgetPublisher.store.load() == nil)

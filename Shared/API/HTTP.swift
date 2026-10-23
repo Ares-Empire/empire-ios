@@ -1,5 +1,8 @@
 import Foundation
 
+/// The network layer every Empire app shares: transport, status handling and errors.
+/// Statuses follow the Empire contract (aresium/docs/API-DATA.md → Auth): 401 the token is rejected,
+/// 403 the account may not use this service, 503 the account server could not be asked.
 protocol HTTPTransport {
     func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse)
 }
@@ -20,7 +23,7 @@ func checkResponse(_ response: HTTPURLResponse, data: Data, onUnauthorized: () -
     switch response.statusCode {
     case 200..<300: return
     case 401: onUnauthorized(); throw HTTPError.unauthorized
-    case 403: throw HTTPError.server(403, body?.error ?? body?.message ?? "This account has no access to Aresium.")
+    case 403: throw HTTPError.server(403, body?.error ?? body?.message ?? "This account has no access.")
     case 503: throw HTTPError.server(503, "Login service unavailable, try again")
     default: throw HTTPError.server(response.statusCode, body?.error ?? body?.message)
     }
@@ -34,19 +37,5 @@ enum HTTPError: LocalizedError {
         case .unauthorized: "Your session expired. Please log in again."
         case let .server(status, message): message ?? "The request failed (HTTP \(status)). Please try again."
         }
-    }
-}
-
-struct APIClient {
-    var transport: any HTTPTransport = URLSessionTransport()
-    var baseURL = URL(string: "https://aresium.de")!
-
-    func dashboard(token: String, onUnauthorized: () -> Void) async throws -> Dashboard {
-        var request = URLRequest(url: baseURL.appendingPathComponent("api/data"))
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        request.timeoutInterval = 30
-        let (data, response) = try await transport.send(request)
-        try checkResponse(response, data: data, onUnauthorized: onUnauthorized)
-        return try Dashboard.decode(data)
     }
 }
