@@ -65,9 +65,9 @@ milestones, a bug that comes back, and every 2–3 weeks over merged Codex work.
 - MacBook: Xcode 27.1 with two simulator runtimes (2026-10-23): **iOS 27.0** for all normal iPhones (use this)
   and iOS 27.1, which only supports the foldable "iPhone Duo" (its screenshots came out black). The simulator
   window app is called **DeviceHub** in Xcode 27; `xcrun simctl` works without it.
-- Apple Developer Program (paid, for TestFlight; decided in `ares-empire/docs/IPHONE-APPS.md`): Patrik applying
-  2026-10-23. Xcode is signed in (2026-10-23), so far with only the free "Personal Team"; the paid team
-  appears under the same account once Apple approves. Until then: simulator only, no TestFlight (a free
+- Apple Developer Program (paid, for TestFlight; decided in `ares-empire/docs/IPHONE-APPS.md`): payment confirmed,
+  enrollment **pending** at Apple (2026-10-23). Xcode is signed in, so far with only the free "Personal Team"; the
+  paid team appears under the same account once Apple approves (check: Xcode → Settings → Apple Accounts). Until then: simulator only, no TestFlight (a free
   Apple ID could install on the phone, but those builds stop opening after 7 days, so we don't use it).
 - Xcode project `Aresium/Aresium.xcodeproj` (2026-10-23): app + tests, folder-synchronized groups (new Swift
   files need no `project.pbxproj` edits), bundle id `de.ares-empire.aresium`, iOS 26+. Signing team: set to the
