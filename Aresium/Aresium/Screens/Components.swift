@@ -45,7 +45,8 @@ struct ScreenHeader: View {
                 if let subtitle { Text(subtitle).font(AppFont.text(12)).foregroundStyle(palette.muted).lineLimit(1) }
             }.frame(maxWidth: .infinity)
             HStack(spacing: 8) {
-                IconButton(symbol: palette.dark ? "sun.max.fill" : "moon.fill", label: "Toggle theme", palette: palette, action: toggleTheme)
+                IconButton(symbol: palette.red ? "xmark" : palette.dark ? "sun.max.fill" : "moon.fill",
+                           label: palette.red ? "Exit Aresium mode" : "Toggle theme", palette: palette, action: toggleTheme)
                 IconButton(symbol: "rectangle.portrait.and.arrow.right", label: "Log out", palette: palette, action: logout)
             }
         }.padding(.horizontal, 14).padding(.top, 8).padding(.bottom, 10)
