@@ -289,6 +289,241 @@ struct AresiumTests {
     private func sampleStore() -> DashboardStore {
         DashboardStore(session: EmpireSession(storage: MemoryTokenStorage()), sample: true)
     }
+
+    @Test func importRequestSendsTwoFilesAndBearer() async throws {
+        let transport = FakeTransport(data: importResponse())
+        let files = [ImportFile(name: "bank.csv", content: "fictional,bank\n1,2"),
+                     ImportFile(name: "paypal.xml", content: "<fictional />")]
+        var unauthorized = false
+        let response = try await APIClient(transport: transport).importFiles(files, token: "fictional-token") { unauthorized = true }
+        let request = try #require(transport.requests.first)
+        #expect(transport.requests.count == 1)
+        #expect(request.url?.absoluteString == "https://aresium.de/api/import")
+        #expect(request.httpMethod == "POST")
+        #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer fictional-token")
+        #expect(request.value(forHTTPHeaderField: "Content-Type") == "application/json")
+        let body = try JSONDecoder().decode([String: [ImportFile]].self, from: #require(request.httpBody))
+        #expect(body == ["files": files])
+        #expect(response.results.first?.account == "Fictional bank")
+        #expect(response.results.first?.total == 12)
+        #expect(!unauthorized)
+    }
+
+    @Test func importReaderSkipsOtherExtensionsAndAcceptsUppercase() throws {
+        let directory = try importDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let csv = directory.appendingPathComponent("bank.CSV")
+        let xml = directory.appendingPathComponent("paypal.XmL")
+        try Data("fictional csv".utf8).write(to: csv)
+        try Data("<fictional />".utf8).write(to: xml)
+        let ignored = directory.appendingPathComponent("missing.pdf")
+        #expect(try ImportFileReader.read([ignored, csv, xml]).map(\.name) == ["bank.CSV", "paypal.XmL"])
+        #expect(throws: ImportFileError.self) { try ImportFileReader.read([ignored]) }
+    }
+
+    @Test func importReaderAllowsExactly20MBAndNamesOversizeFile() throws {
+        let directory = try importDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("large.csv")
+        try Data(repeating: 65, count: ImportFileReader.maximumBytes).write(to: url)
+        #expect(try ImportFileReader.read([url]).first?.content.utf8.count == ImportFileReader.maximumBytes)
+        let handle = try FileHandle(forWritingTo: url)
+        try handle.seekToEnd()
+        try handle.write(contentsOf: Data([65]))
+        try handle.close()
+        do {
+            _ = try ImportFileReader.read([url])
+            Issue.record("Expected the 20 MB guard")
+        } catch { #expect(error.localizedDescription == "large.csv is too large (max 20 MB)") }
+    }
+
+    @Test func importReaderReplacesInvalidUTF8LikeWebsiteFileText() throws {
+        let directory = try importDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("latin1.csv")
+        try Data([0x61, 0x3B, 0xE4, 0x0A]).write(to: url) // Latin-1 ä is invalid UTF-8.
+        #expect(try ImportFileReader.read([url]).first?.content == "a;\u{FFFD}\n")
+    }
+
+    @Test func importSummariesMatchWebsite() throws {
+        func summary(_ results: String) throws -> String {
+            try JSONDecoder().decode(ImportResponse.self, from: Data("{\"results\":[\(results)]}".utf8)).summary
+        }
+        let one = #"{"name":"one.csv","added":1,"total":1,"account":"Fictional bank","skipped":false}"#
+        let eleven = #"{"name":"eleven.xml","added":11,"total":11,"account":"Fictional bank","skipped":false}"#
+        let skipped = #"{"name":"duplicate.csv","added":0,"total":1,"account":null,"skipped":true}"#
+        let failed = #"{"name":"bad.csv","added":0,"total":0,"account":null,"skipped":false,"error":"Unknown format"}"#
+        #expect(try summary("") == "0 new transactions imported")
+        #expect(try summary(one) == "1 new transaction imported")
+        #expect(try summary(one + "," + eleven) == "12 new transactions imported")
+        #expect(try summary(one + "," + eleven + "," + skipped) == "12 new transactions imported · 1 skipped")
+        #expect(try summary(skipped + "," + skipped) == "0 new transactions imported · 2 skipped")
+        #expect(try summary(one + "," + one + "," + one + "," + failed) == "3 added · 1 file(s) failed")
+        #expect(try summary(failed + "," + failed) == "0 added · 2 file(s) failed")
+    }
+
+    @Test(arguments: [400, 409]) func importFailureShowsServerError(status: Int) async throws {
+        let session = await importSession()
+        let dashboardTransport = FakeTransport()
+        let store = DashboardStore(session: session, client: APIClient(transport: dashboardTransport))
+        let text = status == 409 ? "an import is already running" : "no .csv/.xml files in request"
+        let transport = FakeTransport(status: status, data: try JSONEncoder().encode(["error": text]))
+        let imports = ImportStore(dashboard: store, client: APIClient(transport: transport))
+        let directory = try importDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("bank.csv")
+        try Data("fictional".utf8).write(to: url)
+        await imports.receive([url])
+        await imports.importPendingFiles()
+        #expect(imports.banner?.message == text)
+        #expect(imports.banner?.success == false)
+        #expect(session.token != nil)
+        #expect(dashboardTransport.requests.isEmpty)
+        #expect(!imports.isBusy)
+    }
+
+    @Test func importUnauthorizedLogsOut() async {
+        let session = await importSession()
+        var unauthorized = false
+        do {
+            _ = try await APIClient(transport: FakeTransport(status: 401)).importFiles(
+                [ImportFile(name: "bank.csv", content: "fictional")], token: "fictional-token") {
+                    unauthorized = true
+                    session.logOut()
+                }
+            Issue.record("Expected unauthorized")
+        } catch { #expect(error.localizedDescription == "Your session expired. Please log in again.") }
+        #expect(unauthorized)
+        #expect(session.token == nil)
+    }
+
+    @Test func successfulImportReloadsDashboardEvenWithFailedFiles() async throws {
+        let session = await importSession()
+        let dashboardTransport = FakeTransport(data: try JSONEncoder().encode(Dashboard.sample()))
+        let store = DashboardStore(session: session, client: APIClient(transport: dashboardTransport))
+        let response = Data(#"{"results":[{"name":"bank.csv","added":3,"total":3,"account":"Fictional bank","skipped":false},{"name":"bad.xml","added":0,"total":0,"account":null,"skipped":false,"error":"Unknown format"}]}"#.utf8)
+        let imports = ImportStore(dashboard: store, client: APIClient(transport: FakeTransport(data: response)))
+        let directory = try importDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("bank.csv")
+        try Data("fictional".utf8).write(to: url)
+        await imports.receive([url])
+        await imports.importPendingFiles()
+        #expect(dashboardTransport.requests.map { $0.url?.path } == ["/api/data"])
+        #expect(store.dashboard?.transactions.count == 25)
+        #expect(imports.banner?.message == "3 added · 1 file(s) failed")
+        #expect(imports.banner?.success == false)
+        #expect(!imports.isBusy)
+    }
+
+    @Test func filesReceivedBeforeLoginAreRetainedAndImportedTogetherAfterLogin() async throws {
+        let session = EmpireSession(storage: MemoryTokenStorage(), client: EmpireAuthClient(transport: FakeTransport(data: authResponse())), restoreOnLaunch: false)
+        let dashboardTransport = FakeTransport(data: try JSONEncoder().encode(Dashboard.sample()))
+        let store = DashboardStore(session: session, client: APIClient(transport: dashboardTransport))
+        let transport = FakeTransport(data: importResponse())
+        let imports = ImportStore(dashboard: store, client: APIClient(transport: transport))
+        let directory = try importDirectory()
+        let csv = directory.appendingPathComponent("bank.csv")
+        let xml = directory.appendingPathComponent("paypal.xml")
+        try Data("fictional bank".utf8).write(to: csv)
+        try Data("<fictional />".utf8).write(to: xml)
+        await imports.receive([csv])
+        await imports.receive([xml])
+        #expect(transport.requests.isEmpty)
+        #expect(!imports.isBusy)
+        try FileManager.default.removeItem(at: directory)
+        await session.login(email: "fictional@example.invalid", password: "fictional-password")
+        await imports.sessionChanged()
+        #expect(transport.requests.count == 1)
+        let body = try JSONDecoder().decode([String: [ImportFile]].self, from: #require(transport.requests.first?.httpBody))
+        #expect(body["files"] == [ImportFile(name: "bank.csv", content: "fictional bank"), ImportFile(name: "paypal.xml", content: "<fictional />")])
+        #expect(dashboardTransport.requests.count == 1)
+        #expect(imports.banner?.message == "12 new transactions imported")
+        #expect(imports.banner?.success == true)
+        await imports.sessionChanged()
+        #expect(transport.requests.count == 1)
+    }
+
+    @Test func importRefreshSupersedesAnOlderDashboardRequest() async throws {
+        let session = await importSession()
+        let dashboardTransport = PendingAPITransport(data: try JSONEncoder().encode(Dashboard.sample()))
+        let store = DashboardStore(session: session, client: APIClient(transport: dashboardTransport))
+        let oldReload = Task { await store.reload() }
+        await dashboardTransport.waitForFirstRequest()
+        let imports = ImportStore(dashboard: store, client: APIClient(transport: FakeTransport(data: importResponse())))
+        let directory = try importDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("bank.csv")
+        try Data("fictional".utf8).write(to: url)
+        await imports.receive([url])
+        await imports.importPendingFiles()
+        #expect(store.dashboard?.transactions.count == 25)
+        dashboardTransport.finishFirstRequest(status: 401)
+        await oldReload.value
+        #expect(session.token != nil)
+        #expect(store.error == nil)
+        #expect(store.dashboard?.transactions.count == 25)
+    }
+
+    @Test func incomingURLsAreAutomaticallyBatchedWhenLoggedIn() async throws {
+        let session = await importSession()
+        let dashboardTransport = FakeTransport(data: try JSONEncoder().encode(Dashboard.sample()))
+        let store = DashboardStore(session: session, client: APIClient(transport: dashboardTransport))
+        let transport = FakeTransport(data: importResponse())
+        let imports = ImportStore(dashboard: store, client: APIClient(transport: transport))
+        let directory = try importDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let csv = directory.appendingPathComponent("bank.csv")
+        let xml = directory.appendingPathComponent("paypal.xml")
+        try Data("fictional bank".utf8).write(to: csv)
+        try Data("<fictional />".utf8).write(to: xml)
+        await imports.receive([csv])
+        await imports.receive([xml])
+        #expect(imports.isBusy)
+        #expect(transport.requests.isEmpty)
+        await transport.waitForRequest()
+        #expect(transport.requests.count == 1)
+        let body = try JSONDecoder().decode([String: [ImportFile]].self, from: #require(transport.requests.first?.httpBody))
+        #expect(body["files"]?.map(\.name) == ["bank.csv", "paypal.xml"])
+        #expect(dashboardTransport.requests.count == 1)
+        #expect(!imports.isBusy)
+    }
+
+    @Test func sampleImportButtonAndSharedFilesShowUnavailableWithoutReading() async {
+        let transport = FakeTransport()
+        let imports = ImportStore(dashboard: sampleStore(), client: APIClient(transport: transport))
+        imports.showSampleUnavailable()
+        #expect(imports.banner?.message == "Not available with sample data")
+        await imports.receive([URL(fileURLWithPath: "/nonexistent/bank.csv")])
+        #expect(imports.banner?.message == "Not available with sample data")
+        #expect(transport.requests.isEmpty)
+        #expect(!imports.isBusy)
+    }
+
+    @Test func importBannerDismissesAutomatically() async throws {
+        let imports = ImportStore(dashboard: sampleStore())
+        imports.showSampleUnavailable()
+        #expect(imports.banner != nil)
+        try await Task.sleep(for: .milliseconds(4700))
+        #expect(imports.banner == nil)
+    }
+
+    private func importSession() async -> EmpireSession {
+        let session = EmpireSession(storage: MemoryTokenStorage(), client: EmpireAuthClient(transport: FakeTransport(data: authResponse())))
+        await session.login(email: "fictional@example.invalid", password: "fictional-password")
+        return session
+    }
+
+    private func importDirectory() throws -> URL {
+        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let directory = root.appendingPathComponent("build/03-test-files/\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        return directory
+    }
+
+    private func importResponse() -> Data {
+        Data(#"{"results":[{"name":"bank.csv","added":12,"total":12,"account":"Fictional bank","skipped":false}]}"#.utf8)
+    }
 }
 
 @MainActor
@@ -297,11 +532,18 @@ private final class FakeTransport: HTTPTransport {
     var status: Int
     var data: Data
     var failure: (any Error)?
+    private var requestWaiter: CheckedContinuation<Void, Never>?
     init(status: Int = 200, data: Data = Data()) { self.status = status; self.data = data }
     func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
         requests.append(request)
+        requestWaiter?.resume()
+        requestWaiter = nil
         if let failure { throw failure }
         return (data, HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: nil, headerFields: nil)!)
+    }
+    func waitForRequest() async {
+        if !requests.isEmpty { return }
+        await withCheckedContinuation { requestWaiter = $0 }
     }
 }
 
