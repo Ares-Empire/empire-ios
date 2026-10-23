@@ -32,24 +32,19 @@ shows this data) and the build is clearly bigger than the brief. Otherwise Claud
    rules instead of restating them. Commit it to `main` before branching.
 2. **Worktree:** `git worktree add -b codex/NN-slug ../empire-ios-NN-slug main`. Never let Codex (or
    uncommitted work) sit in `~/empire-ios` itself: aresync auto-commits and pushes that checkout.
-3. **Run** in the background (Claude is notified when it ends). Use the full path; `codex` is a stale alias:
+3. **Run** in the background (Claude is notified when it ends):
    ```
-   /opt/homebrew/bin/codex exec -s workspace-write -m gpt-6.1-sol -c model_reasoning_effort=high \
+   codex exec --dangerously-bypass-approvals-and-sandbox -m gpt-6.1-sol -c model_reasoning_effort=high \
      -C ../empire-ios-NN-slug -o codex-runs/NN-slug.md - < prompts/NN-slug.md
    ```
    Models: `gpt-6.1-sol` builds (`xhigh` for tricky ones), `gpt-6-astra` council seats (uses the allowance
    about 3× faster), `gpt-6-luna` trivial jobs. `-o` goes to `codex-runs/` (gitignored).
 4. **Check** (below), commit in the worktree, merge to `main`, remove the worktree, set the brief's status line.
 
-**What the sandbox allows (tested 2026-10-23 on this Mac):** Codex writes only inside the worktree, cannot
-write `.git` (Claude commits), and has no network. `swift build` and `swift test` work once the caches point
-into the worktree (commands in `AGENTS.md`). **`xcodebuild` and the simulator fail** (the sandbox blocks the
-CoreSimulator services), so Codex cannot build the app target or run it. Hence the split:
-- Logic (models, API client, decoding, formatting) lives in a local Swift package per app (e.g.
-  `Aresium/AresiumKit/`, platforms iOS + macOS) that Codex builds and tests itself.
-- The SwiftUI app target stays thin. Codex writes views blind; Claude builds with `xcodebuild` and sends any
-  compile errors back with `codex exec resume <session id> "<errors>"` (run from the same worktree).
-- No third-party packages unless a brief allows them (no network to fetch them anyway).
+**Why no sandbox:** Codex's `workspace-write` sandbox blocks `xcodebuild` and the simulator (tested
+2026-10-23), so builds run without it (Patrik's call, 2026-10-23). Codex can then build, run the simulator and
+fix its own compile errors. The limits the sandbox used to enforce are now rules in `AGENTS.md`: stay in the
+worktree, never commit or push, no installs. Council seats and reviews still run with `-s read-only`.
 
 **Checks are light, but never skipped:**
 - Build and run the tests yourself on the simulator. Never take Codex's "build succeeded" as evidence.
@@ -60,9 +55,17 @@ CoreSimulator services), so Codex cannot build the app target or run it. Hence t
 **Council** (`docs/REVIEW.md`): a few blind reviewers with distinct focuses, for hard-to-undo choices,
 milestones, a bug that comes back, and every 2–3 weeks over merged Codex work.
 
-**Allowance:** `/status` in an interactive `/opt/homebrew/bin/codex`, or the `rate_limits` line in the newest
+**Allowance:** `/status` in an interactive `codex`, or the `rate_limits` line in the newest
 `~/.codex/sessions/**/*.jsonl` (`used_percent`; window 10080 min = weekly).
 
-**Not set up yet:** no iOS simulator runtime is installed (`xcodebuild -downloadPlatform iOS`, several GB),
-and no Xcode project exists. When Claude creates it, use folder-synchronized groups (the Xcode default),
-so new Swift files need no `project.pbxproj` edits, and add the app's local package as above.
+## Setup state (update as it changes)
+
+- MacBook: Xcode 27.1 with two simulator runtimes (2026-10-23): **iOS 27.0** for all normal iPhones (use this)
+  and iOS 27.1, which only supports the foldable "iPhone Duo" (its screenshots came out black). The simulator
+  window app is called **DeviceHub** in Xcode 27; `xcrun simctl` works without it.
+- Apple Developer Program (paid, for TestFlight; decided in `ares-empire/docs/IPHONE-APPS.md`): Patrik applying
+  2026-10-23. Xcode is signed in (2026-10-23), so far with only the free "Personal Team"; the paid team
+  appears under the same account once Apple approves. Until then: simulator only, no TestFlight (a free
+  Apple ID could install on the phone, but those builds stop opening after 7 days, so we don't use it).
+- No Xcode project yet. When Claude creates it: folder-synchronized groups (the Xcode default), so new Swift
+  files need no `project.pbxproj` edits; signing team = the paid team once approved.

@@ -14,7 +14,7 @@ One or two sentences: what exists after this that does not exist now, and why it
 
 ## Build
 
-- <deliverables, file by file where known; say which go in the local package and which in the app target>
+- <deliverables, file by file where known>
 
 ## Settled: do not re-open
 
@@ -31,9 +31,9 @@ Anything missing: `TODO(api)`, never guessed.>
 
 ## Done when
 
-- `swift test` passes in the package (command in `AGENTS.md`), with new tests for <behaviour>
-- Claude: the app target builds and <screen> shows <data> on the simulator
+- `xcodebuild test` passes on your own simulator (commands in `AGENTS.md`), with new tests for <behaviour>
+- <screen> shows <data> on the simulator; save a screenshot to `build/NN-<screen>.png`
 
 ## Final message
 
-As in `AGENTS.md`: files changed, the exact build and test summary lines, what is unbuilt, missing or doubtful.
+As in `AGENTS.md`: files changed, the exact build and test summary lines, what is missing or doubtful.
