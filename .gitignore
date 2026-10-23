@@ -13,3 +13,5 @@ build/
 *.p8
 # macOS
 .DS_Store
+# Codex run outputs (final messages), see CLAUDE.md → Workflow
+codex-runs/
