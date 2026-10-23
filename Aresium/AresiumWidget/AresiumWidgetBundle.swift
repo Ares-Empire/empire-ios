@@ -14,7 +14,7 @@ struct AresiumWidgetBundle: WidgetBundle {
 struct MonthlySpendingWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: "AresiumMonthlySpending", provider: SpendingProvider()) { entry in
-            SpendingWidgetView(snapshot: entry.snapshot, theme: entry.theme)
+            SpendingWidgetView(snapshot: entry.snapshot, theme: entry.theme, date: entry.date)
                 .containerBackground(for: .widget) { Wall(palette: Palette(theme: entry.theme)) }
                 .environment(\.colorScheme, entry.theme == .light ? .light : .dark)
         }
@@ -29,7 +29,7 @@ struct SpendingCategoriesWidget: Widget {
         AppIntentConfiguration(kind: "AresiumSpendingCategories", intent: SpendingCategoriesIntent.self,
                                provider: CategoriesProvider()) { entry in
             CategoriesWidgetView(snapshot: entry.snapshot, firstCategory: entry.firstCategory,
-                                 secondCategory: entry.secondCategory, theme: entry.theme)
+                                 secondCategory: entry.secondCategory, theme: entry.theme, date: entry.date)
                 .containerBackground(for: .widget) { Wall(palette: Palette(theme: entry.theme)) }
                 .environment(\.colorScheme, entry.theme == .light ? .light : .dark)
         }
