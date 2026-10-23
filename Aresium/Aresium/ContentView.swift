@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ContentView: View {
     @State private var store: DashboardStore
+    @State private var imports: ImportStore
     @State private var dark = true
     @State private var current = true
     @State private var side = DashboardSide.expenses
@@ -14,9 +15,15 @@ struct ContentView: View {
     init(arguments: [String] = ProcessInfo.processInfo.arguments) {
         let sample = arguments.contains("-sampleData")
         let session = EmpireSession(restoreOnLaunch: !sample)
-        _store = State(initialValue: DashboardStore(session: session, sample: sample))
+        let store = DashboardStore(session: session, sample: sample)
+        let imports = ImportStore(dashboard: store)
+        _store = State(initialValue: store)
+        _imports = State(initialValue: imports)
         _sampleActive = State(initialValue: sample)
         if sample {
+            if arguments.contains("-sampleImportResult") {
+                imports.show("12 new transactions imported · 1 skipped", success: true)
+            }
             let side: DashboardSide = arguments.contains("-sampleIncome") ? .income : .expenses
             _side = State(initialValue: side)
             _current = State(initialValue: !arguments.contains("-sampleOverview"))
@@ -39,7 +46,7 @@ struct ContentView: View {
                 NavigationStack(path: $path) {
                     VStack(spacing: 0) {
                         header()
-                        StartScreen(store: store, palette: palette, current: $current, side: $side, graph: $graph) { path.append($0) }
+                        StartScreen(store: store, imports: imports, palette: palette, current: $current, side: $side, graph: $graph) { path.append($0) }
                     }
                     .background { Wall(palette: palette) }
                     .toolbar(.hidden, for: .navigationBar)
@@ -65,6 +72,13 @@ struct ContentView: View {
         .task { if !store.isSample { await session.restore() } }
         .onChange(of: session.token) { _, token in
             if token == nil { store.clear(); path = [] }
+            Task { await imports.sessionChanged() }
+        }
+        .onOpenURL { url in
+            if url.isFileURL { Task { await imports.receive([url]) } }
+        }
+        .overlay(alignment: .bottom) {
+            ImportFeedback(store: imports, palette: palette)
         }
     }
 
@@ -84,6 +98,7 @@ struct ContentView: View {
             if sampleActive {
                 sampleActive = false
                 store = DashboardStore(session: EmpireSession(restoreOnLaunch: false))
+                imports = ImportStore(dashboard: store)
             }
             else { session.logOut() }
         })

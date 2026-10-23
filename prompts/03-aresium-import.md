@@ -1,6 +1,6 @@
 # 03: Import bank and PayPal exports
 
-Status: draft
+Status: merged 2026-10-23 (merged together with 03; 44 tests pass on the combined code).
 Branch: `codex/03-aresium-import` · Worktree: `../empire-ios-03-aresium-import` · Model: `gpt-6.1-sol`, effort `high`
 
 ## Goal

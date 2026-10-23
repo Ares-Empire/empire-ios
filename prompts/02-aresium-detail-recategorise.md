@@ -1,6 +1,6 @@
 # 02: Transaction detail and recategorise
 
-Status: draft
+Status: merged 2026-10-23 (merged together with 03; 44 tests pass on the combined code).
 Branch: `codex/02-aresium-detail` · Worktree: `../empire-ios-02-aresium-detail` · Model: `gpt-6.1-sol`, effort `high`
 
 ## Goal

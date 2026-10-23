@@ -72,6 +72,13 @@ final class DashboardStore {
         }
     }
 
+    func reloadAfterImport() async {
+        // Supersede a fetch started before the import, preserving the visible dashboard meanwhile.
+        generation += 1
+        isLoading = false
+        await reload()
+    }
+
     func clear() {
         generation += 1
         isLoading = false

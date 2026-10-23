@@ -8,6 +8,7 @@ struct DashboardRoute: Hashable {
 
 struct StartScreen: View {
     let store: DashboardStore
+    let imports: ImportStore
     let palette: Palette
     @Binding var current: Bool
     @Binding var side: DashboardSide
@@ -21,6 +22,7 @@ struct StartScreen: View {
                     Text("Overview").tag(false)
                 }.pickerStyle(.segmented).frame(maxWidth: 235)
                 Spacer()
+                ImportButton(store: imports, sample: store.isSample, palette: palette)
                 IconButton(symbol: "chart.line.uptrend.xyaxis", label: "Toggle graph", palette: palette, active: graph) {
                     withAnimation(.easeInOut(duration: 0.3)) { graph.toggle() }
                 }
