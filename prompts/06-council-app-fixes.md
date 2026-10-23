@@ -1,6 +1,6 @@
 # 06: App fixes from the pre-TestFlight council
 
-Status: draft
+Status: merged 2026-10-23. 95 tests; Release binary checked for debug hooks. On-device behaviour (backgrounding, file protection, Inbox path) still to check on the phone.
 Branch: `codex/06-council-app` · Worktree: `../empire-ios-06-council-app` · Model: `gpt-6.1-sol`, effort `high`
 
 ## Goal
