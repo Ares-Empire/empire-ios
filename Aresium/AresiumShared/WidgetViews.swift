@@ -15,7 +15,7 @@ struct SpendingWidgetView: View {
                     HStack(alignment: .firstTextBaseline) {
                         Text(snapshot.monthLabel).font(AppFont.text(14))
                         Spacer(minLength: 8)
-                        Text(Money.precise(snapshot.expense)).font(AppFont.number(20))
+                        Text(Money.precise(snapshot.expense)).privacySensitive().font(AppFont.number(20))
                             .minimumScaleFactor(0.7).lineLimit(1)
                     }.foregroundStyle(palette.ink)
                     Chart(Array(snapshot.dayExpenseRunning.enumerated()), id: \.offset) { point in
@@ -39,6 +39,7 @@ struct SpendingWidgetView: View {
                     .chartYAxis(.hidden)
                     .accessibilityLabel("This month's spending")
                     .accessibilityValue(Money.precise(snapshot.expense))
+                    .privacySensitive()
                     HStack {
                         Text("ARESIUM").tracking(2).font(AppFont.text(8))
                         Spacer()
@@ -88,7 +89,7 @@ struct CategoriesWidgetView: View {
                     .font(.system(size: 17, weight: .medium)).frame(width: 21)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(category.name).font(AppFont.text(11)).lineLimit(1).minimumScaleFactor(0.7)
-                    Text(Money.precise(category.total)).font(AppFont.number(16)).lineLimit(1).minimumScaleFactor(0.7)
+                    Text(Money.precise(category.total)).privacySensitive().font(AppFont.number(16)).lineLimit(1).minimumScaleFactor(0.7)
                 }
                 Spacer(minLength: 0)
             }

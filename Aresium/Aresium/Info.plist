@@ -3,6 +3,8 @@
 <!-- Merged with the generated Info.plist (GENERATE_INFOPLIST_FILE). Only what build settings cannot express. -->
 <plist version="1.0">
 <dict>
+    <key>UILaunchScreen</key>
+    <dict><key>UIColorName</key><string>LaunchBackground</string></dict>
     <key>CFBundleURLTypes</key>
     <array>
         <dict>

@@ -40,27 +40,41 @@ struct ImportFeedback: View {
 
     var body: some View {
         Group {
-            if let banner = store.banner { ImportToast(banner: banner, palette: palette) }
+            if let banner = store.banner { ImportToast(banner: banner, store: store, palette: palette) }
         }
     }
 }
 
 private struct ImportToast: View {
     let banner: ImportBanner
+    let store: ImportStore
     let palette: Palette
 
     var body: some View {
-        HStack(spacing: 9) {
-            Image(systemName: banner.success ? "checkmark.circle" : "exclamationmark.circle")
-                .foregroundStyle(banner.success ? palette.income : palette.expense)
-            Text(banner.message).font(AppFont.text(13, weight: .semibold))
-                .foregroundStyle(palette.ink).fixedSize(horizontal: false, vertical: true)
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 9) {
+                Image(systemName: banner.success ? "checkmark.circle" : "exclamationmark.circle")
+                    .foregroundStyle(banner.success ? palette.income : palette.expense)
+                Text(banner.message).font(AppFont.text(13, weight: .semibold))
+                    .foregroundStyle(palette.ink).fixedSize(horizontal: false, vertical: true)
+            }
+            ForEach(Array(banner.files.enumerated()), id: \.offset) { _, result in
+                Text(result).font(AppFont.text(12)).foregroundStyle(palette.secondary)
+            }
+            HStack(spacing: 24) {
+                if store.canRetry {
+                    Button("Retry") { Task { await store.importPendingFiles() } }
+                    Button("Discard") { store.discard() }
+                } else {
+                    Button("Dismiss") { store.dismiss() }
+                }
+            }.font(AppFont.text(13, weight: .bold)).tint(palette.ink)
         }
         .padding(14)
         .background(palette.card2, in: RoundedRectangle(cornerRadius: 14))
         .overlay(RoundedRectangle(cornerRadius: 14).stroke(palette.line))
         .padding(.horizontal, 18).padding(.bottom, 14)
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .contain)
         .accessibilityAddTraits(.updatesFrequently)
     }
 }

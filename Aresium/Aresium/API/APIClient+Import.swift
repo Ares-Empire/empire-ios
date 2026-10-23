@@ -13,10 +13,13 @@ struct ImportResponse: Decodable {
         let account: String?
         let skipped: Bool
         let error: String?
+
+        var displayMessage: String {
+            if let error, !error.isEmpty { return "\(name): \(error)" }
+            return "\(name): \(added) added" + (skipped ? " · skipped" : "")
+        }
     }
-
     let results: [Result]
-
     var summary: String {
         let added = results.reduce(0) { $0 + $1.added }
         let failed = results.filter { !($0.error ?? "").isEmpty }.count
@@ -27,28 +30,46 @@ struct ImportResponse: Decodable {
     }
 }
 
+struct ImportRequestPlan {
+    static let maximumBytes = 25 * 1024 * 1024
+    struct Body: Encodable { let files: [ImportFile] }
+    let batches: [[ImportFile]]
+    let refused: [ImportFile]
+
+    static func encode(_ files: [ImportFile]) throws -> Data { try JSONEncoder().encode(Body(files: files)) }
+
+    init(files: [ImportFile], maximumBytes: Int = Self.maximumBytes) throws {
+        var batches: [[ImportFile]] = []
+        var current: [ImportFile] = []
+        var refused: [ImportFile] = []
+        for file in files {
+            guard try Self.encode([file]).count <= maximumBytes else { refused.append(file); continue }
+            if try Self.encode(current + [file]).count > maximumBytes {
+                batches.append(current)
+                current = []
+            }
+            current.append(file)
+        }
+        if !current.isEmpty { batches.append(current) }
+        self.batches = batches
+        self.refused = refused
+    }
+}
+
 extension APIClient {
     func importFiles(_ files: [ImportFile], token: String, onUnauthorized: () -> Void) async throws -> ImportResponse {
-        struct Body: Encodable { let files: [ImportFile] }
-        struct Failure: Decodable { let error: String }
-
+        let body = try ImportRequestPlan.encode(files)
+        guard body.count <= ImportRequestPlan.maximumBytes else {
+            throw HTTPError.server(413, "Import request exceeds 25 MB. Split the files and try again.")
+        }
         var request = URLRequest(url: baseURL.appendingPathComponent("api/import"))
         request.httpMethod = "POST"
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONEncoder().encode(Body(files: files))
-        // The server imports and then categorises the whole table before it answers; a timeout here would
-        // report a successful import as failed, so allow well beyond the slowest import seen (539 rows).
+        request.httpBody = body
         request.timeoutInterval = 120
         let (data, response) = try await transport.send(request)
-        if response.statusCode == 401 {
-            onUnauthorized()
-            throw HTTPError.unauthorized
-        }
-        guard (200..<300).contains(response.statusCode) else {
-            let message = try? JSONDecoder().decode(Failure.self, from: data).error
-            throw HTTPError.server(response.statusCode, message ?? "Import failed (\(response.statusCode))")
-        }
+        try checkResponse(response, data: data, onUnauthorized: onUnauthorized)
         return try JSONDecoder().decode(ImportResponse.self, from: data)
     }
 }

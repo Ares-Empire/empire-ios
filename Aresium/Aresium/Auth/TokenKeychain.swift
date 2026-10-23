@@ -53,3 +53,13 @@ struct KeychainError: LocalizedError {
     let status: OSStatus
     var errorDescription: String? { "Secure token storage failed (\(status)). Please try again." }
 }
+
+/// The install flag is deliberately separate from the Keychain, which survives uninstall.
+enum FirstLaunchTokenReset {
+    static let key = "aresium.hasLaunched"
+    static func run(storage: any TokenStorage, defaults: UserDefaults) throws {
+        guard !defaults.bool(forKey: key) else { return }
+        try storage.delete()
+        defaults.set(true, forKey: key)
+    }
+}

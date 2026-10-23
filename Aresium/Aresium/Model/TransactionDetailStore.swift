@@ -20,6 +20,7 @@ final class TransactionDetailStore {
     private let transaction: Transaction
     private let dashboardStore: DashboardStore
     private let client: APIClient
+    private var retryDropCurrent = false
 
     init(transaction: Transaction, dashboardStore: DashboardStore, client: APIClient) {
         self.transaction = transaction
@@ -63,6 +64,7 @@ final class TransactionDetailStore {
             detail = loaded
         } catch {
             guard isCurrent(generation, token: token) else { return }
+            dashboardStore.session.handleAuthFailure(error, generation: generation)
             loadError = error.localizedDescription
         }
     }
@@ -91,6 +93,7 @@ final class TransactionDetailStore {
             saveError = "Not available with sample data"
             return
         }
+        retryDropCurrent = dropCurrent
         isSaving = true
         saveError = nil
         defer { isSaving = false }
@@ -115,11 +118,14 @@ final class TransactionDetailStore {
             await dashboardStore.reloadAfterTransactionChange()
         } catch {
             guard isCurrent(generation, token: token) else { return }
+            dashboardStore.session.handleAuthFailure(error, generation: generation)
             saveError = error.localizedDescription
         }
     }
 
+    func retrySave() async { await save(dropCurrent: retryDropCurrent) }
+
     private func isCurrent(_ generation: Int, token: String?) -> Bool {
-        dashboardStore.generation == generation && dashboardStore.session.token == token
+        dashboardStore.generation == generation
     }
 }

@@ -171,6 +171,36 @@ struct WidgetTests {
         #expect(reloads == 2)
     }
 
+    @Test func readFailuresRetryInThirtyMinutesAndOtherStatesAtNextMonth() throws {
+        let root = try directory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = WidgetSnapshotStore(directory: root)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let now = calendar.date(from: DateComponents(year: 2026, month: 12, day: 31, hour: 23, minute: 45))!
+        let nextMonth = calendar.date(from: DateComponents(year: 2027, month: 1, day: 1))!
+        if case .missing = store.read() {} else { Issue.record("Expected missing file") }
+        #expect(store.read().nextRefresh(after: now, calendar: calendar) == nextMonth)
+        try Data("invalid".utf8).write(to: root.appendingPathComponent("widget-snapshot.json"))
+        if case .failed = store.read() {} else { Issue.record("Expected failed read") }
+        #expect(store.read().nextRefresh(after: now, calendar: calendar) == now.addingTimeInterval(1800))
+        try store.save(#require(WidgetSnapshot.sample))
+        if case .snapshot = store.read() {} else { Issue.record("Expected snapshot") }
+        #expect(store.read().nextRefresh(after: now, calendar: calendar) == nextMonth)
+        let unavailable = WidgetSnapshotStore(directory: nil)
+        if case .failed = unavailable.read() {} else { Issue.record("Unavailable container must retry") }
+    }
+
+    @Test func defaultSessionPublisherIsIsolatedFromAppGroup() throws {
+        let first = EmpireSession(storage: WidgetMemoryTokens(), restoreOnLaunch: false)
+        let second = EmpireSession(storage: WidgetMemoryTokens(), restoreOnLaunch: false)
+        try first.widgetPublisher.publish(Dashboard.sample())
+        #expect(first.widgetPublisher.store.load() != nil)
+        #expect(second.widgetPublisher.store.load() == nil)
+        try first.widgetPublisher.clear()
+        try second.widgetPublisher.clear()
+    }
+
     @Test func widgetDateAndMoneyFormatting() {
         #expect(WidgetFormatting.freshness("2026-10-22") == "up to 22 Oct")
         #expect(WidgetFormatting.freshness(nil) == nil)

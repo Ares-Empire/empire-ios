@@ -187,11 +187,13 @@ struct TransactionsScreen: View {
             TransactionDetailSheet(store: store.transactionDetailStore(for: transaction), palette: palette)
         }
         .task {
+            #if DEBUG
             let arguments = ProcessInfo.processInfo.arguments
             if store.isSample, let index = arguments.firstIndex(of: "-sampleTransaction"),
                arguments.indices.contains(index + 1) {
                 selectedTransaction = store.dashboard?.transactions.first { $0.id == arguments[index + 1] }
             }
+            #endif
         }
     }
 }

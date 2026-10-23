@@ -5,9 +5,11 @@ struct ContentView: View {
     @State private var imports: ImportStore
     @AppStorage(ThemeState.preferenceKey) private var rememberedTheme = AppTheme.dark.rawValue
     @AppStorage(ThemeState.previousPreferenceKey) private var rememberedPreviousTheme = AppTheme.dark.rawValue
+    @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var theme: ThemeState
     private let pausedIntroProgress: Double?
+    private let restoresOnLaunch: Bool
     @State private var current = true
     @State private var side = DashboardSide.expenses
     @State private var graph = false
@@ -17,10 +19,17 @@ struct ContentView: View {
     private var session: EmpireSession { store.session }
 
     init(arguments: [String] = ProcessInfo.processInfo.arguments) {
-        let sample = arguments.contains("-sampleData")
+        var sample = false
+        var skipRestore = false
+        #if DEBUG
+        sample = arguments.contains("-sampleData")
+        let debugLaunch = DebugLaunch.isTesting || sample || arguments.contains("-sampleAuthUnavailable") || arguments.contains("-sampleLoginWaiting")
+        skipRestore = DebugLaunch.isTesting || arguments.contains("-sampleLoginWaiting")
+        #endif
         var initialTheme = ThemeState(rememberedValue: UserDefaults.standard.string(forKey: ThemeState.preferenceKey),
                                       previousValue: UserDefaults.standard.string(forKey: ThemeState.previousPreferenceKey))
         var pausedProgress: Double?
+        #if DEBUG
         if sample {
             initialTheme = ThemeState(rememberedValue: arguments.contains("-sampleRed") ? "red" :
                                         arguments.contains("-sampleLight") ? "light" : "dark")
@@ -35,15 +44,28 @@ struct ContentView: View {
         if sample, arguments.contains("-sampleIntro"), pausedProgress == nil {
             initialTheme.send(.band, reduceMotion: false)
         }
+        #endif
         _theme = State(initialValue: initialTheme)
         pausedIntroProgress = pausedProgress
-        let session = EmpireSession(restoreOnLaunch: !sample)
+        restoresOnLaunch = !sample && !skipRestore
+        #if DEBUG
+        var session = EmpireSession(restoreOnLaunch: !sample && !skipRestore,
+                                    widgetPublisher: debugLaunch ? .temporary() : WidgetSnapshotPublisher(),
+                                    installDefaults: debugLaunch ? nil : .standard)
+        if DebugLaunch.isTesting { session = DebugLaunch.testingSession() }
+        if arguments.contains("-sampleAuthUnavailable") { session = DebugLaunch.unavailableSession() }
+        #else
+        let session = EmpireSession(widgetPublisher: WidgetSnapshotPublisher(), installDefaults: .standard)
+        #endif
         let store = DashboardStore(session: session, sample: sample)
         let imports = ImportStore(dashboard: store)
         _store = State(initialValue: store)
         _imports = State(initialValue: imports)
         _sampleActive = State(initialValue: sample)
+        #if DEBUG
+        if arguments.contains("-sampleLoginWaiting") { imports.seedDebugWaitingFiles() }
         if sample {
+            if arguments.contains("-sampleImportFailed") { imports.seedDebugImportFailure() }
             if arguments.contains("-sampleImportResult") {
                 imports.show("12 new transactions imported · 1 skipped", success: true)
             }
@@ -60,6 +82,7 @@ struct ContentView: View {
                 _path = State(initialValue: routes)
             }
         }
+        #endif
     }
 
     var body: some View {
@@ -69,6 +92,7 @@ struct ContentView: View {
                     NavigationStack(path: $path) {
                         VStack(spacing: 0) {
                             header()
+                            restoreFeedback
                             StartScreen(store: store, imports: imports, palette: palette, current: $current, side: $side, graph: $graph) { path.append($0) }
                             band(in: geometry)
                         }
@@ -77,6 +101,7 @@ struct ContentView: View {
                         .navigationDestination(for: DashboardRoute.self) { route in
                             VStack(spacing: 0) {
                                 header(route)
+                                restoreFeedback
                                 if route.month != nil {
                                     TransactionsScreen(route: route, store: store, palette: palette)
                                 } else {
@@ -89,7 +114,7 @@ struct ContentView: View {
                 } else if session.isRestoring {
                     ProgressView("Restoring session…").font(AppFont.text(14)).frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
-                    LoginScreen(session: session, palette: palette)
+                    LoginScreen(session: session, palette: palette, waitingFiles: imports.waitingCount)
                 }
             }
             .foregroundStyle(palette.ink).background { Wall(palette: palette) }
@@ -113,14 +138,19 @@ struct ContentView: View {
             .onChange(of: theme.previousTheme) { _, value in
                 if !store.isSample { rememberedPreviousTheme = value.rawValue }
             }
-            .task { if !store.isSample { await session.restore() } }
+            .task {
+                if restoresOnLaunch { await session.restore() }
+            }
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .active { Task { await store.refreshOnForeground() } }
+            }
             .task { store.setWidgetTheme(theme.theme) }
-            .onChange(of: session.token) { _, token in
-                if token == nil { store.clear(); path = [] }
+            .onChange(of: session.generation) { _, _ in
+                if session.token == nil { path = [] }
                 Task { await imports.sessionChanged() }
             }
             .onOpenURL { url in
-                if url.isFileURL { Task { await imports.receive([url]) } }
+                if url.isFileURL { Task { await imports.receive([url], source: .shared) } }
                 else if let destination = AresiumURL(url: url) {
                     current = true
                     side = .expenses
@@ -137,6 +167,20 @@ struct ContentView: View {
         }
     }
 
+    @ViewBuilder private var restoreFeedback: some View {
+        if session.needsRestoreRetry, let error = session.error {
+            HStack {
+                Text(error).foregroundStyle(palette.expense)
+                Button("Retry") {
+                    Task {
+                        await session.restore()
+                        if !session.needsRestoreRetry { await store.refreshOnForeground() }
+                    }
+                }.disabled(session.isBusy)
+            }.font(AppFont.text(13)).padding(12)
+        }
+    }
+
     private func band(in geometry: GeometryProxy) -> some View {
         AresiumBand(palette: palette,
                     screenSize: CGSize(width: geometry.size.width,
@@ -147,13 +191,15 @@ struct ContentView: View {
     @MainActor
     private func runTransition() async {
         guard let transition = theme.transition, pausedIntroProgress == nil else { return }
+        let haptic = UIImpactFeedbackGenerator(style: .soft)
+        haptic.prepare()
         let hero = transition.entering ? 0.26 : 0.30
         let clock = ContinuousClock()
         let start = clock.now
         do {
             try await clock.sleep(until: start.advanced(by: .seconds(IntroTimeline.duration * hero)))
             guard theme.transition?.id == transition.id else { return }
-            UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+            haptic.impactOccurred()
             try await clock.sleep(until: start.advanced(by: .seconds(IntroTimeline.duration * IntroTimeline.swapAt)))
             theme.advance(to: IntroTimeline.swapAt)
             try await clock.sleep(until: start.advanced(by: .seconds(IntroTimeline.duration)))
@@ -180,7 +226,8 @@ struct ContentView: View {
             store.clear()
             if sampleActive {
                 sampleActive = false
-                store = DashboardStore(session: EmpireSession(restoreOnLaunch: false))
+                store = DashboardStore(session: EmpireSession(restoreOnLaunch: false, widgetPublisher: WidgetSnapshotPublisher(),
+                                                              installDefaults: .standard))
                 imports = ImportStore(dashboard: store)
             }
             else { session.logOut() }
@@ -188,4 +235,6 @@ struct ContentView: View {
     }
 }
 
+#if DEBUG
 #Preview { ContentView(arguments: ["-sampleData"]) }
+#endif

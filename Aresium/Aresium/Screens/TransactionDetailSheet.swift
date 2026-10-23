@@ -33,12 +33,14 @@ struct TransactionDetailSheet: View {
             if store.detail == nil { await store.load() }
             // Sample-only routing for repeatable simulator screenshots, like the
             // existing -sampleCategory / -sampleMonth launch arguments.
+            #if DEBUG
             let arguments = ProcessInfo.processInfo.arguments
             if store.isSample, let index = arguments.firstIndex(of: "-sampleRecategorise"),
                arguments.indices.contains(index + 1) {
                 store.beginRecategorisation()
                 store.mode = arguments[index + 1] == "add" ? .add : .switchCategory
             }
+            #endif
         }
     }
 

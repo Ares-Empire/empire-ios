@@ -131,7 +131,7 @@ struct AresiumTests {
             _ = try await APIClient(transport: FakeTransport(status: 503, data: Data(#"{"message":"Temporarily unavailable"}"#.utf8)))
                 .dashboard(token: "fictional-token") { unauthorized = true }
             Issue.record("Expected server failure")
-        } catch { #expect(error.localizedDescription == "Temporarily unavailable") }
+        } catch { #expect(error.localizedDescription == "Login service unavailable, try again") }
         #expect(!unauthorized)
     }
 
@@ -513,7 +513,7 @@ struct AresiumTests {
     }
 
     @Test func importRequestSendsTwoFilesAndBearer() async throws {
-        let transport = FakeTransport(data: importResponse())
+        let transport = FakeTransport(data: importResponse(includingPayPal: true))
         let files = [ImportFile(name: "bank.csv", content: "fictional,bank\n1,2"),
                      ImportFile(name: "paypal.xml", content: "<fictional />")]
         var unauthorized = false
@@ -543,7 +543,7 @@ struct AresiumTests {
         #expect(throws: ImportFileError.self) { try ImportFileReader.read([ignored]) }
     }
 
-    @Test func importReaderAllowsExactly20MBAndNamesOversizeFile() throws {
+    @Test func importReaderBoundsRawBytesAndNamesOversizeFile() throws {
         let directory = try importDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
         let url = directory.appendingPathComponent("large.csv")
@@ -555,8 +555,8 @@ struct AresiumTests {
         try handle.close()
         do {
             _ = try ImportFileReader.read([url])
-            Issue.record("Expected the 20 MB guard")
-        } catch { #expect(error.localizedDescription == "large.csv is too large (max 20 MB)") }
+            Issue.record("Expected the raw file size guard")
+        } catch { #expect(error.localizedDescription == "large.csv is too large (max 25 MB before JSON encoding)") }
     }
 
     @Test func importReaderReplacesInvalidUTF8LikeWebsiteFileText() throws {
@@ -642,7 +642,7 @@ struct AresiumTests {
         let session = EmpireSession(storage: MemoryTokenStorage(), client: EmpireAuthClient(transport: FakeTransport(data: authResponse())), restoreOnLaunch: false)
         let dashboardTransport = FakeTransport(data: try JSONEncoder().encode(Dashboard.sample()))
         let store = DashboardStore(session: session, client: APIClient(transport: dashboardTransport))
-        let transport = FakeTransport(data: importResponse())
+        let transport = FakeTransport(data: importResponse(includingPayPal: true))
         let imports = ImportStore(dashboard: store, client: APIClient(transport: transport))
         let directory = try importDirectory()
         let csv = directory.appendingPathComponent("bank.csv")
@@ -691,7 +691,7 @@ struct AresiumTests {
         let session = await importSession()
         let dashboardTransport = FakeTransport(data: try JSONEncoder().encode(Dashboard.sample()))
         let store = DashboardStore(session: session, client: APIClient(transport: dashboardTransport))
-        let transport = FakeTransport(data: importResponse())
+        let transport = FakeTransport(data: importResponse(includingPayPal: true))
         let imports = ImportStore(dashboard: store, client: APIClient(transport: transport))
         let directory = try importDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -722,17 +722,476 @@ struct AresiumTests {
         #expect(!imports.isBusy)
     }
 
-    @Test func importBannerDismissesAutomatically() async throws {
+    @Test func failedImportBannerPersistsUntilDismissed() async throws {
         let imports = ImportStore(dashboard: sampleStore())
         imports.showSampleUnavailable()
         #expect(imports.banner != nil)
-        // Rendering tests can delay the dismissal task's initial scheduling on the main actor.
-        let clock = ContinuousClock()
-        let deadline = clock.now.advanced(by: .seconds(7))
-        while imports.banner != nil, clock.now < deadline {
-            try await clock.sleep(for: .milliseconds(50))
-        }
+        try await Task.sleep(for: .seconds(4.7))
+        #expect(imports.banner != nil)
+        imports.dismiss()
         #expect(imports.banner == nil)
+    }
+
+    @Test(arguments: [401, 403, 503])
+    func authStatusesAcrossEveryAPIRoute(status: Int) async throws {
+        for action in ["dashboard", "detail", "switch", "tags", "import"] {
+            let transport = FakeTransport(status: status, data: Data(#"{"error":"No access from server"}"#.utf8))
+            let client = APIClient(transport: transport)
+            var unauthorized = false
+            let callback = { unauthorized = true }
+            do {
+                switch action {
+                case "dashboard": _ = try await client.dashboard(token: "fictional", onUnauthorized: callback)
+                case "detail": _ = try await client.transactionDetail(id: "fictional", token: "fictional", onUnauthorized: callback)
+                case "switch": _ = try await client.switchCategory(id: "fictional", category: "Home", token: "fictional", onUnauthorized: callback)
+                case "tags": _ = try await client.setTransactionTags(id: "fictional", categories: [], dropCurrent: false, token: "fictional", onUnauthorized: callback)
+                default: _ = try await client.importFiles([.init(name: "bank.csv", content: "fictional")], token: "fictional", onUnauthorized: callback)
+                }
+                Issue.record("Expected failure for \(action)")
+            } catch {
+                #expect(error.localizedDescription == (status == 401 ? "Your session expired. Please log in again." :
+                    status == 503 ? "Login service unavailable, try again" : "No access from server"))
+            }
+            #expect(unauthorized == (status == 401))
+        }
+    }
+
+    @Test(arguments: [403, 503, 200])
+    func revokedOrUnavailableRestoreHandlesSavedSessionAndWidget(status: Int) async throws {
+        let storage = MemoryTokenStorage()
+        let transport = FakeTransport(data: authResponse())
+        let session = EmpireSession(storage: storage, client: EmpireAuthClient(transport: transport))
+        await session.login(email: "fictional@example.invalid", password: "fictional")
+        try session.widgetPublisher.publish(Dashboard.sample())
+        transport.status = status
+        transport.data = status == 200
+            ? Data(#"{"token":"fictional-new","record":{"id":"fictional","approved":true,"services":["empire"]}}"#.utf8)
+            : Data(#"{"error":"Aresium access revoked"}"#.utf8)
+        await session.restore()
+        if status == 503 {
+            #expect(session.token != nil && storage.token != nil)
+            #expect(session.widgetPublisher.store.load() != nil)
+            #expect(session.error == "Login service unavailable, try again")
+            #expect(session.needsRestoreRetry)
+        } else {
+            #expect(session.token == nil && storage.token == nil)
+            #expect(session.widgetPublisher.store.load() == nil)
+            #expect(!session.needsRestoreRetry)
+            #expect(session.error == (status == 403 ? "Aresium access revoked" : "This account has no access to Aresium."))
+        }
+    }
+
+    @Test func coldRestore503RetainsStoredTokenAndOffersRetry() async {
+        let storage = MemoryTokenStorage(token: "fictional")
+        let session = EmpireSession(storage: storage, client: EmpireAuthClient(transport: FakeTransport(status: 503)))
+        await session.restore()
+        #expect(storage.token == "fictional")
+        #expect(session.error == "Login service unavailable, try again")
+        #expect(session.needsRestoreRetry)
+    }
+
+    @Test(arguments: [403, 503])
+    func dashboardAuthFailureKeepsOrClearsDataAndSnapshot(status: Int) async throws {
+        let session = await importSession()
+        let transport = FakeTransport(data: try JSONEncoder().encode(Dashboard.sample()))
+        let dashboard = DashboardStore(session: session, client: APIClient(transport: transport))
+        await dashboard.reload()
+        transport.status = status
+        transport.data = Data(#"{"error":"No access to Aresium"}"#.utf8)
+        await dashboard.reload()
+        #expect((session.token != nil) == (status == 503))
+        #expect((dashboard.dashboard != nil) == (status == 503))
+        #expect((session.widgetPublisher.store.load() != nil) == (status == 503))
+        #expect(status == 503 ? dashboard.error == "Login service unavailable, try again" : session.error == "No access to Aresium")
+    }
+
+    @Test func foregroundRefreshUsesFiveMinutesAndTwelveHours() async throws {
+        let auth = FakeTransport(data: authResponse())
+        let session = EmpireSession(storage: MemoryTokenStorage(), client: EmpireAuthClient(transport: auth))
+        await session.login(email: "fictional@example.invalid", password: "fictional")
+        let transport = FakeTransport(data: try JSONEncoder().encode(Dashboard.sample()))
+        let dashboard = DashboardStore(session: session, client: APIClient(transport: transport))
+        await dashboard.refreshOnForeground()
+        let loaded = try #require(dashboard.lastSuccessfulLoad)
+        await dashboard.refreshOnForeground(now: loaded.addingTimeInterval(299))
+        #expect(transport.requests.count == 1)
+        await dashboard.refreshOnForeground(now: loaded.addingTimeInterval(301))
+        #expect(transport.requests.count == 2 && auth.requests.count == 1)
+        await dashboard.refreshOnForeground(now: loaded.addingTimeInterval(12 * 3600 + 1))
+        #expect(auth.requests.count == 2 && transport.requests.count == 3)
+        #expect(auth.requests.last?.url?.path.hasSuffix("auth-refresh") == true)
+    }
+
+    @Test func foregroundRefreshDeduplicatesAndPreservesVisibleData() async throws {
+        let session = await importSession()
+        let transport = FakeTransport(data: try JSONEncoder().encode(Dashboard.sample()))
+        let dashboard = DashboardStore(session: session, client: APIClient(transport: transport))
+        await dashboard.reload()
+        let now = try #require(dashboard.lastSuccessfulLoad).addingTimeInterval(301)
+        let gate = RequestGate()
+        transport.nextGate = gate
+        let refresh = Task { await dashboard.refreshOnForeground(now: now) }
+        await gate.waitUntilPaused()
+        await dashboard.refreshOnForeground(now: now)
+        #expect(dashboard.dashboard != nil && dashboard.isLoading)
+        #expect(transport.requests.count == 2)
+        gate.resume()
+        await refresh.value
+        #expect(!dashboard.isLoading)
+    }
+
+    @Test func foregroundRestore503StopsFetchAndPreservesData() async throws {
+        let auth = FakeTransport(data: authResponse())
+        let session = EmpireSession(storage: MemoryTokenStorage(), client: EmpireAuthClient(transport: auth))
+        await session.login(email: "fictional@example.invalid", password: "fictional")
+        let transport = FakeTransport(data: try JSONEncoder().encode(Dashboard.sample()))
+        let dashboard = DashboardStore(session: session, client: APIClient(transport: transport))
+        await dashboard.reload()
+        auth.status = 503
+        await dashboard.refreshOnForeground(now: Date.now.addingTimeInterval(13 * 3600))
+        #expect(transport.requests.count == 1)
+        #expect(session.token != nil && dashboard.dashboard != nil && session.widgetPublisher.store.load() != nil)
+        #expect(session.needsRestoreRetry)
+    }
+
+    @Test(arguments: ["load", "save"])
+    func importCompletingDuringDetailOperationDoesNotDropIt(operation: String) async throws {
+        let (dashboard, transport, detail) = try await liveDetailStore()
+        detail.beginRecategorisation()
+        detail.select("Home")
+        let gate = RequestGate()
+        transport.nextGate = gate
+        transport.responses = [(200, transport.data), (200, try JSONEncoder().encode(Dashboard.sample())),
+                               (200, try JSONEncoder().encode(Dashboard.sample()))]
+        let task = Task {
+            if operation == "save" { await detail.save() }
+            else { await detail.load() }
+        }
+        await gate.waitUntilPaused()
+        let imports = ImportStore(dashboard: dashboard, client: APIClient(transport: FakeTransport(data: importResponse())))
+        let directory = try importDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("bank.csv")
+        try Data("fictional".utf8).write(to: url)
+        await imports.receive([url])
+        await imports.importPendingFiles()
+        #expect(imports.banner?.success == true)
+        gate.resume()
+        await task.value
+        #expect(detail.detail != nil && detail.loadError == nil && detail.saveError == nil)
+        if operation == "save" {
+            #expect(!detail.showsRecategorisation)
+            #expect(transport.requests.filter { $0.url?.path == "/api/data" }.count == 3)
+        }
+    }
+
+    @Test func tokenRenewalDoesNotDropDetailSave() async throws {
+        let auth = FakeTransport(data: authResponse())
+        let session = EmpireSession(storage: MemoryTokenStorage(), client: EmpireAuthClient(transport: auth))
+        await session.login(email: "fictional@example.invalid", password: "fictional")
+        let transport = FakeTransport(data: try JSONEncoder().encode(Dashboard.sample()))
+        let dashboard = DashboardStore(session: session, client: APIClient(transport: transport))
+        await dashboard.reload()
+        let detail = dashboard.transactionDetailStore(for: try #require(dashboard.dashboard?.transactions.first))
+        transport.data = try JSONEncoder().encode(TransactionDetail.bundledSample())
+        await detail.load()
+        detail.beginRecategorisation()
+        detail.select("Home")
+        let gate = RequestGate()
+        transport.nextGate = gate
+        transport.responses = [(200, transport.data), (200, try JSONEncoder().encode(Dashboard.sample()))]
+        let save = Task { await detail.save() }
+        await gate.waitUntilPaused()
+        let generation = session.generation
+        auth.data = Data(#"{"token":"fictional-renewed-token","record":{"id":"fictional","approved":true,"services":["aresium"]}}"#.utf8)
+        await session.restore()
+        #expect(session.generation == generation && session.token == "fictional-renewed-token")
+        gate.resume()
+        await save.value
+        #expect(!detail.showsRecategorisation && detail.saveError == nil)
+        #expect(transport.requests.last?.value(forHTTPHeaderField: "Authorization") == "Bearer fictional-renewed-token")
+    }
+
+    @Test(arguments: ["load", "save"])
+    func logoutDropsLateDetailOperation(operation: String) async throws {
+        let (dashboard, transport, detail) = try await liveDetailStore()
+        detail.beginRecategorisation()
+        detail.select("Home")
+        let original = detail.detail?.category
+        var updated = try #require(JSONSerialization.jsonObject(with: transport.data) as? [String: Any])
+        updated["category"] = "Home"
+        transport.data = try JSONSerialization.data(withJSONObject: updated)
+        let gate = RequestGate()
+        transport.nextGate = gate
+        let task = Task { if operation == "load" { await detail.load() } else { await detail.save() } }
+        await gate.waitUntilPaused()
+        dashboard.session.logOut()
+        gate.resume()
+        await task.value
+        #expect(detail.detail?.category == original)
+        #expect(dashboard.dashboard == nil)
+    }
+
+    @Test(arguments: [403, 503])
+    func detailAuthFailuresRespectSessionStatus(status: Int) async throws {
+        for saving in [false, true] {
+            let (dashboard, transport, detail) = try await liveDetailStore()
+            detail.beginRecategorisation()
+            detail.select("Home")
+            transport.status = status
+            transport.data = Data(#"{"error":"No access to Aresium"}"#.utf8)
+            if saving { await detail.save() } else { await detail.load() }
+            #expect((dashboard.session.token != nil) == (status == 503))
+            if status == 503 {
+                #expect(dashboard.dashboard != nil && detail.detail != nil)
+                #expect((saving ? detail.saveError : detail.loadError) == "Login service unavailable, try again")
+            } else { #expect(dashboard.session.error == "No access to Aresium") }
+        }
+    }
+
+    @Test func failedBatchRetriesAndDiscardAndLogoutClearQueues() async throws {
+        let session = await importSession()
+        let dashboard = DashboardStore(session: session, client: APIClient(transport: FakeTransport(data: try JSONEncoder().encode(Dashboard.sample()))))
+        let transport = FakeTransport(status: 409, data: Data(#"{"error":"Import already running"}"#.utf8))
+        let imports = ImportStore(dashboard: dashboard, client: APIClient(transport: transport))
+        let directory = try importDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let file = directory.appendingPathComponent("bank.csv")
+        try Data("fictional".utf8).write(to: file)
+        await imports.receive([file])
+        await imports.importPendingFiles()
+        #expect(imports.waitingCount == 1 && imports.canRetry)
+        #expect(imports.banner?.files.first == "bank.csv: Import already running")
+        transport.status = 200
+        transport.data = importResponse()
+        await imports.importPendingFiles()
+        #expect(transport.requests.count == 2 && imports.waitingCount == 0 && !imports.canRetry)
+        await imports.receive([file])
+        imports.discard()
+        #expect(imports.waitingCount == 0 && imports.banner == nil)
+        session.logOut()
+        await imports.receive([file])
+        await imports.sessionChanged()
+        #expect(imports.waitingCount == 1)
+        session.logOut()
+        #expect(imports.waitingCount == 0)
+    }
+
+    @Test(arguments: [401, 403, 413, 503])
+    func importAuthAndSizeFailuresRetainOrClearBatch(status: Int) async throws {
+        let session = await importSession()
+        let dashboard = DashboardStore(session: session)
+        let imports = ImportStore(dashboard: dashboard, client: APIClient(transport: FakeTransport(status: status,
+            data: Data(#"{"error":"Request refused"}"#.utf8))))
+        let directory = try importDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let file = directory.appendingPathComponent("bank.csv")
+        try Data("fictional".utf8).write(to: file)
+        await imports.receive([file])
+        await imports.importPendingFiles()
+        let retained = status == 413 || status == 503
+        #expect((session.token != nil) == retained)
+        #expect(imports.waitingCount == (retained ? 1 : 0))
+        if retained { #expect(imports.canRetry && imports.banner?.success == false) }
+    }
+
+    @Test func partialImportRetriesOnlyFailedFiles() async throws {
+        let session = await importSession()
+        let dashboard = DashboardStore(session: session, client: APIClient(transport: FakeTransport(data: try JSONEncoder().encode(Dashboard.sample()))))
+        let response = Data(#"{"results":[{"name":"bank.csv","added":3,"total":3,"skipped":false},{"name":"bad.xml","added":0,"total":0,"skipped":false,"error":"Unknown format"}]}"#.utf8)
+        let transport = FakeTransport(data: response)
+        let imports = ImportStore(dashboard: dashboard, client: APIClient(transport: transport))
+        let directory = try importDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let urls = [directory.appendingPathComponent("bank.csv"), directory.appendingPathComponent("bad.xml")]
+        for url in urls { try Data("fictional".utf8).write(to: url) }
+        await imports.receive(urls)
+        await imports.importPendingFiles()
+        #expect(imports.waitingCount == 1)
+        #expect(imports.banner?.files == ["bank.csv: 3 added", "bad.xml: Unknown format"])
+        transport.data = Data(#"{"results":[{"name":"bad.xml","added":1,"total":1,"skipped":false}]}"#.utf8)
+        await imports.importPendingFiles()
+        let body = try JSONDecoder().decode([String: [ImportFile]].self, from: #require(transport.requests.last?.httpBody))
+        #expect(body["files"]?.map(\.name) == ["bad.xml"])
+        #expect(imports.waitingCount == 0 && imports.banner?.success == true)
+    }
+
+    @Test func encodedRequestPlanSplitsEscapingAndUnicodeAtExactByteLimit() throws {
+        let files = [ImportFile(name: "one.csv", content: String(repeating: "\"\n\\é", count: 30)),
+                     ImportFile(name: "two.csv", content: String(repeating: "€", count: 80))]
+        let limit = try max(ImportRequestPlan.encode([files[0]]).count, ImportRequestPlan.encode([files[1]]).count)
+        let plan = try ImportRequestPlan(files: files, maximumBytes: limit)
+        #expect(plan.batches == [[files[0]], [files[1]]])
+        #expect(plan.refused.isEmpty)
+        for batch in plan.batches { #expect(try ImportRequestPlan.encode(batch).count <= limit) }
+        let exact = try ImportRequestPlan.encode([files[0]]).count
+        #expect(try ImportRequestPlan(files: [files[0]], maximumBytes: exact).batches.count == 1)
+        #expect(try ImportRequestPlan(files: [files[0]], maximumBytes: exact - 1).refused == [files[0]])
+        #expect(try ImportRequestPlan(files: []).batches.isEmpty)
+    }
+
+    @Test func oversizedEncodedFileIsRefusedWithNameBeforeNetwork() async throws {
+        let session = await importSession()
+        let transport = FakeTransport()
+        let imports = ImportStore(dashboard: DashboardStore(session: session), client: APIClient(transport: transport))
+        let directory = try importDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let file = directory.appendingPathComponent("escaped.csv")
+        try Data(repeating: 34, count: 13 * 1024 * 1024).write(to: file)
+        await imports.receive([file])
+        await imports.importPendingFiles()
+        #expect(transport.requests.isEmpty)
+        #expect(imports.banner?.files == ["escaped.csv: Too large for a 25 MB import request"])
+        #expect(imports.canRetry)
+        imports.discard()
+    }
+
+    @Test func backgroundExpirationRetainsBatchAndBalancesActivity() async throws {
+        let session = await importSession()
+        let activity = TestImportActivity()
+        let transport = FakeTransport(data: importResponse())
+        let gate = RequestGate()
+        transport.nextGate = gate
+        let imports = ImportStore(dashboard: DashboardStore(session: session), client: APIClient(transport: transport), background: activity)
+        let directory = try importDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let file = directory.appendingPathComponent("bank.csv")
+        try Data("fictional".utf8).write(to: file)
+        await imports.receive([file])
+        let task = Task { await imports.importPendingFiles() }
+        await gate.waitUntilPaused()
+        #expect(activity.begins == 1)
+        activity.expiration?()
+        gate.resume()
+        await task.value
+        #expect(activity.ends == 1)
+        #expect(imports.canRetry && imports.waitingCount == 1)
+        #expect(imports.banner?.message == "Import interrupted. Retry when you return to Aresium.")
+    }
+
+    @Test func sharedInboxCleanupNeverDeletesPickerOriginalsOrOutsideFiles() throws {
+        let directory = try importDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let container = directory.appendingPathComponent("app")
+        let inbox = container.appendingPathComponent("Documents/Inbox")
+        try FileManager.default.createDirectory(at: inbox, withIntermediateDirectories: true)
+        let shared = inbox.appendingPathComponent("bank.csv")
+        let picker = inbox.appendingPathComponent("picker.csv")
+        let outside = directory.appendingPathComponent("outside.csv")
+        for file in [shared, picker, outside] { try Data("fictional".utf8).write(to: file) }
+        #expect(try ImportFileReader.read([shared], source: .shared, container: container).count == 1)
+        #expect(!FileManager.default.fileExists(atPath: shared.path))
+        _ = try ImportFileReader.read([picker], source: .picker, container: container)
+        #expect(FileManager.default.fileExists(atPath: picker.path))
+        _ = try ImportFileReader.read([outside], source: .shared, container: container)
+        #expect(FileManager.default.fileExists(atPath: outside.path))
+        let symlink = inbox.appendingPathComponent("link.csv")
+        try FileManager.default.createSymbolicLink(at: symlink, withDestinationURL: outside)
+        ImportFileReader.removeSharedCopy(symlink, container: container)
+        #expect(FileManager.default.fileExists(atPath: outside.path))
+        ImportFileReader.clearInbox(container: container)
+        #expect(!FileManager.default.fileExists(atPath: picker.path))
+        #expect(FileManager.default.fileExists(atPath: outside.path))
+    }
+
+    @Test func unreadableSharedCopyIsCleanedUp() throws {
+        let container = try importDirectory()
+        defer { try? FileManager.default.removeItem(at: container) }
+        let file = container.appendingPathComponent("Documents/Inbox/directory.csv")
+        try FileManager.default.createDirectory(at: file, withIntermediateDirectories: true)
+        #expect(throws: (any Error).self) { try ImportFileReader.read([file], source: .shared, container: container) }
+        #expect(!FileManager.default.fileExists(atPath: file.path))
+    }
+
+    @Test func firstLaunchDeletesOldTokenOnlyOnce() throws {
+        let suite = "aresium.tests.install.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let storage = MemoryTokenStorage(token: "fictional-old-install")
+        try FirstLaunchTokenReset.run(storage: storage, defaults: defaults)
+        #expect(storage.token == nil && defaults.bool(forKey: FirstLaunchTokenReset.key))
+        try storage.save("fictional-new-install")
+        try FirstLaunchTokenReset.run(storage: storage, defaults: defaults)
+        #expect(storage.token == "fictional-new-install")
+    }
+
+    @Test func transportHasNoDiskCache() {
+        let configuration = URLSessionTransport().session.configuration
+        #expect((configuration.urlCache?.diskCapacity ?? 0) == 0)
+    }
+
+    @Test func splitUploadRetainsOnlyUnfinishedRequestsForRetry() async throws {
+        let session = await importSession()
+        let dashboard = DashboardStore(session: session, client: APIClient(transport: FakeTransport(data: try JSONEncoder().encode(Dashboard.sample()))))
+        let transport = FakeTransport()
+        let files = [ImportFile(name: "bank.csv", content: String(repeating: "x", count: 80)),
+                     ImportFile(name: "second.xml", content: String(repeating: "y", count: 80))]
+        let limit = try max(ImportRequestPlan.encode([files[0]]).count, ImportRequestPlan.encode([files[1]]).count)
+        let activity = TestImportActivity()
+        let imports = ImportStore(dashboard: dashboard, client: APIClient(transport: transport), background: activity, maximumRequestBytes: limit)
+        let directory = try importDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        for file in files { try Data(file.content.utf8).write(to: directory.appendingPathComponent(file.name)) }
+        transport.responses = [(200, importResponse()), (503, Data())]
+        await imports.receive(files.map { directory.appendingPathComponent($0.name) })
+        await imports.importPendingFiles()
+        #expect(transport.requests.count == 2)
+        #expect(imports.waitingCount == 1 && imports.canRetry)
+        #expect(activity.begins == 1 && activity.ends == 1)
+        #expect(dashboard.dashboard != nil)
+        for request in transport.requests { #expect(try #require(request.httpBody).count <= limit) }
+        transport.data = Data(#"{"results":[{"name":"second.xml","added":1,"total":1,"skipped":false}]}"#.utf8)
+        await imports.importPendingFiles()
+        let body = try JSONDecoder().decode([String: [ImportFile]].self, from: #require(transport.requests.last?.httpBody))
+        #expect(body["files"] == [files[1]])
+        #expect(imports.waitingCount == 0 && imports.banner?.success == true)
+    }
+
+    @Test func launchInboxCleanupProtectsTheDocumentOpeningTheApp() throws {
+        let container = try importDirectory()
+        defer { try? FileManager.default.removeItem(at: container) }
+        let inbox = container.appendingPathComponent("Documents/Inbox")
+        try FileManager.default.createDirectory(at: inbox, withIntermediateDirectories: true)
+        let incoming = inbox.appendingPathComponent("incoming.csv")
+        let leftover = inbox.appendingPathComponent("leftover.csv")
+        for file in [incoming, leftover] { try Data("fictional".utf8).write(to: file) }
+        ImportFileReader.clearInbox(container: container, excluding: [incoming])
+        #expect(FileManager.default.fileExists(atPath: incoming.path))
+        #expect(!FileManager.default.fileExists(atPath: leftover.path))
+        _ = try ImportFileReader.read([incoming], source: .shared, container: container)
+        #expect(!FileManager.default.fileExists(atPath: incoming.path))
+    }
+
+    @Test func firstLaunchFlagIsNotSetWhenTokenDeletionFails() throws {
+        let suite = "aresium.tests.install.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        #expect(throws: (any Error).self) { try FirstLaunchTokenReset.run(storage: FailingTokenDeletion(), defaults: defaults) }
+        #expect(!defaults.bool(forKey: FirstLaunchTokenReset.key))
+    }
+
+    @Test func accessRevocationReasonSurvivesCleanupFailure() async {
+        let session = EmpireSession(storage: FailingTokenDeletion(), client: EmpireAuthClient(transport:
+            FakeTransport(status: 403, data: Data(#"{"error":"No access to Aresium"}"#.utf8))))
+        await session.restore()
+        #expect(session.error == "No access to Aresium")
+        #expect(session.token == nil && !session.needsRestoreRetry)
+    }
+
+    @Test(arguments: [401, 403, 503])
+    func loginAuthFailuresRespectExistingSession(status: Int) async throws {
+        let storage = MemoryTokenStorage()
+        let auth = FakeTransport(data: authResponse())
+        let session = EmpireSession(storage: storage, client: EmpireAuthClient(transport: auth))
+        await session.login(email: "fictional@example.invalid", password: "fictional")
+        try session.widgetPublisher.publish(Dashboard.sample())
+        auth.status = status
+        auth.data = Data(#"{"error":"No access to Aresium"}"#.utf8)
+        await session.login(email: "fictional@example.invalid", password: "fictional")
+        #expect((session.token != nil) == (status == 503))
+        #expect((storage.token != nil) == (status == 503))
+        #expect((session.widgetPublisher.store.load() != nil) == (status == 503))
+        #expect(session.loginUnavailable == (status == 503))
     }
 
     private func importSession() async -> EmpireSession {
@@ -748,8 +1207,9 @@ struct AresiumTests {
         return directory
     }
 
-    private func importResponse() -> Data {
-        Data(#"{"results":[{"name":"bank.csv","added":12,"total":12,"account":"Fictional bank","skipped":false}]}"#.utf8)
+    private func importResponse(includingPayPal: Bool = false) -> Data {
+        let extra = includingPayPal ? #",{"name":"paypal.xml","added":0,"total":0,"account":null,"skipped":false}"# : ""
+        return Data((#"{"results":[{"name":"bank.csv","added":12,"total":12,"account":"Fictional bank","skipped":false}"# + extra + "]}").utf8)
     }
 }
 
@@ -882,4 +1342,19 @@ private final class RequestGate {
         await withCheckedContinuation { waiter = $0 }
     }
     func resume() { pending?.resume(); pending = nil }
+}
+
+@MainActor
+private final class TestImportActivity: ImportBackgroundActivity {
+    var begins = 0
+    var ends = 0
+    var expiration: (@MainActor () -> Void)?
+    func begin(expiration: @escaping @MainActor () -> Void) { begins += 1; self.expiration = expiration }
+    func end() { ends += 1 }
+}
+
+private struct FailingTokenDeletion: TokenStorage {
+    func read() throws -> String? { "fictional" }
+    func save(_ token: String) throws {}
+    func delete() throws { throw CocoaError(.fileWriteNoPermission) }
 }

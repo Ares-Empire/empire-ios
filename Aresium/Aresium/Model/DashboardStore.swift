@@ -40,12 +40,16 @@ final class DashboardStore {
     let session: EmpireSession
     let isSample: Bool
     private let client: APIClient
-    private(set) var generation = 0
+    var generation: Int { session.generation }
+    private var fetchGeneration = 0
+    private(set) var lastSuccessfulLoad: Date?
+    private var foregroundRefreshing = false
 
     init(session: EmpireSession, client: APIClient = APIClient(), sample: Bool = false) {
         self.session = session
         self.client = client
         isSample = sample
+        session.onLogout { [weak self] in self?.clear(clearWidget: false) }
     }
 
     func reload() async {
@@ -53,21 +57,25 @@ final class DashboardStore {
         isLoading = true
         error = nil
         let generation = generation
-        defer { if generation == self.generation { isLoading = false } }
+        let fetch = fetchGeneration
+        defer { if fetch == self.fetchGeneration { isLoading = false } }
         do {
             let loaded: Dashboard
             if isSample { loaded = try Dashboard.sample() }
             else {
                 guard let token = session.token else { throw HTTPError.unauthorized }
                 loaded = try await client.dashboard(token: token) {
-                    if generation == self.generation, self.session.token == token { self.session.logOut() }
+                    if generation == self.generation, fetch == self.fetchGeneration { self.session.logOut() }
                 }
-                guard session.token == token else { return }
+                guard generation == self.generation else { return }
             }
-            guard generation == self.generation else { return }
+            guard generation == self.generation, fetch == fetchGeneration else { return }
             dashboard = loaded
+            lastSuccessfulLoad = .now
             try session.widgetPublisher.publish(loaded)
         } catch {
+            guard generation == self.generation, fetch == fetchGeneration else { return }
+            session.handleAuthFailure(error, generation: generation)
             guard generation == self.generation else { return }
             self.error = error.localizedDescription
         }
@@ -75,17 +83,20 @@ final class DashboardStore {
 
     func reloadAfterImport() async {
         // Supersede a fetch started before the import, preserving the visible dashboard meanwhile.
-        generation += 1
+        fetchGeneration += 1
         isLoading = false
         await reload()
     }
 
-    func clear() {
-        generation += 1
+    func clear(clearWidget: Bool = true) {
+        fetchGeneration += 1
         isLoading = false
         dashboard = nil
+        lastSuccessfulLoad = nil
         error = nil
-        do { try session.widgetPublisher.clear() } catch { self.error = error.localizedDescription }
+        if clearWidget {
+            do { try session.widgetPublisher.clear() } catch { self.error = error.localizedDescription }
+        }
     }
 
     func setWidgetTheme(_ theme: AppTheme) {
@@ -99,9 +110,22 @@ final class DashboardStore {
     // A refresh already in flight may predate the save. Supersede it so the new
     // dashboard always comes from a request made after the transaction changed.
     func reloadAfterTransactionChange() async {
-        generation += 1
+        fetchGeneration += 1
         isLoading = false
         await reload()
+    }
+
+    func refreshOnForeground(now: Date = .now) async {
+        guard !isSample, session.token != nil, !session.isBusy, !foregroundRefreshing, !isLoading else { return }
+        foregroundRefreshing = true
+        defer { foregroundRefreshing = false }
+        let generation = generation
+        if session.lastRenewedAt.map({ now.timeIntervalSince($0) > 12 * 60 * 60 }) ?? true {
+            await session.restore()
+            guard generation == self.generation, session.token != nil else { return }
+            if session.needsRestoreRetry { return }
+        }
+        if lastSuccessfulLoad.map({ now.timeIntervalSince($0) > 5 * 60 }) ?? true { await reload() }
     }
 
     var currentMonth: Month? { dashboard?.months.last }

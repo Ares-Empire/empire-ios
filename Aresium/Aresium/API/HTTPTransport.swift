@@ -5,14 +5,26 @@ protocol HTTPTransport {
 }
 
 struct URLSessionTransport: HTTPTransport {
+    let session = URLSession(configuration: .ephemeral)
     func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await session.data(for: request)
         guard let response = response as? HTTPURLResponse else { throw HTTPError.invalidResponse }
         return (data, response)
     }
 }
 
-struct ServerMessage: Decodable { let message: String }
+struct ServerMessage: Decodable { let message: String?; let error: String? }
+
+func checkResponse(_ response: HTTPURLResponse, data: Data, onUnauthorized: () -> Void) throws {
+    let body = try? JSONDecoder().decode(ServerMessage.self, from: data)
+    switch response.statusCode {
+    case 200..<300: return
+    case 401: onUnauthorized(); throw HTTPError.unauthorized
+    case 403: throw HTTPError.server(403, body?.error ?? body?.message ?? "This account has no access to Aresium.")
+    case 503: throw HTTPError.server(503, "Login service unavailable, try again")
+    default: throw HTTPError.server(response.statusCode, body?.error ?? body?.message)
+    }
+}
 
 enum HTTPError: LocalizedError {
     case invalidResponse, unauthorized, server(Int, String?)
@@ -34,13 +46,7 @@ struct APIClient {
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.timeoutInterval = 30
         let (data, response) = try await transport.send(request)
-        if response.statusCode == 401 {
-            onUnauthorized()
-            throw HTTPError.unauthorized
-        }
-        guard (200..<300).contains(response.statusCode) else {
-            throw HTTPError.server(response.statusCode, try? JSONDecoder().decode(ServerMessage.self, from: data).message)
-        }
+        try checkResponse(response, data: data, onUnauthorized: onUnauthorized)
         return try Dashboard.decode(data)
     }
 }

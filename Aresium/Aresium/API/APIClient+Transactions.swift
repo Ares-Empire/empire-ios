@@ -37,18 +37,10 @@ extension APIClient {
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         if body != nil { request.setValue("application/json", forHTTPHeaderField: "Content-Type") }
         let (data, response) = try await transport.send(request)
-        if response.statusCode == 401 {
-            onUnauthorized()
-            throw HTTPError.unauthorized
-        }
-        guard (200..<300).contains(response.statusCode) else {
-            let message = try? JSONDecoder().decode(TransactionErrorBody.self, from: data)
-            throw HTTPError.server(response.statusCode, message?.error ?? message?.message)
-        }
+        try checkResponse(response, data: data, onUnauthorized: onUnauthorized)
         return try JSONDecoder().decode(TransactionDetail.self, from: data)
     }
 }
 
 private struct CategoryBody: Encodable { let category: String }
 private struct TagsBody: Encodable { let categories: [String]; let dropCurrent: Bool }
-private struct TransactionErrorBody: Decodable { let error: String?; let message: String? }

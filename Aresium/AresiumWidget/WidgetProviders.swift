@@ -19,7 +19,10 @@ nonisolated struct SpendingProvider: TimelineProvider {
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<SpendingEntry>) -> Void) {
         let store = WidgetSnapshotStore()
-        completion(Timeline(entries: [SpendingEntry(date: .now, snapshot: store.load(), theme: store.theme)], policy: .never))
+        let now = Date.now
+        let result = store.read()
+        completion(Timeline(entries: [SpendingEntry(date: now, snapshot: result.snapshot, theme: store.theme)],
+                            policy: .after(result.nextRefresh(after: now))))
     }
 }
 
@@ -44,8 +47,10 @@ nonisolated struct CategoriesProvider: AppIntentTimelineProvider {
 
     func timeline(for configuration: SpendingCategoriesIntent, in context: Context) async -> Timeline<CategoriesEntry> {
         let store = WidgetSnapshotStore()
-        let entry = CategoriesEntry(date: .now, snapshot: store.load(), theme: store.theme,
+        let now = Date.now
+        let result = store.read()
+        let entry = CategoriesEntry(date: now, snapshot: result.snapshot, theme: store.theme,
                                     firstCategory: configuration.firstCategory?.id, secondCategory: configuration.secondCategory?.id)
-        return Timeline(entries: [entry], policy: .never)
+        return Timeline(entries: [entry], policy: .after(result.nextRefresh(after: now)))
     }
 }

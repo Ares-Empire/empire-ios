@@ -30,6 +30,7 @@ struct RecategoriseSheet: View {
                         }
                         if let error = store.saveError {
                             Text(error).foregroundStyle(palette.expense).accessibilityIdentifier("recategorisationError")
+                            Button("Retry") { Task { await store.retrySave() } }.disabled(!store.canSave)
                         }
                         HStack {
                             Spacer()
