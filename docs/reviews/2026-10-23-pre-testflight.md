@@ -74,7 +74,7 @@ Two findings are about what the numbers mean and go to Patrik (D1, D2).
   counted as the same number of euros, and its "Allgemeine Währungsumrechnung" partner row counts as income
   (4 of them uncategorised, under "Other"). The website has always shown it this way. Proposal: count the euro leg of
   each PayPal conversion as the purchase and drop the dollar rows from the totals (server-side, like bank funding).
-- **D2 → decided 2026-10-24** (Patrik: yes, add the note): brief 07. Original finding: **"This month" on the widget** (seat 3). It shows the latest month that has transactions, so on 1 November,
+- **D2 → done 2026-10-24** (Patrik: yes, add the note): brief 07, merged. Original finding: **"This month" on the widget** (seat 3). It shows the latest month that has transactions, so on 1 November,
   before the first November import, it still shows October (correctly labelled). Patrik asked for "the month that I'm
   in". Proposal: show the calendar month with "nothing imported yet for November · last data 30 Oct".
 

@@ -1,6 +1,6 @@
 # 07: Widgets show the calendar month, with a note when nothing is imported yet
 
-Status: draft
+Status: merged 2026-10-24. 101 tests.
 Branch: `codex/07-widget-month` · Worktree: `../empire-ios-07-widget-month` · Model: `gpt-6.1-sol`, effort `high`
 
 ## Goal
