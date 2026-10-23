@@ -1,9 +1,5 @@
 import Foundation
 
-nonisolated enum AppTheme: String, CaseIterable {
-    case dark, light, red
-}
-
 /// Display preferences and transition gating, independent of SwiftUI and wall-clock time.
 nonisolated struct ThemeState {
     static let preferenceKey = "aresium.theme"

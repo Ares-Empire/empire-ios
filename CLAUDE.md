@@ -75,6 +75,11 @@ milestones, a bug that comes back, and every 2–3 weeks over merged Codex work.
 - Test fixtures `AresiumTests/server-dashboard.sample.json` + `.expected.json`: the Aresium server's sample and
   the website's answers for it. When `/api/data` changes: `npm run sample` in aresium, then
   `node scripts/aresium-fixtures.mjs`.
+- Targets: `Aresium` (app), `AresiumWidgetExtension` (widgets, folder `Aresium/AresiumWidget/`, embedded in the
+  app), `AresiumTests`. `Aresium/AresiumShared/` is compiled into both app and widget (theme, fonts, `AppTheme`,
+  `AppGroup`); everything else belongs to one target. App Group `group.de.ares-empire.aresium` in both
+  entitlements files (on the simulator Xcode embeds them as "simulated" entitlements; on the phone it needs
+  the paid team).
 - `Aresium/Aresium/Info.plist` holds only what build settings cannot (document types: the share sheet offers
   "Aresium" for `.csv`/`.xml` exports); it is merged with the generated plist and excluded from the folder's
   resources in the project file.
