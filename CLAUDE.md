@@ -73,5 +73,8 @@ milestones, a bug that comes back, and every 2–3 weeks over merged Codex work.
   files need no `project.pbxproj` edits), bundle id `de.ares-empire.aresium`, iOS 26+. Signing team: set to the
   paid team once approved. Launch argument `-sampleData` skips login and shows the bundled sample.
 - Test fixtures `AresiumTests/server-dashboard.sample.json` + `.expected.json`: the Aresium server's sample and
-  the website's answers for it. Regenerate both when `/api/data` changes (`aresium`: `npm run sample`, then the
-  website's `data.js` on that sample; see the test's comment).
+  the website's answers for it. When `/api/data` changes: `npm run sample` in aresium, then
+  `node scripts/aresium-fixtures.mjs`.
+- `Aresium/Aresium/Info.plist` holds only what build settings cannot (document types: the share sheet offers
+  "Aresium" for `.csv`/`.xml` exports); it is merged with the generated plist and excluded from the folder's
+  resources in the project file.

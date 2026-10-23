@@ -21,9 +21,22 @@
 		CAC6B7691F2F062B4F2D49DF /* AresiumTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AresiumTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		5F8A4507C9F0B38A2706048E /* Exceptions for "Aresium" folder in "Aresium" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = F2D626DD0A6E6CCFCAF01B8C /* Aresium */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		4276F417974F4EDACEDA269F /* Aresium */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				5F8A4507C9F0B38A2706048E /* Exceptions for "Aresium" folder in "Aresium" target */,
+			);
 			path = Aresium;
 			sourceTree = "<group>";
 		};
@@ -258,6 +271,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Aresium/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Aresium;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -281,6 +295,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Aresium/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Aresium;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
