@@ -1,6 +1,6 @@
 # 01: Aresium app foundation and the three main screens
 
-Status: merged 2026-10-23. 21 tests (incl. Claude's check that every list matches the website on the server sample, 511 values). Live login not tried yet.
+Status: merged 2026-10-23. 21 tests (incl. Claude's check that every list matches the website on the server sample, 511 values). Live login with Patrik's Empire account works on the simulator (2026-10-23).
 Branch: `codex/01-aresium-foundation` · Worktree: `../empire-ios-01-aresium-foundation` · Model: `gpt-6.1-sol`, effort `high`
 
 ## Goal
