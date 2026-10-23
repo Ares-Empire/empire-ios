@@ -29,6 +29,9 @@
 			</array>
 		</dict>
 	</array>
+	<!-- Only standard HTTPS: exempt, so App Store Connect stops asking about encryption on every build. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<false/>
 </dict>
