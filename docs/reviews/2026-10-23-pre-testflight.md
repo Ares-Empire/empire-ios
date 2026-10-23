@@ -22,6 +22,16 @@ seat 2: only signing; seats 3 and 4 each named two items). Claude's call: for an
 only signing blocks, but everything accepted below is done before that build, since we are waiting for Apple anyway.
 Two findings are about what the numbers mean and go to Patrik (D1, D2).
 
+## Done (2026-10-23)
+
+- App fixes A1–A11: brief 06, merged, 95 tests, Release binary free of debug hooks.
+- Server fixes S1–S4: aresium brief 02, deployed; live checks: no token and a fake token both get 401; on real data
+  `pick` no longer offers the synthesised "Uncategorised".
+- Setup: versions in one place, `.gitignore`, `ACCOUNTS.md` token lifetime, Release device build compiles.
+- Left for the phone (needs the paid team): backgrounding during an import, file protection after reboot, the real
+  Inbox path, widgets on the home screen (incl. the small widget's row taps). Small follow-up: the import banner
+  overlaps the ARESIUM band.
+
 ## Accepted: app (brief 06)
 
 | # | Finding | Seats |
