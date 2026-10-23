@@ -1,0 +1,33 @@
+{
+  "id": "fictional-detail",
+  "place": "Sample Market",
+  "amount": -42.50,
+  "currency": "EUR",
+  "bookingDate": "2026-10-03",
+  "valueDate": "2026-10-03",
+  "balance": 1420.75,
+  "category": "Groceries",
+  "categoryColor": "#E8B85C",
+  "tags": ["Dining"],
+  "categorySource": "rule",
+  "categorized": true,
+  "description": "Fictional card purchase at Sample Market",
+  "counterparty": "Sample Market",
+  "account": "Sample current account",
+  "iban": null,
+  "source": "bank",
+  "city": "Sample City",
+  "country": "DE",
+  "trip": null,
+  "tripKind": null,
+  "placeType": "supermarket",
+  "recurring": false,
+  "externalId": "fictional-export-001",
+  "raw": {
+    "Booking text": "Fictional card purchase",
+    "Reference": "SAMPLE-001",
+    "Amount": -42.50,
+    "Currency": "EUR",
+    "Note": null
+  }
+}

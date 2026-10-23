@@ -145,6 +145,7 @@ struct TransactionsScreen: View {
     let route: DashboardRoute
     let store: DashboardStore
     let palette: Palette
+    @State private var selectedTransaction: Transaction?
     var body: some View {
         VStack(spacing: 0) {
             DashboardStatus(store: store, palette: palette)
@@ -153,30 +154,42 @@ struct TransactionsScreen: View {
                 LazyVStack(spacing: 0) {
                     ForEach(rows) { row in
                         let transaction = row.transaction
-                        HStack(spacing: 12) {
-                            Text(String(transaction.day)).font(AppFont.number(15))
-                                .foregroundStyle(palette.secondary).frame(width: 38, height: 38)
-                                .background(palette.card2, in: RoundedRectangle(cornerRadius: 9))
-                                .overlay(RoundedRectangle(cornerRadius: 9).stroke(palette.line))
-                            VStack(alignment: .leading, spacing: 2) {
-                                HStack(spacing: 5) {
-                                    Text(transaction.place).font(AppFont.text(14.5, weight: .semibold)).lineLimit(1)
-                                    if row.tagged {
-                                        Text("tag").font(AppFont.text(9, weight: .semibold)).foregroundStyle(palette.secondary)
-                                            .padding(.horizontal, 4).padding(.vertical, 2)
-                                            .background(palette.card2, in: RoundedRectangle(cornerRadius: 4))
-                                            .accessibilityLabel("Added here by tag; primary category \(transaction.categoryName)")
+                        Button { selectedTransaction = transaction } label: {
+                            HStack(spacing: 12) {
+                                Text(String(transaction.day)).font(AppFont.number(15))
+                                    .foregroundStyle(palette.secondary).frame(width: 38, height: 38)
+                                    .background(palette.card2, in: RoundedRectangle(cornerRadius: 9))
+                                    .overlay(RoundedRectangle(cornerRadius: 9).stroke(palette.line))
+                                VStack(alignment: .leading, spacing: 2) {
+                                    HStack(spacing: 5) {
+                                        Text(transaction.place).font(AppFont.text(14.5, weight: .semibold)).lineLimit(1)
+                                        if row.tagged {
+                                            Text("tag").font(AppFont.text(9, weight: .semibold)).foregroundStyle(palette.secondary)
+                                                .padding(.horizontal, 4).padding(.vertical, 2)
+                                                .background(palette.card2, in: RoundedRectangle(cornerRadius: 4))
+                                                .accessibilityLabel("Added here by tag; primary category \(transaction.categoryName)")
+                                        }
                                     }
-                                }
-                                Text(transaction.city).font(AppFont.text(12.5)).foregroundStyle(palette.muted).lineLimit(1)
-                            }.frame(maxWidth: .infinity, alignment: .leading)
-                            Text(Money.transaction(transaction.amount)).font(AppFont.number(14))
-                                .foregroundStyle(transaction.amount < 0 ? palette.expense : palette.income).fixedSize()
-                        }.padding(.horizontal, 12).padding(.vertical, 11)
+                                    Text(transaction.city).font(AppFont.text(12.5)).foregroundStyle(palette.muted).lineLimit(1)
+                                }.frame(maxWidth: .infinity, alignment: .leading)
+                                Text(Money.transaction(transaction.amount)).font(AppFont.number(14))
+                                    .foregroundStyle(transaction.amount < 0 ? palette.expense : palette.income).fixedSize()
+                            }.padding(.horizontal, 12).padding(.vertical, 11).contentShape(Rectangle())
+                        }.buttonStyle(.plain)
                     }
                     if rows.isEmpty { EmptyMessage(text: "No transactions this month.", palette: palette) }
                 }.padding(.horizontal, 12).padding(.top, 8)
             }.refreshable { await store.reload() }.scrollBounceBehavior(.always)
+        }
+        .sheet(item: $selectedTransaction) { transaction in
+            TransactionDetailSheet(store: store.transactionDetailStore(for: transaction), palette: palette)
+        }
+        .task {
+            let arguments = ProcessInfo.processInfo.arguments
+            if store.isSample, let index = arguments.firstIndex(of: "-sampleTransaction"),
+               arguments.indices.contains(index + 1) {
+                selectedTransaction = store.dashboard?.transactions.first { $0.id == arguments[index + 1] }
+            }
         }
     }
 }

@@ -11,6 +11,7 @@ struct Dashboard: Codable {
     let byMonth: [String: MonthData]
     let spend: [String: Series]
     let income: [String: Series]
+    let pick: CategoryChoices
 
     static func decode(_ data: Data) throws -> Dashboard {
         let dashboard = try JSONDecoder().decode(Dashboard.self, from: data)
@@ -23,6 +24,19 @@ struct Dashboard: Codable {
             throw DashboardError.missingSample
         }
         return try decode(Data(contentsOf: url))
+    }
+}
+
+struct CategoryChoices: Codable {
+    let spend: [String]
+    let income: [String]
+}
+
+extension Dashboard {
+    func recategorisationChoices(amount: Double) -> [Category] {
+        (amount > 0 ? pick.income : pick.spend).compactMap { name in
+            categories.first { $0.name == name }
+        }
     }
 }
 

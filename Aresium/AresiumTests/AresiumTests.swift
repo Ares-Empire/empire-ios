@@ -286,6 +286,228 @@ struct AresiumTests {
         }
     }
 
+    @Test func detailDecodesAndFormatsWebsiteRows() throws {
+        let detail = try TransactionDetail.bundledSample()
+        #expect(detail.id == "fictional-detail" && detail.currency == "EUR")
+        #expect(detail.valueDate == "2026-10-03" && detail.balance == 1420.75)
+        #expect(detail.category == "Groceries" && detail.categoryColor == "#E8B85C")
+        #expect(detail.tags == ["Dining"] && detail.categorySource == "rule" && detail.categorized)
+        #expect(detail.counterparty == "Sample Market" && detail.accountLabel == "Sample current account")
+        #expect(detail.iban == nil && detail.source == "bank")
+        #expect(detail.city == "Sample City" && detail.country == "DE")
+        #expect(detail.trip == nil && detail.tripKind == nil && !detail.recurring)
+        #expect(detail.placeType == "supermarket" && detail.externalId == "fictional-export-001")
+        #expect(detail.signedAmount == "−42.50")
+        #expect(detail.originalRows?.first { $0.label == "Amount" }?.value == "-42.5")
+        #expect(detail.originalRows?.first { $0.label == "Note" }?.value == "—")
+        #expect(!detail.rows.contains { ["Trip", "Recurring"].contains($0.label) })
+        #expect(detail.rows.first { $0.label == "Balance after" }?.value == "€1,420.75")
+        #expect(detail.rows.first { $0.label == "Location" }?.value == "Sample City, DE")
+        let roundTrip = try JSONDecoder().decode(TransactionDetail.self, from: JSONEncoder().encode(detail))
+        #expect(roundTrip.raw == detail.raw)
+    }
+
+    @Test func emptyDetailRowsAreHiddenAndZeroBalanceIsShown() throws {
+        var json = try #require(try JSONSerialization.jsonObject(with: JSONEncoder().encode(TransactionDetail.bundledSample())) as? [String: Any])
+        for field in ["valueDate", "counterparty", "city", "country", "categorySource", "account", "iban"] { json[field] = NSNull() }
+        json["balance"] = 0
+        json["description"] = ""
+        json["placeType"] = "unknown"
+        json["recurring"] = true
+        json["trip"] = "Sample trip"
+        json["tripKind"] = "travel"
+        json["currency"] = "USD"
+        json["raw"] = ["nested": ["sample": true], "list": [1, 2], "empty": ""]
+        let detail = try JSONDecoder().decode(TransactionDetail.self, from: JSONSerialization.data(withJSONObject: json))
+        #expect(detail.accountLabel == nil && detail.signedAmount == "−42.50 USD")
+        #expect(detail.rows.map(\.label) == ["Source", "Booking date", "Balance after", "Trip", "Recurring", "External ID"])
+        #expect(detail.rows.first { $0.label == "Balance after" }?.value == "€0.00")
+        #expect(detail.rows.first { $0.label == "Trip" }?.value == "Sample trip (travel)")
+        #expect(detail.originalRows?.first { $0.label == "empty" }?.value == "—")
+    }
+
+    @Test(arguments: ["detail", "category", "tags"])
+    func transactionRequestsEncodeIDMethodBodyAndBearer(action: String) async throws {
+        let transport = FakeTransport(data: try JSONEncoder().encode(TransactionDetail.bundledSample()))
+        let client = APIClient(transport: transport)
+        let id = "sample/id ?#%ä"
+        var unauthorized = false
+        let result: TransactionDetail
+        switch action {
+        case "category":
+            result = try await client.switchCategory(id: id, category: "Dining", token: "fictional-token") { unauthorized = true }
+        case "tags":
+            result = try await client.setTransactionTags(id: id, categories: ["Dining", "Transport"], dropCurrent: true,
+                                                         token: "fictional-token") { unauthorized = true }
+        default:
+            result = try await client.transactionDetail(id: id, token: "fictional-token") { unauthorized = true }
+        }
+        let request = try #require(transport.requests.first)
+        let suffix = action == "detail" ? "" : "/" + action
+        #expect(request.url?.absoluteString == "https://aresium.de/api/transaction/sample%2Fid%20%3F%23%25%C3%A4" + suffix)
+        #expect(request.httpMethod == (action == "detail" ? "GET" : "POST"))
+        #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer fictional-token")
+        #expect(request.timeoutInterval == 30 && result.category == "Groceries" && !unauthorized)
+        if action == "detail" { #expect(request.httpBody == nil) }
+        else {
+            #expect(request.value(forHTTPHeaderField: "Content-Type") == "application/json")
+            let bodyData = try #require(request.httpBody)
+            let body = try #require(try JSONSerialization.jsonObject(with: bodyData) as? [String: Any])
+            if action == "category" {
+                #expect(body.count == 1 && body["category"] as? String == "Dining")
+            } else {
+                #expect(body.count == 2)
+                #expect(body["categories"] as? [String] == ["Dining", "Transport"])
+                #expect(body["dropCurrent"] as? Bool == true)
+            }
+        }
+    }
+
+    @Test(arguments: ["detail", "category", "tags"])
+    func transactionUnauthorizedUsesSameSessionHandling(action: String) async {
+        let client = APIClient(transport: FakeTransport(status: 401))
+        var unauthorized = false
+        do {
+            switch action {
+            case "category": _ = try await client.switchCategory(id: "fictional", category: "Dining", token: "fictional-token") { unauthorized = true }
+            case "tags": _ = try await client.setTransactionTags(id: "fictional", categories: [], dropCurrent: false, token: "fictional-token") { unauthorized = true }
+            default: _ = try await client.transactionDetail(id: "fictional", token: "fictional-token") { unauthorized = true }
+            }
+            Issue.record("Expected unauthorized")
+        } catch { #expect(error.localizedDescription == HTTPError.unauthorized.localizedDescription) }
+        #expect(unauthorized)
+    }
+
+    @Test func choicesUseServerPickOrderForEachSign() throws {
+        let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().appendingPathComponent("server-dashboard.sample.json")
+        let dashboard = try Dashboard.decode(Data(contentsOf: url))
+        #expect(dashboard.recategorisationChoices(amount: -1).map(\.name) == dashboard.pick.spend)
+        #expect(dashboard.recategorisationChoices(amount: 0).map(\.name) == dashboard.pick.spend)
+        #expect(dashboard.recategorisationChoices(amount: 1).map(\.name) == dashboard.pick.income)
+        #expect(dashboard.pick.spend.first == "Rent" && dashboard.categories.first?.name == "Groceries")
+        #expect(!dashboard.recategorisationChoices(amount: 1).contains { $0.name == "Refunds" || $0.name == "Other" })
+    }
+
+    @Test(arguments: ["switch", "add", "drop"])
+    func successfulChangeShowsReturnedDetailAndReloadsDashboard(action: String) async throws {
+        let (dashboard, transport, store) = try await liveDetailStore()
+        store.beginRecategorisation()
+        #expect(store.extras == ["Dining"])
+        if action == "switch" { store.select("Home") }
+        else {
+            store.mode = .add
+            store.select("Transport")
+            store.select("Groceries")
+            #expect(store.extras == ["Dining", "Transport"])
+        }
+        var updated = try #require(try JSONSerialization.jsonObject(with: transport.data) as? [String: Any])
+        updated["category"] = action == "add" ? "Groceries" : "Home"
+        updated["categorySource"] = "manual"
+        var nextDashboard = try #require(try JSONSerialization.jsonObject(with: JSONEncoder().encode(Dashboard.sample())) as? [String: Any])
+        nextDashboard["transactions"] = []
+        transport.responses = [(200, try JSONSerialization.data(withJSONObject: updated)),
+                               (200, try JSONSerialization.data(withJSONObject: nextDashboard))]
+        let before = transport.requests.count
+        await store.save(dropCurrent: action == "drop")
+        #expect(store.detail?.category == updated["category"] as? String)
+        #expect(store.detail?.categorySource == "manual")
+        #expect(!store.showsRecategorisation && !store.isSaving && store.saveError == nil)
+        #expect(transport.requests.count == before + 2)
+        #expect(transport.requests.last?.url?.path == "/api/data")
+        #expect(dashboard.dashboard?.transactions.isEmpty == true)
+        if action != "switch" {
+            let bodyData = try #require(transport.requests[before].httpBody)
+            let body = try #require(try JSONSerialization.jsonObject(with: bodyData) as? [String: Any])
+            #expect(body["categories"] as? [String] == ["Dining", "Transport"])
+            #expect(body["dropCurrent"] as? Bool == (action == "drop"))
+        }
+    }
+
+    @Test(arguments: ["switch", "add"])
+    func failedChangeKeepsSheetSelectionsAndError(action: String) async throws {
+        let (dashboard, transport, store) = try await liveDetailStore()
+        store.beginRecategorisation()
+        if action == "switch" { store.select("Home") }
+        else { store.mode = .add; store.select("Transport") }
+        transport.status = 400
+        transport.data = Data(#"{"error":"unknown category"}"#.utf8)
+        let before = transport.requests.count
+        await store.save()
+        #expect(store.showsRecategorisation && store.saveError == "unknown category" && !store.isSaving)
+        #expect(store.detail?.category == "Groceries")
+        #expect(store.target == (action == "switch" ? "Home" : nil))
+        #expect(store.extras == (action == "switch" ? ["Dining"] : ["Dining", "Transport"]))
+        #expect(transport.requests.count == before + 1 && dashboard.session.token != nil)
+    }
+
+    @Test func savingDisablesSelectionsAndDuplicateSubmissions() async throws {
+        let (_, transport, store) = try await liveDetailStore()
+        store.beginRecategorisation()
+        store.select("Home")
+        transport.responses = [(200, transport.data), (200, try JSONEncoder().encode(Dashboard.sample()))]
+        let gate = RequestGate()
+        transport.nextGate = gate
+        let saving = Task { await store.save() }
+        await gate.waitUntilPaused()
+        #expect(store.isSaving && !store.canSave && !store.canRemoveCurrent)
+        store.select("Transport")
+        #expect(store.target == "Home")
+        let before = transport.requests.count
+        await store.save()
+        #expect(transport.requests.count == before)
+        gate.resume()
+        await saving.value
+        #expect(!store.isSaving && !store.showsRecategorisation)
+    }
+
+    @Test func successfulSaveSupersedesDashboardRefreshThatPredatesIt() async throws {
+        let (dashboard, transport, store) = try await liveDetailStore()
+        store.beginRecategorisation()
+        store.select("Home")
+        let gate = RequestGate()
+        transport.nextGate = gate
+        transport.responses = [(401, Data()), (200, transport.data), (200, try JSONEncoder().encode(Dashboard.sample()))]
+        let oldReload = Task { await dashboard.reload() }
+        await gate.waitUntilPaused()
+        let before = transport.requests.count
+        await store.save()
+        #expect(transport.requests.count == before + 2 && dashboard.error == nil && !dashboard.isLoading)
+        gate.resume()
+        await oldReload.value
+        #expect(dashboard.session.token != nil && dashboard.error == nil)
+        #expect(dashboard.dashboard?.transactions.count == 25)
+    }
+
+    @Test func sampleDetailUsesSelectedRowAndCannotMutate() async throws {
+        let dashboard = sampleStore()
+        await dashboard.reload()
+        for transaction in try #require(dashboard.dashboard).transactions {
+            let store = dashboard.transactionDetailStore(for: transaction)
+            await store.load()
+            #expect(store.detail?.id == transaction.id && store.detail?.place == transaction.place)
+            #expect(store.detail?.amount == transaction.amount && store.detail?.bookingDate == transaction.date)
+            store.beginRecategorisation()
+            store.select(try #require(store.choices.first { $0.name != store.detail?.category }).name)
+            await store.save()
+            #expect(store.showsRecategorisation && store.saveError == "Not available with sample data")
+            store.mode = .add
+            await store.save()
+            #expect(store.saveError == "Not available with sample data")
+        }
+    }
+
+    private func liveDetailStore() async throws -> (DashboardStore, FakeTransport, TransactionDetailStore) {
+        let transport = FakeTransport(data: try JSONEncoder().encode(Dashboard.sample()))
+        let session = EmpireSession(storage: MemoryTokenStorage(), client: EmpireAuthClient(transport: FakeTransport(data: authResponse())))
+        await session.login(email: "fictional@example.invalid", password: "fictional-password")
+        let dashboard = DashboardStore(session: session, client: APIClient(transport: transport))
+        await dashboard.reload()
+        let store = dashboard.transactionDetailStore(for: try #require(dashboard.dashboard?.transactions.first))
+        transport.data = try JSONEncoder().encode(TransactionDetail.bundledSample())
+        await store.load()
+        return (dashboard, transport, store)
+    }
+
     private func sampleStore() -> DashboardStore {
         DashboardStore(session: EmpireSession(storage: MemoryTokenStorage()), sample: true)
     }
@@ -297,10 +519,17 @@ private final class FakeTransport: HTTPTransport {
     var status: Int
     var data: Data
     var failure: (any Error)?
+    var responses: [(Int, Data)] = []
+    var nextGate: RequestGate?
     init(status: Int = 200, data: Data = Data()) { self.status = status; self.data = data }
     func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
         requests.append(request)
         if let failure { throw failure }
+        let (status, data) = responses.isEmpty ? (status, data) : responses.removeFirst()
+        if let gate = nextGate {
+            nextGate = nil
+            await gate.pause()
+        }
         return (data, HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: nil, headerFields: nil)!)
     }
 }
@@ -388,4 +617,22 @@ struct ServerSampleMatchesWebsiteTests {
         }
         #expect(compared == 511)
     }
+}
+
+@MainActor
+private final class RequestGate {
+    private var pending: CheckedContinuation<Void, Never>?
+    private var waiter: CheckedContinuation<Void, Never>?
+    func pause() async {
+        await withCheckedContinuation {
+            pending = $0
+            waiter?.resume()
+            waiter = nil
+        }
+    }
+    func waitUntilPaused() async {
+        if pending != nil { return }
+        await withCheckedContinuation { waiter = $0 }
+    }
+    func resume() { pending?.resume(); pending = nil }
 }

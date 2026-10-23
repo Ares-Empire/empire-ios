@@ -3,6 +3,7 @@ import Foundation
 // Match panels.jsx: whole euros for totals, two decimals without a currency sign for activities.
 enum Money {
     static func total(_ value: Double) -> String { "€" + formatted(value, digits: 0) }
+    static func precise(_ value: Double) -> String { "€" + formatted(value, digits: 2) }
     static func transaction(_ value: Double) -> String {
         (value < 0 ? "−" : "+") + formatted(abs(value), digits: 2)
     }

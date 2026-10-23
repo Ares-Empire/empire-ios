@@ -40,7 +40,7 @@ final class DashboardStore {
     let session: EmpireSession
     let isSample: Bool
     private let client: APIClient
-    private var generation = 0
+    private(set) var generation = 0
 
     init(session: EmpireSession, client: APIClient = APIClient(), sample: Bool = false) {
         self.session = session
@@ -77,6 +77,18 @@ final class DashboardStore {
         isLoading = false
         dashboard = nil
         error = nil
+    }
+
+    func transactionDetailStore(for transaction: Transaction) -> TransactionDetailStore {
+        TransactionDetailStore(transaction: transaction, dashboardStore: self, client: client)
+    }
+
+    // A refresh already in flight may predate the save. Supersede it so the new
+    // dashboard always comes from a request made after the transaction changed.
+    func reloadAfterTransactionChange() async {
+        generation += 1
+        isLoading = false
+        await reload()
     }
 
     var currentMonth: Month? { dashboard?.months.last }
