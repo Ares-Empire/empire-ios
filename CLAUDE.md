@@ -69,5 +69,9 @@ milestones, a bug that comes back, and every 2–3 weeks over merged Codex work.
   2026-10-23. Xcode is signed in (2026-10-23), so far with only the free "Personal Team"; the paid team
   appears under the same account once Apple approves. Until then: simulator only, no TestFlight (a free
   Apple ID could install on the phone, but those builds stop opening after 7 days, so we don't use it).
-- No Xcode project yet. When Claude creates it: folder-synchronized groups (the Xcode default), so new Swift
-  files need no `project.pbxproj` edits; signing team = the paid team once approved.
+- Xcode project `Aresium/Aresium.xcodeproj` (2026-10-23): app + tests, folder-synchronized groups (new Swift
+  files need no `project.pbxproj` edits), bundle id `de.ares-empire.aresium`, iOS 26+. Signing team: set to the
+  paid team once approved. Launch argument `-sampleData` skips login and shows the bundled sample.
+- Test fixtures `AresiumTests/server-dashboard.sample.json` + `.expected.json`: the Aresium server's sample and
+  the website's answers for it. Regenerate both when `/api/data` changes (`aresium`: `npm run sample`, then the
+  website's `data.js` on that sample; see the test's comment).
