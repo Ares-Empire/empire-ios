@@ -32,7 +32,7 @@ Shared code is extracted only once a second app needs it — until then it lives
 
 ## Releasing to the phone (TestFlight)
 
-1. Bump the build number, Product → Archive in Xcode, *Distribute App* → *TestFlight Internal Only*.
+1. Bump `CURRENT_PROJECT_VERSION` (project-level build settings, the one place for app and widget), Product → Archive in Xcode, *Distribute App* → *TestFlight Internal Only*.
 2. After processing (a few minutes) the build shows up in the TestFlight app on the iPhone → *Update*.
 3. Each build stays installable for 90 days; any newer build restarts that clock.
 
