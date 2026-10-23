@@ -1,0 +1,363 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXContainerItemProxy section */
+		03FE73935A789228A38F833D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 7D124D8EB7A1CD5680D4BEF2 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = F2D626DD0A6E6CCFCAF01B8C;
+			remoteInfo = Aresium;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		5B2D6ADD97CD5EA3A8602575 /* Aresium.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Aresium.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		CAC6B7691F2F062B4F2D49DF /* AresiumTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AresiumTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		4276F417974F4EDACEDA269F /* Aresium */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Aresium;
+			sourceTree = "<group>";
+		};
+		8A79A9F3D4C59DD5E91D6F9B /* AresiumTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = AresiumTests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		3D788989E40A8E007BA9086B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7E292C96375EBDF4EC568795 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		2D478AA2FC01AF7F5BF07958 = {
+			isa = PBXGroup;
+			children = (
+				4276F417974F4EDACEDA269F /* Aresium */,
+				8A79A9F3D4C59DD5E91D6F9B /* AresiumTests */,
+				D769A831193A5CCB0688851D /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		D769A831193A5CCB0688851D /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				5B2D6ADD97CD5EA3A8602575 /* Aresium.app */,
+				CAC6B7691F2F062B4F2D49DF /* AresiumTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		F2D626DD0A6E6CCFCAF01B8C /* Aresium */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5C8D399BCB418A51D40EC43C;
+			buildPhases = (
+				E9D939FC8251252FB0274B5F,
+				3D788989E40A8E007BA9086B,
+				3F51E770092E9D84F111CA7A,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				4276F417974F4EDACEDA269F,
+			);
+			name = Aresium;
+			packageProductDependencies = (
+			);
+			productName = Aresium;
+			productReference = 5B2D6ADD97CD5EA3A8602575;
+			productType = "com.apple.product-type.application";
+		};
+		21078C060C5852137AF7F44F /* AresiumTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A162A349639F02323E6482D0;
+			buildPhases = (
+				EA39250B536EAE2E00A47FB0,
+				7E292C96375EBDF4EC568795,
+				CE15EA2011E0061FF896BEBC,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				EEEEB42364C0B53AB3147F72,
+			);
+			fileSystemSynchronizedGroups = (
+				8A79A9F3D4C59DD5E91D6F9B,
+			);
+			name = AresiumTests;
+			packageProductDependencies = (
+			);
+			productName = AresiumTests;
+			productReference = CAC6B7691F2F062B4F2D49DF;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		7D124D8EB7A1CD5680D4BEF2 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2710;
+				LastUpgradeCheck = 2710;
+				TargetAttributes = {
+					F2D626DD0A6E6CCFCAF01B8C = {
+						CreatedOnToolsVersion = 27.1;
+					};
+					21078C060C5852137AF7F44F = {
+						CreatedOnToolsVersion = 27.1;
+						TestTargetID = F2D626DD0A6E6CCFCAF01B8C;
+					};
+				};
+			};
+			buildConfigurationList = 240FD356E4C6E39FBFA4619E;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 2D478AA2FC01AF7F5BF07958;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = D769A831193A5CCB0688851D /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				F2D626DD0A6E6CCFCAF01B8C /* Aresium */,
+				21078C060C5852137AF7F44F /* AresiumTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		3F51E770092E9D84F111CA7A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CE15EA2011E0061FF896BEBC /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		E9D939FC8251252FB0274B5F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EA39250B536EAE2E00A47FB0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		EEEEB42364C0B53AB3147F72 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = F2D626DD0A6E6CCFCAF01B8C /* Aresium */;
+			targetProxy = 03FE73935A789228A38F833D /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		8B6AF6E4A14580DBA946686D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				ONLY_ACTIVE_ARCH = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		6A069D23C48EDDDC8F0180A5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		EE2C9580BBCF7BF48301E082 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Aresium;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				MARKETING_VERSION = 0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = "de.ares-empire.aresium";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		28622ECC5E325D9B55140F28 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Aresium;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				MARKETING_VERSION = 0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = "de.ares-empire.aresium";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		7C508EDD42E30C4D09CFFD70 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = "de.ares-empire.aresium.tests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Aresium.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Aresium";
+			};
+			name = Debug;
+		};
+		D47CB8559ADD5762725FDC85 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = "de.ares-empire.aresium.tests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Aresium.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Aresium";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		240FD356E4C6E39FBFA4619E /* Build configuration list for PBXProject "Aresium" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8B6AF6E4A14580DBA946686D /* Debug */,
+				6A069D23C48EDDDC8F0180A5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		5C8D399BCB418A51D40EC43C /* Build configuration list for PBXNativeTarget "Aresium" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EE2C9580BBCF7BF48301E082 /* Debug */,
+				28622ECC5E325D9B55140F28 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A162A349639F02323E6482D0 /* Build configuration list for PBXNativeTarget "AresiumTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7C508EDD42E30C4D09CFFD70 /* Debug */,
+				D47CB8559ADD5762725FDC85 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 7D124D8EB7A1CD5680D4BEF2 /* Project object */;
+}
