@@ -1,6 +1,6 @@
 # 04: The red "Aresium mode", the ARESIUM band and its intro animation
 
-Status: draft
+Status: merged 2026-10-23. 56 tests pass on main after the merge.
 Branch: `codex/04-aresium-red-mode` · Worktree: `../empire-ios-04-aresium-red-mode` · Model: `gpt-6.1-sol`, effort `high`
 
 ## Goal
