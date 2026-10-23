@@ -1,6 +1,6 @@
 # 05: Aresium widgets (medium: this month's spending line; small: two categories)
 
-Status: draft
+Status: merged 2026-10-23. 67 tests; widgets rendered in tests, not yet placed on a home screen.
 Branch: `codex/05-aresium-widgets` · Worktree: `../empire-ios-05-aresium-widgets` · Model: `gpt-6.1-sol`, effort `high`
 
 ## Goal
