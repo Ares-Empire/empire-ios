@@ -9,6 +9,9 @@ Read `README.md` first, then the decision record in the ares-empire repo
 - Log in via the Empire account system, never a service's own password.
 - Design language: the Ares Empire "crown language" in `ares-empire/EMPIRE.md`
   (near-black, polished gold accent, Space Grotesk / JetBrains Mono).
+- Every app's main screen (the first tab's root) ends with the app's name: `WordmarkScrollView`
+  (`Shared/Design/EmpireDesign.swift`) in place of its `ScrollView`; the band scrolls with the content and shows only
+  when you scroll down (Patrik, 2026-10-24). Its launch argument for screenshots: `-scrollToEnd` (Arestemis `-scrollBottom`).
 - Append a line to the Chronicle in `ares-empire/EMPIRE.md` after meaningful work.
 - A good structure is worth more work now: if the app would need a copy of a service's logic or a
   workaround, fixing the service is usually the better call (`~/ares-empire/EMPIRE.md` → "How we build apps").
@@ -119,6 +122,9 @@ Apple approves the developer account.
 9. **Arestoteles on the phone:** check the Discuss hand-off (`DiscussPrompt.target`, now `https://claude.ai/code`: does
    the Claude app open, and how to start a session there with the copied prompt); replace the bust (the website's
    `aristotle-bust.png` has a faint "Magnific" watermark); a widget with a position to revisit (needs a widget target).
+10. **Light mode before the next new app** (Patrik, 2026-10-24; `ares-empire/docs/IPHONE-APPS.md` → "Every app
+   has"): colours as light/dark pairs in `Shared/Design`, an Appearance row in Settings, every app checked in both.
+   Aresium already has its own light theme (`AppTheme`/`Palette`, the sun button in its header): start from it.
 8. **Build 2026-10-24 record:** `docs/build-2026-10-24/STATUS.md` (what was built, decisions, live tests). Built after the main work: the Aresus
    widget and the hub's live lines from Aresus.
 
@@ -133,7 +139,8 @@ Apple approves the developer account.
   Apple ID could install on the phone, but those builds stop opening after 7 days, so we don't use it).
 - Xcode project `Aresium/Aresium.xcodeproj` (2026-10-23): app + tests, folder-synchronized groups (new Swift
   files need no `project.pbxproj` edits), bundle id `de.ares-empire.aresium`, iOS 26+. Signing team: set to the
-  paid team once approved. Launch argument `-sampleData` skips login and shows the bundled sample.
+  paid team once approved. Launch argument `-sampleData` skips login and shows the bundled sample
+  (`-scrollToEnd`: the start screen at its band).
 - Test fixtures `AresiumTests/server-dashboard.sample.json` + `.expected.json`: the Aresium server's sample and
   the website's answers for it. When `/api/data` changes: `npm run sample` in aresium, then
   `node scripts/aresium-fixtures.mjs`.
@@ -154,7 +161,7 @@ Apple approves the developer account.
 - **Empire app** (2026-10-24): the approved phone hub (`ares-empire/web/app/mobile.jsx` + `mobile.css`) in SwiftUI,
   `Empire/Empire/Screens/` (Claude's look; values copied from the CSS, with the CSS selector named in comments), data
   in `Model/` + `API/` (brief 08). Launch arguments (DEBUG): `-sampleData` (admin sample), `-sampleUser` (member
-  sample), `-openSheet province|idea|add|approvals` for screenshots. Ring: tap the front province to open it (its app if
+  sample), `-openSheet province|idea|add|approvals`, `-scrollToEnd` for screenshots. Ring: tap the front province to open it (its app if
   installed, else its website), hold any tab for its page; on the page the name is the link (Patrik, 2026-10-24). Province marks load from the hub with the
   Bearer token, so the samples show monograms. Signing up and password resets stay on the website.
 - **Push** (2026-10-24): `Shared/Push/` (`PushCenter`, `PushAppDelegate`, tests in `EmpireTests/PushCenterTests`)
@@ -198,15 +205,21 @@ Apple approves the developer account.
   `Spotlight`. Screens in `Screens/` are structure on `Shared/Design`, not styled yet. Launch arguments (DEBUG):
   `-sampleData` (edits answered with `edit-result.json`; `-sampleEditConflict` 409, `-sampleEditInvalid` 422,
   `-samplePushLater` pushed false, `-sampleOffline` the sample as the saved vault and no server),
-  `-tab positions|topics|library|search`, `-library mechanisms|events|questions|actors`, `-search <query>`,
-  `-openNote <id>[#<heading>]`, `-openPosition <id>`,
-  `-openSheet brief|edit|quicknote|discuss|discussions|reword|change|drop|add|evidence`, and `-sampleVaultFile <path>` (a
+  `-sampleSlowSearch` (the server's search answers after 3 s), `-tab positions|topics|library|search`,
+  `-library mechanisms|events|questions|actors`, `-search <query>`, `-tabSearch <query>` (in the field of the tab
+  `-tab` opens), `-openBestMatch <n>` (taps the n-th best match), `-openNote <id>[#<heading>]`, `-openPosition <id>`,
+  `-openSheet brief|edit|quicknote|discuss|discussions|reword|change|drop|add|evidence`, `-scrollToEnd` (Positions), and `-sampleVaultFile <path>` (a
   vault saved from the server instead of the made-up sample, to look at real notes; DEBUG only, never committed).
   **For lookups (Patrik, 2026-10-24):** position cards show the position's `title` (the bold part) cut to one line of
   thought (`Lookup.cardLine`); a position page offers Discuss (now, or "later" onto the vault's to-discuss list), Edit
   (wording) and Note (into the Inbox, about the position); no change/drop on the phone. Long notes open with their
   sections closed (`NoteBody`), with Figures & dates, Sources and Terms (`LookupPanel`), search shows sentences first,
   and pressing a paragraph or list item edits just that passage (the server's block `lines`).
+  **Search (2026-10-24, build E2):** Positions, Topics and Library each have a search field over their own items
+  (`TabSearch`, `VaultSearch`'s matching; the Library shows every kind while a query is typed). The Search tab puts the
+  server's best matches (`GET /search`, by words and meaning; `BestMatches`: asked once typing pauses, a newer query
+  cancels the older, 5 s timeout, nothing shown on failure) above the device's results; sample mode answers every
+  query with `Samples/search.json`.
 - Targets: `Aresium` (app), `AresiumWidgetExtension` (widgets, folder `Aresium/AresiumWidget/`, embedded in the
   app), `AresiumTests`. `Aresium/AresiumShared/` is compiled into both app and widget (theme, `AppTheme`, `AppGroup`,
   widget snapshot); everything else belongs to one target. App Group `group.de.ares-empire.aresium` in both

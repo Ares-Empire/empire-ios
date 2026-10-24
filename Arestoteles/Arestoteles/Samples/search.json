@@ -1,0 +1,56 @@
+{
+  "commit": "a1b2c3d",
+  "meaning": true,
+  "results": [
+    {
+      "note": "Printing press",
+      "block": 1,
+      "item": null,
+      "position": "Printing press#2",
+      "heading": "My position",
+      "text": "Printers were businessmen first; they printed what sold.",
+      "sentence": "Printers were businessmen first; they printed what sold.",
+      "match": "both"
+    },
+    {
+      "note": "Information wants to be cheap",
+      "block": 2,
+      "item": null,
+      "position": null,
+      "heading": "My take",
+      "text": "The printers were businessmen first: they printed Luther because Luther sold.",
+      "sentence": "The printers were businessmen first: they printed Luther because Luther sold.",
+      "match": "both"
+    },
+    {
+      "note": "Spread of print",
+      "block": 2,
+      "item": null,
+      "position": null,
+      "heading": "Trade routes, not borders",
+      "text": "Printers went where paper, money and readers were: the trading cities (Handelsstädte) of the Rhine and northern Italy.",
+      "sentence": "Printers went where paper, money and readers were: the trading cities (Handelsstädte) of the Rhine and northern Italy.",
+      "match": "words"
+    },
+    {
+      "note": "Martin Luther",
+      "block": 0,
+      "item": null,
+      "position": null,
+      "heading": null,
+      "text": "Monk and professor in Wittenberg; the most printed author of the [Reformation](arestoteles://note/Reformation).",
+      "sentence": "Monk and professor in Wittenberg; the most printed author of the Reformation.",
+      "match": "meaning"
+    },
+    {
+      "note": "Reformation",
+      "block": 2,
+      "item": 0,
+      "position": null,
+      "heading": "Mechanisms at work",
+      "text": "[Information wants to be cheap](arestoteles://note/Information%20wants%20to%20be%20cheap): pamphlets outsold books",
+      "sentence": "Information wants to be cheap: pamphlets outsold books",
+      "match": "meaning"
+    }
+  ]
+}

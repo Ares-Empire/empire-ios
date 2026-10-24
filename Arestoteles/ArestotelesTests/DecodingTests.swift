@@ -2,8 +2,8 @@ import Foundation
 import Testing
 @testable import Arestoteles
 
-/// The contract's three samples (Samples/ = Arestoteles/docs/samples/) decode into the app's models and survive the
-/// round trip through the app's own cache; edits encode exactly as API.md → Edits says.
+/// The contract's samples (Samples/ = Arestoteles/docs/samples/) decode into the app's models and survive the round
+/// trip through the app's own cache; edits encode exactly as API.md → Edits says.
 @MainActor
 struct DecodingTests {
     @Test(arguments: ArestotelesSamples.files)
@@ -12,6 +12,7 @@ struct DecodingTests {
         case "vault": try roundTrip(Vault.self, file)
         case "note-source": try roundTrip(NoteSource.self, file)
         case "edit-result": try roundTrip(EditResult.self, file)
+        case "search": try roundTrip(SearchAnswer.self, file)
         default: Issue.record("No model for \(file)")
         }
     }

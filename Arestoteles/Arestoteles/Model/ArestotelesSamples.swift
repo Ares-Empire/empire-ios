@@ -2,7 +2,7 @@ import Foundation
 
 /// The contract's made-up samples (Samples/, copies of Arestoteles/docs/samples/), for the tests and for `-sampleData`.
 enum ArestotelesSamples {
-    nonisolated static let files = ["vault", "note-source", "edit-result"]
+    nonisolated static let files = ["vault", "note-source", "edit-result", "search"]
 
     static func data(_ name: String) throws -> Data {
         guard let url = Bundle.main.url(forResource: name, withExtension: "json") else {
@@ -19,18 +19,21 @@ enum ArestotelesSamples {
 #if DEBUG
 /// `-sampleData`: the samples as a server in memory. `GET /vault` answers the sample (304 with its ETag); every edit is
 /// answered with `edit-result.json` (whose vault then stays), or with a 409 / 422 when asked; the source of any note is
-/// `note-source.json` for its note and a short made-up body for the others. Nothing leaves the device.
+/// `note-source.json` for its note and a short made-up body for the others; every search is answered with
+/// `search.json` (written for the query "printers sold"). Nothing leaves the device.
 final class SampleBackend: VaultBackend {
     struct Options {
         var conflict = false            // -sampleEditConflict: every edit answers 409
         var invalid = false             // -sampleEditInvalid: every edit answers 422
         var pushLater = false           // -samplePushLater: edits saved with pushed: false
         var offline = false             // -sampleOffline: the server cannot be reached
+        var slowSearch = false          // -sampleSlowSearch: searches answer after 3 s (the placeholder shows)
     }
 
     private(set) var current: Vault
     private let source: NoteSource
     private let result: EditResult
+    private let found: SearchAnswer
     private let options: Options
 
     init(options: Options = Options()) throws {
@@ -45,6 +48,7 @@ final class SampleBackend: VaultBackend {
         }
         source = try ArestotelesSamples.decode(NoteSource.self, from: "note-source")
         result = try ArestotelesSamples.decode(EditResult.self, from: "edit-result")
+        found = try ArestotelesSamples.decode(SearchAnswer.self, from: "search")
     }
 
     /// The sample vault as the device would have saved it (for `-sampleOffline`).
@@ -86,6 +90,12 @@ final class SampleBackend: VaultBackend {
         current = result.vault
         return EditResult(vault: result.vault, changed: result.changed, pushed: result.pushed && !options.pushLater,
                           warnings: result.warnings)
+    }
+
+    func search(_ query: String, limit: Int) async throws -> SearchAnswer {
+        try reachable()
+        try await Task.sleep(for: options.slowSearch ? .seconds(3) : .milliseconds(250))
+        return SearchAnswer(commit: found.commit, meaning: found.meaning, results: Array(found.results.prefix(limit)))
     }
 
     private func reachable() throws {
