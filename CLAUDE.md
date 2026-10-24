@@ -113,6 +113,11 @@ Both apps work on the simulator and are merged; nothing reaches the phone until 
   sample), `-openSheet province|idea|add|approvals` for screenshots. Ring: tap the front province to open it (its app if
   installed, else its website), hold any tab for its page; on the page the name is the link (Patrik, 2026-10-24). Province marks load from the hub with the
   Bearer token, so the samples show monograms. Signing up and password resets stay on the website.
+- **Push** (2026-10-24): `Shared/Push/` (`PushCenter`, `PushAppDelegate`, tests in `EmpireTests/PushCenterTests`)
+  registers devices with the Empire push service (`ares-empire/docs/PUSH.md`; dry run until the APNs key). Not wired
+  into any app yet; each app needs the Push Notifications capability (paid team) and, for time-sensitive
+  notifications, the `com.apple.developer.usernotifications.time-sensitive` entitlement. Nothing in Shared may use
+  `UIApplication.shared` (the Aresium widget compiles Shared too).
 - Targets: `Aresium` (app), `AresiumWidgetExtension` (widgets, folder `Aresium/AresiumWidget/`, embedded in the
   app), `AresiumTests`. `Aresium/AresiumShared/` is compiled into both app and widget (theme, `AppTheme`, `AppGroup`,
   widget snapshot); everything else belongs to one target. App Group `group.de.ares-empire.aresium` in both

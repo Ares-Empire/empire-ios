@@ -21,10 +21,17 @@ empire-ios/
   Aresium/        Aresium.xcodeproj: the Aresium app, its widget extension, tests
   Empire/         Empire.xcodeproj: the Ares Empire app (the hub), tests
   Shared/         compiled into every app: the Empire login (one login for all apps), the network
-                  layer, the fonts; each project includes it as a synchronized folder
+                  layer, the fonts, push (Push/: PushCenter + PushAppDelegate); each project includes
+                  it as a synchronized folder
   scripts/        new-app-project.py (a new app project, wired to Shared/), check-shared-login.sh,
                   aresium-fixtures.mjs
 ```
+
+**Push** (`Shared/Push/`, server: `ares-empire/docs/PUSH.md`): an app adopts `PushAppDelegate` with
+`@UIApplicationDelegateAdaptor`, calls `delegate.push.start(app:session:categories:)` once its session exists and
+routes `delegate.push.openedURL`. Until the paid team allows the Push capability, try a notification on the
+simulator with `xcrun simctl push <udid> <bundle id> Shared/Push/sample-push.apns` (the app must have asked for
+permission first).
 
 Code moves into `Shared/` when a second app needs it (2026-10-24: the login, network layer and fonts, for the
 Empire app). A new province app: `python3 scripts/new-app-project.py <Name> <bundle id> "<display name>"`.
