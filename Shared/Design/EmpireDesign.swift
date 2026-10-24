@@ -224,7 +224,7 @@ struct WordmarkScrollView<Content: View, Band: View>: View {
         ScrollView {
             VStack(spacing: 0) {
                 VStack(spacing: 0) {
-                    content
+                    content.fixedSize(horizontal: false, vertical: true)   // only the gap grows, never the content
                     Spacer(minLength: 44)
                 }
                 .frame(minHeight: visible.height, alignment: .top)
