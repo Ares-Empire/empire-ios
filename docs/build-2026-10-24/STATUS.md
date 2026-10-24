@@ -126,3 +126,16 @@ Stop only for a genuine problem.
   for Patrik and the test account (gives access to Patrik's vault: never to anyone else).
 - Checked live: 78 notes, 29 positions, ETag 304, a stale edit refused (409, German); the vault untouched. App on
   Patrik's simulator shows his real positions.
+
+## Late evening: lookups, Settings, contact, legal (briefs E1–E6)
+
+- E1 the app's name ends each main screen (`WordmarkScrollView`), E2 Arestoteles search fields + best matches, E3 the
+  server's search by meaning (EmbeddingGemma-300m q4, live: 538 passages, ~0.15 s, ~280 MB), E4/E4b Settings in every
+  app (language chosen in the app: iOS hides its own entry with one phone language), E5 contact & support (`feedback`
+  collection + mail hook, live, tested with the test account), E6 privacy manifests + `docs/APP-STORE.md` (merged) and
+  the privacy/imprint pages (ares-empire branch `legal`, worktree `~/wt/ares-empire-legal`: waits for Patrik's answers
+  on the netcup agreement and a second contact route, then journald 14 days, the address, publish).
+- All merged and on Patrik's simulator except the legal pages. Follow-ups: self-host the websites' fonts and scripts,
+  account deletion in the apps reaching every service, drop search terms from the services' logs, light mode before
+  the next app.
+
