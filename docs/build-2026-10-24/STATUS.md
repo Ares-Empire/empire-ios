@@ -22,7 +22,7 @@ Stop only for a genuine problem.
 |---|---|---|---|
 | P: Empire push service + `Shared/Push` | Claude subagent | `~/wt/ares-empire-push` (`push`), `~/wt/empire-ios-push` (`push`) | merged + deployed (dry run) |
 | T: Arestemis server (API, hunts, AI check, places) | Claude subagent | `~/wt/Arestemis-api` (`app-api`) | running since 04:20 |
-| S: Aresus server + Aresync reports | Claude subagent | `~/wt/aresus-server` (`server`), `~/wt/aresync-report` (`report`) | running since 04:20 |
+| S: Aresus server + Aresync reports | Claude subagent | `~/wt/aresus-server` (`server`), `~/wt/aresync-report` (`report`) | merged + deployed |
 | A1: Arestemis iOS app | Claude subagent | `~/wt/empire-ios-arestemis` (`arestemis-app`) | running since 04:29 |
 | A2: Aresus iOS app | Claude subagent | `~/wt/empire-ios-aresus` (`aresus-app`) | running since 04:29 |
 | D: Shared design kit, two Xcode projects, icons | me | `~/empire-ios` main (small commits) | done 04:28 |
@@ -43,8 +43,12 @@ Stop only for a genuine problem.
       to `push/` (the ares-empire Aresync hook must do this). PushCenter wiring into the apps: step 10.
 - [ ] 8. Review + merge T. Server move `/root/flatsniper` → `/root/Arestemis`, `arestemis.service`, Caddy route,
       Groq model, delete old config/db, live test with the test account.
-- [ ] 9. Review + merge S. Deploy aresus (`aresus.service`), Caddy route, machine tokens (Mac, server), Aresync report
-      on Mac + server, server Aresync REPOS + hooks.
+- [x] 9. Review + merge S (107 + 32 + 7 tests pass on my run). Deploy aresus (`aresus.service`), Caddy route, machine tokens (Mac, server), Aresync report
+      on Mac + server, server Aresync REPOS + hooks. Done: `aresus.service` live, Caddy `/api/aresus/*` (backup
+      `Caddyfile.bak-20261024-aresus`), machine tokens Server + Aresium (token files `/root/.config/aresus-*-token.out`,
+      600), server REPOS="ares-empire aresus aresync" + hooks ares-empire, aresus; both machines report. My fix:
+      `hide: [arescope]` + Arestudy/AresOS/Aresify as Inactive. **Left:** add `Arestemis` to server REPOS + its hook
+      after the move (step 8); Windows token when Patrik sets up the laptop; retire Aresync Telegram once push works.
 - [ ] 10. Review A1, A2 on the simulator (screenshots), design polish, wire Shared/Push, live login with the test
       account, `simctl push` tests.
 - [ ] 11. Hub: ~~app schemes~~ (done 04:30: `APP_SCHEMES` in webauth/server.py, live; Empire Info.plist queries), chronicle lines, EMPIRE.md connections,
@@ -65,3 +69,6 @@ Stop only for a genuine problem.
 - 04:36 Patrik's real account (admin, id o3hbhzk8bo1352x) given services arestemis + aresus (his own apps); TELEGRAM_FALLBACK_USER candidate.
 - push merged + deployed; merged-main build/test of the apps running in the background.
 - merged main (push): Empire tests pass, Aresium (+widget), Arestemis, Aresus build.
+- 04:56 S merged and deployed; Aresus overview live (1 issue = Arestemis not deployed yet, correct). Careful: a
+  `config.bak` in ~/aresync is NOT git-ignored (Aresync would commit it with the Telegram token): deleted; never back
+  up configs inside a synced repo.
