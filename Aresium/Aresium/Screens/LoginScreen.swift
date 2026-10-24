@@ -10,7 +10,7 @@ struct LoginScreen: View {
     private enum Field { case email, password }
 
     var body: some View {
-        ScrollView {
+        LoginScroll(footerColor: palette.muted) {
             VStack(alignment: .leading, spacing: 22) {
                 Image("Hermes").resizable().scaledToFit().frame(width: 72, height: 72)
                 VStack(alignment: .leading, spacing: 6) {
@@ -45,7 +45,8 @@ struct LoginScreen: View {
                         .font(AppFont.text(14)).tint(palette.secondary).disabled(session.isBusy)
                 }
             }.padding(.horizontal, 28).padding(.top, 80)
-        }.scrollDismissesKeyboard(.interactively)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
     }
 
     private func login() {

@@ -10,7 +10,7 @@ struct EmpireLogin: View {
     private enum Field { case email, password }
 
     var body: some View {
-        ScrollView {
+        LoginScroll {
             VStack(spacing: 0) {
                 Image("Crest").resizable().scaledToFit().frame(width: 104, height: 130)
                     .shadow(color: .black.opacity(0.6), radius: 17, y: 16)
@@ -66,11 +66,10 @@ struct EmpireLogin: View {
                 .font(AppFont.text(12.5)).foregroundStyle(Color(hex: 0x8F9390)).tint(Color(hex: 0xC2C4BF))
                 .padding(.top, 20)
             }
-            .padding(.horizontal, 30).padding(.top, 96).padding(.bottom, 40)
+            .padding(.horizontal, 30).padding(.top, 96)
             .frame(maxWidth: 420)
             .frame(maxWidth: .infinity)
         }
-        .scrollDismissesKeyboard(.interactively)
         .background(EmpireStyle.background.ignoresSafeArea())
         .preferredColorScheme(.dark)
     }

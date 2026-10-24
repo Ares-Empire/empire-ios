@@ -12,7 +12,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Info"
+            "value" : "Über"
           }
         }
       }
@@ -480,6 +480,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ERKUNDET"
+          }
+        }
+      }
+    },
+    "Settings" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einstellungen"
           }
         }
       }

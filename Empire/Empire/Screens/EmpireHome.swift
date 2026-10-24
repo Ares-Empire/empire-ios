@@ -9,7 +9,7 @@ struct EmpireHomeActions {
     var remove: (String) async -> Bool = { _ in true }
     var loadApprovals: () async -> Void = {}
     var decide: (String, Bool) async -> Bool = { _, _ in true }   // (account id, approve)
-    var logOut: () -> Void = {}
+    var openSettings: () -> Void = {}                     // Settings, with Log out (the app presents it)
     var refresh: () async -> Void = {}
 }
 
@@ -107,7 +107,7 @@ struct EmpireHome: View {
                         sheet = .approvals; Task { await actions.loadApprovals() }
                     }
                 }
-                iconButton("rectangle.portrait.and.arrow.right", label: String(localized: "Log out")) { actions.logOut() }
+                iconButton("gearshape", label: String(localized: "Settings")) { actions.openSettings() }
             }
         }
         .padding(.leading, 18).padding(.trailing, 8).padding(.top, 6).padding(.bottom, 4)
@@ -200,7 +200,7 @@ struct EmpireHome: View {
 
 #if DEBUG
 extension EmpireHome {
-    /// Screenshots: `-openSheet province|idea|add|approvals` opens that page at launch.
+    /// Screenshots: `-openSheet province|idea|add|approvals|settings` opens that page at launch.
     private func openDebugSheet() {
         let arguments = ProcessInfo.processInfo.arguments
         guard let index = arguments.firstIndex(of: "-openSheet"), arguments.indices.contains(index + 1) else { return }
@@ -209,6 +209,7 @@ extension EmpireHome {
         case "idea": sheet = data.ideas.first.map { .idea($0) }
         case "add": sheet = .add
         case "approvals": sheet = .approvals
+        case "settings": actions.openSettings()
         default: break
         }
     }

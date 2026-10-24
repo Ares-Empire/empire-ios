@@ -11,27 +11,24 @@ enum Look {
     static let headingGap: CGFloat = 10                 // a section heading to its card
 }
 
-/// The top of a tab: the bust on the left (its menu logs out), the title centred, the quick-note button on the right
-/// (reachable from every tab).
+/// The top of a tab: the bust on the left, the title centred, the quick-note button (reachable from every tab) and
+/// Settings on the right.
 struct ScreenHeader: View {
     let title: String
     @Environment(AppNavigation.self) private var navigation
-    @Environment(\.logOut) private var logOut
 
     var body: some View {
         ZStack {
             Text(title).font(AppFont.text(17, weight: .bold)).foregroundStyle(Ink.primary).lineLimit(1)
                 .accessibilityAddTraits(.isHeader)
-            HStack {
-                Menu {
-                    Button("Log out", systemImage: "rectangle.portrait.and.arrow.right", role: .destructive) { logOut() }
-                } label: {
-                    Image("Bust").resizable().scaledToFit().frame(width: 38, height: 38)
-                }
-                .accessibilityLabel(Text("Account"))
+            HStack(spacing: 8) {
+                Image("Bust").resizable().scaledToFit().frame(width: 38, height: 38).accessibilityHidden(true)
                 Spacer()
                 GlassIconButton(symbol: "square.and.pencil", label: String(localized: "Quick note")) {
                     navigation.sheet = .quickNote(about: nil)
+                }
+                GlassIconButton(symbol: "gearshape", label: String(localized: "Settings")) {
+                    navigation.sheet = .settings
                 }
             }
         }

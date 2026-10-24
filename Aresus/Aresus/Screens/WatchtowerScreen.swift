@@ -11,10 +11,16 @@ struct WatchtowerTab: View {
 
     var body: some View {
         NavigationStack(path: $navigation.provincePath) {
-            WatchtowerScreen(store: store, serverRequest: navigation.serverRequest, marks: marks, logOut: logOut)
-                .navigationDestination(for: String.self) { slug in
-                    ProvinceDetailScreen(slug: slug, store: store, mark: marks[slug])
-                }
+            WatchtowerScreen(store: store, serverRequest: navigation.serverRequest, marks: marks) {
+                navigation.showsSettings = true
+            }
+            .navigationDestination(for: String.self) { slug in
+                ProvinceDetailScreen(slug: slug, store: store, mark: marks[slug])
+            }
+        }
+        .sheet(isPresented: $navigation.showsSettings) {
+            SettingsScreen(app: SettingsApp(name: "Aresus", accent: .aresus, sendsNotifications: true),
+                           session: store.session, sample: store.isSample, logOut: logOut)
         }
     }
 }
@@ -24,7 +30,7 @@ struct WatchtowerScreen: View {
     let store: AresusStore
     let serverRequest: Int
     let marks: [String: UIImage]
-    let logOut: () -> Void
+    let openSettings: () -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -33,9 +39,7 @@ struct WatchtowerScreen: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
                         AresusHeader(bust: Image("Bust"), title: "Aresus") {
-                            GlassMenuButton(symbol: "ellipsis", label: String(localized: "More")) {
-                                Button("Log out", systemImage: "rectangle.portrait.and.arrow.right", action: logOut)
-                            }
+                            GlassIconButton(symbol: "gearshape", label: String(localized: "Settings"), action: openSettings)
                         }
                         content.padding(.horizontal, 18)
                             .animation(reduceMotion ? nil : .smooth, value: store.overview)

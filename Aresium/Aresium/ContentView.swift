@@ -15,6 +15,7 @@ struct ContentView: View {
     @State private var graph = false
     @State private var path: [DashboardRoute] = []
     @State private var sampleActive: Bool
+    @State private var showsSettings = false
     private var palette: Palette { Palette(theme: theme.theme) }
     private var session: EmpireSession { store.session }
 
@@ -66,6 +67,9 @@ struct ContentView: View {
         #if DEBUG
         if arguments.contains("-sampleLoginWaiting") { imports.seedDebugWaitingFiles() }
         if sample {
+            if let index = arguments.firstIndex(of: "-openSheet"), arguments.indices.contains(index + 1) {
+                _showsSettings = State(initialValue: arguments[index + 1] == "settings")
+            }
             if arguments.contains("-sampleImportFailed") { imports.seedDebugImportFailure() }
             if arguments.contains("-sampleImportResult") {
                 imports.show("12 new transactions imported · 1 skipped", success: true)
@@ -170,6 +174,9 @@ struct ContentView: View {
             .overlay(alignment: .bottom) {
                 ImportFeedback(store: imports, palette: palette)
             }
+            .sheet(isPresented: $showsSettings) {
+                SettingsScreen(app: SettingsApp(name: "Aresium"), session: session, sample: sampleActive, logOut: logOut)
+            }
         }
     }
 
@@ -228,18 +235,22 @@ struct ContentView: View {
         }
         return ScreenHeader(title: route?.category ?? "Aresium", subtitle: subtitle, category: category, palette: palette,
                             back: route == nil ? nil : { if !path.isEmpty { path.removeLast() } },
-                            toggleTheme: { theme.send(.header, reduceMotion: reduceMotion) }, logout: {
-            path = []
-            store.clear()
-            if sampleActive {
-                sampleActive = false
-                store = DashboardStore(session: EmpireSession(app: .aresium, restoreOnLaunch: false,
-                                                              installDefaults: EmpireShared.defaults),
-                                       widgetPublisher: WidgetSnapshotPublisher())
-                imports = ImportStore(dashboard: store)
-            }
-            else { session.logOut() }
-        })
+                            toggleTheme: { theme.send(.header, reduceMotion: reduceMotion) },
+                            openSettings: { showsSettings = true })
+    }
+
+    /// Settings → Log out: ends the shared login; in sample mode it leaves the sample for the real login.
+    private func logOut() {
+        path = []
+        store.clear()
+        if sampleActive {
+            sampleActive = false
+            store = DashboardStore(session: EmpireSession(app: .aresium, restoreOnLaunch: false,
+                                                          installDefaults: EmpireShared.defaults),
+                                   widgetPublisher: WidgetSnapshotPublisher())
+            imports = ImportStore(dashboard: store)
+        }
+        else { session.logOut() }
     }
 }
 

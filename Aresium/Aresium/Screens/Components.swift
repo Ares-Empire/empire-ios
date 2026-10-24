@@ -25,7 +25,7 @@ struct ScreenHeader: View {
     let palette: Palette
     var back: (() -> Void)? = nil
     let toggleTheme: () -> Void
-    let logout: () -> Void
+    let openSettings: () -> Void
     var body: some View {
         HStack(spacing: 10) {
             if let back {
@@ -47,7 +47,7 @@ struct ScreenHeader: View {
             HStack(spacing: 8) {
                 IconButton(symbol: palette.red ? "xmark" : palette.dark ? "sun.max.fill" : "moon.fill",
                            label: palette.red ? String(localized: "Exit Aresium mode") : String(localized: "Toggle theme"), palette: palette, action: toggleTheme)
-                IconButton(symbol: "rectangle.portrait.and.arrow.right", label: String(localized: "Log out"), palette: palette, action: logout)
+                IconButton(symbol: "gearshape", label: String(localized: "Settings"), palette: palette, action: openSettings)
             }
         }.padding(.horizontal, 14).padding(.top, 8).padding(.bottom, 10)
     }

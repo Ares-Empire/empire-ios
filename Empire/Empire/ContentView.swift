@@ -6,6 +6,7 @@ import UIKit
 struct ContentView: View {
     @State private var store: EmpireStore
     @State private var markImages: [String: UIImage] = [:]
+    @State private var showsSettings = false
     @Environment(\.scenePhase) private var scenePhase
     // State, like the store: SwiftUI may build this view again (a new session each time); the marks must keep using
     // the store's session, or they see a logged-out one and load nothing.
@@ -56,6 +57,10 @@ struct ContentView: View {
             }
         }
         .onChange(of: session.generation) { _, _ in markImages = [:] }
+        .sheet(isPresented: $showsSettings) {
+            SettingsScreen(app: SettingsApp(name: "Empire"), session: session, sample: store.isSample,
+                           logOut: { store.session.logOut() })
+        }
     }
 
     private var status: EmpireHomeStatus {
@@ -72,7 +77,7 @@ struct ContentView: View {
             remove: { slug in await store.ring(remove: slug); return store.ringError == nil },
             loadApprovals: { await store.loadApprovals() },
             decide: { id, approve in await store.decide(id: id, approve: approve); return store.approvalsError == nil },
-            logOut: { store.session.logOut() },
+            openSettings: { showsSettings = true },
             refresh: { await store.reload() })
     }
 

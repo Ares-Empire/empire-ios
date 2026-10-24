@@ -16,6 +16,7 @@ struct EmpireRecord: Decodable {
     let id: String
     let approved: Bool
     let services: [String]
+    var email: String? = nil        // the account server sends it to the account itself
 }
 
 struct AuthResponse: Decodable {
@@ -66,6 +67,8 @@ final class EmpireSession {
 
     let app: EmpireAppIdentity
     private(set) var token: String?
+    /// The account's email from the last login answer, for Settings → Account. Never logged; forgotten on logout.
+    private(set) var email: String?
     private(set) var access: Access = .unknown
     private(set) var isRestoring = true
     private(set) var isBusy = false
@@ -182,6 +185,7 @@ final class EmpireSession {
         }
         try storage.save(response.token)
         token = response.token
+        email = response.record.email
         lastRenewedAt = .now
         if response.record.services.contains(app.service) {
             access = .granted
@@ -233,6 +237,7 @@ final class EmpireSession {
     private func endSession(reason: String?) {
         generation += 1
         token = nil
+        email = nil
         access = .unknown
         lastRenewedAt = nil
         isRestoring = false

@@ -131,7 +131,7 @@ struct ContentView: View {
     }
 }
 
-/// Ends the login (the header's menu). Always equal: it is the root's one action, so a new closure for it never needs
+/// Ends the login (Settings → Account). Always equal: it is the root's one action, so a new closure for it never needs
 /// to redraw the views reading it.
 struct LogOutAction: Equatable {
     let run: () -> Void
@@ -148,6 +148,7 @@ extension EnvironmentValues {
 private struct MainTabs: View {
     @Environment(VaultStore.self) private var store
     @Environment(AppNavigation.self) private var navigation
+    @Environment(\.logOut) private var logOut
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -175,6 +176,9 @@ private struct MainTabs: View {
                 case let .discuss(subject): DiscussSheet(subject: subject)
                 case let .quickNote(about): QuickNoteSheet(about: about)
                 case .discussions: DiscussionsSheet()
+                case .settings:
+                    SettingsScreen(app: SettingsApp(name: "Arestoteles", accent: Look.accent), session: store.session,
+                                   sample: store.isSample, logOut: logOut.run)
                 case let .passage(note, lines): PassageSheet(note: note, lines: lines)
                 case let .position(kind): PositionSheet(kind: kind, index: store.index)
                 }

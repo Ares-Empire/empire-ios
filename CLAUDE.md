@@ -66,10 +66,19 @@ milestones, a bug that comes back, and every 2–3 weeks over merged Codex work.
 
 ## Languages (every app in English and German)
 
-Decided 2026-10-24 (Patrik), rules in `ares-empire/docs/LANGUAGES.md`. The iPhone's language (or the app's own, Settings →
-Apps → the app → Language) picks German or English; there is no switch in the apps. The Mac and the simulators are set
-to German, so the apps open in German there.
+Decided 2026-10-24 (Patrik), rules in `ares-empire/docs/LANGUAGES.md`. The iPhone's language, or the app's own, picks
+German or English. The Mac and the simulators are set to German, so the apps open in German there.
 
+- **The app's own language: Settings → General → Language in every app** (the gear in its header; row "Sprache ·
+  Deutsch" shows the language the app shows now). It offers Like the iPhone / English / Deutsch and writes the app's own
+  `AppleLanguages` (`Shared/Language/LanguageSetting.swift`; "like the iPhone" removes it), the same setting iOS keeps in
+  Settings → Apps → the app → Language, so the two always agree. iOS 27 shows that iOS entry only while the iPhone lists
+  two or more languages (tested 2026-10-24), hence the in-app page. iOS reads the setting when the app starts: the page
+  says the app switches after it is closed and opened again; the app's server texts follow it (`Accept-Language` from
+  `AppLanguage.current`). Not checked yet: whether a widget (its own process and defaults) follows the app's own choice
+  or the iPhone's. On the simulator, `xcrun simctl spawn <udid> defaults write <bundle id> AppleLanguages …` lands
+  outside the app's container (the app follows it, iOS's page does not); choosing in the app or in iOS Settings writes
+  the app's own defaults.
 - **Write English in the code, German in the String Catalogs.** `Text("Save")`, `Button("Save")` and other SwiftUI
   literals are looked up by themselves. Text that is built as a `String` (model code, components taking `String`,
   errors) goes through `String(localized: "…")`; pure functions that tests pin take `language: AppLanguage = .current`
@@ -91,6 +100,18 @@ to German, so the apps open in German there.
 - Sample mode shows the servers' English sample files, so their lines stay English there; live they come in German.
 - German style: "du", plain and short; the app's terms: Jagd/Angebote/Suche (Arestemis), Problem/Aktiv/Inaktiv
   (Aresus), Buchung/Ausgaben/Einnahmen (Aresium), EROBERT/BELAGERT/… (Empire status words). "THE EMPIRE" stays a name.
+
+## Settings (every app, 2026-10-24)
+
+Every app has one Settings sheet, opened by the gear (`gearshape`) in its header where the account actions used to be:
+`Shared/Design/SettingsScreen.swift` (`SettingsScreen(app:session:sample:logOut:) { app's own section }`). Sections: the
+app's own (a view-builder slot, built with `SettingsSection` / `SettingsRow`; Arestemis puts its application texts and
+hunt notifications there), General (Language; Notifications, opening the app's page in iOS Settings, in apps with
+`sendsNotifications`), Help (Contact & support, the form from `Shared/Support`), About (Privacy and Imprint open
+`LegalPage` in the app's language, Fonts & licences shows the OFL texts from `Shared/Fonts`, Version), Account (the
+email from the login answer, `EmpireSession.email`, and Log out, which does what the app's log-out did before). Links:
+`Shared/Settings/SettingsInfo.swift`. Every login screen ends with "Privacy · Imprint" (`LoginScroll`). Screenshots:
+`-sampleData -openSheet settings` in every app. A new app: a gear in its header and `SettingsScreen` in a sheet.
 
 ## Open (2026-10-24)
 

@@ -27,27 +27,6 @@ extension AresusHeader where Trailing == Color {
     }
 }
 
-/// `GlassIconButton`'s look around a menu (Shared's button takes an action, a menu needs a label).
-struct GlassMenuButton<Items: View>: View {
-    let symbol: String
-    let label: String
-    @ViewBuilder var items: Items
-
-    var body: some View {
-        Menu {
-            items
-        } label: {
-            Image(systemName: symbol).font(.system(size: 16, weight: .medium)).foregroundStyle(Ink.secondary)
-                .frame(width: 42, height: 42)
-                .background(Ink.card, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Ink.line))
-                .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(label)
-    }
-}
-
 /// A section's heading with an optional quiet figure on the right ("ACTIVE ··· 3").
 struct SectionTitle: View {
     let text: String

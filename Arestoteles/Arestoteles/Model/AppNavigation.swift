@@ -35,6 +35,7 @@ enum AppSheet: Identifiable, Equatable {
     case discussions                        // the "discuss later" marks not yet discussed
     case passage(note: String, lines: LineRange)   // one paragraph or list item, edited on its own
     case position(PositionDraft.Kind)       // reword, change, drop, add
+    case settings                           // the app's Settings (the header's gear)
 
     var id: String {
         switch self {
@@ -46,6 +47,7 @@ enum AppSheet: Identifiable, Equatable {
         case .discussions: "discussions"
         case let .passage(note, lines): "passage:\(note):\(lines.start)-\(lines.end)"
         case let .position(kind): "position:" + kind.id
+        case .settings: "settings"
         }
     }
 }
@@ -174,7 +176,7 @@ final class AppNavigation {
 /// `-sampleEditInvalid` (edits answered 409 / 422), `-samplePushLater` (edits saved with `pushed: false`),
 /// `-sampleOffline` (the samples as the saved vault, the server unreachable), `-tab positions|topics|library|search`,
 /// `-library mechanisms|events|questions|actors`, `-search <query>`, `-openNote <id>[#<heading>]`,
-/// `-openPosition <id>`, `-openSheet brief|edit|quicknote|discuss|reword|change|drop|add|evidence`.
+/// `-openPosition <id>`, `-openSheet brief|edit|quicknote|discuss|discussions|reword|change|drop|add|evidence|settings`.
 struct LaunchOptions {
     var sample = false
     var editConflict = false
@@ -234,6 +236,8 @@ struct LaunchOptions {
             sheet = (note ?? index.topics.first?.id).map(AppSheet.editor)
         case "quicknote":
             sheet = .quickNote(about: position.map(DiscussSubject.position))
+        case "settings":
+            sheet = .settings
         case "discussions":
             sheet = .discussions
         case "discuss":

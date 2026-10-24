@@ -38,7 +38,7 @@ nonisolated struct RunRef: Identifiable, Hashable, Sendable {
     let id: Int
 }
 
-/// Where the app is: the tab, the pushed province pages, the open run sheet. Links and notification taps change it
+/// Where the app is: the tab, the pushed province pages, the open run sheet, Settings. Links and notification taps change it
 /// here; the views only follow it.
 @MainActor @Observable
 final class AresusNavigation {
@@ -47,6 +47,7 @@ final class AresusNavigation {
     var tab: Tab
     var provincePath: [String]            // slugs pushed on the Aresus tab
     var openRun: RunRef?
+    var showsSettings = false
     /// Bumped to scroll the Aresus tab to the server card.
     private(set) var serverRequest = 0
 
@@ -99,12 +100,13 @@ final class AresusNavigation {
         tab = .aresus
         provincePath = []
         openRun = nil
+        showsSettings = false
     }
 }
 
 #if DEBUG
 extension AresusNavigation {
-    /// Screenshots: `-tab aresus|aresync`, `-openProvince <slug>`, `-openRun <id>`.
+    /// Screenshots: `-tab aresus|aresync`, `-openProvince <slug>`, `-openRun <id>`, `-openSheet settings`.
     static func launched(arguments: [String]) -> AresusNavigation {
         func value(_ flag: String) -> String? {
             guard let index = arguments.firstIndex(of: flag), arguments.indices.contains(index + 1) else { return nil }
@@ -113,6 +115,7 @@ extension AresusNavigation {
         let navigation = AresusNavigation(tab: value("-tab").flatMap(Tab.init(rawValue:)) ?? .aresus)
         if let slug = value("-openProvince"), AresusLink.isSlug(slug) { navigation.open(.province(slug)) }
         if let id = value("-openRun").flatMap(Int.init), id > 0 { navigation.open(.run(id)) }
+        navigation.showsSettings = value("-openSheet") == "settings"
         return navigation
     }
 }
