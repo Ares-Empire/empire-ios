@@ -3,53 +3,53 @@
   "meaning": true,
   "results": [
     {
-      "note": "Printing press",
-      "block": 1,
-      "item": null,
-      "position": "Printing press#2",
-      "heading": "My position",
-      "text": "Printers were businessmen first; they printed what sold.",
-      "sentence": "Printers were businessmen first; they printed what sold.",
-      "match": "both"
-    },
-    {
-      "note": "Information wants to be cheap",
-      "block": 2,
-      "item": null,
-      "position": null,
-      "heading": "My take",
-      "text": "The printers were businessmen first: they printed Luther because Luther sold.",
-      "sentence": "The printers were businessmen first: they printed Luther because Luther sold.",
-      "match": "both"
-    },
-    {
       "note": "Spread of print",
-      "block": 2,
+      "block": 3,
       "item": null,
       "position": null,
       "heading": "Trade routes, not borders",
-      "text": "Printers went where paper, money and readers were: the trading cities (Handelsstädte) of the Rhine and northern Italy.",
-      "sentence": "Printers went where paper, money and readers were: the trading cities (Handelsstädte) of the Rhine and northern Italy.",
-      "match": "words"
+      "text": "The figure of 20 million books by 1500 is an estimate; ranges in the literature go from 8 to 20 million.",
+      "sentence": "The figure of 20 million books by 1500 is an estimate; ranges in the literature go from 8 to 20 million.",
+      "match": "both"
     },
     {
-      "note": "Martin Luther",
+      "note": "Printing press",
+      "block": 3,
+      "item": null,
+      "position": null,
+      "heading": "1. How print spread",
+      "text": "Within fifty years of the [Gutenberg Bible](arestoteles://note/Gutenberg%20Bible), presses ran in more than 250 European towns (Druckorte). Print followed trade routes, not borders.",
+      "sentence": "Within fifty years of the Gutenberg Bible, presses ran in more than 250 European towns (Druckorte).",
+      "match": "meaning"
+    },
+    {
+      "note": "Gutenberg Bible",
       "block": 0,
       "item": null,
       "position": null,
       "heading": null,
-      "text": "Monk and professor in Wittenberg; the most printed author of the [Reformation](arestoteles://note/Reformation).",
-      "sentence": "Monk and professor in Wittenberg; the most printed author of the Reformation.",
+      "text": "About 180 copies, printed in Mainz with movable metal type: the first major book printed in Europe.",
+      "sentence": "About 180 copies, printed in Mainz with movable metal type: the first major book printed in Europe.",
       "match": "meaning"
     },
     {
-      "note": "Reformation",
-      "block": 2,
-      "item": 0,
+      "note": "Printing press",
+      "block": 6,
+      "item": null,
       "position": null,
-      "heading": "Mechanisms at work",
-      "text": "[Information wants to be cheap](arestoteles://note/Information%20wants%20to%20be%20cheap): pamphlets outsold books",
-      "sentence": "Information wants to be cheap: pamphlets outsold books",
+      "heading": "2. Print and the Reformation",
+      "text": "Luther's pamphlets were cheap, short and in German, and printers reprinted whatever sold: see [Information wants to be cheap](arestoteles://note/Information%20wants%20to%20be%20cheap) and [Did print cause the Reformation](arestoteles://note/Did%20print%20cause%20the%20Reformation).",
+      "sentence": "Luther's pamphlets were cheap, short and in German, and printers reprinted whatever sold: see Information wants to be cheap and Did print cause the Reformation.",
+      "match": "meaning"
+    },
+    {
+      "note": "Printing press",
+      "block": 7,
+      "item": null,
+      "position": null,
+      "heading": "2. Print and the Reformation",
+      "text": "**A rival view** Elizabeth Eisenstein (*The Printing Press as an Agent of Change*, 1979) gives the press the leading role; Andrew Pettegree argues that pamphlets mattered more than books.",
+      "sentence": "Elizabeth Eisenstein (The Printing Press as an Agent of Change, 1979) gives the press the leading role; Andrew Pettegree argues that pamphlets mattered more than books.",
       "match": "meaning"
     }
   ]
