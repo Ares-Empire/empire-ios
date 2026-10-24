@@ -147,7 +147,9 @@ Apple approves the developer account.
   this app's service, or a 403 from the app's server, closes only this app (`access = .denied`, the app forgets its
   data via `onAppDataReset`); a failed new login never ends an existing one. Coming to the foreground, each app calls
   `followSharedLogin()`: it picks up a login or logout made in another app meanwhile (a renewed token of the same
-  account is taken over without a server call). Verified across the two apps on the simulator with
+  account is taken over without a server call). Every logout is written to the device log with the line that
+  asked for it (`log show --predicate 'subsystem == "de.ares-empire.shared"'`; on a simulator via `xcrun simctl spawn
+  <udid> log show …`). Verified across the two apps on the simulator with
   `scripts/check-shared-login.sh <udid>` (2026-10-24).
 - **Empire app** (2026-10-24): the approved phone hub (`ares-empire/web/app/mobile.jsx` + `mobile.css`) in SwiftUI,
   `Empire/Empire/Screens/` (Claude's look; values copied from the CSS, with the CSS selector named in comments), data
