@@ -57,7 +57,7 @@ Stop only for a genuine problem.
       account, `simctl push` tests.
 - [x] 11. Hub: ~~app schemes~~ (done 04:30: `APP_SCHEMES` in webauth/server.py, live; Empire Info.plist queries), chronicle lines, EMPIRE.md connections,
       empire-ios README/CLAUDE.md, IPHONE-APPS.md.
-- [ ] 12. Report for Patrik (what works, screenshots in `~/empire-ios/build/screens-2026-10-24/`, what waits for Apple).
+- [x] 12. Report for Patrik (what works, screenshots in `~/empire-ios/build/screens-2026-10-24/`, what waits for Apple).
 - [x] 13. Extra (Patrik: 'if done quickly, scope another project'; Arescribe vetoed, other provinces not sensible to
       build alone): (a) Aresus widget (brief W): merged 06:20, 75 tests pass, Release builds without warnings;
       (b) hub live lines from Aresus (935d534, deployed 05:41 by Aresync, hub answers 200).
@@ -102,3 +102,4 @@ Stop only for a genuine problem.
   tests pass. Screenshot set + overview.png in `~/empire-ios/build/screens-2026-10-24/`.
 - 06:25 widget merged; push set per build configuration (Release warnings gone); CLAUDE.md, chronicle (EMPIRE.md, live
   state.json, empire-data.js) updated. All worktrees and agent simulators removed. Next: the report (step 12).
+- 06:30 done. Heartbeat cron and caffeinate stopped. Report given in the session.
