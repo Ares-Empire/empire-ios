@@ -118,6 +118,13 @@ Both apps work on the simulator and are merged; nothing reaches the phone until 
   into any app yet; each app needs the Push Notifications capability (paid team) and, for time-sensitive
   notifications, the `com.apple.developer.usernotifications.time-sensitive` entitlement. Nothing in Shared may use
   `UIApplication.shared` (the Aresium widget compiles Shared too).
+- **Aresus app** (2026-10-24, `Aresus/`): two tabs, Aresus (summary, server card, province boxes, province page) and
+  Aresync (machines, runs by day, run sheet), on the Aresus API (`aresus/docs/API.md`, samples in
+  `Aresus/Aresus/Samples/` = copies of `aresus/docs/samples/`). Data in `Model/` + `API/`, look in `Screens/` (Shared/Design).
+  Links `aresus://province/<slug>`, `aresus://sync/run/<id>`, `aresus://server` go through `AresusNavigation.open(_:)`
+  (notification taps too, once Shared/Push is wired). Launch arguments (DEBUG): `-sampleData` (`-sampleAllGood`,
+  `-sampleEmpty`), `-tab aresus|aresync`, `-openProvince <slug>`, `-openRun <id>`, `-scrollToEnd`, and `-sampleLogin` /
+  `-sampleLoading` for those screens. Sample mode runs its clock from the samples' moment, so times read as live.
 - Targets: `Aresium` (app), `AresiumWidgetExtension` (widgets, folder `Aresium/AresiumWidget/`, embedded in the
   app), `AresiumTests`. `Aresium/AresiumShared/` is compiled into both app and widget (theme, `AppTheme`, `AppGroup`,
   widget snapshot); everything else belongs to one target. App Group `group.de.ares-empire.aresium` in both

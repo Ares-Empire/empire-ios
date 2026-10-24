@@ -1,0 +1,48 @@
+import SwiftUI
+import UIKit
+
+/// The signed-in app: two tabs, Aresus (the watchtower) and Aresync (sync runs), and the run sheet over both.
+/// What is on screen refreshes every minute while the app is open (`AresusStore.interval`).
+struct AresusTabs: View {
+    let store: AresusStore
+    @Bindable var navigation: AresusNavigation
+    let marks: [String: UIImage]
+    let logOut: () -> Void
+    @Environment(\.scenePhase) private var scenePhase
+
+    var body: some View {
+        TabView(selection: $navigation.tab) {
+            Tab("Aresus", systemImage: "binoculars", value: AresusNavigation.Tab.aresus) {
+                WatchtowerTab(store: store, navigation: navigation, marks: marks, logOut: logOut)
+                    .tint(Ink.primary)
+            }
+            Tab("Aresync", systemImage: "arrow.triangle.2.circlepath", value: AresusNavigation.Tab.aresync) {
+                SyncScreen(store: store) { navigation.openRun = RunRef(id: $0) }
+                    .tint(Ink.primary)
+            }
+        }
+        .tint(AppAccent.aresus.color)
+        .sheet(item: $navigation.openRun) { run in
+            RunSheet(id: run.id, store: store)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+                .presentationBackground { ProvinceWall(accent: .aresus) }
+                .tint(Ink.primary)
+        }
+        .task(id: Refresh(parts: navigation.visibleParts, active: scenePhase == .active)) {
+            guard scenePhase == .active else { return }
+            let parts = navigation.visibleParts
+            await store.refresh(parts, olderThan: AresusStore.interval)
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(AresusStore.interval))
+                guard !Task.isCancelled else { return }
+                await store.refresh(parts)
+            }
+        }
+    }
+
+    private struct Refresh: Equatable {
+        let parts: [AresusStore.Part]
+        let active: Bool
+    }
+}
