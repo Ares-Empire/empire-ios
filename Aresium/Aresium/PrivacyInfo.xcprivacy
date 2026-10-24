@@ -17,6 +17,8 @@
 			<key>NSPrivacyAccessedAPITypeReasons</key>
 			<array>
 				<string>CA92.1</string>
+				<!-- The shared App Group's defaults (Shared/EmpireShared.swift: the first-launch flag). -->
+				<string>1C8F.1</string>
 			</array>
 		</dict>
 	</array>

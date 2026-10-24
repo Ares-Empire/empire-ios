@@ -11,17 +11,22 @@ The login they use: [`ares-empire/docs/ACCOUNTS.md`](https://github.com/Ares-Emp
 
 | App | Status | Talks to | Bundle ID (planned) |
 |---|---|---|---|
-| **Aresium** | planned, first | `aresium.de` API (`/api/data`, `/api/transaction/…`, `/api/import`) | `de.ares-empire.aresium` |
+| **Aresium** | built (TestFlight pending) | `aresium.de` API (`/api/data`, `/api/transaction/…`, `/api/import`) | `de.ares-empire.aresium` |
 
-## Layout (planned)
+## Layout
 
 ```
 empire-ios/
-  Aresium/        Xcode project: the Aresium app + its widget extension
-  Shared/         added when the 2nd app arrives: Empire login, API client, design tokens
+  Aresium/        Aresium.xcodeproj: the Aresium app, its widget extension, tests
+  Empire/         Empire.xcodeproj: the Ares Empire app (the hub), tests
+  Shared/         compiled into every app: the Empire login (one login for all apps), the network
+                  layer, the fonts; each project includes it as a synchronized folder
+  scripts/        new-app-project.py (a new app project, wired to Shared/), check-shared-login.sh,
+                  aresium-fixtures.mjs
 ```
 
-Shared code is extracted only once a second app needs it — until then it lives in the app.
+Code moves into `Shared/` when a second app needs it (2026-10-24: the login, network layer and fonts, for the
+Empire app). A new province app: `python3 scripts/new-app-project.py <Name> <bundle id> "<display name>"`.
 
 ## Working on it
 

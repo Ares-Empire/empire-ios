@@ -79,9 +79,19 @@ milestones, a bug that comes back, and every 2–3 weeks over merged Codex work.
 - Test fixtures `AresiumTests/server-dashboard.sample.json` + `.expected.json`: the Aresium server's sample and
   the website's answers for it. When `/api/data` changes: `npm run sample` in aresium, then
   `node scripts/aresium-fixtures.mjs`.
+- **Two projects, one shared folder** (2026-10-24): `Aresium/Aresium.xcodeproj` and `Empire/Empire.xcodeproj`
+  (bundle id `de.ares-empire.empire`, made with `scripts/new-app-project.py`). `Shared/` (Empire login, network
+  layer, `AppFont`, fonts, `EmpireShared`) is compiled into every app (and the Aresium widget, for the fonts).
+- **One login for all apps:** the token is a Keychain item in the group `$(AppIdentifierPrefix)de.ares-empire.shared`
+  (every app's entitlements + `AppIdentifierPrefix` in its Info.plist), the fresh-install wipe keys off the App
+  Group `group.de.ares-empire.shared` (deleted by iOS only with the last Empire app). Rules in
+  `Shared/Auth/EmpireSession.swift`: an invalid login (401, refresh refused) logs out everywhere; an account without
+  this app's service, or a 403 from the app's server, closes only this app (`access = .denied`, the app forgets its
+  data via `onAppDataReset`); a failed new login never ends an existing one. Verified across the two apps on the
+  simulator with `scripts/check-shared-login.sh <udid>` (2026-10-24).
 - Targets: `Aresium` (app), `AresiumWidgetExtension` (widgets, folder `Aresium/AresiumWidget/`, embedded in the
-  app), `AresiumTests`. `Aresium/AresiumShared/` is compiled into both app and widget (theme, fonts, `AppTheme`,
-  `AppGroup`); everything else belongs to one target. App Group `group.de.ares-empire.aresium` in both
+  app), `AresiumTests`. `Aresium/AresiumShared/` is compiled into both app and widget (theme, `AppTheme`, `AppGroup`,
+  widget snapshot); everything else belongs to one target. App Group `group.de.ares-empire.aresium` in both
   entitlements files (on the simulator Xcode embeds them as "simulated" entitlements; on the phone it needs
   the paid team).
 - `Aresium/Aresium/Info.plist` holds only what build settings cannot (document types: the share sheet offers

@@ -1376,3 +1376,15 @@ private struct FailingTokenDeletion: TokenStorage {
     func save(_ token: String) throws {}
     func delete() throws { throw CocoaError(.fileWriteNoPermission) }
 }
+
+/// The other half of the one-login check (scripts/check-shared-login.sh): Aresium reads what the Empire app saved.
+struct SharedLoginProbe {
+    nonisolated static let env = ProcessInfo.processInfo.environment
+
+    @Test(.enabled(if: env["SHARED_LOGIN_PROBE"] == "read"))
+    func readsTheLoginTheEmpireAppSaved() throws {
+        let keychain = TokenKeychain()
+        #expect(try keychain.read() == Self.env["SHARED_LOGIN_PROBE_TOKEN"])
+        try keychain.delete()
+    }
+}
