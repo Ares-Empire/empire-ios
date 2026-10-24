@@ -12,6 +12,7 @@ The login they use: [`ares-empire/docs/ACCOUNTS.md`](https://github.com/Ares-Emp
 | App | Status | Talks to | Bundle ID (planned) |
 |---|---|---|---|
 | **Aresium** | built (TestFlight pending) | `aresium.de` API (`/api/data`, `/api/transaction/…`, `/api/import`) | `de.ares-empire.aresium` |
+| **Empire** (the hub) | built (TestFlight pending) | `www.ares-empire.de` API (`/api/empire`, ring, approvals) | `de.ares-empire.empire` |
 
 ## Layout
 
@@ -37,7 +38,7 @@ Empire app). A new province app: `python3 scripts/new-app-project.py <Name> <bun
 
 ## Releasing to the phone (TestFlight)
 
-1. Bump `CURRENT_PROJECT_VERSION` (project-level build settings, the one place for app and widget), Product → Archive in Xcode, *Distribute App* → *TestFlight Internal Only*.
+1. Bump `CURRENT_PROJECT_VERSION` (project-level build settings, the one place for app and widget), Product → Archive in Xcode, *Distribute App* → *TestFlight Internal Only*. Each app (Aresium, Empire) is archived and uploaded on its own.
 2. After processing (a few minutes) the build shows up in the TestFlight app on the iPhone → *Update*.
 3. Each build stays installable for 90 days; any newer build restarts that clock.
 

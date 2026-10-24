@@ -64,6 +64,21 @@ milestones, a bug that comes back, and every 2–3 weeks over merged Codex work.
 **Allowance:** `/status` in an interactive `codex`, or the `rate_limits` line in the newest
 `~/.codex/sessions/**/*.jsonl` (`used_percent`; window 10080 min = weekly).
 
+## Open (2026-10-24)
+
+Both apps work on the simulator and are merged; nothing reaches the phone until Apple approves the developer account.
+
+1. **TestFlight, once Apple approves:** set the paid team (project level, both projects); register the App Groups
+   `group.de.ares-empire.aresium` + `group.de.ares-empire.shared` and the shared Keychain group for both bundle ids;
+   an App Store Connect record per app; Release build for a generic device; archive and upload both (README).
+2. **On the phone:** the checks in `docs/reviews/2026-10-23-pre-testflight.md` (widgets incl. row taps), the shared
+   login across the two apps on the real device, the Empire app opening Aresium (`aresium://`), no connection.
+3. **Council over the Empire app before its first upload** (`docs/REVIEW.md`): brief 08 (Codex: API, store, marks,
+   opener) and the login changes (`followSharedLogin`). Not done yet.
+4. Hub data, not this repo: Aresium's "About" on the hub (`data/state.json` on the server, `lock: true`, so the sync
+   never refreshes it) is outdated (Next.js, Prisma); Patrik has not decided yet whether to rewrite it.
+5. Later (decided): Aresium for several users, then Aresium `open` in the hub catalog.
+
 ## Setup state (update as it changes)
 
 - MacBook: Xcode 27.1 with two simulator runtimes (2026-10-23): **iOS 27.0** for all normal iPhones (use this)
