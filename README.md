@@ -29,8 +29,8 @@ empire-ios/
   Arestoteles/    Arestoteles.xcodeproj: Patrik's Weltbild vault (positions, topics, library, search, edits,
                   quick notes, Discuss with Claude, Spotlight), tests
   Shared/         compiled into every app: the Empire login (one login for all apps), the network
-                  layer, the fonts, push (Push/: PushCenter + PushAppDelegate); each project includes
-                  it as a synchronized folder
+                  layer, the fonts, push (Push/: PushCenter + PushAppDelegate), the contact form
+                  (Support/); each project includes it as a synchronized folder
   scripts/        new-app-project.py (a new app project, wired to Shared/), strings.py (String Catalogs),
                   check-shared-login.sh, aresium-fixtures.mjs
 ```

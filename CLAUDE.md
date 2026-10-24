@@ -154,9 +154,16 @@ Apple approves the developer account.
 - **Empire app** (2026-10-24): the approved phone hub (`ares-empire/web/app/mobile.jsx` + `mobile.css`) in SwiftUI,
   `Empire/Empire/Screens/` (Claude's look; values copied from the CSS, with the CSS selector named in comments), data
   in `Model/` + `API/` (brief 08). Launch arguments (DEBUG): `-sampleData` (admin sample), `-sampleUser` (member
-  sample), `-openSheet province|idea|add|approvals` for screenshots. Ring: tap the front province to open it (its app if
+  sample), `-openSheet province|idea|add|approvals|support` for screenshots. Ring: tap the front province to open it (its app if
   installed, else its website), hold any tab for its page; on the page the name is the link (Patrik, 2026-10-24). Province marks load from the hub with the
   Bearer token, so the samples show monograms. Signing up and password resets stay on the website.
+- **Contact & support** (2026-10-24, brief E5): `Shared/Support/`, the form every app's Settings → Help opens
+  (`SupportSheet(session:accent:sample:)`): a kind (Problem, Idea or wish, Question, Something else) and a message,
+  posted with the Empire token to the account server's `feedback` collection, which mails it to Patrik
+  (`ares-empire/docs/ACCOUNTS.md` → Contact & support). Logic in `SupportForm`/`SupportMessage`/`SupportAPI` (tests in
+  `EmpireTests/SupportTests`); a 401 logs out, a 429 says "too many", a 403 never closes the app; sample mode only
+  pretends. Screenshots (DEBUG, any app showing the sheet): `-supportKind <kind>`, `-supportText <text>`,
+  `-supportPhase sending|sent|offline|tooMany|loggedOut|other`.
 - **Push** (2026-10-24): `Shared/Push/` (`PushCenter`, `PushAppDelegate`, tests in `EmpireTests/PushCenterTests`)
   registers devices with the Empire push service (`ares-empire/docs/PUSH.md`; dry run until the APNs key). Wired into
   Aresus and Arestemis (`@UIApplicationDelegateAdaptor(PushAppDelegate.self)` in the App, `push.start` + routing of
