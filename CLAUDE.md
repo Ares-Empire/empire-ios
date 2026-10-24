@@ -70,11 +70,13 @@ Four apps (Aresium, Empire, Arestemis, Aresus) work on the simulator and are mer
 Apple approves the developer account.
 
 1. **TestFlight, once Apple approves:** set the paid team (project level, both projects); the App Groups
-   `group.de.ares-empire.aresium` + `group.de.ares-empire.shared` registered for the bundle ids (Xcode's automatic
+   `group.de.ares-empire.aresium` + `group.de.ares-empire.shared` registered for the bundle ids, the widgets' too
+   (`de.ares-empire.aresium.widget`, `de.ares-empire.aresus.widget`) (Xcode's automatic
    signing can do it; the shared Keychain group needs only the team prefix); an App Store Connect record per app;
    Release build for a generic device; archive and upload both (README).
 2. **On the phone:** the checks in `docs/reviews/2026-10-23-pre-testflight.md` (widgets incl. row taps), the shared
-   login across the two apps on the real device, the Empire app opening Aresium (`aresium://`), no connection.
+   login across the two apps on the real device, the Empire app opening Aresium (`aresium://`), no connection; the
+   Aresus widget placed on the home and lock screen (refreshes by itself, the medium one's rows open their province).
 3. **Council over the Empire app before its first upload** (`docs/REVIEW.md`): brief 08 (Codex: API, store, marks,
    opener) and the login changes (`followSharedLogin`). Not done yet.
 4. Hub data, not this repo: Aresium's "About" on the hub (`data/state.json` on the server, `lock: true`, so the sync
@@ -87,7 +89,7 @@ Apple approves the developer account.
 7. **Windows laptop:** an Aresus machine token for `Notebook-Patrik` (`aresus/scripts/new-machine-token.py`) into
    `windows/config.ps1`; the PowerShell report is untested.
 8. **Build 2026-10-24 record:** `docs/build-2026-10-24/STATUS.md` (what was built, decisions, live tests). Ideas not built
-   yet: an Aresus home-screen widget; Aresus feeding the hub's live lines (up/down per province).
+   yet: Aresus feeding the hub's live lines (up/down per province).
 
 ## Setup state (update as it changes)
 
@@ -134,6 +136,13 @@ Apple approves the developer account.
   (notification taps too, once Shared/Push is wired). Launch arguments (DEBUG): `-sampleData` (`-sampleAllGood`,
   `-sampleEmpty`), `-tab aresus|aresync`, `-openProvince <slug>`, `-openRun <id>`, `-scrollToEnd`, and `-sampleLogin` /
   `-sampleLoading` for those screens. Sample mode runs its clock from the samples' moment, so times read as live.
+  **Widget** (`AresusWidgetExtension`, kind `AresusStatus`, `de.ares-empire.aresus.widget`; small, medium, lock-screen
+  rectangular and circular): "All running" or the issues, with the check's live age. Its timeline provider reads the
+  shared Empire token (never logs in), fetches `GET /overview` every 15 min and saves a `WidgetStatus` in the App Group
+  (`aresus-widget-status.json`); the app saves it after every overview and deletes it on logout. Offline, or with the
+  Keychain locked (the token is readable only while the phone is unlocked), it shows the saved status; after an hour it
+  loses its status colour. `Aresus/AresusShared/` is compiled into app and widget (overview types, API client core,
+  widget status, store, loader, views). DEBUG `-widgetGallery good|issues|loggedout` shows the views for screenshots.
 - **Arestemis app** (2026-10-24, build A1): `Arestemis/` (bundle id `de.ares-empire.arestemis`), the flat hunter on
   the Arestemis API (`~/Arestemis/docs/API.md`; samples in `Arestemis/Arestemis/Samples/`, copies of its `docs/samples/`).
   Data in `API/` + `Model/` (one `ArestemisStore`, optimistic changes with rollback), screens in `Screens/` on

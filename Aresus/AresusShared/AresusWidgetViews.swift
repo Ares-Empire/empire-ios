@@ -46,12 +46,13 @@ struct WidgetSmall: View {
         VStack(alignment: .leading, spacing: 0) {
             WidgetMark()
             Spacer(minLength: 4)
-            WidgetHeadline(status: status, stale: stale)
+            WidgetHeadline(status: status, stale: stale).layoutPriority(1)
             if let first = status.rows.first {
                 Text(first.name).font(AppFont.text(13, weight: .semibold)).foregroundStyle(Ink.primary)
-                    .lineLimit(1).padding(.top, 3)
+                    .lineLimit(1).padding(.top, 3).layoutPriority(1)
+                // Two lines when they fit; with larger text it gives way first, so the headline keeps its size.
                 Text(first.line).font(AppFont.text(11)).foregroundStyle(Ink.muted)
-                    .lineLimit(2).fixedSize(horizontal: false, vertical: true).padding(.top, 2)
+                    .lineLimit(2).padding(.top, 2)
             }
             Spacer(minLength: 8)        // more room above the age, so two muted lines don't run together
             WidgetChecked(checked: status.checked)

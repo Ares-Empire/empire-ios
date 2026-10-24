@@ -22,7 +22,8 @@ The login they use: [`ares-empire/docs/ACCOUNTS.md`](https://github.com/Ares-Emp
 empire-ios/
   Aresium/        Aresium.xcodeproj: the Aresium app, its widget extension, tests
   Empire/         Empire.xcodeproj: the Ares Empire app (the hub), tests
-  Aresus/         Aresus.xcodeproj: the watchtower (every province, the server) and Aresync's sync runs, tests
+  Aresus/         Aresus.xcodeproj: the watchtower (every province, the server) and Aresync's sync runs, its
+                  status widget (home and lock screen), tests
   Arestemis/      Arestemis.xcodeproj: the flat hunter (search, hunt, matches, applications), tests
   Shared/         compiled into every app: the Empire login (one login for all apps), the network
                   layer, the fonts, push (Push/: PushCenter + PushAppDelegate); each project includes
