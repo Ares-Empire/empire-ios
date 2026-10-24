@@ -38,18 +38,19 @@ struct ContentView: View {
         // Like push: samples, tests and the screenshot screens never write the widget's status.
         let widget: WidgetStatusPublisher = restores ? .live() : .disabled
         widgetGallery = gallery
+        // Samples, tests and the screenshot screens never register for push.
+        self.push = restores ? push : nil
         #else
         let session = EmpireSession(app: .aresus, installDefaults: EmpireShared.defaults)
         let restores = true
         let navigation = AresusNavigation()
         let widget = WidgetStatusPublisher.live()
+        self.push = push
         #endif
         _store = State(initialValue: AresusStore(session: session, samples: samples, widget: widget))
         _navigation = State(initialValue: navigation)
         marks = ProvinceMarks(session: session, sample: samples != nil)
         restoresOnLaunch = restores
-        // Samples, tests and the screenshot screens never register for push.
-        self.push = restores ? push : nil
     }
 
     var body: some View {

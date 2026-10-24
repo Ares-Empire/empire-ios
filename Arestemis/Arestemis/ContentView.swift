@@ -21,15 +21,16 @@ struct ContentView: View {
             || ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
         let quiet = options.sample || testing
         let installDefaults = quiet ? nil : EmpireShared.defaults
+        self.push = quiet ? nil : push          // samples and tests never register for push
         #else
         let quiet = false
         let installDefaults = EmpireShared.defaults
+        self.push = push
         #endif
         let session = EmpireSession(app: .arestemis, restoreOnLaunch: !quiet, installDefaults: installDefaults)
         _store = State(initialValue: Self.makeStore(session: session, options: options))
         self.options = options
         restoresOnLaunch = !quiet
-        self.push = quiet ? nil : push          // samples and tests never register for push
     }
 
     private static func makeStore(session: EmpireSession, options: LaunchOptions) -> ArestemisStore {
