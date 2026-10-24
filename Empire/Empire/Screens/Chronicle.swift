@@ -9,17 +9,20 @@ struct ChronicleList: View {
     let entries: [ChronicleEntry]
     let marks: [String: UIImage]       // by province slug; "empire" → the crest
 
-    private let lineX: CGFloat = 34     // the busts' centre on the line (LINE_Y on the desktop, transposed)
+    // Smaller than the website's phone layout (Patrik, 2026-10-24: the chronicle took too much room).
+    private let lineX: CGFloat = 27     // the busts' centre on the line (LINE_Y on the desktop, transposed)
+    private let coin: CGFloat = 38      // the website's 50
+    private let column: CGFloat = 60    // the website's 78
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 22) {
+        VStack(alignment: .leading, spacing: 18) {
             Text(title).font(AppFont.text(13, weight: .medium)).foregroundStyle(Color(hex: 0xC2C4BF))
             if entries.isEmpty {
                 Text("No news yet.").font(AppFont.text(12)).foregroundStyle(EmpireStyle.ink2)
             } else {
                 ZStack(alignment: .topLeading) {
-                    GoldDustLine(lineX: lineX).frame(width: 78).allowsHitTesting(false)
-                    VStack(alignment: .leading, spacing: 28) {
+                    GoldDustLine(lineX: lineX).frame(width: column).allowsHitTesting(false)
+                    VStack(alignment: .leading, spacing: 20) {
                         ForEach(Array(newestFirst.enumerated()), id: \.offset) { _, entry in
                             row(entry)
                         }
@@ -34,19 +37,19 @@ struct ChronicleList: View {
     private func row(_ entry: ChronicleEntry) -> some View {
         HStack(alignment: .top, spacing: 0) {
             GoldCoin(image: image(for: entry))
-                .frame(width: lineX * 2 - 18, height: lineX * 2 - 18)   // 50 pt, centred on the line
-                .padding(.leading, 9)
-                .frame(width: 78, alignment: .leading)
-            VStack(alignment: .leading, spacing: 5) {
+                .frame(width: coin, height: coin)
+                .padding(.leading, lineX - coin / 2)                     // centred on the line
+                .frame(width: column, alignment: .leading)
+            VStack(alignment: .leading, spacing: 3) {
                 // mobile.css: the phone's meta line is quieter than the desktop's (grey project, no gold)
                 HStack(spacing: 6) {
-                    Text(entry.at).font(AppFont.number(9, weight: .regular)).foregroundStyle(Color(hex: 0x858A8A))
+                    Text(entry.at).font(AppFont.number(8.5, weight: .regular)).foregroundStyle(Color(hex: 0x858A8A))
                     Text("·").font(AppFont.text(10)).foregroundStyle(EmpireStyle.ink3)
-                    Text((entry.project ?? "empire").uppercased()).font(AppFont.number(9, weight: .medium)).tracking(0.3)
+                    Text((entry.project ?? "empire").uppercased()).font(AppFont.number(8.5, weight: .medium)).tracking(0.3)
                         .foregroundStyle(Color(hex: 0xA7ABA7))
                 }
-                .frame(minHeight: 22)
-                Text(entry.text).font(AppFont.text(12)).lineSpacing(5.5).foregroundStyle(Color(hex: 0xAAAEAA))
+                .frame(minHeight: 18)
+                Text(entry.text).font(AppFont.text(11.5)).lineSpacing(3.5).foregroundStyle(Color(hex: 0xAAAEAA))
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -65,15 +68,15 @@ private struct GoldCoin: View {
     var body: some View {
         ZStack {
             Circle().fill(RadialGradient(colors: [Color(hex: 0xFFE4A0, opacity: 0.22), Color(hex: 0x080705, opacity: 0.55)],
-                                         center: .init(x: 0.5, y: 0.38), startRadius: 0, endRadius: 28))
+                                         center: .init(x: 0.5, y: 0.38), startRadius: 0, endRadius: 21))
             if let image {
-                Image(uiImage: image).resizable().scaledToFit().padding(4)
+                Image(uiImage: image).resizable().scaledToFit().padding(3)
                     .shadow(color: .black.opacity(0.65), radius: 2, y: 2)
             }
             Circle().strokeBorder(Color(hex: 0xFFDE96, opacity: 0.75), lineWidth: 1.5)
         }
         .clipShape(Circle())
-        .shadow(color: Color(hex: 0xFFCE70, opacity: 0.65), radius: 8)
+        .shadow(color: Color(hex: 0xFFCE70, opacity: 0.6), radius: 6)
         .shadow(color: Color(hex: 0xFFE8AA, opacity: 0.5), radius: 2)
     }
 }

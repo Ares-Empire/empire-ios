@@ -4,7 +4,7 @@ import UIKit
 /// The hub's orbital circle, ported from ares-empire/web/app/ring.jsx (the desktop's own wheel, which the approved
 /// phone hub reuses): a wheel laid flat and seen from the front. The province at the front is sharp and centred; its
 /// neighbours fall away to the sides, smaller, paler and blurred; the far side is out of sight. Swipe to revolve, tap a
-/// neighbour to bring it round, tap the front one to open it. Short rings (fewer than six places) keep their tabs as
+/// neighbour to bring it round, tap the front one to open it, hold any one for its page. Short rings (fewer than six places) keep their tabs as
 /// close as six would be and stop at both ends.
 struct EmpireRing: View {
     struct Item: Identifiable, Equatable {
@@ -17,11 +17,14 @@ struct EmpireRing: View {
     let items: [Item]
     let marks: [String: UIImage]
     let onOpen: (Item) -> Void
+    var onHold: (Item) -> Void = { _ in }
     var onFront: (Item?) -> Void = { _ in }
 
     @State private var rotation: Double = 0          // degrees
     @State private var dragStart: Double?
     @State private var dragDistance: CGFloat = 0
+    @State private var pressed: String?
+    @State private var held = 0                          // haptic trigger
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private let sensitivity = 0.34                   // degrees of revolve per point dragged (SENS)
@@ -48,6 +51,7 @@ struct EmpireRing: View {
                     let off = min(abs(phi) / visible, 1)
                     let hidden = abs(phi) > visible
                     RingTab(item: item, mark: marks[item.id], isFront: index == frontIndex)
+                        .scaleEffect(pressed == item.id ? 0.96 : 1)
                         .scaleEffect(1 - 0.42 * off)
                         .blur(radius: off * 3.2)
                         .opacity(hidden ? 0 : 1 - 0.84 * off)
@@ -55,9 +59,17 @@ struct EmpireRing: View {
                         .zIndex((cos(r) + 1) * 50)
                         .allowsHitTesting(!hidden)
                         .onTapGesture { tap(index) }
+                        .onLongPressGesture(minimumDuration: 0.35) {
+                            guard dragDistance <= 6 else { return }
+                            held += 1
+                            onHold(item)
+                        } onPressingChanged: { pressing in
+                            withAnimation(.easeOut(duration: 0.18)) { pressed = pressing ? item.id : nil }
+                        }
                         .accessibilityElement(children: .combine)
                         .accessibilityLabel(item.isAdd ? item.name : "\(item.name), \(item.status)")
                         .accessibilityAddTraits(index == frontIndex ? [.isButton, .isSelected] : .isButton)
+                        .accessibilityAction(named: "Details") { onHold(item) }
                 }
             }
             .frame(width: geometry.size.width, height: geometry.size.height)
@@ -65,6 +77,7 @@ struct EmpireRing: View {
             .contentShape(Rectangle())
             .gesture(drag)
         }
+        .sensoryFeedback(.impact(weight: .medium), trigger: held)
         .onAppear { report() }
         .onChange(of: frontIndex) { _, _ in report() }
         .accessibilityAdjustableAction { direction in

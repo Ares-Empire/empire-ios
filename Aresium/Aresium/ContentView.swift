@@ -143,7 +143,12 @@ struct ContentView: View {
                 if restoresOnLaunch { await session.restore() }
             }
             .onChange(of: scenePhase) { _, phase in
-                if phase == .active { Task { await store.refreshOnForeground() } }
+                if phase == .active {
+                    Task {
+                        await session.followSharedLogin()    // another Empire app may have logged in or out
+                        await store.refreshOnForeground()
+                    }
+                }
             }
             .task { store.setWidgetTheme(theme.theme) }
             .onChange(of: session.generation) { _, _ in

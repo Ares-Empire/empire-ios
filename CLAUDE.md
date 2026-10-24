@@ -87,12 +87,15 @@ milestones, a bug that comes back, and every 2–3 weeks over merged Codex work.
   Group `group.de.ares-empire.shared` (deleted by iOS only with the last Empire app). Rules in
   `Shared/Auth/EmpireSession.swift`: an invalid login (401, refresh refused) logs out everywhere; an account without
   this app's service, or a 403 from the app's server, closes only this app (`access = .denied`, the app forgets its
-  data via `onAppDataReset`); a failed new login never ends an existing one. Verified across the two apps on the
-  simulator with `scripts/check-shared-login.sh <udid>` (2026-10-24).
+  data via `onAppDataReset`); a failed new login never ends an existing one. Coming to the foreground, each app calls
+  `followSharedLogin()`: it picks up a login or logout made in another app meanwhile (a renewed token of the same
+  account is taken over without a server call). Verified across the two apps on the simulator with
+  `scripts/check-shared-login.sh <udid>` (2026-10-24).
 - **Empire app** (2026-10-24): the approved phone hub (`ares-empire/web/app/mobile.jsx` + `mobile.css`) in SwiftUI,
   `Empire/Empire/Screens/` (Claude's look; values copied from the CSS, with the CSS selector named in comments), data
   in `Model/` + `API/` (brief 08). Launch arguments (DEBUG): `-sampleData` (admin sample), `-sampleUser` (member
-  sample), `-openSheet province|idea|add|approvals` for screenshots. Province marks load from the hub with the
+  sample), `-openSheet province|idea|add|approvals` for screenshots. Ring: tap the front province to open it (its app if
+  installed, else its website), hold any tab for its page; on the page the name is the link (Patrik, 2026-10-24). Province marks load from the hub with the
   Bearer token, so the samples show monograms. Signing up and password resets stay on the website.
 - Targets: `Aresium` (app), `AresiumWidgetExtension` (widgets, folder `Aresium/AresiumWidget/`, embedded in the
   app), `AresiumTests`. `Aresium/AresiumShared/` is compiled into both app and widget (theme, `AppTheme`, `AppGroup`,

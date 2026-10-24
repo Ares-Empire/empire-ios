@@ -181,7 +181,40 @@ final class EmpireSession {
         appDataResetHandlers.forEach { $0() }
     }
 
+    /// The apps share the saved login, so it can change while this app waits in the background. Call when the app
+    /// comes to the foreground: it picks up a login made in another app, follows a logout made there, and switches
+    /// when another account logged in. A newer token for the same account (another app renewed it) is taken over
+    /// without asking the server, so the apps don't renew it in turn on every switch.
+    func followSharedLogin() async {
+        guard !isBusy, !isRestoring else { return }
+        let saved: String?
+        do { saved = try storage.read() } catch { return }
+        switch (token, saved) {
+        case (nil, .some):
+            await restore()
+        case (.some, nil):
+            endSession(reason: nil)
+        case let (.some(current), .some(saved)) where current != saved:
+            if let account = EmpireToken.accountID(current), account == EmpireToken.accountID(saved) {
+                token = saved
+                lastRenewedAt = .now
+            } else {
+                endSession(reason: nil)
+                await restore()
+            }
+        default:
+            break
+        }
+    }
+
+    /// Ends the login in every Empire app.
     func logOut(reason: String? = nil) {
+        endSession(reason: reason)
+        do { try storage.delete() } catch { self.error = self.error ?? error.localizedDescription }
+    }
+
+    /// Ends the login in this app only (the saved login is left as it is).
+    private func endSession(reason: String?) {
         generation += 1
         token = nil
         access = .unknown
@@ -192,6 +225,20 @@ final class EmpireSession {
         loginUnavailable = false
         logoutHandlers.forEach { $0() }
         appDataResetHandlers.forEach { $0() }
-        do { try storage.delete() } catch { self.error = self.error ?? error.localizedDescription }
+    }
+}
+
+/// Reading a PocketBase login token (a JWT) without verifying it: only to tell a renewed token of the same account
+/// from another account's. The servers verify every token they receive.
+enum EmpireToken {
+    static func accountID(_ token: String) -> String? {
+        let parts = token.split(separator: ".", omittingEmptySubsequences: false)
+        guard parts.count == 3 else { return nil }
+        var base64 = parts[1].replacingOccurrences(of: "-", with: "+").replacingOccurrences(of: "_", with: "/")
+        base64 += String(repeating: "=", count: (4 - base64.count % 4) % 4)
+        guard let data = Data(base64Encoded: base64),
+              let payload = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let id = payload["id"] as? String, !id.isEmpty else { return nil }
+        return id
     }
 }

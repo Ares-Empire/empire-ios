@@ -166,18 +166,25 @@ private struct Paragraph: View {
     }
 }
 
-/// .em-detail-hero: the mark, the name, the status word, then what it is.
+/// .em-detail-hero: the mark, the name, the status word, then what it is. With `open`, the mark and the name are the
+/// link (a small arrow beside the name says so); there is no separate Open button.
 private struct DetailHero<MarkView: View>: View {
     let name: String
     let status: String
     var blurb: String? = nil
     var live: String? = nil
+    var open: (() -> Void)? = nil
     @ViewBuilder let mark: MarkView
 
     var body: some View {
         VStack(spacing: 0) {
-            mark.frame(width: 72, height: 80).padding(.bottom, 14)
-            Text(name).font(AppFont.text(26, weight: .medium)).foregroundStyle(Color(hex: 0xEEEEE8)).padding(.bottom, 12)
+            if let open {
+                Button(action: open) { title }
+                    .buttonStyle(PressedOpacity())
+                    .accessibilityLabel("Open \(name)")
+            } else {
+                title
+            }
             StatusWord(text: status)
             if let blurb, !blurb.isEmpty {
                 Text(blurb).font(AppFont.text(13)).lineSpacing(5.5).foregroundStyle(Color(hex: 0xA9AEAA)).padding(.top, 18)
@@ -189,6 +196,27 @@ private struct DetailHero<MarkView: View>: View {
         .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity)
         .padding(.bottom, 24)
+    }
+
+    private var title: some View {
+        VStack(spacing: 0) {
+            mark.frame(width: 72, height: 80).padding(.bottom, 14)
+            Text(name).font(AppFont.text(26, weight: .medium)).foregroundStyle(Color(hex: 0xEEEEE8))
+                .overlay(alignment: .trailing) {
+                    if open != nil {
+                        Image(systemName: "arrow.up.right").font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(Color(hex: 0x8F9390)).offset(x: 20)
+                    }
+                }
+                .padding(.bottom, 12)
+        }
+        .contentShape(Rectangle())
+    }
+}
+
+private struct PressedOpacity: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label.opacity(configuration.isPressed ? 0.6 : 1)
     }
 }
 
@@ -220,24 +248,17 @@ private struct ProvincePage: View {
 
     private var admin: Bool { data.me.admin }
     private var comingSoon: Bool { !admin && province.isComingSoon }
-    private var canOpen: Bool { !province.isComingSoon && (!province.url.isEmpty || province.app != nil) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             DetailHero(name: province.name, status: comingSoon ? "COMING SOON" : province.status,
-                       blurb: province.blurb, live: province.live) {
+                       blurb: province.blurb, live: province.live,
+                       open: province.canOpen ? { actions.open(province) } : nil) {
                 PageMark(name: province.name, image: mark)
             }
             if comingSoon {
                 Note(text: "Coming soon. You’ll be able to open \(province.name) here when it’s available.")
-            } else if canOpen {
-                Button { actions.open(province) } label: {
-                    HStack(spacing: 8) { Text("Open \(province.name)"); Image(systemName: "arrow.up.right").font(.system(size: 13)) }
-                }
-                .buttonStyle(HubButtonStyle(kind: .primary))
-                .padding(.bottom, 16)
-            } else {
-                Note(text: "No website is available yet.")
+                    .padding(.bottom, 8)
             }
             DetailSection(title: "About") { Paragraph(text: province.detail.about.isEmpty ? province.blurb : province.detail.about) }
             DetailSection(title: "Features") {

@@ -160,13 +160,13 @@ struct EmpireHome: View {
                 Text("No expansions yet.").font(AppFont.text(12)).foregroundStyle(Color(hex: 0x9B9F9D))
                     .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 26).padding(.vertical, 12)
             } else {
-                EmpireRing(items: ringItems, marks: marks, onOpen: open, onFront: { front = $0 })
+                EmpireRing(items: ringItems, marks: marks, onOpen: open, onHold: details, onFront: { front = $0 })
                     .id(expanded ? "ideas" : "provinces:" + data.projects.map(\.slug).joined(separator: ","))
                     .frame(height: 158)
                 caption.frame(minHeight: 18).padding(.horizontal, 40)
             }
         }
-        .padding(.top, 6).padding(.bottom, 10)
+        .padding(.top, 46).padding(.bottom, 16)   // lower than the website (Patrik, 2026-10-24)
     }
 
     @ViewBuilder private var caption: some View {
@@ -181,7 +181,17 @@ struct EmpireHome: View {
         }
     }
 
+    /// Tapping the front tab: a province opens (its app, else its website); anything that cannot open shows its page.
     private func open(_ item: EmpireRing.Item) {
+        if let province = data.projects.first(where: { $0.slug == item.id }), !expanded, province.canOpen {
+            actions.open(province)
+        } else {
+            details(item)
+        }
+    }
+
+    /// Holding a tab: its page.
+    private func details(_ item: EmpireRing.Item) {
         if item.isAdd { sheet = .add; return }
         if expanded, let idea = data.ideas.first(where: { "idea:" + $0.title == item.id }) { sheet = .idea(idea); return }
         if let province = data.projects.first(where: { $0.slug == item.id }) { sheet = .province(province) }
@@ -204,6 +214,11 @@ extension EmpireHome {
     }
 }
 #endif
+
+extension Province {
+    /// Whether it can be opened from the phone (as `ProvinceOpener` does): open for this account, with an app or a website.
+    var canOpen: Bool { !isComingSoon && (app != nil || !url.isEmpty) }
+}
 
 extension EmpireHome.Sheet {
     var isSmall: Bool { if case .add = self { true } else { false } }
