@@ -84,3 +84,8 @@ Stop only for a genuine problem.
   Empire/Empire.xcodeproj -scheme Empire -destination id=<udid> -parallel-testing-enabled NO
   -only-testing:EmpireTests/SharedLoginProbe`.
 - 05:08 Arestemis server live; test hunt running; Aresus sync-lock fix (66ffe12) deploying via Aresync.
+- 05:12 Live test of Arestemis (test hunt id 1, München broad): pipeline works (seed 113, scan: 10 read, 4 AI-checked,
+  2 matches, 1 rejected). Found + fixed (e02c620): 10 m² WG rooms passed 'sqm_min 15' → new `room_sqm_min` (contract
+  addition), AI prompt: numbers are HARD LIMITS (fail, never pass with a warning), Groq 429 → fallback model
+  gpt-oss-20b. A1 told about room_sqm_min. Background check reports 10 min of results after the deploy.
+- 05:10 Aresus sync-lock fix confirmed: deploy run had no failed pull.
