@@ -11,7 +11,9 @@ struct ContentView: View {
     @State private var navigation: AresusNavigation
     @State private var markImages: [String: UIImage] = [:]
     @Environment(\.scenePhase) private var scenePhase
-    private let marks: ProvinceMarks
+    // State, like the store: SwiftUI may build this view again (a new session each time); the marks must keep using
+    // the store's session, or they see a logged-out one and load nothing.
+    @State private var marks: ProvinceMarks
     private let restoresOnLaunch: Bool
     private let push: PushCenter?
     #if DEBUG
@@ -49,7 +51,7 @@ struct ContentView: View {
         #endif
         _store = State(initialValue: AresusStore(session: session, samples: samples, widget: widget))
         _navigation = State(initialValue: navigation)
-        marks = ProvinceMarks(session: session, sample: samples != nil)
+        _marks = State(initialValue: ProvinceMarks(session: session, sample: samples != nil))
         restoresOnLaunch = restores
     }
 

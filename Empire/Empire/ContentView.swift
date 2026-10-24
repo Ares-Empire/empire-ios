@@ -7,7 +7,9 @@ struct ContentView: View {
     @State private var store: EmpireStore
     @State private var markImages: [String: UIImage] = [:]
     @Environment(\.scenePhase) private var scenePhase
-    private let marks: ProvinceMarks
+    // State, like the store: SwiftUI may build this view again (a new session each time); the marks must keep using
+    // the store's session, or they see a logged-out one and load nothing.
+    @State private var marks: ProvinceMarks
     private let restoresOnLaunch: Bool
     private var session: EmpireSession { store.session }
 
@@ -22,7 +24,7 @@ struct ContentView: View {
         #endif
         let session = EmpireSession(app: .empire, restoreOnLaunch: !quiet, installDefaults: quiet ? nil : EmpireShared.defaults)
         _store = State(initialValue: EmpireStore(session: session, sample: sample))
-        marks = ProvinceMarks(session: session, sample: sample)
+        _marks = State(initialValue: ProvinceMarks(session: session, sample: sample))
         restoresOnLaunch = !quiet
     }
 
