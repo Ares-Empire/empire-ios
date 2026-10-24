@@ -89,3 +89,4 @@ Stop only for a genuine problem.
   addition), AI prompt: numbers are HARD LIMITS (fail, never pass with a warning), Groq 429 → fallback model
   gpt-oss-20b. A1 told about room_sqm_min. Background check reports 10 min of results after the deploy.
 - 05:10 Aresus sync-lock fix confirmed: deploy run had no failed pull.
+- 05:27 10 min under the new rules: 13 matches, all rooms ≥ 15 m², AI checked every candidate, no 429 errors. Test hunt PAUSED (kept: real matches for the app review with the test account). Note for the app: 'About you' caption should suggest gender + age (listings restrict on them).
