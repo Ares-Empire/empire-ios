@@ -1,7 +1,8 @@
-import Foundation
+import SwiftUI
 import UIKit
 
-/// Authenticated hub marks. Keep one instance alongside the store; reset with this app's session data.
+/// Authenticated hub marks (the province busts on www.ares-empire.de/brand/), for every app that shows provinces.
+/// Keep one instance alongside the store; reset with this app's session data.
 @MainActor
 final class ProvinceMarks {
     private let session: EmpireSession
@@ -11,7 +12,7 @@ final class ProvinceMarks {
     private var generation = 0
 
     init(session: EmpireSession, transport: any HTTPTransport = URLSessionTransport(),
-         sample: Bool = EmpireSamples.isEnabled) {
+         sample: Bool = false) {
         self.session = session
         self.transport = transport
         #if DEBUG
@@ -54,5 +55,26 @@ final class ProvinceMarks {
         var destination = URLComponents(string: "https://www.ares-empire.de")!
         destination.percentEncodedPath = components.percentEncodedPath
         return destination.url
+    }
+}
+
+/// A province's mark: its image when loaded, else its initial in a quiet tile (.tab-mono).
+struct ProvinceMarkView: View {
+    let name: String
+    let image: UIImage?
+    var size: CGFloat = 50
+
+    var body: some View {
+        if let image {
+            Image(uiImage: image).resizable().scaledToFit().frame(width: size, height: size)
+                .shadow(color: .black.opacity(0.55), radius: 9, y: 8)
+        } else {
+            Text(String(name.prefix(1)).uppercased())
+                .font(AppFont.text(size * 0.44, weight: .bold)).foregroundStyle(Color(hex: 0xF3F1EA))
+                .frame(width: size * 0.92, height: size * 0.92)
+                .background(RadialGradient(colors: [.white.opacity(0.08), .black.opacity(0.2)], center: .init(x: 0.3, y: 0.2),
+                                           startRadius: 0, endRadius: size), in: .rect(cornerRadius: 13))
+                .overlay(RoundedRectangle(cornerRadius: 13).strokeBorder(.white.opacity(0.12)))
+        }
     }
 }
