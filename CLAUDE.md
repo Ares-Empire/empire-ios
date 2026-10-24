@@ -116,6 +116,9 @@ Apple approves the developer account.
    phone and retire Telegram: Arestemis (`TELEGRAM_*` in /root/Arestemis/.env) and Aresync (`TG_*` in each config).
 7. **Windows laptop:** an Aresus machine token for `Notebook-Patrik` (`aresus/scripts/new-machine-token.py`) into
    `windows/config.ps1`; the PowerShell report is untested.
+9. **Arestoteles on the phone:** check the Discuss hand-off (`DiscussPrompt.target`, now `https://claude.ai/code`: does
+   the Claude app open, and how to start a session there with the copied prompt); replace the bust (the website's
+   `aristotle-bust.png` has a faint "Magnific" watermark); a widget with a position to revisit (needs a widget target).
 8. **Build 2026-10-24 record:** `docs/build-2026-10-24/STATUS.md` (what was built, decisions, live tests). Built after the main work: the Aresus
    widget and the hub's live lines from Aresus.
 

@@ -116,3 +116,13 @@ Stop only for a genuine problem.
 - Apps (Claude): String Catalogs for all four apps, both widgets and the three shared folders; `AppLanguage`
   (`Shared/Language/`), `Accept-Language` on every request, the device language at push registration; formatting per
   language; German screenshots of every main screen; `scripts/strings.py` (sync / fill / check).
+
+## Evening: Arestoteles becomes the Weltbild app
+
+- Decisions `ares-empire/docs/ARESTOTELES-APP.md`; contract `Arestoteles/docs/API.md`. Built by two Claude agents
+  (briefs `R1`, `R2`), design and German by Claude. Trading code deleted (the website stays).
+- Live: `arestoteles.service` on `127.0.0.1:8099`, Caddy `/api/arestoteles/*`, Aresync deploy hook, Aresus checks it.
+  Vault clone `/var/lib/arestoteles/vault` (deploy key, read + write), Ruby for the vault check. Service `arestoteles`
+  for Patrik and the test account (gives access to Patrik's vault: never to anyone else).
+- Checked live: 78 notes, 29 positions, ETag 304, a stale edit refused (409, German); the vault untouched. App on
+  Patrik's simulator shows his real positions.
