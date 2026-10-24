@@ -9,6 +9,10 @@
 	<!-- Only standard HTTPS: exempt, so App Store Connect stops asking about encryption on every build. -->
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>aresium</string>
+	</array>
 	<!-- Launch on the app's own background instead of a white flash. -->
 	<key>UILaunchScreen</key>
 	<dict>
