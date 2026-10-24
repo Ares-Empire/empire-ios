@@ -9,6 +9,9 @@ Read `README.md` first, then the decision record in the ares-empire repo
 - Log in via the Empire account system, never a service's own password.
 - Design language: the Ares Empire "crown language" in `ares-empire/EMPIRE.md`
   (near-black, polished gold accent, Space Grotesk / JetBrains Mono).
+- Every app's main screen (the first tab's root) ends with the app's name: `WordmarkScrollView`
+  (`Shared/Design/EmpireDesign.swift`) in place of its `ScrollView`; the band scrolls with the content and shows only
+  when you scroll down (Patrik, 2026-10-24). Its launch argument for screenshots: `-scrollToEnd` (Arestemis `-scrollBottom`).
 - Append a line to the Chronicle in `ares-empire/EMPIRE.md` after meaningful work.
 - A good structure is worth more work now: if the app would need a copy of a service's logic or a
   workaround, fixing the service is usually the better call (`~/ares-empire/EMPIRE.md` → "How we build apps").
@@ -133,7 +136,8 @@ Apple approves the developer account.
   Apple ID could install on the phone, but those builds stop opening after 7 days, so we don't use it).
 - Xcode project `Aresium/Aresium.xcodeproj` (2026-10-23): app + tests, folder-synchronized groups (new Swift
   files need no `project.pbxproj` edits), bundle id `de.ares-empire.aresium`, iOS 26+. Signing team: set to the
-  paid team once approved. Launch argument `-sampleData` skips login and shows the bundled sample.
+  paid team once approved. Launch argument `-sampleData` skips login and shows the bundled sample
+  (`-scrollToEnd`: the start screen at its band).
 - Test fixtures `AresiumTests/server-dashboard.sample.json` + `.expected.json`: the Aresium server's sample and
   the website's answers for it. When `/api/data` changes: `npm run sample` in aresium, then
   `node scripts/aresium-fixtures.mjs`.
@@ -152,7 +156,7 @@ Apple approves the developer account.
 - **Empire app** (2026-10-24): the approved phone hub (`ares-empire/web/app/mobile.jsx` + `mobile.css`) in SwiftUI,
   `Empire/Empire/Screens/` (Claude's look; values copied from the CSS, with the CSS selector named in comments), data
   in `Model/` + `API/` (brief 08). Launch arguments (DEBUG): `-sampleData` (admin sample), `-sampleUser` (member
-  sample), `-openSheet province|idea|add|approvals` for screenshots. Ring: tap the front province to open it (its app if
+  sample), `-openSheet province|idea|add|approvals`, `-scrollToEnd` for screenshots. Ring: tap the front province to open it (its app if
   installed, else its website), hold any tab for its page; on the page the name is the link (Patrik, 2026-10-24). Province marks load from the hub with the
   Bearer token, so the samples show monograms. Signing up and password resets stay on the website.
 - **Push** (2026-10-24): `Shared/Push/` (`PushCenter`, `PushAppDelegate`, tests in `EmpireTests/PushCenterTests`)
@@ -198,7 +202,7 @@ Apple approves the developer account.
   `-samplePushLater` pushed false, `-sampleOffline` the sample as the saved vault and no server),
   `-tab positions|topics|library|search`, `-library mechanisms|events|questions|actors`, `-search <query>`,
   `-openNote <id>[#<heading>]`, `-openPosition <id>`,
-  `-openSheet brief|edit|quicknote|discuss|discussions|reword|change|drop|add|evidence`, and `-sampleVaultFile <path>` (a
+  `-openSheet brief|edit|quicknote|discuss|discussions|reword|change|drop|add|evidence`, `-scrollToEnd` (Positions), and `-sampleVaultFile <path>` (a
   vault saved from the server instead of the made-up sample, to look at real notes; DEBUG only, never committed).
   **For lookups (Patrik, 2026-10-24):** position cards show the position's `title` (the bold part) cut to one line of
   thought (`Lookup.cardLine`); a position page offers Discuss (now, or "later" onto the vault's to-discuss list), Edit
