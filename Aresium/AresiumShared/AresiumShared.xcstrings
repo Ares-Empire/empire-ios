@@ -1,0 +1,76 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "No spending categories" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keine Ausgabenkategorien"
+          }
+        }
+      }
+    },
+    "Nothing imported for %@ yet" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Für %@ noch nichts importiert"
+          }
+        }
+      }
+    },
+    "Open Aresium to load your data" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öffne Aresium, um deine Daten zu laden"
+          }
+        }
+      }
+    },
+    "The bundled sample dashboard is missing." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das mitgelieferte Beispiel-Dashboard fehlt."
+          }
+        }
+      }
+    },
+    "This dashboard version is not supported." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Dashboard-Version wird nicht unterstützt."
+          }
+        }
+      }
+    },
+    "last data %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "letzte Daten %@"
+          }
+        }
+      }
+    },
+    "up to %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "bis %@"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

@@ -26,6 +26,21 @@ enum EmpireStyle {
         .init(color: Color(hex: 0xB07F2C), location: 0.86), .init(color: Color(hex: 0xF0D289), location: 1)],
         startPoint: .top, endPoint: .bottom)
 
+    /// A status code from the hub ("CONQUERED", …, "COMING SOON", "PLANNED") in the app's language; codes stay codes
+    /// (they pick the colour), only the shown word is translated.
+    static func statusWord(_ status: String) -> String {
+        switch status {
+        case "CONQUERED": String(localized: "CONQUERED", comment: "Province status: live and held")
+        case "FORTIFYING": String(localized: "FORTIFYING", comment: "Province status: live, in maintenance")
+        case "MUSTERING": String(localized: "MUSTERING", comment: "Province status: getting ready")
+        case "BESIEGING": String(localized: "BESIEGING", comment: "Province status: being built")
+        case "SCOUTED": String(localized: "SCOUTED", comment: "Province status: an idea")
+        case "COMING SOON": String(localized: "COMING SOON", comment: "Province status for members: not open yet")
+        case "PLANNED": String(localized: "PLANNED", comment: "An expansion's status")
+        default: status
+        }
+    }
+
     /// Status words on the tabs (.st-live, .st-wip, .st-hold, .st-scout, .st-muster).
     static func statusColor(_ status: String) -> Color {
         switch status {

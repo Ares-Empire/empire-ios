@@ -41,7 +41,7 @@ struct ListingsScreen: View {
 
     private var header: some View {
         VStack(spacing: 10) {
-            AppHeader(title: "Listings")
+            AppHeader(title: String(localized: "Listings"))
             Picker("Show", selection: $navigation.filter) {
                 ForEach(MatchFilter.allCases) { Text($0.title).tag($0) }
             }
@@ -57,12 +57,12 @@ struct ListingsScreen: View {
         if matches.isEmpty {
             Group {
                 if !list.loaded && list.error == nil {
-                    CalmMessage(text: "Loading listings…", loading: true)
+                    CalmMessage(text: String(localized: "Loading listings…"), loading: true)
                 } else if let error = list.error {
-                    CalmMessage(text: error, action: ("Try again", { Task { await store.loadMatches(filter) } }))
+                    CalmMessage(text: error, action: (String(localized: "Try again"), { Task { await store.loadMatches(filter) } }))
                 } else if store.hunt == nil {
-                    CalmMessage(text: "No search yet. Set one up and listings appear here the moment they're found.",
-                                action: ("Set up your search", { navigation.tab = .search }))
+                    CalmMessage(text: String(localized: "No search yet. Set one up and listings appear here the moment they're found."),
+                                action: (String(localized: "Set up your search"), { navigation.tab = .search }))
                 } else {
                     CalmMessage(text: emptyText)
                 }
@@ -104,7 +104,7 @@ struct ListingsScreen: View {
             Button { navigation.sheet = .rejected } label: {
                 HStack(spacing: 6) {
                     Text("Filtered out ·")
-                    Text("\(store.rejected.count)").font(AppFont.number(13, weight: .regular))
+                    Text(verbatim: "\(store.rejected.count)").font(AppFont.number(13, weight: .regular))
                     Spacer()
                     Image(systemName: "chevron.right").font(.system(size: 11, weight: .semibold))
                 }
@@ -121,10 +121,10 @@ struct ListingsScreen: View {
 
     private var emptyText: String {
         switch filter {
-        case .new: "Nothing new. New listings appear here the moment they're found."
-        case .saved: "Nothing saved. Swipe right on a listing to keep it here."
-        case .applied: "No applications yet."
-        case .all: "No listings yet. They appear here the moment they're found."
+        case .new: String(localized: "Nothing new. New listings appear here the moment they're found.")
+        case .saved: String(localized: "Nothing saved. Swipe right on a listing to keep it here.")
+        case .applied: String(localized: "No applications yet.")
+        case .all: String(localized: "No listings yet. They appear here the moment they're found.")
         }
     }
 }
@@ -153,7 +153,7 @@ struct RejectedSheet: View {
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.horizontal, 4).padding(.bottom, 6)
                     if store.rejected.isEmpty {
-                        CalmMessage(text: store.rejectedError ?? "Nothing was filtered out.", loading: store.isLoadingRejected)
+                        CalmMessage(text: store.rejectedError ?? String(localized: "Nothing was filtered out."), loading: store.isLoadingRejected)
                     }
                     ForEach(store.rejected) { item in
                         Button { item.listing.portalURL.map { openURL($0) } } label: { row(item) }

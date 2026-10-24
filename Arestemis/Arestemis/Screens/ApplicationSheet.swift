@@ -20,7 +20,7 @@ struct ApplicationSheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     if let application = state.application {
-                        CapsLabel(text: application.mode == .ai ? "Written by AI" : "Your text", size: 11)
+                        CapsLabel(text: application.mode == .ai ? String(localized: "Written by AI") : String(localized: "Your text"), size: 11)
                             .padding(.leading, 4)
                         Text(application.text).font(AppFont.text(15)).foregroundStyle(Ink.primary).lineSpacing(5)
                             .textSelection(.enabled)
@@ -36,9 +36,9 @@ struct ApplicationSheet: View {
                             Text(error).font(AppFont.text(12)).foregroundStyle(Ink.muted).padding(.top, 10).padding(.leading, 4)
                         }
                     } else if let error = state.error {
-                        CalmMessage(text: error, action: ("Try again", { Task { await store.loadApplication(for: matchID) } }))
+                        CalmMessage(text: error, action: (String(localized: "Try again"), { Task { await store.loadApplication(for: matchID) } }))
                     } else {
-                        CalmMessage(text: "Writing the application…", loading: true)
+                        CalmMessage(text: String(localized: "Writing the application…"), loading: true)
                     }
                 }
                 .padding(.horizontal, Look.side).padding(.top, 8).padding(.bottom, 20)

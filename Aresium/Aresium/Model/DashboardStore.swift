@@ -3,8 +3,8 @@ import Observation
 
 enum DashboardSide: String, CaseIterable, Hashable {
     case expenses, income
-    var title: String { self == .expenses ? "Expenses" : "Income" }
-    var caption: String { self == .expenses ? "spent" : "received" }
+    var title: String { self == .expenses ? String(localized: "Expenses") : String(localized: "Income") }
+    var caption: String { self == .expenses ? String(localized: "spent") : String(localized: "received") }
 }
 
 struct DisplayRow: Identifiable {
@@ -137,8 +137,8 @@ final class DashboardStore {
     var currentMonth: Month? { dashboard?.months.last }
 
     func rangeLabel(current: Bool) -> String {
-        guard let first = dashboard?.months.first, let last = currentMonth else { return "No activity" }
-        return current ? last.label : "\(first.label) – \(last.label)"
+        guard let first = dashboard?.months.first, let last = currentMonth else { return String(localized: "No activity") }
+        return current ? last.title() : "\(first.title()) – \(last.title())"
     }
 
     func totals(current: Bool) -> Totals? {
@@ -203,7 +203,7 @@ final class DashboardStore {
     private func monthPoints(_ values: [Double]) -> [ChartPoint] {
         (dashboard?.months ?? []).enumerated().compactMap { index, month in
             guard values.indices.contains(index) else { return nil }
-            return ChartPoint(index: index, label: month.short, value: values[index])
+            return ChartPoint(index: index, label: month.shortTitle(), value: values[index])
         }
     }
 }

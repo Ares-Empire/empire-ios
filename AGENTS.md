@@ -30,8 +30,10 @@ a personal finance dashboard). Claude plans the work, writes your brief and chec
 - Keep logic (models, API client, decoding, formatting) out of the views and give it unit tests.
 - No secrets, API keys, passwords, personal data or real transaction data in files, fixtures or tests. Use
   made-up sample data. Server URLs are fine.
-- Code, comments and docs in plain English. UI text in English, like the Aresium website, unless the brief
-  says otherwise.
+- Code, comments and docs in plain English. UI text is written in English in the code and translated to German in
+  the String Catalogs: every app speaks both (`CLAUDE.md` → Languages; `String(localized:)` for text built as a
+  `String`, the folder's table in `Shared/`, `AresiumShared/`, `AresusShared/`). Leave the German to Claude unless the
+  brief asks for it, and say in your final message which strings you added.
 
 ## Building and running
 

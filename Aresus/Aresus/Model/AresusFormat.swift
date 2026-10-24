@@ -1,63 +1,59 @@
 import Foundation
 
-/// How times, durations and shares read in the app: English words, 24-hour times, the phone's time zone.
-/// Every function takes `now` and a calendar, so tests pin both.
+/// How times, durations and shares read in the app, in its language (ares-empire/docs/LANGUAGES.md): 24-hour times, the
+/// phone's time zone. Every function takes `now`, a calendar and the language, so tests pin all three.
 nonisolated enum AresusFormat {
-    static let locale = Locale(identifier: "en_GB")
-
     // MARK: times
 
     /// "just now", "12 s ago", "4 min ago", "3 h ago" (same day), "yesterday 23:57", "Mon 19 Oct 11:00",
-    /// "19 Oct 2025" (another year).
-    static func relative(_ date: Date, now: Date, calendar: Calendar = .current) -> String {
+    /// "19 Oct 2025" (another year). German: "gerade eben", "vor 4 Min.", "gestern 23:57", "Mo. 19. Okt. 11:00".
+    static func relative(_ date: Date, now: Date, calendar: Calendar = .current, language: AppLanguage = .current) -> String {
         let seconds = now.timeIntervalSince(date)
-        if seconds < 1 { return "just now" }
-        if seconds < 60 { return "\(Int(seconds)) s ago" }
-        if seconds < 3600 { return "\(Int(seconds / 60)) min ago" }
-        if calendar.isDate(date, inSameDayAs: now) { return "\(Int(seconds / 3600)) h ago" }
+        if seconds < 1 { return language.string("just now") }
+        if seconds < 60 { return language.string("\(Int(seconds)) s ago") }
+        if seconds < 3600 { return language.string("\(Int(seconds / 60)) min ago") }
+        if calendar.isDate(date, inSameDayAs: now) { return language.string("\(Int(seconds / 3600)) h ago") }
         if let yesterday = calendar.date(byAdding: .day, value: -1, to: now), calendar.isDate(date, inSameDayAs: yesterday) {
-            return "yesterday \(time(date, calendar: calendar))"
+            return language.string("yesterday \(time(date, calendar: calendar, language: language))")
         }
         if calendar.component(.year, from: date) != calendar.component(.year, from: now) {
-            return format(date, "\(day: .defaultDigits) \(month: .abbreviated) \(year: .defaultDigits)", calendar: calendar)
+            return date.formatted(style(calendar, language).day().month(.abbreviated).year())
         }
-        return "\(day(date, calendar: calendar)) \(time(date, calendar: calendar))"
+        return "\(day(date, calendar: calendar, language: language)) \(time(date, calendar: calendar, language: language))"
     }
 
     /// "14:09"
-    static func time(_ date: Date, calendar: Calendar = .current) -> String {
-        format(date, "\(hour: .twoDigits(clock: .twentyFourHour, hourCycle: .zeroBased)):\(minute: .twoDigits)",
-               calendar: calendar)
+    static func time(_ date: Date, calendar: Calendar = .current, language: AppLanguage = .current) -> String {
+        date.formatted(style(calendar, language).hour(.twoDigits(amPM: .omitted)).minute(.twoDigits))
     }
 
-    /// "Sat 24 Oct"
-    static func day(_ date: Date, calendar: Calendar = .current) -> String {
-        format(date, "\(weekday: .abbreviated) \(day: .defaultDigits) \(month: .abbreviated)", calendar: calendar)
+    /// "Sat 24 Oct" (German "Sa. 24. Okt.")
+    static func day(_ date: Date, calendar: Calendar = .current, language: AppLanguage = .current) -> String {
+        date.formatted(style(calendar, language).weekday(.abbreviated).day().month(.abbreviated))
     }
 
     /// "Today 14:09", "Yesterday 23:57", "Mon 19 Oct 11:00": a moment in a list where the day matters.
-    static func moment(_ date: Date, now: Date, calendar: Calendar = .current) -> String {
-        "\(dayHeading(date, now: now, calendar: calendar)) \(time(date, calendar: calendar))"
+    static func moment(_ date: Date, now: Date, calendar: Calendar = .current, language: AppLanguage = .current) -> String {
+        "\(dayHeading(date, now: now, calendar: calendar, language: language)) \(time(date, calendar: calendar, language: language))"
     }
 
     /// The overview's heading: "Sat 24 Oct · 14:09" (shown in capitals).
-    static func checkedHeading(_ date: Date, calendar: Calendar = .current) -> String {
-        "\(day(date, calendar: calendar)) · \(time(date, calendar: calendar))"
+    static func checkedHeading(_ date: Date, calendar: Calendar = .current, language: AppLanguage = .current) -> String {
+        "\(day(date, calendar: calendar, language: language)) · \(time(date, calendar: calendar, language: language))"
     }
 
     // MARK: days
 
     /// "Today", "Yesterday", "Sat 19 Oct", "Sat 19 Oct 2025" (another year).
-    static func dayHeading(_ date: Date, now: Date, calendar: Calendar = .current) -> String {
-        if calendar.isDate(date, inSameDayAs: now) { return "Today" }
+    static func dayHeading(_ date: Date, now: Date, calendar: Calendar = .current, language: AppLanguage = .current) -> String {
+        if calendar.isDate(date, inSameDayAs: now) { return language.string("Today") }
         if let yesterday = calendar.date(byAdding: .day, value: -1, to: now), calendar.isDate(date, inSameDayAs: yesterday) {
-            return "Yesterday"
+            return language.string("Yesterday")
         }
         if calendar.component(.year, from: date) != calendar.component(.year, from: now) {
-            return format(date, "\(weekday: .abbreviated) \(day: .defaultDigits) \(month: .abbreviated) \(year: .defaultDigits)",
-                          calendar: calendar)
+            return day(date, calendar: calendar, language: language) + " " + date.formatted(style(calendar, language).year())
         }
-        return day(date, calendar: calendar)
+        return day(date, calendar: calendar, language: language)
     }
 
     /// A calendar day from the contract ("2026-10-24") as noon of that day in `calendar`'s time zone.
@@ -79,30 +75,32 @@ nonisolated enum AresusFormat {
     }
 
     /// The weekday's initial ("S" for Saturday).
-    static func weekdayInitial(_ date: Date, calendar: Calendar = .current) -> String {
-        format(date, "\(weekday: .narrow)", calendar: calendar)
+    static func weekdayInitial(_ date: Date, calendar: Calendar = .current, language: AppLanguage = .current) -> String {
+        date.formatted(style(calendar, language).weekday(.narrow))
     }
 
     // MARK: durations and shares
 
-    /// "45 s", "6 min", "2 h", "2 h 10 min", "3 d 4 h".
-    static func duration(_ seconds: TimeInterval) -> String {
+    /// "45 s", "6 min", "2 h", "2 h 10 min", "3 d 4 h" (German "6 Min.", "2 Std. 10 Min.", "3 Tg. 4 Std.").
+    static func duration(_ seconds: TimeInterval, language: AppLanguage = .current) -> String {
         let total = max(0, Int(seconds))
-        if total < 60 { return "\(total) s" }
+        if total < 60 { return language.string("\(total) s") }
         let minutes = total / 60
-        if minutes < 60 { return "\(minutes) min" }
+        if minutes < 60 { return language.string("\(minutes) min") }
         let hours = minutes / 60
-        if hours < 24 { return minutes % 60 == 0 ? "\(hours) h" : "\(hours) h \(minutes % 60) min" }
+        if hours < 24 {
+            return minutes % 60 == 0 ? language.string("\(hours) h") : language.string("\(hours) h \(minutes % 60) min")
+        }
         let days = hours / 24
-        return hours % 24 == 0 ? "\(days) d" : "\(days) d \(hours % 24) h"
+        return hours % 24 == 0 ? language.string("\(days) d") : language.string("\(days) d \(hours % 24) h")
     }
 
     /// The server's uptime as one short figure: "5 d", "15 h", "40 min".
-    static func upFor(_ seconds: Int) -> String {
+    static func upFor(_ seconds: Int, language: AppLanguage = .current) -> String {
         let total = max(0, seconds)
-        if total >= 86_400 { return "\(total / 86_400) d" }
-        if total >= 3600 { return "\(total / 3600) h" }
-        return "\(total / 60) min"
+        if total >= 86_400 { return language.string("\(total / 86_400) d") }
+        if total >= 3600 { return language.string("\(total / 3600) h") }
+        return language.string("\(total / 60) min")
     }
 
     /// A share 0…1 as a whole percentage: "35 %". Values just under 100 % never round up to it.
@@ -112,22 +110,23 @@ nonisolated enum AresusFormat {
         return "\(Int(rounded == 100 && value < 100 ? 99 : rounded)) %"
     }
 
-    /// A day's or a period's uptime: "100 %", "99.6 %", "97 %"; nil = "not watched".
-    static func uptime(_ ratio: Double?) -> String {
-        guard let ratio else { return "not watched" }
+    /// A day's or a period's uptime: "100 %", "99.6 %" (German "99,6 %"), "97 %"; nil = "not watched".
+    static func uptime(_ ratio: Double?, language: AppLanguage = .current) -> String {
+        guard let ratio else { return language.string("not watched") }
         let clamped = max(0, min(1, ratio))
         var permille = Int((clamped * 1000).rounded())
         if permille == 1000 && clamped < 1 { permille = 999 }      // any downtime never reads as 100 %
-        return permille % 10 == 0 ? "\(permille / 10) %" : "\(permille / 10).\(permille % 10) %"
+        let shown = (Double(permille) / 10).formatted(.number.precision(.fractionLength(0...1)).locale(language.locale))
+        return shown + " %"
     }
 
-    /// The load average: "0.04", "1.20".
-    static func load(_ value: Double) -> String {
-        String(format: "%.2f", max(0, value))
+    /// The load average: "0.04", "1.20" (German "0,04").
+    static func load(_ value: Double, language: AppLanguage = .current) -> String {
+        max(0, value).formatted(.number.precision(.fractionLength(2)).grouping(.never).locale(language.locale))
     }
 
-    private static func format(_ date: Date, _ format: Date.FormatString, calendar: Calendar) -> String {
-        date.formatted(Date.VerbatimFormatStyle(format: format, locale: locale, timeZone: calendar.timeZone,
-                                                calendar: calendar))
+    private static func style(_ calendar: Calendar, _ language: AppLanguage) -> Date.FormatStyle {
+        Date.FormatStyle(date: .omitted, time: .omitted, locale: language.locale, calendar: calendar,
+                         timeZone: calendar.timeZone)
     }
 }

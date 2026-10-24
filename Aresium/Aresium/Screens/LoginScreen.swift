@@ -14,11 +14,11 @@ struct LoginScreen: View {
             VStack(alignment: .leading, spacing: 22) {
                 Image("Hermes").resizable().scaledToFit().frame(width: 72, height: 72)
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Aresium").font(AppFont.text(34, weight: .bold))
+                    Text(verbatim: "Aresium").font(AppFont.text(34, weight: .bold))
                     Text("Log in with your Empire account.").font(AppFont.text(15)).foregroundStyle(palette.secondary)
                 }
                 if waitingFiles > 0 {
-                    Text("\(waitingFiles) file(s) waiting, imported after login")
+                    Text("\(waitingFiles) files waiting, imported after login")
                         .font(AppFont.text(14)).foregroundStyle(palette.secondary)
                 }
                 VStack(alignment: .leading, spacing: 14) {

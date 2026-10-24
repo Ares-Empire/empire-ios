@@ -149,10 +149,10 @@ final class AresusStore {
 
     private func message(for error: Error, part: Part) -> String {
         switch (error, part) {
-        case (HTTPError.server(404, _), .province): "Aresus does not watch this province."
-        case (HTTPError.server(404, _), .run): "This run is no longer kept."
-        case (is DecodingError, _): "The server's answer could not be read."
-        case (let error as URLError, _) where error.code == .notConnectedToInternet: "No connection."
+        case (HTTPError.server(404, _), .province): String(localized: "Aresus does not watch this province.")
+        case (HTTPError.server(404, _), .run): String(localized: "This run is no longer kept.")
+        case (is DecodingError, _): String(localized: "The server's answer could not be read.")
+        case (let error as URLError, _) where error.code == .notConnectedToInternet: String(localized: "No connection.")
         default: error.localizedDescription
         }
     }

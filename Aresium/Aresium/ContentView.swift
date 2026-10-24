@@ -221,9 +221,10 @@ struct ContentView: View {
         let category = route.flatMap { store.category($0.category, side: $0.side) }
         let subtitle: String? = route.map { route in
             if let key = route.month {
-                return "\(store.dashboard?.months.first { $0.key == key }?.label ?? key) · activities"
+                let month = store.dashboard?.months.first { $0.key == key }?.title() ?? key
+                return String(localized: "\(month) · activities")
             }
-            return route.side == .income ? "Monthly income" : "Monthly spend"
+            return route.side == .income ? String(localized: "Monthly income") : String(localized: "Monthly spend")
         }
         return ScreenHeader(title: route?.category ?? "Aresium", subtitle: subtitle, category: category, palette: palette,
                             back: route == nil ? nil : { if !path.isEmpty { path.removeLast() } },

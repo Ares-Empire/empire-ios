@@ -11,9 +11,9 @@ nonisolated struct ProvinceSection: Equatable, Identifiable, Sendable {
 
     var title: String {
         switch state {
-        case .issue: "Issues"
-        case .active: "Active"
-        case .inactive: "Inactive"
+        case .issue: String(localized: "Issues")
+        case .active: String(localized: "Active")
+        case .inactive: String(localized: "Inactive")
         }
     }
 }
@@ -59,18 +59,21 @@ extension AresusState {
     /// A machine's status word (provinces bring their own `word`).
     nonisolated var word: String {
         switch self {
-        case .issue: "Issue"
-        case .active: "Active"
-        case .inactive: "Inactive"
+        case .issue: String(localized: "Issue")
+        case .active: String(localized: "Active")
+        case .inactive: String(localized: "Inactive")
         }
     }
 }
 
 extension RunCounts {
-    /// The counts worth showing, zeros left out: what came in, what went out, then what went wrong.
-    nonisolated var shown: [(label: String, value: Int)] {
-        [("pulled", pulled), ("pushed", pushed), ("committed", committed), ("cloned", cloned),
-         ("skipped", skipped), ("failed", failed)].filter { $0.1 > 0 }
+    /// The counts worth showing, zeros left out: what came in, what went out, then what went wrong. `key` is the
+    /// contract's name, `label` the word shown.
+    nonisolated var shown: [(key: String, label: String, value: Int)] {
+        [("pulled", String(localized: "pulled"), pulled), ("pushed", String(localized: "pushed"), pushed),
+         ("committed", String(localized: "committed"), committed), ("cloned", String(localized: "cloned"), cloned),
+         ("skipped", String(localized: "skipped"), skipped), ("failed", String(localized: "failed"), failed)]
+            .filter { $0.2 > 0 }
     }
 }
 

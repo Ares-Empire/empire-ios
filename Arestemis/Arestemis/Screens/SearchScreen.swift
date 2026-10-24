@@ -22,18 +22,18 @@ struct SearchScreen: View {
     var body: some View {
         NavigationStack {
           VStack(spacing: 0) {
-            AppHeader(title: "Search")
+            AppHeader(title: String(localized: "Search"))
             ScrollViewReader { reader in
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
                         describeLine
-                        section("What") { what }
-                        section("Where") { places }
-                        section("Size") { size }.id("size")
-                        section("Rent") { rent }.id("rent")
-                        section("Move-in") { moveIn }.id("movein")
-                        section("Portals") { portals }
-                        section("Extras") { extra }
+                        section(String(localized: "What")) { what }
+                        section(String(localized: "Where")) { places }
+                        section(String(localized: "Size")) { size }.id("size")
+                        section(String(localized: "Rent")) { rent }.id("rent")
+                        section(String(localized: "Move-in")) { moveIn }.id("movein")
+                        section(String(localized: "Portals")) { portals }
+                        section(String(localized: "Extras")) { extra }
                         save.padding(.top, Look.sectionGap)
                         Color.clear.frame(height: 1).id("bottom")
                     }
@@ -138,12 +138,12 @@ struct SearchScreen: View {
             .pickerStyle(.segmented)
             .padding(.vertical, 12)
             Hairline()
-            CountStepper(label: "Moving in", value: $draft.people, range: SearchDraft.people) { count in
-                count == 1 ? "1 person" : "\(count) people"
+            CountStepper(label: String(localized: "Moving in"), value: $draft.people, range: SearchDraft.people) { count in
+                String(localized: "\(count) people")
             }
             if draft.asksWG {
                 Hairline()
-                OptionalStepper(label: "Max flatmates", value: flatmates, range: 0...8)
+                OptionalStepper(label: String(localized: "Max flatmates"), value: flatmates, range: 0...8)
             }
         }
     }
@@ -161,14 +161,14 @@ struct SearchScreen: View {
                     Chip(text: place.name) { draft.places.removeAll { $0.id == place.id } }
                 }
                 Button { navigation.showsPlaceSearch = true } label: {
-                    Chip(text: draft.places.isEmpty ? "Choose a city" : "Add city", symbol: "plus")
+                    Chip(text: draft.places.isEmpty ? String(localized: "Choose a city") : String(localized: "Add city"), symbol: "plus")
                 }
                 .buttonStyle(.plain)
             }
             .padding(.vertical, 14)
             Hairline()
             VStack(alignment: .leading, spacing: 10) {
-                CapsLabel(text: "Areas")
+                CapsLabel(text: String(localized: "Areas"))
                 FlowLayout(spacing: 8, lineSpacing: 8) {
                     ForEach(draft.districts, id: \.self) { name in
                         Chip(text: name) { draft.districts.removeAll { $0 == name } }
@@ -191,7 +191,7 @@ struct SearchScreen: View {
                     .padding(.horizontal, 13).frame(minHeight: 34)
                     .overlay(Capsule().strokeBorder(Ink.line, style: StrokeStyle(lineWidth: 1, dash: [4, 3])))
                 }
-                Caption(text: "Optional, like Schwabing. None means the whole city.")
+                Caption(text: String(localized: "Optional, like Schwabing. None means the whole city."))
             }
             .padding(.vertical, 14)
         }
@@ -210,20 +210,20 @@ struct SearchScreen: View {
         VStack(alignment: .leading, spacing: 8) {
             FormCard {
                 if draft.asksFlat {
-                    RangeRow(label: "Flat", range: $draft.flatSize, suffix: "m²", unitName: "square metres")
+                    RangeRow(label: String(localized: "Flat"), range: $draft.flatSize, suffix: "m²", unitName: String(localized: "square metres"))
                 }
                 if draft.asksFlat && draft.asksWG { Hairline() }
                 if draft.asksWG {
-                    RangeRow(label: "WG room", range: $draft.roomSize, suffix: "m²", unitName: "square metres")
+                    RangeRow(label: String(localized: "WG room"), range: $draft.roomSize, suffix: "m²", unitName: String(localized: "square metres"))
                 }
                 if draft.asksFlat {
                     Hairline()
-                    OptionalStepper(label: "Min rooms", value: $draft.roomsMin, range: 1...6, step: 0.5)
+                    OptionalStepper(label: String(localized: "Min rooms"), value: $draft.roomsMin, range: 1...6, step: 0.5)
                 }
             }
             Caption(text: draft.asksFlat && draft.asksWG
-                    ? "In m². A flat by its whole size, a WG by your room."
-                    : "In m².")
+                    ? String(localized: "In m². A flat by its whole size, a WG by your room.")
+                    : String(localized: "In m²."))
                 .padding(.leading, 4)
         }
     }
@@ -233,24 +233,27 @@ struct SearchScreen: View {
     private var rent: some View {
         VStack(alignment: .leading, spacing: 8) {
             FormCard {
-                RangeRow(label: "Cold", range: $draft.coldRent, prefix: "€", unitName: "euros")
+                RangeRow(label: String(localized: "Cold"), range: $draft.coldRent, prefix: euro.prefix, suffix: euro.suffix, unitName: String(localized: "euros"))
                 Hairline()
-                RangeRow(label: "Warm", range: $draft.warmRent, prefix: "€", unitName: "euros")
+                RangeRow(label: String(localized: "Warm"), range: $draft.warmRent, prefix: euro.prefix, suffix: euro.suffix, unitName: String(localized: "euros"))
             }
-            Caption(text: "Per month, as listed. Warm includes the utilities.").padding(.leading, 4)
+            Caption(text: String(localized: "Per month, as listed. Warm includes the utilities.")).padding(.leading, 4)
         }
     }
+
+    /// "€" before the amount in English, after it in German ("€400", "400 €").
+    private var euro: (prefix: String?, suffix: String?) { AppLanguage.current == .german ? (nil, "€") : ("€", nil) }
 
     // MARK: move-in
 
     private var moveIn: some View {
         FormCard {
-            dateRow("From", date: $draft.moveInFrom)
+            dateRow(String(localized: "From"), date: $draft.moveInFrom)
             Hairline()
-            dateRow("Until", date: $draft.moveInUntil)
+            dateRow(String(localized: "Until"), date: $draft.moveInUntil)
             Hairline()
             VStack(alignment: .leading, spacing: 10) {
-                CapsLabel(text: "Temporary offers")
+                CapsLabel(text: String(localized: "Temporary offers"))
                 Picker("Temporary offers", selection: $draft.sublet) {
                     Text("No").tag(Sublet.exclude)
                     Text("Also").tag(Sublet.include)
@@ -276,7 +279,7 @@ struct SearchScreen: View {
                 DatePicker(label, selection: Binding(get: { value }, set: { date.wrappedValue = $0 }),
                            displayedComponents: .date)
                     .datePickerStyle(.compact).labelsHidden()
-                    .environment(\.locale, Locale(identifier: "en_GB"))      // "1 Dec 2026", like the rest of the app
+                    .environment(\.locale, AppLanguage.current.locale)      // "1 Dec 2026" / "1. Dez. 2026", like the rest of the app
                     .transition(.opacity)
             } else {
                 Text("Any").font(AppFont.text(15)).foregroundStyle(Ink.muted)
@@ -313,10 +316,10 @@ struct SearchScreen: View {
 
     private var extra: some View {
         VStack(alignment: .leading, spacing: 8) {
-            TextArea(placeholder: "e.g. furnished, balcony, not on the ground floor", text: $draft.extra, minHeight: 84,
+            TextArea(placeholder: String(localized: "e.g. furnished, balcony, not on the ground floor"), text: $draft.extra, minHeight: 84,
                      inWell: false)
                 .glassCard()
-            Caption(text: "Optional. The AI checks every listing against it.").padding(.leading, 4)
+            Caption(text: String(localized: "Optional. The AI checks every listing against it.")).padding(.leading, 4)
         }
     }
 
@@ -353,9 +356,9 @@ struct SearchScreen: View {
             } else if let hint = draft.hint {
                 Caption(text: hint).multilineTextAlignment(.center)
             } else if store.hunt?.active == true && isDirty {
-                Caption(text: "Changes apply from the next scan.")
+                Caption(text: String(localized: "Changes apply from the next scan."))
             } else if !hasHunt {
-                Caption(text: "The hunt starts paused. Start it on the Hunt tab.")
+                Caption(text: String(localized: "The hunt starts paused. Start it on the Hunt tab."))
             }
 
             if hasHunt {
@@ -385,15 +388,15 @@ struct DescribeSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    TextArea(placeholder: "e.g. WG or flat in Munich for two, up to €1,400 warm, from December, furnished",
+                    TextArea(placeholder: String(localized: "e.g. WG or flat in Munich for two, up to €1,400 warm, from December, furnished"),
                              text: $text, minHeight: 130, inWell: false)
                         .focused($focused)
                         .glassCard()
-                    Caption(text: store.parseError ?? "The AI fills in the fields from it. Check them, then save.")
+                    Caption(text: store.parseError ?? String(localized: "The AI fills in the fields from it. Check them, then save."))
                         .padding(.horizontal, 4)
                     if !unclear.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
-                            CapsLabel(text: "Filled in, except")
+                            CapsLabel(text: String(localized: "Filled in, except"))
                             ForEach(unclear, id: \.self) { note in
                                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                                     Image(systemName: "questionmark.circle").font(.system(size: 12, weight: .medium))
@@ -497,12 +500,12 @@ struct PlaceSearchSheet: View {
     @ViewBuilder private var results: some View {
         let query = text.trimmingCharacters(in: .whitespacesAndNewlines)
         if query.count < 2 {
-            Caption(text: "Type at least two letters. Places in Germany that the portals can search.")
+            Caption(text: String(localized: "Type at least two letters. Places in Germany that the portals can search."))
                 .padding(.horizontal, 4)
         } else if let error = search.error {
             CalmMessage(text: error)
         } else if search.results.isEmpty {
-            if !search.isSearching { CalmMessage(text: "No place found.") }
+            if !search.isSearching { CalmMessage(text: String(localized: "No place found.")) }
         } else {
             VStack(spacing: 0) {
                 ForEach(Array(search.results.enumerated()), id: \.element.id) { index, place in

@@ -8,8 +8,8 @@ enum ImportFileError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .noExports: "Pick a VR Bank or PayPal .csv (or CAMT .xml) export."
-        case let .tooLarge(name): "\(name) is too large (max 25 MB before JSON encoding)"
+        case .noExports: String(localized: "Pick a VR Bank or PayPal .csv (or CAMT .xml) export.")
+        case let .tooLarge(name): String(localized: "\(name) is too large (max 25 MB before JSON encoding)")
         }
     }
 }

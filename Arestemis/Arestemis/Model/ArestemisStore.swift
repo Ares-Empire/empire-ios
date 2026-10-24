@@ -153,7 +153,8 @@ final class ArestemisStore {
         } catch {
             guard isCurrent(context) else { return }
             if overview?.hunt?.id == hunt.id { overview?.hunt?.active = hunt.active }
-            handle(error, context: context) { self.show(active ? "Could not start the hunt. \($0)" : "Could not pause the hunt. \($0)") }
+            handle(error, context: context) { self.show(active ? String(localized: "Could not start the hunt. \($0)")
+                                                                     : String(localized: "Could not pause the hunt. \($0)")) }
         }
     }
 
@@ -292,7 +293,7 @@ final class ArestemisStore {
         } catch {
             guard isCurrent(context) else { return }
             matchesByID[id] = current
-            handle(error, context: context) { self.show("Could not \(state.verb) the listing. \($0)") }
+            handle(error, context: context) { self.show("\(state.failure) \($0)") }
         }
     }
 
@@ -379,7 +380,7 @@ final class ArestemisStore {
         } catch {
             guard isCurrent(context) else { return }
             if settings == new { settings = old }
-            handle(error, context: context) { self.show("Settings not saved. \($0)") }
+            handle(error, context: context) { self.show(String(localized: "Settings not saved. \($0)")) }
         }
     }
 
@@ -473,12 +474,12 @@ final class ArestemisStore {
 
 extension MatchState {
     /// "Could not save the listing."
-    var verb: String {
+    var failure: String {
         switch self {
-        case .new: "reset"
-        case .saved: "save"
-        case .applied: "mark as applied"
-        case .dismissed: "dismiss"
+        case .new: String(localized: "Could not reset the listing.")
+        case .saved: String(localized: "Could not save the listing.")
+        case .applied: String(localized: "Could not mark the listing as applied.")
+        case .dismissed: String(localized: "Could not dismiss the listing.")
         }
     }
 }

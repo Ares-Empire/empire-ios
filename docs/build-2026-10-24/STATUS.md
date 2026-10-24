@@ -103,3 +103,16 @@ Stop only for a genuine problem.
 - 06:25 widget merged; push set per build configuration (Release warnings gone); CLAUDE.md, chronicle (EMPIRE.md, live
   state.json, empire-data.js) updated. All worktrees and agent simulators removed. Next: the report (step 12).
 - 06:30 done. Heartbeat cron and caffeinate stopped. Report given in the session.
+
+## Evening: languages (Patrik: "english and german in all current but also future apps")
+
+- Rule: `ares-empire/docs/LANGUAGES.md` (linked from EMPIRE.md → How we build apps, IPHONE-APPS.md, the forge's seed
+  CLAUDE.md). How-to: `CLAUDE.md` → Languages.
+- Servers (Codex, briefs `briefs/L-COMMON.md`, `L1`–`L4`; German wording reviewed and aligned by Claude), all merged
+  and live: Aresium (`/api/pulse` + errors), push service (device language, `localized` text; reinstalled), hub (live
+  lines per language), Arestemis (schema 3: AI reason/warnings in both languages, notes, errors, describe-it
+  questions, pushes; DB backup `/root/arestemis-backup-before-languages-20261024.db`), Aresus (every line, word,
+  summary, check, incident and push; incidents keep both). Checked live with the test account in both languages.
+- Apps (Claude): String Catalogs for all four apps, both widgets and the three shared folders; `AppLanguage`
+  (`Shared/Language/`), `Accept-Language` on every request, the device language at push registration; formatting per
+  language; German screenshots of every main screen; `scripts/strings.py` (sync / fill / check).

@@ -60,8 +60,8 @@ extension MatchState {
     /// The word a row shows for a state that is not obvious from the list it is in.
     var word: String? {
         switch self {
-        case .saved: "Saved"
-        case .applied: "Applied"
+        case .saved: String(localized: "Saved")
+        case .applied: String(localized: "Applied")
         case .new, .dismissed: nil
         }
     }

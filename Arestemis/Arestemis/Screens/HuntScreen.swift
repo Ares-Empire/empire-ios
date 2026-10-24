@@ -15,7 +15,7 @@ struct HuntScreen: View {
                 ScrollView {
                     VStack(spacing: 0) {
                         AppHeader(title: "Arestemis") {
-                            GlassIconButton(symbol: "gearshape", label: "Settings") { navigation.sheet = .settings }
+                            GlassIconButton(symbol: "gearshape", label: String(localized: "Settings")) { navigation.sheet = .settings }
                         }
                         VStack(alignment: .leading, spacing: 0) {
                             if let error = store.overviewError {
@@ -29,7 +29,7 @@ struct HuntScreen: View {
                                 figures(overview).padding(.top, Look.rowGap)
                             }
                             if let sources = store.overview?.sources, !sources.isEmpty {
-                                section("Portals") { PortalsCard(sources: sources) }
+                                section(String(localized: "Portals")) { PortalsCard(sources: sources) }
                             }
                             if store.hunt != nil { latest }
                         }
@@ -63,17 +63,17 @@ struct HuntScreen: View {
     private func figures(_ overview: Overview) -> some View {
         VStack(spacing: 10) {
             HStack(spacing: 0) {
-                figure("New", overview.counts.new, highlight: overview.counts.new > 0) { show(.new) }
+                figure(String(localized: "New"), overview.counts.new, highlight: overview.counts.new > 0) { show(.new) }
                 divider
-                figure("Today", overview.counts.today) { show(.all) }
+                figure(String(localized: "Today"), overview.counts.today) { show(.all) }
                 divider
-                figure("Applied", overview.counts.applied) { show(.applied) }
+                figure(String(localized: "Applied"), overview.counts.applied) { show(.applied) }
             }
             .padding(.vertical, 16)
             .glassCard()
             TimelineView(.periodic(from: .now, by: 5)) { context in
-                Text(overview.lastScan.flatMap { Format.relative($0, now: context.date) }.map { "Last scan \($0)" }
-                     ?? "No scan yet")
+                Text(overview.lastScan.flatMap { Format.relative($0, now: context.date) }.map { String(localized: "Last scan \($0)") }
+                     ?? String(localized: "No scan yet"))
                     .font(AppFont.number(11, weight: .regular)).foregroundStyle(Ink.muted)
                     .contentTransition(.numericText())
             }
@@ -84,7 +84,7 @@ struct HuntScreen: View {
     private func figure(_ label: String, _ value: Int, highlight: Bool = false, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             VStack(spacing: 7) {
-                Text("\(value)").font(AppFont.number(22, weight: .semibold)).foregroundStyle(Ink.primary)
+                Text(verbatim: "\(value)").font(AppFont.number(22, weight: .semibold)).foregroundStyle(Ink.primary)
                     .contentTransition(.numericText(value: Double(value)))
                     .animation(.snappy, value: value)
                 HStack(spacing: 5) {
@@ -96,7 +96,7 @@ struct HuntScreen: View {
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(label): \(value)")
+        .accessibilityLabel(Text(verbatim: "\(label): \(value)"))
         .accessibilityHint("Shows these listings")
     }
 
@@ -112,7 +112,7 @@ struct HuntScreen: View {
     // MARK: latest
 
     @ViewBuilder private var latest: some View {
-        section("Latest") {
+        section(String(localized: "Latest")) {
             let matches = store.latest
             if matches.isEmpty {
                 Text("No listings yet. They appear here the moment they're found.")
@@ -174,7 +174,7 @@ private struct HuntCard: View {
             if let hunt {
                 HStack(spacing: 9) {
                     StatusDot(active: hunt.active)
-                    StatusLabel(text: hunt.active ? "Hunting" : "Paused", tone: hunt.active ? .accent : .inactive,
+                    StatusLabel(text: hunt.active ? String(localized: "Hunting") : String(localized: "Paused"), tone: hunt.active ? .accent : .inactive,
                                 accent: Look.accent)
                 }
                 .accessibilityElement(children: .combine)
@@ -247,10 +247,10 @@ private struct PortalsCard: View {
 
     private func word(_ state: SourceStatus.State) -> String {
         switch state {
-        case .ok: "working"
-        case .blocked: "blocked"
-        case .error: "not answering"
-        case .idle: "idle"
+        case .ok: String(localized: "working")
+        case .blocked: String(localized: "blocked")
+        case .error: String(localized: "not answering")
+        case .idle: String(localized: "idle")
         }
     }
 }

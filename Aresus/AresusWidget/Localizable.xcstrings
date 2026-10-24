@@ -1,0 +1,32 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "" : {
+      "shouldTranslate" : false
+    },
+    "Aresus" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aresus"
+          }
+        }
+      }
+    },
+    "Whether every province is running, and how fresh the check is." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ob jede Provinz läuft und wie frisch die Prüfung ist."
+          }
+        }
+      }
+    },
+    "·" : {
+      "shouldTranslate" : false
+    }
+  },
+  "version" : "1.0"
+}

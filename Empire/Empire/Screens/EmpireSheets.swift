@@ -39,10 +39,10 @@ struct EmpireSheetView: View {
 
     private var title: String {
         switch sheet {
-        case .province: "Provinces"
-        case .idea: "Expansions"
-        case .add: "Add a province"
-        case .approvals: "Approvals"
+        case .province: String(localized: "Provinces")
+        case .idea: String(localized: "Expansions")
+        case .add: String(localized: "Add a province")
+        case .approvals: String(localized: "Approvals")
         }
     }
 
@@ -185,7 +185,7 @@ private struct DetailHero<MarkView: View>: View {
             } else {
                 title
             }
-            StatusWord(text: status)
+            StatusWord(text: EmpireStyle.statusWord(status))
             if let blurb, !blurb.isEmpty {
                 Text(blurb).font(AppFont.text(13)).lineSpacing(5.5).foregroundStyle(Color(hex: 0xA9AEAA)).padding(.top, 18)
             }
@@ -257,13 +257,13 @@ private struct ProvincePage: View {
                 PageMark(name: province.name, image: mark)
             }
             if comingSoon {
-                Note(text: "Coming soon. You’ll be able to open \(province.name) here when it’s available.")
+                Note(text: String(localized: "Coming soon. You’ll be able to open \(province.name) here when it’s available."))
                     .padding(.bottom, 8)
             }
-            DetailSection(title: "About") { Paragraph(text: province.detail.about.isEmpty ? province.blurb : province.detail.about) }
-            DetailSection(title: "Features") {
+            DetailSection(title: String(localized: "About")) { Paragraph(text: province.detail.about.isEmpty ? province.blurb : province.detail.about) }
+            DetailSection(title: String(localized: "Features")) {
                 if province.detail.features.isEmpty {
-                    Paragraph(text: "No features listed yet.")
+                    Paragraph(text: String(localized: "No features listed yet."))
                 } else {
                     VStack(alignment: .leading, spacing: 11) {
                         ForEach(Array(province.detail.features.enumerated()), id: \.offset) { _, feature in
@@ -276,7 +276,7 @@ private struct ProvincePage: View {
                 }
             }
             Rectangle().fill(.white.opacity(0x10 / 255)).frame(height: 1).padding(.top, 14)
-            ChronicleList(title: "What's new", entries: data.chronicle.filter { $0.project == province.slug }, marks: marks)
+            ChronicleList(title: String(localized: "What's new"), entries: data.chronicle.filter { $0.project == province.slug }, marks: marks)
                 .padding(.top, 23)
             if !admin {
                 Button {
@@ -306,7 +306,7 @@ private struct IdeaPage: View {
             DetailHero(name: idea.title, status: "PLANNED") {
                 Image(systemName: "square.stack.3d.up").font(.system(size: 30, weight: .light)).foregroundStyle(Color(hex: 0xBCC0BD))
             }
-            DetailSection(title: "About") { Paragraph(text: idea.note) }
+            DetailSection(title: String(localized: "About")) { Paragraph(text: idea.note) }
         }
     }
 }
@@ -322,7 +322,8 @@ private struct AddPage: View {
 
     var body: some View {
         if addable.isEmpty {
-            EmptyState(symbol: "checkmark", title: "Your ring is up to date.", note: "No other provinces are available to add.")
+            EmptyState(symbol: "checkmark", title: String(localized: "Your ring is up to date."),
+                       note: String(localized: "No other provinces are available to add."))
         } else {
             VStack(spacing: 14) {
                 ForEach(addable) { province in
@@ -331,7 +332,7 @@ private struct AddPage: View {
                             PageMark(name: province.name, image: marks[province.slug]).frame(width: 48, height: 54)
                             VStack(alignment: .leading, spacing: 8) {
                                 Text(province.name).font(AppFont.text(18, weight: .medium)).foregroundStyle(Color(hex: 0xE4E9DF))
-                                if province.isComingSoon { StatusWord(text: "COMING SOON") }
+                                if province.isComingSoon { StatusWord(text: EmpireStyle.statusWord("COMING SOON")) }
                             }
                         }
                         Button {
@@ -362,7 +363,7 @@ private struct ApprovalsPage: View {
             } else if status.approvals.isEmpty && status.approvalsError != nil {
                 Text("Pending accounts could not be loaded.").font(AppFont.text(12)).foregroundStyle(Color(hex: 0x9B9F9D))
             } else if status.approvals.isEmpty {
-                EmptyState(symbol: "checkmark", title: "No pending accounts.", note: nil)
+                EmptyState(symbol: "checkmark", title: String(localized: "No pending accounts."), note: nil)
             } else {
                 HStack {
                     Text("Pending accounts").font(AppFont.text(13, weight: .medium)).foregroundStyle(Sheet.heading)
@@ -382,7 +383,7 @@ private struct ApprovalsPage: View {
     }
 
     private func card(_ account: PendingAccount) -> some View {
-        let name = account.name.isEmpty ? "New account" : account.name
+        let name = account.name.isEmpty ? String(localized: "New account") : account.name
         return VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 12) {
                 Text(String((account.name.isEmpty ? account.email : account.name).prefix(1)).uppercased())

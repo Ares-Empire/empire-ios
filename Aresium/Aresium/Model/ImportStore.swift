@@ -145,7 +145,7 @@ final class ImportStore {
             let plan = try ImportRequestPlan(files: attempted, maximumBytes: maximumRequestBytes)
             for file in plan.refused {
                 results.append(.init(name: file.name, added: 0, total: 0, account: nil, skipped: false,
-                                     error: "Too large for a 25 MB import request"))
+                                     error: String(localized: "Too large for a 25 MB import request")))
             }
             for files in plan.batches {
                 try Task.checkCancellation()
@@ -172,7 +172,7 @@ final class ImportStore {
             dashboard.session.handleAuthFailure(error, generation: sessionGeneration)
             guard generation == self.generation else { return }
             let message = error is CancellationError || (error as? URLError)?.code == .cancelled
-                ? "Import interrupted. Retry when you return to Aresium." : error.localizedDescription
+                ? String(localized: "Import interrupted. Retry when you return to Aresium.") : error.localizedDescription
             show(message, success: false, files: results.map(\.displayMessage) + attempted.map { "\($0.name): \(message)" })
         }
         if changed, generation == self.generation, sessionGeneration == dashboard.session.generation {

@@ -45,7 +45,7 @@ struct SpendingWidgetView: View {
                     .accessibilityValue(Money.precise(snapshot.expense))
                     .privacySensitive()
                     HStack {
-                        Text("ARESIUM").tracking(2).font(AppFont.text(8))
+                        Text(verbatim: "ARESIUM").tracking(2).font(AppFont.text(8))
                         Spacer()
                         if let freshness = WidgetFormatting.freshness(snapshot.newestTransactionDate) {
                             Text(freshness).font(AppFont.text(10))
@@ -82,7 +82,7 @@ struct CategoriesWidgetView: View {
                     if first != nil && second != nil { Rectangle().fill(palette.line).frame(height: 1) }
                     if let second { row(second) }
                     if first == nil && second == nil {
-                        Text("No spending categories").font(AppFont.text(12)).foregroundStyle(palette.secondary)
+                        Text("No spending categories", tableName: "AresiumShared").font(AppFont.text(12)).foregroundStyle(palette.secondary)
                     }
                 }.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             } else { EmptyWidgetView(palette: palette) }
@@ -124,7 +124,7 @@ private struct WidgetMonthNoteView: View {
             Spacer(minLength: 0)
             HStack {
                 if !compact {
-                    Text("ARESIUM").tracking(2).font(AppFont.text(8))
+                    Text(verbatim: "ARESIUM").tracking(2).font(AppFont.text(8))
                     Spacer()
                 }
                 if let lastData = note.lastData {
@@ -139,8 +139,8 @@ private struct EmptyWidgetView: View {
     let palette: Palette
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Aresium").font(AppFont.text(15)).foregroundStyle(palette.ink)
-            Text("Open Aresium to load your data").font(AppFont.text(13))
+            Text(verbatim: "Aresium").font(AppFont.text(15)).foregroundStyle(palette.ink)
+            Text("Open Aresium to load your data", tableName: "AresiumShared").font(AppFont.text(13))
                 .foregroundStyle(palette.secondary)
         }.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
     }

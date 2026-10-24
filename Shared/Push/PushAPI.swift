@@ -18,9 +18,12 @@ struct PushAPI {
     var transport: any HTTPTransport = URLSessionTransport()
     private let url = URL(string: "https://www.ares-empire.de/api/push/devices")!
 
-    /// 204 on success; the newest account wins, so this also moves the device to a new account.
-    func register(app: String, deviceToken: String, environment: PushEnvironment, token: String) async throws {
-        try await send("POST", ["app": app, "token": deviceToken, "environment": environment.rawValue], token: token)
+    /// 204 on success; the newest account wins, so this also moves the device to a new account. The language picks the
+    /// text of each notification (a phone that changes its language moves over at the app's next launch).
+    func register(app: String, deviceToken: String, environment: PushEnvironment, language: AppLanguage = .current,
+                  token: String) async throws {
+        try await send("POST", ["app": app, "token": deviceToken, "environment": environment.rawValue,
+                                "language": language.code], token: token)
     }
 
     /// 204 also when the server does not know the device.

@@ -153,3 +153,19 @@ struct AresusFormatTests {
         #expect(UptimeShare(ratio: 0.5)?.down == 0.5)
     }
 }
+
+// MARK: - German (ares-empire/docs/LANGUAGES.md): words from the String Catalog, numbers and dates in de_DE
+
+extension AresusFormatTests {
+    @Test func german() {
+        let de = AppLanguage.german
+        #expect(AresusFormat.relative(at("2026-10-24T12:05:03Z"), now: now, calendar: berlin, language: de) == "vor 4 Min.")
+        #expect(AresusFormat.relative(at("2026-10-23T21:57:02Z"), now: now, calendar: berlin, language: de) == "gestern 23:57")
+        #expect(AresusFormat.checkedHeading(at("2026-10-24T12:09:00Z"), calendar: berlin, language: de) == "Sa. 24. Okt. · 14:09")
+        #expect(AresusFormat.dayHeading(at("2026-10-24T10:00:00Z"), now: now, calendar: berlin, language: de) == "Heute")
+        #expect(AresusFormat.duration(7800, language: de) == "2 Std. 10 Min.")
+        #expect(AresusFormat.upFor(5 * 86_400, language: de) == "5 Tg.")
+        #expect(AresusFormat.uptime(0.996, language: de) == "99,6 %" && AresusFormat.uptime(nil, language: de) == "nicht überwacht")
+        #expect(AresusFormat.load(0.04, language: de) == "0,04")
+    }
+}

@@ -51,7 +51,7 @@ struct TransactionDetailSheet: View {
                 .foregroundStyle(detail.amount < 0 ? palette.expense : palette.balance)
             Text(detail.bookingDate).font(AppFont.number(12)).foregroundStyle(palette.muted)
         }.padding(.bottom, 20)
-        detailRow("Category") {
+        detailRow(String(localized: "Category")) {
             VStack(alignment: .leading, spacing: 8) {
                 CategoryChip(name: detail.category, color: detail.categoryColor)
                 HStack(spacing: 10) {
@@ -66,7 +66,7 @@ struct TransactionDetailSheet: View {
             }
         }
         if !detail.tags.isEmpty {
-            detailRow("Also in") {
+            detailRow(String(localized: "Also in")) {
                 VStack(alignment: .leading, spacing: 6) {
                     ForEach(detail.tags, id: \.self) { name in
                         CategoryChip(name: name, color: store.categoryColor(for: name))
@@ -74,7 +74,7 @@ struct TransactionDetailSheet: View {
                 }
             }
         }
-        if let account = detail.accountLabel { detailRow("Account") { Text(account) } }
+        if let account = detail.accountLabel { detailRow(String(localized: "Account")) { Text(account) } }
         ForEach(detail.rows) { row in detailRow(row.label) { Text(row.value) } }
         if let rows = detail.originalRows {
             DisclosureGroup("Original \(detail.source) record", isExpanded: $originalExpanded) {

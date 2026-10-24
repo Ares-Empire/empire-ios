@@ -103,13 +103,14 @@ struct CalmLoading: View {
 struct LiveRelativeTime: View {
     let date: Date
     let clock: AresusClock
-    var prefix: String = ""
+    /// The whole line around the relative time: { String(localized: "checked \($0)") }.
+    var text: (String) -> String = { $0 }
     var font: Font = AppFont.number(12, weight: .regular)
     var color: Color = Ink.muted
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
-            Text(prefix + AresusFormat.relative(date, now: clock.now(context.date)))
+            Text(text(AresusFormat.relative(date, now: clock.now(context.date))))
                 .font(font).foregroundStyle(color).lineLimit(1)
         }
     }

@@ -29,7 +29,7 @@ struct ScreenHeader: View {
     var body: some View {
         HStack(spacing: 10) {
             if let back {
-                IconButton(symbol: "chevron.left", label: "Back", palette: palette, action: back)
+                IconButton(symbol: "chevron.left", label: String(localized: "Back"), palette: palette, action: back)
             } else {
                 Image("Hermes").resizable().scaledToFit().frame(width: 38, height: 38)
                     .frame(width: 42, height: 42).accessibilityLabel("Aresium")
@@ -46,8 +46,8 @@ struct ScreenHeader: View {
             }.frame(maxWidth: .infinity)
             HStack(spacing: 8) {
                 IconButton(symbol: palette.red ? "xmark" : palette.dark ? "sun.max.fill" : "moon.fill",
-                           label: palette.red ? "Exit Aresium mode" : "Toggle theme", palette: palette, action: toggleTheme)
-                IconButton(symbol: "rectangle.portrait.and.arrow.right", label: "Log out", palette: palette, action: logout)
+                           label: palette.red ? String(localized: "Exit Aresium mode") : String(localized: "Toggle theme"), palette: palette, action: toggleTheme)
+                IconButton(symbol: "rectangle.portrait.and.arrow.right", label: String(localized: "Log out"), palette: palette, action: logout)
             }
         }.padding(.horizontal, 14).padding(.top, 8).padding(.bottom, 10)
     }

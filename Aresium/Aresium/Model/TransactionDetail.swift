@@ -40,17 +40,17 @@ struct TransactionDetail: Codable {
         let location = [city, country].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: ", ")
         let tripLabel = trip.map { $0 + ((tripKind?.isEmpty == false) ? " (\(tripKind!))" : "") }
         return [
-            DetailRow(label: "Source", value: source),
-            DetailRow(label: "Booking date", value: bookingDate),
-            DetailRow(label: "Value date", value: valueDate),
-            DetailRow(label: "Balance after", value: balance.map { Money.precise($0) }),
-            DetailRow(label: "Counterparty", value: counterparty),
-            DetailRow(label: "Description", value: description),
-            DetailRow(label: "Location", value: location),
-            DetailRow(label: "Trip", value: trip?.isEmpty == false ? tripLabel : nil),
-            DetailRow(label: "Place type", value: placeType == "unknown" ? nil : placeType),
-            DetailRow(label: "Recurring", value: recurring ? "Yes" : nil),
-            DetailRow(label: "External ID", value: externalId)
+            DetailRow(label: String(localized: "Source"), value: source),
+            DetailRow(label: String(localized: "Booking date"), value: bookingDate),
+            DetailRow(label: String(localized: "Value date"), value: valueDate),
+            DetailRow(label: String(localized: "Balance after"), value: balance.map { Money.precise($0) }),
+            DetailRow(label: String(localized: "Counterparty"), value: counterparty),
+            DetailRow(label: String(localized: "Description"), value: description),
+            DetailRow(label: String(localized: "Location"), value: location),
+            DetailRow(label: String(localized: "Trip"), value: trip?.isEmpty == false ? tripLabel : nil),
+            DetailRow(label: String(localized: "Place type"), value: placeType == "unknown" ? nil : placeType),
+            DetailRow(label: String(localized: "Recurring"), value: recurring ? String(localized: "Yes") : nil),
+            DetailRow(label: String(localized: "External ID"), value: externalId)
         ].filter { !$0.value.isEmpty }
     }
 

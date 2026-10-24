@@ -92,25 +92,27 @@ private struct DetailSections: View {
             }
             if !detail.checks.isEmpty {
                 let failing = detail.checks.filter { !$0.ok }.count
-                section("Checks", value: failing > 0 ? "\(failing) of \(detail.checks.count) failing" : "all \(detail.checks.count) ok") {
+                section(String(localized: "Checks"),
+                        value: failing > 0 ? String(localized: "\(failing) of \(detail.checks.count) failing")
+                                           : String(localized: "all \(detail.checks.count) ok")) {
                     CardRows(items: detail.checks) { CheckRow(check: $0) }
                 }
             }
             if let deploy = detail.deploy {
-                section("Last deploy") { DeployCard(deploy: deploy, clock: clock) }
+                section(String(localized: "Last deploy")) { DeployCard(deploy: deploy, clock: clock) }
             }
             if hasUptime {
-                section("14 days", value: detail.averageUptime.map(AresusFormat.uptime)) {
+                section(String(localized: "14 days"), value: detail.averageUptime.map { AresusFormat.uptime($0) }) {
                     UptimeStrip(days: detail.uptime)
                 }
             }
             if !detail.incidents.isEmpty {
-                section("Incidents", value: "\(detail.incidents.count)") {
+                section(String(localized: "Incidents"), value: "\(detail.incidents.count)") {
                     CardRows(items: detail.incidents) { IncidentRow(incident: $0, clock: clock) }
                 }
             }
             if detail.checks.isEmpty && detail.deploy == nil && !hasUptime && detail.incidents.isEmpty {
-                CalmMessage(text: "Aresus has nothing to check here yet.").padding(.top, 44)
+                CalmMessage(text: String(localized: "Aresus has nothing to check here yet.")).padding(.top, 44)
             }
         }
     }
@@ -150,7 +152,7 @@ private struct CheckRow: View {
         }
         .padding(.horizontal, 16).padding(.vertical, 13)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(check.name), \(check.ok ? "ok" : "failing")")
+        .accessibilityLabel(check.ok ? String(localized: "\(check.name), ok") : String(localized: "\(check.name), failing"))
         .accessibilityValue(check.detail)
     }
 
@@ -184,7 +186,7 @@ private struct DeployCard: View {
             Text(deploy.subject).font(AppFont.text(14, weight: .medium)).lineSpacing(3).foregroundStyle(Ink.primary)
                 .fixedSize(horizontal: false, vertical: true).padding(.top, 8)
             if let behind = deploy.behind, behind > 0 {
-                Text("\(behind) \(behind == 1 ? "commit" : "commits") on GitHub not deployed")
+                Text(String(localized: "\(behind) commits on GitHub not deployed"))
                     .font(AppFont.text(12, weight: .medium)).foregroundStyle(Color(hex: 0xE0B15A)).padding(.top, 10)
             }
         }

@@ -108,7 +108,7 @@ struct WidgetMedium: View {
                 .accessibilityElement(children: .combine)
             }
             if rows.count > 3 {
-                Text("and \(rows.count - 3) more").font(AppFont.text(10.5)).foregroundStyle(Ink.muted)
+                Text("and \(rows.count - 3) more", tableName: "AresusShared").font(AppFont.text(10.5)).foregroundStyle(Ink.muted)
             }
         }
         .padding(.top, 3)
@@ -116,11 +116,11 @@ struct WidgetMedium: View {
 
     private var counts: some View {
         VStack(alignment: .leading, spacing: 5) {
-            count(status.counts.active, "active", tone: .active)
-            count(status.counts.inactive, "inactive", tone: .inactive)
+            count(String(localized: "\(status.counts.active) active", table: "AresusShared"), tone: .active)
+            count(String(localized: "\(status.counts.inactive) inactive", table: "AresusShared"), tone: .inactive)
             Spacer(minLength: 6)
             if let sync = status.syncLine {
-                Text("Aresync · " + sync).font(AppFont.text(11)).foregroundStyle(Ink.muted)
+                Text(verbatim: "Aresync · " + sync).font(AppFont.text(11)).foregroundStyle(Ink.muted)
                     .lineLimit(2).fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -128,16 +128,16 @@ struct WidgetMedium: View {
         .accessibilityElement(children: .combine)
     }
 
-    private func count(_ value: Int, _ word: String, tone: StatusTone) -> some View {
-        Text("\(value) \(word)").font(AppFont.number(12, weight: .medium))
+    private func count(_ text: String, tone: StatusTone) -> some View {
+        Text(text).font(AppFont.number(12, weight: .medium))
             .foregroundStyle(stale && tone == .active ? Ink.secondary : tone.color(.aresus))
     }
 }
 
 /// Logged out, or nothing loaded yet: the bust and one calm sentence.
 struct WidgetMessage: View {
-    static let loggedOut = "Open Aresus to log in"
-    static let notLoaded = "Open Aresus to load the status"
+    static var loggedOut: String { String(localized: "Open Aresus to log in", table: "AresusShared") }
+    static var notLoaded: String { String(localized: "Open Aresus to load the status", table: "AresusShared") }
     let text: String
 
     var body: some View {
@@ -156,7 +156,7 @@ struct WidgetMark: View {
     var body: some View {
         HStack(spacing: 6) {
             Image("Bust").resizable().scaledToFit().frame(width: 22, height: 22).accessibilityHidden(true)
-            Text("ARESUS").font(AppFont.text(9, weight: .semibold)).tracking(1.8).foregroundStyle(Ink.muted)
+            Text(verbatim: "ARESUS").font(AppFont.text(9, weight: .semibold)).tracking(1.8).foregroundStyle(Ink.muted)
         }
     }
 }
@@ -189,7 +189,7 @@ struct WidgetChecked: View {
     var size: CGFloat = 10
 
     var body: some View {
-        Text("checked \(TimeDataSource<Date>.currentDate, format: WidgetAge.style(since: checked))")
+        Text("checked \(TimeDataSource<Date>.currentDate, format: WidgetAge.style(since: checked))", tableName: "AresusShared")
             .font(AppFont.number(size, weight: .regular)).foregroundStyle(Ink.muted)
             .lineLimit(1).minimumScaleFactor(0.8)
     }
@@ -203,7 +203,7 @@ struct WidgetRectangular: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 1) {
-            Text("ARESUS").font(AppFont.text(10, weight: .semibold)).tracking(1.6).foregroundStyle(.secondary)
+            Text(verbatim: "ARESUS").font(AppFont.text(10, weight: .semibold)).tracking(1.6).foregroundStyle(.secondary)
             switch content {
             case .status(let status):
                 ViewThatFits(in: .horizontal) {                     // as many whole names as fit
@@ -233,18 +233,18 @@ struct WidgetCircular: View {
         switch content {
         case .status(let status):
             Gauge(value: status.runningShare) {
-                Text("Aresus")
+                Text(verbatim: "Aresus")
             } currentValueLabel: {
                 if status.issueCount == 0 {
                     Image(systemName: "checkmark").font(.system(size: 17, weight: .bold))
                 } else {
-                    Text("\(status.issueCount)").font(AppFont.number(19, weight: .semibold))
+                    Text(verbatim: "\(status.issueCount)").font(AppFont.number(19, weight: .semibold))
                 }
             }
             .gaugeStyle(.accessoryCircularCapacity)
             .opacity(status.isStale(at: date) ? 0.5 : 1)
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel("Aresus, \(status.summary)")
+            .accessibilityLabel(Text(verbatim: "Aresus, \(status.summary)"))
         case .loggedOut, .notLoaded:
             ZStack {
                 AccessoryWidgetBackground()

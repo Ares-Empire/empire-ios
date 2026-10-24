@@ -44,9 +44,9 @@ struct RunSheet: View {
                 Text(machine).font(AppFont.text(20, weight: .bold)).foregroundStyle(Ink.primary).lineLimit(1)
                     .accessibilityAddTraits(.isHeader)
                 Spacer(minLength: 12)
-                StatusLabel(text: result == .ok ? "OK" : "Failed", tone: result == .ok ? .active : .issue, size: 10)
+                StatusLabel(text: result == .ok ? String(localized: "OK") : String(localized: "Failed"), tone: result == .ok ? .active : .issue, size: 10)
             }
-            Text([AresusFormat.moment(finished, now: store.clock.now()), took.map { "took \(AresusFormat.duration($0))" }]
+            Text([AresusFormat.moment(finished, now: store.clock.now()), took.map { String(localized: "took \(AresusFormat.duration($0))") }]
                     .compactMap { $0 }.joined(separator: " · "))
                 .font(AppFont.number(12, weight: .regular)).foregroundStyle(Ink.muted).padding(.top, 6)
             Text(summary).font(AppFont.text(14)).foregroundStyle(Ink.secondary)
@@ -59,8 +59,8 @@ struct RunSheet: View {
         let counts = run.counts.shown
         if !counts.isEmpty {
             FlowRow(spacing: 8) {
-                ForEach(counts, id: \.label) { count in
-                    CountCapsule(label: count.label, value: count.value, failed: count.label == "failed")
+                ForEach(counts, id: \.key) { count in
+                    CountCapsule(label: count.label, value: count.value, failed: count.key == "failed")
                 }
             }
             .padding(.top, 18)
@@ -68,7 +68,7 @@ struct RunSheet: View {
         }
         if !run.problems.isEmpty {
             VStack(alignment: .leading, spacing: 10) {
-                SectionTitle(text: "Problems")
+                SectionTitle(text: String(localized: "Problems"))
                 ForEach(Array(run.problems.enumerated()), id: \.offset) { _, problem in
                     Text(problem.message).font(AppFont.text(13)).lineSpacing(3)
                         .foregroundStyle(StatusTone.issue.color(.aresus)).fixedSize(horizontal: false, vertical: true)
@@ -77,7 +77,7 @@ struct RunSheet: View {
             .padding(.top, 28)
         }
         VStack(alignment: .leading, spacing: 12) {
-            SectionTitle(text: "Log", value: run.lines.isEmpty ? nil : "\(run.lines.count) lines")
+            SectionTitle(text: String(localized: "Log"), value: run.lines.isEmpty ? nil : String(localized: "\(run.lines.count) lines"))
             if run.lines.isEmpty {
                 Text("This run wrote no log lines.").font(AppFont.text(13)).foregroundStyle(Ink.muted)
             } else {

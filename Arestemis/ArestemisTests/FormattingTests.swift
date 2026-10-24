@@ -152,3 +152,41 @@ struct FormattingTests {
         }
     }
 }
+
+// MARK: - German (ares-empire/docs/LANGUAGES.md): words from the String Catalog, numbers and dates in de_DE
+
+extension FormattingTests {
+    @Test func germanMoneySizesAndRooms() {
+        let de = AppLanguage.german
+        #expect(Format.money(1150, language: de) == "1.150\u{a0}€")
+        #expect(Format.moneyRange(400, 1000, language: de) == "400–1.000\u{a0}€")
+        #expect(Format.size(42.5, language: de) == "42,5 m²")
+        #expect(Format.rooms(1, language: de) == "1 Zimmer" && Format.rooms(2.5, language: de) == "2,5 Zimmer")
+        #expect(Format.flatmates(1, language: de) == "1 Mitbewohner")
+    }
+
+    @Test(arguments: [
+        ("2026-10-24T10:02:36Z", "gerade eben"),
+        ("2026-10-24T09:58:40Z", "vor 4 Min."),
+        ("2026-10-24T07:02:00Z", "vor 3 Std."),
+        ("2026-10-23T16:05:00Z", "gestern 18:05"),
+        ("2026-10-21T16:05:00Z", "Mi 18:05"),
+        ("2026-10-04T08:00:00Z", "4. Okt."),
+        ("2025-10-04T08:00:00Z", "4. Okt. 2025"),
+    ])
+    func germanRelativeTimes(timestamp: String, expected: String) {
+        #expect(Format.relative(timestamp, now: now, calendar: calendar, language: .german) == expected)
+    }
+
+    @Test func germanSummary() throws {
+        let hunt = try #require(try sample(Overview.self, "overview").hunt)
+        let summary = SearchSummary(hunt.search, now: now, calendar: calendar, language: .german)
+        #expect(summary.kinds == "Wohnung oder WG-Zimmer")
+        #expect(summary.details == "München, Garching · 400–1.000\u{a0}€ warm · 1. Dez. – 1. Feb.")
+        let both = SearchSummary(search(kinds: [.wg, .flat], people: 2, warm: 1150, until: "2027-02-01"),
+                                 now: now, calendar: calendar, language: .german)
+        #expect(both.details == "München · 2 Personen · bis 1.150\u{a0}€ warm · bis 1. Feb.")
+        #expect(SearchSummary(search(cold: 700), now: now, calendar: calendar, language: .german).details
+                == "München · bis 700\u{a0}€ kalt")
+    }
+}

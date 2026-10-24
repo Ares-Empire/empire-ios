@@ -1,0 +1,135 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "" : {
+      "shouldTranslate" : false
+    },
+    "%@" : {
+      "shouldTranslate" : false
+    },
+    "Choose the two spending categories to show this month." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähle die zwei Ausgabenkategorien, die für diesen Monat angezeigt werden."
+          }
+        }
+      }
+    },
+    "Day" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tag"
+          }
+        }
+      }
+    },
+    "First category" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erste Kategorie"
+          }
+        }
+      }
+    },
+    "Monthly spending" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Monatsausgaben"
+          }
+        }
+      }
+    },
+    "Second category" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zweite Kategorie"
+          }
+        }
+      }
+    },
+    "Show ${firstCategory} and ${secondCategory}" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "${firstCategory} und ${secondCategory} zeigen"
+          }
+        }
+      }
+    },
+    "Spending categories" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ausgabenkategorien"
+          }
+        }
+      }
+    },
+    "Spending category" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ausgabenkategorie"
+          }
+        }
+      }
+    },
+    "Spent" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ausgegeben"
+          }
+        }
+      }
+    },
+    "This month's spending" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ausgaben diesen Monat"
+          }
+        }
+      }
+    },
+    "This month's spending, up to your latest transaction." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Ausgaben dieses Monats, bis zu deiner letzten Buchung."
+          }
+        }
+      }
+    },
+    "Two categories for this month. Long press to choose them." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zwei Kategorien für diesen Monat. Lange drücken, um sie zu wählen."
+          }
+        }
+      }
+    },
+    "·" : {
+      "shouldTranslate" : false
+    }
+  },
+  "version" : "1.0"
+}

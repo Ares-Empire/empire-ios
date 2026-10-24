@@ -21,16 +21,17 @@ struct ProvinceLogin: View {
                     .padding(.bottom, 16).accessibilityHidden(true)
                 Text(name.uppercased()).font(AppFont.text(17, weight: .bold)).tracking(3.7).padding(.leading, 3.7)
                     .foregroundStyle(Ink.primary).accessibilityAddTraits(.isHeader)
-                Text(session.isDenied ? "This account has no access to \(name)." : "Log in with your Empire account")
+                (session.isDenied ? Text("This account has no access to \(name).", tableName: "Shared")
+                                  : Text("Log in with your Empire account", tableName: "Shared"))
                     .font(AppFont.number(12, weight: .regular)).foregroundStyle(Color(hex: 0x8F9390))
                     .multilineTextAlignment(.center).padding(.top, 8).padding(.bottom, 28)
 
                 VStack(spacing: 11) {
-                    field { TextField("", text: $email, prompt: prompt("Email")) }
+                    field { TextField("", text: $email, prompt: prompt(Text("Email", tableName: "Shared"))) }
                         .textContentType(.username).keyboardType(.emailAddress)
                         .textInputAutocapitalization(.never).autocorrectionDisabled()
                         .focused($focused, equals: .email).submitLabel(.next).onSubmit { focused = .password }
-                    field { SecureField("", text: $password, prompt: prompt("Password")) }
+                    field { SecureField("", text: $password, prompt: prompt(Text("Password", tableName: "Shared"))) }
                         .textContentType(.password)
                         .focused($focused, equals: .password).submitLabel(.go).onSubmit(login)
                 }
@@ -46,7 +47,7 @@ struct ProvinceLogin: View {
                 Button(action: login) {
                     HStack(spacing: 10) {
                         if session.isBusy { ProgressView().tint(Color(hex: 0x141617)) }
-                        Text(session.loginUnavailable ? "Try again" : "Log in")
+                        session.loginUnavailable ? Text("Try again", tableName: "Shared") : Text("Log in", tableName: "Shared")
                     }
                     .font(AppFont.text(14, weight: .semibold)).foregroundStyle(Color(hex: 0x141617))
                     .frame(maxWidth: .infinity, minHeight: 50)
@@ -58,14 +59,16 @@ struct ProvinceLogin: View {
                 .padding(.top, 18)
 
                 if session.needsRestoreRetry {
-                    Button("Retry") { Task { await session.restore() } }
+                    Button { Task { await session.restore() } } label: { Text("Retry", tableName: "Shared") }
                         .font(AppFont.text(13)).foregroundStyle(Color(hex: 0xC0C4BF)).disabled(session.isBusy).padding(.top, 14)
                 }
 
                 HStack(spacing: 6) {
-                    Link("Forgot password?", destination: URL(string: "https://www.ares-empire.de/forgot")!)
+                    Link(destination: URL(string: "https://www.ares-empire.de/forgot")!) {
+                        Text("Forgot password?", tableName: "Shared")
+                    }
                     Text("·")
-                    Link("Sign up", destination: URL(string: "https://www.ares-empire.de/signup")!)
+                    Link(destination: URL(string: "https://www.ares-empire.de/signup")!) { Text("Sign up", tableName: "Shared") }
                 }
                 .font(AppFont.text(12.5)).foregroundStyle(Color(hex: 0x8F9390)).tint(Color(hex: 0xC2C4BF))
                 .padding(.top, 20)
@@ -87,8 +90,8 @@ struct ProvinceLogin: View {
             .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(.white.opacity(0.12)))
     }
 
-    private func prompt(_ text: String) -> Text {
-        Text(text).foregroundStyle(Color(hex: 0x6F726F))
+    private func prompt(_ text: Text) -> Text {
+        text.foregroundStyle(Color(hex: 0x6F726F))
     }
 
     private func login() {
@@ -120,18 +123,18 @@ struct ProvinceLoading: View {
                     .multilineTextAlignment(.center)
                 VStack(spacing: 10) {
                     if let retry {
-                        Button("Try again", action: retry).font(AppFont.text(12, weight: .semibold))
+                        Button(action: retry) { Text("Try again", tableName: "Shared") }.font(AppFont.text(12, weight: .semibold))
                             .foregroundStyle(Color(hex: 0x141617)).frame(maxWidth: 260, minHeight: 46)
                             .background(Color(hex: 0xEEEEE8), in: .rect(cornerRadius: 11)).buttonStyle(.plain)
                     }
                     if let logOut {
-                        Button("Log out", action: logOut).font(AppFont.text(12, weight: .semibold))
+                        Button(action: logOut) { Text("Log out", tableName: "Shared") }.font(AppFont.text(12, weight: .semibold))
                             .foregroundStyle(Color(hex: 0xC0C4BF)).frame(maxWidth: 260, minHeight: 46)
                             .overlay(RoundedRectangle(cornerRadius: 11).strokeBorder(.white.opacity(0.125))).buttonStyle(.plain)
                     }
                 }
             } else {
-                ProgressView().tint(Color(hex: 0xA0A79F)).accessibilityLabel("Loading")
+                ProgressView().tint(Color(hex: 0xA0A79F)).accessibilityLabel(Text("Loading", tableName: "Shared"))
             }
         }
         .padding(30)

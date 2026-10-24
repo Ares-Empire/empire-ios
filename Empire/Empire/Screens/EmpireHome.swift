@@ -65,7 +65,7 @@ struct EmpireHome: View {
                     ringSection
                     if !expanded {
                         Divider().overlay(Color.white.opacity(0.06)).padding(.horizontal, 26).padding(.top, 14)
-                        ChronicleList(title: admin ? "Chronicle" : "What's new", entries: data.chronicle, marks: marks)
+                        ChronicleList(title: admin ? String(localized: "Chronicle") : String(localized: "What's new"), entries: data.chronicle, marks: marks)
                             .padding(.horizontal, 26).padding(.top, 22).padding(.bottom, 40)
                     }
                 }
@@ -100,14 +100,14 @@ struct EmpireHome: View {
                 Spacer()
                 if admin {
                     iconButton(expanded ? "circle.dotted" : "arrow.up.left.and.arrow.down.right",
-                               label: expanded ? "Show the provinces" : "Show the expansions") {
+                               label: expanded ? String(localized: "Show the provinces") : String(localized: "Show the expansions")) {
                         withAnimation(.easeInOut(duration: 0.25)) { expanded.toggle() }
                     }
-                    iconButton("tray", label: "Approvals, \(data.pending) pending", badge: data.pending) {
+                    iconButton("tray", label: String(localized: "Approvals, \(data.pending) pending"), badge: data.pending) {
                         sheet = .approvals; Task { await actions.loadApprovals() }
                     }
                 }
-                iconButton("rectangle.portrait.and.arrow.right", label: "Log out") { actions.logOut() }
+                iconButton("rectangle.portrait.and.arrow.right", label: String(localized: "Log out")) { actions.logOut() }
             }
         }
         .padding(.leading, 18).padding(.trailing, 8).padding(.top, 6).padding(.bottom, 4)
@@ -119,7 +119,7 @@ struct EmpireHome: View {
                 .frame(width: 44, height: 44)
                 .overlay(alignment: .topTrailing) {
                     if badge > 0 {
-                        Text("\(badge)").font(AppFont.number(9, weight: .semibold)).foregroundStyle(Color(hex: 0x0B0C0E))
+                        Text(verbatim: "\(badge)").font(AppFont.number(9, weight: .semibold)).foregroundStyle(Color(hex: 0x0B0C0E))
                             .padding(.horizontal, 4).frame(minWidth: 15, minHeight: 15)
                             .background(Color(hex: 0xD9D9D3), in: .capsule).offset(x: -4, y: 6)
                     }
@@ -150,7 +150,7 @@ struct EmpireHome: View {
         var items = data.projects.map { p in
             EmpireRing.Item(id: p.slug, name: p.name, status: !admin && p.isComingSoon ? "COMING SOON" : p.status, isAdd: false)
         }
-        if !admin { items.append(.init(id: "__add", name: "Add a province", status: "", isAdd: true)) }
+        if !admin { items.append(.init(id: "__add", name: String(localized: "Add a province"), status: "", isAdd: true)) }
         return items
     }
 

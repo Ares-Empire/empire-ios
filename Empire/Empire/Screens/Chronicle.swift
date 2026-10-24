@@ -44,7 +44,7 @@ struct ChronicleList: View {
                 // mobile.css: the phone's meta line is quieter than the desktop's (grey project, no gold)
                 HStack(spacing: 6) {
                     Text(entry.at).font(AppFont.number(8.5, weight: .regular)).foregroundStyle(Color(hex: 0x858A8A))
-                    Text("·").font(AppFont.text(10)).foregroundStyle(EmpireStyle.ink3)
+                    Text(verbatim: "·").font(AppFont.text(10)).foregroundStyle(EmpireStyle.ink3)
                     Text((entry.project ?? "empire").uppercased()).font(AppFont.number(8.5, weight: .medium)).tracking(0.3)
                         .foregroundStyle(Color(hex: 0xA7ABA7))
                 }

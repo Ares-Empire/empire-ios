@@ -23,7 +23,7 @@ nonisolated struct WidgetSnapshot: Codable, Equatable {
               let date = WidgetFormatting.monthDate(month.key),
               let days = WidgetFormatting.calendar.range(of: .day, in: .month, for: date)?.count else { return nil }
         monthKey = month.key
-        monthLabel = month.label
+        monthLabel = month.title()
         daysInMonth = days
         dayExpenseRunning = data.dayExpenseRunning
         expense = data.expense
@@ -63,15 +63,16 @@ nonisolated struct WidgetMonthNote: Equatable {
 
     init?(snapshot: WidgetSnapshot, now: Date, calendar: Calendar) {
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_GB")
+        formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.calendar = calendar
         formatter.timeZone = calendar.timeZone
         formatter.dateFormat = "yyyy-MM"
         guard snapshot.monthKey < formatter.string(from: now) else { return nil }
-        formatter.dateFormat = "MMMM yyyy"
+        formatter.locale = AppLanguage.current.locale
+        formatter.setLocalizedDateFormatFromTemplate("MMMMyyyy")
         monthLabel = formatter.string(from: now)
-        formatter.dateFormat = "MMMM"
-        message = "Nothing imported for \(formatter.string(from: now)) yet"
+        formatter.setLocalizedDateFormatFromTemplate("MMMM")
+        message = String(localized: "Nothing imported for \(formatter.string(from: now)) yet", table: "AresiumShared")
         lastData = WidgetFormatting.lastData(snapshot.newestTransactionDate)
     }
 }
@@ -96,19 +97,19 @@ nonisolated enum WidgetFormatting {
     }
 
     static func freshness(_ value: String?) -> String? {
-        transactionDateLabel(value).map { "up to " + $0 }
+        transactionDateLabel(value).map { String(localized: "up to \($0)", table: "AresiumShared") }
     }
 
     static func lastData(_ value: String?) -> String? {
-        transactionDateLabel(value).map { "last data " + $0 }
+        transactionDateLabel(value).map { String(localized: "last data \($0)", table: "AresiumShared") }
     }
 
     private static func transactionDateLabel(_ value: String?) -> String? {
         guard let value, let date = date(value) else { return nil }
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_GB")
+        formatter.locale = AppLanguage.current.locale
         formatter.timeZone = calendar.timeZone
-        formatter.dateFormat = "d MMM"
+        formatter.setLocalizedDateFormatFromTemplate("dMMM")
         return formatter.string(from: date)
     }
 }

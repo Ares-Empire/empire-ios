@@ -23,7 +23,7 @@ struct StartScreen: View {
                 }.pickerStyle(.segmented).frame(maxWidth: 235)
                 Spacer()
                 ImportButton(store: imports, sample: store.isSample, palette: palette)
-                IconButton(symbol: "chart.line.uptrend.xyaxis", label: "Toggle graph", palette: palette, active: graph) {
+                IconButton(symbol: "chart.line.uptrend.xyaxis", label: String(localized: "Toggle graph"), palette: palette, active: graph) {
                     withAnimation(.easeInOut(duration: 0.3)) { graph.toggle() }
                 }
             }.padding(.horizontal, 14).padding(.bottom, 8)
@@ -31,7 +31,7 @@ struct StartScreen: View {
             if graph {
                 SeriesChart(points: store.startChart(side: side, current: current),
                             color: side == .income ? palette.income : palette.expense,
-                            palette: palette, xTitle: current ? "Day" : "Month")
+                            palette: palette, xTitle: current ? String(localized: "Day") : String(localized: "Month"))
                     .frame(height: 235).transition(.opacity.combined(with: .move(edge: .top)))
             }
             HStack(spacing: 9) {
@@ -85,7 +85,8 @@ private struct StartPage: View {
                         }.buttonStyle(.plain)
                     }
                     if rows.isEmpty && !store.isLoading {
-                        EmptyMessage(text: "No \(side == .income ? "income" : "spending") recorded.", palette: palette)
+                        EmptyMessage(text: side == .income ? String(localized: "No income recorded.") : String(localized: "No spending recorded."),
+                                     palette: palette)
                     }
                 }.padding(.horizontal, 12).padding(.top, 8)
             }
@@ -103,7 +104,7 @@ struct CategoryScreen: View {
         VStack(spacing: 0) {
             HStack {
                 Spacer()
-                IconButton(symbol: "chart.line.uptrend.xyaxis", label: "Toggle graph", palette: palette, active: graph) {
+                IconButton(symbol: "chart.line.uptrend.xyaxis", label: String(localized: "Toggle graph"), palette: palette, active: graph) {
                     withAnimation { graph.toggle() }
                 }
             }.padding(.horizontal, 14).padding(.bottom, 8)
@@ -113,14 +114,14 @@ struct CategoryScreen: View {
                     let months = store.months(category: route.category, side: route.side)
                     if graph {
                         SeriesChart(points: store.categoryChart(route.category, side: route.side),
-                                    color: Color(hex: category.color), palette: palette, xTitle: "Month") { index in
+                                    color: Color(hex: category.color), palette: palette, xTitle: String(localized: "Month")) { index in
                             guard let allMonths = store.dashboard?.months, allMonths.indices.contains(index) else { return }
                             pick(DashboardRoute(category: route.category, side: route.side, month: allMonths[index].key))
                         }.frame(height: 420)
                         .accessibilityRepresentation {
                             VStack {
                                 ForEach(months) { row in
-                                    Button("\(row.month.label) · \(Money.total(row.total))") {
+                                    Button("\(row.month.title()) · \(Money.total(row.total))") {
                                         pick(DashboardRoute(category: route.category, side: route.side, month: row.month.key))
                                     }
                                 }
@@ -130,14 +131,14 @@ struct CategoryScreen: View {
                         LazyVStack(spacing: 0) {
                             ForEach(months) { row in
                                 Button { pick(DashboardRoute(category: route.category, side: route.side, month: row.month.key)) } label: {
-                                    ValueRow(title: row.month.label, category: category, total: row.total,
+                                    ValueRow(title: row.month.title(), category: category, total: row.total,
                                              maximum: months.map(\.total).max() ?? 0, palette: palette)
                                 }.buttonStyle(.plain)
                             }
-                            if months.isEmpty { EmptyMessage(text: "No activity recorded.", palette: palette) }
+                            if months.isEmpty { EmptyMessage(text: String(localized: "No activity recorded."), palette: palette) }
                         }.padding(.horizontal, 12).padding(.top, 8)
                     }
-                } else { EmptyMessage(text: "This category is no longer available.", palette: palette) }
+                } else { EmptyMessage(text: String(localized: "This category is no longer available."), palette: palette) }
             }.refreshable { await store.reload() }.scrollBounceBehavior(.always)
         }
     }
@@ -179,7 +180,7 @@ struct TransactionsScreen: View {
                             }.padding(.horizontal, 12).padding(.vertical, 11).contentShape(Rectangle())
                         }.buttonStyle(.plain)
                     }
-                    if rows.isEmpty { EmptyMessage(text: "No transactions this month.", palette: palette) }
+                    if rows.isEmpty { EmptyMessage(text: String(localized: "No transactions this month."), palette: palette) }
                 }.padding(.horizontal, 12).padding(.top, 8)
             }.refreshable { await store.reload() }.scrollBounceBehavior(.always)
         }

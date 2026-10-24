@@ -14,10 +14,10 @@ struct MatchDetailScreen: View {
             if let match = store.match(id) {
                 page(match)
             } else if let error = store.matchErrors[id] {
-                CalmMessage(text: error, action: ("Try again", { Task { await store.loadMatch(id) } }))
+                CalmMessage(text: error, action: (String(localized: "Try again"), { Task { await store.loadMatch(id) } }))
                     .frame(maxHeight: .infinity)
             } else {
-                CalmMessage(text: "Loading the listing…", loading: true).frame(maxHeight: .infinity)
+                CalmMessage(text: String(localized: "Loading the listing…"), loading: true).frame(maxHeight: .infinity)
             }
         }
         .frame(maxWidth: .infinity)
@@ -50,10 +50,10 @@ struct MatchDetailScreen: View {
                 hero(match)
                 let facts = listing.detailFacts()
                 if !facts.isEmpty { FactsGrid(facts: facts).padding(.top, 22) }
-                SectionHeading(text: "Why it fits").padding(.leading, 4).padding(.top, Look.sectionGap)
+                SectionHeading(text: String(localized: "Why it fits")).padding(.leading, 4).padding(.top, Look.sectionGap)
                 WhyItFits(reason: match.reason, warnings: match.warnings).padding(.top, Look.headingGap)
                 if !listing.description.isEmpty {
-                    SectionHeading(text: "Description").padding(.leading, 4).padding(.top, Look.sectionGap)
+                    SectionHeading(text: String(localized: "Description")).padding(.leading, 4).padding(.top, Look.sectionGap)
                     ExpandableText(text: listing.description).padding(.top, Look.headingGap).padding(.horizontal, 4)
                 }
             }

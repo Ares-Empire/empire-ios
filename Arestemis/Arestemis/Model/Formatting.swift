@@ -1,70 +1,82 @@
 import Foundation
 
-/// How the app writes the API's values: English labels, € in front, mono-friendly numbers. Pure functions with the
-/// clock and calendar passed in, so the tests pin them.
+/// How the app writes the API's values, in the app's language (ares-empire/docs/LANGUAGES.md): "€980" or "980 €",
+/// "1 Dec" or "1. Dez.". Pure functions with the clock, calendar and language passed in, so the tests pin them.
 enum Format {
-    private static let posix = Locale(identifier: "en_US_POSIX")
-    private static let grouping = Locale(identifier: "en_US")
-
-    /// "€980", "€1,150" (whole euros).
-    static func money(_ euros: Double) -> String {
-        "€" + Int(euros.rounded()).formatted(.number.locale(grouping))
+    /// "€980", "€1,150"; German "980 €", "1.150 €" (whole euros).
+    static func money(_ euros: Double, language: AppLanguage = .current) -> String {
+        let amount = whole(euros, language: language)
+        return language == .german ? amount + "\u{a0}€" : "€" + amount
     }
 
-    /// "42", "42.5": whole numbers without a decimal point.
-    static func number(_ value: Double) -> String {
-        if value == value.rounded() { return String(Int(value)) }
-        return String(format: "%.1f", locale: posix, value)
+    /// "€400–1,000"; German "400–1.000 €".
+    static func moneyRange(_ low: Double, _ high: Double, language: AppLanguage = .current) -> String {
+        let range = whole(low, language: language) + "–" + whole(high, language: language)
+        return language == .german ? range + "\u{a0}€" : "€" + range
+    }
+
+    private static func whole(_ euros: Double, language: AppLanguage) -> String {
+        Int(euros.rounded()).formatted(.number.locale(language.locale))
+    }
+
+    /// "42", "42.5" (German "42,5"): whole numbers without a decimal point, no grouping.
+    static func number(_ value: Double, language: AppLanguage = .current) -> String {
+        value.formatted(.number.precision(.fractionLength(0...1)).grouping(.never).locale(language.locale))
     }
 
     /// "42 m²"
-    static func size(_ sqm: Double) -> String { number(sqm) + " m²" }
+    static func size(_ sqm: Double, language: AppLanguage = .current) -> String { number(sqm, language: language) + " m²" }
 
-    /// "1 room", "2 rooms", "1.5 rooms"
-    static func rooms(_ rooms: Double) -> String { number(rooms) + (rooms == 1 ? " room" : " rooms") }
+    /// "1 room", "2 rooms", "1.5 rooms" (German "1 Zimmer", "1,5 Zimmer")
+    static func rooms(_ rooms: Double, language: AppLanguage = .current) -> String {
+        let count = number(rooms, language: language)
+        return rooms == 1 ? language.string("\(count) room") : language.string("\(count) rooms")
+    }
 
     /// "1 flatmate", "2 flatmates"
-    static func flatmates(_ count: Int) -> String { "\(count) flatmate" + (count == 1 ? "" : "s") }
+    static func flatmates(_ count: Int, language: AppLanguage = .current) -> String {
+        language.string("\(count) flatmates")
+    }
 
     /// How long ago: "just now", "40 s ago", "4 min ago", "3 h ago" (same day), "yesterday 18:05", "Mon 18:05"
     /// (this week), then the day ("12 Oct").
-    static func relative(_ date: Date, now: Date = .now, calendar: Calendar = .app) -> String {
+    static func relative(_ date: Date, now: Date = .now, calendar: Calendar = .app,
+                         language: AppLanguage = .current) -> String {
         let seconds = now.timeIntervalSince(date)
-        if seconds < 10 { return "just now" }
-        if seconds < 60 { return "\(Int(seconds)) s ago" }
-        if seconds < 3600 { return "\(Int(seconds / 60)) min ago" }
-        if calendar.isDate(date, inSameDayAs: now) { return "\(Int(seconds / 3600)) h ago" }
-        let time = formatted(date, "HH:mm", calendar: calendar)
+        if seconds < 10 { return language.string("just now") }
+        if seconds < 60 { return language.string("\(Int(seconds)) s ago") }
+        if seconds < 3600 { return language.string("\(Int(seconds / 60)) min ago") }
+        if calendar.isDate(date, inSameDayAs: now) { return language.string("\(Int(seconds / 3600)) h ago") }
+        let time = date.formatted(style(calendar, language).hour(.twoDigits(amPM: .omitted)).minute(.twoDigits))
         if let yesterday = calendar.date(byAdding: .day, value: -1, to: now), calendar.isDate(date, inSameDayAs: yesterday) {
-            return "yesterday " + time
+            return language.string("yesterday \(time)")
         }
-        if seconds < 6 * 86_400 { return formatted(date, "EEE", calendar: calendar) + " " + time }
-        return day(date, now: now, calendar: calendar)
+        if seconds < 6 * 86_400 { return date.formatted(style(calendar, language).weekday(.abbreviated)) + " " + time }
+        return day(date, now: now, calendar: calendar, language: language)
     }
 
     /// An API timestamp, relative; nil if it cannot be read.
-    static func relative(_ timestamp: String?, now: Date = .now, calendar: Calendar = .app) -> String? {
-        timestamp.flatMap(Timestamp.parse).map { relative($0, now: now, calendar: calendar) }
+    static func relative(_ timestamp: String?, now: Date = .now, calendar: Calendar = .app,
+                         language: AppLanguage = .current) -> String? {
+        timestamp.flatMap(Timestamp.parse).map { relative($0, now: now, calendar: calendar, language: language) }
     }
 
-    /// "1 Dec"; with the year when the day is far from now ("1 Dec 2027").
-    static func day(_ date: Date, now: Date = .now, calendar: Calendar = .app) -> String {
+    /// "1 Dec" (German "1. Dez."); with the year when the day is far from now ("1 Dec 2027").
+    static func day(_ date: Date, now: Date = .now, calendar: Calendar = .app, language: AppLanguage = .current) -> String {
         let far = abs(date.timeIntervalSince(now)) > 330 * 86_400
-        return formatted(date, far ? "d MMM yyyy" : "d MMM", calendar: calendar)
+        let style = style(calendar, language).day().month(.abbreviated)
+        return date.formatted(far ? style.year() : style)
     }
 
     /// An API date ("2026-12-01") as "1 Dec"; nil if it cannot be read.
-    static func day(_ string: String?, now: Date = .now, calendar: Calendar = .app) -> String? {
-        string.flatMap { DateOnly.parse($0, calendar: calendar) }.map { day($0, now: now, calendar: calendar) }
+    static func day(_ string: String?, now: Date = .now, calendar: Calendar = .app,
+                    language: AppLanguage = .current) -> String? {
+        string.flatMap { DateOnly.parse($0, calendar: calendar) }.map { day($0, now: now, calendar: calendar, language: language) }
     }
 
-    private static func formatted(_ date: Date, _ pattern: String, calendar: Calendar) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = posix
-        formatter.calendar = calendar
-        formatter.timeZone = calendar.timeZone
-        formatter.dateFormat = pattern
-        return formatter.string(from: date)
+    private static func style(_ calendar: Calendar, _ language: AppLanguage) -> Date.FormatStyle {
+        Date.FormatStyle(date: .omitted, time: .omitted, locale: language.locale, calendar: calendar,
+                         timeZone: calendar.timeZone)
     }
 }
 
@@ -108,16 +120,15 @@ enum DateOnly {
 // MARK: - names
 
 extension Kind {
-    /// "Flat", "WG room" (the server's labels too: the push subtitle).
-    var title: String {
+    /// "Flat", "WG room" (German "Wohnung", "WG-Zimmer"; the server's labels too: the push subtitle).
+    func title(in language: AppLanguage = .current) -> String {
         switch self {
-        case .flat: "Flat"
-        case .wg: "WG room"
+        case .flat: language.string("Flat")
+        case .wg: language.string("WG room")
         }
     }
 
-    /// Inside a sentence, after the first kind: "WG room".
-    var inSentence: String { title }
+    var title: String { title() }
 
     /// On a listing row.
     var short: String { title }
@@ -151,13 +162,13 @@ extension Place {
 struct SearchSummary: Equatable {
     /// The kinds as phrases ("Flat", "WG room") and as one sentence.
     let kindPhrases: [String]
-    var kinds: String { Self.sentence(kindPhrases) }
+    var kinds: String { sentence(kindPhrases) }
     /// Places, rent, move-in: each part a unit that should not be broken across lines.
     let parts: [String]
     var details: String { parts.joined(separator: " · ") }
 
     /// For display: lines break only between kinds and between parts, never inside "WG room" or "1 Dec – 1 Feb".
-    var wrappingKinds: String { Self.sentence(kindPhrases.map(Self.unbreakable)) }
+    var wrappingKinds: String { sentence(kindPhrases.map(Self.unbreakable)) }
     var wrappingDetails: String { parts.map(Self.unbreakable).joined(separator: " · ") }
 
     private static func unbreakable(_ phrase: String) -> String {
@@ -166,34 +177,37 @@ struct SearchSummary: Equatable {
             .replacingOccurrences(of: "–", with: "\u{2060}–\u{2060}")
     }
 
-    init(_ search: Search, now: Date = .now, calendar: Calendar = .app) {
+    private let language: AppLanguage
+
+    init(_ search: Search, now: Date = .now, calendar: Calendar = .app, language: AppLanguage = .current) {
+        self.language = language
         let kinds = Kind.allCases.filter(search.kinds.contains)
-        kindPhrases = kinds.enumerated().map { $0.offset == 0 ? $0.element.title : $0.element.inSentence }
+        kindPhrases = kinds.map { $0.title(in: language) }
         var parts: [String] = []
         if let places = Self.places(search.places) { parts.append(places) }
-        if search.people > 1 { parts.append("\(search.people) people") }
-        if let rent = Self.rent(min: search.rentWarmMin, max: search.rentWarmMax, label: "warm")
-            ?? Self.rent(min: search.rentColdMin, max: search.rentColdMax, label: "cold") {
+        if search.people > 1 { parts.append(language.string("\(search.people) people")) }
+        if let rent = Self.rent(min: search.rentWarmMin, max: search.rentWarmMax, warm: true, language: language)
+            ?? Self.rent(min: search.rentColdMin, max: search.rentColdMax, warm: false, language: language) {
             parts.append(rent)
         }
-        if let moveIn = Self.moveIn(search, now: now, calendar: calendar) { parts.append(moveIn) }
+        if let moveIn = Self.moveIn(search, now: now, calendar: calendar, language: language) { parts.append(moveIn) }
         self.parts = parts
     }
 
-    /// "€400–1,000 warm", "up to €1,000 warm", "from €400 warm"
-    private static func rent(min: Double?, max: Double?, label: String) -> String? {
+    /// "€400–1,000 warm", "up to €1,000 warm", "from €400 warm" (German "400–1.000 € warm", "bis 1.000 € warm", …)
+    private static func rent(min: Double?, max: Double?, warm: Bool, language: AppLanguage) -> String? {
+        let label = warm ? language.string("warm") : language.string("cold")
         switch (min, max) {
-        case let (min?, max?): "\(Format.money(min))–\(Format.money(max).dropFirst()) \(label)"
-        case let (nil, max?): "up to \(Format.money(max)) \(label)"
-        case let (min?, nil): "from \(Format.money(min)) \(label)"
-        case (nil, nil): nil
+        case let (min?, max?): return "\(Format.moneyRange(min, max, language: language)) \(label)"
+        case let (nil, max?): return language.string("up to \(Format.money(max, language: language)) \(label)")
+        case let (min?, nil): return language.string("from \(Format.money(min, language: language)) \(label)")
+        case (nil, nil): return nil
         }
     }
 
-    /// "a", "a or b", "a, b or c"
-    private static func sentence(_ items: [String]) -> String {
-        guard items.count > 1 else { return items.first ?? "" }
-        return items.dropLast().joined(separator: ", ") + " or " + items[items.count - 1]
+    /// "a", "a or b", "a, b or c" (German "a, b oder c")
+    private func sentence(_ items: [String]) -> String {
+        items.formatted(.list(type: .or).locale(language.locale))
     }
 
     /// Short town names (full ones where two would read the same), at most three, then "+2".
@@ -207,13 +221,13 @@ struct SearchSummary: Equatable {
         return names.count > 3 ? "\(shown) +\(names.count - 3)" : shown
     }
 
-    private static func moveIn(_ search: Search, now: Date, calendar: Calendar) -> String? {
-        let from = Format.day(search.moveInFrom, now: now, calendar: calendar)
-        let until = Format.day(search.moveInUntil, now: now, calendar: calendar)
+    private static func moveIn(_ search: Search, now: Date, calendar: Calendar, language: AppLanguage) -> String? {
+        let from = Format.day(search.moveInFrom, now: now, calendar: calendar, language: language)
+        let until = Format.day(search.moveInUntil, now: now, calendar: calendar, language: language)
         switch (from, until) {
         case let (from?, until?): return "\(from) – \(until)"
-        case let (from?, nil): return "from \(from)"
-        case let (nil, until?): return "until \(until)"
+        case let (from?, nil): return language.string("from \(from)")
+        case let (nil, until?): return language.string("until \(until)")
         case (nil, nil): return nil
         }
     }
@@ -223,9 +237,11 @@ struct SearchSummary: Equatable {
 
 extension Listing {
     /// The rent to show big and what it is: warm if known, else cold.
-    var shownRent: (amount: String, label: String)? {
-        if let rentWarm { return (Format.money(rentWarm), "warm") }
-        if let rentCold { return (Format.money(rentCold), "cold") }
+    var shownRent: (amount: String, label: String)? { shownRent() }
+
+    func shownRent(language: AppLanguage = .current) -> (amount: String, label: String)? {
+        if let rentWarm { return (Format.money(rentWarm, language: language), language.string("warm")) }
+        if let rentCold { return (Format.money(rentCold, language: language), language.string("cold")) }
         return nil
     }
 
@@ -255,29 +271,34 @@ struct ListingFact: Equatable, Identifiable {
 extension Listing {
     /// The match page's grid: Size, Rooms (a flat) or Flatmates (a WG), Kind, Move-in, Until, Furnished, District
     /// (or City), Posted; only the known ones.
-    func detailFacts(now: Date = .now, calendar: Calendar = .app) -> [ListingFact] {
+    func detailFacts(now: Date = .now, calendar: Calendar = .app, language: AppLanguage = .current) -> [ListingFact] {
+        let l = language
         var facts: [ListingFact] = []
-        if let sqm { facts.append(ListingFact(label: "Size", value: Format.number(sqm), unit: "m²", numeric: true)) }
+        if let sqm {
+            facts.append(ListingFact(label: l.string("Size"), value: Format.number(sqm, language: l), unit: "m²", numeric: true))
+        }
         if let kind, kind.isWG {
-            if let flatmates { facts.append(ListingFact(label: "Flatmates", value: String(flatmates), numeric: true)) }
+            if let flatmates { facts.append(ListingFact(label: l.string("Flatmates"), value: String(flatmates), numeric: true)) }
         } else if let rooms {
-            facts.append(ListingFact(label: "Rooms", value: Format.number(rooms), numeric: true))
+            facts.append(ListingFact(label: l.string("Rooms"), value: Format.number(rooms, language: l), numeric: true))
         }
-        if let kind { facts.append(ListingFact(label: "Kind", value: kind.title)) }
-        if let from = Format.day(availableFrom, now: now, calendar: calendar) {
-            facts.append(ListingFact(label: "Move-in", value: from))
+        if let kind { facts.append(ListingFact(label: l.string("Kind"), value: kind.title(in: l))) }
+        if let from = Format.day(availableFrom, now: now, calendar: calendar, language: l) {
+            facts.append(ListingFact(label: l.string("Move-in"), value: from))
         }
-        if let until = Format.day(availableUntil, now: now, calendar: calendar) {
-            facts.append(ListingFact(label: "Until", value: until))
+        if let until = Format.day(availableUntil, now: now, calendar: calendar, language: l) {
+            facts.append(ListingFact(label: l.string("Until"), value: until))
         }
-        if let furnished { facts.append(ListingFact(label: "Furnished", value: furnished ? "Yes" : "No")) }
+        if let furnished {
+            facts.append(ListingFact(label: l.string("Furnished"), value: furnished ? l.string("Yes") : l.string("No")))
+        }
         if let district {
-            facts.append(ListingFact(label: "District", value: district))
+            facts.append(ListingFact(label: l.string("District"), value: district))
         } else if let city {
-            facts.append(ListingFact(label: "City", value: city))
+            facts.append(ListingFact(label: l.string("City"), value: city))
         }
-        if let posted = Format.relative(posted, now: now, calendar: calendar) {
-            facts.append(ListingFact(label: "Posted", value: posted))
+        if let posted = Format.relative(posted, now: now, calendar: calendar, language: l) {
+            facts.append(ListingFact(label: l.string("Posted"), value: posted))
         }
         return facts
     }

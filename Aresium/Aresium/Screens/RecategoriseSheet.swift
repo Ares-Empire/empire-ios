@@ -75,7 +75,7 @@ struct RecategoriseSheet: View {
                 .overlay(RoundedRectangle(cornerRadius: 10).stroke(color.opacity(selected ? 1 : 0.33), lineWidth: selected ? 2 : 1))
         }.buttonStyle(.plain)
             .disabled(store.mode == .add && category.name == current)
-            .accessibilityLabel(category.name + (category.name == current ? ", current" : ""))
+            .accessibilityLabel(category.name == current ? String(localized: "\(category.name), current") : category.name)
             .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }

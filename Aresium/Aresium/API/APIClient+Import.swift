@@ -16,17 +16,17 @@ struct ImportResponse: Decodable {
 
         var displayMessage: String {
             if let error, !error.isEmpty { return "\(name): \(error)" }
-            return "\(name): \(added) added" + (skipped ? " · skipped" : "")
+            return skipped ? String(localized: "\(name): \(added) added · skipped") : String(localized: "\(name): \(added) added")
         }
     }
     let results: [Result]
     var summary: String {
         let added = results.reduce(0) { $0 + $1.added }
         let failed = results.filter { !($0.error ?? "").isEmpty }.count
-        if failed > 0 { return "\(added) added · \(failed) file(s) failed" }
+        if failed > 0 { return String(localized: "\(added) added") + " · " + String(localized: "\(failed) files failed") }
         let skipped = results.filter(\.skipped).count
-        return "\(added) new transaction\(added == 1 ? "" : "s") imported"
-            + (skipped > 0 ? " · \(skipped) skipped" : "")
+        return String(localized: "\(added) new transactions imported")
+            + (skipped > 0 ? " · " + String(localized: "\(skipped) skipped") : "")
     }
 }
 
@@ -60,7 +60,7 @@ extension APIClient {
     func importFiles(_ files: [ImportFile], token: String, onUnauthorized: () -> Void) async throws -> ImportResponse {
         let body = try ImportRequestPlan.encode(files)
         guard body.count <= ImportRequestPlan.maximumBytes else {
-            throw HTTPError.server(413, "Import request exceeds 25 MB. Split the files and try again.")
+            throw HTTPError.server(413, String(localized: "Import request exceeds 25 MB. Split the files and try again."))
         }
         var request = URLRequest(url: baseURL.appendingPathComponent("api/import"))
         request.httpMethod = "POST"

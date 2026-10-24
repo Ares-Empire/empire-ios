@@ -67,7 +67,7 @@ struct EmpireRing: View {
                             withAnimation(.easeOut(duration: 0.18)) { pressed = pressing ? item.id : nil }
                         }
                         .accessibilityElement(children: .combine)
-                        .accessibilityLabel(item.isAdd ? item.name : "\(item.name), \(item.status)")
+                        .accessibilityLabel(item.isAdd ? item.name : "\(item.name), \(EmpireStyle.statusWord(item.status))")
                         .accessibilityAddTraits(index == frontIndex ? [.isButton, .isSelected] : .isButton)
                         .accessibilityAction(named: "Details") { onHold(item) }
                 }
@@ -174,7 +174,7 @@ private struct RingTab: View {
                     Text(item.name.uppercased()).font(AppFont.text(15, weight: .bold)).tracking(1.5)
                         .lineLimit(1).goldFill(EmpireStyle.goldName)
                         .shadow(color: .black.opacity(0.55), radius: 1, y: 1)
-                    Text(item.status).font(AppFont.text(9.5, weight: .semibold)).tracking(2.1)
+                    Text(EmpireStyle.statusWord(item.status)).font(AppFont.text(9.5, weight: .semibold)).tracking(2.1)
                         .foregroundStyle(EmpireStyle.statusColor(item.status))
                 }
             }

@@ -42,9 +42,9 @@ enum MatchNotification {
     static let applicationAction = "ARESTEMIS_APPLICATION"
 
     static var categories: Set<UNNotificationCategory> {
-        let open = UNNotificationAction(identifier: openListingAction, title: "Open listing",
+        let open = UNNotificationAction(identifier: openListingAction, title: String(localized: "Open listing"),
                                         options: [.foreground], icon: UNNotificationActionIcon(systemImageName: "safari"))
-        let application = UNNotificationAction(identifier: applicationAction, title: "Application",
+        let application = UNNotificationAction(identifier: applicationAction, title: String(localized: "Application"),
                                                options: [.foreground], icon: UNNotificationActionIcon(systemImageName: "text.quote"))
         return [UNNotificationCategory(identifier: category, actions: [open, application], intentIdentifiers: [],
                                        options: [])]

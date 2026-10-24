@@ -99,7 +99,7 @@ nonisolated enum StatusTimeline {
 /// "checked 4 minutes ago": the system's live relative time, so the widget's age keeps counting between refreshes
 /// (a widget cannot run its own clock). One unit, from minutes up; under half a minute it reads "now".
 nonisolated enum WidgetAge {
-    static let locale = Locale(identifier: "en_GB")
+    static var locale: Locale { AppLanguage.current.locale }
 
     static func style(since checked: Date) -> SystemFormatStyle.DateReference {
         SystemFormatStyle.DateReference(to: checked, allowedFields: [.minute, .hour, .day], maxFieldCount: 1)
@@ -108,6 +108,6 @@ nonisolated enum WidgetAge {
 
     /// The text the live view shows at `now`.
     static func text(since checked: Date, now: Date) -> String {
-        "checked " + String(style(since: checked).format(now).characters)
+        String(localized: "checked \(String(style(since: checked).format(now).characters))", table: "AresusShared")
     }
 }

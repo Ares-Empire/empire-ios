@@ -1,15 +1,23 @@
 import Foundation
 
-// Match panels.jsx: whole euros for totals, two decimals without a currency sign for activities.
+// Match panels.jsx: whole euros for totals, two decimals without a currency sign for activities. In the app's language:
+// "€1,339" / "1.339 €", "−12.40" / "−12,40".
 nonisolated enum Money {
-    static func total(_ value: Double) -> String { "€" + formatted(value, digits: 0) }
-    static func precise(_ value: Double) -> String { "€" + formatted(value, digits: 2) }
-    static func transaction(_ value: Double) -> String {
-        (value < 0 ? "−" : "+") + formatted(abs(value), digits: 2)
+    static func total(_ value: Double, language: AppLanguage = .current) -> String {
+        euros(formatted(value, digits: 0, language: language), language)
     }
-    private static func formatted(_ value: Double, digits: Int) -> String {
+    static func precise(_ value: Double, language: AppLanguage = .current) -> String {
+        euros(formatted(value, digits: 2, language: language), language)
+    }
+    static func transaction(_ value: Double, language: AppLanguage = .current) -> String {
+        (value < 0 ? "−" : "+") + formatted(abs(value), digits: 2, language: language)
+    }
+    private static func euros(_ amount: String, _ language: AppLanguage) -> String {
+        language == .german ? amount + "\u{a0}€" : "€" + amount
+    }
+    private static func formatted(_ value: Double, digits: Int, language: AppLanguage) -> String {
         let formatter = NumberFormatter()
-        formatter.locale = Locale(identifier: "en_US")
+        formatter.locale = language.locale
         formatter.numberStyle = .decimal
         formatter.minimumFractionDigits = digits
         formatter.maximumFractionDigits = digits

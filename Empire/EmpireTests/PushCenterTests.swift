@@ -86,7 +86,8 @@ struct PushCenterTests {
         #expect(request.url?.absoluteString == "https://www.ares-empire.de/api/push/devices")
         #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer \(Self.token("account-a"))")
         #expect(request.value(forHTTPHeaderField: "Content-Type") == "application/json")
-        #expect(Self.body(request) == ["app": Self.app, "token": Self.deviceHex, "environment": "sandbox"])
+        #expect(Self.body(request) == ["app": Self.app, "token": Self.deviceHex, "environment": "sandbox",
+                                       "language": AppLanguage.current.code])
         #expect(setup.push.deviceToken == Self.deviceHex)
 
         setup.push.refresh()                                         // the next foreground

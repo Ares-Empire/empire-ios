@@ -7,7 +7,7 @@
          </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
-   <TestAction buildConfiguration = "Debug" selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB" selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB" shouldUseLaunchSchemeArgsEnv = "YES" shouldAutocreateTestPlan = "YES">
+   <TestAction language = "en" region = "GB" buildConfiguration = "Debug" selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB" selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB" shouldUseLaunchSchemeArgsEnv = "YES" shouldAutocreateTestPlan = "YES">
       <Testables>
          <TestableReference skipped = "NO" parallelizable = "YES">
             <BuildableReference BuildableIdentifier = "primary" BlueprintIdentifier = "21078C060C5852137AF7F44F" BuildableName = "AresiumTests.xctest" BlueprintName = "AresiumTests" ReferencedContainer = "container:Aresium.xcodeproj"></BuildableReference>

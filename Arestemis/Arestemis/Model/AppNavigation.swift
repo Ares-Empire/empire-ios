@@ -12,10 +12,10 @@ enum MatchFilter: String, CaseIterable, Hashable, Identifiable {
 
     var title: String {
         switch self {
-        case .new: "New"
-        case .saved: "Saved"
-        case .applied: "Applied"
-        case .all: "All"
+        case .new: String(localized: "New")
+        case .saved: String(localized: "Saved")
+        case .applied: String(localized: "Applied")
+        case .all: String(localized: "All")
         }
     }
 

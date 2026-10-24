@@ -64,6 +64,34 @@ milestones, a bug that comes back, and every 2–3 weeks over merged Codex work.
 **Allowance:** `/status` in an interactive `codex`, or the `rate_limits` line in the newest
 `~/.codex/sessions/**/*.jsonl` (`used_percent`; window 10080 min = weekly).
 
+## Languages (every app in English and German)
+
+Decided 2026-10-24 (Patrik), rules in `ares-empire/docs/LANGUAGES.md`. The iPhone's language (or the app's own, Settings →
+Apps → the app → Language) picks German or English; there is no switch in the apps. The Mac and the simulators are set
+to German, so the apps open in German there.
+
+- **Write English in the code, German in the String Catalogs.** `Text("Save")`, `Button("Save")` and other SwiftUI
+  literals are looked up by themselves. Text that is built as a `String` (model code, components taking `String`,
+  errors) goes through `String(localized: "…")`; pure functions that tests pin take `language: AppLanguage = .current`
+  and use `language.string("…")`. Names (Aresium, WG-Gesucht) and numbers-only text use `Text(verbatim:)`.
+- **One catalog per folder that more than one target compiles:** `Shared/Shared.xcstrings`,
+  `Aresium/AresiumShared/AresiumShared.xcstrings`, `Aresus/AresusShared/AresusShared.xcstrings`. Code in those folders
+  names its table (`Text("Log in", tableName: "Shared")`, `String(localized: "…", table: "AresusShared")`), or the
+  widget would miss the string. Everything else uses the target's own `Localizable.xcstrings` (each app, each widget).
+- **Numbers, money, dates:** `AppLanguage.locale` (en_GB or de_DE, fixed per language): "€1,400" / "1.400 €",
+  "Sat 24 Oct" / "Sa. 24. Okt."; `Format`/`AresusFormat`/`Money` take the language. A server's sentences arrive in the
+  app's language: `URLSessionTransport` sends `Accept-Language`, `PushAPI` registers the device's language.
+- **After changing text:** `scripts/strings.py sync` (exports every project and updates the catalogs: new keys in,
+  unused ones out), write the German (`scripts/strings.py fill de.json`, plurals as `{"en": {"one", "other"}, "de":
+  {…}}`, or edit the catalog in Xcode), then `scripts/strings.py check` must say 0 problems. Look at every changed
+  screen in German before merging: `xcrun simctl launch <udid> <bundle id> -AppleLanguages "(de)" -AppleLocale de_DE`
+  plus the app's sample arguments; a label that wraps gets a shorter German word, not a smaller font.
+- **Tests run in English:** each scheme's test action pins `en`/`GB`. German cases call the pure functions with
+  `language: .german` (`FormattingTests`, `AresusFormatTests`, `GermanTests`, `AppLanguageTests`).
+- Sample mode shows the servers' English sample files, so their lines stay English there; live they come in German.
+- German style: "du", plain and short; the app's terms: Jagd/Angebote/Suche (Arestemis), Problem/Aktiv/Inaktiv
+  (Aresus), Buchung/Ausgaben/Einnahmen (Aresium), EROBERT/BELAGERT/… (Empire status words). "THE EMPIRE" stays a name.
+
 ## Open (2026-10-24)
 
 Four apps (Aresium, Empire, Arestemis, Aresus) work on the simulator and are merged; nothing reaches the phone until

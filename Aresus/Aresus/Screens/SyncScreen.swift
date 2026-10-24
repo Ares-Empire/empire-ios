@@ -24,14 +24,14 @@ struct SyncScreen: View {
     @ViewBuilder private var content: some View {
         if let sync = store.sync {
             if sync.machines.isEmpty && sync.runs.isEmpty {
-                CalmMessage(text: "No sync reports yet. Each machine reports after its next run.").padding(.top, 170)
+                CalmMessage(text: String(localized: "No sync reports yet. Each machine reports after its next run.")).padding(.top, 170)
             } else {
                 if let error = store.error(.sync) {
                     Text("Not refreshed: \(error)").font(AppFont.text(12)).foregroundStyle(Ink.muted)
                         .lineLimit(2).padding(.top, 14)
                 }
                 if !sync.machines.isEmpty {
-                    SectionTitle(text: "Machines", value: "\(sync.machines.count)").padding(.top, 18).padding(.bottom, 12)
+                    SectionTitle(text: String(localized: "Machines"), value: "\(sync.machines.count)").padding(.top, 18).padding(.bottom, 12)
                     CardRows(items: sync.machines) { MachineRow(machine: $0, clock: store.clock) }
                 }
                 ForEach(RunDay.group(sync.runs, now: store.clock.now())) { day in
@@ -47,7 +47,7 @@ struct SyncScreen: View {
                 }
             }
         } else if let error = store.error(.sync) {
-            CalmMessage(text: error, actionTitle: "Try again") { Task { await store.load(.sync) } }.padding(.top, 170)
+            CalmMessage(text: error, actionTitle: String(localized: "Try again")) { Task { await store.load(.sync) } }.padding(.top, 170)
         } else {
             CalmLoading().padding(.top, 190)
         }
@@ -67,7 +67,7 @@ private struct MachineRow: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(machine.name).font(AppFont.text(15, weight: .semibold)).foregroundStyle(Ink.primary).lineLimit(1)
                     if let lastRun = machine.lastRun {
-                        LiveRelativeTime(date: lastRun, clock: clock, prefix: "last sync ")
+                        LiveRelativeTime(date: lastRun, clock: clock, text: { String(localized: "last sync \($0)") })
                     } else {
                         Text("no sync yet").font(AppFont.number(12, weight: .regular)).foregroundStyle(Ink.muted)
                     }
@@ -98,7 +98,7 @@ private struct RunRow: View {
                 Text(run.summary).font(AppFont.text(13)).foregroundStyle(Ink.secondary).lineLimit(1)
             }
             Spacer(minLength: 8)
-            StatusLabel(text: run.result == .ok ? "OK" : "Failed", tone: run.result == .ok ? .active : .issue, size: 9.5)
+            StatusLabel(text: run.result == .ok ? String(localized: "OK") : String(localized: "Failed"), tone: run.result == .ok ? .active : .issue, size: 9.5)
         }
         .padding(.horizontal, 16).padding(.vertical, 12)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -115,7 +115,7 @@ private struct QuietRow: View {
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 12) {
             Text(AresusFormat.time(day.last)).font(AppFont.number(13, weight: .regular))
-            Text("\(day.machine) · \(day.count) quiet \(day.count == 1 ? "run" : "runs")").font(AppFont.text(13))
+            Text(verbatim: "\(day.machine) · " + String(localized: "\(day.count) quiet runs")).font(AppFont.text(13))
                 .lineLimit(1)
             Spacer(minLength: 0)
         }

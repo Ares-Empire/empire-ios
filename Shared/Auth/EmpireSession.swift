@@ -6,7 +6,7 @@ struct EmpireAppIdentity: Equatable, Sendable {
     let service: String
     let name: String
     static let aresium = EmpireAppIdentity(service: "aresium", name: "Aresium")
-    static let empire = EmpireAppIdentity(service: "empire", name: "the Ares Empire")
+    static let empire = EmpireAppIdentity(service: "empire", name: "Ares Empire")
     static let arestemis = EmpireAppIdentity(service: "arestemis", name: "Arestemis")
     static let aresus = EmpireAppIdentity(service: "aresus", name: "Aresus")
 }
@@ -27,7 +27,12 @@ struct EmpireAuthClient {
     private let baseURL = URL(string: "https://auth.ares-empire.de/api/collections/users")!
 
     func login(email: String, password: String) async throws -> AuthResponse {
-        try await post("auth-with-password", body: ["identity": email, "password": password])
+        do {
+            return try await post("auth-with-password", body: ["identity": email, "password": password])
+        } catch HTTPError.server(400, _) {
+            // The account server's own words ("Failed to authenticate.") are English only.
+            throw HTTPError.server(400, String(localized: "Wrong email or password.", table: "Shared"))
+        }
     }
 
     func refresh(token: String) async throws -> AuthResponse {
@@ -110,7 +115,7 @@ final class EmpireSession {
         }
     }
 
-    private var noAccessMessage: String { "This account has no access to \(app.name)." }
+    private var noAccessMessage: String { String(localized: "This account has no access to \(app.name).", table: "Shared") }
 
     func restore() async {
         guard !isBusy else { return }
@@ -172,7 +177,7 @@ final class EmpireSession {
     /// A valid login is saved for all apps even when this app is not allowed; access is decided per app.
     private func accept(_ response: AuthResponse) throws {
         guard !response.token.isEmpty, response.record.approved else {
-            throw HTTPError.server(403, "This account is not approved yet.")
+            throw HTTPError.server(403, String(localized: "This account is not approved yet.", table: "Shared"))
         }
         try storage.save(response.token)
         token = response.token

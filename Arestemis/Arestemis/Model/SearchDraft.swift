@@ -98,15 +98,17 @@ struct SearchDraft: Equatable {
     /// One calm line under the save button saying what is still missing or wrong (the first problem).
     var hint: String? {
         let problems = problems
-        if problems.contains(.noPlace) && problems.contains(.noPortal) { return "Choose a place and at least one portal." }
+        if problems.contains(.noPlace) && problems.contains(.noPortal) {
+            return String(localized: "Choose a place and at least one portal.")
+        }
         switch problems.first {
-        case .noPlace: return "Choose a place."
-        case .noPortal: return "Choose at least one portal."
-        case .flatSizeOrder: return "The flat's smallest size is above its largest."
-        case .roomSizeOrder: return "The room's smallest size is above its largest."
-        case .coldRentOrder: return "The lowest cold rent is above the highest."
-        case .warmRentOrder: return "The lowest warm rent is above the highest."
-        case .moveInOrder: return "The move-in \"until\" date is before the \"from\" date."
+        case .noPlace: return String(localized: "Choose a place.")
+        case .noPortal: return String(localized: "Choose at least one portal.")
+        case .flatSizeOrder: return String(localized: "The flat's smallest size is above its largest.")
+        case .roomSizeOrder: return String(localized: "The room's smallest size is above its largest.")
+        case .coldRentOrder: return String(localized: "The lowest cold rent is above the highest.")
+        case .warmRentOrder: return String(localized: "The lowest warm rent is above the highest.")
+        case .moveInOrder: return String(localized: "The move-in \"until\" date is before the \"from\" date.")
         case nil: return nil
         }
     }

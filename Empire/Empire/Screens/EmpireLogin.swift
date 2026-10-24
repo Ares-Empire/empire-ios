@@ -17,7 +17,7 @@ struct EmpireLogin: View {
                     .padding(.bottom, 14).accessibilityHidden(true)
                 Text("THE EMPIRE").font(AppFont.text(17, weight: .bold)).tracking(3.7).padding(.leading, 3.7).goldFill()
                     .accessibilityAddTraits(.isHeader)
-                Text(session.isDenied ? "This app needs an Empire account with access." : "Log in with your Empire account")
+                (session.isDenied ? Text("This app needs an Empire account with access.") : Text("Log in with your Empire account"))
                     .font(AppFont.number(12, weight: .regular)).foregroundStyle(Color(hex: 0x8F9390))
                     .multilineTextAlignment(.center).padding(.top, 8).padding(.bottom, 28)
 
@@ -42,7 +42,7 @@ struct EmpireLogin: View {
                 Button(action: login) {
                     HStack(spacing: 10) {
                         if session.isBusy { ProgressView().tint(Color(hex: 0x141617)) }
-                        Text(session.loginUnavailable ? "Try again" : "Log in")
+                        session.loginUnavailable ? Text("Try again") : Text("Log in")
                     }
                     .font(AppFont.text(14, weight: .semibold)).foregroundStyle(Color(hex: 0x141617))
                     .frame(maxWidth: .infinity, minHeight: 50)
@@ -83,8 +83,8 @@ struct EmpireLogin: View {
             .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(.white.opacity(0.12)))
     }
 
-    private func prompt(_ text: String) -> Text {
-        Text(text).foregroundStyle(Color(hex: 0x6F726F))
+    private func prompt(_ key: LocalizedStringKey) -> Text {
+        Text(key).foregroundStyle(Color(hex: 0x6F726F))
     }
 
     private func login() {

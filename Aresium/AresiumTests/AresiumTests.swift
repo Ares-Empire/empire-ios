@@ -581,8 +581,8 @@ struct AresiumTests {
         #expect(try summary(one + "," + eleven) == "12 new transactions imported")
         #expect(try summary(one + "," + eleven + "," + skipped) == "12 new transactions imported · 1 skipped")
         #expect(try summary(skipped + "," + skipped) == "0 new transactions imported · 2 skipped")
-        #expect(try summary(one + "," + one + "," + one + "," + failed) == "3 added · 1 file(s) failed")
-        #expect(try summary(failed + "," + failed) == "0 added · 2 file(s) failed")
+        #expect(try summary(one + "," + one + "," + one + "," + failed) == "3 added · 1 file failed")
+        #expect(try summary(failed + "," + failed) == "0 added · 2 files failed")
     }
 
     @Test(arguments: [400, 409]) func importFailureShowsServerError(status: Int) async throws {
@@ -634,7 +634,7 @@ struct AresiumTests {
         await imports.importPendingFiles()
         #expect(dashboardTransport.requests.map { $0.url?.path } == ["/api/data"])
         #expect(store.dashboard?.transactions.count == 25)
-        #expect(imports.banner?.message == "3 added · 1 file(s) failed")
+        #expect(imports.banner?.message == "3 added · 1 file failed")
         #expect(imports.banner?.success == false)
         #expect(!imports.isBusy)
     }

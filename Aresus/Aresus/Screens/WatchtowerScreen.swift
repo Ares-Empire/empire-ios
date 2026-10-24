@@ -33,7 +33,7 @@ struct WatchtowerScreen: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
                         AresusHeader(bust: Image("Bust"), title: "Aresus") {
-                            GlassMenuButton(symbol: "ellipsis", label: "More") {
+                            GlassMenuButton(symbol: "ellipsis", label: String(localized: "More")) {
                                 Button("Log out", systemImage: "rectangle.portrait.and.arrow.right", action: logOut)
                             }
                         }
@@ -81,7 +81,7 @@ struct WatchtowerScreen: View {
                 }
             }
         } else if let error = store.error(.overview) {
-            CalmMessage(text: error, actionTitle: "Try again") { Task { await store.load(.overview) } }
+            CalmMessage(text: error, actionTitle: String(localized: "Try again")) { Task { await store.load(.overview) } }
                 .padding(.top, 170)
         } else {
             CalmLoading().padding(.top, 190)
@@ -102,7 +102,7 @@ private struct Summary: View {
                 .foregroundStyle(overview.hasIssue ? StatusTone.issue.color(.aresus) : Ink.primary)
                 .contentTransition(.numericText())
                 .padding(.top, 6)
-            LiveRelativeTime(date: overview.checked, clock: clock, prefix: "checked ").padding(.top, 5)
+            LiveRelativeTime(date: overview.checked, clock: clock, text: { String(localized: "checked \($0)") }).padding(.top, 5)
             if let refreshError {
                 Text("Not refreshed: \(refreshError)").font(AppFont.text(12)).foregroundStyle(Ink.muted)
                     .lineLimit(2).padding(.top, 8)
@@ -120,11 +120,11 @@ struct ServerCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .top, spacing: 14) {
-                figure("Disk", AresusFormat.percent(server.diskUsed), share: server.diskUsed, over: server.diskOverLimit)
-                figure("Memory", AresusFormat.percent(server.memoryUsed), share: server.memoryUsed,
+                figure(String(localized: "Disk"), AresusFormat.percent(server.diskUsed), share: server.diskUsed, over: server.diskOverLimit)
+                figure(String(localized: "Memory"), AresusFormat.percent(server.memoryUsed), share: server.memoryUsed,
                        over: server.memoryOverLimit)
-                figure("Load", AresusFormat.load(server.load))
-                figure("Up", AresusFormat.upFor(server.uptimeSeconds))
+                figure(String(localized: "Load"), AresusFormat.load(server.load))
+                figure(String(localized: "Up"), AresusFormat.upFor(server.uptimeSeconds))
             }
             if let issue = server.issue {
                 Text(issue).font(AppFont.text(13, weight: .medium)).foregroundStyle(StatusTone.issue.color(.aresus))

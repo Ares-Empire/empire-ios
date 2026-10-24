@@ -43,7 +43,7 @@ struct NumberField: View {
     @Binding var value: Double?
     var prefix: String? = nil
     var suffix: String? = nil
-    var placeholder = "Any"
+    var placeholder = String(localized: "Any")
     var width: CGFloat = 104
     var label: String
     @State private var text = ""
@@ -104,7 +104,7 @@ struct OptionalStepper: View {
             HStack {
                 Text(label).font(AppFont.text(15, weight: .medium)).foregroundStyle(Ink.primary).lineLimit(1)
                 Spacer(minLength: 8)
-                Text(value.map(Format.number) ?? "Any")
+                Text(value.map { Format.number($0) } ?? String(localized: "Any"))
                     .font(value == nil ? AppFont.text(15) : AppFont.number(15, weight: .medium))
                     .foregroundStyle(value == nil ? Ink.muted : Ink.primary)
                     .contentTransition(.numericText())
@@ -117,7 +117,7 @@ struct OptionalStepper: View {
             withAnimation(.snappy) { value = current - step < range.lowerBound ? nil : current - step }
         }
         .frame(minHeight: 50)
-        .accessibilityValue(value.map(Format.number) ?? "Any")
+        .accessibilityValue(value.map { Format.number($0) } ?? String(localized: "Any"))
     }
 }
 
@@ -157,11 +157,11 @@ struct RangeRow: View {
             Text(label).font(AppFont.text(15, weight: .medium)).foregroundStyle(Ink.primary)
                 .lineLimit(1).minimumScaleFactor(0.85)
             Spacer(minLength: 6)
-            NumberField(value: $range.min, prefix: prefix, suffix: suffix, placeholder: "min", width: 92,
-                        label: "\(label), at least, in \(unitName)")
+            NumberField(value: $range.min, prefix: prefix, suffix: suffix, placeholder: String(localized: "min"), width: 92,
+                        label: String(localized: "\(label), at least, in \(unitName)"))
             Text("–").font(AppFont.text(14)).foregroundStyle(Ink.muted).accessibilityHidden(true)
-            NumberField(value: $range.max, prefix: prefix, suffix: suffix, placeholder: "max", width: 92,
-                        label: "\(label), at most, in \(unitName)")
+            NumberField(value: $range.max, prefix: prefix, suffix: suffix, placeholder: String(localized: "max"), width: 92,
+                        label: String(localized: "\(label), at most, in \(unitName)"))
         }
         .frame(minHeight: 54)
     }

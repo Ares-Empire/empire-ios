@@ -42,6 +42,7 @@ extension Dashboard {
 
 nonisolated struct Month: Codable, Identifiable {
     let key: String
+    /// The server's English names ("Sep 2025", "Sep"); the app shows `title()` and `shortTitle()`.
     let label: String
     let short: String
     let year: Int
@@ -49,6 +50,23 @@ nonisolated struct Month: Codable, Identifiable {
     let days: Int
     let partial: Bool
     var id: String { key }
+
+    /// The month in the app's language: the server's "Sep 2025", or German "Sept. 2025".
+    func title(_ language: AppLanguage = .current) -> String {
+        german(language, style: { $0.month(.abbreviated).year() }) ?? label
+    }
+
+    /// The chart's axis label: "Sep", or German "Sept".
+    func shortTitle(_ language: AppLanguage = .current) -> String {
+        german(language, style: { $0.month(.abbreviated) }) ?? short
+    }
+
+    private func german(_ language: AppLanguage, style: (Date.FormatStyle) -> Date.FormatStyle) -> String? {
+        guard language == .german, let date = WidgetFormatting.monthDate(key) else { return nil }
+        let calendar = WidgetFormatting.calendar
+        return date.formatted(style(Date.FormatStyle(date: .omitted, time: .omitted, locale: language.locale,
+                                                     calendar: calendar, timeZone: calendar.timeZone)))
+    }
 }
 
 nonisolated struct Category: Codable, Identifiable {
@@ -118,8 +136,8 @@ nonisolated enum DashboardError: LocalizedError {
     case unsupportedVersion, missingSample
     var errorDescription: String? {
         switch self {
-        case .unsupportedVersion: "This dashboard version is not supported."
-        case .missingSample: "The bundled sample dashboard is missing."
+        case .unsupportedVersion: String(localized: "This dashboard version is not supported.", table: "AresiumShared")
+        case .missingSample: String(localized: "The bundled sample dashboard is missing.", table: "AresiumShared")
         }
     }
 }
