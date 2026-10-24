@@ -196,8 +196,9 @@ Apple approves the developer account.
   `Spotlight`. Screens in `Screens/` are structure on `Shared/Design`, not styled yet. Launch arguments (DEBUG):
   `-sampleData` (edits answered with `edit-result.json`; `-sampleEditConflict` 409, `-sampleEditInvalid` 422,
   `-samplePushLater` pushed false, `-sampleOffline` the sample as the saved vault and no server),
-  `-tab positions|topics|library|search`, `-library mechanisms|events|questions|actors`, `-search <query>`,
-  `-openNote <id>[#<heading>]`, `-openPosition <id>`,
+  `-sampleSlowSearch` (the server's search answers after 3 s), `-tab positions|topics|library|search`,
+  `-library mechanisms|events|questions|actors`, `-search <query>`, `-tabSearch <query>` (in the field of the tab
+  `-tab` opens), `-openBestMatch <n>` (taps the n-th best match), `-openNote <id>[#<heading>]`, `-openPosition <id>`,
   `-openSheet brief|edit|quicknote|discuss|discussions|reword|change|drop|add|evidence`, and `-sampleVaultFile <path>` (a
   vault saved from the server instead of the made-up sample, to look at real notes; DEBUG only, never committed).
   **For lookups (Patrik, 2026-10-24):** position cards show the position's `title` (the bold part) cut to one line of
@@ -205,6 +206,11 @@ Apple approves the developer account.
   (wording) and Note (into the Inbox, about the position); no change/drop on the phone. Long notes open with their
   sections closed (`NoteBody`), with Figures & dates, Sources and Terms (`LookupPanel`), search shows sentences first,
   and pressing a paragraph or list item edits just that passage (the server's block `lines`).
+  **Search (2026-10-24, build E2):** Positions, Topics and Library each have a search field over their own items
+  (`TabSearch`, `VaultSearch`'s matching; the Library shows every kind while a query is typed). The Search tab puts the
+  server's best matches (`GET /search`, by words and meaning; `BestMatches`: asked once typing pauses, a newer query
+  cancels the older, 5 s timeout, nothing shown on failure) above the device's results; sample mode answers every
+  query with `Samples/search.json`.
 - Targets: `Aresium` (app), `AresiumWidgetExtension` (widgets, folder `Aresium/AresiumWidget/`, embedded in the
   app), `AresiumTests`. `Aresium/AresiumShared/` is compiled into both app and widget (theme, `AppTheme`, `AppGroup`,
   widget snapshot); everything else belongs to one target. App Group `group.de.ares-empire.aresium` in both
