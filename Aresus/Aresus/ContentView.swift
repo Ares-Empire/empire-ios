@@ -2,7 +2,7 @@ import SwiftUI
 import UIKit
 
 /// The Aresus app: the shared Empire login, then the two tabs. Logged in once in any Empire app means logged in here.
-/// Links (`aresus://…`, later also notification taps) go through `AresusNavigation`.
+/// Links (`aresus://…`) and notification taps go through `AresusNavigation`.
 /// DEBUG launch arguments: `-sampleData` (`-sampleAllGood`), `-tab aresus|aresync`, `-openProvince <slug>`,
 /// `-openRun <id>`, and `-sampleLogin` / `-sampleLoading` for the login and loading screens.
 struct ContentView: View {
@@ -12,9 +12,10 @@ struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
     private let marks: ProvinceMarks
     private let restoresOnLaunch: Bool
+    private let push: PushCenter?
     private var session: EmpireSession { store.session }
 
-    init(arguments: [String] = ProcessInfo.processInfo.arguments) {
+    init(push: PushCenter? = nil, arguments: [String] = ProcessInfo.processInfo.arguments) {
         let samples = AresusSamples.launched(arguments: arguments)
         #if DEBUG
         // Tests (the app is their host), samples and the screenshot screens never touch the real login.
@@ -38,6 +39,8 @@ struct ContentView: View {
         _navigation = State(initialValue: navigation)
         marks = ProvinceMarks(session: session, sample: samples != nil)
         restoresOnLaunch = restores
+        // Samples, tests and the screenshot screens never register for push.
+        self.push = restores ? push : nil
     }
 
     var body: some View {
@@ -52,7 +55,13 @@ struct ContentView: View {
             }
         }
         .preferredColorScheme(.dark)
-        .task { if restoresOnLaunch { await session.restore() } }
+        .task {
+            push?.start(app: "de.ares-empire.aresus", session: session)
+            if restoresOnLaunch { await session.restore() }
+        }
+        .onChange(of: push?.openedURL) { _, url in
+            if url != nil, let url = push?.takeOpenedURL() { navigation.open(url) }
+        }
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
             Task {
