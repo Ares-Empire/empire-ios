@@ -66,6 +66,8 @@ final class AppNavigation {
     private(set) var scrollRequest: NoteLink?
     /// A link from outside, waiting for the tabs to be on screen.
     private(set) var pendingLink: NoteLink?
+    /// A sheet to show once the pending link is open.
+    private var pendingSheet: AppSheet?
 
     /// The pages of the tab on screen.
     var path: [Route] {
@@ -87,13 +89,18 @@ final class AppNavigation {
         }
     }
 
-    /// A deep link or a Spotlight result: queued until the tabs are on screen, then `open(_:)`.
-    func follow(_ link: NoteLink) { pendingLink = link }
+    /// A deep link or a Spotlight result: queued until the tabs are on screen, then `open(_:)`, then `sheet` if given.
+    func follow(_ link: NoteLink, then sheet: AppSheet? = nil) {
+        pendingLink = link
+        pendingSheet = sheet
+    }
 
     func openPendingLink() {
         guard let link = pendingLink else { return }
         pendingLink = nil
         open(link)
+        if let pendingSheet { sheet = pendingSheet }
+        pendingSheet = nil
     }
 
     /// Opens a note on the tab on screen (closing a sheet first). A link to a heading of the note already on top
@@ -141,6 +148,7 @@ final class AppNavigation {
         sheet = nil
         scrollRequest = nil
         pendingLink = nil
+        pendingSheet = nil
     }
 }
 
@@ -199,28 +207,33 @@ struct LaunchOptions {
             navigation.query = search
         }
         if let openPosition { navigation.showPosition(openPosition) }
-        if let openNote { navigation.follow(openNote) }
         let note = openNote?.note
         let position = openPosition ?? index.positionTargets.lazy.compactMap { index.positions($0.positions).first?.id }.first
+        var sheet: AppSheet?
         switch openSheet {
         case "brief":
-            if let topic = note ?? index.topics.first(where: { $0.brief != nil })?.id { navigation.sheet = .brief(topic) }
+            sheet = (note ?? index.topics.first(where: { $0.brief != nil })?.id).map(AppSheet.brief)
         case "edit":
-            if let target = note ?? index.topics.first?.id { navigation.sheet = .editor(target) }
+            sheet = (note ?? index.topics.first?.id).map(AppSheet.editor)
         case "quicknote":
-            navigation.sheet = .quickNote
+            sheet = .quickNote
         case "discuss":
-            if let subject = openPosition.map(DiscussSubject.position) ?? note.map(DiscussSubject.note)
-                ?? position.map(DiscussSubject.position) { navigation.sheet = .discuss(subject) }
+            let subject = openPosition.map(DiscussSubject.position) ?? note.map(DiscussSubject.note)
+                ?? position.map(DiscussSubject.position)
+            sheet = subject.map(AppSheet.discuss)
         case "reword", "change", "drop":
-            if let position {
-                navigation.sheet = .position(openSheet == "reword" ? .reword(position)
-                                             : openSheet == "change" ? .change(position) : .drop(position))
-            }
+            sheet = position.map { openSheet == "reword" ? .position(.reword($0))
+                                   : openSheet == "change" ? .position(.change($0)) : .position(.drop($0)) }
         case "add":
-            if let target = note ?? index.positionTargets.first?.id { navigation.sheet = .position(.add(note: target)) }
+            sheet = (note ?? index.positionTargets.first?.id).map { .position(.add(note: $0)) }
         default:
             break
+        }
+        // A note to open first: the sheet comes once the note is there (opening a link closes sheets).
+        if let openNote {
+            navigation.follow(openNote, then: sheet)
+        } else {
+            navigation.sheet = sheet
         }
     }
 }

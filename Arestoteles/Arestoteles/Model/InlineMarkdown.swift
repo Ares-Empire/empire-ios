@@ -29,7 +29,9 @@ enum InlineMarkdown {
                 } else {
                     index = next
                 }
-            case "*", "_" where isEmphasis(markdown, at: index), "`":
+            case "*", "`":
+                index = markdown.index(after: index)
+            case "_" where isEmphasis(markdown, at: index):
                 index = markdown.index(after: index)
             case "[":
                 if let (text, end) = link(in: markdown, at: index) {

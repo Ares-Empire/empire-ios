@@ -11,18 +11,24 @@ enum Look {
     static let headingGap: CGFloat = 10                 // a section heading to its card
 }
 
-/// The top of a tab: the bust on the left, the title centred, the quick-note button on the right (reachable from every
-/// tab).
+/// The top of a tab: the bust on the left (its menu logs out), the title centred, the quick-note button on the right
+/// (reachable from every tab).
 struct ScreenHeader: View {
     let title: String
     @Environment(AppNavigation.self) private var navigation
+    @Environment(\.logOut) private var logOut
 
     var body: some View {
         ZStack {
             Text(title).font(AppFont.text(17, weight: .bold)).foregroundStyle(Ink.primary).lineLimit(1)
                 .accessibilityAddTraits(.isHeader)
             HStack {
-                Image("Bust").resizable().scaledToFit().frame(width: 38, height: 38).accessibilityHidden(true)
+                Menu {
+                    Button("Log out", systemImage: "rectangle.portrait.and.arrow.right", role: .destructive) { logOut() }
+                } label: {
+                    Image("Bust").resizable().scaledToFit().frame(width: 38, height: 38)
+                }
+                .accessibilityLabel(Text("Account"))
                 Spacer()
                 GlassIconButton(symbol: "plus", label: String(localized: "Quick note")) { navigation.sheet = .quickNote }
             }
@@ -85,7 +91,7 @@ struct CalmMessage: View {
 /// A note as a row: title, type, summary (two lines). Tapping opens it.
 struct NoteRow: View {
     let note: Note
-    var detail: String? = nil
+    var detail: Text? = nil
     @Environment(AppNavigation.self) private var navigation
 
     var body: some View {
@@ -95,7 +101,7 @@ struct NoteRow: View {
                     Text(note.title).font(AppFont.text(15, weight: .semibold)).foregroundStyle(Ink.primary)
                         .multilineTextAlignment(.leading)
                     Spacer(minLength: 8)
-                    if let detail { Text(verbatim: detail).font(AppFont.number(12)).foregroundStyle(Ink.secondary) }
+                    if let detail { detail.font(AppFont.text(12)).foregroundStyle(Ink.secondary) }
                 }
                 CapsLabel(text: Format.type(note.type))
                 if let summary = note.summary {

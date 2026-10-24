@@ -152,7 +152,9 @@ final class VaultStore {
     /// - The login is renewed first when it is older than `renewAfter` or was left waiting for the account server (an
     ///   offline launch keeps showing the saved vault until then).
     /// - `minimumAge`: no request when the server confirmed the vault less than this ago (the foreground).
-    func update(now: Date = .now, minimumAge: TimeInterval? = nil, renewAfter: TimeInterval = 12 * 3600) async {
+    /// - `renewsLogin`: false right after the launch restored the login itself.
+    func update(now: Date = .now, minimumAge: TimeInterval? = nil, renewAfter: TimeInterval = 12 * 3600,
+                renewsLogin: Bool = true) async {
         guard !foregroundUpdating else { return }
         foregroundUpdating = true
         // Not tied to the login it started with: renewing a waiting login starts a new session on purpose.
@@ -160,7 +162,7 @@ final class VaultStore {
         if !isSample {
             guard !session.isBusy else { return }
             let renewalDue = session.lastRenewedAt.map { now.timeIntervalSince($0) > renewAfter } ?? true
-            if session.needsRestoreRetry || (session.isSignedIn && renewalDue) {
+            if renewsLogin, session.needsRestoreRetry || (session.isSignedIn && renewalDue) {
                 await session.restore()
             }
             guard session.isSignedIn else {

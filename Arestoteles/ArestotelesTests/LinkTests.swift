@@ -114,9 +114,10 @@ struct LinkTests {
         #expect(options.openNote == NoteLink(note: "Printing press", anchor: "My position"))
         let navigation = AppNavigation()
         options.apply(to: navigation, index: try sampleIndex())
-        #expect(navigation.tab == .library && navigation.sheet == .brief("Printing press"))
+        #expect(navigation.tab == .library && navigation.sheet == nil)  // the sheet comes with the note
         navigation.openPendingLink()
         #expect(navigation.libraryPath == [.note(NoteLink(note: "Printing press", anchor: "My position"))])
+        #expect(navigation.sheet == .brief("Printing press"))
 
         let position = LaunchOptions(arguments: ["-sampleData", "-openPosition", "Printing press#2", "-openSheet", "drop"])
         let other = AppNavigation()
