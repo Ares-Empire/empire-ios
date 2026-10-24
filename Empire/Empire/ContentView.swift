@@ -1,24 +1,82 @@
 import SwiftUI
+import UIKit
 
-/// Placeholder until the throne room screens land (the approved phone hub, ares-empire web/app/mobile.jsx).
-/// It already uses the shared Empire login: logged in once in any Empire app means logged in here.
+/// The Empire app: the shared login, then the throne room (the approved phone hub, ares-empire web/app/mobile.jsx).
+/// Logged in once in any Empire app means logged in here. `-sampleData` (`-sampleUser`) shows the bundled samples.
 struct ContentView: View {
-    @State private var session = EmpireSession(app: .empire, installDefaults: EmpireShared.defaults)
+    @State private var store: EmpireStore
+    @State private var markImages: [String: UIImage] = [:]
+    @Environment(\.scenePhase) private var scenePhase
+    private let marks: ProvinceMarks
+    private let restoresOnLaunch: Bool
+    private var session: EmpireSession { store.session }
+
+    init(arguments: [String] = ProcessInfo.processInfo.arguments) {
+        let sample = EmpireSamples.enabled(arguments: arguments)
+        #if DEBUG
+        // Tests (the app is their host) and samples never touch the real login.
+        let testing = NSClassFromString("XCTestCase") != nil || ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+        let quiet = sample || testing
+        #else
+        let quiet = false
+        #endif
+        let session = EmpireSession(app: .empire, restoreOnLaunch: !quiet, installDefaults: quiet ? nil : EmpireShared.defaults)
+        _store = State(initialValue: EmpireStore(session: session, sample: sample))
+        marks = ProvinceMarks(session: session, sample: sample)
+        restoresOnLaunch = !quiet
+    }
 
     var body: some View {
-        VStack(spacing: 14) {
-            Text("THE EMPIRE").font(AppFont.text(14, weight: .bold)).tracking(5).foregroundStyle(Color.accentColor)
-            if session.isRestoring {
-                ProgressView()
-            } else if session.isSignedIn {
-                Text("Signed in").font(AppFont.text(15))
+        Group {
+            if store.isSample || session.isSignedIn {
+                if let data = store.data {
+                    EmpireHome(data: data, marks: markImages, status: status, actions: actions)
+                        .task(id: logos(data)) { await loadMarks(data) }
+                } else {
+                    EmpireLoading(message: store.isLoading ? nil : store.error,
+                                  retry: { Task { await store.reload() } },
+                                  logOut: { session.logOut() })
+                        .task { if store.data == nil { await store.reload() } }
+                }
+            } else if session.isRestoring {
+                EmpireLoading()
             } else {
-                Text(session.error ?? "Not signed in").font(AppFont.text(13)).foregroundStyle(.secondary)
+                EmpireLogin(session: session)
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.black)
-        .preferredColorScheme(.dark)
-        .task { await session.restore() }
+        .task { if restoresOnLaunch { await session.restore() } }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { Task { await store.refreshOnForeground() } }
+        }
+        .onChange(of: session.generation) { _, _ in markImages = [:] }
+    }
+
+    private var status: EmpireHomeStatus {
+        EmpireHomeStatus(ringBusy: store.isRingBusy, ringError: store.ringError, approvals: store.approvals,
+                         approvalsLoading: store.isLoadingApprovals, approvalsError: store.approvalsError,
+                         deciding: store.isDeciding, loadError: store.error)
+    }
+
+    private var actions: EmpireHomeActions {
+        let store = store
+        return EmpireHomeActions(
+            open: { province in Task { await ProvinceOpener().open(province) } },
+            add: { slug in await store.ring(add: slug); return store.ringError == nil },
+            remove: { slug in await store.ring(remove: slug); return store.ringError == nil },
+            loadApprovals: { await store.loadApprovals() },
+            decide: { id, approve in await store.decide(id: id, approve: approve); return store.approvalsError == nil },
+            logOut: { store.session.logOut() },
+            refresh: { await store.reload() })
+    }
+
+    /// Every province this account can see, with its mark on the hub.
+    private func logos(_ data: EmpireData) -> [String] {
+        (data.projects + data.addable).map { $0.slug + "=" + $0.logo }
+    }
+
+    private func loadMarks(_ data: EmpireData) async {
+        for province in data.projects + data.addable where markImages[province.slug] == nil && !province.logo.isEmpty {
+            if let image = await marks.image(for: province.logo) { markImages[province.slug] = image }
+        }
     }
 }
