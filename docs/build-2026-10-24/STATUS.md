@@ -20,9 +20,9 @@ Stop only for a genuine problem.
 
 | Package | Agent | Worktree (branch) | State |
 |---|---|---|---|
-| P: Empire push service + `Shared/Push` | Claude subagent | `~/wt/ares-empire-push` (`push`), `~/wt/empire-ios-push` (`push`) | not started |
-| T: Arestemis server (API, hunts, AI check, places) | Claude subagent | `~/wt/Arestemis-api` (`app-api`) | not started |
-| S: Aresus server + Aresync reports | Claude subagent | `~/wt/aresus-server` (`server`), `~/wt/aresync-report` (`report`) | not started |
+| P: Empire push service + `Shared/Push` | Claude subagent | `~/wt/ares-empire-push` (`push`), `~/wt/empire-ios-push` (`push`) | running since 04:33 |
+| T: Arestemis server (API, hunts, AI check, places) | Claude subagent | `~/wt/Arestemis-api` (`app-api`) | running since 04:33 |
+| S: Aresus server + Aresync reports | Claude subagent | `~/wt/aresus-server` (`server`), `~/wt/aresync-report` (`report`) | running since 04:33 |
 | A1: Arestemis iOS app | Claude subagent | `~/wt/empire-ios-arestemis` (`arestemis-app`) | waits for D |
 | A2: Aresus iOS app | Claude subagent | `~/wt/empire-ios-aresus` (`aresus-app`) | waits for D |
 | D: Shared design kit, two Xcode projects, icons | me | `~/empire-ios` main (small commits) | not started |
@@ -32,8 +32,8 @@ Stop only for a genuine problem.
 - [x] 1. Accounts: services `arestemis`, `aresus` (migration live 04:10, data copy `pb_data.before-services-20261024`);
       Claude superuser; test account has all four services.
 - [x] 2. Decision records + contracts written.
-- [ ] 3. Commit docs; aresus repo initial commit; worktrees.
-- [ ] 4. Spawn P, T, S (background).
+- [x] 3. Commit docs; aresus repo initial commit; worktrees.
+- [x] 4. Spawn P, T, S (background, 04:33). Their results arrive as task notifications; if the session restarted and they are gone, check each branch's commits and re-run what is missing.
 - [ ] 5. D: Shared/Design (+ move ProvinceMarks), Arestemis + Aresus projects (URL schemes, push entitlements), icons,
       sample JSON copied into the projects. Screenshot Empire + Aresium before/after if they switch to Shared/Design.
 - [ ] 6. Spawn A1, A2 (background) with the design brief.
@@ -51,3 +51,4 @@ Stop only for a genuine problem.
 ## Log
 
 - 04:10 migration live. 04:14 superuser + test account services.
+- 04:33 P, T, S started. Groq key in Keychain item `groq-api-key`.
