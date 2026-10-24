@@ -124,6 +124,7 @@ Apple approves the developer account.
    `aristotle-bust.png` has a faint "Magnific" watermark); a widget with a position to revisit (needs a widget target).
 10. **Light mode before the next new app** (Patrik, 2026-10-24; `ares-empire/docs/IPHONE-APPS.md` → "Every app
    has"): colours as light/dark pairs in `Shared/Design`, an Appearance row in Settings, every app checked in both.
+   Aresium already has its own light theme (`AppTheme`/`Palette`, the sun button in its header): start from it.
 8. **Build 2026-10-24 record:** `docs/build-2026-10-24/STATUS.md` (what was built, decisions, live tests). Built after the main work: the Aresus
    widget and the hub's live lines from Aresus.
 
