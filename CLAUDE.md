@@ -215,3 +215,7 @@ Apple approves the developer account.
 - `Aresium/Aresium/Info.plist` holds only what build settings cannot (document types: the share sheet offers
   "Aresium" for `.csv`/`.xml` exports); it is merged with the generated plist and excluded from the folder's
   resources in the project file.
+- **Privacy** (2026-10-24, brief E6): each app and widget folder has its `PrivacyInfo.xcprivacy` (what it collects,
+  the required-reason APIs its Release binary really imports); each app's `Info.plist` has
+  `ITSAppUsesNonExemptEncryption = NO`. A new data type or API means updating the manifest, `docs/APP-STORE.md` (App
+  Store Connect's answers, TestFlight test information, what is missing) and `ares-empire/docs/PRIVACY.md`.

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Apple privacy manifest (Aresium widget). What it declares and why: ares-empire/docs/PRIVACY.md and
+     docs/APP-STORE.md. Update it when the app sends something new or starts using another required-reason API
+     (https://developer.apple.com/documentation/bundleresources/privacy-manifest-files).
+     The widget only reads the figures the app saved in its App Group; it sends nothing. -->
+<plist version="1.0">
+<dict>
+	<!-- No tracking: no analytics, ads or third-party SDKs; data goes only to the Empire's own servers. -->
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+	<!-- None: the Release binary imports no required-reason API (nm, 2026-10-24); Shared/'s App Group defaults are
+	     compiled in but stripped as unused. Declare 1C8F.1 here once the widget reads EmpireShared.defaults. -->
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array/>
+	<!-- Everything is linked to the account and used only to run the app. -->
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array/>
+</dict>
+</plist>
