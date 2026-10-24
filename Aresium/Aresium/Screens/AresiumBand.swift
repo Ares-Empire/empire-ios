@@ -61,6 +61,7 @@ struct AresiumIntro: View {
     let transition: ThemeState.Transition
     let landing: CGFloat            // from the screen's bottom edge to the band word's bottom, where the word lands
     var pausedProgress: Double?
+    @State private var start = Date()       // each transition gets a new overlay (`.id`), so a new start
 
     var body: some View {
         Group {
@@ -69,10 +70,9 @@ struct AresiumIntro: View {
             } else {
                 // A linear clock lets the shared sampler preserve the website's exact offsets
                 // and per-segment cubic Beziers, including the impact curve's overshoot.
-                Color.clear.keyframeAnimator(initialValue: 0.0, repeating: false) { _, progress in
-                    frame(at: progress)
-                } keyframes: { _ in
-                    LinearKeyframe(1.0, duration: IntroTimeline.duration)
+                // (A keyframe animator with `repeating: false` never plays; it only shows the first value.)
+                TimelineView(.animation) { context in
+                    frame(at: context.date.timeIntervalSince(start) / IntroTimeline.duration)
                 }
             }
         }.ignoresSafeArea().allowsHitTesting(false).accessibilityHidden(true)
