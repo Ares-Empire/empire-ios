@@ -58,8 +58,8 @@ Stop only for a genuine problem.
 - [x] 11. Hub: ~~app schemes~~ (done 04:30: `APP_SCHEMES` in webauth/server.py, live; Empire Info.plist queries), chronicle lines, EMPIRE.md connections,
       empire-ios README/CLAUDE.md, IPHONE-APPS.md.
 - [ ] 12. Report for Patrik (what works, screenshots in `~/empire-ios/build/screens-2026-10-24/`, what waits for Apple).
-- [ ] 13. Extra (Patrik: 'if done quickly, scope another project'; Arescribe vetoed, other provinces not sensible to
-      build alone): (a) Aresus widget, brief W, agent running since 05:38, worktree `~/wt/empire-ios-widget`;
+- [x] 13. Extra (Patrik: 'if done quickly, scope another project'; Arescribe vetoed, other provinces not sensible to
+      build alone): (a) Aresus widget (brief W): merged 06:20, 75 tests pass, Release builds without warnings;
       (b) hub live lines from Aresus (935d534, deployed 05:41 by Aresync, hub answers 200).
 
 ## Log
@@ -100,3 +100,5 @@ Stop only for a genuine problem.
 - 05:35 hub chronicle gap fixed: EMPIRE.md entries since 10-23 were never in the live state.json (backup
   `state.json.bak-20261024-chronicle`) nor in empire-data.js; both in step now. Final regression: Aresium 102, Empire 60
   tests pass. Screenshot set + overview.png in `~/empire-ios/build/screens-2026-10-24/`.
+- 06:25 widget merged; push set per build configuration (Release warnings gone); CLAUDE.md, chronicle (EMPIRE.md, live
+  state.json, empire-data.js) updated. All worktrees and agent simulators removed. Next: the report (step 12).
