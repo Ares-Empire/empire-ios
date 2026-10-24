@@ -15,7 +15,8 @@ struct ContentView: View {
     @State private var graph = false
     @State private var path: [DashboardRoute] = []
     @State private var sampleActive: Bool
-    /// Where the band was tapped last (from the screen's bottom edge to its word), so the intro's word lands there.
+    /// Where the band was when it was tapped (from the screen's bottom edge to its word), so the intro's word lands
+    /// there; nil when the header started the transition.
     @State private var bandLanding: CGFloat?
     private var palette: Palette { Palette(theme: theme.theme) }
     private var session: EmpireSession { store.session }
@@ -96,8 +97,8 @@ struct ContentView: View {
                         VStack(spacing: 0) {
                             header()
                             restoreFeedback
-                            StartScreen(store: store, imports: imports, palette: palette, current: $current, side: $side, graph: $graph,
-                                        band: band(in: geometry)) { path.append($0) }
+                            StartScreen(store: store, imports: imports, palette: palette, current: $current, side: $side,
+                                        graph: $graph, band: band(in: geometry)) { path.append($0) }
                         }
                         .background { Wall(palette: palette) }
                         .toolbar(.hidden, for: .navigationBar)
@@ -125,8 +126,9 @@ struct ContentView: View {
             .allowsHitTesting(!theme.isAnimating)
             .overlay {
                 if let transition = theme.transition {
-                    // Without a tapped band (the DEBUG intro arguments): where the band sits when scrolled to the end.
-                    AresiumIntro(transition: transition, landing: bandLanding ?? geometry.safeAreaInsets.bottom + 10,
+                    // Without a tapped band (the header, the DEBUG intro arguments): where the band sits at the end.
+                    AresiumIntro(transition: transition,
+                                 landing: bandLanding ?? geometry.safeAreaInsets.bottom + WordmarkEnd.below,
                                  pausedProgress: pausedIntroProgress)
                         .id(transition.id)
                 }
@@ -234,7 +236,11 @@ struct ContentView: View {
         }
         return ScreenHeader(title: route?.category ?? "Aresium", subtitle: subtitle, category: category, palette: palette,
                             back: route == nil ? nil : { if !path.isEmpty { path.removeLast() } },
-                            toggleTheme: { theme.send(.header, reduceMotion: reduceMotion) }, logout: {
+                            toggleTheme: {
+            guard !theme.isAnimating else { return }
+            bandLanding = nil
+            theme.send(.header, reduceMotion: reduceMotion)
+        }, logout: {
             path = []
             store.clear()
             if sampleActive {

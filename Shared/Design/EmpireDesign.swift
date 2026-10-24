@@ -203,15 +203,15 @@ struct WordmarkBand: View {
 }
 
 /// The main screen's scroll view, ending with the app's wordmark: the rule for every app (Patrik, 2026-10-24). Use it
-/// in place of the screen's `ScrollView`. The band scrolls with the content and is never fixed on screen. Content
-/// shorter than the screen is stretched to the scroll view's bottom edge, so the band starts just below it and shows
-/// only when you scroll down; longer content is followed by the band, 44 pt below it and 10 pt above the bars.
+/// in place of the screen's `ScrollView`. The band scrolls with the content and is never fixed on screen. Below
+/// content shorter than the screen the gap grows to the scroll view's bottom edge, so the band starts just below it
+/// and shows only when you scroll down; longer content is followed by the band (`WordmarkEnd` spacing).
 /// Scroll modifiers (`.refreshable`, `.scrollIndicators`, …) go on it as on a `ScrollView`; inside a
 /// `ScrollViewReader`, `proxy.scrollToWordmark()` scrolls the band into view.
 struct WordmarkScrollView<Content: View, Band: View>: View {
     private let content: Content
     private let band: (CGFloat) -> Band
-    /// The scroll view's width, and the height from the content's top to its bottom edge under the bars (zero until measured).
+    /// The scroll view's width, and the height from the content's top to its bottom edge under the bars (0 until measured).
     @State private var visible = CGSize.zero
 
     /// A band of the app's own (Aresium's, with its special mode); it gets the full width.
@@ -225,13 +225,13 @@ struct WordmarkScrollView<Content: View, Band: View>: View {
             VStack(spacing: 0) {
                 VStack(spacing: 0) {
                     content.fixedSize(horizontal: false, vertical: true)   // only the gap grows, never the content
-                    Spacer(minLength: 44)
+                    Spacer(minLength: WordmarkEnd.above)
                 }
                 .frame(minHeight: visible.height, alignment: .top)
                 band(visible.width)
-                    .padding(.bottom, 10)
+                    .padding(.bottom, WordmarkEnd.below)
                     .opacity(visible == .zero ? 0 : 1)      // never seen in the first frame, before the measure
-                    .id(WordmarkScrollID.end)
+                    .id(WordmarkEnd.id)
             }
         }
         .onScrollGeometryChange(for: CGSize.self) { geometry in
@@ -250,9 +250,14 @@ extension WordmarkScrollView where Band == WordmarkBand {
     }
 }
 
-private enum WordmarkScrollID { static let end = "wordmark-end" }
+/// The band's place at the end of a `WordmarkScrollView`.
+enum WordmarkEnd {
+    static let above: CGFloat = 44          // the least gap between the content and the band
+    static let below: CGFloat = 10          // between the band and the bottom bars, scrolled to the end
+    fileprivate static let id = "wordmark-end"
+}
 
 extension ScrollViewProxy {
     /// Scrolls a `WordmarkScrollView` to its end, the band at the bottom (for the screenshots' launch arguments).
-    func scrollToWordmark() { scrollTo(WordmarkScrollID.end, anchor: .bottom) }
+    func scrollToWordmark() { scrollTo(WordmarkEnd.id, anchor: .bottom) }
 }
