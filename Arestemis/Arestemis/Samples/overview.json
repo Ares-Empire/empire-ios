@@ -47,6 +47,7 @@
         }
       ],
       "sqm_min": 28,
+      "room_sqm_min": null,
       "rooms_min": 1,
       "flatmates_max": 1,
       "move_in_from": "2026-12-01",

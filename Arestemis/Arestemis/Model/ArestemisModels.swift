@@ -45,7 +45,8 @@ struct Search: Codable, Equatable, Sendable {
     var districts: [String]
     var rentMaxWarm: Double?
     var rentTiers: [RentTier]
-    var sqmMin: Double?
+    var sqmMin: Double?            // an own flat, or the whole flat of an empty 2-person WG
+    var roomSqmMin: Double?        // the room, for a room in a WG (CONTRACT ADDITION 2026-10-24)
     var roomsMin: Double?          // own flat only
     var flatmatesMax: Int?         // WG kinds only
     var moveInFrom: String?        // "2026-12-01"
@@ -57,8 +58,9 @@ struct Search: Codable, Equatable, Sendable {
 
     enum CodingKeys: String, CodingKey {
         case kinds, places, districts, sublet, furnished, extra, sources
-        case rentMaxWarm = "rent_max_warm", rentTiers = "rent_tiers", sqmMin = "sqm_min", roomsMin = "rooms_min"
-        case flatmatesMax = "flatmates_max", moveInFrom = "move_in_from", moveInUntil = "move_in_until"
+        case rentMaxWarm = "rent_max_warm", rentTiers = "rent_tiers", sqmMin = "sqm_min", roomSqmMin = "room_sqm_min"
+        case roomsMin = "rooms_min", flatmatesMax = "flatmates_max", moveInFrom = "move_in_from"
+        case moveInUntil = "move_in_until"
     }
 
     /// Every field is sent, unknown values as `null` (the contract's `number | null`), so a cleared field clears.
@@ -70,6 +72,7 @@ struct Search: Codable, Equatable, Sendable {
         try container.encode(rentMaxWarm, forKey: .rentMaxWarm)
         try container.encode(rentTiers, forKey: .rentTiers)
         try container.encode(sqmMin, forKey: .sqmMin)
+        try container.encode(roomSqmMin, forKey: .roomSqmMin)
         try container.encode(roomsMin, forKey: .roomsMin)
         try container.encode(flatmatesMax, forKey: .flatmatesMax)
         try container.encode(moveInFrom, forKey: .moveInFrom)
@@ -89,6 +92,7 @@ struct PartialSearch: Codable, Equatable, Sendable {
     var rentMaxWarm: Double?
     var rentTiers: [RentTier]?
     var sqmMin: Double?
+    var roomSqmMin: Double?
     var roomsMin: Double?
     var flatmatesMax: Int?
     var moveInFrom: String?
@@ -98,11 +102,7 @@ struct PartialSearch: Codable, Equatable, Sendable {
     var extra: String?
     var sources: [Source]?
 
-    enum CodingKeys: String, CodingKey {
-        case kinds, places, districts, sublet, furnished, extra, sources
-        case rentMaxWarm = "rent_max_warm", rentTiers = "rent_tiers", sqmMin = "sqm_min", roomsMin = "rooms_min"
-        case flatmatesMax = "flatmates_max", moveInFrom = "move_in_from", moveInUntil = "move_in_until"
-    }
+    typealias CodingKeys = Search.CodingKeys
 }
 
 struct ParsedSearch: Codable, Equatable, Sendable {

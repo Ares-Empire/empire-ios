@@ -153,7 +153,7 @@ extension Place {
 // MARK: - the search in two lines
 
 /// The hunt's search as the Hunt tab shows it: what ("Own flat or empty 2-person WG") and where, how much, when
-/// ("München, Garching · up to €1,000 warm · from 1 Dec").
+/// ("München, Garching · up to €1,000 warm · from 1 Dec"); a room size only when one is set ("room from 15 m²").
 struct SearchSummary: Equatable {
     let kinds: String
     /// Places, rent, move-in: each part a unit that should not be broken across lines.
@@ -173,6 +173,7 @@ struct SearchSummary: Equatable {
         var parts: [String] = []
         if let places = Self.places(search.places) { parts.append(places) }
         if let rent = search.rentMaxWarm { parts.append("up to \(Format.money(rent)) warm") }
+        if let room = search.roomSqmMin { parts.append("room from \(Format.size(room))") }
         if let moveIn = Self.moveIn(search, now: now, calendar: calendar) { parts.append(moveIn) }
         self.parts = parts
     }

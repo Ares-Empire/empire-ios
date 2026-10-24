@@ -64,10 +64,10 @@ struct FormattingTests {
     // MARK: the search summary
 
     private func search(kinds: [Kind] = [.flat], places: [String] = ["München"], rent: Double? = nil,
-                        from: String? = nil, until: String? = nil) -> Search {
+                        room: Double? = nil, from: String? = nil, until: String? = nil) -> Search {
         Search(kinds: kinds, places: places.enumerated().map { Place(id: "p\($0.offset)", name: $0.element, region: nil,
                                                                    sources: [.wgGesucht]) },
-               districts: [], rentMaxWarm: rent, rentTiers: [], sqmMin: nil, roomsMin: nil, flatmatesMax: nil,
+               districts: [], rentMaxWarm: rent, rentTiers: [], sqmMin: nil, roomSqmMin: room, roomsMin: nil, flatmatesMax: nil,
                moveInFrom: from, moveInUntil: until, sublet: .exclude, furnished: .any, extra: "", sources: [.wgGesucht])
     }
 
@@ -82,15 +82,18 @@ struct FormattingTests {
     }
 
     @Test func summaryOfOtherSearches() {
-        let room = SearchSummary(search(kinds: [.wgRoom], places: ["Garching bei München"], from: "2026-12-01"),
-                                 now: now, calendar: calendar)
-        #expect(room.kinds == "Room in a WG")
-        #expect(room.details == "Garching · from 1 Dec")
+        let garching = SearchSummary(search(kinds: [.wgRoom], places: ["Garching bei München"], from: "2026-12-01"),
+                                     now: now, calendar: calendar)
+        #expect(garching.kinds == "Room in a WG")
+        #expect(garching.details == "Garching · from 1 Dec")
 
         let all = SearchSummary(search(kinds: [.wgEmpty, .flat, .wgRoom], rent: 1150, until: "2027-02-01"),
                                 now: now, calendar: calendar)
         #expect(all.kinds == "Own flat, room in a WG or empty 2-person WG")      // always in the contract's order
         #expect(all.details == "München · up to €1,150 warm · until 1 Feb")
+
+        let room = SearchSummary(search(kinds: [.wgRoom], rent: 650, room: 15, from: "2026-12-01"), now: now, calendar: calendar)
+        #expect(room.details == "München · up to €650 warm · room from 15 m² · from 1 Dec")
 
         let twins = SearchSummary(search(places: ["Garching bei München", "Garching an der Alz"]), now: now, calendar: calendar)
         #expect(twins.details == "Garching bei München, Garching an der Alz")

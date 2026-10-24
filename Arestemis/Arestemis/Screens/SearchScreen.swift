@@ -239,9 +239,17 @@ struct SearchScreen: View {
                 .frame(minHeight: 30)
             }
             .padding(.vertical, 12)
-            Hairline()
-            FormRow(label: "Min size") {
-                NumberField(value: $draft.sqmMin, suffix: "m²", label: "Minimum size in square metres")
+            if draft.asksFlatSize {
+                Hairline()
+                FormRow(label: "Min size (flat)") {
+                    NumberField(value: $draft.sqmMin, suffix: "m²", label: "Minimum size of the flat in square metres")
+                }
+            }
+            if draft.asksRoomSize {
+                Hairline()
+                FormRow(label: "Min room size") {
+                    NumberField(value: $draft.roomSqmMin, suffix: "m²", label: "Minimum size of the room in square metres")
+                }
             }
             if draft.asksRooms {
                 Hairline()

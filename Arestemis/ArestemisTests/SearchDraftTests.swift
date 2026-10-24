@@ -68,6 +68,21 @@ struct SearchDraftTests {
         #expect(draft.asksRooms && !draft.asksFlatmates)
     }
 
+    /// The flat's size for an own flat or an empty 2-person WG, the room's size for a room in a WG.
+    @Test func sizesFollowTheKinds() throws {
+        var draft = SearchDraft(try sampleSearch(), calendar: calendar)
+        draft.roomSqmMin = 15
+        #expect(draft.asksFlatSize && !draft.asksRoomSize)
+        #expect(draft.search(calendar: calendar).sqmMin == 28 && draft.search(calendar: calendar).roomSqmMin == nil)
+        draft.kinds = [.wgRoom]
+        #expect(!draft.asksFlatSize && draft.asksRoomSize)
+        #expect(draft.search(calendar: calendar).sqmMin == nil && draft.search(calendar: calendar).roomSqmMin == 15)
+        draft.kinds = [.wgEmpty, .wgRoom]
+        #expect(draft.search(calendar: calendar).sqmMin == 28 && draft.search(calendar: calendar).roomSqmMin == 15)
+        draft.apply(PartialSearch(roomSqmMin: 18), calendar: calendar)
+        #expect(draft.roomSqmMin == 18)
+    }
+
     @Test func kindsAndPortalsKeepTheContractsOrder() {
         var draft = SearchDraft()
         draft.toggle(.wgEmpty)
@@ -104,7 +119,8 @@ struct SearchDraftTests {
         #expect(search.places.map(\.id) == ["wg:90", "wg:400", "wg:500"])
         #expect(search.districts == ["Schwabing", "Maxvorstadt", "Freimann", "Au"])
         #expect(search.moveInFrom == "2027-01-01" && search.moveInUntil == "2027-02-01")
-        #expect(search.sqmMin == 28 && search.furnished == .any && search.extra == "Balkon wäre schön, kein Erdgeschoss")
+        #expect(search.furnished == .any && search.extra == "Balkon wäre schön, kein Erdgeschoss")
+        #expect(draft.sqmMin == 28 && search.sqmMin == nil)        // kept in the form, not sent for a room
         #expect(search.rentTiers == [RentTier(sqmMin: 40, rentMaxWarm: 1200)])
 
         draft.apply(PartialSearch(kinds: [], extra: "", sources: []), calendar: calendar)    // empty says nothing

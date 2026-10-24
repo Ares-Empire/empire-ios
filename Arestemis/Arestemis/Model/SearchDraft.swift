@@ -1,8 +1,8 @@
 import Foundation
 
 /// The Search tab's editable copy of a search. The fields are the truth; "Describe it" only fills them in.
-/// Converting back to the contract's `Search` drops what does not apply (rooms only for an own flat, flatmates only
-/// for a WG kind) and empty tiers.
+/// Converting back to the contract's `Search` drops what does not apply (the flat's size for an own flat or an empty
+/// 2-person WG, rooms for an own flat, the room's size for a room in a WG, flatmates for a WG kind) and empty tiers.
 struct SearchDraft: Equatable {
     struct Tier: Equatable, Identifiable {
         let id: UUID
@@ -23,6 +23,7 @@ struct SearchDraft: Equatable {
     var rentMaxWarm: Double?
     var tiers: [Tier] = []
     var sqmMin: Double?
+    var roomSqmMin: Double?
     var roomsMin: Double?
     var flatmatesMax: Int?
     var moveInFrom: Date?
@@ -42,6 +43,7 @@ struct SearchDraft: Equatable {
         rentMaxWarm = search.rentMaxWarm
         tiers = search.rentTiers.map { Tier(sqmMin: $0.sqmMin, rentMaxWarm: $0.rentMaxWarm) }
         sqmMin = search.sqmMin
+        roomSqmMin = search.roomSqmMin
         roomsMin = search.roomsMin
         flatmatesMax = search.flatmatesMax
         moveInFrom = search.moveInFrom.flatMap { DateOnly.parse($0, calendar: calendar) }
@@ -52,6 +54,10 @@ struct SearchDraft: Equatable {
         sources = Set(search.sources)
     }
 
+    /// The whole flat's size: an own flat, or the flat of an empty 2-person WG.
+    var asksFlatSize: Bool { kinds.contains(.flat) || kinds.contains(.wgEmpty) }
+    /// The room's size: a room in a WG.
+    var asksRoomSize: Bool { kinds.contains(.wgRoom) }
     var asksRooms: Bool { kinds.contains(.flat) }
     var asksFlatmates: Bool { kinds.contains { $0.isWG } }
 
@@ -98,7 +104,8 @@ struct SearchDraft: Equatable {
                    guard let sqm = tier.sqmMin, let rent = tier.rentMaxWarm else { return nil }
                    return RentTier(sqmMin: sqm, rentMaxWarm: rent)
                },
-               sqmMin: sqmMin,
+               sqmMin: asksFlatSize ? sqmMin : nil,
+               roomSqmMin: asksRoomSize ? roomSqmMin : nil,
                roomsMin: asksRooms ? roomsMin : nil,
                flatmatesMax: asksFlatmates ? flatmatesMax : nil,
                moveInFrom: moveInFrom.map { DateOnly.string($0, calendar: calendar) },
@@ -123,6 +130,7 @@ struct SearchDraft: Equatable {
             self.tiers = tiers.map { Tier(sqmMin: $0.sqmMin, rentMaxWarm: $0.rentMaxWarm) }
         }
         if let sqm = parsed.sqmMin { sqmMin = sqm }
+        if let room = parsed.roomSqmMin { roomSqmMin = room }
         if let rooms = parsed.roomsMin { roomsMin = rooms }
         if let flatmates = parsed.flatmatesMax { flatmatesMax = flatmates }
         if let from = parsed.moveInFrom.flatMap({ DateOnly.parse($0, calendar: calendar) }) { moveInFrom = from }

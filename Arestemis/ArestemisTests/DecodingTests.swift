@@ -33,6 +33,7 @@ struct DecodingTests {
         #expect(hunt.search.places[1].sources == [.wgGesucht, .kleinanzeigen])
         #expect(hunt.search.rentTiers == [RentTier(sqmMin: 40, rentMaxWarm: 1200)])
         #expect(hunt.search.rentMaxWarm == 1000 && hunt.search.sqmMin == 28 && hunt.search.roomsMin == 1)
+        #expect(hunt.search.roomSqmMin == nil)
         #expect(hunt.search.flatmatesMax == 1 && hunt.search.sublet == .exclude && hunt.search.furnished == .any)
         #expect(hunt.search.moveInFrom == "2026-12-01" && hunt.search.moveInUntil == "2027-02-01")
         #expect(overview.sources.map(\.state) == [.ok, .ok, .ok])
@@ -73,9 +74,10 @@ struct DecodingTests {
         search.rentMaxWarm = nil
         search.moveInUntil = nil
         let json = try #require(try JSONSerialization.jsonObject(with: JSONEncoder().encode(search)) as? [String: Any])
-        #expect(Set(json.keys) == ["kinds", "places", "districts", "rent_max_warm", "rent_tiers", "sqm_min", "rooms_min",
-                                   "flatmates_max", "move_in_from", "move_in_until", "sublet", "furnished", "extra", "sources"])
-        #expect(json["rent_max_warm"] is NSNull && json["move_in_until"] is NSNull)
+        #expect(Set(json.keys) == ["kinds", "places", "districts", "rent_max_warm", "rent_tiers", "sqm_min", "room_sqm_min",
+                                   "rooms_min", "flatmates_max", "move_in_from", "move_in_until", "sublet", "furnished",
+                                   "extra", "sources"])
+        #expect(json["rent_max_warm"] is NSNull && json["move_in_until"] is NSNull && json["room_sqm_min"] is NSNull)
         #expect(json["kinds"] as? [String] == ["flat", "wg_empty"])
         #expect((json["rent_tiers"] as? [[String: Any]])?.first?["sqm_min"] as? Double == 40)
         let place = try #require((json["places"] as? [[String: Any]])?.first)
@@ -93,10 +95,11 @@ struct DecodingTests {
     /// `Partial<Search>`: only what the sentence said; a null counts as not said.
     @Test func parseResultIsPartial() throws {
         let parsed = try JSONDecoder().decode(ParsedSearch.self, from: Data("""
-            {"search": {"kinds": ["wg_room"], "rent_max_warm": 650, "move_in_from": "2026-12-01", "sqm_min": null},
+            {"search": {"kinds": ["wg_room"], "rent_max_warm": 650, "move_in_from": "2026-12-01", "sqm_min": null,
+                        "room_sqm_min": 15},
              "unclear": ["Which city?"]}
             """.utf8))
-        #expect(parsed.search.kinds == [.wgRoom] && parsed.search.rentMaxWarm == 650)
+        #expect(parsed.search.kinds == [.wgRoom] && parsed.search.rentMaxWarm == 650 && parsed.search.roomSqmMin == 15)
         #expect(parsed.search.moveInFrom == "2026-12-01" && parsed.search.sqmMin == nil && parsed.search.places == nil)
         #expect(parsed.unclear == ["Which city?"])
     }
