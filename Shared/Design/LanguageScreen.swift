@@ -1,8 +1,8 @@
 import SwiftUI
 
 /// Settings → Language: like the iPhone, English or Deutsch, saved where iOS keeps an app's own language
-/// (`LanguageSetting`). The app switches when it next starts, so a line says so once the choice changes what it will
-/// show; below, where iOS keeps the same setting.
+/// (`LanguageSetting`). The choice takes effect when the app next starts, so a line says so once it is changed;
+/// below, where iOS keeps the same setting.
 struct LanguageScreen: View {
     let app: SettingsApp
     private let setting: LanguageSetting
@@ -20,8 +20,7 @@ struct LanguageScreen: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 VStack(spacing: 0) {
-                    option(nil, title: String(localized: "Like the iPhone", table: "Shared"),
-                           subtitle: setting.phoneLanguage?.name)
+                    option(nil, title: String(localized: "Like the iPhone", table: "Shared"))
                     SettingsDivider()
                     option(.english, title: AppLanguage.english.name)
                     SettingsDivider()
@@ -30,7 +29,7 @@ struct LanguageScreen: View {
                 .glassCard()
 
                 if setting.announcesSwitch(current: current, changedHere: changedHere) {
-                    Text("\(app.name) switches after you close it and open it again.", tableName: "Shared")
+                    Text("Takes effect after you close \(app.name) and open it again.", tableName: "Shared")
                         .font(AppFont.text(13)).foregroundStyle(Ink.secondary).lineSpacing(2)
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.horizontal, 4).padding(.top, 14)
@@ -51,7 +50,7 @@ struct LanguageScreen: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 
-    private func option(_ language: AppLanguage?, title: String, subtitle: String? = nil) -> some View {
+    private func option(_ language: AppLanguage?, title: String) -> some View {
         let selected = choice == language
         return Button {
             guard !selected else { return }
@@ -60,16 +59,13 @@ struct LanguageScreen: View {
             changedHere = true
         } label: {
             HStack(spacing: 10) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(verbatim: title).font(AppFont.text(15, weight: .medium)).foregroundStyle(Ink.primary)
-                    if let subtitle { Text(verbatim: subtitle).font(AppFont.text(12)).foregroundStyle(Ink.muted) }
-                }
+                Text(verbatim: title).font(AppFont.text(15, weight: .medium)).foregroundStyle(Ink.primary)
                 Spacer(minLength: 12)
                 Image(systemName: "checkmark").font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(app.accent?.color ?? Ink.primary)
                     .opacity(selected ? 1 : 0)
             }
-            .frame(minHeight: subtitle == nil ? 50 : 58).padding(.horizontal, 16)
+            .frame(minHeight: 50).padding(.horizontal, 16)
             .contentShape(Rectangle())
         }
         .buttonStyle(SettingsRowStyle())

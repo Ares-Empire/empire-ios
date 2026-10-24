@@ -261,6 +261,16 @@
         }
       }
     },
+    "Takes effect after you close %@ and open it again." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gilt, sobald du %@ schließt und wieder öffnest."
+          }
+        }
+      }
+    },
     "The contact form comes with the next update." : {
       "localizations" : {
         "de" : {

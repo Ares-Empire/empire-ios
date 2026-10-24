@@ -5,20 +5,18 @@ import Foundation
 /// the iPhone's own language is picked), so the two always agree. On iOS 27 that entry shows only while the iPhone lists
 /// two or more languages (tested 2026-10-24), which is why every app offers the choice in its own Settings.
 /// iOS reads the setting when the app starts: a change shows once the app has been closed and opened again.
+/// An app cannot read the iPhone's own list (the global defaults are closed to it; tested 2026-10-24), so "like the
+/// iPhone" does not name a language.
 nonisolated struct LanguageSetting {
     static let key = "AppleLanguages"
 
     let defaults: UserDefaults
     /// The app's own defaults domain (its bundle id), read on its own so the iPhone's list never counts as a choice.
     let domain: String
-    /// The iPhone's languages, most preferred first; nil when they cannot be read.
-    let phoneLanguages: () -> [String]?
 
     /// This app's setting.
     static var standard: LanguageSetting {
-        LanguageSetting(defaults: .standard, domain: Bundle.main.bundleIdentifier ?? "") {
-            UserDefaults.standard.persistentDomain(forName: UserDefaults.globalDomain)?[key] as? [String]
-        }
+        LanguageSetting(defaults: .standard, domain: Bundle.main.bundleIdentifier ?? "")
     }
 
     /// The language chosen for this app; nil when it follows the iPhone.
@@ -37,17 +35,12 @@ nonisolated struct LanguageSetting {
         }
     }
 
-    /// What "like the iPhone" means right now; nil when the iPhone's languages cannot be read.
-    var phoneLanguage: AppLanguage? { phoneLanguages().map(AppLanguage.preferred) }
-
-    /// The language the app shows after its next start; nil when that depends on an unreadable iPhone list.
-    var nextLanguage: AppLanguage? { choice ?? phoneLanguage }
-
-    /// Whether to say that the app switches when it is next opened: its next language differs from the one it shows
-    /// (`current`). When that cannot be told, after any change made on the page (`changedHere`).
+    /// Whether to say that the choice takes effect when the app is next opened: a chosen language that differs from
+    /// the one the app shows (`current`); for "like the iPhone", whose language the app cannot know, after a change
+    /// made on the page (`changedHere`).
     func announcesSwitch(current: AppLanguage, changedHere: Bool) -> Bool {
-        guard let next = nextLanguage else { return changedHere }
-        return next != current
+        guard let choice else { return changedHere }
+        return choice != current
     }
 }
 

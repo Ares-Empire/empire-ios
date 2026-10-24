@@ -7,11 +7,11 @@ import Testing
 @MainActor
 struct SettingsTests {
     /// A setting on its own defaults suite (the suite name is its domain, like the bundle id in the app).
-    private func makeSetting(phone: [String]? = ["de-DE", "en"]) -> (LanguageSetting, UserDefaults) {
+    private func makeSetting() -> (LanguageSetting, UserDefaults) {
         let domain = "settings-tests-" + UUID().uuidString
         let defaults = UserDefaults(suiteName: domain)!
         defaults.removePersistentDomain(forName: domain)
-        return (LanguageSetting(defaults: defaults, domain: domain, phoneLanguages: { phone }), defaults)
+        return (LanguageSetting(defaults: defaults, domain: domain), defaults)
     }
 
     // MARK: language
@@ -37,35 +37,25 @@ struct SettingsTests {
         #expect(setting.choice == .german)
     }
 
-    @Test func likeTheIPhoneIsItsFirstLanguageTheAppsHave() {
+    @Test func picksTheFirstLanguageTheAppsHave() {
         #expect(AppLanguage.preferred(["de-DE", "en"]) == .german)
         #expect(AppLanguage.preferred(["fr-FR", "de", "en"]) == .german)
         #expect(AppLanguage.preferred(["en-GB", "de"]) == .english)
         #expect(AppLanguage.preferred(["fr", "it"]) == .english)    // English for every other language
         #expect(AppLanguage.preferred([]) == .english)
-        #expect(makeSetting(phone: ["fr", "de"]).0.phoneLanguage == .german)
-        #expect(makeSetting(phone: nil).0.phoneLanguage == nil)
     }
 
-    @Test func saysTheAppSwitchesOnlyWhenItsNextLanguageDiffers() {
-        let (setting, _) = makeSetting(phone: ["de-DE"])
-        #expect(!setting.announcesSwitch(current: .german, changedHere: false))   // following a German iPhone
+    @Test func saysWhenTheChoiceTakesEffect() {
+        let (setting, _) = makeSetting()
+        #expect(!setting.announcesSwitch(current: .german, changedHere: false))   // following the iPhone, untouched
         setting.choose(.english)
-        #expect(setting.nextLanguage == .english)
         #expect(setting.announcesSwitch(current: .german, changedHere: true))
-        setting.choose(.german)                     // back to what it shows: nothing switches
+        #expect(setting.announcesSwitch(current: .german, changedHere: false))   // also when the page is opened again
+        setting.choose(.german)                                                   // what it shows: nothing to wait for
         #expect(!setting.announcesSwitch(current: .german, changedHere: true))
-        setting.choose(nil)
-        #expect(setting.announcesSwitch(current: .english, changedHere: true))   // shows English now, German next
-    }
-
-    @Test func withAnUnreadableIPhoneListOnlyAChangeAnnouncesASwitch() {
-        let (setting, _) = makeSetting(phone: nil)
-        #expect(setting.nextLanguage == nil)
-        #expect(!setting.announcesSwitch(current: .german, changedHere: false))
+        setting.choose(nil)                         // like the iPhone: its language is unknown to the app
         #expect(setting.announcesSwitch(current: .german, changedHere: true))
-        setting.choose(.english)
-        #expect(!setting.announcesSwitch(current: .english, changedHere: true))   // chosen = shown: no switch
+        #expect(!setting.announcesSwitch(current: .german, changedHere: false))
     }
 
     @Test func namesEachLanguageInItself() {
