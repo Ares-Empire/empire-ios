@@ -68,9 +68,10 @@ milestones, a bug that comes back, and every 2–3 weeks over merged Codex work.
 
 Both apps work on the simulator and are merged; nothing reaches the phone until Apple approves the developer account.
 
-1. **TestFlight, once Apple approves:** set the paid team (project level, both projects); register the App Groups
-   `group.de.ares-empire.aresium` + `group.de.ares-empire.shared` and the shared Keychain group for both bundle ids;
-   an App Store Connect record per app; Release build for a generic device; archive and upload both (README).
+1. **TestFlight, once Apple approves:** set the paid team (project level, both projects); the App Groups
+   `group.de.ares-empire.aresium` + `group.de.ares-empire.shared` registered for the bundle ids (Xcode's automatic
+   signing can do it; the shared Keychain group needs only the team prefix); an App Store Connect record per app;
+   Release build for a generic device; archive and upload both (README).
 2. **On the phone:** the checks in `docs/reviews/2026-10-23-pre-testflight.md` (widgets incl. row taps), the shared
    login across the two apps on the real device, the Empire app opening Aresium (`aresium://`), no connection.
 3. **Council over the Empire app before its first upload** (`docs/REVIEW.md`): brief 08 (Codex: API, store, marks,
