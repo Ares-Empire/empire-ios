@@ -1,54 +1,96 @@
 import SwiftUI
 
 /// The start tab: what Patrik thinks, as `vault.positions` groups them ("Across topics" first, then each topic). Each
-/// card opens the position's page; "Add a position" opens the add sheet (across topics, or a topic picked there).
+/// card opens the position's page; "Add a position" opens the add sheet (across topics, or a topic picked there). The
+/// search field filters the positions by their title and text (`TabSearch`).
 struct PositionsScreen: View {
     @Environment(VaultStore.self) private var store
     @Environment(AppNavigation.self) private var navigation
 
     var body: some View {
+        @Bindable var navigation = navigation
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 ScreenHeader(title: String(localized: "Positions"))
                 StatusLine()
-                DiscussionsRow().padding(.horizontal, Look.side).padding(.top, 4)
-                let groups = store.vault?.positions ?? []
-                VStack(alignment: .leading, spacing: Look.sectionGap) {
-                    ForEach(groups, id: \.note) { group in
-                        VStack(alignment: .leading, spacing: Look.headingGap) {
-                            Button { navigation.open(NoteLink(note: group.note)) } label: {
-                                SectionHeading(text: group.title)
-                            }
-                            .buttonStyle(.plain)
-                            if group.positions.isEmpty {
-                                Text("No positions yet.").font(AppFont.text(13)).foregroundStyle(Ink.muted)
-                            }
-                            ForEach(group.positions) { position in PositionCard(position: position) }
-                        }
-                    }
-                    if groups.isEmpty {
-                        CalmMessage(text: String(localized: "No positions in the vault yet."))
-                    }
-                    if let target = store.index.positionTargets.first {
-                        Button { navigation.sheet = .position(.add(note: target.id)) } label: {
-                            Label("Add a position", systemImage: "plus")
-                        }
-                        .buttonStyle(.pill)
-                        .disabled(store.isSending)
-                    }
+                TabSearchField(text: $navigation.positionsQuery, prompt: Text("Search positions"))
+                    .padding(.horizontal, Look.side).padding(.top, 2)
+                if TabSearch.isQuery(navigation.positionsQuery) {
+                    found(navigation.positionsQuery)
+                } else {
+                    all
                 }
-                .padding(.horizontal, Look.side).padding(.top, 10).padding(.bottom, 40)
             }
         }
+        .scrollDismissesKeyboard(.immediately)
         .refreshable { await store.update() }
         .provinceWall()
         .toolbar(.hidden, for: .navigationBar)
     }
+
+    @ViewBuilder private var all: some View {
+        DiscussionsRow().padding(.horizontal, Look.side).padding(.top, Look.rowGap)
+        let groups = store.vault?.positions ?? []
+        VStack(alignment: .leading, spacing: Look.sectionGap) {
+            ForEach(groups, id: \.note) { group in
+                VStack(alignment: .leading, spacing: Look.headingGap) {
+                    GroupHeading(group: group.title, note: group.note)
+                    if group.positions.isEmpty {
+                        Text("No positions yet.").font(AppFont.text(13)).foregroundStyle(Ink.muted)
+                    }
+                    ForEach(group.positions) { position in PositionCard(position: position) }
+                }
+            }
+            if groups.isEmpty {
+                CalmMessage(text: String(localized: "No positions in the vault yet."))
+            }
+            if let target = store.index.positionTargets.first {
+                Button { navigation.sheet = .position(.add(note: target.id)) } label: {
+                    Label("Add a position", systemImage: "plus")
+                }
+                .buttonStyle(.pill)
+                .disabled(store.isSending)
+            }
+        }
+        .padding(.horizontal, Look.side).padding(.top, 10).padding(.bottom, 40)
+    }
+
+    /// The positions that match, in their groups; the cards show the whole title with the words marked.
+    private func found(_ query: String) -> some View {
+        let groups = store.tabSearch.positions(query)
+        return VStack(alignment: .leading, spacing: Look.sectionGap) {
+            ForEach(groups, id: \.note) { group in
+                VStack(alignment: .leading, spacing: Look.headingGap) {
+                    GroupHeading(group: group.title, note: group.note)
+                    ForEach(group.positions) { hit in
+                        PositionCard(position: hit.position, query: query, showsText: hit.showsText)
+                    }
+                }
+            }
+            if groups.isEmpty { CalmMessage(text: Format.nothingFound(query)) }
+        }
+        .padding(.horizontal, Look.side).padding(.top, 20).padding(.bottom, 40)
+    }
 }
 
-/// A position as a card: its sentence, the draft mark, how many notes back it. Tapping opens its page.
+/// A group's heading ("Across topics", a topic), which opens the note the positions are written on.
+private struct GroupHeading: View {
+    let group: String
+    let note: String
+    @Environment(AppNavigation.self) private var navigation
+
+    var body: some View {
+        Button { navigation.open(NoteLink(note: note)) } label: { SectionHeading(text: group) }
+            .buttonStyle(.plain)
+    }
+}
+
+/// A position as a card: its number, its line, the draft mark. Tapping opens its page. In the tab's search the card
+/// shows the whole title with the query's words marked, and the position's text under it when the match is there.
 struct PositionCard: View {
     let position: Position
+    var query = ""
+    var showsText = false
     @Environment(AppNavigation.self) private var navigation
 
     var body: some View {
@@ -58,10 +100,23 @@ struct PositionCard: View {
                     .foregroundStyle(position.draft ? Look.accent.color : Ink.muted)
                     .frame(minWidth: 14, alignment: .leading)
                     .accessibilityHidden(true)
-                Text(verbatim: Lookup.cardLine(position.title))
-                    .font(AppFont.text(16, weight: .medium)).foregroundStyle(Ink.primary)
-                    .lineLimit(2).multilineTextAlignment(.leading)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                VStack(alignment: .leading, spacing: 6) {
+                    if query.isEmpty {
+                        Text(verbatim: Lookup.cardLine(position.title))
+                            .font(AppFont.text(16, weight: .medium)).foregroundStyle(Ink.primary)
+                            .lineLimit(2).multilineTextAlignment(.leading)
+                    } else {
+                        Text(InlineMarkdown.plain(position.title), marking: query)
+                            .font(AppFont.text(16, weight: .medium)).foregroundStyle(Ink.primary)
+                            .lineLimit(3).multilineTextAlignment(.leading)
+                        if showsText {
+                            Text(InlineMarkdown.plain(position.text), marking: query)
+                                .font(AppFont.text(13)).foregroundStyle(Ink.secondary)
+                                .lineLimit(4).multilineTextAlignment(.leading)
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 if position.draft {
                     CapsLabel(text: String(localized: "Draft"), color: Look.accent.color)
                 }

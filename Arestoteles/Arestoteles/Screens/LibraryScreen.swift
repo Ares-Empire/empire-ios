@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// The library: mechanisms (with how many notes use each), events as a timeline by year with a region filter and what
-/// followed each, questions, actors.
+/// followed each, questions, actors. While something is typed in the search field, the matches of every kind show
+/// instead (`TabSearch`), each row with its kind; clearing the field returns to the chosen kind.
 struct LibraryScreen: View {
     @Environment(VaultStore.self) private var store
     @Environment(AppNavigation.self) private var navigation
@@ -12,20 +13,27 @@ struct LibraryScreen: View {
             VStack(alignment: .leading, spacing: 0) {
                 ScreenHeader(title: String(localized: "Library"))
                 StatusLine()
-                ChipPicker(options: LibraryPart.allCases.map { ($0, $0.title) }, selection: $navigation.libraryPart)
-                    .padding(.top, 6)
-
-                VStack(alignment: .leading, spacing: Look.rowGap) {
-                    switch navigation.libraryPart {
-                    case .mechanisms: mechanisms
-                    case .events: EventsTimeline()
-                    case .questions: list(store.index.questions, empty: String(localized: "No questions yet."))
-                    case .actors: list(store.index.actors, empty: String(localized: "No actors yet."))
+                TabSearchField(text: $navigation.libraryQuery, prompt: Text("Search the library"))
+                    .padding(.horizontal, Look.side).padding(.top, 2)
+                if TabSearch.isQuery(navigation.libraryQuery) {
+                    found(navigation.libraryQuery)
+                        .padding(.horizontal, Look.side).padding(.top, 20).padding(.bottom, 40)
+                } else {
+                    ChipPicker(options: LibraryPart.allCases.map { ($0, $0.title) }, selection: $navigation.libraryPart)
+                        .padding(.top, 14)
+                    VStack(alignment: .leading, spacing: Look.rowGap) {
+                        switch navigation.libraryPart {
+                        case .mechanisms: mechanisms
+                        case .events: EventsTimeline()
+                        case .questions: list(store.index.questions, empty: String(localized: "No questions yet."))
+                        case .actors: list(store.index.actors, empty: String(localized: "No actors yet."))
+                        }
                     }
+                    .padding(.horizontal, Look.side).padding(.top, 16).padding(.bottom, 40)
                 }
-                .padding(.horizontal, Look.side).padding(.top, 16).padding(.bottom, 40)
             }
         }
+        .scrollDismissesKeyboard(.immediately)
         .refreshable { await store.update() }
         .provinceWall()
         .toolbar(.hidden, for: .navigationBar)
@@ -33,8 +41,7 @@ struct LibraryScreen: View {
 
     @ViewBuilder private var mechanisms: some View {
         ForEach(store.index.mechanisms) { mechanism in
-            let uses = store.index.mechanismUses(mechanism.id)
-            NoteRow(note: mechanism, detail: Text("Used in \(uses) notes"))
+            NoteRow(note: mechanism, detail: uses(mechanism))
         }
         if store.index.mechanisms.isEmpty { CalmMessage(text: String(localized: "No mechanisms yet.")) }
     }
@@ -43,6 +50,29 @@ struct LibraryScreen: View {
         ForEach(notes) { note in NoteRow(note: note) }
         if notes.isEmpty { CalmMessage(text: empty) }
     }
+
+    /// Matches of every kind, as rows with their kind, the words marked (events and actors without a summary show their
+    /// first paragraph).
+    private func found(_ query: String) -> some View {
+        let hits = store.tabSearch.library(query)
+        return VStack(alignment: .leading, spacing: Look.rowGap) {
+            ForEach(hits) { hit in
+                NoteRow(note: hit.note, detail: detail(hit.note), lead: hit.lead, query: query)
+            }
+            if hits.isEmpty { CalmMessage(text: Format.nothingFound(query)) }
+        }
+    }
+
+    /// Beside the title: how often a mechanism is used, an event's years.
+    private func detail(_ note: Note) -> Text? {
+        switch note.type {
+        case .mechanism: uses(note)
+        case .event: Format.years(from: note.event?.from, to: note.event?.to).map { Text(verbatim: $0) }
+        default: nil
+        }
+    }
+
+    private func uses(_ mechanism: Note) -> Text { Text("Used in \(store.index.mechanismUses(mechanism.id)) notes") }
 }
 
 /// Events by year (BCE before CE, events without a year last), filtered by region; each with its years, places,
@@ -115,7 +145,7 @@ struct EventRow: View {
                             Text(verbatim: places.joined(separator: ", ")).font(AppFont.text(12)).foregroundStyle(Ink.muted)
                         }
                     }
-                    if let summary = event.summary ?? firstParagraph {
+                    if let summary = event.summary ?? Lookup.firstParagraph(of: event) {
                         Text(InlineMarkdown.plain(summary)).font(AppFont.text(13)).foregroundStyle(Ink.secondary)
                             .lineLimit(3).multilineTextAlignment(.leading)
                     }
@@ -142,10 +172,5 @@ struct EventRow: View {
         }
         .padding(14)
         .glassCard()
-    }
-
-    /// Events often have no summary box: their first paragraph stands in.
-    private var firstParagraph: String? {
-        event.blocks.lazy.compactMap { if case let .paragraph(text) = $0 { text } else { nil } }.first
     }
 }
