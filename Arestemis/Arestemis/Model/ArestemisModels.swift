@@ -1,13 +1,14 @@
 import Foundation
 
-/// The Arestemis API, version 1 (Arestemis/docs/API.md). The server decides and calculates; the app only displays and
+/// The Arestemis API, version 2 (Arestemis/docs/API.md). The server decides and calculates; the app only displays and
 /// sends what the user changed. Field names on the wire are the contract's (snake_case, in the CodingKeys); timestamps
 /// and dates stay the contract's ISO 8601 strings and are read with `Timestamp` / `DateOnly` where shown.
 
+/// A whole flat, or a room in a shared flat (WG).
 enum Kind: String, Codable, CaseIterable, Identifiable, Sendable {
-    case flat, wgRoom = "wg_room", wgEmpty = "wg_empty"
+    case flat, wg
     var id: String { rawValue }
-    var isWG: Bool { self != .flat }
+    var isWG: Bool { self == .wg }
 }
 
 enum Source: String, Codable, CaseIterable, Identifiable, Sendable {
@@ -30,55 +31,60 @@ struct Place: Codable, Equatable, Hashable, Identifiable, Sendable {
     }
 }
 
-struct RentTier: Codable, Equatable, Hashable, Sendable {
-    var sqmMin: Double
-    var rentMaxWarm: Double
-    enum CodingKeys: String, CodingKey { case sqmMin = "sqm_min", rentMaxWarm = "rent_max_warm" }
-}
-
+/// Temporary offers (Zwischenmiete): none, also, or only those.
 enum Sublet: String, Codable, CaseIterable, Sendable { case exclude, include, only }
-enum Furnished: String, Codable, CaseIterable, Sendable { case any, yes, no }
 
+/// Every filter is optional on its own (`nil` = any) except places and sources; each min/max pair is a range.
 struct Search: Codable, Equatable, Sendable {
-    var kinds: [Kind]
+    var kinds: [Kind]              // [.flat], [.wg] or both (= either)
+    var people: Int                // moving in together, 1–6
+    var flatmatesMax: Int?         // WG offers: people already living there
     var places: [Place]
     var districts: [String]
-    var rentMaxWarm: Double?
-    var rentTiers: [RentTier]
-    var sqmMin: Double?            // an own flat, or the whole flat of an empty 2-person WG
-    var roomSqmMin: Double?        // the room, for a room in a WG (CONTRACT ADDITION 2026-10-24)
-    var roomsMin: Double?          // own flat only
-    var flatmatesMax: Int?         // WG kinds only
+    var sqmMin: Double?            // the flat (flat offers)
+    var sqmMax: Double?
+    var roomSqmMin: Double?        // the room (WG offers)
+    var roomSqmMax: Double?
+    var roomsMin: Double?          // flat offers only
+    var rentColdMin: Double?
+    var rentColdMax: Double?
+    var rentWarmMin: Double?
+    var rentWarmMax: Double?
     var moveInFrom: String?        // "2026-12-01"
     var moveInUntil: String?
     var sublet: Sublet
-    var furnished: Furnished
     var extra: String
     var sources: [Source]
 
     enum CodingKeys: String, CodingKey {
-        case kinds, places, districts, sublet, furnished, extra, sources
-        case rentMaxWarm = "rent_max_warm", rentTiers = "rent_tiers", sqmMin = "sqm_min", roomSqmMin = "room_sqm_min"
-        case roomsMin = "rooms_min", flatmatesMax = "flatmates_max", moveInFrom = "move_in_from"
-        case moveInUntil = "move_in_until"
+        case kinds, people, places, districts, sublet, extra, sources
+        case flatmatesMax = "flatmates_max", sqmMin = "sqm_min", sqmMax = "sqm_max"
+        case roomSqmMin = "room_sqm_min", roomSqmMax = "room_sqm_max", roomsMin = "rooms_min"
+        case rentColdMin = "rent_cold_min", rentColdMax = "rent_cold_max"
+        case rentWarmMin = "rent_warm_min", rentWarmMax = "rent_warm_max"
+        case moveInFrom = "move_in_from", moveInUntil = "move_in_until"
     }
 
     /// Every field is sent, unknown values as `null` (the contract's `number | null`), so a cleared field clears.
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(kinds, forKey: .kinds)
+        try container.encode(people, forKey: .people)
+        try container.encode(flatmatesMax, forKey: .flatmatesMax)
         try container.encode(places, forKey: .places)
         try container.encode(districts, forKey: .districts)
-        try container.encode(rentMaxWarm, forKey: .rentMaxWarm)
-        try container.encode(rentTiers, forKey: .rentTiers)
         try container.encode(sqmMin, forKey: .sqmMin)
+        try container.encode(sqmMax, forKey: .sqmMax)
         try container.encode(roomSqmMin, forKey: .roomSqmMin)
+        try container.encode(roomSqmMax, forKey: .roomSqmMax)
         try container.encode(roomsMin, forKey: .roomsMin)
-        try container.encode(flatmatesMax, forKey: .flatmatesMax)
+        try container.encode(rentColdMin, forKey: .rentColdMin)
+        try container.encode(rentColdMax, forKey: .rentColdMax)
+        try container.encode(rentWarmMin, forKey: .rentWarmMin)
+        try container.encode(rentWarmMax, forKey: .rentWarmMax)
         try container.encode(moveInFrom, forKey: .moveInFrom)
         try container.encode(moveInUntil, forKey: .moveInUntil)
         try container.encode(sublet, forKey: .sublet)
-        try container.encode(furnished, forKey: .furnished)
         try container.encode(extra, forKey: .extra)
         try container.encode(sources, forKey: .sources)
     }
@@ -87,18 +93,22 @@ struct Search: Codable, Equatable, Sendable {
 /// `Partial<Search>` from `POST /search/parse`: only what the sentence said. A `null` counts as "not said".
 struct PartialSearch: Codable, Equatable, Sendable {
     var kinds: [Kind]?
+    var people: Int?
+    var flatmatesMax: Int?
     var places: [Place]?
     var districts: [String]?
-    var rentMaxWarm: Double?
-    var rentTiers: [RentTier]?
     var sqmMin: Double?
+    var sqmMax: Double?
     var roomSqmMin: Double?
+    var roomSqmMax: Double?
     var roomsMin: Double?
-    var flatmatesMax: Int?
+    var rentColdMin: Double?
+    var rentColdMax: Double?
+    var rentWarmMin: Double?
+    var rentWarmMax: Double?
     var moveInFrom: String?
     var moveInUntil: String?
     var sublet: Sublet?
-    var furnished: Furnished?
     var extra: String?
     var sources: [Source]?
 

@@ -63,39 +63,41 @@ struct FormattingTests {
 
     // MARK: the search summary
 
-    private func search(kinds: [Kind] = [.flat], places: [String] = ["München"], rent: Double? = nil,
-                        room: Double? = nil, from: String? = nil, until: String? = nil) -> Search {
-        Search(kinds: kinds, places: places.enumerated().map { Place(id: "p\($0.offset)", name: $0.element, region: nil,
-                                                                   sources: [.wgGesucht]) },
-               districts: [], rentMaxWarm: rent, rentTiers: [], sqmMin: nil, roomSqmMin: room, roomsMin: nil, flatmatesMax: nil,
-               moveInFrom: from, moveInUntil: until, sublet: .exclude, furnished: .any, extra: "", sources: [.wgGesucht])
+    private func search(kinds: [Kind] = [.flat], people: Int = 1, places: [String] = ["München"], warm: Double? = nil,
+                        warmMin: Double? = nil, cold: Double? = nil, from: String? = nil, until: String? = nil) -> Search {
+        Search(kinds: kinds, people: people, flatmatesMax: nil,
+               places: places.enumerated().map { Place(id: "p\($0.offset)", name: $0.element, region: nil, sources: [.wgGesucht]) },
+               districts: [], sqmMin: nil, sqmMax: nil, roomSqmMin: nil, roomSqmMax: nil, roomsMin: nil,
+               rentColdMin: nil, rentColdMax: cold, rentWarmMin: warmMin, rentWarmMax: warm,
+               moveInFrom: from, moveInUntil: until, sublet: .exclude, extra: "", sources: [.wgGesucht])
     }
 
     @Test func summaryOfTheSampleSearch() throws {
         let hunt = try #require(try sample(Overview.self, "overview").hunt)
         let summary = SearchSummary(hunt.search, now: now, calendar: calendar)
-        #expect(summary.kinds == "Own flat or empty 2-person WG")
-        #expect(summary.details == "München, Garching · up to €1,000 warm · 1 Dec – 1 Feb")
+        #expect(summary.kinds == "Flat or WG room")
+        #expect(summary.details == "München, Garching · €400–1,000 warm · 1 Dec – 1 Feb")
         #expect(summary.parts.count == 3)
         // On screen a part never breaks across lines, nor a kind.
         #expect(!summary.wrappingDetails.replacingOccurrences(of: " · ", with: "").contains(" "))
-        #expect(summary.wrappingKinds.components(separatedBy: " ").count == 3)       // "Own flat" | "or" | "empty 2-person WG"
-        #expect(summary.wrappingKinds.contains("2-\u{2060}person"))
+        #expect(summary.wrappingKinds.components(separatedBy: " ").count == 3)       // "Flat" | "or" | "WG room"
     }
 
     @Test func summaryOfOtherSearches() {
-        let garching = SearchSummary(search(kinds: [.wgRoom], places: ["Garching bei München"], from: "2026-12-01"),
+        let garching = SearchSummary(search(kinds: [.wg], places: ["Garching bei München"], from: "2026-12-01"),
                                      now: now, calendar: calendar)
-        #expect(garching.kinds == "Room in a WG")
+        #expect(garching.kinds == "WG room")
         #expect(garching.details == "Garching · from 1 Dec")
 
-        let all = SearchSummary(search(kinds: [.wgEmpty, .flat, .wgRoom], rent: 1150, until: "2027-02-01"),
-                                now: now, calendar: calendar)
-        #expect(all.kinds == "Own flat, room in a WG or empty 2-person WG")      // always in the contract's order
-        #expect(all.details == "München · up to €1,150 warm · until 1 Feb")
+        let both = SearchSummary(search(kinds: [.wg, .flat], people: 2, warm: 1150, until: "2027-02-01"),
+                                 now: now, calendar: calendar)
+        #expect(both.kinds == "Flat or WG room")                                // always in the contract's order
+        #expect(both.details == "München · 2 people · up to €1,150 warm · until 1 Feb")
 
-        let room = SearchSummary(search(kinds: [.wgRoom], rent: 650, room: 15, from: "2026-12-01"), now: now, calendar: calendar)
-        #expect(room.details == "München · up to €650 warm · room from 15 m² · from 1 Dec")
+        // The warm rent stands for the rent when both are set; the cold one shows when it is the only one.
+        #expect(SearchSummary(search(warmMin: 500, cold: 700), now: now, calendar: calendar).details
+                == "München · from €500 warm")
+        #expect(SearchSummary(search(cold: 700), now: now, calendar: calendar).details == "München · up to €700 cold")
 
         let twins = SearchSummary(search(places: ["Garching bei München", "Garching an der Alz"]), now: now, calendar: calendar)
         #expect(twins.details == "Garching bei München, Garching an der Alz")
@@ -120,7 +122,7 @@ struct FormattingTests {
     @Test func listingLines() throws {
         let page = try sample(MatchPage.self, "matches")
         #expect(page.items[0].listing.facts == "42 m² · 2 rooms · Schwabing")
-        #expect(page.items[2].listing.facts == "19 m² · Empty WG · Hochbrück")
+        #expect(page.items[2].listing.facts == "19 m² · WG room · Hochbrück")
         #expect(page.items[0].listing.shownRent?.amount == "€980" && page.items[0].listing.shownRent?.label == "warm")
         #expect(page.items[1].listing.shownRent?.amount == "€1,150")
         #expect(page.items[0].sourceLine(now: now, calendar: calendar) == "WG-Gesucht · 3 min ago")
@@ -132,7 +134,7 @@ struct FormattingTests {
         let page = try sample(MatchPage.self, "matches")
         let flat = page.items[0].listing.detailFacts(now: now, calendar: calendar)
         #expect(flat.map(\.label) == ["Size", "Rooms", "Kind", "Move-in", "Furnished", "District", "Posted"])
-        #expect(flat.map(\.value) == ["42", "2", "Own flat", "1 Dec", "No", "Schwabing", "4 min ago"])
+        #expect(flat.map(\.value) == ["42", "2", "Flat", "1 Dec", "No", "Schwabing", "4 min ago"])
         #expect(flat[0].unit == "m²" && flat[0].numeric && !flat[2].numeric)
         let wg = page.items[2].listing.detailFacts(now: now, calendar: calendar)
         #expect(wg.map(\.label) == ["Size", "Flatmates", "Kind", "Move-in", "Furnished", "District", "Posted"])

@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "me": {
     "id": "sample0user0id1",
     "name": "Patrik"
@@ -11,8 +11,10 @@
     "search": {
       "kinds": [
         "flat",
-        "wg_empty"
+        "wg"
       ],
+      "people": 1,
+      "flatmates_max": 2,
       "places": [
         {
           "id": "wg:90",
@@ -39,21 +41,18 @@
         "Maxvorstadt",
         "Freimann"
       ],
-      "rent_max_warm": 1000,
-      "rent_tiers": [
-        {
-          "sqm_min": 40,
-          "rent_max_warm": 1200
-        }
-      ],
       "sqm_min": 28,
-      "room_sqm_min": null,
-      "rooms_min": 1,
-      "flatmates_max": 1,
+      "sqm_max": null,
+      "room_sqm_min": 14,
+      "room_sqm_max": null,
+      "rooms_min": null,
+      "rent_cold_min": null,
+      "rent_cold_max": null,
+      "rent_warm_min": 400,
+      "rent_warm_max": 1000,
       "move_in_from": "2026-12-01",
       "move_in_until": "2027-02-01",
       "sublet": "exclude",
-      "furnished": "any",
       "extra": "Balkon wäre schön, kein Erdgeschoss",
       "sources": [
         "wg_gesucht",
@@ -172,7 +171,7 @@
         "source_name": "WG-Gesucht",
         "url": "https://www.wg-gesucht.de/wg-zimmer-in-Garching.10000003.html",
         "title": "Neue 2er-WG in Garching – du suchst den Mitbewohner aus",
-        "kind": "wg_empty",
+        "kind": "wg",
         "rent_warm": 610,
         "rent_cold": null,
         "sqm": 19,

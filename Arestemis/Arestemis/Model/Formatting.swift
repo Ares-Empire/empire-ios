@@ -108,26 +108,19 @@ enum DateOnly {
 // MARK: - names
 
 extension Kind {
-    /// The chip label: "Own flat", "Room in a WG", "Empty 2-person WG".
+    /// "Flat", "WG room" (the server's labels too: the push subtitle).
     var title: String {
         switch self {
-        case .flat: "Own flat"
-        case .wgRoom: "Room in a WG"
-        case .wgEmpty: "Empty 2-person WG"
-        }
-    }
-
-    /// Inside a sentence, after the first kind: "own flat", "room in a WG".
-    var inSentence: String { title.prefix(1).lowercased() + title.dropFirst() }
-
-    /// On a listing row: "Flat", "WG room", "Empty WG".
-    var short: String {
-        switch self {
         case .flat: "Flat"
-        case .wgRoom: "WG room"
-        case .wgEmpty: "Empty WG"
+        case .wg: "WG room"
         }
     }
+
+    /// Inside a sentence, after the first kind: "WG room".
+    var inSentence: String { title }
+
+    /// On a listing row.
+    var short: String { title }
 }
 
 extension Source {
@@ -152,17 +145,18 @@ extension Place {
 
 // MARK: - the search in two lines
 
-/// The hunt's search as the Hunt tab shows it: what ("Own flat or empty 2-person WG") and where, how much, when
-/// ("München, Garching · up to €1,000 warm · from 1 Dec"); a room size only when one is set ("room from 15 m²").
+/// The hunt's search as the Hunt tab shows it: what ("Flat or WG room") and where, for whom, how much, when
+/// ("München, Garching · 2 people · up to €1,000 warm · from 1 Dec"). The warm rent stands for the rent when both are
+/// set; sizes are left to the Search tab.
 struct SearchSummary: Equatable {
-    /// The kinds as phrases ("Own flat", "empty 2-person WG") and as one sentence.
+    /// The kinds as phrases ("Flat", "WG room") and as one sentence.
     let kindPhrases: [String]
     var kinds: String { Self.sentence(kindPhrases) }
     /// Places, rent, move-in: each part a unit that should not be broken across lines.
     let parts: [String]
     var details: String { parts.joined(separator: " · ") }
 
-    /// For display: lines break only between kinds and between parts, never inside "2-person" or "1 Dec – 1 Feb".
+    /// For display: lines break only between kinds and between parts, never inside "WG room" or "1 Dec – 1 Feb".
     var wrappingKinds: String { Self.sentence(kindPhrases.map(Self.unbreakable)) }
     var wrappingDetails: String { parts.map(Self.unbreakable).joined(separator: " · ") }
 
@@ -177,10 +171,23 @@ struct SearchSummary: Equatable {
         kindPhrases = kinds.enumerated().map { $0.offset == 0 ? $0.element.title : $0.element.inSentence }
         var parts: [String] = []
         if let places = Self.places(search.places) { parts.append(places) }
-        if let rent = search.rentMaxWarm { parts.append("up to \(Format.money(rent)) warm") }
-        if let room = search.roomSqmMin { parts.append("room from \(Format.size(room))") }
+        if search.people > 1 { parts.append("\(search.people) people") }
+        if let rent = Self.rent(min: search.rentWarmMin, max: search.rentWarmMax, label: "warm")
+            ?? Self.rent(min: search.rentColdMin, max: search.rentColdMax, label: "cold") {
+            parts.append(rent)
+        }
         if let moveIn = Self.moveIn(search, now: now, calendar: calendar) { parts.append(moveIn) }
         self.parts = parts
+    }
+
+    /// "€400–1,000 warm", "up to €1,000 warm", "from €400 warm"
+    private static func rent(min: Double?, max: Double?, label: String) -> String? {
+        switch (min, max) {
+        case let (min?, max?): "\(Format.money(min))–\(Format.money(max).dropFirst()) \(label)"
+        case let (nil, max?): "up to \(Format.money(max)) \(label)"
+        case let (min?, nil): "from \(Format.money(min)) \(label)"
+        case (nil, nil): nil
+        }
     }
 
     /// "a", "a or b", "a, b or c"
@@ -222,7 +229,7 @@ extension Listing {
         return nil
     }
 
-    /// "42 m² · 2 rooms · Schwabing" (a WG: "19 m² · Empty WG · Hochbrück"); unknown parts left out.
+    /// "42 m² · 2 rooms · Schwabing" (a WG: "19 m² · WG room · Hochbrück"); unknown parts left out.
     var facts: String {
         var parts: [String] = []
         if let sqm { parts.append(Format.size(sqm)) }

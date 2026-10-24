@@ -54,7 +54,7 @@ struct NumberField: View {
         HStack(alignment: .firstTextBaseline, spacing: 3) {
             Spacer(minLength: 0)
             if let prefix, !text.isEmpty { unit(prefix) }
-            TextField("", text: $text, prompt: Text(placeholder).foregroundStyle(Ink.muted))
+            TextField("", text: $text, prompt: Text(placeholder).font(AppFont.text(15)).foregroundStyle(Ink.muted))
                 .font(AppFont.number(15, weight: .medium))
                 .keyboardType(.numberPad)
                 .multilineTextAlignment(.trailing)
@@ -121,7 +121,53 @@ struct OptionalStepper: View {
     }
 }
 
-/// A text area in a quiet well (the search's "Describe it", "Anything else", the application texts).
+/// A native stepper over a required count ("1 person", "2 people").
+struct CountStepper: View {
+    let label: String
+    @Binding var value: Int
+    let range: ClosedRange<Int>
+    let text: (Int) -> String
+
+    var body: some View {
+        Stepper(value: $value.animation(.snappy), in: range) {
+            HStack {
+                Text(label).font(AppFont.text(15, weight: .medium)).foregroundStyle(Ink.primary).lineLimit(1)
+                Spacer(minLength: 8)
+                Text(text(value)).font(AppFont.text(15)).foregroundStyle(Ink.primary)
+                    .contentTransition(.numericText())
+                    .padding(.trailing, 6)
+            }
+        }
+        .frame(minHeight: 50)
+        .accessibilityValue(text(value))
+    }
+}
+
+/// A label and two number wells, "min – max"; either may stay empty (no limit on that side).
+struct RangeRow: View {
+    let label: String
+    @Binding var range: SearchDraft.Range
+    var prefix: String? = nil
+    var suffix: String? = nil
+    /// The unit for VoiceOver ("euros", "square metres").
+    let unitName: String
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Text(label).font(AppFont.text(15, weight: .medium)).foregroundStyle(Ink.primary)
+                .lineLimit(1).minimumScaleFactor(0.85)
+            Spacer(minLength: 6)
+            NumberField(value: $range.min, prefix: prefix, suffix: suffix, placeholder: "min", width: 92,
+                        label: "\(label), at least, in \(unitName)")
+            Text("–").font(AppFont.text(14)).foregroundStyle(Ink.muted).accessibilityHidden(true)
+            NumberField(value: $range.max, prefix: prefix, suffix: suffix, placeholder: "max", width: 92,
+                        label: "\(label), at most, in \(unitName)")
+        }
+        .frame(minHeight: 54)
+    }
+}
+
+/// A text area in a quiet well (the search's "Describe it" and extras, the application texts).
 struct TextArea: View {
     let placeholder: String
     @Binding var text: String

@@ -1,17 +1,17 @@
 import SwiftUI
 
-/// The search as a form in glass cards: describe it (optional), what, where, rent and size, move-in, anything else,
-/// portals; then save. Without a hunt the same form creates one (paused).
+/// The search as a form in glass cards, in the order one thinks of it: what, where, size, rent, move-in, portals,
+/// extras; then save. Every field is optional on its own (empty = any) except a place and a portal. "Describe it" (a
+/// line at the top) opens a sheet where a sentence fills the fields in. Without a hunt the same form creates one (paused).
 struct SearchScreen: View {
     let store: ArestemisStore
     @Bindable var navigation: AppNavigation
-    /// Screenshots: a section to scroll to ("rent", "movein", "bottom").
+    /// Screenshots: a section to scroll to ("size", "rent", "movein", "bottom").
     var scrollTarget: String? = nil
 
     @State private var draft = SearchDraft()
     @State private var baseline: Search?
     @State private var description = ""
-    @State private var unclear: [String] = []
     @State private var district = ""
     @State private var confirmDelete = false
     @State private var savedNote = false
@@ -26,17 +26,19 @@ struct SearchScreen: View {
             ScrollViewReader { reader in
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
-                        describe
-                        section("What") { kinds }
+                        describeLine
+                        section("What") { what }
                         section("Where") { places }
-                        section("Rent and size") { rentAndSize }.id("rent")
+                        section("Size") { size }.id("size")
+                        section("Rent") { rent }.id("rent")
                         section("Move-in") { moveIn }.id("movein")
-                        section("Anything else") { extra }
                         section("Portals") { portals }
+                        section("Extras") { extra }
                         save.padding(.top, Look.sectionGap)
                         Color.clear.frame(height: 1).id("bottom")
                     }
                     .padding(.horizontal, Look.side).padding(.top, 4).padding(.bottom, 30)
+                    .animation(.easeOut(duration: 0.2), value: draft.type)
                 }
                 .scrollIndicators(.hidden)
                 .scrollDismissesKeyboard(.interactively)
@@ -57,6 +59,13 @@ struct SearchScreen: View {
             .sheet(isPresented: $navigation.showsPlaceSearch) {
                 PlaceSearchSheet(store: store, chosen: draft.places, initialQuery: navigation.placeQuery) { place in
                     draft.add(place)
+                }
+                .presentationDetents([.large])
+                .presentationBackground(Ink.background)
+            }
+            .sheet(isPresented: $navigation.showsDescribe) {
+                DescribeSheet(store: store, text: $description) { parsed in
+                    withAnimation(.easeOut(duration: 0.25)) { draft.apply(parsed) }
                 }
                 .presentationDetents([.large])
                 .presentationBackground(Ink.background)
@@ -89,73 +98,61 @@ struct SearchScreen: View {
         .padding(.top, Look.sectionGap)
     }
 
-    // MARK: 1 describe it
+    // MARK: describe it (a line; the sheet does the work)
 
-    private var describe: some View {
-        VStack(alignment: .leading, spacing: Look.headingGap) {
-            SectionHeading(text: "Describe it").padding(.leading, 4)
-            VStack(alignment: .leading, spacing: 12) {
-                TextArea(placeholder: "e.g. 2-room flat in Schwabing up to €1,000 warm from December",
-                         text: $description, minHeight: 84)
-                HStack(spacing: 12) {
-                    Caption(text: store.parseError ?? "Optional. The fields below are what counts.")
-                    Spacer(minLength: 8)
-                    Button {
-                        endTyping()
-                        Task {
-                            if let parsed = await store.parse(description) {
-                                withAnimation(.easeOut(duration: 0.25)) {
-                                    draft.apply(parsed.search)
-                                    unclear = parsed.unclear
-                                }
-                            }
-                        }
-                    } label: {
-                        HStack(spacing: 7) {
-                            if store.isParsing { ProgressView().controlSize(.small).tint(Ink.primary) }
-                            Text(store.isParsing ? "Reading…" : "Fill in")
-                        }
-                    }
-                    .buttonStyle(ProvinceButtonStyle(kind: .glass, height: 38))
-                    .fixedSize()
-                    .disabled(store.isParsing || description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+    private var describeLine: some View {
+        Button {
+            endTyping()
+            navigation.showsDescribe = true
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "sparkles").font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(Look.accent.color)
+                    .frame(width: 22)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Describe it").font(AppFont.text(15, weight: .semibold)).foregroundStyle(Ink.primary)
+                    Text("Say what you look for; the fields fill in.").font(AppFont.text(12)).foregroundStyle(Ink.muted)
+                        .lineLimit(1).minimumScaleFactor(0.9)
                 }
-                if !unclear.isEmpty {
-                    VStack(alignment: .leading, spacing: 6) {
-                        ForEach(unclear, id: \.self) { note in
-                            HStack(alignment: .firstTextBaseline, spacing: 7) {
-                                Image(systemName: "questionmark.circle").font(.system(size: 11, weight: .medium))
-                                Text(note).fixedSize(horizontal: false, vertical: true)
-                            }
-                            .font(AppFont.text(12)).foregroundStyle(Ink.muted)
-                        }
-                    }
-                }
+                Spacer(minLength: 8)
+                Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold)).foregroundStyle(Ink.muted)
             }
-            .padding(14)
+            .padding(.horizontal, 16).frame(minHeight: 60)
+            .frame(maxWidth: .infinity, alignment: .leading)
             .glassCard()
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
         .padding(.top, 8)
     }
 
-    // MARK: 2 what
+    // MARK: what
 
-    private var kinds: some View {
-        FlowLayout(spacing: 8, lineSpacing: 8) {
-            ForEach(Kind.allCases) { kind in
-                Button { withAnimation(.easeOut(duration: 0.15)) { draft.toggle(kind) } } label: {
-                    Chip(text: kind.title, selected: draft.kinds.contains(kind))
-                }
-                .buttonStyle(.plain)
-                .accessibilityAddTraits(draft.kinds.contains(kind) ? .isSelected : [])
+    private var what: some View {
+        FormCard {
+            Picker("Type", selection: $draft.type) {
+                Text("Flat or WG").tag(SearchDraft.OfferType.any)
+                Text("Flat").tag(SearchDraft.OfferType.flat)
+                Text("WG").tag(SearchDraft.OfferType.wg)
+            }
+            .pickerStyle(.segmented)
+            .padding(.vertical, 12)
+            Hairline()
+            CountStepper(label: "Moving in", value: $draft.people, range: SearchDraft.people) { count in
+                count == 1 ? "1 person" : "\(count) people"
+            }
+            if draft.asksWG {
+                Hairline()
+                OptionalStepper(label: "Max flatmates", value: flatmates, range: 0...8)
             }
         }
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .glassCard()
     }
 
-    // MARK: 3 where
+    private var flatmates: Binding<Double?> {
+        Binding(get: { draft.flatmatesMax.map(Double.init) }, set: { draft.flatmatesMax = $0.map { Int($0) } })
+    }
+
+    // MARK: where
 
     private var places: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -164,37 +161,37 @@ struct SearchScreen: View {
                     Chip(text: place.name) { draft.places.removeAll { $0.id == place.id } }
                 }
                 Button { navigation.showsPlaceSearch = true } label: {
-                    Chip(text: "Add place", symbol: "plus")
+                    Chip(text: draft.places.isEmpty ? "Choose a city" : "Add city", symbol: "plus")
                 }
                 .buttonStyle(.plain)
             }
             .padding(.vertical, 14)
             Hairline()
             VStack(alignment: .leading, spacing: 10) {
-                CapsLabel(text: "Districts")
+                CapsLabel(text: "Areas")
                 FlowLayout(spacing: 8, lineSpacing: 8) {
                     ForEach(draft.districts, id: \.self) { name in
                         Chip(text: name) { draft.districts.removeAll { $0 == name } }
                     }
                     HStack(spacing: 6) {
-                        TextField("", text: $district, prompt: Text("Add district").foregroundStyle(Ink.muted))
+                        TextField("", text: $district, prompt: Text("Add area").foregroundStyle(Ink.muted))
                             .font(AppFont.text(14)).foregroundStyle(Ink.primary)
                             .submitLabel(.done)
                             .onSubmit(addDistrict)
-                            .frame(width: 118)
+                            .frame(width: 104)
                         if !district.trimmingCharacters(in: .whitespaces).isEmpty {
                             Button(action: addDistrict) {
                                 Image(systemName: "plus").font(.system(size: 11, weight: .bold))
                                     .foregroundStyle(Look.accent.color).frame(width: 22, height: 22)
                             }
                             .buttonStyle(.plain)
-                            .accessibilityLabel("Add district")
+                            .accessibilityLabel("Add area")
                         }
                     }
                     .padding(.horizontal, 13).frame(minHeight: 34)
                     .overlay(Capsule().strokeBorder(Ink.line, style: StrokeStyle(lineWidth: 1, dash: [4, 3])))
                 }
-                Caption(text: "Words within the places, like Schwabing. None means the whole place.")
+                Caption(text: "Optional, like Schwabing. None means the whole city.")
             }
             .padding(.vertical, 14)
         }
@@ -207,66 +204,44 @@ struct SearchScreen: View {
         if draft.addDistrict(district) { district = "" }
     }
 
-    // MARK: 4 rent and size
+    // MARK: size
 
-    private var rentAndSize: some View {
-        FormCard {
-            FormRow(label: "Max warm rent") {
-                NumberField(value: $draft.rentMaxWarm, prefix: "€", label: "Max warm rent in euros")
-            }
-            Hairline()
-            VStack(alignment: .leading, spacing: 10) {
-                Text("Bigger flats may cost more").font(AppFont.text(13)).foregroundStyle(Ink.secondary)
-                ForEach($draft.tiers) { $tier in
-                    HStack(spacing: 8) {
-                        Text("from").font(AppFont.text(13)).foregroundStyle(Ink.muted)
-                        NumberField(value: $tier.sqmMin, suffix: "m²", placeholder: "m²", width: 82, label: "From square metres")
-                        Text("up to").font(AppFont.text(13)).foregroundStyle(Ink.muted)
-                        NumberField(value: $tier.rentMaxWarm, prefix: "€", placeholder: "€", width: 96, label: "Up to euros warm")
-                        Spacer(minLength: 0)
-                        Button { withAnimation { draft.tiers.removeAll { $0.id == tier.id } } } label: {
-                            Image(systemName: "minus.circle").font(.system(size: 17)).foregroundStyle(Ink.muted)
-                                .frame(width: 30, height: 30)
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("Remove tier")
-                    }
+    private var size: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            FormCard {
+                if draft.asksFlat {
+                    RangeRow(label: "Flat", range: $draft.flatSize, suffix: "m²", unitName: "square metres")
                 }
-                Button { withAnimation { draft.tiers.append(SearchDraft.Tier()) } } label: {
-                    Label("Add tier", systemImage: "plus").font(AppFont.text(13, weight: .semibold))
+                if draft.asksFlat && draft.asksWG { Hairline() }
+                if draft.asksWG {
+                    RangeRow(label: "WG room", range: $draft.roomSize, suffix: "m²", unitName: "square metres")
                 }
-                .buttonStyle(.plain).foregroundStyle(Ink.secondary)
-                .frame(minHeight: 30)
-            }
-            .padding(.vertical, 12)
-            if draft.asksFlatSize {
-                Hairline()
-                FormRow(label: "Min size (flat)") {
-                    NumberField(value: $draft.sqmMin, suffix: "m²", label: "Minimum size of the flat in square metres")
+                if draft.asksFlat {
+                    Hairline()
+                    OptionalStepper(label: "Min rooms", value: $draft.roomsMin, range: 1...6, step: 0.5)
                 }
             }
-            if draft.asksRoomSize {
-                Hairline()
-                FormRow(label: "Min room size") {
-                    NumberField(value: $draft.roomSqmMin, suffix: "m²", label: "Minimum size of the room in square metres")
-                }
-            }
-            if draft.asksRooms {
-                Hairline()
-                OptionalStepper(label: "Min rooms", value: $draft.roomsMin, range: 1...6, step: 0.5)
-            }
-            if draft.asksFlatmates {
-                Hairline()
-                OptionalStepper(label: "Max flatmates", value: flatmates, range: 0...8)
-            }
+            Caption(text: draft.asksFlat && draft.asksWG
+                    ? "In m². A flat by its whole size, a WG by your room."
+                    : "In m².")
+                .padding(.leading, 4)
         }
     }
 
-    private var flatmates: Binding<Double?> {
-        Binding(get: { draft.flatmatesMax.map(Double.init) }, set: { draft.flatmatesMax = $0.map { Int($0) } })
+    // MARK: rent
+
+    private var rent: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            FormCard {
+                RangeRow(label: "Cold", range: $draft.coldRent, prefix: "€", unitName: "euros")
+                Hairline()
+                RangeRow(label: "Warm", range: $draft.warmRent, prefix: "€", unitName: "euros")
+            }
+            Caption(text: "Per month, as listed. Warm includes the utilities.").padding(.leading, 4)
+        }
     }
 
-    // MARK: 5 move-in
+    // MARK: move-in
 
     private var moveIn: some View {
         FormCard {
@@ -275,22 +250,11 @@ struct SearchScreen: View {
             dateRow("Until", date: $draft.moveInUntil)
             Hairline()
             VStack(alignment: .leading, spacing: 10) {
-                CapsLabel(text: "Sublets")
-                Picker("Sublets", selection: $draft.sublet) {
-                    Text("No sublets").tag(Sublet.exclude)
-                    Text("Include").tag(Sublet.include)
+                CapsLabel(text: "Temporary offers")
+                Picker("Temporary offers", selection: $draft.sublet) {
+                    Text("No").tag(Sublet.exclude)
+                    Text("Also").tag(Sublet.include)
                     Text("Only").tag(Sublet.only)
-                }
-                .pickerStyle(.segmented)
-            }
-            .padding(.vertical, 12)
-            Hairline()
-            VStack(alignment: .leading, spacing: 10) {
-                CapsLabel(text: "Furnished")
-                Picker("Furnished", selection: $draft.furnished) {
-                    Text("Any").tag(Furnished.any)
-                    Text("Yes").tag(Furnished.yes)
-                    Text("No").tag(Furnished.no)
                 }
                 .pickerStyle(.segmented)
             }
@@ -322,17 +286,7 @@ struct SearchScreen: View {
         .frame(minHeight: 50)
     }
 
-    // MARK: 6 anything else
-
-    private var extra: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            TextArea(placeholder: "e.g. balcony, not on the ground floor", text: $draft.extra, minHeight: 84, inWell: false)
-                .glassCard()
-            Caption(text: "Checked by the AI on every listing.").padding(.leading, 4)
-        }
-    }
-
-    // MARK: 7 portals
+    // MARK: portals
 
     private var portals: some View {
         FormCard {
@@ -355,7 +309,18 @@ struct SearchScreen: View {
         }
     }
 
-    // MARK: 8 save
+    // MARK: extras
+
+    private var extra: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            TextArea(placeholder: "e.g. furnished, balcony, not on the ground floor", text: $draft.extra, minHeight: 84,
+                     inWell: false)
+                .glassCard()
+            Caption(text: "Optional. The AI checks every listing against it.").padding(.leading, 4)
+        }
+    }
+
+    // MARK: save
 
     private var save: some View {
         VStack(spacing: 12) {
@@ -401,6 +366,83 @@ struct SearchScreen: View {
             }
         }
         .frame(maxWidth: .infinity)
+    }
+}
+
+/// "Describe it": a sentence in, the fields filled in (`POST /search/parse`). Nothing is saved here; the form shows
+/// what was filled and the user saves it. Closes by itself when everything was clear, else lists what was not.
+struct DescribeSheet: View {
+    let store: ArestemisStore
+    @Binding var text: String
+    let fill: (PartialSearch) -> Void
+    @State private var unclear: [String] = []
+    @FocusState private var focused: Bool
+    @Environment(\.dismiss) private var dismiss
+
+    private var isEmpty: Bool { text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    TextArea(placeholder: "e.g. WG or flat in Munich for two, up to €1,400 warm, from December, furnished",
+                             text: $text, minHeight: 130, inWell: false)
+                        .focused($focused)
+                        .glassCard()
+                    Caption(text: store.parseError ?? "The AI fills in the fields from it. Check them, then save.")
+                        .padding(.horizontal, 4)
+                    if !unclear.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            CapsLabel(text: "Filled in, except")
+                            ForEach(unclear, id: \.self) { note in
+                                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                    Image(systemName: "questionmark.circle").font(.system(size: 12, weight: .medium))
+                                    Text(note).fixedSize(horizontal: false, vertical: true)
+                                }
+                                .font(AppFont.text(13)).foregroundStyle(Ink.secondary)
+                            }
+                        }
+                        .padding(14)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .glassCard()
+                    }
+                    Button {
+                        if unclear.isEmpty { read() } else { dismiss() }
+                    } label: {
+                        HStack(spacing: 8) {
+                            if store.isParsing { ProgressView().controlSize(.small).tint(Look.onAccent) }
+                            Text(store.isParsing ? "Reading…" : unclear.isEmpty ? "Fill in" : "Done")
+                        }
+                    }
+                    .buttonStyle(.accent)
+                    .disabled(store.isParsing || (unclear.isEmpty && isEmpty))
+                    .padding(.top, 6)
+                }
+                .padding(.horizontal, Look.side).padding(.top, 8).padding(.bottom, 30)
+            }
+            .scrollDismissesKeyboard(.interactively)
+            .provinceWall()
+            .navigationTitle("Describe it")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() }.tint(Ink.primary) }
+            }
+        }
+        .onAppear { if text.isEmpty { focused = true } }
+        .onChange(of: text) { _, _ in unclear = [] }
+    }
+
+    private func read() {
+        endTyping()
+        Task {
+            guard let parsed = await store.parse(text) else { return }
+            fill(parsed.search)
+            if parsed.unclear.isEmpty {
+                dismiss()
+            } else {
+                withAnimation(.easeOut(duration: 0.2)) { unclear = parsed.unclear }
+            }
+        }
     }
 }
 

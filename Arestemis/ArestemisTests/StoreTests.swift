@@ -160,7 +160,7 @@ struct StoreTests {
         try transport.answer("PUT /hunts/1", encoding: hunt)
         #expect(await store.saveSearch(hunt.search))
         let sent = try #require(try body(transport.requests("PUT /hunts/1").first)?["search"] as? [String: Any])
-        #expect(sent["rent_max_warm"] as? Double == 1000)
+        #expect(sent["rent_warm_max"] as? Double == 1000 && sent["people"] as? Int == 1)
 
         transport.answer("PUT /hunts/1", 400, json: Data(#"{"error":"At least one place","field":"places"}"#.utf8))
         #expect(await store.saveSearch(hunt.search) == false)

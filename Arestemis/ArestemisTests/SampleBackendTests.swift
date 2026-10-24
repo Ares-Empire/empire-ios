@@ -72,6 +72,6 @@ struct SampleBackendTests {
         await store.places.settle()
         #expect(store.places.results.map(\.name) == ["München", "Garching bei München"])
         let parsed = await store.parse("2-room flat in Schwabing")
-        #expect(parsed?.search.kinds == [.flat] && parsed?.unclear.isEmpty == false)
+        #expect(parsed?.search.kinds == [.flat, .wg] && parsed?.search.people == 2 && parsed?.unclear.isEmpty == false)
     }
 }

@@ -55,6 +55,8 @@ final class AppNavigation {
     var filter: MatchFilter = .new
     var sheet: RootSheet?
     var showsPlaceSearch = false
+    /// The Search tab's "Describe it" sheet.
+    var showsDescribe = false
     /// What the place search starts with (empty, or a sample query for screenshots).
     var placeQuery = ""
     /// A link asked to open this match's portal page; the root opens it once the match is known.
@@ -77,6 +79,7 @@ final class AppNavigation {
         tab = .listings
         listingsPath = [link.match]
         showsPlaceSearch = false
+        showsDescribe = false
         sheet = link.then == .application ? .application(link.match) : nil
         pendingListing = link.then == .openListing ? link.match : nil
     }
@@ -98,6 +101,7 @@ final class AppNavigation {
         filter = .new
         sheet = nil
         showsPlaceSearch = false
+        showsDescribe = false
         placeQuery = ""
         pendingListing = nil
         pendingLink = nil
@@ -106,7 +110,8 @@ final class AppNavigation {
 
 /// DEBUG launch arguments for screenshots: `-sampleData`, `-sampleNoHunt`, `-samplePaused`, `-sampleLoading`,
 /// `-tab hunt|listings|search`, `-filter new|saved|applied|all`, `-openMatch <id>`,
-/// `-openSheet settings|application|rejected|place`, `-scrollBottom` (Hunt and Search), `-scrollTo rent|movein` (Search). In a release build all are ignored.
+/// `-openSheet settings|application|rejected|place|describe`, `-scrollBottom` (Hunt and Search),
+/// `-scrollTo size|rent|movein` (Search). In a release build all are ignored.
 struct LaunchOptions {
     var sample = false
     var noHunt = false
@@ -153,6 +158,9 @@ struct LaunchOptions {
             navigation.tab = .search
             navigation.placeQuery = "Garch"
             navigation.showsPlaceSearch = true
+        case "describe":
+            navigation.tab = .search
+            navigation.showsDescribe = true
         default: break
         }
     }

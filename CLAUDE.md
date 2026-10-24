@@ -150,8 +150,11 @@ Apple approves the developer account.
   Data in `API/` + `Model/` (one `ArestemisStore`, optimistic changes with rollback), screens in `Screens/` on
   `Shared/Design`. Launch arguments (DEBUG): `-sampleData` (+ `-sampleNoHunt`, `-samplePaused`, `-sampleLoading`),
   `-tab hunt|listings|search`, `-filter new|saved|applied|all`, `-openMatch <id>`,
-  `-openSheet settings|application|rejected|place`, `-scrollBottom`, `-scrollTo rent|movein`. Push: the category and
+  `-openSheet settings|application|rejected|place|describe`, `-scrollBottom`, `-scrollTo size|rent|movein`. Push: the category and
   the link routing are in `Model/Notifications.swift`; `Shared/Push` is wired in ContentView.
+  **Search (API version 2, 2026-10-24, Patrik):** Flat or WG / Flat / WG, people moving in, max flatmates, size ranges
+  (flat, WG room), areas, cold and warm rent ranges, move-in and temporary offers, portals, extras; every field optional
+  except a place and a portal. "Describe it" is a line at the top that opens a sheet (`SearchDraft`, `SearchScreen`).
 - Targets: `Aresium` (app), `AresiumWidgetExtension` (widgets, folder `Aresium/AresiumWidget/`, embedded in the
   app), `AresiumTests`. `Aresium/AresiumShared/` is compiled into both app and widget (theme, `AppTheme`, `AppGroup`,
   widget snapshot); everything else belongs to one target. App Group `group.de.ares-empire.aresium` in both

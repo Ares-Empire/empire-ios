@@ -97,7 +97,7 @@ struct APITests {
         switch route {
         case .createHunt, .updateHunt:
             let search = try #require(json?["search"] as? [String: Any])
-            #expect(json?.count == 1 && search["kinds"] as? [String] == ["flat", "wg_empty"])
+            #expect(json?.count == 1 && search["kinds"] as? [String] == ["flat", "wg"])
         case .startHunt: #expect(json?["active"] as? Bool == true && json?.count == 1)
         case .parse: #expect(json?["text"] as? String == "2 rooms in Schwabing" && json?.count == 1)
         case .state: #expect(json?["state"] as? String == "saved" && json?.count == 1)

@@ -25,16 +25,16 @@ struct DecodingTests {
 
     @Test func overviewSample() throws {
         let overview = try sample(Overview.self, "overview")
-        #expect(overview.version == 1 && overview.me.name == "Patrik")
+        #expect(overview.version == 2 && overview.me.name == "Patrik")
         let hunt = try #require(overview.hunt)
         #expect(hunt.id == 1 && hunt.kind == "flat" && hunt.active)
-        #expect(hunt.search.kinds == [.flat, .wgEmpty])
+        #expect(hunt.search.kinds == [.flat, .wg] && hunt.search.people == 1)
         #expect(hunt.search.places.map(\.id) == ["wg:90", "wg:400"])
         #expect(hunt.search.places[1].sources == [.wgGesucht, .kleinanzeigen])
-        #expect(hunt.search.rentTiers == [RentTier(sqmMin: 40, rentMaxWarm: 1200)])
-        #expect(hunt.search.rentMaxWarm == 1000 && hunt.search.sqmMin == 28 && hunt.search.roomsMin == 1)
-        #expect(hunt.search.roomSqmMin == nil)
-        #expect(hunt.search.flatmatesMax == 1 && hunt.search.sublet == .exclude && hunt.search.furnished == .any)
+        #expect(hunt.search.rentWarmMin == 400 && hunt.search.rentWarmMax == 1000 && hunt.search.rentColdMax == nil)
+        #expect(hunt.search.sqmMin == 28 && hunt.search.sqmMax == nil && hunt.search.roomsMin == nil)
+        #expect(hunt.search.roomSqmMin == 14 && hunt.search.roomSqmMax == nil)
+        #expect(hunt.search.flatmatesMax == 2 && hunt.search.sublet == .exclude)
         #expect(hunt.search.moveInFrom == "2026-12-01" && hunt.search.moveInUntil == "2027-02-01")
         #expect(overview.sources.map(\.state) == [.ok, .ok, .ok])
         #expect(overview.sources.last?.note == "Only München")
@@ -54,7 +54,7 @@ struct DecodingTests {
         let page = try sample(MatchPage.self, "matches")
         #expect(!page.more && page.items.map(\.state) == [.new, .saved, .applied])
         #expect(page.items[1].application?.mode == .ai && page.items[1].warnings == ["Floor not stated with certainty"])
-        #expect(page.items[2].listing.kind == .wgEmpty && page.items[2].listing.flatmates == 1)
+        #expect(page.items[2].listing.kind == .wg && page.items[2].listing.flatmates == 1)
     }
 
     @Test func otherSamples() throws {
@@ -71,15 +71,16 @@ struct DecodingTests {
     /// The app sends every search field, unknown ones as null, under the contract's names.
     @Test func searchEncodesEveryFieldWithNulls() throws {
         var search = try #require(try sample(Overview.self, "overview").hunt?.search)
-        search.rentMaxWarm = nil
+        search.rentWarmMax = nil
         search.moveInUntil = nil
         let json = try #require(try JSONSerialization.jsonObject(with: JSONEncoder().encode(search)) as? [String: Any])
-        #expect(Set(json.keys) == ["kinds", "places", "districts", "rent_max_warm", "rent_tiers", "sqm_min", "room_sqm_min",
-                                   "rooms_min", "flatmates_max", "move_in_from", "move_in_until", "sublet", "furnished",
-                                   "extra", "sources"])
-        #expect(json["rent_max_warm"] is NSNull && json["move_in_until"] is NSNull && json["room_sqm_min"] is NSNull)
-        #expect(json["kinds"] as? [String] == ["flat", "wg_empty"])
-        #expect((json["rent_tiers"] as? [[String: Any]])?.first?["sqm_min"] as? Double == 40)
+        #expect(Set(json.keys) == ["kinds", "people", "flatmates_max", "places", "districts", "sqm_min", "sqm_max",
+                                   "room_sqm_min", "room_sqm_max", "rooms_min", "rent_cold_min", "rent_cold_max",
+                                   "rent_warm_min", "rent_warm_max", "move_in_from", "move_in_until", "sublet", "extra",
+                                   "sources"])
+        #expect(json["rent_warm_max"] is NSNull && json["move_in_until"] is NSNull && json["sqm_max"] is NSNull)
+        #expect(json["kinds"] as? [String] == ["flat", "wg"] && json["people"] as? Int == 1)
+        #expect(json["rent_warm_min"] as? Double == 400)
         let place = try #require((json["places"] as? [[String: Any]])?.first)
         #expect(Set(place.keys) == ["id", "name", "region", "sources"])
     }
@@ -95,11 +96,12 @@ struct DecodingTests {
     /// `Partial<Search>`: only what the sentence said; a null counts as not said.
     @Test func parseResultIsPartial() throws {
         let parsed = try JSONDecoder().decode(ParsedSearch.self, from: Data("""
-            {"search": {"kinds": ["wg_room"], "rent_max_warm": 650, "move_in_from": "2026-12-01", "sqm_min": null,
-                        "room_sqm_min": 15},
+            {"search": {"kinds": ["wg"], "people": 2, "rent_warm_max": 650, "move_in_from": "2026-12-01",
+                        "sqm_min": null, "room_sqm_min": 15},
              "unclear": ["Which city?"]}
             """.utf8))
-        #expect(parsed.search.kinds == [.wgRoom] && parsed.search.rentMaxWarm == 650 && parsed.search.roomSqmMin == 15)
+        #expect(parsed.search.kinds == [.wg] && parsed.search.people == 2 && parsed.search.rentWarmMax == 650)
+        #expect(parsed.search.roomSqmMin == 15 && parsed.search.rentColdMax == nil)
         #expect(parsed.search.moveInFrom == "2026-12-01" && parsed.search.sqmMin == nil && parsed.search.places == nil)
         #expect(parsed.unclear == ["Which city?"])
     }

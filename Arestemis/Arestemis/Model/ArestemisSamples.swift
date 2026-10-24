@@ -138,8 +138,9 @@ final class SampleBackend: ArestemisBackend {
         try await Task.sleep(for: .milliseconds(600))
         let year = Calendar.app.component(.year, from: .now)
         let munich = knownPlaces.first { $0.name == "München" }
-        return ParsedSearch(search: PartialSearch(kinds: [.flat], places: munich.map { [$0] }, districts: ["Schwabing"],
-                                                  rentMaxWarm: 1000, roomsMin: 2, moveInFrom: "\(year)-12-01"),
+        return ParsedSearch(search: PartialSearch(kinds: [.flat, .wg], people: 2, places: munich.map { [$0] },
+                                                  districts: ["Schwabing"], rentWarmMax: 1400,
+                                                  moveInFrom: "\(year)-12-01", extra: "möbliert"),
                             unclear: ["No size given, so any size is fine."])
     }
 

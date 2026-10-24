@@ -1,151 +1,168 @@
 import Foundation
 
 /// The Search tab's editable copy of a search. The fields are the truth; "Describe it" only fills them in.
-/// Converting back to the contract's `Search` drops what does not apply (the flat's size for an own flat or an empty
-/// 2-person WG, rooms for an own flat, the room's size for a room in a WG, flatmates for a WG kind) and empty tiers.
+/// Every filter is optional on its own (`nil` = any); only a place and a portal are required. Converting back to the
+/// contract's `Search` drops what does not apply to the chosen type (the flat's size and rooms for WG only, the room's
+/// size and flatmates for flats only).
 struct SearchDraft: Equatable {
-    struct Tier: Equatable, Identifiable {
-        let id: UUID
-        var sqmMin: Double?
-        var rentMaxWarm: Double?
-        init(id: UUID = UUID(), sqmMin: Double? = nil, rentMaxWarm: Double? = nil) {
-            self.id = id
-            self.sqmMin = sqmMin
-            self.rentMaxWarm = rentMaxWarm
+    /// What the user looks for: either, a whole flat, or a room in a WG.
+    enum OfferType: String, CaseIterable, Identifiable {
+        case any, flat, wg
+        var id: String { rawValue }
+
+        init(_ kinds: [Kind]) {
+            let set = Set(kinds)
+            self = set == [.flat] ? .flat : set == [.wg] ? .wg : .any
         }
-        var isEmpty: Bool { sqmMin == nil && rentMaxWarm == nil }
-        var isComplete: Bool { sqmMin != nil && rentMaxWarm != nil }
+
+        var kinds: [Kind] {
+            switch self {
+            case .any: [.flat, .wg]
+            case .flat: [.flat]
+            case .wg: [.wg]
+            }
+        }
     }
 
-    var kinds: Set<Kind> = []
+    /// A min/max pair; either end may be empty.
+    struct Range: Equatable {
+        var min: Double?
+        var max: Double?
+        var isInOrder: Bool { guard let min, let max else { return true }; return min <= max }
+    }
+
+    static let people = 1...6
+
+    var type: OfferType = .any
+    var people = 1
+    var flatmatesMax: Int?
     var places: [Place] = []
     var districts: [String] = []
-    var rentMaxWarm: Double?
-    var tiers: [Tier] = []
-    var sqmMin: Double?
-    var roomSqmMin: Double?
+    var flatSize = Range()
+    var roomSize = Range()
     var roomsMin: Double?
-    var flatmatesMax: Int?
+    var coldRent = Range()
+    var warmRent = Range()
     var moveInFrom: Date?
     var moveInUntil: Date?
     var sublet: Sublet = .exclude
-    var furnished: Furnished = .any
     var extra = ""
     var sources: Set<Source> = Set(Source.allCases)
 
-    /// A new search: every portal on, no sublets, furnished or not.
+    /// A new search: flat or WG, one person, every portal, no temporary offers.
     init() {}
 
     init(_ search: Search, calendar: Calendar = .app) {
-        kinds = Set(search.kinds)
+        type = OfferType(search.kinds)
+        people = min(max(search.people, Self.people.lowerBound), Self.people.upperBound)
+        flatmatesMax = search.flatmatesMax
         places = search.places
         districts = search.districts
-        rentMaxWarm = search.rentMaxWarm
-        tiers = search.rentTiers.map { Tier(sqmMin: $0.sqmMin, rentMaxWarm: $0.rentMaxWarm) }
-        sqmMin = search.sqmMin
-        roomSqmMin = search.roomSqmMin
+        flatSize = Range(min: search.sqmMin, max: search.sqmMax)
+        roomSize = Range(min: search.roomSqmMin, max: search.roomSqmMax)
         roomsMin = search.roomsMin
-        flatmatesMax = search.flatmatesMax
+        coldRent = Range(min: search.rentColdMin, max: search.rentColdMax)
+        warmRent = Range(min: search.rentWarmMin, max: search.rentWarmMax)
         moveInFrom = search.moveInFrom.flatMap { DateOnly.parse($0, calendar: calendar) }
         moveInUntil = search.moveInUntil.flatMap { DateOnly.parse($0, calendar: calendar) }
         sublet = search.sublet
-        furnished = search.furnished
         extra = search.extra
         sources = Set(search.sources)
     }
 
-    /// The whole flat's size: an own flat, or the flat of an empty 2-person WG.
-    var asksFlatSize: Bool { kinds.contains(.flat) || kinds.contains(.wgEmpty) }
-    /// The room's size: a room in a WG.
-    var asksRoomSize: Bool { kinds.contains(.wgRoom) }
-    var asksRooms: Bool { kinds.contains(.flat) }
-    var asksFlatmates: Bool { kinds.contains { $0.isWG } }
+    /// Flat offers are possible: their size and rooms apply.
+    var asksFlat: Bool { type != .wg }
+    /// WG offers are possible: the room's size and the flatmates apply.
+    var asksWG: Bool { type != .flat }
 
     // MARK: validation
 
     enum Problem: Equatable {
-        case noKind, noPlace, noPortal, incompleteTier, moveInOrder
+        case noPlace, noPortal, flatSizeOrder, roomSizeOrder, coldRentOrder, warmRentOrder, moveInOrder
     }
 
     var problems: [Problem] {
         var problems: [Problem] = []
-        if kinds.isEmpty { problems.append(.noKind) }
         if places.isEmpty { problems.append(.noPlace) }
         if sources.isEmpty { problems.append(.noPortal) }
-        if tiers.contains(where: { !$0.isEmpty && !$0.isComplete }) { problems.append(.incompleteTier) }
+        if asksFlat && !flatSize.isInOrder { problems.append(.flatSizeOrder) }
+        if asksWG && !roomSize.isInOrder { problems.append(.roomSizeOrder) }
+        if !coldRent.isInOrder { problems.append(.coldRentOrder) }
+        if !warmRent.isInOrder { problems.append(.warmRentOrder) }
         if let moveInFrom, let moveInUntil, moveInUntil < moveInFrom { problems.append(.moveInOrder) }
         return problems
     }
 
     var isValid: Bool { problems.isEmpty }
 
-    /// One calm line under the save button saying what is still missing.
+    /// One calm line under the save button saying what is still missing or wrong (the first problem).
     var hint: String? {
         let problems = problems
-        let missing = [(Problem.noKind, "a kind"), (.noPlace, "a place"), (.noPortal, "a portal")]
-            .filter { problems.contains($0.0) }.map(\.1)
-        if !missing.isEmpty {
-            let list = missing.count == 1 ? missing[0] : missing.dropLast().joined(separator: ", ") + " and " + missing.last!
-            return "Choose at least \(list)."
+        if problems.contains(.noPlace) && problems.contains(.noPortal) { return "Choose a place and at least one portal." }
+        switch problems.first {
+        case .noPlace: return "Choose a place."
+        case .noPortal: return "Choose at least one portal."
+        case .flatSizeOrder: return "The flat's smallest size is above its largest."
+        case .roomSizeOrder: return "The room's smallest size is above its largest."
+        case .coldRentOrder: return "The lowest cold rent is above the highest."
+        case .warmRentOrder: return "The lowest warm rent is above the highest."
+        case .moveInOrder: return "The move-in \"until\" date is before the \"from\" date."
+        case nil: return nil
         }
-        if problems.contains(.incompleteTier) { return "Fill in both numbers of a size tier, or remove it." }
-        if problems.contains(.moveInOrder) { return "The move-in \"until\" date is before the \"from\" date." }
-        return nil
     }
 
     // MARK: to the contract
 
     func search(calendar: Calendar = .app) -> Search {
-        Search(kinds: Kind.allCases.filter(kinds.contains),
+        Search(kinds: type.kinds,
+               people: people,
+               flatmatesMax: asksWG ? flatmatesMax : nil,
                places: places,
                districts: districts,
-               rentMaxWarm: rentMaxWarm,
-               rentTiers: tiers.compactMap { tier in
-                   guard let sqm = tier.sqmMin, let rent = tier.rentMaxWarm else { return nil }
-                   return RentTier(sqmMin: sqm, rentMaxWarm: rent)
-               },
-               sqmMin: asksFlatSize ? sqmMin : nil,
-               roomSqmMin: asksRoomSize ? roomSqmMin : nil,
-               roomsMin: asksRooms ? roomsMin : nil,
-               flatmatesMax: asksFlatmates ? flatmatesMax : nil,
+               sqmMin: asksFlat ? flatSize.min : nil,
+               sqmMax: asksFlat ? flatSize.max : nil,
+               roomSqmMin: asksWG ? roomSize.min : nil,
+               roomSqmMax: asksWG ? roomSize.max : nil,
+               roomsMin: asksFlat ? roomsMin : nil,
+               rentColdMin: coldRent.min,
+               rentColdMax: coldRent.max,
+               rentWarmMin: warmRent.min,
+               rentWarmMax: warmRent.max,
                moveInFrom: moveInFrom.map { DateOnly.string($0, calendar: calendar) },
                moveInUntil: moveInUntil.map { DateOnly.string($0, calendar: calendar) },
                sublet: sublet,
-               furnished: furnished,
                extra: extra.trimmingCharacters(in: .whitespacesAndNewlines),
                sources: Source.allCases.filter(sources.contains))
     }
 
     /// Fills in what a sentence said (`POST /search/parse`); everything it did not mention stays as it is.
     mutating func apply(_ parsed: PartialSearch, calendar: Calendar = .app) {
-        if let kinds = parsed.kinds, !kinds.isEmpty { self.kinds = Set(kinds) }
+        if let kinds = parsed.kinds, !kinds.isEmpty { type = OfferType(kinds) }
+        if let people = parsed.people, Self.people.contains(people) { self.people = people }
+        if let flatmates = parsed.flatmatesMax { flatmatesMax = flatmates }
         if let places = parsed.places, !places.isEmpty {
             for place in places where !self.places.contains(where: { $0.id == place.id }) { self.places.append(place) }
         }
         if let districts = parsed.districts {
             for district in districts where !self.districts.contains(district) { self.districts.append(district) }
         }
-        if let rent = parsed.rentMaxWarm { rentMaxWarm = rent }
-        if let tiers = parsed.rentTiers, !tiers.isEmpty {
-            self.tiers = tiers.map { Tier(sqmMin: $0.sqmMin, rentMaxWarm: $0.rentMaxWarm) }
-        }
-        if let sqm = parsed.sqmMin { sqmMin = sqm }
-        if let room = parsed.roomSqmMin { roomSqmMin = room }
+        if let value = parsed.sqmMin { flatSize.min = value }
+        if let value = parsed.sqmMax { flatSize.max = value }
+        if let value = parsed.roomSqmMin { roomSize.min = value }
+        if let value = parsed.roomSqmMax { roomSize.max = value }
         if let rooms = parsed.roomsMin { roomsMin = rooms }
-        if let flatmates = parsed.flatmatesMax { flatmatesMax = flatmates }
+        if let value = parsed.rentColdMin { coldRent.min = value }
+        if let value = parsed.rentColdMax { coldRent.max = value }
+        if let value = parsed.rentWarmMin { warmRent.min = value }
+        if let value = parsed.rentWarmMax { warmRent.max = value }
         if let from = parsed.moveInFrom.flatMap({ DateOnly.parse($0, calendar: calendar) }) { moveInFrom = from }
         if let until = parsed.moveInUntil.flatMap({ DateOnly.parse($0, calendar: calendar) }) { moveInUntil = until }
         if let sublet = parsed.sublet { self.sublet = sublet }
-        if let furnished = parsed.furnished { self.furnished = furnished }
         if let extra = parsed.extra, !extra.isEmpty { self.extra = extra }
         if let sources = parsed.sources, !sources.isEmpty { self.sources = Set(sources) }
     }
 
     // MARK: editing helpers
-
-    mutating func toggle(_ kind: Kind) {
-        if kinds.contains(kind) { kinds.remove(kind) } else { kinds.insert(kind) }
-    }
 
     mutating func add(_ place: Place) {
         guard !places.contains(where: { $0.id == place.id }) else { return }
