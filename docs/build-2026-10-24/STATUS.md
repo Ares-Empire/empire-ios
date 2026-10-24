@@ -59,3 +59,4 @@ Stop only for a genuine problem.
   `handle /api/push/* {reverse_proxy 127.0.0.1:8095}`, `/api/arestemis/*` → 8097, `/api/aresus/*` → 8098, and wrap the hub
   proxy in a final `handle { reverse_proxy 172.18.0.1:5185 }`.
 - 04:33 heartbeat: no agent finished yet; P and S have uncommitted work in progress. (Times above corrected to git times.)
+- 04:36 Patrik's real account (admin, id o3hbhzk8bo1352x) given services arestemis + aresus (his own apps); TELEGRAM_FALLBACK_USER candidate.
