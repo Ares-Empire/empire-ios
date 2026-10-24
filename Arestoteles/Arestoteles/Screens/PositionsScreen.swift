@@ -2,12 +2,13 @@ import SwiftUI
 
 /// The start tab: what Patrik thinks, as `vault.positions` groups them ("Across topics" first, then each topic). Each
 /// card opens the position's page; "Add a position" opens the add sheet (across topics, or a topic picked there).
+/// The ARESTOTELES band ends the scroll (`WordmarkScrollView`).
 struct PositionsScreen: View {
     @Environment(VaultStore.self) private var store
     @Environment(AppNavigation.self) private var navigation
 
     var body: some View {
-        ScrollView {
+        WordmarkScrollView(word: "ARESTOTELES") {
             VStack(alignment: .leading, spacing: 0) {
                 ScreenHeader(title: String(localized: "Positions"))
                 StatusLine()
@@ -37,10 +38,13 @@ struct PositionsScreen: View {
                         .disabled(store.isSending)
                     }
                 }
-                .padding(.horizontal, Look.side).padding(.top, 10).padding(.bottom, 40)
+                .padding(.horizontal, Look.side).padding(.top, 10)
             }
         }
         .refreshable { await store.update() }
+        #if DEBUG
+        .defaultScrollAnchor(ProcessInfo.processInfo.arguments.contains("-scrollToEnd") ? .bottom : nil)   // screenshots
+        #endif
         .provinceWall()
         .toolbar(.hidden, for: .navigationBar)
     }
