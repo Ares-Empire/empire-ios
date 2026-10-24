@@ -79,7 +79,7 @@ struct SettingsSheet: View {
             TextArea(placeholder: "Age, studies or job, non-smoker, …", text: settings.aboutMe, minHeight: 96,
                      font: AppFont.text(14), inWell: false)
                 .glassCard()
-            Caption(text: "Facts the AI may use. It never invents others.").padding(.leading, 4)
+            Caption(text: "Facts the AI may use; it never invents others. Give your gender and age: many listings are only for women, men or an age range, and the check needs them.").padding(.leading, 4)
         }
     }
 

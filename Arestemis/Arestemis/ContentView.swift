@@ -1,16 +1,19 @@
 import SwiftUI
+import UserNotifications
 
 /// Arestemis: the shared Empire login, then three tabs (Hunt, Listings, Search). Logged in once in any Empire app means
 /// logged in here. `-sampleData` shows the bundled samples (see `LaunchOptions` for the screenshot arguments).
+/// A new match arrives as a push (Shared/Push); tapping it, or its "Open listing" / "Application" action, opens the match.
 struct ContentView: View {
     @State private var store: ArestemisStore
     @State private var navigation = AppNavigation()
     @Environment(\.scenePhase) private var scenePhase
     private let options: LaunchOptions
     private let restoresOnLaunch: Bool
+    private let push: PushCenter?
     private var session: EmpireSession { store.session }
 
-    init(arguments: [String] = ProcessInfo.processInfo.arguments) {
+    init(push: PushCenter? = nil, arguments: [String] = ProcessInfo.processInfo.arguments) {
         let options = LaunchOptions(arguments: arguments)
         #if DEBUG
         // Tests (the app is their host) and samples never touch the real login.
@@ -26,6 +29,7 @@ struct ContentView: View {
         _store = State(initialValue: Self.makeStore(session: session, options: options))
         self.options = options
         restoresOnLaunch = !quiet
+        self.push = quiet ? nil : push          // samples and tests never register for push
     }
 
     private static func makeStore(session: EmpireSession, options: LaunchOptions) -> ArestemisStore {
@@ -58,7 +62,16 @@ struct ContentView: View {
             }
         }
         .preferredColorScheme(.dark)
-        .task { if restoresOnLaunch { await session.restore() } }
+        .task {
+            push?.start(app: "de.ares-empire.arestemis", session: session,
+                        categories: Array(MatchNotification.categories))
+            if restoresOnLaunch { await session.restore() }
+        }
+        .onChange(of: push?.openedURL) { _, url in
+            guard url != nil, let push else { return }
+            let action = push.lastActionIdentifier ?? UNNotificationDefaultActionIdentifier
+            if let link = MatchNotification.link(url: push.takeOpenedURL(), action: action) { navigation.follow(link) }
+        }
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
             Task {
