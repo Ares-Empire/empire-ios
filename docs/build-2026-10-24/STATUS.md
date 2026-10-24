@@ -23,7 +23,7 @@ Stop only for a genuine problem.
 | P: Empire push service + `Shared/Push` | Claude subagent | `~/wt/ares-empire-push` (`push`), `~/wt/empire-ios-push` (`push`) | merged + deployed (dry run) |
 | T: Arestemis server (API, hunts, AI check, places) | Claude subagent | `~/wt/Arestemis-api` (`app-api`) | merged + deployed |
 | S: Aresus server + Aresync reports | Claude subagent | `~/wt/aresus-server` (`server`), `~/wt/aresync-report` (`report`) | merged + deployed |
-| A1: Arestemis iOS app | Claude subagent | `~/wt/empire-ios-arestemis` (`arestemis-app`) | running since 04:29 |
+| A1: Arestemis iOS app | Claude subagent | `~/wt/empire-ios-arestemis` (`arestemis-app`) | merged, push wired |
 | A2: Aresus iOS app | Claude subagent | `~/wt/empire-ios-aresus` (`aresus-app`) | merged, polished, push wired |
 | D: Shared design kit, two Xcode projects, icons | me | `~/empire-ios` main (small commits) | done 04:28 |
 
@@ -53,9 +53,9 @@ Stop only for a genuine problem.
       600), server REPOS="ares-empire aresus aresync" + hooks ares-empire, aresus; both machines report. My fix:
       `hide: [arescope]` + Arestudy/AresOS/Aresify as Inactive. **Left:** add `Arestemis` to server REPOS + its hook
       after the move (step 8); Windows token when Patrik sets up the laptop; retire Aresync Telegram once push works.
-- [ ] 10. Review A1, A2 on the simulator (screenshots), design polish, wire Shared/Push, live login with the test
+- [x] 10. Review A1, A2 on the simulator (screenshots), design polish, wire Shared/Push, live login with the test
       account, `simctl push` tests.
-- [ ] 11. Hub: ~~app schemes~~ (done 04:30: `APP_SCHEMES` in webauth/server.py, live; Empire Info.plist queries), chronicle lines, EMPIRE.md connections,
+- [x] 11. Hub: ~~app schemes~~ (done 04:30: `APP_SCHEMES` in webauth/server.py, live; Empire Info.plist queries), chronicle lines, EMPIRE.md connections,
       empire-ios README/CLAUDE.md, IPHONE-APPS.md.
 - [ ] 12. Report for Patrik (what works, screenshots, what waits for Apple).
 
@@ -90,3 +90,7 @@ Stop only for a genuine problem.
   gpt-oss-20b. A1 told about room_sqm_min. Background check reports 10 min of results after the deploy.
 - 05:10 Aresus sync-lock fix confirmed: deploy run had no failed pull.
 - 05:27 10 min under the new rules: 13 matches, all rooms ≥ 15 m², AI checked every candidate, no 429 errors. Test hunt PAUSED (kept: real matches for the app review with the test account). Note for the app: 'About you' caption should suggest gender + age (listings restrict on them).
+- 05:30 A1 merged (77 tests pass), push wired into Arestemis, 'About you' asks for gender + age; live with the test
+  account (28 real matches). /root/flatsniper deleted, worktrees + agent simulators removed. EMPIRE.md chronicle,
+  connections, decision records, IPHONE-APPS, PUSH status, empire-ios CLAUDE.md 'Open' updated. Final regression run
+  (Aresium + Empire tests) and hub data refresh running. Next: step 12, the report for Patrik.
