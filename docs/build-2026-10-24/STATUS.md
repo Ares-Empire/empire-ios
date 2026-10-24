@@ -21,7 +21,7 @@ Stop only for a genuine problem.
 | Package | Agent | Worktree (branch) | State |
 |---|---|---|---|
 | P: Empire push service + `Shared/Push` | Claude subagent | `~/wt/ares-empire-push` (`push`), `~/wt/empire-ios-push` (`push`) | merged + deployed (dry run) |
-| T: Arestemis server (API, hunts, AI check, places) | Claude subagent | `~/wt/Arestemis-api` (`app-api`) | running since 04:20 |
+| T: Arestemis server (API, hunts, AI check, places) | Claude subagent | `~/wt/Arestemis-api` (`app-api`) | merged + deployed |
 | S: Aresus server + Aresync reports | Claude subagent | `~/wt/aresus-server` (`server`), `~/wt/aresync-report` (`report`) | merged + deployed |
 | A1: Arestemis iOS app | Claude subagent | `~/wt/empire-ios-arestemis` (`arestemis-app`) | running since 04:29 |
 | A2: Aresus iOS app | Claude subagent | `~/wt/empire-ios-aresus` (`aresus-app`) | merged, polished, push wired |
@@ -41,8 +41,12 @@ Stop only for a genuine problem.
       Caddy `/api/push/*` (backup `Caddyfile.bak-20261024-push`); register/unregister 204 with the test account, `/send`
       not reachable from outside. Code runs from `/opt/empire-push/push` → re-run `deploy/install-push.sh` after changes
       to `push/` (the ares-empire Aresync hook must do this). PushCenter wiring into the apps: step 10.
-- [ ] 8. Review + merge T. Server move `/root/flatsniper` → `/root/Arestemis`, `arestemis.service`, Caddy route,
-      Groq model, delete old config/db, live test with the test account.
+- [x] 8. Review + merge T (266 tests pass; ownership checks reviewed). Server move `/root/flatsniper` → `/root/Arestemis`, `arestemis.service`, Caddy route,
+      Groq model, delete old config/db, live test with the test account. Done 05:08: `arestemis.service` from
+      `/root/Arestemis` (fresh clone), `.env` from the old one + gpt-oss-120b + TELEGRAM_FALLBACK_USER=Patrik, Caddy
+      `/api/arestemis/*` (backup `Caddyfile.bak-20261024-arestemis`), server Aresync REPOS + `hooks/Arestemis`,
+      flatsniper.service removed. Live: places Germany-wide OK; TEST hunt id 1 on the test account started 05:08
+      (München, broad) — **pause + delete it after checking matches**. `/root/flatsniper` still there: delete after.
 - [x] 9. Review + merge S (107 + 32 + 7 tests pass on my run). Deploy aresus (`aresus.service`), Caddy route, machine tokens (Mac, server), Aresync report
       on Mac + server, server Aresync REPOS + hooks. Done: `aresus.service` live, Caddy `/api/aresus/*` (backup
       `Caddyfile.bak-20261024-aresus`), machine tokens Server + Aresium (token files `/root/.config/aresus-*-token.out`,
@@ -79,3 +83,4 @@ Stop only for a genuine problem.
   `TEST_RUNNER_SHARED_LOGIN_PROBE=write TEST_RUNNER_SHARED_LOGIN_PROBE_TOKEN="$(cat tok)" xcodebuild test -project
   Empire/Empire.xcodeproj -scheme Empire -destination id=<udid> -parallel-testing-enabled NO
   -only-testing:EmpireTests/SharedLoginProbe`.
+- 05:08 Arestemis server live; test hunt running; Aresus sync-lock fix (66ffe12) deploying via Aresync.
