@@ -1,0 +1,13 @@
+{
+  "aps": {
+    "alert": {
+      "title": "Sample notification",
+      "subtitle": "Ares Empire",
+      "body": "Tap to open the sample link."
+    },
+    "sound": "default",
+    "thread-id": "samples",
+    "interruption-level": "active"
+  },
+  "url": "empire://sample"
+}

@@ -69,6 +69,7 @@ final class EmpireSession {
     private let installDefaults: UserDefaults?
     private(set) var generation = 0
     private(set) var lastRenewedAt: Date?
+    private var signInHandlers: [() -> Void] = []
     private var logoutHandlers: [() -> Void] = []
     private var appDataResetHandlers: [() -> Void] = []
 
@@ -77,6 +78,9 @@ final class EmpireSession {
     /// Logged in AND allowed into this app.
     var isSignedIn: Bool { token != nil && !isDenied }
 
+    /// Called when a session starts in this app: a new login, the saved login restored at launch, or a login picked
+    /// up from another app (not when the same account's token is renewed). Access may still be denied: check `isSignedIn`.
+    func onSignIn(_ action: @escaping () -> Void) { signInHandlers.append(action) }
     /// Called on logout (the shared login ends).
     func onLogout(_ action: @escaping () -> Void) { logoutHandlers.append(action) }
     /// Called whenever this app must forget its own data: on logout and when access to this app is denied.
@@ -121,7 +125,10 @@ final class EmpireSession {
             guard generation == self.generation else { return }
             let startsSession = token == nil
             try accept(response)
-            if startsSession { self.generation += 1 }
+            if startsSession {
+                self.generation += 1
+                signInHandlers.forEach { $0() }
+            }
         } catch HTTPError.unauthorized {
             guard generation == self.generation else { return }
             logOut()
@@ -150,6 +157,7 @@ final class EmpireSession {
             try accept(response)
             self.generation += 1
             needsRestoreRetry = false
+            signInHandlers.forEach { $0() }
         } catch {
             // A failed login concerns only the credentials just typed: an existing login (used by the other Empire
             // apps) stays as it is.
