@@ -38,8 +38,8 @@ nonisolated struct RunRef: Identifiable, Hashable, Sendable {
     let id: Int
 }
 
-/// Where the app is: the tab, the pushed province pages, the open run sheet, Settings. Links and notification taps change it
-/// here; the views only follow it.
+/// Where the app is: the tab, the pushed province pages, the open run sheet, Settings. Links and notification taps
+/// change it here; the views only follow it.
 @MainActor @Observable
 final class AresusNavigation {
     enum Tab: String, Hashable, CaseIterable { case aresus, aresync }

@@ -106,12 +106,13 @@ German or English. The Mac and the simulators are set to German, so the apps ope
 Every app has one Settings sheet, opened by the gear (`gearshape`) in its header where the account actions used to be:
 `Shared/Design/SettingsScreen.swift` (`SettingsScreen(app:session:sample:logOut:) { app's own section }`). Sections: the
 app's own (a view-builder slot, built with `SettingsSection` / `SettingsRow`; Arestemis puts its application texts and
-hunt notifications there), General (Language; Notifications, opening the app's page in iOS Settings, in apps with
-`sendsNotifications`), Help (Contact & support, the form from `Shared/Support`), About (Privacy and Imprint open
-`LegalPage` in the app's language, Fonts & licences shows the OFL texts from `Shared/Fonts`, Version), Account (the
-email from the login answer, `EmpireSession.email`, and Log out, which does what the app's log-out did before). Links:
-`Shared/Settings/SettingsInfo.swift`. Every login screen ends with "Privacy · Imprint" (`LoginScroll`). Screenshots:
-`-sampleData -openSheet settings` in every app. A new app: a gear in its header and `SettingsScreen` in a sheet.
+hunt notifications there), General (Language; Notifications, opening the app's notification page in iOS Settings, in
+apps with `sendsNotifications`), Help (Contact & support: brief E5's form from `Shared/Support`, a stub until it is
+merged), About (Privacy and Imprint open `LegalPage` in the app's language, Fonts & licences shows the OFL texts from
+`Shared/Fonts`, Version), Account (the email from the login answer, `EmpireSession.email`, and Log out, which does what
+the app's log-out did before). Links: `Shared/Settings/SettingsInfo.swift`. Every login screen ends with "Privacy ·
+Imprint" (`LoginScroll`). Screenshots: `-sampleData -openSheet settings` in every app. A new app: a gear in its header
+and `SettingsScreen` in a sheet. The sheet is dark in every app, also in Aresium's light theme.
 
 ## Open (2026-10-24)
 

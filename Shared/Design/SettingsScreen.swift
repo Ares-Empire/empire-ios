@@ -183,9 +183,12 @@ struct SettingsRow: View {
             Spacer(minLength: 12)
             if let value { Text(value).font(AppFont.text(15)).foregroundStyle(Ink.secondary).lineLimit(1) }
             switch trailing {
-            case .push: Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold)).foregroundStyle(Ink.muted)
-            case .external: Image(systemName: "arrow.up.right").font(.system(size: 11, weight: .semibold)).foregroundStyle(Ink.muted)
-            case .none: EmptyView()
+            case .push:
+                Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold)).foregroundStyle(Ink.muted)
+            case .external:
+                Image(systemName: "arrow.up.right").font(.system(size: 11, weight: .semibold)).foregroundStyle(Ink.muted)
+            case .none:
+                EmptyView()
             }
         }
         .frame(minHeight: subtitle == nil ? 50 : 58).padding(.horizontal, 16)

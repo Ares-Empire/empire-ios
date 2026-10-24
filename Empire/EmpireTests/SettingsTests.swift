@@ -80,7 +80,8 @@ struct SettingsTests {
 
     @Test func unwrapsALicenceIntoParagraphsAndHeadings() {
         let text = "Copyright 2020 The Authors\r\n\r\n-----\r\nSIL OPEN FONT LICENSE Version 1.1\r\n-----\r\n\r\n"
-            + "PREAMBLE\r\nThe goals of the\r\nlicense.\r\n\r\nDISCLAIMER\r\nTHE FONT SOFTWARE IS PROVIDED \"AS IS\",\r\nWITHOUT WARRANTY.\r\n"
+            + "PREAMBLE\r\nThe goals of the\r\nlicense.\r\n\r\n"
+            + "DISCLAIMER\r\nTHE FONT SOFTWARE IS PROVIDED \"AS IS\",\r\nWITHOUT WARRANTY.\r\n"
         #expect(LicenceParagraph.paragraphs(text) == [
             LicenceParagraph(text: "Copyright 2020 The Authors", isHeading: false),
             LicenceParagraph(text: "SIL OPEN FONT LICENSE Version 1.1", isHeading: false),

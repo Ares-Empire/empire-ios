@@ -39,7 +39,8 @@ struct WatchtowerScreen: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
                         AresusHeader(bust: Image("Bust"), title: "Aresus") {
-                            GlassIconButton(symbol: "gearshape", label: String(localized: "Settings"), action: openSettings)
+                            GlassIconButton(symbol: "gearshape", label: String(localized: "Settings"),
+                                            action: openSettings)
                         }
                         content.padding(.horizontal, 18)
                             .animation(reduceMotion ? nil : .smooth, value: store.overview)
