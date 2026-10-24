@@ -71,6 +71,12 @@ struct StoreTests {
         #expect(h.store.vault == nil && persistence.vault == nil)
     }
 
+    @Test func aVaultWithoutAKnownAccountIsNotShown() async throws {
+        let persistence = try saved(account: nil)
+        let h = try await makeStore(persistence: persistence, savedAccount: nil)
+        #expect(h.store.vault == nil && persistence.vault == nil)
+    }
+
     @Test func offlineKeepsTheSavedVault() async throws {
         let h = try await makeStore(persistence: try saved())
         h.transport.failure = URLError(.notConnectedToInternet)

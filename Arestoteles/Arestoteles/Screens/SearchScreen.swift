@@ -39,6 +39,12 @@ struct SearchScreen: View {
         .provinceWall()
         .navigationTitle(Text("Search"))
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            // The quick note, as on the other tabs (whose headers carry it).
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { navigation.sheet = .quickNote } label: { Label("Quick note", systemImage: "plus") }
+            }
+        }
         .searchable(text: $navigation.query, prompt: Text("Notes, positions, terms"))
     }
 }

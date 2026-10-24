@@ -323,6 +323,7 @@ struct PositionSheet: View {
 
     var body: some View {
         @Bindable var draft = draft
+        @Bindable var navigation = navigation
         NavigationStack {
             Form {
                 if let id = draft.kind.position, let position = store.index.position(id) {
@@ -348,7 +349,7 @@ struct PositionSheet: View {
                 if case .add = draft.kind {
                     Section {
                         ForEach(draft.evidence, id: \.self) { id in Text(store.index.title(id)) }
-                        NavigationLink("Pick notes") { EvidencePicker(draft: draft) }
+                        Button("Pick notes") { navigation.showsEvidencePicker = true }
                     } header: { Text("Evidence") }
                 }
                 if let problem = draft.problem {
@@ -357,6 +358,7 @@ struct PositionSheet: View {
             }
             .scrollContentBackground(.hidden)
             .provinceWall()
+            .navigationDestination(isPresented: $navigation.showsEvidencePicker) { EvidencePicker(draft: draft) }
             .navigationTitle(Text(title))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -374,6 +376,7 @@ struct PositionSheet: View {
             }
         }
         .interactiveDismissDisabled(draft.isSaving)
+        .onDisappear { navigation.showsEvidencePicker = false }
     }
 
     private func save() async {
@@ -447,5 +450,6 @@ struct EvidencePicker: View {
         .provinceWall()
         .searchable(text: $query)
         .navigationTitle(Text("Evidence"))
+        .navigationBarTitleDisplayMode(.inline)
     }
 }

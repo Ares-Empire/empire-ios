@@ -15,6 +15,7 @@ The login they use: [`ares-empire/docs/ACCOUNTS.md`](https://github.com/Ares-Emp
 | **Empire** (the hub) | built (TestFlight pending) | `www.ares-empire.de` API (`/api/empire`, ring, approvals) | `de.ares-empire.empire` |
 | **Aresus** (+ Aresync) | built (simulator; TestFlight pending) | Aresus API `www.ares-empire.de/api/aresus` (`aresus/docs/API.md`) | `de.ares-empire.aresus` |
 | **Arestemis** (flat hunter) | built (simulator) | `www.ares-empire.de/api/arestemis` (`Arestemis/docs/API.md`) | `de.ares-empire.arestemis` |
+| **Arestoteles** (Weltbild vault) | built (simulator), look not done yet | `www.ares-empire.de/api/arestoteles` (`Arestoteles/docs/API.md`) | `de.ares-empire.arestoteles` |
 
 ## Layout
 
@@ -25,11 +26,13 @@ empire-ios/
   Aresus/         Aresus.xcodeproj: the watchtower (every province, the server) and Aresync's sync runs, its
                   status widget (home and lock screen), tests
   Arestemis/      Arestemis.xcodeproj: the flat hunter (search, hunt, matches, applications), tests
+  Arestoteles/    Arestoteles.xcodeproj: Patrik's Weltbild vault (positions, topics, library, search, edits,
+                  quick notes, Discuss with Claude, Spotlight), tests
   Shared/         compiled into every app: the Empire login (one login for all apps), the network
                   layer, the fonts, push (Push/: PushCenter + PushAppDelegate); each project includes
                   it as a synchronized folder
-  scripts/        new-app-project.py (a new app project, wired to Shared/), check-shared-login.sh,
-                  aresium-fixtures.mjs
+  scripts/        new-app-project.py (a new app project, wired to Shared/), strings.py (String Catalogs),
+                  check-shared-login.sh, aresium-fixtures.mjs
 ```
 
 **Push** (`Shared/Push/`, server: `ares-empire/docs/PUSH.md`): an app adopts `PushAppDelegate` with

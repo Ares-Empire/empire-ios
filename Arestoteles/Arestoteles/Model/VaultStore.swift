@@ -103,11 +103,12 @@ final class VaultStore {
     // MARK: - loading
 
     /// The vault and quick notes saved on the device, if they belong to the login saved on the device. Anything else
-    /// is deleted (another account logged in, or every Empire app logged out, while this app was closed).
+    /// is deleted (another account logged in, or every Empire app logged out, while this app was closed); so is a vault
+    /// whose account cannot be told.
     private func loadFromDisk() {
         let account = isSample ? Self.sampleAccount : savedAccount()
         if let cached = persistence.loadVault() {
-            guard cached.account == account else {
+            guard let account, cached.account == account else {
                 try? persistence.deleteAll()
                 return
             }

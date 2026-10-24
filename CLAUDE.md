@@ -183,6 +183,18 @@ Apple approves the developer account.
   **Search (API version 2, 2026-10-24, Patrik):** Flat or WG / Flat / WG, people moving in, max flatmates, size ranges
   (flat, WG room), areas, cold and warm rent ranges, move-in and temporary offers, portals, extras; every field optional
   except a place and a portal. "Describe it" is a line at the top that opens a sheet (`SearchDraft`, `SearchScreen`).
+- **Arestoteles app** (2026-10-24, build R2): `Arestoteles/` (bundle id `de.ares-empire.arestoteles`, URL scheme
+  `arestoteles`), Patrik's Weltbild vault on the Arestoteles API (`Arestoteles/docs/API.md`, decisions
+  `ares-empire/docs/ARESTOTELES-APP.md`; samples in `Arestoteles/Arestoteles/Samples/`, copies of its `docs/samples/`).
+  Data in `API/` + `Model/`: one `VaultStore` (the last vault from Application Support first, only for the account of
+  the saved login, then `GET /vault` with `If-None-Match`; one method per edit op, sent one at a time; quick notes kept
+  on the device until sent; forgets files and Spotlight on logout), `VaultIndex` (lookups), `VaultSearch`, `NoteLink`
+  (the one parser for links in notes, deep links and Spotlight), `DiscussPrompt` (target URL in one constant),
+  `Spotlight`. Screens in `Screens/` are structure on `Shared/Design`, not styled yet. Launch arguments (DEBUG):
+  `-sampleData` (edits answered with `edit-result.json`; `-sampleEditConflict` 409, `-sampleEditInvalid` 422,
+  `-samplePushLater` pushed false, `-sampleOffline` the sample as the saved vault and no server),
+  `-tab positions|topics|library|search`, `-library mechanisms|events|questions|actors`, `-search <query>`,
+  `-openNote <id>[#<heading>]`, `-openPosition <id>`, `-openSheet brief|edit|quicknote|discuss|reword|change|drop|add|evidence`.
 - Targets: `Aresium` (app), `AresiumWidgetExtension` (widgets, folder `Aresium/AresiumWidget/`, embedded in the
   app), `AresiumTests`. `Aresium/AresiumShared/` is compiled into both app and widget (theme, `AppTheme`, `AppGroup`,
   widget snapshot); everything else belongs to one target. App Group `group.de.ares-empire.aresium` in both

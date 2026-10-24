@@ -62,6 +62,8 @@ final class AppNavigation {
     /// The search's type filter; nil = every type.
     var searchType: NoteType?
     var sheet: AppSheet?
+    /// The add-position sheet shows its evidence picker.
+    var showsEvidencePicker = false
     /// A heading to scroll to in the note already on top (a link within the same note).
     private(set) var scrollRequest: NoteLink?
     /// A link from outside, waiting for the tabs to be on screen.
@@ -146,6 +148,7 @@ final class AppNavigation {
         query = ""
         searchType = nil
         sheet = nil
+        showsEvidencePicker = false
         scrollRequest = nil
         pendingLink = nil
         pendingSheet = nil
@@ -157,7 +160,7 @@ final class AppNavigation {
 /// `-sampleEditInvalid` (edits answered 409 / 422), `-samplePushLater` (edits saved with `pushed: false`),
 /// `-sampleOffline` (the samples as the saved vault, the server unreachable), `-tab positions|topics|library|search`,
 /// `-library mechanisms|events|questions|actors`, `-search <query>`, `-openNote <id>[#<heading>]`,
-/// `-openPosition <id>`, `-openSheet brief|edit|quicknote|discuss|reword|change|drop|add`.
+/// `-openPosition <id>`, `-openSheet brief|edit|quicknote|discuss|reword|change|drop|add|evidence`.
 struct LaunchOptions {
     var sample = false
     var editConflict = false
@@ -224,8 +227,9 @@ struct LaunchOptions {
         case "reword", "change", "drop":
             sheet = position.map { openSheet == "reword" ? .position(.reword($0))
                                    : openSheet == "change" ? .position(.change($0)) : .position(.drop($0)) }
-        case "add":
+        case "add", "evidence":
             sheet = (note ?? index.positionTargets.first?.id).map { .position(.add(note: $0)) }
+            navigation.showsEvidencePicker = openSheet == "evidence"
         default:
             break
         }
