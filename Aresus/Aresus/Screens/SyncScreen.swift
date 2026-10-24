@@ -5,12 +5,14 @@ import SwiftUI
 struct SyncScreen: View {
     let store: AresusStore
     let open: (Int) -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 AresusHeader(bust: Image("SyncBust"), title: "Aresync")
                 content.padding(.horizontal, 18)
+                    .animation(reduceMotion ? nil : .smooth, value: store.sync)
             }
             .padding(.bottom, 36)
         }

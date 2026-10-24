@@ -66,11 +66,25 @@ struct AresusAPITests {
         } catch {
             switch status {
             case 401: #expect(error.localizedDescription == "Your session expired. Please log in again.")
-            case 503: #expect(error.localizedDescription == "Login service unavailable, try again")
             default: #expect(error.localizedDescription == "No aresus service")
             }
         }
         #expect(unauthorized == (status == 401))
+    }
+
+    /// 503 has two causes on Aresus; its own sentence says which (CONTRACT ADDITION in aresus/docs/API.md).
+    @Test(arguments: Route.allCases)
+    func unavailableKeepsTheServersSentence(route: Route) async {
+        let transport = FakeTransport(data: Data(#"{"error":"The first check round is still running, try again in a minute."}"#.utf8))
+        transport.status = 503
+        await #expect(throws: HTTPError.self) { try await route.call(AresusAPI(transport: transport)) }
+        do { try await route.call(AresusAPI(transport: transport)) } catch {
+            #expect(error.localizedDescription == "The first check round is still running, try again in a minute.")
+        }
+        transport.data = Data()
+        do { try await route.call(AresusAPI(transport: transport)) } catch {
+            #expect(error.localizedDescription == "Login service unavailable, try again")
+        }
     }
 
     @Test func aSlugIsOnePathSegment() async throws {

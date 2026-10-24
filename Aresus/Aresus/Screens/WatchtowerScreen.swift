@@ -25,6 +25,7 @@ struct WatchtowerScreen: View {
     let serverRequest: Int
     let marks: [String: UIImage]
     let logOut: () -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         GeometryReader { geometry in
@@ -37,6 +38,7 @@ struct WatchtowerScreen: View {
                             }
                         }
                         content.padding(.horizontal, 18)
+                            .animation(reduceMotion ? nil : .smooth, value: store.overview)
                         if store.overview != nil {
                             WordmarkBand(word: "ARESUS", width: geometry.size.width).padding(.top, 44).padding(.bottom, 10).id(Self.end)
                         }

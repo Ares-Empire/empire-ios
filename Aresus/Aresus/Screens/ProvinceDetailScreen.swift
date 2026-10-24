@@ -4,20 +4,24 @@ import UIKit
 /// A province's page: the mark, name, status word, line and what it is; then its checks, last deploy, the last 14 days
 /// and recent incidents. Empty sections are left out. The name moves into the bar once the hero scrolls away.
 struct ProvinceDetailScreen: View {
+    private static let end = "end"
     let slug: String
     let store: AresusStore
     let mark: UIImage?
     @State private var showsTitle = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var detail: ProvinceDetail? { store.provinces[slug] }
     private var province: Province? { detail?.province ?? store.overview?.provinces.first { $0.slug == slug } }
 
     var body: some View {
+        ScrollViewReader { proxy in
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 if let province { hero(province) }
                 if let detail {
                     DetailSections(detail: detail, clock: store.clock, refreshError: store.error(.province(slug)))
+                        .animation(reduceMotion ? nil : .smooth, value: detail)
                 } else if let error = store.error(.province(slug)) {
                     CalmMessage(text: error, actionTitle: "Try again") { Task { await store.load(.province(slug)) } }
                         .padding(.top, province == nil ? 160 : 34)
@@ -26,14 +30,25 @@ struct ProvinceDetailScreen: View {
                 }
             }
             .padding(.horizontal, 18).padding(.bottom, 44)
+            Color.clear.frame(height: 1).id(Self.end)
         }
         .scrollIndicators(.hidden)
+        #if DEBUG
+        .task(id: detail != nil) {
+            // Screenshots: `-scrollToEnd` shows the page's last sections.
+            guard detail != nil, ProcessInfo.processInfo.arguments.contains("-scrollToEnd") else { return }
+            try? await Task.sleep(for: .milliseconds(400))
+            proxy.scrollTo(Self.end, anchor: .bottom)
+        }
+        #endif
+        }
         .onScrollGeometryChange(for: Bool.self) { geometry in
             geometry.contentOffset.y + geometry.contentInsets.top > 170
         } action: { _, past in
             withAnimation(.easeInOut(duration: 0.2)) { showsTitle = past }
         }
         .refreshable { await store.load(.province(slug)) }
+        .scrollEdgeEffectStyle(.soft, for: .top)
         .background { ProvinceWall(accent: .aresus) }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -84,7 +99,7 @@ private struct DetailSections: View {
             if let deploy = detail.deploy {
                 section("Last deploy") { DeployCard(deploy: deploy, clock: clock) }
             }
-            if detail.uptime.contains(where: { $0.ratio != nil }) {
+            if hasUptime {
                 section("14 days", value: detail.averageUptime.map(AresusFormat.uptime)) {
                     UptimeStrip(days: detail.uptime)
                 }
@@ -94,8 +109,13 @@ private struct DetailSections: View {
                     CardRows(items: detail.incidents) { IncidentRow(incident: $0, clock: clock) }
                 }
             }
+            if detail.checks.isEmpty && detail.deploy == nil && !hasUptime && detail.incidents.isEmpty {
+                CalmMessage(text: "Aresus has nothing to check here yet.").padding(.top, 44)
+            }
         }
     }
+
+    private var hasUptime: Bool { detail.uptime.contains { $0.ratio != nil } }
 
     private func section<Content: View>(_ title: String, value: String? = nil,
                                         @ViewBuilder content: () -> Content) -> some View {

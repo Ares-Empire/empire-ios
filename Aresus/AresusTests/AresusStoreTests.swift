@@ -117,9 +117,11 @@ struct AresusStoreTests {
         await store.load(.overview)
         let shown = store.overview
         transport.status = 503
+        transport.data = Data(#"{"error":"Login service unavailable, try again in a minute."}"#.utf8)
         await store.load(.overview)
         #expect(store.overview == shown && session.isSignedIn)
-        #expect(store.error(.overview) == "Login service unavailable, try again")
+        #expect(store.error(.overview) == "Login service unavailable, try again in a minute.")
+        transport.data = try sampleData("overview")
         transport.status = 200
         await store.load(.overview)
         #expect(store.error(.overview) == nil)
