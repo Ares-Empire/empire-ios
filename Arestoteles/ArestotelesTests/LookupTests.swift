@@ -14,6 +14,15 @@ struct LookupTests {
         #expect(Lookup.headline("No full stop at the end") == "No full stop at the end")
     }
 
+    @Test func cardLinesAreShortAndEndOnAWord() {
+        #expect(Lookup.cardLine("Capital interests are dominant.") == "Capital interests are dominant.")
+        let long = "The West is only rich because it exploited the rest of the world for centuries, and it still does: more hidden now."
+        #expect(Lookup.cardLine(long) == "The West is only rich because it exploited the rest of the world…")
+        let noBreak = String(repeating: "word ", count: 30) + "end."
+        let line = Lookup.cardLine(noBreak)
+        #expect(line.count <= 67 && line.hasSuffix("…") && !line.contains("wor…"))
+    }
+
     @Test func figuresAndSources() throws {
         let vault = try sampleVault()
         let spread = try #require(vault.notes.first { $0.id == "Spread of print" })

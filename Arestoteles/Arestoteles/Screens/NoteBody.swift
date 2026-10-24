@@ -275,3 +275,27 @@ struct LookupPanel: View {
         return parts.joined(separator: " · ")
     }
 }
+
+/// A note's summary box: four lines, the rest on a tap (a lookup rarely needs all of it).
+struct SummaryBox: View {
+    let summary: String
+    @State private var expanded = false
+
+    var body: some View {
+        Button { withAnimation(.easeOut(duration: 0.2)) { expanded.toggle() } } label: {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(InlineMarkdown.attributed(summary)).font(AppFont.text(15)).foregroundStyle(Ink.primary)
+                    .tint(Look.accent.color).lineSpacing(3)
+                    .lineLimit(expanded ? nil : 4)
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                if !expanded && InlineMarkdown.plain(summary).count > 220 {
+                    Text("More").font(AppFont.text(12, weight: .semibold)).foregroundStyle(Look.accent.color)
+                }
+            }
+            .padding(16)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+}

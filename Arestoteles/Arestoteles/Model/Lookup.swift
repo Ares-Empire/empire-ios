@@ -22,6 +22,25 @@ enum Lookup {
         return sentences(plain).first ?? plain
     }
 
+    /// A card's line for a position (Patrik: "just one sentence per box, I know what's in there"): the first sentence,
+    /// and when that is long, only its first clause, cut at ":", ";", " – " or ", and/but/even/so/while" and ended with
+    /// "…" ("The West is only rich because it exploited the rest of the world for centuries…").
+    static func cardLine(_ markdown: String, longerThan limit: Int = 66) -> String {
+        let sentence = headline(markdown)
+        guard sentence.count > limit else { return sentence }
+        let cuts = [": ", "; ", " – ", " — ", ", and ", ", but ", ", even ", ", so ", ", while ", ", which "]
+        let ends = cuts.compactMap { cut in sentence.range(of: cut).map(\.lowerBound) }
+            .filter { sentence.distance(from: sentence.startIndex, to: $0) >= 30 }
+        var line = ends.min().map { String(sentence[..<$0]).trimmingCharacters(in: .whitespaces) } ?? sentence
+        // Still long: end at the last whole word that fits, never inside a word.
+        if line.count > limit {
+            let prefix = line.prefix(limit)
+            line = prefix.lastIndex(of: " ").map { String(prefix[..<$0]) } ?? String(prefix)
+            line = line.trimmingCharacters(in: CharacterSet(charactersIn: " ,;:"))
+        }
+        return line == sentence ? line : line + "…"
+    }
+
     /// A text's sentences (the system's sentence rules: "e.g." and "U.S." do not end one).
     static func sentences(_ text: String) -> [String] {
         let tokenizer = NLTokenizer(unit: .sentence)

@@ -197,7 +197,14 @@ Apple approves the developer account.
   `-sampleData` (edits answered with `edit-result.json`; `-sampleEditConflict` 409, `-sampleEditInvalid` 422,
   `-samplePushLater` pushed false, `-sampleOffline` the sample as the saved vault and no server),
   `-tab positions|topics|library|search`, `-library mechanisms|events|questions|actors`, `-search <query>`,
-  `-openNote <id>[#<heading>]`, `-openPosition <id>`, `-openSheet brief|edit|quicknote|discuss|reword|change|drop|add|evidence`.
+  `-openNote <id>[#<heading>]`, `-openPosition <id>`,
+  `-openSheet brief|edit|quicknote|discuss|discussions|reword|change|drop|add|evidence`, and `-sampleVaultFile <path>` (a
+  vault saved from the server instead of the made-up sample, to look at real notes; DEBUG only, never committed).
+  **For lookups (Patrik, 2026-10-24):** position cards show the position's `title` (the bold part) cut to one line of
+  thought (`Lookup.cardLine`); a position page offers Discuss (now, or "later" onto the vault's to-discuss list), Edit
+  (wording) and Note (into the Inbox, about the position); no change/drop on the phone. Long notes open with their
+  sections closed (`NoteBody`), with Figures & dates, Sources and Terms (`LookupPanel`), search shows sentences first,
+  and pressing a paragraph or list item edits just that passage (the server's block `lines`).
 - Targets: `Aresium` (app), `AresiumWidgetExtension` (widgets, folder `Aresium/AresiumWidget/`, embedded in the
   app), `AresiumTests`. `Aresium/AresiumShared/` is compiled into both app and widget (theme, `AppTheme`, `AppGroup`,
   widget snapshot); everything else belongs to one target. App Group `group.de.ares-empire.aresium` in both

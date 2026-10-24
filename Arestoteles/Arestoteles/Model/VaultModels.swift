@@ -322,9 +322,26 @@ nonisolated struct Position: Codable, Equatable, Identifiable, Sendable {
     let note: String                    // the note it is written on
     let number: Int
     let text: String                    // inline Markdown, without "(draft)" and the → links
+    /// The short version: the bold part the vault marks ("Business wants labour as powerless as possible"); the whole
+    /// text when all of it is bold, or from a server before titles.
+    let title: String
     let draft: Bool                     // worded by Claude, not yet confirmed by Patrik
     let evidence: [String]              // note ids
     let history: [PositionChange]       // newest first
+
+    enum CodingKeys: String, CodingKey { case id, note, number, text, title, draft, evidence, history }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        note = try container.decode(String.self, forKey: .note)
+        number = try container.decode(Int.self, forKey: .number)
+        text = try container.decode(String.self, forKey: .text)
+        title = try container.decodeIfPresent(String.self, forKey: .title) ?? text
+        draft = try container.decode(Bool.self, forKey: .draft)
+        evidence = try container.decodeIfPresent([String].self, forKey: .evidence) ?? []
+        history = try container.decodeIfPresent([PositionChange].self, forKey: .history) ?? []
+    }
 }
 
 /// One entry of a note's "## How my view changed".

@@ -35,7 +35,14 @@ final class SampleBackend: VaultBackend {
 
     init(options: Options = Options()) throws {
         self.options = options
-        current = try ArestotelesSamples.decode(Vault.self, from: "vault")
+        // -sampleVaultFile <path>: a vault saved from the server instead of the made-up one, to look at real notes on the
+        // simulator during development (DEBUG only, read-only like the rest of sample mode).
+        if let path = UserDefaults.standard.string(forKey: "sampleVaultFile"),
+           let data = FileManager.default.contents(atPath: path) {
+            current = try JSONDecoder().decode(Vault.self, from: data)
+        } else {
+            current = try ArestotelesSamples.decode(Vault.self, from: "vault")
+        }
         source = try ArestotelesSamples.decode(NoteSource.self, from: "note-source")
         result = try ArestotelesSamples.decode(EditResult.self, from: "edit-result")
     }

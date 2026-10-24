@@ -58,9 +58,9 @@ struct PositionCard: View {
                     .foregroundStyle(position.draft ? Look.accent.color : Ink.muted)
                     .frame(minWidth: 14, alignment: .leading)
                     .accessibilityHidden(true)
-                Text(verbatim: Lookup.headline(position.text))
+                Text(verbatim: Lookup.cardLine(position.title))
                     .font(AppFont.text(16, weight: .medium)).foregroundStyle(Ink.primary)
-                    .lineLimit(3).multilineTextAlignment(.leading)
+                    .lineLimit(2).multilineTextAlignment(.leading)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 if position.draft {
                     CapsLabel(text: String(localized: "Draft"), color: Look.accent.color)

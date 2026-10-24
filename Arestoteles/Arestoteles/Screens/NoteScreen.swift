@@ -34,8 +34,7 @@ struct NoteScreen: View {
                     header(note)
                     actions(note).padding(.top, 16)
                     if let summary = note.summary {
-                        InlineText(summary, size: 15)
-                            .padding(16)
+                        SummaryBox(summary: summary)
                             .glassCard(accent: Look.accent, raised: true)
                             .padding(.top, 16)
                             .accessibilityLabel(Text("Summary: \(InlineMarkdown.plain(summary))"))
