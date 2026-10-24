@@ -6,7 +6,18 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		C600C48898E5E23D4C8C2846 /* AresusWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 027DFBB3600530BFAFCBE9A6 /* AresusWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
+		117D65E5B8038AE42E2F3E27 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = EF43CC3F43931AC9C123AF51 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 19C0828712D54FA10CFA86CB;
+			remoteInfo = AresusWidgetExtension;
+		};
 		A8E47F972B86ED796252180F /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = EF43CC3F43931AC9C123AF51 /* Project object */;
@@ -16,12 +27,34 @@
 		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		8BB7CAED488D00316C30F8AC /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				C600C48898E5E23D4C8C2846 /* AresusWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		027DFBB3600530BFAFCBE9A6 /* AresusWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = AresusWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		CA2208171B2869A21E83A62C /* Aresus.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Aresus.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F4BBD701698C6A940B6DA621 /* AresusTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AresusTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		E9F9296979642ECF4185694C /* Exceptions for "AresusWidget" folder in "AresusWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 19C0828712D54FA10CFA86CB /* AresusWidgetExtension */;
+		};
 		438AA893F29B955D08D926AF /* Exceptions for "Aresus" folder in "Aresus" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -51,6 +84,19 @@
 			path = ../Shared;
 			sourceTree = "<group>";
 		};
+		CE36613BE8F0F88F375EDA1C /* AresusShared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = AresusShared;
+			sourceTree = "<group>";
+		};
+		294C9629557055A0D97E5E1F /* AresusWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				E9F9296979642ECF4185694C /* Exceptions for "AresusWidget" folder in "AresusWidgetExtension" target */,
+			);
+			path = AresusWidget;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -68,6 +114,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		4B2ECD22C4220DDC9616D7A1 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -76,6 +129,8 @@
 			children = (
 				9A77B8D29253AD29ADECF577 /* Aresus */,
 				5312006EC87B3BEB13C30C40 /* Shared */,
+				CE36613BE8F0F88F375EDA1C /* AresusShared */,
+				294C9629557055A0D97E5E1F /* AresusWidget */,
 				80513EFDA7D143C4EB1B9EF6 /* AresusTests */,
 				F7BEF6B0E51A793750803928 /* Products */,
 			);
@@ -86,6 +141,7 @@
 			children = (
 				CA2208171B2869A21E83A62C /* Aresus.app */,
 				F4BBD701698C6A940B6DA621 /* AresusTests.xctest */,
+				027DFBB3600530BFAFCBE9A6 /* AresusWidgetExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -93,6 +149,30 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		19C0828712D54FA10CFA86CB /* AresusWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6AB365F16419876EB6AA9675 /* Build configuration list for PBXNativeTarget "AresusWidgetExtension" */;
+			buildPhases = (
+				7F0D54BB6939777909636C9F /* Sources */,
+				4B2ECD22C4220DDC9616D7A1 /* Frameworks */,
+				34D51C6CD1370F05377351A7 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				5312006EC87B3BEB13C30C40 /* Shared */,
+				294C9629557055A0D97E5E1F /* AresusWidget */,
+				CE36613BE8F0F88F375EDA1C /* AresusShared */,
+			);
+			name = AresusWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = AresusWidgetExtension;
+			productReference = 027DFBB3600530BFAFCBE9A6 /* AresusWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		8BDCB6A72C3E68FA16DB9CBB /* Aresus */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 8DCA6FC2EF21C679ECCCCBC3;
@@ -100,14 +180,17 @@
 				BB18CF3E1BA684DD1F23FB01,
 				66C5743DE79E4D3D2A610437,
 				3509DD193375047B7A3B3993,
+				8BB7CAED488D00316C30F8AC /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				F77C0A62060B27F126E75234 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				9A77B8D29253AD29ADECF577,
 				5312006EC87B3BEB13C30C40,
+				CE36613BE8F0F88F375EDA1C /* AresusShared */,
 			);
 			name = Aresus;
 			packageProductDependencies = (
@@ -149,6 +232,9 @@
 				LastSwiftUpdateCheck = 2710;
 				LastUpgradeCheck = 2710;
 				TargetAttributes = {
+					19C0828712D54FA10CFA86CB = {
+						CreatedOnToolsVersion = 27.1;
+					};
 					8BDCB6A72C3E68FA16DB9CBB = {
 						CreatedOnToolsVersion = 27.1;
 					};
@@ -174,6 +260,7 @@
 			targets = (
 				8BDCB6A72C3E68FA16DB9CBB /* Aresus */,
 				51EDAD307FD12C1815971014 /* AresusTests */,
+				19C0828712D54FA10CFA86CB /* AresusWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -187,6 +274,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		9882A104377565DF54226474 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		34D51C6CD1370F05377351A7 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -210,9 +304,21 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		7F0D54BB6939777909636C9F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		F77C0A62060B27F126E75234 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 19C0828712D54FA10CFA86CB /* AresusWidgetExtension */;
+			targetProxy = 117D65E5B8038AE42E2F3E27 /* PBXContainerItemProxy */;
+		};
 		BDD4E258F7DE7DA4A2948052 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 8BDCB6A72C3E68FA16DB9CBB /* Aresus */;
@@ -221,6 +327,40 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		86C3C79A9E9F50EB215408BA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = AresusWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = AresusWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Aresus;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = "de.ares-empire.aresus.widget";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		3C6D257E9D4EDF11D86A0266 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = AresusWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = AresusWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Aresus;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = "de.ares-empire.aresus.widget";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
 		A67DC1DEA86AE786069E0C75 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -349,6 +489,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		6AB365F16419876EB6AA9675 /* Build configuration list for PBXNativeTarget "AresusWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				86C3C79A9E9F50EB215408BA /* Debug */,
+				3C6D257E9D4EDF11D86A0266 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		6C99BA0DF068711C52B2FC0F /* Build configuration list for PBXProject "Aresus" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

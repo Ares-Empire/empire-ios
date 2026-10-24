@@ -4,6 +4,7 @@ import Observation
 /// The app's data: the overview, province details cached by slug, the sync overview and run details. Each part loads on
 /// its own, keeps its last good answer when a refresh fails, and is forgotten on logout or when access is denied.
 /// The screens on view refresh every `interval` and when the app comes to the foreground (`AresusTabs`).
+/// Each overview loaded also becomes the widget's status (`widget`); forgetting the data deletes it.
 @MainActor @Observable
 final class AresusStore {
     enum Part: Hashable, Sendable {
@@ -25,14 +26,17 @@ final class AresusStore {
     let clock: AresusClock
     private(set) var samples: AresusSamples?
     private let client: AresusAPI
+    private let widget: WidgetStatusPublisher
     private var resetGeneration = 0
     private var foregroundRefreshing = false
 
     var isSample: Bool { samples != nil }
 
-    init(session: EmpireSession, client: AresusAPI = AresusAPI(), samples: AresusSamples? = nil, launched: Date = .now) {
+    init(session: EmpireSession, client: AresusAPI = AresusAPI(), samples: AresusSamples? = nil,
+         widget: WidgetStatusPublisher = .disabled, launched: Date = .now) {
         self.session = session
         self.client = client
+        self.widget = widget
         #if DEBUG
         let samples = samples
         #else
@@ -63,6 +67,7 @@ final class AresusStore {
                 let value = try await fetch({ try $0.overview() }, { try await client.overview(token: $0) })
                 guard isCurrent(context) else { return }
                 overview = value
+                if !isSample { widget.publish(value) }
             case .province(let slug):
                 let value = try await fetch({ try $0.province(slug) }, { try await client.province(slug, token: $0) })
                 guard isCurrent(context) else { return }
@@ -117,6 +122,7 @@ final class AresusStore {
         errors = [:]
         loadedAt = [:]
         foregroundRefreshing = false
+        widget.clear()
     }
 
     #if DEBUG

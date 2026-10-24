@@ -4,7 +4,8 @@ import UIKit
 /// The Aresus app: the shared Empire login, then the two tabs. Logged in once in any Empire app means logged in here.
 /// Links (`aresus://…`) and notification taps go through `AresusNavigation`.
 /// DEBUG launch arguments: `-sampleData` (`-sampleAllGood`), `-tab aresus|aresync`, `-openProvince <slug>`,
-/// `-openRun <id>`, and `-sampleLogin` / `-sampleLoading` for the login and loading screens.
+/// `-openRun <id>`, `-sampleLogin` / `-sampleLoading` for the login and loading screens, and
+/// `-widgetGallery good|issues|loggedout` for the widget's views.
 struct ContentView: View {
     @State private var store: AresusStore
     @State private var navigation: AresusNavigation
@@ -13,6 +14,9 @@ struct ContentView: View {
     private let marks: ProvinceMarks
     private let restoresOnLaunch: Bool
     private let push: PushCenter?
+    #if DEBUG
+    private let widgetGallery: WidgetGallery.Page?
+    #endif
     private var session: EmpireSession { store.session }
 
     init(push: PushCenter? = nil, arguments: [String] = ProcessInfo.processInfo.arguments) {
@@ -21,7 +25,8 @@ struct ContentView: View {
         // Tests (the app is their host), samples and the screenshot screens never touch the real login.
         let testing = NSClassFromString("XCTestCase") != nil
             || ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
-        let quiet = samples != nil || testing
+        let gallery = WidgetGallery.Page.launched(arguments: arguments)
+        let quiet = samples != nil || testing || gallery != nil
         var session = EmpireSession(app: .aresus, restoreOnLaunch: !quiet, installDefaults: quiet ? nil : EmpireShared.defaults)
         var restores = !quiet
         if arguments.contains("-sampleLogin") || arguments.contains("-sampleLoading") {
@@ -30,12 +35,16 @@ struct ContentView: View {
             restores = false
         }
         let navigation = AresusNavigation.launched(arguments: arguments)
+        // Like push: samples, tests and the screenshot screens never write the widget's status.
+        let widget: WidgetStatusPublisher = restores ? .live() : .disabled
+        widgetGallery = gallery
         #else
         let session = EmpireSession(app: .aresus, installDefaults: EmpireShared.defaults)
         let restores = true
         let navigation = AresusNavigation()
+        let widget = WidgetStatusPublisher.live()
         #endif
-        _store = State(initialValue: AresusStore(session: session, samples: samples))
+        _store = State(initialValue: AresusStore(session: session, samples: samples, widget: widget))
         _navigation = State(initialValue: navigation)
         marks = ProvinceMarks(session: session, sample: samples != nil)
         restoresOnLaunch = restores
@@ -44,6 +53,18 @@ struct ContentView: View {
     }
 
     var body: some View {
+        #if DEBUG
+        if let widgetGallery {
+            WidgetGallery(page: widgetGallery).preferredColorScheme(.dark)
+        } else {
+            app
+        }
+        #else
+        app
+        #endif
+    }
+
+    private var app: some View {
         Group {
             if store.isSample || session.isSignedIn {
                 AresusTabs(store: store, navigation: navigation, marks: markImages, logOut: logOut)

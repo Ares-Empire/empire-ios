@@ -228,13 +228,3 @@ struct PressedBox: ButtonStyle {
             .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
     }
 }
-
-extension AresusState {
-    var tone: StatusTone {
-        switch self {
-        case .issue: .issue
-        case .active: .active
-        case .inactive: .inactive
-        }
-    }
-}
