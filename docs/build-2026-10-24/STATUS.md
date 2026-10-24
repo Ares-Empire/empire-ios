@@ -20,7 +20,7 @@ Stop only for a genuine problem.
 
 | Package | Agent | Worktree (branch) | State |
 |---|---|---|---|
-| P: Empire push service + `Shared/Push` | Claude subagent | `~/wt/ares-empire-push` (`push`), `~/wt/empire-ios-push` (`push`) | running since 04:20 |
+| P: Empire push service + `Shared/Push` | Claude subagent | `~/wt/ares-empire-push` (`push`), `~/wt/empire-ios-push` (`push`) | merged + deployed (dry run) |
 | T: Arestemis server (API, hunts, AI check, places) | Claude subagent | `~/wt/Arestemis-api` (`app-api`) | running since 04:20 |
 | S: Aresus server + Aresync reports | Claude subagent | `~/wt/aresus-server` (`server`), `~/wt/aresync-report` (`report`) | running since 04:20 |
 | A1: Arestemis iOS app | Claude subagent | `~/wt/empire-ios-arestemis` (`arestemis-app`) | running since 04:29 |
@@ -37,7 +37,10 @@ Stop only for a genuine problem.
 - [x] 5. D: Shared/Design (+ move ProvinceMarks), Arestemis + Aresus projects (URL schemes, push entitlements), icons,
       sample JSON copied into the projects. Screenshot Empire + Aresium before/after if they switch to Shared/Design.
 - [x] 6. Spawn A1, A2 (background, 04:29) with the design brief (`briefs/DESIGN.md`).
-- [ ] 7. Review + merge P (build/test myself). Deploy push service (dry run), Caddy route `/api/push/*`.
+- [x] 7. Review + merge P (45 + 31 tests pass on my run). Deployed: `empire-push.service` (dry run, :8095/:8096),
+      Caddy `/api/push/*` (backup `Caddyfile.bak-20261024-push`); register/unregister 204 with the test account, `/send`
+      not reachable from outside. Code runs from `/opt/empire-push/push` → re-run `deploy/install-push.sh` after changes
+      to `push/` (the ares-empire Aresync hook must do this). PushCenter wiring into the apps: step 10.
 - [ ] 8. Review + merge T. Server move `/root/flatsniper` → `/root/Arestemis`, `arestemis.service`, Caddy route,
       Groq model, delete old config/db, live test with the test account.
 - [ ] 9. Review + merge S. Deploy aresus (`aresus.service`), Caddy route, machine tokens (Mac, server), Aresync report
@@ -60,3 +63,4 @@ Stop only for a genuine problem.
   proxy in a final `handle { reverse_proxy 172.18.0.1:5185 }`.
 - 04:33 heartbeat: no agent finished yet; P and S have uncommitted work in progress. (Times above corrected to git times.)
 - 04:36 Patrik's real account (admin, id o3hbhzk8bo1352x) given services arestemis + aresus (his own apps); TELEGRAM_FALLBACK_USER candidate.
+- push merged + deployed; merged-main build/test of the apps running in the background.
