@@ -1,0 +1,101 @@
+{
+  "items": [
+    {
+      "id": 41,
+      "hunt_id": 1,
+      "state": "new",
+      "found": "2026-10-24T09:59:10Z",
+      "listing": {
+        "source": "wg_gesucht",
+        "source_name": "WG-Gesucht",
+        "url": "https://www.wg-gesucht.de/wohnungen-in-Muenchen-Schwabing.10000001.html",
+        "title": "Helle 2-Zimmer-Wohnung mit Balkon in Schwabing",
+        "kind": "flat",
+        "rent_warm": 980,
+        "rent_cold": 820,
+        "sqm": 42,
+        "rooms": 2,
+        "flatmates": null,
+        "city": "München",
+        "district": "Schwabing",
+        "address": "Hohenzollernstraße",
+        "available_from": "2026-12-01",
+        "available_until": null,
+        "furnished": false,
+        "posted": "2026-10-24T09:58:00Z",
+        "image_url": null,
+        "description": "Wir vermieten ab 1. Dezember eine helle 2-Zimmer-Wohnung im 3. OG mit Südbalkon. Warmmiete 980 € inkl. Nebenkosten und Heizung. Einbauküche vorhanden, Keller, Fahrradkeller. U-Bahn Hohenzollernplatz 3 Minuten."
+      },
+      "reason": "€980 warm, 42 m² with a balcony in Schwabing, from 1 Dec — fits.",
+      "warnings": [],
+      "application": null
+    },
+    {
+      "id": 40,
+      "hunt_id": 1,
+      "state": "saved",
+      "found": "2026-10-24T07:22:30Z",
+      "listing": {
+        "source": "kleinanzeigen",
+        "source_name": "Kleinanzeigen",
+        "url": "https://www.kleinanzeigen.de/s-anzeige/2-zimmer-freimann/3000000002",
+        "title": "2-Zi.-Whg. Freimann, ruhig, U6",
+        "kind": "flat",
+        "rent_warm": 1150,
+        "rent_cold": 960,
+        "sqm": 51,
+        "rooms": 2,
+        "flatmates": null,
+        "city": "München",
+        "district": "Freimann",
+        "address": null,
+        "available_from": "2027-01-01",
+        "available_until": null,
+        "furnished": null,
+        "posted": "2026-10-24T07:21:00Z",
+        "image_url": null,
+        "description": "Ruhige 2-Zimmer-Wohnung, 51 m², 2. OG, Balkon zum Hof. Gesamtmiete 1.150 €. Bezug ab Januar."
+      },
+      "reason": "51 m² for €1,150 warm in Freimann; the 40 m²+ limit of €1,200 applies.",
+      "warnings": [
+        "Floor not stated with certainty"
+      ],
+      "application": {
+        "text": "Hallo,\n\nmit großem Interesse habe ich Ihre Anzeige für die 2-Zimmer-Wohnung in Freimann gelesen. ...",
+        "mode": "ai",
+        "created": "2026-10-24T07:25:00Z"
+      }
+    },
+    {
+      "id": 38,
+      "hunt_id": 1,
+      "state": "applied",
+      "found": "2026-10-23T18:06:00Z",
+      "listing": {
+        "source": "wg_gesucht",
+        "source_name": "WG-Gesucht",
+        "url": "https://www.wg-gesucht.de/wg-zimmer-in-Garching.10000003.html",
+        "title": "Neue 2er-WG in Garching – du suchst den Mitbewohner aus",
+        "kind": "wg_empty",
+        "rent_warm": 610,
+        "rent_cold": null,
+        "sqm": 19,
+        "rooms": 1,
+        "flatmates": 1,
+        "city": "Garching bei München",
+        "district": "Hochbrück",
+        "address": null,
+        "available_from": "2026-12-15",
+        "available_until": null,
+        "furnished": true,
+        "posted": "2026-10-23T18:05:00Z",
+        "image_url": null,
+        "description": "Wir ziehen beide aus, die ganze Wohnung (2 Zimmer) wird neu vermietet. Du ziehst mit einer Person deiner Wahl ein."
+      },
+      "reason": "Whole 2-person WG is re-let; you choose the flatmate. €610 warm.",
+      "warnings": [],
+      "application": null
+    }
+  ],
+  "more": false
+}

@@ -1,0 +1,73 @@
+{
+  "machines": [
+    {
+      "name": "Aresium",
+      "os": "macOS",
+      "last_run": "2026-10-24T09:00:31Z",
+      "last_result": "ok",
+      "last_ok": "2026-10-24T09:00:31Z",
+      "open_problems": [],
+      "state": "active"
+    },
+    {
+      "name": "Server",
+      "os": "Linux",
+      "last_run": "2026-10-24T12:05:03Z",
+      "last_result": "ok",
+      "last_ok": "2026-10-24T12:05:03Z",
+      "open_problems": [],
+      "state": "active"
+    },
+    {
+      "name": "Notebook-Patrik",
+      "os": "Windows",
+      "last_run": "2026-10-19T09:00:12Z",
+      "last_result": "failed",
+      "last_ok": "2026-10-18T09:00:09Z",
+      "open_problems": [
+        "aresium: rebase conflict between local commits and origin, resolve by hand"
+      ],
+      "state": "issue"
+    }
+  ],
+  "runs": [
+    {
+      "machine": "Server",
+      "day": "2026-10-24",
+      "count": 141,
+      "last": "2026-10-24T12:05:03Z",
+      "quiet": true
+    },
+    {
+      "id": 905,
+      "machine": "Server",
+      "finished": "2026-10-24T11:40:04Z",
+      "result": "ok",
+      "summary": "pulled ares-empire · deployed",
+      "quiet": false
+    },
+    {
+      "id": 880,
+      "machine": "Aresium",
+      "finished": "2026-10-24T09:00:31Z",
+      "result": "ok",
+      "summary": "pulled 2 · pushed 1",
+      "quiet": false
+    },
+    {
+      "machine": "Server",
+      "day": "2026-10-23",
+      "count": 286,
+      "last": "2026-10-23T23:57:02Z",
+      "quiet": true
+    },
+    {
+      "id": 612,
+      "machine": "Notebook-Patrik",
+      "finished": "2026-10-19T09:00:12Z",
+      "result": "failed",
+      "summary": "rebase conflict in aresium",
+      "quiet": false
+    }
+  ]
+}

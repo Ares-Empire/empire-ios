@@ -7,6 +7,8 @@ struct EmpireAppIdentity: Equatable, Sendable {
     let name: String
     static let aresium = EmpireAppIdentity(service: "aresium", name: "Aresium")
     static let empire = EmpireAppIdentity(service: "empire", name: "the Ares Empire")
+    static let arestemis = EmpireAppIdentity(service: "arestemis", name: "Arestemis")
+    static let aresus = EmpireAppIdentity(service: "aresus", name: "Aresus")
 }
 
 struct EmpireRecord: Decodable {

@@ -1,0 +1,382 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXContainerItemProxy section */
+		A8E47F972B86ED796252180F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = EF43CC3F43931AC9C123AF51 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 8BDCB6A72C3E68FA16DB9CBB;
+			remoteInfo = Aresus;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		CA2208171B2869A21E83A62C /* Aresus.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Aresus.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F4BBD701698C6A940B6DA621 /* AresusTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AresusTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		438AA893F29B955D08D926AF /* Exceptions for "Aresus" folder in "Aresus" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 8BDCB6A72C3E68FA16DB9CBB /* Aresus */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		9A77B8D29253AD29ADECF577 /* Aresus */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				438AA893F29B955D08D926AF,
+			);
+			path = Aresus;
+			sourceTree = "<group>";
+		};
+		80513EFDA7D143C4EB1B9EF6 /* AresusTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = AresusTests;
+			sourceTree = "<group>";
+		};
+		5312006EC87B3BEB13C30C40 /* Shared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			name = Shared;
+			path = ../Shared;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		66C5743DE79E4D3D2A610437 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		2261771F1B154F23327A53E6 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		F473E1B8EB8CFE10ADF5D0B6 = {
+			isa = PBXGroup;
+			children = (
+				9A77B8D29253AD29ADECF577 /* Aresus */,
+				5312006EC87B3BEB13C30C40 /* Shared */,
+				80513EFDA7D143C4EB1B9EF6 /* AresusTests */,
+				F7BEF6B0E51A793750803928 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		F7BEF6B0E51A793750803928 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				CA2208171B2869A21E83A62C /* Aresus.app */,
+				F4BBD701698C6A940B6DA621 /* AresusTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		8BDCB6A72C3E68FA16DB9CBB /* Aresus */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 8DCA6FC2EF21C679ECCCCBC3;
+			buildPhases = (
+				BB18CF3E1BA684DD1F23FB01,
+				66C5743DE79E4D3D2A610437,
+				3509DD193375047B7A3B3993,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				9A77B8D29253AD29ADECF577,
+				5312006EC87B3BEB13C30C40,
+			);
+			name = Aresus;
+			packageProductDependencies = (
+			);
+			productName = Aresus;
+			productReference = CA2208171B2869A21E83A62C;
+			productType = "com.apple.product-type.application";
+		};
+		51EDAD307FD12C1815971014 /* AresusTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E7F5BFA82959E02D42A00AB7;
+			buildPhases = (
+				FF1F763C89038BBA90C8278E,
+				2261771F1B154F23327A53E6,
+				9882A104377565DF54226474,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				BDD4E258F7DE7DA4A2948052,
+			);
+			fileSystemSynchronizedGroups = (
+				80513EFDA7D143C4EB1B9EF6,
+			);
+			name = AresusTests;
+			packageProductDependencies = (
+			);
+			productName = AresusTests;
+			productReference = F4BBD701698C6A940B6DA621;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		EF43CC3F43931AC9C123AF51 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2710;
+				LastUpgradeCheck = 2710;
+				TargetAttributes = {
+					8BDCB6A72C3E68FA16DB9CBB = {
+						CreatedOnToolsVersion = 27.1;
+					};
+					51EDAD307FD12C1815971014 = {
+						CreatedOnToolsVersion = 27.1;
+						TestTargetID = 8BDCB6A72C3E68FA16DB9CBB;
+					};
+				};
+			};
+			buildConfigurationList = 6C99BA0DF068711C52B2FC0F;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = F473E1B8EB8CFE10ADF5D0B6;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = F7BEF6B0E51A793750803928 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				8BDCB6A72C3E68FA16DB9CBB /* Aresus */,
+				51EDAD307FD12C1815971014 /* AresusTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		3509DD193375047B7A3B3993 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9882A104377565DF54226474 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		BB18CF3E1BA684DD1F23FB01 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FF1F763C89038BBA90C8278E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		BDD4E258F7DE7DA4A2948052 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 8BDCB6A72C3E68FA16DB9CBB /* Aresus */;
+			targetProxy = A8E47F972B86ED796252180F /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		A67DC1DEA86AE786069E0C75 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 0.1;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		A19C06D5D36B62ED7BCF6A19 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 0.1;
+				SDKROOT = iphoneos;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		D1564063B4C4D551D984EB52 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Aresus.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Aresus/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Aresus";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = "de.ares-empire.aresus";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		6D069A8FB4C9652841513DED /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Aresus.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Aresus/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Aresus";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = "de.ares-empire.aresus";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		A17BE6B762A47AB570C912A5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = "de.ares-empire.aresus.tests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Aresus.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Aresus";
+			};
+			name = Debug;
+		};
+		1D8A0A42F0A4BC954C206DE1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = "de.ares-empire.aresus.tests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Aresus.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Aresus";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		6C99BA0DF068711C52B2FC0F /* Build configuration list for PBXProject "Aresus" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A67DC1DEA86AE786069E0C75 /* Debug */,
+				A19C06D5D36B62ED7BCF6A19 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		8DCA6FC2EF21C679ECCCCBC3 /* Build configuration list for PBXNativeTarget "Aresus" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D1564063B4C4D551D984EB52 /* Debug */,
+				6D069A8FB4C9652841513DED /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		E7F5BFA82959E02D42A00AB7 /* Build configuration list for PBXNativeTarget "AresusTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A17BE6B762A47AB570C912A5 /* Debug */,
+				1D8A0A42F0A4BC954C206DE1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = EF43CC3F43931AC9C123AF51 /* Project object */;
+}

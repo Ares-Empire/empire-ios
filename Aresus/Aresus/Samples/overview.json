@@ -1,0 +1,87 @@
+{
+  "version": 1,
+  "checked": "2026-10-24T12:09:00Z",
+  "summary": "1 issue",
+  "server": {
+    "host": "server.example",
+    "disk_used": 0.35,
+    "memory_used": 0.46,
+    "load": 0.04,
+    "uptime_s": 488000,
+    "issue": null
+  },
+  "provinces": [
+    {
+      "slug": "aresium",
+      "name": "Aresium",
+      "logo": "brand/hermes.webp",
+      "state": "issue",
+      "word": "Issue",
+      "line": "Website down since 14:02 (502)",
+      "since": "2026-10-24T12:02:00Z"
+    },
+    {
+      "slug": "empire",
+      "name": "Ares Empire",
+      "logo": "brand/ares-bust.webp",
+      "state": "active",
+      "word": "Active",
+      "line": "Website 96 ms · Accounts ok",
+      "since": "2026-10-23T15:35:00Z"
+    },
+    {
+      "slug": "arestemis",
+      "name": "Arestemis",
+      "logo": "brand/artemis.webp",
+      "state": "active",
+      "word": "Active",
+      "line": "Hunting · last scan 1 min ago",
+      "since": "2026-10-24T08:41:00Z"
+    },
+    {
+      "slug": "aresync",
+      "name": "Aresync",
+      "logo": "brand/janus.webp",
+      "state": "active",
+      "word": "Active",
+      "line": "3 machines · last sync 4 min ago",
+      "since": "2026-10-20T09:00:00Z"
+    },
+    {
+      "slug": "arestoteles",
+      "name": "Arestoteles",
+      "logo": "brand/arestoteles.webp",
+      "state": "inactive",
+      "word": "Inactive",
+      "line": "Off on purpose · website up",
+      "since": null
+    },
+    {
+      "slug": "aresis",
+      "name": "Aresis",
+      "logo": "brand/nemesis.png",
+      "state": "inactive",
+      "word": "Inactive",
+      "line": "Not deployed",
+      "since": null
+    },
+    {
+      "slug": "arescrypt",
+      "name": "Arescrypt",
+      "logo": "brand/cerberus.webp",
+      "state": "inactive",
+      "word": "Planned",
+      "line": "Not built yet",
+      "since": null
+    },
+    {
+      "slug": "aresolus",
+      "name": "Aresolus",
+      "logo": "brand/aeolus.webp",
+      "state": "inactive",
+      "word": "Planned",
+      "line": "Not built yet",
+      "since": null
+    }
+  ]
+}

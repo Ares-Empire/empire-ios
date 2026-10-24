@@ -1,0 +1,382 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXContainerItemProxy section */
+		ADF1D64F8272E9455DFBF92B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B342F760022D8B2C9CBA337B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B262A91D9DB9C9BA217FFA5D;
+			remoteInfo = Arestemis;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		62E3727ECF3049038BC1DC3A /* Arestemis.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Arestemis.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		CBAD4180E2DDF16B2E706729 /* ArestemisTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ArestemisTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		B9B6F66B88AE5543FF917547 /* Exceptions for "Arestemis" folder in "Arestemis" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = B262A91D9DB9C9BA217FFA5D /* Arestemis */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		58E8B7486D0DB12EC5E56865 /* Arestemis */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				B9B6F66B88AE5543FF917547,
+			);
+			path = Arestemis;
+			sourceTree = "<group>";
+		};
+		AF209150564ED3FACF6F3A2E /* ArestemisTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = ArestemisTests;
+			sourceTree = "<group>";
+		};
+		706B5587B13A7915B7F2491A /* Shared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			name = Shared;
+			path = ../Shared;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		C92EDEA2514627B8DF4B1C17 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BC5929DEE8BC39E9D4DFEC5C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		6954B499171DB15984097EA7 = {
+			isa = PBXGroup;
+			children = (
+				58E8B7486D0DB12EC5E56865 /* Arestemis */,
+				706B5587B13A7915B7F2491A /* Shared */,
+				AF209150564ED3FACF6F3A2E /* ArestemisTests */,
+				9C7D3C4D4AE5EA1BFE22C238 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		9C7D3C4D4AE5EA1BFE22C238 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				62E3727ECF3049038BC1DC3A /* Arestemis.app */,
+				CBAD4180E2DDF16B2E706729 /* ArestemisTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		B262A91D9DB9C9BA217FFA5D /* Arestemis */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4D0B82475281B71740AAF3EA;
+			buildPhases = (
+				9B11FEC3EAB17C3AA9A52EDE,
+				C92EDEA2514627B8DF4B1C17,
+				C7AC0F1965174B6EA75A9BAB,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				58E8B7486D0DB12EC5E56865,
+				706B5587B13A7915B7F2491A,
+			);
+			name = Arestemis;
+			packageProductDependencies = (
+			);
+			productName = Arestemis;
+			productReference = 62E3727ECF3049038BC1DC3A;
+			productType = "com.apple.product-type.application";
+		};
+		9972AD266CC5DD79A7FEF807 /* ArestemisTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F06ED12EEEB43AAB0EFD0D77;
+			buildPhases = (
+				D70D53C596E1F528F2F2ECC7,
+				BC5929DEE8BC39E9D4DFEC5C,
+				129E884FDCF83A1990935093,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				F021D7F34C3AF8246FD51A7E,
+			);
+			fileSystemSynchronizedGroups = (
+				AF209150564ED3FACF6F3A2E,
+			);
+			name = ArestemisTests;
+			packageProductDependencies = (
+			);
+			productName = ArestemisTests;
+			productReference = CBAD4180E2DDF16B2E706729;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		B342F760022D8B2C9CBA337B /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2710;
+				LastUpgradeCheck = 2710;
+				TargetAttributes = {
+					B262A91D9DB9C9BA217FFA5D = {
+						CreatedOnToolsVersion = 27.1;
+					};
+					9972AD266CC5DD79A7FEF807 = {
+						CreatedOnToolsVersion = 27.1;
+						TestTargetID = B262A91D9DB9C9BA217FFA5D;
+					};
+				};
+			};
+			buildConfigurationList = C79BFE3CA32EFCB3D536C4A8;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 6954B499171DB15984097EA7;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 9C7D3C4D4AE5EA1BFE22C238 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				B262A91D9DB9C9BA217FFA5D /* Arestemis */,
+				9972AD266CC5DD79A7FEF807 /* ArestemisTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		C7AC0F1965174B6EA75A9BAB /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		129E884FDCF83A1990935093 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		9B11FEC3EAB17C3AA9A52EDE /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D70D53C596E1F528F2F2ECC7 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		F021D7F34C3AF8246FD51A7E /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B262A91D9DB9C9BA217FFA5D /* Arestemis */;
+			targetProxy = ADF1D64F8272E9455DFBF92B /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		289D07AC1EE6D884B8E4E38F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 0.1;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		5A6C01546A305822B91110B9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 0.1;
+				SDKROOT = iphoneos;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		0CFC4EDAB233E3D41E42C818 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Arestemis.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Arestemis/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Arestemis";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = "de.ares-empire.arestemis";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		13760E1851538B3C2A649535 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Arestemis.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Arestemis/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Arestemis";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = "de.ares-empire.arestemis";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		B79F2E6207C16FBC131EF2DE /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = "de.ares-empire.arestemis.tests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Arestemis.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Arestemis";
+			};
+			name = Debug;
+		};
+		0D74BFA40720888C7F22817A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = "de.ares-empire.arestemis.tests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Arestemis.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Arestemis";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		C79BFE3CA32EFCB3D536C4A8 /* Build configuration list for PBXProject "Arestemis" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				289D07AC1EE6D884B8E4E38F /* Debug */,
+				5A6C01546A305822B91110B9 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		4D0B82475281B71740AAF3EA /* Build configuration list for PBXNativeTarget "Arestemis" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0CFC4EDAB233E3D41E42C818 /* Debug */,
+				13760E1851538B3C2A649535 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F06ED12EEEB43AAB0EFD0D77 /* Build configuration list for PBXNativeTarget "ArestemisTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B79F2E6207C16FBC131EF2DE /* Debug */,
+				0D74BFA40720888C7F22817A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = B342F760022D8B2C9CBA337B /* Project object */;
+}

@@ -1,0 +1,118 @@
+{
+  "slug": "aresium",
+  "name": "Aresium",
+  "logo": "brand/hermes.webp",
+  "state": "issue",
+  "word": "Issue",
+  "line": "Website down since 14:02 (502)",
+  "since": "2026-10-24T12:02:00Z",
+  "about": "Personal finance command — VR Bank + PayPal, imported and understood.",
+  "checks": [
+    {
+      "name": "Website",
+      "ok": false,
+      "detail": "502 in 41 ms",
+      "checked": "2026-10-24T12:09:00Z"
+    },
+    {
+      "name": "aresium.service",
+      "ok": false,
+      "detail": "activating (auto-restart)",
+      "checked": "2026-10-24T12:09:00Z"
+    },
+    {
+      "name": "Database container",
+      "ok": true,
+      "detail": "healthy",
+      "checked": "2026-10-24T12:09:00Z"
+    },
+    {
+      "name": "aresium-bot.service",
+      "ok": true,
+      "detail": "active for 2 days",
+      "checked": "2026-10-24T12:09:00Z"
+    },
+    {
+      "name": "TLS certificate",
+      "ok": true,
+      "detail": "expires in 61 days",
+      "checked": "2026-10-24T11:40:00Z"
+    }
+  ],
+  "deploy": {
+    "commit": "c22dad8",
+    "subject": "/api/pulse: one line for the Empire hub's Aresium card",
+    "date": "2026-10-24T01:58:00Z",
+    "behind": 0
+  },
+  "incidents": [
+    {
+      "opened": "2026-10-24T12:02:00Z",
+      "resolved": null,
+      "summary": "Website down (502)"
+    },
+    {
+      "opened": "2026-10-21T03:14:00Z",
+      "resolved": "2026-10-21T03:20:00Z",
+      "summary": "Website down (timeout)"
+    }
+  ],
+  "uptime": [
+    {
+      "day": "2026-10-11",
+      "ratio": null
+    },
+    {
+      "day": "2026-10-12",
+      "ratio": null
+    },
+    {
+      "day": "2026-10-13",
+      "ratio": null
+    },
+    {
+      "day": "2026-10-14",
+      "ratio": null
+    },
+    {
+      "day": "2026-10-15",
+      "ratio": null
+    },
+    {
+      "day": "2026-10-16",
+      "ratio": null
+    },
+    {
+      "day": "2026-10-17",
+      "ratio": null
+    },
+    {
+      "day": "2026-10-18",
+      "ratio": null
+    },
+    {
+      "day": "2026-10-19",
+      "ratio": null
+    },
+    {
+      "day": "2026-10-20",
+      "ratio": null
+    },
+    {
+      "day": "2026-10-21",
+      "ratio": 0.996
+    },
+    {
+      "day": "2026-10-22",
+      "ratio": 1.0
+    },
+    {
+      "day": "2026-10-23",
+      "ratio": 1.0
+    },
+    {
+      "day": "2026-10-24",
+      "ratio": 0.97
+    }
+  ]
+}

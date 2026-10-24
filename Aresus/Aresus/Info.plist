@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Merged with the generated Info.plist (GENERATE_INFOPLIST_FILE). Only what build settings cannot express. -->
+<plist version="1.0">
+<dict>
+	<!-- The team prefix of the shared Keychain group (Shared/EmpireShared.swift). -->
+	<key>AppIdentifierPrefix</key>
+	<string>$(AppIdentifierPrefix)</string>
+	<!-- aresus:// opens the app (the Empire app's province launcher, notification links). -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>de.ares-empire.aresus</string>
+			<key>CFBundleURLSchemes</key>
+			<array><string>aresus</string></array>
+		</dict>
+	</array>
+	<!-- Only standard HTTPS: exempt, so App Store Connect stops asking about encryption on every build. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<!-- Launch on the app's own background instead of a white flash. -->
+	<key>UILaunchScreen</key>
+	<dict>
+		<key>UIColorName</key>
+		<string>LaunchBackground</string>
+	</dict>
+</dict>
+</plist>

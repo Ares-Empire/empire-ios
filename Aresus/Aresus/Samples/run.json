@@ -1,0 +1,31 @@
+{
+  "id": 612,
+  "machine": "Notebook-Patrik",
+  "finished": "2026-10-19T09:00:12Z",
+  "result": "failed",
+  "summary": "rebase conflict in aresium",
+  "quiet": false,
+  "started": "2026-10-19T08:59:40Z",
+  "counts": {
+    "cloned": 0,
+    "committed": 1,
+    "pushed": 0,
+    "pulled": 3,
+    "skipped": 0,
+    "failed": 1
+  },
+  "lines": [
+    "COMMIT aresium  (local changes on main)",
+    "PULL  ares-empire  e0aafda..fe141a2",
+    "FAIL  aresium  (rebase conflict — left untouched, resolve manually)",
+    "PULL  Arestemis  1beeb75..b9a79d8",
+    "PULL  aresync  8de0bf1..4e7ff91"
+  ],
+  "problems": [
+    {
+      "key": "conflict:aresium",
+      "immediate": true,
+      "message": "aresium: rebase conflict between local commits and origin, resolve by hand"
+    }
+  ]
+}
