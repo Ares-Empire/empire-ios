@@ -25,7 +25,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 PROJECTS = ["Aresium/Aresium.xcodeproj", "Empire/Empire.xcodeproj", "Arestemis/Arestemis.xcodeproj",
-            "Aresus/Aresus.xcodeproj"]
+            "Aresus/Aresus.xcodeproj", "Arestoteles/Arestoteles.xcodeproj"]
 LANGUAGE = "de"
 XLIFF = "{urn:oasis:names:tc:xliff:document:1.2}"
 PLACEHOLDER = re.compile(r"%(?:\d+\$)?(?:lld|ld|d|@|f|\.\d+f|%)")

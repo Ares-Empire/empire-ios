@@ -1,7 +1,171 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-
+    "" : {
+      "shouldTranslate" : false
+    },
+    "%@ BCE" : {},
+    "%@ BCE – %@ CE" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ BCE – %2$@ CE"
+          }
+        }
+      }
+    },
+    "%@–%@ BCE" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@–%2$@ BCE"
+          }
+        }
+      }
+    },
+    "%lld h ago" : {},
+    "%lld min ago" : {},
+    "A changed view replaces the sentence." : {},
+    "A quick note was not saved: %@" : {},
+    "A thought for the Inbox" : {},
+    "Account" : {},
+    "Across topics" : {},
+    "Actor" : {},
+    "Actors" : {},
+    "Add" : {},
+    "Add a position" : {},
+    "Adopt" : {},
+    "All regions" : {},
+    "Brief" : {},
+    "Cancel" : {},
+    "Change my view" : {},
+    "Claude" : {},
+    "Claude Code works on the vault with its rules. The prompt below is copied; paste it in a new session." : {},
+    "Close" : {},
+    "Confidence" : {},
+    "Confirm" : {},
+    "Copy and open Claude" : {},
+    "Copy my text" : {},
+    "Counterpoints" : {},
+    "Delete" : {},
+    "Discard" : {},
+    "Discard your changes?" : {},
+    "Discuss" : {},
+    "Discuss with Claude" : {},
+    "Dismiss" : {},
+    "Dismiss Claude's note?" : {},
+    "Draft" : {},
+    "Draft, worded by Claude" : {},
+    "Drop" : {},
+    "Drop this position" : {},
+    "Edit" : {},
+    "Event" : {},
+    "Events" : {},
+    "Everything" : {},
+    "Evidence" : {},
+    "Explained in %@" : {},
+    "Glossary" : {},
+    "Home" : {},
+    "How my view changed" : {},
+    "I thought:" : {},
+    "In %@" : {},
+    "Inbox" : {},
+    "It is removed from the note." : {},
+    "Library" : {},
+    "Linked from" : {},
+    "Load the current version" : {},
+    "Loading the note…" : {},
+    "Log in to change the vault." : {},
+    "Log out" : {},
+    "Mechanism" : {},
+    "Mechanisms" : {},
+    "My positions" : {},
+    "My read" : {},
+    "My view now" : {},
+    "No actors yet." : {},
+    "No events here yet." : {},
+    "No mechanisms yet." : {},
+    "No notes named as evidence." : {},
+    "No positions in the vault yet." : {},
+    "No positions yet." : {},
+    "No questions yet." : {},
+    "No topics in the vault yet." : {},
+    "No year" : {},
+    "Not sent yet" : {},
+    "Note" : {},
+    "Notes, positions, terms" : {},
+    "Nothing found." : {},
+    "Now" : {},
+    "Offline" : {},
+    "Offline · updated %@" : {},
+    "One sentence, in your words" : {},
+    "Open questions" : {},
+    "Part" : {},
+    "Pick notes" : {},
+    "Position" : {},
+    "Position %lld on %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Position %1$lld on %2$@"
+          }
+        }
+      }
+    },
+    "Positions" : {},
+    "Question" : {},
+    "Questions" : {},
+    "Quick note" : {},
+    "Region" : {},
+    "Reword" : {},
+    "Same view, better words: nothing goes to the history." : {},
+    "Save" : {},
+    "Saved as you write it." : {},
+    "Saved on the phone. It goes to the Inbox once the server can be reached." : {},
+    "Saved. It reaches the laptops once the server can push it to GitHub." : {},
+    "Search" : {},
+    "Search titles, summaries, the notes' text and the glossary, in English and German." : {},
+    "Sections" : {},
+    "Session" : {},
+    "Sessions" : {},
+    "Shaky" : {},
+    "Solid" : {},
+    "Summary: %@" : {},
+    "Terms" : {},
+    "The server cannot be reached. Try again when you're online." : {},
+    "The vault's check refused this edit." : {},
+    "The vault's check warns: %@" : {},
+    "This changed elsewhere in the meantime. The app loaded the current version; please try again." : {},
+    "This changed elsewhere." : {},
+    "This is no longer in the vault." : {},
+    "This note changed elsewhere since you opened it. Your text is still here: copy it if you need it, then load the current version." : {},
+    "This note is no longer in the vault." : {},
+    "This position is no longer in the vault." : {},
+    "This topic has no brief." : {},
+    "Topic" : {},
+    "Topics" : {},
+    "Try again" : {},
+    "Type" : {},
+    "Updated %@" : {},
+    "Used in ^[%lld note](inflect: true)" : {},
+    "Waiting to be sent" : {},
+    "What changed it" : {},
+    "What changed it:" : {},
+    "What followed" : {},
+    "Where" : {},
+    "Why" : {},
+    "Your old view goes to “How my view changed”, with today's date." : {},
+    "Your question (optional)" : {},
+    "^[%lld note](inflect: true) as evidence" : {},
+    "^[%lld position](inflect: true)" : {},
+    "^[%lld quick note](inflect: true) waiting to be sent" : {},
+    "just now" : {},
+    "·" : {
+      "shouldTranslate" : false
+    }
   },
   "version" : "1.0"
 }
