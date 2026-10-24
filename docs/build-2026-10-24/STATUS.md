@@ -64,3 +64,4 @@ Stop only for a genuine problem.
 - 04:33 heartbeat: no agent finished yet; P and S have uncommitted work in progress. (Times above corrected to git times.)
 - 04:36 Patrik's real account (admin, id o3hbhzk8bo1352x) given services arestemis + aresus (his own apps); TELEGRAM_FALLBACK_USER candidate.
 - push merged + deployed; merged-main build/test of the apps running in the background.
+- merged main (push): Empire tests pass, Aresium (+widget), Arestemis, Aresus build.
