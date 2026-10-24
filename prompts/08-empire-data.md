@@ -1,6 +1,6 @@
 # 08: Empire app data layer (no screens)
 
-Status: draft
+Status: merged 2026-10-24
 Branch: `codex/08-empire-data` · Worktree: `../empire-ios-08-empire-data` · Model: `gpt-6.1-sol`, effort `high`
 
 ## Goal
