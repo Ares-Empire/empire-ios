@@ -22,6 +22,8 @@ struct AppAccent: Sendable {
     static let arestemis = AppAccent(color: Color(hex: 0xA996FF), deep: Color(hex: 0x6A4FE0))
     /// Aresus: lightning blue (Zeus); keeps green and red free for status words.
     static let aresus = AppAccent(color: Color(hex: 0x6AA8FF), deep: Color(hex: 0x2F6BEA))
+    /// Arestoteles: Aegean teal.
+    static let arestoteles = AppAccent(color: Color(hex: 0x5ECBBE), deep: Color(hex: 0x1E8C82))
 }
 
 /// Ink and surfaces of the dark wall (`[data-theme="dark"]` in the Aresium/Arestoteles styles).

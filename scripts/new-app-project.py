@@ -9,6 +9,7 @@ What every Empire app gets (see CLAUDE.md → Setup state):
 - iOS 26+, Swift 6 with MainActor default isolation, iPhone only, portrait;
 - <Name>.entitlements with the shared App Group and Keychain group (one login for all Empire apps);
 - <Name>/Info.plist merged with the generated one (excluded from the folder's resources);
+- English and German (CLAUDE.md → Languages): `de` among the known regions, tests run in English (en/GB);
 - a shared scheme with the tests.
 It only creates files that do not exist yet and refuses to overwrite a project.
 """
@@ -181,6 +182,7 @@ pbx = f"""// !$*UTF8*$!
 \t\t\thasScannedForEncodings = 0;
 \t\t\tknownRegions = (
 \t\t\t\ten,
+\t\t\t\tde,
 \t\t\t\tBase,
 \t\t\t);
 \t\t\tmainGroup = {I['MAINGROUP']};
@@ -231,7 +233,7 @@ scheme = f"""<?xml version="1.0" encoding="UTF-8"?>
          </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
-   <TestAction buildConfiguration = "Debug" selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB" selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB" shouldUseLaunchSchemeArgsEnv = "YES" shouldAutocreateTestPlan = "YES">
+   <TestAction language = "en" region = "GB" buildConfiguration = "Debug" selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB" selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB" shouldUseLaunchSchemeArgsEnv = "YES" shouldAutocreateTestPlan = "YES">
       <Testables>
          <TestableReference skipped = "NO" parallelizable = "YES">
             <BuildableReference {ref('TESTTARGET', T, T + '.xctest')}></BuildableReference>
