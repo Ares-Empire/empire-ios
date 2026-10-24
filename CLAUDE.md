@@ -119,6 +119,8 @@ Apple approves the developer account.
 9. **Arestoteles on the phone:** check the Discuss hand-off (`DiscussPrompt.target`, now `https://claude.ai/code`: does
    the Claude app open, and how to start a session there with the copied prompt); replace the bust (the website's
    `aristotle-bust.png` has a faint "Magnific" watermark); a widget with a position to revisit (needs a widget target).
+10. **Light mode before the next new app** (Patrik, 2026-10-24; `ares-empire/docs/IPHONE-APPS.md` → "Every app
+   has"): colours as light/dark pairs in `Shared/Design`, an Appearance row in Settings, every app checked in both.
 8. **Build 2026-10-24 record:** `docs/build-2026-10-24/STATUS.md` (what was built, decisions, live tests). Built after the main work: the Aresus
    widget and the hub's live lines from Aresus.
 
@@ -147,7 +149,9 @@ Apple approves the developer account.
   this app's service, or a 403 from the app's server, closes only this app (`access = .denied`, the app forgets its
   data via `onAppDataReset`); a failed new login never ends an existing one. Coming to the foreground, each app calls
   `followSharedLogin()`: it picks up a login or logout made in another app meanwhile (a renewed token of the same
-  account is taken over without a server call). Verified across the two apps on the simulator with
+  account is taken over without a server call). Every logout is written to the device log with the line that
+  asked for it (`log show --predicate 'subsystem == "de.ares-empire.shared"'`; on a simulator via `xcrun simctl spawn
+  <udid> log show …`). Verified across the two apps on the simulator with
   `scripts/check-shared-login.sh <udid>` (2026-10-24).
 - **Empire app** (2026-10-24): the approved phone hub (`ares-empire/web/app/mobile.jsx` + `mobile.css`) in SwiftUI,
   `Empire/Empire/Screens/` (Claude's look; values copied from the CSS, with the CSS selector named in comments), data
