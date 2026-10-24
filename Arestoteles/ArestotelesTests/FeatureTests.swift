@@ -40,7 +40,7 @@ struct FeatureTests {
     @Test func spotlightItems() throws {
         let vault = try sampleVault()
         let items = SpotlightItems.make(vault.notes, language: .english)
-        #expect(items.count == 12 && Set(items.map(\.uniqueIdentifier)).count == 12)
+        #expect(items.count == 13 && Set(items.map(\.uniqueIdentifier)).count == 13)
         let topic = try #require(items.first { $0.attributeSet.title == "Printing press" })
         #expect(topic.uniqueIdentifier == "arestoteles://note/Printing%20press")
         #expect(topic.domainIdentifier == SpotlightItems.domain)
@@ -78,7 +78,8 @@ struct FeatureTests {
         #expect(index.questions.map(\.id) == ["Did print cause the Reformation"])
         #expect(index.actors.map(\.id) == ["Martin Luther"])
         #expect(index.backlinks(of: "Printing press").map(\.id)
-                == ["2026-10-20 Printing press", "Home", "Positions", "Spread of print"])
+                == ["2026-10-20 Printing press", "2026-10-23 2110 discuss Printing press", "Home", "Positions",
+                    "Spread of print"])
         #expect(index.title("Reformation") == "Reformation" && index.title("Unknown") == "Unknown")
         let position = try #require(index.position("Printing press#1"))
         #expect(index.evidence(of: position).map(\.id) == ["Did print cause the Reformation", "Reformation"])

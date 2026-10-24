@@ -52,7 +52,7 @@ struct StoreTests {
         let h = try await makeStore()
         #expect(h.store.vault == nil)
         await h.store.refresh()
-        #expect(h.store.vault?.notes.count == 12 && h.store.loadError == nil)
+        #expect(h.store.vault?.notes.count == 13 && h.store.loadError == nil)
         #expect(h.transport.requests.only?.value(forHTTPHeaderField: "If-None-Match") == nil)
         #expect(h.persistence.vault?.etag == "\"a1b2c3d\"" && h.persistence.vault?.account == "account-a")
     }

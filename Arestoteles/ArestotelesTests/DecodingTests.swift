@@ -24,7 +24,7 @@ struct DecodingTests {
     @Test func vaultSample() throws {
         let vault = try sampleVault()
         #expect(vault.version == 1 && vault.commit == "a1b2c3d" && vault.built == "2026-10-24T18:00:00Z")
-        #expect(vault.notes.count == 12)
+        #expect(vault.notes.count == 13)
         #expect(vault.positions.map(\.title) == ["Across topics", "Printing press"])
         #expect(vault.glossary.map(\.german) == ["Druckort", "Handelsstadt"])
         #expect(vault.home.learnNext.count == 2)

@@ -80,3 +80,14 @@ struct LookupTests {
                 == ["op": "set_inbox_status", "note": "x", "status": "processed"])
     }
 }
+
+extension LookupTests {
+    @Test func theSampleHasLinesAndAnOpenDiscussion() throws {
+        let vault = try sampleVault()
+        let index = VaultIndex(vault: vault)
+        #expect(index.openDiscussions.map(\.id) == ["2026-10-23 2110 discuss Printing press"])
+        #expect(index.openDiscussions.first?.inbox?.positionID == "Printing press#1")
+        let press = try #require(vault.notes.first { $0.id == "Printing press" })
+        #expect(press.blockLines.count == press.blocks.count && press.blockLines.allSatisfy { $0 != nil })
+    }
+}
