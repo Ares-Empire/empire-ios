@@ -155,21 +155,26 @@ extension Place {
 /// The hunt's search as the Hunt tab shows it: what ("Own flat or empty 2-person WG") and where, how much, when
 /// ("München, Garching · up to €1,000 warm · from 1 Dec"); a room size only when one is set ("room from 15 m²").
 struct SearchSummary: Equatable {
-    let kinds: String
+    /// The kinds as phrases ("Own flat", "empty 2-person WG") and as one sentence.
+    let kindPhrases: [String]
+    var kinds: String { Self.sentence(kindPhrases) }
     /// Places, rent, move-in: each part a unit that should not be broken across lines.
     let parts: [String]
     var details: String { parts.joined(separator: " · ") }
-    /// The details for display: lines break only between parts.
-    var wrappingDetails: String {
-        parts.map {
-            $0.replacingOccurrences(of: " ", with: "\u{00A0}").replacingOccurrences(of: "–", with: "\u{2060}–\u{2060}")
-        }
-        .joined(separator: " · ")
+
+    /// For display: lines break only between kinds and between parts, never inside "2-person" or "1 Dec – 1 Feb".
+    var wrappingKinds: String { Self.sentence(kindPhrases.map(Self.unbreakable)) }
+    var wrappingDetails: String { parts.map(Self.unbreakable).joined(separator: " · ") }
+
+    private static func unbreakable(_ phrase: String) -> String {
+        phrase.replacingOccurrences(of: " ", with: "\u{00A0}")
+            .replacingOccurrences(of: "-", with: "-\u{2060}")
+            .replacingOccurrences(of: "–", with: "\u{2060}–\u{2060}")
     }
 
     init(_ search: Search, now: Date = .now, calendar: Calendar = .app) {
         let kinds = Kind.allCases.filter(search.kinds.contains)
-        self.kinds = Self.sentence(kinds.enumerated().map { $0.offset == 0 ? $0.element.title : $0.element.inSentence })
+        kindPhrases = kinds.enumerated().map { $0.offset == 0 ? $0.element.title : $0.element.inSentence }
         var parts: [String] = []
         if let places = Self.places(search.places) { parts.append(places) }
         if let rent = search.rentMaxWarm { parts.append("up to \(Format.money(rent)) warm") }

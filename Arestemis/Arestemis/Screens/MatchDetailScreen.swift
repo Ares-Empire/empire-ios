@@ -42,8 +42,8 @@ struct MatchDetailScreen: View {
           ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 if let url = listing.imageURL.flatMap(URL.init(string:)) {
-                    ListingPhoto(url: url)
-                        .aspectRatio(16 / 10, contentMode: .fit)
+                    Color.clear.aspectRatio(16 / 10, contentMode: .fit)
+                        .overlay { ListingPhoto(url: url, radius: Ink.cardRadius) }
                         .clipShape(RoundedRectangle(cornerRadius: Ink.cardRadius, style: .continuous))
                         .padding(.bottom, 22)
                 }

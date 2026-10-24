@@ -77,8 +77,10 @@ struct FormattingTests {
         #expect(summary.kinds == "Own flat or empty 2-person WG")
         #expect(summary.details == "München, Garching · up to €1,000 warm · 1 Dec – 1 Feb")
         #expect(summary.parts.count == 3)
-        // On screen a part never breaks across lines.
+        // On screen a part never breaks across lines, nor a kind.
         #expect(!summary.wrappingDetails.replacingOccurrences(of: " · ", with: "").contains(" "))
+        #expect(summary.wrappingKinds.components(separatedBy: " ").count == 3)       // "Own flat" | "or" | "empty 2-person WG"
+        #expect(summary.wrappingKinds.contains("2-\u{2060}person"))
     }
 
     @Test func summaryOfOtherSearches() {

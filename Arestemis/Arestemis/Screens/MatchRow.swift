@@ -70,6 +70,7 @@ extension MatchState {
 /// A listing's photo, with a quiet tile while it loads or when it fails.
 struct ListingPhoto: View {
     let url: URL
+    var radius: CGFloat = Ink.rowRadius
 
     var body: some View {
         AsyncImage(url: url, transaction: Transaction(animation: .easeOut(duration: 0.25))) { phase in
@@ -79,7 +80,7 @@ struct ListingPhoto: View {
                 Rectangle().fill(Ink.card2)
             }
         }
-        .overlay(RoundedRectangle(cornerRadius: Ink.rowRadius, style: .continuous).strokeBorder(Ink.line))
+        .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous).strokeBorder(Ink.line))
         .accessibilityHidden(true)
     }
 }

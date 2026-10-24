@@ -113,6 +113,13 @@ Both apps work on the simulator and are merged; nothing reaches the phone until 
   sample), `-openSheet province|idea|add|approvals` for screenshots. Ring: tap the front province to open it (its app if
   installed, else its website), hold any tab for its page; on the page the name is the link (Patrik, 2026-10-24). Province marks load from the hub with the
   Bearer token, so the samples show monograms. Signing up and password resets stay on the website.
+- **Arestemis app** (2026-10-24, build A1): `Arestemis/` (bundle id `de.ares-empire.arestemis`), the flat hunter on
+  the Arestemis API (`~/Arestemis/docs/API.md`; samples in `Arestemis/Arestemis/Samples/`, copies of its `docs/samples/`).
+  Data in `API/` + `Model/` (one `ArestemisStore`, optimistic changes with rollback), screens in `Screens/` on
+  `Shared/Design`. Launch arguments (DEBUG): `-sampleData` (+ `-sampleNoHunt`, `-samplePaused`, `-sampleLoading`),
+  `-tab hunt|listings|search`, `-filter new|saved|applied|all`, `-openMatch <id>`,
+  `-openSheet settings|application|rejected|place`, `-scrollBottom`, `-scrollTo rent|movein`. Push: the category and
+  the link routing are in `Model/Notifications.swift`; `Shared/Push` is not wired in yet.
 - Targets: `Aresium` (app), `AresiumWidgetExtension` (widgets, folder `Aresium/AresiumWidget/`, embedded in the
   app), `AresiumTests`. `Aresium/AresiumShared/` is compiled into both app and widget (theme, `AppTheme`, `AppGroup`,
   widget snapshot); everything else belongs to one target. App Group `group.de.ares-empire.aresium` in both

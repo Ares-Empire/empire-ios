@@ -13,6 +13,7 @@ The login they use: [`ares-empire/docs/ACCOUNTS.md`](https://github.com/Ares-Emp
 |---|---|---|---|
 | **Aresium** | built (TestFlight pending) | `aresium.de` API (`/api/data`, `/api/transaction/…`, `/api/import`) | `de.ares-empire.aresium` |
 | **Empire** (the hub) | built (TestFlight pending) | `www.ares-empire.de` API (`/api/empire`, ring, approvals) | `de.ares-empire.empire` |
+| **Arestemis** (flat hunter) | built (simulator) | `www.ares-empire.de/api/arestemis` (`Arestemis/docs/API.md`) | `de.ares-empire.arestemis` |
 
 ## Layout
 
@@ -20,6 +21,7 @@ The login they use: [`ares-empire/docs/ACCOUNTS.md`](https://github.com/Ares-Emp
 empire-ios/
   Aresium/        Aresium.xcodeproj: the Aresium app, its widget extension, tests
   Empire/         Empire.xcodeproj: the Ares Empire app (the hub), tests
+  Arestemis/      Arestemis.xcodeproj: the flat hunter (search, hunt, matches, applications), tests
   Shared/         compiled into every app: the Empire login (one login for all apps), the network
                   layer, the fonts; each project includes it as a synchronized folder
   scripts/        new-app-project.py (a new app project, wired to Shared/), check-shared-login.sh,

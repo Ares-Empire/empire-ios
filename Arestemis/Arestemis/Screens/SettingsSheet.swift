@@ -119,12 +119,14 @@ struct SettingsSheet: View {
                     .accessibilityElement(children: .combine)
                     Hairline()
                 }
-                Button("Log out") {
+                Button {
                     dismiss()
                     logOut()
+                } label: {
+                    Text("Log out").font(AppFont.text(15, weight: .medium)).foregroundStyle(Ink.primary)
+                        .frame(maxWidth: .infinity, minHeight: 50).contentShape(Rectangle())
                 }
-                .buttonStyle(.destructiveQuiet)
-                .frame(maxWidth: .infinity, minHeight: 50)
+                .buttonStyle(.plain)
             }
             .glassCard()
         }

@@ -179,7 +179,7 @@ private struct HuntCard: View {
                 }
                 .accessibilityElement(children: .combine)
                 let summary = SearchSummary(hunt.search)
-                Text(summary.kinds).font(AppFont.text(20, weight: .semibold)).foregroundStyle(Ink.primary)
+                Text(summary.wrappingKinds).font(AppFont.text(20, weight: .semibold)).foregroundStyle(Ink.primary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 14)
                 if !summary.parts.isEmpty {
