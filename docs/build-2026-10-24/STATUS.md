@@ -57,7 +57,10 @@ Stop only for a genuine problem.
       account, `simctl push` tests.
 - [x] 11. Hub: ~~app schemes~~ (done 04:30: `APP_SCHEMES` in webauth/server.py, live; Empire Info.plist queries), chronicle lines, EMPIRE.md connections,
       empire-ios README/CLAUDE.md, IPHONE-APPS.md.
-- [ ] 12. Report for Patrik (what works, screenshots, what waits for Apple).
+- [ ] 12. Report for Patrik (what works, screenshots in `~/empire-ios/build/screens-2026-10-24/`, what waits for Apple).
+- [ ] 13. Extra (Patrik: 'if done quickly, scope another project'; Arescribe vetoed, other provinces not sensible to
+      build alone): (a) Aresus widget, brief W, agent running since 05:38, worktree `~/wt/empire-ios-widget`;
+      (b) hub live lines from Aresus (done 05:45, 935d534, deploying via Aresync).
 
 ## Log
 
@@ -94,3 +97,6 @@ Stop only for a genuine problem.
   account (28 real matches). /root/flatsniper deleted, worktrees + agent simulators removed. EMPIRE.md chronicle,
   connections, decision records, IPHONE-APPS, PUSH status, empire-ios CLAUDE.md 'Open' updated. Final regression run
   (Aresium + Empire tests) and hub data refresh running. Next: step 12, the report for Patrik.
+- 05:35 hub chronicle gap fixed: EMPIRE.md entries since 10-23 were never in the live state.json (backup
+  `state.json.bak-20261024-chronicle`) nor in empire-data.js; both in step now. Final regression: Aresium 102, Empire 60
+  tests pass. Screenshot set + overview.png in `~/empire-ios/build/screens-2026-10-24/`.
