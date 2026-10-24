@@ -8,7 +8,10 @@ What every Empire app gets (see CLAUDE.md → Setup state):
   fonts), so new Swift files need no project edits;
 - iOS 26+, Swift 6 with MainActor default isolation, iPhone only, portrait;
 - <Name>.entitlements with the shared App Group and Keychain group (one login for all Empire apps);
-- <Name>/Info.plist merged with the generated one (excluded from the folder's resources);
+- <Name>/Info.plist merged with the generated one (excluded from the folder's resources), with
+  ITSAppUsesNonExemptEncryption = NO (only HTTPS);
+- <Name>/PrivacyInfo.xcprivacy, Apple's privacy manifest with what every Empire app collects (the login, the
+  account id, the support form) and the App Group defaults; add the app's own data (docs/APP-STORE.md);
 - English and German (CLAUDE.md → Languages): `de` among the known regions, tests run in English (en/GB);
 - a shared scheme with the tests.
 It only creates files that do not exist yet and refuses to overwrite a project.
@@ -293,11 +296,84 @@ info = """<?xml version="1.0" encoding="UTF-8"?>
 </plist>
 """
 
+# The Empire app's manifest: only what every app shares. A new app adds its own data types (docs/APP-STORE.md).
+privacy = """<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Apple privacy manifest (the """ + DISPLAY + """ app). What it declares and why: ares-empire/docs/PRIVACY.md and
+     docs/APP-STORE.md. Update it when the app sends something new or starts using another required-reason API
+     (https://developer.apple.com/documentation/bundleresources/privacy-manifest-files). -->
+<plist version="1.0">
+<dict>
+	<!-- No tracking: no analytics, ads or third-party SDKs; data goes only to the Empire's own servers. -->
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<!-- 1C8F.1: the shared App Group's defaults (Shared/EmpireShared.swift: the first-launch flag). -->
+				<string>1C8F.1</string>
+			</array>
+		</dict>
+	</array>
+	<!-- Everything is linked to the account and used only to run the app. -->
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array>
+		<!-- Email address: the Empire login (Shared/Auth), kept by the account server. -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeEmailAddress</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<!-- User ID: the Empire account id; every request carries the login token that names it. -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeUserID</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<!-- Customer support: the Contact & support form (Shared/Support, brief E5): message, app and iOS version, language. -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeCustomerSupport</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>
+"""
+
 files = {
     os.path.join(PROJ, "project.pbxproj"): pbx,
     os.path.join(PROJ, "xcshareddata", "xcschemes", NAME + ".xcscheme"): scheme,
     os.path.join(ROOT, NAME + ".entitlements"): entitlements,
     os.path.join(ROOT, NAME, "Info.plist"): info,
+    os.path.join(ROOT, NAME, "PrivacyInfo.xcprivacy"): privacy,
 }
 for path, text in files.items():
     os.makedirs(os.path.dirname(path), exist_ok=True)

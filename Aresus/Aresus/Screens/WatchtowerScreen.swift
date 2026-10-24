@@ -2,7 +2,8 @@ import SwiftUI
 import UIKit
 
 /// The Aresus tab: the watchtower. The check's moment and summary painted on the wall, the server card, then every
-/// province as a box like the hub's ring tab (Issues, Active, Inactive), ending in the ARESUS band. Tap a box for its page.
+/// province as a box like the hub's ring tab (Issues, Active, Inactive), ending in the ARESUS band (`WordmarkScrollView`).
+/// Tap a box for its page.
 struct WatchtowerTab: View {
     let store: AresusStore
     @Bindable var navigation: AresusNavigation
@@ -20,7 +21,6 @@ struct WatchtowerTab: View {
 }
 
 struct WatchtowerScreen: View {
-    private static let end = "end"
     let store: AresusStore
     let serverRequest: Int
     let marks: [String: UIImage]
@@ -28,36 +28,31 @@ struct WatchtowerScreen: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        GeometryReader { geometry in
-            ScrollViewReader { proxy in
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 0) {
-                        AresusHeader(bust: Image("Bust"), title: "Aresus") {
-                            GlassMenuButton(symbol: "ellipsis", label: String(localized: "More")) {
-                                Button("Log out", systemImage: "rectangle.portrait.and.arrow.right", action: logOut)
-                            }
-                        }
-                        content.padding(.horizontal, 18)
-                            .animation(reduceMotion ? nil : .smooth, value: store.overview)
-                        if store.overview != nil {
-                            WordmarkBand(word: "ARESUS", width: geometry.size.width).padding(.top, 44).padding(.bottom, 10).id(Self.end)
+        ScrollViewReader { proxy in
+            WordmarkScrollView(word: "ARESUS") {
+                VStack(alignment: .leading, spacing: 0) {
+                    AresusHeader(bust: Image("Bust"), title: "Aresus") {
+                        GlassMenuButton(symbol: "ellipsis", label: String(localized: "More")) {
+                            Button("Log out", systemImage: "rectangle.portrait.and.arrow.right", action: logOut)
                         }
                     }
+                    content.padding(.horizontal, 18)
+                        .animation(reduceMotion ? nil : .smooth, value: store.overview)
                 }
-                .scrollIndicators(.hidden)
-                .refreshable { await store.load(.overview) }
-                .onChange(of: serverRequest) { _, _ in
-                    withAnimation(.smooth) { proxy.scrollTo(ServerCard.anchor, anchor: .top) }
-                }
-                #if DEBUG
-                .task(id: store.overview?.checked) {
-                    // Screenshots: `-scrollToEnd` shows the inactive provinces and the band.
-                    guard store.overview != nil, ProcessInfo.processInfo.arguments.contains("-scrollToEnd") else { return }
-                    try? await Task.sleep(for: .milliseconds(300))
-                    proxy.scrollTo(Self.end, anchor: .bottom)
-                }
-                #endif
             }
+            .scrollIndicators(.hidden)
+            .refreshable { await store.load(.overview) }
+            .onChange(of: serverRequest) { _, _ in
+                withAnimation(.smooth) { proxy.scrollTo(ServerCard.anchor, anchor: .top) }
+            }
+            #if DEBUG
+            .task(id: store.overview?.checked) {
+                // Screenshots: `-scrollToEnd` shows the inactive provinces and the band.
+                guard store.overview != nil, ProcessInfo.processInfo.arguments.contains("-scrollToEnd") else { return }
+                try? await Task.sleep(for: .milliseconds(300))
+                proxy.scrollToWordmark()
+            }
+            #endif
         }
         .background { ProvinceWall(accent: .aresus) }
         .toolbar(.hidden, for: .navigationBar)

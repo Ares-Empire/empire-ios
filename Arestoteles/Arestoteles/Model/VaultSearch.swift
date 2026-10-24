@@ -91,14 +91,13 @@ struct VaultSearch: Sendable {
 
     /// The sentences that hold every word of the query (at least two letters typed), the ones with the whole query as
     /// a phrase first, then in the vault's order; at most `limit`.
-    func sentences(_ query: String, limit: Int = 40) -> [SentenceHit] {
-        let folded = Self.fold(query).trimmingCharacters(in: .whitespacesAndNewlines)
-        let words = folded.split(whereSeparator: \.isWhitespace).map(String.init)
-        guard folded.count >= 2, !words.isEmpty else { return [] }
+    func sentences(_ text: String, limit: Int = 40) -> [SentenceHit] {
+        let query = Query(text)
+        guard query.folded.count >= 2, !query.isEmpty else { return [] }
         var phrase: [SentenceHit] = []
         var rest: [SentenceHit] = []
-        for entry in sentenceEntries where words.allSatisfy({ entry.key.contains($0) }) {
-            let isPhrase = words.count > 1 && entry.key.contains(folded)
+        for entry in sentenceEntries where query.isFound(in: entry.key) {
+            let isPhrase = query.words.count > 1 && entry.key.contains(query.folded)
             let hit = SentenceHit(passage: entry.passage, sentence: entry.sentence, title: entry.title, phrase: isPhrase)
             if isPhrase { phrase.append(hit) } else { rest.append(hit) }
             if phrase.count >= limit { break }
@@ -108,16 +107,15 @@ struct VaultSearch: Sendable {
 
     /// The results for a query, best first. `type` limits them to notes of one type (glossary terms then only show for
     /// the glossary type). An empty query finds nothing.
-    func results(_ query: String, type: NoteType? = nil) -> [Result] {
-        let folded = Self.fold(query).trimmingCharacters(in: .whitespacesAndNewlines)
-        let words = folded.split(whereSeparator: \.isWhitespace).map(String.init)
-        guard !words.isEmpty else { return [] }
-        func all(_ text: String) -> Bool { words.allSatisfy { text.contains($0) } }
+    func results(_ text: String, type: NoteType? = nil) -> [Result] {
+        let query = Query(text)
+        guard !query.isEmpty else { return [] }
+        let all = query.isFound(in:)
 
         var found: [(rank: Rank, title: String, result: Result)] = []
         for entry in entries where type == nil || entry.type == type {
             let rank: Rank
-            if entry.titleKey.hasPrefix(folded) { rank = .titleStart }
+            if entry.titleKey.hasPrefix(query.folded) { rank = .titleStart }
             else if all(entry.titleKey) { rank = .title }
             else if all(entry.summaryKey) { rank = .summary }
             else if all(entry.textKey) { rank = .text }
@@ -134,6 +132,26 @@ struct VaultSearch: Sendable {
             if first.rank != second.rank { return first.rank < second.rank }
             return first.title.localizedStandardCompare(second.title) == .orderedAscending
         }.map(\.result)
+    }
+
+    /// A query as every search of the app reads it: folded, cut into words. A text matches when it holds every word
+    /// (anywhere, also inside a longer word: "druck" finds "Druckorte").
+    struct Query: Sendable {
+        let folded: String              // the whole query, folded and trimmed
+        let words: [String]
+
+        init(_ text: String) {
+            folded = VaultSearch.fold(text).trimmingCharacters(in: .whitespacesAndNewlines)
+            words = folded.split(whereSeparator: \.isWhitespace).map(String.init)
+        }
+
+        var isEmpty: Bool { words.isEmpty }
+
+        /// Every word is in `key` (a folded text). An empty query is found nowhere.
+        func isFound(in key: String) -> Bool { !words.isEmpty && words.allSatisfy { key.contains($0) } }
+
+        /// At least one word is in `key` (a folded text).
+        func touches(_ key: String) -> Bool { words.contains { key.contains($0) } }
     }
 
     /// Lower case, without accents and umlaut dots, so typing on any keyboard finds the words.

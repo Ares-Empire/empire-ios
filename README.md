@@ -58,3 +58,6 @@ Empire app). A new province app: `python3 scripts/new-app-project.py <Name> <bun
 3. Each build stays installable for 90 days; any newer build restarts that clock.
 
 Later: automate step 1 (Xcode Cloud or a script with an App Store Connect API key kept outside the repo).
+
+What App Store Connect asks (App Privacy, TestFlight test information, demo login) and what is still missing before
+the App Store: [`docs/APP-STORE.md`](docs/APP-STORE.md).

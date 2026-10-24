@@ -41,6 +41,11 @@ enum Lookup {
         return line == sentence ? line : line + "…"
     }
 
+    /// A note's first paragraph: what introduces a note without a summary box (events, actors), inline Markdown.
+    static func firstParagraph(of note: Note) -> String? {
+        note.blocks.lazy.compactMap { if case let .paragraph(text) = $0 { text } else { nil } }.first
+    }
+
     /// A text's sentences (the system's sentence rules: "e.g." and "U.S." do not end one).
     static func sentences(_ text: String) -> [String] {
         let tokenizer = NLTokenizer(unit: .sentence)
