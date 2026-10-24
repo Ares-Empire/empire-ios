@@ -3,7 +3,7 @@ import Foundation
 /// The contract's made-up sample answers (Samples/, copies of Arestemis/docs/samples/), for the tests and for
 /// `-sampleData`.
 enum ArestemisSamples {
-    static let files = ["overview", "matches", "match", "rejected", "settings", "places"]
+    nonisolated static let files = ["overview", "matches", "match", "rejected", "settings", "places"]
 
     static func data(_ name: String) throws -> Data {
         guard let url = Bundle.main.url(forResource: name, withExtension: "json") else {
