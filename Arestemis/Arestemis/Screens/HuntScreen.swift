@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// The main tab: the hunt (status, the search in two lines, start or pause), today's figures, the portals, the
-/// latest matches, and the ARESTEMIS band at the end of the scroll.
+/// latest matches, and the ARESTEMIS band at the end of the scroll (`WordmarkScrollView`).
 struct HuntScreen: View {
     let store: ArestemisStore
     @Bindable var navigation: AppNavigation
@@ -10,9 +10,8 @@ struct HuntScreen: View {
 
     var body: some View {
         NavigationStack(path: $navigation.huntPath) {
-            GeometryReader { geometry in
-              ScrollViewReader { reader in
-                ScrollView {
+            ScrollViewReader { reader in
+                WordmarkScrollView(word: "ARESTEMIS") {
                     VStack(spacing: 0) {
                         AppHeader(title: "Arestemis") {
                             GlassIconButton(symbol: "gearshape", label: String(localized: "Settings")) { navigation.sheet = .settings }
@@ -34,20 +33,14 @@ struct HuntScreen: View {
                             if store.hunt != nil { latest }
                         }
                         .padding(.horizontal, Look.side).padding(.top, 10)
-                        Spacer(minLength: 44)
-                        WordmarkBand(word: "ARESTEMIS", width: geometry.size.width)
-                            .padding(.bottom, 6)
-                            .id("band")
                     }
-                    .frame(minHeight: geometry.size.height)
                 }
                 .scrollIndicators(.hidden)
                 .edgeFade(top: 16)
                 .refreshable { await store.reloadOverview() }
                 .onAppear {
-                    if scrollsToBottom { DispatchQueue.main.async { reader.scrollTo("band", anchor: .bottom) } }
+                    if scrollsToBottom { DispatchQueue.main.async { reader.scrollToWordmark() } }
                 }
-              }
             }
             .provinceWall()
             .toolbar(.hidden, for: .navigationBar)

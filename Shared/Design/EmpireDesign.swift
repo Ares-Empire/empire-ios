@@ -165,18 +165,20 @@ struct GlassIconButton: View {
     }
 }
 
-/// The big wordmark across the full width that ends a province app's main screen (Aresium's band, without its
-/// special mode): the letters spread edge to edge, white fading into the wall.
+/// The big wordmark across the full width that ends an app's main screen (Aresium's band, without its special mode):
+/// the letters spread edge to edge, by default white fading into the wall. A space is a wider slot, so two words
+/// read apart (the hub's "ARES EMPIRE" band does the same).
 struct WordmarkBand: View {
     let word: String
     let width: CGFloat
+    var fill = AnyShapeStyle(LinearGradient(stops: [.init(color: Ink.primary, location: 0),
+                                                    .init(color: Color(hex: 0x7F7F7F, opacity: 0.18), location: 1.16)],
+                                            startPoint: .top, endPoint: .bottom))
 
     var body: some View {
         let letters = Array(word.uppercased())
         let size = min(220, max(48, width / CGFloat(max(letters.count, 1)) * 1.08))
-        LinearGradient(stops: [.init(color: Ink.primary, location: 0),
-                               .init(color: Color(hex: 0x7F7F7F, opacity: 0.18), location: 1.16)],
-                       startPoint: .top, endPoint: .bottom)
+        Rectangle().fill(fill)
             .frame(width: width, height: size * 0.74)
             .mask {
                 Canvas { context, canvasSize in
@@ -185,7 +187,7 @@ struct WordmarkBand: View {
                             .tracking(-size * 0.015))
                     }
                     let proposal = CGSize(width: canvasSize.width, height: .infinity)
-                    let widths = glyphs.map { $0.measure(in: proposal).width }
+                    let widths = zip(letters, glyphs).map { $0 == " " ? size * 0.5 : $1.measure(in: proposal).width }
                     let gap = (canvasSize.width - 8 - widths.reduce(0, +)) / CGFloat(max(glyphs.count - 1, 1))
                     var x: CGFloat = 4
                     for (index, glyph) in glyphs.enumerated() {
@@ -198,4 +200,59 @@ struct WordmarkBand: View {
             .opacity(0.9)
             .accessibilityHidden(true)
     }
+}
+
+/// The main screen's scroll view, ending with the app's wordmark: the rule for every app (Patrik, 2026-10-24). Use it
+/// in place of the screen's `ScrollView`. The band scrolls with the content and is never fixed on screen. Content
+/// shorter than the screen is stretched to the scroll view's bottom edge, so the band starts just below it and shows
+/// only when you scroll down; longer content is followed by the band, 44 pt below it and 10 pt above the bars.
+/// Scroll modifiers (`.refreshable`, `.scrollIndicators`, …) go on it as on a `ScrollView`; inside a
+/// `ScrollViewReader`, `proxy.scrollToWordmark()` scrolls the band into view.
+struct WordmarkScrollView<Content: View, Band: View>: View {
+    private let content: Content
+    private let band: (CGFloat) -> Band
+    /// The scroll view's width, and the height from the content's top to its bottom edge under the bars (zero until measured).
+    @State private var visible = CGSize.zero
+
+    /// A band of the app's own (Aresium's, with its special mode); it gets the full width.
+    init(@ViewBuilder content: () -> Content, @ViewBuilder band: @escaping (CGFloat) -> Band) {
+        self.content = content()
+        self.band = band
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 0) {
+                VStack(spacing: 0) {
+                    content
+                    Spacer(minLength: 44)
+                }
+                .frame(minHeight: visible.height, alignment: .top)
+                band(visible.width)
+                    .padding(.bottom, 10)
+                    .opacity(visible == .zero ? 0 : 1)      // never seen in the first frame, before the measure
+                    .id(WordmarkScrollID.end)
+            }
+        }
+        .onScrollGeometryChange(for: CGSize.self) { geometry in
+            // The container is the part between the bars; the content runs on under the bottom bars to the edge.
+            CGSize(width: geometry.containerSize.width, height: geometry.containerSize.height + geometry.contentInsets.bottom)
+        } action: { _, size in
+            visible = size
+        }
+    }
+}
+
+extension WordmarkScrollView where Band == WordmarkBand {
+    /// The usual band: the app's name, white fading into the wall.
+    init(word: String, @ViewBuilder content: () -> Content) {
+        self.init(content: content) { width in WordmarkBand(word: word, width: width) }
+    }
+}
+
+private enum WordmarkScrollID { static let end = "wordmark-end" }
+
+extension ScrollViewProxy {
+    /// Scrolls a `WordmarkScrollView` to its end, the band at the bottom (for the screenshots' launch arguments).
+    func scrollToWordmark() { scrollTo(WordmarkScrollID.end, anchor: .bottom) }
 }
