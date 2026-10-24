@@ -17,11 +17,12 @@ struct ContentView: View {
         let testing = NSClassFromString("XCTestCase") != nil
             || ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
         let quiet = options.sample || testing
+        let installDefaults = quiet ? nil : EmpireShared.defaults
         #else
         let quiet = false
+        let installDefaults = EmpireShared.defaults
         #endif
-        let session = EmpireSession(app: .arestemis, restoreOnLaunch: !quiet,
-                                    installDefaults: quiet ? nil : EmpireShared.defaults)
+        let session = EmpireSession(app: .arestemis, restoreOnLaunch: !quiet, installDefaults: installDefaults)
         _store = State(initialValue: Self.makeStore(session: session, options: options))
         self.options = options
         restoresOnLaunch = !quiet
