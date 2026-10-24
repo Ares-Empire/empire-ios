@@ -37,6 +37,11 @@ enum Format {
         }
     }
 
+    /// A tab's search without a match: "Nothing found for “Luther”." (the query as typed, trimmed).
+    static func nothingFound(_ query: String, language: AppLanguage = .current) -> String {
+        language.string("Nothing found for “\(query.trimmingCharacters(in: .whitespacesAndNewlines))”.")
+    }
+
     /// "Solid", "My read", "Shaky".
     static func confidence(_ confidence: Confidence, language: AppLanguage = .current) -> String {
         switch confidence {

@@ -11,6 +11,22 @@
         }
       }
     },
+    "%lld of %lld characters" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld von %lld Zeichen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld of %2$lld characters"
+          }
+        }
+      }
+    },
     "About" : {
       "localizations" : {
         "de" : {
@@ -37,6 +53,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kontakt & Support"
+          }
+        }
+      }
+    },
+    "Discard" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verwerfen"
+          }
+        }
+      }
+    },
+    "Discard this message?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nachricht verwerfen?"
           }
         }
       }
@@ -101,6 +137,27 @@
         }
       }
     },
+    "Idea or wish" : {
+      "comment" : "Contact form: the kind of message",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Idee oder Wunsch"
+          }
+        }
+      }
+    },
+    "If it needs an answer, it comes by email." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Braucht es eine Antwort, kommt sie per E-Mail."
+          }
+        }
+      }
+    },
     "Imprint" : {
       "localizations" : {
         "de" : {
@@ -117,6 +174,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "In den iOS-Einstellungen"
+          }
+        }
+      }
+    },
+    "It didn't go through. Please try again." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das hat nicht geklappt. Versuch es noch mal."
+          }
+        }
+      }
+    },
+    "Keep writing" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Weiterschreiben"
           }
         }
       }
@@ -191,6 +268,26 @@
         }
       }
     },
+    "Message" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nachricht"
+          }
+        }
+      }
+    },
+    "No connection. Send it again when you're online." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keine Verbindung. Sende sie später noch mal."
+          }
+        }
+      }
+    },
     "Notifications" : {
       "localizations" : {
         "de" : {
@@ -221,12 +318,64 @@
         }
       }
     },
+    "Problem" : {
+      "comment" : "Contact form: the kind of message",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Problem"
+          }
+        }
+      }
+    },
+    "Question" : {
+      "comment" : "Contact form: the kind of message",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Frage"
+          }
+        }
+      }
+    },
     "Retry" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Erneut versuchen"
+          }
+        }
+      }
+    },
+    "Send" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Senden"
+          }
+        }
+      }
+    },
+    "Send again" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erneut senden"
+          }
+        }
+      }
+    },
+    "Sending…" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wird gesendet…"
           }
         }
       }
@@ -261,6 +410,17 @@
         }
       }
     },
+    "Something else" : {
+      "comment" : "Contact form: the kind of message",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sonstiges"
+          }
+        }
+      }
+    },
     "Takes effect after you close %@ and open it again." : {
       "localizations" : {
         "de" : {
@@ -271,12 +431,12 @@
         }
       }
     },
-    "The contact form comes with the next update." : {
+    "Thanks, it's arrived." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Das Kontaktformular kommt mit dem nächsten Update."
+            "value" : "Danke, ist angekommen."
           }
         }
       }
@@ -331,6 +491,26 @@
         }
       }
     },
+    "Too many messages for now. Please try again later." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zu viele Nachrichten. Bitte später noch mal."
+          }
+        }
+      }
+    },
+    "Topic" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thema"
+          }
+        }
+      }
+    },
     "Try again" : {
       "localizations" : {
         "de" : {
@@ -351,12 +531,62 @@
         }
       }
     },
+    "What happened, and what did you expect?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was ist passiert, und was hast du erwartet?"
+          }
+        }
+      }
+    },
+    "What is it about?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Worum geht es?"
+          }
+        }
+      }
+    },
+    "What would make the app better for you?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was würde die App für dich besser machen?"
+          }
+        }
+      }
+    },
+    "What would you like to know?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was möchtest du wissen?"
+          }
+        }
+      }
+    },
     "Wrong email or password." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "E-Mail oder Passwort ist falsch."
+          }
+        }
+      }
+    },
+    "Your app version, iOS version and language are sent with it. The answer comes by email, to your account's address." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App-Version, iOS-Version und Sprache werden mitgeschickt. Die Antwort kommt per E-Mail an die Adresse deines Kontos."
           }
         }
       }

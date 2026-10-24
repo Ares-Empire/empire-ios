@@ -51,7 +51,7 @@ struct SettingsScreen<AppSection: View>: View {
         .presentationBackground(Ink.background)
         .preferredColorScheme(.dark)
         .sheet(isPresented: $showsSupport) {
-            SupportStubSheet()      // E5: SupportSheet goes here
+            SupportSheet(session: session, accent: app.accent, sample: sample)
         }
     }
 
@@ -287,33 +287,5 @@ struct LicenceScreen: View {
         .background { SettingsWall(accent: accent) }
         .navigationTitle(Text(verbatim: font.rawValue))
         .navigationBarTitleDisplayMode(.inline)
-    }
-}
-
-// MARK: - Help
-
-// E5: SupportSheet goes here. Brief E5 builds the contact form (Shared/Support/SupportSheet) at the same time; the lead
-// replaces this stub with it when merging (`SettingsScreen.body`, the `.sheet(isPresented: $showsSupport)`).
-struct SupportStubSheet: View {
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        NavigationStack {
-            Text("The contact form comes with the next update.", tableName: "Shared")
-                .font(AppFont.text(14)).foregroundStyle(Ink.muted).multilineTextAlignment(.center)
-                .padding(30)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background { Ink.background.ignoresSafeArea() }
-                .navigationTitle(Text("Contact & support", tableName: "Shared"))
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button { dismiss() } label: { Text("Done", tableName: "Shared") }
-                    }
-                }
-        }
-        .presentationDetents([.medium])
-        .presentationBackground(Ink.background)
-        .preferredColorScheme(.dark)
     }
 }

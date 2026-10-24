@@ -12,6 +12,10 @@ struct ContentView: View {
     // the store's session, or they see a logged-out one and load nothing.
     @State private var marks: ProvinceMarks
     private let restoresOnLaunch: Bool
+    #if DEBUG
+    /// Screenshots: `-openSheet support` opens the contact form (Shared/Support) over the home.
+    @State private var showsSupport: Bool
+    #endif
     private var session: EmpireSession { store.session }
 
     init(arguments: [String] = ProcessInfo.processInfo.arguments) {
@@ -27,6 +31,10 @@ struct ContentView: View {
         _store = State(initialValue: EmpireStore(session: session, sample: sample))
         _marks = State(initialValue: ProvinceMarks(session: session, sample: sample))
         restoresOnLaunch = !quiet
+        #if DEBUG
+        let sheet = arguments.firstIndex(of: "-openSheet").flatMap { arguments.indices.contains($0 + 1) ? arguments[$0 + 1] : nil }
+        _showsSupport = State(initialValue: sheet == "support")
+        #endif
     }
 
     var body: some View {
@@ -48,6 +56,9 @@ struct ContentView: View {
             }
         }
         .task { if restoresOnLaunch { await session.restore() } }
+        #if DEBUG
+        .sheet(isPresented: $showsSupport) { SupportSheet(session: session, sample: store.isSample) }
+        #endif
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
                 Task {

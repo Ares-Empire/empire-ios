@@ -16,6 +16,9 @@ struct ContentView: View {
     @State private var path: [DashboardRoute] = []
     @State private var sampleActive: Bool
     @State private var showsSettings = false
+    /// Where the band was when it was tapped (from the screen's bottom edge to its word), so the intro's word lands
+    /// there; nil when the header started the transition.
+    @State private var bandLanding: CGFloat?
     private var palette: Palette { Palette(theme: theme.theme) }
     private var session: EmpireSession { store.session }
 
@@ -98,8 +101,8 @@ struct ContentView: View {
                         VStack(spacing: 0) {
                             header()
                             restoreFeedback
-                            StartScreen(store: store, imports: imports, palette: palette, current: $current, side: $side, graph: $graph) { path.append($0) }
-                            band(in: geometry)
+                            StartScreen(store: store, imports: imports, palette: palette, current: $current, side: $side,
+                                        graph: $graph, band: band(in: geometry)) { path.append($0) }
                         }
                         .background { Wall(palette: palette) }
                         .toolbar(.hidden, for: .navigationBar)
@@ -108,11 +111,11 @@ struct ContentView: View {
                                 header(route)
                                 restoreFeedback
                                 if route.month != nil {
-                                    TransactionsScreen(route: route, store: store, palette: palette)
+                                    TransactionsScreen(route: route, store: store, palette: palette, band: band(in: geometry))
                                 } else {
-                                    CategoryScreen(route: route, store: store, palette: palette, graph: $graph) { path.append($0) }
+                                    CategoryScreen(route: route, store: store, palette: palette, graph: $graph,
+                                                   band: band(in: geometry)) { path.append($0) }
                                 }
-                                band(in: geometry)
                             }.background { Wall(palette: palette) }.toolbar(.hidden, for: .navigationBar)
                         }
                     }.task { if store.dashboard == nil { await store.reload() } }
@@ -127,7 +130,9 @@ struct ContentView: View {
             .allowsHitTesting(!theme.isAnimating)
             .overlay {
                 if let transition = theme.transition {
-                    AresiumIntro(transition: transition, bottomInset: geometry.safeAreaInsets.bottom,
+                    // Without a tapped band (the header, the DEBUG intro arguments): where the band sits at the end.
+                    AresiumIntro(transition: transition,
+                                 landing: bandLanding ?? geometry.safeAreaInsets.bottom + WordmarkEnd.below,
                                  pausedProgress: pausedIntroProgress)
                         .id(transition.id)
                 }
@@ -194,11 +199,14 @@ struct ContentView: View {
         }
     }
 
-    private func band(in geometry: GeometryProxy) -> some View {
-        AresiumBand(palette: palette,
-                    screenSize: CGSize(width: geometry.size.width,
-                                       height: geometry.size.height + geometry.safeAreaInsets.top + geometry.safeAreaInsets.bottom),
-                    hidden: theme.isAnimating) { theme.send(.band, reduceMotion: reduceMotion) }
+    /// The band that ends each screen's scroll content; tapping it enters or leaves the special mode.
+    private func band(in geometry: GeometryProxy) -> AresiumBand {
+        let screenHeight = geometry.size.height + geometry.safeAreaInsets.top + geometry.safeAreaInsets.bottom
+        return AresiumBand(palette: palette, width: geometry.size.width, hidden: theme.isAnimating) { wordFrame in
+            guard !theme.isAnimating else { return }
+            bandLanding = screenHeight - wordFrame.maxY
+            theme.send(.band, reduceMotion: reduceMotion)
+        }
     }
 
     @MainActor
@@ -235,8 +243,11 @@ struct ContentView: View {
         }
         return ScreenHeader(title: route?.category ?? "Aresium", subtitle: subtitle, category: category, palette: palette,
                             back: route == nil ? nil : { if !path.isEmpty { path.removeLast() } },
-                            toggleTheme: { theme.send(.header, reduceMotion: reduceMotion) },
-                            openSettings: { showsSettings = true })
+                            toggleTheme: {
+            guard !theme.isAnimating else { return }
+            bandLanding = nil
+            theme.send(.header, reduceMotion: reduceMotion)
+        }, openSettings: { showsSettings = true })
     }
 
     /// Settings → Log out: ends the shared login; in sample mode it leaves the sample for the real login.

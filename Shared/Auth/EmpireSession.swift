@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import os
 
 /// Which Empire app this is: the service its account must have, and its name for messages.
 struct EmpireAppIdentity: Equatable, Sendable {
@@ -83,6 +84,7 @@ final class EmpireSession {
     private var signInHandlers: [() -> Void] = []
     private var logoutHandlers: [() -> Void] = []
     private var appDataResetHandlers: [() -> Void] = []
+    private static let log = Logger(subsystem: "de.ares-empire.shared", category: "login")
 
     /// This app may not be used with the current login.
     var isDenied: Bool { if case .denied = access { true } else { false } }
@@ -213,6 +215,7 @@ final class EmpireSession {
         case (nil, .some):
             await restore()
         case (.some, nil):
+            Self.log.notice("\(self.app.service, privacy: .public): follows a logout made in another app")
             endSession(reason: nil)
         case let (.some(current), .some(saved)) where current != saved:
             if let account = EmpireToken.accountID(current), account == EmpireToken.accountID(saved) {
@@ -227,8 +230,10 @@ final class EmpireSession {
         }
     }
 
-    /// Ends the login in every Empire app.
-    func logOut(reason: String? = nil) {
+    /// Ends the login in every Empire app. Each logout is written to the device's log with the line that asked for it,
+    /// so an unexpected one can be traced: `log show --predicate 'subsystem == "de.ares-empire.shared"'`.
+    func logOut(reason: String? = nil, file: StaticString = #fileID, line: UInt = #line) {
+        Self.log.notice("\(self.app.service, privacy: .public): login ended everywhere by \(file, privacy: .public):\(line)")
         endSession(reason: reason)
         do { try storage.delete() } catch { self.error = self.error ?? error.localizedDescription }
     }

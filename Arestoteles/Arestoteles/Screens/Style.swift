@@ -87,24 +87,28 @@ struct CalmMessage: View {
     }
 }
 
-/// A note as a row: title, type, summary (two lines). Tapping opens it.
+/// A note as a row: title, type, summary (two lines). Tapping opens it. In a tab's search, `lead` stands in for a
+/// missing summary and the query's words are marked.
 struct NoteRow: View {
     let note: Note
     var detail: Text? = nil
+    /// The line under the title, plain text; nil: the summary.
+    var lead: String? = nil
+    var query = ""
     @Environment(AppNavigation.self) private var navigation
 
     var body: some View {
         Button { navigation.open(NoteLink(note: note.id)) } label: {
             VStack(alignment: .leading, spacing: 5) {
                 HStack(alignment: .firstTextBaseline) {
-                    Text(note.title).font(AppFont.text(15, weight: .semibold)).foregroundStyle(Ink.primary)
+                    Text(note.title, marking: query).font(AppFont.text(15, weight: .semibold)).foregroundStyle(Ink.primary)
                         .multilineTextAlignment(.leading)
                     Spacer(minLength: 8)
                     if let detail { detail.font(AppFont.text(12)).foregroundStyle(Ink.secondary) }
                 }
                 CapsLabel(text: Format.type(note.type))
-                if let summary = note.summary {
-                    Text(InlineMarkdown.plain(summary)).font(AppFont.text(13)).foregroundStyle(Ink.secondary)
+                if let line = lead ?? note.summary.map(InlineMarkdown.plain) {
+                    Text(line, marking: query).font(AppFont.text(13)).foregroundStyle(Ink.secondary)
                         .lineLimit(2).multilineTextAlignment(.leading)
                 }
             }
@@ -115,6 +119,67 @@ struct NoteRow: View {
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
+    }
+}
+
+/// The search field at the top of Positions, Topics and Library: the look of the Search tab's own field (a capsule of
+/// light glass, the magnifier, × to clear, the system font as there, growing with Dynamic Type), but in the content, so
+/// it scrolls with it.
+struct TabSearchField: View {
+    @Binding var text: String
+    let prompt: Text
+    @FocusState private var isFocused: Bool
+
+    var body: some View {
+        HStack(spacing: 7) {
+            Image(systemName: "magnifyingglass").font(.body.weight(.medium))
+                .foregroundStyle(.white.opacity(0.8))
+                .accessibilityHidden(true)
+            TextField(text: $text, prompt: prompt.foregroundStyle(.white.opacity(0.45))) { prompt }
+                .font(.body).foregroundStyle(Ink.primary).tint(Look.accent.color)
+                .textInputAutocapitalization(.never).autocorrectionDisabled()
+                .submitLabel(.search)
+                .focused($isFocused)
+            if !text.isEmpty {
+                Button { text = "" } label: {
+                    Image(systemName: "xmark.circle.fill").font(.body)
+                        .symbolRenderingMode(.palette)
+                        .foregroundStyle(Color(hex: 0x202024), .white.opacity(0.8))
+                        .frame(width: 28, height: 36)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text("Clear the search"))
+            }
+        }
+        .padding(.leading, 14).padding(.trailing, text.isEmpty ? 14 : 6)
+        .frame(minHeight: 42)
+        .background(Capsule().fill(.white.opacity(0.11)))
+        .contentShape(Capsule())
+        .onTapGesture { isFocused = true }
+    }
+}
+
+extension Text {
+    /// A text with the query's words marked as the search marks them: bold, in the accent. Case and accents do not
+    /// matter; words of one letter are left alone. An empty query marks nothing.
+    init(_ text: String, marking query: String) {
+        self.init(Self.marked(text, query: query))
+    }
+
+    static func marked(_ text: String, query: String) -> AttributedString {
+        var marked = AttributedString(text)
+        let words = query.split(whereSeparator: \.isWhitespace).map(String.init).filter { $0.count >= 2 }
+        for word in words {
+            var searchFrom = marked.startIndex
+            while searchFrom < marked.endIndex,
+                  let range = marked[searchFrom...].range(of: word, options: [.caseInsensitive, .diacriticInsensitive]) {
+                marked[range].inlinePresentationIntent = .stronglyEmphasized
+                marked[range].foregroundColor = Look.accent.color
+                searchFrom = range.upperBound
+            }
+        }
+        return marked
     }
 }
 

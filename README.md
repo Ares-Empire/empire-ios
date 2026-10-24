@@ -29,8 +29,8 @@ empire-ios/
   Arestoteles/    Arestoteles.xcodeproj: Patrik's Weltbild vault (positions, topics, library, search, edits,
                   quick notes, Discuss with Claude, Spotlight), tests
   Shared/         compiled into every app: the Empire login (one login for all apps), the network
-                  layer, the fonts, push (Push/: PushCenter + PushAppDelegate); each project includes
-                  it as a synchronized folder
+                  layer, the fonts, push (Push/: PushCenter + PushAppDelegate), the contact form
+                  (Support/); each project includes it as a synchronized folder
   scripts/        new-app-project.py (a new app project, wired to Shared/), strings.py (String Catalogs),
                   check-shared-login.sh, aresium-fixtures.mjs
 ```
@@ -58,3 +58,6 @@ Empire app). A new province app: `python3 scripts/new-app-project.py <Name> <bun
 3. Each build stays installable for 90 days; any newer build restarts that clock.
 
 Later: automate step 1 (Xcode Cloud or a script with an App Store Connect API key kept outside the repo).
+
+What App Store Connect asks (App Privacy, TestFlight test information, demo login) and what is still missing before
+the App Store: [`docs/APP-STORE.md`](docs/APP-STORE.md).

@@ -26,7 +26,8 @@ struct EmpireHomeStatus {
 
 /// The throne room, as approved on the phone hub (ares-empire web/app/mobile.jsx): header (crest · THE EMPIRE ·
 /// quiet icons), the faded marble bust, the desktop's wheel with one quiet line under it, and the chronicle (Patrik)
-/// or "What's new" (everyone else). No slogans, gold only as an accent.
+/// or "What's new" (everyone else), ending in THE EMPIRE in gold (`WordmarkScrollView`). No slogans, gold only as an
+/// accent.
 struct EmpireHome: View {
     let data: EmpireData
     let marks: [String: UIImage]
@@ -55,7 +56,7 @@ struct EmpireHome: View {
         ZStack(alignment: .top) {
             EmpireStyle.background.ignoresSafeArea()
             backdrop
-            ScrollView {
+            WordmarkScrollView {
                 VStack(spacing: 0) {
                     header
                     if let loadError = status.loadError {
@@ -66,12 +67,17 @@ struct EmpireHome: View {
                     if !expanded {
                         Divider().overlay(Color.white.opacity(0.06)).padding(.horizontal, 26).padding(.top, 14)
                         ChronicleList(title: admin ? String(localized: "Chronicle") : String(localized: "What's new"), entries: data.chronicle, marks: marks)
-                            .padding(.horizontal, 26).padding(.top, 22).padding(.bottom, 40)
+                            .padding(.horizontal, 26).padding(.top, 22)
                     }
                 }
+            } band: { width in
+                WordmarkBand(word: "THE EMPIRE", width: width, fill: AnyShapeStyle(EmpireStyle.goldText))
             }
             .scrollIndicators(.hidden)
             .refreshable { await actions.refresh() }
+            #if DEBUG
+            .defaultScrollAnchor(ProcessInfo.processInfo.arguments.contains("-scrollToEnd") ? .bottom : nil)   // screenshots
+            #endif
         }
         .preferredColorScheme(.dark)
         #if DEBUG

@@ -306,6 +306,16 @@
         }
       }
     },
+    "Best matches" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beste Treffer"
+          }
+        }
+      }
+    },
     "Brief" : {
       "localizations" : {
         "de" : {
@@ -352,6 +362,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Claude Code arbeitet mit den Regeln des Vaults. Der Text unten wird kopiert; füg ihn in einer neuen Sitzung ein."
+          }
+        }
+      }
+    },
+    "Clear the search" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suche leeren"
           }
         }
       }
@@ -1026,6 +1046,16 @@
         }
       }
     },
+    "Nothing found for “%@”." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nichts gefunden für „%@“."
+          }
+        }
+      }
+    },
     "Nothing found." : {
       "localizations" : {
         "de" : {
@@ -1282,12 +1312,52 @@
         }
       }
     },
+    "Search positions" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Positionen durchsuchen"
+          }
+        }
+      }
+    },
+    "Search the library" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bibliothek durchsuchen"
+          }
+        }
+      }
+    },
     "Search titles, summaries, the notes' text and the glossary, in English and German." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Durchsucht Titel, Zusammenfassungen, den Text der Notizen und das Glossar, auf Englisch und Deutsch."
+          }
+        }
+      }
+    },
+    "Search topics" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Themen durchsuchen"
+          }
+        }
+      }
+    },
+    "Searching by meaning…" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suche nach Bedeutung…"
           }
         }
       }

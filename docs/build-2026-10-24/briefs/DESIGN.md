@@ -14,7 +14,7 @@ wall, glass, Space Grotesk text, JetBrains Mono numbers, tracked small-caps labe
 screens; stay in their style.**
 
 Use `Shared/Design/` (read it): `ProvinceWall(accent:)`, `.glassCard(accent:raised:)`, `StatusLabel`, `StatusTone`,
-`SectionHeading`, `GlassIconButton`, `WordmarkBand`, `Ink` colours, `AppAccent.arestemis` / `.aresus`,
+`SectionHeading`, `GlassIconButton`, `WordmarkBand`, `WordmarkScrollView`, `Ink` colours, `AppAccent.arestemis` / `.aresus`,
 `ProvinceLogin`, `ProvinceLoading`, `ProvinceMarkView` + `ProvinceMarks`; fonts via `AppFont.text(...)` /
 `AppFont.number(...)`. **Do not edit `Shared/`**; if you need a shared piece, build it in your app's `Screens/` and name
 it in your final message (the lead moves it).
@@ -42,7 +42,9 @@ it in your final message (the lead moves it).
 - Empty, loading and error states are designed, not afterthoughts: a calm sentence in `Ink.muted`, centred, with one
   action if there is one.
 - The app's bust (`Image("Bust")`) is its identity: 38 pt in the header's left slot (like Aresium's Hermes), bigger on
-  login/loading. The `WordmarkBand` with the app's name ends the main tab's scroll content (not fixed on screen).
+  login/loading. The app's name ends the main screen (the first tab's root) in every app: build that screen's scroll
+  view with `WordmarkScrollView(word:)` (`Shared/Design`), never a fixed band. The band scrolls with the content and
+  stays just below the screen's edge until you scroll down (Patrik, 2026-10-24).
 
 ## Screenshots
 

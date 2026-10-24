@@ -34,17 +34,20 @@ struct AresiumWord: View {
     }
 }
 
+/// The ARESIUM band that ends the screens' scroll content (`WordmarkScrollView`), so it shows only when you scroll down.
+/// Tapping it enters or leaves the special mode; it hands over where the word is on screen, so the intro's word lands
+/// exactly on it (or lifts off from it).
 struct AresiumBand: View {
     let palette: Palette
-    let screenSize: CGSize
+    let width: CGFloat
     let hidden: Bool
-    let action: () -> Void
+    let action: (_ wordFrame: CGRect) -> Void       // in the global (screen) coordinate space
+    @State private var wordFrame = CGRect.zero      // read only on a tap, so scrolling does not redraw the band
 
     var body: some View {
-        Button(action: action) {
-            AresiumWord(palette: palette, width: screenSize.width)
-                .padding(.bottom, 4)
-                .frame(width: screenSize.width, height: max(84, screenSize.height * 0.14), alignment: .bottom)
+        Button { action(wordFrame) } label: {
+            AresiumWord(palette: palette, width: width)
+                .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { wordFrame = $0 }
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -56,8 +59,9 @@ struct AresiumBand: View {
 
 struct AresiumIntro: View {
     let transition: ThemeState.Transition
-    let bottomInset: CGFloat
+    let landing: CGFloat            // from the screen's bottom edge to the band word's bottom, where the word lands
     var pausedProgress: Double?
+    @State private var start = Date()       // each transition gets a new overlay (`.id`), so a new start
 
     var body: some View {
         Group {
@@ -66,10 +70,9 @@ struct AresiumIntro: View {
             } else {
                 // A linear clock lets the shared sampler preserve the website's exact offsets
                 // and per-segment cubic Beziers, including the impact curve's overshoot.
-                Color.clear.keyframeAnimator(initialValue: 0.0, repeating: false) { _, progress in
-                    frame(at: progress)
-                } keyframes: { _ in
-                    LinearKeyframe(1.0, duration: IntroTimeline.duration)
+                // (A keyframe animator with `repeating: false` never plays; it only shows the first value.)
+                TimelineView(.animation) { context in
+                    frame(at: context.date.timeIntervalSince(start) / IntroTimeline.duration)
                 }
             }
         }.ignoresSafeArea().allowsHitTesting(false).accessibilityHidden(true)
@@ -88,7 +91,7 @@ struct AresiumIntro: View {
                     .rotationEffect(.degrees(pose.rotation))
                     .offset(x: pose.x, y: geometry.size.height * pose.y / 100)
                     .opacity(pose.opacity)
-                    .padding(.bottom, bottomInset + 4)
+                    .padding(.bottom, landing)
             }.frame(width: geometry.size.width, height: geometry.size.height).clipped()
         }
     }

@@ -62,7 +62,8 @@ extension AppSheet {
     }
 }
 
-/// Where the user is: the tab, each tab's pushed pages, the Library's part and filter, the search, the open sheet.
+/// Where the user is: the tab, each tab's pushed pages, the Library's part and filter, the search, what is typed in each
+/// tab's search field, the open sheet.
 /// Links (in notes, from outside, from Spotlight) all go through `open(_:)`.
 @MainActor @Observable
 final class AppNavigation {
@@ -77,6 +78,10 @@ final class AppNavigation {
     var query = ""
     /// The search's type filter; nil = every type.
     var searchType: NoteType?
+    /// The search fields of Positions, Topics and Library (each filters its own tab).
+    var positionsQuery = ""
+    var topicsQuery = ""
+    var libraryQuery = ""
     var sheet: AppSheet?
     /// The add-position sheet shows its evidence picker.
     var showsEvidencePicker = false
@@ -132,6 +137,14 @@ final class AppNavigation {
         path.append(.note(link))
     }
 
+    /// A page any tab can push: a note (at a heading or passage) or a position.
+    func go(to route: Route) {
+        switch route {
+        case let .note(link): open(link)
+        case let .position(id): showPosition(id)
+        }
+    }
+
     func showPosition(_ id: String) {
         sheet = nil
         if path.last == .position(id) { return }
@@ -163,6 +176,9 @@ final class AppNavigation {
         region = nil
         query = ""
         searchType = nil
+        positionsQuery = ""
+        topicsQuery = ""
+        libraryQuery = ""
         sheet = nil
         showsEvidencePicker = false
         scrollRequest = nil
@@ -174,8 +190,10 @@ final class AppNavigation {
 /// DEBUG launch arguments for screenshots (in a release build all are ignored):
 /// `-sampleData` (the bundled samples; edits answered with `edit-result.json`), `-sampleEditConflict` /
 /// `-sampleEditInvalid` (edits answered 409 / 422), `-samplePushLater` (edits saved with `pushed: false`),
-/// `-sampleOffline` (the samples as the saved vault, the server unreachable), `-tab positions|topics|library|search`,
-/// `-library mechanisms|events|questions|actors`, `-search <query>`, `-openNote <id>[#<heading>]`,
+/// `-sampleOffline` (the samples as the saved vault, the server unreachable), `-sampleSlowSearch` (the server's search
+/// answers after 3 s), `-tab positions|topics|library|search`, `-library mechanisms|events|questions|actors`,
+/// `-search <query>`, `-tabSearch <query>` (typed in the search field of the tab `-tab`/`-library` opens),
+/// `-openBestMatch <n>` (taps the search's n-th best match once it is there), `-openNote <id>[#<heading>]`,
 /// `-openPosition <id>`, `-openSheet brief|edit|quicknote|discuss|discussions|reword|change|drop|add|evidence|settings`.
 struct LaunchOptions {
     var sample = false
@@ -183,9 +201,12 @@ struct LaunchOptions {
     var editInvalid = false
     var pushLater = false
     var offline = false
+    var slowSearch = false
     var tab: AppTab?
     var library: LibraryPart?
     var search: String?
+    var tabSearch: String?
+    var openBestMatch: Int?
     var openNote: NoteLink?
     var openPosition: String?
     var openSheet: String?
@@ -201,9 +222,12 @@ struct LaunchOptions {
         editInvalid = arguments.contains("-sampleEditInvalid")
         pushLater = arguments.contains("-samplePushLater")
         offline = arguments.contains("-sampleOffline")
+        slowSearch = arguments.contains("-sampleSlowSearch")
         tab = value("-tab").flatMap(AppTab.init(rawValue:))
         library = value("-library").flatMap(LibraryPart.init(rawValue:))
         search = value("-search")
+        tabSearch = value("-tabSearch")
+        openBestMatch = value("-openBestMatch").flatMap { Int($0) }
         openNote = value("-openNote").map { text in
             let parts = text.split(separator: "#", maxSplits: 1).map(String.init)
             return NoteLink(note: parts[0], anchor: parts.count > 1 ? parts[1] : nil)
@@ -224,6 +248,14 @@ struct LaunchOptions {
         if let search {
             navigation.tab = .search
             navigation.query = search
+        }
+        if let tabSearch {
+            switch navigation.tab {
+            case .positions: navigation.positionsQuery = tabSearch
+            case .topics: navigation.topicsQuery = tabSearch
+            case .library: navigation.libraryQuery = tabSearch
+            case .search: navigation.query = tabSearch
+            }
         }
         if let openPosition { navigation.showPosition(openPosition) }
         let note = openNote?.note
@@ -259,5 +291,14 @@ struct LaunchOptions {
         } else {
             navigation.sheet = sheet
         }
+    }
+
+    /// `-openBestMatch <n>`: once the search has best matches, the n-th is tapped (true when it was).
+    func openBestMatch(of answer: SearchAnswer?, navigation: AppNavigation, index: VaultIndex) -> Bool {
+        guard sample, let openBestMatch, let answer else { return false }
+        let rows = BestMatches.rows(answer.results, index: index)
+        guard rows.indices.contains(openBestMatch - 1) else { return false }
+        navigation.go(to: rows[openBestMatch - 1].route)
+        return true
     }
 }

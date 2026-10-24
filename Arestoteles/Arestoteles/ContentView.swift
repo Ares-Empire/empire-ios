@@ -10,6 +10,7 @@ struct ContentView: View {
     @State private var store: VaultStore
     @State private var navigation = AppNavigation()
     @State private var appliedOptions = false
+    @State private var openedBestMatch = false
     @Environment(\.scenePhase) private var scenePhase
     private let options: LaunchOptions
     private let restoresOnLaunch: Bool
@@ -37,7 +38,7 @@ struct ContentView: View {
         #if DEBUG
         if options.sample, let backend = try? SampleBackend(options: .init(
             conflict: options.editConflict, invalid: options.editInvalid, pushLater: options.pushLater,
-            offline: options.offline)) {
+            offline: options.offline, slowSearch: options.slowSearch)) {
             let saved = options.offline ? try? SampleBackend.savedVault() : nil
             return VaultStore(session: session, backend: backend, persistence: MemoryPersistence(vault: saved),
                               spotlight: DeviceSpotlight(), savedAccount: { nil }, sample: true)
@@ -102,6 +103,11 @@ struct ContentView: View {
             guard store.vault != nil, !appliedOptions else { return }
             appliedOptions = true
             options.apply(to: navigation, index: store.index)
+        }
+        .onChange(of: store.bestMatches.answer) { _, answer in
+            // -openBestMatch (screenshots): the tap on a best match, once one is there.
+            guard !openedBestMatch else { return }
+            openedBestMatch = options.openBestMatch(of: answer, navigation: navigation, index: store.index)
         }
         .onOpenURL { url in
             if let link = NoteLink(url: url) { navigation.follow(link) }
