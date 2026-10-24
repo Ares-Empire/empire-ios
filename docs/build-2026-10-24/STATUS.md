@@ -24,7 +24,7 @@ Stop only for a genuine problem.
 | T: Arestemis server (API, hunts, AI check, places) | Claude subagent | `~/wt/Arestemis-api` (`app-api`) | running since 04:20 |
 | S: Aresus server + Aresync reports | Claude subagent | `~/wt/aresus-server` (`server`), `~/wt/aresync-report` (`report`) | merged + deployed |
 | A1: Arestemis iOS app | Claude subagent | `~/wt/empire-ios-arestemis` (`arestemis-app`) | running since 04:29 |
-| A2: Aresus iOS app | Claude subagent | `~/wt/empire-ios-aresus` (`aresus-app`) | running since 04:29 |
+| A2: Aresus iOS app | Claude subagent | `~/wt/empire-ios-aresus` (`aresus-app`) | merged, polished, push wired |
 | D: Shared design kit, two Xcode projects, icons | me | `~/empire-ios` main (small commits) | done 04:28 |
 
 ## Steps
@@ -72,3 +72,10 @@ Stop only for a genuine problem.
 - 04:56 S merged and deployed; Aresus overview live (1 issue = Arestemis not deployed yet, correct). Careful: a
   `config.bak` in ~/aresync is NOT git-ignored (Aresync would commit it with the Telegram token): deleted; never back
   up configs inside a synced repo.
+- 05:05 A2 merged (48 tests pass). Live on the simulator with the test account (login written into the shared Keychain
+  with the Empire SharedLoginProbe test + scratchpad `testtoken.sh`; see below). Polish: inactive provinces as slim
+  rows, issue lines wrap; Aresus checks.yaml: readable check names, shorter lines. PushCenter wired into Aresus
+  (permission prompt shows after login). Live login on a simulator:
+  `TEST_RUNNER_SHARED_LOGIN_PROBE=write TEST_RUNNER_SHARED_LOGIN_PROBE_TOKEN="$(cat tok)" xcodebuild test -project
+  Empire/Empire.xcodeproj -scheme Empire -destination id=<udid> -parallel-testing-enabled NO
+  -only-testing:EmpireTests/SharedLoginProbe`.
