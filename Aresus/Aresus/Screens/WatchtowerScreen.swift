@@ -71,7 +71,7 @@ struct WatchtowerScreen: View {
             ForEach(overview.sections) { section in
                 SectionTitle(text: section.title, value: "\(section.provinces.count)")
                     .padding(.top, 30).padding(.bottom, 12)
-                VStack(spacing: 12) {
+                VStack(spacing: section.provinces.first?.state == .inactive ? 9 : 12) {
                     ForEach(section.provinces) { province in
                         NavigationLink(value: province.slug) {
                             ProvinceBox(province: province, mark: marks[province.slug])
@@ -170,21 +170,34 @@ struct ProvinceBox: View {
     let province: Province
     let mark: UIImage?
 
+    /// Inactive and planned provinces are quieter and slimmer, so the running ones lead the list (Patrik: "simple,
+    /// clean, not bloated").
+    private var compact: Bool { province.state == .inactive }
+
     var body: some View {
-        HStack(spacing: 14) {
-            ProvinceMarkView(name: province.name, image: mark, size: 48)
+        HStack(spacing: compact ? 12 : 14) {
+            ProvinceMarkView(name: province.name, image: mark, size: compact ? 36 : 48)
             VStack(alignment: .leading, spacing: 0) {
-                Text(province.name.uppercased()).font(AppFont.text(15, weight: .bold)).tracking(1.5)
-                    .foregroundStyle(Ink.primary).lineLimit(1)
-                StatusLabel(text: province.word, tone: province.state.tone).padding(.top, 5)
-                Text(province.line).font(AppFont.text(12)).foregroundStyle(Ink.muted).lineLimit(1).padding(.top, 6)
+                Text(province.name.uppercased()).font(AppFont.text(compact ? 13 : 15, weight: .bold))
+                    .tracking(compact ? 1.3 : 1.5).foregroundStyle(Ink.primary).lineLimit(1)
+                if compact {
+                    HStack(spacing: 7) {
+                        StatusLabel(text: province.word, tone: province.state.tone, size: 9)
+                        Text(province.line).font(AppFont.text(11.5)).foregroundStyle(Ink.muted).lineLimit(1)
+                    }
+                    .padding(.top, 4)
+                } else {
+                    StatusLabel(text: province.word, tone: province.state.tone).padding(.top, 5)
+                    Text(province.line).font(AppFont.text(12)).foregroundStyle(Ink.muted)
+                        .lineLimit(province.state == .issue ? 2 : 1).padding(.top, 6)
+                }
             }
             Spacer(minLength: 0)
-            Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold)).foregroundStyle(Ink.muted)
+            Image(systemName: "chevron.right").font(.system(size: compact ? 11 : 12, weight: .semibold)).foregroundStyle(Ink.muted)
         }
-        .opacity(province.state == .inactive ? 0.7 : 1)
-        .padding(.leading, 14).padding(.trailing, 16).padding(.vertical, 12)
-        .frame(maxWidth: .infinity, minHeight: 78, alignment: .leading)
+        .opacity(compact ? 0.72 : 1)
+        .padding(.leading, compact ? 12 : 14).padding(.trailing, 16).padding(.vertical, compact ? 9 : 12)
+        .frame(maxWidth: .infinity, minHeight: compact ? 58 : 78, alignment: .leading)
         .modifier(BoxSurface(issue: province.state == .issue))
         .contentShape(RoundedRectangle(cornerRadius: Ink.cardRadius, style: .continuous))
         .accessibilityElement(children: .ignore)
