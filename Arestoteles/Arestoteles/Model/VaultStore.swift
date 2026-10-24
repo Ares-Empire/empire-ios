@@ -10,6 +10,8 @@ import Observation
 ///   app's. 409: "changed elsewhere", and the vault is reloaded; 422: the server's reason; `pushed: false`: a note that
 ///   the edit reaches the laptops later.
 /// - **Quick notes** are kept on the device first and sent when the server is reachable.
+/// - **Search:** the device's own (`search`, and `tabSearch` for the tabs' fields) at once; the server's passages by
+///   words and meaning (`bestMatches`, `GET /search`) once typing pauses.
 /// - Every request remembers the login it started with; answers that arrive after a logout are dropped. Failures go to
 ///   `EmpireSession.handleAuthFailure` (401 ends the login everywhere, 403 closes this app); the session then calls
 ///   `clear()` through `onAppDataReset`, which forgets the vault, the quick notes and the Spotlight entries.
@@ -49,6 +51,9 @@ final class VaultStore {
     private(set) var vault: Vault?
     private(set) var index = VaultIndex.empty
     private(set) var search = VaultSearch.empty
+    private(set) var tabSearch = TabSearch.empty
+    /// The Search tab's best matches from the server.
+    let bestMatches: BestMatches
     private(set) var isRefreshing = false
     /// The last refresh failed for another reason than the connection.
     private(set) var loadError: String?
@@ -73,17 +78,22 @@ final class VaultStore {
     private var spotlightTask: Task<Void, Never>?
 
     init(session: EmpireSession, backend: any VaultBackend, persistence: any VaultPersistence,
-         spotlight: any SpotlightIndexing, savedAccount: @escaping () -> String?, sample: Bool = false) {
+         spotlight: any SpotlightIndexing, savedAccount: @escaping () -> String?, sample: Bool = false,
+         searchTiming: BestMatches.Timing = BestMatches.Timing()) {
         self.session = session
         self.backend = backend
         self.persistence = persistence
         self.spotlight = spotlight
         self.savedAccount = savedAccount
         #if DEBUG
-        isSample = sample
+        let sampleMode = sample
         #else
-        isSample = false
+        let sampleMode = false
         #endif
+        isSample = sampleMode
+        bestMatches = BestMatches(timing: searchTiming) { [backend, session] query in
+            try await Self.passages(for: query, backend: backend, session: session, sample: sampleMode)
+        }
         session.onAppDataReset { [weak self] in self?.clear() }
         loadFromDisk()
     }
@@ -176,6 +186,23 @@ final class VaultStore {
             return
         }
         await refresh()
+    }
+
+    // MARK: - search
+
+    /// The server's passages for a query (`BestMatches` asks, and waits for nobody). A 401 or 403 ends the login or
+    /// closes the app like every other request; any other failure only means no best matches: nothing is shown, and
+    /// the offline state stays as the vault's requests left it. A logout cancels the request (`clear()`).
+    private static func passages(for query: String, backend: any VaultBackend, session: EmpireSession,
+                                 sample: Bool) async throws -> SearchAnswer {
+        guard sample || session.isSignedIn else { throw CancellationError() }
+        let generation = session.generation
+        do {
+            return try await backend.search(query, limit: BestMatches.asked)
+        } catch {
+            session.handleAuthFailure(error, generation: generation)
+            throw error
+        }
     }
 
     // MARK: - edits (one per op of API.md → Edits)
@@ -459,6 +486,8 @@ final class VaultStore {
         vault = nil
         index = .empty
         search = .empty
+        tabSearch = .empty
+        bestMatches.reset()
         etag = nil
         vaultAccount = nil
         isRefreshing = false
@@ -483,6 +512,7 @@ final class VaultStore {
         if changed {
             index = VaultIndex(vault: vault)
             search = VaultSearch(vault: vault)
+            tabSearch = TabSearch(vault: vault, index: index)
             if reindex { updateSpotlight(vault.notes) }
         }
         // A failed write only means the next launch starts without this vault.

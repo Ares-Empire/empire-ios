@@ -122,6 +122,8 @@ Apple approves the developer account.
 9. **Arestoteles on the phone:** check the Discuss hand-off (`DiscussPrompt.target`, now `https://claude.ai/code`: does
    the Claude app open, and how to start a session there with the copied prompt); replace the bust (the website's
    `aristotle-bust.png` has a faint "Magnific" watermark); a widget with a position to revisit (needs a widget target).
+10. **Light mode before the next new app** (Patrik, 2026-10-24; `ares-empire/docs/IPHONE-APPS.md` → "Every app
+   has"): colours as light/dark pairs in `Shared/Design`, an Appearance row in Settings, every app checked in both.
 8. **Build 2026-10-24 record:** `docs/build-2026-10-24/STATUS.md` (what was built, decisions, live tests). Built after the main work: the Aresus
    widget and the hub's live lines from Aresus.
 
@@ -151,7 +153,9 @@ Apple approves the developer account.
   this app's service, or a 403 from the app's server, closes only this app (`access = .denied`, the app forgets its
   data via `onAppDataReset`); a failed new login never ends an existing one. Coming to the foreground, each app calls
   `followSharedLogin()`: it picks up a login or logout made in another app meanwhile (a renewed token of the same
-  account is taken over without a server call). Verified across the two apps on the simulator with
+  account is taken over without a server call). Every logout is written to the device log with the line that
+  asked for it (`log show --predicate 'subsystem == "de.ares-empire.shared"'`; on a simulator via `xcrun simctl spawn
+  <udid> log show …`). Verified across the two apps on the simulator with
   `scripts/check-shared-login.sh <udid>` (2026-10-24).
 - **Empire app** (2026-10-24): the approved phone hub (`ares-empire/web/app/mobile.jsx` + `mobile.css`) in SwiftUI,
   `Empire/Empire/Screens/` (Claude's look; values copied from the CSS, with the CSS selector named in comments), data
@@ -200,8 +204,9 @@ Apple approves the developer account.
   `Spotlight`. Screens in `Screens/` are structure on `Shared/Design`, not styled yet. Launch arguments (DEBUG):
   `-sampleData` (edits answered with `edit-result.json`; `-sampleEditConflict` 409, `-sampleEditInvalid` 422,
   `-samplePushLater` pushed false, `-sampleOffline` the sample as the saved vault and no server),
-  `-tab positions|topics|library|search`, `-library mechanisms|events|questions|actors`, `-search <query>`,
-  `-openNote <id>[#<heading>]`, `-openPosition <id>`,
+  `-sampleSlowSearch` (the server's search answers after 3 s), `-tab positions|topics|library|search`,
+  `-library mechanisms|events|questions|actors`, `-search <query>`, `-tabSearch <query>` (in the field of the tab
+  `-tab` opens), `-openBestMatch <n>` (taps the n-th best match), `-openNote <id>[#<heading>]`, `-openPosition <id>`,
   `-openSheet brief|edit|quicknote|discuss|discussions|reword|change|drop|add|evidence`, `-scrollToEnd` (Positions), and `-sampleVaultFile <path>` (a
   vault saved from the server instead of the made-up sample, to look at real notes; DEBUG only, never committed).
   **For lookups (Patrik, 2026-10-24):** position cards show the position's `title` (the bold part) cut to one line of
@@ -209,6 +214,11 @@ Apple approves the developer account.
   (wording) and Note (into the Inbox, about the position); no change/drop on the phone. Long notes open with their
   sections closed (`NoteBody`), with Figures & dates, Sources and Terms (`LookupPanel`), search shows sentences first,
   and pressing a paragraph or list item edits just that passage (the server's block `lines`).
+  **Search (2026-10-24, build E2):** Positions, Topics and Library each have a search field over their own items
+  (`TabSearch`, `VaultSearch`'s matching; the Library shows every kind while a query is typed). The Search tab puts the
+  server's best matches (`GET /search`, by words and meaning; `BestMatches`: asked once typing pauses, a newer query
+  cancels the older, 5 s timeout, nothing shown on failure) above the device's results; sample mode answers every
+  query with `Samples/search.json`.
 - Targets: `Aresium` (app), `AresiumWidgetExtension` (widgets, folder `Aresium/AresiumWidget/`, embedded in the
   app), `AresiumTests`. `Aresium/AresiumShared/` is compiled into both app and widget (theme, `AppTheme`, `AppGroup`,
   widget snapshot); everything else belongs to one target. App Group `group.de.ares-empire.aresium` in both

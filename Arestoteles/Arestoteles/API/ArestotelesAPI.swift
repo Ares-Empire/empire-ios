@@ -28,6 +28,7 @@ protocol VaultBackend {
     func vault(ifNoneMatch etag: String?) async throws -> VaultFetch
     func source(note id: String) async throws -> NoteSource
     func send(_ edit: Edit) async throws -> EditResult
+    func search(_ query: String, limit: Int) async throws -> SearchAnswer
 }
 
 /// The Arestoteles API (Arestoteles/docs/API.md, version 1), with the Empire login's Bearer token. Statuses go through
@@ -54,6 +55,16 @@ struct ArestotelesAPI: VaultBackend {
         let (data, response) = try await transport.send(request)
         try check(response, data: data)
         return try JSONDecoder().decode(NoteSource.self, from: data)
+    }
+
+    /// The passages that answer a query, by words and meaning. Short timeout: the search waits for nobody, and the
+    /// device's own results stand alone when this fails.
+    func search(_ query: String, limit: Int) async throws -> SearchAnswer {
+        let request = try request("GET", path: "/search", query: "q=\(NoteLink.encode(query))&limit=\(limit)",
+                                  timeout: 5)
+        let (data, response) = try await transport.send(request)
+        try check(response, data: data)
+        return try JSONDecoder().decode(SearchAnswer.self, from: data)
     }
 
     func send(_ edit: Edit) async throws -> EditResult {
@@ -93,13 +104,16 @@ struct ArestotelesAPI: VaultBackend {
         let current: Note?
     }
 
-    private func request(_ method: String, path: String, timeout: TimeInterval = 30) throws -> URLRequest {
+    /// `query`: already percent-encoded (every character but the unreserved ones, so "+" and "&" in a query stay text).
+    private func request(_ method: String, path: String, query: String? = nil, timeout: TimeInterval = 30) throws
+        -> URLRequest {
         guard let token = token(), !token.isEmpty else { throw HTTPError.unauthorized }
         // The path is set percent-encoded, so a note id stays one segment whatever it contains.
         guard var components = URLComponents(url: Self.baseURL, resolvingAgainstBaseURL: false) else {
             throw HTTPError.invalidResponse
         }
         components.percentEncodedPath += path
+        components.percentEncodedQuery = query
         guard let url = components.url else { throw HTTPError.invalidResponse }
         var request = URLRequest(url: url)
         request.httpMethod = method

@@ -138,11 +138,12 @@ struct Harness {
     let spotlight: FakeSpotlight
 }
 
-/// A store on a fake server that answers `GET /vault` with the sample (ETag `"a1b2c3d"`).
+/// A store on a fake server that answers `GET /vault` with the sample (ETag `"a1b2c3d"`); its search waits only a
+/// moment for typing to pause.
 @MainActor
 func makeStore(session: EmpireSession? = nil, transport: FakeTransport = FakeTransport(),
-               persistence: MemoryPersistence = MemoryPersistence(), savedAccount: String? = "account-a") async throws
-    -> Harness {
+               persistence: MemoryPersistence = MemoryPersistence(), savedAccount: String? = "account-a",
+               searchTiming: BestMatches.Timing = .quick) async throws -> Harness {
     var signedIn = session
     if signedIn == nil { signedIn = await signedInSession() }
     let session = signedIn!
@@ -152,7 +153,7 @@ func makeStore(session: EmpireSession? = nil, transport: FakeTransport = FakeTra
     let spotlight = FakeSpotlight()
     let api = ArestotelesAPI(transport: transport, token: { session.token })
     let store = VaultStore(session: session, backend: api, persistence: persistence, spotlight: spotlight,
-                           savedAccount: { savedAccount })
+                           savedAccount: { savedAccount }, searchTiming: searchTiming)
     return Harness(store: store, transport: transport, session: session, persistence: persistence, spotlight: spotlight)
 }
 
@@ -175,4 +176,19 @@ func body(_ request: URLRequest?) throws -> [String: Any]? {
 
 extension Array {
     var only: Element? { count == 1 ? first : nil }
+}
+
+extension BestMatches.Timing {
+    /// The search's waits, short enough for tests and long enough to tell apart.
+    static let quick = BestMatches.Timing(pause: .milliseconds(20), slow: .milliseconds(80), timeout: .seconds(1))
+}
+
+/// Waits until `condition` holds (at most two seconds), for state that changes after a timed wait.
+@MainActor
+func eventually(_ condition: () -> Bool) async -> Bool {
+    for _ in 0..<400 {
+        if condition() { return true }
+        try? await Task.sleep(for: .milliseconds(5))
+    }
+    return condition()
 }

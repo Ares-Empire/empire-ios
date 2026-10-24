@@ -1,16 +1,16 @@
 import SwiftUI
 
-/// Search on the device over the whole vault (`VaultSearch`): titles first, the glossary in English and German, a type
-/// filter. The query and the filter live in the navigation, so they survive switching tabs.
+/// Search over the whole vault: the server's best matches by words and meaning first (`BestMatches`, once typing
+/// pauses), then the device's own results at once (`VaultSearch`): sentences, then notes and the glossary in English
+/// and German, with a type filter. The query and the filter live in the navigation, so they survive switching tabs.
 struct SearchScreen: View {
     @Environment(VaultStore.self) private var store
     @Environment(AppNavigation.self) private var navigation
 
     var body: some View {
         @Bindable var navigation = navigation
-        let results = store.search.results(navigation.query, type: navigation.searchType)
-        // Sentences first: a lookup usually wants the one sentence with the fact, not the note around it.
-        let sentences = navigation.searchType == nil ? store.search.sentences(navigation.query) : []
+        let listing = store.bestMatches.listing(navigation.query, type: navigation.searchType, search: store.search,
+                                                index: store.index)
         ScrollView {
             VStack(alignment: .leading, spacing: Look.rowGap) {
                 StatusLine()
@@ -22,22 +22,11 @@ struct SearchScreen: View {
 
                 if navigation.query.trimmingCharacters(in: .whitespaces).isEmpty {
                     CalmMessage(text: String(localized: "Search titles, summaries, the notes' text and the glossary, in English and German."))
-                } else if results.isEmpty && sentences.isEmpty {
-                    CalmMessage(text: String(localized: "Nothing found."))
+                } else if listing.isEmpty && !listing.placeholder {
+                    // While the server may still answer, the space stays empty rather than saying "nothing".
+                    if !listing.waiting { CalmMessage(text: String(localized: "Nothing found.")) }
                 } else {
-                    if !sentences.isEmpty {
-                        SectionHeading(text: String(localized: "In the text"))
-                        SentenceList(hits: sentences, query: navigation.query)
-                        if !results.isEmpty { SectionHeading(text: String(localized: "Notes")).padding(.top, 10) }
-                    }
-                    ForEach(results) { result in
-                        switch result {
-                        case let .note(id, _):
-                            if let note = store.index.note(id) { NoteRow(note: note) }
-                        case let .term(term, _):
-                            TermRow(term: term)
-                        }
-                    }
+                    results(listing)
                 }
             }
             .padding(.horizontal, Look.side).padding(.top, 6).padding(.bottom, 40)
@@ -53,6 +42,56 @@ struct SearchScreen: View {
             }
         }
         .searchable(text: $navigation.query, prompt: Text("Notes, positions, terms"))
+        .onChange(of: navigation.query, initial: true) { _, query in store.bestMatches.update(query) }
+    }
+
+    /// Best matches, then the device's sentences (without the passages above), then the notes; each part under its
+    /// heading once there is more than one.
+    @ViewBuilder private func results(_ listing: SearchListing) -> some View {
+        let query = navigation.query
+        let headed = !listing.best.isEmpty || listing.placeholder
+        if headed {
+            SectionHeading(text: String(localized: "Best matches"))
+            if listing.best.isEmpty {
+                BestMatchesPlaceholder()
+            } else {
+                PassageCard(rows: listing.best.map { match in
+                    PassageCard.Row(id: match.id, sentence: match.marksWords ? Text.marked(match.hit.sentence, query: query)
+                                                                             : AttributedString(match.hit.sentence),
+                                    place: match.place, route: match.route)
+                }, raised: true)
+            }
+        }
+        if !listing.sentences.isEmpty {
+            SectionHeading(text: String(localized: "In the text")).padding(.top, headed ? 10 : 0)
+            SentenceList(hits: listing.sentences, query: query)
+        }
+        if !listing.results.isEmpty {
+            if headed || !listing.sentences.isEmpty {
+                SectionHeading(text: String(localized: "Notes")).padding(.top, 10)
+            }
+            ForEach(listing.results) { result in
+                switch result {
+                case let .note(id, _):
+                    if let note = store.index.note(id) { NoteRow(note: note) }
+                case let .term(term, _):
+                    TermRow(term: term)
+                }
+            }
+        }
+    }
+}
+
+/// Where the best matches will come, while the server takes its time (shown only after a moment, so it never flashes).
+private struct BestMatchesPlaceholder: View {
+    var body: some View {
+        HStack(spacing: 10) {
+            ProgressView().controlSize(.small).tint(Ink.muted)
+            Text("Searching by meaning…").font(AppFont.text(13)).foregroundStyle(Ink.muted)
+        }
+        .padding(.horizontal, 14).frame(maxWidth: .infinity, minHeight: 52, alignment: .leading)
+        .glassCard()
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -83,48 +122,55 @@ struct TermRow: View {
     }
 }
 
-/// Sentence hits: the sentence with the query's words in bold, and where it stands (note · heading). Tapping opens the
+/// Sentence hits on the device: the sentence with the query's words marked, and where it stands. Tapping opens the
 /// note at that passage, marked.
 struct SentenceList: View {
     let hits: [VaultSearch.SentenceHit]
     let query: String
+
+    var body: some View {
+        PassageCard(rows: hits.map { hit in
+            PassageCard.Row(id: hit.id, sentence: Text.marked(hit.sentence, query: query),
+                            place: [hit.title, hit.passage.heading].compactMap { $0 }.joined(separator: " · "),
+                            route: .note(NoteLink(note: hit.passage.note, block: hit.passage.block)))
+        })
+    }
+}
+
+/// Passages in one card, divided by hairlines: the sentence, and where it stands (note · heading) in small muted
+/// letters. Tapping one opens its page: the note at that passage, marked, or a position. `raised`: the screen's main
+/// card (the best matches).
+struct PassageCard: View {
+    struct Row: Identifiable {
+        let id: String
+        let sentence: AttributedString
+        let place: String
+        let route: Route
+    }
+
+    let rows: [Row]
+    var raised = false
     @Environment(AppNavigation.self) private var navigation
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            ForEach(Array(hits.enumerated()), id: \.element.id) { offset, hit in
+            ForEach(Array(rows.enumerated()), id: \.element.id) { offset, row in
                 if offset > 0 { Rectangle().fill(Ink.line).frame(height: 1) }
-                Button { navigation.open(NoteLink(note: hit.passage.note, block: hit.passage.block)) } label: {
+                Button { navigation.go(to: row.route) } label: {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(Self.marked(hit.sentence, query: query)).font(AppFont.text(14)).foregroundStyle(Ink.primary)
+                        Text(row.sentence).font(AppFont.text(14)).foregroundStyle(Ink.primary)
                             .multilineTextAlignment(.leading)
-                        Text(verbatim: [hit.title, hit.passage.heading].compactMap { $0 }.joined(separator: " · "))
-                            .font(AppFont.text(11)).foregroundStyle(Ink.muted).lineLimit(1)
+                        Text(verbatim: row.place).font(AppFont.text(11)).foregroundStyle(Ink.muted).lineLimit(1)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.vertical, 10)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .accessibilityElement(children: .combine)
             }
         }
         .padding(.horizontal, 14)
-        .glassCard()
-    }
-
-    /// The sentence with each query word in bold and the accent (case and accents ignored).
-    static func marked(_ sentence: String, query: String) -> AttributedString {
-        var text = AttributedString(sentence)
-        let words = query.split(whereSeparator: \.isWhitespace).map(String.init).filter { $0.count >= 2 }
-        for word in words {
-            var searchFrom = text.startIndex
-            while searchFrom < text.endIndex,
-                  let range = text[searchFrom...].range(of: word, options: [.caseInsensitive, .diacriticInsensitive]) {
-                text[range].font = AppFont.text(14, weight: .bold)
-                text[range].foregroundColor = Look.accent.color
-                searchFrom = range.upperBound
-            }
-        }
-        return text
+        .glassCard(raised: raised)
     }
 }
