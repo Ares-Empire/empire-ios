@@ -1,0 +1,53 @@
+# Build 2026-10-24: Arestemis app, Aresus app (+ Aresync), Empire push
+
+Patrik is away; Claude runs this with Claude subagents (no Codex this time: Patrik's Codex runs elsewhere). The
+heartbeat (cron, :07 and :32) reads this file and continues from the first open step. Keep it current.
+
+**Decisions:** `ares-empire/docs/ARESTEMIS-APP.md`, `ARESUS-APP.md`, `PUSH.md`. **Contracts:** `Arestemis/docs/API.md`,
+`aresus/docs/API.md`, `ares-empire/docs/PUSH.md`. **Briefs:** `briefs/` next to this file.
+
+**Patrik's rules for this build (2026-10-24):** UI and design are the point: classy, clean, in the style of the
+existing sites and apps without copying them. One accent colour per app, truly only as an accent (Arestemis moonlight
+violet, Aresus lightning blue); red is the special mode, not needed now. Existing apps may change but must not look
+worse. Good code structure. No websites for these apps (SwiftUI only). Old flat search deleted, no backups now, auto
+deploy via Aresync approved, schedules: my call (frequent is fine where it costs nothing). Don't scope Arescribe.
+Stop only for a genuine problem.
+
+**Logins for testing:** see memory `empire-test-logins` (Keychain items `empire-test-account`,
+`empire-accounts-superuser`). Never write passwords into files.
+
+## Agents and worktrees (never work in the main checkouts: Aresync auto-commits them)
+
+| Package | Agent | Worktree (branch) | State |
+|---|---|---|---|
+| P: Empire push service + `Shared/Push` | Claude subagent | `~/wt/ares-empire-push` (`push`), `~/wt/empire-ios-push` (`push`) | not started |
+| T: Arestemis server (API, hunts, AI check, places) | Claude subagent | `~/wt/Arestemis-api` (`app-api`) | not started |
+| S: Aresus server + Aresync reports | Claude subagent | `~/wt/aresus-server` (`server`), `~/wt/aresync-report` (`report`) | not started |
+| A1: Arestemis iOS app | Claude subagent | `~/wt/empire-ios-arestemis` (`arestemis-app`) | waits for D |
+| A2: Aresus iOS app | Claude subagent | `~/wt/empire-ios-aresus` (`aresus-app`) | waits for D |
+| D: Shared design kit, two Xcode projects, icons | me | `~/empire-ios` main (small commits) | not started |
+
+## Steps
+
+- [x] 1. Accounts: services `arestemis`, `aresus` (migration live 04:10, data copy `pb_data.before-services-20261024`);
+      Claude superuser; test account has all four services.
+- [x] 2. Decision records + contracts written.
+- [ ] 3. Commit docs; aresus repo initial commit; worktrees.
+- [ ] 4. Spawn P, T, S (background).
+- [ ] 5. D: Shared/Design (+ move ProvinceMarks), Arestemis + Aresus projects (URL schemes, push entitlements), icons,
+      sample JSON copied into the projects. Screenshot Empire + Aresium before/after if they switch to Shared/Design.
+- [ ] 6. Spawn A1, A2 (background) with the design brief.
+- [ ] 7. Review + merge P (build/test myself). Deploy push service (dry run), Caddy route `/api/push/*`.
+- [ ] 8. Review + merge T. Server move `/root/flatsniper` → `/root/Arestemis`, `arestemis.service`, Caddy route,
+      Groq model, delete old config/db, live test with the test account.
+- [ ] 9. Review + merge S. Deploy aresus (`aresus.service`), Caddy route, machine tokens (Mac, server), Aresync report
+      on Mac + server, server Aresync REPOS + hooks.
+- [ ] 10. Review A1, A2 on the simulator (screenshots), design polish, wire Shared/Push, live login with the test
+      account, `simctl push` tests.
+- [ ] 11. Hub: app schemes for the Empire app (arestemis://, aresus://), chronicle lines, EMPIRE.md connections,
+      empire-ios README/CLAUDE.md, IPHONE-APPS.md.
+- [ ] 12. Report for Patrik (what works, screenshots, what waits for Apple).
+
+## Log
+
+- 04:10 migration live. 04:14 superuser + test account services.
