@@ -14,6 +14,7 @@ The login they use: [`ares-empire/docs/ACCOUNTS.md`](https://github.com/Ares-Emp
 | **Aresium** | built (TestFlight pending) | `aresium.de` API (`/api/data`, `/api/transaction/…`, `/api/import`) | `de.ares-empire.aresium` |
 | **Empire** (the hub) | built (TestFlight pending) | `www.ares-empire.de` API (`/api/empire`, ring, approvals) | `de.ares-empire.empire` |
 | **Aresus** (+ Aresync) | built (simulator; TestFlight pending) | Aresus API `www.ares-empire.de/api/aresus` (`aresus/docs/API.md`) | `de.ares-empire.aresus` |
+| **Arestemis** (flat hunter) | built (simulator) | `www.ares-empire.de/api/arestemis` (`Arestemis/docs/API.md`) | `de.ares-empire.arestemis` |
 
 ## Layout
 
@@ -22,6 +23,7 @@ empire-ios/
   Aresium/        Aresium.xcodeproj: the Aresium app, its widget extension, tests
   Empire/         Empire.xcodeproj: the Ares Empire app (the hub), tests
   Aresus/         Aresus.xcodeproj: the watchtower (every province, the server) and Aresync's sync runs, tests
+  Arestemis/      Arestemis.xcodeproj: the flat hunter (search, hunt, matches, applications), tests
   Shared/         compiled into every app: the Empire login (one login for all apps), the network
                   layer, the fonts, push (Push/: PushCenter + PushAppDelegate); each project includes
                   it as a synchronized folder

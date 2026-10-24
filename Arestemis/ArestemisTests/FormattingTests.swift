@@ -1,0 +1,152 @@
+import Foundation
+import Testing
+@testable import Arestemis
+
+/// Money, sizes, times and the two-line search summary, with a fixed clock (Sat 24 Oct 2026, 12:02:40 in Berlin).
+@MainActor
+struct FormattingTests {
+    private let now = Clock.now
+    private let calendar = Clock.berlin
+
+    @Test func money() {
+        #expect(Format.money(980) == "€980")
+        #expect(Format.money(1150) == "€1,150")
+        #expect(Format.money(1000) == "€1,000")
+        #expect(Format.money(999.6) == "€1,000")
+        #expect(Format.money(12_500) == "€12,500")
+        #expect(Format.money(0) == "€0")
+    }
+
+    @Test func sizesAndRooms() {
+        #expect(Format.size(42) == "42 m²")
+        #expect(Format.size(42.5) == "42.5 m²")
+        #expect(Format.rooms(1) == "1 room")
+        #expect(Format.rooms(2) == "2 rooms")
+        #expect(Format.rooms(1.5) == "1.5 rooms")
+        #expect(Format.flatmates(1) == "1 flatmate" && Format.flatmates(3) == "3 flatmates")
+    }
+
+    @Test(arguments: [
+        ("2026-10-24T10:02:36Z", "just now"),
+        ("2026-10-24T10:03:40Z", "just now"),            // a clock a little ahead
+        ("2026-10-24T10:02:00Z", "40 s ago"),
+        ("2026-10-24T09:58:40Z", "4 min ago"),
+        ("2026-10-24T07:02:00Z", "3 h ago"),
+        ("2026-10-23T16:05:00Z", "yesterday 18:05"),
+        ("2026-10-21T16:05:00Z", "Wed 18:05"),
+        ("2026-10-04T08:00:00Z", "4 Oct"),
+        ("2025-10-04T08:00:00Z", "4 Oct 2025"),
+    ])
+    func relativeTimes(timestamp: String, expected: String) {
+        #expect(Format.relative(timestamp, now: now, calendar: calendar) == expected)
+    }
+
+    @Test func relativeTimeOfNothing() {
+        #expect(Format.relative(nil as String?, now: now, calendar: calendar) == nil)
+        #expect(Format.relative("not a time", now: now, calendar: calendar) == nil)
+    }
+
+    @Test func days() {
+        #expect(Format.day("2026-12-01", now: now, calendar: calendar) == "1 Dec")
+        #expect(Format.day("2027-02-01", now: now, calendar: calendar) == "1 Feb")
+        #expect(Format.day("2027-12-01", now: now, calendar: calendar) == "1 Dec 2027")
+        #expect(Format.day("2026-13-01", now: now, calendar: calendar) == nil)
+        #expect(Format.day("2026-02-30", now: now, calendar: calendar) == nil)
+        #expect(Format.day("1 Dec", now: now, calendar: calendar) == nil)
+    }
+
+    @Test func dateOnlyRoundTrips() throws {
+        let date = try #require(DateOnly.parse("2026-12-01", calendar: calendar))
+        #expect(DateOnly.string(date, calendar: calendar) == "2026-12-01")
+        #expect(calendar.component(.hour, from: date) == 0)
+    }
+
+    // MARK: the search summary
+
+    private func search(kinds: [Kind] = [.flat], places: [String] = ["München"], rent: Double? = nil,
+                        room: Double? = nil, from: String? = nil, until: String? = nil) -> Search {
+        Search(kinds: kinds, places: places.enumerated().map { Place(id: "p\($0.offset)", name: $0.element, region: nil,
+                                                                   sources: [.wgGesucht]) },
+               districts: [], rentMaxWarm: rent, rentTiers: [], sqmMin: nil, roomSqmMin: room, roomsMin: nil, flatmatesMax: nil,
+               moveInFrom: from, moveInUntil: until, sublet: .exclude, furnished: .any, extra: "", sources: [.wgGesucht])
+    }
+
+    @Test func summaryOfTheSampleSearch() throws {
+        let hunt = try #require(try sample(Overview.self, "overview").hunt)
+        let summary = SearchSummary(hunt.search, now: now, calendar: calendar)
+        #expect(summary.kinds == "Own flat or empty 2-person WG")
+        #expect(summary.details == "München, Garching · up to €1,000 warm · 1 Dec – 1 Feb")
+        #expect(summary.parts.count == 3)
+        // On screen a part never breaks across lines, nor a kind.
+        #expect(!summary.wrappingDetails.replacingOccurrences(of: " · ", with: "").contains(" "))
+        #expect(summary.wrappingKinds.components(separatedBy: " ").count == 3)       // "Own flat" | "or" | "empty 2-person WG"
+        #expect(summary.wrappingKinds.contains("2-\u{2060}person"))
+    }
+
+    @Test func summaryOfOtherSearches() {
+        let garching = SearchSummary(search(kinds: [.wgRoom], places: ["Garching bei München"], from: "2026-12-01"),
+                                     now: now, calendar: calendar)
+        #expect(garching.kinds == "Room in a WG")
+        #expect(garching.details == "Garching · from 1 Dec")
+
+        let all = SearchSummary(search(kinds: [.wgEmpty, .flat, .wgRoom], rent: 1150, until: "2027-02-01"),
+                                now: now, calendar: calendar)
+        #expect(all.kinds == "Own flat, room in a WG or empty 2-person WG")      // always in the contract's order
+        #expect(all.details == "München · up to €1,150 warm · until 1 Feb")
+
+        let room = SearchSummary(search(kinds: [.wgRoom], rent: 650, room: 15, from: "2026-12-01"), now: now, calendar: calendar)
+        #expect(room.details == "München · up to €650 warm · room from 15 m² · from 1 Dec")
+
+        let twins = SearchSummary(search(places: ["Garching bei München", "Garching an der Alz"]), now: now, calendar: calendar)
+        #expect(twins.details == "Garching bei München, Garching an der Alz")
+
+        let many = SearchSummary(search(places: ["München", "Freising", "Dachau", "Erding", "Augsburg"]), now: now,
+                                 calendar: calendar)
+        #expect(many.details == "München, Freising, Dachau +2")
+
+        #expect(SearchSummary(search(places: []), now: now, calendar: calendar).parts.isEmpty)
+    }
+
+    @Test func placeShortNames() {
+        let names = ["Garching bei München": "Garching", "Frankfurt am Main": "Frankfurt", "Halle (Saale)": "Halle",
+                     "Weil im Schönbuch": "Weil", "München": "München", "Neumarkt in der Oberpfalz": "Neumarkt"]
+        for (name, short) in names {
+            #expect(Place(id: name, name: name, region: nil, sources: []).shortName == short)
+        }
+    }
+
+    // MARK: a listing's lines
+
+    @Test func listingLines() throws {
+        let page = try sample(MatchPage.self, "matches")
+        #expect(page.items[0].listing.facts == "42 m² · 2 rooms · Schwabing")
+        #expect(page.items[2].listing.facts == "19 m² · Empty WG · Hochbrück")
+        #expect(page.items[0].listing.shownRent?.amount == "€980" && page.items[0].listing.shownRent?.label == "warm")
+        #expect(page.items[1].listing.shownRent?.amount == "€1,150")
+        #expect(page.items[0].sourceLine(now: now, calendar: calendar) == "WG-Gesucht · 3 min ago")
+        let rejected = try sample(RejectedPage.self, "rejected").items[0].listing
+        #expect(rejected.factsWithRent == "€950 warm · 30 m² · 1 room · Maxvorstadt")
+    }
+
+    @Test func detailFacts() throws {
+        let page = try sample(MatchPage.self, "matches")
+        let flat = page.items[0].listing.detailFacts(now: now, calendar: calendar)
+        #expect(flat.map(\.label) == ["Size", "Rooms", "Kind", "Move-in", "Furnished", "District", "Posted"])
+        #expect(flat.map(\.value) == ["42", "2", "Own flat", "1 Dec", "No", "Schwabing", "4 min ago"])
+        #expect(flat[0].unit == "m²" && flat[0].numeric && !flat[2].numeric)
+        let wg = page.items[2].listing.detailFacts(now: now, calendar: calendar)
+        #expect(wg.map(\.label) == ["Size", "Flatmates", "Kind", "Move-in", "Furnished", "District", "Posted"])
+        let sublet = try sample(RejectedPage.self, "rejected").items[0].listing.detailFacts(now: now, calendar: calendar)
+        #expect(sublet.first { $0.label == "Until" }?.value == "31 Mar")
+    }
+
+    @Test func portalLinksAreOnlyWebAddresses() throws {
+        let listing = try sample(Match.self, "match").listing
+        #expect(listing.portalURL?.host() == "www.wg-gesucht.de")
+        for url in ["javascript:alert(1)", "arestemis://match/1", "file:///etc/hosts", "not a url", "https://"] {
+            let other = try JSONDecoder().decode(Listing.self, from: JSONSerialization.data(withJSONObject: [
+                "source": "wg_gesucht", "source_name": "WG-Gesucht", "url": url, "title": "T", "description": ""]))
+            #expect(other.portalURL == nil, "\(url)")
+        }
+    }
+}
