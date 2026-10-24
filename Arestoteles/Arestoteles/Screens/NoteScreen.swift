@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// A note: title, type and confidence, the summary box, the body's blocks, the notes that link here. Opened at a
-/// heading when the link names one. The toolbar: Brief (topic overviews), Edit (the free editor), Discuss, Confidence.
+/// heading when the link names one. Under the title: Brief (topic overviews) and Discuss; the menu at the top right:
+/// Edit (the free editor) and Confidence.
 struct NoteScreen: View {
     let link: NoteLink
     @Environment(VaultStore.self) private var store
@@ -20,7 +21,7 @@ struct NoteScreen: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
         .toolbar {
-            if let note = store.index.note(link.note) { NoteToolbar(note: note) }
+            if let note = store.index.note(link.note) { NoteMenu(note: note) }
         }
     }
 
@@ -29,6 +30,7 @@ struct NoteScreen: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     header(note)
+                    actions(note).padding(.top, 16)
                     if let summary = note.summary {
                         InlineText(summary, size: 15)
                             .padding(16)
@@ -68,6 +70,19 @@ struct NoteScreen: View {
         }
     }
 
+    private func actions(_ note: Note) -> some View {
+        HStack(spacing: 10) {
+            if note.brief != nil {
+                Button { navigation.sheet = .brief(note.id) } label: { Label("Brief", systemImage: "list.bullet.rectangle") }
+                    .buttonStyle(.primaryPill)
+            }
+            Button { navigation.sheet = .discuss(.note(note.id)) } label: {
+                Label("Discuss", systemImage: "bubble.left.and.text.bubble.right")
+            }
+            .buttonStyle(note.brief == nil ? .primaryPill : .pill)
+        }
+    }
+
     @ViewBuilder private func backlinks(_ note: Note) -> some View {
         let notes = store.index.backlinks(of: note.id)
         if !notes.isEmpty {
@@ -93,28 +108,28 @@ struct NoteScreen: View {
     }
 }
 
-/// The note page's actions.
-struct NoteToolbar: ToolbarContent {
+/// The note page's quieter actions, in one menu at the top right: the free editor and the confidence.
+struct NoteMenu: ToolbarContent {
     let note: Note
     @Environment(VaultStore.self) private var store
     @Environment(AppNavigation.self) private var navigation
 
     var body: some ToolbarContent {
-        ToolbarItemGroup(placement: .bottomBar) {
-            if note.brief != nil {
-                Button { navigation.sheet = .brief(note.id) } label: { Label("Brief", systemImage: "list.bullet.rectangle") }
-            }
-            Button { navigation.sheet = .editor(note.id) } label: { Label("Edit", systemImage: "square.and.pencil") }
-            Button { navigation.sheet = .discuss(.note(note.id)) } label: {
-                Label("Discuss", systemImage: "bubble.left.and.text.bubble.right")
-            }
+        ToolbarItem(placement: .topBarTrailing) {
             Menu {
-                Picker("Confidence", selection: confidence) {
-                    ForEach(Confidence.allCases, id: \.self) { value in Text(Format.confidence(value)).tag(Optional(value)) }
+                Button { navigation.sheet = .editor(note.id) } label: { Label("Edit text", systemImage: "square.and.pencil") }
+                if note.confidence != nil || [.topic, .mechanism, .event, .question].contains(note.type) {
+                    Picker(selection: confidence) {
+                        ForEach(Confidence.allCases, id: \.self) { value in Text(Format.confidence(value)).tag(Optional(value)) }
+                    } label: {
+                        Label("Confidence", systemImage: "gauge.with.dots.needle.33percent")
+                    }
+                    .pickerStyle(.menu)
                 }
             } label: {
-                Label("Confidence", systemImage: "gauge.with.dots.needle.33percent")
+                Image(systemName: "ellipsis")
             }
+            .accessibilityLabel(Text("More"))
             .disabled(store.isSending)
         }
     }

@@ -4,9 +4,24 @@
     "" : {
       "shouldTranslate" : false
     },
-    "%@ BCE" : {},
+    "%@ BCE" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ v. Chr."
+          }
+        }
+      }
+    },
     "%@ BCE – %@ CE" : {
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ v. Chr. – %@ n. Chr."
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "new",
@@ -17,6 +32,12 @@
     },
     "%@–%@ BCE" : {
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@–%@ v. Chr."
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "new",
@@ -25,88 +46,924 @@
         }
       }
     },
-    "%lld h ago" : {},
-    "%lld min ago" : {},
-    "A changed view replaces the sentence." : {},
-    "A quick note was not saved: %@" : {},
-    "A thought for the Inbox" : {},
-    "Account" : {},
-    "Across topics" : {},
-    "Actor" : {},
-    "Actors" : {},
-    "Add" : {},
-    "Add a position" : {},
-    "Adopt" : {},
-    "All regions" : {},
-    "Brief" : {},
-    "Cancel" : {},
-    "Change my view" : {},
-    "Claude" : {},
-    "Claude Code works on the vault with its rules. The prompt below is copied; paste it in a new session." : {},
-    "Close" : {},
-    "Confidence" : {},
-    "Confirm" : {},
-    "Copy and open Claude" : {},
-    "Copy my text" : {},
-    "Counterpoints" : {},
-    "Delete" : {},
-    "Discard" : {},
-    "Discard your changes?" : {},
-    "Discuss" : {},
-    "Discuss with Claude" : {},
-    "Dismiss" : {},
-    "Dismiss Claude's note?" : {},
-    "Draft" : {},
-    "Draft, worded by Claude" : {},
-    "Drop" : {},
-    "Drop this position" : {},
-    "Edit" : {},
-    "Event" : {},
-    "Events" : {},
-    "Everything" : {},
-    "Evidence" : {},
-    "Explained in %@" : {},
-    "Glossary" : {},
-    "Home" : {},
-    "How my view changed" : {},
-    "I thought:" : {},
-    "In %@" : {},
-    "Inbox" : {},
-    "It is removed from the note." : {},
-    "Library" : {},
-    "Linked from" : {},
-    "Load the current version" : {},
-    "Loading the note…" : {},
-    "Log in to change the vault." : {},
-    "Log out" : {},
-    "Mechanism" : {},
-    "Mechanisms" : {},
-    "My positions" : {},
-    "My read" : {},
-    "My view now" : {},
-    "No actors yet." : {},
-    "No events here yet." : {},
-    "No mechanisms yet." : {},
-    "No notes named as evidence." : {},
-    "No positions in the vault yet." : {},
-    "No positions yet." : {},
-    "No questions yet." : {},
-    "No topics in the vault yet." : {},
-    "No year" : {},
-    "Not sent yet" : {},
-    "Note" : {},
-    "Notes, positions, terms" : {},
-    "Nothing found." : {},
-    "Now" : {},
-    "Offline" : {},
-    "Offline · updated %@" : {},
-    "One sentence, in your words" : {},
-    "Open questions" : {},
-    "Part" : {},
-    "Pick notes" : {},
-    "Position" : {},
+    "%lld h ago" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "vor %lld Std."
+          }
+        }
+      }
+    },
+    "%lld min ago" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "vor %lld Min."
+          }
+        }
+      }
+    },
+    "%lld notes as evidence" : {
+      "localizations" : {
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Notiz als Beleg"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Notizen als Belege"
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld note as evidence"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld notes as evidence"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld positions" : {
+      "localizations" : {
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Position"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Positionen"
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld position"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld positions"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld quick notes waiting to be sent" : {
+      "localizations" : {
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Notiz wartet auf das Senden"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Notizen warten auf das Senden"
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld quick note waiting to be sent"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld quick notes waiting to be sent"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "A changed view replaces the sentence." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eine geänderte Meinung ersetzt den Satz."
+          }
+        }
+      }
+    },
+    "A quick note was not saved: %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eine Notiz wurde nicht gespeichert: %@"
+          }
+        }
+      }
+    },
+    "A thought for the Inbox" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein Gedanke für den Eingang"
+          }
+        }
+      }
+    },
+    "Account" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Konto"
+          }
+        }
+      }
+    },
+    "Across topics" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Themenübergreifend"
+          }
+        }
+      }
+    },
+    "Actor" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Akteur"
+          }
+        }
+      }
+    },
+    "Actors" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Akteure"
+          }
+        }
+      }
+    },
+    "Add" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hinzufügen"
+          }
+        }
+      }
+    },
+    "Add a position" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Position hinzufügen"
+          }
+        }
+      }
+    },
+    "Adopt" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Übernehmen"
+          }
+        }
+      }
+    },
+    "All regions" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alle Regionen"
+          }
+        }
+      }
+    },
+    "Brief" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Briefing"
+          }
+        }
+      }
+    },
+    "Cancel" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abbrechen"
+          }
+        }
+      }
+    },
+    "Change my view" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Meinung ändern"
+          }
+        }
+      }
+    },
+    "Claude" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Claude"
+          }
+        }
+      }
+    },
+    "Claude Code works on the vault with its rules. The prompt below is copied; paste it in a new session." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Claude Code arbeitet mit den Regeln des Vaults. Der Text unten wird kopiert; füg ihn in einer neuen Sitzung ein."
+          }
+        }
+      }
+    },
+    "Close" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schließen"
+          }
+        }
+      }
+    },
+    "Confidence" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gewissheit"
+          }
+        }
+      }
+    },
+    "Confirm as mine" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Als meine bestätigen"
+          }
+        }
+      }
+    },
+    "Copy and open Claude" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kopieren und Claude öffnen"
+          }
+        }
+      }
+    },
+    "Copy my text" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Meinen Text kopieren"
+          }
+        }
+      }
+    },
+    "Counterpoints" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gegenargumente"
+          }
+        }
+      }
+    },
+    "Delete" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Löschen"
+          }
+        }
+      }
+    },
+    "Discard" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verwerfen"
+          }
+        }
+      }
+    },
+    "Discard your changes?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Änderungen verwerfen?"
+          }
+        }
+      }
+    },
+    "Discuss" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Besprechen"
+          }
+        }
+      }
+    },
+    "Dismiss" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Entfernen"
+          }
+        }
+      }
+    },
+    "Dismiss Claude's note?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Claudes Hinweis entfernen?"
+          }
+        }
+      }
+    },
+    "Draft" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Entwurf"
+          }
+        }
+      }
+    },
+    "Draft, worded by Claude" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Entwurf, von Claude formuliert"
+          }
+        }
+      }
+    },
+    "Drop" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aufgeben"
+          }
+        }
+      }
+    },
+    "Drop this position" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Position aufgeben"
+          }
+        }
+      }
+    },
+    "Edit" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bearbeiten"
+          }
+        }
+      }
+    },
+    "Edit text" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Text bearbeiten"
+          }
+        }
+      }
+    },
+    "Event" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ereignis"
+          }
+        }
+      }
+    },
+    "Events" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ereignisse"
+          }
+        }
+      }
+    },
+    "Everything" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alles"
+          }
+        }
+      }
+    },
+    "Evidence" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Belege"
+          }
+        }
+      }
+    },
+    "Explained in %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erklärt in %@"
+          }
+        }
+      }
+    },
+    "Glossary" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Glossar"
+          }
+        }
+      }
+    },
+    "Home" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start"
+          }
+        }
+      }
+    },
+    "How my view changed" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wie sich meine Meinung geändert hat"
+          }
+        }
+      }
+    },
+    "I thought:" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ich dachte:"
+          }
+        }
+      }
+    },
+    "In %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In %@"
+          }
+        }
+      }
+    },
+    "Inbox" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eingang"
+          }
+        }
+      }
+    },
+    "It is removed from the note." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Er wird aus der Notiz entfernt."
+          }
+        }
+      }
+    },
+    "Library" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bibliothek"
+          }
+        }
+      }
+    },
+    "Linked from" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verlinkt von"
+          }
+        }
+      }
+    },
+    "Load the current version" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktuelle Version laden"
+          }
+        }
+      }
+    },
+    "Loading the note…" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notiz wird geladen…"
+          }
+        }
+      }
+    },
+    "Log in to change the vault." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Melde dich an, um den Vault zu ändern."
+          }
+        }
+      }
+    },
+    "Log out" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abmelden"
+          }
+        }
+      }
+    },
+    "Mechanism" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mechanismus"
+          }
+        }
+      }
+    },
+    "Mechanisms" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mechanismen"
+          }
+        }
+      }
+    },
+    "More" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mehr"
+          }
+        }
+      }
+    },
+    "My positions" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Meine Positionen"
+          }
+        }
+      }
+    },
+    "My read" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Meine Lesart"
+          }
+        }
+      }
+    },
+    "My view now" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Meine Meinung jetzt"
+          }
+        }
+      }
+    },
+    "No actors yet." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch keine Akteure."
+          }
+        }
+      }
+    },
+    "No events here yet." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hier noch keine Ereignisse."
+          }
+        }
+      }
+    },
+    "No mechanisms yet." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch keine Mechanismen."
+          }
+        }
+      }
+    },
+    "No notes named as evidence." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keine Notizen als Belege genannt."
+          }
+        }
+      }
+    },
+    "No positions in the vault yet." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch keine Positionen im Vault."
+          }
+        }
+      }
+    },
+    "No positions yet." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch keine Positionen."
+          }
+        }
+      }
+    },
+    "No questions yet." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch keine Fragen."
+          }
+        }
+      }
+    },
+    "No topics in the vault yet." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch keine Themen im Vault."
+          }
+        }
+      }
+    },
+    "Not sent yet" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch nicht gesendet"
+          }
+        }
+      }
+    },
+    "Note" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notiz"
+          }
+        }
+      }
+    },
+    "Notes, positions, terms" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notizen, Positionen, Begriffe"
+          }
+        }
+      }
+    },
+    "Nothing found." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nichts gefunden."
+          }
+        }
+      }
+    },
+    "Now" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jetzt"
+          }
+        }
+      }
+    },
+    "Offline" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Offline"
+          }
+        }
+      }
+    },
+    "Offline · updated %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Offline · aktualisiert %@"
+          }
+        }
+      }
+    },
+    "One sentence, in your words" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein Satz, in deinen Worten"
+          }
+        }
+      }
+    },
+    "Open questions" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Offene Fragen"
+          }
+        }
+      }
+    },
+    "Pick notes" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notizen wählen"
+          }
+        }
+      }
+    },
+    "Position" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Position"
+          }
+        }
+      }
+    },
     "Position %lld on %@" : {
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Position %lld zu %@"
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "new",
@@ -115,54 +972,486 @@
         }
       }
     },
-    "Positions" : {},
-    "Question" : {},
-    "Questions" : {},
-    "Quick note" : {},
-    "Region" : {},
-    "Reword" : {},
-    "Same view, better words: nothing goes to the history." : {},
-    "Save" : {},
-    "Saved as you write it." : {},
-    "Saved on the phone. It goes to the Inbox once the server can be reached." : {},
-    "Saved. It reaches the laptops once the server can push it to GitHub." : {},
-    "Search" : {},
-    "Search titles, summaries, the notes' text and the glossary, in English and German." : {},
-    "Sections" : {},
-    "Session" : {},
-    "Sessions" : {},
-    "Shaky" : {},
-    "Solid" : {},
-    "Summary: %@" : {},
-    "Terms" : {},
-    "The server cannot be reached. Try again when you're online." : {},
-    "The vault's check refused this edit." : {},
-    "The vault's check warns: %@" : {},
-    "This changed elsewhere in the meantime. The app loaded the current version; please try again." : {},
-    "This changed elsewhere." : {},
-    "This is no longer in the vault." : {},
-    "This note changed elsewhere since you opened it. Your text is still here: copy it if you need it, then load the current version." : {},
-    "This note is no longer in the vault." : {},
-    "This position is no longer in the vault." : {},
-    "This topic has no brief." : {},
-    "Topic" : {},
-    "Topics" : {},
-    "Try again" : {},
-    "Type" : {},
-    "Updated %@" : {},
-    "Used in ^[%lld note](inflect: true)" : {},
-    "Waiting to be sent" : {},
-    "What changed it" : {},
-    "What changed it:" : {},
-    "What followed" : {},
-    "Where" : {},
-    "Why" : {},
-    "Your old view goes to “How my view changed”, with today's date." : {},
-    "Your question (optional)" : {},
-    "^[%lld note](inflect: true) as evidence" : {},
-    "^[%lld position](inflect: true)" : {},
-    "^[%lld quick note](inflect: true) waiting to be sent" : {},
-    "just now" : {},
+    "Positions" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Positionen"
+          }
+        }
+      }
+    },
+    "Question" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Frage"
+          }
+        }
+      }
+    },
+    "Questions" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fragen"
+          }
+        }
+      }
+    },
+    "Quick note" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schnelle Notiz"
+          }
+        }
+      }
+    },
+    "Region" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Region"
+          }
+        }
+      }
+    },
+    "Reword" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Umformulieren"
+          }
+        }
+      }
+    },
+    "Same view, better words: nothing goes to the history." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gleiche Meinung, bessere Worte: nichts kommt in den Verlauf."
+          }
+        }
+      }
+    },
+    "Save" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Speichern"
+          }
+        }
+      }
+    },
+    "Saved as you write it." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wird so gespeichert, wie du es schreibst."
+          }
+        }
+      }
+    },
+    "Saved on the phone. It goes to the Inbox once the server can be reached." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auf dem Telefon gespeichert. Sie kommt in den Eingang, sobald der Server erreichbar ist."
+          }
+        }
+      }
+    },
+    "Saved. It reaches the laptops once the server can push it to GitHub." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gespeichert. Es kommt auf die Laptops, sobald der Server es zu GitHub pushen kann."
+          }
+        }
+      }
+    },
+    "Search" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suche"
+          }
+        }
+      }
+    },
+    "Search titles, summaries, the notes' text and the glossary, in English and German." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Durchsucht Titel, Zusammenfassungen, den Text der Notizen und das Glossar, auf Englisch und Deutsch."
+          }
+        }
+      }
+    },
+    "Sections" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abschnitte"
+          }
+        }
+      }
+    },
+    "Session" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gespräch"
+          }
+        }
+      }
+    },
+    "Sessions" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gespräche"
+          }
+        }
+      }
+    },
+    "Shaky" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unsicher"
+          }
+        }
+      }
+    },
+    "Solid" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gesichert"
+          }
+        }
+      }
+    },
+    "Summary: %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zusammenfassung: %@"
+          }
+        }
+      }
+    },
+    "Terms" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Begriffe"
+          }
+        }
+      }
+    },
+    "The server cannot be reached. Try again when you're online." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Server ist nicht erreichbar. Versuch es noch einmal, wenn du online bist."
+          }
+        }
+      }
+    },
+    "The vault's check refused this edit." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Prüfung des Vaults hat diese Änderung abgelehnt."
+          }
+        }
+      }
+    },
+    "The vault's check warns: %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Prüfung des Vaults warnt: %@"
+          }
+        }
+      }
+    },
+    "This changed elsewhere in the meantime. The app loaded the current version; please try again." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das wurde inzwischen woanders geändert. Die App hat die aktuelle Version geladen; versuch es bitte noch einmal."
+          }
+        }
+      }
+    },
+    "This changed elsewhere." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das wurde woanders geändert."
+          }
+        }
+      }
+    },
+    "This is no longer in the vault." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das ist nicht mehr im Vault."
+          }
+        }
+      }
+    },
+    "This note changed elsewhere since you opened it. Your text is still here: copy it if you need it, then load the current version." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Notiz wurde woanders geändert, seit du sie geöffnet hast. Dein Text ist noch da: Kopier ihn, wenn du ihn brauchst, dann lade die aktuelle Version."
+          }
+        }
+      }
+    },
+    "This note is no longer in the vault." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Notiz ist nicht mehr im Vault."
+          }
+        }
+      }
+    },
+    "This position is no longer in the vault." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Position ist nicht mehr im Vault."
+          }
+        }
+      }
+    },
+    "This topic has no brief." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieses Thema hat kein Briefing."
+          }
+        }
+      }
+    },
+    "Topic" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thema"
+          }
+        }
+      }
+    },
+    "Topics" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Themen"
+          }
+        }
+      }
+    },
+    "Try again" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erneut versuchen"
+          }
+        }
+      }
+    },
+    "Type" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Art"
+          }
+        }
+      }
+    },
+    "Updated %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktualisiert %@"
+          }
+        }
+      }
+    },
+    "Used in %lld notes" : {
+      "localizations" : {
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "In %lld Notiz verwendet"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "In %lld Notizen verwendet"
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Used in %lld note"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Used in %lld notes"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Waiting to be sent" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wartet auf das Senden"
+          }
+        }
+      }
+    },
+    "What changed it" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was sie geändert hat"
+          }
+        }
+      }
+    },
+    "What changed it:" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was sie geändert hat:"
+          }
+        }
+      }
+    },
+    "What followed" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was folgte"
+          }
+        }
+      }
+    },
+    "Where" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wo"
+          }
+        }
+      }
+    },
+    "Why" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Warum"
+          }
+        }
+      }
+    },
+    "Your old view goes to “How my view changed”, with today's date." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine alte Meinung kommt mit heutigem Datum unter „Wie sich meine Meinung geändert hat“."
+          }
+        }
+      }
+    },
+    "Your question (optional)" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Frage (optional)"
+          }
+        }
+      }
+    },
+    "just now" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gerade eben"
+          }
+        }
+      }
+    },
     "·" : {
       "shouldTranslate" : false
     }

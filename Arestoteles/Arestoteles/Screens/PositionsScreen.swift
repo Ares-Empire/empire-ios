@@ -29,10 +29,11 @@ struct PositionsScreen: View {
                         CalmMessage(text: String(localized: "No positions in the vault yet."))
                     }
                     if let target = store.index.positionTargets.first {
-                        Button("Add a position") { navigation.sheet = .position(.add(note: target.id)) }
-                            .buttonStyle(.bordered).tint(Look.accent.color)
-                            .frame(maxWidth: .infinity)
-                            .disabled(store.isSending)
+                        Button { navigation.sheet = .position(.add(note: target.id)) } label: {
+                            Label("Add a position", systemImage: "plus")
+                        }
+                        .buttonStyle(.pill)
+                        .disabled(store.isSending)
                     }
                 }
                 .padding(.horizontal, Look.side).padding(.top, 10).padding(.bottom, 40)
@@ -51,17 +52,23 @@ struct PositionCard: View {
 
     var body: some View {
         Button { navigation.showPosition(position.id) } label: {
-            VStack(alignment: .leading, spacing: 8) {
-                InlineText(position.text, size: 15, weight: .medium)
-                HStack(spacing: 10) {
-                    if position.draft { CapsLabel(text: String(localized: "Draft"), color: Look.accent.color) }
-                    Text("^[\(position.evidence.count) note](inflect: true) as evidence")
-                        .font(AppFont.text(12)).foregroundStyle(Ink.muted)
-                    Spacer()
-                    Image(systemName: "chevron.right").font(.system(size: 11, weight: .semibold)).foregroundStyle(Ink.muted)
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                Text(verbatim: "\(position.number)").font(AppFont.number(13, weight: .medium))
+                    .foregroundStyle(position.draft ? Look.accent.color : Ink.muted)
+                    .frame(minWidth: 14, alignment: .leading)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 9) {
+                    InlineText(position.text, size: 16, weight: .medium)
+                    HStack(spacing: 10) {
+                        if position.draft { CapsLabel(text: String(localized: "Draft"), color: Look.accent.color) }
+                        Text("\(position.evidence.count) notes as evidence")
+                            .font(AppFont.text(12)).foregroundStyle(Ink.muted)
+                        Spacer()
+                        Image(systemName: "chevron.right").font(.system(size: 11, weight: .semibold)).foregroundStyle(Ink.muted)
+                    }
                 }
             }
-            .padding(14)
+            .padding(.horizontal, 16).padding(.vertical, 15)
             .frame(maxWidth: .infinity, alignment: .leading)
             .glassCard()
             .contentShape(Rectangle())
@@ -98,7 +105,7 @@ struct PositionScreen: View {
                 if position.draft {
                     CapsLabel(text: String(localized: "Draft, worded by Claude"), color: Look.accent.color).padding(.bottom, 8)
                 }
-                InlineText(position.text, size: 22, weight: .semibold)
+                InlineText(position.text, size: 23, weight: .semibold).lineSpacing(2)
                 Button { navigation.open(NoteLink(note: position.note)) } label: {
                     Text("Position \(position.number) on \(store.index.title(position.note))")
                         .font(AppFont.text(13)).foregroundStyle(Ink.secondary)
@@ -132,22 +139,45 @@ struct PositionScreen: View {
         }
     }
 
+    /// The one main action first: Confirm for a draft (it is Claude's wording until then), else Discuss. Then the
+    /// edits, quieter; they wrap onto a second line when the words are long (German).
     private func actions(_ position: Position) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            if position.draft {
-                Button("Confirm") { Task { await store.confirmPosition(position.id) } }
-                    .buttonStyle(.borderedProminent).tint(Look.accent.color)
-            }
             HStack(spacing: 10) {
-                Button("Reword") { navigation.sheet = .position(.reword(position.id)) }
-                Button("Change my view") { navigation.sheet = .position(.change(position.id)) }
-                Button("Drop", role: .destructive) { navigation.sheet = .position(.drop(position.id)) }
+                if position.draft {
+                    Button { Task { await store.confirmPosition(position.id) } } label: {
+                        Label("Confirm as mine", systemImage: "checkmark")
+                    }
+                    .buttonStyle(.primaryPill)
+                    discuss(position).buttonStyle(.pill)
+                } else {
+                    discuss(position).buttonStyle(.primaryPill)
+                }
             }
-            .buttonStyle(.bordered).tint(Ink.secondary)
-            Button("Discuss with Claude") { navigation.sheet = .discuss(.position(position.id)) }
-                .buttonStyle(.bordered).tint(Ink.secondary)
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 8) { edits(position) }
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 8) {
+                        Button("Reword") { navigation.sheet = .position(.reword(position.id)) }.buttonStyle(.pill)
+                        Button("Change my view") { navigation.sheet = .position(.change(position.id)) }.buttonStyle(.pill)
+                    }
+                    Button("Drop") { navigation.sheet = .position(.drop(position.id)) }.buttonStyle(.destructivePill)
+                }
+            }
         }
         .disabled(store.isSending)
+    }
+
+    @ViewBuilder private func edits(_ position: Position) -> some View {
+        Button("Reword") { navigation.sheet = .position(.reword(position.id)) }.buttonStyle(.pill)
+        Button("Change my view") { navigation.sheet = .position(.change(position.id)) }.buttonStyle(.pill)
+        Button("Drop") { navigation.sheet = .position(.drop(position.id)) }.buttonStyle(.destructivePill)
+    }
+
+    private func discuss(_ position: Position) -> some View {
+        Button { navigation.sheet = .discuss(.position(position.id)) } label: {
+            Label("Discuss", systemImage: "bubble.left.and.text.bubble.right")
+        }
     }
 }
 

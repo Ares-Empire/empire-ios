@@ -44,7 +44,7 @@ struct TopicCard: View {
                         .multilineTextAlignment(.leading).fixedSize(horizontal: false, vertical: true)
                 }
                 if !topic.positions.isEmpty {
-                    Text("^[\(topic.positions.count) position](inflect: true)").font(AppFont.text(12))
+                    Text("\(topic.positions.count) positions").font(AppFont.text(12))
                         .foregroundStyle(Ink.muted)
                 }
             }

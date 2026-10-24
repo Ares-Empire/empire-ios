@@ -30,7 +30,9 @@ struct ScreenHeader: View {
                 }
                 .accessibilityLabel(Text("Account"))
                 Spacer()
-                GlassIconButton(symbol: "plus", label: String(localized: "Quick note")) { navigation.sheet = .quickNote }
+                GlassIconButton(symbol: "square.and.pencil", label: String(localized: "Quick note")) {
+                    navigation.sheet = .quickNote
+                }
             }
         }
         .frame(minHeight: 44)
@@ -81,7 +83,7 @@ struct CalmMessage: View {
             if loading { ProgressView().tint(Ink.muted) }
             Text(text).font(AppFont.text(14)).foregroundStyle(Ink.muted).multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
-            if let action { Button(action.title, action: action.run).buttonStyle(.bordered).tint(Ink.secondary) }
+            if let action { Button(action.title, action: action.run).buttonStyle(.pill) }
         }
         .frame(maxWidth: .infinity)
         .padding(.horizontal, 30).padding(.vertical, 36)
@@ -156,8 +158,7 @@ struct StatusLine: View {
                     Text(error).font(AppFont.text(12)).foregroundStyle(Ink.muted)
                 }
                 if waiting > 0 {
-                    Text("^[\(waiting) quick note](inflect: true) waiting to be sent").font(AppFont.text(12))
-                        .foregroundStyle(Ink.muted)
+                    Text("\(waiting) quick notes waiting to be sent").font(AppFont.text(12)).foregroundStyle(Ink.muted)
                 }
             }
             .multilineTextAlignment(.center)
@@ -176,4 +177,67 @@ struct StatusLine: View {
 extension View {
     /// The wall every Arestoteles screen stands on.
     func provinceWall() -> some View { background { ProvinceWall(accent: Look.accent) } }
+}
+
+// MARK: - buttons
+
+/// A pill button. Prominent: the screen's one main action, in the accent (dark text on teal). Otherwise glass.
+struct PillButtonStyle: ButtonStyle {
+    var prominent = false
+    var destructive = false
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(AppFont.text(14, weight: .semibold))
+            .foregroundStyle(prominent ? Color(hex: 0x06201D) : destructive ? StatusTone.issue.color(Look.accent) : Ink.primary)
+            .lineLimit(1)
+            .padding(.horizontal, 16).frame(minHeight: 40)
+            .background {
+                if prominent {
+                    Capsule().fill(Look.accent.color)
+                } else {
+                    Capsule().fill(.white.opacity(0.06))
+                        .overlay(Capsule().strokeBorder(.white.opacity(0.12)))
+                }
+            }
+            .opacity(isEnabled ? (configuration.isPressed ? 0.75 : 1) : 0.45)
+            .contentShape(Capsule())
+    }
+}
+
+extension ButtonStyle where Self == PillButtonStyle {
+    static var pill: PillButtonStyle { PillButtonStyle() }
+    static var primaryPill: PillButtonStyle { PillButtonStyle(prominent: true) }
+    static var destructivePill: PillButtonStyle { PillButtonStyle(destructive: true) }
+}
+
+/// A row of choices as small capsules that scrolls sideways when it does not fit (German labels run long).
+struct ChipPicker<Value: Hashable>: View {
+    let options: [(value: Value, title: String)]
+    @Binding var selection: Value
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(options, id: \.value) { option in
+                    let selected = option.value == selection
+                    Button { withAnimation(.easeOut(duration: 0.15)) { selection = option.value } } label: {
+                        Text(option.title)
+                            .font(AppFont.text(13, weight: selected ? .semibold : .medium))
+                            .foregroundStyle(selected ? Color(hex: 0x06201D) : Ink.secondary)
+                            .padding(.horizontal, 14).frame(minHeight: 34)
+                            .background {
+                                if selected { Capsule().fill(Look.accent.color) }
+                                else { Capsule().fill(.white.opacity(0.05)).overlay(Capsule().strokeBorder(.white.opacity(0.1))) }
+                            }
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(selected ? .isSelected : [])
+                }
+            }
+            .padding(.horizontal, Look.side)
+        }
+        .scrollClipDisabled()
+    }
 }

@@ -12,11 +12,8 @@ struct LibraryScreen: View {
             VStack(alignment: .leading, spacing: 0) {
                 ScreenHeader(title: String(localized: "Library"))
                 StatusLine()
-                Picker("Part", selection: $navigation.libraryPart) {
-                    ForEach(LibraryPart.allCases) { part in Text(part.title).tag(part) }
-                }
-                .pickerStyle(.segmented)
-                .padding(.horizontal, Look.side).padding(.top, 6)
+                ChipPicker(options: LibraryPart.allCases.map { ($0, $0.title) }, selection: $navigation.libraryPart)
+                    .padding(.top, 6)
 
                 VStack(alignment: .leading, spacing: Look.rowGap) {
                     switch navigation.libraryPart {
@@ -37,7 +34,7 @@ struct LibraryScreen: View {
     @ViewBuilder private var mechanisms: some View {
         ForEach(store.index.mechanisms) { mechanism in
             let uses = store.index.mechanismUses(mechanism.id)
-            NoteRow(note: mechanism, detail: Text("Used in ^[\(uses) note](inflect: true)"))
+            NoteRow(note: mechanism, detail: Text("Used in \(uses) notes"))
         }
         if store.index.mechanisms.isEmpty { CalmMessage(text: String(localized: "No mechanisms yet.")) }
     }
@@ -51,6 +48,7 @@ struct LibraryScreen: View {
 /// Events by year (BCE before CE, events without a year last), filtered by region; each with its years, places,
 /// summary and what followed (`led_to`).
 struct EventsTimeline: View {
+    static let yearWidth: CGFloat = 46
     @Environment(VaultStore.self) private var store
     @Environment(AppNavigation.self) private var navigation
 
@@ -65,14 +63,34 @@ struct EventsTimeline: View {
             .pickerStyle(.menu).tint(Look.accent.color)
         }
         let timeline = store.index.timeline(region: navigation.region)
-        ForEach(timeline, id: \.year) { year in
-            VStack(alignment: .leading, spacing: Look.headingGap) {
-                Text(verbatim: year.year.map { Format.year($0) } ?? String(localized: "No year"))
-                    .font(AppFont.number(15, weight: .semibold)).foregroundStyle(Ink.primary)
-                    .accessibilityAddTraits(.isHeader)
-                ForEach(year.events) { event in EventRow(event: event) }
+        VStack(alignment: .leading, spacing: 18) {
+            ForEach(timeline, id: \.year) { year in
+                HStack(alignment: .top, spacing: 12) {
+                    VStack(alignment: .trailing, spacing: 6) {
+                        Text(verbatim: year.year.map { Format.year($0) } ?? "–")
+                            .font(AppFont.number(13, weight: .semibold)).foregroundStyle(Look.accent.color)
+                            .lineLimit(1).minimumScaleFactor(0.8)
+                            .accessibilityAddTraits(.isHeader)
+                    }
+                    .frame(width: Self.yearWidth, alignment: .trailing)
+                    .padding(.top, 15)
+                    Circle().fill(Look.accent.color).frame(width: 7, height: 7)
+                        .overlay(Circle().strokeBorder(Ink.background, lineWidth: 2).padding(-2))
+                        .padding(.top, 20)
+                        .accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: Look.rowGap) {
+                        ForEach(year.events) { event in EventRow(event: event) }
+                    }
+                }
             }
-            .padding(.bottom, 8)
+        }
+        // The rail runs behind the dots, from the first year to the last.
+        .background(alignment: .topLeading) {
+            if timeline.count > 1 {
+                Rectangle().fill(.white.opacity(0.1)).frame(width: 1)
+                    .padding(.leading, Self.yearWidth + 12 + 3).padding(.vertical, 22)
+                    .accessibilityHidden(true)
+            }
         }
         if timeline.isEmpty { CalmMessage(text: String(localized: "No events here yet.")) }
     }

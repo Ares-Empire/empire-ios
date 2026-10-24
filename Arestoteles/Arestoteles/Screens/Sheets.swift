@@ -183,10 +183,9 @@ struct EditorSheet: View {
             Text(problem).font(AppFont.text(13)).foregroundStyle(Ink.primary).fixedSize(horizontal: false, vertical: true)
             if editor.conflict {
                 HStack(spacing: 10) {
-                    Button("Copy my text") { UIPasteboard.general.string = editor.text }
-                    Button("Load the current version") { Task { await editor.loadCurrentVersion() } }
+                    Button("Copy my text") { UIPasteboard.general.string = editor.text }.buttonStyle(.pill)
+                    Button("Load the current version") { Task { await editor.loadCurrentVersion() } }.buttonStyle(.pill)
                 }
-                .buttonStyle(.bordered).tint(Ink.secondary)
             }
         }
         .padding(12).frame(maxWidth: .infinity, alignment: .leading).glassCard(raised: true)
@@ -216,7 +215,7 @@ struct DiscussSheet: View {
                         .font(AppFont.text(15))
                         .padding(12).glassCard()
                     if let prompt {
-                        Text(verbatim: prompt).font(.system(size: 13, design: .monospaced)).foregroundStyle(Ink.secondary)
+                        Text(verbatim: prompt).font(AppFont.number(12.5, weight: .regular)).foregroundStyle(Ink.secondary)
                             .textSelection(.enabled)
                             .padding(12).frame(maxWidth: .infinity, alignment: .leading).glassCard()
                         Button("Copy and open Claude") {
@@ -224,7 +223,7 @@ struct DiscussSheet: View {
                             openURL(DiscussPrompt.target)
                             dismiss()
                         }
-                        .buttonStyle(.borderedProminent).tint(Look.accent.color)
+                        .buttonStyle(.primaryPill)
                         .frame(maxWidth: .infinity)
                     } else {
                         CalmMessage(text: String(localized: "This is no longer in the vault."))

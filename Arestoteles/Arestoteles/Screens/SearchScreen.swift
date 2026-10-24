@@ -42,7 +42,7 @@ struct SearchScreen: View {
         .toolbar {
             // The quick note, as on the other tabs (whose headers carry it).
             ToolbarItem(placement: .topBarTrailing) {
-                Button { navigation.sheet = .quickNote } label: { Label("Quick note", systemImage: "plus") }
+                Button { navigation.sheet = .quickNote } label: { Label("Quick note", systemImage: "square.and.pencil") }
             }
         }
         .searchable(text: $navigation.query, prompt: Text("Notes, positions, terms"))

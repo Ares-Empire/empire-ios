@@ -43,8 +43,10 @@ struct BlockView: View {
                 ForEach(store.index.positions(ids)) { PositionCard(position: $0) }
             }
             if owner.isTopicOverview || owner.type == .positions, embedDepth == 0 {
-                Button("Add a position") { navigation.sheet = .position(.add(note: owner.id)) }
-                    .buttonStyle(.bordered).tint(Ink.secondary)
+                Button { navigation.sheet = .position(.add(note: owner.id)) } label: {
+                    Label("Add a position", systemImage: "plus")
+                }
+                .buttonStyle(.pill)
                     .disabled(store.isSending)
             }
         case let .callout(style, title, text, index):
@@ -114,10 +116,12 @@ struct CalloutView: View {
             InlineText(text, size: 14, color: Ink.secondary)
             if style == .claude {
                 HStack(spacing: 10) {
-                    Button("Adopt") { Task { await store.adoptCallout(index, of: owner.id) } }
-                    Button("Dismiss", role: .destructive) { confirmsDismiss = true }
+                    Button { Task { await store.adoptCallout(index, of: owner.id) } } label: {
+                        Label("Adopt", systemImage: "checkmark")
+                    }
+                    .buttonStyle(.pill)
+                    Button("Dismiss") { confirmsDismiss = true }.buttonStyle(.destructivePill)
                 }
-                .buttonStyle(.bordered).tint(Ink.secondary)
                 .disabled(store.isSending)
                 .padding(.top, 4)
             }
