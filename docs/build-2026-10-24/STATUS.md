@@ -60,7 +60,7 @@ Stop only for a genuine problem.
 - [ ] 12. Report for Patrik (what works, screenshots in `~/empire-ios/build/screens-2026-10-24/`, what waits for Apple).
 - [ ] 13. Extra (Patrik: 'if done quickly, scope another project'; Arescribe vetoed, other provinces not sensible to
       build alone): (a) Aresus widget, brief W, agent running since 05:38, worktree `~/wt/empire-ios-widget`;
-      (b) hub live lines from Aresus (done 05:45, 935d534, deploying via Aresync).
+      (b) hub live lines from Aresus (935d534, deployed 05:41 by Aresync, hub answers 200).
 
 ## Log
 
