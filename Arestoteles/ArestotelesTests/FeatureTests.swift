@@ -72,10 +72,13 @@ struct FeatureTests {
         #expect(index.topics.map(\.id) == ["Printing press"])                  // section pages are not overviews
         #expect(index.positionTargets.map(\.id) == ["Positions", "Printing press"])
         #expect(index.mechanisms.map(\.id) == ["Information wants to be cheap"])
-        #expect(index.mechanismUses("Information wants to be cheap") == 2)      // Printing press, Reformation
+        // Linked from Positions, Printing press and Reformation; the Positions page is an index, not a use.
+        #expect(index.note("Information wants to be cheap")?.backlinks.count == 3)
+        #expect(index.mechanismUses("Information wants to be cheap") == 2)
         #expect(index.questions.map(\.id) == ["Did print cause the Reformation"])
         #expect(index.actors.map(\.id) == ["Martin Luther"])
-        #expect(index.backlinks(of: "Gutenberg Bible").map(\.id) == ["Printing press", "Spread of print"])
+        #expect(index.backlinks(of: "Printing press").map(\.id)
+                == ["2026-10-20 Printing press", "Home", "Positions", "Spread of print"])
         #expect(index.title("Reformation") == "Reformation" && index.title("Unknown") == "Unknown")
         let position = try #require(index.position("Printing press#1"))
         #expect(index.evidence(of: position).map(\.id) == ["Did print cause the Reformation", "Reformation"])

@@ -41,7 +41,8 @@ struct DecodingTests {
         let brief = try #require(topic.brief)
         #expect(brief.positions.count == 2 && brief.sections.map(\.note) == ["Spread of print", nil])
         #expect(brief.counterpoints.first?.title == "A rival view" && brief.shaky.first?.note == "Spread of print")
-        #expect(brief.terms.map(\.english) == ["printing town"] && brief.questions == ["Did print cause the Reformation"])
+        #expect(brief.terms.map(\.english) == ["printing town", "trading city"])
+        #expect(brief.questions == ["Did print cause the Reformation"])
 
         let section = try #require(vault.notes.first { $0.id == "Spread of print" })
         #expect(section.topic == "Printing press" && !section.isTopicOverview)

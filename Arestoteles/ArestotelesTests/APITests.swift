@@ -95,6 +95,23 @@ struct APITests {
         } catch { Issue.record("404 should be server(404), got \(error)") }
     }
 
+    /// Before its first index the server answers 503 with its own sentence; without one, the shared message.
+    @Test func stillLoadingKeepsTheServersWords() async throws {
+        let transport = FakeTransport()
+        transport.answer("GET /vault", 503, json: Data(#"{"error":"The vault is still loading."}"#.utf8))
+        do {
+            _ = try await api(transport).vault(ifNoneMatch: nil)
+            Issue.record("503 should throw")
+        } catch HTTPError.server(503, "The vault is still loading.") {
+        } catch { Issue.record("Expected the server's sentence, got \(error)") }
+        transport.answer("GET /vault", 503, json: Data())
+        do {
+            _ = try await api(transport).vault(ifNoneMatch: nil)
+        } catch let HTTPError.server(503, message) {
+            #expect(message == "Login service unavailable, try again")
+        } catch { Issue.record("Expected a 503, got \(error)") }
+    }
+
     @Test func noTokenNoRequest() async throws {
         let transport = FakeTransport()
         await #expect(throws: HTTPError.self) { try await api(transport, token: nil).vault(ifNoneMatch: nil) }

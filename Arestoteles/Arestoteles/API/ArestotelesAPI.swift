@@ -45,14 +45,14 @@ struct ArestotelesAPI: VaultBackend {
         if let etag { request.setValue(etag, forHTTPHeaderField: "If-None-Match") }
         let (data, response) = try await transport.send(request)
         if response.statusCode == 304 { return .notModified }
-        try checkResponse(response, data: data, onUnauthorized: {})
+        try check(response, data: data)
         return .fresh(try JSONDecoder().decode(Vault.self, from: data), etag: response.value(forHTTPHeaderField: "ETag"))
     }
 
     func source(note id: String) async throws -> NoteSource {
         let request = try request("GET", path: "/notes/" + NoteLink.encode(id) + "/source")
         let (data, response) = try await transport.send(request)
-        try checkResponse(response, data: data, onUnauthorized: {})
+        try check(response, data: data)
         return try JSONDecoder().decode(NoteSource.self, from: data)
     }
 
@@ -70,12 +70,22 @@ struct ArestotelesAPI: VaultBackend {
             throw VaultAPIError.invalid(message: body?.error ?? body?.message
                                         ?? String(localized: "The vault's check refused this edit."))
         default:
-            try checkResponse(response, data: data, onUnauthorized: {})
+            try check(response, data: data)
         }
         return try JSONDecoder().decode(EditResult.self, from: data)
     }
 
     // MARK: - requests
+
+    /// The shared statuses (`checkResponse`), except that a 503 keeps the server's own sentence when it sends one: the
+    /// shared message speaks of the account server, while this server also answers 503 before its first index is
+    /// built ("still loading", API.md).
+    private func check(_ response: HTTPURLResponse, data: Data) throws {
+        if response.statusCode == 503, let message = try? JSONDecoder().decode(ServerMessage.self, from: data).error {
+            throw HTTPError.server(503, message)
+        }
+        try checkResponse(response, data: data, onUnauthorized: {})
+    }
 
     /// `{"error": "…", "current": Note}` of a 409.
     private struct ConflictBody: Decodable {
