@@ -66,7 +66,8 @@ milestones, a bug that comes back, and every 2–3 weeks over merged Codex work.
 
 ## Open (2026-10-24)
 
-Both apps work on the simulator and are merged; nothing reaches the phone until Apple approves the developer account.
+Four apps (Aresium, Empire, Arestemis, Aresus) work on the simulator and are merged; nothing reaches the phone until
+Apple approves the developer account.
 
 1. **TestFlight, once Apple approves:** set the paid team (project level, both projects); the App Groups
    `group.de.ares-empire.aresium` + `group.de.ares-empire.shared` registered for the bundle ids (Xcode's automatic
@@ -79,6 +80,14 @@ Both apps work on the simulator and are merged; nothing reaches the phone until 
 4. Hub data, not this repo: Aresium's "About" on the hub (`data/state.json` on the server, `lock: true`, so the sync
    never refreshes it) is outdated (Next.js, Prisma); Patrik has not decided yet whether to rewrite it.
 5. Later (decided): Aresium for several users, then Aresium `open` in the hub catalog.
+6. **Push, once Apple approves** (`ares-empire/docs/PUSH.md` → Operating): create the APNs key (.p8) in the developer
+   portal, put it on the server, set `APNS_KEY_ID`/`APNS_TEAM_ID`, restart `empire-push`; enable the Push Notifications
+   and Time Sensitive capabilities for Arestemis and Aresus (entitlements are already in the projects). Then check on the
+   phone and retire Telegram: Arestemis (`TELEGRAM_*` in /root/Arestemis/.env) and Aresync (`TG_*` in each config).
+7. **Windows laptop:** an Aresus machine token for `Notebook-Patrik` (`aresus/scripts/new-machine-token.py`) into
+   `windows/config.ps1`; the PowerShell report is untested.
+8. **Build 2026-10-24 record:** `docs/build-2026-10-24/STATUS.md` (what was built, decisions, live tests). Ideas not built
+   yet: an Aresus home-screen widget; Aresus feeding the hub's live lines (up/down per province).
 
 ## Setup state (update as it changes)
 
