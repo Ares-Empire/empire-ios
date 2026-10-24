@@ -5,16 +5,34 @@ import SwiftUI
 /// `owner` is the note the blocks belong to (an embed's blocks belong to the embedded note).
 struct BlocksView: View {
     let blocks: [Block]
+    /// Where each block sits in the owner's body (empty: unknown, e.g. inside an embed): a passage with lines can be
+    /// edited on its own by pressing and holding it.
+    var lines: [LineRange?] = []
+    /// Each block's index in `owner.blocks` (scroll targets and the marked passage); empty: in order from 0.
+    var indices: [Int] = []
     let owner: Note
+    /// The block to mark for a moment (a search hit, a figure, a source).
+    var marked: Int? = nil
     /// 1 inside an embed: an embed in there shows as a link only, so notes embedding each other never loop.
     var embedDepth = 0
 
     static func anchorID(_ anchor: String) -> String { "anchor:" + anchor }
+    static func blockID(_ index: Int) -> String { "block:\(index)" }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            ForEach(Array(blocks.enumerated()), id: \.offset) { _, block in
-                BlockView(block: block, owner: owner, embedDepth: embedDepth)
+            ForEach(Array(blocks.enumerated()), id: \.offset) { offset, block in
+                let index = offset < indices.count ? indices[offset] : offset
+                BlockView(block: block, lines: offset < lines.count ? lines[offset] : nil, owner: owner,
+                          embedDepth: embedDepth)
+                    .padding(marked == index ? 8 : 0)
+                    .background {
+                        if marked == index {
+                            RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Look.accent.color.opacity(0.14))
+                        }
+                    }
+                    .padding(marked == index ? -8 : 0)
+                    .id(Self.blockID(index))
             }
         }
     }
@@ -22,12 +40,44 @@ struct BlocksView: View {
 
 struct BlockView: View {
     let block: Block
+    var lines: LineRange? = nil
     let owner: Note
     let embedDepth: Int
     @Environment(VaultStore.self) private var store
     @Environment(AppNavigation.self) private var navigation
 
     var body: some View {
+        content.contextMenu {
+            if embedDepth == 0, let lines, isPassage {
+                Button { navigation.sheet = .passage(note: owner.id, lines: lines) } label: {
+                    Label("Edit this passage", systemImage: "pencil")
+                }
+            }
+            if isPassage {
+                Button { navigation.sheet = .quickNote(about: .note(owner.id)) } label: {
+                    Label("Note about this", systemImage: "note.text")
+                }
+                Button { UIPasteboard.general.string = plainText } label: { Label("Copy", systemImage: "doc.on.doc") }
+            }
+        }
+    }
+
+    /// Paragraphs and quotes can be edited, copied and noted on as a whole (a list: per item, in `ListBlock`).
+    private var isPassage: Bool {
+        switch block {
+        case .paragraph, .quote: true
+        default: false
+        }
+    }
+
+    private var plainText: String {
+        switch block {
+        case let .paragraph(text), let .quote(text): InlineMarkdown.plain(text)
+        default: ""
+        }
+    }
+
+    @ViewBuilder private var content: some View {
         switch block {
         case let .heading(level, text, anchor):
             InlineText(text, size: level == 2 ? 20 : level == 3 ? 17 : 15, weight: .bold)
@@ -37,7 +87,7 @@ struct BlockView: View {
         case let .paragraph(text):
             InlineText(text)
         case let .list(ordered, items):
-            ListBlock(ordered: ordered, items: items)
+            ListBlock(ordered: ordered, items: items, owner: embedDepth == 0 ? owner : nil)
         case let .positions(ids):
             VStack(spacing: Look.rowGap) {
                 ForEach(store.index.positions(ids)) { PositionCard(position: $0) }
@@ -73,6 +123,9 @@ struct BlockView: View {
 struct ListBlock: View {
     let ordered: Bool
     let items: [ListItem]
+    /// The note the list belongs to, when its items can be edited (not inside an embed).
+    var owner: Note? = nil
+    @Environment(AppNavigation.self) private var navigation
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -83,6 +136,22 @@ struct ListBlock: View {
                     InlineText(item.text)
                 }
                 .padding(.leading, CGFloat(item.depth) * 18)
+                .contentShape(Rectangle())
+                .contextMenu {
+                    if let owner, let lines = item.lines {
+                        Button { navigation.sheet = .passage(note: owner.id, lines: lines) } label: {
+                            Label("Edit this passage", systemImage: "pencil")
+                        }
+                    }
+                    if let owner {
+                        Button { navigation.sheet = .quickNote(about: .note(owner.id)) } label: {
+                            Label("Note about this", systemImage: "note.text")
+                        }
+                    }
+                    Button { UIPasteboard.general.string = InlineMarkdown.plain(item.text) } label: {
+                        Label("Copy", systemImage: "doc.on.doc")
+                    }
+                }
             }
         }
     }

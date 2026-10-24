@@ -31,7 +31,9 @@ enum AppSheet: Identifiable, Equatable {
     case brief(String)                      // a topic overview's brief
     case editor(String)                     // the free editor of a note
     case discuss(DiscussSubject)
-    case quickNote
+    case quickNote(about: DiscussSubject?)  // a thought for the Inbox, maybe about a note or a position
+    case discussions                        // the "discuss later" marks not yet discussed
+    case passage(note: String, lines: LineRange)   // one paragraph or list item, edited on its own
     case position(PositionDraft.Kind)       // reword, change, drop, add
 
     var id: String {
@@ -40,8 +42,20 @@ enum AppSheet: Identifiable, Equatable {
         case let .editor(note): "editor:" + note
         case let .discuss(.note(note)): "discuss-note:" + note
         case let .discuss(.position(position)): "discuss-position:" + position
-        case .quickNote: "quicknote"
+        case let .quickNote(about): "quicknote:" + (about?.id ?? "")
+        case .discussions: "discussions"
+        case let .passage(note, lines): "passage:\(note):\(lines.start)-\(lines.end)"
         case let .position(kind): "position:" + kind.id
+        }
+    }
+}
+
+extension AppSheet {
+    /// Short sheets open at half height.
+    var isSmall: Bool {
+        switch self {
+        case .quickNote, .discuss: true
+        default: false
         }
     }
 }
@@ -110,7 +124,7 @@ final class AppNavigation {
     func open(_ link: NoteLink) {
         sheet = nil
         if case let .note(top)? = path.last, top.note == link.note {
-            if link.anchor != nil { scrollRequest = link }
+            if link.anchor != nil || link.block != nil { scrollRequest = link }
             return
         }
         path.append(.note(link))
@@ -219,7 +233,9 @@ struct LaunchOptions {
         case "edit":
             sheet = (note ?? index.topics.first?.id).map(AppSheet.editor)
         case "quicknote":
-            sheet = .quickNote
+            sheet = .quickNote(about: position.map(DiscussSubject.position))
+        case "discussions":
+            sheet = .discussions
         case "discuss":
             let subject = openPosition.map(DiscussSubject.position) ?? note.map(DiscussSubject.note)
                 ?? position.map(DiscussSubject.position)

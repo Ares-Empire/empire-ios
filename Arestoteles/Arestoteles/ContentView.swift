@@ -173,11 +173,13 @@ private struct MainTabs: View {
                 case let .brief(note): BriefSheet(note: note)
                 case let .editor(note): EditorSheet(note: note, store: store)
                 case let .discuss(subject): DiscussSheet(subject: subject)
-                case .quickNote: QuickNoteSheet()
+                case let .quickNote(about): QuickNoteSheet(about: about)
+                case .discussions: DiscussionsSheet()
+                case let .passage(note, lines): PassageSheet(note: note, lines: lines)
                 case let .position(kind): PositionSheet(kind: kind, index: store.index)
                 }
             }
-            .presentationDetents(sheet == .quickNote ? [.medium, .large] : [.large])
+            .presentationDetents(sheet.isSmall ? [.medium, .large] : [.large])
             .presentationBackground(Ink.background)
             .preferredColorScheme(.dark)
         }

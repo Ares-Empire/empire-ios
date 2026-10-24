@@ -75,7 +75,7 @@ struct LinkTests {
 
     @Test func openingALinkPushesTheNote() {
         let navigation = AppNavigation()
-        navigation.sheet = .quickNote
+        navigation.sheet = .quickNote(about: nil)
         navigation.open(NoteLink(note: "Reformation"))
         #expect(navigation.positionsPath == [.note(NoteLink(note: "Reformation"))] && navigation.sheet == nil)
         // A heading of the note on top: scroll, do not push it again.

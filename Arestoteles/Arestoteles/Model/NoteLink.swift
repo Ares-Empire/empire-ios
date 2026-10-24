@@ -8,10 +8,14 @@ nonisolated struct NoteLink: Hashable, Sendable {
 
     let note: String
     var anchor: String?
+    /// A passage to show and mark (an index in `Note.blocks`): a search hit, a figure, a source. Inside the app only;
+    /// links from outside name a heading at most.
+    var block: Int?
 
-    init(note: String, anchor: String? = nil) {
+    init(note: String, anchor: String? = nil, block: Int? = nil) {
         self.note = note
         self.anchor = anchor.flatMap { $0.isEmpty ? nil : $0 }
+        self.block = block
     }
 
     /// `arestoteles://note/Printing%20press#My%20position`. Nil for anything else (a web link, the bare

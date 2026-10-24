@@ -5,6 +5,8 @@ import SwiftUI
 /// Edit (the free editor) and Confidence.
 struct NoteScreen: View {
     let link: NoteLink
+    @State private var focus: NoteLink?
+    @State private var expandsAll = false
     @Environment(VaultStore.self) private var store
     @Environment(AppNavigation.self) private var navigation
 
@@ -21,7 +23,7 @@ struct NoteScreen: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
         .toolbar {
-            if let note = store.index.note(link.note) { NoteMenu(note: note) }
+            if let note = store.index.note(link.note) { NoteMenu(note: note, expandsAll: $expandsAll) }
         }
     }
 
@@ -38,15 +40,20 @@ struct NoteScreen: View {
                             .padding(.top, 16)
                             .accessibilityLabel(Text("Summary: \(InlineMarkdown.plain(summary))"))
                     }
-                    BlocksView(blocks: note.blocks, owner: note).padding(.top, 18)
+                    LookupPanel(note: note).padding(.top, 16)
+                    NoteBody(note: note, focus: focus, expandsAll: $expandsAll).padding(.top, 18)
                     backlinks(note)
                 }
                 .padding(.horizontal, Look.side).padding(.top, 8).padding(.bottom, 40)
             }
-            .onAppear { scroll(proxy, to: link.anchor, animated: false) }
+            .onAppear {
+                focus = link
+                scroll(proxy, to: link, animated: false)
+            }
             .onChange(of: navigation.scrollRequest) { _, request in
                 guard let request, request.note == note.id else { return }
-                scroll(proxy, to: request.anchor, animated: true)
+                focus = request
+                scroll(proxy, to: request, animated: true)
                 navigation.scrolled()
             }
         }
@@ -94,9 +101,11 @@ struct NoteScreen: View {
         }
     }
 
-    private func scroll(_ proxy: ScrollViewProxy, to anchor: String?, animated: Bool) {
-        guard let anchor else { return }
-        let id = BlocksView.anchorID(anchor)
+    private func scroll(_ proxy: ScrollViewProxy, to link: NoteLink, animated: Bool) {
+        let id: String
+        if let block = link.block { id = BlocksView.blockID(block) }
+        else if let anchor = link.anchor { id = BlocksView.anchorID(anchor) }
+        else { return }
         // After the first layout, so the heading exists.
         DispatchQueue.main.async {
             if animated {
@@ -111,12 +120,20 @@ struct NoteScreen: View {
 /// The note page's quieter actions, in one menu at the top right: the free editor and the confidence.
 struct NoteMenu: ToolbarContent {
     let note: Note
+    @Binding var expandsAll: Bool
     @Environment(VaultStore.self) private var store
     @Environment(AppNavigation.self) private var navigation
 
     var body: some ToolbarContent {
         ToolbarItem(placement: .topBarTrailing) {
             Menu {
+                if NoteSections(note: note).compact {
+                    Button { withAnimation { expandsAll.toggle() } } label: {
+                        expandsAll ? Label("Close the sections", systemImage: "rectangle.compress.vertical")
+                                   : Label("Open all sections", systemImage: "rectangle.expand.vertical")
+                    }
+                }
+                Button { navigation.sheet = .quickNote(about: .note(note.id)) } label: { Label("Note", systemImage: "note.text") }
                 Button { navigation.sheet = .editor(note.id) } label: { Label("Edit text", systemImage: "square.and.pencil") }
                 if note.confidence != nil || [.topic, .mechanism, .event, .question].contains(note.type) {
                     Picker(selection: confidence) {

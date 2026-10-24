@@ -186,6 +186,16 @@
         }
       }
     },
+    "%lld to discuss" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld zu besprechen"
+          }
+        }
+      }
+    },
     "A changed view replaces the sentence." : {
       "localizations" : {
         "de" : {
@@ -356,6 +366,26 @@
         }
       }
     },
+    "Close the sections" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abschnitte zuklappen"
+          }
+        }
+      }
+    },
+    "Closes the section" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Klappt den Abschnitt zu"
+          }
+        }
+      }
+    },
     "Confidence" : {
       "localizations" : {
         "de" : {
@@ -372,6 +402,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Als meine bestätigen"
+          }
+        }
+      }
+    },
+    "Copies the question with the vault's context; paste it in a new Claude Code session." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kopiert die Frage mit dem Kontext aus dem Vault; füg sie in einer neuen Claude-Code-Sitzung ein."
+          }
+        }
+      }
+    },
+    "Copy" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kopieren"
           }
         }
       }
@@ -466,6 +516,16 @@
         }
       }
     },
+    "Done" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erledigt"
+          }
+        }
+      }
+    },
     "Draft" : {
       "localizations" : {
         "de" : {
@@ -526,6 +586,16 @@
         }
       }
     },
+    "Edit this passage" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diesen Absatz bearbeiten"
+          }
+        }
+      }
+    },
     "Event" : {
       "localizations" : {
         "de" : {
@@ -576,12 +646,42 @@
         }
       }
     },
+    "Figures & dates" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zahlen & Daten"
+          }
+        }
+      }
+    },
     "Glossary" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Glossar"
+          }
+        }
+      }
+    },
+    "Goes on the “To discuss” list in the vault; the next Claude session brings it up." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kommt auf die Liste „Zu besprechen“ im Vault; die nächste Claude-Sitzung spricht es an."
+          }
+        }
+      }
+    },
+    "Goes to the vault's Inbox as you write it; Claude works it in later." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kommt so, wie du sie schreibst, in den Eingang des Vaults; Claude arbeitet sie später ein."
           }
         }
       }
@@ -626,6 +726,16 @@
         }
       }
     },
+    "In the text" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Im Text"
+          }
+        }
+      }
+    },
     "Inbox" : {
       "localizations" : {
         "de" : {
@@ -642,6 +752,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Er wird aus der Notiz entfernt."
+          }
+        }
+      }
+    },
+    "Later" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Später"
           }
         }
       }
@@ -702,6 +822,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Abmelden"
+          }
+        }
+      }
+    },
+    "Markdown, as in Obsidian: [[links]] and **bold** stay as they are." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Markdown wie in Obsidian: [[Links]] und **fett** bleiben, wie sie sind."
           }
         }
       }
@@ -866,6 +996,26 @@
         }
       }
     },
+    "Note about this" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notiz dazu"
+          }
+        }
+      }
+    },
+    "Notes" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notizen"
+          }
+        }
+      }
+    },
     "Notes, positions, terms" : {
       "localizations" : {
         "de" : {
@@ -886,12 +1036,32 @@
         }
       }
     },
+    "Nothing to discuss right now." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gerade nichts zu besprechen."
+          }
+        }
+      }
+    },
     "Now" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Jetzt"
+          }
+        }
+      }
+    },
+    "Now, with Claude" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jetzt mit Claude"
           }
         }
       }
@@ -926,12 +1096,32 @@
         }
       }
     },
+    "Open all sections" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alle Abschnitte aufklappen"
+          }
+        }
+      }
+    },
     "Open questions" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Offene Fragen"
+          }
+        }
+      }
+    },
+    "Opens the section" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Klappt den Abschnitt auf"
           }
         }
       }
@@ -1152,6 +1342,16 @@
         }
       }
     },
+    "Sources" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quellen"
+          }
+        }
+      }
+    },
     "Summary: %@" : {
       "localizations" : {
         "de" : {
@@ -1272,6 +1472,16 @@
         }
       }
     },
+    "To discuss" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zu besprechen"
+          }
+        }
+      }
+    },
     "Topic" : {
       "localizations" : {
         "de" : {
@@ -1372,6 +1582,16 @@
         }
       }
     },
+    "What about it? (optional)" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Worum geht es? (optional)"
+          }
+        }
+      }
+    },
     "What changed it" : {
       "localizations" : {
         "de" : {
@@ -1418,6 +1638,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Warum"
+          }
+        }
+      }
+    },
+    "Your note" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Notiz"
           }
         }
       }

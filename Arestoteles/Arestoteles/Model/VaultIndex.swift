@@ -60,6 +60,12 @@ struct VaultIndex: Sendable {
 
     func note(_ id: String) -> Note? { notes[id] }
 
+    /// The "discuss later" marks not yet discussed (Inbox notes of kind discuss, status new), newest first.
+    var openDiscussions: [Note] {
+        notes.values.filter { $0.inbox?.kind == .discuss && $0.inbox?.isOpen == true }
+            .sorted { $0.id > $1.id }       // Inbox names start with the date and time
+    }
+
     func position(_ id: String) -> Position? { positions[id] }
 
     /// The notes that link to this one, in the server's order (by id); ids the vault does not know are left out.

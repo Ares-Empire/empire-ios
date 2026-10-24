@@ -207,24 +207,40 @@ struct DiscussSheet: View {
         let prompt = DiscussPrompt.make(subject, question: question, index: store.index)
         SheetFrame(title: String(localized: "Discuss")) {
             ScrollView {
-                VStack(alignment: .leading, spacing: 14) {
-                    Text("Claude Code works on the vault with its rules. The prompt below is copied; paste it in a new session.")
-                        .font(AppFont.text(13)).foregroundStyle(Ink.secondary).fixedSize(horizontal: false, vertical: true)
-                    TextField("Your question (optional)", text: $question, axis: .vertical)
+                VStack(alignment: .leading, spacing: 16) {
+                    SubjectLine(subject: subject)
+                    TextField("What about it? (optional)", text: $question, axis: .vertical)
                         .lineLimit(2...6)
                         .font(AppFont.text(15))
                         .padding(12).glassCard()
                     if let prompt {
-                        Text(verbatim: prompt).font(AppFont.number(12.5, weight: .regular)).foregroundStyle(Ink.secondary)
-                            .textSelection(.enabled)
-                            .padding(12).frame(maxWidth: .infinity, alignment: .leading).glassCard()
-                        Button("Copy and open Claude") {
-                            UIPasteboard.general.string = prompt
-                            openURL(DiscussPrompt.target)
-                            dismiss()
+                        VStack(alignment: .leading, spacing: 10) {
+                            Button {
+                                UIPasteboard.general.string = prompt
+                                openURL(DiscussPrompt.target)
+                                dismiss()
+                            } label: {
+                                Label("Now, with Claude", systemImage: "bubble.left.and.text.bubble.right")
+                            }
+                            .buttonStyle(.primaryPill)
+                            Text("Copies the question with the vault's context; paste it in a new Claude Code session.")
+                                .font(AppFont.text(12)).foregroundStyle(Ink.muted).fixedSize(horizontal: false, vertical: true)
                         }
-                        .buttonStyle(.primaryPill)
-                        .frame(maxWidth: .infinity)
+                        VStack(alignment: .leading, spacing: 10) {
+                            Button {
+                                let typed = question
+                                Task {
+                                    if await store.addQuickNote(typed, about: subject.id, kind: .discuss) != .empty {
+                                        dismiss()
+                                    }
+                                }
+                            } label: {
+                                Label("Later", systemImage: "bookmark")
+                            }
+                            .buttonStyle(.pill)
+                            Text("Goes on the “To discuss” list in the vault; the next Claude session brings it up.")
+                                .font(AppFont.text(12)).foregroundStyle(Ink.muted).fixedSize(horizontal: false, vertical: true)
+                        }
                     } else {
                         CalmMessage(text: String(localized: "This is no longer in the vault."))
                     }
@@ -235,10 +251,40 @@ struct DiscussSheet: View {
     }
 }
 
+/// What a note or a discussion is about, in one line: the position's first sentence or the note's title.
+struct SubjectLine: View {
+    let subject: DiscussSubject
+    @Environment(VaultStore.self) private var store
+
+    var body: some View {
+        if let text = Self.text(subject, index: store.index) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Image(systemName: subject.isPosition ? "quote.opening" : "doc.text")
+                    .font(.system(size: 12, weight: .semibold)).foregroundStyle(Look.accent.color)
+                Text(verbatim: text).font(AppFont.text(14, weight: .medium)).foregroundStyle(Ink.primary)
+                    .lineLimit(2).fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    static func text(_ subject: DiscussSubject, index: VaultIndex) -> String? {
+        switch subject {
+        case let .note(id): index.note(id)?.title
+        case let .position(id): index.position(id).map { Lookup.headline($0.text) }
+        }
+    }
+}
+
+extension DiscussSubject {
+    var isPosition: Bool { if case .position = self { true } else { false } }
+}
+
 // MARK: - quick note
 
-/// A quick note for the Inbox, verbatim. Kept on the phone until the server has it; the waiting ones are listed.
+/// A quick note for the Inbox, verbatim, maybe about a note or a position (Claude works it into the vault later).
+/// Kept on the phone until the server has it; the waiting ones are listed.
 struct QuickNoteSheet: View {
+    let about: DiscussSubject?
     @State private var text = ""
     @State private var waitingNow = false
     @FocusState private var focused: Bool
@@ -246,14 +292,17 @@ struct QuickNoteSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        SheetFrame(title: String(localized: "Quick note")) {
+        SheetFrame(title: about == nil ? String(localized: "Quick note") : String(localized: "Note")) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    TextField("A thought for the Inbox", text: $text, axis: .vertical)
+                    if let about { SubjectLine(subject: about) }
+                    TextField(about == nil ? "A thought for the Inbox" : "Your note", text: $text, axis: .vertical)
                         .lineLimit(4...12)
                         .font(AppFont.text(16))
                         .focused($focused)
                         .padding(12).glassCard()
+                    Text("Goes to the vault's Inbox as you write it; Claude works it in later.")
+                        .font(AppFont.text(12)).foregroundStyle(Ink.muted)
                     if waitingNow {
                         Text("Saved on the phone. It goes to the Inbox once the server can be reached.")
                             .font(AppFont.text(13)).foregroundStyle(Ink.secondary)
@@ -270,7 +319,7 @@ struct QuickNoteSheet: View {
                 Button("Save") {
                     let typed = text
                     Task {
-                        switch await store.addQuickNote(typed) {
+                        switch await store.addQuickNote(typed, about: about?.id) {
                         case .sent: dismiss()
                         case .waiting:
                             text = ""
@@ -283,6 +332,125 @@ struct QuickNoteSheet: View {
             }
         }
         .onAppear { focused = true }
+    }
+}
+
+// MARK: - to discuss
+
+/// The "discuss later" marks not yet discussed: what each is about and the question, with Now (Claude) and Done.
+struct DiscussionsSheet: View {
+    @Environment(VaultStore.self) private var store
+    @Environment(AppNavigation.self) private var navigation
+
+    var body: some View {
+        SheetFrame(title: String(localized: "To discuss")) {
+            ScrollView {
+                VStack(spacing: Look.rowGap) {
+                    let open = store.index.openDiscussions
+                    if open.isEmpty {
+                        CalmMessage(text: String(localized: "Nothing to discuss right now."))
+                    }
+                    ForEach(open) { note in row(note) }
+                }
+                .padding(.horizontal, Look.side).padding(.vertical, 12)
+            }
+        }
+    }
+
+    private func row(_ note: Note) -> some View {
+        let subject = note.inbox.flatMap(DiscussSubject.init(inbox:))
+        let question = Lookup.passages(of: note).map(\.text).joined(separator: " ")
+        return VStack(alignment: .leading, spacing: 10) {
+            if let subject { SubjectLine(subject: subject) }
+            if !question.trimmingCharacters(in: .whitespaces).isEmpty {
+                Text(verbatim: question).font(AppFont.text(14)).foregroundStyle(Ink.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            HStack(spacing: 8) {
+                if let subject {
+                    Button { navigation.sheet = .discuss(subject) } label: { Label("Now", systemImage: "bubble.left.and.text.bubble.right") }
+                        .buttonStyle(.pill)
+                }
+                Button { Task { await store.setInboxStatus(of: note.id, processed: true) } } label: {
+                    Label("Done", systemImage: "checkmark")
+                }
+                .buttonStyle(.pill)
+                Spacer()
+                Text(verbatim: note.created.map { Format.day($0) } ?? "").font(AppFont.number(11)).foregroundStyle(Ink.muted)
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassCard()
+        .disabled(store.isSending)
+    }
+}
+
+// MARK: - one passage
+
+/// One paragraph or list item, edited on its own: loaded fresh from the server, saved against that version.
+struct PassageSheet: View {
+    let note: String
+    let lines: LineRange
+    @State private var text = ""
+    @State private var source: NoteSource?
+    @State private var problem: String?
+    @State private var saving = false
+    @FocusState private var focused: Bool
+    @Environment(VaultStore.self) private var store
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        SheetFrame(title: String(localized: "Edit")) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    if source == nil && problem == nil {
+                        CalmMessage(text: String(localized: "Loading the note…"), loading: true)
+                    }
+                    if source != nil {
+                        TextField("", text: $text, axis: .vertical)
+                            .lineLimit(3...20)
+                            .font(AppFont.text(16))
+                            .focused($focused)
+                            .padding(12).glassCard()
+                        Text("Markdown, as in Obsidian: [[links]] and **bold** stay as they are.")
+                            .font(AppFont.text(12)).foregroundStyle(Ink.muted)
+                    }
+                    if let problem {
+                        Text(verbatim: problem).font(AppFont.text(13)).foregroundStyle(Ink.primary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .padding(.horizontal, Look.side).padding(.vertical, 12)
+            }
+        } actions: {
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Save") {
+                    guard let source else { return }
+                    saving = true
+                    Task {
+                        let outcome = await store.savePassage(text, of: note, lines: lines, in: source, reportsFailure: false)
+                        saving = false
+                        switch outcome {
+                        case .applied: dismiss()
+                        case .conflict: problem = String(localized: "This changed elsewhere.")
+                        case let .invalid(message), let .failed(message): problem = message
+                        }
+                    }
+                }
+                .disabled(source == nil || saving || text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        }
+        .task {
+            switch await store.passage(of: note, lines: lines) {
+            case let .success(loaded):
+                text = loaded.text
+                source = loaded.source
+                focused = true
+            case let .failure(failure):
+                problem = failure.message
+            }
+        }
     }
 }
 

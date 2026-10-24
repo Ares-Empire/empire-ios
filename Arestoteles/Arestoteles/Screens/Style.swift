@@ -31,7 +31,7 @@ struct ScreenHeader: View {
                 .accessibilityLabel(Text("Account"))
                 Spacer()
                 GlassIconButton(symbol: "square.and.pencil", label: String(localized: "Quick note")) {
-                    navigation.sheet = .quickNote
+                    navigation.sheet = .quickNote(about: nil)
                 }
             }
         }

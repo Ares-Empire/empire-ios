@@ -235,6 +235,54 @@ final class VaultStore {
         await perform(.editNote(note: note, version: version, markdown: markdown), reportsFailure: reportsFailure)
     }
 
+    /// Ticks a "discuss later" mark (or any Inbox note) off, or opens it again.
+    @discardableResult
+    func setInboxStatus(of note: String, processed: Bool, reportsFailure: Bool = true) async -> EditOutcome {
+        await perform(.setInboxStatus(note: note, status: processed ? "processed" : "new"), reportsFailure: reportsFailure)
+    }
+
+    /// One passage of a note (a paragraph, a list item, a quote) as Markdown, for editing it on its own. Loaded fresh;
+    /// when the note changed since it was shown, its lines may have moved, so that counts as "changed elsewhere".
+    func passage(of note: String, lines: LineRange) async -> Result<(text: String, source: NoteSource), Failure> {
+        switch await source(of: note) {
+        case let .failure(failure):
+            return .failure(failure)
+        case let .success(source):
+            guard source.version == index.note(note)?.version, let text = Self.slice(source.markdown, lines) else {
+                await refresh()
+                return .failure(Failure(message: Self.changedElsewhere))
+            }
+            return .success((text, source))
+        }
+    }
+
+    /// Saves an edited passage: the loaded body with exactly those lines replaced, against that body's version.
+    @discardableResult
+    func savePassage(_ text: String, of note: String, lines: LineRange, in source: NoteSource,
+                     reportsFailure: Bool = true) async -> EditOutcome {
+        guard let markdown = Self.replace(lines, in: source.markdown, with: text) else {
+            return .failed(Self.changedElsewhere)
+        }
+        return await perform(.editNote(note: note, version: source.version, markdown: markdown),
+                             reportsFailure: reportsFailure)
+    }
+
+    /// Lines `[start, end)` of a body; nil when the range does not fit it.
+    nonisolated static func slice(_ markdown: String, _ lines: LineRange) -> String? {
+        let all = markdown.components(separatedBy: "\n")
+        guard lines.start >= 0, lines.start < lines.end, lines.end <= all.count else { return nil }
+        return all[lines.start..<lines.end].joined(separator: "\n")
+    }
+
+    /// The body with lines `[start, end)` replaced by `text` (its own lines); nil when the range does not fit.
+    nonisolated static func replace(_ lines: LineRange, in markdown: String, with text: String) -> String? {
+        var all = markdown.components(separatedBy: "\n")
+        guard lines.start >= 0, lines.start < lines.end, lines.end <= all.count else { return nil }
+        let replacement = text.trimmingCharacters(in: .newlines).components(separatedBy: "\n")
+        all.replaceSubrange(lines.start..<lines.end, with: replacement)
+        return all.joined(separator: "\n")
+    }
+
     /// The note's body as Markdown, for the free editor.
     func source(of note: String) async -> Result<NoteSource, Failure> {
         guard canAct else { return .failure(Failure(message: unavailableMessage)) }
@@ -323,9 +371,11 @@ final class VaultStore {
     /// A quick note for the Inbox, verbatim. Kept on the phone first, so nothing is lost offline; sent at once when the
     /// server is reachable.
     @discardableResult
-    func addQuickNote(_ text: String, now: Date = .now) async -> QuickNoteOutcome {
-        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return .empty }
-        let note = PendingQuickNote(text: text, created: now)
+    func addQuickNote(_ text: String, about: String? = nil, kind: QuickNoteKind = .note,
+                      now: Date = .now) async -> QuickNoteOutcome {
+        // A "discuss later" mark may come without words; a note needs some.
+        guard kind == .discuss || !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return .empty }
+        let note = PendingQuickNote(text: text, created: now, about: about, kind: kind)
         pendingQuickNotes.append(note)
         saveQuickNotes()
         await flushQuickNotes()
@@ -354,7 +404,7 @@ final class VaultStore {
     private func send(_ note: PendingQuickNote, context: Context) async -> Bool {
         guard isCurrent(context), canAct, pendingQuickNotes.contains(where: { $0.id == note.id }) else { return false }
         do {
-            let result = try await backend.send(.quickNote(text: note.text))
+            let result = try await backend.send(.quickNote(text: note.text, about: note.about, kind: note.kind))
             guard isCurrent(context) else { return false }
             pendingQuickNotes.removeAll { $0.id == note.id }
             saveQuickNotes()

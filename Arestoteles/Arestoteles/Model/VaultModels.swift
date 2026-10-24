@@ -75,13 +75,17 @@ nonisolated struct Note: Codable, Equatable, Identifiable, Sendable {
     let positions: [String]             // position ids written on this note, in order
     let callouts: [Callout]
     let blocks: [Block]
+    /// Where each block sits in the body `GET /notes/{id}/source` returns (same order as `blocks`; nil: made up by the
+    /// server, or a server from before the lookup additions). Editing one paragraph replaces exactly these lines.
+    let blockLines: [LineRange?]
     let brief: Brief?                   // topic overviews only
+    let inbox: InboxInfo?               // Inbox notes only: a note or a "discuss later" mark, and its status
     let version: String                 // git blob hash: edits of the text name it
 
     enum CodingKeys: String, CodingKey {
         case id, path, type, title, summary, confidence, created, updated, tags, topic, event, links, backlinks, positions
-        case callouts, blocks, brief, version
-        case partOf = "part_of", ledTo = "led_to"
+        case callouts, blocks, brief, inbox, version
+        case partOf = "part_of", ledTo = "led_to", blockLines = "block_lines"
     }
 
     init(from decoder: Decoder) throws {
@@ -105,12 +109,74 @@ nonisolated struct Note: Codable, Equatable, Identifiable, Sendable {
         positions = try container.decodeIfPresent([String].self, forKey: .positions) ?? []
         callouts = try container.decodeIfPresent([Callout].self, forKey: .callouts) ?? []
         blocks = try container.decodeIfPresent([Block].self, forKey: .blocks) ?? []
+        // The server sends each block's `lines` inside the block; the app's own saved copy keeps them next to it.
+        if let saved = try container.decodeIfPresent([LineRange?].self, forKey: .blockLines), saved.count == blocks.count {
+            blockLines = saved
+        } else {
+            let probes = (try? container.decodeIfPresent([BlockLinesProbe].self, forKey: .blocks)) ?? []
+            blockLines = probes.count == blocks.count ? probes.map(\.lines) : Array(repeating: nil, count: blocks.count)
+        }
         brief = try container.decodeIfPresent(Brief.self, forKey: .brief)
+        inbox = try container.decodeIfPresent(InboxInfo.self, forKey: .inbox)
         version = try container.decode(String.self, forKey: .version)
     }
 
     /// A topic overview: the note its topic is named after.
     var isTopicOverview: Bool { type == .topic && topic == id }
+}
+
+/// Lines `[start, end)` of a note's body (0-based, end exclusive), as the contract sends them: `[3, 5]`.
+nonisolated struct LineRange: Codable, Equatable, Hashable, Sendable {
+    let start: Int
+    let end: Int
+
+    init(start: Int, end: Int) {
+        self.start = start
+        self.end = end
+    }
+
+    init(from decoder: Decoder) throws {
+        var container = try decoder.unkeyedContainer()
+        start = try container.decode(Int.self)
+        end = try container.decode(Int.self)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.unkeyedContainer()
+        try container.encode(start)
+        try container.encode(end)
+    }
+}
+
+/// Reads only a block's `lines` (the rest is `Block`).
+private nonisolated struct BlockLinesProbe: Decodable {
+    let lines: LineRange?
+}
+
+/// An Inbox note's frontmatter: a quick note or a "discuss later" mark, what it is about, and whether Claude has
+/// processed it yet.
+nonisolated struct InboxInfo: Codable, Equatable, Sendable {
+    let status: String                  // "new" until processed
+    let kind: QuickNoteKind
+    let about: String?                  // a note id
+    let position: Int?                  // a position's number on that note
+
+    var isOpen: Bool { status == "new" }
+    /// The position id it is about ("Printing press#1"), when it names one.
+    var positionID: String? { about.flatMap { note in position.map { "\(note)#\($0)" } } }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        status = try container.decodeIfPresent(String.self, forKey: .status) ?? "new"
+        kind = (try? container.decodeIfPresent(QuickNoteKind.self, forKey: .kind)) ?? .note
+        about = try container.decodeIfPresent(String.self, forKey: .about)
+        position = try container.decodeIfPresent(Int.self, forKey: .position)
+    }
+}
+
+/// A quick note is a thought for the Inbox, or a mark that Patrik wants to discuss something later.
+nonisolated enum QuickNoteKind: String, Codable, Equatable, Sendable {
+    case note, discuss
 }
 
 nonisolated struct PartOf: Codable, Equatable, Sendable {
@@ -151,6 +217,7 @@ nonisolated struct Callout: Codable, Equatable, Sendable {
 nonisolated struct ListItem: Codable, Equatable, Sendable {
     let text: String
     let depth: Int                      // 0 = top level
+    var lines: LineRange? = nil         // where the item sits in the body (one item can be edited on its own)
 }
 
 /// A piece of a note's body, for display (the frontmatter, the title and the summary box are left out).
@@ -333,7 +400,8 @@ nonisolated enum Edit: Equatable, Sendable {
     case adoptCallout(note: String, callout: Int, version: String)
     case dismissCallout(note: String, callout: Int, version: String)
     case editNote(note: String, version: String, markdown: String)
-    case quickNote(text: String)
+    case quickNote(text: String, about: String? = nil, kind: QuickNoteKind = .note)
+    case setInboxStatus(note: String, status: String)
 
     /// The contract's `op`.
     var op: String {
@@ -348,6 +416,7 @@ nonisolated enum Edit: Equatable, Sendable {
         case .dismissCallout: "dismiss_callout"
         case .editNote: "edit_note"
         case .quickNote: "quick_note"
+        case .setInboxStatus: "set_inbox_status"
         }
     }
 
@@ -358,7 +427,7 @@ nonisolated enum Edit: Equatable, Sendable {
              let .dropPosition(position, _):
             Position.note(ofID: position)
         case let .addPosition(note, _, _), let .setConfidence(note, _), let .adoptCallout(note, _, _),
-             let .dismissCallout(note, _, _), let .editNote(note, _, _):
+             let .dismissCallout(note, _, _), let .editNote(note, _, _), let .setInboxStatus(note, _):
             note
         case .quickNote:
             nil
@@ -368,7 +437,7 @@ nonisolated enum Edit: Equatable, Sendable {
 
 nonisolated extension Edit: Encodable {
     private enum CodingKeys: String, CodingKey {
-        case op, position, text, why, note, evidence, confidence, callout, version, markdown
+        case op, position, text, why, note, evidence, confidence, callout, version, markdown, about, kind, status
     }
 
     func encode(to encoder: Encoder) throws {
@@ -402,8 +471,14 @@ nonisolated extension Edit: Encodable {
             try container.encode(note, forKey: .note)
             try container.encode(version, forKey: .version)
             try container.encode(markdown, forKey: .markdown)
-        case let .quickNote(text):
+        case let .quickNote(text, about, kind):
             try container.encode(text, forKey: .text)
+            // Only sent when set, so a plain quick note is exactly what the first version of the contract takes.
+            try container.encodeIfPresent(about, forKey: .about)
+            if kind != .note { try container.encode(kind, forKey: .kind) }
+        case let .setInboxStatus(note, status):
+            try container.encode(note, forKey: .note)
+            try container.encode(status, forKey: .status)
         }
     }
 }

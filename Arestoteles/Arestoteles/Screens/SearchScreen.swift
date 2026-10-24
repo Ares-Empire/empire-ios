@@ -9,6 +9,8 @@ struct SearchScreen: View {
     var body: some View {
         @Bindable var navigation = navigation
         let results = store.search.results(navigation.query, type: navigation.searchType)
+        // Sentences first: a lookup usually wants the one sentence with the fact, not the note around it.
+        let sentences = navigation.searchType == nil ? store.search.sentences(navigation.query) : []
         ScrollView {
             VStack(alignment: .leading, spacing: Look.rowGap) {
                 StatusLine()
@@ -20,9 +22,14 @@ struct SearchScreen: View {
 
                 if navigation.query.trimmingCharacters(in: .whitespaces).isEmpty {
                     CalmMessage(text: String(localized: "Search titles, summaries, the notes' text and the glossary, in English and German."))
-                } else if results.isEmpty {
+                } else if results.isEmpty && sentences.isEmpty {
                     CalmMessage(text: String(localized: "Nothing found."))
                 } else {
+                    if !sentences.isEmpty {
+                        SectionHeading(text: String(localized: "In the text"))
+                        SentenceList(hits: sentences, query: navigation.query)
+                        if !results.isEmpty { SectionHeading(text: String(localized: "Notes")).padding(.top, 10) }
+                    }
                     ForEach(results) { result in
                         switch result {
                         case let .note(id, _):
@@ -42,7 +49,7 @@ struct SearchScreen: View {
         .toolbar {
             // The quick note, as on the other tabs (whose headers carry it).
             ToolbarItem(placement: .topBarTrailing) {
-                Button { navigation.sheet = .quickNote } label: { Label("Quick note", systemImage: "square.and.pencil") }
+                Button { navigation.sheet = .quickNote(about: nil) } label: { Label("Quick note", systemImage: "square.and.pencil") }
             }
         }
         .searchable(text: $navigation.query, prompt: Text("Notes, positions, terms"))
@@ -73,5 +80,51 @@ struct TermRow: View {
         .buttonStyle(.plain)
         .disabled(term.note == nil)
         .accessibilityElement(children: .combine)
+    }
+}
+
+/// Sentence hits: the sentence with the query's words in bold, and where it stands (note · heading). Tapping opens the
+/// note at that passage, marked.
+struct SentenceList: View {
+    let hits: [VaultSearch.SentenceHit]
+    let query: String
+    @Environment(AppNavigation.self) private var navigation
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(Array(hits.enumerated()), id: \.element.id) { offset, hit in
+                if offset > 0 { Rectangle().fill(Ink.line).frame(height: 1) }
+                Button { navigation.open(NoteLink(note: hit.passage.note, block: hit.passage.block)) } label: {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(Self.marked(hit.sentence, query: query)).font(AppFont.text(14)).foregroundStyle(Ink.primary)
+                            .multilineTextAlignment(.leading)
+                        Text(verbatim: [hit.title, hit.passage.heading].compactMap { $0 }.joined(separator: " · "))
+                            .font(AppFont.text(11)).foregroundStyle(Ink.muted).lineLimit(1)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 10)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 14)
+        .glassCard()
+    }
+
+    /// The sentence with each query word in bold and the accent (case and accents ignored).
+    static func marked(_ sentence: String, query: String) -> AttributedString {
+        var text = AttributedString(sentence)
+        let words = query.split(whereSeparator: \.isWhitespace).map(String.init).filter { $0.count >= 2 }
+        for word in words {
+            var searchFrom = text.startIndex
+            while searchFrom < text.endIndex,
+                  let range = text[searchFrom...].range(of: word, options: [.caseInsensitive, .diacriticInsensitive]) {
+                text[range].font = AppFont.text(14, weight: .bold)
+                text[range].foregroundColor = Look.accent.color
+                searchFrom = range.upperBound
+            }
+        }
+        return text
     }
 }

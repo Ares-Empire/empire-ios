@@ -11,6 +11,7 @@ struct PositionsScreen: View {
             VStack(alignment: .leading, spacing: 0) {
                 ScreenHeader(title: String(localized: "Positions"))
                 StatusLine()
+                DiscussionsRow().padding(.horizontal, Look.side).padding(.top, 4)
                 let groups = store.vault?.positions ?? []
                 VStack(alignment: .leading, spacing: Look.sectionGap) {
                     ForEach(groups, id: \.note) { group in
@@ -57,18 +58,15 @@ struct PositionCard: View {
                     .foregroundStyle(position.draft ? Look.accent.color : Ink.muted)
                     .frame(minWidth: 14, alignment: .leading)
                     .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 9) {
-                    InlineText(position.text, size: 16, weight: .medium)
-                    HStack(spacing: 10) {
-                        if position.draft { CapsLabel(text: String(localized: "Draft"), color: Look.accent.color) }
-                        Text("\(position.evidence.count) notes as evidence")
-                            .font(AppFont.text(12)).foregroundStyle(Ink.muted)
-                        Spacer()
-                        Image(systemName: "chevron.right").font(.system(size: 11, weight: .semibold)).foregroundStyle(Ink.muted)
-                    }
+                Text(verbatim: Lookup.headline(position.text))
+                    .font(AppFont.text(16, weight: .medium)).foregroundStyle(Ink.primary)
+                    .lineLimit(3).multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                if position.draft {
+                    CapsLabel(text: String(localized: "Draft"), color: Look.accent.color)
                 }
             }
-            .padding(.horizontal, 16).padding(.vertical, 15)
+            .padding(.horizontal, 16).padding(.vertical, 14)
             .frame(maxWidth: .infinity, alignment: .leading)
             .glassCard()
             .contentShape(Rectangle())
@@ -139,45 +137,42 @@ struct PositionScreen: View {
         }
     }
 
-    /// The one main action first: Confirm for a draft (it is Claude's wording until then), else Discuss. Then the
-    /// edits, quieter; they wrap onto a second line when the words are long (German).
+    /// Patrik's positions are considered, not changed on the go (2026-10-24): the page offers discussing (now or
+    /// later), fixing the wording, and a note for later; a draft can be confirmed.
     private func actions(_ position: Position) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 10) {
-                if position.draft {
-                    Button { Task { await store.confirmPosition(position.id) } } label: {
-                        Label("Confirm as mine", systemImage: "checkmark")
-                    }
-                    .buttonStyle(.primaryPill)
-                    discuss(position).buttonStyle(.pill)
-                } else {
-                    discuss(position).buttonStyle(.primaryPill)
+            if position.draft {
+                Button { Task { await store.confirmPosition(position.id) } } label: {
+                    Label("Confirm as mine", systemImage: "checkmark")
                 }
+                .buttonStyle(.primaryPill)
             }
+            // One row when it fits; else Discuss on its own and the two quieter ones under it (German runs long).
             ViewThatFits(in: .horizontal) {
-                HStack(spacing: 8) { edits(position) }
+                HStack(spacing: 8) { discuss(position); edits(position) }
                 VStack(alignment: .leading, spacing: 8) {
-                    HStack(spacing: 8) {
-                        Button("Reword") { navigation.sheet = .position(.reword(position.id)) }.buttonStyle(.pill)
-                        Button("Change my view") { navigation.sheet = .position(.change(position.id)) }.buttonStyle(.pill)
-                    }
-                    Button("Drop") { navigation.sheet = .position(.drop(position.id)) }.buttonStyle(.destructivePill)
+                    discuss(position)
+                    HStack(spacing: 8) { edits(position) }
                 }
             }
         }
         .disabled(store.isSending)
     }
 
-    @ViewBuilder private func edits(_ position: Position) -> some View {
-        Button("Reword") { navigation.sheet = .position(.reword(position.id)) }.buttonStyle(.pill)
-        Button("Change my view") { navigation.sheet = .position(.change(position.id)) }.buttonStyle(.pill)
-        Button("Drop") { navigation.sheet = .position(.drop(position.id)) }.buttonStyle(.destructivePill)
-    }
-
     private func discuss(_ position: Position) -> some View {
         Button { navigation.sheet = .discuss(.position(position.id)) } label: {
             Label("Discuss", systemImage: "bubble.left.and.text.bubble.right")
         }
+        .buttonStyle(position.draft ? .pill : .primaryPill)
+    }
+
+    @ViewBuilder private func edits(_ position: Position) -> some View {
+        Button { navigation.sheet = .position(.reword(position.id)) } label: { Label("Edit", systemImage: "pencil") }
+            .buttonStyle(.pill)
+        Button { navigation.sheet = .quickNote(about: .position(position.id)) } label: {
+            Label("Note", systemImage: "note.text")
+        }
+        .buttonStyle(.pill)
     }
 }
 
@@ -203,5 +198,29 @@ struct HistoryRow: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .glassCard()
         .accessibilityElement(children: .combine)
+    }
+}
+
+/// "3 to discuss": the "discuss later" marks not yet discussed; opens the list. Hidden when there are none.
+struct DiscussionsRow: View {
+    @Environment(VaultStore.self) private var store
+    @Environment(AppNavigation.self) private var navigation
+
+    var body: some View {
+        let count = store.index.openDiscussions.count
+        if count > 0 {
+            Button { navigation.sheet = .discussions } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: "bookmark.fill").font(.system(size: 12)).foregroundStyle(Look.accent.color)
+                    Text("\(count) to discuss").font(AppFont.text(14, weight: .medium)).foregroundStyle(Ink.primary)
+                    Spacer()
+                    Image(systemName: "chevron.right").font(.system(size: 11, weight: .semibold)).foregroundStyle(Ink.muted)
+                }
+                .padding(.horizontal, 16).frame(minHeight: 46)
+                .glassCard(accent: Look.accent)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        }
     }
 }

@@ -14,14 +14,30 @@ struct PendingQuickNote: Codable, Equatable, Identifiable, Sendable {
     let id: UUID
     let text: String
     let created: Date
+    /// What it is about (a note id or a position id), and whether it is a note or a "discuss later" mark.
+    var about: String?
+    var kind: QuickNoteKind
     /// The server refused it (422): it stays, with the reason, until Patrik deletes it; it is not sent again.
     var problem: String?
 
-    init(id: UUID = UUID(), text: String, created: Date = .now, problem: String? = nil) {
+    init(id: UUID = UUID(), text: String, created: Date = .now, about: String? = nil, kind: QuickNoteKind = .note,
+         problem: String? = nil) {
         self.id = id
         self.text = text
         self.created = created
+        self.about = about
+        self.kind = kind
         self.problem = problem
+    }
+
+    init(from decoder: Decoder) throws {           // queues saved before `about` and `kind` existed still load
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        text = try container.decode(String.self, forKey: .text)
+        created = try container.decode(Date.self, forKey: .created)
+        about = try container.decodeIfPresent(String.self, forKey: .about)
+        kind = try container.decodeIfPresent(QuickNoteKind.self, forKey: .kind) ?? .note
+        problem = try container.decodeIfPresent(String.self, forKey: .problem)
     }
 }
 

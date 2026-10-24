@@ -4,6 +4,20 @@ import Foundation
 enum DiscussSubject: Hashable, Sendable {
     case note(String)
     case position(String)
+
+    /// The note or position id (what a quick note's `about` names).
+    var id: String {
+        switch self {
+        case let .note(id), let .position(id): id
+        }
+    }
+
+    /// An Inbox note's `about` as a subject: a position when it names one.
+    init?(inbox: InboxInfo) {
+        if let position = inbox.positionID { self = .position(position) }
+        else if let note = inbox.about { self = .note(note) }
+        else { return nil }
+    }
 }
 
 /// Discuss with Claude (ares-empire/docs/ARESTOTELES-APP.md): no AI in the app. The app writes a prompt for a Claude

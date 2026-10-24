@@ -44,10 +44,27 @@ struct VaultSearch: Sendable {
         let key: String                 // English and German, folded
     }
 
+    /// A sentence that holds every word of the query, with the note it stands in.
+    struct SentenceHit: Equatable, Identifiable, Sendable {
+        let passage: Lookup.Passage
+        let sentence: String            // plain text
+        let title: String               // the note's title
+        let phrase: Bool                // holds the query as one phrase (ranked first)
+        var id: String { passage.id + "|" + sentence }
+    }
+
+    private struct SentenceEntry: Sendable {
+        let passage: Lookup.Passage
+        let sentence: String
+        let title: String
+        let key: String                 // folded
+    }
+
     static let empty = VaultSearch(vault: nil)
 
     private let entries: [Entry]
     private let terms: [TermEntry]
+    private let sentenceEntries: [SentenceEntry]
 
     init(vault: Vault?) {
         // A note's positions are part of its text (the note itself holds only their ids).
@@ -61,6 +78,32 @@ struct VaultSearch: Sendable {
                          textKey: Self.fold((stated + [Self.text(of: note.blocks)]).joined(separator: "\n")))
         }
         terms = (vault?.glossary ?? []).map { TermEntry(term: $0, key: Self.fold($0.english + " " + $0.german)) }
+        // Every sentence of the notes people read (not the index pages, which only repeat titles and links).
+        let indexPages: Set<NoteType> = [.home, .positions, .glossary]
+        sentenceEntries = (vault?.notes ?? []).filter { !indexPages.contains($0.type) }.flatMap { note in
+            Lookup.passages(of: note).flatMap { passage in
+                Lookup.sentences(passage.text).map { sentence in
+                    SentenceEntry(passage: passage, sentence: sentence, title: note.title, key: Self.fold(sentence))
+                }
+            }
+        }
+    }
+
+    /// The sentences that hold every word of the query (at least two letters typed), the ones with the whole query as
+    /// a phrase first, then in the vault's order; at most `limit`.
+    func sentences(_ query: String, limit: Int = 40) -> [SentenceHit] {
+        let folded = Self.fold(query).trimmingCharacters(in: .whitespacesAndNewlines)
+        let words = folded.split(whereSeparator: \.isWhitespace).map(String.init)
+        guard folded.count >= 2, !words.isEmpty else { return [] }
+        var phrase: [SentenceHit] = []
+        var rest: [SentenceHit] = []
+        for entry in sentenceEntries where words.allSatisfy({ entry.key.contains($0) }) {
+            let isPhrase = words.count > 1 && entry.key.contains(folded)
+            let hit = SentenceHit(passage: entry.passage, sentence: entry.sentence, title: entry.title, phrase: isPhrase)
+            if isPhrase { phrase.append(hit) } else { rest.append(hit) }
+            if phrase.count >= limit { break }
+        }
+        return Array((phrase + rest).prefix(limit))
     }
 
     /// The results for a query, best first. `type` limits them to notes of one type (glossary terms then only show for
