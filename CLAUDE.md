@@ -138,7 +138,9 @@ Apple approves the developer account.
    opener) and the login changes (`followSharedLogin`). Not done yet.
 4. Hub data, not this repo: Aresium's "About" on the hub (`data/state.json` on the server, `lock: true`, so the sync
    never refreshes it) is outdated (Next.js, Prisma); Patrik has not decided yet whether to rewrite it.
-5. Later (decided): Aresium for several users, then Aresium `open` in the hub catalog.
+5. Later (decided): Aresium for several users, then Aresium `open` in the hub catalog. **Other people's Aresium data
+   stays on their iPhone** (Patrik, 2026-10-25: imports, categories and storage on the device; no bank data on the
+   server; Patrik's own stays on the server for aresium.de). Its section in the privacy policy says so before it opens.
 6. **Push, once Apple approves** (`ares-empire/docs/PUSH.md` → Operating): create the APNs key (.p8) in the developer
    portal, put it on the server, set `APNS_KEY_ID`/`APNS_TEAM_ID`, restart `empire-push`; enable the Push Notifications
    and Time Sensitive capabilities for Arestemis and Aresus (entitlements are already in the projects). Then check on the
