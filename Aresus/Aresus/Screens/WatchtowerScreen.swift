@@ -212,7 +212,7 @@ private struct BoxSurface: ViewModifier {
     let issue: Bool
     func body(content: Content) -> some View {
         if issue {
-            content.modifier(EdgedGlassCard(edge: StatusTone.issue.color(.aresus).opacity(0.35)))
+            content.glassCard(edge: StatusTone.issue.color(.aresus).opacity(0.35))
         } else {
             content.glassCard()
         }

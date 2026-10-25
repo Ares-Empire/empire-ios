@@ -23,7 +23,7 @@ struct ProvinceDetailScreen: View {
                     DetailSections(detail: detail, clock: store.clock, refreshError: store.error(.province(slug)))
                         .animation(reduceMotion ? nil : .smooth, value: detail)
                 } else if let error = store.error(.province(slug)) {
-                    CalmMessage(text: error, actionTitle: "Try again") { Task { await store.load(.province(slug)) } }
+                    CalmMessage(text: error, actionTitle: String(localized: "Try again")) { Task { await store.load(.province(slug)) } }
                         .padding(.top, province == nil ? 160 : 34)
                 } else {
                     CalmLoading().padding(.top, province == nil ? 190 : 40)

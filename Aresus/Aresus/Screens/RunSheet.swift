@@ -24,7 +24,7 @@ struct RunSheet: View {
                                summary: summary.summary, took: nil)
                     }
                     if let error = store.error(.run(id)) {
-                        CalmMessage(text: error, actionTitle: "Try again") { Task { await store.load(.run(id)) } }
+                        CalmMessage(text: error, actionTitle: String(localized: "Try again")) { Task { await store.load(.run(id)) } }
                             .padding(.top, 40)
                     } else {
                         CalmLoading().padding(.top, 50)

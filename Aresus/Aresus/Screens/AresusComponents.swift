@@ -118,30 +118,6 @@ struct ShareBar: View {
     }
 }
 
-/// Shared/Design's glass card with a single-colour edge instead of its light gradient (an issue box's faint red edge).
-/// The same fill, highlight and shadow as `GlassCard` in both looks, so it follows the appearance as that does.
-/// Candidate for Shared/Design as an `edge:` option on `GlassCard`; then this goes.
-struct EdgedGlassCard: ViewModifier {
-    let edge: Color
-    @Environment(\.colorScheme) private var scheme
-
-    func body(content: Content) -> some View {
-        let shape = RoundedRectangle(cornerRadius: Ink.cardRadius, style: .continuous)
-        let light = scheme == .light
-        content
-            .background {
-                ZStack {
-                    shape.fill(.ultraThinMaterial)
-                    shape.fill(Ink.card)
-                    shape.fill(RadialGradient(colors: [.white.opacity(light ? 0.6 : 0.07), .clear], center: .topLeading,
-                                              startRadius: 0, endRadius: 220))
-                }
-            }
-            .overlay { shape.strokeBorder(edge, lineWidth: 1) }
-            .shadow(color: Ink.shadow, radius: light ? 18 : 22, y: light ? 10 : 14)
-    }
-}
-
 /// Rows inside one glass card, divided by hairlines (`Ink.line`).
 struct CardRows<Item: Identifiable, Row: View>: View {
     let items: [Item]

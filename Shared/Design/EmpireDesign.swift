@@ -151,6 +151,7 @@ struct GlassCard: ViewModifier {
     var accent: AppAccent? = nil
     var radius: CGFloat = Ink.cardRadius
     var raised = false            // a little lighter, for the one card that matters most on a screen
+    var edge: Color? = nil        // one colour in place of the bright edge (Aresus's issue box: a faint red)
     @Environment(\.colorScheme) private var scheme
 
     func body(content: Content) -> some View {
@@ -167,25 +168,35 @@ struct GlassCard: ViewModifier {
                 }
             }
             .overlay {
-                shape.strokeBorder(LinearGradient(stops: light ? [
-                    .init(color: .white.opacity(0.95), location: 0),
-                    .init(color: .white.opacity(0.4), location: 0.35),
-                    .init(color: accent == nil ? .white.opacity(0.3) : tint.opacity(0.14), location: 0.74),
-                    .init(color: .white.opacity(0.3), location: 1)
-                ] : [
-                    .init(color: .white.opacity(0.22), location: 0),
-                    .init(color: .white.opacity(0.04), location: 0.30),
-                    .init(color: accent == nil ? .white.opacity(0.03) : (accent?.color ?? .white).opacity(0.10), location: 0.68),
-                    .init(color: .white.opacity(0.03), location: 1)
-                ], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
+                if let edge {
+                    shape.strokeBorder(edge, lineWidth: 1)
+                } else {
+                    glassEdge(shape, light: light, tint: tint)
+                }
             }
             .shadow(color: Ink.shadow, radius: light ? 18 : 22, y: light ? 10 : 14)
+    }
+
+    /// The bright edge that fades: white from the top left, the accent's tint lower down.
+    private func glassEdge(_ shape: RoundedRectangle, light: Bool, tint: Color) -> some View {
+        shape.strokeBorder(LinearGradient(stops: light ? [
+            .init(color: .white.opacity(0.95), location: 0),
+            .init(color: .white.opacity(0.4), location: 0.35),
+            .init(color: accent == nil ? .white.opacity(0.3) : tint.opacity(0.14), location: 0.74),
+            .init(color: .white.opacity(0.3), location: 1)
+        ] : [
+            .init(color: .white.opacity(0.22), location: 0),
+            .init(color: .white.opacity(0.04), location: 0.30),
+            .init(color: accent == nil ? .white.opacity(0.03) : (accent?.color ?? .white).opacity(0.10), location: 0.68),
+            .init(color: .white.opacity(0.03), location: 1)
+        ], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
     }
 }
 
 extension View {
-    func glassCard(accent: AppAccent? = nil, radius: CGFloat = Ink.cardRadius, raised: Bool = false) -> some View {
-        modifier(GlassCard(accent: accent, radius: radius, raised: raised))
+    func glassCard(accent: AppAccent? = nil, radius: CGFloat = Ink.cardRadius, raised: Bool = false,
+                   edge: Color? = nil) -> some View {
+        modifier(GlassCard(accent: accent, radius: radius, raised: raised, edge: edge))
     }
 }
 
