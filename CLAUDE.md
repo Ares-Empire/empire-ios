@@ -112,10 +112,14 @@ app's own (a view-builder slot, built with `SettingsSection` / `SettingsRow`; Ar
 hunt notifications there), General (Language; Notifications, opening the app's notification page in iOS Settings, in
 apps with `sendsNotifications`), Help (Contact & support: brief E5's form from `Shared/Support`, a stub until it is
 merged), About (Privacy and Imprint open `LegalPage` in the app's language, Fonts & licences shows the OFL texts from
-`Shared/Fonts`, Version), Account (the email from the login answer, `EmpireSession.email`, and Log out, which does what
-the app's log-out did before). Links: `Shared/Settings/SettingsInfo.swift`. Every login screen ends with "Privacy ·
-Imprint" (`LoginScroll`). Screenshots: `-sampleData -openSheet settings` in every app. A new app: a gear in its header
-and `SettingsScreen` in a sheet. The sheet is dark in every app, also in Aresium's light theme.
+`Shared/Fonts`, Version), Account (the email from the login answer, `EmpireSession.email`; Change password; Log out
+"in all Ares apps on this iPhone", which does what the app's log-out did before; then, in the hub's soft red, Leave
+<app> and Delete Ares account: pages in `Shared/Design/AccountScreens.swift`, see "Accounts in every app" below). An app
+whose server keeps data per account passes its `DELETE …/me` as `SettingsApp(serverData:)` (today only Arestemis:
+`ArestemisAPI.accountDataURL`); leaving deletes it there first. Links: `Shared/Settings/SettingsInfo.swift`. Every
+login screen ends with "Privacy · Imprint" (`LoginScroll`). Screenshots: `-sampleData -openSheet settings` in every app
+(`-scrollToAccount` shows the Account section). A new app: a gear in its header and `SettingsScreen` in a sheet. The
+sheet is dark in every app, also in Aresium's light theme.
 
 ## Open (2026-10-24)
 
@@ -180,12 +184,38 @@ Apple approves the developer account.
   asked for it (`log show --predicate 'subsystem == "de.ares-empire.shared"'`; on a simulator via `xcrun simctl spawn
   <udid> log show …`). Verified across the two apps on the simulator with
   `scripts/check-shared-login.sh <udid>` (2026-10-24).
+- **Accounts in every app** (2026-10-25, brief F2; contract `docs/build-2026-10-25/briefs/F-accounts-contract.md`,
+  server side `ares-empire/docs/ACCOUNTS.md` → Accounts in every app): one Ares account, made and run from any app.
+  The login (`AresLogin` in `Shared/Design/ProvinceLogin.swift`, used by the provinces and the Empire app; Aresium's
+  `LoginScreen` uses the same pieces) says "One Ares account for all Ares apps" and offers Create account (email,
+  password twice, optional name; asks for this app's service, sends the app's language; then "confirm your email,
+  Patrik approves, an email follows") and Forgot password? (sheets, `Shared/Design/AccountSheets.swift`). Its error
+  names an account not confirmed or approved yet too. An account without this app sees the no-access panel
+  (`NoAccessPanel`): who is logged in, Ask for access (adds the service to `requested`; reads the account first so a
+  request from another app is kept), then "Asked …"; Log out. Settings → Account: Change password (the app logs in
+  again with the new password at once and saves that login for all apps; while it does, a 401 of an older request is
+  no logout, `EmpireSession.isChangingPassword`; if that login fails the page offers Try again, and leaving it logs out
+  with a line), Leave <app> (the app's server data first, then `POST /api/empire/leave`; the session then closes this
+  app like a denied one: its data on the phone and its push device go, the login stays), Delete Ares account (password
+  checked with a login first, then a confirmation, then `DELETE` with that login; logged out everywhere with a calm
+  line, `EmpireSession.notice`). Logic in `Shared/Auth/EmpireAccountClient.swift` (calls, PocketBase errors → one line,
+  `AccountFailure`) and `AccountForms.swift` (one model per action, on the session's transport); tests in
+  `EmpireTests/AccountTests`. Nothing changes on the phone until the server said yes; a 401 logs out everywhere, any
+  other failure leaves account and login as they were. Sample mode (`-sampleData`) only pretends; leaving or deleting
+  there ends the sample. Screenshots (DEBUG, every app, `SampleAccount`: a made-up account on a fake account server,
+  never the real one): `-sampleLogin`, `-sampleNoAccess`, `-sampleAccessAsked`, `-sampleAccountDeleted`; on the login
+  `-openSheet createAccount|forgotPassword`; in Settings `-openAccount changePassword|leave|delete`; any form's state
+  with `-accountPhase <state>` (sending, done, notSent, sent, asking, asked, changing, loginFailed, leaving,
+  dataDeleted, checking, confirming, deleting, or a failure: offline, tooMany, wrongPassword, wrongCurrent, emailTaken,
+  …) and `-accountEmail <text>`. The Empire app: `-sampleData -openSheet approvals`. Screenshots of every sheet and
+  state in both languages: `build/screens/` (2026-10-25).
 - **Empire app** (2026-10-24): the approved phone hub (`ares-empire/web/app/mobile.jsx` + `mobile.css`) in SwiftUI,
   `Empire/Empire/Screens/` (Claude's look; values copied from the CSS, with the CSS selector named in comments), data
   in `Model/` + `API/` (brief 08). Launch arguments (DEBUG): `-sampleData` (admin sample), `-sampleUser` (member
   sample), `-openSheet province|idea|add|approvals|support`, `-scrollToEnd` for screenshots. Ring: tap the front province to open it (its app if
   installed, else its website), hold any tab for its page; on the page the name is the link (Patrik, 2026-10-24). Province marks load from the hub with the
-  Bearer token, so the samples show monograms. Signing up and password resets stay on the website.
+  Bearer token, so the samples show monograms. Approvals list new sign-ups and approved accounts asking for more apps
+  (`PendingAccount.requested`/`approved`), each with the apps asked for.
 - **Contact & support** (2026-10-24, brief E5): `Shared/Support/`, the form every app's Settings → Help opens
   (`SupportSheet(session:accent:sample:)`): a kind (Problem, Idea or wish, Question, Something else) and a message,
   posted with the Empire token to the account server's `feedback` collection, which mails it to Patrik
@@ -205,8 +235,8 @@ Apple approves the developer account.
   `Aresus/Aresus/Samples/` = copies of `aresus/docs/samples/`). Data in `Model/` + `API/`, look in `Screens/` (Shared/Design).
   Links `aresus://province/<slug>`, `aresus://sync/run/<id>`, `aresus://server` go through `AresusNavigation.open(_:)`
   (notification taps too). Launch arguments (DEBUG): `-sampleData` (`-sampleAllGood`,
-  `-sampleEmpty`), `-tab aresus|aresync`, `-openProvince <slug>`, `-openRun <id>`, `-scrollToEnd`, and `-sampleLogin` /
-  `-sampleLoading` for those screens. Sample mode runs its clock from the samples' moment, so times read as live.
+  `-sampleEmpty`), `-tab aresus|aresync`, `-openProvince <slug>`, `-openRun <id>`, `-scrollToEnd`, and `-sampleLoading` for the loading screen (the login screens: the
+  shared `-sampleLogin` and friends, "Accounts in every app"). Sample mode runs its clock from the samples' moment, so times read as live.
   **Widget** (`AresusWidgetExtension`, kind `AresusStatus`, `de.ares-empire.aresus.widget`; small, medium, lock-screen
   rectangular and circular): "All running" or the issues, with the check's live age. Its timeline provider reads the
   shared Empire token (never logs in), fetches `GET /overview` every 15 min and saves a `WidgetStatus` in the App Group

@@ -5,12 +5,14 @@ import Foundation
 /// the same in every app):
 /// - `-sampleLogin`: the login screen (its sheets reach `SampleAccountServer`, never the account server);
 /// - `-sampleNoAccess`: logged in with an account that lacks this app (the no-access screen; "Ask for access" works);
-/// - `-sampleAccessAsked`: the same account after it asked for this app.
+/// - `-sampleAccessAsked`: the same account after it asked for this app;
+/// - `-sampleAccountDeleted`: the login screen right after the account was deleted (its calm line).
 /// The login lives in memory only, never in the shared Keychain.
 enum SampleAccount {
-    enum Start: Equatable { case login, noAccess, asked }
+    enum Start: Equatable { case login, noAccess, asked, deleted }
 
     static func start(_ arguments: [String]) -> Start? {
+        if arguments.contains("-sampleAccountDeleted") { return .deleted }
         if arguments.contains("-sampleAccessAsked") { return .asked }
         if arguments.contains("-sampleNoAccess") { return .noAccess }
         if arguments.contains("-sampleLogin") { return .login }
@@ -21,11 +23,13 @@ enum SampleAccount {
     /// no-access screens: the restore asks `SampleAccountServer` and denies this app as the real one would).
     static func session(app: EmpireAppIdentity, arguments: [String]) -> (session: EmpireSession, restores: Bool)? {
         guard let start = start(arguments) else { return nil }
+        let restores = start == .noAccess || start == .asked
         let server = SampleAccountServer(app: app, asked: start == .asked)
-        let storage = MemoryTokens(token: start == .login ? nil : SampleAccountServer.token)
+        let storage = MemoryTokens(token: restores ? SampleAccountServer.token : nil)
         let session = EmpireSession(app: app, storage: storage, client: EmpireAuthClient(transport: server),
-                                    restoreOnLaunch: start != .login)
-        return (session, start != .login)
+                                    restoreOnLaunch: restores)
+        if start == .deleted { session.accountDeleted() }
+        return (session, restores)
     }
 
     private final class MemoryTokens: TokenStorage {

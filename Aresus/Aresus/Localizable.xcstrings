@@ -781,9 +781,6 @@
           }
         }
       }
-    },
-    "·" : {
-      "shouldTranslate" : false
     }
   },
   "version" : "1.0"

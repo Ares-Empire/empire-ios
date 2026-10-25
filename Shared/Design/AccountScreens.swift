@@ -158,7 +158,7 @@ struct LeaveAppScreen: View {
             VStack(alignment: .leading, spacing: 12) {
                 if let failure = flow.failure {
                     FormProblem(text: flow.serverDataDeleted
-                        ? String(localized: "Your \(app.name) data on its server is deleted, but leaving didn't finish. \(failure.message)",
+                        ? String(localized: "Your \(app.name) data on its server is deleted, but your access is not removed yet. \(failure.message)",
                                  table: "Shared")
                         : failure.message)
                 }

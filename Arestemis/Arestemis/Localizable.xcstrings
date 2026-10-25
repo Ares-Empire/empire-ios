@@ -4,6 +4,12 @@
     "" : {
       "shouldTranslate" : false
     },
+    "–" : {
+      "shouldTranslate" : false
+    },
+    "·" : {
+      "shouldTranslate" : false
+    },
     "%@ room" : {
       "localizations" : {
         "de" : {
@@ -166,16 +172,6 @@
         }
       }
     },
-    "AI per listing" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "KI pro Angebot"
-          }
-        }
-      }
-    },
     "About you" : {
       "localizations" : {
         "de" : {
@@ -187,6 +183,7 @@
       }
     },
     "Account" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -232,6 +229,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Alter, Studium oder Beruf, Nichtraucher, …"
+          }
+        }
+      }
+    },
+    "AI per listing" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "KI pro Angebot"
           }
         }
       }
@@ -312,6 +319,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Stadtteile"
+          }
+        }
+      }
+    },
+    "blocked" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gesperrt"
           }
         }
       }
@@ -402,6 +419,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Schließen"
+          }
+        }
+      }
+    },
+    "cold" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "kalt"
           }
         }
       }
@@ -586,6 +613,36 @@
         }
       }
     },
+    "e.g. furnished, balcony, not on the ground floor" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "z. B. möbliert, Balkon, nicht im Erdgeschoss"
+          }
+        }
+      }
+    },
+    "e.g. WG or flat in Munich for two, up to €1,400 warm, from December, furnished" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "z. B. WG oder Wohnung in München zu zweit, bis 1.400 € warm, ab Dezember, möbliert"
+          }
+        }
+      }
+    },
+    "euros" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Euro"
+          }
+        }
+      }
+    },
     "Extras" : {
       "localizations" : {
         "de" : {
@@ -726,6 +783,32 @@
         }
       }
     },
+    "from %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ab %@"
+          }
+        }
+      }
+    },
+    "from %@ %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ab %@ %@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "from %1$@ %2$@"
+          }
+        }
+      }
+    },
     "Furnished" : {
       "localizations" : {
         "de" : {
@@ -766,6 +849,16 @@
         }
       }
     },
+    "idle" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ruht"
+          }
+        }
+      }
+    },
     "In m²." : {
       "localizations" : {
         "de" : {
@@ -782,6 +875,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "In m². Eine Wohnung nach ihrer ganzen Fläche, eine WG nach deinem Zimmer."
+          }
+        }
+      }
+    },
+    "just now" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gerade eben"
           }
         }
       }
@@ -877,6 +980,7 @@
       }
     },
     "Log out" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -916,12 +1020,32 @@
         }
       }
     },
+    "max" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "max"
+          }
+        }
+      }
+    },
     "Max flatmates" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Max. Mitbewohner"
+          }
+        }
+      }
+    },
+    "min" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "min"
           }
         }
       }
@@ -1042,6 +1166,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Noch keine Suche. Richte eine ein, dann erscheinen Angebote hier, sobald sie gefunden werden."
+          }
+        }
+      }
+    },
+    "not answering" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "antwortet nicht"
           }
         }
       }
@@ -1387,6 +1521,7 @@
       }
     },
     "Signed in as" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1402,6 +1537,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Größe"
+          }
+        }
+      }
+    },
+    "square metres" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quadratmeter"
           }
         }
       }
@@ -1586,6 +1731,52 @@
         }
       }
     },
+    "until %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "bis %@"
+          }
+        }
+      }
+    },
+    "up to %@ %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "bis %@ %@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "up to %1$@ %2$@"
+          }
+        }
+      }
+    },
+    "warm" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "warm"
+          }
+        }
+      }
+    },
+    "Warm" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Warm"
+          }
+        }
+      }
+    },
     "WG" : {
       "localizations" : {
         "de" : {
@@ -1602,16 +1793,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "WG-Zimmer"
-          }
-        }
-      }
-    },
-    "Warm" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Warm"
           }
         }
       }
@@ -1642,6 +1823,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Warum es passt"
+          }
+        }
+      }
+    },
+    "working" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "läuft"
           }
         }
       }
@@ -1696,6 +1887,16 @@
         }
       }
     },
+    "yesterday %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gestern %@"
+          }
+        }
+      }
+    },
     "Your text" : {
       "localizations" : {
         "de" : {
@@ -1715,204 +1916,6 @@
           }
         }
       }
-    },
-    "blocked" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "gesperrt"
-          }
-        }
-      }
-    },
-    "cold" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "kalt"
-          }
-        }
-      }
-    },
-    "e.g. WG or flat in Munich for two, up to €1,400 warm, from December, furnished" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "z. B. WG oder Wohnung in München zu zweit, bis 1.400 € warm, ab Dezember, möbliert"
-          }
-        }
-      }
-    },
-    "e.g. furnished, balcony, not on the ground floor" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "z. B. möbliert, Balkon, nicht im Erdgeschoss"
-          }
-        }
-      }
-    },
-    "euros" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Euro"
-          }
-        }
-      }
-    },
-    "from %@" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ab %@"
-          }
-        }
-      }
-    },
-    "from %@ %@" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ab %@ %@"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "from %1$@ %2$@"
-          }
-        }
-      }
-    },
-    "idle" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ruht"
-          }
-        }
-      }
-    },
-    "just now" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "gerade eben"
-          }
-        }
-      }
-    },
-    "max" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "max"
-          }
-        }
-      }
-    },
-    "min" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "min"
-          }
-        }
-      }
-    },
-    "not answering" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "antwortet nicht"
-          }
-        }
-      }
-    },
-    "square metres" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Quadratmeter"
-          }
-        }
-      }
-    },
-    "until %@" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "bis %@"
-          }
-        }
-      }
-    },
-    "up to %@ %@" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "bis %@ %@"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "up to %1$@ %2$@"
-          }
-        }
-      }
-    },
-    "warm" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "warm"
-          }
-        }
-      }
-    },
-    "working" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "läuft"
-          }
-        }
-      }
-    },
-    "yesterday %@" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "gestern %@"
-          }
-        }
-      }
-    },
-    "·" : {
-      "shouldTranslate" : false
-    },
-    "–" : {
-      "shouldTranslate" : false
     }
   },
   "version" : "1.0"

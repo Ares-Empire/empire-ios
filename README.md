@@ -28,7 +28,8 @@ empire-ios/
   Arestemis/      Arestemis.xcodeproj: the flat hunter (search, hunt, matches, applications), tests
   Arestoteles/    Arestoteles.xcodeproj: Patrik's Weltbild vault (positions, topics, library, search, edits,
                   quick notes, Discuss with Claude, Spotlight), tests
-  Shared/         compiled into every app: the Empire login (one login for all apps), the network
+  Shared/         compiled into every app: the Empire login (one login for all apps) and the account's own
+                  actions (create, password, ask for access, leave an app, delete; Auth/), the network
                   layer, the fonts, push (Push/: PushCenter + PushAppDelegate), the contact form
                   (Support/); each project includes it as a synchronized folder
   scripts/        new-app-project.py (a new app project, wired to Shared/), strings.py (String Catalogs),

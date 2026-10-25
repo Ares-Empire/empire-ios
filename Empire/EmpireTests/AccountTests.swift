@@ -275,6 +275,19 @@ struct AccountTests {
         #expect(form.failure?.message == "The current password is wrong.")
     }
 
+    @Test func aRefusedLoginOnTheChangeItselfStillLogsOut() async {
+        let server = EmpireFakeTransport()
+        let (session, storage) = await signedIn(server: server)
+        server.responses = [(401, Data())]
+        let form = ChangePasswordForm(session: session)
+        form.current = "fictional-password"
+        form.newPassword = "fictional-new-pass"
+        form.newAgain = "fictional-new-pass"
+        await form.change()
+        #expect(form.phase == .failed(.loggedOut) && server.requests.count == 1)
+        #expect(!session.isSignedIn && storage.token == nil && !session.isChangingPassword)
+    }
+
     @Test func theNewPasswordIsCheckedBeforeSending() async {
         let server = EmpireFakeTransport()
         let (session, _) = await signedIn(server: server)
