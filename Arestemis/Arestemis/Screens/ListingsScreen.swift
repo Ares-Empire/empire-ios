@@ -143,6 +143,7 @@ struct RejectedSheet: View {
     let store: ArestemisStore
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
+    @Environment(\.colorScheme) private var scheme
 
     var body: some View {
         NavigationStack {
@@ -189,7 +190,8 @@ struct RejectedSheet: View {
             TimelineView(.periodic(from: .now, by: 30)) { context in
                 Text([item.listing.sourceName, Format.relative(item.found, now: context.date)].compactMap { $0 }
                         .joined(separator: " · "))
-                    .font(AppFont.text(11)).foregroundStyle(Ink.muted.opacity(0.85))
+                    // A touch fainter than muted on the dark wall; on the light one muted is already the faintest that reads.
+                    .font(AppFont.text(11)).foregroundStyle(Ink.muted.opacity(scheme == .dark ? 0.85 : 1))
             }
             .padding(.top, 2)
         }

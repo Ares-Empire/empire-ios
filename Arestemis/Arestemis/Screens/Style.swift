@@ -2,16 +2,25 @@ import SwiftUI
 
 /// Arestemis's look on top of Shared/Design (DESIGN.md of the 2026-10-24 build): the province wall and glass in
 /// moonlight violet, the accent only on the selected tab, the one primary button of a screen and small highlights.
+/// Its own colours are light/dark pairs like the shared ones (`Color(light:dark:)`), so every screen follows the
+/// app's appearance.
 enum Look {
     static let accent = AppAccent.arestemis
-    static let onAccent = Color(hex: 0x141617)          // text on the accent fill (the login button's dark ink)
-    static let amber = Color(hex: 0xE0B15A)             // warnings ("Rent may be cold rent")
+    /// Words on the accent fill: dark on dark mode's bright violet, white on light mode's deeper one.
+    static let onAccent = AppAccent.onColor
+    /// Warnings ("Rent may be cold rent"): warm amber, a deeper ochre on the light wall so the marks read there too.
+    static let amber = Color(light: Color(hex: 0xA86A06), dark: Color(hex: 0xE0B15A))
     static let side: CGFloat = 18                       // side margins
     static let rowGap: CGFloat = 12                     // between rows and cards
     static let sectionGap: CGFloat = 28                 // between sections
     static let headingGap: CGFloat = 10                 // a section heading to its card
-    static let well = Color.white.opacity(0.045)        // input fields inside a card
-    static let wellEdge = Color.white.opacity(0.10)
+    /// Input fields inside a card: a faint white on the dark glass, a faint grey on the near-white light one.
+    static let well = Color(light: Color(hex: 0x0F1428, opacity: 0.035), dark: .white.opacity(0.045))
+    static let wellEdge = Color(light: Color(hex: 0x0F1428, opacity: 0.11), dark: .white.opacity(0.10))
+    /// A glass button's fill: a faint white on the dark wall, white on the light one (Aresium's ghost button, `--card`).
+    static let buttonFill = Color(light: .white.opacity(0.74), dark: .white.opacity(0.06))
+    /// The main button's fill while it cannot be pressed (as the shared `FormButtonStyle`'s).
+    static let offFill = Color(light: Color(hex: 0x0F1428, opacity: 0.05), dark: .white.opacity(0.06))
     static let buttonRadius: CGFloat = 12
 }
 
@@ -29,7 +38,7 @@ struct AppHeader<Trailing: View>: View {
                 .accessibilityAddTraits(.isHeader)
             HStack {
                 Image("Bust").resizable().scaledToFit().frame(width: 38, height: 38)
-                    .shadow(color: .black.opacity(0.5), radius: 6, y: 4)
+                    .shadow(color: Ink.shadow, radius: 6, y: 4)
                     .accessibilityHidden(true)
                 Spacer()
                 trailing
@@ -46,13 +55,15 @@ extension AppHeader where Trailing == EmptyView {
 
 // MARK: - buttons
 
-/// The app's two button looks: `.accent` (the screen's one primary action: accent fill, dark ink) and `.glass`
-/// (everything else: translucent, ink). `.quiet` is a text-only action.
+/// The app's two button looks: `.accent` (the screen's one primary action: accent fill, `Look.onAccent` words) and
+/// `.glass` (everything else: translucent with an outline, ink). `.quiet` is a text-only action, `.destructive` a
+/// text-only one in soft red.
 struct ProvinceButtonStyle: ButtonStyle {
     enum Kind { case accent, glass, quiet, destructive }
     var kind: Kind = .glass
     var height: CGFloat = 50
     @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.colorScheme) private var scheme
 
     func makeBody(configuration: Configuration) -> some View {
         let shape = RoundedRectangle(cornerRadius: Look.buttonRadius, style: .continuous)
@@ -65,12 +76,13 @@ struct ProvinceButtonStyle: ButtonStyle {
             .background {
                 switch kind {
                 case .accent where isEnabled: shape.fill(Look.accent.color)
-                case .accent, .glass: shape.fill(Color.white.opacity(0.06))
+                case .accent: shape.fill(Look.offFill)
+                case .glass: shape.fill(Look.buttonFill)
                 case .quiet, .destructive: EmptyView()
                 }
             }
             .overlay {
-                if kind == .glass || (kind == .accent && !isEnabled) { shape.strokeBorder(Color.white.opacity(0.12)) }
+                if kind == .glass || (kind == .accent && !isEnabled) { shape.strokeBorder(Ink.edge) }
             }
             .contentShape(shape)
             .opacity(isEnabled ? (configuration.isPressed ? 0.72 : 1) : (kind == .accent ? 1 : 0.38))
@@ -82,7 +94,9 @@ struct ProvinceButtonStyle: ButtonStyle {
         case .accent: isEnabled ? Look.onAccent : Ink.muted
         case .glass: Ink.primary
         case .quiet: Ink.secondary
-        case .destructive: StatusTone.issue.color(Look.accent).opacity(0.75)
+        // The issue red, toned down, on the dark wall; on the light one the hub's soft red (toning the red down there
+        // with opacity would leave it too faint to read).
+        case .destructive: scheme == .light ? FormButtonStyle.dangerInk : StatusTone.issue.color(Look.accent).opacity(0.75)
         }
     }
 }
@@ -122,7 +136,7 @@ struct Chip: View {
         }
         .foregroundStyle(selected ? Look.accent.color : Ink.primary)
         .padding(.horizontal, 13).frame(minHeight: 34)
-        .background(selected ? Look.accent.color.opacity(0.14) : Color.white.opacity(0.04), in: Capsule())
+        .background(selected ? Look.accent.color.opacity(0.14) : Ink.field, in: Capsule())
         .overlay(Capsule().strokeBorder(selected ? Look.accent.color.opacity(0.75) : Ink.line.opacity(1.6)))
         .contentShape(Capsule())
     }
