@@ -66,46 +66,6 @@
         }
       }
     },
-    "%lld notes as evidence" : {
-      "localizations" : {
-        "de" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld Notiz als Beleg"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld Notizen als Belege"
-                }
-              }
-            }
-          }
-        },
-        "en" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld note as evidence"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld notes as evidence"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "%lld positions" : {
       "localizations" : {
         "de" : {
@@ -222,16 +182,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ein Gedanke für den Eingang"
-          }
-        }
-      }
-    },
-    "Account" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Konto"
           }
         }
       }
@@ -356,16 +306,6 @@
         }
       }
     },
-    "Claude Code works on the vault with its rules. The prompt below is copied; paste it in a new session." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Claude Code arbeitet mit den Regeln des Vaults. Der Text unten wird kopiert; füg ihn in einer neuen Sitzung ein."
-          }
-        }
-      }
-    },
     "Clear the search" : {
       "localizations" : {
         "de" : {
@@ -442,16 +382,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kopieren"
-          }
-        }
-      }
-    },
-    "Copy and open Claude" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kopieren und Claude öffnen"
           }
         }
       }
@@ -832,16 +762,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Melde dich an, um den Vault zu ändern."
-          }
-        }
-      }
-    },
-    "Log out" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Abmelden"
           }
         }
       }
@@ -1738,16 +1658,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Deine alte Meinung kommt mit heutigem Datum unter „Wie sich meine Meinung geändert hat“."
-          }
-        }
-      }
-    },
-    "Your question (optional)" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Deine Frage (optional)"
           }
         }
       }

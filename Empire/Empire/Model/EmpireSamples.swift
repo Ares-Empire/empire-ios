@@ -2,10 +2,10 @@ import Foundation
 
 enum EmpireSamples {
     static var isEnabled: Bool {
-        enabled(arguments: ProcessInfo.processInfo.arguments)
+        enabled(arguments: LaunchArguments.current)
     }
 
-    static var isUser: Bool { ProcessInfo.processInfo.arguments.contains("-sampleUser") }
+    static var isUser: Bool { LaunchArguments.current.contains("-sampleUser") }
 
     static func enabled(arguments: [String]) -> Bool {
         #if DEBUG

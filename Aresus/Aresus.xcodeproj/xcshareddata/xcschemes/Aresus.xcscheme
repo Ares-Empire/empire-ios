@@ -12,6 +12,9 @@
          <TestableReference skipped = "NO" parallelizable = "YES">
             <BuildableReference BuildableIdentifier = "primary" BlueprintIdentifier = "51EDAD307FD12C1815971014" BuildableName = "AresusTests.xctest" BlueprintName = "AresusTests" ReferencedContainer = "container:Aresus.xcodeproj"></BuildableReference>
          </TestableReference>
+         <TestableReference skipped = "NO" parallelizable = "NO">
+            <BuildableReference BuildableIdentifier = "primary" BlueprintIdentifier = "4C1A6E0B8D2F4A7E9B3C5D16" BuildableName = "AresusUITests.xctest" BlueprintName = "AresusUITests" ReferencedContainer = "container:Aresus.xcodeproj"></BuildableReference>
+         </TestableReference>
       </Testables>
    </TestAction>
    <LaunchAction buildConfiguration = "Debug" selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB" selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB" launchStyle = "0" useCustomWorkingDirectory = "NO" ignoresPersistentStateOnLaunch = "NO" debugDocumentVersioning = "YES" debugServiceExtension = "internal" allowLocationSimulation = "YES">

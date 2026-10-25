@@ -116,8 +116,10 @@ struct WidgetMedium: View {
 
     private var counts: some View {
         VStack(alignment: .leading, spacing: 5) {
-            count(String(localized: "\(status.counts.active) active", table: "AresusShared"), tone: .active)
-            count(String(localized: "\(status.counts.inactive) inactive", table: "AresusShared"), tone: .inactive)
+            count(String(localized: "\(status.counts.active) active", table: "AresusShared",
+                         bundle: .appLanguage, locale: .appLanguage), tone: .active)
+            count(String(localized: "\(status.counts.inactive) inactive", table: "AresusShared",
+                         bundle: .appLanguage, locale: .appLanguage), tone: .inactive)
             Spacer(minLength: 6)
             if let sync = status.syncLine {
                 Text(verbatim: "Aresync · " + sync).font(AppFont.text(11)).foregroundStyle(Ink.muted)
@@ -136,8 +138,10 @@ struct WidgetMedium: View {
 
 /// Logged out, or nothing loaded yet: the bust and one calm sentence.
 struct WidgetMessage: View {
-    static var loggedOut: String { String(localized: "Open Aresus to log in", table: "AresusShared") }
-    static var notLoaded: String { String(localized: "Open Aresus to load the status", table: "AresusShared") }
+    static var loggedOut: String { String(localized: "Open Aresus to log in", table: "AresusShared",
+                                          bundle: .appLanguage, locale: .appLanguage) }
+    static var notLoaded: String { String(localized: "Open Aresus to load the status", table: "AresusShared",
+                                          bundle: .appLanguage, locale: .appLanguage) }
     let text: String
 
     var body: some View {

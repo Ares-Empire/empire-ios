@@ -64,8 +64,9 @@ nonisolated struct WidgetStatus: Codable, Equatable, Sendable {
 
     static func summary(issues: Int) -> String {
         switch issues {
-        case 0: String(localized: "All running", table: "AresusShared")
-        default: String(localized: "\(issues) issues", table: "AresusShared")
+        case 0: String(localized: "All running", table: "AresusShared", bundle: .appLanguage, locale: .appLanguage)
+        default: String(localized: "\(issues) issues", table: "AresusShared",
+                        bundle: .appLanguage, locale: .appLanguage)
         }
     }
 
@@ -82,7 +83,11 @@ nonisolated struct WidgetStatus: Codable, Equatable, Sendable {
     /// The issues to list: the provinces in the server's order, then the server.
     var rows: [Row] {
         issues.map { Row(id: "province-" + $0.slug, name: $0.name, line: $0.line, url: WidgetLink.province($0.slug)) }
-            + (serverIssue.map { [Row(id: "server", name: String(localized: "Server", table: "AresusShared"), line: $0, url: WidgetLink.server)] } ?? [])
+            + (serverIssue.map { [Row(id: "server", name: serverName, line: $0, url: WidgetLink.server)] } ?? [])
+    }
+
+    private var serverName: String {
+        String(localized: "Server", table: "AresusShared", bundle: .appLanguage, locale: .appLanguage)
     }
 
     var issueCount: Int { rows.count }
@@ -113,7 +118,8 @@ nonisolated struct WidgetStatus: Codable, Equatable, Sendable {
     static func example(checked: Date) -> WidgetStatus {
         WidgetStatus(summary: summary(issues: 0), state: .active, issues: [],
                      counts: Counts(issue: 0, active: 4, inactive: 4), serverIssue: nil,
-                     syncLine: String(localized: "3 machines · last sync 2 min ago", table: "AresusShared"), checked: checked)
+                     syncLine: String(localized: "3 machines · last sync 2 min ago", table: "AresusShared",
+                                      bundle: .appLanguage, locale: .appLanguage), checked: checked)
     }
 
     /// The moment the status turns stale.

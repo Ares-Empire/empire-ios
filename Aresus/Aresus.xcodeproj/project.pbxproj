@@ -25,6 +25,13 @@
 			remoteGlobalIDString = 8BDCB6A72C3E68FA16DB9CBB;
 			remoteInfo = Aresus;
 		};
+		4C1A6E0B8D2F4A7E9B3C5D10 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = EF43CC3F43931AC9C123AF51 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 8BDCB6A72C3E68FA16DB9CBB;
+			remoteInfo = Aresus;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -45,6 +52,7 @@
 		027DFBB3600530BFAFCBE9A6 /* AresusWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = AresusWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		CA2208171B2869A21E83A62C /* Aresus.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Aresus.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F4BBD701698C6A940B6DA621 /* AresusTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AresusTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		4C1A6E0B8D2F4A7E9B3C5D11 /* AresusUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AresusUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -97,6 +105,11 @@
 			path = AresusWidget;
 			sourceTree = "<group>";
 		};
+		4C1A6E0B8D2F4A7E9B3C5D12 /* AresusUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = AresusUITests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -121,6 +134,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		4C1A6E0B8D2F4A7E9B3C5D13 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -132,6 +152,7 @@
 				CE36613BE8F0F88F375EDA1C /* AresusShared */,
 				294C9629557055A0D97E5E1F /* AresusWidget */,
 				80513EFDA7D143C4EB1B9EF6 /* AresusTests */,
+				4C1A6E0B8D2F4A7E9B3C5D12 /* AresusUITests */,
 				F7BEF6B0E51A793750803928 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -141,6 +162,7 @@
 			children = (
 				CA2208171B2869A21E83A62C /* Aresus.app */,
 				F4BBD701698C6A940B6DA621 /* AresusTests.xctest */,
+				4C1A6E0B8D2F4A7E9B3C5D11 /* AresusUITests.xctest */,
 				027DFBB3600530BFAFCBE9A6 /* AresusWidgetExtension.appex */,
 			);
 			name = Products;
@@ -222,6 +244,29 @@
 			productReference = F4BBD701698C6A940B6DA621;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		4C1A6E0B8D2F4A7E9B3C5D16 /* AresusUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4C1A6E0B8D2F4A7E9B3C5D1A;
+			buildPhases = (
+				4C1A6E0B8D2F4A7E9B3C5D15,
+				4C1A6E0B8D2F4A7E9B3C5D13,
+				4C1A6E0B8D2F4A7E9B3C5D14,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				4C1A6E0B8D2F4A7E9B3C5D17,
+			);
+			fileSystemSynchronizedGroups = (
+				4C1A6E0B8D2F4A7E9B3C5D12,
+			);
+			name = AresusUITests;
+			packageProductDependencies = (
+			);
+			productName = AresusUITests;
+			productReference = 4C1A6E0B8D2F4A7E9B3C5D11;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -239,6 +284,10 @@
 						CreatedOnToolsVersion = 27.1;
 					};
 					51EDAD307FD12C1815971014 = {
+						CreatedOnToolsVersion = 27.1;
+						TestTargetID = 8BDCB6A72C3E68FA16DB9CBB;
+					};
+					4C1A6E0B8D2F4A7E9B3C5D16 = {
 						CreatedOnToolsVersion = 27.1;
 						TestTargetID = 8BDCB6A72C3E68FA16DB9CBB;
 					};
@@ -261,6 +310,7 @@
 			targets = (
 				8BDCB6A72C3E68FA16DB9CBB /* Aresus */,
 				51EDAD307FD12C1815971014 /* AresusTests */,
+				4C1A6E0B8D2F4A7E9B3C5D16 /* AresusUITests */,
 				19C0828712D54FA10CFA86CB /* AresusWidgetExtension */,
 			);
 		};
@@ -282,6 +332,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		34D51C6CD1370F05377351A7 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4C1A6E0B8D2F4A7E9B3C5D14 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -312,6 +369,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		4C1A6E0B8D2F4A7E9B3C5D15 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -324,6 +388,11 @@
 			isa = PBXTargetDependency;
 			target = 8BDCB6A72C3E68FA16DB9CBB /* Aresus */;
 			targetProxy = A8E47F972B86ED796252180F /* PBXContainerItemProxy */;
+		};
+		4C1A6E0B8D2F4A7E9B3C5D17 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 8BDCB6A72C3E68FA16DB9CBB /* Aresus */;
+			targetProxy = 4C1A6E0B8D2F4A7E9B3C5D10 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -487,6 +556,32 @@
 			};
 			name = Release;
 		};
+		4C1A6E0B8D2F4A7E9B3C5D18 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = "de.ares-empire.aresus.uitests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_TARGET_NAME = Aresus;
+			};
+			name = Debug;
+		};
+		4C1A6E0B8D2F4A7E9B3C5D19 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = "de.ares-empire.aresus.uitests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_TARGET_NAME = Aresus;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -522,6 +617,15 @@
 			buildConfigurations = (
 				A17BE6B762A47AB570C912A5 /* Debug */,
 				1D8A0A42F0A4BC954C206DE1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		4C1A6E0B8D2F4A7E9B3C5D1A /* Build configuration list for PBXNativeTarget "AresusUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4C1A6E0B8D2F4A7E9B3C5D18 /* Debug */,
+				4C1A6E0B8D2F4A7E9B3C5D19 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

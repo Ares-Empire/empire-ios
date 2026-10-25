@@ -432,16 +432,6 @@
         }
       }
     },
-    "Log out" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Abmelden"
-          }
-        }
-      }
-    },
     "Machines" : {
       "localizations" : {
         "de" : {
@@ -458,16 +448,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "RAM"
-          }
-        }
-      }
-    },
-    "More" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mehr"
           }
         }
       }

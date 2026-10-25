@@ -53,7 +53,7 @@ struct WatchtowerScreen: View {
             #if DEBUG
             .task(id: store.overview?.checked) {
                 // Screenshots: `-scrollToEnd` shows the inactive provinces and the band.
-                guard store.overview != nil, ProcessInfo.processInfo.arguments.contains("-scrollToEnd") else { return }
+                guard store.overview != nil, LaunchArguments.current.contains("-scrollToEnd") else { return }
                 try? await Task.sleep(for: .milliseconds(300))
                 proxy.scrollToWordmark()
             }

@@ -21,7 +21,7 @@ struct ContentView: View {
     #endif
     private var session: EmpireSession { store.session }
 
-    init(push: PushCenter? = nil, arguments: [String] = ProcessInfo.processInfo.arguments) {
+    init(push: PushCenter? = nil, arguments: [String] = LaunchArguments.current) {
         let samples = AresusSamples.launched(arguments: arguments)
         #if DEBUG
         // Tests (the app is their host), samples and the screenshot screens never touch the real login.

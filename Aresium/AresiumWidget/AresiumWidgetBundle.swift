@@ -17,6 +17,7 @@ struct MonthlySpendingWidget: Widget {
             SpendingWidgetView(snapshot: entry.snapshot, theme: entry.theme, date: entry.date)
                 .containerBackground(for: .widget) { Wall(palette: Palette(theme: entry.theme)) }
                 .environment(\.colorScheme, entry.theme == .light ? .light : .dark)
+                .environment(\.locale, AppLanguage.current.locale)      // the app's language (`WidgetLanguage`)
         }
         .configurationDisplayName("Monthly spending")
         .description("This month's spending, up to your latest transaction.")
@@ -32,6 +33,7 @@ struct SpendingCategoriesWidget: Widget {
                                  secondCategory: entry.secondCategory, theme: entry.theme, date: entry.date)
                 .containerBackground(for: .widget) { Wall(palette: Palette(theme: entry.theme)) }
                 .environment(\.colorScheme, entry.theme == .light ? .light : .dark)
+                .environment(\.locale, AppLanguage.current.locale)      // the app's language (`WidgetLanguage`)
         }
         .configurationDisplayName("Spending categories")
         .description("Two categories for this month. Long press to choose them.")

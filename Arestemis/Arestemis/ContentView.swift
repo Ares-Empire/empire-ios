@@ -13,7 +13,7 @@ struct ContentView: View {
     private let push: PushCenter?
     private var session: EmpireSession { store.session }
 
-    init(push: PushCenter? = nil, arguments: [String] = ProcessInfo.processInfo.arguments) {
+    init(push: PushCenter? = nil, arguments: [String] = LaunchArguments.current) {
         let options = LaunchOptions(arguments: arguments)
         #if DEBUG
         // Tests (the app is their host) and samples never touch the real login.

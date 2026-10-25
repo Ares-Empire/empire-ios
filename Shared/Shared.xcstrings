@@ -1,12 +1,22 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "%@ switches after you close it and open it again." : {
+    "%@ restarts in English." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ wechselt, sobald du die App schließt und wieder öffnest."
+            "value" : "%@ startet auf Englisch neu."
+          }
+        }
+      }
+    },
+    "%@ restarts in German." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ startet auf Deutsch neu."
           }
         }
       }
@@ -43,6 +53,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Konto"
+          }
+        }
+      }
+    },
+    "Cancel" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abbrechen"
           }
         }
       }
@@ -340,6 +360,16 @@
         }
       }
     },
+    "Restart" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neu starten"
+          }
+        }
+      }
+    },
     "Retry" : {
       "localizations" : {
         "de" : {
@@ -421,12 +451,22 @@
         }
       }
     },
-    "Takes effect after you close %@ and open it again." : {
+    "Switch to English?" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gilt, sobald du %@ schließt und wieder öffnest."
+            "value" : "Auf Englisch umstellen?"
+          }
+        }
+      }
+    },
+    "Switch to German?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auf Deutsch umstellen?"
           }
         }
       }

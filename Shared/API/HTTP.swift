@@ -24,8 +24,10 @@ func checkResponse(_ response: HTTPURLResponse, data: Data, onUnauthorized: () -
     case 200..<300: return
     case 401: onUnauthorized(); throw HTTPError.unauthorized
     case 403: throw HTTPError.server(403, body?.error ?? body?.message
-                                          ?? String(localized: "This account has no access.", table: "Shared"))
-    case 503: throw HTTPError.server(503, String(localized: "Login service unavailable, try again", table: "Shared"))
+                                          ?? String(localized: "This account has no access.", table: "Shared",
+                                                    bundle: .appLanguage, locale: .appLanguage))
+    case 503: throw HTTPError.server(503, String(localized: "Login service unavailable, try again", table: "Shared",
+                                                 bundle: .appLanguage, locale: .appLanguage))
     default: throw HTTPError.server(response.statusCode, body?.error ?? body?.message)
     }
 }
@@ -34,10 +36,13 @@ enum HTTPError: LocalizedError {
     case invalidResponse, unauthorized, server(Int, String?)
     var errorDescription: String? {
         switch self {
-        case .invalidResponse: String(localized: "The server returned an invalid response.", table: "Shared")
-        case .unauthorized: String(localized: "Your session expired. Please log in again.", table: "Shared")
+        case .invalidResponse: String(localized: "The server returned an invalid response.", table: "Shared",
+                                      bundle: .appLanguage, locale: .appLanguage)
+        case .unauthorized: String(localized: "Your session expired. Please log in again.", table: "Shared",
+                                   bundle: .appLanguage, locale: .appLanguage)
         case let .server(status, message):
-            message ?? String(localized: "The request failed (HTTP \(status)). Please try again.", table: "Shared")
+            message ?? String(localized: "The request failed (HTTP \(status)). Please try again.", table: "Shared",
+                              bundle: .appLanguage, locale: .appLanguage)
         }
     }
 }

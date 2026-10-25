@@ -34,7 +34,7 @@ struct TransactionDetailSheet: View {
             // Sample-only routing for repeatable simulator screenshots, like the
             // existing -sampleCategory / -sampleMonth launch arguments.
             #if DEBUG
-            let arguments = ProcessInfo.processInfo.arguments
+            let arguments = LaunchArguments.current
             if store.isSample, let index = arguments.firstIndex(of: "-sampleRecategorise"),
                arguments.indices.contains(index + 1) {
                 store.beginRecategorisation()

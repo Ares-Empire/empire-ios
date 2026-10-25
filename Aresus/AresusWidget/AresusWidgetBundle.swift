@@ -18,6 +18,7 @@ struct AresusStatusWidget: Widget {
             StatusEntryView(entry: entry)
                 .containerBackground(for: .widget) { ProvinceWall(accent: .aresus) }
                 .environment(\.colorScheme, .dark)
+                .environment(\.locale, AppLanguage.current.locale)      // the app's language (`WidgetLanguage`)
         }
         .configurationDisplayName("Aresus")
         .description("Whether every province is running, and how fresh the check is.")

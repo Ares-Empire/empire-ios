@@ -11,10 +11,14 @@ enum SupportKind: String, CaseIterable, Identifiable, Sendable {
     /// The picker's words.
     var title: String {
         switch self {
-        case .problem: String(localized: "Problem", table: "Shared", comment: "Contact form: the kind of message")
-        case .idea: String(localized: "Idea or wish", table: "Shared", comment: "Contact form: the kind of message")
-        case .question: String(localized: "Question", table: "Shared", comment: "Contact form: the kind of message")
-        case .other: String(localized: "Something else", table: "Shared", comment: "Contact form: the kind of message")
+        case .problem: String(localized: "Problem", table: "Shared",
+                              bundle: .appLanguage, locale: .appLanguage, comment: "Contact form: the kind of message")
+        case .idea: String(localized: "Idea or wish", table: "Shared",
+                           bundle: .appLanguage, locale: .appLanguage, comment: "Contact form: the kind of message")
+        case .question: String(localized: "Question", table: "Shared",
+                               bundle: .appLanguage, locale: .appLanguage, comment: "Contact form: the kind of message")
+        case .other: String(localized: "Something else", table: "Shared",
+                            bundle: .appLanguage, locale: .appLanguage, comment: "Contact form: the kind of message")
         }
     }
 
@@ -30,10 +34,13 @@ enum SupportKind: String, CaseIterable, Identifiable, Sendable {
     /// The text box's placeholder: a short prompt that fits the kind.
     var placeholder: String {
         switch self {
-        case .problem: String(localized: "What happened, and what did you expect?", table: "Shared")
-        case .idea: String(localized: "What would make the app better for you?", table: "Shared")
-        case .question: String(localized: "What would you like to know?", table: "Shared")
-        case .other: String(localized: "What is it about?", table: "Shared")
+        case .problem: String(localized: "What happened, and what did you expect?", table: "Shared",
+                              bundle: .appLanguage, locale: .appLanguage)
+        case .idea: String(localized: "What would make the app better for you?", table: "Shared",
+                           bundle: .appLanguage, locale: .appLanguage)
+        case .question: String(localized: "What would you like to know?", table: "Shared",
+                               bundle: .appLanguage, locale: .appLanguage)
+        case .other: String(localized: "What is it about?", table: "Shared", bundle: .appLanguage, locale: .appLanguage)
         }
     }
 }

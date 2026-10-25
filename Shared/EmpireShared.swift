@@ -4,7 +4,7 @@ import Foundation
 enum EmpireShared {
     /// App Group of all Empire apps. iOS deletes its data only when the LAST app of the group is removed, which is
     /// what the first-launch check needs (the Keychain survives every uninstall).
-    static let appGroup = "group.de.ares-empire.shared"
+    nonisolated static let appGroup = "group.de.ares-empire.shared"
     /// Keychain access group of all Empire apps, without the team prefix (entitlement: $(AppIdentifierPrefix) + this).
     static let keychainGroup = "de.ares-empire.shared"
     /// Defaults shared by the Empire apps; nil only if the App Group entitlement is missing.

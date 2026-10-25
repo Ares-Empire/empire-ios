@@ -22,6 +22,12 @@ struct SettingsScreen<AppSection: View>: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
     @State private var showsSupport = false
+    #if DEBUG
+    /// Screenshots: `-openLanguage` opens Settings → Language at once.
+    @State private var showsLanguage = LaunchArguments.current.contains("-openLanguage")
+    #else
+    @State private var showsLanguage = false
+    #endif
 
     var body: some View {
         NavigationStack {
@@ -58,16 +64,20 @@ struct SettingsScreen<AppSection: View>: View {
     // MARK: sections
 
     private var general: some View {
-        SettingsSection(String(localized: "General", table: "Shared")) {
-            NavigationLink { LanguageScreen(app: app) } label: {
-                SettingsRow(title: String(localized: "Language", table: "Shared"), value: AppLanguage.current.name)
+        SettingsSection(String(localized: "General", table: "Shared", bundle: .appLanguage, locale: .appLanguage)) {
+            Button { showsLanguage = true } label: {
+                SettingsRow(title: String(localized: "Language", table: "Shared",
+                                          bundle: .appLanguage, locale: .appLanguage), value: AppLanguage.current.name)
             }
             .buttonStyle(SettingsRowStyle())
+            .navigationDestination(isPresented: $showsLanguage) { LanguageScreen(app: app) }
             if app.sendsNotifications {
                 SettingsDivider()
                 Button { open(UIApplication.openNotificationSettingsURLString) } label: {
-                    SettingsRow(title: String(localized: "Notifications", table: "Shared"),
-                                subtitle: String(localized: "In iOS Settings", table: "Shared"), trailing: .external)
+                    SettingsRow(title: String(localized: "Notifications", table: "Shared",
+                                              bundle: .appLanguage, locale: .appLanguage),
+                                subtitle: String(localized: "In iOS Settings", table: "Shared",
+                                                 bundle: .appLanguage, locale: .appLanguage), trailing: .external)
                 }
                 .buttonStyle(SettingsRowStyle())
             }
@@ -75,28 +85,32 @@ struct SettingsScreen<AppSection: View>: View {
     }
 
     private var help: some View {
-        SettingsSection(String(localized: "Help", table: "Shared")) {
+        SettingsSection(String(localized: "Help", table: "Shared", bundle: .appLanguage, locale: .appLanguage)) {
             Button { showsSupport = true } label: {
-                SettingsRow(title: String(localized: "Contact & support", table: "Shared"))
+                SettingsRow(title: String(localized: "Contact & support", table: "Shared",
+                                          bundle: .appLanguage, locale: .appLanguage))
             }
             .buttonStyle(SettingsRowStyle())
         }
     }
 
     private var about: some View {
-        SettingsSection(String(localized: "About", table: "Shared")) {
+        SettingsSection(String(localized: "About", table: "Shared", bundle: .appLanguage, locale: .appLanguage)) {
             Button { openURL(LegalPage.privacy.url()) } label: {
-                SettingsRow(title: String(localized: "Privacy", table: "Shared"), trailing: .external)
+                SettingsRow(title: String(localized: "Privacy", table: "Shared",
+                                          bundle: .appLanguage, locale: .appLanguage), trailing: .external)
             }
             .buttonStyle(SettingsRowStyle())
             SettingsDivider()
             Button { openURL(LegalPage.imprint.url()) } label: {
-                SettingsRow(title: String(localized: "Imprint", table: "Shared"), trailing: .external)
+                SettingsRow(title: String(localized: "Imprint", table: "Shared",
+                                          bundle: .appLanguage, locale: .appLanguage), trailing: .external)
             }
             .buttonStyle(SettingsRowStyle())
             SettingsDivider()
             NavigationLink { FontsScreen(accent: app.accent) } label: {
-                SettingsRow(title: String(localized: "Fonts & licences", table: "Shared"))
+                SettingsRow(title: String(localized: "Fonts & licences", table: "Shared",
+                                          bundle: .appLanguage, locale: .appLanguage))
             }
             .buttonStyle(SettingsRowStyle())
             SettingsDivider()

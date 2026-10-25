@@ -18,7 +18,7 @@ struct SupportSheet: View {
         self.accent = accent
         let form = SupportForm(session: session, sample: sample)
         #if DEBUG
-        form.applyDebugArguments(ProcessInfo.processInfo.arguments)
+        form.applyDebugArguments(LaunchArguments.current)
         #endif
         _form = State(initialValue: form)
     }
@@ -61,10 +61,13 @@ struct SupportSheet: View {
     private var compose: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                SectionHeading(text: String(localized: "Topic", table: "Shared")).padding(.leading, 4)
+                SectionHeading(text: String(localized: "Topic", table: "Shared",
+                                            bundle: .appLanguage, locale: .appLanguage)).padding(.leading, 4)
                 kindMenu.padding(.top, 10)
 
-                SectionHeading(text: String(localized: "Message", table: "Shared")).padding(.leading, 4).padding(.top, 26)
+                SectionHeading(text: String(localized: "Message", table: "Shared",
+                                            bundle: .appLanguage, locale: .appLanguage))
+                    .padding(.leading, 4).padding(.top, 26)
                 messageBox.padding(.top, 10)
                 if form.length > SupportMessage.maxLength - 500 { counter.padding(.top, 8) }
 

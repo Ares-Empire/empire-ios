@@ -136,8 +136,10 @@ nonisolated enum DashboardError: LocalizedError {
     case unsupportedVersion, missingSample
     var errorDescription: String? {
         switch self {
-        case .unsupportedVersion: String(localized: "This dashboard version is not supported.", table: "AresiumShared")
-        case .missingSample: String(localized: "The bundled sample dashboard is missing.", table: "AresiumShared")
+        case .unsupportedVersion: String(localized: "This dashboard version is not supported.", table: "AresiumShared",
+                                         bundle: .appLanguage, locale: .appLanguage)
+        case .missingSample: String(localized: "The bundled sample dashboard is missing.", table: "AresiumShared",
+                                    bundle: .appLanguage, locale: .appLanguage)
         }
     }
 }

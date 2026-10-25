@@ -9,7 +9,7 @@ nonisolated struct AresusSamples: Sendable {
     var emptySync = false
 
     /// The sample source when the app was launched with `-sampleData` (DEBUG only).
-    static func launched(arguments: [String] = ProcessInfo.processInfo.arguments) -> AresusSamples? {
+    static func launched(arguments: [String] = LaunchArguments.current) -> AresusSamples? {
         #if DEBUG
         guard arguments.contains("-sampleData") else { return nil }
         return AresusSamples(allGood: arguments.contains("-sampleAllGood"), emptySync: arguments.contains("-sampleEmpty"))

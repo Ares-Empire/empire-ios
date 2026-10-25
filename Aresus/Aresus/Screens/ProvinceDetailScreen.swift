@@ -36,7 +36,7 @@ struct ProvinceDetailScreen: View {
         #if DEBUG
         .task(id: detail != nil) {
             // Screenshots: `-scrollToEnd` shows the page's last sections.
-            guard detail != nil, ProcessInfo.processInfo.arguments.contains("-scrollToEnd") else { return }
+            guard detail != nil, LaunchArguments.current.contains("-scrollToEnd") else { return }
             try? await Task.sleep(for: .milliseconds(400))
             proxy.scrollTo(Self.end, anchor: .bottom)
         }

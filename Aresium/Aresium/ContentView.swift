@@ -22,7 +22,7 @@ struct ContentView: View {
     private var palette: Palette { Palette(theme: theme.theme) }
     private var session: EmpireSession { store.session }
 
-    init(arguments: [String] = ProcessInfo.processInfo.arguments) {
+    init(arguments: [String] = LaunchArguments.current) {
         var sample = false
         var skipRestore = false
         #if DEBUG

@@ -76,7 +76,7 @@ struct EmpireHome: View {
             .scrollIndicators(.hidden)
             .refreshable { await actions.refresh() }
             #if DEBUG
-            .defaultScrollAnchor(ProcessInfo.processInfo.arguments.contains("-scrollToEnd") ? .bottom : nil)   // screenshots
+            .defaultScrollAnchor(LaunchArguments.current.contains("-scrollToEnd") ? .bottom : nil)   // screenshots
             #endif
         }
         .preferredColorScheme(.dark)
@@ -208,7 +208,7 @@ struct EmpireHome: View {
 extension EmpireHome {
     /// Screenshots: `-openSheet province|idea|add|approvals|settings` opens that page at launch.
     private func openDebugSheet() {
-        let arguments = ProcessInfo.processInfo.arguments
+        let arguments = LaunchArguments.current
         guard let index = arguments.firstIndex(of: "-openSheet"), arguments.indices.contains(index + 1) else { return }
         switch arguments[index + 1] {
         case "province": sheet = data.projects.first.map { .province($0) }

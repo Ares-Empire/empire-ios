@@ -99,7 +99,7 @@ private struct StartPage: View {
             #if DEBUG
             .task(id: store.dashboard == nil) {
                 // Screenshots: `-scrollToEnd` shows the band.
-                guard store.dashboard != nil, ProcessInfo.processInfo.arguments.contains("-scrollToEnd") else { return }
+                guard store.dashboard != nil, LaunchArguments.current.contains("-scrollToEnd") else { return }
                 try? await Task.sleep(for: .milliseconds(300))
                 proxy.scrollToWordmark()
             }
@@ -207,7 +207,7 @@ struct TransactionsScreen: View {
         }
         .task {
             #if DEBUG
-            let arguments = ProcessInfo.processInfo.arguments
+            let arguments = LaunchArguments.current
             if store.isSample, let index = arguments.firstIndex(of: "-sampleTransaction"),
                arguments.indices.contains(index + 1) {
                 selectedTransaction = store.dashboard?.transactions.first { $0.id == arguments[index + 1] }

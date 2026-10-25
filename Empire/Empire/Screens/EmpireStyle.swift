@@ -30,13 +30,20 @@ enum EmpireStyle {
     /// (they pick the colour), only the shown word is translated.
     static func statusWord(_ status: String) -> String {
         switch status {
-        case "CONQUERED": String(localized: "CONQUERED", comment: "Province status: live and held")
-        case "FORTIFYING": String(localized: "FORTIFYING", comment: "Province status: live, in maintenance")
-        case "MUSTERING": String(localized: "MUSTERING", comment: "Province status: getting ready")
-        case "BESIEGING": String(localized: "BESIEGING", comment: "Province status: being built")
-        case "SCOUTED": String(localized: "SCOUTED", comment: "Province status: an idea")
-        case "COMING SOON": String(localized: "COMING SOON", comment: "Province status for members: not open yet")
-        case "PLANNED": String(localized: "PLANNED", comment: "An expansion's status")
+        case "CONQUERED": String(localized: "CONQUERED", bundle: .appLanguage, locale: .appLanguage,
+                                 comment: "Province status: live and held")
+        case "FORTIFYING": String(localized: "FORTIFYING", bundle: .appLanguage, locale: .appLanguage,
+                                  comment: "Province status: live, in maintenance")
+        case "MUSTERING": String(localized: "MUSTERING", bundle: .appLanguage, locale: .appLanguage,
+                                 comment: "Province status: getting ready")
+        case "BESIEGING": String(localized: "BESIEGING", bundle: .appLanguage, locale: .appLanguage,
+                                 comment: "Province status: being built")
+        case "SCOUTED": String(localized: "SCOUTED", bundle: .appLanguage, locale: .appLanguage,
+                               comment: "Province status: an idea")
+        case "COMING SOON": String(localized: "COMING SOON", bundle: .appLanguage, locale: .appLanguage,
+                                   comment: "Province status for members: not open yet")
+        case "PLANNED": String(localized: "PLANNED", bundle: .appLanguage, locale: .appLanguage,
+                               comment: "An expansion's status")
         default: status
         }
     }

@@ -9,15 +9,18 @@ nonisolated struct SpendingEntry: TimelineEntry {
 
 nonisolated struct SpendingProvider: TimelineProvider {
     func placeholder(in context: Context) -> SpendingEntry {
-        SpendingEntry(date: .now, snapshot: .sample, theme: .dark)
+        WidgetLanguage.aresium.follow()
+        return SpendingEntry(date: .now, snapshot: .sample, theme: .dark)
     }
 
     func getSnapshot(in context: Context, completion: @escaping (SpendingEntry) -> Void) {
+        WidgetLanguage.aresium.follow()         // the app's language, also when it differs from the iPhone's
         let store = WidgetSnapshotStore()
         completion(SpendingEntry(date: .now, snapshot: context.isPreview ? .sample : store.load(), theme: store.theme))
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<SpendingEntry>) -> Void) {
+        WidgetLanguage.aresium.follow()
         let store = WidgetSnapshotStore()
         let now = Date.now
         let result = store.read()
@@ -36,16 +39,19 @@ nonisolated struct CategoriesEntry: TimelineEntry {
 
 nonisolated struct CategoriesProvider: AppIntentTimelineProvider {
     func placeholder(in context: Context) -> CategoriesEntry {
-        CategoriesEntry(date: .now, snapshot: .sample, theme: .dark, firstCategory: nil, secondCategory: nil)
+        WidgetLanguage.aresium.follow()
+        return CategoriesEntry(date: .now, snapshot: .sample, theme: .dark, firstCategory: nil, secondCategory: nil)
     }
 
     func snapshot(for configuration: SpendingCategoriesIntent, in context: Context) async -> CategoriesEntry {
+        WidgetLanguage.aresium.follow()
         let store = WidgetSnapshotStore()
         return CategoriesEntry(date: .now, snapshot: context.isPreview ? .sample : store.load(), theme: store.theme,
                                firstCategory: configuration.firstCategory?.id, secondCategory: configuration.secondCategory?.id)
     }
 
     func timeline(for configuration: SpendingCategoriesIntent, in context: Context) async -> Timeline<CategoriesEntry> {
+        WidgetLanguage.aresium.follow()
         let store = WidgetSnapshotStore()
         let now = Date.now
         let result = store.read()

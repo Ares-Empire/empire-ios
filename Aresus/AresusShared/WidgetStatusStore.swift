@@ -54,3 +54,10 @@ extension WidgetStatusStore {
         WidgetStatusStore(directory: FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: EmpireShared.appGroup))
     }
 }
+
+extension WidgetLanguage {
+    /// Where the Aresus widget reads the app's language choice (the App Group it shares with the app).
+    nonisolated static var aresus: WidgetLanguage {
+        WidgetLanguage(defaults: UserDefaults(suiteName: EmpireShared.appGroup), app: "de.ares-empire.aresus")
+    }
+}

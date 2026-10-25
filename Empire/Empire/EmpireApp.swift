@@ -5,6 +5,6 @@ struct EmpireApp: App {
     init() { AppFont.register() }
 
     var body: some Scene {
-        WindowGroup { ContentView() }
+        WindowGroup { LanguageRoot { ContentView() } }
     }
 }

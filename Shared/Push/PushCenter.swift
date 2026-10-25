@@ -75,7 +75,10 @@ final class PushCenter {
         self.environment = environment
     }
 
-    /// Call once, when the app's session exists.
+    /// Call when the app's session exists: at launch, and again with the new session after the app restarted in
+    /// another language (`LanguageRoot`). Then the categories' action titles are set in the new language and, once
+    /// the new session is signed in, the device registers again with the new language. The handlers of a replaced
+    /// session do nothing any more.
     /// - Parameters:
     ///   - app: the app's bundle id, the `app` the push service knows (e.g. "de.ares-empire.arestemis").
     ///   - categories: the app's notification categories and their actions.
@@ -83,15 +86,21 @@ final class PushCenter {
     ///     nil opens nothing. By default every action opens the notification's `url`.
     func start(app: String, session: EmpireSession, categories: [UNNotificationCategory] = [],
                actionURL: @escaping (_ action: String, _ url: URL?) -> URL? = { _, url in url }) {
-        guard self.app == nil else { return }
+        guard self.session !== session else { return }
         self.app = app
         self.session = session
         self.actionURL = actionURL
+        refusedGeneration = nil
         permissions.setCategories(Set(categories))
-        session.onSignIn { [weak self] in self?.refresh() }
-        session.onLogout { [weak self] in self?.unregister() }
+        session.onSignIn { [weak self, weak session] in
+            if let self, self.session === session { self.refresh() }
+        }
+        session.onLogout { [weak self, weak session] in
+            if let self, self.session === session { self.unregister() }
+        }
         session.onAppDataReset { [weak self, weak session] in
-            if session?.isDenied == true { self?.unregister() }    // logout is handled above
+            // Logout is handled above.
+            if let self, let session, self.session === session, session.isDenied { self.unregister() }
         }
         refresh()
     }

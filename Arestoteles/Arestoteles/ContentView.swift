@@ -16,7 +16,7 @@ struct ContentView: View {
     private let restoresOnLaunch: Bool
     private var session: EmpireSession { store.session }
 
-    init(arguments: [String] = ProcessInfo.processInfo.arguments) {
+    init(arguments: [String] = LaunchArguments.current) {
         let options = LaunchOptions(arguments: arguments)
         #if DEBUG
         // Tests (the app is their host) and samples never touch the real login, files or Spotlight.

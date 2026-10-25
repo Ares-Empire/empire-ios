@@ -26,7 +26,7 @@ struct PositionsScreen: View {
         .scrollDismissesKeyboard(.immediately)
         .refreshable { await store.update() }
         #if DEBUG
-        .defaultScrollAnchor(ProcessInfo.processInfo.arguments.contains("-scrollToEnd") ? .bottom : nil)   // screenshots
+        .defaultScrollAnchor(LaunchArguments.current.contains("-scrollToEnd") ? .bottom : nil)   // screenshots
         #endif
         .provinceWall()
         .toolbar(.hidden, for: .navigationBar)

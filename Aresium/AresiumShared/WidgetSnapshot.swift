@@ -72,7 +72,8 @@ nonisolated struct WidgetMonthNote: Equatable {
         formatter.setLocalizedDateFormatFromTemplate("MMMMyyyy")
         monthLabel = formatter.string(from: now)
         formatter.setLocalizedDateFormatFromTemplate("MMMM")
-        message = String(localized: "Nothing imported for \(formatter.string(from: now)) yet", table: "AresiumShared")
+        message = String(localized: "Nothing imported for \(formatter.string(from: now)) yet", table: "AresiumShared",
+                         bundle: .appLanguage, locale: .appLanguage)
         lastData = WidgetFormatting.lastData(snapshot.newestTransactionDate)
     }
 }
@@ -97,11 +98,13 @@ nonisolated enum WidgetFormatting {
     }
 
     static func freshness(_ value: String?) -> String? {
-        transactionDateLabel(value).map { String(localized: "up to \($0)", table: "AresiumShared") }
+        transactionDateLabel(value).map { String(localized: "up to \($0)", table: "AresiumShared",
+                                                 bundle: .appLanguage, locale: .appLanguage) }
     }
 
     static func lastData(_ value: String?) -> String? {
-        transactionDateLabel(value).map { String(localized: "last data \($0)", table: "AresiumShared") }
+        transactionDateLabel(value).map { String(localized: "last data \($0)", table: "AresiumShared",
+                                                 bundle: .appLanguage, locale: .appLanguage) }
     }
 
     private static func transactionDateLabel(_ value: String?) -> String? {
