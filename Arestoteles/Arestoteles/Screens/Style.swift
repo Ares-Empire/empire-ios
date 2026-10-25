@@ -133,9 +133,9 @@ struct TabSearchField: View {
     var body: some View {
         HStack(spacing: 7) {
             Image(systemName: "magnifyingglass").font(.body.weight(.medium))
-                .foregroundStyle(.white.opacity(0.8))
+                .foregroundStyle(Self.glyph)
                 .accessibilityHidden(true)
-            TextField(text: $text, prompt: prompt.foregroundStyle(.white.opacity(0.45))) { prompt }
+            TextField(text: $text, prompt: prompt.foregroundStyle(Self.prompt)) { prompt }
                 .font(.body).foregroundStyle(Ink.primary).tint(Look.accent.color)
                 .textInputAutocapitalization(.never).autocorrectionDisabled()
                 .submitLabel(.search)
@@ -144,7 +144,7 @@ struct TabSearchField: View {
                 Button { text = "" } label: {
                     Image(systemName: "xmark.circle.fill").font(.body)
                         .symbolRenderingMode(.palette)
-                        .foregroundStyle(Color(hex: 0x202024), .white.opacity(0.8))
+                        .foregroundStyle(Self.clearMark, Self.glyph)
                         .frame(width: 28, height: 36)
                         .contentShape(Rectangle())
                 }
@@ -154,10 +154,19 @@ struct TabSearchField: View {
         }
         .padding(.leading, 14).padding(.trailing, text.isEmpty ? 14 : 6)
         .frame(minHeight: 42)
-        .background(Capsule().fill(.white.opacity(0.11)))
+        .background(Capsule().fill(Self.fill))
         .contentShape(Capsule())
         .onTapGesture { isFocused = true }
     }
+
+    // The Search tab's own field (iOS's), measured on the wall in each look: a light fill with near-white marks on the
+    // dark wall, a grey fill with near-black marks on the light one.
+    private static let fill = Color(light: Color(hex: 0x767680, opacity: 0.12), dark: .white.opacity(0.11))
+    /// The magnifier and the clear button's disc.
+    private static let glyph = Color(light: Color(hex: 0x333334), dark: .white.opacity(0.8))
+    private static let prompt = Color(light: Color(hex: 0x929399), dark: .white.opacity(0.45))
+    /// The × on the clear button: the field's own colour, so it reads as cut out of the disc.
+    private static let clearMark = Color(light: Color(hex: 0xDEDFE4), dark: Color(hex: 0x202024))
 }
 
 extension Text {
@@ -243,7 +252,8 @@ extension View {
 
 // MARK: - buttons
 
-/// A pill button. Prominent: the screen's one main action, in the accent (dark text on teal). Otherwise glass.
+/// A pill button. Prominent: the screen's one main action, in the accent (`AppAccent.onColor` on teal). Otherwise a
+/// quiet outlined pill (`Ink.field`, `Ink.edge`).
 struct PillButtonStyle: ButtonStyle {
     var prominent = false
     var destructive = false
@@ -252,15 +262,15 @@ struct PillButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(AppFont.text(14, weight: .semibold))
-            .foregroundStyle(prominent ? Color(hex: 0x06201D) : destructive ? StatusTone.issue.color(Look.accent) : Ink.primary)
+            .foregroundStyle(prominent ? AppAccent.onColor : destructive ? StatusTone.issue.color(Look.accent) : Ink.primary)
             .lineLimit(1)
             .padding(.horizontal, 16).frame(minHeight: 40)
             .background {
                 if prominent {
                     Capsule().fill(Look.accent.color)
                 } else {
-                    Capsule().fill(.white.opacity(0.06))
-                        .overlay(Capsule().strokeBorder(.white.opacity(0.12)))
+                    Capsule().fill(Ink.field)
+                        .overlay(Capsule().strokeBorder(Ink.edge))
                 }
             }
             .opacity(isEnabled ? (configuration.isPressed ? 0.75 : 1) : 0.45)
@@ -287,11 +297,11 @@ struct ChipPicker<Value: Hashable>: View {
                     Button { withAnimation(.easeOut(duration: 0.15)) { selection = option.value } } label: {
                         Text(option.title)
                             .font(AppFont.text(13, weight: selected ? .semibold : .medium))
-                            .foregroundStyle(selected ? Color(hex: 0x06201D) : Ink.secondary)
+                            .foregroundStyle(selected ? AppAccent.onColor : Ink.secondary)
                             .padding(.horizontal, 14).frame(minHeight: 34)
                             .background {
                                 if selected { Capsule().fill(Look.accent.color) }
-                                else { Capsule().fill(.white.opacity(0.05)).overlay(Capsule().strokeBorder(.white.opacity(0.1))) }
+                                else { Capsule().fill(Ink.field).overlay(Capsule().strokeBorder(Ink.edge)) }
                             }
                     }
                     .buttonStyle(.plain)

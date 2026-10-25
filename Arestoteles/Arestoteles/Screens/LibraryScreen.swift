@@ -117,7 +117,7 @@ struct EventsTimeline: View {
         // The rail runs behind the dots, from the first year to the last.
         .background(alignment: .topLeading) {
             if timeline.count > 1 {
-                Rectangle().fill(.white.opacity(0.1)).frame(width: 1)
+                Rectangle().fill(Ink.line).frame(width: 1)
                     .padding(.leading, Self.yearWidth + 12 + 3).padding(.vertical, 22)
                     .accessibilityHidden(true)
             }
