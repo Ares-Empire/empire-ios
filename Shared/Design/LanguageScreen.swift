@@ -15,14 +15,6 @@ struct LanguageScreen: View {
         self.app = app
         self.setting = setting
         _choice = State(initialValue: setting.choice)
-        #if DEBUG
-        // Screenshots: `-confirmLanguage en|de|iphone` shows the confirmation as if that row had been tapped.
-        if let value = LaunchArguments.value("-confirmLanguage"),
-           case .confirm(let change) = LanguageTap.tap(AppLanguage(rawValue: value), choice: setting.choice,
-                                                      shown: shown, iPhone: { setting.iPhoneLanguage }) {
-            _pending = State(initialValue: change)
-        }
-        #endif
     }
 
     var body: some View {
@@ -51,6 +43,9 @@ struct LanguageScreen: View {
         .background { SettingsWall(accent: app.accent) }
         .navigationTitle(Text("Language", tableName: "Shared"))
         .navigationBarTitleDisplayMode(.inline)
+        #if DEBUG
+        .task { await confirmFromLaunchArgument() }
+        #endif
         .alert(Text(verbatim: pending?.title ?? ""), isPresented: isAsking, presenting: pending) { change in
             Button(role: .cancel) { } label: { Text("Cancel", tableName: "Shared") }
             Button { switchLanguage(change) } label: { Text(verbatim: change.confirm) }
@@ -62,6 +57,18 @@ struct LanguageScreen: View {
     private var isAsking: Binding<Bool> {
         Binding(get: { pending != nil }, set: { if !$0 { pending = nil } })
     }
+
+    #if DEBUG
+    /// Screenshots: `-confirmLanguage en|de|iphone` taps that row once the page is on screen.
+    private func confirmFromLaunchArgument() async {
+        guard let value = LaunchArguments.value("-confirmLanguage") else { return }
+        try? await Task.sleep(for: .seconds(1))
+        if case .confirm(let change) = LanguageTap.tap(AppLanguage(rawValue: value), choice: choice, shown: shown,
+                                                       iPhone: { setting.iPhoneLanguage }) {
+            pending = change
+        }
+    }
+    #endif
 
     private func option(_ language: AppLanguage?, title: String) -> some View {
         let selected = choice == language
