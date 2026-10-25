@@ -4,7 +4,8 @@ import UIKit
 /// The Aresus app: the shared Empire login, then the two tabs. Logged in once in any Empire app means logged in here.
 /// Links (`aresus://…`) and notification taps go through `AresusNavigation`.
 /// DEBUG launch arguments: `-sampleData` (`-sampleAllGood`), `-tab aresus|aresync`, `-openProvince <slug>`,
-/// `-openRun <id>`, `-sampleLogin` / `-sampleLoading` for the login and loading screens, and
+/// `-openRun <id>`, `-sampleLogin` / `-sampleNoAccess` / `-sampleAccessAsked` (`SampleAccount`) / `-sampleLoading` for
+/// the login, no-access and loading screens, and
 /// `-widgetGallery good|issues|loggedout` for the widget's views.
 struct ContentView: View {
     @State private var store: AresusStore
@@ -28,12 +29,15 @@ struct ContentView: View {
         let testing = NSClassFromString("XCTestCase") != nil
             || ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
         let gallery = WidgetGallery.Page.launched(arguments: arguments)
-        let quiet = samples != nil || testing || gallery != nil
-        var session = EmpireSession(app: .aresus, restoreOnLaunch: !quiet, installDefaults: quiet ? nil : EmpireShared.defaults)
-        var restores = !quiet
-        if arguments.contains("-sampleLogin") || arguments.contains("-sampleLoading") {
+        // Screenshots of the login and the no-access screen (`SampleAccount`): a made-up account, no server.
+        let account = SampleAccount.session(app: .aresus, arguments: arguments)
+        let quiet = samples != nil || testing || gallery != nil || account != nil
+        var session = account?.session
+            ?? EmpireSession(app: .aresus, restoreOnLaunch: !quiet, installDefaults: quiet ? nil : EmpireShared.defaults)
+        var restores = account?.restores ?? !quiet
+        if arguments.contains("-sampleLoading") {
             // Loading: a restore that never runs keeps the loading screen up.
-            session = EmpireSession(app: .aresus, storage: DebugTokens(), restoreOnLaunch: arguments.contains("-sampleLoading"))
+            session = EmpireSession(app: .aresus, storage: DebugTokens(), restoreOnLaunch: true)
             restores = false
         }
         let navigation = AresusNavigation.launched(arguments: arguments)
@@ -125,7 +129,7 @@ struct ContentView: View {
 }
 
 #if DEBUG
-/// The login of the screenshot screens: kept in memory, never in the shared Keychain.
+/// The loading screenshot's login: kept in memory, never in the shared Keychain.
 private final class DebugTokens: TokenStorage {
     private var token: String?
     func read() throws -> String? { token }

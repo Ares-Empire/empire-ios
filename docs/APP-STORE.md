@@ -16,13 +16,13 @@ filled the placeholders.
 
   | Bundle | Collected (all linked to the account, App Functionality, no tracking) | Required-reason APIs |
   |---|---|---|
-  | Ares Empire | Email Address, User ID, Customer Support | UserDefaults `CA92.1` (language), `1C8F.1` (App Group) |
-  | Aresium | Email Address, User ID, Other Financial Info, Customer Support | UserDefaults `CA92.1` (theme, language), `1C8F.1` |
+  | Ares Empire | Email Address, Name, User ID, Customer Support | UserDefaults `CA92.1` (language), `1C8F.1` (App Group) |
+  | Aresium | Email Address, Name, User ID, Other Financial Info, Customer Support | UserDefaults `CA92.1` (theme, language), `1C8F.1` |
   | Aresium widget | none (reads the app's saved figures) | UserDefaults `1C8F.1` (the app's language) |
-  | Arestemis | Email Address, User ID, Device ID, Search History, Other User Content, Customer Support | UserDefaults `CA92.1`, `1C8F.1` |
-  | Aresus | Email Address, User ID, Device ID, Customer Support | UserDefaults `CA92.1`, `1C8F.1` |
+  | Arestemis | Email Address, Name, User ID, Device ID, Search History, Other User Content, Customer Support | UserDefaults `CA92.1`, `1C8F.1` |
+  | Aresus | Email Address, Name, User ID, Device ID, Customer Support | UserDefaults `CA92.1`, `1C8F.1` |
   | Aresus widget | User ID (fetches with the shared login) | UserDefaults `1C8F.1` (the app's language) |
-  | Arestoteles | Email Address, User ID, Other User Content, Customer Support | UserDefaults `CA92.1`, `1C8F.1` |
+  | Arestoteles | Email Address, Name, User ID, Other User Content, Customer Support | UserDefaults `CA92.1`, `1C8F.1` |
 
   To check again after a change (no file timestamps, boot time, disk space or keyboards are used today):
   `nm -u <App>.app/<App> | grep -E "NSUserDefaults|stat|getattrlist|mach_absolute_time|systemUptime|Volume.*Capacity|activeInputModes"`
@@ -40,11 +40,11 @@ For every app: **"Do you or your third-party partners collect data from this app
 
 | App | Data types to tick (App Store Connect's names) |
 |---|---|
-| Ares Empire | Contact Info → Email Address · Identifiers → User ID · User Content → Customer Support |
-| Aresium | Contact Info → Email Address · Financial Info → Other Financial Info · Identifiers → User ID · User Content → Customer Support |
-| Arestemis | Contact Info → Email Address · Identifiers → User ID, Device ID · Search History · User Content → Other User Content, Customer Support |
-| Aresus | Contact Info → Email Address · Identifiers → User ID, Device ID · User Content → Customer Support |
-| Arestoteles | Contact Info → Email Address · Identifiers → User ID · User Content → Other User Content, Customer Support |
+| Ares Empire | Contact Info → Email Address, Name · Identifiers → User ID · User Content → Customer Support |
+| Aresium | Contact Info → Email Address, Name · Financial Info → Other Financial Info · Identifiers → User ID · User Content → Customer Support |
+| Arestemis | Contact Info → Email Address, Name · Identifiers → User ID, Device ID · Search History · User Content → Other User Content, Customer Support |
+| Aresus | Contact Info → Email Address, Name · Identifiers → User ID, Device ID · User Content → Customer Support |
+| Arestoteles | Contact Info → Email Address, Name · Identifiers → User ID · User Content → Other User Content, Customer Support |
 
 Why these and not others:
 
@@ -52,7 +52,9 @@ Why these and not others:
   token the push service keeps per account (only the apps with notifications).
 - **Search History (Arestemis):** the hunt's search is stored on the server. **Other User Content:** Arestemis's
   "About you", own application text and match states; Arestoteles's edits and quick notes.
-- **Not collected:** Name (the apps never ask; the account's name field is empty unless set through the API), location
+- **Name:** optional when an account is created in an app (Create account on the login screen, 2026-10-25); the
+  account server keeps it, Patrik sees it when approving.
+- **Not collected:** location
   (Arestemis's places are where to search, not where the phone is; IP addresses are not used for location),
   diagnostics (no crash or analytics SDK), contacts, photos, purchases, browsing history.
 - **Groq** (Arestemis's AI check) is a processor working for the app's function; its data is already covered by the
@@ -73,7 +75,7 @@ internal testers (App Store Connect users, up to 100) need no Beta App Review.
 | Marketing URL | empty (the hub needs a login), or `https://www.ares-empire.de` |
 | Contact (Beta App Review) | Patrik Breeck, `REDACTED-EMAIL`, phone: **[Patrik]** (entered in App Store Connect only, never here) |
 | Sign-in required | **Yes**: the demo login below |
-| Review notes | "Every Ares Empire app needs an approved Ares Empire account; accounts are created on www.ares-empire.de and approved by the developer. The demo account is approved and has access to this app. Push notifications go through the developer's own push service." (+ the app's line below) |
+| Review notes | "Every Ares Empire app needs an approved Ares account; accounts are created in any of the apps (Create account on the login screen) or on www.ares-empire.de and approved by the developer; Settings → Account deletes the account. The demo account is approved and has access to this app. Push notifications go through the developer's own push service." (+ the app's line below) |
 
 Beta App Description (English; German in brackets for a German localization):
 
@@ -114,13 +116,10 @@ names, commit subjects): **[Patrik]** whether that is acceptable, else internal 
 
 ## Missing before the App Store
 
-1. **Delete your account inside each app** (App Review Guideline 5.1.1(v): apps that let people create an account
-   must let them start its deletion in the app; the apps link to sign-up). Suggested: Settings → Account → *Delete
-   account* (Shared, next to Log out from brief E4b), confirm, unregister push, then
-   `DELETE https://auth.ares-empire.de/api/collections/users/records/<id>` with the token (the account rules already
-   allow it for non-admins), then log out everywhere. The servers must follow: Arestemis deletes the account's hunts,
-   settings and matches, the push service its devices (today they stay; see PRIVACY.md → Open 1). The same on the
-   website (a page on the hub).
+1. **Delete your account inside each app** (App Review Guideline 5.1.1(v)): built 2026-10-25 (brief F2): Settings →
+   Account → *Delete Ares account* (password, confirmation, `DELETE …/users/records/<id>`, logged out everywhere) and
+   *Leave <app>*; the servers' deletions run from the account server (brief F1, `ares-empire/docs/ACCOUNTS.md`). Left:
+   the same on the website (a page on the hub), and PRIVACY.md (lead).
 2. **Arestemis and the portals' terms** (Guideline 5.2.2: an app may show a third-party service's content only when
    that service's terms allow it). Arestemis reads WG-Gesucht, Kleinanzeigen and Immowelt without permission
    (`Arestemis/CLAUDE.md`: "scraping is against their terms") and shows their text and photos. Fine for private

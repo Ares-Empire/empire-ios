@@ -37,6 +37,16 @@
         }
       }
     },
+    "A link is on its way to %@. Open it to confirm your address. Then Patrik approves your account, and an email tells you once it's ready." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein Link ist unterwegs an %@. Öffne ihn, um deine Adresse zu bestätigen. Dann gibt Patrik dein Konto frei, und eine E-Mail sagt dir, sobald es bereit ist."
+          }
+        }
+      }
+    },
     "About" : {
       "localizations" : {
         "de" : {
@@ -57,6 +67,56 @@
         }
       }
     },
+    "Ask for access" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zugang anfragen"
+          }
+        }
+      }
+    },
+    "Asked. You get an email once it's approved." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Angefragt. Du bekommst eine E-Mail, sobald die Anfrage freigegeben ist."
+          }
+        }
+      }
+    },
+    "At least 8 characters." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mindestens 8 Zeichen."
+          }
+        }
+      }
+    },
+    "At least 8 characters. Afterwards this app logs in again by itself; the other Ares apps on this iPhone follow." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mindestens 8 Zeichen. Danach meldet sich diese App von selbst neu an; die anderen Ares-Apps auf diesem iPhone folgen."
+          }
+        }
+      }
+    },
+    "Back to login" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zurück zur Anmeldung"
+          }
+        }
+      }
+    },
     "Cancel" : {
       "localizations" : {
         "de" : {
@@ -67,12 +127,132 @@
         }
       }
     },
+    "Change password" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Passwort ändern"
+          }
+        }
+      }
+    },
+    "Changing…" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wird geändert…"
+          }
+        }
+      }
+    },
+    "Check your email" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schau in deine E-Mails"
+          }
+        }
+      }
+    },
+    "Confirm your email" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bestätige deine E-Mail-Adresse"
+          }
+        }
+      }
+    },
     "Contact & support" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kontakt & Support"
+          }
+        }
+      }
+    },
+    "Create account" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Konto erstellen"
+          }
+        }
+      }
+    },
+    "Creating…" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wird erstellt…"
+          }
+        }
+      }
+    },
+    "Current password" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktuelles Passwort"
+          }
+        }
+      }
+    },
+    "Delete Ares account" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ares-Konto löschen"
+          }
+        }
+      }
+    },
+    "Delete account" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Konto löschen"
+          }
+        }
+      }
+    },
+    "Delete your Ares account?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Ares-Konto löschen?"
+          }
+        }
+      }
+    },
+    "Deletes your Ares account and its data in every Ares app, for good." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Löscht dein Ares-Konto und seine Daten in allen Ares-Apps, endgültig."
+          }
+        }
+      }
+    },
+    "Deleting…" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wird gelöscht…"
           }
         }
       }
@@ -117,12 +297,32 @@
         }
       }
     },
+    "Every Ares app on this iPhone logs out. This can't be undone." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alle Ares-Apps auf diesem iPhone melden sich ab. Das lässt sich nicht rückgängig machen."
+          }
+        }
+      }
+    },
     "Fonts & licences" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Schriften & Lizenzen"
+          }
+        }
+      }
+    },
+    "Forgot password" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Passwort vergessen"
           }
         }
       }
@@ -178,12 +378,32 @@
         }
       }
     },
+    "If there is an account for this address, an email is on its way." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wenn es ein Konto mit dieser Adresse gibt, ist eine E-Mail unterwegs."
+          }
+        }
+      }
+    },
     "Imprint" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Impressum"
+          }
+        }
+      }
+    },
+    "In all Ares apps on this iPhone" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In allen Ares-Apps auf diesem iPhone"
           }
         }
       }
@@ -228,6 +448,26 @@
         }
       }
     },
+    "Leave %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ verlassen"
+          }
+        }
+      }
+    },
+    "Leave %@?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ verlassen?"
+          }
+        }
+      }
+    },
     "Like the iPhone" : {
       "localizations" : {
         "de" : {
@@ -258,22 +498,32 @@
         }
       }
     },
-    "Log in with your Empire account" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mit deinem Empire-Konto anmelden"
-          }
-        }
-      }
-    },
     "Log out" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Abmelden"
+          }
+        }
+      }
+    },
+    "Log out and log in again" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abmelden und neu anmelden"
+          }
+        }
+      }
+    },
+    "Logged in as %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Angemeldet als %@"
           }
         }
       }
@@ -298,12 +548,52 @@
         }
       }
     },
+    "Name (optional)" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Name (optional)"
+          }
+        }
+      }
+    },
+    "New password" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neues Passwort"
+          }
+        }
+      }
+    },
+    "New password again" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neues Passwort wiederholen"
+          }
+        }
+      }
+    },
     "No connection. Send it again when you're online." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Keine Verbindung. Sende sie später noch mal."
+          }
+        }
+      }
+    },
+    "No connection. Try again when you're online." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keine Verbindung. Versuch es noch mal, wenn du online bist."
           }
         }
       }
@@ -318,12 +608,62 @@
         }
       }
     },
+    "One Ares account for all Ares apps" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein Ares-Konto für alle Ares-Apps"
+          }
+        }
+      }
+    },
+    "One Ares account for all Ares apps. Once you have confirmed your email, Patrik approves it." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein Ares-Konto für alle Ares-Apps. Sobald du deine Adresse bestätigt hast, gibt Patrik es frei."
+          }
+        }
+      }
+    },
     "Password" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Passwort"
+          }
+        }
+      }
+    },
+    "Password again" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Passwort wiederholen"
+          }
+        }
+      }
+    },
+    "Password changed" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Passwort geändert"
+          }
+        }
+      }
+    },
+    "Patrik sees it when he approves the account." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Patrik sieht ihn, wenn er das Konto freigibt."
           }
         }
       }
@@ -356,6 +696,32 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Frage"
+          }
+        }
+      }
+    },
+    "Removes your access to %@ and deletes your %@ data, on its server and on this iPhone." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Entfernt deinen Zugang zu %@ und löscht deine Daten in %@, auf dem Server und auf diesem iPhone."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Removes your access to %1$@ and deletes your %2$@ data, on its server and on this iPhone."
+          }
+        }
+      }
+    },
+    "Removes your access to %@ and its data on this iPhone." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Entfernt deinen Zugang zu %@ und die Daten der App auf diesem iPhone."
           }
         }
       }
@@ -400,6 +766,26 @@
         }
       }
     },
+    "Send link" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Link senden"
+          }
+        }
+      }
+    },
+    "Send the email again" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "E-Mail noch mal senden"
+          }
+        }
+      }
+    },
     "Sending…" : {
       "localizations" : {
         "de" : {
@@ -416,16 +802,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Einstellungen"
-          }
-        }
-      }
-    },
-    "Sign up" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Registrieren"
           }
         }
       }
@@ -481,6 +857,46 @@
         }
       }
     },
+    "The account server can't be reached right now. Try again in a moment." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Kontoserver ist gerade nicht erreichbar. Versuch es gleich noch mal."
+          }
+        }
+      }
+    },
+    "The current password is wrong." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das aktuelle Passwort ist falsch."
+          }
+        }
+      }
+    },
+    "The password is too long: at most 71 characters." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das Passwort ist zu lang: höchstens 71 Zeichen."
+          }
+        }
+      }
+    },
+    "The password needs at least 8 characters." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das Passwort braucht mindestens 8 Zeichen."
+          }
+        }
+      }
+    },
     "The request failed (HTTP %lld). Please try again." : {
       "localizations" : {
         "de" : {
@@ -497,6 +913,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Der Server hat eine ungültige Antwort geschickt."
+          }
+        }
+      }
+    },
+    "The two passwords are not the same." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die beiden Passwörter sind nicht gleich."
+          }
+        }
+      }
+    },
+    "There is already an account with this email. Log in, or reset its password." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Es gibt schon ein Konto mit dieser E-Mail-Adresse. Melde dich an oder setze sein Passwort zurück."
           }
         }
       }
@@ -531,12 +967,32 @@
         }
       }
     },
+    "This doesn't look like an email address." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das sieht nicht nach einer E-Mail-Adresse aus."
+          }
+        }
+      }
+    },
     "Too many messages for now. Please try again later." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Zu viele Nachrichten. Bitte später noch mal."
+          }
+        }
+      }
+    },
+    "Too many tries for now. Please wait a few minutes." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zu viele Versuche. Bitte warte ein paar Minuten."
           }
         }
       }
@@ -611,12 +1067,108 @@
         }
       }
     },
-    "Wrong email or password." : {
+    "Wrong email or password, or the account is not confirmed or approved yet." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "E-Mail oder Passwort ist falsch."
+            "value" : "E-Mail oder Passwort falsch, oder das Konto ist noch nicht bestätigt oder freigegeben."
+          }
+        }
+      }
+    },
+    "Wrong password." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Falsches Passwort."
+          }
+        }
+      }
+    },
+    "You stay logged in here. The other Ares apps on this iPhone follow when you open them." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du bleibst hier angemeldet. Die anderen Ares-Apps auf diesem iPhone folgen, sobald du sie öffnest."
+          }
+        }
+      }
+    },
+    "Your %@ data on its server is deleted, but your access is not removed yet. %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Daten in %@ sind auf dem Server gelöscht, aber dein Zugang ist noch nicht entfernt. %@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Your %1$@ data on its server is deleted, but your access is not removed yet. %2$@"
+          }
+        }
+      }
+    },
+    "Your Ares account and the other apps stay. You can ask for access again later." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Ares-Konto und die anderen Apps bleiben. Du kannst später wieder Zugang anfragen."
+          }
+        }
+      }
+    },
+    "Your Ares account is deleted." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Ares-Konto ist gelöscht."
+          }
+        }
+      }
+    },
+    "Your access and your data in %@ go. Your Ares account stays." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Zugang zu %@ und deine Daten dort werden entfernt. Dein Ares-Konto bleibt."
+          }
+        }
+      }
+    },
+    "Your account and its data in every Ares app go for good." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Konto und seine Daten in allen Ares-Apps werden endgültig gelöscht."
+          }
+        }
+      }
+    },
+    "Your account is created, but the confirmation email didn't go out. %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Konto ist erstellt, aber die Bestätigungs-E-Mail ging nicht raus. %@"
+          }
+        }
+      }
+    },
+    "Your account's email. You get a link there to choose a new password." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die E-Mail-Adresse deines Kontos. Dorthin bekommst du einen Link, um ein neues Passwort zu wählen."
           }
         }
       }
@@ -627,6 +1179,36 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "App-Version, iOS-Version und Sprache werden mitgeschickt. Die Antwort kommt per E-Mail an die Adresse deines Kontos."
+          }
+        }
+      }
+    },
+    "Your password is changed, but logging in with it didn't work. %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Passwort ist geändert, aber die Anmeldung damit hat nicht geklappt. %@"
+          }
+        }
+      }
+    },
+    "Your password is changed. Log in with the new one." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Passwort ist geändert. Melde dich mit dem neuen an."
+          }
+        }
+      }
+    },
+    "Your password, to be sure it's you." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Passwort, damit sicher ist, dass du es bist."
           }
         }
       }

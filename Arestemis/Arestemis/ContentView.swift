@@ -19,18 +19,22 @@ struct ContentView: View {
         // Tests (the app is their host) and samples never touch the real login.
         let testing = NSClassFromString("XCTestCase") != nil
             || ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
-        let quiet = options.sample || testing
+        // Screenshots of the login and the no-access screen (`SampleAccount`): a made-up account, no server.
+        let account = SampleAccount.session(app: .arestemis, arguments: arguments)
+        let quiet = options.sample || testing || account != nil
         let installDefaults = quiet ? nil : EmpireShared.defaults
         self.push = quiet ? nil : push          // samples and tests never register for push
+        let session = account?.session
+            ?? EmpireSession(app: .arestemis, restoreOnLaunch: !quiet, installDefaults: installDefaults)
+        restoresOnLaunch = account?.restores ?? !quiet
         #else
-        let quiet = false
         let installDefaults = EmpireShared.defaults
         self.push = push
+        let session = EmpireSession(app: .arestemis, restoreOnLaunch: true, installDefaults: installDefaults)
+        restoresOnLaunch = true
         #endif
-        let session = EmpireSession(app: .arestemis, restoreOnLaunch: !quiet, installDefaults: installDefaults)
         _store = State(initialValue: Self.makeStore(session: session, options: options))
         self.options = options
-        restoresOnLaunch = !quiet
     }
 
     private static func makeStore(session: EmpireSession, options: LaunchOptions) -> ArestemisStore {

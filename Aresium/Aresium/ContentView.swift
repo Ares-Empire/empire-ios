@@ -27,8 +27,11 @@ struct ContentView: View {
         var skipRestore = false
         #if DEBUG
         sample = arguments.contains("-sampleData")
-        let debugLaunch = DebugLaunch.isTesting || sample || arguments.contains("-sampleAuthUnavailable") || arguments.contains("-sampleLoginWaiting")
-        skipRestore = DebugLaunch.isTesting || arguments.contains("-sampleLoginWaiting")
+        // Screenshots of the login and the no-access screen (`SampleAccount`): a made-up account, no server.
+        let account = SampleAccount.session(app: .aresium, arguments: arguments)
+        let debugLaunch = DebugLaunch.isTesting || sample || arguments.contains("-sampleAuthUnavailable")
+            || arguments.contains("-sampleLoginWaiting") || account != nil
+        skipRestore = DebugLaunch.isTesting || arguments.contains("-sampleLoginWaiting") || account?.restores == false
         #endif
         var initialTheme = ThemeState(rememberedValue: UserDefaults.standard.string(forKey: ThemeState.preferenceKey),
                                       previousValue: UserDefaults.standard.string(forKey: ThemeState.previousPreferenceKey))
@@ -57,6 +60,7 @@ struct ContentView: View {
                                     installDefaults: debugLaunch ? nil : EmpireShared.defaults)
         if DebugLaunch.isTesting { session = DebugLaunch.testingSession() }
         if arguments.contains("-sampleAuthUnavailable") { session = DebugLaunch.unavailableSession() }
+        if let account { session = account.session }
         let publisher: WidgetSnapshotPublisher = debugLaunch ? .temporary() : WidgetSnapshotPublisher()
         #else
         let session = EmpireSession(app: .aresium, installDefaults: EmpireShared.defaults)

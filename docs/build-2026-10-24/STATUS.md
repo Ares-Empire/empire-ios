@@ -139,3 +139,14 @@ Stop only for a genuine problem.
   account deletion in the apps reaching every service, drop search terms from the services' logs, light mode before
   the next app.
 
+
+## 2026-10-25: accounts in every app, legal pages live, language restart (briefs F1, F2, G1 in `../build-2026-10-25/`)
+
+- Legal pages published (Patrik approved the text and the address; AVV with netcup concluded; journald 14 days).
+- F1 (server) + F2 (apps): one Ares account run from every app: sign up, reset, ask for access, change password, leave
+  an app (its data goes), delete the account (the server's `deletions` jobs reach Arestemis and push). Live and on
+  Patrik's simulator; the privacy policy's account section updated.
+- G1: switching the language asks (in the new language, Cancel in the current one), then the app rebuilds itself in
+  it (`LanguageRoot`, no `exit()`); lookups go through `LocalizedStringResource` with `.appLanguage`
+  (`scripts/strings.py check` flags the others, `fix-lookups` rewrites them). iOS's own menus inside the app (Cut/Copy)
+  switch at the next launch: accepted, the alternative is asking the person to reopen the app.

@@ -54,10 +54,39 @@ struct Idea: Codable, Equatable, Hashable, Sendable {
     let note: String
 }
 
-/// One pending sign-up (`GET /api/empire/approvals`, admin only).
+/// One account waiting for Patrik (`GET /api/empire/approvals`, admin only): a new sign-up (`approved == false`), or an
+/// approved account asking for more apps. `requested` names the apps it asked for (service ids); approving grants them,
+/// declining deletes a new sign-up or only clears an approved account's request (ares-empire docs/ACCOUNTS.md).
 struct PendingAccount: Codable, Equatable, Identifiable, Sendable {
     let id: String
     let email: String
     let name: String
     let created: String
+    var requested: [String] = []
+    var approved = false
+
+    init(id: String, email: String, name: String, created: String, requested: [String] = [], approved: Bool = false) {
+        self.id = id
+        self.email = email
+        self.name = name
+        self.created = created
+        self.requested = requested
+        self.approved = approved
+    }
+
+    private enum CodingKeys: String, CodingKey { case id, email, name, created, requested, approved }
+
+    /// The two newer fields are optional, so the list still loads from a hub that does not send them yet.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        email = try container.decode(String.self, forKey: .email)
+        name = try container.decode(String.self, forKey: .name)
+        created = try container.decode(String.self, forKey: .created)
+        requested = (try? container.decodeIfPresent([String].self, forKey: .requested)) ?? []
+        approved = try container.decodeIfPresent(Bool.self, forKey: .approved) ?? false
+    }
+
+    /// The apps it asked for, by name: "Arestemis, Aresus".
+    var requestedApps: String { requested.map(EmpireAppIdentity.name(of:)).joined(separator: ", ") }
 }

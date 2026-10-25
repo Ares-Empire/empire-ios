@@ -17,6 +17,16 @@
         }
       }
     },
+    "Access requests" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zugangsanfragen"
+          }
+        }
+      }
+    },
     "Add a province" : {
       "localizations" : {
         "de" : {
@@ -83,6 +93,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Freigeben"
+          }
+        }
+      }
+    },
+    "Asks for" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fragt nach"
           }
         }
       }
@@ -170,6 +190,16 @@
         }
       }
     },
+    "Decline %@'s request? The account stays; only the request is cleared." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Anfrage von %@ ablehnen? Das Konto bleibt, nur die Anfrage wird gelöscht."
+          }
+        }
+      }
+    },
     "Decline %@? This deletes their pending sign-up." : {
       "localizations" : {
         "de" : {
@@ -196,16 +226,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "EXPANSIONEN"
-          }
-        }
-      }
-    },
-    "Email" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "E-Mail"
           }
         }
       }
@@ -241,22 +261,22 @@
         }
       }
     },
-    "Forgot password?" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Passwort vergessen?"
-          }
-        }
-      }
-    },
     "Keep account" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Konto behalten"
+          }
+        }
+      }
+    },
+    "Keep request" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anfrage behalten"
           }
         }
       }
@@ -277,26 +297,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Offene Konten werden geladen…"
-          }
-        }
-      }
-    },
-    "Log in" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Anmelden"
-          }
-        }
-      }
-    },
-    "Log in with your Empire account" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mit deinem Empire-Konto anmelden"
           }
         }
       }
@@ -403,16 +403,6 @@
         }
       }
     },
-    "Password" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Passwort"
-          }
-        }
-      }
-    },
     "Pending accounts" : {
       "localizations" : {
         "de" : {
@@ -463,16 +453,6 @@
         }
       }
     },
-    "Retry" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Erneut versuchen"
-          }
-        }
-      }
-    },
     "SCOUTED" : {
       "comment" : "Province status: an idea",
       "localizations" : {
@@ -514,16 +494,6 @@
         }
       }
     },
-    "Sign up" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Registrieren"
-          }
-        }
-      }
-    },
     "Signed up" : {
       "localizations" : {
         "de" : {
@@ -540,16 +510,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "THE EMPIRE"
-          }
-        }
-      }
-    },
-    "This app needs an Empire account with access." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Diese App braucht ein Empire-Konto mit Zugang."
           }
         }
       }
@@ -593,9 +553,6 @@
           }
         }
       }
-    },
-    "·" : {
-      "shouldTranslate" : false
     }
   },
   "version" : "1.0"

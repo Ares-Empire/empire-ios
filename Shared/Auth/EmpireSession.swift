@@ -11,13 +11,44 @@ struct EmpireAppIdentity: Equatable, Sendable {
     static let arestemis = EmpireAppIdentity(service: "arestemis", name: "Arestemis")
     static let aresus = EmpireAppIdentity(service: "aresus", name: "Aresus")
     static let arestoteles = EmpireAppIdentity(service: "arestoteles", name: "Arestoteles")
+
+    /// Every Ares app, in the order the account server lists its services.
+    static let all: [EmpireAppIdentity] = [.empire, .aresium, .arestemis, .aresus, .arestoteles]
+
+    /// The app's name for a service id ("arestemis" → "Arestemis"); the id itself for one this build does not know.
+    static func name(of service: String) -> String {
+        all.first { $0.service == service }?.name ?? service
+    }
 }
 
-struct EmpireRecord: Decodable {
+/// The account as the account server sends it to the account itself (a login answer, `GET`/`PATCH` of its record).
+struct EmpireRecord: Decodable, Equatable {
     let id: String
     let approved: Bool
     let services: [String]
+    /// The apps the account asked for and does not have yet (ares-empire docs/ACCOUNTS.md → Accounts in every app).
+    var requested: [String] = []
     var email: String? = nil        // the account server sends it to the account itself
+
+    init(id: String, approved: Bool, services: [String], requested: [String] = [], email: String? = nil) {
+        self.id = id
+        self.approved = approved
+        self.services = services
+        self.requested = requested
+        self.email = email
+    }
+
+    private enum CodingKeys: String, CodingKey { case id, approved, services, requested, email }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        approved = try container.decode(Bool.self, forKey: .approved)
+        services = try container.decode([String].self, forKey: .services)
+        // Missing before the field existed on the server, and PocketBase sends "" for an empty multi-select.
+        requested = (try? container.decodeIfPresent([String].self, forKey: .requested)) ?? []
+        email = try container.decodeIfPresent(String.self, forKey: .email)
+    }
 }
 
 struct AuthResponse: Decodable {
@@ -33,9 +64,15 @@ struct EmpireAuthClient {
         do {
             return try await post("auth-with-password", body: ["identity": email, "password": password])
         } catch HTTPError.server(400, _) {
-            // The account server's own words ("Failed to authenticate.") are English only.
-            throw HTTPError.server(400, String(localized: "Wrong email or password.", table: "Shared"))
+            // The account server's own words ("Failed to authenticate.") are English only. It cannot tell a wrong
+            // password from an account that is not confirmed or approved yet, so the line names both.
+            throw HTTPError.server(400, Self.refusedLogin)
         }
+    }
+
+    static var refusedLogin: String {
+        String(localized: LocalizedStringResource("Wrong email or password, or the account is not confirmed or approved yet.",
+                                                  table: "Shared", locale: .appLanguage))
     }
 
     func refresh(token: String) async throws -> AuthResponse {
@@ -62,6 +99,9 @@ struct EmpireAuthClient {
 /// - The account is fine but may not use THIS app (its `services` lack this app's service, or the app's server
 ///   answers 403): `access = .denied` in this app only; this app forgets its own data (`onAppDataReset`), the shared
 ///   login stays for the other apps.
+/// - The account's own actions (Settings → Account, the login's sheets, "Ask for access") are in `AccountForms.swift`;
+///   they change the session only through `updateAccess`, `takeOverLogin`, `accountDeleted` and the password-change
+///   guard below.
 @MainActor @Observable
 final class EmpireSession {
     enum Access: Equatable { case unknown, granted, denied(String) }
@@ -70,6 +110,16 @@ final class EmpireSession {
     private(set) var token: String?
     /// The account's email from the last login answer, for Settings → Account. Never logged; forgotten on logout.
     private(set) var email: String?
+    /// The account's id and access from the last answer about it (a login, a refresh, leaving or asking for an app).
+    private(set) var accountID: String?
+    private(set) var services: [String] = []
+    private(set) var requested: [String] = []
+    /// A calm line for the login screen after a logout the person caused ("Your Ares account is deleted."); never an
+    /// error. Cleared by the next login.
+    private(set) var notice: String?
+    /// Between a password change and the login with the new password: the old token is refused by now, so a 401 from
+    /// a request still made with it must not log out (`ChangePasswordForm` ends it either way).
+    private(set) var isChangingPassword = false
     private(set) var access: Access = .unknown
     private(set) var isRestoring = true
     private(set) var isBusy = false
@@ -77,7 +127,10 @@ final class EmpireSession {
     private(set) var needsRestoreRetry = false
     private(set) var loginUnavailable = false
     private let storage: any TokenStorage
-    private let client: EmpireAuthClient
+    /// The account server, through one transport (tests and `SampleAccount` hand in theirs): logins here,
+    /// the account's own actions in `accountClient`.
+    let authClient: EmpireAuthClient
+    var accountClient: EmpireAccountClient { EmpireAccountClient(transport: authClient.transport) }
     private let installDefaults: UserDefaults?
     private(set) var generation = 0
     private(set) var lastRenewedAt: Date?
@@ -90,6 +143,11 @@ final class EmpireSession {
     var isDenied: Bool { if case .denied = access { true } else { false } }
     /// Logged in AND allowed into this app.
     var isSignedIn: Bool { token != nil && !isDenied }
+    /// No access because the account lacks this app's service (not because this app's server refused it): asking for
+    /// access can help.
+    var canAskForAccess: Bool { isDenied && accountID != nil && !services.contains(app.service) }
+    /// The account asked for this app and waits for approval.
+    var hasAskedForAccess: Bool { requested.contains(app.service) }
 
     /// Called when a session starts in this app: a new login, the saved login restored at launch, or a login picked
     /// up from another app (not when the same account's token is renewed). Access may still be denied: check `isSignedIn`.
@@ -102,7 +160,13 @@ final class EmpireSession {
     func handleAuthFailure(_ failure: Error, generation: Int) {
         guard generation == self.generation else { return }
         switch failure {
-        case HTTPError.unauthorized: logOut()
+        case HTTPError.unauthorized:
+            // During a password change the old token is refused on purpose; the change logs in again or out itself.
+            guard !isChangingPassword else {
+                Self.log.notice("\(self.app.service, privacy: .public): a 401 during the password change is not a logout")
+                return
+            }
+            logOut()
         case HTTPError.server(403, let message): deny(message ?? noAccessMessage)
         default: break
         }
@@ -113,7 +177,7 @@ final class EmpireSession {
         self.app = app
         self.installDefaults = installDefaults
         self.storage = storage
-        self.client = client
+        authClient = client
         isRestoring = restoreOnLaunch
         if let installDefaults {
             do { try FirstLaunchTokenReset.run(storage: storage, defaults: installDefaults) }
@@ -121,10 +185,12 @@ final class EmpireSession {
         }
     }
 
-    private var noAccessMessage: String { String(localized: "This account has no access to \(app.name).", table: "Shared") }
+    private var noAccessMessage: String { String(localized: LocalizedStringResource("This account has no access to \(app.name).",
+                                                                                    table: "Shared",
+                                                                                    locale: .appLanguage)) }
 
     func restore() async {
-        guard !isBusy else { return }
+        guard !isBusy, !isChangingPassword else { return }
         isBusy = true
         isRestoring = true
         error = nil
@@ -134,7 +200,7 @@ final class EmpireSession {
         do {
             if let installDefaults { try FirstLaunchTokenReset.run(storage: storage, defaults: installDefaults) }
             guard let saved = try storage.read() else { return }
-            let response = try await client.refresh(token: saved)
+            let response = try await authClient.refresh(token: saved)
             guard generation == self.generation else { return }
             let startsSession = token == nil
             try accept(response)
@@ -160,12 +226,13 @@ final class EmpireSession {
         guard !isBusy else { return }
         isBusy = true
         error = nil
+        notice = nil
         loginUnavailable = false
         let generation = generation
         defer { isBusy = false }
         do {
             if let installDefaults { try FirstLaunchTokenReset.run(storage: storage, defaults: installDefaults) }
-            let response = try await client.login(email: email, password: password)
+            let response = try await authClient.login(email: email, password: password)
             guard generation == self.generation else { return }
             try accept(response)
             self.generation += 1
@@ -183,11 +250,16 @@ final class EmpireSession {
     /// A valid login is saved for all apps even when this app is not allowed; access is decided per app.
     private func accept(_ response: AuthResponse) throws {
         guard !response.token.isEmpty, response.record.approved else {
-            throw HTTPError.server(403, String(localized: "This account is not approved yet.", table: "Shared"))
+            throw HTTPError.server(403, String(localized: LocalizedStringResource("This account is not approved yet.",
+                                                                                  table: "Shared",
+                                                                                  locale: .appLanguage)))
         }
         try storage.save(response.token)
         token = response.token
         email = response.record.email
+        accountID = response.record.id
+        services = response.record.services
+        requested = response.record.requested
         lastRenewedAt = .now
         if response.record.services.contains(app.service) {
             access = .granted
@@ -208,7 +280,7 @@ final class EmpireSession {
     /// when another account logged in. A newer token for the same account (another app renewed it) is taken over
     /// without asking the server, so the apps don't renew it in turn on every switch.
     func followSharedLogin() async {
-        guard !isBusy, !isRestoring else { return }
+        guard !isBusy, !isRestoring, !isChangingPassword else { return }
         let saved: String?
         do { saved = try storage.read() } catch { return }
         switch (token, saved) {
@@ -232,17 +304,53 @@ final class EmpireSession {
 
     /// Ends the login in every Empire app. Each logout is written to the device's log with the line that asked for it,
     /// so an unexpected one can be traced: `log show --predicate 'subsystem == "de.ares-empire.shared"'`.
-    func logOut(reason: String? = nil, file: StaticString = #fileID, line: UInt = #line) {
+    /// - Parameters:
+    ///   - reason: a problem to show on the login screen; `notice`: a calm line instead (an action the person took).
+    func logOut(reason: String? = nil, notice: String? = nil, file: StaticString = #fileID, line: UInt = #line) {
         Self.log.notice("\(self.app.service, privacy: .public): login ended everywhere by \(file, privacy: .public):\(line)")
-        endSession(reason: reason)
+        endSession(reason: reason, notice: notice)
         do { try storage.delete() } catch { self.error = self.error ?? error.localizedDescription }
     }
 
+    // MARK: the account's own actions (AccountForms.swift)
+
+    /// The account's access changed on the server (it left this app, or asked for one): take over its services and
+    /// requests. Without this app's service this app closes and forgets its data, as when access is denied; the shared
+    /// login stays for the other apps.
+    func updateAccess(services: [String], requested: [String]) {
+        guard token != nil else { return }
+        self.services = services
+        self.requested = requested
+        if !services.contains(app.service), !isDenied { deny(noAccessMessage) }
+    }
+
+    /// After a password change: the login with the new password replaces the refused token here and, through the
+    /// shared Keychain item, in every app. The same account only; no new session starts, so the app keeps its data.
+    func takeOverLogin(_ response: AuthResponse) throws {
+        guard token != nil, let accountID, response.record.id == accountID else { throw HTTPError.invalidResponse }
+        try accept(response)
+    }
+
+    /// Starts and ends the password change's guard (see `isChangingPassword`). Any logout ends it as well.
+    func beginPasswordChange() { isChangingPassword = true }
+    func endPasswordChange() { isChangingPassword = false }
+
+    /// The account is deleted on the server: the login ends in every app, with a calm line on the login screen.
+    func accountDeleted(file: StaticString = #fileID, line: UInt = #line) {
+        logOut(notice: String(localized: LocalizedStringResource("Your Ares account is deleted.", table: "Shared",
+                                                                 locale: .appLanguage)), file: file, line: line)
+    }
+
     /// Ends the login in this app only (the saved login is left as it is).
-    private func endSession(reason: String?) {
+    private func endSession(reason: String?, notice: String? = nil) {
         generation += 1
         token = nil
         email = nil
+        accountID = nil
+        services = []
+        requested = []
+        self.notice = notice
+        isChangingPassword = false
         access = .unknown
         lastRenewedAt = nil
         isRestoring = false

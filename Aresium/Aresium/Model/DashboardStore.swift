@@ -71,7 +71,7 @@ final class DashboardStore {
             else {
                 guard let token = session.token else { throw HTTPError.unauthorized }
                 loaded = try await client.dashboard(token: token) {
-                    if generation == self.generation, fetch == self.fetchGeneration { self.session.logOut() }
+                    if fetch == self.fetchGeneration { self.session.handleAuthFailure(HTTPError.unauthorized, generation: generation) }
                 }
                 guard generation == self.generation else { return }
             }

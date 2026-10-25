@@ -151,7 +151,7 @@ struct EmpireStoreTests {
         await store.reload()
         transport.data = try JSONEncoder().encode(EmpireSamples.approvals)
         await store.loadApprovals()
-        #expect(store.approvals.count == 2 && !store.isLoadingApprovals)
+        #expect(store.approvals.count == EmpireSamples.approvals.count && !store.isLoadingApprovals)
         let remaining = Array(EmpireSamples.approvals.dropFirst())
         transport.responses = [(204, Data()), (200, try JSONEncoder().encode(remaining)),
                                (200, try JSONEncoder().encode(empireWithPending(1)))]
@@ -229,7 +229,7 @@ struct EmpireStoreTests {
             #expect(other.isSignedIn)
         default:
             #expect(session.isSignedIn && storage.token != nil)
-            #expect(store.data == original && store.approvals.count == 2)
+            #expect(store.data == original && store.approvals.count == EmpireSamples.approvals.count)
             #expect(action.error(in: store) == "Login service unavailable, try again")
         }
     }
@@ -317,11 +317,13 @@ struct EmpireStoreTests {
         await store.ring(add: "aresium")
         #expect(store.data?.projects.contains { $0.slug == "aresium" } == true)
         await store.loadApprovals()
-        #expect(store.approvals.count == (user ? 0 : 2))
+        #expect(store.approvals.count == (user ? 0 : 3))
         if !user {
             await store.decide(id: "sample-pending-one", approve: true)
-            #expect(store.approvals.count == 1 && store.data?.pending == 1)
+            #expect(store.approvals.count == 2 && store.data?.pending == 2)
             await store.decide(id: "sample-pending-two", approve: false)
+            #expect(store.approvals.count == 1 && store.data?.pending == 1)
+            await store.decide(id: "sample-member-one", approve: true)
             #expect(store.approvals.isEmpty && store.data?.pending == 0)
             await store.reload()
             await store.loadApprovals()

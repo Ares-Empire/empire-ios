@@ -22,16 +22,20 @@ struct ContentView: View {
         // Tests (the app is their host) and samples never touch the real login, files or Spotlight.
         let testing = NSClassFromString("XCTestCase") != nil
             || ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
-        let quiet = options.sample || testing
+        // Screenshots of the login and the no-access screen (`SampleAccount`): a made-up account, no server.
+        let account = SampleAccount.session(app: .arestoteles, arguments: arguments)
+        let quiet = options.sample || testing || account != nil
+        let session = account?.session ?? EmpireSession(app: .arestoteles, restoreOnLaunch: !quiet,
+                                                        installDefaults: quiet ? nil : EmpireShared.defaults)
+        restoresOnLaunch = account?.restores ?? !quiet
+        let store = Self.makeStore(session: session, options: options, testing: testing || account != nil)
         #else
-        let testing = false
-        let quiet = false
+        let session = EmpireSession(app: .arestoteles, restoreOnLaunch: true, installDefaults: EmpireShared.defaults)
+        restoresOnLaunch = true
+        let store = Self.makeStore(session: session, options: options, testing: false)
         #endif
-        let session = EmpireSession(app: .arestoteles, restoreOnLaunch: !quiet,
-                                    installDefaults: quiet ? nil : EmpireShared.defaults)
-        _store = State(initialValue: Self.makeStore(session: session, options: options, testing: testing))
+        _store = State(initialValue: store)
         self.options = options
-        restoresOnLaunch = !quiet
     }
 
     private static func makeStore(session: EmpireSession, options: LaunchOptions, testing: Bool) -> VaultStore {

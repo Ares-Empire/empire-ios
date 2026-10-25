@@ -549,16 +549,6 @@
         }
       }
     },
-    "Log in with your Empire account." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mit deinem Empire-Konto anmelden."
-          }
-        }
-      }
-    },
     "Mode" : {
       "localizations" : {
         "de" : {
@@ -968,9 +958,6 @@
           }
         }
       }
-    },
-    "·" : {
-      "shouldTranslate" : false
     }
   },
   "version" : "1.0"
