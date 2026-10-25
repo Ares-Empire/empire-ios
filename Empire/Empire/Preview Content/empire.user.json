@@ -1,8 +1,8 @@
 {
   "version": 2,
   "me": {
-    "id": "sample-user",
-    "name": "Sample member",
+    "id": "samplemember001",
+    "name": "Robin Vale",
     "admin": false
   },
   "projects": [
@@ -27,8 +27,8 @@
         "changelog": []
       },
       "state": "coming-soon",
-      "live": null,
-      "app": "aresium://"
+      "app": "aresium://",
+      "live": null
     }
   ],
   "addable": [],
@@ -36,12 +36,12 @@
     {
       "at": "2026-10-23",
       "project": "aresium",
-      "text": "The Aresium iPhone app grew to the full mobile site: transaction detail, recategorisation and import, plus two home-screen widgets for spending and groceries."
+      "text": "The Aresium iPhone app grew to the full mobile site: transaction detail and recategorise, import (button and share sheet), the red Aresium mode with the ARESIUM band and intro, and two home-screen widgets (this month's spending line; Groceries + Drogerie). The server now also sends the recategorise choices and each month's running total; the old browser calculation and the paint animation are gone."
     },
     {
       "at": "2026-10-23",
       "project": "aresium",
-      "text": "The first native Aresium app took shape: Empire login, categories and months. Dashboard numbers now come from the server, shared by the website and the app."
+      "text": "The first iPhone app took shape: native SwiftUI Aresium (Empire login, the start, category and month screens of the mobile site) runs on the simulator. To serve website and app alike, Aresium now calculates every dashboard number on the server (`/api/data` v2), checked identical to the old browser calculation on all real data."
     }
   ],
   "ideas": [],

@@ -1,0 +1,49 @@
+{
+  "version": 2,
+  "me": {
+    "id": "samplemember001",
+    "name": "Robin Vale",
+    "admin": false
+  },
+  "projects": [
+    {
+      "slug": "aresium",
+      "name": "Aresium",
+      "url": "https://aresium.de",
+      "logo": "brand/hermes.webp",
+      "status": "CONQUERED",
+      "domain": "aresium.de",
+      "blurb": "Personal finance command — VR Bank + PayPal, imported and understood.",
+      "detail": {
+        "about": "The empire's personal-finance command. Aresium imports VR Bank and PayPal activity, reconciles it, and turns raw statements into an understood picture of balances, cash flow and where the money actually goes.",
+        "features": [
+          "VR Bank + PayPal import",
+          "Transaction categorisation & reconciliation",
+          "Balance and cash-flow overview"
+        ],
+        "setup": "",
+        "wip": [],
+        "ideas": [],
+        "changelog": []
+      },
+      "state": "coming-soon",
+      "app": "aresium://",
+      "live": null
+    }
+  ],
+  "addable": [],
+  "chronicle": [
+    {
+      "at": "2026-10-23",
+      "project": "aresium",
+      "text": "The Aresium iPhone app grew to the full mobile site: transaction detail and recategorise, import (button and share sheet), the red Aresium mode with the ARESIUM band and intro, and two home-screen widgets (this month's spending line; Groceries + Drogerie). The server now also sends the recategorise choices and each month's running total; the old browser calculation and the paint animation are gone."
+    },
+    {
+      "at": "2026-10-23",
+      "project": "aresium",
+      "text": "The first iPhone app took shape: native SwiftUI Aresium (Empire login, the start, category and month screens of the mobile site) runs on the simulator. To serve website and app alike, Aresium now calculates every dashboard number on the server (`/api/data` v2), checked identical to the old browser calculation on all real data."
+    }
+  ],
+  "ideas": [],
+  "pending": 0
+}

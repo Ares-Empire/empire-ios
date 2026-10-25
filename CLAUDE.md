@@ -20,7 +20,10 @@ Read `README.md` first, then the decision record in the ares-empire repo
 
 ## Workflow (Codex month, until about 2026-11-20)
 
-ChatGPT Pro runs until about 2026-11-20. Until then Claude delegates bounded builds to Codex.
+**Since 2026-10-25 (Patrik): hand work to Claude agents (the Agent tool), not Codex.** The Codex notes below stay for
+reference; the same rules hold for Claude agents (a worktree, a full brief, Claude checks and merges, the look is Claude's).
+
+ChatGPT Pro runs until about 2026-11-20. Until then Claude delegated bounded builds to Codex.
 After that, Claude builds alone: drop this section. Same setup as nametbd3 (`docs/WORKFLOW.md` there),
 adapted for Xcode on the MacBook. Codex's own rules: `AGENTS.md`.
 
@@ -199,8 +202,8 @@ specified yet) → new apps. The other items fit in between.
 2. **On the phone:** the checks in `docs/reviews/2026-10-23-pre-testflight.md` (widgets incl. row taps), the shared
    login across the apps on the real device, the Empire app opening Aresium (`aresium://`), no connection; the
    Aresus widget placed on the home and lock screen (refreshes by itself, the medium one's rows open their province).
-3. **Council over the Empire app before its first upload** (`docs/REVIEW.md`): brief 08 (Codex: API, store, marks,
-   opener) and the login changes (`followSharedLogin`). Not done yet.
+3. ~~**Council over the Empire app before its first upload**~~: done 2026-10-25, "Corrected"
+   (`docs/reviews/2026-10-25-empire-app.md`); fixes merged and the servers deployed. Left from it: 12 and 13 below.
 4. Hub data, not this repo: Aresium's "About" on the hub (`data/state.json` on the server, `lock: true`, so the sync
    never refreshes it) is outdated (Next.js, Prisma); Patrik has not decided yet whether to rewrite it.
 5. Later (decided): Aresium for several users, then Aresium `open` in the hub catalog. **Other people's Aresium data
@@ -219,8 +222,17 @@ specified yet) → new apps. The other items fit in between.
    `aristotle-bust.png` has a faint "Magnific" watermark); a widget with a position to revisit (needs a widget target).
 10. ~~Light mode~~: built 2026-10-25 (section "Light mode"). On the phone, check both looks once TestFlight runs
    (the iPhone switching by itself in the evening while an app is open, the widgets on a light and a dark home screen).
-11. **Aresync file sharing from the phone** (Patrik, 2026-10-25, named as a next step): not specified yet. Ask Patrik
-   what it should do (which files, to which machines, from the share sheet or an app) before writing a brief.
+11. **Aresync file sharing from the phone** (Patrik, 2026-10-25): on hold; Patrik will say what it should do when it
+   comes up. Don't ask before then.
+12. **Before anyone but Patrik gets an app** (council 2026-10-25): log out centrally (a logout marker in
+   `group.de.ares-empire.shared` that every app and widget checks before showing saved data; the Aresium widget drops
+   its snapshot without a token; push devices removed by the app that logs out), a privacy cover in the app switcher,
+   and a way to install a missing province app from the Empire app (the hub sends its TestFlight link).
+13. **For Patrik to decide** (council 2026-10-25): (a) should a member's ring show every province the account has
+   access to (today: only their saved ring within the catalog, so a friend approved for Arestemis sees an empty ring
+   and cannot add it)? (b) What makes the Empire app worth having over the mobile website (`ares-empire/docs/
+   EMPIRE-APP.md` lacks the iPhone-features note): e.g. a sign-up notification with Approve/Decline on the lock
+   screen, and the last hub kept on the phone for opening offline.
 
 ## Setup state (update as it changes)
 
@@ -238,6 +250,9 @@ specified yet) → new apps. The other items fit in between.
 - Test fixtures `AresiumTests/server-dashboard.sample.json` + `.expected.json`: the Aresium server's sample and
   the website's answers for it. When `/api/data` changes: `npm run sample` in aresium, then
   `node scripts/aresium-fixtures.mjs`.
+- Empire app fixtures (2026-10-25): `Empire/EmpireTests/ServerSamples/` (every hub answer and error, made by the hub's
+  own code, `ares-empire/tools/empire_samples.py`; `ServerSamplesTests`) and the sample mode's `Preview Content`
+  (admin, member). When the hub API changes: `bash scripts/empire-fixtures.sh`.
 - **Two projects, one shared folder** (2026-10-24): `Aresium/Aresium.xcodeproj` and `Empire/Empire.xcodeproj`
   (bundle id `de.ares-empire.empire`, made with `scripts/new-app-project.py`). `Shared/` (Empire login, network
   layer, `AppFont`, fonts, `EmpireShared`) is compiled into every app (and the Aresium widget, for the fonts).
