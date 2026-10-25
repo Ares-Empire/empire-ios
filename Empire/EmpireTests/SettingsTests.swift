@@ -45,17 +45,24 @@ struct SettingsTests {
         #expect(AppLanguage.preferred([]) == .english)
     }
 
-    @Test func saysWhenTheChoiceTakesEffect() {
-        let (setting, _) = makeSetting()
-        #expect(!setting.announcesSwitch(current: .german, changedHere: false))   // following the iPhone, untouched
+    @Test func knowsTheIPhonesLanguageAlsoWhileTheAppHasItsOwn() {
+        let (base, defaults) = makeSetting()
+        var setting = base
+        // Like `Locale.preferredLanguages`: the app's own list while it has one, otherwise the iPhone's.
+        setting.preferredLanguages = {
+            defaults.persistentDomain(forName: setting.domain)?[LanguageSetting.key] as? [String] ?? ["de-DE", "en"]
+        }
+        #expect(setting.iPhoneLanguage == .german)
+        #expect(setting.language(for: nil) == .german)
         setting.choose(.english)
-        #expect(setting.announcesSwitch(current: .german, changedHere: true))
-        #expect(setting.announcesSwitch(current: .german, changedHere: false))   // also when the page is opened again
-        setting.choose(.german)                                                   // what it shows: nothing to wait for
-        #expect(!setting.announcesSwitch(current: .german, changedHere: true))
-        setting.choose(nil)                         // like the iPhone: its language is unknown to the app
-        #expect(setting.announcesSwitch(current: .german, changedHere: true))
-        #expect(!setting.announcesSwitch(current: .german, changedHere: false))
+        #expect(setting.iPhoneLanguage == .german)                  // read with the app's own choice set aside …
+        #expect(setting.choice == .english)                         // … which is back at once
+        #expect(defaults.persistentDomain(forName: setting.domain)?[LanguageSetting.key] as? [String] == ["en"])
+        #expect(setting.language(for: .english) == .english)
+        #expect(setting.language(for: nil) == .german)
+        defaults.set(["en", "de"], forKey: LanguageSetting.key)     // iOS Settings' list: put back as it was
+        _ = setting.iPhoneLanguage
+        #expect(defaults.persistentDomain(forName: setting.domain)?[LanguageSetting.key] as? [String] == ["en", "de"])
     }
 
     @Test func namesEachLanguageInItself() {

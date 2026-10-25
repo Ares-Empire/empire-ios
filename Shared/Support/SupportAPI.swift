@@ -41,13 +41,16 @@ enum SupportFailure: Error, Equatable {
 
     var message: String {
         switch self {
-        case .offline: String(localized: "No connection. Send it again when you're online.", table: "Shared",
-                              bundle: .appLanguage, locale: .appLanguage)
-        case .tooMany: String(localized: "Too many messages for now. Please try again later.", table: "Shared",
-                              bundle: .appLanguage, locale: .appLanguage)
+        case .offline: String(localized: LocalizedStringResource("No connection. Send it again when you're online.",
+                                                                 table: "Shared",
+                                                                 locale: .appLanguage))
+        case .tooMany: String(localized: LocalizedStringResource("Too many messages for now. Please try again later.",
+                                                                 table: "Shared",
+                                                                 locale: .appLanguage))
         case .loggedOut: HTTPError.unauthorized.localizedDescription      // the login was rejected: the app logs out
-        case .other: String(localized: "It didn't go through. Please try again.", table: "Shared",
-                            bundle: .appLanguage, locale: .appLanguage)
+        case .other: String(localized: LocalizedStringResource("It didn't go through. Please try again.",
+                                                               table: "Shared",
+                                                               locale: .appLanguage))
         }
     }
 }

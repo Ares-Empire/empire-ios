@@ -108,7 +108,7 @@ nonisolated enum WidgetAge {
 
     /// The text the live view shows at `now`.
     static func text(since checked: Date, now: Date) -> String {
-        String(localized: "checked \(String(style(since: checked).format(now).characters))", table: "AresusShared",
-               bundle: .appLanguage, locale: .appLanguage)
+        String(localized: LocalizedStringResource("checked \(String(style(since: checked).format(now).characters))",
+                                                  table: "AresusShared", locale: .appLanguage))
     }
 }

@@ -25,11 +25,11 @@ nonisolated struct WidgetLanguage {
         reload()
     }
 
-    /// The widget: the language it shows from now on (its process can live on between timelines, so it asks each time).
-    @discardableResult
-    func follow() -> AppLanguage {
-        let language = choice ?? .launched
+    /// The language the widget shows: the app's choice, or else the iPhone's (the one iOS started the widget in).
+    var language: AppLanguage { choice ?? .launched }
+
+    /// The widget: shows `language` from now on (its process can live on between timelines, so it asks each time).
+    func follow() {
         AppLanguage.show(language)
-        return language
     }
 }

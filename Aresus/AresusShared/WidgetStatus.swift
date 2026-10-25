@@ -64,9 +64,9 @@ nonisolated struct WidgetStatus: Codable, Equatable, Sendable {
 
     static func summary(issues: Int) -> String {
         switch issues {
-        case 0: String(localized: "All running", table: "AresusShared", bundle: .appLanguage, locale: .appLanguage)
-        default: String(localized: "\(issues) issues", table: "AresusShared",
-                        bundle: .appLanguage, locale: .appLanguage)
+        case 0: String(localized: LocalizedStringResource("All running", table: "AresusShared", locale: .appLanguage))
+        default: String(localized: LocalizedStringResource("\(issues) issues", table: "AresusShared",
+                                                           locale: .appLanguage))
         }
     }
 
@@ -87,7 +87,7 @@ nonisolated struct WidgetStatus: Codable, Equatable, Sendable {
     }
 
     private var serverName: String {
-        String(localized: "Server", table: "AresusShared", bundle: .appLanguage, locale: .appLanguage)
+        String(localized: LocalizedStringResource("Server", table: "AresusShared", locale: .appLanguage))
     }
 
     var issueCount: Int { rows.count }
@@ -118,8 +118,9 @@ nonisolated struct WidgetStatus: Codable, Equatable, Sendable {
     static func example(checked: Date) -> WidgetStatus {
         WidgetStatus(summary: summary(issues: 0), state: .active, issues: [],
                      counts: Counts(issue: 0, active: 4, inactive: 4), serverIssue: nil,
-                     syncLine: String(localized: "3 machines · last sync 2 min ago", table: "AresusShared",
-                                      bundle: .appLanguage, locale: .appLanguage), checked: checked)
+                     syncLine: String(localized: LocalizedStringResource("3 machines · last sync 2 min ago",
+                                                                         table: "AresusShared",
+                                                                         locale: .appLanguage)), checked: checked)
     }
 
     /// The moment the status turns stale.

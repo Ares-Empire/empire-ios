@@ -158,6 +158,45 @@ struct PushCenterTests {
         #expect(Self.body(setup.server.requests[0])?["app"] == Self.app)
     }
 
+    // MARK: Restarting in another language
+
+    /// Settings → Language rebuilds the app with a new session (Shared/Language/LanguageRoot.swift): the push center
+    /// takes it, sets the categories again (their titles in the new language) and registers the device with the new
+    /// language once the new session has restored the login. The replaced session no longer reaches it.
+    @Test func aRestartRegistersAgainInTheNewLanguage() async {
+        let setup = await setup()
+        await deliverToken(setup)
+        #expect(Self.body(setup.server.requests[0])?["language"] == AppLanguage.current.code)
+
+        let other: AppLanguage = AppLanguage.launched == .german ? .english : .german
+        let restarted = EmpireSession(app: .empire, storage: setup.storage,
+                                      client: EmpireAuthClient(transport: setup.auth))
+        let category = UNNotificationCategory(identifier: "ARESUS_ISSUE", actions: [], intentIdentifiers: [])
+        await AppLanguage.$scoped.withValue(other) {
+            setup.push.start(app: Self.app, session: restarted, categories: [category])
+            await setup.push.idle()
+            #expect(setup.asks.count == 1)                          // still restoring: nothing yet
+            await restarted.restore()
+            await setup.push.idle()
+            #expect(setup.asks.count == 2)
+            await deliverToken(setup)
+        }
+        #expect(setup.permissions.categories.map(\.identifier) == ["ARESUS_ISSUE"])
+        #expect(setup.permissions.requests.count == 1)              // permission is not asked again
+        #expect(setup.server.requests.count == 2)
+        #expect(Self.body(setup.server.requests[1])?["language"] == other.code)
+
+        // The same session again (SwiftUI may build the root again): nothing happens.
+        setup.push.start(app: Self.app, session: restarted)
+        await setup.push.idle()
+        #expect(setup.asks.count == 2 && setup.server.requests.count == 2)
+
+        // The replaced session ending (a late answer of the old app) does not remove the device.
+        setup.session.logOut()
+        await setup.push.idle()
+        #expect(setup.server.requests.count == 2)
+    }
+
     // MARK: Account switch, logout, denied
 
     @Test func anAccountSwitchRemovesTheOldRegistrationAndRegistersTheNewAccount() async {

@@ -10,9 +10,11 @@ import Synchronization
 /// - SwiftUI texts (`Text("…")`, `Button("…")`, `Text("…", tableName: "Shared")`, plurals) take the root's
 ///   `.environment(\.locale, language.locale)`;
 /// - `String(localized: "…")` is this module's own (below);
-/// - `String(localized: "…", table: …)` and calls with a comment pass `bundle: .appLanguage, locale: .appLanguage`
-///   (`scripts/strings.py check` finds any that do not);
+/// - a table or a comment: `String(localized: LocalizedStringResource("…", table: "Shared", locale: .appLanguage))`
+///   (`scripts/strings.py check` finds lookups that would keep the start language, `fix-lookups` rewrites them);
 /// - formatting uses `AppLanguage.current.locale`, model code `language.string("…")`.
+/// All of them pick the language's strings through the locale of a `LocalizedStringResource`: a bundle's `.lproj`
+/// would not do, as a target without English plurals has no `en.lproj` (tested 2026-10-25).
 nonisolated enum AppLanguage: String, Sendable {
     case english = "en", german = "de"
 
@@ -42,42 +44,23 @@ nonisolated enum AppLanguage: String, Sendable {
 
     /// The request header's value: exactly "en" or "de".
     var code: String { rawValue }
-
-    /// The running target's strings in this language: its `de.lproj` or `en.lproj` folder (the English one holds only
-    /// the plural rules; a key missing there is its own English text). The main bundle if the folder is missing.
-    var bundle: Bundle { Self.bundles[self] ?? .main }
-
-    private static let bundles: [AppLanguage: Bundle] = {
-        var bundles: [AppLanguage: Bundle] = [:]
-        for language in [english, german] {
-            if let path = Bundle.main.path(forResource: language.code, ofType: "lproj") {
-                bundles[language] = Bundle(path: path)
-            }
-        }
-        return bundles
-    }()
 }
 
 extension String {
     /// `String(localized: "…")` in the language the app shows now (`AppLanguage.current`), numbers in its locale.
     /// Declared in the apps' own module with only the key, so every plain `String(localized: "…")` calls this one
     /// instead of Foundation's, which keeps the language iOS started the app in. Xcode still finds the key (it reads
-    /// the `String.LocalizationValue`), but not a table or comment: those calls use Foundation's with
-    /// `bundle: .appLanguage, locale: .appLanguage`.
+    /// the `String.LocalizationValue`), but would not see a table or comment here: those calls name a
+    /// `LocalizedStringResource` (see `AppLanguage`).
     nonisolated init(localized key: String.LocalizationValue) {
-        let language = AppLanguage.current
-        self.init(localized: key, table: nil, bundle: language.bundle, locale: language.locale)
+        self = AppLanguage.current.string(LocalizedStringResource(key))
     }
 }
 
-extension Bundle {
-    /// The strings of the language the app shows now: `String(localized: "…", table: "Shared", bundle: .appLanguage,
-    /// locale: .appLanguage)`.
-    nonisolated static var appLanguage: Bundle { AppLanguage.current.bundle }
-}
-
 extension Locale {
-    /// The locale of the language the app shows now (`AppLanguage.current.locale`).
+    /// The locale of the language the app shows now (`AppLanguage.current.locale`); in a `LocalizedStringResource` it
+    /// picks the language's strings: `String(localized: LocalizedStringResource("…", table: "Shared",
+    /// locale: .appLanguage))`.
     nonisolated static var appLanguage: Locale { AppLanguage.current.locale }
 }
 

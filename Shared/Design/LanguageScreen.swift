@@ -29,8 +29,8 @@ struct LanguageScreen: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 VStack(spacing: 0) {
-                    option(nil, title: String(localized: "Like the iPhone", table: "Shared", bundle: .appLanguage,
-                                              locale: .appLanguage))
+                    option(nil, title: String(localized: LocalizedStringResource("Like the iPhone", table: "Shared",
+                                                                                 locale: .appLanguage)))
                     SettingsDivider()
                     option(.english, title: AppLanguage.english.name)
                     SettingsDivider()
