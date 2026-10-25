@@ -151,6 +151,10 @@ sheet is dark in every app, also in Aresium's light theme.
 All five apps (Aresium, Empire, Arestemis, Aresus, Arestoteles) work on the simulator and are merged; nothing reaches
 the phone until Apple approves the developer account.
 
+**Order of the big steps** (Patrik, 2026-10-25; also in `ares-empire/EMPIRE.md` → Now and next): light mode (10) →
+TestFlight once Apple approves (1–3, 6) → Aresium for other people (5) → Aresync file sharing from the phone (11, not
+specified yet) → new apps. The other items fit in between.
+
 1. **TestFlight, once Apple approves:** set the paid team (project level, all five projects); the App Groups
    `group.de.ares-empire.aresium` + `group.de.ares-empire.shared` registered for the bundle ids, the widgets' too
    (`de.ares-empire.aresium.widget`, `de.ares-empire.aresus.widget`) (Xcode's automatic
@@ -180,6 +184,8 @@ the phone until Apple approves the developer account.
 10. **Light mode before the next new app** (Patrik, 2026-10-24; `ares-empire/docs/IPHONE-APPS.md` → "Every app
    has"): colours as light/dark pairs in `Shared/Design`, an Appearance row in Settings, every app checked in both.
    Aresium already has its own light theme (`AppTheme`/`Palette`, the sun button in its header): start from it.
+11. **Aresync file sharing from the phone** (Patrik, 2026-10-25, named as a next step): not specified yet. Ask Patrik
+   what it should do (which files, to which machines, from the share sheet or an app) before writing a brief.
 
 ## Setup state (update as it changes)
 
