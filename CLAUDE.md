@@ -50,7 +50,9 @@ shows this data) and the build is clearly bigger than the brief. Otherwise Claud
    ```
    Models: `gpt-6.1-sol` builds (`xhigh` for tricky ones), `gpt-6-astra` council seats (uses the allowance
    about 3× faster), `gpt-6-luna` trivial jobs. `-o` goes to `codex-runs/` (gitignored).
-4. **Check** (below), commit in the worktree, merge to `main`, remove the worktree, set the brief's status line.
+4. **Check** (below), commit in the worktree, merge to `main` and push it, remove the worktree, set the brief's
+   status line. Push as soon as work is merged, in every Empire repo; aresync's daily run is only the backstop
+   (Patrik, 2026-10-25).
 
 **Why no sandbox:** Codex's `workspace-write` sandbox blocks `xcodebuild` and the simulator (tested
 2026-10-23), so builds run without it (Patrik's call, 2026-10-23). Codex can then build, run the simulator and
