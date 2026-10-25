@@ -21,3 +21,4 @@ codex-runs/
 *.cer
 *.mobileprovision
 *.xcarchive
+__pycache__/
