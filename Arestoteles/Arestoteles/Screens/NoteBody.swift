@@ -201,11 +201,11 @@ struct LookupPanel: View {
                         Button { withAnimation(.easeOut(duration: 0.18)) { shown = selected ? nil : kind } } label: {
                             Text(kind.title)
                                 .font(AppFont.text(13, weight: selected ? .semibold : .medium))
-                                .foregroundStyle(selected ? Color(hex: 0x06201D) : Ink.secondary)
+                                .foregroundStyle(selected ? AppAccent.onColor : Ink.secondary)
                                 .padding(.horizontal, 12).frame(minHeight: 32)
                                 .background {
                                     if selected { Capsule().fill(Look.accent.color) }
-                                    else { Capsule().fill(.white.opacity(0.05)).overlay(Capsule().strokeBorder(.white.opacity(0.1))) }
+                                    else { Capsule().fill(Ink.field).overlay(Capsule().strokeBorder(Ink.edge)) }
                                 }
                         }
                         .buttonStyle(.plain)
