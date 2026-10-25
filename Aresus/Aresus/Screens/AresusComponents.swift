@@ -2,6 +2,13 @@ import SwiftUI
 
 /// Small pieces both tabs use, in the family look of Shared/Design (Aresium's header, the hub's quiet states).
 
+/// Aresus's own colours beside Shared/Design's, light/dark pairs like those.
+enum AresusInk {
+    /// Amber: something to look at that is not a failure (commits on GitHub not deployed yet). Deeper on the light
+    /// wall, so it reads on a light card (5:1).
+    static let warning = Color(light: Color(hex: 0x8F6210), dark: Color(hex: 0xE0B15A))
+}
+
 /// The tab header: the bust on the left (38 pt, like Aresium's Hermes), the title centred, an optional button right.
 struct AresusHeader<Trailing: View>: View {
     let bust: Image
@@ -11,7 +18,7 @@ struct AresusHeader<Trailing: View>: View {
     var body: some View {
         HStack(spacing: 10) {
             bust.resizable().scaledToFit().frame(width: 38, height: 38)
-                .shadow(color: .black.opacity(0.55), radius: 6, y: 4)
+                .shadow(color: Ink.shadow, radius: 6, y: 4)
                 .frame(width: 42, height: 42).accessibilityHidden(true)
             Text(title).font(AppFont.text(17, weight: .bold)).foregroundStyle(Ink.primary).lineLimit(1)
                 .frame(maxWidth: .infinity).accessibilityAddTraits(.isHeader)
@@ -61,7 +68,7 @@ struct CalmMessage: View {
                     .font(AppFont.text(13, weight: .semibold)).foregroundStyle(Ink.primary)
                     .padding(.horizontal, 22).frame(minHeight: 42)
                     .background(Ink.card2, in: .capsule)
-                    .overlay(Capsule().strokeBorder(.white.opacity(0.12)))
+                    .overlay(Capsule().strokeBorder(Ink.edge))
                     .buttonStyle(.plain)
             }
         }
@@ -112,23 +119,26 @@ struct ShareBar: View {
 }
 
 /// Shared/Design's glass card with a single-colour edge instead of its light gradient (an issue box's faint red edge).
-/// Candidate for Shared/Design as an `edge:` option on `GlassCard`.
+/// The same fill, highlight and shadow as `GlassCard` in both looks, so it follows the appearance as that does.
+/// Candidate for Shared/Design as an `edge:` option on `GlassCard`; then this goes.
 struct EdgedGlassCard: ViewModifier {
     let edge: Color
+    @Environment(\.colorScheme) private var scheme
 
     func body(content: Content) -> some View {
         let shape = RoundedRectangle(cornerRadius: Ink.cardRadius, style: .continuous)
+        let light = scheme == .light
         content
             .background {
                 ZStack {
-                    shape.fill(.ultraThinMaterial).environment(\.colorScheme, .dark)
+                    shape.fill(.ultraThinMaterial)
                     shape.fill(Ink.card)
-                    shape.fill(RadialGradient(colors: [.white.opacity(0.07), .clear], center: .topLeading,
+                    shape.fill(RadialGradient(colors: [.white.opacity(light ? 0.6 : 0.07), .clear], center: .topLeading,
                                               startRadius: 0, endRadius: 220))
                 }
             }
             .overlay { shape.strokeBorder(edge, lineWidth: 1) }
-            .shadow(color: .black.opacity(0.55), radius: 22, y: 14)
+            .shadow(color: Ink.shadow, radius: light ? 18 : 22, y: light ? 10 : 14)
     }
 }
 
