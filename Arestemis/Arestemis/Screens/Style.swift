@@ -19,8 +19,6 @@ enum Look {
     static let wellEdge = Color(light: Color(hex: 0x0F1428, opacity: 0.11), dark: .white.opacity(0.10))
     /// A glass button's fill: a faint white on the dark wall, white on the light one (Aresium's ghost button, `--card`).
     static let buttonFill = Color(light: .white.opacity(0.74), dark: .white.opacity(0.06))
-    /// The main button's fill while it cannot be pressed (as the shared `FormButtonStyle`'s).
-    static let offFill = Color(light: Color(hex: 0x0F1428, opacity: 0.05), dark: .white.opacity(0.06))
     static let buttonRadius: CGFloat = 12
 }
 
@@ -76,7 +74,7 @@ struct ProvinceButtonStyle: ButtonStyle {
             .background {
                 switch kind {
                 case .accent where isEnabled: shape.fill(Look.accent.color)
-                case .accent: shape.fill(Look.offFill)
+                case .accent: shape.fill(FormButtonStyle.offFill)
                 case .glass: shape.fill(Look.buttonFill)
                 case .quiet, .destructive: EmptyView()
                 }

@@ -22,7 +22,8 @@ struct FormButtonStyle: ButtonStyle {
     static let dangerInk = Color(light: Color(hex: 0xA33A3A), dark: Color(hex: 0xE4AAAA))
     private static let dangerFill = Color(light: Color(hex: 0xC24848, opacity: 0.10), dark: Color(hex: 0x5E2929, opacity: 0.30))
     private static let dangerEdge = Color(light: Color(hex: 0xB84A4A, opacity: 0.35), dark: Color(hex: 0xBC6D6D, opacity: 0.38))
-    private static let offFill = Color(light: Color(hex: 0x0F1428, opacity: 0.05), dark: .white.opacity(0.06))
+    /// A main button that cannot be pressed: a faint fill (with `Ink.edge` around it).
+    static let offFill = Color(light: Color(hex: 0x0F1428, opacity: 0.05), dark: .white.opacity(0.06))
 
     func makeBody(configuration: Configuration) -> some View {
         let shape = RoundedRectangle(cornerRadius: 12, style: .continuous)
