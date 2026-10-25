@@ -98,9 +98,11 @@ Beta App Description (English; German in brackets for a German localization):
 
 ### The demo login (the lead makes it)
 
-Never the existing test account: it has the `arestoteles` service, which opens Patrik's own vault.
+Only needed once an app goes to other people (App Store or external testers): builds for Patrik alone use internal
+testing, which Apple does not review (Patrik, 2026-10-25). Never the existing test account (Claude's own).
 
-1. Sign up at `https://www.ares-empire.de/signup` with a mailbox the lead can read (**[Patrik]**: which address).
+1. Sign up at `https://www.ares-empire.de/signup` with an extra address on Patrik's domain that forwards to him
+   (Patrik, 2026-10-25: e.g. `review@REDACTED-DOMAIN`; his own address is his own account).
    Password from a generator, kept only in the Keychain item `empire-review-account` and in App Store Connect.
 2. Confirm the email, then approve the account (Empire app → Approvals, or the PocketBase admin UI). In the admin UI
    set `services` to `empire` plus the app under review (`arestemis`, `aresus`); nothing else.
@@ -109,10 +111,10 @@ Never the existing test account: it has the `arestoteles` service, which opens P
 4. Enter user name and password under *Sign-in required*. Keep the account while builds are reviewed; remove its
    services when no review is pending.
 
-**Aresium and Arestoteles** show only Patrik's own data (Aresium lets in only `EMPIRE_ALLOWED_USERS`), so a demo
-account would see nothing (Aresium answers 403). Keep both on internal TestFlight, or give them a demo mode on the
-server before external testing. **Aresus** would show a reviewer the real server's state (service names, machine
-names, commit subjects): **[Patrik]** whether that is acceptable, else internal only as well.
+**Aresium, Arestoteles and Aresus** hold only Patrik's own data and let in only their owner (`EMPIRE_ALLOWED_USERS`
+in each server, 2026-10-25), so a demo account gets 403 there. **Aresus** (and Aresync) stay Patrik's own tools and
+never go to others (Patrik, 2026-10-25): internal TestFlight only. Arestoteles likewise for now; Aresium gets its
+version for other people first (`ares-empire/EMPIRE.md` → Now and next, step 3).
 
 ## Missing before the App Store
 
