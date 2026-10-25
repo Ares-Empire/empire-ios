@@ -94,8 +94,16 @@ final class MemoryTokens: TokenStorage {
 final class FakeSpotlight: SpotlightIndexing {
     enum Call: Equatable { case replace([String]), removeAll }
     var calls: [Call] = []
-    func replace(with notes: [Note]) async throws { calls.append(.replace(notes.map(\.id))) }
-    func removeAll() async throws { calls.append(.removeAll) }
+    /// Written in the language the app shows, unless a test says otherwise.
+    var language: AppLanguage? = AppLanguage.current
+    func replace(with notes: [Note]) async throws {
+        calls.append(.replace(notes.map(\.id)))
+        language = AppLanguage.current
+    }
+    func removeAll() async throws {
+        calls.append(.removeAll)
+        language = nil
+    }
 }
 
 /// A made-up login token shaped like PocketBase's (a JWT whose payload names the account), so the store can tell
@@ -143,14 +151,14 @@ struct Harness {
 @MainActor
 func makeStore(session: EmpireSession? = nil, transport: FakeTransport = FakeTransport(),
                persistence: MemoryPersistence = MemoryPersistence(), savedAccount: String? = "account-a",
-               searchTiming: BestMatches.Timing = .quick) async throws -> Harness {
+               searchTiming: BestMatches.Timing = .quick,
+               spotlight: FakeSpotlight = FakeSpotlight()) async throws -> Harness {
     var signedIn = session
     if signedIn == nil { signedIn = await signedInSession() }
     let session = signedIn!
     if transport.routes["GET /vault"] == nil {
         try transport.answer("GET /vault", sample: "vault", headers: ["ETag": "\"a1b2c3d\""])
     }
-    let spotlight = FakeSpotlight()
     let api = ArestotelesAPI(transport: transport, token: { session.token })
     let store = VaultStore(session: session, backend: api, persistence: persistence, spotlight: spotlight,
                            savedAccount: { savedAccount }, searchTiming: searchTiming)

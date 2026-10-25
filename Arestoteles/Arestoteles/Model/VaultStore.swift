@@ -122,7 +122,9 @@ final class VaultStore {
                 try? persistence.deleteAll()
                 return
             }
-            apply(cached.vault, etag: cached.etag, account: cached.account, save: false, reindex: false)
+            // Indexed when it was loaded, unless that was in the other language.
+            apply(cached.vault, etag: cached.etag, account: cached.account, save: false,
+                  reindex: spotlight.language != AppLanguage.current)
         }
         pendingQuickNotes = persistence.loadQuickNotes()
     }

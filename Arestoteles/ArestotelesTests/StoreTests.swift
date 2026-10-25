@@ -21,6 +21,17 @@ struct StoreTests {
         #expect(h.spotlight.calls.isEmpty)                         // indexed when it was first loaded
     }
 
+    /// After Settings → Language (the app restarts in itself) or a change in iOS Settings, the saved vault goes into
+    /// Spotlight again, so iPhone search shows its type words in the new language.
+    @Test func theSavedVaultIsIndexedAgainInAnotherLanguage() async throws {
+        let spotlight = FakeSpotlight()
+        spotlight.language = AppLanguage.current == .german ? .english : .german
+        let h = try await makeStore(persistence: try saved(), spotlight: spotlight)
+        await h.store.spotlightSettled()
+        #expect(h.spotlight.calls == [.replace(try sampleVault().notes.map(\.id))])
+        #expect(h.spotlight.language == AppLanguage.current)
+    }
+
     @Test func aCurrentVaultIsNotDownloadedAgain() async throws {
         let h = try await makeStore(persistence: try saved())
         h.transport.answer("GET /vault", 304, json: Data())

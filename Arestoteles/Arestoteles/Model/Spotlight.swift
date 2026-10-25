@@ -9,6 +9,9 @@ protocol SpotlightIndexing: Sendable {
     /// The vault's notes replace whatever the index held for the app.
     func replace(with notes: [Note]) async throws
     func removeAll() async throws
+    /// The language the index was last written in (its type words); nil when unknown. The saved vault is indexed again
+    /// at launch when the app now shows another language (Settings → Language, here or in iOS Settings).
+    var language: AppLanguage? { get }
 }
 
 enum SpotlightItems {
@@ -41,16 +44,25 @@ enum SpotlightItems {
     }
 }
 
-/// The device's Spotlight index.
+/// The device's Spotlight index; the language it was written in is kept in the app's own defaults.
 struct DeviceSpotlight: SpotlightIndexing {
+    private static let languageKey = "spotlightLanguage"
+
     func replace(with notes: [Note]) async throws {
+        let language = AppLanguage.current
         let index = CSSearchableIndex.default()
         try await index.deleteSearchableItems(withDomainIdentifiers: [SpotlightItems.domain])
-        try await index.indexSearchableItems(SpotlightItems.make(notes))
+        try await index.indexSearchableItems(SpotlightItems.make(notes, language: language))
+        UserDefaults.standard.set(language.code, forKey: Self.languageKey)
     }
 
     func removeAll() async throws {
         try await CSSearchableIndex.default().deleteSearchableItems(withDomainIdentifiers: [SpotlightItems.domain])
+        UserDefaults.standard.removeObject(forKey: Self.languageKey)
+    }
+
+    var language: AppLanguage? {
+        UserDefaults.standard.string(forKey: Self.languageKey).flatMap(AppLanguage.init(rawValue:))
     }
 }
 
@@ -58,4 +70,5 @@ struct DeviceSpotlight: SpotlightIndexing {
 struct NoSpotlight: SpotlightIndexing {
     func replace(with notes: [Note]) async throws {}
     func removeAll() async throws {}
+    var language: AppLanguage? { .current }
 }
