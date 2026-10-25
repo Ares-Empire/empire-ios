@@ -15,7 +15,7 @@ noticing a deeper problem is luck; several distinct focuses make it likely.
 | A choice that is hard to undo | login and token handling, the app's data model and caching, what moves into `Shared/`, an API change in a service |
 | A milestone | before the first TestFlight build, before adding external testers, before a second app starts |
 | The same kind of bug shows up twice | two fixes in one area that each caused the next |
-| Codex has built a lot since the last look | every 2–3 weeks during the Codex month, over everything merged since |
+| An agent has built a lot since the last look | every 2–3 weeks, over everything merged since |
 | Patrik asks | any time |
 
 Not for: a single screen's layout, mechanical changes with tests, or a question a decision record
@@ -33,8 +33,8 @@ would not, drop it.
 | **3–4** | login, tokens, anything holding financial data on the phone |
 | **5** (maximum) | before other people get the app |
 
-Mix vendors: Claude agents plus Codex (`codex exec -s read-only -m gpt-6-astra`). Different models miss
-different things, and during the Codex month that costs nothing extra.
+Seats are Claude agents (Patrik, 2026-10-25: Claude agents, not Codex). Each seat gets its own focus and works blind
+to the others.
 
 ## Focuses to pick from
 
