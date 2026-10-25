@@ -14,16 +14,16 @@ struct EmpireSheetView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Text(title).font(AppFont.text(13, weight: .medium)).foregroundStyle(Color(hex: 0xB8BCB8))
+                Text(title).font(AppFont.text(13, weight: .medium)).foregroundStyle(EmpireStyle.heading(dark: 0xB8BCB8))
                 Spacer()
                 Button(action: close) {
-                    Image(systemName: "xmark").font(.system(size: 15, weight: .regular)).foregroundStyle(Color(hex: 0xA8A9A7))
+                    Image(systemName: "xmark").font(.system(size: 15, weight: .regular)).foregroundStyle(EmpireStyle.icon(dark: 0xA8A9A7))
                         .frame(width: 44, height: 44)
                 }
                 .accessibilityLabel("Close")
             }
             .padding(.leading, 26).padding(.trailing, 14).padding(.top, sheet.isSmall ? 10 : 8).padding(.bottom, 4)
-            .overlay(alignment: .bottom) { Rectangle().fill(.white.opacity(0.05)).frame(height: 1) }
+            .overlay(alignment: .bottom) { Rectangle().fill(EmpireStyle.hairline(dark: 0.05)).frame(height: 1) }
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
@@ -73,18 +73,18 @@ struct EmpireSheetView: View {
 // MARK: - pieces shared by the pages
 
 private enum Sheet {
-    static let heading = Color(hex: 0xC2C4BF)
-    static let body = Color(hex: 0xADB2AD)
-    static let cardStroke = Color.white.opacity(0x16 / 255)
+    static let heading = EmpireStyle.heading(dark: 0xC2C4BF)
+    static let body = EmpireStyle.body(dark: 0xADB2AD)
+    static let cardStroke = EmpireStyle.edge(dark: 0x16 / 255)
 }
 
 private struct ErrorNote: View {
     let text: String
     var body: some View {
-        Text(text).font(AppFont.text(12)).lineSpacing(5).foregroundStyle(Color(hex: 0xD9B4A6))
+        Text(text).font(AppFont.text(12)).lineSpacing(5).foregroundStyle(LoginStyle.problemInk)
             .frame(maxWidth: .infinity, alignment: .leading).padding(14)
-            .background(Color(hex: 0x3A2222, opacity: 0.19), in: .rect(cornerRadius: 10))
-            .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Color(hex: 0xCF8F78, opacity: 0.2)))
+            .background(LoginStyle.problemFill, in: .rect(cornerRadius: 10))
+            .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(LoginStyle.problemEdge))
             .accessibilityAddTraits(.isStaticText)
     }
 }
@@ -108,23 +108,23 @@ private struct HubButtonStyle: ButtonStyle {
 
     private var foreground: Color {
         switch kind {
-        case .primary: Color(hex: 0x141617)
-        case .secondary: Color(hex: 0xC0C4BF)
-        case .danger: Color(hex: 0xE4AAAA)
+        case .primary: LoginStyle.standard.buttonText
+        case .secondary: LoginStyle.standard.secondaryText
+        case .danger: FormButtonStyle.dangerInk
         }
     }
     private var background: Color {
         switch kind {
-        case .primary: Color(hex: 0xEEEEE8)
-        case .secondary: .white.opacity(0x04 / 255)
-        case .danger: Color(hex: 0x5E2929, opacity: 0x2B / 255)
+        case .primary: LoginStyle.standard.button
+        case .secondary: EmpireStyle.fill(dark: 0x04 / 255)
+        case .danger: Color(light: Color(hex: 0xC24848, opacity: 0.10), dark: Color(hex: 0x5E2929, opacity: 0x2B / 255))
         }
     }
     private var stroke: Color {
         switch kind {
-        case .primary: Color(hex: 0xEEEEE8)
-        case .secondary: .white.opacity(0x20 / 255)
-        case .danger: Color(hex: 0xBC6D6D, opacity: 0x44 / 255)
+        case .primary: LoginStyle.standard.button
+        case .secondary: EmpireStyle.edge(dark: 0x20 / 255)
+        case .danger: Color(light: Color(hex: 0xB84A4A, opacity: 0.35), dark: Color(hex: 0xBC6D6D, opacity: 0x44 / 255))
         }
     }
 }
@@ -132,17 +132,18 @@ private struct HubButtonStyle: ButtonStyle {
 private struct StatusWord: View {
     let text: String
     var body: some View {
-        Text(text).font(AppFont.number(9, weight: .regular)).tracking(1.1).foregroundStyle(Color(hex: 0xC5AE7E))
+        Text(text).font(AppFont.number(9, weight: .regular)).tracking(1.1)
+            .foregroundStyle(Color(light: Color(hex: 0x86662A), dark: Color(hex: 0xC5AE7E)))
     }
 }
 
 private struct Note: View {
     let text: String
     var body: some View {
-        Text(text).font(AppFont.text(12)).lineSpacing(6).foregroundStyle(Color(hex: 0xB3BAB3))
+        Text(text).font(AppFont.text(12)).lineSpacing(6).foregroundStyle(EmpireStyle.body(dark: 0xB3BAB3))
             .frame(maxWidth: .infinity, alignment: .leading).padding(15)
-            .background(.white.opacity(0x04 / 255), in: .rect(cornerRadius: 12))
-            .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(.white.opacity(0x15 / 255)))
+            .background(EmpireStyle.fill(dark: 0x04 / 255), in: .rect(cornerRadius: 12))
+            .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(EmpireStyle.edge(dark: 0x15 / 255)))
     }
 }
 
@@ -187,10 +188,10 @@ private struct DetailHero<MarkView: View>: View {
             }
             StatusWord(text: EmpireStyle.statusWord(status))
             if let blurb, !blurb.isEmpty {
-                Text(blurb).font(AppFont.text(13)).lineSpacing(5.5).foregroundStyle(Color(hex: 0xA9AEAA)).padding(.top, 18)
+                Text(blurb).font(AppFont.text(13)).lineSpacing(5.5).foregroundStyle(EmpireStyle.body(dark: 0xA9AEAA)).padding(.top, 18)
             }
             if let live {
-                Text(live).font(AppFont.number(11, weight: .regular)).foregroundStyle(Color(hex: 0xC4C8C2)).padding(.top, 18)
+                Text(live).font(AppFont.number(11, weight: .regular)).foregroundStyle(EmpireStyle.heading(dark: 0xC4C8C2)).padding(.top, 18)
             }
         }
         .multilineTextAlignment(.center)
@@ -201,11 +202,11 @@ private struct DetailHero<MarkView: View>: View {
     private var title: some View {
         VStack(spacing: 0) {
             mark.frame(width: 72, height: 80).padding(.bottom, 14)
-            Text(name).font(AppFont.text(26, weight: .medium)).foregroundStyle(Color(hex: 0xEEEEE8))
+            Text(name).font(AppFont.text(26, weight: .medium)).foregroundStyle(EmpireStyle.title(dark: 0xEEEEE8))
                 .overlay(alignment: .trailing) {
                     if open != nil {
                         Image(systemName: "arrow.up.right").font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(Color(hex: 0x8F9390)).offset(x: 20)
+                            .foregroundStyle(EmpireStyle.quiet(dark: 0x8F9390)).offset(x: 20)
                     }
                 }
                 .padding(.bottom, 12)
@@ -228,9 +229,9 @@ private struct PageMark: View {
         if let image {
             Image(uiImage: image).resizable().scaledToFit()
         } else {
-            Text(String(name.prefix(1)).uppercased()).font(AppFont.text(22)).foregroundStyle(Color(hex: 0xE6E6DF))
+            Text(String(name.prefix(1)).uppercased()).font(AppFont.text(22)).foregroundStyle(EmpireStyle.title(dark: 0xE6E6DF))
                 .frame(width: 48, height: 48)
-                .overlay(Circle().strokeBorder(.white.opacity(0x22 / 255)))
+                .overlay(Circle().strokeBorder(EmpireStyle.edge(dark: 0x22 / 255)))
         }
     }
 }
@@ -268,14 +269,14 @@ private struct ProvincePage: View {
                     VStack(alignment: .leading, spacing: 11) {
                         ForEach(Array(province.detail.features.enumerated()), id: \.offset) { _, feature in
                             HStack(alignment: .firstTextBaseline, spacing: 10) {
-                                Image(systemName: "checkmark").font(.system(size: 11, weight: .medium)).foregroundStyle(Color(hex: 0x8C9391))
+                                Image(systemName: "checkmark").font(.system(size: 11, weight: .medium)).foregroundStyle(EmpireStyle.quiet(dark: 0x8C9391))
                                 Paragraph(text: feature)
                             }
                         }
                     }
                 }
             }
-            Rectangle().fill(.white.opacity(0x10 / 255)).frame(height: 1).padding(.top, 14)
+            Rectangle().fill(EmpireStyle.hairline(dark: 0x10 / 255)).frame(height: 1).padding(.top, 14)
             ChronicleList(title: String(localized: "What's new"), entries: data.chronicle.filter { $0.project == province.slug }, marks: marks)
                 .padding(.top, 23)
             if !admin {
@@ -286,9 +287,9 @@ private struct ProvincePage: View {
                         Image(systemName: "minus").font(.system(size: 12))
                         Text(busy ? "Removing…" : "Remove from my ring")
                     }
-                    .font(AppFont.text(11)).foregroundStyle(Color(hex: 0xB1B7B0))
+                    .font(AppFont.text(11)).foregroundStyle(EmpireStyle.body(dark: 0xB1B7B0))
                     .frame(maxWidth: .infinity, minHeight: 46)
-                    .overlay(RoundedRectangle(cornerRadius: 11).strokeBorder(.white.opacity(0x18 / 255)))
+                    .overlay(RoundedRectangle(cornerRadius: 11).strokeBorder(EmpireStyle.edge(dark: 0x18 / 255)))
                 }
                 .buttonStyle(.plain).disabled(busy).opacity(busy ? 0.5 : 1)
                 .padding(.top, 34)
@@ -304,7 +305,7 @@ private struct IdeaPage: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             DetailHero(name: idea.title, status: "PLANNED") {
-                Image(systemName: "square.stack.3d.up").font(.system(size: 30, weight: .light)).foregroundStyle(Color(hex: 0xBCC0BD))
+                Image(systemName: "square.stack.3d.up").font(.system(size: 30, weight: .light)).foregroundStyle(EmpireStyle.icon(dark: 0xBCC0BD))
             }
             DetailSection(title: String(localized: "About")) { Paragraph(text: idea.note) }
         }
@@ -331,7 +332,7 @@ private struct AddPage: View {
                         HStack(spacing: 15) {
                             PageMark(name: province.name, image: marks[province.slug]).frame(width: 48, height: 54)
                             VStack(alignment: .leading, spacing: 8) {
-                                Text(province.name).font(AppFont.text(18, weight: .medium)).foregroundStyle(Color(hex: 0xE4E9DF))
+                                Text(province.name).font(AppFont.text(18, weight: .medium)).foregroundStyle(EmpireStyle.title(dark: 0xE4E9DF))
                                 if province.isComingSoon { StatusWord(text: EmpireStyle.statusWord("COMING SOON")) }
                             }
                         }
@@ -361,9 +362,9 @@ private struct ApprovalsPage: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             if status.approvalsLoading && status.approvals.isEmpty {
-                Text("Loading pending accounts…").font(AppFont.text(12)).foregroundStyle(Color(hex: 0x9B9F9D)).padding(.vertical, 12)
+                Text("Loading pending accounts…").font(AppFont.text(12)).foregroundStyle(EmpireStyle.quiet(dark: 0x9B9F9D)).padding(.vertical, 12)
             } else if status.approvals.isEmpty && status.approvalsError != nil {
-                Text("Pending accounts could not be loaded.").font(AppFont.text(12)).foregroundStyle(Color(hex: 0x9B9F9D))
+                Text("Pending accounts could not be loaded.").font(AppFont.text(12)).foregroundStyle(EmpireStyle.quiet(dark: 0x9B9F9D))
             } else if status.approvals.isEmpty {
                 EmptyState(symbol: "checkmark", title: String(localized: "No pending accounts."), note: nil)
             } else {
@@ -377,7 +378,7 @@ private struct ApprovalsPage: View {
                 }
             }
             if status.deciding {
-                Text("Updating account…").font(AppFont.text(12)).foregroundStyle(Color(hex: 0x9B9F9D)).padding(.top, 14)
+                Text("Updating account…").font(AppFont.text(12)).foregroundStyle(EmpireStyle.quiet(dark: 0x9B9F9D)).padding(.top, 14)
             }
         }
     }
@@ -388,7 +389,7 @@ private struct ApprovalsPage: View {
                 title.font(AppFont.text(13, weight: .medium)).foregroundStyle(Sheet.heading)
                 Spacer()
                 Text(String(format: "%02d", accounts.count)).font(AppFont.number(11, weight: .regular))
-                    .foregroundStyle(Color(hex: 0x858A8A))
+                    .foregroundStyle(EmpireStyle.quiet(dark: 0x858A8A))
             }
             .padding(.bottom, 25)
             VStack(spacing: 18) {
@@ -403,21 +404,21 @@ private struct ApprovalsPage: View {
         return VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 12) {
                 Text(String(who.prefix(1)).uppercased())
-                    .font(AppFont.text(14)).foregroundStyle(Color(hex: 0xC3C9C1))
+                    .font(AppFont.text(14)).foregroundStyle(EmpireStyle.heading(dark: 0xC3C9C1))
                     .frame(width: 38, height: 38)
-                    .background(.white.opacity(0x06 / 255), in: .circle)
-                    .overlay(Circle().strokeBorder(.white.opacity(0x17 / 255)))
+                    .background(EmpireStyle.fill(dark: 0x06 / 255), in: .circle)
+                    .overlay(Circle().strokeBorder(EmpireStyle.edge(dark: 0x17 / 255)))
                 VStack(alignment: .leading, spacing: 5) {
-                    Text(name).font(AppFont.text(15, weight: .medium)).foregroundStyle(Color(hex: 0xE0E4DC))
-                    Text(account.email).font(AppFont.text(11)).foregroundStyle(Color(hex: 0x969E97))
+                    Text(name).font(AppFont.text(15, weight: .medium)).foregroundStyle(EmpireStyle.title(dark: 0xE0E4DC))
+                    Text(account.email).font(AppFont.text(11)).foregroundStyle(EmpireStyle.quiet(dark: 0x969E97))
                 }
             }
             Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 12, verticalSpacing: 9) {
                 if !account.requested.isEmpty {
                     GridRow {
-                        Text("Asks for").font(AppFont.text(10)).foregroundStyle(Color(hex: 0x879089))
+                        Text("Asks for").font(AppFont.text(10)).foregroundStyle(EmpireStyle.quiet(dark: 0x879089))
                         Text(verbatim: account.requestedApps).font(AppFont.text(12, weight: .medium))
-                            .foregroundStyle(Color(hex: 0xC3C9C1))
+                            .foregroundStyle(EmpireStyle.heading(dark: 0xC3C9C1))
                     }
                 }
                 if !account.approved {
@@ -425,7 +426,7 @@ private struct ApprovalsPage: View {
                         Text("Signed up").font(AppFont.text(10))
                         Text(String(account.created.prefix(10))).font(AppFont.number(9, weight: .regular))
                     }
-                    .foregroundStyle(Color(hex: 0x879089))
+                    .foregroundStyle(EmpireStyle.quiet(dark: 0x879089))
                 }
             }
             .padding(.vertical, 20)
@@ -433,7 +434,7 @@ private struct ApprovalsPage: View {
                 (account.approved
                     ? Text("Decline \(who)'s request? The account stays; only the request is cleared.")
                     : Text("Decline \(who)? This deletes their pending sign-up."))
-                    .font(AppFont.text(12)).lineSpacing(5).foregroundStyle(Color(hex: 0xC6B1AB)).padding(.bottom, 14)
+                    .font(AppFont.text(12)).lineSpacing(5).foregroundStyle(Color(light: Color(hex: 0x8C5A4E), dark: Color(hex: 0xC6B1AB))).padding(.bottom, 14)
                 HStack(spacing: 10) {
                     Button(account.approved ? "Keep request" : "Keep account") { declining = nil }
                         .buttonStyle(HubButtonStyle(kind: .secondary))
@@ -464,9 +465,9 @@ private struct EmptyState: View {
     let note: String?
     var body: some View {
         VStack(spacing: 12) {
-            Image(systemName: symbol).font(.system(size: 24, weight: .light)).foregroundStyle(Color(hex: 0xA0A9A1))
-            Text(title).font(AppFont.text(15, weight: .medium)).foregroundStyle(Color(hex: 0xC9CFC5))
-            if let note { Text(note).font(AppFont.text(12)).foregroundStyle(Color(hex: 0x969F96)) }
+            Image(systemName: symbol).font(.system(size: 24, weight: .light)).foregroundStyle(EmpireStyle.icon(dark: 0xA0A9A1))
+            Text(title).font(AppFont.text(15, weight: .medium)).foregroundStyle(EmpireStyle.heading(dark: 0xC9CFC5))
+            if let note { Text(note).font(AppFont.text(12)).foregroundStyle(EmpireStyle.quiet(dark: 0x969F96)) }
         }
         .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity)
@@ -482,8 +483,9 @@ private extension View {
             .background {
                 let shape = RoundedRectangle(cornerRadius: 17, style: .continuous)
                 ZStack {
-                    shape.fill(Color(hex: 0x111417))
-                    shape.fill(LinearGradient(colors: [.white.opacity(0x06 / 255), .clear], startPoint: .topLeading, endPoint: .bottomTrailing))
+                    shape.fill(EmpireStyle.card)
+                    shape.fill(LinearGradient(colors: [Color(light: .white.opacity(0.6), dark: .white.opacity(0x06 / 255)), .clear],
+                                              startPoint: .topLeading, endPoint: .bottomTrailing))
                 }
             }
             .overlay(RoundedRectangle(cornerRadius: 17, style: .continuous).strokeBorder(Sheet.cardStroke))

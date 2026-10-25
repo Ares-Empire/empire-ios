@@ -163,17 +163,17 @@ private struct RingTab: View {
     var body: some View {
         HStack(spacing: 13) {
             if item.isAdd {
-                Text("+").font(AppFont.text(26, weight: .light)).foregroundStyle(Color(hex: 0xD6D6D0))
+                Text("+").font(AppFont.text(26, weight: .light)).foregroundStyle(EmpireStyle.heading(dark: 0xD6D6D0))
                     .frame(width: 46, height: 46)
-                    .overlay(RoundedRectangle(cornerRadius: 13).strokeBorder(.white.opacity(0.18), style: .init(lineWidth: 1, dash: [4, 3])))
+                    .overlay(RoundedRectangle(cornerRadius: 13).strokeBorder(EmpireStyle.edge(dark: 0.18), style: .init(lineWidth: 1, dash: [4, 3])))
                     .frame(width: 50, height: 50)
-                Text(item.name).font(AppFont.text(13)).tracking(0.5).foregroundStyle(Color(hex: 0xD0D1CC))
+                Text(item.name).font(AppFont.text(13)).tracking(0.5).foregroundStyle(EmpireStyle.heading(dark: 0xD0D1CC))
             } else {
                 ProvinceMarkView(name: item.name, image: mark, size: 50)
                 VStack(alignment: .leading, spacing: 5) {
                     Text(item.name.uppercased()).font(AppFont.text(15, weight: .bold)).tracking(1.5)
                         .lineLimit(1).goldFill(EmpireStyle.goldName)
-                        .shadow(color: .black.opacity(0.55), radius: 1, y: 1)
+                        .shadow(color: Color(light: .white.opacity(0.7), dark: .black.opacity(0.55)), radius: 1, y: 1)   // light: engraved
                     Text(EmpireStyle.statusWord(item.status)).font(AppFont.text(9.5, weight: .semibold)).tracking(2.1)
                         .foregroundStyle(EmpireStyle.statusColor(item.status))
                 }
@@ -184,18 +184,20 @@ private struct RingTab: View {
         .frame(width: 236, height: 82)
         .background(tabBackground)
         .overlay(tabEdge)
-        .shadow(color: .black.opacity(0.9), radius: isFront ? 30 : 22, y: isFront ? 18 : 14)
+        .shadow(color: EmpireStyle.shadow(dark: 0.9), radius: isFront ? 30 : 22, y: isFront ? 18 : 14)
     }
 
     @ViewBuilder private var tabBackground: some View {
         let shape = RoundedRectangle(cornerRadius: EmpireStyle.cardRadius, style: .continuous)
         if item.isAdd {
-            shape.fill(.white.opacity(0.015))
+            shape.fill(EmpireStyle.fill(dark: 0.015))
         } else {
             ZStack {
-                shape.fill(.ultraThinMaterial).environment(\.colorScheme, .dark)
-                shape.fill(Color(hex: isFront ? 0x1A1B21 : 0x101015, opacity: 0.64))
-                shape.fill(RadialGradient(colors: [.white.opacity(0.07), .clear], center: .topLeading, startRadius: 0, endRadius: 140))
+                shape.fill(.ultraThinMaterial)
+                shape.fill(isFront ? Color(light: .white.opacity(0.80), dark: Color(hex: 0x1A1B21, opacity: 0.64))
+                                   : Color(light: Color(hex: 0xFBFAF7, opacity: 0.66), dark: Color(hex: 0x101015, opacity: 0.64)))
+                shape.fill(RadialGradient(colors: [Color(light: .white.opacity(0.6), dark: .white.opacity(0.07)), .clear],
+                                          center: .topLeading, startRadius: 0, endRadius: 140))
             }
         }
     }
@@ -203,11 +205,14 @@ private struct RingTab: View {
     @ViewBuilder private var tabEdge: some View {
         let shape = RoundedRectangle(cornerRadius: EmpireStyle.cardRadius, style: .continuous)
         if item.isAdd {
-            shape.strokeBorder(.white.opacity(isFront ? 0.34 : 0.18), style: .init(lineWidth: 1, dash: [5, 4]))
+            shape.strokeBorder(EmpireStyle.edge(dark: isFront ? 0.34 : 0.18), style: .init(lineWidth: 1, dash: [5, 4]))
         } else {
-            shape.strokeBorder(LinearGradient(colors: [.white.opacity(isFront ? 0.26 : 0.22), .white.opacity(0.04),
-                                                       .white.opacity(0.03), .white.opacity(isFront ? 0.12 : 0.10)],
-                                              startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
+            shape.strokeBorder(LinearGradient(colors: [
+                Color(light: .white.opacity(0.95), dark: .white.opacity(isFront ? 0.26 : 0.22)),
+                Color(light: .white.opacity(0.45), dark: .white.opacity(0.04)),
+                Color(light: .white.opacity(0.35), dark: .white.opacity(0.03)),
+                Color(light: .white.opacity(0.7), dark: .white.opacity(isFront ? 0.12 : 0.10))],
+                startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
         }
     }
 }

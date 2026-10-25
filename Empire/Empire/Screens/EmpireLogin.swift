@@ -8,7 +8,7 @@ struct EmpireLogin: View {
     var body: some View {
         AresLogin(session: session) {
             Image("Crest").resizable().scaledToFit().frame(width: 104, height: 130)
-                .shadow(color: .black.opacity(0.6), radius: 17, y: 16)
+                .shadow(color: EmpireStyle.shadow(dark: 0.6), radius: 17, y: 16)
                 .padding(.bottom, 14).accessibilityHidden(true)
             Text("THE EMPIRE").font(AppFont.text(17, weight: .bold)).tracking(3.7).padding(.leading, 3.7).goldFill()
                 .accessibilityAddTraits(.isHeader)
@@ -29,27 +29,27 @@ struct EmpireLoading: View {
             Image("Crest").resizable().scaledToFit().frame(width: 70, height: 90).accessibilityHidden(true)
             Text("THE EMPIRE").font(AppFont.text(18, weight: .bold)).tracking(4).padding(.leading, 4).goldFill()
             if let message {
-                Text(message).font(AppFont.text(13)).lineSpacing(7).foregroundStyle(Color(hex: 0xA0A79F))
+                Text(message).font(AppFont.text(13)).lineSpacing(7).foregroundStyle(EmpireStyle.body(dark: 0xA0A79F))
                     .multilineTextAlignment(.center)
                 VStack(spacing: 10) {
                     if let retry {
                         Button("Try again", action: retry).font(AppFont.text(12, weight: .semibold))
-                            .foregroundStyle(Color(hex: 0x141617)).frame(maxWidth: 260, minHeight: 46)
-                            .background(Color(hex: 0xEEEEE8), in: .rect(cornerRadius: 11)).buttonStyle(.plain)
+                            .foregroundStyle(LoginStyle.standard.buttonText).frame(maxWidth: 260, minHeight: 46)
+                            .background(LoginStyle.standard.button, in: .rect(cornerRadius: 11)).buttonStyle(.plain)
                     }
                     if let logOut {
                         Button("Log out", action: logOut).font(AppFont.text(12, weight: .semibold))
-                            .foregroundStyle(Color(hex: 0xC0C4BF)).frame(maxWidth: 260, minHeight: 46)
-                            .overlay(RoundedRectangle(cornerRadius: 11).strokeBorder(.white.opacity(0.125))).buttonStyle(.plain)
+                            .foregroundStyle(LoginStyle.standard.secondaryText).frame(maxWidth: 260, minHeight: 46)
+                            .overlay(RoundedRectangle(cornerRadius: 11).strokeBorder(LoginStyle.standard.outline))
+                            .buttonStyle(.plain)
                     }
                 }
             } else {
-                ProgressView().tint(Color(hex: 0xA0A79F)).accessibilityLabel("Loading")
+                ProgressView().tint(EmpireStyle.body(dark: 0xA0A79F)).accessibilityLabel("Loading")
             }
         }
         .padding(30)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(EmpireStyle.background.ignoresSafeArea())
-        .preferredColorScheme(.dark)
     }
 }

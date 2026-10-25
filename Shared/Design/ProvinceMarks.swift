@@ -58,7 +58,8 @@ final class ProvinceMarks {
     }
 }
 
-/// A province's mark: its image when loaded, else its initial in a quiet tile (.tab-mono).
+/// A province's mark: its image when loaded, else its initial in a quiet tile (.tab-mono; on the light wall an ivory
+/// tile with a dark initial).
 struct ProvinceMarkView: View {
     let name: String
     let image: UIImage?
@@ -67,14 +68,18 @@ struct ProvinceMarkView: View {
     var body: some View {
         if let image {
             Image(uiImage: image).resizable().scaledToFit().frame(width: size, height: size)
-                .shadow(color: .black.opacity(0.55), radius: 9, y: 8)
+                .shadow(color: Color(light: Color(hex: 0x2A2418, opacity: 0.18), dark: .black.opacity(0.55)), radius: 9, y: 8)
         } else {
             Text(String(name.prefix(1)).uppercased())
-                .font(AppFont.text(size * 0.44, weight: .bold)).foregroundStyle(Color(hex: 0xF3F1EA))
+                .font(AppFont.text(size * 0.44, weight: .bold))
+                .foregroundStyle(Color(light: Color(hex: 0x2A2620), dark: Color(hex: 0xF3F1EA)))
                 .frame(width: size * 0.92, height: size * 0.92)
-                .background(RadialGradient(colors: [.white.opacity(0.08), .black.opacity(0.2)], center: .init(x: 0.3, y: 0.2),
-                                           startRadius: 0, endRadius: size), in: .rect(cornerRadius: 13))
-                .overlay(RoundedRectangle(cornerRadius: 13).strokeBorder(.white.opacity(0.12)))
+                .background(RadialGradient(colors: [Color(light: .white.opacity(0.95), dark: .white.opacity(0.08)),
+                                                    Color(light: Color(hex: 0xE6E2D8), dark: .black.opacity(0.2))],
+                                           center: .init(x: 0.3, y: 0.2), startRadius: 0, endRadius: size),
+                            in: .rect(cornerRadius: 13))
+                .overlay(RoundedRectangle(cornerRadius: 13).strokeBorder(Color(light: Color(hex: 0x1A1813, opacity: 0.12),
+                                                                                dark: .white.opacity(0.12))))
         }
     }
 }

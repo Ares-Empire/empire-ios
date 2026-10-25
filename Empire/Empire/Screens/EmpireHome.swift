@@ -35,6 +35,7 @@ struct EmpireHome: View {
     let actions: EmpireHomeActions
 
     @State private var expanded = false
+    @Environment(\.colorScheme) private var scheme
     @State private var front: EmpireRing.Item?
     @State private var sheet: Sheet?
 
@@ -60,12 +61,12 @@ struct EmpireHome: View {
                 VStack(spacing: 0) {
                     header
                     if let loadError = status.loadError {
-                        Text(loadError).font(AppFont.text(11.5)).foregroundStyle(Color(hex: 0xD9B4A6))
+                        Text(loadError).font(AppFont.text(11.5)).foregroundStyle(LoginStyle.problemInk)
                             .multilineTextAlignment(.center).padding(.horizontal, 40).padding(.top, 2)
                     }
                     ringSection
                     if !expanded {
-                        Divider().overlay(Color.white.opacity(0.06)).padding(.horizontal, 26).padding(.top, 14)
+                        Divider().overlay(EmpireStyle.hairline(dark: 0.06)).padding(.horizontal, 26).padding(.top, 14)
                         ChronicleList(title: admin ? String(localized: "Chronicle") : String(localized: "What's new"), entries: data.chronicle, marks: marks)
                             .padding(.horizontal, 26).padding(.top, 22)
                     }
@@ -79,7 +80,6 @@ struct EmpireHome: View {
             .defaultScrollAnchor(LaunchArguments.current.contains("-scrollToEnd") ? .bottom : nil)   // screenshots
             #endif
         }
-        .preferredColorScheme(.dark)
         #if DEBUG
         .onAppear(perform: openDebugSheet)
         #endif
@@ -87,8 +87,7 @@ struct EmpireHome: View {
             EmpireSheetView(sheet: sheet, data: data, marks: marks, status: status, actions: actions, close: { self.sheet = nil })
                 .presentationDetents(sheet.isSmall ? [.medium] : [.large])
                 .presentationDragIndicator(sheet.isSmall ? .visible : .hidden)
-                .presentationBackground(Color(hex: 0x0A0C0E))
-                .preferredColorScheme(.dark)
+                .presentationBackground(EmpireStyle.sheetBackground)
         }
     }
 
@@ -101,7 +100,7 @@ struct EmpireHome: View {
                 .onTapGesture { if admin { withAnimation(.easeInOut(duration: 0.25)) { expanded.toggle() } } }
                 .accessibilityAddTraits(admin ? .isButton : [])
             HStack(spacing: 2) {
-                Image("Crest").resizable().scaledToFit().frame(height: 42).shadow(color: .black.opacity(0.65), radius: 6, y: 4)
+                Image("Crest").resizable().scaledToFit().frame(height: 42).shadow(color: EmpireStyle.shadow(dark: 0.65), radius: 6, y: 4)
                     .accessibilityHidden(true)
                 Spacer()
                 if admin {
@@ -121,13 +120,13 @@ struct EmpireHome: View {
 
     private func iconButton(_ symbol: String, label: String, badge: Int = 0, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Image(systemName: symbol).font(.system(size: 17, weight: .regular)).foregroundStyle(Color(hex: 0xA8A9A7))
+            Image(systemName: symbol).font(.system(size: 17, weight: .regular)).foregroundStyle(EmpireStyle.icon(dark: 0xA8A9A7))
                 .frame(width: 44, height: 44)
                 .overlay(alignment: .topTrailing) {
                     if badge > 0 {
-                        Text(verbatim: "\(badge)").font(AppFont.number(9, weight: .semibold)).foregroundStyle(Color(hex: 0x0B0C0E))
+                        Text(verbatim: "\(badge)").font(AppFont.number(9, weight: .semibold)).foregroundStyle(Color(light: Color(hex: 0xF3F1EA), dark: Color(hex: 0x0B0C0E)))
                             .padding(.horizontal, 4).frame(minWidth: 15, minHeight: 15)
-                            .background(Color(hex: 0xD9D9D3), in: .capsule).offset(x: -4, y: 6)
+                            .background(Color(light: Color(hex: 0x2A2925), dark: Color(hex: 0xD9D9D3)), in: .capsule).offset(x: -4, y: 6)
                     }
                 }
         }
@@ -136,10 +135,12 @@ struct EmpireHome: View {
 
     // MARK: backdrop
 
-    /// The desktop's bust, large on the left and faded (as the desktop recedes it on small screens).
+    /// The desktop's bust, large on the left and faded (as the desktop recedes it on small screens). On the ivory wall
+    /// it is laid in with multiply, a faint grey relief.
     private var backdrop: some View {
         Image("Backdrop").resizable().scaledToFit().frame(height: 560)
-            .opacity(0.22)
+            .blendMode(scheme == .light ? .multiply : .normal)
+            .opacity(scheme == .light ? 0.13 : 0.22)
             .mask(LinearGradient(stops: [.init(color: .black, location: 0.3), .init(color: .clear, location: 0.92)],
                                  startPoint: .top, endPoint: .bottom))
             .frame(maxWidth: .infinity, alignment: .leading).offset(x: -150)
@@ -163,7 +164,7 @@ struct EmpireHome: View {
     private var ringSection: some View {
         VStack(spacing: 2) {
             if ringItems.isEmpty {
-                Text("No expansions yet.").font(AppFont.text(12)).foregroundStyle(Color(hex: 0x9B9F9D))
+                Text("No expansions yet.").font(AppFont.text(12)).foregroundStyle(EmpireStyle.quiet(dark: 0x9B9F9D))
                     .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 26).padding(.vertical, 12)
             } else {
                 EmpireRing(items: ringItems, marks: marks, onOpen: open, onHold: details, onFront: { front = $0 })
@@ -178,12 +179,12 @@ struct EmpireHome: View {
     @ViewBuilder private var caption: some View {
         if let front, !expanded, let province = data.projects.first(where: { $0.slug == front.id }) {
             if let live = province.live {
-                Text(live).font(AppFont.number(11, weight: .regular)).foregroundStyle(Color(hex: 0xB5B8B4))
+                Text(live).font(AppFont.number(11, weight: .regular)).foregroundStyle(EmpireStyle.heading(dark: 0xB5B8B4))
             } else {
-                Text(province.blurb).font(AppFont.text(12.5)).foregroundStyle(Color(hex: 0x8F9390)).multilineTextAlignment(.center)
+                Text(province.blurb).font(AppFont.text(12.5)).foregroundStyle(EmpireStyle.quiet(dark: 0x8F9390)).multilineTextAlignment(.center)
             }
         } else if front == nil, !admin, !expanded {
-            Text("Add a province to your ring").font(AppFont.text(12.5)).foregroundStyle(Color(hex: 0x8F9390))
+            Text("Add a province to your ring").font(AppFont.text(12.5)).foregroundStyle(EmpireStyle.quiet(dark: 0x8F9390))
         }
     }
 
