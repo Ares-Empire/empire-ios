@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Settings → Language: like the iPhone, English or Deutsch, saved where iOS keeps an app's own language
 /// (`LanguageSetting`). A row that brings another language asks first (`LanguageSwitch`: in the language it switches
-/// to, Cancel in the current one), then the app restarts in it (`LanguageRoot`); below, where iOS keeps it too.
+/// to, Cancel in the current one), then the app restarts in it (`AppRoot`); below, where iOS keeps it too.
 struct LanguageScreen: View {
     let app: SettingsApp
     private let setting: LanguageSetting

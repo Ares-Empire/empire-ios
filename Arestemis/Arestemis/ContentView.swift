@@ -66,7 +66,6 @@ struct ContentView: View {
                 ProvinceLogin(session: session, name: "Arestemis", bust: Image("Bust"), accent: Look.accent)
             }
         }
-        .preferredColorScheme(.dark)
         .task {
             push?.start(app: "de.ares-empire.arestemis", session: session,
                         categories: Array(MatchNotification.categories))
@@ -140,7 +139,6 @@ private struct MainTabs: View {
             }
             .presentationDetents(sheet == .settings ? [.large] : [.medium, .large])
             .presentationBackground(Ink.background)
-            .preferredColorScheme(.dark)
         }
         .overlay(alignment: .top) {
             if let notice = store.notice {

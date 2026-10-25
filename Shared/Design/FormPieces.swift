@@ -3,9 +3,9 @@ import SwiftUI
 // The pieces every form sheet and Settings page is built from (the contact form, the account's sheets and pages), so
 // they look and behave the same in every app.
 
-/// A form's one main button: the app's accent with dark ink (ivory without an accent, like the login's button), a quiet
-/// glass outline while it cannot be pressed. `destructive` (leaving an app, deleting the account) is the hub's soft red
-/// (mobile.css `.em-danger`), never a loud one.
+/// A form's one main button: the app's accent (ivory without an accent, like the login's button; near-black on the light
+/// wall), a quiet glass outline while it cannot be pressed. `destructive` (leaving an app, deleting the account) is the
+/// hub's soft red (mobile.css `.em-danger`), never a loud one.
 struct FormButtonStyle: ButtonStyle {
     enum Kind { case primary, destructive }
 
@@ -14,9 +14,15 @@ struct FormButtonStyle: ButtonStyle {
     var busy = false
     @Environment(\.isEnabled) private var isEnabled
 
-    static let ink = Color(hex: 0x141617)
-    static let ivory = Color(hex: 0xEEEEE8)
-    static let dangerInk = Color(hex: 0xE4AAAA)
+    /// The words on the main button: dark on the bright dark-mode fills, white on the deeper light-mode ones.
+    static let ink = AppAccent.onColor
+    /// The main button without an accent: ivory on the dark wall, near-black on the light one.
+    static let ivory = Color(light: Color(hex: 0x16181C), dark: Color(hex: 0xEEEEE8))
+    /// The hub's soft red, for leaving an app and deleting the account (darker on the light wall).
+    static let dangerInk = Color(light: Color(hex: 0xA33A3A), dark: Color(hex: 0xE4AAAA))
+    private static let dangerFill = Color(light: Color(hex: 0xC24848, opacity: 0.10), dark: Color(hex: 0x5E2929, opacity: 0.30))
+    private static let dangerEdge = Color(light: Color(hex: 0xB84A4A, opacity: 0.35), dark: Color(hex: 0xBC6D6D, opacity: 0.38))
+    private static let offFill = Color(light: Color(hex: 0x0F1428, opacity: 0.05), dark: .white.opacity(0.06))
 
     func makeBody(configuration: Configuration) -> some View {
         let shape = RoundedRectangle(cornerRadius: 12, style: .continuous)
@@ -29,14 +35,14 @@ struct FormButtonStyle: ButtonStyle {
             .background {
                 switch (kind, isEnabled) {
                 case (.primary, true): shape.fill(accent?.color ?? Self.ivory).opacity(busy ? 0.75 : 1)
-                case (.destructive, true): shape.fill(Color(hex: 0x5E2929, opacity: busy ? 0.22 : 0.30))
-                case (_, false): shape.fill(Color.white.opacity(0.06))
+                case (.destructive, true): shape.fill(Self.dangerFill).opacity(busy ? 0.75 : 1)
+                case (_, false): shape.fill(Self.offFill)
                 }
             }
             .overlay {
                 switch (kind, isEnabled) {
-                case (.destructive, true): shape.strokeBorder(Color(hex: 0xBC6D6D, opacity: 0.38))
-                case (_, false): shape.strokeBorder(Color.white.opacity(0.12))
+                case (.destructive, true): shape.strokeBorder(Self.dangerEdge)
+                case (_, false): shape.strokeBorder(Ink.edge)
                 default: EmptyView()
                 }
             }
@@ -111,7 +117,7 @@ struct FormNote: View {
 /// Why something did not go through, in the login's soft problem colour.
 struct FormProblem: View {
     let text: String
-    static let ink = Color(hex: 0xD9B4A6)
+    static let ink = Color(light: Color(hex: 0xA2503C), dark: Color(hex: 0xD9B4A6))
 
     var body: some View {
         Label { Text(text) } icon: { Image(systemName: "exclamationmark.circle") }

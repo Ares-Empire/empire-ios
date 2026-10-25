@@ -53,7 +53,6 @@ struct SupportSheet: View {
         .presentationDetents([.large])
         .presentationBackground(Ink.background)
         .interactiveDismissDisabled(form.hasUnsentText || form.phase == .sending)
-        .preferredColorScheme(.dark)
     }
 
     // MARK: writing

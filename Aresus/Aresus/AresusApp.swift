@@ -8,6 +8,6 @@ struct AresusApp: App {
     init() { AppFont.register() }
 
     var body: some Scene {
-        WindowGroup { LanguageRoot(widget: .aresus) { ContentView(push: delegate.push) } }
+        WindowGroup { AppRoot(widget: .aresus) { ContentView(push: delegate.push) } }
     }
 }

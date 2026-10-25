@@ -88,7 +88,6 @@ struct ContentView: View {
         .environment(store)
         .environment(navigation)
         .environment(\.logOut, LogOutAction(run: logOut))
-        .preferredColorScheme(.dark)
         .task {
             if restoresOnLaunch { await session.restore() }
             await store.update(renewsLogin: false)
@@ -195,7 +194,6 @@ private struct MainTabs: View {
             }
             .presentationDetents(sheet.isSmall ? [.medium, .large] : [.large])
             .presentationBackground(Ink.background)
-            .preferredColorScheme(.dark)
         }
         .overlay(alignment: .top) {
             if let notice = store.notice {

@@ -3,18 +3,25 @@ import Synchronization
 import SwiftUI
 import UIKit
 
-/// Every app's root, inside its `WindowGroup`: `LanguageRoot { ContentView(…) }`. It shows the app in the language it
-/// shows now and, when Settings → Language switches it, restarts the app inside itself: the choice is saved where iOS
-/// keeps the app's language, every sheet and alert is closed, then the whole view tree is built again in the new
-/// language, as at a launch. The main screen comes back, the stores load again (the servers answer in the new
-/// language), the session restores the login, and push registers the device with the new language
-/// (`PushCenter.start`). The app never quits itself (Apple asks apps not to).
-struct LanguageRoot<Content: View>: View {
+/// Every app's root, inside its `WindowGroup`: `AppRoot { ContentView(…) }`. It applies the app's two settings that
+/// reach every screen:
+/// - **Appearance** (Settings → Appearance): like the iPhone, light or dark, for the whole window and its sheets; the
+///   shared colours follow (`Ink`, `AppAccent`). It switches at once. A screen can hold the window in one look for a
+///   while with `holdsColorScheme(_:)` (Aresium's red mode is dark); the root's choice wins over any
+///   `preferredColorScheme` further in, so screens never set that themselves.
+/// - **Language**: it shows the app in the language it shows now and, when Settings → Language switches it, restarts
+///   the app inside itself: the choice is saved where iOS keeps the app's language, every sheet and alert is closed,
+///   then the whole view tree is built again in the new language, as at a launch. The main screen comes back, the
+///   stores load again (the servers answer in the new language), the session restores the login, and push registers
+///   the device with the new language (`PushCenter.start`). The app never quits itself (Apple asks apps not to).
+struct AppRoot<Content: View>: View {
     private let setting: LanguageSetting
     private let widget: WidgetLanguage?
     private let content: () -> Content
     @State private var language = AppLanguage.current
     @State private var window = WindowReference()
+    @AppStorage(Appearance.key) private var appearance = Appearance.iPhone.rawValue
+    @State private var held: ColorScheme?
 
     /// - Parameter widget: where the app's widget reads the app's choice; nil for apps without a widget.
     init(setting: LanguageSetting = .standard, widget: WidgetLanguage? = nil, @ViewBuilder content: @escaping () -> Content) {
@@ -28,6 +35,10 @@ struct LanguageRoot<Content: View>: View {
             .id(language)                                       // a new language: every view and its state anew
             .environment(\.locale, language.locale)            // SwiftUI's own lookups (Text, Button, …) and formats
             .environment(\.switchLanguage, SwitchLanguageAction(run: switchLanguage))
+            .onPreferenceChange(HeldColorScheme.self) { scheme in
+                Task { @MainActor in held = scheme }
+            }
+            .preferredColorScheme(held ?? Appearance(saved: appearance).colorScheme)
             .background { WindowReader(reference: window) }
             .task { widget?.publish(setting.choice) }        // a choice made in iOS Settings, or in an older version
             #if DEBUG
@@ -60,6 +71,22 @@ struct LanguageRoot<Content: View>: View {
         switchLanguage(LanguageSwitch(choice: choice, language: setting.language(for: choice)))
     }
     #endif
+}
+
+/// A look a screen holds the whole window in, over the app's appearance (`holdsColorScheme(_:)`).
+private struct HeldColorScheme: PreferenceKey {
+    static let defaultValue: ColorScheme? = nil
+    static func reduce(value: inout ColorScheme?, nextValue: () -> ColorScheme?) {
+        value = value ?? nextValue()
+    }
+}
+
+extension View {
+    /// Holds the window and its sheets in this look while the view is shown (nil: the app's appearance). For a
+    /// special mode with its own colours, as Aresium's red one; `AppRoot` applies it.
+    func holdsColorScheme(_ scheme: ColorScheme?) -> some View {
+        preference(key: HeldColorScheme.self, value: scheme)
+    }
 }
 
 /// The window the root is shown in, to close what is presented over it.
@@ -103,7 +130,7 @@ private struct WindowReader: UIViewRepresentable {
     }
 }
 
-/// Settings → Language's Restart: saves the choice and restarts the app in its language (`LanguageRoot`). Outside a
+/// Settings → Language's Restart: saves the choice and restarts the app in its language (`AppRoot`). Outside a
 /// root (previews) it only saves the choice.
 struct SwitchLanguageAction {
     let run: (LanguageSwitch) -> Void
@@ -127,7 +154,7 @@ nonisolated enum LaunchArguments {
         return arguments[index + 1]
     }
 
-    /// Drops the arguments that open a screen (`LanguageRoot` calls it as it restarts the app).
+    /// Drops the arguments that open a screen (`AppRoot` calls it as it restarts the app).
     static func restart() { arguments.withLock { $0 = afterRestart($0) } }
 
     /// The arguments without the ones that open or scroll to a screen (with their values).
@@ -157,6 +184,7 @@ nonisolated enum LaunchArguments {
     ]
     private static let opens: Set<String> = [
         "-scrollToEnd", "-scrollBottom", "-sampleIntro", "-sampleImportResult", "-sampleImportFailed", "-openLanguage",
+        "-openAppearance",
         "-scrollToAccount", "-sampleAccountDeleted",
     ]
 }

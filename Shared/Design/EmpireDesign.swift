@@ -1,53 +1,82 @@
 import SwiftUI
+import UIKit
 
-/// The look the province apps share (Arestemis, Aresus, and the ones after them): the Aresium/Arestoteles dark wall,
-/// glass cards and type (aresium/web/public/app/styles.css, Arestoteles/web/app/styles.css `[data-theme="dark"]`), with one
+/// The look the province apps share (Arestemis, Aresus, and the ones after them): the Aresium/Arestoteles wall, glass
+/// cards and type (aresium/web/public/index.html `html[data-theme="dark"]` and `html[data-theme="light"]`), with one
 /// accent colour per app instead of their red. Patrik, 2026-10-24: each app may have its own accent so the apps can be
 /// told apart, but only as an accent ("I don't want to see completely green apps"); red is the special mode.
-/// Aresium and the Empire app keep their own styles (Palette, EmpireStyle).
+/// Every colour here is a light/dark pair, so a screen built from them follows the app's appearance by itself
+/// (Settings → Appearance, `Appearance`). Aresium and the Empire app keep their own styles (Palette, EmpireStyle).
 
 extension Color {
     init(hex: UInt32, opacity: Double = 1) {
         self.init(.sRGB, red: Double((hex >> 16) & 0xFF) / 255, green: Double((hex >> 8) & 0xFF) / 255,
                   blue: Double(hex & 0xFF) / 255, opacity: opacity)
     }
+
+    /// One colour for each appearance; the screen picks as it draws, so it follows a switch at once.
+    init(light: Color, dark: Color) {
+        self.init(uiColor: UIColor { traits in UIColor(traits.userInterfaceStyle == .dark ? dark : light) })
+    }
 }
 
-/// An app's accent: the colour of its key control, highlights and the faint light on its wall.
+/// An app's accent: the colour of its key control, highlights and the faint light on its wall. On the light wall
+/// the accent is a deeper shade of the same colour, so text and marks in it read as well as on the dark one (at
+/// least 4.5:1 on `Ink.background`).
 struct AppAccent: Sendable {
     let color: Color        // controls, selected tab, highlights
     let deep: Color         // the wall's light and the glass edge tint
+    /// Words and marks on a fill of `color` (a main button): dark on the bright dark-mode accent, white on the deeper
+    /// light-mode one.
+    static let onColor = Color(light: .white, dark: Color(hex: 0x141617))
 
     /// Arestemis: moonlight violet (Artemis wears a crescent moon).
-    static let arestemis = AppAccent(color: Color(hex: 0xA996FF), deep: Color(hex: 0x6A4FE0))
+    static let arestemis = AppAccent(color: Color(light: Color(hex: 0x6A4FE0), dark: Color(hex: 0xA996FF)),
+                                     deep: Color(hex: 0x6A4FE0))
     /// Aresus: lightning blue (Zeus); keeps green and red free for status words.
-    static let aresus = AppAccent(color: Color(hex: 0x6AA8FF), deep: Color(hex: 0x2F6BEA))
+    static let aresus = AppAccent(color: Color(light: Color(hex: 0x2A62E0), dark: Color(hex: 0x6AA8FF)),
+                                  deep: Color(hex: 0x2F6BEA))
     /// Arestoteles: Aegean teal.
-    static let arestoteles = AppAccent(color: Color(hex: 0x5ECBBE), deep: Color(hex: 0x1E8C82))
+    static let arestoteles = AppAccent(color: Color(light: Color(hex: 0x12746B), dark: Color(hex: 0x5ECBBE)),
+                                       deep: Color(hex: 0x1E8C82))
 }
 
-/// Ink and surfaces of the dark wall (`[data-theme="dark"]` in the Aresium/Arestoteles styles).
+/// Ink and surfaces of the wall, light and dark (`html[data-theme="light"]` / `"dark"` in Aresium's styles). One
+/// change from the website: the light `muted` is darker than its #88919F, which is too faint for 11–12 pt text on
+/// the phone (3.9:1 now, as the dark one's 4.2:1).
 enum Ink {
-    static let background = Color(hex: 0x050507)        // --bg
-    static let primary = Color(hex: 0xF6F7FB)           // --ink
-    static let secondary = Color(hex: 0xB3B9C6)         // --ink-2
-    static let muted = Color(hex: 0x6B7280)             // --ink-3
-    static let line = Color.white.opacity(0.08)         // --line-soft
-    static let grid = Color.white.opacity(0.05)         // --grid
-    static let card = Color(hex: 0x0F1015, opacity: 0.55)   // --card
-    static let card2 = Color(hex: 0x1A1C23, opacity: 0.62)  // --card-2
+    static let background = Color(light: Color(hex: 0xECEDF2), dark: Color(hex: 0x050507))           // --bg
+    static let primary = Color(light: Color(hex: 0x0A0C12), dark: Color(hex: 0xF6F7FB))              // --ink
+    static let secondary = Color(light: Color(hex: 0x525A69), dark: Color(hex: 0xB3B9C6))            // --ink-2
+    static let muted = Color(light: Color(hex: 0x6E7685), dark: Color(hex: 0x6B7280))                // --ink-3
+    static let line = Color(light: Color(hex: 0x0F1428, opacity: 0.10), dark: .white.opacity(0.08)) // --line-soft
+    static let grid = Color(light: Color(hex: 0x0F1428, opacity: 0.07), dark: .white.opacity(0.05)) // --grid
+    static let card = Color(light: .white.opacity(0.74), dark: Color(hex: 0x0F1015, opacity: 0.55)) // --card
+    static let card2 = Color(light: Color(hex: 0xF7F8FB, opacity: 0.82),                              // --card-2
+                             dark: Color(hex: 0x1A1C23, opacity: 0.62))
+    /// A row or button while it is pressed (--hover).
+    static let press = Color(light: Color(hex: 0x0F1428, opacity: 0.045), dark: .white.opacity(0.05))
+    /// An input's fill and edge (the login's fields, quiet outlined buttons).
+    static let field = Color(light: .white.opacity(0.62), dark: .white.opacity(0.04))
+    static let edge = Color(light: Color(hex: 0x0F1428, opacity: 0.13), dark: .white.opacity(0.12))
+    /// The shadow under a card or a floating mark (--shadow): black on the dark wall, a soft blue-grey on the light one.
+    static let shadow = Color(light: Color(hex: 0x0F1628, opacity: 0.16), dark: .black.opacity(0.55))
     static let cardRadius: CGFloat = 16                 // --r-card
     static let rowRadius: CGFloat = 11                  // --r-row
 }
 
-/// Status words: green for running, red for a problem, grey for off; the same green as the hub's CONQUERED.
+/// Status words: green for running, red for a problem, grey for off; the same green as the hub's CONQUERED. Deeper
+/// on the light wall, as the accents.
 enum StatusTone: Sendable {
     case active, issue, inactive, accent
 
+    static let activeColor = Color(light: Color(hex: 0x12784A), dark: Color(hex: 0x6FCF9B))
+    static let issueColor = Color(light: Color(hex: 0xD11F35), dark: Color(hex: 0xFF5D6C))
+
     func color(_ accent: AppAccent) -> Color {
         switch self {
-        case .active: Color(hex: 0x6FCF9B)
-        case .issue: Color(hex: 0xFF5D6C)
+        case .active: Self.activeColor
+        case .issue: Self.issueColor
         case .inactive: Ink.muted
         case .accent: accent.color
         }
@@ -76,16 +105,20 @@ struct SectionHeading: View {
     }
 }
 
-/// The black wall with the app's accent as a faint light from the top and the far corner (Aresium's dark wall,
-/// `--glow1` / `--glow2`, in the accent colour).
+/// The wall with the app's accent as a faint light from the top and the far corner (Aresium's walls, `--glow1` /
+/// `--glow2`, in the accent colour; on the light wall about a third as strong, as Aresium's).
 struct ProvinceWall: View {
     let accent: AppAccent
+    @Environment(\.colorScheme) private var scheme
 
     var body: some View {
+        let light = scheme == .light
         ZStack {
             Ink.background
-            Glow(color: accent.deep.opacity(0.30), center: UnitPoint(x: 0.5, y: -0.12), radius: CGSize(width: 0.72, height: 0.52))
-            Glow(color: accent.deep.opacity(0.16), center: UnitPoint(x: 0.9, y: 1.2), radius: CGSize(width: 0.58, height: 0.5))
+            Glow(color: accent.deep.opacity(light ? 0.11 : 0.30), center: UnitPoint(x: 0.5, y: -0.12),
+                 radius: CGSize(width: 0.72, height: 0.52))
+            Glow(color: accent.deep.opacity(light ? 0.05 : 0.16), center: UnitPoint(x: 0.9, y: 1.2),
+                 radius: CGSize(width: 0.58, height: 0.5))
         }
         .ignoresSafeArea()
         .accessibilityHidden(true)
@@ -111,32 +144,42 @@ struct ProvinceWall: View {
 }
 
 /// Glass surface: blurred translucent card, a soft highlight from the top left, and a bright edge that fades
-/// (Arestoteles `--glass-edge` and `--spec`, the edge tinted with the accent instead of red).
+/// (`--glass-edge` and `--spec` of Aresium's light and dark themes, the edge tinted with the accent instead of red).
+/// On the light wall the card is nearly white with a strong white edge and a soft shadow; on the dark one it is
+/// smoked glass with a faint edge.
 struct GlassCard: ViewModifier {
     var accent: AppAccent? = nil
     var radius: CGFloat = Ink.cardRadius
     var raised = false            // a little lighter, for the one card that matters most on a screen
+    @Environment(\.colorScheme) private var scheme
 
     func body(content: Content) -> some View {
         let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
+        let light = scheme == .light
+        let tint = accent?.deep ?? .white
         content
             .background {
                 ZStack {
-                    shape.fill(.ultraThinMaterial).environment(\.colorScheme, .dark)
+                    shape.fill(.ultraThinMaterial)
                     shape.fill(raised ? Ink.card2 : Ink.card)
-                    shape.fill(RadialGradient(colors: [.white.opacity(0.07), .clear], center: .topLeading,
+                    shape.fill(RadialGradient(colors: [.white.opacity(light ? 0.6 : 0.07), .clear], center: .topLeading,
                                               startRadius: 0, endRadius: 220))
                 }
             }
             .overlay {
-                shape.strokeBorder(LinearGradient(stops: [
+                shape.strokeBorder(LinearGradient(stops: light ? [
+                    .init(color: .white.opacity(0.95), location: 0),
+                    .init(color: .white.opacity(0.4), location: 0.35),
+                    .init(color: accent == nil ? .white.opacity(0.3) : tint.opacity(0.14), location: 0.74),
+                    .init(color: .white.opacity(0.3), location: 1)
+                ] : [
                     .init(color: .white.opacity(0.22), location: 0),
                     .init(color: .white.opacity(0.04), location: 0.30),
-                    .init(color: (accent?.color ?? .white).opacity(accent == nil ? 0.03 : 0.10), location: 0.68),
-                    .init(color: .white.opacity(0.03), location: 1)], startPoint: .topLeading, endPoint: .bottomTrailing),
-                    lineWidth: 1)
+                    .init(color: accent == nil ? .white.opacity(0.03) : (accent?.color ?? .white).opacity(0.10), location: 0.68),
+                    .init(color: .white.opacity(0.03), location: 1)
+                ], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
             }
-            .shadow(color: .black.opacity(0.55), radius: 22, y: 14)
+            .shadow(color: Ink.shadow, radius: light ? 18 : 22, y: light ? 10 : 14)
     }
 }
 

@@ -75,7 +75,7 @@ struct LanguageLookupTests {
     @Test(arguments: [AppLanguage.english, .german]) func swiftUITextsTakeTheRootsLocale(language: AppLanguage) {
         func rendered(_ text: Text) -> Data? {
             let renderer = ImageRenderer(content: text.font(.system(size: 14)).foregroundStyle(.black)
-                .environment(\.locale, language.locale)                   // what LanguageRoot sets
+                .environment(\.locale, language.locale)                   // what AppRoot sets
                 .frame(width: 320, height: 24, alignment: .leading).background(Color.white))
             renderer.scale = 1
             return renderer.uiImage?.pngData()

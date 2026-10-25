@@ -67,6 +67,16 @@
         }
       }
     },
+    "Appearance" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Darstellung"
+          }
+        }
+      }
+    },
     "Ask for access" : {
       "localizations" : {
         "de" : {
@@ -203,6 +213,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Aktuelles Passwort"
+          }
+        }
+      }
+    },
+    "Dark" : {
+      "comment" : "Appearance: always dark",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dunkel"
           }
         }
       }
@@ -464,6 +485,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ verlassen?"
+          }
+        }
+      }
+    },
+    "Light" : {
+      "comment" : "Appearance: always light",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hell"
           }
         }
       }

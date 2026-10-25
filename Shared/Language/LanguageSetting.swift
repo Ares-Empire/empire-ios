@@ -4,7 +4,7 @@ import Foundation
 /// iOS's Settings → Apps → the app → Language keeps the same setting there (it writes `[chosen, …]` and removes it when
 /// the iPhone's own language is picked), so the two always agree. On iOS 27 that entry shows only while the iPhone lists
 /// two or more languages (tested 2026-10-24), which is why every app offers the choice in its own Settings.
-/// iOS reads the setting when it starts the app; a choice made in the app switches it at once (`LanguageRoot`).
+/// iOS reads the setting when it starts the app; a choice made in the app switches it at once (`AppRoot`).
 nonisolated struct LanguageSetting {
     static let key = "AppleLanguages"
 

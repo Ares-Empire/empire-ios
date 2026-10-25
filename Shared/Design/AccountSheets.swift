@@ -263,6 +263,5 @@ struct AccountSheetFrame<Content: View, Actions: View>: View {
         .presentationDetents([.large])
         .presentationBackground(Ink.background)
         .interactiveDismissDisabled(busy)
-        .preferredColorScheme(.dark)
     }
 }

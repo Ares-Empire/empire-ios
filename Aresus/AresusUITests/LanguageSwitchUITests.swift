@@ -1,7 +1,7 @@
 import XCTest
 
 /// Settings → Language on the real screens: the confirmation, Cancel, and Restart, which rebuilds the app in the other
-/// language with Settings closed (Shared/Language/LanguageRoot.swift). Sample data; the app starts in German.
+/// language with Settings closed (Shared/Language/AppRoot.swift). Sample data; the app starts in German.
 nonisolated final class LanguageSwitchUITests: XCTestCase {
     override func setUp() {
         continueAfterFailure = false

@@ -62,7 +62,7 @@ struct ContentView: View {
     var body: some View {
         #if DEBUG
         if let widgetGallery {
-            WidgetGallery(page: widgetGallery).preferredColorScheme(.dark)
+            WidgetGallery(page: widgetGallery)
         } else {
             app
         }
@@ -82,7 +82,6 @@ struct ContentView: View {
                 ProvinceLogin(session: session, name: "Aresus", bust: Image("Bust"), accent: .aresus)
             }
         }
-        .preferredColorScheme(.dark)
         .task {
             push?.start(app: "de.ares-empire.aresus", session: session)
             if restoresOnLaunch { await session.restore() }

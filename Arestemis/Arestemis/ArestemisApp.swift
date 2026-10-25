@@ -8,6 +8,6 @@ struct ArestemisApp: App {
     init() { AppFont.register() }
 
     var body: some Scene {
-        WindowGroup { LanguageRoot { ContentView(push: delegate.push) } }
+        WindowGroup { AppRoot { ContentView(push: delegate.push) } }
     }
 }

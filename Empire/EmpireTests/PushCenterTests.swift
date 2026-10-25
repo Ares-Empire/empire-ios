@@ -160,7 +160,7 @@ struct PushCenterTests {
 
     // MARK: Restarting in another language
 
-    /// Settings → Language rebuilds the app with a new session (Shared/Language/LanguageRoot.swift): the push center
+    /// Settings → Language rebuilds the app with a new session (Shared/Language/AppRoot.swift): the push center
     /// takes it, sets the categories again (their titles in the new language) and registers the device with the new
     /// language once the new session has restored the login. The replaced session no longer reaches it.
     @Test func aRestartRegistersAgainInTheNewLanguage() async {

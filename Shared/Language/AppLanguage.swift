@@ -5,7 +5,7 @@ import Synchronization
 /// languages, or from the app's own setting (Settings → Apps → the app → Language); English for every other language.
 /// The app's servers learn it from `Accept-Language` on every request, the push service from the device registration.
 ///
-/// Settings → Language can switch it while the app runs (`LanguageRoot`). iOS keeps the language it started the app
+/// Settings → Language can switch it while the app runs (`AppRoot`). iOS keeps the language it started the app
 /// in for its own lookups (`Bundle.main`, `Locale.current`), so every text of the apps asks this type instead:
 /// - SwiftUI texts (`Text("…")`, `Button("…")`, `Text("…", tableName: "Shared")`, plurals) take the root's
 ///   `.environment(\.locale, language.locale)`;
@@ -24,7 +24,7 @@ nonisolated enum AppLanguage: String, Sendable {
     /// The language iOS started this process in: the bundle's best match for the user's languages.
     static let launched = from(Bundle.main.preferredLocalizations)
 
-    /// From now on the app's texts, formats and requests use this language. Called by `LanguageRoot`, which then
+    /// From now on the app's texts, formats and requests use this language. Called by `AppRoot`, which then
     /// builds every view again so nothing keeps a text of the old language, and by a widget following its app.
     static func show(_ language: AppLanguage) { shown.withLock { $0 = language } }
 

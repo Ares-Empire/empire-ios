@@ -6,7 +6,7 @@ struct AresiumApp: App {
 
     init() { AppFont.register() }
     var body: some Scene {
-        WindowGroup { LanguageRoot(widget: .aresium) { ContentView() } }
+        WindowGroup { AppRoot(widget: .aresium) { ContentView() } }
     }
 }
 

@@ -10,7 +10,7 @@ struct ProvinceLogin: View {
     var body: some View {
         AresLogin(session: session, accent: accent) {
             bust.resizable().scaledToFit().frame(width: 112, height: 112)
-                .shadow(color: .black.opacity(0.6), radius: 17, y: 16)
+                .shadow(color: Ink.shadow, radius: 17, y: 16)
                 .padding(.bottom, 16).accessibilityHidden(true)
             Text(verbatim: name.uppercased()).font(AppFont.text(17, weight: .bold)).tracking(3.7).padding(.leading, 3.7)
                 .foregroundStyle(Ink.primary).accessibilityAddTraits(.isHeader)
@@ -49,7 +49,6 @@ struct AresLogin<Mark: View, Wall: View>: View {
     var body: some View {
         LoginScroll { form }
             .background { wall }
-            .preferredColorScheme(.dark)
             .loginSheets($sheet, session: session, accent: accent, email: $email)
     }
 
@@ -58,7 +57,7 @@ struct AresLogin<Mark: View, Wall: View>: View {
             mark
             (session.isDenied ? Text("This account has no access to \(session.app.name).", tableName: "Shared")
                               : Text("One Ares account for all Ares apps", tableName: "Shared"))
-                .font(AppFont.number(12, weight: .regular)).foregroundStyle(LoginStyle.dark.quiet)
+                .font(AppFont.number(12, weight: .regular)).foregroundStyle(LoginStyle.standard.quiet)
                 .multilineTextAlignment(.center).padding(.top, 8).padding(.bottom, 28)
 
             if session.isDenied {
@@ -94,10 +93,10 @@ struct AresLogin<Mark: View, Wall: View>: View {
             Button(action: login) {
                 BusyLabel(text: session.loginUnavailable ? Text("Try again", tableName: "Shared")
                                                          : Text("Log in", tableName: "Shared"),
-                          busy: session.isBusy, tint: LoginStyle.dark.buttonText)
-                    .font(AppFont.text(14, weight: .semibold)).foregroundStyle(LoginStyle.dark.buttonText)
+                          busy: session.isBusy, tint: LoginStyle.standard.buttonText)
+                    .font(AppFont.text(14, weight: .semibold)).foregroundStyle(LoginStyle.standard.buttonText)
                     .frame(maxWidth: .infinity, minHeight: 50)
-                    .background(LoginStyle.dark.button, in: .rect(cornerRadius: 12))
+                    .background(LoginStyle.standard.button, in: .rect(cornerRadius: 12))
             }
             .buttonStyle(.plain)
             .disabled(session.isBusy || email.isEmpty || password.isEmpty)
@@ -106,7 +105,7 @@ struct AresLogin<Mark: View, Wall: View>: View {
 
             if session.needsRestoreRetry {
                 Button { Task { await session.restore() } } label: { Text("Retry", tableName: "Shared") }
-                    .font(AppFont.text(13)).foregroundStyle(LoginStyle.dark.secondaryText).disabled(session.isBusy)
+                    .font(AppFont.text(13)).foregroundStyle(LoginStyle.standard.secondaryText).disabled(session.isBusy)
                     .padding(.top, 14)
             }
 
@@ -119,12 +118,12 @@ struct AresLogin<Mark: View, Wall: View>: View {
         content()
             .font(AppFont.number(15, weight: .regular)).foregroundStyle(Ink.primary)
             .padding(.horizontal, 16).frame(height: 50)
-            .background(.white.opacity(0.04), in: .rect(cornerRadius: 12))
-            .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(.white.opacity(0.12)))
+            .background(Ink.field, in: .rect(cornerRadius: 12))
+            .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Ink.edge))
     }
 
     private func prompt(_ text: Text) -> Text {
-        text.foregroundStyle(Color(hex: 0x6F726F))
+        text.foregroundStyle(LoginStyle.placeholder)
     }
 
     private func login() {
@@ -138,8 +137,8 @@ struct AresLogin<Mark: View, Wall: View>: View {
 
 // MARK: - pieces every login uses (Aresium's too)
 
-/// The login's colours and button type: the dark register of the Empire and province logins, or an app's own
-/// (Aresium's palette).
+/// The login's colours and button type: the register of the Empire and province logins (`standard`, light and dark),
+/// or an app's own (Aresium's palette).
 struct LoginStyle {
     var quiet: Color            // the line under the name, small print
     var button: Color           // the main button's fill
@@ -150,15 +149,27 @@ struct LoginStyle {
     var boxText: Color
     var buttonFont = AppFont.text(14, weight: .semibold)
 
-    static let dark = LoginStyle(quiet: Color(hex: 0x8F9390), button: Color(hex: 0xEEEEE8),
-                                 buttonText: Color(hex: 0x141617), secondaryText: Color(hex: 0xC0C4BF),
-                                 outline: .white.opacity(0.125), box: .white.opacity(0.04), boxText: Color(hex: 0xC0C4BF))
+    /// Ivory button and quiet greys on the dark wall; on the light wall the same, turned over: a near-black button.
+    static let standard = LoginStyle(
+        quiet: Color(light: Color(hex: 0x666B67), dark: Color(hex: 0x8F9390)),
+        button: FormButtonStyle.ivory,
+        buttonText: Color(light: Color(hex: 0xF3F3EE), dark: Color(hex: 0x141617)),
+        secondaryText: Color(light: Color(hex: 0x3B403D), dark: Color(hex: 0xC0C4BF)),
+        outline: Color(light: Color(hex: 0x0F1428, opacity: 0.16), dark: .white.opacity(0.125)),
+        box: Ink.field,
+        boxText: Color(light: Color(hex: 0x3B403D), dark: Color(hex: 0xC0C4BF)))
+    /// A field's placeholder and the legal footer: the same grey reads on both walls (about 4:1).
+    static let placeholder = Color(hex: 0x6F726F)
+    /// A problem's line, fill and edge (the login's soft red).
+    static let problemInk = FormProblem.ink
+    static let problemFill = Color(light: Color(hex: 0xC0504A, opacity: 0.08), dark: Color(hex: 0x3A2222, opacity: 0.19))
+    static let problemEdge = Color(light: Color(hex: 0xB8604A, opacity: 0.28), dark: Color(hex: 0xCF8F78, opacity: 0.2))
 }
 
 /// Under the Log in button: "Create account" (an outlined button: the first Ares app someone opens may be this one)
 /// and the quieter "Forgot password?".
 struct LoginLinks: View {
-    var style = LoginStyle.dark
+    var style = LoginStyle.standard
     let createAccount: () -> Void
     let forgotPassword: () -> Void
 
@@ -186,7 +197,7 @@ struct LoginLinks: View {
 struct LoginBox: View {
     let text: String
     let problem: Bool
-    var style = LoginStyle.dark
+    var style = LoginStyle.standard
     var alignment: Alignment = .leading
     var symbol: String? = nil       // a small mark before the line ("checkmark" once access was asked for)
 
@@ -197,11 +208,11 @@ struct LoginBox: View {
             }
             Text(text).font(AppFont.text(12)).lineSpacing(5)
         }
-        .foregroundStyle(problem ? Color(hex: 0xD9B4A6) : style.boxText)
+        .foregroundStyle(problem ? LoginStyle.problemInk : style.boxText)
         .frame(maxWidth: .infinity, alignment: alignment).padding(14)
-        .background(problem ? Color(hex: 0x3A2222, opacity: 0.19) : style.box, in: .rect(cornerRadius: 10))
+        .background(problem ? LoginStyle.problemFill : style.box, in: .rect(cornerRadius: 10))
         .overlay(RoundedRectangle(cornerRadius: 10)
-            .strokeBorder(problem ? Color(hex: 0xCF8F78, opacity: 0.2) : style.outline))
+            .strokeBorder(problem ? LoginStyle.problemEdge : style.outline))
         .accessibilityElement(children: .combine)
     }
 }
@@ -211,11 +222,11 @@ struct LoginBox: View {
 /// server refused an account that has the app (a 403), asking cannot help: its line and Log out only.
 struct NoAccessPanel: View {
     let session: EmpireSession
-    var style = LoginStyle.dark
+    var style = LoginStyle.standard
     var alignment: HorizontalAlignment = .center
     @State private var request: AccessRequest
 
-    init(session: EmpireSession, style: LoginStyle = .dark, alignment: HorizontalAlignment = .center) {
+    init(session: EmpireSession, style: LoginStyle = .standard, alignment: HorizontalAlignment = .center) {
         self.session = session
         self.style = style
         self.alignment = alignment
@@ -285,7 +296,7 @@ struct NoAccessPanel: View {
 /// A login screen's scrolling content with the quiet legal footer ("Privacy · Imprint", in the app's language) at the
 /// bottom of the screen, or below the content when that is taller. Used by every app's login.
 struct LoginScroll<Content: View>: View {
-    var footerColor = Color(hex: 0x6F726F)
+    var footerColor = LoginStyle.placeholder
     @ViewBuilder var content: Content
 
     var body: some View {
@@ -325,27 +336,27 @@ struct ProvinceLoading: View {
             Text(name.uppercased()).font(AppFont.text(17, weight: .bold)).tracking(3.7).padding(.leading, 3.7)
                 .foregroundStyle(Ink.primary)
             if let message {
-                Text(message).font(AppFont.text(13)).lineSpacing(7).foregroundStyle(Color(hex: 0xA0A79F))
+                Text(message).font(AppFont.text(13)).lineSpacing(7).foregroundStyle(Ink.secondary)
                     .multilineTextAlignment(.center)
                 VStack(spacing: 10) {
                     if let retry {
                         Button(action: retry) { Text("Try again", tableName: "Shared") }.font(AppFont.text(12, weight: .semibold))
-                            .foregroundStyle(Color(hex: 0x141617)).frame(maxWidth: 260, minHeight: 46)
-                            .background(Color(hex: 0xEEEEE8), in: .rect(cornerRadius: 11)).buttonStyle(.plain)
+                            .foregroundStyle(LoginStyle.standard.buttonText).frame(maxWidth: 260, minHeight: 46)
+                            .background(LoginStyle.standard.button, in: .rect(cornerRadius: 11)).buttonStyle(.plain)
                     }
                     if let logOut {
                         Button(action: logOut) { Text("Log out", tableName: "Shared") }.font(AppFont.text(12, weight: .semibold))
-                            .foregroundStyle(Color(hex: 0xC0C4BF)).frame(maxWidth: 260, minHeight: 46)
-                            .overlay(RoundedRectangle(cornerRadius: 11).strokeBorder(.white.opacity(0.125))).buttonStyle(.plain)
+                            .foregroundStyle(LoginStyle.standard.secondaryText).frame(maxWidth: 260, minHeight: 46)
+                            .overlay(RoundedRectangle(cornerRadius: 11).strokeBorder(LoginStyle.standard.outline))
+                            .buttonStyle(.plain)
                     }
                 }
             } else {
-                ProgressView().tint(Color(hex: 0xA0A79F)).accessibilityLabel(Text("Loading", tableName: "Shared"))
+                ProgressView().tint(Ink.secondary).accessibilityLabel(Text("Loading", tableName: "Shared"))
             }
         }
         .padding(30)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background { ProvinceWall(accent: accent) }
-        .preferredColorScheme(.dark)
     }
 }

@@ -76,7 +76,7 @@ final class PushCenter {
     }
 
     /// Call when the app's session exists: at launch, and again with the new session after the app restarted in
-    /// another language (`LanguageRoot`). Then the categories' action titles are set in the new language and, once
+    /// another language (`AppRoot`). Then the categories' action titles are set in the new language and, once
     /// the new session is signed in, the device registers again with the new language. The handlers of a replaced
     /// session do nothing any more.
     /// - Parameters:

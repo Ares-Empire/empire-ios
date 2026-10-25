@@ -12,8 +12,8 @@ struct SettingsApp {
 }
 
 /// Every app's Settings (the gear in its header), one sheet in the family look: the app's own section (optional, the
-/// `appSection` slot, e.g. Arestemis's application texts), then General (Language; Notifications in apps that send
-/// them), Help (Contact & support), About (Privacy, Imprint, Fonts & licences, Version) and Account (email, Change
+/// `appSection` slot, e.g. Arestemis's application texts), then General (Language, Appearance; Notifications in apps
+/// that send them), Help (Contact & support), About (Privacy, Imprint, Fonts & licences, Version) and Account (email, Change
 /// password, Log out; then Leave <app> and Delete Ares account, `AccountScreens.swift`).
 /// Log out does what the app's log-out did before (in sample mode it leaves the sample); so does the end of leaving or
 /// deleting in sample mode, where nothing is sent.
@@ -33,6 +33,13 @@ struct SettingsScreen<AppSection: View>: View {
     #else
     @State private var showsLanguage = false
     #endif
+    #if DEBUG
+    /// Screenshots: `-openAppearance` opens Settings → Appearance at once.
+    @State private var showsAppearance = LaunchArguments.current.contains("-openAppearance")
+    #else
+    @State private var showsAppearance = false
+    #endif
+    @AppStorage(Appearance.key) private var appearance = Appearance.iPhone.rawValue
     @State private var path: [AccountPage] = []
 
     init(app: SettingsApp, session: EmpireSession, sample: Bool = false, logOut: @escaping () -> Void,
@@ -91,7 +98,6 @@ struct SettingsScreen<AppSection: View>: View {
         .tint(Ink.primary)
         .presentationDetents([.large])
         .presentationBackground(Ink.background)
-        .preferredColorScheme(.dark)
         .sheet(isPresented: $showsSupport) {
             SupportSheet(session: session, accent: app.accent, sample: sample)
         }
@@ -110,6 +116,14 @@ struct SettingsScreen<AppSection: View>: View {
             }
             .buttonStyle(SettingsRowStyle())
             .navigationDestination(isPresented: $showsLanguage) { LanguageScreen(app: app) }
+            SettingsDivider()
+            Button { showsAppearance = true } label: {
+                SettingsRow(title: String(localized: LocalizedStringResource("Appearance", table: "Shared",
+                                                                             locale: .appLanguage)),
+                            value: Appearance(saved: appearance).name)
+            }
+            .buttonStyle(SettingsRowStyle())
+            .navigationDestination(isPresented: $showsAppearance) { AppearanceScreen(app: app) }
             if app.sendsNotifications {
                 SettingsDivider()
                 Button { open(UIApplication.openNotificationSettingsURLString) } label: {
@@ -294,15 +308,15 @@ struct SettingsDivider: View {
     var body: some View { Rectangle().fill(Ink.line).frame(height: 1).padding(.horizontal, 16) }
 }
 
-/// A row that answers a press with a faint light, like the rows of iOS's own lists.
+/// A row that answers a press with a faint shade, like the rows of iOS's own lists.
 struct SettingsRowStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .background(configuration.isPressed ? Color.white.opacity(0.05) : .clear)
+            .background(configuration.isPressed ? Ink.press : .clear)
     }
 }
 
-/// The black wall, with the app's accent as a faint light when it has one.
+/// The wall, with the app's accent as a faint light when it has one.
 struct SettingsWall: View {
     let accent: AppAccent?
     var body: some View {
