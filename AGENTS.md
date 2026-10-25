@@ -28,6 +28,9 @@ a personal finance dashboard). Claude plans the work, writes your brief and chec
 - Do not edit `*.xcodeproj/project.pbxproj` unless the brief says so. The project uses folder-synchronized
   groups: a new Swift file in the right folder is picked up without it.
 - Keep logic (models, API client, decoding, formatting) out of the views and give it unit tests.
+- Every screen works in light and dark (`CLAUDE.md` → Light mode): colours come from the shared pairs (`Ink`,
+  `AppAccent`, `StatusTone`, the app's own style), never `.white`, `.black` or a fixed `Color(hex:)` for text or
+  surfaces; never call `preferredColorScheme`.
 - No secrets, API keys, passwords, personal data or real transaction data in files, fixtures or tests. Use
   made-up sample data. Server URLs are fine.
 - Code, comments and docs in plain English. UI text is written in English in the code and translated to German in
