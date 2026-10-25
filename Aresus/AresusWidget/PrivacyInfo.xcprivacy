@@ -10,10 +10,19 @@
 	<false/>
 	<key>NSPrivacyTrackingDomains</key>
 	<array/>
-	<!-- None: the Release binary imports no required-reason API (nm, 2026-10-24); Shared/'s App Group defaults are
-	     compiled in but stripped as unused. Declare 1C8F.1 here once the widget reads EmpireShared.defaults. -->
 	<key>NSPrivacyAccessedAPITypes</key>
-	<array/>
+	<array>
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<!-- 1C8F.1: the App Group's defaults it shares with the app (Shared/Language/WidgetLanguage.swift: the
+				     app's language choice, so the widget shows the app's language). -->
+				<string>1C8F.1</string>
+			</array>
+		</dict>
+	</array>
 	<!-- Everything is linked to the account and used only to run the app. -->
 	<key>NSPrivacyCollectedDataTypes</key>
 	<array>

@@ -10,17 +10,19 @@ filled the placeholders.
 - **Privacy manifests** `PrivacyInfo.xcprivacy` in each app folder and each widget folder (folder-synchronized, so
   they land in the bundle by themselves; `scripts/new-app-project.py` creates the baseline for a new app). No
   tracking, no tracking domains. Checked 2026-10-24 on Release builds for iPhone: every `.app` and `.appex` contains
-  its manifest, and each binary imports only the required-reason APIs its manifest declares:
+  its manifest, and each binary imports only the required-reason APIs its manifest declares (2026-10-25, brief G1:
+  `CA92.1` for the app's own language setting in every app, `1C8F.1` in both widgets, which read the app's language
+  choice from their App Group; `nm` on Release builds of Aresus and Aresium):
 
   | Bundle | Collected (all linked to the account, App Functionality, no tracking) | Required-reason APIs |
   |---|---|---|
-  | Ares Empire | Email Address, User ID, Customer Support | UserDefaults `1C8F.1` (App Group) |
-  | Aresium | Email Address, User ID, Other Financial Info, Customer Support | UserDefaults `CA92.1` (theme), `1C8F.1` |
-  | Aresium widget | none (reads the app's saved figures) | none |
-  | Arestemis | Email Address, User ID, Device ID, Search History, Other User Content, Customer Support | UserDefaults `1C8F.1` |
-  | Aresus | Email Address, User ID, Device ID, Customer Support | UserDefaults `1C8F.1` |
-  | Aresus widget | User ID (fetches with the shared login) | none |
-  | Arestoteles | Email Address, User ID, Other User Content, Customer Support | UserDefaults `1C8F.1` |
+  | Ares Empire | Email Address, User ID, Customer Support | UserDefaults `CA92.1` (language), `1C8F.1` (App Group) |
+  | Aresium | Email Address, User ID, Other Financial Info, Customer Support | UserDefaults `CA92.1` (theme, language), `1C8F.1` |
+  | Aresium widget | none (reads the app's saved figures) | UserDefaults `1C8F.1` (the app's language) |
+  | Arestemis | Email Address, User ID, Device ID, Search History, Other User Content, Customer Support | UserDefaults `CA92.1`, `1C8F.1` |
+  | Aresus | Email Address, User ID, Device ID, Customer Support | UserDefaults `CA92.1`, `1C8F.1` |
+  | Aresus widget | User ID (fetches with the shared login) | UserDefaults `1C8F.1` (the app's language) |
+  | Arestoteles | Email Address, User ID, Other User Content, Customer Support | UserDefaults `CA92.1`, `1C8F.1` |
 
   To check again after a change (no file timestamps, boot time, disk space or keyboards are used today):
   `nm -u <App>.app/<App> | grep -E "NSUserDefaults|stat|getattrlist|mach_absolute_time|systemUptime|Volume.*Capacity|activeInputModes"`

@@ -316,6 +316,9 @@ privacy = """<?xml version="1.0" encoding="UTF-8"?>
 			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
 			<key>NSPrivacyAccessedAPITypeReasons</key>
 			<array>
+				<!-- CA92.1: this app's own defaults (Shared/Language/LanguageSetting.swift: the app's language, the same
+				     setting iOS keeps in Settings → Apps → the app → Language). -->
+				<string>CA92.1</string>
 				<!-- 1C8F.1: the shared App Group's defaults (Shared/EmpireShared.swift: the first-launch flag). -->
 				<string>1C8F.1</string>
 			</array>
