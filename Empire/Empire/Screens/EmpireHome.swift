@@ -214,7 +214,9 @@ extension EmpireHome {
         case "province": sheet = data.projects.first.map { .province($0) }
         case "idea": sheet = data.ideas.first.map { .idea($0) }
         case "add": sheet = .add
-        case "approvals": sheet = .approvals
+        case "approvals":
+            sheet = .approvals
+            Task { await actions.loadApprovals() }          // as the tray button does
         case "settings": actions.openSettings()
         default: break
         }

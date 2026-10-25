@@ -43,15 +43,25 @@ struct SettingsScreen<AppSection: View>: View {
 
     var body: some View {
         NavigationStack(path: $path) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    appSection
-                    general
-                    help
-                    about
-                    account
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 0) {
+                        appSection
+                        general
+                        help
+                        about
+                        account.id(Self.accountID)
+                    }
+                    .padding(.horizontal, 18).padding(.top, 4).padding(.bottom, 34)
                 }
-                .padding(.horizontal, 18).padding(.top, 4).padding(.bottom, 34)
+                #if DEBUG
+                .task {
+                    // Screenshots: `-scrollToAccount` shows the Account section.
+                    guard ProcessInfo.processInfo.arguments.contains("-scrollToAccount") else { return }
+                    try? await Task.sleep(for: .milliseconds(300))
+                    proxy.scrollTo(Self.accountID, anchor: .bottom)
+                }
+                #endif
             }
             .scrollIndicators(.hidden)
             .scrollDismissesKeyboard(.interactively)
@@ -80,6 +90,8 @@ struct SettingsScreen<AppSection: View>: View {
             SupportSheet(session: session, accent: app.accent, sample: sample)
         }
     }
+
+    private static var accountID: String { "settings-account" }
 
     // MARK: sections
 

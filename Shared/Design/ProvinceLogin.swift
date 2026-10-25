@@ -188,14 +188,21 @@ struct LoginBox: View {
     let problem: Bool
     var style = LoginStyle.dark
     var alignment: Alignment = .leading
+    var symbol: String? = nil       // a small mark before the line ("checkmark" once access was asked for)
 
     var body: some View {
-        Text(text).font(AppFont.text(12)).lineSpacing(5)
-            .foregroundStyle(problem ? Color(hex: 0xD9B4A6) : style.boxText)
-            .frame(maxWidth: .infinity, alignment: alignment).padding(14)
-            .background(problem ? Color(hex: 0x3A2222, opacity: 0.19) : style.box, in: .rect(cornerRadius: 10))
-            .overlay(RoundedRectangle(cornerRadius: 10)
-                .strokeBorder(problem ? Color(hex: 0xCF8F78, opacity: 0.2) : style.outline))
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            if let symbol {
+                Image(systemName: symbol).font(.system(size: 11, weight: .semibold)).accessibilityHidden(true)
+            }
+            Text(text).font(AppFont.text(12)).lineSpacing(5)
+        }
+        .foregroundStyle(problem ? Color(hex: 0xD9B4A6) : style.boxText)
+        .frame(maxWidth: .infinity, alignment: alignment).padding(14)
+        .background(problem ? Color(hex: 0x3A2222, opacity: 0.19) : style.box, in: .rect(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10)
+            .strokeBorder(problem ? Color(hex: 0xCF8F78, opacity: 0.2) : style.outline))
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -234,7 +241,7 @@ struct NoAccessPanel: View {
             if session.canAskForAccess {
                 if request.isAsked {
                     LoginBox(text: String(localized: "Asked. You get an email once it's approved.", table: "Shared"),
-                             problem: false, style: style, alignment: textAlignment)
+                             problem: false, style: style, alignment: textAlignment, symbol: "checkmark")
                         .transition(.opacity)
                 } else {
                     Button { Task { await request.ask() } } label: {

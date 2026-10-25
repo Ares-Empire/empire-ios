@@ -39,7 +39,7 @@ struct ChangePasswordScreen: View {
                          holds: form.holdsThePage) {
             if form.phase == .done {
                 CalmDone(title: Text("Password changed", tableName: "Shared"),
-                         text: Text("\(app.name) is logged in with it. The other Ares apps on this iPhone follow when you open them.",
+                         text: Text("You stay logged in here. The other Ares apps on this iPhone follow when you open them.",
                                     tableName: "Shared"),
                          highlight: app.accent?.color ?? Ink.secondary)
             } else {
@@ -68,7 +68,7 @@ struct ChangePasswordScreen: View {
                         .focused($focus, equals: .again).submitLabel(.done).onSubmit(change)
                 }
                 .glassCard(accent: app.accent)
-                FormNote(text: String(localized: "At least 8 characters. Afterwards \(app.name) logs in again by itself; the other Ares apps on this iPhone follow.",
+                FormNote(text: String(localized: "At least 8 characters. Afterwards this app logs in again by itself; the other Ares apps on this iPhone follow.",
                                       table: "Shared"))
                     .padding(.top, 10)
             }

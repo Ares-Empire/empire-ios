@@ -412,16 +412,16 @@ private struct ApprovalsPage: View {
                     Text(account.email).font(AppFont.text(11)).foregroundStyle(Color(hex: 0x969E97))
                 }
             }
-            VStack(alignment: .leading, spacing: 9) {
+            Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 12, verticalSpacing: 9) {
                 if !account.requested.isEmpty {
-                    HStack(alignment: .firstTextBaseline, spacing: 12) {
+                    GridRow {
                         Text("Asks for").font(AppFont.text(10)).foregroundStyle(Color(hex: 0x879089))
                         Text(verbatim: account.requestedApps).font(AppFont.text(12, weight: .medium))
                             .foregroundStyle(Color(hex: 0xC3C9C1))
                     }
                 }
                 if !account.approved {
-                    HStack(spacing: 12) {
+                    GridRow {
                         Text("Signed up").font(AppFont.text(10))
                         Text(String(account.created.prefix(10))).font(AppFont.number(9, weight: .regular))
                     }
