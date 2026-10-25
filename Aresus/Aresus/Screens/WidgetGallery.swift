@@ -43,10 +43,17 @@ struct WidgetGallery: View {
             .scrollIndicators(.hidden)
         }
         .background {
-            LinearGradient(colors: [Color(hex: 0x2A2D35), Color(hex: 0x111216)], startPoint: .top, endPoint: .bottom)
+            LinearGradient(colors: [Self.wallpaperTop, Self.wallpaperBottom], startPoint: .top, endPoint: .bottom)
                 .ignoresSafeArea()
         }
     }
+
+    /// A home screen's wallpaper behind the widgets, light or dark with the appearance (`-appearance light|dark`), as
+    /// the widgets follow the home screen's.
+    private static let wallpaperTop = Color(light: Color(hex: 0xE2E5EB), dark: Color(hex: 0x2A2D35))
+    private static let wallpaperBottom = Color(light: Color(hex: 0xCBD0D9), dark: Color(hex: 0x111216))
+    /// The one tint iOS draws lock-screen widgets in: white on the dark wallpaper, dark ink on the light one.
+    fileprivate static let lockInk = Color(light: Color(hex: 0x0A0C12), dark: .white)
 
     // MARK: the states
 
@@ -128,8 +135,8 @@ private enum Cell {
     }
 }
 
-/// A home-screen widget on its wall with the system's content margins and corners; a lock-screen one bare, in white,
-/// as iOS tints it.
+/// A home-screen widget on its wall with the system's content margins and corners; a lock-screen one bare, in one
+/// tint, as iOS draws it.
 private struct WidgetCell: View {
     let cell: Cell
     let size: CGSize
@@ -145,7 +152,7 @@ private struct WidgetCell: View {
                 .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
         default:
             view.frame(width: size.width, height: size.height)
-                .foregroundStyle(.white).tint(.white)
+                .foregroundStyle(WidgetGallery.lockInk).tint(WidgetGallery.lockInk)
         }
     }
 }

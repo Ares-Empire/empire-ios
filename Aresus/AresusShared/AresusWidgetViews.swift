@@ -150,7 +150,7 @@ struct WidgetMessage: View {
     var body: some View {
         VStack(spacing: 10) {
             Image("Bust").resizable().scaledToFit().frame(width: 46, height: 46)
-                .shadow(color: .black.opacity(0.55), radius: 6, y: 4).accessibilityHidden(true)
+                .shadow(color: Ink.shadow, radius: 6, y: 4).accessibilityHidden(true)
             Text(text).font(AppFont.text(12)).foregroundStyle(Ink.muted).multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
         }

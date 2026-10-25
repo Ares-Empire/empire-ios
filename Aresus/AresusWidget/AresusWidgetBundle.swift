@@ -11,13 +11,13 @@ struct AresusWidgetBundle: WidgetBundle {
 }
 
 /// The empire's status light: "All running" or the issues, always with how old the check is. Home screen (small,
-/// medium) and lock screen (rectangular, circular). Views in `AresusShared/AresusWidgetViews.swift`.
+/// medium) and lock screen (rectangular, circular). Views in `AresusShared/AresusWidgetViews.swift`. Light or dark as
+/// the home screen is (like the widgets around it), not as the app's own Appearance setting.
 struct AresusStatusWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: AresusWidgetKind.status, provider: StatusProvider()) { entry in
             StatusEntryView(entry: entry)
                 .containerBackground(for: .widget) { ProvinceWall(accent: .aresus) }
-                .environment(\.colorScheme, .dark)
                 .environment(\.locale, AppLanguage.current.locale)      // the app's language (`WidgetLanguage`)
         }
         .configurationDisplayName("Aresus")

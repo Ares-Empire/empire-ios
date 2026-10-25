@@ -125,10 +125,10 @@ private struct QuietRow: View {
     }
 }
 
-/// A row pressed inside a card: a faint light behind it.
+/// A row pressed inside a card: a faint tint behind it (`Ink.press`).
 private struct PressedRow: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .background(Color.white.opacity(configuration.isPressed ? 0.05 : 0))
+            .background(configuration.isPressed ? Ink.press : .clear)
     }
 }

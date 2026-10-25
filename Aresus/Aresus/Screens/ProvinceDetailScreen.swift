@@ -187,7 +187,7 @@ private struct DeployCard: View {
                 .fixedSize(horizontal: false, vertical: true).padding(.top, 8)
             if let behind = deploy.behind, behind > 0 {
                 Text(String(localized: "\(behind) commits on GitHub not deployed"))
-                    .font(AppFont.text(12, weight: .medium)).foregroundStyle(Color(hex: 0xE0B15A)).padding(.top, 10)
+                    .font(AppFont.text(12, weight: .medium)).foregroundStyle(AresusInk.warning).padding(.top, 10)
             }
         }
         .padding(16)
