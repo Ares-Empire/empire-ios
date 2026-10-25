@@ -9,6 +9,8 @@ Read `README.md` first, then the decision record in the ares-empire repo
 - Log in via the Empire account system, never a service's own password.
 - Design language: the Ares Empire "crown language" in `ares-empire/EMPIRE.md`
   (near-black, polished gold accent, Space Grotesk / JetBrains Mono).
+- Every screen works in light and dark (Settings → Appearance): build it from the shared colours, never fixed ones
+  (below, "Light mode").
 - Every app's main screen (the first tab's root) ends with the app's name: `WordmarkScrollView`
   (`Shared/Design/EmpireDesign.swift`) in place of its `ScrollView`; the band scrolls with the content and shows only
   when you scroll down (Patrik, 2026-10-24). Its launch argument for screenshots: `-scrollToEnd` (Arestemis `-scrollBottom`).
@@ -83,12 +85,12 @@ German or English. The Mac and the simulators are set to German, so the apps ope
   first (`LanguageSwitch`): title, line and Restart in the language it switches to ("Switch to English?", "Aresus
   restarts in English.", "Restart" / "Auf Deutsch umstellen?", "… startet auf Deutsch neu.", "Neu starten"), Cancel in
   the current one, like iOS's own language change. Restart saves the choice, closes every sheet, sets
-  `AppLanguage.current` and builds the whole app again (`Shared/Language/LanguageRoot.swift`, every app's `WindowGroup {
-  LanguageRoot { ContentView() } }`): the main screen, new stores (the servers answer in the new language), the login
+  `AppLanguage.current` and builds the whole app again (`Shared/AppRoot.swift`, every app's `WindowGroup {
+  AppRoot { ContentView() } }`): the main screen, new stores (the servers answer in the new language), the login
   restored as at a launch, push registered again with the new language (`PushCenter.start` takes the new session). No
   `exit()`. A row that keeps the language shown (Deutsch while following a German iPhone) only saves. The widgets
   (Aresus, Aresium) run in their own process, which iOS starts in the iPhone's language: the app copies its choice into
-  the App Group (`WidgetLanguage`, `LanguageRoot(widget:)`) and reloads them; they follow it (checked on the simulator's
+  the App Group (`WidgetLanguage`, `AppRoot(widget:)`) and reloads them; they follow it (checked on the simulator's
   home screen, 2026-10-25). Not following: the widget gallery's name and description (system UI, the iPhone's language)
   and words iOS draws itself inside the app, such as the Cut/Copy/Replace menu on selected text: they keep the language
   iOS started the app in until it is next opened (measured 2026-10-25; SwiftUI's own words, like the Search tab's
@@ -134,8 +136,8 @@ German or English. The Mac and the simulators are set to German, so the apps ope
 Every app has one Settings sheet, opened by the gear (`gearshape`) in its header where the account actions used to be:
 `Shared/Design/SettingsScreen.swift` (`SettingsScreen(app:session:sample:logOut:) { app's own section }`). Sections: the
 app's own (a view-builder slot, built with `SettingsSection` / `SettingsRow`; Arestemis puts its application texts and
-hunt notifications there), General (Language; Notifications, opening the app's notification page in iOS Settings, in
-apps with `sendsNotifications`), Help (Contact & support: the form from `Shared/Support`, sent to the account
+hunt notifications there), General (Language; Appearance; Notifications, opening the app's notification page in iOS
+Settings, in apps with `sendsNotifications`), Help (Contact & support: the form from `Shared/Support`, sent to the account
 server's `feedback` collection, which emails Patrik), About (Privacy and Imprint open `LegalPage` in the app's language, Fonts & licences shows the OFL texts from
 `Shared/Fonts`, Version), Account (the email from the login answer, `EmpireSession.email`; Change password; Log out
 "in all Ares apps on this iPhone", which does what the app's log-out did before; then, in the hub's soft red, Leave
@@ -144,15 +146,47 @@ whose server keeps data per account passes its `DELETE …/me` as `SettingsApp(s
 `ArestemisAPI.accountDataURL`); leaving deletes it there first. Links: `Shared/Settings/SettingsInfo.swift`. Every
 login screen ends with "Privacy · Imprint" (`LoginScroll`). Screenshots: `-sampleData -openSheet settings` in every app
 (`-scrollToAccount` shows the Account section). A new app: a gear in its header and `SettingsScreen` in a sheet. The
-sheet is dark in every app, also in Aresium's light theme.
+sheet follows the app's appearance (dark in Aresium's red mode).
+
+## Light mode (every app, 2026-10-25)
+
+Decided 2026-10-24 (Patrik: part of the standard design, before any new app); built 2026-10-25 for all five apps and
+both widgets. **Settings → General → Appearance**: Like the iPhone (default) / Light / Dark, each app its own choice
+(`Shared/Settings/Appearance.swift`, page `Shared/Design/AppearanceScreen.swift`); it switches at once, open sheets with
+it, no restart.
+
+- **Colours are light/dark pairs.** `Color(light:dark:)` (`Shared/Design/EmpireDesign.swift`) resolves as it draws.
+  `Ink` (background, primary, secondary, muted, line, grid, card, card2, press, field, edge, shadow), `AppAccent.color`
+  (a deeper shade on the light wall, at least 4.5:1; `AppAccent.onColor` for words on an accent fill),
+  `StatusTone.activeColor`/`issueColor`, `FormButtonStyle`, `LoginStyle.standard`. The light values are Aresium's
+  website light theme (`aresium/web/public/index.html`, `html[data-theme="light"]`), except `Ink.muted` (darker, for
+  small text). A screen built from them needs nothing else; a colour no token covers gets its own pair, named for its
+  meaning. Never `.white`/`.black`/`Color(hex:)` for ink or surfaces, never a material pinned dark.
+- **The root sets the look on the window** (`AppRoot` → `overrideUserInterfaceStyle`). Screens never call
+  `preferredColorScheme`: SwiftUI fixes a sheet's look when the sheet opens, so a sheet open during a switch stayed in
+  the old look (seen 2026-10-25). A mode with its own colours holds the window in one look with `holdsColorScheme(_:)`
+  (Aresium's red mode: dark); `\.appearanceScheme` is the look to return to (the choice, or the iPhone's own, read
+  from the screen, which the window's look does not change).
+- **Widgets follow the home screen** (light or dark like the widgets around them), not the app's choice; Aresium's
+  also shows its red mode (`WidgetSnapshotStore.redMode`, `AresiumWidgetLook`).
+- **Aresium:** light or dark is the shared appearance; the sun button in its header switches it (writes the choice);
+  red is Aresium's own mode over either (`ThemeState.red`, remembered), entered and left with the band.
+- **Empire app: the marble hall** (light): ivory wall, antique gold (`EmpireStyle.goldText`/`goldName` as pairs), the
+  bust laid in with multiply, parchment coins, a plain gold chronicle line with amber dust. The phone hub's greys keep
+  their exact dark value at each place and take their role's light value (`EmpireStyle.title/heading/body/quiet/icon(dark:)`).
+- **Screenshots:** `-appearance light|dark` (a launch argument read as the saved choice), or the simulator's own look
+  with `xcrun simctl ui <device> appearance light|dark` (for "Like the iPhone" and the widgets); `-openSheet settings
+  -openAppearance` shows the page. Aresium: `-sampleRed` for red mode (`-sampleLight` is gone; use `-appearance light`).
+- Tests: `EmpireTests/AppearanceTests` (the choice, the pairs, contrast of the light accents and status colours on the
+  light wall), Aresium's `ThemeStateTests` and `WidgetTests`.
 
 ## Open (2026-10-25)
 
 All five apps (Aresium, Empire, Arestemis, Aresus, Arestoteles) work on the simulator and are merged; nothing reaches
 the phone until Apple approves the developer account.
 
-**Order of the big steps** (Patrik, 2026-10-25; also in `ares-empire/EMPIRE.md` → Now and next): light mode (10) →
-TestFlight once Apple approves (1–3, 6) → Aresium for other people (5) → Aresync file sharing from the phone (11, not
+**Order of the big steps** (Patrik, 2026-10-25; also in `ares-empire/EMPIRE.md` → Now and next): light mode (done
+2026-10-25, "Light mode" above) → TestFlight once Apple approves (1–3, 6) → Aresium for other people (5) → Aresync file sharing from the phone (11, not
 specified yet) → new apps. The other items fit in between.
 
 1. **TestFlight, once Apple approves:** set the paid team (project level, all five projects); the App Groups
@@ -181,9 +215,8 @@ specified yet) → new apps. The other items fit in between.
 9. **Arestoteles on the phone:** check the Discuss hand-off (`DiscussPrompt.target`, now `https://claude.ai/code`: does
    the Claude app open, and how to start a session there with the copied prompt); replace the bust (the website's
    `aristotle-bust.png` has a faint "Magnific" watermark); a widget with a position to revisit (needs a widget target).
-10. **Light mode before the next new app** (Patrik, 2026-10-24; `ares-empire/docs/IPHONE-APPS.md` → "Every app
-   has"): colours as light/dark pairs in `Shared/Design`, an Appearance row in Settings, every app checked in both.
-   Aresium already has its own light theme (`AppTheme`/`Palette`, the sun button in its header): start from it.
+10. ~~Light mode~~: built 2026-10-25 (section "Light mode"). On the phone, check both looks once TestFlight runs
+   (the iPhone switching by itself in the evening while an app is open, the widgets on a light and a dark home screen).
 11. **Aresync file sharing from the phone** (Patrik, 2026-10-25, named as a next step): not specified yet. Ask Patrik
    what it should do (which files, to which machines, from the share sheet or an app) before writing a brief.
 
