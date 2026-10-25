@@ -76,30 +76,55 @@ German or English. The Mac and the simulators are set to German, so the apps ope
   Deutsch" shows the language the app shows now). It offers Like the iPhone / English / Deutsch and writes the app's own
   `AppleLanguages` (`Shared/Language/LanguageSetting.swift`; "like the iPhone" removes it), the same setting iOS keeps in
   Settings → Apps → the app → Language, so the two always agree. iOS 27 shows that iOS entry only while the iPhone lists
-  two or more languages (tested 2026-10-24), hence the in-app page. iOS reads the setting when the app starts: the page
-  says the app switches after it is closed and opened again; the app's server texts follow it (`Accept-Language` from
-  `AppLanguage.current`). Not checked yet: whether a widget (its own process and defaults) follows the app's own choice
-  or the iPhone's. On the simulator, `xcrun simctl spawn <udid> defaults write <bundle id> AppleLanguages …` lands
-  outside the app's container (the app follows it, iOS's page does not); choosing in the app or in iOS Settings writes
-  the app's own defaults.
+  two or more languages (tested 2026-10-24), hence the in-app page. On the simulator, `xcrun simctl spawn <udid>
+  defaults write <bundle id> AppleLanguages …` lands outside the app's container (the app follows it, iOS's page does
+  not); choosing in the app or in iOS Settings writes the app's own defaults.
+- **Switching restarts the app inside itself** (Patrik, 2026-10-25, brief G1). A row that brings another language asks
+  first (`LanguageSwitch`): title, line and Restart in the language it switches to ("Switch to English?", "Aresus
+  restarts in English.", "Restart" / "Auf Deutsch umstellen?", "… startet auf Deutsch neu.", "Neu starten"), Cancel in
+  the current one, like iOS's own language change. Restart saves the choice, closes every sheet, sets
+  `AppLanguage.current` and builds the whole app again (`Shared/Language/LanguageRoot.swift`, every app's `WindowGroup {
+  LanguageRoot { ContentView() } }`): the main screen, new stores (the servers answer in the new language), the login
+  restored as at a launch, push registered again with the new language (`PushCenter.start` takes the new session). No
+  `exit()`. A row that keeps the language shown (Deutsch while following a German iPhone) only saves. The widgets
+  (Aresus, Aresium) run in their own process, which iOS starts in the iPhone's language: the app copies its choice into
+  the App Group (`WidgetLanguage`, `LanguageRoot(widget:)`) and reloads them; they follow it (checked on the simulator's
+  home screen, 2026-10-25). Not following: the widget gallery's name and description (system UI, the iPhone's language)
+  and words iOS draws itself inside the app, such as the Cut/Copy/Replace menu on selected text: they keep the language
+  iOS started the app in until it is next opened (measured 2026-10-25; SwiftUI's own words, like the Search tab's
+  title, do follow). DEBUG screenshots: `-openSheet settings -openLanguage` (the page),
+  `-confirmLanguage en|de|iphone` (the confirmation), `-switchLanguage en|de|iphone` (Restart, 2 s after launch); after
+  a restart the arguments that open a screen are dropped (`LaunchArguments`), so read launch arguments from
+  `LaunchArguments.current`, not `ProcessInfo`. UI tests: `Aresus/AresusUITests` (the real taps, both ways).
 - **Write English in the code, German in the String Catalogs.** `Text("Save")`, `Button("Save")` and other SwiftUI
-  literals are looked up by themselves. Text that is built as a `String` (model code, components taking `String`,
-  errors) goes through `String(localized: "…")`; pure functions that tests pin take `language: AppLanguage = .current`
-  and use `language.string("…")`. Names (Aresium, WG-Gesucht) and numbers-only text use `Text(verbatim:)`.
+  literals are looked up by themselves (in the root's `.environment(\.locale)`). Text that is built as a `String`
+  (model code, components taking `String`, errors) goes through `String(localized: "…")`, which is the apps' own
+  (`Shared/Language/AppLanguage.swift`): it reads `AppLanguage.current`, as Foundation's would not after a switch.
+  With a table or a comment it is `String(localized: LocalizedStringResource("…", table: "Shared", locale:
+  .appLanguage))` (Xcode keeps the table and comment only for Foundation's own calls); `scripts/strings.py check` finds
+  any lookup that would keep the start language and `scripts/strings.py fix-lookups` rewrites them. Pure functions
+  that tests pin take `language: AppLanguage = .current` and use `language.string("…")`. Names (Aresium, WG-Gesucht)
+  and numbers-only text use `Text(verbatim:)`. Never keep a looked-up text in a `static let` or anywhere else that
+  outlives a restart.
 - **One catalog per folder that more than one target compiles:** `Shared/Shared.xcstrings`,
   `Aresium/AresiumShared/AresiumShared.xcstrings`, `Aresus/AresusShared/AresusShared.xcstrings`. Code in those folders
-  names its table (`Text("Log in", tableName: "Shared")`, `String(localized: "…", table: "AresusShared")`), or the
-  widget would miss the string. Everything else uses the target's own `Localizable.xcstrings` (each app, each widget).
+  names its table (`Text("Log in", tableName: "Shared")`, `String(localized: LocalizedStringResource("…", table:
+  "AresusShared", locale: .appLanguage))`), or the widget would miss the string. Everything else uses the target's own
+  `Localizable.xcstrings` (each app, each widget).
 - **Numbers, money, dates:** `AppLanguage.locale` (en_GB or de_DE, fixed per language): "€1,400" / "1.400 €",
   "Sat 24 Oct" / "Sa. 24. Okt."; `Format`/`AresusFormat`/`Money` take the language. A server's sentences arrive in the
   app's language: `URLSessionTransport` sends `Accept-Language`, `PushAPI` registers the device's language.
 - **After changing text:** `scripts/strings.py sync` (exports every project and updates the catalogs: new keys in,
-  unused ones out), write the German (`scripts/strings.py fill de.json`, plurals as `{"en": {"one", "other"}, "de":
-  {…}}`, or edit the catalog in Xcode), then `scripts/strings.py check` must say 0 problems. Look at every changed
+  unused ones out; Xcode's export also rewrites the catalogs, so run it rather than `-exportLocalizations` alone),
+  write the German (`scripts/strings.py fill de.json`, plurals as `{"en": {"one", "other"}, "de": {…}}`, or edit the
+  catalog in Xcode), then `scripts/strings.py check` must say 0 problems. Look at every changed
   screen in German before merging: `xcrun simctl launch <udid> <bundle id> -AppleLanguages "(de)" -AppleLocale de_DE`
   plus the app's sample arguments; a label that wraps gets a shorter German word, not a smaller font.
 - **Tests run in English:** each scheme's test action pins `en`/`GB`. German cases call the pure functions with
-  `language: .german` (`FormattingTests`, `AresusFormatTests`, `GermanTests`, `AppLanguageTests`).
+  `language: .german` (`FormattingTests`, `AresusFormatTests`, `GermanTests`, `AppLanguageTests`), or run code in the
+  other language with `AppLanguage.$scoped.withValue(.german) { … }` (per test, so tests running side by side keep
+  theirs). The switch tests (`LanguageLookupTests`, `LanguageSwitchTests` in each suite) ask in both languages; to
+  prove the other direction run them again with `-testLanguage de -testRegion DE`.
 - Sample mode shows the servers' English sample files, so their lines stay English there; live they come in German.
 - German style: "du", plain and short; the app's terms: Jagd/Angebote/Suche (Arestemis), Problem/Aktiv/Inaktiv
   (Aresus), Buchung/Ausgaben/Einnahmen (Aresium), EROBERT/BELAGERT/… (Empire status words). "THE EMPIRE" stays a name.
@@ -216,6 +241,7 @@ Apple approves the developer account.
   Keychain locked (the token is readable only while the phone is unlocked), it shows the saved status; after an hour it
   loses its status colour. `Aresus/AresusShared/` is compiled into app and widget (overview types, API client core,
   widget status, store, loader, views). DEBUG `-widgetGallery good|issues|loggedout` shows the views for screenshots.
+  `AresusUITests` (UI tests, in the scheme): Settings → Language switched both ways with the real taps, about a minute.
 - **Arestemis app** (2026-10-24, build A1): `Arestemis/` (bundle id `de.ares-empire.arestemis`), the flat hunter on
   the Arestemis API (`~/Arestemis/docs/API.md`; samples in `Arestemis/Arestemis/Samples/`, copies of its `docs/samples/`).
   Data in `API/` + `Model/` (one `ArestemisStore`, optimistic changes with rollback), screens in `Screens/` on
