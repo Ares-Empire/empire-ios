@@ -178,15 +178,18 @@ struct WidgetTests {
         #expect(dashboard.error == nil)
         #expect(files.load() == WidgetSnapshot.sample)
         #expect(reloads == 1)
-        for theme in AppTheme.allCases {
-            dashboard.setWidgetTheme(theme)
-            #expect(files.theme == theme)
-        }
+        dashboard.setWidgetRedMode(false)               // already off: nothing to reload
+        #expect(!files.redMode)
+        #expect(reloads == 1)
+        dashboard.setWidgetRedMode(true)
+        #expect(files.redMode)
+        dashboard.setWidgetRedMode(true)
+        #expect(reloads == 2)
         session.logOut()
         #expect(files.load() == nil)
         #expect(!FileManager.default.fileExists(atPath: root.appendingPathComponent("widget-snapshot.json").path))
-        #expect(files.theme == .red)
-        #expect(reloads == 5)
+        #expect(files.redMode)
+        #expect(reloads == 3)
         #expect(session.error == nil)
         // Sample logout has no token change; clearing the dashboard must also remove the file.
         await dashboard.reload()
@@ -196,12 +199,12 @@ struct WidgetTests {
         #expect(dashboard.error == nil)
     }
 
-    @Test func absentOrCorruptSnapshotShowsEmptyStateAndDefaultsToDark() throws {
+    @Test func absentOrCorruptSnapshotShowsEmptyStateWithoutRedMode() throws {
         let root = try directory()
         defer { try? FileManager.default.removeItem(at: root) }
         let files = WidgetSnapshotStore(directory: root)
         #expect(files.load() == nil)
-        #expect(files.theme == .dark)
+        #expect(!files.redMode)
         try Data("invalid".utf8).write(to: root.appendingPathComponent("widget-snapshot.json"))
         #expect(files.load() == nil)
         try files.delete()

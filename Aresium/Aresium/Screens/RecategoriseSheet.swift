@@ -55,7 +55,6 @@ struct RecategoriseSheet: View {
             .disabled(store.isSaving)
         }
         .font(AppFont.text(14)).foregroundStyle(palette.ink).tint(palette.balance)
-        .preferredColorScheme(palette.dark ? .dark : .light)
         .interactiveDismissDisabled(store.isSaving)
     }
 

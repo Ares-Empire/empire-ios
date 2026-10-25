@@ -105,8 +105,9 @@ final class DashboardStore {
         }
     }
 
-    func setWidgetTheme(_ theme: AppTheme) {
-        do { try widgetPublisher.setTheme(theme) } catch { self.error = error.localizedDescription }
+    /// Tells the widgets whether red mode is on (otherwise they follow the home screen's light or dark).
+    func setWidgetRedMode(_ red: Bool) {
+        do { try widgetPublisher.setRedMode(red) } catch { self.error = error.localizedDescription }
     }
 
     func transactionDetailStore(for transaction: Transaction) -> TransactionDetailStore {

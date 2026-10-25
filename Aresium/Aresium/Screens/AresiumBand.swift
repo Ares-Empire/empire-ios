@@ -59,6 +59,7 @@ struct AresiumBand: View {
 
 struct AresiumIntro: View {
     let transition: ThemeState.Transition
+    let target: AppTheme            // the look it lands on: red, or the appearance's light or dark
     let landing: CGFloat            // from the screen's bottom edge to the band word's bottom, where the word lands
     var pausedProgress: Double?
     @State private var start = Date()       // each transition gets a new overlay (`.id`), so a new start
@@ -81,7 +82,7 @@ struct AresiumIntro: View {
     nonisolated private func frame(at progress: Double) -> some View {
         GeometryReader { geometry in
             let pose = IntroTimeline.frame(at: progress, entering: transition.entering)
-            let target = Palette(theme: transition.target)
+            let target = Palette(theme: target)
             ZStack(alignment: .bottom) {
                 Wall(palette: target).opacity(IntroTimeline.backgroundOpacity(at: progress))
                 // The website overlay uses the translucent white word in either direction.

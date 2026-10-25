@@ -29,8 +29,10 @@ struct WidgetSnapshotPublisher {
         reloadTimelines()
     }
 
-    func setTheme(_ theme: AppTheme) throws {
-        try store.saveTheme(theme)
+    /// Saves red mode for the widgets; reloads them only when it changed.
+    func setRedMode(_ red: Bool) throws {
+        guard store.redMode != red else { return }
+        try store.saveRedMode(red)
         reloadTimelines()
     }
 }

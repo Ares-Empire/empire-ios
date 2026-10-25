@@ -1,118 +1,96 @@
+import SwiftUI
 import Testing
 @testable import Aresium
 
 struct ThemeStateTests {
     @Test(arguments: [AppTheme.dark, .light])
-    func bandReturnsToPreviousTheme(start: AppTheme) {
-        var state = ThemeState(rememberedValue: start.rawValue)
+    func bandEntersAndLeavesRedOverTheAppearance(base: AppTheme) {
+        var state = ThemeState()
+        #expect(state.theme(over: base) == base)
         state.send(.band, reduceMotion: false)
-        #expect(state.theme == start)
-        #expect(state.transition?.source == start)
-        #expect(state.transition?.target == .red)
-        #expect(state.previousTheme == start)
+        #expect(state.transition?.entering == true)
         state.advance(to: 0.559)
-        #expect(state.theme == start)
+        #expect(state.theme(over: base) == base)
         state.advance(to: 0.56)
-        #expect(state.theme == .red)
+        #expect(state.theme(over: base) == .red)
         #expect(state.isAnimating)
         state.advance(to: 1)
         #expect(!state.isAnimating)
         state.send(.band, reduceMotion: false)
-        #expect(state.transition?.target == start)
         #expect(state.transition?.entering == false)
         state.advance(to: 1)
-        #expect(state.theme == start)
+        #expect(state.theme(over: base) == base)
     }
 
-    @Test(arguments: [AppTheme.dark, .light])
-    func headerXExitsRed(start: AppTheme) {
-        var state = ThemeState(rememberedValue: start.rawValue)
-        state.send(.band, reduceMotion: true)
+    @Test func headerXLeavesRed() {
+        var state = ThemeState(red: true)
         state.send(.header, reduceMotion: false)
-        #expect(state.theme == .red)
-        #expect(state.transition?.target == start)
+        #expect(state.red)
+        #expect(state.transition?.entering == false)
         state.advance(to: 1)
-        #expect(state.theme == start)
+        #expect(!state.red)
     }
 
-    @Test func headerTogglesDarkAndLightInstantly() {
+    /// Outside red the header is the sun button: it switches the app's appearance, not this state.
+    @Test func headerOutsideRedLeavesTheStateAlone() {
         var state = ThemeState()
         state.send(.header, reduceMotion: false)
-        #expect(state.theme == .light)
+        #expect(!state.red)
         #expect(!state.isAnimating)
-        state.send(.header, reduceMotion: false)
-        #expect(state.theme == .dark)
+        #expect(Appearance.toggled(from: .dark) == .light)
+        #expect(Appearance.toggled(from: .light) == .dark)
+    }
+
+    /// Red stays on across launches, over whichever look the appearance gives then.
+    @Test func redIsRememberedAndShowsOverEitherLook() {
+        let state = ThemeState(red: true)
+        #expect(state.theme(over: .light) == .red)
+        #expect(state.theme(over: .dark) == .red)
         #expect(!state.isAnimating)
+        #expect(ThemeState().theme(over: .light) == .light)
     }
 
-    @Test(arguments: AppTheme.allCases)
-    func restoresRememberedTheme(theme: AppTheme) {
-        let state = ThemeState(rememberedValue: theme.rawValue)
-        #expect(state.theme == theme)
-        #expect(!state.isAnimating)
-    }
-
-    @Test func restoresRedAndItsPreviousThemeAcrossLaunches() {
-        var original = ThemeState(rememberedValue: "light")
-        original.send(.band, reduceMotion: true)
-        var restored = ThemeState(rememberedValue: original.theme.rawValue,
-                                  previousValue: original.previousTheme.rawValue)
-        restored.send(.header, reduceMotion: true)
-        #expect(restored.theme == .light)
-    }
-
-    @Test func invalidPreferencesFallBackToDark() {
-        #expect(ThemeState(rememberedValue: "invalid").theme == .dark)
-        for previous in [nil, "invalid", "red"] {
-            var state = ThemeState(rememberedValue: "red", previousValue: previous)
-            state.send(.header, reduceMotion: true)
-            #expect(state.theme == .dark)
-        }
-    }
-
-    @Test(arguments: [AppTheme.dark, .light])
-    func reduceMotionSkipsOverlayInBothDirections(start: AppTheme) {
-        var state = ThemeState(rememberedValue: start.rawValue)
+    @Test func reduceMotionSkipsOverlayInBothDirections() {
+        var state = ThemeState()
         state.send(.band, reduceMotion: true)
-        #expect(state.theme == .red)
+        #expect(state.red)
         #expect(state.transition == nil)
         state.send(.band, reduceMotion: true)
-        #expect(state.theme == start)
+        #expect(!state.red)
         #expect(state.transition == nil)
     }
 
     @Test(arguments: [0.0, 0.56, 0.99])
     func tapsDuringAnimationAreIgnored(progress: Double) {
-        var state = ThemeState(rememberedValue: "light")
+        var state = ThemeState()
         state.send(.band, reduceMotion: false)
         state.advance(to: progress)
         let transition = state.transition
-        let theme = state.theme
+        let red = state.red
         state.send(.band, reduceMotion: false)
         state.send(.header, reduceMotion: true)
         #expect(state.transition == transition)
-        #expect(state.theme == theme)
-        #expect(state.previousTheme == .light)
+        #expect(state.red == red)
         state.advance(to: 1)
         state.send(.header, reduceMotion: false)
-        #expect(state.transition?.target == .light)
-        // Exiting must be guarded as well, both before and after its real theme swap.
+        #expect(state.transition?.entering == false)
+        // Exiting must be guarded as well, both before and after its real swap.
         let exit = state.transition
         state.send(.band, reduceMotion: true)
         state.advance(to: 0.56)
         state.send(.header, reduceMotion: false)
         #expect(state.transition == exit)
-        #expect(state.theme == .light)
+        #expect(!state.red)
     }
 
     @Test func enablingReduceMotionFinishesAnActiveTransition() {
         var state = ThemeState()
         state.send(.band, reduceMotion: false)
         state.finishImmediately()
-        #expect(state.theme == .red)
+        #expect(state.red)
         #expect(!state.isAnimating)
         state.advance(to: 0.56)
-        #expect(state.theme == .red)
+        #expect(state.red)
     }
 
     @Test func timelineMatchesWebsiteAnchors() {

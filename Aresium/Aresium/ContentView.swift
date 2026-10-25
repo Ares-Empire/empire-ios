@@ -3,8 +3,10 @@ import SwiftUI
 struct ContentView: View {
     @State private var store: DashboardStore
     @State private var imports: ImportStore
-    @AppStorage(ThemeState.preferenceKey) private var rememberedTheme = AppTheme.dark.rawValue
-    @AppStorage(ThemeState.previousPreferenceKey) private var rememberedPreviousTheme = AppTheme.dark.rawValue
+    @AppStorage(ThemeState.preferenceKey) private var rememberedRed = false
+    @AppStorage(Appearance.key) private var appearance = Appearance.iPhone.rawValue
+    /// Light or dark as Settings → Appearance (or the iPhone) says; red mode shows over it.
+    @Environment(\.appearanceScheme) private var appearanceScheme
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var theme: ThemeState
@@ -19,7 +21,9 @@ struct ContentView: View {
     /// Where the band was when it was tapped (from the screen's bottom edge to its word), so the intro's word lands
     /// there; nil when the header started the transition.
     @State private var bandLanding: CGFloat?
-    private var palette: Palette { Palette(theme: theme.theme) }
+    private var base: AppTheme { appearanceScheme == .light ? .light : .dark }
+    private var shownTheme: AppTheme { theme.theme(over: base) }
+    private var palette: Palette { Palette(theme: shownTheme) }
     private var session: EmpireSession { store.session }
 
     init(arguments: [String] = LaunchArguments.current) {
@@ -33,13 +37,12 @@ struct ContentView: View {
             || arguments.contains("-sampleLoginWaiting") || account != nil
         skipRestore = DebugLaunch.isTesting || arguments.contains("-sampleLoginWaiting") || account?.restores == false
         #endif
-        var initialTheme = ThemeState(rememberedValue: UserDefaults.standard.string(forKey: ThemeState.preferenceKey),
-                                      previousValue: UserDefaults.standard.string(forKey: ThemeState.previousPreferenceKey))
+        var initialTheme = ThemeState(red: UserDefaults.standard.bool(forKey: ThemeState.preferenceKey))
         var pausedProgress: Double?
         #if DEBUG
         if sample {
-            initialTheme = ThemeState(rememberedValue: arguments.contains("-sampleRed") ? "red" :
-                                        arguments.contains("-sampleLight") ? "light" : "dark")
+            // Light or dark in screenshots: `-appearance light|dark`.
+            initialTheme = ThemeState(red: arguments.contains("-sampleRed"))
             if let index = arguments.firstIndex(of: "-sampleIntroProgress"), arguments.indices.contains(index + 1),
                let progress = Double(arguments[index + 1]), progress.isFinite {
                 let clamped = min(1, max(0, progress))
@@ -130,12 +133,12 @@ struct ContentView: View {
                 }
             }
             .foregroundStyle(palette.ink).background { Wall(palette: palette) }
-            .preferredColorScheme(palette.dark ? .dark : .light)
+            .holdsColorScheme(palette.red ? .dark : nil)      // red mode: dark status bar, sheets and keyboard
             .allowsHitTesting(!theme.isAnimating)
             .overlay {
                 if let transition = theme.transition {
                     // Without a tapped band (the header, the DEBUG intro arguments): where the band sits at the end.
-                    AresiumIntro(transition: transition,
+                    AresiumIntro(transition: transition, target: transition.entering ? .red : base,
                                  landing: bandLanding ?? geometry.safeAreaInsets.bottom + WordmarkEnd.below,
                                  pausedProgress: pausedIntroProgress)
                         .id(transition.id)
@@ -145,12 +148,9 @@ struct ContentView: View {
             .onChange(of: reduceMotion) { _, reduced in
                 if reduced { theme.finishImmediately() }
             }
-            .onChange(of: theme.theme) { _, value in
-                if !store.isSample { rememberedTheme = value.rawValue }
-                store.setWidgetTheme(value)
-            }
-            .onChange(of: theme.previousTheme) { _, value in
-                if !store.isSample { rememberedPreviousTheme = value.rawValue }
+            .onChange(of: theme.red) { _, red in
+                if !store.isSample { rememberedRed = red }
+                store.setWidgetRedMode(red)
             }
             .task {
                 if restoresOnLaunch { await session.restore() }
@@ -163,7 +163,7 @@ struct ContentView: View {
                     }
                 }
             }
-            .task { store.setWidgetTheme(theme.theme) }
+            .task { store.setWidgetRedMode(theme.red) }
             .onChange(of: session.generation) { _, _ in
                 if !session.isSignedIn { path = [] }
                 Task { await imports.sessionChanged() }
@@ -249,8 +249,12 @@ struct ContentView: View {
                             back: route == nil ? nil : { if !path.isEmpty { path.removeLast() } },
                             toggleTheme: {
             guard !theme.isAnimating else { return }
-            bandLanding = nil
-            theme.send(.header, reduceMotion: reduceMotion)
+            if theme.red {
+                bandLanding = nil
+                theme.send(.header, reduceMotion: reduceMotion)       // the X: back to light or dark
+            } else {
+                appearance = Appearance.toggled(from: appearanceScheme).rawValue    // the sun: the app's appearance
+            }
         }, openSettings: { showsSettings = true })
     }
 

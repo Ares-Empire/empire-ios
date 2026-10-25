@@ -1,53 +1,44 @@
 import Foundation
 
-/// Display preferences and transition gating, independent of SwiftUI and wall-clock time.
+/// Aresium's red mode and its transitions, independent of SwiftUI and wall-clock time. Light or dark is the app's
+/// appearance (Settings → Appearance, shared by every app; the header's sun button switches it), so this keeps only
+/// whether red is on: the band enters and leaves it, the header's X leaves it, and it stays on across launches.
 nonisolated struct ThemeState {
-    static let preferenceKey = "aresium.theme"
-    static let previousPreferenceKey = "aresium.previousTheme"
+    static let preferenceKey = "aresium.red"
 
     enum Action { case band, header }
 
     struct Transition: Equatable {
         let id = UUID()
-        let source: AppTheme
-        let target: AppTheme
-        var entering: Bool { target == .red }
+        let entering: Bool              // into red; false: back to the appearance's light or dark
     }
 
-    private(set) var theme: AppTheme
-    private(set) var previousTheme: AppTheme
+    private(set) var red: Bool
     private(set) var transition: Transition?
     var isAnimating: Bool { transition != nil }
 
-    init(rememberedValue: String? = nil, previousValue: String? = nil) {
-        theme = AppTheme(rawValue: rememberedValue ?? "") ?? .dark
-        let previous = AppTheme(rawValue: previousValue ?? "") ?? .dark
-        previousTheme = previous == .red ? .dark : previous
+    init(red: Bool = false) {
+        self.red = red
     }
 
+    /// The look on screen over the appearance's light or dark (`base`).
+    func theme(over base: AppTheme) -> AppTheme { red ? .red : base }
+
+    /// The band enters or leaves red; the header's X leaves it. The header outside red is the sun button, which
+    /// switches the app's appearance instead (`Appearance.toggled`), so it does nothing here. Taps while a transition
+    /// runs are ignored.
     mutating func send(_ action: Action, reduceMotion: Bool) {
-        guard !isAnimating else { return }
-        if action == .header, theme != .red {
-            theme = theme == .dark ? .light : .dark
-            return
-        }
-        let target: AppTheme
-        if theme == .red {
-            target = previousTheme
-        } else {
-            previousTheme = theme
-            target = .red
-        }
+        guard !isAnimating, action == .band || red else { return }
         if reduceMotion {
-            theme = target
+            red.toggle()
         } else {
-            transition = Transition(source: theme, target: target)
+            transition = Transition(entering: !red)
         }
     }
 
     mutating func advance(to progress: Double) {
         guard let transition else { return }
-        if progress >= IntroTimeline.swapAt { theme = transition.target }
+        if progress >= IntroTimeline.swapAt { red = transition.entering }
         if progress >= 1 { self.transition = nil }
     }
 

@@ -6,9 +6,13 @@ import UIKit
 /// Every app's root, inside its `WindowGroup`: `AppRoot { ContentView(…) }`. It applies the app's two settings that
 /// reach every screen:
 /// - **Appearance** (Settings → Appearance): like the iPhone, light or dark, for the whole window and its sheets; the
-///   shared colours follow (`Ink`, `AppAccent`). It switches at once. A screen can hold the window in one look for a
-///   while with `holdsColorScheme(_:)` (Aresium's red mode is dark); the root's choice wins over any
-///   `preferredColorScheme` further in, so screens never set that themselves.
+///   shared colours follow (`Ink`, `AppAccent`). It switches at once, open sheets with it. A screen can hold the
+///   window in one look for a while with `holdsColorScheme(_:)` (Aresium's red mode is dark). `\.appearanceScheme`
+///   tells screens the look the app shows outside such a mode (the choice, or the iPhone's own look).
+///   The look is set on the window itself (UIKit's `overrideUserInterfaceStyle`), which every sheet and alert follows.
+///   Not SwiftUI's `preferredColorScheme`: it fixes a sheet's look when the sheet opens and keeps it, so a sheet open
+///   while the look changes (Settings → Appearance itself) stayed in the old one (seen 2026-10-25). Screens never
+///   call `preferredColorScheme`.
 /// - **Language**: it shows the app in the language it shows now and, when Settings → Language switches it, restarts
 ///   the app inside itself: the choice is saved where iOS keeps the app's language, every sheet and alert is closed,
 ///   then the whole view tree is built again in the new language, as at a launch. The main screen comes back, the
@@ -22,6 +26,10 @@ struct AppRoot<Content: View>: View {
     @State private var window = WindowReference()
     @AppStorage(Appearance.key) private var appearance = Appearance.iPhone.rawValue
     @State private var held: ColorScheme?
+    /// The iPhone's own look; nil until the window is shown.
+    @State private var iPhoneScheme: ColorScheme?
+    @Environment(\.colorScheme) private var windowScheme
+    @Environment(\.scenePhase) private var scenePhase
 
     /// - Parameter widget: where the app's widget reads the app's choice; nil for apps without a widget.
     init(setting: LanguageSetting = .standard, widget: WidgetLanguage? = nil, @ViewBuilder content: @escaping () -> Content) {
@@ -31,19 +39,30 @@ struct AppRoot<Content: View>: View {
     }
 
     var body: some View {
+        let chosen = Appearance(saved: appearance).colorScheme
         content()
             .id(language)                                       // a new language: every view and its state anew
             .environment(\.locale, language.locale)            // SwiftUI's own lookups (Text, Button, …) and formats
             .environment(\.switchLanguage, SwitchLanguageAction(run: switchLanguage))
+            .environment(\.appearanceScheme, chosen ?? iPhoneScheme ?? windowScheme)
             .onPreferenceChange(HeldColorScheme.self) { scheme in
                 Task { @MainActor in held = scheme }
             }
-            .preferredColorScheme(held ?? Appearance(saved: appearance).colorScheme)
-            .background { WindowReader(reference: window) }
+            .onChange(of: held ?? chosen, initial: true) { _, scheme in window.show(scheme) }
+            .background { WindowReader(reference: window, sceneChanged: readIPhoneScheme) }
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .active { readIPhoneScheme() }
+            }
             .task { widget?.publish(setting.choice) }        // a choice made in iOS Settings, or in an older version
             #if DEBUG
             .task { await switchFromLaunchArgument() }
             #endif
+    }
+
+    /// The iPhone's look, read from the screen (the app's look is set on the window, below the scene and the screen),
+    /// whenever the scene's look changes or the app comes to the front.
+    private func readIPhoneScheme() {
+        if let style = window.iPhoneStyle { iPhoneScheme = ColorScheme(style) }
     }
 
     private func switchLanguage(_ change: LanguageSwitch) {
@@ -73,6 +92,12 @@ struct AppRoot<Content: View>: View {
     #endif
 }
 
+extension EnvironmentValues {
+    /// The look the app shows outside a held mode: Settings → Appearance, or for "like the iPhone" the iPhone's own.
+    /// Inside a mode that holds the window (Aresium's red), `colorScheme` is the held look and this the one to return to.
+    @Entry var appearanceScheme: ColorScheme = .dark
+}
+
 /// A look a screen holds the whole window in, over the app's appearance (`holdsColorScheme(_:)`).
 private struct HeldColorScheme: PreferenceKey {
     static let defaultValue: ColorScheme? = nil
@@ -92,7 +117,23 @@ extension View {
 /// The window the root is shown in, to close what is presented over it.
 @MainActor
 private final class WindowReference {
-    weak var window: UIWindow?
+    weak var window: UIWindow? { didSet { window?.overrideUserInterfaceStyle = style } }
+    /// The look the window shows: the app's choice or a held one; unspecified follows the iPhone.
+    private var style = UIUserInterfaceStyle.unspecified
+
+    func show(_ scheme: ColorScheme?) {
+        style = switch scheme {
+        case .light: .light
+        case .dark: .dark
+        default: .unspecified
+        }
+        window?.overrideUserInterfaceStyle = style
+    }
+
+    /// The iPhone's own light or dark, whatever the app shows.
+    var iPhoneStyle: UIUserInterfaceStyle? {
+        window?.windowScene?.screen.traitCollection.userInterfaceStyle
+    }
 
     /// Dismisses every sheet and alert over the window's root, waiting for one that is still on its way in or out
     /// (the confirmation closes as its Restart is tapped).
@@ -109,23 +150,40 @@ private final class WindowReference {
     }
 }
 
+/// Finds the window the root is shown in, and says when it is shown and each time its scene's light or dark changes
+/// (the iPhone switching while the app follows it, or the app's own choice).
 private struct WindowReader: UIViewRepresentable {
     let reference: WindowReference
+    let sceneChanged: () -> Void
 
-    func makeUIView(context: Context) -> ReaderView { ReaderView(reference: reference) }
+    func makeUIView(context: Context) -> ReaderView { ReaderView(reference: reference, sceneChanged: sceneChanged) }
     func updateUIView(_ view: ReaderView, context: Context) {}
 
     final class ReaderView: UIView {
         let reference: WindowReference
-        init(reference: WindowReference) {
+        let sceneChanged: () -> Void
+        private weak var scene: UIWindowScene?
+        private var registration: (any UITraitChangeRegistration)?
+
+        init(reference: WindowReference, sceneChanged: @escaping () -> Void) {
             self.reference = reference
+            self.sceneChanged = sceneChanged
             super.init(frame: .zero)
             isUserInteractionEnabled = false
         }
         required init?(coder: NSCoder) { nil }
         override func didMoveToWindow() {
             super.didMoveToWindow()
-            if let window { reference.window = window }
+            guard let window else { return }
+            reference.window = window
+            guard let windowScene = window.windowScene, windowScene !== scene else { return }
+            if let registration, let scene { scene.unregisterForTraitChanges(registration) }
+            scene = windowScene
+            sceneChanged()
+            registration = windowScene.registerForTraitChanges([UITraitUserInterfaceStyle.self]) {
+                [weak self] (_: UIWindowScene, _: UITraitCollection) in
+                self?.sceneChanged()
+            }
         }
     }
 }

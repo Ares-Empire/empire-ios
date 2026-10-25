@@ -45,13 +45,15 @@ nonisolated struct WidgetSnapshotStore {
         if FileManager.default.fileExists(atPath: url.path) { try FileManager.default.removeItem(at: url) }
     }
 
-    var theme: AppTheme {
-        guard let url = try? file("widget-theme.json"), let data = try? Data(contentsOf: url),
-              let theme = try? JSONDecoder().decode(AppTheme.self, from: data) else { return .dark }
-        return theme
+    /// Whether the app is in red mode; the widgets then show red, otherwise the home screen's light or dark
+    /// (`AresiumWidgetLook`). Off when nothing is saved.
+    var redMode: Bool {
+        guard let url = try? file("widget-red-mode.json"), let data = try? Data(contentsOf: url),
+              let red = try? JSONDecoder().decode(Bool.self, from: data) else { return false }
+        return red
     }
 
-    func saveTheme(_ theme: AppTheme) throws {
-        try JSONEncoder().encode(theme).write(to: file("widget-theme.json"), options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+    func saveRedMode(_ red: Bool) throws {
+        try JSONEncoder().encode(red).write(to: file("widget-red-mode.json"), options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
     }
 }

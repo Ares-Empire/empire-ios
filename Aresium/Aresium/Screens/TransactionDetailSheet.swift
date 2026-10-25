@@ -28,7 +28,6 @@ struct TransactionDetailSheet: View {
             }
         }
         .font(AppFont.text(14)).foregroundStyle(palette.ink).tint(palette.balance)
-        .preferredColorScheme(palette.dark ? .dark : .light)
         .task {
             if store.detail == nil { await store.load() }
             // Sample-only routing for repeatable simulator screenshots, like the
