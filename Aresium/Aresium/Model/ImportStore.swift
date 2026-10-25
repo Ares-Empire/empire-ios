@@ -151,7 +151,8 @@ final class ImportStore {
                 try Task.checkCancellation()
                 let result = try await client.importFiles(files, token: token) {
                     if generation == self.generation {
-                        self.dashboard.session.handleAuthFailure(HTTPError.unauthorized, generation: sessionGeneration)
+                        self.dashboard.session.handleAuthFailure(HTTPError.unauthorized, generation: sessionGeneration,
+                                                                 token: token)
                     }
                 }
                 guard generation == self.generation, sessionGeneration == dashboard.session.generation else { return }
@@ -169,7 +170,7 @@ final class ImportStore {
                  files: results.map(\.displayMessage))
         } catch {
             guard generation == self.generation, sessionGeneration == dashboard.session.generation else { return }
-            dashboard.session.handleAuthFailure(error, generation: sessionGeneration)
+            dashboard.session.handleAuthFailure(error, generation: sessionGeneration, token: token)
             guard generation == self.generation else { return }
             let message = error is CancellationError || (error as? URLError)?.code == .cancelled
                 ? String(localized: "Import interrupted. Retry when you return to Aresium.") : error.localizedDescription

@@ -88,13 +88,9 @@ struct ArestotelesAPI: VaultBackend {
 
     // MARK: - requests
 
-    /// The shared statuses (`checkResponse`), except that a 503 keeps the server's own sentence when it sends one: the
-    /// shared message speaks of the account server, while this server also answers 503 before its first index is
-    /// built ("still loading", API.md).
+    /// The shared statuses (`checkResponse`); a 503 keeps the server's own sentence, which matters here: this server
+    /// also answers 503 before its first index is built ("still loading", API.md).
     private func check(_ response: HTTPURLResponse, data: Data) throws {
-        if response.statusCode == 503, let message = try? JSONDecoder().decode(ServerMessage.self, from: data).error {
-            throw HTTPError.server(503, message)
-        }
         try checkResponse(response, data: data, onUnauthorized: {})
     }
 

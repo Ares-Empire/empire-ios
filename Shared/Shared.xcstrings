@@ -1009,6 +1009,16 @@
         }
       }
     },
+    "This isn't allowed for this account." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das ist für dieses Konto nicht erlaubt."
+          }
+        }
+      }
+    },
     "Too many messages for now. Please try again later." : {
       "localizations" : {
         "de" : {
@@ -1141,6 +1151,16 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Your %1$@ data on its server is deleted, but your access is not removed yet. %2$@"
+          }
+        }
+      }
+    },
+    "Your Ares account and the other apps stay." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Ares-Konto und die anderen Apps bleiben."
           }
         }
       }

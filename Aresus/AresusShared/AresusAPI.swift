@@ -36,12 +36,8 @@ struct AresusAPI {
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.timeoutInterval = 30
         let (data, response) = try await transport.send(request)
-        // Aresus answers 503 for two reasons (account server unreachable, or its first check round not finished yet,
-        // aresus/docs/API.md → CONTRACT ADDITION) and says which in `error`; keep its sentence over the shared one.
-        if response.statusCode == 503, let message = try? JSONDecoder().decode(ServerMessage.self, from: data).error,
-           !message.isEmpty {
-            throw HTTPError.server(503, message)
-        }
+        // A 503 says which of its two reasons it is (account server unreachable, or the first check round not finished
+        // yet, aresus/docs/API.md → CONTRACT ADDITION): `checkResponse` keeps the server's sentence.
         try checkResponse(response, data: data, onUnauthorized: onUnauthorized)
         return try AresusJSON.decoder().decode(T.self, from: data)
     }

@@ -245,7 +245,8 @@ struct PushCenterTests {
     @Test func deniedAccessRemovesTheDevice() async {
         let setup = await setup()
         await deliverToken(setup)
-        setup.session.handleAuthFailure(HTTPError.server(403, "No access."), generation: setup.session.generation)
+        setup.session.handleAuthFailure(HTTPError.server(403, "No access."), generation: setup.session.generation,
+                                        token: setup.session.token)
         await setup.push.idle()
         #expect(setup.session.isDenied)
         #expect(setup.server.requests.map(\.httpMethod) == ["POST", "DELETE"])

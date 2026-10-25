@@ -246,9 +246,15 @@ specified yet) → new apps. The other items fit in between.
   Group `group.de.ares-empire.shared` (deleted by iOS only with the last Empire app). Rules in
   `Shared/Auth/EmpireSession.swift`: an invalid login (401, refresh refused) logs out everywhere; an account without
   this app's service, or a 403 from the app's server, closes only this app (`access = .denied`, the app forgets its
-  data via `onAppDataReset`); a failed new login never ends an existing one. Coming to the foreground, each app calls
+  data via `onAppDataReset`); a failed new login never ends an existing one. A refusal counts only for the login it
+  was made with: every caller passes the token it sent (`handleAuthFailure(_:generation:token:)`), so a late 401 for
+  an older token (one renewed or replaced in another app) changes nothing, and a 401 deletes the saved login only
+  while it is still the refused token (council 2026-10-25). Only a 403 with the code `no_access`, or none, closes the
+  app; other codes (`admin_only`) only refuse that request (`HTTPError.forbidden`), and a 503 shows the server's own
+  sentence (`Shared/API/HTTP.swift`). Coming to the foreground, each app calls
   `followSharedLogin()`: it picks up a login or logout made in another app meanwhile (a renewed token of the same
-  account is taken over without a server call). Every logout is written to the device log with the line that
+  account is taken over without a server call); while the app is closed because the account lacks its service, it
+  asks the account server again quietly, at most once a minute, so an approval opens the app by itself. Every logout is written to the device log with the line that
   asked for it (`log show --predicate 'subsystem == "de.ares-empire.shared"'`; on a simulator via `xcrun simctl spawn
   <udid> log show …`). Verified across the two apps on the simulator with
   `scripts/check-shared-login.sh <udid>` (2026-10-24).
@@ -275,15 +281,24 @@ specified yet) → new apps. The other items fit in between.
   `-openSheet createAccount|forgotPassword`; in Settings `-openAccount changePassword|leave|delete`; any form's state
   with `-accountPhase <state>` (sending, done, notSent, sent, asking, asked, changing, loginFailed, leaving,
   dataDeleted, checking, confirming, deleting, or a failure: offline, tooMany, wrongPassword, wrongCurrent, emailTaken,
-  …) and `-accountEmail <text>`. The Empire app: `-sampleData -openSheet approvals`. Screenshots of every sheet and
+  refused (the server's sentence, `-accountMessage <text>`), …) and `-accountEmail <text>`. The admin account cannot
+  leave an app or delete itself: the account server answers 403 with a sentence in the app's language, which the page
+  shows (`AccountFailure.refused`; only for leave and delete, where the server explains its refusals). The Empire app: `-sampleData -openSheet approvals`. Screenshots of every sheet and
   state in both languages: `build/screens/` (2026-10-25).
 - **Empire app** (2026-10-24): the approved phone hub (`ares-empire/web/app/mobile.jsx` + `mobile.css`) in SwiftUI,
   `Empire/Empire/Screens/` (Claude's look; values copied from the CSS, with the CSS selector named in comments), data
   in `Model/` + `API/` (brief 08). Launch arguments (DEBUG): `-sampleData` (admin sample), `-sampleUser` (member
-  sample), `-openSheet province|idea|add|approvals|support`, `-scrollToEnd` for screenshots. Ring: tap the front province to open it (its app if
-  installed, else its website), hold any tab for its page; on the page the name is the link (Patrik, 2026-10-24). Province marks load from the hub with the
+  sample), `-openSheet province|unopened|idea|add|approvals|support`, `-tapProvince <slug>` (the ring tap at launch),
+  `-scrollToEnd` for screenshots. Ring: tap the front province to open it (its app if
+  installed, else its website, else its page with "The … app isn't on this iPhone"), hold any tab for its page; on the
+  page the name is the link (Patrik, 2026-10-24). `ProvinceOpener` tries the app's URL and uses iOS's answer, so no
+  scheme is declared anywhere (no `LSApplicationQueriesSchemes`; a new province app needs no change here). Province marks load from the hub with the
   Bearer token, so the samples show monograms. Approvals list new sign-ups and approved accounts asking for more apps
-  (`PendingAccount.requested`/`approved`), each with the apps asked for.
+  (`PendingAccount.requested`/`approved`), each with the apps asked for and "Email not confirmed yet" while `verified`
+  is false; approving sends the apps the card shows (`requested`), and the hub's answer carries the list and the count
+  (`DecisionAnswer`; an older hub's `{"ok": true}` makes the app ask for both). A failed decision asks for the list
+  again. `pending` is null when the hub could not count (no badge). A hub answer that does not decode is logged by its
+  key path (`log show --predicate 'subsystem == "de.ares-empire.shared" && category == "decoding"'`).
 - **Contact & support** (2026-10-24, brief E5): `Shared/Support/`, the form every app's Settings → Help opens
   (`SupportSheet(session:accent:sample:)`): a kind (Problem, Idea or wish, Question, Something else) and a message,
   posted with the Empire token to the account server's `feedback` collection, which mails it to Patrik

@@ -230,6 +230,16 @@
         }
       }
     },
+    "Email not confirmed yet" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "E-Mail noch nicht bestätigt"
+          }
+        }
+      }
+    },
     "Expansions" : {
       "localizations" : {
         "de" : {
@@ -510,6 +520,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "THE EMPIRE"
+          }
+        }
+      }
+    },
+    "The %@ app isn’t on this iPhone." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die App %@ ist nicht auf diesem iPhone."
           }
         }
       }

@@ -86,3 +86,18 @@ func empireWithPending(_ count: Int) throws -> EmpireData {
     return EmpireData(version: original.version, me: original.me, projects: original.projects,
                       addable: original.addable, chronicle: original.chronicle, ideas: original.ideas, pending: count)
 }
+
+/// Small hub answers written out here, shaped as `GET /api/empire` sends them (ares-empire webauth/server.py
+/// `empire_data`). The larger samples in Preview Content come from the server itself.
+enum EmpireFixtures {
+    /// A member approved a moment ago: an empty ring, Aresium to add (coming soon), no chronicle entries yet.
+    static let emptyRing = #"""
+    {"version": 2, "me": {"id": "fictional00003", "name": "", "admin": false},
+     "projects": [],
+     "addable": [{"slug": "aresium", "name": "Aresium", "url": "https://aresium.de", "logo": "brand/hermes.webp",
+                  "status": "CONQUERED", "domain": "aresium.de", "blurb": "Fictional blurb.",
+                  "detail": {"about": "", "features": [], "setup": "", "wip": [], "ideas": [], "changelog": []},
+                  "state": "coming-soon", "live": null, "app": "aresium://"}],
+     "chronicle": [], "ideas": [], "pending": 0}
+    """#
+}

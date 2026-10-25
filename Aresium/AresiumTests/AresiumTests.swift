@@ -131,7 +131,7 @@ struct AresiumTests {
             _ = try await APIClient(transport: FakeTransport(status: 503, data: Data(#"{"message":"Temporarily unavailable"}"#.utf8)))
                 .dashboard(token: "fictional-token") { unauthorized = true }
             Issue.record("Expected server failure")
-        } catch { #expect(error.localizedDescription == "Login service unavailable, try again") }
+        } catch { #expect(error.localizedDescription == "Temporarily unavailable") }     // the server's own sentence
         #expect(!unauthorized)
     }
 
@@ -733,10 +733,23 @@ struct AresiumTests {
         #expect(imports.banner == nil)
     }
 
+    /// Aresium's 503 sentence (the account server could not be asked), shown as the server writes it.
+    static let unavailable = "Login service unavailable, try again in a minute."
+
+    /// A refusal as Aresium sends it: 403 with its sentence and `no_access`, 503 with its own sentence.
+    static func refusal(_ status: Int, _ noAccess: String) -> String {
+        switch status {
+        case 401: #"{"error":"unauthenticated","code":"unauthorized"}"#
+        case 503: #"{"error":"\#(unavailable)","code":"unavailable"}"#
+        default: #"{"error":"\#(noAccess)","code":"no_access"}"#
+        }
+    }
+
     @Test(arguments: [401, 403, 503])
     func authStatusesAcrossEveryAPIRoute(status: Int) async throws {
         for action in ["dashboard", "detail", "switch", "tags", "import"] {
-            let transport = FakeTransport(status: status, data: Data(#"{"error":"No access from server"}"#.utf8))
+            // As Aresium answers (`{"error", "code"}`); a 503 without a sentence is the next test's.
+            let transport = FakeTransport(status: status, data: Data(Self.refusal(status, "No access from server").utf8))
             let client = APIClient(transport: transport)
             var unauthorized = false
             let callback = { unauthorized = true }
@@ -751,7 +764,7 @@ struct AresiumTests {
                 Issue.record("Expected failure for \(action)")
             } catch {
                 #expect(error.localizedDescription == (status == 401 ? "Your session expired. Please log in again." :
-                    status == 503 ? "Login service unavailable, try again" : "No access from server"))
+                    status == 503 ? Self.unavailable : "No access from server"))
             }
             #expect(unauthorized == (status == 401))
         }
@@ -768,9 +781,11 @@ struct AresiumTests {
         await session.login(email: "fictional@example.invalid", password: "fictional")
         try store.widgetPublisher.publish(Dashboard.sample())
         transport.status = status
-        transport.data = status == 200
-            ? Data(#"{"token":"fictional-new","record":{"id":"fictional","approved":true,"services":["empire"]}}"#.utf8)
-            : Data(#"{"error":"Aresium access revoked"}"#.utf8)
+        transport.data = switch status {
+        case 200: Data(#"{"token":"fictional-new","record":{"id":"fictional","approved":true,"services":["empire"]}}"#.utf8)
+        case 503: Data()                    // the account server's proxy: no sentence, the app's own line
+        default: Data(#"{"error":"Aresium access revoked"}"#.utf8)
+        }
         await session.restore()
         switch status {
         case 503:
@@ -807,14 +822,14 @@ struct AresiumTests {
         let dashboard = DashboardStore(session: session, client: APIClient(transport: transport))
         await dashboard.reload()
         transport.status = status
-        transport.data = Data(#"{"error":"No access to Aresium"}"#.utf8)
+        transport.data = Data(Self.refusal(status, "No access to Aresium").utf8)
         await dashboard.reload()
         // 403 from Aresium: no access to THIS app; the shared login stays, Aresium forgets its data and widget.
         #expect(session.token != nil)
         #expect(session.isSignedIn == (status == 503))
         #expect((dashboard.dashboard != nil) == (status == 503))
         #expect((dashboard.widgetPublisher.store.load() != nil) == (status == 503))
-        #expect(status == 503 ? dashboard.error == "Login service unavailable, try again" : session.error == "No access to Aresium")
+        #expect(status == 503 ? dashboard.error == Self.unavailable : session.error == "No access to Aresium")
     }
 
     @Test func foregroundRefreshUsesFiveMinutesAndTwelveHours() async throws {
@@ -951,13 +966,13 @@ struct AresiumTests {
             detail.beginRecategorisation()
             detail.select("Home")
             transport.status = status
-            transport.data = Data(#"{"error":"No access to Aresium"}"#.utf8)
+            transport.data = Data(Self.refusal(status, "No access to Aresium").utf8)
             if saving { await detail.save() } else { await detail.load() }
             #expect(dashboard.session.token != nil)
             #expect(dashboard.session.isSignedIn == (status == 503))
             if status == 503 {
                 #expect(dashboard.dashboard != nil && detail.detail != nil)
-                #expect((saving ? detail.saveError : detail.loadError) == "Login service unavailable, try again")
+                #expect((saving ? detail.saveError : detail.loadError) == Self.unavailable)
             } else { #expect(dashboard.session.error == "No access to Aresium") }
         }
     }

@@ -95,11 +95,13 @@ struct ContentView: View {
     private var actions: EmpireHomeActions {
         let store = store
         return EmpireHomeActions(
-            open: { province in Task { await ProvinceOpener().open(province) } },
+            open: { province in await ProvinceOpener().open(province) != .notOpened },
             add: { slug in await store.ring(add: slug); return store.ringError == nil },
             remove: { slug in await store.ring(remove: slug); return store.ringError == nil },
             loadApprovals: { await store.loadApprovals() },
-            decide: { id, approve in await store.decide(id: id, approve: approve); return store.approvalsError == nil },
+            decide: { account, approve in
+                await store.decide(id: account.id, approve: approve, requested: account.requested)
+            },
             openSettings: { showsSettings = true },
             refresh: { await store.reload() })
     }

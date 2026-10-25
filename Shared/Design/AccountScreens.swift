@@ -154,7 +154,10 @@ struct LeaveAppScreen: View {
                                                                     table: "Shared", locale: .appLanguage))
                         : String(localized: LocalizedStringResource("Removes your access to \(app.name) and deletes your \(app.name) data, on its server and on this iPhone.",
                                                                     table: "Shared", locale: .appLanguage)),
-                    rest: String(localized: LocalizedStringResource("Your Ares account and the other apps stay. You can ask for access again later.",
+                    rest: refused
+                        ? String(localized: LocalizedStringResource("Your Ares account and the other apps stay.",
+                                                                    table: "Shared", locale: .appLanguage))
+                        : String(localized: LocalizedStringResource("Your Ares account and the other apps stay. You can ask for access again later.",
                                                                     table: "Shared", locale: .appLanguage)),
                     accent: app.accent)
                     .padding(.horizontal, 18).padding(.top, 22).padding(.bottom, 24)
@@ -184,6 +187,9 @@ struct LeaveAppScreen: View {
             }
         }
     }
+
+    /// The server refused to let this account leave (the admin account): asking for access again does not apply.
+    private var refused: Bool { if case .refused = flow.failure { true } else { false } }
 
     private func leave() {
         Task {

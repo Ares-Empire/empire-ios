@@ -137,6 +137,7 @@ final class VaultStore {
         defer { if isCurrent(context) { isRefreshing = false } }
         let account = currentAccount
         let sameAccount = vault != nil && account == vaultAccount
+        let token = session.token           // what the request goes with (the API reads it before suspending)
         do {
             let fetched = try await backend.vault(ifNoneMatch: sameAccount ? etag : nil)
             guard isCurrent(context) else { return }
@@ -148,7 +149,7 @@ final class VaultStore {
             }
         } catch {
             guard isCurrent(context) else { return }
-            session.handleAuthFailure(error, generation: context.session)
+            session.handleAuthFailure(error, generation: context.session, token: token)
             guard isCurrent(context) else { return }
             if Self.isOffline(error) {
                 isOffline = true
@@ -199,10 +200,11 @@ final class VaultStore {
                                  sample: Bool) async throws -> SearchAnswer {
         guard sample || session.isSignedIn else { throw CancellationError() }
         let generation = session.generation
+        let token = session.token
         do {
             return try await backend.search(query, limit: BestMatches.asked)
         } catch {
-            session.handleAuthFailure(error, generation: generation)
+            session.handleAuthFailure(error, generation: generation, token: token)
             throw error
         }
     }
@@ -316,12 +318,13 @@ final class VaultStore {
     func source(of note: String) async -> Result<NoteSource, Failure> {
         guard canAct else { return .failure(Failure(message: unavailableMessage)) }
         let context = context
+        let token = session.token
         do {
             let source = try await backend.source(note: note)
             guard isCurrent(context) else { return .failure(Failure(message: "")) }
             return .success(source)
         } catch {
-            session.handleAuthFailure(error, generation: context.session)
+            session.handleAuthFailure(error, generation: context.session, token: token)
             if Self.isOffline(error) {
                 isOffline = true
                 return .failure(Failure(message: Self.offlineMessage))
@@ -356,6 +359,7 @@ final class VaultStore {
 
     private func send(_ edit: Edit, context: Context) async -> EditOutcome {
         guard isCurrent(context) else { return .failed("") }
+        let token = session.token           // sent now, maybe well after the edit was queued
         do {
             let result = try await backend.send(edit)
             guard isCurrent(context) else { return .failed("") }
@@ -366,7 +370,7 @@ final class VaultStore {
         } catch let VaultAPIError.invalid(message) {
             return .invalid(message)
         } catch {
-            session.handleAuthFailure(error, generation: context.session)
+            session.handleAuthFailure(error, generation: context.session, token: token)
             guard isCurrent(context) else { return .failed("") }
             if Self.isOffline(error) {
                 isOffline = true
@@ -432,6 +436,7 @@ final class VaultStore {
     /// True when the note left the queue (sent, or refused and kept aside); false: try again later.
     private func send(_ note: PendingQuickNote, context: Context) async -> Bool {
         guard isCurrent(context), canAct, pendingQuickNotes.contains(where: { $0.id == note.id }) else { return false }
+        let token = session.token
         do {
             let result = try await backend.send(.quickNote(text: note.text, about: note.about, kind: note.kind))
             guard isCurrent(context) else { return false }
@@ -448,7 +453,7 @@ final class VaultStore {
             show(String(localized: "A quick note was not saved: \(message)"), .problem)
             return true
         } catch {
-            session.handleAuthFailure(error, generation: context.session)
+            session.handleAuthFailure(error, generation: context.session, token: token)
             guard isCurrent(context) else { return false }
             if Self.isOffline(error) { isOffline = true }
             return false

@@ -134,6 +134,8 @@ final class EmpireSession {
     private let installDefaults: UserDefaults?
     private(set) var generation = 0
     private(set) var lastRenewedAt: Date?
+    /// When the no-access screen last asked the account server again (`followSharedLogin`).
+    private var lastAccessRecheck: Date?
     private var signInHandlers: [() -> Void] = []
     private var logoutHandlers: [() -> Void] = []
     private var appDataResetHandlers: [() -> Void] = []
@@ -157,8 +159,14 @@ final class EmpireSession {
     /// Called whenever this app must forget its own data: on logout and when access to this app is denied.
     func onAppDataReset(_ action: @escaping () -> Void) { appDataResetHandlers.append(action) }
 
-    func handleAuthFailure(_ failure: Error, generation: Int) {
-        guard generation == self.generation else { return }
+    /// A request failed; `generation` and `token` are the session's and the login's it was made with. Only an answer
+    /// about the login this app uses now counts: a late answer about an older one (the same account's renewed token,
+    /// taken over from another app after a password change there, say) changes nothing. A 401 ends the login (the
+    /// saved one only while it is still that token); a 403 "no access" closes this app; anything else is the
+    /// caller's to show.
+    func handleAuthFailure(_ failure: Error, generation: Int, token refused: String?) {
+        // Both: a login made again can bring back the same token (PocketBase's tokens of one second are identical).
+        guard generation == self.generation, let refused, refused == token else { return }
         switch failure {
         case HTTPError.unauthorized:
             // During a password change the old token is refused on purpose; the change logs in again or out itself.
@@ -166,7 +174,14 @@ final class EmpireSession {
                 Self.log.notice("\(self.app.service, privacy: .public): a 401 during the password change is not a logout")
                 return
             }
-            logOut()
+            // Another app saved a newer login of the same account meanwhile: this answer is about the old one.
+            if let saved = try? storage.read(), saved != refused, isSameAccount(refused, saved) {
+                Self.log.notice("\(self.app.service, privacy: .public): a 401 for an outdated token; takes over the saved one")
+                token = saved
+                lastRenewedAt = .now
+                return
+            }
+            logOut(refusedToken: refused)
         case HTTPError.server(403, let message): deny(message ?? noAccessMessage)
         default: break
         }
@@ -189,34 +204,46 @@ final class EmpireSession {
                                                                                     table: "Shared",
                                                                                     locale: .appLanguage)) }
 
-    func restore() async {
+    /// Renews the saved login with the account server (at launch, picking up another app's login, every 12 hours).
+    /// - Parameter quietly: a check in the background (the no-access re-check, a refused login of the delete form): no
+    ///   loading state, and a failure that may pass (offline) leaves everything as it was. A refused login still ends.
+    func restore(quietly: Bool = false) async {
         guard !isBusy, !isChangingPassword else { return }
         isBusy = true
-        isRestoring = true
-        error = nil
-        needsRestoreRetry = false
+        if !quietly {
+            isRestoring = true
+            error = nil
+            needsRestoreRetry = false
+        }
         let generation = generation
-        defer { isRestoring = false; isBusy = false }
+        var saved: String?
+        defer {
+            if !quietly { isRestoring = false }
+            isBusy = false
+        }
         do {
             if let installDefaults { try FirstLaunchTokenReset.run(storage: storage, defaults: installDefaults) }
-            guard let saved = try storage.read() else { return }
+            saved = try storage.read()
+            guard let saved else { return }
             let response = try await authClient.refresh(token: saved)
             guard generation == self.generation else { return }
             let startsSession = token == nil
+            let wasDenied = isDenied
             try accept(response)
-            if startsSession {
+            // Access granted after a denial (approved meanwhile) starts this app's session as a login would.
+            if startsSession || (wasDenied && !isDenied) {
                 self.generation += 1
                 signInHandlers.forEach { $0() }
             }
         } catch HTTPError.unauthorized {
             guard generation == self.generation else { return }
-            logOut()
+            logOut(refusedToken: saved)
         } catch HTTPError.server(let status, let message) where status == 400 || status == 401 || status == 403 {
             // The account server refused the refresh itself (expired, unapproved): the login is gone everywhere.
             guard generation == self.generation else { return }
-            logOut(reason: message)
+            logOut(reason: message, refusedToken: saved)
         } catch {
-            guard generation == self.generation else { return }
+            guard generation == self.generation, !quietly else { return }
             self.error = error.localizedDescription
             needsRestoreRetry = true
         }
@@ -262,24 +289,30 @@ final class EmpireSession {
         requested = response.record.requested
         lastRenewedAt = .now
         if response.record.services.contains(app.service) {
+            if isDenied { error = nil }             // the no-access line goes with the denial
             access = .granted
         } else {
             deny(noAccessMessage)
         }
     }
 
-    /// This app may not be used with this account: forget its data, keep the shared login.
+    /// This app may not be used with this account: forget its data, keep the shared login. Asked again while denied
+    /// (the no-access re-check), only the line is renewed: the data went at the first denial.
     private func deny(_ message: String) {
+        let wasDenied = isDenied
         access = .denied(message)
         error = message
-        appDataResetHandlers.forEach { $0() }
+        if !wasDenied { appDataResetHandlers.forEach { $0() } }
     }
 
     /// The apps share the saved login, so it can change while this app waits in the background. Call when the app
     /// comes to the foreground: it picks up a login made in another app, follows a logout made there, and switches
     /// when another account logged in. A newer token for the same account (another app renewed it) is taken over
     /// without asking the server, so the apps don't renew it in turn on every switch.
-    func followSharedLogin() async {
+    /// While this app is closed because the account lacks its service (it may have asked for it), the account server is
+    /// asked again, at most once a minute, so an approval opens the app by itself. A 403 from the app's own server is
+    /// not asked again: the account server cannot tell anything new about it.
+    func followSharedLogin(now: Date = .now) async {
         guard !isBusy, !isRestoring, !isChangingPassword else { return }
         let saved: String?
         do { saved = try storage.read() } catch { return }
@@ -290,7 +323,7 @@ final class EmpireSession {
             Self.log.notice("\(self.app.service, privacy: .public): follows a logout made in another app")
             endSession(reason: nil)
         case let (.some(current), .some(saved)) where current != saved:
-            if let account = EmpireToken.accountID(current), account == EmpireToken.accountID(saved) {
+            if isSameAccount(current, saved) {
                 token = saved
                 lastRenewedAt = .now
             } else {
@@ -298,18 +331,46 @@ final class EmpireSession {
                 await restore()
             }
         default:
-            break
+            // The account server answered about this login at its last renewal (the login, say) and at the last check.
+            guard canAskForAccess,
+                  [lastRenewedAt, lastAccessRecheck].allSatisfy({ asked in
+                      asked.map { now.timeIntervalSince($0) >= Self.accessRecheckInterval } ?? true
+                  }) else { return }
+            lastAccessRecheck = now
+            await restore(quietly: true)
         }
+    }
+
+    /// How long the no-access screen waits before asking the account server again (`followSharedLogin`).
+    static let accessRecheckInterval: TimeInterval = 60
+
+    /// Two tokens of the same account (a renewed one, or one from a new login of that account).
+    private func isSameAccount(_ one: String, _ other: String) -> Bool {
+        guard let account = EmpireToken.accountID(one) else { return false }
+        return account == EmpireToken.accountID(other)
     }
 
     /// Ends the login in every Empire app. Each logout is written to the device's log with the line that asked for it,
     /// so an unexpected one can be traced: `log show --predicate 'subsystem == "de.ares-empire.shared"'`.
     /// - Parameters:
     ///   - reason: a problem to show on the login screen; `notice`: a calm line instead (an action the person took).
-    func logOut(reason: String? = nil, notice: String? = nil, file: StaticString = #fileID, line: UInt = #line) {
-        Self.log.notice("\(self.app.service, privacy: .public): login ended everywhere by \(file, privacy: .public):\(line)")
+    ///   - refusedToken: when a server refused this login: the saved login is deleted only while it is still that
+    ///     token, so a newer one another app saved meanwhile stays for the apps (this one picks it up when it next
+    ///     comes to the foreground). Nil (the person logs out): it is deleted.
+    func logOut(reason: String? = nil, notice: String? = nil, refusedToken: String? = nil,
+                file: StaticString = #fileID, line: UInt = #line) {
         endSession(reason: reason, notice: notice)
-        do { try storage.delete() } catch { self.error = self.error ?? error.localizedDescription }
+        do {
+            if let refusedToken, try storage.read() != refusedToken {
+                Self.log.notice("\(self.app.service, privacy: .public): login ended here by \(file, privacy: .public):\(line); the saved login is another one (or none) and stays")
+                return
+            }
+            Self.log.notice("\(self.app.service, privacy: .public): login ended everywhere by \(file, privacy: .public):\(line)")
+            try storage.delete()
+        } catch {
+            Self.log.error("\(self.app.service, privacy: .public): login ended here by \(file, privacy: .public):\(line); the saved login could not be read or deleted")
+            self.error = self.error ?? error.localizedDescription
+        }
     }
 
     // MARK: the account's own actions (AccountForms.swift)
@@ -353,6 +414,7 @@ final class EmpireSession {
         isChangingPassword = false
         access = .unknown
         lastRenewedAt = nil
+        lastAccessRecheck = nil
         isRestoring = false
         needsRestoreRetry = false
         error = reason

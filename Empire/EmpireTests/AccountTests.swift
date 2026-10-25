@@ -313,14 +313,17 @@ struct AccountTests {
         await gate.waitUntilPaused()
         #expect(session.isChangingPassword)
         // Another request of this app, made with the old token, comes back 401 meanwhile.
-        session.handleAuthFailure(HTTPError.unauthorized, generation: session.generation)
+        session.handleAuthFailure(HTTPError.unauthorized, generation: session.generation, token: Self.oldToken)
         #expect(session.isSignedIn && storage.token == Self.oldToken)
         gate.resume()
         await change.value
         #expect(form.phase == .done && session.token == Self.newToken && !session.isChangingPassword)
 
-        session.handleAuthFailure(HTTPError.unauthorized, generation: session.generation)
-        #expect(!session.isSignedIn)                                          // afterwards a 401 logs out again
+        // Afterwards a late 401 for the old token changes nothing; one for the new token logs out again.
+        session.handleAuthFailure(HTTPError.unauthorized, generation: session.generation, token: Self.oldToken)
+        #expect(session.isSignedIn && storage.token == Self.newToken)
+        session.handleAuthFailure(HTTPError.unauthorized, generation: session.generation, token: Self.newToken)
+        #expect(!session.isSignedIn && storage.token == nil)
     }
 
     @Test func aFailedLoginWithTheNewPasswordOffersToTryAgain() async {
@@ -412,6 +415,21 @@ struct AccountTests {
         #expect(server.requests.map { $0.httpMethod } == ["DELETE", "POST", "DELETE", "POST"])
     }
 
+    /// The admin account cannot leave an app: the account server says so in the app's language (a 403), and the page
+    /// shows that sentence instead of "try again".
+    @Test func aLeaveTheServerRefusesShowsItsSentence() async {
+        let server = EmpireFakeTransport()
+        let (session, storage) = await signedIn(.aresus, services: ["empire", "aresus"], server: server)
+        // As the account server's hook answers (German, chosen by the request's language).
+        let sentence = "Das ist das Administratorkonto. Es kann hier keine App verlassen und nicht gelöscht werden."
+        server.responses = [(403, Self.json(["status": 403, "message": sentence, "data": [String: String]()]))]
+        let flow = LeaveAppFlow(session: session, serverData: nil)
+        await flow.leave()
+        #expect(flow.phase == .failed(.refused(sentence)) && flow.failure?.message == sentence)
+        #expect(flow.failure?.isTransient == false)
+        #expect(session.isSignedIn && !session.isDenied && storage.token == Self.oldToken)
+    }
+
     @Test func aRefusedLoginWhileLeavingLogsOut() async {
         let server = EmpireFakeTransport()
         let (session, storage) = await signedIn(.arestemis, services: ["empire", "arestemis"], server: server)
@@ -484,6 +502,39 @@ struct AccountTests {
         #expect(session.notice == nil)
     }
 
+    /// The admin account cannot be deleted: the account server's sentence, the login stays.
+    @Test func aDeletionTheServerRefusesShowsItsSentence() async {
+        let server = EmpireFakeTransport()
+        let (session, storage) = await signedIn(server: server)
+        let sentence = "This is the administrator account; it cannot leave an app or be deleted here."
+        server.responses = [(200, Self.login(Self.newToken)),
+                            (403, Self.json(["status": 403, "message": sentence, "data": [String: String]()]))]
+        let flow = DeleteAccountFlow(session: session)
+        flow.password = "fictional-password"
+        await flow.check()
+        await flow.delete()
+        #expect(flow.phase == .failed(.refused(sentence)) && session.isSignedIn && storage.token == Self.oldToken)
+        #expect(session.notice == nil)
+    }
+
+    /// The login the password check made is refused (its password changed meanwhile, say): that is not this app's
+    /// login, so the account server is asked about this one: still valid, it stays; refused, it ends.
+    @Test(arguments: [true, false])
+    func aRefusedCheckedLoginAsksAboutThisAppsOwn(stillValid: Bool) async {
+        let server = EmpireFakeTransport()
+        let (session, storage) = await signedIn(server: server)
+        server.responses = [(200, Self.login(Self.newToken)), (401, Data()),
+                            stillValid ? (200, Self.login(Self.oldToken)) : (401, Data())]
+        let flow = DeleteAccountFlow(session: session)
+        flow.password = "fictional-password"
+        await flow.check()
+        await flow.delete()
+        #expect(server.requests.last?.url?.lastPathComponent == "auth-refresh")
+        #expect(server.requests.last?.value(forHTTPHeaderField: "Authorization") == Self.oldToken)
+        #expect(session.isSignedIn == stillValid && (storage.token != nil) == stillValid)
+        #expect(flow.phase == .failed(stillValid ? .other : .loggedOut))
+    }
+
     @Test func anotherAccountsLoginNeverDeletes() async {
         let server = EmpireFakeTransport()
         let (session, _) = await signedIn(server: server)
@@ -525,6 +576,11 @@ struct AccountTests {
         #expect(AccountFailure(status: 429, body: Data()) == .tooMany)
         #expect(AccountFailure(status: 503, body: Data()) == .unavailable)
         #expect(AccountFailure(status: 500, body: Data()) == .other)
+        // A 403 is the server's own sentence only where the server explains it (leave, delete), else PocketBase's English.
+        let pocketBase = Self.json(["status": 403, "message": "Fictional refusal.", "data": [String: String]()])
+        #expect(AccountFailure(status: 403, body: pocketBase, explainsRefusal: true) == .refused("Fictional refusal."))
+        #expect(AccountFailure(status: 403, body: pocketBase) == .other)
+        #expect(AccountFailure(status: 403, body: Data(), explainsRefusal: true) == .other)
         #expect(AccountFailure(status: 400, body: Data()) == .other)
         #expect(AccountFailure(status: 400, body: Self.refused("oldPassword")) == .wrongCurrentPassword)
         #expect(AccountFailure(status: 400, body: Self.refused("email", code: "validation_not_unique")) == .emailTaken)

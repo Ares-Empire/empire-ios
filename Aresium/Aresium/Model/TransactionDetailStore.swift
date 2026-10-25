@@ -58,7 +58,7 @@ final class TransactionDetailStore {
                 guard let token else { throw HTTPError.unauthorized }
                 loaded = try await client.transactionDetail(id: transaction.id, token: token) {
                     if self.isCurrent(generation, token: token) {
-                        self.dashboardStore.session.handleAuthFailure(HTTPError.unauthorized, generation: generation)
+                        self.dashboardStore.session.handleAuthFailure(HTTPError.unauthorized, generation: generation, token: token)
                     }
                 }
                 guard isCurrent(generation, token: token) else { return }
@@ -66,7 +66,7 @@ final class TransactionDetailStore {
             detail = loaded
         } catch {
             guard isCurrent(generation, token: token) else { return }
-            dashboardStore.session.handleAuthFailure(error, generation: generation)
+            dashboardStore.session.handleAuthFailure(error, generation: generation, token: token)
             loadError = error.localizedDescription
         }
     }
@@ -105,7 +105,7 @@ final class TransactionDetailStore {
             guard let token else { throw HTTPError.unauthorized }
             let onUnauthorized = {
                 if self.isCurrent(generation, token: token) {
-                    self.dashboardStore.session.handleAuthFailure(HTTPError.unauthorized, generation: generation)
+                    self.dashboardStore.session.handleAuthFailure(HTTPError.unauthorized, generation: generation, token: token)
                 }
             }
             let updated: TransactionDetail
@@ -122,7 +122,7 @@ final class TransactionDetailStore {
             await dashboardStore.reloadAfterTransactionChange()
         } catch {
             guard isCurrent(generation, token: token) else { return }
-            dashboardStore.session.handleAuthFailure(error, generation: generation)
+            dashboardStore.session.handleAuthFailure(error, generation: generation, token: token)
             saveError = error.localizedDescription
         }
     }

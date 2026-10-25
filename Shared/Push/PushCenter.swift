@@ -187,7 +187,7 @@ final class PushCenter {
             try await api.register(app: app, deviceToken: device, environment: environment, token: empireToken)
         } catch HTTPError.unauthorized {
             if registered?.empireToken == empireToken { registered = nil }   // that token cannot remove it either
-            session.handleAuthFailure(HTTPError.unauthorized, generation: generation)
+            session.handleAuthFailure(HTTPError.unauthorized, generation: generation, token: empireToken)
         } catch HTTPError.server(403, _) {
             refusedGeneration = generation
         } catch {

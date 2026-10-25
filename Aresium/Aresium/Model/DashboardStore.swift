@@ -64,14 +64,17 @@ final class DashboardStore {
         error = nil
         let generation = generation
         let fetch = fetchGeneration
+        let token = session.token          // the login this request goes with; a refusal names it
         defer { if fetch == self.fetchGeneration { isLoading = false } }
         do {
             let loaded: Dashboard
             if isSample { loaded = try Dashboard.sample() }
             else {
-                guard let token = session.token else { throw HTTPError.unauthorized }
+                guard let token else { throw HTTPError.unauthorized }
                 loaded = try await client.dashboard(token: token) {
-                    if fetch == self.fetchGeneration { self.session.handleAuthFailure(HTTPError.unauthorized, generation: generation) }
+                    if fetch == self.fetchGeneration {
+                        self.session.handleAuthFailure(HTTPError.unauthorized, generation: generation, token: token)
+                    }
                 }
                 guard generation == self.generation else { return }
             }
@@ -81,7 +84,7 @@ final class DashboardStore {
             try widgetPublisher.publish(loaded)
         } catch {
             guard generation == self.generation, fetch == fetchGeneration else { return }
-            session.handleAuthFailure(error, generation: generation)
+            session.handleAuthFailure(error, generation: generation, token: token)
             guard generation == self.generation else { return }
             self.error = error.localizedDescription
         }

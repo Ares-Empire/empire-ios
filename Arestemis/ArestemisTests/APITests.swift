@@ -136,7 +136,7 @@ struct APITests {
             #expect(status == 401)
         } catch HTTPError.server(let code, let message) {
             #expect(code == status)
-            #expect(message == (status == 503 ? "Login service unavailable, try again" : "Made-up refusal"))
+            #expect(message == "Made-up refusal")          // a 503 too keeps the server's own sentence
         }
     }
 

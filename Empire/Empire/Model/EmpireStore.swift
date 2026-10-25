@@ -49,7 +49,7 @@ final class EmpireStore {
                 // Refreshing a preview must preserve its in-memory ring and approval decisions.
                 loaded = try data ?? EmpireSamples.load(user: sampleUser)
             } else {
-                loaded = try await client.empire(token: try token())
+                loaded = try await client.empire(token: try token(for: context))
             }
             guard isCurrent(context), fetch == dataGeneration else { return }
             data = loaded
@@ -94,11 +94,11 @@ final class EmpireStore {
                 } else if !add, let index = projects.firstIndex(where: { $0.slug == slug }) {
                     addable.append(projects.remove(at: index))
                 }
-                loaded = replacing(current, projects: projects, addable: addable)
+                loaded = current.replacing(projects: projects, addable: addable)
             } else if add {
-                loaded = try await client.ring(add: slug, token: try token())
+                loaded = try await client.ring(add: slug, token: try token(for: context))
             } else {
-                loaded = try await client.ring(remove: slug, token: try token())
+                loaded = try await client.ring(remove: slug, token: try token(for: context))
             }
             guard isCurrent(context) else { return }
             data = loaded
@@ -117,7 +117,7 @@ final class EmpireStore {
         let fetch = approvalsGeneration
         defer { if isCurrent(context), fetch == approvalsGeneration { isLoadingApprovals = false } }
         do {
-            let loaded = try await fetchApprovals()
+            let loaded = try await fetchApprovals(context)
             guard isCurrent(context), fetch == approvalsGeneration else { return }
             approvals = loaded
         } catch {
@@ -126,8 +126,14 @@ final class EmpireStore {
         }
     }
 
-    func decide(id: String, approve: Bool) async {
-        guard !isDeciding, !isRingBusy, isSample || session.isSignedIn else { return }
+    /// Approves (granting `requested`, the apps the card shows) or declines an account (withdrawing only those
+    /// requests of an approved account). Returns whether the decision
+    /// itself went through; a failed refresh afterwards only shows its error. After a failed decision the list is
+    /// asked for again: the decision may have gone through all the same (its answer lost), or the account was decided
+    /// elsewhere, and a stale card must not stay.
+    @discardableResult
+    func decide(id: String, approve: Bool, requested: [String]) async -> Bool {
+        guard !isDeciding, !isRingBusy, isSample || session.isSignedIn else { return false }
         invalidateDataLoad()
         approvalsGeneration += 1
         isLoadingApprovals = false
@@ -135,39 +141,56 @@ final class EmpireStore {
         approvalsError = nil
         let context = context
         defer { if isCurrent(context) { isDeciding = false } }
+        let answer: DecisionAnswer?
         do {
             if isSample {
                 var pending = sampleApprovals ?? (sampleUser ? [] : EmpireSamples.approvals)
                 pending.removeAll { $0.id == id }
                 sampleApprovals = pending
-                let current = try data ?? EmpireSamples.load(user: sampleUser)
-                data = replacing(current, pending: pending.count)
+                if data == nil { data = try EmpireSamples.load(user: sampleUser) }
+                answer = DecisionAnswer(approvals: pending, pending: pending.count)
             } else {
-                try await client.decide(id: id, approve: approve, token: try token())
-            }
-            guard isCurrent(context) else { return }
-            // These are independent refreshes: still update the hub count if refreshing the list fails.
-            do {
-                let loaded = try await fetchApprovals()
-                guard isCurrent(context) else { return }
-                approvals = loaded
-            } catch {
-                guard isCurrent(context) else { return }
-                handle(error, context: context) { self.approvalsError = $0 }
-            }
-            guard isCurrent(context) else { return }
-            do {
-                let loaded = isSample ? data : try await client.empire(token: try token())
-                guard isCurrent(context) else { return }
-                data = loaded
-                lastSuccessfulLoad = .now
-            } catch {
-                guard isCurrent(context) else { return }
-                handle(error, context: context) { self.approvalsError = $0 }
+                answer = try await client.decide(id: id, approve: approve, requested: requested,
+                                                 token: try token(for: context))
             }
         } catch {
-            guard isCurrent(context) else { return }
+            guard isCurrent(context) else { return false }
             handle(error, context: context) { self.approvalsError = $0 }
+            guard isCurrent(context) else { return false }
+            await refreshAfterDecision(context: context, keepingError: true)
+            return false
+        }
+        guard isCurrent(context) else { return true }
+        if let answer {
+            approvals = answer.approvals
+            data = data?.replacing(pending: answer.pending)
+        } else {
+            await refreshAfterDecision(context: context, keepingError: false)    // the answer had no list
+        }
+        return true
+    }
+
+    /// The list, then the hub's count, each on its own so one failing does not stop the other. `keepingError`: an
+    /// error of the decision itself is showing and stays the one shown.
+    private func refreshAfterDecision(context: Context, keepingError: Bool) async {
+        let report: (String) -> Void = { message in if !keepingError { self.approvalsError = message } }
+        do {
+            let loaded = try await fetchApprovals(context)
+            guard isCurrent(context) else { return }
+            approvals = loaded
+        } catch {
+            guard isCurrent(context) else { return }
+            handle(error, context: context, report: report)
+        }
+        guard isCurrent(context) else { return }
+        do {
+            let loaded = isSample ? data : try await client.empire(token: try token(for: context))
+            guard isCurrent(context) else { return }
+            data = loaded
+            lastSuccessfulLoad = .now
+        } catch {
+            guard isCurrent(context) else { return }
+            handle(error, context: context, report: report)
         }
     }
 
@@ -188,19 +211,21 @@ final class EmpireStore {
         foregroundRefreshing = false
     }
 
-    private var context: Context { Context(session: session.generation, reset: resetGeneration) }
-    private struct Context { let session: Int; let reset: Int }
+    /// What an action started with: the session, the reset, and the login its requests use (a refusal names it, so an
+    /// answer about an older login changes nothing: `EmpireSession.handleAuthFailure`).
+    private var context: Context { Context(session: session.generation, reset: resetGeneration, token: session.token) }
+    private struct Context { let session: Int; let reset: Int; let token: String? }
     private func isCurrent(_ context: Context) -> Bool {
         context.session == session.generation && context.reset == resetGeneration
     }
 
-    private func token() throws -> String {
-        guard session.isSignedIn, let token = session.token else { throw HTTPError.unauthorized }
+    private func token(for context: Context) throws -> String {
+        guard session.isSignedIn, let token = context.token else { throw HTTPError.unauthorized }
         return token
     }
 
     private func handle(_ failure: Error, context: Context, report: (String) -> Void) {
-        session.handleAuthFailure(failure, generation: context.session)
+        session.handleAuthFailure(failure, generation: context.session, token: context.token)
         guard isCurrent(context) else { return }
         report(failure.localizedDescription)
     }
@@ -210,19 +235,24 @@ final class EmpireStore {
         isLoading = false
     }
 
-    private func fetchApprovals() async throws -> [PendingAccount] {
+    private func fetchApprovals(_ context: Context) async throws -> [PendingAccount] {
         if isSample {
             let pending = sampleApprovals ?? (sampleUser ? [] : EmpireSamples.approvals)
             sampleApprovals = pending
             return pending
         }
-        return try await client.approvals(token: try token())
+        return try await client.approvals(token: try token(for: context))
+    }
+}
+
+private extension EmpireData {
+    func replacing(projects: [Province]? = nil, addable: [Province]? = nil) -> EmpireData {
+        EmpireData(version: version, me: me, projects: projects ?? self.projects, addable: addable ?? self.addable,
+                   chronicle: chronicle, ideas: ideas, pending: pending)
     }
 
-    private func replacing(_ current: EmpireData, projects: [Province]? = nil, addable: [Province]? = nil,
-                           pending: Int? = nil) -> EmpireData {
-        EmpireData(version: current.version, me: current.me, projects: projects ?? current.projects,
-                   addable: addable ?? current.addable, chronicle: current.chronicle, ideas: current.ideas,
-                   pending: pending ?? current.pending)
+    func replacing(pending: Int?) -> EmpireData {
+        EmpireData(version: version, me: me, projects: projects, addable: addable, chronicle: chronicle, ideas: ideas,
+                   pending: pending)
     }
 }

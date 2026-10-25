@@ -56,10 +56,11 @@ struct EmpireSheetView: View {
 
     @ViewBuilder private var page: some View {
         switch sheet {
-        case .province(let province):
+        case .province(let province, let unopened):
             // the live copy, so a refresh while the page is open shows through
             ProvincePage(province: data.projects.first { $0.slug == province.slug } ?? province, data: data,
-                         mark: marks[province.slug], marks: marks, busy: status.ringBusy, actions: actions, close: close)
+                         mark: marks[province.slug], marks: marks, busy: status.ringBusy, unopened: unopened,
+                         actions: actions, close: close)
         case .idea(let idea):
             IdeaPage(idea: idea)
         case .add:
@@ -246,20 +247,41 @@ private struct ProvincePage: View {
     let busy: Bool
     let actions: EmpireHomeActions
     let close: () -> Void
+    /// Opening it opened nothing: its app is not on this iPhone and it has no website. The name stops being a link.
+    @State private var unopened: Bool
+
+    init(province: Province, data: EmpireData, mark: UIImage?, marks: [String: UIImage], busy: Bool, unopened: Bool,
+         actions: EmpireHomeActions, close: @escaping () -> Void) {
+        self.province = province
+        self.data = data
+        self.mark = mark
+        self.marks = marks
+        self.busy = busy
+        self.actions = actions
+        self.close = close
+        _unopened = State(initialValue: unopened)
+    }
 
     private var admin: Bool { data.me.admin }
     private var comingSoon: Bool { !admin && province.isComingSoon }
+    /// The name opens the province, unless it is known not to open.
+    private var link: (() -> Void)? {
+        guard province.canOpen, !unopened else { return nil }
+        return { open() }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             DetailHero(name: province.name, status: comingSoon ? "COMING SOON" : province.status,
                        blurb: province.blurb, live: province.live,
-                       open: province.canOpen ? { actions.open(province) } : nil) {
+                       open: link) {
                 PageMark(name: province.name, image: mark)
             }
             if comingSoon {
                 Note(text: String(localized: "Coming soon. You’ll be able to open \(province.name) here when it’s available."))
                     .padding(.bottom, 8)
+            } else if unopened {
+                Note(text: String(localized: "The \(province.name) app isn’t on this iPhone.")).padding(.bottom, 8)
             }
             DetailSection(title: String(localized: "About")) { Paragraph(text: province.detail.about.isEmpty ? province.blurb : province.detail.about) }
             DetailSection(title: String(localized: "Features")) {
@@ -294,6 +316,13 @@ private struct ProvincePage: View {
                 .buttonStyle(.plain).disabled(busy).opacity(busy ? 0.5 : 1)
                 .padding(.top, 34)
             }
+        }
+    }
+
+    private func open() {
+        Task {
+            let opened = await actions.open(province)
+            if !opened { withAnimation(.easeOut(duration: 0.2)) { unopened = true } }
         }
     }
 }
@@ -381,6 +410,10 @@ private struct ApprovalsPage: View {
                 Text("Updating account…").font(AppFont.text(12)).foregroundStyle(EmpireStyle.quiet(dark: 0x9B9F9D)).padding(.top, 14)
             }
         }
+        // A card that went (decided here or elsewhere) takes its open confirmation with it.
+        .onChange(of: status.approvals.map(\.id)) { _, ids in
+            if let declining, !ids.contains(declining) { self.declining = nil }
+        }
     }
 
     private func group(_ title: Text, _ accounts: [PendingAccount]) -> some View {
@@ -411,6 +444,9 @@ private struct ApprovalsPage: View {
                 VStack(alignment: .leading, spacing: 5) {
                     Text(name).font(AppFont.text(15, weight: .medium)).foregroundStyle(EmpireStyle.title(dark: 0xE0E4DC))
                     Text(account.email).font(AppFont.text(11)).foregroundStyle(EmpireStyle.quiet(dark: 0x969E97))
+                    if account.awaitsEmailConfirmation {
+                        Text("Email not confirmed yet").font(AppFont.text(11)).foregroundStyle(EmpireStyle.quiet(dark: 0x879089))
+                    }
                 }
             }
             Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 12, verticalSpacing: 9) {
@@ -439,14 +475,14 @@ private struct ApprovalsPage: View {
                     Button(account.approved ? "Keep request" : "Keep account") { declining = nil }
                         .buttonStyle(HubButtonStyle(kind: .secondary))
                     Button("Confirm decline") {
-                        Task { if await actions.decide(account.id, false) { declining = nil } }
+                        Task { if await actions.decide(account, false) { declining = nil } }
                     }
                     .buttonStyle(HubButtonStyle(kind: .danger))
                 }
                 .disabled(status.deciding)
             } else {
                 HStack(spacing: 10) {
-                    Button { Task { _ = await actions.decide(account.id, true) } } label: {
+                    Button { Task { _ = await actions.decide(account, true) } } label: {
                         HStack(spacing: 8) { Image(systemName: "checkmark").font(.system(size: 12)); Text("Approve") }
                     }
                     .buttonStyle(HubButtonStyle(kind: .primary))

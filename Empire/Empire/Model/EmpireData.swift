@@ -9,7 +9,7 @@ struct EmpireData: Codable, Equatable, Sendable {
     let addable: [Province]        // the "+" list (non-admins)
     let chronicle: [ChronicleEntry]
     let ideas: [Idea]              // admin only
-    let pending: Int               // admin: accounts waiting for approval
+    let pending: Int?              // admin: accounts waiting for approval; nil when the hub could not count them
 
     struct Me: Codable, Equatable, Sendable {
         let id: String
@@ -64,19 +64,23 @@ struct PendingAccount: Codable, Equatable, Identifiable, Sendable {
     let created: String
     var requested: [String] = []
     var approved = false
+    /// Whether the account confirmed its email (it can log in only once it has); nil from a hub that does not say.
+    var verified: Bool? = nil
 
-    init(id: String, email: String, name: String, created: String, requested: [String] = [], approved: Bool = false) {
+    init(id: String, email: String, name: String, created: String, requested: [String] = [], approved: Bool = false,
+         verified: Bool? = nil) {
         self.id = id
         self.email = email
         self.name = name
         self.created = created
         self.requested = requested
         self.approved = approved
+        self.verified = verified
     }
 
-    private enum CodingKeys: String, CodingKey { case id, email, name, created, requested, approved }
+    private enum CodingKeys: String, CodingKey { case id, email, name, created, requested, approved, verified }
 
-    /// The two newer fields are optional, so the list still loads from a hub that does not send them yet.
+    /// The newer fields are optional, so the list still loads from a hub that does not send them yet.
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(String.self, forKey: .id)
@@ -85,8 +89,20 @@ struct PendingAccount: Codable, Equatable, Identifiable, Sendable {
         created = try container.decode(String.self, forKey: .created)
         requested = (try? container.decodeIfPresent([String].self, forKey: .requested)) ?? []
         approved = try container.decodeIfPresent(Bool.self, forKey: .approved) ?? false
+        verified = try container.decodeIfPresent(Bool.self, forKey: .verified)
     }
+
+    /// The account has not confirmed its email yet (a hub that does not say counts as confirmed).
+    var awaitsEmailConfirmation: Bool { verified == false }
 
     /// The apps it asked for, by name: "Arestemis, Aresus".
     var requestedApps: String { requested.map(EmpireAppIdentity.name(of:)).joined(separator: ", ") }
+}
+
+/// What `POST /api/empire/approvals/<id>` answers: `{"ok": true, "approvals": [...], "pending": n|null}`, the list and
+/// the count after the decision. Without a list (`"approvals": null`, or an older hub's `{"ok": true}`) `EmpireAPI`
+/// gives nil, and the app asks for the list and the count again.
+struct DecisionAnswer: Decodable, Equatable {
+    let approvals: [PendingAccount]
+    let pending: Int?
 }

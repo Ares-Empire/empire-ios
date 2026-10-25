@@ -64,27 +64,27 @@ final class AresusStore {
         do {
             switch part {
             case .overview:
-                let value = try await fetch({ try $0.overview() }, { try await client.overview(token: $0) })
+                let value = try await fetch(context, { try $0.overview() }, { try await client.overview(token: $0) })
                 guard isCurrent(context) else { return }
                 overview = value
                 if !isSample { widget.publish(value) }
             case .province(let slug):
-                let value = try await fetch({ try $0.province(slug) }, { try await client.province(slug, token: $0) })
+                let value = try await fetch(context, { try $0.province(slug) }, { try await client.province(slug, token: $0) })
                 guard isCurrent(context) else { return }
                 provinces[slug] = value
             case .sync:
-                let value = try await fetch({ try $0.sync() }, { try await client.sync(token: $0) })
+                let value = try await fetch(context, { try $0.sync() }, { try await client.sync(token: $0) })
                 guard isCurrent(context) else { return }
                 sync = value
             case .run(let id):
-                let value = try await fetch({ try $0.run(id) }, { try await client.run(id, token: $0) })
+                let value = try await fetch(context, { try $0.run(id) }, { try await client.run(id, token: $0) })
                 guard isCurrent(context) else { return }
                 runs[id] = value
             }
             loadedAt[part] = .now
         } catch {
             guard isCurrent(context) else { return }
-            session.handleAuthFailure(error, generation: context.session)
+            session.handleAuthFailure(error, generation: context.session, token: context.token)
             guard isCurrent(context) else { return }
             errors[part] = message(for: error, part: part)
         }
@@ -135,15 +135,17 @@ final class AresusStore {
 
     // MARK: private
 
-    private var context: Context { Context(session: session.generation, reset: resetGeneration) }
-    private struct Context { let session: Int; let reset: Int }
+    /// What a load started with; its request uses that login, and a refusal names it (`handleAuthFailure`).
+    private var context: Context { Context(session: session.generation, reset: resetGeneration, token: session.token) }
+    private struct Context { let session: Int; let reset: Int; let token: String? }
     private func isCurrent(_ context: Context) -> Bool {
         context.session == session.generation && context.reset == resetGeneration
     }
 
-    private func fetch<T>(_ sample: (AresusSamples) throws -> T, _ remote: (String) async throws -> T) async throws -> T {
+    private func fetch<T>(_ context: Context, _ sample: (AresusSamples) throws -> T,
+                          _ remote: (String) async throws -> T) async throws -> T {
         if let samples { return try sample(samples) }
-        guard session.isSignedIn, let token = session.token else { throw HTTPError.unauthorized }
+        guard session.isSignedIn, let token = context.token else { throw HTTPError.unauthorized }
         return try await remote(token)
     }
 

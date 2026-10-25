@@ -76,7 +76,9 @@ struct ProvinceServicesTests {
         let transport = EmpireFakeTransport(data: try imageData())
         let marks = ProvinceMarks(session: session, transport: transport)
         #expect(await marks.image(for: "brand/fictional.png") != nil)
-        if denied { session.handleAuthFailure(HTTPError.server(403, "Denied"), generation: session.generation) }
+        if denied {
+            session.handleAuthFailure(HTTPError.server(403, "Denied"), generation: session.generation, token: session.token)
+        }
         else { session.logOut() }
         #expect(await marks.image(for: "brand/fictional.png") == nil)
         await session.login(email: "member@example.invalid", password: "fictional")
@@ -107,54 +109,74 @@ struct ProvinceServicesTests {
                         detail: original.detail, state: state, live: original.live, app: app)
     }
 
-    @Test(arguments: [true, false])
-    func openerChoosesInstalledAppOtherwiseWebsite(installed: Bool) async throws {
-        let application = FakeProvinceApplication()
-        application.installed = installed
-        #expect(await ProvinceOpener(application: application).open(try province()))
-        #expect(application.queried.map(\.absoluteString) == ["aresium://"])
-        #expect(application.opened.map(\.absoluteString) == [installed ? "aresium://" : "https://aresium.de"])
+    @Test func openerOpensTheInstalledApp() async throws {
+        let application = FakeProvinceApplication(installed: ["aresium"])
+        #expect(await ProvinceOpener(application: application).open(try province()) == .app)
+        #expect(application.opened.map(\.absoluteString) == ["aresium://"])
+    }
+
+    /// iOS answers whether an app took the URL; without one the website opens.
+    @Test func openerFallsBackToTheWebsiteWhenTheAppIsNotInstalled() async throws {
+        let application = FakeProvinceApplication(installed: [])
+        #expect(await ProvinceOpener(application: application).open(try province()) == .website)
+        #expect(application.opened.map(\.absoluteString) == ["aresium://", "https://aresium.de"])
+    }
+
+    /// Arestemis and Aresus have no website: without their app nothing opens, and the ring shows the page instead.
+    @Test func anAppWithoutAWebsiteThatIsNotInstalledOpensNothing() async throws {
+        let application = FakeProvinceApplication(installed: [])
+        #expect(await ProvinceOpener(application: application).open(try province(app: "arestemis://", url: "")) == .notOpened)
+        #expect(application.opened.map(\.absoluteString) == ["arestemis://"])
+    }
+
+    /// A province app this build does not know (a sixth one) opens too: no scheme is declared anywhere.
+    @Test func anyProvinceAppOpensWithoutDeclaringItsScheme() async throws {
+        let application = FakeProvinceApplication(installed: ["arestoteles"])
+        #expect(await ProvinceOpener(application: application).open(try province(app: "arestoteles://", url: "")) == .app)
+        #expect(Bundle.main.object(forInfoDictionaryKey: "LSApplicationQueriesSchemes") == nil)
     }
 
     @Test func openerUsesWebsiteWhenNoAppIsSpecified() async throws {
-        let application = FakeProvinceApplication()
-        application.installed = true
-        #expect(await ProvinceOpener(application: application).open(try province(app: nil)))
-        #expect(application.queried.isEmpty)
+        let application = FakeProvinceApplication(installed: ["aresium"])
+        #expect(await ProvinceOpener(application: application).open(try province(app: nil)) == .website)
         #expect(application.opened.map(\.absoluteString) == ["https://aresium.de"])
     }
 
     @Test func comingSoonProvinceDoesNotOpen() async throws {
-        let application = FakeProvinceApplication()
-        application.installed = true
-        #expect(await ProvinceOpener(application: application).open(try province(state: "coming-soon")) == false)
-        #expect(application.queried.isEmpty && application.opened.isEmpty)
+        let application = FakeProvinceApplication(installed: ["aresium"])
+        #expect(await ProvinceOpener(application: application).open(try province(state: "coming-soon")) == .notOpened)
+        #expect(application.opened.isEmpty)
     }
 
     @Test(arguments: ["", "relative/path", "javascript:alert(1)"])
     func missingOrInvalidWebsiteDoesNotOpen(url: String) async throws {
-        let application = FakeProvinceApplication()
-        #expect(await ProvinceOpener(application: application).open(try province(app: nil, url: url)) == false)
+        let application = FakeProvinceApplication(installed: [])
+        #expect(await ProvinceOpener(application: application).open(try province(app: nil, url: url)) == .notOpened)
         #expect(application.opened.isEmpty)
     }
 
-    @Test func openerReturnsSystemOpenResult() async throws {
-        let application = FakeProvinceApplication()
-        application.openResult = false
-        #expect(await ProvinceOpener(application: application).open(try province()) == false)
+    @Test func aWebsiteTheSystemDoesNotOpenIsNotOpened() async throws {
+        let application = FakeProvinceApplication(installed: [])
+        application.websitesOpen = false
+        #expect(await ProvinceOpener(application: application).open(try province()) == .notOpened)
     }
 
-    @Test func appAllowsQueryingAresiumScheme() {
-        #expect((Bundle.main.object(forInfoDictionaryKey: "LSApplicationQueriesSchemes") as? [String])?.contains("aresium") == true)
+    @Test func canOpenMeansWorthTrying() throws {
+        #expect(try province().canOpen && province(app: "aresus://", url: "").canOpen && province(app: nil).canOpen)
+        #expect(try !province(app: nil, url: "").canOpen && !province(state: "coming-soon").canOpen)
     }
 }
 
+/// The system's `open`: an app's scheme opens only when that app is installed; websites open (unless told not to).
 @MainActor
 private final class FakeProvinceApplication: ProvinceURLOpening {
-    var installed = false
-    var openResult = true
-    var queried: [URL] = []
+    let installed: Set<String>
+    var websitesOpen = true
     var opened: [URL] = []
-    func canOpenURL(_ url: URL) -> Bool { queried.append(url); return installed }
-    func open(_ url: URL) async -> Bool { opened.append(url); return openResult }
+    init(installed: Set<String>) { self.installed = installed }
+    func open(_ url: URL) async -> Bool {
+        opened.append(url)
+        guard let scheme = url.scheme else { return false }
+        return ["https", "http"].contains(scheme) ? websitesOpen : installed.contains(scheme)
+    }
 }

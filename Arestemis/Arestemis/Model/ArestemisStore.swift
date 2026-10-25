@@ -82,8 +82,21 @@ final class ArestemisStore {
         #else
         isSample = false
         #endif
-        places = PlaceSearch(delay: placeDelay, fetch: { [backend] query in try await backend.places(query: query) })
-        places.onFailure = { [weak self] error in self?.report(error) }
+        places = PlaceSearch(delay: placeDelay, fetch: { [backend] query in
+            // The login this request goes with, so its refusal names it (`EmpireSession.handleAuthFailure`).
+            let generation = session.generation
+            let token = session.token
+            do {
+                return try await backend.places(query: query)
+            } catch {
+                session.handleAuthFailure(error, generation: generation, token: token)
+                throw error
+            }
+        })
+        places.onFailure = { [weak session] error in
+            // A failure that ended the login or closed the app says nothing more here.
+            session?.isSignedIn == true ? error.localizedDescription : nil
+        }
         session.onAppDataReset { [weak self] in self?.clear() }
     }
 
@@ -110,7 +123,7 @@ final class ArestemisStore {
         } catch {
             guard isCurrent(context) else { return }
             if !quiet || overview == nil { handle(error, context: context) { self.overviewError = $0 } }
-            else { session.handleAuthFailure(error, generation: context.session) }
+            else { session.handleAuthFailure(error, generation: context.session, token: context.token) }
         }
     }
 
@@ -252,7 +265,7 @@ final class ArestemisStore {
             merge(page, filter: filter, appending: more)
         } catch {
             guard isCurrent(context) else { return }
-            if quiet { session.handleAuthFailure(error, generation: context.session) }
+            if quiet { session.handleAuthFailure(error, generation: context.session, token: context.token) }
             else { handle(error, context: context) { self.lists[filter]?.error = $0 } }
         }
     }
@@ -428,23 +441,18 @@ final class ArestemisStore {
 
     // MARK: - plumbing
 
-    private struct Context { let session: Int; let reset: Int }
-    private var context: Context { Context(session: session.generation, reset: resetGeneration) }
+    /// What an action started with. Its requests read the same login (`ArestemisAPI` reads `session.token` before
+    /// its first suspension, on the main actor), so a refusal names that one (`handleAuthFailure`).
+    private struct Context { let session: Int; let reset: Int; let token: String? }
+    private var context: Context { Context(session: session.generation, reset: resetGeneration, token: session.token) }
     private func isCurrent(_ context: Context) -> Bool {
         context.session == session.generation && context.reset == resetGeneration
     }
 
     private func handle(_ failure: Error, context: Context, report: (String) -> Void) {
-        session.handleAuthFailure(failure, generation: context.session)
+        session.handleAuthFailure(failure, generation: context.session, token: context.token)
         guard isCurrent(context) else { return }
         report(failure.localizedDescription)
-    }
-
-    /// For the place search: auth failures end the session, anything else is its message.
-    private func report(_ failure: Error) -> String? {
-        let context = context
-        session.handleAuthFailure(failure, generation: context.session)
-        return isCurrent(context) ? failure.localizedDescription : nil
     }
 
     private func remember(_ match: Match) {

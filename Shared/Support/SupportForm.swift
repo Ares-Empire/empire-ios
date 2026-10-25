@@ -79,7 +79,7 @@ final class SupportForm {
         do {
             try await api.send(message, token: token)
         } catch HTTPError.unauthorized {
-            session.handleAuthFailure(HTTPError.unauthorized, generation: generation)
+            session.handleAuthFailure(HTTPError.unauthorized, generation: generation, token: token)
             throw HTTPError.unauthorized
         }
     }

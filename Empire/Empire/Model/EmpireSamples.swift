@@ -25,10 +25,10 @@ enum EmpireSamples {
     /// Fictional sign-ups and an access request for exercising approvals without contacting an account server.
     static let approvals = [
         PendingAccount(id: "sample-pending-one", email: "alex@example.invalid", name: "Alex Sample", created: "2026-10-24",
-                       requested: ["empire"]),
+                       requested: ["empire"], verified: true),
         PendingAccount(id: "sample-pending-two", email: "sam@example.invalid", name: "Sam Sample", created: "2026-10-24",
-                       requested: ["arestemis"]),
+                       requested: ["arestemis"], verified: false),
         PendingAccount(id: "sample-member-one", email: "kim@example.invalid", name: "Kim Sample", created: "2026-10-12",
-                       requested: ["arestemis", "aresus"], approved: true),
+                       requested: ["arestemis", "aresus"], approved: true, verified: true),
     ]
 }

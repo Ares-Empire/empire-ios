@@ -182,7 +182,7 @@ final class AccessRequest {
             session.updateAccess(services: updated.services, requested: updated.requested)
             phase = .ready
         } catch {
-            if error == .loggedOut { session.handleAuthFailure(HTTPError.unauthorized, generation: generation) }
+            if error == .loggedOut { session.handleAuthFailure(HTTPError.unauthorized, generation: generation, token: token) }
             phase = .failed(error)
         }
     }
@@ -271,7 +271,7 @@ final class ChangePasswordForm {
             _ = try await session.accountClient.changePassword(from: current, to: newPassword, account: id, token: token)
         } catch {
             session.endPasswordChange()
-            if error == .loggedOut { session.handleAuthFailure(HTTPError.unauthorized, generation: generation) }
+            if error == .loggedOut { session.handleAuthFailure(HTTPError.unauthorized, generation: generation, token: token) }
             phase = .failed(error)
             return
         }
@@ -386,7 +386,7 @@ final class LeaveAppFlow {
             session.updateAccess(services: access.services.filter { $0 != service },
                                  requested: access.requested.filter { $0 != service })
         } catch {
-            if error == .loggedOut { session.handleAuthFailure(HTTPError.unauthorized, generation: generation) }
+            if error == .loggedOut { session.handleAuthFailure(HTTPError.unauthorized, generation: generation, token: token) }
             phase = .failed(error)
         }
     }
@@ -480,13 +480,19 @@ final class DeleteAccountFlow {
         }
         guard let token = checkedLogin, let id = session.accountID else { phase = .failed(.other); return }
         checkedLogin = nil
-        let generation = session.generation
         do {
             try await session.accountClient.deleteAccount(id: id, token: token)
             phase = .deleted
             session.accountDeleted()
         } catch {
-            if error == .loggedOut { session.handleAuthFailure(HTTPError.unauthorized, generation: generation) }
+            if error == .loggedOut {
+                // The login the password check made was refused, not necessarily this app's: ask the account server
+                // about this app's own login (a refused one ends; one still valid stays and the form asks again).
+                phase = .failed(.other)
+                await session.restore(quietly: true)
+                if session.token == nil { phase = .failed(.loggedOut) }
+                return
+            }
             phase = .failed(error)
         }
     }
@@ -500,7 +506,8 @@ final class DeleteAccountFlow {
 // MARK: - screenshots
 
 /// Screenshots of the account screens (DEBUG): `-accountPhase <state>` shows a form's state without sending; which
-/// states a form knows is listed at each `applyDebugArguments`. `-accountEmail <text>` fills the email fields.
+/// states a form knows is listed at each `applyDebugArguments`. `-accountEmail <text>` fills the email fields;
+/// `-accountMessage <text>` is the server's sentence of `-accountPhase refused`.
 enum AccountDebug {
     static func value(_ name: String, in arguments: [String]) -> String? {
         guard let index = arguments.firstIndex(of: name), arguments.indices.contains(index + 1) else { return nil }
@@ -522,6 +529,9 @@ enum AccountDebug {
         case "invalidEmail": .invalidEmail
         case "tooShort": .passwordTooShort
         case "passwordsDiffer": .passwordsDiffer
+        // The server's sentence, as `-accountMessage <text>` (in the language of the screenshot).
+        case "refused": .refused(value("-accountMessage", in: LaunchArguments.current)
+                                 ?? "This is the administrator account; it cannot leave an app or be deleted here.")
         default: nil
         }
     }

@@ -4,11 +4,13 @@ import UIKit
 /// What the home screen can do; `EmpireStore` (brief 08) provides it, previews fake it.
 /// Ring changes report success so the sheet closes only when the server took the change.
 struct EmpireHomeActions {
-    var open: (Province) -> Void = { _ in }              // the province's app if installed, else its website
+    /// The province's app if installed, else its website; false when neither opened (the page shows instead).
+    var open: (Province) async -> Bool = { _ in true }
     var add: (String) async -> Bool = { _ in true }
     var remove: (String) async -> Bool = { _ in true }
     var loadApprovals: () async -> Void = {}
-    var decide: (String, Bool) async -> Bool = { _, _ in true }   // (account id, approve)
+    /// (the account as its card shows it, approve); true when the decision went through.
+    var decide: (PendingAccount, Bool) async -> Bool = { _, _ in true }
     var openSettings: () -> Void = {}                     // Settings, with Log out (the app presents it)
     var refresh: () async -> Void = {}
 }
@@ -40,10 +42,11 @@ struct EmpireHome: View {
     @State private var sheet: Sheet?
 
     enum Sheet: Identifiable {
-        case province(Province), idea(Idea), add, approvals
+        /// `unopened`: tapping it in the ring opened nothing (its app is not on this iPhone, and it has no website).
+        case province(Province, unopened: Bool = false), idea(Idea), add, approvals
         var id: String {
             switch self {
-            case .province(let p): "p-" + p.slug
+            case .province(let p, _): "p-" + p.slug
             case .idea(let i): "i-" + i.title
             case .add: "add"
             case .approvals: "approvals"
@@ -108,7 +111,9 @@ struct EmpireHome: View {
                                label: expanded ? String(localized: "Show the provinces") : String(localized: "Show the expansions")) {
                         withAnimation(.easeInOut(duration: 0.25)) { expanded.toggle() }
                     }
-                    iconButton("tray", label: String(localized: "Approvals, \(data.pending) pending"), badge: data.pending) {
+                    // No count when the hub could not count (`pending` null): no badge rather than a wrong one.
+                    iconButton("tray", label: data.pending.map { String(localized: "Approvals, \($0) pending") }
+                                   ?? String(localized: "Approvals"), badge: data.pending ?? 0) {
                         sheet = .approvals; Task { await actions.loadApprovals() }
                     }
                 }
@@ -188,12 +193,15 @@ struct EmpireHome: View {
         }
     }
 
-    /// Tapping the front tab: a province opens (its app, else its website); anything that cannot open shows its page.
+    /// Tapping the front tab: a province opens (its app, else its website); anything that does not open shows its page.
     private func open(_ item: EmpireRing.Item) {
-        if let province = data.projects.first(where: { $0.slug == item.id }), !expanded, province.canOpen {
-            actions.open(province)
-        } else {
+        guard !expanded, let province = data.projects.first(where: { $0.slug == item.id }), province.canOpen else {
             details(item)
+            return
+        }
+        Task {
+            let opened = await actions.open(province)
+            if !opened { sheet = .province(province, unopened: true) }
         }
     }
 
@@ -207,12 +215,18 @@ struct EmpireHome: View {
 
 #if DEBUG
 extension EmpireHome {
-    /// Screenshots: `-openSheet province|idea|add|approvals|settings` opens that page at launch.
+    /// Screenshots: `-openSheet province|unopened|idea|add|approvals|settings` opens that page at launch (`unopened`:
+    /// the first province's page as a ring tap that opened nothing shows it). `-tapProvince <slug>` taps that province
+    /// in the ring, as a finger would (its app, its website, or its page).
     private func openDebugSheet() {
         let arguments = LaunchArguments.current
+        if let index = arguments.firstIndex(of: "-tapProvince"), arguments.indices.contains(index + 1) {
+            open(EmpireRing.Item(id: arguments[index + 1], name: "", status: "", isAdd: false))
+        }
         guard let index = arguments.firstIndex(of: "-openSheet"), arguments.indices.contains(index + 1) else { return }
         switch arguments[index + 1] {
         case "province": sheet = data.projects.first.map { .province($0) }
+        case "unopened": sheet = data.projects.first.map { .province($0, unopened: true) }
         case "idea": sheet = data.ideas.first.map { .idea($0) }
         case "add": sheet = .add
         case "approvals":
@@ -226,7 +240,8 @@ extension EmpireHome {
 #endif
 
 extension Province {
-    /// Whether it can be opened from the phone (as `ProvinceOpener` does): open for this account, with an app or a website.
+    /// Whether opening it is worth trying (`ProvinceOpener`): open for this account, with an app or a website. Whether
+    /// the app is installed shows only when it is tried.
     var canOpen: Bool { !isComingSoon && (app != nil || !url.isEmpty) }
 }
 

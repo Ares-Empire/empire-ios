@@ -23,7 +23,14 @@ struct EmpireAPI {
         try await decoded("api/empire/approvals", token: token, onUnauthorized: onUnauthorized)
     }
 
-    func decide(id: String, approve: Bool, token: String, onUnauthorized: () -> Void = {}) async throws {
+    /// Approves the account, granting `requested` (the apps its card shows, so a request made meanwhile is not granted
+    /// unseen), or declines it (an approved account's `requested` only are withdrawn; a new sign-up is deleted).
+    /// Returns the list and the count after the decision; nil when the answer has no list (an older hub's
+    /// `{"ok": true}`, or `"approvals": null`: the hub could not read it again) or an unreadable one. The decision went
+    /// through either way; the caller asks for the list again.
+    @discardableResult
+    func decide(id: String, approve: Bool, requested: [String], token: String,
+                onUnauthorized: () -> Void = {}) async throws -> DecisionAnswer? {
         // Append the account ID as one path segment, even if it contains reserved characters.
         var allowed = CharacterSet.urlPathAllowed
         allowed.remove(charactersIn: "/%?#")
@@ -31,15 +38,32 @@ struct EmpireAPI {
               let segment = id.addingPercentEncoding(withAllowedCharacters: allowed) else {
             throw HTTPError.invalidResponse
         }
-        _ = try await request("api/empire/approvals/\(segment)",
-                              body: JSONEncoder().encode([approve ? "approve" : "decline": true]),
-                              token: token, onUnauthorized: onUnauthorized)
+        let body = approve ? DecisionBody(approve: true, requested: requested)
+                           : DecisionBody(decline: true, requested: requested)
+        let data = try await request("api/empire/approvals/\(segment)", body: JSONEncoder().encode(body),
+                                     token: token, onUnauthorized: onUnauthorized)
+        let answer = try? decodeAnswer(DecisionWire.self, from: data, answer: "POST /api/empire/approvals/<id>")
+        return answer?.approvals.map { DecisionAnswer(approvals: $0, pending: answer?.pending) }
+    }
+
+    /// `{approve: true, requested: [...]}` or `{decline: true, requested: [...]}`.
+    private struct DecisionBody: Encodable {
+        var approve: Bool? = nil
+        var decline: Bool? = nil
+        var requested: [String]? = nil
+    }
+
+    /// The decision's answer as it comes: `approvals` null when the hub could not read the list again, absent from an
+    /// older hub (`{"ok": true}`).
+    private struct DecisionWire: Decodable {
+        let approvals: [PendingAccount]?
+        let pending: Int?
     }
 
     private func decoded<T: Decodable>(_ path: String, body: Data? = nil, token: String,
                                        onUnauthorized: () -> Void) async throws -> T {
         let data = try await request(path, body: body, token: token, onUnauthorized: onUnauthorized)
-        return try JSONDecoder().decode(T.self, from: data)
+        return try decodeAnswer(T.self, from: data, answer: (body == nil ? "GET /" : "POST /") + path)
     }
 
     private func request(_ path: String, body: Data? = nil, token: String,

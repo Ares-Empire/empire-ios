@@ -13,7 +13,7 @@ struct EmpireStoreTests {
             case .add: await store.ring(add: "aresium")
             case .remove: await store.ring(remove: "aresium")
             case .approvals: await store.loadApprovals()
-            case .approve, .decline: await store.decide(id: "fictional-id", approve: self == .approve)
+            case .approve, .decline: await store.decide(id: "fictional-id", approve: self == .approve, requested: ["empire"])
             }
         }
 
@@ -129,8 +129,8 @@ struct EmpireStoreTests {
         let store = EmpireStore(session: session, client: EmpireAPI(transport: transport))
         await store.reload()
         let original = store.data
-        transport.status = 409
-        transport.data = Data(#"{"error":"The ring could not be changed"}"#.utf8)
+        transport.status = 400              // webauth/server.py change_ring: an unknown province
+        transport.data = Data(#"{"error":"The ring could not be changed","code":"bad_request"}"#.utf8)
         if add { await store.ring(add: "aresium") }
         else { await store.ring(remove: "aresium") }
         #expect(store.ringError == "The ring could not be changed")
@@ -153,25 +153,130 @@ struct EmpireStoreTests {
         await store.loadApprovals()
         #expect(store.approvals.count == EmpireSamples.approvals.count && !store.isLoadingApprovals)
         let remaining = Array(EmpireSamples.approvals.dropFirst())
-        transport.responses = [(204, Data()), (200, try JSONEncoder().encode(remaining)),
+        // A hub that answers only {"ok": true} (before it sent the list): the app asks for both again.
+        transport.responses = [(200, Self.ok), (200, try JSONEncoder().encode(remaining)),
                                (200, try JSONEncoder().encode(empireWithPending(1)))]
         let gate = EmpireRequestGate()
         transport.nextGate = gate
-        let decision = Task { await store.decide(id: "sample-pending-one", approve: approve) }
+        let decision = Task { await store.decide(id: "sample-pending-one", approve: approve, requested: ["empire"]) }
         await gate.waitUntilPaused()
         #expect(store.isDeciding)
-        await store.decide(id: "sample-pending-two", approve: approve)
+        #expect(await store.decide(id: "sample-pending-two", approve: approve, requested: ["empire"]) == false)
         await store.loadApprovals()
         #expect(transport.requests.count == 3)
         gate.resume()
-        await decision.value
+        #expect(await decision.value)
         #expect(!store.isDeciding && store.approvalsError == nil)
         #expect(store.approvals == remaining && store.data?.pending == 1)
         #expect(transport.requests.suffix(3).map { $0.url?.path } == [
             "/api/empire/approvals/sample-pending-one", "/api/empire/approvals", "/api/empire"
         ])
-        let body = try JSONDecoder().decode([String: Bool].self, from: #require(transport.requests[2].httpBody))
-        #expect(body == [approve ? "approve" : "decline": true])
+        let sent = try #require(transport.requests[2].httpBody)
+        let body = try #require(try JSONSerialization.jsonObject(with: sent) as? [String: Any])
+        #expect(body.count == 2 && body[approve ? "approve" : "decline"] as? Bool == true)
+        #expect(body["requested"] as? [String] == ["empire"])
+    }
+
+    static let ok = Data(#"{"ok": true}"#.utf8)
+
+    static func decisionAnswer(_ approvals: [PendingAccount], pending: Int?) throws -> Data {
+        var answer: [String: Any] = ["ok": true, "approvals": try JSONSerialization.jsonObject(with: JSONEncoder().encode(approvals))]
+        answer["pending"] = pending ?? NSNull()
+        return try JSONSerialization.data(withJSONObject: answer)
+    }
+
+    /// The hub's answer carries the list and the count after the decision: nothing more is asked.
+    @Test(arguments: [true, false])
+    func aDecisionUsesTheListAndCountItsAnswerCarries(approve: Bool) async throws {
+        let session = await empireSession()
+        let transport = EmpireFakeTransport(data: try empireJSON())
+        let store = EmpireStore(session: session, client: EmpireAPI(transport: transport))
+        await store.reload()
+        transport.data = try JSONEncoder().encode(EmpireSamples.approvals)
+        await store.loadApprovals()
+        let remaining = Array(EmpireSamples.approvals.dropFirst())
+        transport.responses = [(200, try Self.decisionAnswer(remaining, pending: 1))]
+        let count = transport.requests.count
+        #expect(await store.decide(id: "sample-pending-one", approve: approve, requested: ["empire"]))
+        #expect(transport.requests.count == count + 1)
+        #expect(store.approvals == remaining && store.data?.pending == 1 && store.approvalsError == nil)
+
+        // A count the hub could not make hides the badge rather than keeping an old one.
+        transport.responses = [(200, try Self.decisionAnswer([], pending: nil))]
+        #expect(await store.decide(id: "sample-pending-two", approve: approve, requested: ["empire"]))
+        #expect(store.approvals.isEmpty && store.data != nil && store.data?.pending == nil)
+    }
+
+    /// A decision whose answer did not come (or that the hub refused because the account was decided meanwhile): the
+    /// list is asked for again, so a card for an account already decided goes, with its open confirmation.
+    @Test(arguments: [(503, #"{"error":"Login service unavailable, try again in a minute.","code":"unavailable"}"#),
+                      (404, #"{"error":"Account not found.","code":"not_found"}"#)])
+    func aFailedDecisionRefreshesTheList(refusal: (status: Int, body: String)) async throws {
+        let session = await empireSession()
+        let transport = EmpireFakeTransport(data: try empireJSON())
+        let store = EmpireStore(session: session, client: EmpireAPI(transport: transport))
+        await store.reload()
+        transport.data = try JSONEncoder().encode(EmpireSamples.approvals)
+        await store.loadApprovals()
+        let remaining = Array(EmpireSamples.approvals.dropFirst())
+        transport.responses = [(refusal.status, Data(refusal.body.utf8)), (200, try JSONEncoder().encode(remaining)),
+                               (200, try JSONEncoder().encode(empireWithPending(remaining.count)))]
+        #expect(await store.decide(id: "sample-pending-one", approve: false, requested: []) == false)
+        #expect(store.approvals == remaining && store.data?.pending == remaining.count)
+        // The decision's own error stays the one shown.
+        let sentence = try JSONDecoder().decode(ServerMessage.self, from: Data(refusal.body.utf8)).sentence
+        #expect(store.approvalsError == sentence && !store.isDeciding)
+        #expect(session.isSignedIn)
+    }
+
+    /// `"approvals": null`: the decision went through, the hub could not read the list again; the app asks for it.
+    @Test func aDecisionAnswerWithoutTheListAsksForIt() async throws {
+        let session = await empireSession()
+        let transport = EmpireFakeTransport(data: try empireJSON())
+        let store = EmpireStore(session: session, client: EmpireAPI(transport: transport))
+        await store.reload()
+        let remaining = Array(EmpireSamples.approvals.dropFirst())
+        transport.responses = [(200, Data(#"{"ok": true, "approvals": null, "pending": null}"#.utf8)),
+                               (200, try JSONEncoder().encode(remaining)),
+                               (200, try JSONEncoder().encode(empireWithPending(remaining.count)))]
+        #expect(await store.decide(id: "sample-pending-one", approve: true, requested: ["empire"]))
+        #expect(store.approvals == remaining && store.data?.pending == remaining.count && store.approvalsError == nil)
+        #expect(transport.requests.suffix(2).map { $0.url?.path } == ["/api/empire/approvals", "/api/empire"])
+    }
+
+    @Test func aDecisionThatWentThroughSaysSoEvenWhenTheRefreshFails() async throws {
+        let session = await empireSession()
+        let transport = EmpireFakeTransport(data: try empireJSON())
+        let store = EmpireStore(session: session, client: EmpireAPI(transport: transport))
+        await store.reload()
+        transport.responses = [(200, Self.ok), (503, Data()), (503, Data())]
+        #expect(await store.decide(id: "fictional-id", approve: false, requested: []))
+        #expect(store.approvalsError == "Login service unavailable, try again")
+    }
+
+    /// `admin_only` (an account that lost its admin flag): the request is refused, the app stays open.
+    @Test(arguments: Action.allCases)
+    func aRefusalOtherThanNoAccessKeepsTheApp(action: Action) async throws {
+        let storage = EmpireMemoryTokens()
+        let session = await empireSession(storage: storage)
+        let transport = EmpireFakeTransport(data: try empireJSON())
+        let store = EmpireStore(session: session, client: EmpireAPI(transport: transport))
+        await store.reload()
+        let original = store.data
+        transport.status = 403
+        transport.data = Data(#"{"error":"Administrator access required.","code":"admin_only"}"#.utf8)
+        await action.run(store)
+        #expect(session.isSignedIn && !session.isDenied && storage.token != nil)
+        #expect(store.data == original)
+        #expect(action.error(in: store) == "Administrator access required.")
+    }
+
+    @Test func anEmptyRingLoads() async throws {
+        let session = await empireSession()
+        let transport = EmpireFakeTransport(data: Data(EmpireFixtures.emptyRing.utf8))
+        let store = EmpireStore(session: session, client: EmpireAPI(transport: transport))
+        await store.reload()
+        #expect(store.error == nil && store.data?.projects.isEmpty == true && store.data?.addable.count == 1)
     }
 
     @Test func decisionStillRefreshesPendingWhenListRefreshFails() async throws {
@@ -179,8 +284,8 @@ struct EmpireStoreTests {
         let transport = EmpireFakeTransport(data: try empireJSON())
         let store = EmpireStore(session: session, client: EmpireAPI(transport: transport))
         await store.reload()
-        transport.responses = [(204, Data()), (503, Data()), (200, try JSONEncoder().encode(empireWithPending(1)))]
-        await store.decide(id: "fictional-id", approve: true)
+        transport.responses = [(200, Self.ok), (503, Data()), (200, try JSONEncoder().encode(empireWithPending(1)))]
+        await store.decide(id: "fictional-id", approve: true, requested: [])
         #expect(store.data?.pending == 1)
         #expect(store.approvalsError == "Login service unavailable, try again")
         #expect(!store.isDeciding)
@@ -192,8 +297,8 @@ struct EmpireStoreTests {
         let store = EmpireStore(session: session, client: EmpireAPI(transport: transport))
         await store.reload()
         let original = store.data
-        transport.responses = [(204, Data()), (200, Data("[]".utf8)), (503, Data())]
-        await store.decide(id: "fictional-id", approve: false)
+        transport.responses = [(200, Self.ok), (200, Data("[]".utf8)), (503, Data())]
+        await store.decide(id: "fictional-id", approve: false, requested: [])
         #expect(store.data == original && store.approvals.isEmpty)
         #expect(store.approvalsError == "Login service unavailable, try again")
     }
@@ -209,7 +314,9 @@ struct EmpireStoreTests {
         transport.data = try JSONEncoder().encode(EmpireSamples.approvals)
         await store.loadApprovals()
         transport.status = status
-        transport.data = Data(#"{"error":"No access to Empire"}"#.utf8)
+        transport.data = Data([401: #"{"error":"unauthenticated","code":"unauthorized"}"#,
+                               403: #"{"error":"No access to Empire","code":"no_access"}"#,
+                               503: #"{"error":"Login service unavailable, try again in a minute.","code":"unavailable"}"#][status]!.utf8)
         await action.run(store)
         #expect(!store.isLoading && !store.isRingBusy && !store.isLoadingApprovals && !store.isDeciding)
         switch status {
@@ -230,7 +337,7 @@ struct EmpireStoreTests {
         default:
             #expect(session.isSignedIn && storage.token != nil)
             #expect(store.data == original && store.approvals.count == EmpireSamples.approvals.count)
-            #expect(action.error(in: store) == "Login service unavailable, try again")
+            #expect(action.error(in: store) == "Login service unavailable, try again in a minute.")
         }
     }
 
@@ -243,10 +350,10 @@ struct EmpireStoreTests {
         await store.loadApprovals()
         transport.status = 503
         await store.ring(add: "aresium")
-        await store.decide(id: "fictional-id", approve: true)
+        await store.decide(id: "fictional-id", approve: true, requested: [])
         await store.reload()
         #expect(store.ringError != nil && store.approvalsError != nil && store.error != nil)
-        session.handleAuthFailure(HTTPError.server(403, "Denied"), generation: session.generation)
+        session.handleAuthFailure(HTTPError.server(403, "Denied"), generation: session.generation, token: session.token)
         #expect(store.data == nil && store.approvals.isEmpty && store.lastSuccessfulLoad == nil)
         #expect(store.error == nil && store.ringError == nil && store.approvalsError == nil)
         let count = transport.requests.count
@@ -319,11 +426,11 @@ struct EmpireStoreTests {
         await store.loadApprovals()
         #expect(store.approvals.count == (user ? 0 : 3))
         if !user {
-            await store.decide(id: "sample-pending-one", approve: true)
+            await store.decide(id: "sample-pending-one", approve: true, requested: [])
             #expect(store.approvals.count == 2 && store.data?.pending == 2)
-            await store.decide(id: "sample-pending-two", approve: false)
+            await store.decide(id: "sample-pending-two", approve: false, requested: [])
             #expect(store.approvals.count == 1 && store.data?.pending == 1)
-            await store.decide(id: "sample-member-one", approve: true)
+            await store.decide(id: "sample-member-one", approve: true, requested: [])
             #expect(store.approvals.isEmpty && store.data?.pending == 0)
             await store.reload()
             await store.loadApprovals()

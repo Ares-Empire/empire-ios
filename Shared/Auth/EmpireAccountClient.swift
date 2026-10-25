@@ -50,17 +50,17 @@ struct EmpireAccountClient {
     /// its requests, and answers what is left.
     func leave(service: String, token: String) async throws(AccountFailure) -> AccountAccess {
         let url = Self.server.appendingPathComponent("api/empire/leave")
-        return try decode(await send("POST", url, body: ["service": service], token: token))
+        return try decode(await send("POST", url, body: ["service": service], token: token, explainsRefusal: true))
     }
 
     /// `DELETE <the app's API>/me`: the app's server deletes what it keeps for this account (today only Arestemis).
     func deleteServiceData(at url: URL, token: String) async throws(AccountFailure) {
-        _ = try await send("DELETE", url, token: token)
+        _ = try await send("DELETE", url, token: token, explainsRefusal: true)
     }
 
     /// `DELETE …/users/records/<id>`: the account goes; the account server then deletes its data in every service.
     func deleteAccount(id: String, token: String) async throws(AccountFailure) {
-        _ = try await send("DELETE", try record(id), token: token)
+        _ = try await send("DELETE", try record(id), token: token, explainsRefusal: true)
     }
 
     // MARK: requests
@@ -71,12 +71,16 @@ struct EmpireAccountClient {
         return Self.users.appendingPathComponent("records").appendingPathComponent(id)
     }
 
-    private func send(_ method: String, _ url: URL, token: String? = nil) async throws(AccountFailure) -> Data {
-        try await send(method, url, body: Optional<[String: String]>.none, token: token)
+    /// - Parameter explainsRefusal: the server answers a refusal of this call with its own sentence for the person
+    ///   (a 403 when the admin account tries to leave an app or delete itself); elsewhere a 403 is PocketBase's own
+    ///   English and reads as `.other`.
+    private func send(_ method: String, _ url: URL, token: String? = nil,
+                      explainsRefusal: Bool = false) async throws(AccountFailure) -> Data {
+        try await send(method, url, body: Optional<[String: String]>.none, token: token, explainsRefusal: explainsRefusal)
     }
 
-    private func send<Body: Encodable>(_ method: String, _ url: URL, body: Body?,
-                                       token: String? = nil) async throws(AccountFailure) -> Data {
+    private func send<Body: Encodable>(_ method: String, _ url: URL, body: Body?, token: String? = nil,
+                                       explainsRefusal: Bool = false) async throws(AccountFailure) -> Data {
         var request = URLRequest(url: url)
         request.httpMethod = method
         request.setValue("application/json", forHTTPHeaderField: "Accept")
@@ -93,7 +97,9 @@ struct EmpireAccountClient {
         } catch {
             throw AccountFailure(error)
         }
-        if let failure = AccountFailure(status: response.statusCode, body: data) { throw failure }
+        if let failure = AccountFailure(status: response.statusCode, body: data, explainsRefusal: explainsRefusal) {
+            throw failure
+        }
         return data
     }
 
@@ -131,16 +137,26 @@ struct AccountAccess: Decodable, Equatable {
 /// (PocketBase: `{"message", "data": {"<field>": {"code"}}}`) or from the transport's error.
 enum AccountFailure: Error, Equatable {
     case offline, tooMany, loggedOut, unavailable, other
+    /// The server refused it and said why, in the app's language (the admin account cannot leave an app or delete
+    /// itself). Trying again does not help.
+    case refused(String)
     case wrongPassword              // the password typed to confirm (deleting the account)
     case wrongCurrentPassword       // changing the password: the current one
     case emailTaken, invalidEmail
     case passwordTooShort, passwordTooLong, passwordsDiffer
 
     /// The failure an answer stands for; nil for a 2xx.
-    init?(status: Int, body: Data) {
+    /// - Parameter explainsRefusal: a 403 carries the server's own sentence for the person (`EmpireAccountClient`).
+    init?(status: Int, body: Data, explainsRefusal: Bool = false) {
         switch status {
         case 200..<300: return nil
         case 401: self = .loggedOut
+        case 403 where explainsRefusal:
+            guard let sentence = (try? JSONDecoder().decode(ServerMessage.self, from: body))?.sentence else {
+                self = .other
+                return
+            }
+            self = .refused(sentence)
         case 429: self = .tooMany
         case 502, 503, 504: self = .unavailable
         case 400: self = Self.field(in: body) ?? .other
@@ -190,6 +206,7 @@ enum AccountFailure: Error, Equatable {
                                                                      table: "Shared", locale: .appLanguage))
         case .other: String(localized: LocalizedStringResource("It didn't go through. Please try again.",
                                                                table: "Shared", locale: .appLanguage))
+        case .refused(let sentence): sentence
         case .wrongPassword: String(localized: LocalizedStringResource("Wrong password.", table: "Shared",
                                                                        locale: .appLanguage))
         case .wrongCurrentPassword: String(localized: LocalizedStringResource("The current password is wrong.",
