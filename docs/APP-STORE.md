@@ -118,18 +118,19 @@ names, commit subjects): **[Patrik]** whether that is acceptable, else internal 
 
 1. **Delete your account inside each app** (App Review Guideline 5.1.1(v)): built 2026-10-25 (brief F2): Settings →
    Account → *Delete Ares account* (password, confirmation, `DELETE …/users/records/<id>`, logged out everywhere) and
-   *Leave <app>*; the servers' deletions run from the account server (brief F1, `ares-empire/docs/ACCOUNTS.md`). Left:
-   the same on the website (a page on the hub), and PRIVACY.md (lead).
+   *Leave <app>*; the servers' deletions run from the account server (brief F1, `ares-empire/docs/ACCOUNTS.md`). The
+   privacy policy says so (live 2026-10-25). Optional: the same on the website (a page on the hub); the policy also
+   names deletion by email.
 2. **Arestemis and the portals' terms** (Guideline 5.2.2: an app may show a third-party service's content only when
    that service's terms allow it). Arestemis reads WG-Gesucht, Kleinanzeigen and Immowelt without permission
    (`Arestemis/CLAUDE.md`: "scraping is against their terms") and shows their text and photos. Fine for private
    TestFlight use; a public App Store release needs permission or a different source. **[Patrik]**
-3. **Support URL** (required on the App Store page): a public page, e.g. a short `/support` on the hub naming
-   `REDACTED-EMAIL` and the in-app form, or the imprint.
+3. **Support URL** (required on the App Store page): `https://www.ares-empire.de/kontakt` (the contact form, live
+   since 2026-10-25; English `/contact`).
 4. **EU trader status** (App Store Connect → Business, required for EU distribution under the Digital Services Act):
    **[Patrik]** declares himself a non-trader (private, non-commercial), or a trader, whose address and phone number
    Apple then shows on the App Store.
-5. **The pages online:** Patrik approves the text, the lead fills `[ADDRESS]` and every `[lead to confirm]`
-   (`ares-empire/docs/PRIVACY.md`), and the Settings links (brief E4b) then open them.
+5. **The pages online:** done 2026-10-25 (`/datenschutz`, `/privacy`, `/impressum`, `/imprint`; Settings opens them).
+   When an app opens to people besides Patrik, its section goes into the policy first (`ares-empire/docs/PRIVACY.md`).
 6. Per app on the App Store page: age rating questionnaire, category, screenshots, copyright line; for Arestemis and
    Aresus the time-sensitive notification entitlement is justified by "a new flat listing / a service is down".

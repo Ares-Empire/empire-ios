@@ -135,8 +135,8 @@ Every app has one Settings sheet, opened by the gear (`gearshape`) in its header
 `Shared/Design/SettingsScreen.swift` (`SettingsScreen(app:session:sample:logOut:) { app's own section }`). Sections: the
 app's own (a view-builder slot, built with `SettingsSection` / `SettingsRow`; Arestemis puts its application texts and
 hunt notifications there), General (Language; Notifications, opening the app's notification page in iOS Settings, in
-apps with `sendsNotifications`), Help (Contact & support: brief E5's form from `Shared/Support`, a stub until it is
-merged), About (Privacy and Imprint open `LegalPage` in the app's language, Fonts & licences shows the OFL texts from
+apps with `sendsNotifications`), Help (Contact & support: the form from `Shared/Support`, sent to the account
+server's `feedback` collection, which emails Patrik), About (Privacy and Imprint open `LegalPage` in the app's language, Fonts & licences shows the OFL texts from
 `Shared/Fonts`, Version), Account (the email from the login answer, `EmpireSession.email`; Change password; Log out
 "in all Ares apps on this iPhone", which does what the app's log-out did before; then, in the hub's soft red, Leave
 <app> and Delete Ares account: pages in `Shared/Design/AccountScreens.swift`, see "Accounts in every app" below). An app
@@ -146,18 +146,18 @@ login screen ends with "Privacy · Imprint" (`LoginScroll`). Screenshots: `-samp
 (`-scrollToAccount` shows the Account section). A new app: a gear in its header and `SettingsScreen` in a sheet. The
 sheet is dark in every app, also in Aresium's light theme.
 
-## Open (2026-10-24)
+## Open (2026-10-25)
 
-Four apps (Aresium, Empire, Arestemis, Aresus) work on the simulator and are merged; nothing reaches the phone until
-Apple approves the developer account.
+All five apps (Aresium, Empire, Arestemis, Aresus, Arestoteles) work on the simulator and are merged; nothing reaches
+the phone until Apple approves the developer account.
 
-1. **TestFlight, once Apple approves:** set the paid team (project level, both projects); the App Groups
+1. **TestFlight, once Apple approves:** set the paid team (project level, all five projects); the App Groups
    `group.de.ares-empire.aresium` + `group.de.ares-empire.shared` registered for the bundle ids, the widgets' too
    (`de.ares-empire.aresium.widget`, `de.ares-empire.aresus.widget`) (Xcode's automatic
    signing can do it; the shared Keychain group needs only the team prefix); an App Store Connect record per app;
-   Release build for a generic device; archive and upload both (README).
+   Release build for a generic device; archive and upload each (README).
 2. **On the phone:** the checks in `docs/reviews/2026-10-23-pre-testflight.md` (widgets incl. row taps), the shared
-   login across the two apps on the real device, the Empire app opening Aresium (`aresium://`), no connection; the
+   login across the apps on the real device, the Empire app opening Aresium (`aresium://`), no connection; the
    Aresus widget placed on the home and lock screen (refreshes by itself, the medium one's rows open their province).
 3. **Council over the Empire app before its first upload** (`docs/REVIEW.md`): brief 08 (Codex: API, store, marks,
    opener) and the login changes (`followSharedLogin`). Not done yet.
@@ -172,14 +172,14 @@ Apple approves the developer account.
    phone and retire Telegram: Arestemis (`TELEGRAM_*` in /root/Arestemis/.env) and Aresync (`TG_*` in each config).
 7. **Windows laptop:** an Aresus machine token for `Notebook-Patrik` (`aresus/scripts/new-machine-token.py`) into
    `windows/config.ps1`; the PowerShell report is untested.
+8. **Build 2026-10-24 record:** `docs/build-2026-10-24/STATUS.md` (what was built, decisions, live tests). Built after the main work: the Aresus
+   widget and the hub's live lines from Aresus.
 9. **Arestoteles on the phone:** check the Discuss hand-off (`DiscussPrompt.target`, now `https://claude.ai/code`: does
    the Claude app open, and how to start a session there with the copied prompt); replace the bust (the website's
    `aristotle-bust.png` has a faint "Magnific" watermark); a widget with a position to revisit (needs a widget target).
 10. **Light mode before the next new app** (Patrik, 2026-10-24; `ares-empire/docs/IPHONE-APPS.md` → "Every app
    has"): colours as light/dark pairs in `Shared/Design`, an Appearance row in Settings, every app checked in both.
    Aresium already has its own light theme (`AppTheme`/`Palette`, the sun button in its header): start from it.
-8. **Build 2026-10-24 record:** `docs/build-2026-10-24/STATUS.md` (what was built, decisions, live tests). Built after the main work: the Aresus
-   widget and the hub's live lines from Aresus.
 
 ## Setup state (update as it changes)
 
