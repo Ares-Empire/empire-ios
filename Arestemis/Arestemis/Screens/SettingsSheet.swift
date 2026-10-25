@@ -9,7 +9,8 @@ struct SettingsSheet: View {
     @State private var draft: Settings?
 
     var body: some View {
-        SettingsScreen(app: SettingsApp(name: "Arestemis", accent: Look.accent, sendsNotifications: true),
+        SettingsScreen(app: SettingsApp(name: "Arestemis", accent: Look.accent, sendsNotifications: true,
+                                       serverData: ArestemisAPI.accountDataURL),
                        session: store.session, sample: store.isSample, logOut: logOut) {
             Group {
                 if let draft = Binding($draft) {

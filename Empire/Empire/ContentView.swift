@@ -27,10 +27,22 @@ struct ContentView: View {
         #else
         let quiet = false
         #endif
-        let session = EmpireSession(app: .empire, restoreOnLaunch: !quiet, installDefaults: quiet ? nil : EmpireShared.defaults)
+        var session: EmpireSession
+        var restores = !quiet
+        #if DEBUG
+        // Screenshots of the login and the no-access screen (`SampleAccount`): a made-up account, no server.
+        if let account = SampleAccount.session(app: .empire, arguments: arguments) {
+            session = account.session
+            restores = account.restores
+        } else {
+            session = EmpireSession(app: .empire, restoreOnLaunch: !quiet, installDefaults: quiet ? nil : EmpireShared.defaults)
+        }
+        #else
+        session = EmpireSession(app: .empire, restoreOnLaunch: !quiet, installDefaults: quiet ? nil : EmpireShared.defaults)
+        #endif
         _store = State(initialValue: EmpireStore(session: session, sample: sample))
         _marks = State(initialValue: ProvinceMarks(session: session, sample: sample))
-        restoresOnLaunch = !quiet
+        restoresOnLaunch = restores
         #if DEBUG
         let sheet = arguments.firstIndex(of: "-openSheet").flatMap { arguments.indices.contains($0 + 1) ? arguments[$0 + 1] : nil }
         _showsSupport = State(initialValue: sheet == "support")

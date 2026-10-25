@@ -6,25 +6,43 @@ struct SettingsApp {
     let name: String                    // "Arestoteles": also names the app in the iOS Settings path
     var accent: AppAccent? = nil        // the wall's light and the one highlight; nil = ink only (Aresium, Empire)
     var sendsNotifications = false      // a Notifications row, opening the app's notification page in iOS Settings
+    /// The app's `DELETE …/me` when its server keeps data per account (today only Arestemis): leaving the app deletes it
+    /// there first. nil: the server keeps nothing per account (Aresium, Aresus, Arestoteles hold only Patrik's data).
+    var serverData: URL? = nil
 }
 
 /// Every app's Settings (the gear in its header), one sheet in the family look: the app's own section (optional, the
 /// `appSection` slot, e.g. Arestemis's application texts), then General (Language; Notifications in apps that send
-/// them), Help (Contact & support), About (Privacy, Imprint, Fonts & licences, Version) and Account (email, Log out).
-/// Log out does what the app's log-out did before (in sample mode it leaves the sample).
+/// them), Help (Contact & support), About (Privacy, Imprint, Fonts & licences, Version) and Account (email, Change
+/// password, Log out; then Leave <app> and Delete Ares account, `AccountScreens.swift`).
+/// Log out does what the app's log-out did before (in sample mode it leaves the sample); so does the end of leaving or
+/// deleting in sample mode, where nothing is sent.
 struct SettingsScreen<AppSection: View>: View {
     let app: SettingsApp
     let session: EmpireSession          // the account's email; the login the support form sends with (brief E5)
     var sample = false                  // sample mode: a made-up email, nothing is sent
     let logOut: () -> Void
-    @ViewBuilder var appSection: AppSection
+    let appSection: AppSection
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
     @State private var showsSupport = false
+    @State private var path: [AccountPage] = []
+
+    init(app: SettingsApp, session: EmpireSession, sample: Bool = false, logOut: @escaping () -> Void,
+         @ViewBuilder appSection: () -> AppSection) {
+        self.app = app
+        self.session = session
+        self.sample = sample
+        self.logOut = logOut
+        self.appSection = appSection()
+        #if DEBUG
+        _path = State(initialValue: AccountPage.launched().map { [$0] } ?? [])
+        #endif
+    }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     appSection
@@ -43,6 +61,14 @@ struct SettingsScreen<AppSection: View>: View {
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button { dismiss() } label: { Text("Done", tableName: "Shared") }
+                }
+            }
+            .navigationDestination(for: AccountPage.self) { page in
+                switch page {
+                case .changePassword:
+                    ChangePasswordScreen(app: app, session: session, sample: sample, closeSettings: accountEnded)
+                case .leave: LeaveAppScreen(app: app, session: session, sample: sample, closeSettings: accountEnded)
+                case .delete: DeleteAccountScreen(app: app, session: session, sample: sample, closeSettings: accountEnded)
                 }
             }
         }
@@ -111,26 +137,55 @@ struct SettingsScreen<AppSection: View>: View {
     }
 
     private var account: some View {
-        SettingsSection(String(localized: "Account", table: "Shared")) {
-            if let email = sample ? "sample@example.com" : session.email {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Signed in as", tableName: "Shared").font(AppFont.text(12)).foregroundStyle(Ink.muted)
-                    Text(verbatim: email).font(AppFont.text(15, weight: .medium)).foregroundStyle(Ink.primary)
-                        .lineLimit(1).truncationMode(.middle)
+        VStack(spacing: 12) {
+            SettingsSection(String(localized: "Account", table: "Shared")) {
+                if let email = sample ? "sample@example.com" : session.email {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Signed in as", tableName: "Shared").font(AppFont.text(12)).foregroundStyle(Ink.muted)
+                        Text(verbatim: email).font(AppFont.text(15, weight: .medium)).foregroundStyle(Ink.primary)
+                            .lineLimit(1).truncationMode(.middle)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 58, alignment: .leading).padding(.horizontal, 16)
+                    .accessibilityElement(children: .combine)
+                    SettingsDivider()
                 }
-                .frame(maxWidth: .infinity, minHeight: 58, alignment: .leading).padding(.horizontal, 16)
-                .accessibilityElement(children: .combine)
+                NavigationLink(value: AccountPage.changePassword) {
+                    SettingsRow(title: String(localized: "Change password", table: "Shared"))
+                }
+                .buttonStyle(SettingsRowStyle())
                 SettingsDivider()
+                Button {
+                    dismiss()
+                    logOut()
+                } label: {
+                    SettingsRow(title: String(localized: "Log out", table: "Shared"),
+                                subtitle: String(localized: "In all Ares apps on this iPhone", table: "Shared"),
+                                trailing: .none)
+                }
+                .buttonStyle(SettingsRowStyle())
             }
-            Button {
-                dismiss()
-                logOut()
-            } label: {
-                Text("Log out", tableName: "Shared").font(AppFont.text(15, weight: .medium)).foregroundStyle(Ink.primary)
-                    .frame(maxWidth: .infinity, minHeight: 50).contentShape(Rectangle())
+            // Leaving and deleting apart from the everyday rows, in the hub's soft red.
+            VStack(spacing: 0) {
+                NavigationLink(value: AccountPage.leave) {
+                    SettingsRow(title: String(localized: "Leave \(app.name)", table: "Shared"), tint: FormButtonStyle.dangerInk)
+                }
+                .buttonStyle(SettingsRowStyle())
+                SettingsDivider()
+                NavigationLink(value: AccountPage.delete) {
+                    SettingsRow(title: String(localized: "Delete Ares account", table: "Shared"),
+                                tint: FormButtonStyle.dangerInk)
+                }
+                .buttonStyle(SettingsRowStyle())
             }
-            .buttonStyle(SettingsRowStyle())
+            .glassCard()
         }
+    }
+
+    /// The account left this app or was deleted: close Settings (the app shows its no-access screen or the login).
+    /// In sample mode nothing was sent, so leave the sample for the login, as Log out does.
+    private func accountEnded() {
+        dismiss()
+        if sample { logOut() }
     }
 
     private func open(_ string: String) {
@@ -173,11 +228,12 @@ struct SettingsRow: View {
     var subtitle: String? = nil
     var value: String? = nil
     var trailing: Trailing = .push
+    var tint: Color = Ink.primary       // the title's colour (the hub's soft red for leaving and deleting)
 
     var body: some View {
         HStack(spacing: 10) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(AppFont.text(15, weight: .medium)).foregroundStyle(Ink.primary)
+                Text(title).font(AppFont.text(15, weight: .medium)).foregroundStyle(tint)
                 if let subtitle { Text(subtitle).font(AppFont.text(12)).foregroundStyle(Ink.muted) }
             }
             Spacer(minLength: 12)

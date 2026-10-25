@@ -146,43 +146,17 @@ struct SupportSheet: View {
     // MARK: sent
 
     private var sent: some View {
-        VStack(spacing: 0) {
-            Spacer()
-            ZStack {
-                Circle().fill(highlight.opacity(0.10))
-                Circle().strokeBorder(highlight.opacity(0.45), lineWidth: 1)
-                Image(systemName: "checkmark").font(.system(size: 22, weight: .semibold)).foregroundStyle(highlight)
-            }
-            .frame(width: 64, height: 64)
-            .accessibilityHidden(true)
-            Text("Thanks, it's arrived.", tableName: "Shared")
-                .font(AppFont.text(22, weight: .bold)).foregroundStyle(Ink.primary)
-                .multilineTextAlignment(.center).padding(.top, 22)
-            Text("If it needs an answer, it comes by email.", tableName: "Shared")
-                .font(AppFont.text(14)).foregroundStyle(Ink.muted)
-                .multilineTextAlignment(.center).padding(.top, 8)
-            Spacer()
-            Spacer()
-        }
-        .padding(.horizontal, 24)
-        .frame(maxWidth: .infinity)
-        .accessibilityElement(children: .combine)
-        .transition(.opacity)
+        CalmDone(title: Text("Thanks, it's arrived.", tableName: "Shared"),
+                 text: Text("If it needs an answer, it comes by email.", tableName: "Shared"), highlight: highlight)
     }
 
     // MARK: the button
 
     private var actions: some View {
         VStack(alignment: .leading, spacing: 12) {
-            if let failure = form.failure {
-                Label { Text(failure.message) } icon: { Image(systemName: "exclamationmark.circle") }
-                    .font(AppFont.text(13)).foregroundStyle(Self.problemInk)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.horizontal, 4)
-                    .transition(.opacity)
-            }
+            if let failure = form.failure { FormProblem(text: failure.message) }
             Button(action: primary) { primaryLabel }
-                .buttonStyle(SupportButtonStyle(accent: accent, busy: form.phase == .sending))
+                .buttonStyle(FormButtonStyle(accent: accent, busy: form.phase == .sending))
                 .disabled(!(form.canSend || form.phase == .sending || form.phase == .sent))
                 .allowsHitTesting(form.phase != .sending)
         }
@@ -192,11 +166,7 @@ struct SupportSheet: View {
     @ViewBuilder private var primaryLabel: some View {
         switch form.phase {
         case .writing: Text("Send", tableName: "Shared")
-        case .sending:
-            HStack(spacing: 10) {
-                ProgressView().tint(SupportButtonStyle.ink)
-                Text("Sending…", tableName: "Shared")
-            }
+        case .sending: BusyLabel(text: Text("Sending…", tableName: "Shared"), busy: true)
         case .failed: Text("Send again", tableName: "Shared")
         case .sent: Text("Done", tableName: "Shared")
         }
@@ -217,43 +187,8 @@ struct SupportSheet: View {
     /// The accent where the sheet has one small highlight (the kind's symbol, the focused box, the check).
     private var highlight: Color { accent?.color ?? Ink.secondary }
 
-    /// The shared login's soft problem colour (`ProvinceLogin`).
-    private static let problemInk = Color(hex: 0xD9B4A6)
-
     @ViewBuilder private var wall: some View {
         if let accent { ProvinceWall(accent: accent) } else { Ink.background.ignoresSafeArea() }
-    }
-}
-
-/// The form's one primary button: the app's accent with dark ink (ivory, like the login's button, when the app has no
-/// accent); a quiet glass outline while there is nothing to send.
-private struct SupportButtonStyle: ButtonStyle {
-    let accent: AppAccent?
-    var busy = false
-    @Environment(\.isEnabled) private var isEnabled
-
-    static let ink = Color(hex: 0x141617)
-    private static let ivory = Color(hex: 0xEEEEE8)
-
-    func makeBody(configuration: Configuration) -> some View {
-        let shape = RoundedRectangle(cornerRadius: 12, style: .continuous)
-        configuration.label
-            .font(AppFont.text(15, weight: .semibold))
-            .lineLimit(1).minimumScaleFactor(0.85)
-            .foregroundStyle(isEnabled ? Self.ink : Ink.muted)
-            .padding(.horizontal, 16)
-            .frame(maxWidth: .infinity, minHeight: 50)
-            .background {
-                if isEnabled {
-                    shape.fill(accent?.color ?? Self.ivory).opacity(busy ? 0.75 : 1)
-                } else {
-                    shape.fill(Color.white.opacity(0.06))
-                }
-            }
-            .overlay { if !isEnabled { shape.strokeBorder(Color.white.opacity(0.12)) } }
-            .contentShape(shape)
-            .opacity(configuration.isPressed ? 0.75 : 1)
-            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
     }
 }
 

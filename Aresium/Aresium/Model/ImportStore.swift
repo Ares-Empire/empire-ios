@@ -150,8 +150,8 @@ final class ImportStore {
             for files in plan.batches {
                 try Task.checkCancellation()
                 let result = try await client.importFiles(files, token: token) {
-                    if generation == self.generation, sessionGeneration == self.dashboard.session.generation {
-                        self.dashboard.session.logOut()
+                    if generation == self.generation {
+                        self.dashboard.session.handleAuthFailure(HTTPError.unauthorized, generation: sessionGeneration)
                     }
                 }
                 guard generation == self.generation, sessionGeneration == dashboard.session.generation else { return }

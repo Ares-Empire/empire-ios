@@ -23,6 +23,9 @@ protocol ArestemisBackend {
 /// `checkResponse`; the store hands failures to `EmpireSession.handleAuthFailure` (401 logs out, 403 closes this app).
 struct ArestemisAPI: ArestemisBackend {
     static let baseURL = URL(string: "https://www.ares-empire.de/api/arestemis")!
+    /// `DELETE /me`: the account's own data on the server (settings, hunts, matches, applications). Settings → Account →
+    /// Leave Arestemis calls it before the access goes (`LeaveAppFlow`); deleting the account reaches it on the server.
+    static let accountDataURL = baseURL.appendingPathComponent("me")
     /// Routes where the server asks the AI (parse, application) may take longer than a plain read.
     static let aiTimeout: TimeInterval = 60
 

@@ -57,7 +57,9 @@ final class TransactionDetailStore {
             else {
                 guard let token else { throw HTTPError.unauthorized }
                 loaded = try await client.transactionDetail(id: transaction.id, token: token) {
-                    if self.isCurrent(generation, token: token) { self.dashboardStore.session.logOut() }
+                    if self.isCurrent(generation, token: token) {
+                        self.dashboardStore.session.handleAuthFailure(HTTPError.unauthorized, generation: generation)
+                    }
                 }
                 guard isCurrent(generation, token: token) else { return }
             }
@@ -102,7 +104,9 @@ final class TransactionDetailStore {
         do {
             guard let token else { throw HTTPError.unauthorized }
             let onUnauthorized = {
-                if self.isCurrent(generation, token: token) { self.dashboardStore.session.logOut() }
+                if self.isCurrent(generation, token: token) {
+                    self.dashboardStore.session.handleAuthFailure(HTTPError.unauthorized, generation: generation)
+                }
             }
             let updated: TransactionDetail
             if mode == .switchCategory, let target {

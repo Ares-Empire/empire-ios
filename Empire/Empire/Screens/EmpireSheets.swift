@@ -351,6 +351,8 @@ private struct AddPage: View {
 
 // MARK: - approvals
 
+/// New sign-ups first, then approved accounts asking for more apps (each with the apps it asked for). Approving grants
+/// what was asked; declining deletes a new sign-up, or only clears an approved account's request.
 private struct ApprovalsPage: View {
     let status: EmpireHomeStatus
     let actions: EmpireHomeActions
@@ -365,15 +367,13 @@ private struct ApprovalsPage: View {
             } else if status.approvals.isEmpty {
                 EmptyState(symbol: "checkmark", title: String(localized: "No pending accounts."), note: nil)
             } else {
-                HStack {
-                    Text("Pending accounts").font(AppFont.text(13, weight: .medium)).foregroundStyle(Sheet.heading)
-                    Spacer()
-                    Text(String(format: "%02d", status.approvals.count)).font(AppFont.number(11, weight: .regular))
-                        .foregroundStyle(Color(hex: 0x858A8A))
+                let newAccounts = status.approvals.filter { !$0.approved }
+                let requests = status.approvals.filter(\.approved)
+                if !newAccounts.isEmpty {
+                    group(Text("Pending accounts"), newAccounts)
                 }
-                .padding(.bottom, 25)
-                VStack(spacing: 18) {
-                    ForEach(status.approvals) { account in card(account) }
+                if !requests.isEmpty {
+                    group(Text("Access requests"), requests).padding(.top, newAccounts.isEmpty ? 0 : 34)
                 }
             }
             if status.deciding {
@@ -382,11 +382,27 @@ private struct ApprovalsPage: View {
         }
     }
 
+    private func group(_ title: Text, _ accounts: [PendingAccount]) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                title.font(AppFont.text(13, weight: .medium)).foregroundStyle(Sheet.heading)
+                Spacer()
+                Text(String(format: "%02d", accounts.count)).font(AppFont.number(11, weight: .regular))
+                    .foregroundStyle(Color(hex: 0x858A8A))
+            }
+            .padding(.bottom, 25)
+            VStack(spacing: 18) {
+                ForEach(accounts) { account in card(account) }
+            }
+        }
+    }
+
     private func card(_ account: PendingAccount) -> some View {
         let name = account.name.isEmpty ? String(localized: "New account") : account.name
+        let who = account.name.isEmpty ? account.email : account.name
         return VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 12) {
-                Text(String((account.name.isEmpty ? account.email : account.name).prefix(1)).uppercased())
+                Text(String(who.prefix(1)).uppercased())
                     .font(AppFont.text(14)).foregroundStyle(Color(hex: 0xC3C9C1))
                     .frame(width: 38, height: 38)
                     .background(.white.opacity(0x06 / 255), in: .circle)
@@ -396,16 +412,31 @@ private struct ApprovalsPage: View {
                     Text(account.email).font(AppFont.text(11)).foregroundStyle(Color(hex: 0x969E97))
                 }
             }
-            HStack(spacing: 12) {
-                Text("Signed up").font(AppFont.text(10))
-                Text(String(account.created.prefix(10))).font(AppFont.number(9, weight: .regular))
+            VStack(alignment: .leading, spacing: 9) {
+                if !account.requested.isEmpty {
+                    HStack(alignment: .firstTextBaseline, spacing: 12) {
+                        Text("Asks for").font(AppFont.text(10)).foregroundStyle(Color(hex: 0x879089))
+                        Text(verbatim: account.requestedApps).font(AppFont.text(12, weight: .medium))
+                            .foregroundStyle(Color(hex: 0xC3C9C1))
+                    }
+                }
+                if !account.approved {
+                    HStack(spacing: 12) {
+                        Text("Signed up").font(AppFont.text(10))
+                        Text(String(account.created.prefix(10))).font(AppFont.number(9, weight: .regular))
+                    }
+                    .foregroundStyle(Color(hex: 0x879089))
+                }
             }
-            .foregroundStyle(Color(hex: 0x879089)).padding(.vertical, 20)
+            .padding(.vertical, 20)
             if declining == account.id {
-                Text("Decline \(account.name.isEmpty ? account.email : account.name)? This deletes their pending sign-up.")
+                (account.approved
+                    ? Text("Decline \(who)'s request? The account stays; only the request is cleared.")
+                    : Text("Decline \(who)? This deletes their pending sign-up."))
                     .font(AppFont.text(12)).lineSpacing(5).foregroundStyle(Color(hex: 0xC6B1AB)).padding(.bottom, 14)
                 HStack(spacing: 10) {
-                    Button("Keep account") { declining = nil }.buttonStyle(HubButtonStyle(kind: .secondary))
+                    Button(account.approved ? "Keep request" : "Keep account") { declining = nil }
+                        .buttonStyle(HubButtonStyle(kind: .secondary))
                     Button("Confirm decline") {
                         Task { if await actions.decide(account.id, false) { declining = nil } }
                     }
