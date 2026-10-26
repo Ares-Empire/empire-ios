@@ -20,8 +20,10 @@ Read `README.md` first, then the decision record in the ares-empire repo
 
 ## Workflow (Codex month, until about 2026-11-20)
 
-**Since 2026-10-25 (Patrik): hand work to Claude agents (the Agent tool), not Codex.** The Codex notes below stay for
-reference; the same rules hold for Claude agents (a worktree, a full brief, Claude checks and merges, the look is Claude's).
+**Who gets delegated work (Patrik, 2026-10-26):** design-related work (screens, the look, visual assets) → Claude
+agents (the Agent tool); everything else (data, plumbing, scripts, tests, server code) → Codex as below. The same rules
+hold for both (a worktree, a full brief, Claude checks and merges). A Claude agent stopped by the usage limit is resumed
+after the reset, not restarted.
 
 ChatGPT Pro runs until about 2026-11-20. Until then Claude delegated bounded builds to Codex.
 After that, Claude builds alone: drop this section. Same setup as nametbd3 (`docs/WORKFLOW.md` there),

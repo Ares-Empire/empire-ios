@@ -33,8 +33,8 @@ would not, drop it.
 | **3–4** | login, tokens, anything holding financial data on the phone |
 | **5** (maximum) | before other people get the app |
 
-Seats are Claude agents (Patrik, 2026-10-25: Claude agents, not Codex). Each seat gets its own focus and works blind
-to the others.
+Mix vendors: Claude agents plus Codex (`codex exec -s read-only -m gpt-6-astra`). Different models miss different
+things. Each seat gets its own focus and works blind to the others.
 
 ## Focuses to pick from
 
