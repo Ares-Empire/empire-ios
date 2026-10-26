@@ -38,6 +38,13 @@ nonisolated enum CategorySymbol {
         "Scissors": "scissors", "Shirt": "tshirt", "ShoppingBag": "bag", "ShoppingCart": "cart",
         "SprayCan": "bubbles.and.sparkles", "Tag": "tag", "TrainFront": "tram",
         "TrendingUp": "chart.line.uptrend.xyaxis", "Tv": "tv", "Users": "person.2",
-        "Trash2": "trash", "Utensils": "fork.knife", "Wallet": "wallet.bifold"
+        "Trash2": "trash", "Utensils": "fork.knife", "Wallet": "wallet.bifold",
+        // The default categories of Aresium for other people (aresium/src/engine/categories.ts → CATEGORY_LOOK).
+        "Baby": "figure.child", "Banknote": "banknote", "BookOpen": "book", "Briefcase": "briefcase",
+        "CarTaxiFront": "car", "Coffee": "cup.and.saucer", "Coins": "eurosign.circle", "Ellipsis": "ellipsis.circle",
+        "Fuel": "fuelpump", "Gift": "gift", "HandHeart": "heart", "HeartHandshake": "figure.2.and.child.holdinghands",
+        "Landmark": "building.columns", "Package": "shippingbox", "Palette": "paintpalette", "PawPrint": "pawprint",
+        "Percent": "percent", "Plane": "airplane", "Shield": "shield", "Smartphone": "iphone", "Sofa": "sofa",
+        "Ticket": "ticket", "Zap": "bolt"
     ]
 }
