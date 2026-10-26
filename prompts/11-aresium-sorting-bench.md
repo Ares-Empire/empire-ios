@@ -1,6 +1,6 @@
 # 11: Aresium sorting: default categories, starter rules, learning, and the measurements M1–M3
 
-Status: running (2026-10-26)
+Status: merged 2026-10-26
 Branch: `codex/11-sorting-bench` in aresium · Worktree: `~/aresium-11-sorting-bench` · Model: `gpt-6.1-sol`, effort `high`
 
 ## Goal
