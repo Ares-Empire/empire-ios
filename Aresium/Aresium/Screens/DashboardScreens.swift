@@ -71,7 +71,7 @@ private struct StartPage: View {
                             .tracking(1.3).foregroundStyle(palette.muted)
                         HStack(alignment: .firstTextBaseline, spacing: 6) {
                             Text(side.title).font(AppFont.text(21, weight: .bold))
-                                .foregroundStyle(side == .income ? palette.income : palette.expense)
+                                .foregroundStyle(side == .income ? palette.income : palette.expenseText)
                             Spacer(minLength: 4)
                             if let totals = store.totals(current: current) {
                                 Text(Money.total(side == .income ? totals.income : totals.expense))
@@ -193,7 +193,7 @@ struct TransactionsScreen: View {
                                     Text(transaction.city).font(AppFont.text(12.5)).foregroundStyle(palette.muted).lineLimit(1)
                                 }.frame(maxWidth: .infinity, alignment: .leading)
                                 Text(Money.transaction(transaction.amount)).font(AppFont.number(14))
-                                    .foregroundStyle(transaction.amount < 0 ? palette.expense : palette.income).fixedSize()
+                                    .foregroundStyle(transaction.amount < 0 ? palette.expenseText : palette.income).fixedSize()
                             }.padding(.horizontal, 12).padding(.vertical, 11).contentShape(Rectangle())
                         }.buttonStyle(.plain)
                     }

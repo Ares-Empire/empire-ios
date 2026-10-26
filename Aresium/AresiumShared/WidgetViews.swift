@@ -24,7 +24,7 @@ struct SpendingWidgetView: View {
                     }.foregroundStyle(palette.ink)
                     Chart(Array(snapshot.dayExpenseRunning.enumerated()), id: \.offset) { point in
                         LineMark(x: .value("Day", point.offset + 1), y: .value("Spent", point.element))
-                            .foregroundStyle(palette.expense)
+                            .foregroundStyle(palette.expenseText)
                             .lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
                     }
                     .chartXScale(domain: 1...snapshot.daysInMonth)

@@ -12,7 +12,7 @@ struct TransactionDetailSheet: View {
                 VStack(alignment: .leading, spacing: 0) {
                     if store.isLoading { ProgressView("Loading…").frame(maxWidth: .infinity).padding(30) }
                     if let error = store.loadError {
-                        Text(error).foregroundStyle(palette.expense).padding(.vertical)
+                        Text(error).foregroundStyle(palette.expenseText).padding(.vertical)
                         Button("Retry") { Task { await store.load() } }
                     }
                     if let detail = store.detail { record(detail) }
@@ -47,7 +47,7 @@ struct TransactionDetailSheet: View {
         VStack(alignment: .leading, spacing: 7) {
             Text(detail.place).font(AppFont.text(22, weight: .bold))
             Text(detail.signedAmount).font(AppFont.number(28, weight: .bold))
-                .foregroundStyle(detail.amount < 0 ? palette.expense : palette.balance)
+                .foregroundStyle(detail.amount < 0 ? palette.expenseText : palette.balance)
             Text(detail.bookingDate).font(AppFont.number(12)).foregroundStyle(palette.muted)
         }.padding(.bottom, 20)
         detailRow(String(localized: "Category")) {

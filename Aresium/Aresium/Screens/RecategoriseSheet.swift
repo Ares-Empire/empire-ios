@@ -29,7 +29,7 @@ struct RecategoriseSheet: View {
                             Text("Not available with sample data").foregroundStyle(palette.muted)
                         }
                         if let error = store.saveError {
-                            Text(error).foregroundStyle(palette.expense).accessibilityIdentifier("recategorisationError")
+                            Text(error).foregroundStyle(palette.expenseText).accessibilityIdentifier("recategorisationError")
                             Button("Retry") { Task { await store.retrySave() } }.disabled(!store.canSave)
                         }
                         HStack {
@@ -40,7 +40,7 @@ struct RecategoriseSheet: View {
                         if store.mode == .add {
                             Button("Save & remove from current", role: .destructive) {
                                 Task { await store.save(dropCurrent: true) }
-                            }.buttonStyle(.bordered).tint(palette.expense).foregroundStyle(palette.expense)
+                            }.buttonStyle(.bordered).tint(palette.expenseText).foregroundStyle(palette.expenseText)
                                 .disabled(!store.canRemoveCurrent)
                         }
                         if store.isSaving { ProgressView("Saving…").frame(maxWidth: .infinity) }
