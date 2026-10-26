@@ -38,14 +38,14 @@ struct AresusDecodingTests {
 
     @Test func syncSample() throws {
         let sync: SyncOverview = try sample("sync")
-        #expect(sync.machines.map(\.name) == ["Aresium", "Server", "Notebook-Patrik"])
+        #expect(sync.machines.map(\.name) == ["Aresium", "Server", "Windows-Laptop"])
         let notebook = try #require(sync.machines.last)
         #expect(notebook.os == "Windows" && notebook.state == .issue && notebook.lastResult == .failed)
         #expect(notebook.lastOK == at("2026-10-18T09:00:09Z"))
         #expect(notebook.openProblems.count == 1)
         #expect(sync.runs.map(\.isQuiet) == [true, false, false, true, false])
         #expect(sync.runs[0] == .quiet(QuietDay(machine: "Server", day: "2026-10-24", count: 141, last: at("2026-10-24T12:05:03Z"))))
-        #expect(sync.runs[4] == .run(RunSummary(id: 612, machine: "Notebook-Patrik", finished: at("2026-10-19T09:00:12Z"),
+        #expect(sync.runs[4] == .run(RunSummary(id: 612, machine: "Windows-Laptop", finished: at("2026-10-19T09:00:12Z"),
                                                 result: .failed, summary: "rebase conflict in aresium")))
     }
 

@@ -58,7 +58,7 @@ nonisolated struct ProvinceDetail: Codable, Equatable, Sendable {
 }
 
 nonisolated struct Machine: Codable, Equatable, Identifiable, Sendable {
-    let name: String               // "Aresium" (the MacBook's host name), "Notebook-Patrik", "Server"
+    let name: String               // "Aresium" (the MacBook's host name), "Windows-Laptop", "Server"
     let os: String                 // "macOS" | "Windows" | "Linux"
     let lastRun: Date?
     let lastResult: RunResult?

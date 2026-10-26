@@ -43,7 +43,7 @@ PNGQUANT = shutil.which("pngquant") or "/opt/homebrew/bin/pngquant"
 SIMULATOR_NAME = "claude-showcase"
 DEVICE_TYPE = "com.apple.CoreSimulator.SimDeviceType.iPhone-17"
 RUNTIME = "com.apple.CoreSimulator.SimRuntime.iOS-27-0"
-STATUS_BAR = ["--time", "9:41", "--batteryState", "charged", "--batteryLevel", "100", "--cellularMode", "active",
+STATUS_BAR = ["--time", "9:41", "--batteryState", "discharging", "--batteryLevel", "100", "--cellularMode", "active",
               "--cellularBars", "4", "--wifiBars", "3", "--dataNetwork", "wifi"]
 # The apps in English with British formats (CLAUDE.md → Languages).
 LANGUAGE = ["-AppleLanguages", "(en)", "-AppleLocale", "en_GB"]
@@ -97,6 +97,8 @@ SHOTS = [
          "light", 7, ("-sampleData", "-openSheet", "province")),
     Shot("empire", "04-approvals-dark", "Approvals: new sign-ups and requests for more apps",
          "dark", 7, ("-sampleData", "-openSheet", "approvals")),
+    Shot("empire", "05-more-apps-dark", "More apps: ask for another app; it joins your ring once approved",
+         "dark", 7, ("-sampleData", "-sampleCatalog", "-openSheet", "add")),
 
     Shot("arestemis", "01-hunt-dark", "The hunt: the search running, today's counts, the portals and the latest finds",
          "dark", 6, ("-sampleData", "-tab", "hunt")),

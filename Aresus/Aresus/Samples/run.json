@@ -1,6 +1,6 @@
 {
   "id": 612,
-  "machine": "Notebook-Patrik",
+  "machine": "Windows-Laptop",
   "finished": "2026-10-19T09:00:12Z",
   "result": "failed",
   "summary": "rebase conflict in aresium",

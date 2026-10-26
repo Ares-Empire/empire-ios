@@ -22,6 +22,7 @@ Made by `scripts/showcase.py`, which also writes this file; change a shot or cap
 | <a href="empire/02-marble-hall-light.png"><img src="empire/02-marble-hall-light.png" width="220" alt="The same room in light mode, the marble hall"></a> | **02-marble-hall-light.png**<br>The same room in light mode, the marble hall |
 | <a href="empire/03-province-light.png"><img src="empire/03-province-light.png" width="220" alt="A province's page: what it is, its features, what's new"></a> | **03-province-light.png**<br>A province's page: what it is, its features, what's new |
 | <a href="empire/04-approvals-dark.png"><img src="empire/04-approvals-dark.png" width="220" alt="Approvals: new sign-ups and requests for more apps"></a> | **04-approvals-dark.png**<br>Approvals: new sign-ups and requests for more apps |
+| <a href="empire/05-more-apps-dark.png"><img src="empire/05-more-apps-dark.png" width="220" alt="More apps: ask for another app; it joins your ring once approved"></a> | **05-more-apps-dark.png**<br>More apps: ask for another app; it joins your ring once approved |
 
 ## Arestemis (flat hunter)
 
