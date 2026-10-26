@@ -3,6 +3,27 @@ import Synchronization
 import SwiftUI
 import UIKit
 
+/// Every app checks the marker synchronously before starting its existing foreground work.
+private struct EmpireForeground: ViewModifier {
+    let session: EmpireSession
+    let action: @MainActor () async -> Void
+    @Environment(\.scenePhase) private var scenePhase
+
+    func body(content: Content) -> some View {
+        content.onChange(of: scenePhase) { _, phase in
+            guard phase == .active else { return }
+            session.followMarker()
+            Task { await action() }
+        }
+    }
+}
+
+extension View {
+    func onEmpireForeground(session: EmpireSession, perform action: @escaping @MainActor () async -> Void) -> some View {
+        modifier(EmpireForeground(session: session, action: action))
+    }
+}
+
 /// Every app's root, inside its `WindowGroup`: `AppRoot { ContentView(…) }`. It applies the app's two settings that
 /// reach every screen:
 /// - **Appearance** (Settings → Appearance): like the iPhone, light or dark, for the whole window and its sheets; the

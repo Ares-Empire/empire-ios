@@ -16,7 +16,8 @@ nonisolated enum WidgetContent: Equatable, Sendable {
 /// 1. No login → logged out (and the saved status of the last login is deleted).
 /// 2. A status the app saved a moment ago → shown as it is (the app reloads the widget after each overview).
 /// 3. Otherwise `GET /overview` → shown and saved. A 401/403 → logged out.
-/// 4. Offline, server down, the Keychain locked → the saved status with its `checked` time, whose age tells it is old.
+/// 4. Offline or server down → a saved status of this token's account, with its age. Locked Keychain → saved status
+///    only while its account matches the shared login marker.
 struct WidgetStatusLoader {
     /// A saved status this young is used without asking the server: the server checks once a minute, so a fetch would
     /// bring nothing newer.
@@ -25,6 +26,7 @@ struct WidgetStatusLoader {
     var readToken: () throws -> String?
     var fetch: (String) async throws -> Overview
     var store: WidgetStatusStore
+    var readAccount: () -> String? = { LoginMarker.account(in: EmpireShared.defaults) }
 
     /// The real one: the shared Keychain, the Aresus API and the App Group file.
     static func live() -> WidgetStatusLoader {
@@ -40,20 +42,34 @@ struct WidgetStatusLoader {
         do {
             token = try readToken()
         } catch {
-            // The token is readable only while the phone is unlocked: show what was saved.
-            return saved()
+            // The marker remains readable while locked. A missing marker never authorizes old unowned files.
+            guard let account = readAccount() else {
+                try? store.delete()
+                return .loggedOut
+            }
+            let saved = store.read().status
+            if let saved, saved.account != account {
+                try? store.delete()
+                return .loggedOut
+            }
+            return saved.map(WidgetContent.status) ?? .notLoaded
         }
         guard let token else {
             try? store.delete()
             return .loggedOut
         }
-        let saved = store.read().status
+        let account = EmpireToken.accountID(token)
+        let stored = store.read().status
+        let saved = stored.flatMap { status in
+            account != nil && status.account == account ? status : nil
+        }
+        if stored != nil, saved == nil { try? store.delete() }
         if let saved, !fetching || (0..<Self.freshFor).contains(now.timeIntervalSince(saved.checked)) {
             return .status(saved)
         }
         guard fetching else { return .notLoaded }
         do {
-            let status = WidgetStatus(overview: try await fetch(token))
+            let status = WidgetStatus(overview: try await fetch(token), account: account)
             try? store.save(status)
             return .status(status)
         } catch HTTPError.unauthorized {
@@ -67,9 +83,6 @@ struct WidgetStatusLoader {
         }
     }
 
-    private func saved() -> WidgetContent {
-        store.read().status.map(WidgetContent.status) ?? .notLoaded
-    }
 }
 
 /// One moment of the widget.

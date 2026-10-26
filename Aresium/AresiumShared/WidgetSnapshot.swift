@@ -17,8 +17,9 @@ nonisolated struct WidgetSnapshot: Codable, Equatable {
     let expense: Double
     let newestTransactionDate: String?
     let categories: [SpendCategory]
+    let account: String?
 
-    init?(dashboard: Dashboard) {
+    init?(dashboard: Dashboard, account: String? = nil) {
         guard let month = dashboard.months.last, let data = dashboard.byMonth[month.key],
               let date = WidgetFormatting.monthDate(month.key),
               let days = WidgetFormatting.calendar.range(of: .day, in: .month, for: date)?.count else { return nil }
@@ -27,6 +28,7 @@ nonisolated struct WidgetSnapshot: Codable, Equatable {
         daysInMonth = days
         dayExpenseRunning = data.dayExpenseRunning
         expense = data.expense
+        self.account = account
         newestTransactionDate = dashboard.transactions.map(\.date).max()
         categories = dashboard.categories.filter { $0.kind == .spend }.map { category in
             SpendCategory(name: category.name, icon: category.icon, color: category.color,

@@ -106,6 +106,13 @@ struct EmpireAuthClient {
 final class EmpireSession {
     enum Access: Equatable { case unknown, granted, denied(String) }
 
+    /// Passed only in memory to cleanup handlers, after the generation has moved on.
+    struct EndedLogin {
+        let token: String?
+        let deletedSavedLogin: Bool
+        let wasRefused: Bool
+    }
+
     let app: EmpireAppIdentity
     private(set) var token: String?
     /// The account's email from the last login answer, for Settings → Account. Never logged; forgotten on logout.
@@ -131,13 +138,13 @@ final class EmpireSession {
     /// the account's own actions in `accountClient`.
     let authClient: EmpireAuthClient
     var accountClient: EmpireAccountClient { EmpireAccountClient(transport: authClient.transport) }
-    private let installDefaults: UserDefaults?
+    private let sharedDefaults: UserDefaults?
     private(set) var generation = 0
     private(set) var lastRenewedAt: Date?
     /// When the no-access screen last asked the account server again (`followSharedLogin`).
     private var lastAccessRecheck: Date?
     private var signInHandlers: [() -> Void] = []
-    private var logoutHandlers: [() -> Void] = []
+    private var logoutHandlers: [(EndedLogin) -> Void] = []
     private var appDataResetHandlers: [() -> Void] = []
     private static let log = Logger(subsystem: "de.ares-empire.shared", category: "login")
 
@@ -154,8 +161,8 @@ final class EmpireSession {
     /// Called when a session starts in this app: a new login, the saved login restored at launch, or a login picked
     /// up from another app (not when the same account's token is renewed). Access may still be denied: check `isSignedIn`.
     func onSignIn(_ action: @escaping () -> Void) { signInHandlers.append(action) }
-    /// Called on logout (the shared login ends).
-    func onLogout(_ action: @escaping () -> Void) { logoutHandlers.append(action) }
+    /// Called after this app ends its session, with the login needed to remove its push devices.
+    func onLogout(_ action: @escaping (EndedLogin) -> Void) { logoutHandlers.append(action) }
     /// Called whenever this app must forget its own data: on logout and when access to this app is denied.
     func onAppDataReset(_ action: @escaping () -> Void) { appDataResetHandlers.append(action) }
 
@@ -188,14 +195,14 @@ final class EmpireSession {
     }
 
     init(app: EmpireAppIdentity, storage: any TokenStorage = TokenKeychain(), client: EmpireAuthClient = EmpireAuthClient(),
-         restoreOnLaunch: Bool = true, installDefaults: UserDefaults? = nil) {
+         restoreOnLaunch: Bool = true, sharedDefaults: UserDefaults? = nil) {
         self.app = app
-        self.installDefaults = installDefaults
+        self.sharedDefaults = sharedDefaults
         self.storage = storage
         authClient = client
         isRestoring = restoreOnLaunch
-        if let installDefaults {
-            do { try FirstLaunchTokenReset.run(storage: storage, defaults: installDefaults) }
+        if let sharedDefaults {
+            do { try FirstLaunchTokenReset.run(storage: storage, defaults: sharedDefaults) }
             catch { self.error = error.localizedDescription }
         }
     }
@@ -222,7 +229,7 @@ final class EmpireSession {
             isBusy = false
         }
         do {
-            if let installDefaults { try FirstLaunchTokenReset.run(storage: storage, defaults: installDefaults) }
+            if let sharedDefaults { try FirstLaunchTokenReset.run(storage: storage, defaults: sharedDefaults) }
             saved = try storage.read()
             guard let saved else { return }
             let response = try await authClient.refresh(token: saved)
@@ -258,7 +265,7 @@ final class EmpireSession {
         let generation = generation
         defer { isBusy = false }
         do {
-            if let installDefaults { try FirstLaunchTokenReset.run(storage: storage, defaults: installDefaults) }
+            if let sharedDefaults { try FirstLaunchTokenReset.run(storage: storage, defaults: sharedDefaults) }
             let response = try await authClient.login(email: email, password: password)
             guard generation == self.generation else { return }
             try accept(response)
@@ -282,6 +289,7 @@ final class EmpireSession {
                                                                                   locale: .appLanguage)))
         }
         try storage.save(response.token)
+        LoginMarker.save(response.record.id, in: sharedDefaults)
         token = response.token
         email = response.record.email
         accountID = response.record.id
@@ -341,6 +349,14 @@ final class EmpireSession {
         }
     }
 
+    /// Before the foreground's async work: forget this app's old data without waiting for the Keychain or server.
+    /// Nil defaults are used by samples and isolated tests, which do not follow the device's real login.
+    func followMarker() {
+        guard token != nil, let sharedDefaults,
+              LoginMarker.account(in: sharedDefaults) != accountID else { return }
+        endSession(reason: nil)
+    }
+
     /// How long the no-access screen waits before asking the account server again (`followSharedLogin`).
     static let accessRecheckInterval: TimeInterval = 60
 
@@ -359,18 +375,23 @@ final class EmpireSession {
     ///     comes to the foreground). Nil (the person logs out): it is deleted.
     func logOut(reason: String? = nil, notice: String? = nil, refusedToken: String? = nil,
                 file: StaticString = #fileID, line: UInt = #line) {
-        endSession(reason: reason, notice: notice)
+        var deletedSavedLogin = false
+        var deletionError: String?
         do {
             if let refusedToken, try storage.read() != refusedToken {
                 Self.log.notice("\(self.app.service, privacy: .public): login ended here by \(file, privacy: .public):\(line); the saved login is another one (or none) and stays")
-                return
+            } else {
+                Self.log.notice("\(self.app.service, privacy: .public): login ended everywhere by \(file, privacy: .public):\(line)")
+                try storage.delete()
+                LoginMarker.clear(in: sharedDefaults)
+                deletedSavedLogin = true
             }
-            Self.log.notice("\(self.app.service, privacy: .public): login ended everywhere by \(file, privacy: .public):\(line)")
-            try storage.delete()
         } catch {
             Self.log.error("\(self.app.service, privacy: .public): login ended here by \(file, privacy: .public):\(line); the saved login could not be read or deleted")
-            self.error = self.error ?? error.localizedDescription
+            deletionError = error.localizedDescription
         }
+        endSession(reason: reason ?? deletionError, notice: notice, deletedSavedLogin: deletedSavedLogin,
+                   refusedToken: refusedToken)
     }
 
     // MARK: the account's own actions (AccountForms.swift)
@@ -403,7 +424,10 @@ final class EmpireSession {
     }
 
     /// Ends the login in this app only (the saved login is left as it is).
-    private func endSession(reason: String?, notice: String? = nil) {
+    private func endSession(reason: String?, notice: String? = nil, deletedSavedLogin: Bool = false,
+                            refusedToken: String? = nil) {
+        let ended = EndedLogin(token: token ?? refusedToken, deletedSavedLogin: deletedSavedLogin,
+                               wasRefused: refusedToken != nil)
         generation += 1
         token = nil
         email = nil
@@ -419,7 +443,7 @@ final class EmpireSession {
         needsRestoreRetry = false
         error = reason
         loginUnavailable = false
-        logoutHandlers.forEach { $0() }
+        logoutHandlers.forEach { $0(ended) }
         appDataResetHandlers.forEach { $0() }
     }
 }

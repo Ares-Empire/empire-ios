@@ -7,7 +7,6 @@ import UserNotifications
 struct ContentView: View {
     @State private var store: ArestemisStore
     @State private var navigation = AppNavigation()
-    @Environment(\.scenePhase) private var scenePhase
     private let options: LaunchOptions
     private let restoresOnLaunch: Bool
     private let push: PushCenter?
@@ -22,15 +21,15 @@ struct ContentView: View {
         // Screenshots of the login and the no-access screen (`SampleAccount`): a made-up account, no server.
         let account = SampleAccount.session(app: .arestemis, arguments: arguments)
         let quiet = options.sample || testing || account != nil
-        let installDefaults = quiet ? nil : EmpireShared.defaults
+        let sharedDefaults = quiet ? nil : EmpireShared.defaults
         self.push = quiet ? nil : push          // samples and tests never register for push
         let session = account?.session
-            ?? EmpireSession(app: .arestemis, restoreOnLaunch: !quiet, installDefaults: installDefaults)
+            ?? EmpireSession(app: .arestemis, restoreOnLaunch: !quiet, sharedDefaults: sharedDefaults)
         restoresOnLaunch = account?.restores ?? !quiet
         #else
-        let installDefaults = EmpireShared.defaults
+        let sharedDefaults = EmpireShared.defaults
         self.push = push
-        let session = EmpireSession(app: .arestemis, restoreOnLaunch: true, installDefaults: installDefaults)
+        let session = EmpireSession(app: .arestemis, restoreOnLaunch: true, sharedDefaults: sharedDefaults)
         restoresOnLaunch = true
         #endif
         _store = State(initialValue: Self.makeStore(session: session, options: options))
@@ -76,12 +75,9 @@ struct ContentView: View {
             let action = push.lastActionIdentifier ?? UNNotificationDefaultActionIdentifier
             if let link = MatchNotification.link(url: push.takeOpenedURL(), action: action) { navigation.follow(link) }
         }
-        .onChange(of: scenePhase) { _, phase in
-            guard phase == .active else { return }
-            Task {
-                await session.followSharedLogin()        // another Empire app may have logged in or out
-                await store.refreshOnForeground()
-            }
+        .onEmpireForeground(session: session) {
+            await session.followSharedLogin()        // another Empire app may have logged in or out
+            await store.refreshOnForeground()
         }
         .onChange(of: session.generation) { _, _ in
             if !session.isSignedIn { navigation.reset() }
@@ -99,7 +95,7 @@ struct ContentView: View {
         navigation.reset()
         if store.isSample {
             store.clear()
-            let session = EmpireSession(app: .arestemis, restoreOnLaunch: false, installDefaults: EmpireShared.defaults)
+            let session = EmpireSession(app: .arestemis, restoreOnLaunch: false, sharedDefaults: EmpireShared.defaults)
             store = ArestemisStore(session: session, backend: ArestemisAPI(token: { session.token }))
         } else {
             session.logOut()

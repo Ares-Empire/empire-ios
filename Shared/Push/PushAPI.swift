@@ -40,5 +40,6 @@ struct PushAPI {
         request.timeoutInterval = 30
         let (data, response) = try await transport.send(request)
         try checkResponse(response, data: data, onUnauthorized: {})
+        guard response.statusCode == 204 else { throw HTTPError.invalidResponse }
     }
 }

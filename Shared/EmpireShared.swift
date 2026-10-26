@@ -8,7 +8,7 @@ enum EmpireShared {
     /// Keychain access group of all Empire apps, without the team prefix (entitlement: $(AppIdentifierPrefix) + this).
     static let keychainGroup = "de.ares-empire.shared"
     /// Defaults shared by the Empire apps; nil only if the App Group entitlement is missing.
-    static var defaults: UserDefaults? { UserDefaults(suiteName: appGroup) }
+    nonisolated static var defaults: UserDefaults? { UserDefaults(suiteName: appGroup) }
     /// "$(AppIdentifierPrefix)" from the app's Info.plist ("TEAMID." on a device, may be empty on the simulator).
     static var keychainAccessGroup: String {
         let prefix = Bundle.main.object(forInfoDictionaryKey: "AppIdentifierPrefix") as? String ?? ""

@@ -122,7 +122,7 @@ struct WidgetTests {
         let saved = try snapshot([("Groceries", 99.25)], newestTransactionDate: "2026-10-30")
         try store.save(saved)
         let calendar = WidgetFormatting.calendar
-        let now = try #require(WidgetFormatting.date("2026-10-31"))
+        let now = try #require(WidgetFormatting.date("2026-11-01")).addingTimeInterval(-1800)
         #expect(WidgetMonthNote(snapshot: saved, now: now, calendar: calendar) == nil)
         let entryDate = store.read().nextRefresh(after: now, calendar: calendar)
         #expect(entryDate == WidgetFormatting.date("2026-11-01"))
@@ -225,7 +225,7 @@ struct WidgetTests {
         let dashboard = DashboardStore(session: session, client: APIClient(transport: transport), widgetPublisher: publisher)
         await dashboard.reload()
         let saved = try #require(files.load())
-        #expect(saved == WidgetSnapshot(dashboard: try serverDashboard()))
+        #expect(saved == WidgetSnapshot(dashboard: try serverDashboard(), account: session.accountID))
         #expect(reloads == 1)
         transport.status = 500
         await dashboard.reload()
@@ -244,7 +244,7 @@ struct WidgetTests {
         #expect(reloads == 2)
     }
 
-    @Test func readFailuresRetryInThirtyMinutesAndOtherStatesAtNextMonth() throws {
+    @Test func readFailuresRetryInThirtyMinutesAndOtherStatesWithinAnHourOrAtNextMonth() throws {
         let root = try directory()
         defer { try? FileManager.default.removeItem(at: root) }
         let store = WidgetSnapshotStore(directory: root)
@@ -272,6 +272,46 @@ struct WidgetTests {
         #expect(second.widgetPublisher.store.load() == nil)
         try first.widgetPublisher.clear()
         try second.widgetPublisher.clear()
+    }
+
+    @Test(arguments: ["account-a", "account-b", nil] as [String?])
+    func widgetReadsOnlyTheMarkersAccountAndDeletesMismatches(account: String?) throws {
+        let root = try directory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let suite = "aresium.tests.widget-marker." + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        if let account { LoginMarker.save(account, in: defaults) }
+        let store = WidgetSnapshotStore(directory: root)
+        let snapshot = try #require(WidgetSnapshot(dashboard: serverDashboard(), account: "account-a"))
+        try store.save(snapshot)
+        let result = store.readForCurrentLogin(in: defaults)
+        if account == "account-a" {
+            #expect(result.snapshot == snapshot && store.load() == snapshot)
+        } else {
+            #expect(result.snapshot == nil && store.load() == nil)
+            #expect(!FileManager.default.fileExists(atPath: root.appendingPathComponent("widget-snapshot.json").path))
+        }
+    }
+
+    @Test func legacySnapshotWithNoAccountIsNeverShownEvenWithNoMarker() throws {
+        let root = try directory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = WidgetSnapshotStore(directory: root)
+        try store.save(#require(WidgetSnapshot.sample))
+        #expect(store.readForCurrentLogin(in: nil).snapshot == nil && store.load() == nil)
+    }
+
+    @Test func everyWidgetReadStateRefreshesWithinAnHourThroughoutTheMonth() throws {
+        let snapshot = try #require(WidgetSnapshot.sample)
+        let states: [WidgetSnapshotStore.ReadResult] = [.missing, .failed, .snapshot(snapshot)]
+        for day in [1, 15, 31] {
+            let now = try #require(WidgetFormatting.date(String(format: "2026-10-%02d", day)))
+            for state in states {
+                let refresh = state.nextRefresh(after: now, calendar: WidgetFormatting.calendar)
+                #expect(refresh > now && refresh <= now.addingTimeInterval(3600))
+            }
+        }
     }
 
     @Test func widgetDateAndMoneyFormatting() {

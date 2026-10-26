@@ -1137,9 +1137,11 @@ struct AresiumTests {
         let suite = "aresium.tests.install.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
+        defaults.set("old-account", forKey: LoginMarker.key)
         let storage = MemoryTokenStorage(token: "fictional-old-install")
         try FirstLaunchTokenReset.run(storage: storage, defaults: defaults)
         #expect(storage.token == nil && defaults.bool(forKey: FirstLaunchTokenReset.key))
+        #expect(LoginMarker.account(in: defaults) == nil)
         try storage.save("fictional-new-install")
         try FirstLaunchTokenReset.run(storage: storage, defaults: defaults)
         #expect(storage.token == "fictional-new-install")
@@ -1196,7 +1198,9 @@ struct AresiumTests {
         let suite = "aresium.tests.install.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
+        defaults.set("saved-account", forKey: LoginMarker.key)
         #expect(throws: (any Error).self) { try FirstLaunchTokenReset.run(storage: FailingTokenDeletion(), defaults: defaults) }
+        #expect(LoginMarker.account(in: defaults) == "saved-account")
         #expect(!defaults.bool(forKey: FirstLaunchTokenReset.key))
     }
 

@@ -124,7 +124,7 @@ struct WidgetStatusLoaderTests {
 
     @Test func noLoginMeansLoggedOutAndForgetsTheSavedStatus() async throws {
         let store = temporaryStore()
-        try store.save(.example(checked: now.addingTimeInterval(-60)))
+        try store.save(.example(checked: now.addingTimeInterval(-60), account: "account-a"))
         var fetched = false
         let loader = WidgetStatusLoader(readToken: { nil }, fetch: { _ in fetched = true; return try sample("overview") },
                                         store: store)
@@ -134,10 +134,10 @@ struct WidgetStatusLoaderTests {
 
     @Test func aStatusTheAppJustSavedIsUsedWithoutAsking() async throws {
         let store = temporaryStore()
-        let saved = WidgetStatus.example(checked: now.addingTimeInterval(-90))
+        let saved = WidgetStatus.example(checked: now.addingTimeInterval(-90), account: "account-a")
         try store.save(saved)
         var fetched = false
-        let loader = WidgetStatusLoader(readToken: { "fictional-empire-token" },
+        let loader = WidgetStatusLoader(readToken: { widgetLoginToken() },
                                         fetch: { _ in fetched = true; return try sample("overview") }, store: store)
         #expect(await loader.load(now: now) == .status(saved))
         #expect(!fetched)
@@ -145,23 +145,23 @@ struct WidgetStatusLoaderTests {
 
     @Test func otherwiseItAsksTheServerAndSavesTheAnswer() async throws {
         let store = temporaryStore()
-        try store.save(.example(checked: now.addingTimeInterval(-20 * 60)))
+        try store.save(.example(checked: now.addingTimeInterval(-20 * 60), account: "account-a"))
         let transport = FakeTransport(data: try sampleData("overview"))
-        let loader = WidgetStatusLoader(readToken: { "fictional-empire-token" },
+        let loader = WidgetStatusLoader(readToken: { widgetLoginToken() },
                                         fetch: { try await AresusAPI(transport: transport).overview(token: $0) }, store: store)
-        let expected = WidgetStatus(overview: try sample("overview"))
+        let expected = WidgetStatus(overview: try sample("overview"), account: "account-a")
         #expect(await loader.load(now: now) == .status(expected))
         #expect(store.read() == .status(expected))
         #expect(transport.requests.map { $0.url?.path } == ["/api/aresus/overview"])
-        #expect(transport.requests.first?.value(forHTTPHeaderField: "Authorization") == "Bearer fictional-empire-token")
+        #expect(transport.requests.first?.value(forHTTPHeaderField: "Authorization") == "Bearer \(widgetLoginToken())")
     }
 
     @Test func aSavedStatusFromTheFutureIsNotTrusted() async throws {
         // A phone clock behind the server's must not make an old status look fresh forever.
         let store = temporaryStore()
-        try store.save(.example(checked: now.addingTimeInterval(10 * 60)))
+        try store.save(.example(checked: now.addingTimeInterval(10 * 60), account: "account-a"))
         var fetched = false
-        let loader = WidgetStatusLoader(readToken: { "fictional-empire-token" },
+        let loader = WidgetStatusLoader(readToken: { widgetLoginToken() },
                                         fetch: { _ in fetched = true; return try sample("overview") }, store: store)
         _ = await loader.load(now: now)
         #expect(fetched)
@@ -170,10 +170,10 @@ struct WidgetStatusLoaderTests {
     @Test(arguments: [401, 403])
     func aRefusedLoginMeansLoggedOut(status: Int) async throws {
         let store = temporaryStore()
-        try store.save(.example(checked: now.addingTimeInterval(-20 * 60)))
+        try store.save(.example(checked: now.addingTimeInterval(-20 * 60), account: "account-a"))
         let transport = FakeTransport(data: Data("{\"error\":\"No access.\"}".utf8))
         transport.status = status
-        let loader = WidgetStatusLoader(readToken: { "fictional-empire-token" },
+        let loader = WidgetStatusLoader(readToken: { widgetLoginToken() },
                                         fetch: { try await AresusAPI(transport: transport).overview(token: $0) }, store: store)
         #expect(await loader.load(now: now) == .loggedOut)
         #expect(store.read() == .missing)
@@ -182,11 +182,11 @@ struct WidgetStatusLoaderTests {
     @Test(arguments: [500, 503])
     func theServerDownShowsTheSavedStatus(status: Int) async throws {
         let store = temporaryStore()
-        let saved = WidgetStatus.example(checked: now.addingTimeInterval(-3 * 3600))
+        let saved = WidgetStatus.example(checked: now.addingTimeInterval(-3 * 3600), account: "account-a")
         try store.save(saved)
         let transport = FakeTransport(data: Data("{\"error\":\"Aresus has not finished its first check yet.\"}".utf8))
         transport.status = status
-        let loader = WidgetStatusLoader(readToken: { "fictional-empire-token" },
+        let loader = WidgetStatusLoader(readToken: { widgetLoginToken() },
                                         fetch: { try await AresusAPI(transport: transport).overview(token: $0) }, store: store)
         #expect(await loader.load(now: now) == .status(saved))                 // its age tells it is old
         #expect(store.read() == .status(saved))
@@ -194,10 +194,10 @@ struct WidgetStatusLoaderTests {
 
     @Test func offlineShowsTheSavedStatusOrNothingLoaded() async throws {
         let store = temporaryStore()
-        let loader = WidgetStatusLoader(readToken: { "fictional-empire-token" },
+        let loader = WidgetStatusLoader(readToken: { widgetLoginToken() },
                                         fetch: { _ in throw URLError(.notConnectedToInternet) }, store: store)
         #expect(await loader.load(now: now) == .notLoaded)
-        let saved = WidgetStatus.example(checked: now.addingTimeInterval(-40 * 60))
+        let saved = WidgetStatus.example(checked: now.addingTimeInterval(-40 * 60), account: "account-a")
         try store.save(saved)
         #expect(await loader.load(now: now) == .status(saved))
     }
@@ -207,9 +207,10 @@ struct WidgetStatusLoaderTests {
         let store = temporaryStore()
         var fetched = false
         let loader = WidgetStatusLoader(readToken: { throw KeychainError(status: errSecInteractionNotAllowed) },
-                                        fetch: { _ in fetched = true; return try sample("overview") }, store: store)
+                                        fetch: { _ in fetched = true; return try sample("overview") }, store: store,
+                                        readAccount: { "account-a" })
         #expect(await loader.load(now: now) == .notLoaded)
-        let saved = WidgetStatus.example(checked: now.addingTimeInterval(-2 * 3600))
+        let saved = WidgetStatus.example(checked: now.addingTimeInterval(-2 * 3600), account: "account-a")
         try store.save(saved)
         #expect(await loader.load(now: now) == .status(saved))
         #expect(!fetched && store.read() == .status(saved))                     // kept: the login may well be fine
@@ -218,13 +219,57 @@ struct WidgetStatusLoaderTests {
     @Test func theQuickSnapshotNeverFetches() async throws {
         let store = temporaryStore()
         var fetched = false
-        let loader = WidgetStatusLoader(readToken: { "fictional-empire-token" },
+        let loader = WidgetStatusLoader(readToken: { widgetLoginToken() },
                                         fetch: { _ in fetched = true; return try sample("overview") }, store: store)
         #expect(await loader.load(now: now, fetching: false) == .notLoaded)
-        let saved = WidgetStatus.example(checked: now.addingTimeInterval(-50 * 60))
+        let saved = WidgetStatus.example(checked: now.addingTimeInterval(-50 * 60), account: "account-a")
         try store.save(saved)
         #expect(await loader.load(now: now, fetching: false) == .status(saved))
         #expect(!fetched)
+    }
+
+    @Test(arguments: ["account-a", "account-b", nil] as [String?])
+    func lockedKeychainChecksTheMarkerAndDeletesOtherAccounts(account: String?) async throws {
+        let store = temporaryStore()
+        let saved = WidgetStatus.example(checked: now, account: "account-a")
+        try store.save(saved)
+        var fetched = false
+        let loader = WidgetStatusLoader(readToken: { throw KeychainError(status: errSecInteractionNotAllowed) },
+                                        fetch: { _ in fetched = true; return try sample("overview") }, store: store,
+                                        readAccount: { account })
+        #expect(await loader.load(now: now) == (account == "account-a" ? .status(saved) : .loggedOut))
+        #expect(store.read() == (account == "account-a" ? .status(saved) : .missing))
+        #expect(!fetched)
+    }
+
+    @Test func lockedLegacyStatusIsDeletedEvenWithNoMarker() async throws {
+        let store = temporaryStore()
+        try store.save(.example(checked: now))
+        let loader = WidgetStatusLoader(readToken: { throw KeychainError(status: errSecInteractionNotAllowed) },
+                                        fetch: { _ in throw URLError(.notConnectedToInternet) }, store: store,
+                                        readAccount: { nil })
+        #expect(await loader.load(now: now) == .loggedOut)
+        #expect(store.read() == .missing)
+    }
+
+    @Test(arguments: [false, true])
+    func anotherAccountsUnlockedTokenNeverShowsTheSavedStatus(fetching: Bool) async throws {
+        let store = temporaryStore()
+        try store.save(.example(checked: now, account: "account-a"))
+        let loader = WidgetStatusLoader(readToken: { widgetLoginToken(account: "account-b") },
+                                        fetch: { _ in throw URLError(.notConnectedToInternet) }, store: store)
+        #expect(await loader.load(now: now, fetching: fetching) == .notLoaded)
+        #expect(store.read() == .missing)
+    }
+
+    @Test func anotherAccountsTokenFetchesAndSavesItsOwnStatus() async throws {
+        let store = temporaryStore()
+        try store.save(.example(checked: now, account: "account-a"))
+        let loader = WidgetStatusLoader(readToken: { widgetLoginToken(account: "account-b") },
+                                        fetch: { _ in try sample("overview") }, store: store)
+        let expected = WidgetStatus(overview: try sample("overview"), account: "account-b")
+        #expect(await loader.load(now: now) == .status(expected))
+        #expect(store.read() == .status(expected))
     }
 }
 
@@ -281,8 +326,8 @@ struct WidgetStatusPublisherTests {
         var reloads = 0
         let publisher = WidgetStatusPublisher(store: store, reloadTimelines: { reloads += 1 })
         let overview: Overview = try sample("overview")
-        publisher.publish(overview)
-        #expect(store.read() == .status(WidgetStatus(overview: overview)) && reloads == 1)
+        publisher.publish(overview, account: "fictional-account")
+        #expect(store.read() == .status(WidgetStatus(overview: overview, account: "fictional-account")) && reloads == 1)
         publisher.clear()
         #expect(store.read() == .missing && reloads == 2)
     }
@@ -295,7 +340,7 @@ struct WidgetStatusPublisherTests {
         let aresus = AresusStore(session: session, client: AresusAPI(transport: transport),
                                  widget: WidgetStatusPublisher(store: store, reloadTimelines: { reloads += 1 }))
         await aresus.load(.overview)
-        #expect(store.read() == .status(WidgetStatus(overview: try sample("overview"))) && reloads == 1)
+        #expect(store.read() == .status(WidgetStatus(overview: try sample("overview"), account: session.accountID)) && reloads == 1)
         session.logOut()
         #expect(store.read() == .missing && reloads == 2)
     }
@@ -317,3 +362,11 @@ func temporaryDirectory() -> URL {
 }
 
 func temporaryStore() -> WidgetStatusStore { WidgetStatusStore(directory: temporaryDirectory()) }
+
+/// An unsigned fictional JWT; only the account payload is read by the widget.
+nonisolated private func widgetLoginToken(account: String = "account-a") -> String {
+    let payload = Data("{\"id\":\"\(account)\"}".utf8).base64EncodedString()
+        .replacingOccurrences(of: "+", with: "-").replacingOccurrences(of: "/", with: "_")
+        .replacingOccurrences(of: "=", with: "")
+    return "fictional.\(payload).unsigned"
+}

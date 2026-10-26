@@ -7,7 +7,6 @@ struct ContentView: View {
     @AppStorage(Appearance.key) private var appearance = Appearance.iPhone.rawValue
     /// Light or dark as Settings → Appearance (or the iPhone) says; red mode shows over it.
     @Environment(\.appearanceScheme) private var appearanceScheme
-    @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var theme: ThemeState
     private let pausedIntroProgress: Double?
@@ -60,14 +59,16 @@ struct ContentView: View {
         restoresOnLaunch = !sample && !skipRestore
         #if DEBUG
         var session = EmpireSession(app: .aresium, restoreOnLaunch: !sample && !skipRestore,
-                                    installDefaults: debugLaunch ? nil : EmpireShared.defaults)
+                                    sharedDefaults: debugLaunch ? nil : EmpireShared.defaults)
         if DebugLaunch.isTesting { session = DebugLaunch.testingSession() }
         if arguments.contains("-sampleAuthUnavailable") { session = DebugLaunch.unavailableSession() }
         if let account { session = account.session }
         let publisher: WidgetSnapshotPublisher = debugLaunch ? .temporary() : WidgetSnapshotPublisher()
+        PushCenter.removeDevicesOnLogout(of: session, sharedDefaults: debugLaunch ? nil : EmpireShared.defaults)
         #else
-        let session = EmpireSession(app: .aresium, installDefaults: EmpireShared.defaults)
+        let session = EmpireSession(app: .aresium, sharedDefaults: EmpireShared.defaults)
         let publisher = WidgetSnapshotPublisher()
+        PushCenter.removeDevicesOnLogout(of: session, sharedDefaults: EmpireShared.defaults)
         #endif
         let store = DashboardStore(session: session, sample: sample, widgetPublisher: publisher)
         let imports = ImportStore(dashboard: store)
@@ -155,13 +156,9 @@ struct ContentView: View {
             .task {
                 if restoresOnLaunch { await session.restore() }
             }
-            .onChange(of: scenePhase) { _, phase in
-                if phase == .active {
-                    Task {
-                        await session.followSharedLogin()    // another Empire app may have logged in or out
-                        await store.refreshOnForeground()
-                    }
-                }
+            .onEmpireForeground(session: session) {
+                await session.followSharedLogin()    // another Empire app may have logged in or out
+                await store.refreshOnForeground()
             }
             .task { store.setWidgetRedMode(theme.red) }
             .onChange(of: session.generation) { _, _ in
@@ -264,8 +261,9 @@ struct ContentView: View {
         store.clear()
         if sampleActive {
             sampleActive = false
-            store = DashboardStore(session: EmpireSession(app: .aresium, restoreOnLaunch: false,
-                                                          installDefaults: EmpireShared.defaults),
+            let session = EmpireSession(app: .aresium, restoreOnLaunch: false, sharedDefaults: EmpireShared.defaults)
+            PushCenter.removeDevicesOnLogout(of: session, sharedDefaults: EmpireShared.defaults)
+            store = DashboardStore(session: session,
                                    widgetPublisher: WidgetSnapshotPublisher())
             imports = ImportStore(dashboard: store)
         }

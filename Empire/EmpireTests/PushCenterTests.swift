@@ -42,18 +42,18 @@ struct PushCenterTests {
 
     /// A push center started on a session; `signedIn` logs in as account A first.
     func setup(signedIn: Bool = true, permission: UNAuthorizationStatus = .notDetermined,
-               categories: [UNNotificationCategory] = [],
+               categories: [UNNotificationCategory] = [], sharedDefaults: UserDefaults? = nil,
                actionURL: @escaping (String, URL?) -> URL? = { _, url in url }) async -> Setup {
         let storage = EmpireMemoryTokens()
         let auth = EmpireFakeTransport(data: SharedLoginTests.response(Self.token("account-a")))
         let session = EmpireSession(app: .empire, storage: storage, client: EmpireAuthClient(transport: auth),
-                                    restoreOnLaunch: false)
+                                    restoreOnLaunch: false, sharedDefaults: sharedDefaults)
         if signedIn { await session.login(email: "member@example.invalid", password: "fictional-password") }
         let server = EmpireFakeTransport()
         server.status = 204
         let permissions = FakePermissions()
         permissions.status = permission
-        let push = PushCenter(api: PushAPI(transport: server), permissions: permissions, environment: .sandbox)
+        let push = PushCenter(api: PushAPI(transport: server), permissions: permissions, environment: .sandbox, sharedDefaults: sharedDefaults)
         let asks = Counter()
         push.registerForRemote = { asks.count += 1 }
         push.start(app: Self.app, session: session, categories: categories, actionURL: actionURL)
@@ -132,7 +132,7 @@ struct PushCenterTests {
         let permissions = FakePermissions()
         permissions.answer = .denied
         let server = EmpireFakeTransport()
-        let push = PushCenter(api: PushAPI(transport: server), permissions: permissions, environment: .sandbox)
+        let push = PushCenter(api: PushAPI(transport: server), permissions: permissions, environment: .sandbox, sharedDefaults: nil)
         var asks = 0
         push.registerForRemote = { asks += 1 }
         push.start(app: Self.app, session: session)
@@ -296,6 +296,165 @@ struct PushCenterTests {
     }
 
     // MARK: Opening notifications
+
+    @Test(arguments: [200, 204, 401, 403, 500])
+    func sharedRecordIsWrittenOnlyAfterA204(status: Int) async throws {
+        try await LoginMarkerTests.withDefaults { defaults in
+            let setup = await setup(sharedDefaults: defaults)
+            setup.server.status = status
+            await deliverToken(setup)
+            let devices = PushDeviceStore(defaults: defaults).devices
+            #expect(devices == (status == 204 ? [Self.app: Self.deviceHex] : [:]))
+        }
+    }
+
+    @Test func offlineRegistrationIsNotRecorded() async throws {
+        try await LoginMarkerTests.withDefaults { defaults in
+            let setup = await setup(sharedDefaults: defaults)
+            setup.server.failure = URLError(.notConnectedToInternet)
+            await deliverToken(setup)
+            #expect(PushDeviceStore(defaults: defaults).devices.isEmpty)
+        }
+    }
+
+    @Test func appsWithoutPushStillRemoveEveryDeviceWithoutRequestingPermission() async throws {
+        try await LoginMarkerTests.withDefaults { defaults in
+            let setup = await setup(sharedDefaults: defaults)
+            let devices = PushDeviceStore(defaults: defaults)
+            devices.save(Self.deviceHex, app: Self.app)
+            devices.save(String(repeating: "ab", count: 32), app: "de.ares-empire.arestemis")
+            let server = EmpireFakeTransport()
+            server.status = 204
+            let permissions = FakePermissions()
+            let cleanup = PushCenter(api: PushAPI(transport: server), permissions: permissions, sharedDefaults: defaults)
+            let auth = EmpireFakeTransport(data: Data(#"{"token":"fictional-login","record":{"id":"account-a","approved":true,"services":["aresium"]}}"#.utf8))
+            let session = EmpireSession(app: .aresium, storage: setup.storage, client: EmpireAuthClient(transport: auth),
+                                        restoreOnLaunch: false, sharedDefaults: defaults)
+            await session.login(email: "member@example.invalid", password: "fictional-password")
+            cleanup.removeDevicesOnLogout(of: session)
+            session.logOut()
+            await cleanup.idle()
+            #expect(server.requests.map(\.httpMethod) == ["DELETE", "DELETE"])
+            #expect(server.requests.allSatisfy { $0.value(forHTTPHeaderField: "Authorization") == "Bearer fictional-login" })
+            #expect(devices.devices.isEmpty && permissions.requests.isEmpty)
+        }
+    }
+
+    @Test func personsLogoutRemovesEveryRecordedAppInOrderWithTheEndedLogin() async throws {
+        try await LoginMarkerTests.withDefaults { defaults in
+            let setup = await setup(sharedDefaults: defaults)
+            // This app has not registered in memory since launch; the shared record must suffice.
+            let devices = PushDeviceStore(defaults: defaults)
+            let recorded = [Self.app: Self.deviceHex, "de.ares-empire.arestemis": String(repeating: "ab", count: 32),
+                            "de.ares-empire.aresus": String(repeating: "cd", count: 32)]
+            for (app, token) in recorded { devices.save(token, app: app) }
+            let ended = setup.session.token
+            let first = EmpireRequestGate()
+            setup.server.nextGate = first
+            setup.session.logOut()
+            let generation = setup.session.generation
+            await first.waitUntilPaused()
+            #expect(setup.server.requests.count == 1)               // later removals wait for the first
+            first.resume()
+            await setup.push.idle()
+            #expect(setup.server.requests.map(\.httpMethod) == ["DELETE", "DELETE", "DELETE"])
+            #expect(setup.server.requests.compactMap { Self.body($0)?["app"] } == recorded.keys.sorted())
+            for request in setup.server.requests {
+                let body = try #require(Self.body(request))
+                #expect(body["token"] == recorded[body["app"]!])
+                #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer \(ended!)")
+            }
+            #expect(devices.devices.isEmpty && setup.session.generation == generation)
+        }
+    }
+
+    @Test func registrationFinishingAfterLogoutIsRecordedThenRemoved() async throws {
+        try await LoginMarkerTests.withDefaults { defaults in
+            let setup = await setup(sharedDefaults: defaults)
+            let gate = EmpireRequestGate()
+            setup.server.nextGate = gate
+            setup.push.didRegister(deviceToken: Self.device)
+            await gate.waitUntilPaused()
+            #expect(PushDeviceStore(defaults: defaults).devices.isEmpty)
+            setup.session.logOut()
+            gate.resume()
+            await setup.push.idle()
+            #expect(setup.server.requests.map(\.httpMethod) == ["POST", "DELETE"])
+            #expect(PushDeviceStore(defaults: defaults).devices.isEmpty)
+        }
+    }
+
+    @Test func refusedLoginLogoutSendsNoRemovalEvenForPreviouslyRegisteredDevices() async throws {
+        try await LoginMarkerTests.withDefaults { defaults in
+            let setup = await setup(sharedDefaults: defaults)
+            await deliverToken(setup)
+            PushDeviceStore(defaults: defaults).save(String(repeating: "cd", count: 32), app: "de.ares-empire.aresus")
+            setup.session.handleAuthFailure(HTTPError.unauthorized, generation: setup.session.generation,
+                                            token: setup.session.token)
+            await setup.push.idle()
+            #expect(setup.server.requests.map(\.httpMethod) == ["POST"])
+            #expect(setup.session.token == nil)
+        }
+    }
+
+    @Test(arguments: [nil, 500, 401] as [Int?])
+    func failedRemovalsDropRecordsAndNeverEndTheNextLogin(status: Int?) async throws {
+        try await LoginMarkerTests.withDefaults { defaults in
+            let setup = await setup(sharedDefaults: defaults)
+            let devices = PushDeviceStore(defaults: defaults)
+            devices.save(Self.deviceHex, app: Self.app)
+            devices.save(String(repeating: "ab", count: 32), app: "de.ares-empire.arestemis")
+            if let status { setup.server.status = status }
+            else { setup.server.failure = URLError(.notConnectedToInternet) }
+            let gate = EmpireRequestGate()
+            setup.server.nextGate = gate
+            var logouts = 0
+            setup.session.onLogout { _ in logouts += 1 }
+            setup.session.logOut()
+            await gate.waitUntilPaused()
+            setup.auth.data = SharedLoginTests.response(Self.token("account-b"), account: "account-b")
+            await setup.session.login(email: "next@example.invalid", password: "fictional-password")
+            let generation = setup.session.generation
+            gate.resume()
+            await setup.push.idle()
+            #expect(logouts == 1 && setup.session.generation == generation && setup.session.accountID == "account-b")
+            #expect(setup.server.requests.map(\.httpMethod) == ["DELETE", "DELETE"])
+            #expect(devices.devices.isEmpty)
+        }
+    }
+
+    @Test func followingLogoutRemovesOnlyThisAppsRecordedDeviceWithoutAnInMemoryRegistration() async throws {
+        try await LoginMarkerTests.withDefaults { defaults in
+            let setup = await setup(sharedDefaults: defaults)
+            let devices = PushDeviceStore(defaults: defaults)
+            devices.save(Self.deviceHex, app: Self.app)
+            devices.save(String(repeating: "ab", count: 32), app: "de.ares-empire.arestemis")
+            LoginMarker.clear(in: defaults)
+            setup.storage.token = nil
+            setup.session.followMarker()
+            await setup.push.idle()
+            #expect(setup.server.requests.count == 1)
+            #expect(Self.body(setup.server.requests[0]) == ["app": Self.app, "token": Self.deviceHex])
+            #expect(devices.devices.keys.sorted() == ["de.ares-empire.arestemis"])
+        }
+    }
+
+    @Test func removingAnOlderDeviceKeepsANewerRecordedRegistration() async throws {
+        try await LoginMarkerTests.withDefaults { defaults in
+            let setup = await setup(sharedDefaults: defaults)
+            let devices = PushDeviceStore(defaults: defaults)
+            devices.save(Self.deviceHex, app: Self.app)
+            let gate = EmpireRequestGate()
+            setup.server.nextGate = gate
+            setup.session.logOut()
+            await gate.waitUntilPaused()
+            let newer = String(repeating: "ef", count: 32)
+            devices.save(newer, app: Self.app)
+            gate.resume()
+            await setup.push.idle()
+            #expect(devices.devices == [Self.app: newer])
+        }
+    }
 
     @Test func extractsTheURLFromAPayload() {
         #expect(PushCenter.url(from: ["aps": ["alert": "x"], "url": "arestemis://match/123"])

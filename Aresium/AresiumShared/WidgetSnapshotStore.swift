@@ -21,7 +21,7 @@ nonisolated struct WidgetSnapshotStore {
         }
         func nextRefresh(after now: Date, calendar: Calendar = .current) -> Date {
             if case .failed = self { return now.addingTimeInterval(30 * 60) }
-            return calendar.dateInterval(of: .month, for: now)!.end
+            return min(now.addingTimeInterval(60 * 60), calendar.dateInterval(of: .month, for: now)!.end)
         }
     }
 
@@ -35,6 +35,18 @@ nonisolated struct WidgetSnapshotStore {
     }
 
     func load() -> WidgetSnapshot? { read().snapshot }
+
+    /// The widgets check at every use, including quick snapshots and category pickers. Old files without an account
+    /// are discarded too; nil must never match a missing marker.
+    func readForCurrentLogin(in defaults: UserDefaults? = EmpireShared.defaults) -> ReadResult {
+        let result = read()
+        guard case .snapshot(let snapshot) = result else { return result }
+        guard let account = LoginMarker.account(in: defaults), snapshot.account == account else {
+            try? delete()
+            return .missing
+        }
+        return result
+    }
 
     func save(_ snapshot: WidgetSnapshot) throws {
         try JSONEncoder().encode(snapshot).write(to: file("widget-snapshot.json"), options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])

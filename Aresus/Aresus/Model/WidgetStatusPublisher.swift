@@ -11,9 +11,9 @@ struct WidgetStatusPublisher {
     static let disabled = WidgetStatusPublisher(store: nil, reloadTimelines: {})
     static func live() -> WidgetStatusPublisher { WidgetStatusPublisher(store: .appGroup) }
 
-    func publish(_ overview: Overview) {
+    func publish(_ overview: Overview, account: String? = nil) {
         guard let store else { return }
-        try? store.save(WidgetStatus(overview: overview))   // if saving fails, the widget still fetches on its own
+        try? store.save(WidgetStatus(overview: overview, account: account))   // if saving fails, the widget still fetches on its own
         reloadTimelines()
     }
 

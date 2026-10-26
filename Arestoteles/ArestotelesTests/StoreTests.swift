@@ -82,6 +82,22 @@ struct StoreTests {
         #expect(h.store.vault == nil && persistence.vault == nil)
     }
 
+    @Test(arguments: ["account-a", "account-b", nil] as [String?])
+    func launchUsesTheMarkerBeforeRestoringOrReadingAToken(account: String?) throws {
+        let suite = "arestoteles.tests.marker." + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        if let account { LoginMarker.save(account, in: defaults) }
+        // There is no readable login in this app yet, as on a locked background launch.
+        let session = EmpireSession(app: .arestoteles, storage: MemoryTokens())
+        let persistence = try saved()
+        let store = VaultStore(session: session, backend: ArestotelesAPI(token: { nil }), persistence: persistence,
+                               spotlight: NoSpotlight(), savedAccount: { LoginMarker.account(in: defaults) })
+        #expect(session.token == nil && session.isRestoring)
+        #expect((store.vault != nil) == (account == "account-a"))
+        #expect((persistence.vault != nil) == (account == "account-a"))
+    }
+
     @Test func aVaultWithoutAKnownAccountIsNotShown() async throws {
         let persistence = try saved(account: nil)
         let h = try await makeStore(persistence: persistence, savedAccount: nil)
