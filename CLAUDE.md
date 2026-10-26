@@ -232,10 +232,9 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
    (the iPhone switching by itself in the evening while an app is open, the widgets on a light and a dark home screen).
 11. **Aresync file sharing from the phone** (Patrik, 2026-10-25): on hold; Patrik will say what it should do when it
    comes up. Don't ask before then.
-12. **Before anyone but Patrik gets an app** (council 2026-10-25): log out centrally (a logout marker in
-   `group.de.ares-empire.shared` that every app and widget checks before showing saved data; the Aresium widget drops
-   its snapshot without a token; push devices removed by the app that logs out): Codex, brief
-   `prompts/09-central-logout.md` (Patrik, 2026-10-26); and a privacy cover in the app switcher (Claude: the look).
+12. **Before anyone but Patrik gets an app** (council 2026-10-25): ~~log out centrally~~: merged 2026-10-26 (brief 09,
+   "One login for all apps" below; on the phone: check a widget and a notification after logging out in another app).
+   Left: a privacy cover in the app switcher (Claude: the look).
    (Installing a missing app from the Empire app: built 2026-10-25, the page's Install from the hub's `install` link.)
 13. **For Patrik to decide** (council 2026-10-25): (a) ~~should a member's ring show every province the account has
    access to~~: decided 2026-10-25, yes (the "Empire app" entry below). (b) What makes the Empire app worth having
@@ -282,7 +281,16 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   sentence (`Shared/API/HTTP.swift`). Coming to the foreground, each app calls
   `followSharedLogin()`: it picks up a login or logout made in another app meanwhile (a renewed token of the same
   account is taken over without a server call); while the app is closed because the account lacks its service, it
-  asks the account server again quietly, at most once a minute, so an approval opens the app by itself. Every logout is written to the device log with the line that
+  asks the account server again quietly, at most once a minute, so an approval opens the app by itself.
+  **Central logout** (2026-10-26, brief 09): the shared App Group holds the saved login's account id
+  (`LoginMarker`, key `empire.login.account`; never a token), written whenever a login is saved and cleared when it is
+  deleted. It is readable while the phone is locked, so saved data is shown only where it matches: each app checks it
+  synchronously on coming to the foreground (`onEmpireForeground` → `followMarker()`, before `followSharedLogin()`),
+  the Aresium widget's snapshot and the Aresus widget's status carry their account and are deleted on a mismatch (the
+  Aresium widget refreshes at least hourly to notice), Arestoteles's saved vault is checked against it. Each app records
+  its accepted push device in the group (`PushDeviceStore`, `empire.push.devices`); the app where the person logs out
+  removes every recorded device with the ended login (Aresium and Arestoteles through a cleanup-only `PushCenter`), so
+  notifications of apps that are not running stop too (`ares-empire/docs/PUSH.md` → the limit). Every logout is written to the device log with the line that
   asked for it (`log show --predicate 'subsystem == "de.ares-empire.shared"'`; on a simulator via `xcrun simctl spawn
   <udid> log show …`). Verified across the two apps on the simulator with
   `scripts/check-shared-login.sh <udid>` (2026-10-24).
