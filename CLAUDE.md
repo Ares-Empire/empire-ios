@@ -392,3 +392,8 @@ specified yet) → new apps. The other items fit in between.
   the required-reason APIs its Release binary really imports); each app's `Info.plist` has
   `ITSAppUsesNonExemptEncryption = NO`. A new data type or API means updating the manifest, `docs/APP-STORE.md` (App
   Store Connect's answers, TestFlight test information, what is missing) and `ares-empire/docs/PRIVACY.md`.
+- **Showcase images** (2026-10-26): `showcase/<app>/NN-name.png`, each app's main screens inside a drawn iPhone, with
+  the sample data only, for display (portfolio, website); `showcase/README.md` lists them with captions. Refresh with
+  `python3 scripts/showcase.py [app ...]` (builds the apps, uses its own simulator `claude-showcase` and deletes it,
+  about 6 min for all five); the shots and their launch arguments are the `SHOTS` table in the script. After a screen
+  changes, re-run that app and look at its images (and `build/showcase/contact-sheet.png`) before committing.
