@@ -187,20 +187,22 @@ it, no restart.
 - Tests: `EmpireTests/AppearanceTests` (the choice, the pairs, contrast of the light accents and status colours on the
   light wall), Aresium's `ThemeStateTests` and `WidgetTests`.
 
-## Open (2026-10-25)
+## Open (2026-10-26)
 
 All five apps (Aresium, Empire, Arestemis, Aresus, Arestoteles) work on the simulator and are merged; nothing reaches
 the phone until Apple approves the developer account.
 
 **Order of the big steps** (Patrik, 2026-10-25; also in `ares-empire/EMPIRE.md` → Now and next): light mode (done
-2026-10-25, "Light mode" above) → TestFlight once Apple approves (1–3, 6) → Aresium for other people (5) → Aresync file sharing from the phone (11, not
-specified yet) → new apps. The other items fit in between.
+2026-10-25, "Light mode" above) → TestFlight once Apple approves (1–3, 6) → Aresium for other people (5) → Aresync file sharing from the phone (11, on
+hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people. The other items fit in between.
 
 1. **TestFlight, once Apple approves:** set the paid team (project level, all five projects); the App Groups
    `group.de.ares-empire.aresium` + `group.de.ares-empire.shared` registered for the bundle ids, the widgets' too
    (`de.ares-empire.aresium.widget`, `de.ares-empire.aresus.widget`) (Xcode's automatic
    signing can do it; the shared Keychain group needs only the team prefix); an App Store Connect record per app;
-   Release build for a generic device; archive and upload each (README).
+   Release build for a generic device; archive and upload each (README). For people besides Patrik: external
+   testing with a public TestFlight link per app, entered as `install` in `ares-empire/webauth/apps.json` (the Empire
+   app's Install button shows it to accounts that have the app).
 2. **On the phone:** the checks in `docs/reviews/2026-10-23-pre-testflight.md` (widgets incl. row taps), the shared
    login across the apps on the real device, the Empire app opening Aresium (`aresium://`), no connection; the
    Aresus widget placed on the home and lock screen (refreshes by itself, the medium one's rows open their province).
@@ -238,6 +240,10 @@ specified yet) → new apps. The other items fit in between.
    over the mobile website: members are told "<App> is ready" by a notification (2026-10-25); Patrik's sign-ups and
    requests stay email plus the approvals sheet, no push to him (Patrik, 2026-10-26). Still open: the last hub kept on
    the phone for opening offline.
+
+14. **Arestemis sample with real details:** `Arestemis/Arestemis/Samples/settings.json` (and Arestemis's `docs/samples/`)
+   holds Patrik's real application text (name, TUM, Garching, age), so the showcase leaves that screen out. Replace it
+   with a made-up text if Patrik wants that screen shown (offered 2026-10-26).
 
 ## Setup state (update as it changes)
 
