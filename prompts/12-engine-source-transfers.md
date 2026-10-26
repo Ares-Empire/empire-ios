@@ -1,6 +1,6 @@
 # 12: Engine: the dashboard source, PayPal and own transfers, and the mode route
 
-Status: draft
+Status: merged 2026-10-27 (parity on the real database: identical, 1,246 payments)
 Repo: aresium · Worktree: `~/aresium-12-engine-source` (branch `claude/12-engine-source`) · Built by: a Claude agent
 
 ## Goal
