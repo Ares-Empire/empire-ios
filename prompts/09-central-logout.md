@@ -1,6 +1,6 @@
 # 09: Central logout (every app, widget and push device follows a logout)
 
-Status: draft
+Status: running (2026-10-26)
 Branch: `codex/09-central-logout` · Worktree: `../empire-ios-09-central-logout` · Model: `gpt-6.1-sol`, effort `xhigh`
 
 ## Goal

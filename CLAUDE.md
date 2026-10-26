@@ -213,14 +213,16 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
 5. Later (decided): Aresium for several users, then Aresium `open` in the hub catalog. **Other people's Aresium data
    stays on their iPhone** (Patrik, 2026-10-25: imports, categories and storage on the device; no bank data on the
    server; Patrik's own stays on the server for aresium.de). Its section in the privacy policy says so before it opens.
+   Plan (draft 2026-10-26, waits for Patrik's decisions D1–D8): `ares-empire/docs/ARESIUM-FOR-OTHERS.md`. In phone mode
+   logout must keep the data (the phone has the only copy).
 6. **Push, once Apple approves** (`ares-empire/docs/PUSH.md` → Operating): create the APNs key (.p8) in the developer
    portal, put it on the server, set `APNS_KEY_ID`/`APNS_TEAM_ID`, restart `empire-push`; enable the Push Notifications
    capability for Arestemis, Aresus and the Empire app, Time Sensitive for Arestemis and Aresus (entitlements are
    already in the projects). Then check on the phone (the Empire app: "<App> is ready" for a member's account, its tap
    showing the ring) and retire Telegram: Arestemis (`TELEGRAM_*` in /root/Arestemis/.env) and Aresync (`TG_*` in each
    config).
-7. **Windows laptop:** an Aresus machine token for `Notebook-Patrik` (`aresus/scripts/new-machine-token.py`) into
-   `windows/config.ps1`; the PowerShell report is untested.
+7. ~~**Windows laptop:** an Aresus machine token for `Notebook-Patrik`~~: done; its token is on the server and its
+   PowerShell report works (three daily runs 2026-10-24 to 26, all `ok`, checked in the Aresus database 2026-10-26).
 8. **Build 2026-10-24 record:** `docs/build-2026-10-24/STATUS.md` (what was built, decisions, live tests). Built after the main work: the Aresus
    widget and the hub's live lines from Aresus.
 9. **Arestoteles on the phone:** check the Discuss hand-off (`DiscussPrompt.target`, now `https://claude.ai/code`: does
@@ -232,14 +234,14 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
    comes up. Don't ask before then.
 12. **Before anyone but Patrik gets an app** (council 2026-10-25): log out centrally (a logout marker in
    `group.de.ares-empire.shared` that every app and widget checks before showing saved data; the Aresium widget drops
-   its snapshot without a token; push devices removed by the app that logs out), and a privacy cover in the app
-   switcher. (Installing a missing app from the Empire app: built 2026-10-25, the page's Install from the hub's
-   `install` link.)
+   its snapshot without a token; push devices removed by the app that logs out): Codex, brief
+   `prompts/09-central-logout.md` (Patrik, 2026-10-26); and a privacy cover in the app switcher (Claude: the look).
+   (Installing a missing app from the Empire app: built 2026-10-25, the page's Install from the hub's `install` link.)
 13. **For Patrik to decide** (council 2026-10-25): (a) ~~should a member's ring show every province the account has
    access to~~: decided 2026-10-25, yes (the "Empire app" entry below). (b) What makes the Empire app worth having
    over the mobile website: members are told "<App> is ready" by a notification (2026-10-25); Patrik's sign-ups and
-   requests stay email plus the approvals sheet, no push to him (Patrik, 2026-10-26). Still open: the last hub kept on
-   the phone for opening offline.
+   requests stay email plus the approvals sheet, no push to him (Patrik, 2026-10-26). Opening offline (the last hub
+   kept on the phone): not now, later (Patrik, 2026-10-26).
 
 14. **Arestemis sample with real details:** `Arestemis/Arestemis/Samples/settings.json` (and Arestemis's `docs/samples/`)
    holds Patrik's real application text (name, TUM, Garching, age), so the showcase leaves that screen out. Replace it
