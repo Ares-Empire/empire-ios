@@ -22,3 +22,7 @@ codex-runs/
 *.mobileprovision
 *.xcarchive
 __pycache__/
+# Fictional bank-format inputs for the JavaScriptCore engine measurement.
+!Aresium/AresiumTests/Engine/vrbank.csv
+!Aresium/AresiumTests/Engine/paypal.csv
+!Aresium/AresiumTests/Engine/timing-vr-5000.csv
