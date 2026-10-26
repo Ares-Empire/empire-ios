@@ -100,4 +100,43 @@ enum EmpireFixtures {
                   "state": "coming-soon", "live": null, "app": "aresium://"}],
      "chronicle": [], "ideas": [], "pending": 0}
     """#
+
+    /// The hub since 2026-10-25 for a member (`access`, `install`): Aresolus in the ring with an install link, and in
+    /// "+" Arestemis (open; `arestemis` is its `access`) and Aresium (coming soon). Fictional texts.
+    static func catalog(arestemis: String = "none") -> String {
+        member(projects: [province("aresolus", state: "open", access: "granted",
+                                   install: #""https://testflight.apple.com/join/FICTION1""#)],
+               addable: [province("arestemis", state: "open", access: arestemis),
+                         province("aresium", state: "coming-soon", access: "none")])
+    }
+
+    /// `catalog()` once Patrik approved Arestemis: it moved into the ring.
+    static let catalogApproved = member(
+        projects: [province("aresolus", state: "open", access: "granted",
+                            install: #""https://testflight.apple.com/join/FICTION1""#),
+                   province("arestemis", state: "open", access: "granted")],
+        addable: [province("aresium", state: "coming-soon", access: "none")])
+
+    /// A member's `GET /api/empire` with these provinces (JSON from `province`).
+    static func member(projects: [String], addable: [String]) -> String {
+        #"""
+        {"version": 2, "me": {"id": "fictional00004", "name": "Robin Vale", "admin": false},
+         "projects": [\#(projects.joined(separator: ", "))], "addable": [\#(addable.joined(separator: ", "))],
+         "chronicle": [{"at": "2026-10-25", "project": "aresolus", "text": "Fictional news."}],
+         "ideas": [], "pending": 0}
+        """#
+    }
+
+    /// One province as the hub writes it. `access`: its text; `rawAccess`: raw JSON instead (a number, a wrong type);
+    /// both nil leave the key out, as an older hub does. `install`: raw JSON; nil leaves it out.
+    static func province(_ slug: String, state: String, access: String?, rawAccess: String? = nil,
+                         install: String? = "null") -> String {
+        var fields = [#""slug": "\#(slug)", "name": "\#(slug.capitalized)", "url": "", "logo": "brand/\#(slug).webp""#,
+                      #""status": "CONQUERED", "domain": "", "blurb": "Fictional blurb.""#,
+                      #""detail": {"about": "", "features": [], "setup": "", "wip": [], "ideas": [], "changelog": []}"#,
+                      #""state": "\#(state)", "live": null, "app": "\#(slug)://""#]
+        if let value = rawAccess ?? access.map({ #""\#($0)""# }) { fields.append(#""access": \#(value)"#) }
+        if let install { fields.append(#""install": \#(install)"#) }
+        return "{" + fields.joined(separator: ", ") + "}"
+    }
 }

@@ -5,13 +5,12 @@ import Testing
 @MainActor
 struct EmpireStoreTests {
     enum Action: String, CaseIterable {
-        case load, add, remove, approvals, approve, decline
+        case load, request, approvals, approve, decline
 
         func run(_ store: EmpireStore) async {
             switch self {
             case .load: await store.reload()
-            case .add: await store.ring(add: "aresium")
-            case .remove: await store.ring(remove: "aresium")
+            case .request: await store.request("aresium")
             case .approvals: await store.loadApprovals()
             case .approve, .decline: await store.decide(id: "fictional-id", approve: self == .approve, requested: ["empire"])
             }
@@ -20,7 +19,7 @@ struct EmpireStoreTests {
         func error(in store: EmpireStore) -> String? {
             switch self {
             case .load: store.error
-            case .add, .remove: store.ringError
+            case .request: store.requestError
             default: store.approvalsError
             }
         }
@@ -97,50 +96,52 @@ struct EmpireStoreTests {
         if status == 503 { #expect(session.error == "Login service unavailable, try again") }
     }
 
-    @Test(arguments: [true, false])
-    func ringUsesReturnedDataAndBusyState(add: Bool) async throws {
+    /// Asking shows which app is on its way (one at a time); the hub's answer is the new data, with that app asked for.
+    @Test func aRequestShowsProgressThenTheHubsAnswer() async throws {
         let session = await empireSession()
-        let transport = EmpireFakeTransport(data: try empireJSON(user: true))
+        let transport = EmpireFakeTransport(data: Data(EmpireFixtures.catalog().utf8))
         let store = EmpireStore(session: session, client: EmpireAPI(transport: transport))
         await store.reload()
-        let returned = try EmpireSamples.load(user: false)
-        transport.data = try JSONEncoder().encode(returned)
+        #expect(store.data?.addable.first { $0.slug == "arestemis" }?.canRequest == true)
+        let answer = Data(EmpireFixtures.catalog(arestemis: "requested").utf8)
+        transport.data = answer
         let gate = EmpireRequestGate()
         transport.nextGate = gate
-        let action = Task {
-            if add { await store.ring(add: "aresium") }
-            else { await store.ring(remove: "aresium") }
-        }
+        let asking = Task { await store.request("arestemis") }
         await gate.waitUntilPaused()
-        #expect(store.isRingBusy && store.data?.me.admin == false)
-        await store.ring(add: "another-slug")
-        await store.reload()
+        #expect(store.requesting == "arestemis")
+        #expect(await store.request("aresolus") == false)          // one at a time
+        await store.reload()                                       // and no reload over it
         #expect(transport.requests.count == 2)
         gate.resume()
-        await action.value
-        #expect(store.data == returned)
-        #expect(!store.isRingBusy && store.ringError == nil)
+        #expect(await asking.value)
+        #expect(store.requesting == nil && store.requestError == nil)
+        #expect(store.data == (try JSONDecoder().decode(EmpireData.self, from: answer)))
+        let arestemis = try #require(store.data?.addable.first { $0.slug == "arestemis" })
+        #expect(arestemis.access == .requested && !arestemis.canRequest)
+        let sent = try #require(transport.requests.last)
+        #expect(sent.httpMethod == "POST" && sent.url?.path == "/api/empire/request")
+        #expect(try JSONDecoder().decode([String: String].self, from: #require(sent.httpBody)) == ["service": "arestemis"])
     }
 
-    @Test(arguments: [true, false])
-    func ringErrorPersistsThroughReloadUntilNextAction(add: Bool) async throws {
+    /// An app that cannot be requested (400 `bad_request`): the hub's sentence shows until the next request.
+    @Test func aRefusedRequestShowsTheHubsSentence() async throws {
         let session = await empireSession()
-        let transport = EmpireFakeTransport(data: try empireJSON())
+        let transport = EmpireFakeTransport(data: Data(EmpireFixtures.catalog().utf8))
         let store = EmpireStore(session: session, client: EmpireAPI(transport: transport))
         await store.reload()
         let original = store.data
-        transport.status = 400              // webauth/server.py change_ring: an unknown province
-        transport.data = Data(#"{"error":"The ring could not be changed","code":"bad_request"}"#.utf8)
-        if add { await store.ring(add: "aresium") }
-        else { await store.ring(remove: "aresium") }
-        #expect(store.ringError == "The ring could not be changed")
-        #expect(store.data == original && !store.isRingBusy)
+        transport.status = 400
+        transport.data = Data(#"{"error":"Aresium can't be requested yet.","code":"bad_request"}"#.utf8)
+        #expect(await store.request("aresium") == false)
+        #expect(store.requestError == "Aresium can't be requested yet.")
+        #expect(store.data == original && store.requesting == nil && session.isSignedIn)
         transport.status = 200
-        transport.data = try empireJSON()
+        transport.data = Data(EmpireFixtures.catalog().utf8)
         await store.reload()
-        #expect(store.ringError == "The ring could not be changed")
-        await store.ring(add: "aresium")
-        #expect(store.ringError == nil)
+        #expect(store.requestError == "Aresium can't be requested yet.")
+        #expect(await store.request("arestemis"))
+        #expect(store.requestError == nil)
     }
 
     @Test(arguments: [true, false])
@@ -318,7 +319,7 @@ struct EmpireStoreTests {
                                403: #"{"error":"No access to Empire","code":"no_access"}"#,
                                503: #"{"error":"Login service unavailable, try again in a minute.","code":"unavailable"}"#][status]!.utf8)
         await action.run(store)
-        #expect(!store.isLoading && !store.isRingBusy && !store.isLoadingApprovals && !store.isDeciding)
+        #expect(!store.isLoading && store.requesting == nil && !store.isLoadingApprovals && !store.isDeciding)
         switch status {
         case 401:
             #expect(session.token == nil && storage.token == nil && !session.isSignedIn)
@@ -349,13 +350,13 @@ struct EmpireStoreTests {
         transport.data = try JSONEncoder().encode(EmpireSamples.approvals)
         await store.loadApprovals()
         transport.status = 503
-        await store.ring(add: "aresium")
+        await store.request("aresium")
         await store.decide(id: "fictional-id", approve: true, requested: [])
         await store.reload()
-        #expect(store.ringError != nil && store.approvalsError != nil && store.error != nil)
+        #expect(store.requestError != nil && store.approvalsError != nil && store.error != nil)
         session.handleAuthFailure(HTTPError.server(403, "Denied"), generation: session.generation, token: session.token)
         #expect(store.data == nil && store.approvals.isEmpty && store.lastSuccessfulLoad == nil)
-        #expect(store.error == nil && store.ringError == nil && store.approvalsError == nil)
+        #expect(store.error == nil && store.requestError == nil && store.approvalsError == nil)
         let count = transport.requests.count
         for action in Action.allCases { await action.run(store) }
         await store.refreshOnForeground(now: Date.now.addingTimeInterval(13 * 3600))
@@ -385,12 +386,12 @@ struct EmpireStoreTests {
         await pending.value
         #expect(session.isSignedIn && !session.isDenied)
         #expect(store.data == original && store.approvals.isEmpty)
-        #expect(store.error == nil && store.ringError == nil && store.approvalsError == nil)
-        #expect(!store.isLoading && !store.isRingBusy && !store.isLoadingApprovals && !store.isDeciding)
+        #expect(store.error == nil && store.requestError == nil && store.approvalsError == nil)
+        #expect(!store.isLoading && store.requesting == nil && !store.isLoadingApprovals && !store.isDeciding)
     }
 
     @Test(arguments: [200, 401, 403])
-    func ringSupersedesAnOlderHubRequest(status: Int) async throws {
+    func aRequestSupersedesAnOlderHubRequest(status: Int) async throws {
         let session = await empireSession()
         let transport = EmpireFakeTransport(data: try empireJSON(user: true))
         let store = EmpireStore(session: session, client: EmpireAPI(transport: transport))
@@ -401,7 +402,7 @@ struct EmpireStoreTests {
         await gate.waitUntilPaused()
         transport.status = 200
         transport.data = try empireJSON()
-        await store.ring(add: "aresium")
+        await store.request("aresium")
         let current = store.data
         gate.resume()
         await old.value
@@ -416,13 +417,6 @@ struct EmpireStoreTests {
         let store = EmpireStore(session: session, client: EmpireAPI(transport: transport), sample: true, sampleUser: user)
         await store.reload()
         #expect(store.data == (try EmpireSamples.load(user: user)))
-        await store.ring(remove: "aresium")
-        #expect(store.data?.projects.contains { $0.slug == "aresium" } == false)
-        #expect(store.data?.addable.contains { $0.slug == "aresium" } == true)
-        await store.reload()
-        #expect(store.data?.addable.contains { $0.slug == "aresium" } == true)
-        await store.ring(add: "aresium")
-        #expect(store.data?.projects.contains { $0.slug == "aresium" } == true)
         await store.loadApprovals()
         #expect(store.approvals.count == (user ? 0 : 3))
         if !user {

@@ -1,0 +1,11 @@
+{
+  "aps": {
+    "alert": {
+      "title": "Arestemis is ready",
+      "body": "Your request was approved. It's in your ring now."
+    },
+    "thread-id": "access",
+    "sound": "default"
+  },
+  "url": "empire://ring"
+}

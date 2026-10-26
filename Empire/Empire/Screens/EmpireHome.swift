@@ -2,12 +2,11 @@ import SwiftUI
 import UIKit
 
 /// What the home screen can do; `EmpireStore` (brief 08) provides it, previews fake it.
-/// Ring changes report success so the sheet closes only when the server took the change.
 struct EmpireHomeActions {
     /// The province's app if installed, else its website; false when neither opened (the page shows instead).
     var open: (Province) async -> Bool = { _ in true }
-    var add: (String) async -> Bool = { _ in true }
-    var remove: (String) async -> Bool = { _ in true }
+    /// Asks for access to an app of the "+" sheet; true when the hub took it (the sheet then shows its new state).
+    var request: (String) async -> Bool = { _ in true }
     var loadApprovals: () async -> Void = {}
     /// (the account as its card shows it, approve); true when the decision went through.
     var decide: (PendingAccount, Bool) async -> Bool = { _, _ in true }
@@ -17,8 +16,8 @@ struct EmpireHomeActions {
 
 /// The store's busy and error state, as the sheets show it.
 struct EmpireHomeStatus {
-    var ringBusy = false
-    var ringError: String?
+    var requesting: String?         // the app of the "+" sheet being asked for
+    var requestError: String?
     var approvals: [PendingAccount] = []
     var approvalsLoading = false
     var approvalsError: String?
@@ -35,26 +34,28 @@ struct EmpireHome: View {
     let marks: [String: UIImage]
     let status: EmpireHomeStatus
     let actions: EmpireHomeActions
+    /// The open sheet and the expansions, kept by `ContentView` so a tapped notification can close them.
+    @Bindable var navigation: EmpireNavigation
 
-    @State private var expanded = false
     @Environment(\.colorScheme) private var scheme
     @State private var front: EmpireRing.Item?
-    @State private var sheet: Sheet?
 
     enum Sheet: Identifiable {
         /// `unopened`: tapping it in the ring opened nothing (its app is not on this iPhone, and it has no website).
-        case province(Province, unopened: Bool = false), idea(Idea), add, approvals
+        /// `moreApps`: the "+" card's sheet, the other apps open to users (members).
+        case province(Province, unopened: Bool = false), idea(Idea), moreApps, approvals
         var id: String {
             switch self {
             case .province(let p, _): "p-" + p.slug
             case .idea(let i): "i-" + i.title
-            case .add: "add"
+            case .moreApps: "more-apps"
             case .approvals: "approvals"
             }
         }
     }
 
     private var admin: Bool { data.me.admin }
+    private var expanded: Bool { navigation.expanded }
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -86,9 +87,10 @@ struct EmpireHome: View {
         #if DEBUG
         .onAppear(perform: openDebugSheet)
         #endif
-        .sheet(item: $sheet) { sheet in
-            EmpireSheetView(sheet: sheet, data: data, marks: marks, status: status, actions: actions, close: { self.sheet = nil })
-                .presentationDetents(sheet.isSmall ? [.medium] : [.large])
+        .sheet(item: $navigation.sheet) { sheet in
+            EmpireSheetView(sheet: sheet, data: data, marks: marks, status: status, actions: actions,
+                            close: { navigation.sheet = nil })
+                .presentationDetents(sheet.isSmall ? [.medium, .large] : [.large])
                 .presentationDragIndicator(sheet.isSmall ? .visible : .hidden)
                 .presentationBackground(EmpireStyle.sheetBackground)
         }
@@ -100,7 +102,7 @@ struct EmpireHome: View {
         ZStack {
             Text(expanded ? "EXPANSIONS" : "THE EMPIRE")
                 .font(AppFont.text(12.5, weight: .bold)).tracking(5.2).padding(.leading, 5.2).goldFill()   // text-indent balances the tracking
-                .onTapGesture { if admin { withAnimation(.easeInOut(duration: 0.25)) { expanded.toggle() } } }
+                .onTapGesture { if admin { withAnimation(.easeInOut(duration: 0.25)) { navigation.expanded.toggle() } } }
                 .accessibilityAddTraits(admin ? .isButton : [])
             HStack(spacing: 2) {
                 Image("Crest").resizable().scaledToFit().frame(height: 42).shadow(color: EmpireStyle.shadow(dark: 0.65), radius: 6, y: 4)
@@ -109,12 +111,12 @@ struct EmpireHome: View {
                 if admin {
                     iconButton(expanded ? "circle.dotted" : "arrow.up.left.and.arrow.down.right",
                                label: expanded ? String(localized: "Show the provinces") : String(localized: "Show the expansions")) {
-                        withAnimation(.easeInOut(duration: 0.25)) { expanded.toggle() }
+                        withAnimation(.easeInOut(duration: 0.25)) { navigation.expanded.toggle() }
                     }
                     // No count when the hub could not count (`pending` null): no badge rather than a wrong one.
                     iconButton("tray", label: data.pending.map { String(localized: "Approvals, \($0) pending") }
                                    ?? String(localized: "Approvals"), badge: data.pending ?? 0) {
-                        sheet = .approvals; Task { await actions.loadApprovals() }
+                        navigation.sheet = .approvals; Task { await actions.loadApprovals() }
                     }
                 }
                 iconButton("gearshape", label: String(localized: "Settings")) { actions.openSettings() }
@@ -162,7 +164,7 @@ struct EmpireHome: View {
         var items = data.projects.map { p in
             EmpireRing.Item(id: p.slug, name: p.name, status: !admin && p.isComingSoon ? "COMING SOON" : p.status, isAdd: false)
         }
-        if !admin { items.append(.init(id: "__add", name: String(localized: "Add a province"), status: "", isAdd: true)) }
+        if !admin { items.append(.init(id: "__add", name: String(localized: "More apps"), status: "", isAdd: true)) }
         return items
     }
 
@@ -189,7 +191,7 @@ struct EmpireHome: View {
                 Text(province.blurb).font(AppFont.text(12.5)).foregroundStyle(EmpireStyle.quiet(dark: 0x8F9390)).multilineTextAlignment(.center)
             }
         } else if front == nil, !admin, !expanded {
-            Text("Add a province to your ring").font(AppFont.text(12.5)).foregroundStyle(EmpireStyle.quiet(dark: 0x8F9390))
+            Text("Ask for access to more apps").font(AppFont.text(12.5)).foregroundStyle(EmpireStyle.quiet(dark: 0x8F9390))
         }
     }
 
@@ -201,23 +203,26 @@ struct EmpireHome: View {
         }
         Task {
             let opened = await actions.open(province)
-            if !opened { sheet = .province(province, unopened: true) }
+            if !opened { navigation.sheet = .province(province, unopened: true) }
         }
     }
 
-    /// Holding a tab: its page.
+    /// Holding a tab: its page (the "+" card: the other apps to ask for).
     private func details(_ item: EmpireRing.Item) {
-        if item.isAdd { sheet = .add; return }
-        if expanded, let idea = data.ideas.first(where: { "idea:" + $0.title == item.id }) { sheet = .idea(idea); return }
-        if let province = data.projects.first(where: { $0.slug == item.id }) { sheet = .province(province) }
+        if item.isAdd { navigation.sheet = .moreApps; return }
+        if expanded, let idea = data.ideas.first(where: { "idea:" + $0.title == item.id }) {
+            navigation.sheet = .idea(idea)
+            return
+        }
+        if let province = data.projects.first(where: { $0.slug == item.id }) { navigation.sheet = .province(province) }
     }
 }
 
 #if DEBUG
 extension EmpireHome {
     /// Screenshots: `-openSheet province|unopened|idea|add|approvals|settings` opens that page at launch (`unopened`:
-    /// the first province's page as a ring tap that opened nothing shows it). `-tapProvince <slug>` taps that province
-    /// in the ring, as a finger would (its app, its website, or its page).
+    /// the first province's page as a ring tap that opened nothing shows it; `add`: the "+" card's sheet).
+    /// `-tapProvince <slug>` taps that province in the ring, as a finger would (its app, its website, or its page).
     private func openDebugSheet() {
         let arguments = LaunchArguments.current
         if let index = arguments.firstIndex(of: "-tapProvince"), arguments.indices.contains(index + 1) {
@@ -225,12 +230,12 @@ extension EmpireHome {
         }
         guard let index = arguments.firstIndex(of: "-openSheet"), arguments.indices.contains(index + 1) else { return }
         switch arguments[index + 1] {
-        case "province": sheet = data.projects.first.map { .province($0) }
-        case "unopened": sheet = data.projects.first.map { .province($0, unopened: true) }
-        case "idea": sheet = data.ideas.first.map { .idea($0) }
-        case "add": sheet = .add
+        case "province": navigation.sheet = data.projects.first.map { .province($0) }
+        case "unopened": navigation.sheet = data.projects.first.map { .province($0, unopened: true) }
+        case "idea": navigation.sheet = data.ideas.first.map { .idea($0) }
+        case "add": navigation.sheet = .moreApps
         case "approvals":
-            sheet = .approvals
+            navigation.sheet = .approvals
             Task { await actions.loadApprovals() }          // as the tray button does
         case "settings": actions.openSettings()
         default: break
@@ -246,5 +251,5 @@ extension Province {
 }
 
 extension EmpireHome.Sheet {
-    var isSmall: Bool { if case .add = self { true } else { false } }
+    var isSmall: Bool { if case .moreApps = self { true } else { false } }
 }

@@ -211,8 +211,10 @@ specified yet) → new apps. The other items fit in between.
    server; Patrik's own stays on the server for aresium.de). Its section in the privacy policy says so before it opens.
 6. **Push, once Apple approves** (`ares-empire/docs/PUSH.md` → Operating): create the APNs key (.p8) in the developer
    portal, put it on the server, set `APNS_KEY_ID`/`APNS_TEAM_ID`, restart `empire-push`; enable the Push Notifications
-   and Time Sensitive capabilities for Arestemis and Aresus (entitlements are already in the projects). Then check on the
-   phone and retire Telegram: Arestemis (`TELEGRAM_*` in /root/Arestemis/.env) and Aresync (`TG_*` in each config).
+   capability for Arestemis, Aresus and the Empire app, Time Sensitive for Arestemis and Aresus (entitlements are
+   already in the projects). Then check on the phone (the Empire app: "<App> is ready" for a member's account, its tap
+   showing the ring) and retire Telegram: Arestemis (`TELEGRAM_*` in /root/Arestemis/.env) and Aresync (`TG_*` in each
+   config).
 7. **Windows laptop:** an Aresus machine token for `Notebook-Patrik` (`aresus/scripts/new-machine-token.py`) into
    `windows/config.ps1`; the PowerShell report is untested.
 8. **Build 2026-10-24 record:** `docs/build-2026-10-24/STATUS.md` (what was built, decisions, live tests). Built after the main work: the Aresus
@@ -226,13 +228,14 @@ specified yet) → new apps. The other items fit in between.
    comes up. Don't ask before then.
 12. **Before anyone but Patrik gets an app** (council 2026-10-25): log out centrally (a logout marker in
    `group.de.ares-empire.shared` that every app and widget checks before showing saved data; the Aresium widget drops
-   its snapshot without a token; push devices removed by the app that logs out), a privacy cover in the app switcher,
-   and a way to install a missing province app from the Empire app (the hub sends its TestFlight link).
-13. **For Patrik to decide** (council 2026-10-25): (a) should a member's ring show every province the account has
-   access to (today: only their saved ring within the catalog, so a friend approved for Arestemis sees an empty ring
-   and cannot add it)? (b) What makes the Empire app worth having over the mobile website (`ares-empire/docs/
-   EMPIRE-APP.md` lacks the iPhone-features note): e.g. a sign-up notification with Approve/Decline on the lock
-   screen, and the last hub kept on the phone for opening offline.
+   its snapshot without a token; push devices removed by the app that logs out), and a privacy cover in the app
+   switcher. (Installing a missing app from the Empire app: built 2026-10-25, the page's Install from the hub's
+   `install` link.)
+13. **For Patrik to decide** (council 2026-10-25): (a) ~~should a member's ring show every province the account has
+   access to~~: decided 2026-10-25, yes (the "Empire app" entry below). (b) What makes the Empire app worth having
+   over the mobile website: members are told "<App> is ready" by a notification (2026-10-25); Patrik's sign-ups and
+   requests stay email plus the approvals sheet, no push to him (Patrik, 2026-10-26). Still open: the last hub kept on
+   the phone for opening offline.
 
 ## Setup state (update as it changes)
 
@@ -303,10 +306,28 @@ specified yet) → new apps. The other items fit in between.
 - **Empire app** (2026-10-24): the approved phone hub (`ares-empire/web/app/mobile.jsx` + `mobile.css`) in SwiftUI,
   `Empire/Empire/Screens/` (Claude's look; values copied from the CSS, with the CSS selector named in comments), data
   in `Model/` + `API/` (brief 08). Launch arguments (DEBUG): `-sampleData` (admin sample), `-sampleUser` (member
-  sample), `-openSheet province|unopened|idea|add|approvals|support`, `-tapProvince <slug>` (the ring tap at launch),
-  `-scrollToEnd` for screenshots. Ring: tap the front province to open it (its app if
-  installed, else its website, else its page with "The … app isn't on this iPhone"), hold any tab for its page; on the
-  page the name is the link (Patrik, 2026-10-24). `ProvinceOpener` tries the app's URL and uses iOS's answer, so no
+  sample), `-sampleCatalog` (a member made up from the admin sample's provinces: Arestemis in the ring with an install
+  link; in "+" Aresolus to ask for, Aresync asked for, Aresium coming soon), `-samplePush` (push routing in sample
+  mode, for `simctl push` with `Empire/PushSamples/app-ready.apns`; the sample never signs in, so nothing registers), `-openSheet province|unopened|idea|add|approvals|support` (`add`:
+  the "+" sheet), `-tapProvince <slug>` (the ring tap at launch), `-scrollToEnd` for screenshots. Screenshots of the
+  new states: `-sampleData -sampleCatalog -openSheet add` (the "+" sheet), `-sampleData -sampleCatalog -openSheet
+  unopened` (the page with Install). **Whose ring shows what** (Patrik, 2026-10-25, `ares-empire/docs/EMPIRE-APP.md`):
+  the ring is `projects`, every app the account has (Patrik: every province); members get a "+" card ("More apps") at
+  the end, whose sheet lists `addable`, the other apps open to users, each with its state on the right: Ask for access
+  (a quiet gold button; `POST /api/empire/request`, whose answer is the new hub data, so the row then says "Asked ·
+  waiting for approval"; a refusal shows the hub's sentence), or Coming soon (not requestable). There is no adding or
+  removing any more (the old `POST /api/empire/ring` is gone from the app); leaving an app is Settings → Leave. Each
+  province's `access` (`granted` | `requested` | `none`) and `install` (its TestFlight or App Store link, only for apps
+  the account has) are read leniently: a hub without them, or an unknown value, counts as granted in the ring and not
+  asked for in "+" (`EmpireData.init(from:)`), no install link. Ring: tap the front province to open it (its app if
+  installed, else its website, else its page with "The … app isn't on this iPhone" and, when the hub sends an https
+  install link, **Install**), hold any tab for its page; on the page the name is the link (Patrik, 2026-10-24).
+  **Notification** (2026-10-25): a member whose request Patrik approved gets "<App> is ready" (`url` `empire://ring`,
+  thread `access`, no actions); tapping it closes any sheet and asks the hub again, so the new app is in the ring
+  (`EmpireLink`, `EmpireNavigation`, which `ContentView` owns so a tap works before the hub has loaded; `onChange(…,
+  initial: true)` so a tap that launched the app is not missed). The app declares no URL scheme: links come only in
+  the payload. No push to Patrik: his sign-ups and access requests come by email and he decides in the approvals sheet
+  (Patrik, 2026-10-26). `ProvinceOpener` tries the app's URL and uses iOS's answer, so no
   scheme is declared anywhere (no `LSApplicationQueriesSchemes`; a new province app needs no change here). Province marks load from the hub with the
   Bearer token, so the samples show monograms. Approvals list new sign-ups and approved accounts asking for more apps
   (`PendingAccount.requested`/`approved`), each with the apps asked for and "Email not confirmed yet" while `verified`
@@ -323,10 +344,10 @@ specified yet) → new apps. The other items fit in between.
   `-supportPhase sending|sent|offline|tooMany|loggedOut|other`.
 - **Push** (2026-10-24): `Shared/Push/` (`PushCenter`, `PushAppDelegate`, tests in `EmpireTests/PushCenterTests`)
   registers devices with the Empire push service (`ares-empire/docs/PUSH.md`; dry run until the APNs key). Wired into
-  Aresus and Arestemis (`@UIApplicationDelegateAdaptor(PushAppDelegate.self)` in the App, `push.start` + routing of
-  `openedURL` in ContentView, never in samples/tests); each needs the Push Notifications capability (paid team) and,
-  for time-sensitive notifications, the `com.apple.developer.usernotifications.time-sensitive` entitlement (in the
-  projects already). Nothing in Shared may use
+  Aresus, Arestemis and the Empire app (`@UIApplicationDelegateAdaptor(PushAppDelegate.self)` in the App, `push.start`
+  + routing of `openedURL` in ContentView, never in samples/tests); each needs the Push Notifications capability (paid
+  team; `aps-environment` is in their entitlements) and, for time-sensitive notifications, the
+  `com.apple.developer.usernotifications.time-sensitive` entitlement (Arestemis, Aresus). Nothing in Shared may use
   `UIApplication.shared` (the Aresium widget compiles Shared too).
 - **Aresus app** (2026-10-24, `Aresus/`): two tabs, Aresus (summary, server card, province boxes, province page) and
   Aresync (machines, runs by day, run sheet), on the Aresus API (`aresus/docs/API.md`, samples in
