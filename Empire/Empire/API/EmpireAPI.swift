@@ -9,13 +9,11 @@ struct EmpireAPI {
         try await decoded("api/empire", token: token, onUnauthorized: onUnauthorized)
     }
 
-    func ring(add slug: String, token: String, onUnauthorized: () -> Void = {}) async throws -> EmpireData {
-        try await decoded("api/empire/ring", body: JSONEncoder().encode(["add": slug]),
-                          token: token, onUnauthorized: onUnauthorized)
-    }
-
-    func ring(remove slug: String, token: String, onUnauthorized: () -> Void = {}) async throws -> EmpireData {
-        try await decoded("api/empire/ring", body: JSONEncoder().encode(["remove": slug]),
+    /// Asks for access to an app of the "+" sheet (`{"service": slug}`): it goes into the account's `requested` and
+    /// Patrik is told. Answers the hub data afresh, with that app's `access` now "requested"; asking again changes
+    /// nothing. 400 `bad_request` (with the hub's sentence) for an app that cannot be requested.
+    func request(service slug: String, token: String, onUnauthorized: () -> Void = {}) async throws -> EmpireData {
+        try await decoded("api/empire/request", body: JSONEncoder().encode(["service": slug]),
                           token: token, onUnauthorized: onUnauthorized)
     }
 

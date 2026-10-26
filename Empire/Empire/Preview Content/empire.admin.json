@@ -27,8 +27,10 @@
         "changelog": []
       },
       "state": "open",
+      "live": "€1,339 spent in October",
       "app": "aresium://",
-      "live": "€1,339 spent in October"
+      "install": null,
+      "access": "granted"
     },
     {
       "slug": "arestoteles",
@@ -51,8 +53,10 @@
         "changelog": []
       },
       "state": "open",
+      "live": "Website up · vault synced 2 min ago",
       "app": "arestoteles://",
-      "live": "Website up · vault synced 2 min ago"
+      "install": null,
+      "access": "granted"
     },
     {
       "slug": "arestemis",
@@ -75,8 +79,10 @@
         "changelog": []
       },
       "state": "open",
+      "live": "Issue: Server down since 04:53",
       "app": "arestemis://",
-      "live": "Issue: Server down since 04:53"
+      "install": "https://example.com/testflight/arestemis",
+      "access": "granted"
     },
     {
       "slug": "aresolus",
@@ -101,8 +107,10 @@
         "changelog": []
       },
       "state": "open",
+      "live": null,
       "app": null,
-      "live": null
+      "install": null,
+      "access": "granted"
     },
     {
       "slug": "aresync",
@@ -129,8 +137,10 @@
         "changelog": []
       },
       "state": "open",
+      "live": "Last sync 3 min ago on 2 machines",
       "app": null,
-      "live": "Last sync 3 min ago on 2 machines"
+      "install": null,
+      "access": "granted"
     },
     {
       "slug": "aresus",
@@ -153,12 +163,19 @@
         "changelog": []
       },
       "state": "open",
+      "live": "All running · checked 1 min ago",
       "app": "aresus://",
-      "live": "All running · checked 1 min ago"
+      "install": null,
+      "access": "granted"
     }
   ],
   "addable": [],
   "chronicle": [
+    {
+      "at": "2026-10-25",
+      "project": "empire",
+      "text": "The Empire app was reviewed by three independent reviewers before its first TestFlight build, and their fixes are in: the apps that hold only Patrik's data (Aresium, Arestoteles, Aresus) now let in only him, so approving a request can no longer open them; the hub's answers and errors follow one checked shape; tapping a province always opens something; and every website links the privacy policy and imprint."
+    },
     {
       "at": "2026-10-25",
       "project": "empire",

@@ -1,8 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<!-- One login for all Empire apps: the shared App Group and Keychain group (Shared/EmpireShared.swift). -->
+<!-- One login for all Empire apps: the shared App Group and Keychain group (Shared/EmpireShared.swift).
+     Push notifications (ares-empire/docs/PUSH.md): sign-ups and access requests for admins, "<App> is ready" for
+     members. Needs the paid team on a device; the simulator embeds it as a simulated entitlement. -->
 <plist version="1.0">
 <dict>
+	<key>aps-environment</key>
+	<string>development</string>
 	<key>com.apple.security.application-groups</key>
 	<array>
 		<string>group.de.ares-empire.shared</string>

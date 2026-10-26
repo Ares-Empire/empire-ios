@@ -35,6 +35,21 @@ struct ServerSamplesTests {
         #expect(data.projects.isEmpty && data.chronicle.isEmpty && !data.me.admin)
     }
 
+    @Test func memberRingIsWhatTheAccountHasWithItsInstallLink() throws {
+        let data = try JSONDecoder().decode(EmpireData.self, from: sample("empire.member"))
+        #expect(data.projects.allSatisfy { $0.access == .granted })
+        #expect(data.projects.contains { $0.install != nil })
+        #expect(data.addable.allSatisfy { $0.install == nil && $0.access != .granted })
+    }
+
+    @Test(arguments: ["empire.requested", "access-request"])
+    func askedAppShowsAsRequested(_ name: String) throws {
+        let data = try JSONDecoder().decode(EmpireData.self, from: sample(name))
+        let asked = try #require(data.addable.first { $0.access == .requested })
+        #expect(!asked.isComingSoon)
+        #expect(data.addable.contains { $0.isComingSoon && $0.access == .notRequested })
+    }
+
     @Test func approvalsAndTheDecisionAnswerDecode() throws {
         let list = try JSONDecoder().decode([PendingAccount].self, from: sample("approvals"))
         #expect(!list.isEmpty && list.allSatisfy { $0.verified != nil })

@@ -5,20 +5,19 @@ import Testing
 @MainActor
 struct EmpireAPITests {
     enum Route: String, CaseIterable {
-        case empire, add, remove, approvals, approve, decline
+        case empire, request, approvals, approve, decline
 
         var path: String {
             switch self {
             case .empire: "/api/empire"
-            case .add, .remove: "/api/empire/ring"
+            case .request: "/api/empire/request"
             case .approvals: "/api/empire/approvals"
             case .approve, .decline: "/api/empire/approvals/fictional-id"
             }
         }
         var body: [String: String]? {
             switch self {
-            case .add: ["add": "aresium"]
-            case .remove: ["remove": "aresium"]
+            case .request: ["service": "arestemis"]
             default: nil
             }
         }
@@ -26,8 +25,8 @@ struct EmpireAPITests {
         func call(_ api: EmpireAPI, onUnauthorized: () -> Void = {}) async throws {
             switch self {
             case .empire: _ = try await api.empire(token: "fictional-token", onUnauthorized: onUnauthorized)
-            case .add: _ = try await api.ring(add: "aresium", token: "fictional-token", onUnauthorized: onUnauthorized)
-            case .remove: _ = try await api.ring(remove: "aresium", token: "fictional-token", onUnauthorized: onUnauthorized)
+            case .request:
+                _ = try await api.request(service: "arestemis", token: "fictional-token", onUnauthorized: onUnauthorized)
             case .approvals: _ = try await api.approvals(token: "fictional-token", onUnauthorized: onUnauthorized)
             case .approve, .decline:
                 try await api.decide(id: "fictional-id", approve: self == .approve, requested: ["arestemis"],
@@ -38,18 +37,25 @@ struct EmpireAPITests {
 
     @Test(arguments: [false, true])
     func bundledSamplesDecode(user: Bool) throws {
-        let sample = try EmpireSamples.load(user: user)
+        try Self.checkSample(EmpireSamples.load(user: user), user: user)
+    }
+
+    /// What sample mode needs from the hub's own answers (Preview Content, scripts/empire-fixtures.sh). It holds for the
+    /// samples from before the hub's 2026-10-25 change (Aresium in the member's ring, coming soon) and after it
+    /// (Arestemis in the ring, Aresium in "+").
+    static func checkSample(_ sample: EmpireData, user: Bool) throws {
         #expect(sample.version == 2)
         #expect(sample.me.admin == !user)
-        #expect(!sample.me.id.isEmpty)  // the samples are the hub's own answers (scripts/empire-fixtures.sh)
-        let aresium = try #require(sample.projects.first { $0.slug == "aresium" })
+        #expect(!sample.me.id.isEmpty)  // the samples are the hub's own answers
+        let aresium = try #require((sample.projects + sample.addable).first { $0.slug == "aresium" })
         #expect(aresium.logo == "brand/hermes.webp")
         #expect(aresium.app == "aresium://")
         #expect(aresium.isComingSoon == user)
         #expect(!aresium.detail.features.isEmpty)
         #expect(user ? aresium.live == nil : aresium.live != nil)
+        #expect(sample.projects.allSatisfy { $0.access == .granted })
         #expect(user ? sample.pending == 0 : (sample.pending ?? 0) > 0)
-        #expect(user ? sample.ideas.isEmpty : !sample.ideas.isEmpty)
+        #expect(user ? sample.ideas.isEmpty : !sample.ideas.isEmpty && sample.addable.isEmpty)
         #expect(!sample.chronicle.isEmpty)
         #expect(try JSONDecoder().decode(EmpireData.self, from: JSONEncoder().encode(sample)) == sample)
     }
@@ -62,8 +68,7 @@ struct EmpireAPITests {
         let api = EmpireAPI(transport: transport)
         switch route {
         case .empire: #expect(try await api.empire(token: "fictional-token") == sample)
-        case .add: #expect(try await api.ring(add: "aresium", token: "fictional-token") == sample)
-        case .remove: #expect(try await api.ring(remove: "aresium", token: "fictional-token") == sample)
+        case .request: #expect(try await api.request(service: "arestemis", token: "fictional-token") == sample)
         case .approvals: #expect(try await api.approvals(token: "fictional-token") == pending)
         default:
             // The hub's answer before it sent the list: `{"ok": true}` (webauth/server.py decide_approval).

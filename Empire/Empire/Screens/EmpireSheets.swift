@@ -1,8 +1,9 @@
 import SwiftUI
 import UIKit
 
-/// The phone hub's dialogs (mobile.jsx `Dialog`, `Province`, `Approvals`, the add sheet and the idea page), as native
-/// sheets: a quiet header with the section's name and a close button, then the page. Plain ivory buttons, no gold.
+/// The phone hub's dialogs (mobile.jsx `Dialog`, `Province`, `Approvals`, the "+" sheet and the idea page), as native
+/// sheets: a quiet header with the section's name and a close button, then the page. Plain ivory buttons; gold only
+/// for the status words and the "+" sheet's quiet Ask for access.
 struct EmpireSheetView: View {
     let sheet: EmpireHome.Sheet
     let data: EmpireData
@@ -34,23 +35,23 @@ struct EmpireSheetView: View {
             }
             .scrollIndicators(.hidden)
         }
-        .interactiveDismissDisabled(status.ringBusy || status.deciding)
+        .interactiveDismissDisabled(status.requesting != nil || status.deciding)
     }
 
     private var title: String {
         switch sheet {
         case .province: String(localized: "Provinces")
         case .idea: String(localized: "Expansions")
-        case .add: String(localized: "Add a province")
+        case .moreApps: String(localized: "More apps")
         case .approvals: String(localized: "Approvals")
         }
     }
 
     private var error: String? {
         switch sheet {
-        case .province, .add: status.ringError
+        case .moreApps: status.requestError
         case .approvals: status.approvalsError
-        case .idea: nil
+        case .province, .idea: nil
         }
     }
 
@@ -59,12 +60,11 @@ struct EmpireSheetView: View {
         case .province(let province, let unopened):
             // the live copy, so a refresh while the page is open shows through
             ProvincePage(province: data.projects.first { $0.slug == province.slug } ?? province, data: data,
-                         mark: marks[province.slug], marks: marks, busy: status.ringBusy, unopened: unopened,
-                         actions: actions, close: close)
+                         mark: marks[province.slug], marks: marks, unopened: unopened, actions: actions)
         case .idea(let idea):
             IdeaPage(idea: idea)
-        case .add:
-            AddPage(addable: data.addable, marks: marks, busy: status.ringBusy, actions: actions, close: close)
+        case .moreApps:
+            MoreAppsPage(addable: data.addable, marks: marks, requesting: status.requesting, actions: actions)
         case .approvals:
             ApprovalsPage(status: status, actions: actions)
         }
@@ -222,16 +222,19 @@ private struct PressedOpacity: ButtonStyle {
     }
 }
 
-/// A province's mark at page size: the image, else its initial in a thin circle (.em-monogram).
+/// A province's mark at page size: the image, else its initial in a thin circle (.em-monogram, 48 pt; smaller in a
+/// "+" sheet row).
 private struct PageMark: View {
     let name: String
     let image: UIImage?
+    var monogram: CGFloat = 48
     var body: some View {
         if let image {
             Image(uiImage: image).resizable().scaledToFit()
         } else {
-            Text(String(name.prefix(1)).uppercased()).font(AppFont.text(22)).foregroundStyle(EmpireStyle.title(dark: 0xE6E6DF))
-                .frame(width: 48, height: 48)
+            Text(String(name.prefix(1)).uppercased()).font(AppFont.text(monogram * 0.46))
+                .foregroundStyle(EmpireStyle.title(dark: 0xE6E6DF))
+                .frame(width: monogram, height: monogram)
                 .overlay(Circle().strokeBorder(EmpireStyle.edge(dark: 0x22 / 255)))
         }
     }
@@ -239,26 +242,25 @@ private struct PageMark: View {
 
 // MARK: - province
 
+/// A province's page (hold its card, or a tap that opened nothing). When opening it opened nothing and the hub sends
+/// the app's install link (TestFlight while testing, the App Store later), the page offers Install.
 private struct ProvincePage: View {
     let province: Province
     let data: EmpireData
     let mark: UIImage?
     let marks: [String: UIImage]
-    let busy: Bool
     let actions: EmpireHomeActions
-    let close: () -> Void
     /// Opening it opened nothing: its app is not on this iPhone and it has no website. The name stops being a link.
     @State private var unopened: Bool
+    @Environment(\.openURL) private var openURL
 
-    init(province: Province, data: EmpireData, mark: UIImage?, marks: [String: UIImage], busy: Bool, unopened: Bool,
-         actions: EmpireHomeActions, close: @escaping () -> Void) {
+    init(province: Province, data: EmpireData, mark: UIImage?, marks: [String: UIImage], unopened: Bool,
+         actions: EmpireHomeActions) {
         self.province = province
         self.data = data
         self.mark = mark
         self.marks = marks
-        self.busy = busy
         self.actions = actions
-        self.close = close
         _unopened = State(initialValue: unopened)
     }
 
@@ -282,6 +284,14 @@ private struct ProvincePage: View {
                     .padding(.bottom, 8)
             } else if unopened {
                 Note(text: String(localized: "The \(province.name) app isn’t on this iPhone.")).padding(.bottom, 8)
+                if let install = province.installURL {
+                    Button { openURL(install) } label: {
+                        HStack(spacing: 8) { Image(systemName: "arrow.down.circle").font(.system(size: 13)); Text("Install") }
+                    }
+                    .buttonStyle(HubButtonStyle(kind: .primary))
+                    .accessibilityLabel(Text("Install \(province.name)"))
+                    .padding(.top, 6).padding(.bottom, 8)
+                }
             }
             DetailSection(title: String(localized: "About")) { Paragraph(text: province.detail.about.isEmpty ? province.blurb : province.detail.about) }
             DetailSection(title: String(localized: "Features")) {
@@ -301,21 +311,6 @@ private struct ProvincePage: View {
             Rectangle().fill(EmpireStyle.hairline(dark: 0x10 / 255)).frame(height: 1).padding(.top, 14)
             ChronicleList(title: String(localized: "What's new"), entries: data.chronicle.filter { $0.project == province.slug }, marks: marks)
                 .padding(.top, 23)
-            if !admin {
-                Button {
-                    Task { if await actions.remove(province.slug) { close() } }
-                } label: {
-                    HStack(spacing: 9) {
-                        Image(systemName: "minus").font(.system(size: 12))
-                        Text(busy ? "Removing…" : "Remove from my ring")
-                    }
-                    .font(AppFont.text(11)).foregroundStyle(EmpireStyle.body(dark: 0xB1B7B0))
-                    .frame(maxWidth: .infinity, minHeight: 46)
-                    .overlay(RoundedRectangle(cornerRadius: 11).strokeBorder(EmpireStyle.edge(dark: 0x18 / 255)))
-                }
-                .buttonStyle(.plain).disabled(busy).opacity(busy ? 0.5 : 1)
-                .padding(.top, 34)
-            }
         }
     }
 
@@ -341,41 +336,103 @@ private struct IdeaPage: View {
     }
 }
 
-// MARK: - add
+// MARK: - more apps
 
-private struct AddPage: View {
+/// The "+" card's sheet (members): the other apps open to users, each with its state on the right: Ask for access (a
+/// quiet gold button; then "Asking…"), Asked · waiting for approval, or Coming soon (shown, not requestable). The
+/// state after asking is the hub's answer; a refusal shows its sentence at the top of the sheet.
+private struct MoreAppsPage: View {
     let addable: [Province]
     let marks: [String: UIImage]
-    let busy: Bool
+    let requesting: String?
     let actions: EmpireHomeActions
-    let close: () -> Void
 
     var body: some View {
         if addable.isEmpty {
-            EmptyState(symbol: "checkmark", title: String(localized: "Your ring is up to date."),
-                       note: String(localized: "No other provinces are available to add."))
+            EmptyState(symbol: "checkmark", title: String(localized: "No other apps right now."),
+                       note: String(localized: "New apps show up here when they open."))
         } else {
-            VStack(spacing: 14) {
-                ForEach(addable) { province in
-                    VStack(alignment: .leading, spacing: 22) {
-                        HStack(spacing: 15) {
-                            PageMark(name: province.name, image: marks[province.slug]).frame(width: 48, height: 54)
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text(province.name).font(AppFont.text(18, weight: .medium)).foregroundStyle(EmpireStyle.title(dark: 0xE4E9DF))
-                                if province.isComingSoon { StatusWord(text: EmpireStyle.statusWord("COMING SOON")) }
-                            }
-                        }
-                        Button {
-                            Task { if await actions.add(province.slug) { close() } }
-                        } label: {
-                            HStack(spacing: 8) { Image(systemName: "plus").font(.system(size: 12)); Text(busy ? "Adding…" : "Add to my ring") }
-                        }
-                        .buttonStyle(HubButtonStyle(kind: .primary)).disabled(busy)
-                    }
-                    .hubCard()
+            VStack(alignment: .leading, spacing: 0) {
+                Text("Ask for an app, and it joins your ring once it’s approved.")
+                    .font(AppFont.text(12)).lineSpacing(5).foregroundStyle(EmpireStyle.body(dark: 0xA9AEAA))
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.bottom, 20)
+                VStack(spacing: 12) {
+                    ForEach(addable) { province in row(province) }
                 }
             }
         }
+    }
+
+    private func row(_ province: Province) -> some View {
+        HStack(alignment: .top, spacing: 14) {
+            PageMark(name: province.name, image: marks[province.slug], monogram: 38).frame(width: 40, height: 40)
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 10) {
+                    Text(province.name).font(AppFont.text(15, weight: .medium))
+                        .foregroundStyle(EmpireStyle.title(dark: 0xE4E9DF)).lineLimit(1)
+                        .layoutPriority(1)                  // the state takes what is left (one line or two)
+                    Spacer(minLength: 6)
+                    state(province)
+                }
+                .frame(minHeight: 40)
+                if !province.blurb.isEmpty {
+                    Text(province.blurb).font(AppFont.text(12)).lineSpacing(4)
+                        .foregroundStyle(EmpireStyle.quiet(dark: 0x969E97))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+        .hubCard(padding: 16)
+    }
+
+    @ViewBuilder private func state(_ province: Province) -> some View {
+        if province.isComingSoon {
+            StatusWord(text: EmpireStyle.statusWord("COMING SOON"))
+        } else if province.access == .requested {
+            // One line when it fits beside the name, else two.
+            ViewThatFits(in: .horizontal) {
+                Text("Asked · waiting for approval").lineLimit(1)
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("Asked")
+                    Text("waiting for approval").foregroundStyle(EmpireStyle.quiet(dark: 0x8F9390))
+                }
+            }
+            .font(AppFont.text(11)).foregroundStyle(EmpireStyle.heading(dark: 0xC3C9C1))
+            .multilineTextAlignment(.trailing)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text("Asked, waiting for approval"))
+        } else if province.canRequest {
+            let asking = requesting == province.slug
+            Button { Task { await actions.request(province.slug) } } label: {
+                HStack(spacing: 6) {
+                    if asking { ProgressView().controlSize(.mini).tint(EmpireStyle.gold2) }
+                    Text(asking ? "Asking…" : "Ask for access")
+                }
+            }
+            .buttonStyle(AskButtonStyle())
+            .disabled(requesting != nil)
+            .accessibilityLabel(asking ? Text("Asking for \(province.name)") : Text("Ask for access to \(province.name)"))
+        }
+    }
+}
+
+/// The "+" sheet's Ask for access: a quiet capsule with the hub's gold ink and a thin gold edge (gold as an accent only).
+private struct AskButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(AppFont.text(11.5, weight: .semibold))
+            .foregroundStyle(EmpireStyle.gold2)
+            .lineLimit(1)
+            .padding(.horizontal, 13).frame(minHeight: 32)
+            .background(Color(light: Color(hex: 0x9A6B1F, opacity: 0.06), dark: Color(hex: 0xCFA24F, opacity: 0.06)),
+                        in: .capsule)
+            .overlay(Capsule().strokeBorder(Color(light: Color(hex: 0x9A6B1F, opacity: 0.42),
+                                                  dark: Color(hex: 0xCFA24F, opacity: 0.40))))
+            .contentShape(.capsule)
+            .opacity(isEnabled ? (configuration.isPressed ? 0.6 : 1) : 0.45)
     }
 }
 
@@ -513,8 +570,8 @@ private struct EmptyState: View {
 
 private extension View {
     /// .em-account / .em-catalog-card
-    func hubCard() -> some View {
-        padding(20)
+    func hubCard(padding inset: CGFloat = 20) -> some View {
+        padding(inset)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background {
                 let shape = RoundedRectangle(cornerRadius: 17, style: .continuous)

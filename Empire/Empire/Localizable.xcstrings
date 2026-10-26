@@ -27,46 +27,6 @@
         }
       }
     },
-    "Add a province" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Provinz hinzufügen"
-          }
-        }
-      }
-    },
-    "Add a province to your ring" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Füge deinem Ring eine Provinz hinzu"
-          }
-        }
-      }
-    },
-    "Add to my ring" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zu meinem Ring hinzufügen"
-          }
-        }
-      }
-    },
-    "Adding…" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wird hinzugefügt…"
-          }
-        }
-      }
-    },
     "Approvals" : {
       "localizations" : {
         "de" : {
@@ -93,6 +53,96 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Freigeben"
+          }
+        }
+      }
+    },
+    "Ask for access" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zugang anfragen"
+          }
+        }
+      }
+    },
+    "Ask for access to %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zugang zu %@ anfragen"
+          }
+        }
+      }
+    },
+    "Ask for access to more apps" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zugang zu weiteren Apps anfragen"
+          }
+        }
+      }
+    },
+    "Ask for an app, and it joins your ring once it’s approved." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Frag eine App an. Sobald sie freigegeben ist, kommt sie in deinen Ring."
+          }
+        }
+      }
+    },
+    "Asked" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Angefragt"
+          }
+        }
+      }
+    },
+    "Asked · waiting for approval" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Angefragt · wartet auf Freigabe"
+          }
+        }
+      }
+    },
+    "Asked, waiting for approval" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Angefragt, wartet auf Freigabe"
+          }
+        }
+      }
+    },
+    "Asking for %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ wird angefragt"
+          }
+        }
+      }
+    },
+    "Asking…" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wird angefragt…"
           }
         }
       }
@@ -271,6 +321,26 @@
         }
       }
     },
+    "Install" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Installieren"
+          }
+        }
+      }
+    },
+    "Install %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ installieren"
+          }
+        }
+      }
+    },
     "Keep account" : {
       "localizations" : {
         "de" : {
@@ -332,12 +402,32 @@
         }
       }
     },
+    "More apps" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Weitere Apps"
+          }
+        }
+      }
+    },
     "New account" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Neues Konto"
+          }
+        }
+      }
+    },
+    "New apps show up here when they open." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neue Apps erscheinen hier, sobald sie verfügbar sind."
           }
         }
       }
@@ -372,12 +462,12 @@
         }
       }
     },
-    "No other provinces are available to add." : {
+    "No other apps right now." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Es gibt keine weiteren Provinzen zum Hinzufügen."
+            "value" : "Gerade keine weiteren Apps."
           }
         }
       }
@@ -439,26 +529,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Provinzen"
-          }
-        }
-      }
-    },
-    "Remove from my ring" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aus meinem Ring entfernen"
-          }
-        }
-      }
-    },
-    "Removing…" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wird entfernt…"
           }
         }
       }
@@ -564,12 +634,12 @@
         }
       }
     },
-    "Your ring is up to date." : {
+    "waiting for approval" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dein Ring ist vollständig."
+            "value" : "wartet auf Freigabe"
           }
         }
       }

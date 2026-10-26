@@ -16,7 +16,7 @@ filled the placeholders.
 
   | Bundle | Collected (all linked to the account, App Functionality, no tracking) | Required-reason APIs |
   |---|---|---|
-  | Ares Empire | Email Address, Name, User ID, Customer Support | UserDefaults `CA92.1` (language), `1C8F.1` (App Group) |
+  | Ares Empire | Email Address, Name, User ID, Device ID, Customer Support | UserDefaults `CA92.1` (language), `1C8F.1` (App Group) |
   | Aresium | Email Address, Name, User ID, Other Financial Info, Customer Support | UserDefaults `CA92.1` (theme, language), `1C8F.1` |
   | Aresium widget | none (reads the app's saved figures) | UserDefaults `1C8F.1` (the app's language) |
   | Arestemis | Email Address, Name, User ID, Device ID, Search History, Other User Content, Customer Support | UserDefaults `CA92.1`, `1C8F.1` |
@@ -40,7 +40,7 @@ For every app: **"Do you or your third-party partners collect data from this app
 
 | App | Data types to tick (App Store Connect's names) |
 |---|---|
-| Ares Empire | Contact Info → Email Address, Name · Identifiers → User ID · User Content → Customer Support |
+| Ares Empire | Contact Info → Email Address, Name · Identifiers → User ID, Device ID · User Content → Customer Support |
 | Aresium | Contact Info → Email Address, Name · Financial Info → Other Financial Info · Identifiers → User ID · User Content → Customer Support |
 | Arestemis | Contact Info → Email Address, Name · Identifiers → User ID, Device ID · Search History · User Content → Other User Content, Customer Support |
 | Aresus | Contact Info → Email Address, Name · Identifiers → User ID, Device ID · User Content → Customer Support |

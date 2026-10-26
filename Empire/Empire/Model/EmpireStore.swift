@@ -6,8 +6,9 @@ final class EmpireStore {
     private(set) var data: EmpireData?
     private(set) var isLoading = false
     private(set) var error: String?
-    private(set) var isRingBusy = false
-    private(set) var ringError: String?
+    /// The app of the "+" sheet whose access request is on its way, if any (one at a time).
+    private(set) var requesting: String?
+    private(set) var requestError: String?
     private(set) var approvals: [PendingAccount] = []
     private(set) var isLoadingApprovals = false
     private(set) var isDeciding = false
@@ -16,6 +17,7 @@ final class EmpireStore {
     let session: EmpireSession
     let isSample: Bool
     private let sampleUser: Bool
+    private let sampleCatalog: Bool
     private let client: EmpireAPI
     private var resetGeneration = 0
     private var dataGeneration = 0
@@ -24,7 +26,7 @@ final class EmpireStore {
     private var sampleApprovals: [PendingAccount]?
 
     init(session: EmpireSession, client: EmpireAPI = EmpireAPI(), sample: Bool = EmpireSamples.isEnabled,
-         sampleUser: Bool = EmpireSamples.isUser) {
+         sampleUser: Bool = EmpireSamples.isUser, sampleCatalog: Bool = EmpireSamples.isCatalog) {
         self.session = session
         self.client = client
         #if DEBUG
@@ -32,12 +34,13 @@ final class EmpireStore {
         #else
         isSample = false
         #endif
-        self.sampleUser = sampleUser
+        self.sampleUser = sampleUser || sampleCatalog
+        self.sampleCatalog = sampleCatalog
         session.onAppDataReset { [weak self] in self?.clear() }
     }
 
     func reload() async {
-        guard !isLoading, !isRingBusy, !isDeciding, isSample || session.isSignedIn else { return }
+        guard !isLoading, requesting == nil, !isDeciding, isSample || session.isSignedIn else { return }
         isLoading = true
         error = nil
         let context = context
@@ -46,8 +49,8 @@ final class EmpireStore {
         do {
             let loaded: EmpireData
             if isSample {
-                // Refreshing a preview must preserve its in-memory ring and approval decisions.
-                loaded = try data ?? EmpireSamples.load(user: sampleUser)
+                // Refreshing a preview must preserve its in-memory requests and approval decisions.
+                loaded = try data ?? loadSample()
             } else {
                 loaded = try await client.empire(token: try token(for: context))
             }
@@ -62,7 +65,7 @@ final class EmpireStore {
 
     func refreshOnForeground(now: Date = .now) async {
         guard !isSample, session.isSignedIn, !session.isBusy, !foregroundRefreshing,
-              !isLoading, !isRingBusy, !isDeciding else { return }
+              !isLoading, requesting == nil, !isDeciding else { return }
         foregroundRefreshing = true
         let context = context
         defer { if isCurrent(context) { foregroundRefreshing = false } }
@@ -73,39 +76,34 @@ final class EmpireStore {
         if lastSuccessfulLoad.map({ now.timeIntervalSince($0) > 5 * 60 }) ?? true { await reload() }
     }
 
-    func ring(add slug: String) async { await changeRing(slug: slug, add: true) }
-    func ring(remove slug: String) async { await changeRing(slug: slug, add: false) }
-
-    private func changeRing(slug: String, add: Bool) async {
-        guard !isRingBusy, !isDeciding, isSample || session.isSignedIn else { return }
+    /// Asks for access to an app of the "+" sheet. The hub answers the data afresh, so the sheet shows the state it
+    /// now has ("Asked · waiting for approval"); a refusal shows the hub's sentence. True when the hub took it.
+    @discardableResult
+    func request(_ slug: String) async -> Bool {
+        guard requesting == nil, !isDeciding, isSample || session.isSignedIn else { return false }
         invalidateDataLoad()
-        isRingBusy = true
-        ringError = nil
+        requesting = slug
+        requestError = nil
         let context = context
-        defer { if isCurrent(context) { isRingBusy = false } }
+        defer { if isCurrent(context) { requesting = nil } }
         do {
             let loaded: EmpireData
             if isSample {
-                let current = try data ?? EmpireSamples.load(user: sampleUser)
-                var projects = current.projects
-                var addable = current.addable
-                if add, let index = addable.firstIndex(where: { $0.slug == slug }) {
-                    projects.append(addable.remove(at: index))
-                } else if !add, let index = projects.firstIndex(where: { $0.slug == slug }) {
-                    addable.append(projects.remove(at: index))
-                }
-                loaded = current.replacing(projects: projects, addable: addable)
-            } else if add {
-                loaded = try await client.ring(add: slug, token: try token(for: context))
+                let current = try data ?? loadSample()
+                loaded = current.replacing(addable: current.addable.map { province in
+                    province.slug == slug && province.canRequest ? province.with(access: .requested) : province
+                })
             } else {
-                loaded = try await client.ring(remove: slug, token: try token(for: context))
+                loaded = try await client.request(service: slug, token: try token(for: context))
             }
-            guard isCurrent(context) else { return }
+            guard isCurrent(context) else { return false }
             data = loaded
             lastSuccessfulLoad = .now
+            return true
         } catch {
-            guard isCurrent(context) else { return }
-            handle(error, context: context) { self.ringError = $0 }
+            guard isCurrent(context) else { return false }
+            handle(error, context: context) { self.requestError = $0 }
+            return false
         }
     }
 
@@ -133,7 +131,7 @@ final class EmpireStore {
     /// elsewhere, and a stale card must not stay.
     @discardableResult
     func decide(id: String, approve: Bool, requested: [String]) async -> Bool {
-        guard !isDeciding, !isRingBusy, isSample || session.isSignedIn else { return false }
+        guard !isDeciding, requesting == nil, isSample || session.isSignedIn else { return false }
         invalidateDataLoad()
         approvalsGeneration += 1
         isLoadingApprovals = false
@@ -147,7 +145,7 @@ final class EmpireStore {
                 var pending = sampleApprovals ?? (sampleUser ? [] : EmpireSamples.approvals)
                 pending.removeAll { $0.id == id }
                 sampleApprovals = pending
-                if data == nil { data = try EmpireSamples.load(user: sampleUser) }
+                if data == nil { data = try loadSample() }
                 answer = DecisionAnswer(approvals: pending, pending: pending.count)
             } else {
                 answer = try await client.decide(id: id, approve: approve, requested: requested,
@@ -203,9 +201,9 @@ final class EmpireStore {
         sampleApprovals = nil
         lastSuccessfulLoad = nil
         error = nil
-        ringError = nil
+        requestError = nil
         approvalsError = nil
-        isRingBusy = false
+        requesting = nil
         isLoadingApprovals = false
         isDeciding = false
         foregroundRefreshing = false
@@ -233,6 +231,10 @@ final class EmpireStore {
     private func invalidateDataLoad() {
         dataGeneration += 1
         isLoading = false
+    }
+
+    private func loadSample() throws -> EmpireData {
+        try sampleCatalog ? EmpireSamples.catalog() : EmpireSamples.load(user: sampleUser)
     }
 
     private func fetchApprovals(_ context: Context) async throws -> [PendingAccount] {

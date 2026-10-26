@@ -7,6 +7,34 @@
   },
   "projects": [
     {
+      "slug": "arestemis",
+      "name": "Arestemis",
+      "url": "",
+      "logo": "brand/artemis.webp",
+      "status": "CONQUERED",
+      "domain": "",
+      "blurb": "Apartment sniper — claims new flat listings the moment they post.",
+      "detail": {
+        "about": "The huntress. Arestemis watches the Munich housing portals and pounces on a new listing the instant it appears — first to the viewing, first to apply. Runs 24/7 as a Telegram bot in the empire (formerly the FlatSniper project).",
+        "features": [
+          "Real-time listing watch",
+          "Instant alerts",
+          "Fast-track applying"
+        ],
+        "setup": "",
+        "wip": [],
+        "ideas": [],
+        "changelog": []
+      },
+      "state": "open",
+      "live": null,
+      "app": "arestemis://",
+      "install": "https://example.com/testflight/arestemis",
+      "access": "granted"
+    }
+  ],
+  "addable": [
+    {
       "slug": "aresium",
       "name": "Aresium",
       "url": "https://aresium.de",
@@ -27,21 +55,22 @@
         "changelog": []
       },
       "state": "coming-soon",
+      "live": null,
       "app": "aresium://",
-      "live": null
+      "install": null,
+      "access": "none"
     }
   ],
-  "addable": [],
   "chronicle": [
     {
-      "at": "2026-10-23",
-      "project": "aresium",
-      "text": "The Aresium iPhone app grew to the full mobile site: transaction detail and recategorise, import (button and share sheet), the red Aresium mode with the ARESIUM band and intro, and two home-screen widgets (this month's spending line; Groceries + Drogerie). The server now also sends the recategorise choices and each month's running total; the old browser calculation and the paint animation are gone."
+      "at": "2026-10-24",
+      "project": "arestemis",
+      "text": "Arestemis's search got simpler: flat or WG, how many move in, sizes, cold and warm rent ranges, dates, portals and extras, each field optional on its own; a sentence can fill in the fields."
     },
     {
-      "at": "2026-10-23",
-      "project": "aresium",
-      "text": "The first iPhone app took shape: native SwiftUI Aresium (Empire login, the start, category and month screens of the mobile site) runs on the simulator. To serve website and app alike, Aresium now calculates every dashboard number on the server (`/api/data` v2), checked identical to the old browser calculation on all real data."
+      "at": "2026-10-24",
+      "project": "arestemis",
+      "text": "Arestemis became an iPhone app: the search set in fields (places anywhere in Germany), the hunt started and paused from the phone, an AI check of every listing against the whole search, matches with their states, and the application text (written once or by AI per listing). The server was rebuilt for Empire accounts; push notifications replace Telegram once the phone can receive them."
     }
   ],
   "ideas": [],
