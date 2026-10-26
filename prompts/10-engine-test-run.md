@@ -1,6 +1,6 @@
 # 10: Aresium engine test run (M5): the server's code inside the app
 
-Status: draft
+Status: merged 2026-10-26 (one engine confirmed: exact results; JIT off: 11 ms for 5,000 payments, 0.43 s for 5,000 CSV rows on the simulator)
 Branches: `codex/10-engine-test-run` in both repos · Worktrees: `../empire-ios-10-engine-test-run` and
 `~/aresium-10-engine-test-run` · Model: `gpt-6.1-sol`, effort `high`
 
