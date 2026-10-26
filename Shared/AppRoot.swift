@@ -44,7 +44,7 @@ struct AppRoot<Content: View>: View {
     private let widget: WidgetLanguage?
     private let content: () -> Content
     @State private var language = AppLanguage.current
-    @State private var window = WindowReference()
+    @State private var window: WindowReference
     @AppStorage(Appearance.key) private var appearance = Appearance.iPhone.rawValue
     @State private var held: ColorScheme?
     /// The iPhone's own look; nil until the window is shown.
@@ -52,11 +52,15 @@ struct AppRoot<Content: View>: View {
     @Environment(\.colorScheme) private var windowScheme
     @Environment(\.scenePhase) private var scenePhase
 
-    /// - Parameter widget: where the app's widget reads the app's choice; nil for apps without a widget.
-    init(setting: LanguageSetting = .standard, widget: WidgetLanguage? = nil, @ViewBuilder content: @escaping () -> Content) {
+    /// - Parameters:
+    ///   - widget: where the app's widget reads the app's choice; nil for apps without a widget.
+    ///   - cover: what the app switcher shows instead of the app's screens (`PrivacyCover`); by default the app's name.
+    init(setting: LanguageSetting = .standard, widget: WidgetLanguage? = nil, cover: PrivacyCover = .app,
+         @ViewBuilder content: @escaping () -> Content) {
         self.setting = setting
         self.widget = widget
         self.content = content
+        _window = State(initialValue: WindowReference(cover: cover))
     }
 
     var body: some View {
@@ -138,7 +142,18 @@ extension View {
 /// The window the root is shown in, to close what is presented over it.
 @MainActor
 private final class WindowReference {
-    weak var window: UIWindow? { didSet { window?.overrideUserInterfaceStyle = style } }
+    weak var window: UIWindow? {
+        didSet {
+            window?.overrideUserInterfaceStyle = style
+            cover.attach(to: window)
+        }
+    }
+    /// The app switcher's cover, on the same scene (`PrivacyCover`).
+    private let cover: PrivacyCoverWindow
+
+    init(cover: PrivacyCover) {
+        self.cover = PrivacyCoverWindow(cover: cover)
+    }
     /// The look the window shows: the app's choice or a held one; unspecified follows the iPhone.
     private var style = UIUserInterfaceStyle.unspecified
 

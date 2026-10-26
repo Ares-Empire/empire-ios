@@ -8,6 +8,11 @@ struct EmpireApp: App {
     init() { AppFont.register() }
 
     var body: some Scene {
-        WindowGroup { AppRoot { ContentView(push: delegate.push) } }
+        WindowGroup {
+            // The app switcher shows the hub's own band, in gold.
+            AppRoot(cover: PrivacyCover(word: "THE EMPIRE", fill: AnyShapeStyle(EmpireStyle.goldText))) {
+                ContentView(push: delegate.push)
+            }
+        }
     }
 }

@@ -234,7 +234,8 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
    comes up. Don't ask before then.
 12. **Before anyone but Patrik gets an app** (council 2026-10-25): ~~log out centrally~~: merged 2026-10-26 (brief 09,
    "One login for all apps" below; on the phone: check a widget and a notification after logging out in another app).
-   Left: a privacy cover in the app switcher (Claude: the look).
+   ~~A privacy cover in the app switcher~~: built 2026-10-26 ("App switcher cover" below; on the phone: check the
+   switcher card and Control Center once TestFlight runs).
    (Installing a missing app from the Empire app: built 2026-10-25, the page's Install from the hub's `install` link.)
 13. **For Patrik to decide** (council 2026-10-25): (a) ~~should a member's ring show every province the account has
    access to~~: decided 2026-10-25, yes (the "Empire app" entry below). (b) What makes the Empire app worth having
@@ -294,6 +295,15 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   asked for it (`log show --predicate 'subsystem == "de.ares-empire.shared"'`; on a simulator via `xcrun simctl spawn
   <udid> log show …`). Verified across the two apps on the simulator with
   `scripts/check-shared-login.sh <udid>` (2026-10-24).
+- **App switcher cover** (2026-10-26, `Shared/Design/PrivacyCover.swift`): while an app is not active (app switcher,
+  Control Center, Notification Center, a system alert) a window of its own above everything, sheets included, shows
+  the app's `LaunchBackground` wall with the band that ends its main screen (the app's display name; the Empire app
+  passes "THE EMPIRE" in gold, `AppRoot(cover:)`), in the look the app shows. Shown on the scene's `willDeactivate`
+  and `didEnterBackground`, faded out (0.18 s) on `didActivate`; it never takes touches. `AppRoot` attaches it to the
+  app's window. DEBUG `-privacyCover` keeps it shown for screenshots; the log category `cover` says when it shows and
+  hides (debug level: `xcrun simctl spawn <udid> log config --subsystem de.ares-empire.shared --mode
+  "level:debug,persist:debug"`). Checked on the simulator 2026-10-26: all five apps in light and dark, and a round trip
+  through Safari.
 - **Accounts in every app** (2026-10-25, brief F2; contract `docs/build-2026-10-25/briefs/F-accounts-contract.md`,
   server side `ares-empire/docs/ACCOUNTS.md` → Accounts in every app): one Ares account, made and run from any app.
   The login (`AresLogin` in `Shared/Design/ProvinceLogin.swift`, used by the provinces and the Empire app; Aresium's
