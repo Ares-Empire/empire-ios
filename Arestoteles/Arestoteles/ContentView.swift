@@ -11,7 +11,6 @@ struct ContentView: View {
     @State private var navigation = AppNavigation()
     @State private var appliedOptions = false
     @State private var openedBestMatch = false
-    @Environment(\.scenePhase) private var scenePhase
     private let options: LaunchOptions
     private let restoresOnLaunch: Bool
     private var session: EmpireSession { store.session }
@@ -26,11 +25,11 @@ struct ContentView: View {
         let account = SampleAccount.session(app: .arestoteles, arguments: arguments)
         let quiet = options.sample || testing || account != nil
         let session = account?.session ?? EmpireSession(app: .arestoteles, restoreOnLaunch: !quiet,
-                                                        installDefaults: quiet ? nil : EmpireShared.defaults)
+                                                        sharedDefaults: quiet ? nil : EmpireShared.defaults)
         restoresOnLaunch = account?.restores ?? !quiet
         let store = Self.makeStore(session: session, options: options, testing: testing || account != nil)
         #else
-        let session = EmpireSession(app: .arestoteles, restoreOnLaunch: true, installDefaults: EmpireShared.defaults)
+        let session = EmpireSession(app: .arestoteles, restoreOnLaunch: true, sharedDefaults: EmpireShared.defaults)
         restoresOnLaunch = true
         let store = Self.makeStore(session: session, options: options, testing: false)
         #endif
@@ -52,16 +51,15 @@ struct ContentView: View {
                               persistence: MemoryPersistence(), spotlight: NoSpotlight(), savedAccount: { nil })
         }
         #endif
+        PushCenter.removeDevicesOnLogout(of: session, sharedDefaults: EmpireShared.defaults)
         return VaultStore(session: session, backend: ArestotelesAPI(token: { session.token }),
                           persistence: FilePersistence.standard, spotlight: DeviceSpotlight(),
                           savedAccount: Self.savedAccount)
     }
 
-    /// The account of the login saved for all Empire apps (only its id is read from the token, never kept or shown),
-    /// so the vault saved on the device is shown only to that account.
+    /// Readable even on a locked background launch: show the saved vault only to the account in the marker.
     private static func savedAccount() -> String? {
-        guard let token = try? TokenKeychain().read() else { return nil }
-        return EmpireToken.accountID(token)
+        LoginMarker.account(in: EmpireShared.defaults)
     }
 
     /// The saved vault stays on screen while the login is restored or waits for the account server (offline).
@@ -92,12 +90,9 @@ struct ContentView: View {
             if restoresOnLaunch { await session.restore() }
             await store.update(renewsLogin: false)
         }
-        .onChange(of: scenePhase) { _, phase in
-            guard phase == .active else { return }
-            Task {
-                if !store.isSample { await session.followSharedLogin() }   // another Empire app may have logged in or out
-                await store.update(minimumAge: 30)
-            }
+        .onEmpireForeground(session: session) {
+            if !store.isSample { await session.followSharedLogin() }   // another Empire app may have logged in or out
+            await store.update(minimumAge: 30)
         }
         .onChange(of: session.generation) { _, _ in
             if !session.isSignedIn && !store.isSample { navigation.reset() }
@@ -130,7 +125,8 @@ struct ContentView: View {
         navigation.reset()
         if store.isSample {
             store.clear()
-            let session = EmpireSession(app: .arestoteles, restoreOnLaunch: false, installDefaults: EmpireShared.defaults)
+            let session = EmpireSession(app: .arestoteles, restoreOnLaunch: false, sharedDefaults: EmpireShared.defaults)
+            PushCenter.removeDevicesOnLogout(of: session, sharedDefaults: EmpireShared.defaults)
             store = VaultStore(session: session, backend: ArestotelesAPI(token: { session.token }),
                                persistence: FilePersistence.standard, spotlight: DeviceSpotlight(),
                                savedAccount: Self.savedAccount)

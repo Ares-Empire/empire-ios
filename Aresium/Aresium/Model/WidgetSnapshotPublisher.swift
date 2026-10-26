@@ -18,8 +18,8 @@ struct WidgetSnapshotPublisher {
         return Self(store: WidgetSnapshotStore(directory: directory), reloadTimelines: {})
     }
 
-    func publish(_ dashboard: Dashboard) throws {
-        if let snapshot = WidgetSnapshot(dashboard: dashboard) { try store.save(snapshot) }
+    func publish(_ dashboard: Dashboard, account: String? = nil) throws {
+        if let snapshot = WidgetSnapshot(dashboard: dashboard, account: account) { try store.save(snapshot) }
         else { try store.delete() }
         reloadTimelines()
     }

@@ -2,7 +2,7 @@ import Foundation
 
 /// What the Aresus widget shows: the overview cut down to a status light. The widget fetches it itself and the app
 /// saves it after every overview it loads (`WidgetStatusStore`), so a widget without a connection shows the last one
-/// with its age. Display data only: no token, no account.
+/// with its age. Display data and its owning account id only; never a login token.
 nonisolated struct WidgetStatus: Codable, Equatable, Sendable {
     /// A province with an issue.
     nonisolated struct Issue: Codable, Equatable, Sendable {
@@ -31,13 +31,14 @@ nonisolated struct WidgetStatus: Codable, Equatable, Sendable {
     let syncLine: String?
     /// The server's check round this status comes from.
     let checked: Date
+    let account: String?
 
     /// After this long without a newer check the status is stale: the widget keeps showing it with its age, but
     /// without its status colour, so an old "All running" never reads as current.
     static let staleAfter: TimeInterval = 60 * 60
 
     init(summary: String, state: AresusState, issues: [Issue], counts: Counts, serverIssue: String?, syncLine: String?,
-         checked: Date) {
+         checked: Date, account: String? = nil) {
         self.summary = summary
         self.state = state
         self.issues = issues
@@ -45,9 +46,10 @@ nonisolated struct WidgetStatus: Codable, Equatable, Sendable {
         self.serverIssue = serverIssue
         self.syncLine = syncLine
         self.checked = checked
+        self.account = account
     }
 
-    init(overview: Overview) {
+    init(overview: Overview, account: String? = nil) {
         let issues = overview.provinces.filter { $0.state == .issue }
             .map { Issue(slug: $0.slug, name: $0.name, line: $0.line) }
         let issueCount = issues.count + (overview.server.issue == nil ? 0 : 1)
@@ -59,7 +61,7 @@ nonisolated struct WidgetStatus: Codable, Equatable, Sendable {
                                  inactive: overview.provinces.count(where: { $0.state == .inactive })),
                   serverIssue: overview.server.issue,
                   syncLine: overview.provinces.first { $0.slug == "aresync" }?.line,
-                  checked: overview.checked)
+                  checked: overview.checked, account: account)
     }
 
     static func summary(issues: Int) -> String {
@@ -115,12 +117,12 @@ nonisolated struct WidgetStatus: Codable, Equatable, Sendable {
     func isStale(at now: Date) -> Bool { now.timeIntervalSince(checked) >= Self.staleAfter }
 
     /// A made-up status for the system's widget gallery and the placeholder (never real data).
-    static func example(checked: Date) -> WidgetStatus {
+    static func example(checked: Date, account: String? = nil) -> WidgetStatus {
         WidgetStatus(summary: summary(issues: 0), state: .active, issues: [],
                      counts: Counts(issue: 0, active: 4, inactive: 4), serverIssue: nil,
                      syncLine: String(localized: LocalizedStringResource("3 machines · last sync 2 min ago",
                                                                          table: "AresusShared",
-                                                                         locale: .appLanguage)), checked: checked)
+                                                                         locale: .appLanguage)), checked: checked, account: account)
     }
 
     /// The moment the status turns stale.

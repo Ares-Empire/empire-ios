@@ -67,7 +67,7 @@ final class AresusStore {
                 let value = try await fetch(context, { try $0.overview() }, { try await client.overview(token: $0) })
                 guard isCurrent(context) else { return }
                 overview = value
-                if !isSample { widget.publish(value) }
+                if !isSample { widget.publish(value, account: session.accountID) }
             case .province(let slug):
                 let value = try await fetch(context, { try $0.province(slug) }, { try await client.province(slug, token: $0) })
                 guard isCurrent(context) else { return }

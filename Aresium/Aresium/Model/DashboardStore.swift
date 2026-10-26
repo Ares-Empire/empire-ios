@@ -81,7 +81,7 @@ final class DashboardStore {
             guard generation == self.generation, fetch == fetchGeneration else { return }
             dashboard = loaded
             lastSuccessfulLoad = .now
-            try widgetPublisher.publish(loaded)
+            try widgetPublisher.publish(loaded, account: session.accountID)
         } catch {
             guard generation == self.generation, fetch == fetchGeneration else { return }
             session.handleAuthFailure(error, generation: generation, token: token)

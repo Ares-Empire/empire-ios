@@ -21,7 +21,8 @@
 				     Shared/Language/LanguageSetting.swift: the app's language). -->
 				<string>CA92.1</string>
 				<!-- 1C8F.1: the App Groups' defaults (Shared/EmpireShared.swift: the first-launch flag;
-				     Shared/Language/WidgetLanguage.swift: the language choice for the widgets). -->
+				     Shared/Language/WidgetLanguage.swift: the language choice for the widgets; the login marker,
+				     Shared/Auth/LoginMarker.swift; the push device record, Shared/Push/PushDeviceStore.swift). -->
 				<string>1C8F.1</string>
 			</array>
 		</dict>

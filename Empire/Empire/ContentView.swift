@@ -10,7 +10,6 @@ struct ContentView: View {
     @State private var navigation = EmpireNavigation()
     @State private var markImages: [String: UIImage] = [:]
     @State private var showsSettings = false
-    @Environment(\.scenePhase) private var scenePhase
     // State, like the store: SwiftUI may build this view again (a new session each time); the marks must keep using
     // the store's session, or they see a logged-out one and load nothing.
     @State private var marks: ProvinceMarks
@@ -43,13 +42,13 @@ struct ContentView: View {
             session = account.session
             restores = account.restores
         } else {
-            session = EmpireSession(app: .empire, restoreOnLaunch: !quiet, installDefaults: quiet ? nil : EmpireShared.defaults)
+            session = EmpireSession(app: .empire, restoreOnLaunch: !quiet, sharedDefaults: quiet ? nil : EmpireShared.defaults)
         }
         // Samples, tests and the screenshot screens never register for push (`-samplePush` routes taps only).
         samplePush = sample && arguments.contains("-samplePush")
         self.push = (quiet || account != nil) && !samplePush ? nil : push
         #else
-        session = EmpireSession(app: .empire, restoreOnLaunch: !quiet, installDefaults: quiet ? nil : EmpireShared.defaults)
+        session = EmpireSession(app: .empire, restoreOnLaunch: !quiet, sharedDefaults: quiet ? nil : EmpireShared.defaults)
         self.push = push
         #endif
         _store = State(initialValue: EmpireStore(session: session, sample: sample))
@@ -96,13 +95,9 @@ struct ContentView: View {
         #if DEBUG
         .sheet(isPresented: $showsSupport) { SupportSheet(session: session, sample: store.isSample) }
         #endif
-        .onChange(of: scenePhase) { _, phase in
-            if phase == .active {
-                Task {
-                    await session.followSharedLogin()        // another Empire app may have logged in or out
-                    await store.refreshOnForeground()
-                }
-            }
+        .onEmpireForeground(session: session) {
+            await session.followSharedLogin()        // another Empire app may have logged in or out
+            await store.refreshOnForeground()
         }
         .onChange(of: session.generation) { _, _ in
             markImages = [:]

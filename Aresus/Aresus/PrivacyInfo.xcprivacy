@@ -21,7 +21,8 @@
 				     setting iOS keeps in Settings → Apps → the app → Language). -->
 				<string>CA92.1</string>
 				<!-- 1C8F.1: the shared App Group's defaults (Shared/EmpireShared.swift: the first-launch flag; for the
-				     widget, Shared/Language/WidgetLanguage.swift: the app's language choice). -->
+				     widget, Shared/Language/WidgetLanguage.swift: the app's language choice; the login marker,
+				     Shared/Auth/LoginMarker.swift; the push device record, Shared/Push/PushDeviceStore.swift). -->
 				<string>1C8F.1</string>
 			</array>
 		</dict>

@@ -1,6 +1,7 @@
 import Foundation
 import Observation
 import UserNotifications
+import os
 
 /// What PushCenter needs from iOS's notification center; a protocol so tests can stand in for the permission dialog.
 protocol PushPermissions {
@@ -29,8 +30,9 @@ struct SystemPushPermissions: PushPermissions {
 /// - While signed in (each new session, and at every launch and foreground via the delegate): asks for permission
 ///   once, then asks iOS for the device token; each token iOS hands over is sent to the push service, which also tells
 ///   it the device is alive.
-/// - On logout, and when this app's access is denied: removes the device, with the Empire token it was registered
-///   with (the session has already forgotten its token when the logout handlers run).
+/// - When this app deletes the saved login on a person's logout: removes every recorded app's device with the ended
+///   login. Following a logout elsewhere, or losing this app's access, removes only this app's device.
+/// - A refused login cannot remove devices. Removal failures are logged without tokens and dropped locally.
 /// - A 401 from the push service is a rejected login (the session's normal failure path); a 403 stops the tries for
 ///   this session.
 /// - A tapped notification's `url` (or the URL the app maps a chosen action to) becomes `openedURL`.
@@ -55,6 +57,7 @@ final class PushCenter {
     @ObservationIgnored private let api: PushAPI
     @ObservationIgnored private let permissions: any PushPermissions
     @ObservationIgnored private let environment: PushEnvironment
+    @ObservationIgnored private let devices: PushDeviceStore
     @ObservationIgnored private var app: String?
     @ObservationIgnored private var session: EmpireSession?
     @ObservationIgnored private var actionURL: (String, URL?) -> URL? = { _, url in url }
@@ -67,12 +70,26 @@ final class PushCenter {
     @ObservationIgnored private var queue: Task<Void, Never>?
 
     static let permissionOptions: UNAuthorizationOptions = [.alert, .sound, .badge]
+    private static let log = Logger(subsystem: "de.ares-empire.shared", category: "push")
 
     init(api: PushAPI = PushAPI(), permissions: any PushPermissions = SystemPushPermissions(),
-         environment: PushEnvironment = .current) {
+         environment: PushEnvironment = .current, sharedDefaults: UserDefaults? = EmpireShared.defaults) {
         self.api = api
         self.permissions = permissions
         self.environment = environment
+        devices = PushDeviceStore(defaults: sharedDefaults)
+    }
+
+    /// Apps without push notifications still remove the other apps' devices on a person's logout. The session owns
+    /// this cleanup-only center through its handler; it never requests permission or registers a device.
+    static func removeDevicesOnLogout(of session: EmpireSession, sharedDefaults: UserDefaults?) {
+        guard let sharedDefaults else { return }       // samples and tests stay isolated
+        let center = PushCenter(sharedDefaults: sharedDefaults)
+        center.removeDevicesOnLogout(of: session)
+    }
+
+    func removeDevicesOnLogout(of session: EmpireSession) {
+        session.onLogout { [self] ended in unregister(ended: ended) }
     }
 
     /// Call when the app's session exists: at launch, and again with the new session after the app restarted in
@@ -95,8 +112,8 @@ final class PushCenter {
         session.onSignIn { [weak self, weak session] in
             if let self, self.session === session { self.refresh() }
         }
-        session.onLogout { [weak self, weak session] in
-            if let self, self.session === session { self.unregister() }
+        session.onLogout { [weak self, weak session] ended in
+            if let self, self.session === session { self.unregister(ended: ended) }
         }
         session.onAppDataReset { [weak self, weak session] in
             // Logout is handled above.
@@ -185,6 +202,7 @@ final class PushCenter {
         registered = (empireToken, device)
         do {
             try await api.register(app: app, deviceToken: device, environment: environment, token: empireToken)
+            devices.save(device, app: app)
         } catch HTTPError.unauthorized {
             if registered?.empireToken == empireToken { registered = nil }   // that token cannot remove it either
             session.handleAuthFailure(HTTPError.unauthorized, generation: generation, token: empireToken)
@@ -195,11 +213,30 @@ final class PushCenter {
         }
     }
 
-    private func unregister() {
-        guard let app, let registered else { return }
+    private func unregister(ended: EmpireSession.EndedLogin? = nil) {
+        let app = app
+        let registered = registered
         self.registered = nil
-        enqueue { [api] in
-            try? await api.unregister(app: app, deviceToken: registered.deviceToken, token: registered.empireToken)
+        // A refused login cannot remove devices. In particular, never turn a refusal into another request/logout.
+        guard ended?.wasRefused != true,
+              let token = ended?.token ?? registered?.empireToken ?? session?.token else { return }
+        let allApps = ended?.deletedSavedLogin == true
+        enqueue { [api, devices] in
+            // Read after any in-flight registration finished, so a 204 arriving after logout is removed as well.
+            var removals = allApps ? devices.devices : [:]
+            if let app, removals[app] == nil, let device = registered?.deviceToken ?? devices.devices[app] {
+                removals[app] = device
+            }
+            for app in removals.keys.sorted() {
+                guard let device = removals[app] else { continue }
+                do {
+                    try await api.unregister(app: app, deviceToken: device, token: token)
+                } catch {
+                    // No credentials, device tokens or server error bodies in the log. Offline logout is best effort.
+                    Self.log.error("\(app, privacy: .public): push device removal failed; dropping its local record")
+                }
+                devices.remove(device, app: app)
+            }
         }
     }
 }

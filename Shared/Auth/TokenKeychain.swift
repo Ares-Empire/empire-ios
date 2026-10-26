@@ -67,6 +67,7 @@ enum FirstLaunchTokenReset {
     static func run(storage: any TokenStorage, defaults: UserDefaults) throws {
         guard !defaults.bool(forKey: key) else { return }
         try storage.delete()
+        LoginMarker.clear(in: defaults)
         defaults.set(true, forKey: key)
     }
 }
