@@ -58,7 +58,7 @@ struct LoginScreen: View {
                 .focused($focused, equals: .password).submitLabel(.go).onSubmit { login() }
         }.font(AppFont.text(16)).padding(18).background(palette.card2, in: RoundedRectangle(cornerRadius: 14))
         if let error = session.error {
-            Text(error).font(AppFont.text(14)).foregroundStyle(palette.expense).accessibilityLabel(error)
+            Text(error).font(AppFont.text(14)).foregroundStyle(palette.expenseText).accessibilityLabel(error)
         } else if let notice = session.notice {
             Text(notice).font(AppFont.text(14)).foregroundStyle(palette.secondary)
         }

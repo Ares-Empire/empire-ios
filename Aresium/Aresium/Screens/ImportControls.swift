@@ -54,7 +54,7 @@ private struct ImportToast: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 9) {
                 Image(systemName: banner.success ? "checkmark.circle" : "exclamationmark.circle")
-                    .foregroundStyle(banner.success ? palette.income : palette.expense)
+                    .foregroundStyle(banner.success ? palette.income : palette.expenseText)
                 Text(banner.message).font(AppFont.text(13, weight: .semibold))
                     .foregroundStyle(palette.ink).fixedSize(horizontal: false, vertical: true)
             }

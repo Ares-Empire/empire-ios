@@ -192,7 +192,7 @@ struct ContentView: View {
     @ViewBuilder private var restoreFeedback: some View {
         if session.needsRestoreRetry, let error = session.error {
             HStack {
-                Text(error).foregroundStyle(palette.expense)
+                Text(error).foregroundStyle(palette.expenseText)
                 Button("Retry") {
                     Task {
                         await session.restore()
