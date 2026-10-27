@@ -1,6 +1,6 @@
 # 26: An inbox for "my bank is missing" from Aresium
 
-Status: merged 2026-10-27 (311 checks; not deployed yet: with brief 21 and the policy)
+Status: merged and deployed 2026-10-27 (311 checks; live: a test request mailed and deleted)
 Repo: ares-empire · Worktree: `~/ares-empire-26-bank-requests` (branch `claude/26-bank-requests`) · Built by: a Claude
 agent
 

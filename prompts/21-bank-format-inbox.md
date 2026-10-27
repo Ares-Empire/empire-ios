@@ -1,6 +1,6 @@
 # 21: An inbox for bank formats people share from Aresium
 
-Status: merged 2026-10-27 (not deployed yet: deploy with the app feature and the policy text)
+Status: merged and deployed 2026-10-27 (live checks: refusals 400, anonymous read 403, rate limit 5/h)
 Repo: ares-empire · Worktree: `~/ares-empire-21-format-inbox` (branch `claude/21-format-inbox`) · Built by: a Claude
 agent
 
