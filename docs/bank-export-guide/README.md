@@ -1,8 +1,18 @@
 # How to get the bank file: steps per bank
 
 Research for brief 19 (`prompts/19-bank-export-guide.md`), checked 2026-10-27. For each bank Aresium reads,
-`steps.json` gives the steps on the bank's website and in its iPhone app, the file type to pick, the limits, how the
-file reaches Aresium, the sources and how sure the steps are. A later brief builds the screen from it.
+the data gives the steps on the bank's website and in its iPhone app, the file type to pick, the limits, how the
+file reaches Aresium, the sources and how sure the steps are.
+
+**The data lives in the app:** [`Aresium/Aresium/Guide/bank-steps.json`](../../Aresium/Aresium/Guide/bank-steps.json)
+(one copy only; moved there by brief 24, `prompts/24-tour-and-bank-guide.md`). Aresium shows it as it is: Settings →
+Help → "Get the file from your bank", the first run's import step and the empty dashboard (`BankGuide`,
+`Screens/BankGuideScreens.swift`; `BankGuideTests` checks every entry). "`steps.json`" below means that file. Brief 24
+also made the data fit the screen: a place without steps (an app that exports nothing, or one no source describes) has
+no `de`/`en` and the app says so in one line, its sentence moved to the bank's `notes`; `fileType.pick` lists the
+label(s) to choose (`{de, en}` where they differ), `fileType.de/en` is the screen's one plain line on why (the
+research's lines on the other party's IBAN moved to `notes` as "File: …"); each bank has a `title`; the `toAresium`
+steps name the guide's „Datei auswählen“ button. To change a bank's steps, edit that file and run the tests.
 
 ## How the data was collected
 
@@ -73,7 +83,7 @@ PayPal (and comdirect and Commerzbank keep it inside the booking text).
 
 ## Findings that matter for Aresium beyond the screen
 
-These came up during the research; none was changed (this brief writes only these two files).
+These came up during the research; none was changed (brief 19 wrote only these two files).
 
 1. **Sparkasse's XML CAMT** is a ZIP with one XML file per booking day. CSV-CAMT is one file with the same
    information, so the guide recommends it (as the brief expected).

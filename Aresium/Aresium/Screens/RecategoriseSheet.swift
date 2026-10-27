@@ -54,6 +54,7 @@ struct RecategoriseSheet: View {
             }
             .disabled(store.isSaving)
         }
+        .tourCard()
         .font(AppFont.text(14)).foregroundStyle(palette.ink).tint(palette.balance)
         .interactiveDismissDisabled(store.isSaving || store.followUp != nil)
         // Phone mode, after a Switch: the merchant's other payments, as a short centred question. The count is on the

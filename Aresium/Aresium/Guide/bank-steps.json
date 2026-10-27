@@ -1,0 +1,1794 @@
+{
+  "about": "How to get a file of your payments out of each bank Aresium reads: per bank, the steps on the website and in the bank's iPhone app, the file to pick and why, the limits, and how the file reaches Aresium. Aresium shows it as it is (Settings → Help → Get the file from your bank; `BankGuide`). Collected from public sources only (no login, no real payment data); how and what is unsure: docs/bank-export-guide/README.md.",
+  "checked": "2026-10-27",
+  "fields": {
+    "id": "The engine profile id (aresium/src/engine/readers/bank-profiles.ts) of the bank's current layout; a short slug where the bank has none of its own.",
+    "profiles": "Every engine profile id that reads this bank's files (current and older layouts).",
+    "names": "What people call the bank, for a search box.",
+    "website.status / app.status": "found: steps from a source; unsure: a part of the steps is not confirmed (see notes); none: no file export there (website.none = app only, app.none = website only).",
+    "website.de / website.en, app.de / app.en": "The steps, German with du; the bank's own labels in quotes. Where the bank has no English page (or its English labels were not found), the English steps keep the German label with its meaning in brackets. Only where there are steps: a place without them (status none, or unsure with no export described) has no de/en, and the app shows one line instead; what the research found about it is in notes.",
+    "website.englishSite": "yes (labels found) / yes, labels not found / no / unsure.",
+    "title": "The bank's name on the screen (a brand name, the same in both languages); without one, the app names it (\"Another bank\").",
+    "fileType.de / fileType.en": "Why that file, as the screen says it: one plain line, no format jargon (labels in quotes only). What the research found about each file (the other party's IBAN and so on) is in notes.",
+    "fileType.pick": "The label(s) to choose, in the bank's own words; one list for both languages, or {de, en} where they differ.",
+    "toAresium": "Keys into the top-level toAresium block: the ways this bank's file reaches Aresium, the usual one first.",
+    "confidence": "high: the bank's own help page, recent; medium: several matching third-party guides, or the bank's page plus a gap; low: one old or indirect source."
+  },
+  "toAresium": {
+    "safari": {
+      "de": [
+        "Fragt Safari, ob du die Datei laden willst: tippe auf „Laden“.",
+        "Die Datei liegt dann in der App „Dateien“ unter „Downloads“.",
+        "Tippe in Aresium auf „Datei auswählen“ und nimm sie aus „Downloads“."
+      ],
+      "en": [
+        "If Safari asks whether to download the file, choose to download it.",
+        "The file is then in the Files app, in “Downloads”.",
+        "In Aresium, tap “Choose file” and take it from “Downloads”."
+      ],
+      "alsoDe": "Oder: Tippe in Safari auf die Downloads-Taste neben dem Suchfeld, öffne die Datei und teile sie an Aresium.",
+      "alsoEn": "Or: in Safari, tap the Downloads button next to the search field, open the file and share it to Aresium.",
+      "sources": [
+        {
+          "url": "https://support.apple.com/de-de/102440",
+          "checked": "2026-10-27",
+          "supports": "Downloads land in Files → iCloud Drive → „Downloads“; Safari's „Downloads“ button next to the search field (English: https://support.apple.com/102440)."
+        },
+        {
+          "url": "https://www.netzwelt.de/browser/safari/dateien-mit-safari-herunterladen-iphone-ipad.html",
+          "checked": "2026-10-27",
+          "supports": "Safari's pop-up asks whether to download; the button is „Laden“ (article 2024-12-05). The English button was not checked."
+        }
+      ]
+    },
+    "share": {
+      "de": [
+        "Tippe in der App deiner Bank auf Teilen.",
+        "Wähle Aresium in der Reihe der Apps.",
+        "Oder sichere sie in „Dateien“ und tippe in Aresium auf „Datei auswählen“."
+      ],
+      "en": [
+        "In your bank's app, tap Share.",
+        "Pick Aresium in the row of apps.",
+        "Or save it to Files and tap “Choose file” in Aresium."
+      ],
+      "sources": [
+        {
+          "url": "../Info.plist",
+          "checked": "2026-10-27",
+          "supports": "Aresium registers for .csv, .xml and MT940 .sta/.mt940 files, so the share sheet offers it for those (not for .txt, .mta or .zip: those are picked inside Aresium or unzipped first)."
+        }
+      ]
+    },
+    "computer": {
+      "de": [
+        "Schick die Datei vom Computer per AirDrop an dein iPhone.",
+        "Oder leg sie in iCloud Drive und öffne sie am iPhone.",
+        "Tippe dann in Aresium auf „Datei auswählen“."
+      ],
+      "en": [
+        "Send the file from the computer to your iPhone with AirDrop.",
+        "Or put it in iCloud Drive and open it on the iPhone.",
+        "Then tap “Choose file” in Aresium."
+      ],
+      "sources": [
+        {
+          "url": "https://support.apple.com/102538",
+          "checked": "2026-10-27",
+          "supports": "AirDrop sends documents between one's own Apple devices; with the same Apple Account they are accepted and saved automatically."
+        }
+      ]
+    },
+    "unzip": {
+      "de": [
+        "Öffne die App „Dateien“ und such die ZIP-Datei.",
+        "Tippe auf die ZIP-Datei: daneben entsteht ein Ordner.",
+        "Tippe in Aresium auf „Datei auswählen“ und nimm die Dateien aus dem Ordner."
+      ],
+      "en": [
+        "Open the Files app and find the ZIP file.",
+        "Tap the ZIP file: a folder appears next to it.",
+        "Tap “Choose file” in Aresium and take the files from that folder."
+      ],
+      "sources": [
+        {
+          "url": "https://support.apple.com/de-de/102532",
+          "checked": "2026-10-27",
+          "supports": "„Tippe auf die ZIP-Datei oder auf das Archiv.“ A folder with the files is created (English: https://support.apple.com/102532)."
+        }
+      ]
+    },
+    "desktopSite": {
+      "de": [
+        "Zeigt die Website auf dem iPhone keinen Export?",
+        "Wähle in Safaris Seitenmenü „Desktop-Website anfordern“.",
+        "Oder mach den Export am Computer."
+      ],
+      "en": [
+        "Does the website show no export on the iPhone?",
+        "In Safari's page menu, choose “Request Desktop Website”.",
+        "Or do the export on a computer."
+      ],
+      "sources": [
+        {
+          "url": "https://www.giga.de/artikel/safari-desktop-ansicht-am-iphone-anfordern/",
+          "checked": "2026-10-27",
+          "supports": "German label „Desktop-Website anfordern“ (under „aA“ in older iOS)."
+        },
+        {
+          "url": "https://www.igeeksblog.com/how-to-request-desktop-site-on-iphone-ipad/",
+          "checked": "2026-10-27",
+          "supports": "English label “Request Desktop Website”; in iOS 26 the menu moved (sources disagree where), so the steps say only “page menu”."
+        }
+      ]
+    },
+    "numbers": {
+      "de": [
+        "Öffne die Excel-Datei in der App „Numbers“.",
+        "Tippe auf „Mehr“, dann „Exportieren“ und „CSV“.",
+        "Sichere die neue Datei in „Dateien“ oder teile sie an Aresium."
+      ],
+      "en": [
+        "Open the Excel file in the Numbers app.",
+        "Tap “More”, then “Export” and “CSV”.",
+        "Save the new file to Files or share it to Aresium."
+      ],
+      "sources": [
+        {
+          "url": "https://support.apple.com/de-de/guide/numbers-iphone/tan3b922d4ad/ios",
+          "checked": "2026-10-27",
+          "supports": "Numbers on iPhone: „Mehr“ → „Exportieren“ → a format (CSV), then send or save (English: https://support.apple.com/guide/numbers-iphone/tan3b922d4ad/ios)."
+        }
+      ]
+    }
+  },
+  "banks": [
+    {
+      "id": "sparkasse-camt",
+      "title": "Sparkasse",
+      "profiles": [
+        "sparkasse-camt",
+        "sparkasse-mt940"
+      ],
+      "names": [
+        "Sparkasse",
+        "Stadtsparkasse",
+        "Kreissparkasse",
+        "KSK",
+        "Spk",
+        "Sparkasse KölnBonn",
+        "Berliner Sparkasse",
+        "Frankfurter Sparkasse",
+        "Stadtsparkasse München",
+        "LZO"
+      ],
+      "website": {
+        "status": "found",
+        "englishSite": "yes, labels not found",
+        "de": [
+          "Melde dich im Online-Banking deiner Sparkasse an.",
+          "Klicke bei deinem Girokonto auf „Umsätze“.",
+          "Stell den Zeitraum ein (über „Filtern“).",
+          "Klicke auf „Exportieren & Drucken“ (ältere Seiten: „Export“).",
+          "Wähle „Excel (CSV-CAMT V8)“ oder „Excel (CSV-CAMT V2)“.",
+          "Speichere die Datei."
+        ],
+        "en": [
+          "Log in to your Sparkasse's online banking.",
+          "Next to your current account, click “Umsätze” (transactions).",
+          "Set the period (with “Filtern”, filter).",
+          "Click “Exportieren & Drucken” (export & print); older pages: “Export”.",
+          "Pick “Excel (CSV-CAMT V8)” or “Excel (CSV-CAMT V2)”.",
+          "Save the file."
+        ]
+      },
+      "app": {
+        "status": "none"
+      },
+      "toAresium": [
+        "safari",
+        "computer",
+        "desktopSite"
+      ],
+      "fileType": {
+        "pick": [
+          "Excel (CSV-CAMT V8)",
+          "Excel (CSV-CAMT V2)"
+        ],
+        "de": "Sie hat alles, was Aresium braucht, in einer Datei.",
+        "en": "It has everything Aresium needs, in one file.",
+        "offered": [
+          "Excel (CSV-CAMT V8)",
+          "Excel (CSV-CAMT V2)",
+          "Excel (CSV-MT940)",
+          "Excel (CSV gefilterte Einträge)",
+          "XML CAMT V8/V2 (ZIP)",
+          "Text MT940"
+        ]
+      },
+      "limits": {
+        "de": "Je nach Sparkasse etwa 2 Jahre zurück; manche nennen 90 oder 180 Tage.",
+        "en": "About 2 years back, depending on the Sparkasse; some guides say 90 or 180 days."
+      },
+      "confidence": {
+        "website": "medium",
+        "app": "high"
+      },
+      "sources": [
+        {
+          "url": "https://www.sparkasse.de/pk/produkte/konten-und-karten/banking/online-services/kontostand-abfragen.html",
+          "checked": "2026-10-27",
+          "supports": "Sparkasse's own page: the menu item „Umsätze“."
+        },
+        {
+          "url": "https://fibunu.com/blog/csv-import-sparkasse",
+          "checked": "2026-10-27",
+          "supports": "„Filtern“, „Exportieren & Drucken“, „Excel (CSV-CAMT V2)“ (2023-08-18)."
+        },
+        {
+          "url": "https://imagetotable.ai/de/blog/extract-sparkasse-kontoauszug-excel",
+          "checked": "2026-10-27",
+          "supports": "Same labels, updated 2026-09-15; claims a 90-day limit (vendor blog, weak)."
+        },
+        {
+          "url": "https://forum.clubdesk.com/topic/3333-import-von-kontoausz%C3%BCgen/",
+          "checked": "2026-10-27",
+          "supports": "The list of formats incl. CSV-CAMT V2/V8, XML CAMT, MT940 (2023-10-10)."
+        },
+        {
+          "url": "https://www.sparkasse-gm.de/content/dam/myif/sk-gm/work/dokumente/pdf/allgemein/Anleitung_Export_Umsatzdaten_IF.pdf",
+          "checked": "2026-10-27",
+          "supports": "Sparkasse Gummersbach's guide: „Umsätze“ → „Exportieren“, four formats (2020-02-05)."
+        },
+        {
+          "url": "https://www.sparkasse-westmuensterland.de/fi/home/services-und-kontakt/online-banking/tipps_und_hilfen.html",
+          "checked": "2026-10-27",
+          "supports": "Older design: „Aktualisieren“, then a format under „Export“; the app shows 90 days (up to 445)."
+        },
+        {
+          "url": "https://homebanking-hilfe.de/forum/topic.php?t=23512",
+          "checked": "2026-10-27",
+          "supports": "CAMT XML download is a ZIP with one XML file per booking day; the web reaches 2 years back (2019)."
+        },
+        {
+          "url": "https://www.sparkasse.de/pk/produkte/konten-und-karten/finanzen-apps/s-app.html",
+          "checked": "2026-10-27",
+          "supports": "The app's features: no export."
+        },
+        {
+          "url": "https://apps.apple.com/de/app/sparkasse-ihre-mobile-filiale/id320599923",
+          "checked": "2026-10-27",
+          "supports": "Release notes up to 8.3.5 (2026-10-16): no export."
+        }
+      ],
+      "notes": "Each Sparkasse runs its own site on the same platform (Finanz Informatik), so the path is the same but the design can lag behind: older pages show „Export“ as a menu or icon next to „Drucken“. The current button name and the V2/V8 names come from 2023 and 2026 third-party guides; no official 2024–2026 page was found. The XML CAMT option is a ZIP (Aresium refuses ZIPs: 'unzip it first'); unzipping in Files works too, but gives one file per day. CSV-MT940 lacks the other party's IBAN. Exports are said to be ISO-8859-1. MT940 for business software was switched off in Nov 2025; whether the web still lists MT940 is unknown. File: CSV-CAMT carries the other party's IBAN. App: The Sparkasse app exports no transactions file, only PDF statements. Use the website."
+    },
+    {
+      "id": "volksbank",
+      "title": "Volksbank, Raiffeisenbank",
+      "profiles": [
+        "volksbank",
+        "volksbank-2021",
+        "volksbank-classic"
+      ],
+      "names": [
+        "Volksbank",
+        "Raiffeisenbank",
+        "VR Bank",
+        "VR-Bank",
+        "Volksbank Raiffeisenbank",
+        "Vereinigte Volksbank",
+        "VR Banking",
+        "VR-NetKey"
+      ],
+      "website": {
+        "status": "found",
+        "englishSite": "unsure",
+        "de": [
+          "Melde dich im OnlineBanking deiner Bank an (VR-NetKey, PIN).",
+          "Öffne die Umsätze deines Girokontos (Seite „Umsatzanzeige“).",
+          "Klicke oben auf „Export“ (neben „Drucken“).",
+          "Wähle bei „Format“ „CSV“.",
+          "Wähle bei „Zeitraum“ „eigener Zeitraum“ und gib die Daten ein.",
+          "Klicke auf „Exportieren“; ab 90 Tagen brauchst du eine TAN."
+        ],
+        "en": [
+          "Log in to your bank's online banking (VR-NetKey, PIN).",
+          "Open your current account's transactions (page “Umsatzanzeige”).",
+          "Click “Export” at the top (next to “Drucken”, print).",
+          "Under “Format”, pick “CSV”.",
+          "Under “Zeitraum” (period), pick “eigener Zeitraum” (own period), enter dates.",
+          "Click “Exportieren” (export); over 90 days needs a TAN."
+        ]
+      },
+      "app": {
+        "status": "unsure",
+        "de": [
+          "Öffne in der VR Banking App dein Konto (ab Version 9.2).",
+          "Such oder filtere die Umsätze für deinen Zeitraum.",
+          "Tippe in der „Umsatzübersicht“ auf „Exportieren“.",
+          "Wähle „CSV“ und teile die Datei an Aresium."
+        ],
+        "en": [
+          "Open your account in the VR Banking app (version 9.2 or newer).",
+          "Search or filter the transactions for your period.",
+          "In the transaction overview, tap “Exportieren” (export).",
+          "Pick “CSV” and share the file to Aresium."
+        ]
+      },
+      "toAresium": [
+        "safari",
+        "share",
+        "computer"
+      ],
+      "fileType": {
+        "pick": [
+          "CSV"
+        ],
+        "de": "Sie hat alles, was Aresium braucht. Die anderen Formate muss die Bank oft erst freischalten.",
+        "en": "It has everything Aresium needs. The other formats often have to be switched on by the bank first.",
+        "offered": [
+          "PDF",
+          "CSV",
+          "MT940 (.mta/.sta)",
+          "CAMT (only if the bank switched it on)"
+        ]
+      },
+      "limits": {
+        "de": "Bis 2 Jahre zurück; mehr als 90 Tage nur mit TAN.",
+        "en": "Up to 2 years back; more than 90 days only with a TAN."
+      },
+      "confidence": {
+        "website": "medium",
+        "app": "low"
+      },
+      "sources": [
+        {
+          "url": "https://atruvia.scene7.com/is/content/atruvia/OnlineBanking%20Ums%C3%A4tze%20exportieren%20(MT940,%20CSV%20oder%20PDF)pdf",
+          "checked": "2026-10-27",
+          "supports": "Guide of VR Bank Fulda on Atruvia's server (current design, undated): „Umsatzanzeige“, „Suchfilter“, „Drucken“, „Export“, „Format“, „Zeitraum“ with „aus Suche“ / „letzter Buchungstag“ / „eigener Zeitraum“, a TAN over 90 days, MT940 only after switching on."
+        },
+        {
+          "url": "https://fibunu.com/blog/csv-import-volksbank",
+          "checked": "2026-10-27",
+          "supports": "„Export“ at the top right, format „CSV“, „Exportieren“ (2023-08-11)."
+        },
+        {
+          "url": "https://vrkennung.de/umsatzluecke-auffuellen-per-onlinebanking-export/",
+          "checked": "2026-10-27",
+          "supports": "Older design (three dots → „Export“), 2 years back, about 3 months per file, MT940 saved as .mta (2021, marked outdated)."
+        },
+        {
+          "url": "https://www.volksbank-pur.de/banking-und-vertraege/banking/neuerungen-im-banking.html",
+          "checked": "2026-10-27",
+          "supports": "The app: „Drucken“ / „Exportieren“ in the „Umsatzübersicht“, PDF or CSV, takes the current search (Aug 2026)."
+        },
+        {
+          "url": "https://apps.apple.com/de/app/vr-banking-einfach-sicher/id1505855171",
+          "checked": "2026-10-27",
+          "supports": "Version 9.2.1 (2026-08-11): „Druck und Export von Umsätzen“; app in German and English."
+        },
+        {
+          "url": "https://github.com/nicolettas-muggelbude/RechnungsFee/blob/main/vorlagen/bank-csv/README.md",
+          "checked": "2026-10-27",
+          "supports": "VR CSV header, UTF-8 with BOM."
+        }
+      ],
+      "notes": "About 700 banks on one platform (Atruvia); the labels come from one bank's guide (Fulda) and match a 2023 third-party guide, but a bank may still show the older design (three dots above the amounts → „Export“). The app export is new (VR Banking 9.2, Aug 2026): only „Exportieren“ in the „Umsatzübersicht“ is quoted by a bank; the other taps and the app CSV's columns are not confirmed. CAMT appears only when the bank switched it on for the account; MT940 may save as .mta, which Aresium's file picker and share sheet do not list (only .sta, .mt940, .txt). The web export takes the dates from the search filter („aus Suche“) unless „eigener Zeitraum“ is picked. File: the CSV carries the other party's IBAN."
+    },
+    {
+      "id": "ing",
+      "title": "ING",
+      "profiles": [
+        "ing"
+      ],
+      "names": [
+        "ING",
+        "ING-DiBa",
+        "ING Deutschland",
+        "ING Girokonto",
+        "Extra-Konto"
+      ],
+      "website": {
+        "status": "found",
+        "englishSite": "no",
+        "de": [
+          "Melde dich im Online-Banking der ING an (banking.ing.de).",
+          "Klicke auf dein Girokonto, um die Umsätze zu sehen.",
+          "Stell mit dem Filter den Zeitraum ein (bis 390 Tage).",
+          "Klicke ganz unten auf der Seite auf „Exportieren“.",
+          "Wähle „CSV (Excel)“ und klicke auf „Jetzt exportieren“."
+        ],
+        "en": [
+          "Log in to ING's online banking (banking.ing.de).",
+          "Click your current account to see the transactions.",
+          "Set the period with the filter (up to 390 days).",
+          "At the very bottom of the page, click “Exportieren” (export).",
+          "Pick “CSV (Excel)” and click “Jetzt exportieren” (export now)."
+        ]
+      },
+      "app": {
+        "status": "none"
+      },
+      "toAresium": [
+        "safari",
+        "computer",
+        "desktopSite"
+      ],
+      "fileType": {
+        "pick": [
+          "CSV (Excel)"
+        ],
+        "de": "Die einzige Datei, die die ING anbietet.",
+        "en": "The only file ING offers.",
+        "offered": [
+          "CSV (Excel)"
+        ]
+      },
+      "limits": {
+        "de": "Bis 390 Tage zurück; die Datei enthält die angezeigten Umsätze.",
+        "en": "Up to 390 days back; the file holds the transactions shown."
+      },
+      "confidence": {
+        "website": "medium",
+        "app": "medium"
+      },
+      "sources": [
+        {
+          "url": "https://www.ing.de/hilfe/banking/",
+          "checked": "2026-10-27",
+          "supports": "Official: „Klicken Sie im Online-Banking am Seitenende auf „Exportieren““; transactions shown up to 390 days back; filters and a period can be set (read through a reader proxy; ing.de timed out)."
+        },
+        {
+          "url": "https://hilfe.vereinsguru.com/de/articles/607881-zahlungen-von-ing-konto-per-csv-exportieren",
+          "checked": "2026-10-27",
+          "supports": "„Exportieren“ bottom left, format „CSV (Excel)“, „Jetzt exportieren“ (2026-04-10)."
+        },
+        {
+          "url": "https://fibunu.com/blog/csv-import-ing",
+          "checked": "2026-10-27",
+          "supports": "„Exportieren“ bottom left, format „CSV“, „Jetzt exportieren“ (2023-08-11)."
+        },
+        {
+          "url": "https://depotstudent.de/ing-export-csv-excel/",
+          "checked": "2026-10-27",
+          "supports": "Export only on the desktop website, not in the ING app (2024-02-10)."
+        },
+        {
+          "url": "https://github.com/nicolettas-muggelbude/RechnungsFee/blob/main/vorlagen/bank-csv/README.md",
+          "checked": "2026-10-27",
+          "supports": "ING CSV: ISO-8859-1, header on line 13 or 14, no IBAN column."
+        }
+      ],
+      "notes": "The date filter's button label was not quoted by any source, so the step does not quote it. In 2023 the format was called „CSV“, in 2026 „CSV (Excel)“. A 2026 converter site describes a download icon at the top right and MT940; ING's own help says „Exportieren“ at the page bottom, and no trustworthy source shows MT940 or CAMT for private customers. The ING app has no English version (developer reply, Dec 2024). File: CSV (Excel) is the only file; it has no IBAN of the other party. App: The ING app exports no transactions file. Use the website."
+    },
+    {
+      "id": "dkb",
+      "title": "DKB",
+      "profiles": [
+        "dkb",
+        "dkb-old",
+        "dkb-visa",
+        "dkb-visa-old"
+      ],
+      "names": [
+        "DKB",
+        "Deutsche Kreditbank",
+        "DKB Girokonto",
+        "DKB Visa",
+        "DKB Kreditkarte"
+      ],
+      "website": {
+        "status": "found",
+        "englishSite": "unsure",
+        "de": [
+          "Melde dich im Web-Banking der DKB an (banking.dkb.de).",
+          "Klicke auf dein Girokonto: die „Umsatzübersicht“ öffnet sich.",
+          "Stell mit dem Filter den Zeitraum ein.",
+          "Klicke auf „Exportieren“ und wähle „CSV“.",
+          "Für die Visa Kreditkarte: öffne die Karte und wiederhole das."
+        ],
+        "en": [
+          "Log in to DKB's web banking (banking.dkb.de).",
+          "Click your current account: the “Umsatzübersicht” (transactions) opens.",
+          "Set the period with the filter.",
+          "Click “Exportieren” (export) and choose “CSV”.",
+          "For the Visa credit card: open the card and repeat."
+        ]
+      },
+      "app": {
+        "status": "none"
+      },
+      "toAresium": [
+        "safari",
+        "computer",
+        "desktopSite"
+      ],
+      "fileType": {
+        "pick": [
+          "CSV"
+        ],
+        "de": "Sie hat alles, was Aresium braucht. Ein PDF kann Aresium nicht lesen.",
+        "en": "It has everything Aresium needs. Aresium cannot read a PDF.",
+        "offered": [
+          "CSV",
+          "PDF"
+        ]
+      },
+      "limits": {
+        "de": "Karte und Konto einzeln exportieren.",
+        "en": "Export card and account separately."
+      },
+      "confidence": {
+        "website": "medium",
+        "app": "high"
+      },
+      "sources": [
+        {
+          "url": "https://www.dkb.de/fragen-antworten/wo-finde-ich-meine-kontoauszuege-und-abrechnungen",
+          "checked": "2026-10-27",
+          "supports": "Official: „Gehe dazu in der (gefilterten) Umsatzübersicht auf „Exportieren““ (mentions PDF, not CSV)."
+        },
+        {
+          "url": "https://www.dkb.de/fragen-antworten/was-kann-ich-tun-wenn-ich-umsaetze-nicht-zuordnen-kann",
+          "checked": "2026-10-27",
+          "supports": "Visa credit card transactions are in the card's own Umsatzübersicht; Visa Debitkarte payments are in the current account's."
+        },
+        {
+          "url": "https://fibunu.com/blog/csv-import-dkb",
+          "checked": "2026-10-27",
+          "supports": "„CSV“ under „Export“ (2024-04-15)."
+        },
+        {
+          "url": "https://www.ifun.de/dkb-neue-freigabemethoden-und-serverwechsel-fuer-finanzsoftware-243660/",
+          "checked": "2026-10-27",
+          "supports": "Reader comments: web banking creates a transaction list as PDF and CSV (Nov 2024)."
+        },
+        {
+          "url": "https://apps.apple.com/de/app/dkb/id1473806360",
+          "checked": "2026-10-27",
+          "supports": "App release notes: transactions saved as PDF (v2.31.0, 2025-02-13; v2.57, Sept 2026); no CSV."
+        },
+        {
+          "url": "https://raw.githubusercontent.com/siddhantgoel/beancount-dkb/main/CHANGELOG.md",
+          "checked": "2026-10-27",
+          "supports": "New-banking files are UTF-8; the delimiter changed between ';' and ','."
+        },
+        {
+          "url": "https://www.techbook.de/shop-pay/payment-services/dkb-online-banking-neue-ansicht",
+          "checked": "2026-10-27",
+          "supports": "Transactions older than 360 days (2023-06-07)."
+        }
+      ],
+      "notes": "Girokonto and Visa Kreditkarte are exported separately (the card has its own transaction list; Visa Debitkarte payments are in the Girokonto list). DKB's own page confirms „Exportieren“ in the Umsatzübersicht; the „CSV“ choice comes from a 2024 guide and a user comment. The filter's label was not found. The DKB app is in German and English; the web banking's English is unknown. A 2026 converter site claims 90 days and no Visa CSV; the engine's DKB Visa profile and beancount-dkb's Visa importer show a Visa CSV exists. File: the current account's CSV carries the other party's IBAN; there is no CAMT. App: The DKB app saves transactions only as PDF. Use the website for the CSV. Limits (moved out of the screen, 2026-10-27): how far back is unsure (2023: 360 days)."
+    },
+    {
+      "id": "comdirect",
+      "title": "comdirect",
+      "profiles": [
+        "comdirect",
+        "comdirect-visa"
+      ],
+      "names": [
+        "comdirect",
+        "Comdirect",
+        "comdirect bank",
+        "comdirect Girokonto",
+        "comdirect Visa"
+      ],
+      "website": {
+        "status": "found",
+        "englishSite": "no",
+        "de": [
+          "Melde dich auf comdirect.de im „Persönlichen Bereich“ an.",
+          "Öffne „Konto & Karte“ → „Umsätze“.",
+          "Wähle das Konto oder die Karte.",
+          "Wähle den Zeitraum, z. B. „180 Tage“, oder gib Daten ein.",
+          "Lade die Liste mit dem neuen Zeitraum.",
+          "Klicke ganz unten auf „Export als csv“."
+        ],
+        "en": [
+          "Log in to the “Persönlicher Bereich” (personal area) on comdirect.de.",
+          "Open “Konto & Karte” (account & card) → “Umsätze” (transactions).",
+          "Pick the account or the card.",
+          "Pick the period, e.g. “180 Tage” (180 days), or enter dates.",
+          "Load the list for the new period.",
+          "At the very bottom, click “Export als csv”."
+        ]
+      },
+      "app": {
+        "status": "unsure"
+      },
+      "toAresium": [
+        "safari",
+        "computer",
+        "desktopSite"
+      ],
+      "fileType": {
+        "pick": [
+          "Export als csv"
+        ],
+        "de": "Die einzige Datei, die comdirect anbietet.",
+        "en": "The only file comdirect offers.",
+        "offered": [
+          "CSV"
+        ]
+      },
+      "limits": {
+        "de": "Bis 540 Tage zurück. Über 500 Buchungen: kürzere Zeiträume exportieren.",
+        "en": "Up to 540 days back. Over 500 bookings: export shorter periods."
+      },
+      "confidence": {
+        "website": "medium",
+        "app": "low"
+      },
+      "sources": [
+        {
+          "url": "https://www.comdirect.de/faq/umsaetze",
+          "checked": "2026-10-27",
+          "supports": "„Konto & Karte > Umsätze“, „Export als csv“ at the end of the page, presets 1–180 days, 540 days back. Read from the search index only (the page refuses direct fetching)."
+        },
+        {
+          "url": "https://acutic.io/blog/comdirect-depot-csv-export",
+          "checked": "2026-10-27",
+          "supports": "540 days back, the export link at the foot of the page, ISO-8859-1, 4 lines before the header (2026-07-22)."
+        },
+        {
+          "url": "https://community.comdirect.de/",
+          "checked": "2026-10-27",
+          "supports": "Threads 378548, 363497, 326900, 257936 (search excerpts): the list pages at 500 entries and the CSV may hold only the shown page; reload the list after changing the period."
+        }
+      ],
+      "notes": "One CSV can hold several sections (Girokonto, Visa, Tagesgeld); Aresium reads only the first section, so pick one account or card per export. The step 'load the list for the new period' comes from community advice; its button label was not confirmed. Whether the redesigned app (July 2025) can export is unknown. File: the CSV is the only file; the other party's IBAN is inside the booking text. App: No source describes an export in the comdirect app. Use the website in Safari."
+    },
+    {
+      "id": "commerzbank",
+      "title": "Commerzbank",
+      "profiles": [
+        "commerzbank"
+      ],
+      "names": [
+        "Commerzbank",
+        "Coba",
+        "Commerzbank Girokonto"
+      ],
+      "website": {
+        "status": "found",
+        "englishSite": "yes, labels not found",
+        "de": [
+          "Melde dich im Online Banking auf commerzbank.de an.",
+          "Öffne die Umsatzübersicht deines Girokontos.",
+          "Klicke rechts über den Umsätzen auf „PDF / CSV“.",
+          "Wähle „Umsätze exportieren“.",
+          "Stell den Zeitraum ein und wähle „CSV“.",
+          "Klicke auf „Exportieren“."
+        ],
+        "en": [
+          "Log in to Online Banking on commerzbank.de.",
+          "Open the transaction overview of your current account.",
+          "Above the transactions on the right, click “PDF / CSV”.",
+          "Choose “Umsätze exportieren” (export transactions).",
+          "Set the period and pick “CSV”.",
+          "Click “Exportieren” (export)."
+        ]
+      },
+      "app": {
+        "status": "none"
+      },
+      "toAresium": [
+        "safari",
+        "computer",
+        "desktopSite"
+      ],
+      "fileType": {
+        "pick": [
+          "CSV"
+        ],
+        "de": "Neben PDF die einzige Datei, und ein PDF kann Aresium nicht lesen.",
+        "en": "Besides PDF the only file, and Aresium cannot read a PDF.",
+        "offered": [
+          "PDF",
+          "CSV"
+        ]
+      },
+      "limits": {
+        "de": "12 Monate laut Export-Hilfe (eine andere Hilfeseite nennt 24 Monate).",
+        "en": "12 months per the export help (another help page says 24 months)."
+      },
+      "confidence": {
+        "website": "high",
+        "app": "high"
+      },
+      "sources": [
+        {
+          "url": "https://www.commerzbank.de/service/wie-kann-ich-meine-umsaetze-exportieren/",
+          "checked": "2026-10-27",
+          "supports": "„PDF / CSV“, „Umsätze exportieren“, „PDF“ or „CSV“, „Exportieren“, 12 months back."
+        },
+        {
+          "url": "https://www.commerzbank.de/service/wie-funktioniert-die-umsatzuebersicht/",
+          "checked": "2026-10-27",
+          "supports": "Online banking: 24 months with export; app: 12 months, no export."
+        },
+        {
+          "url": "https://www.commerzbank.de/portal/en/englisch/my-online-banking/requests/",
+          "checked": "2026-10-27",
+          "supports": "An English online banking exists; some functions German only."
+        },
+        {
+          "url": "https://github.com/nicolettas-muggelbude/RechnungsFee/blob/main/vorlagen/bank-csv/README.md",
+          "checked": "2026-10-27",
+          "supports": "CSV: UTF-8 with BOM, ';', header on line 1."
+        }
+      ],
+      "notes": "The menu name that leads to the Umsatzübersicht after login is not quoted in a source. Two official pages disagree on 12 vs 24 months. „Umsätze auswählen“ instead of „Umsätze exportieren“ exports only ticked rows. File: besides PDF the only file; no CAMT, no MT940. App: The Commerzbank app exports no transactions file. Use the website."
+    },
+    {
+      "id": "deutsche-bank",
+      "title": "Deutsche Bank",
+      "profiles": [
+        "deutsche-bank",
+        "deutsche-bank-old",
+        "deutsche-bank-old-en"
+      ],
+      "names": [
+        "Deutsche Bank",
+        "DB",
+        "meine.deutsche-bank.de",
+        "Deutsche Bank Banking & Brokerage"
+      ],
+      "website": {
+        "status": "unsure",
+        "englishSite": "yes, labels not found",
+        "de": [
+          "Melde dich auf meine.deutsche-bank.de an.",
+          "Wähle in der „Finanzübersicht“ dein Girokonto.",
+          "Klicke im Konto oben rechts auf die drei Punkte.",
+          "Wähle „Als CSV exportieren“.",
+          "Stell den Zeitraum ein und erstelle die Datei.",
+          "Lade die Datei herunter."
+        ],
+        "en": [
+          "Log in at meine.deutsche-bank.de.",
+          "In “Finanzübersicht” (financial overview), pick your current account.",
+          "In the account, click the three dots at the top right.",
+          "Choose “Als CSV exportieren” (export as CSV).",
+          "Set the period and create the file.",
+          "Download the file."
+        ]
+      },
+      "app": {
+        "status": "unsure"
+      },
+      "toAresium": [
+        "safari",
+        "computer",
+        "desktopSite"
+      ],
+      "fileType": {
+        "pick": [
+          "Als CSV exportieren"
+        ],
+        "de": "Sie hat alles, was Aresium braucht.",
+        "en": "It has everything Aresium needs.",
+        "offered": [
+          "CSV",
+          "PDF statements"
+        ]
+      },
+      "limits": {
+        "de": "Die Datei kommt nicht als ZIP.",
+        "en": "The file is not zipped."
+      },
+      "confidence": {
+        "website": "medium",
+        "app": "low"
+      },
+      "sources": [
+        {
+          "url": "https://www.deutsche-bank.de/pk/service-und-kontakt/services/fragen-antworten/konto-und-debitkarten/wo-sehe-ich-meine-umsaetze.html",
+          "checked": "2026-10-27",
+          "supports": "„Finanzübersicht“ → tap the account to see its transactions."
+        },
+        {
+          "url": "https://faq.parqet.com/de/articles/651199-maxblue-deutsche-bank-pdf-csv-import",
+          "checked": "2026-10-27",
+          "supports": "New Deutsche Bank banking: the three-dot menu with „Als CSV exportieren“ (for the securities account)."
+        },
+        {
+          "url": "https://www.deskmodder.de/blog/2025/07/24/deutsche-bank-fuehrt-neues-online-banking-ein/",
+          "checked": "2026-10-27",
+          "supports": "The new banking (since 2025-08-25) is Postbank's system."
+        },
+        {
+          "url": "https://www.postbank.de/privatkunden/services/online-banking/anleitungen/umsaetze-exportieren.html",
+          "checked": "2026-10-27",
+          "supports": "The same platform's export steps at Postbank („Von“, „Bis“, „Erstellen“)."
+        },
+        {
+          "url": "https://www.deutsche-bank.de/ub/kontakt-und-service/service/neues-banking-unternehmensbank.html",
+          "checked": "2026-10-27",
+          "supports": "CAMT only through banking software (FinTS)."
+        }
+      ],
+      "notes": "Deutsche Bank publishes no export guide of its own. Since 2025-08-25 its online banking runs on Postbank's platform, whose official guide gives these steps; „Als CSV exportieren“ in the three-dot menu is confirmed for Deutsche Bank's securities account. The period fields and the create button are called „Von“, „Bis“ and „Erstellen“ at Postbank; not confirmed for Deutsche Bank, so not quoted. Older Deutsche Bank CSVs (Soll/Haben, and the English one) are still read by the engine. File: the CSV carries the other party's IBAN; CAMT is only for banking software. App: An export in the Deutsche Bank app is not confirmed. Use the website. Limits (moved out of the screen, 2026-10-27): how far back is unclear."
+    },
+    {
+      "id": "postbank",
+      "title": "Postbank",
+      "profiles": [
+        "deutsche-bank",
+        "postbank-old"
+      ],
+      "names": [
+        "Postbank",
+        "Postbank Giro",
+        "Deutsche Postbank",
+        "Postbank Banking & Brokerage"
+      ],
+      "website": {
+        "status": "found",
+        "englishSite": "unsure",
+        "de": [
+          "Melde dich unter banking.postbank.de im Online-Banking an.",
+          "Wähle in der „Finanzübersicht“ dein Girokonto.",
+          "Klicke im Konto oben rechts auf das Drei-Punkte-Menü.",
+          "Wähle „Als CSV exportieren“.",
+          "Stell den Zeitraum bei „Von“ und „Bis“ ein.",
+          "Klicke auf „Erstellen“ und lade die Datei herunter."
+        ],
+        "en": [
+          "Log in to online banking at banking.postbank.de.",
+          "In “Finanzübersicht” (financial overview), pick your current account.",
+          "In the account, click the three-dot menu at the top right.",
+          "Choose “Als CSV exportieren” (export as CSV).",
+          "Set the period with “Von” (from) and “Bis” (to).",
+          "Click “Erstellen” (create), then download the file."
+        ]
+      },
+      "app": {
+        "status": "unsure"
+      },
+      "toAresium": [
+        "safari",
+        "computer",
+        "desktopSite"
+      ],
+      "fileType": {
+        "pick": [
+          "Als CSV exportieren"
+        ],
+        "de": "Die einzige Datei auf der Website, und sie hat alles, was Aresium braucht.",
+        "en": "The only file on the website, and it has everything Aresium needs.",
+        "offered": [
+          "CSV",
+          "PDF statements"
+        ]
+      },
+      "limits": {
+        "de": "Keine Grenze genannt; ein Forum nennt 12 Monate.",
+        "en": "No limit stated; a forum says 12 months."
+      },
+      "confidence": {
+        "website": "high",
+        "app": "low"
+      },
+      "sources": [
+        {
+          "url": "https://www.postbank.de/privatkunden/services/online-banking/anleitungen/umsaetze-exportieren.html",
+          "checked": "2026-10-27",
+          "supports": "Official guide: „Finanzübersicht“, „Drei-Punkte-Menü“, „Als CSV exportieren“, „Von“, „Bis“, „Erstellen“; the file is ready shortly after."
+        },
+        {
+          "url": "https://www.postbank.de/privatkunden/services/online-banking.html",
+          "checked": "2026-10-27",
+          "supports": "Online banking also works in a phone's browser."
+        },
+        {
+          "url": "https://www.postbank.de/privatkunden/services/online-banking/banking-app.html",
+          "checked": "2026-10-27",
+          "supports": "The app's features: no export listed; statements as PDF."
+        },
+        {
+          "url": "https://homebanking-hilfe.de/forum/topic.php?t=25677",
+          "checked": "2026-10-27",
+          "supports": "2023: the new banking shows 12 months."
+        }
+      ],
+      "notes": "Postbank's current CSV has the same layout as Deutsche Bank's, so the engine reads it with the 'deutsche-bank' profile (it names Postbank in the lines above the table); 'postbank-old' is the 'Umsatzauskunft' CSV from before 2023. The CSV export was missing from January to May 2023 after the switch to the new platform. File: the only file on the website; it carries the other party's IBAN. App: No source describes an export in the Postbank app. Use the website."
+    },
+    {
+      "id": "n26",
+      "title": "N26",
+      "profiles": [
+        "n26",
+        "n26-old"
+      ],
+      "names": [
+        "N26",
+        "Number26",
+        "N26 Bank"
+      ],
+      "website": {
+        "status": "found",
+        "englishSite": "yes (labels found)",
+        "de": [
+          "Öffne app.n26.com im Browser und melde dich an.",
+          "Bestätige die Anmeldung in der N26-App.",
+          "Wähle im „Home“-Tab dein Konto oder deinen Space.",
+          "Klicke auf „Downloads“.",
+          "Gib unter „Kontoaktivität“ Start- und Enddatum ein.",
+          "Wähle „CSV“ und klicke auf „Herunterladen“."
+        ],
+        "en": [
+          "Open app.n26.com in a browser and log in.",
+          "Confirm the login in the N26 app.",
+          "On the “Home” tab, pick your account or Space.",
+          "Click “Downloads”.",
+          "Under “Account Activity”, enter start and end date.",
+          "Choose “CSV”, then “Download”."
+        ]
+      },
+      "app": {
+        "status": "none"
+      },
+      "toAresium": [
+        "safari",
+        "computer"
+      ],
+      "fileType": {
+        "pick": [
+          "CSV"
+        ],
+        "de": "Sie hat alles, was Aresium braucht. Ein PDF kann Aresium nicht lesen.",
+        "en": "It has everything Aresium needs. Aresium cannot read a PDF.",
+        "offered": [
+          "PDF",
+          "CSV"
+        ]
+      },
+      "limits": {
+        "de": "Ein Konto oder Space pro Datei; keine Grenze für den Zeitraum genannt.",
+        "en": "One account or Space per file; no limit on the period stated."
+      },
+      "confidence": {
+        "website": "high",
+        "app": "high"
+      },
+      "sources": [
+        {
+          "url": "https://support.n26.com/de-de/konto-und-personliche-informationen/kontoauszuge-und-kontobestatigungen/kontoauszug-herunterladen",
+          "checked": "2026-10-27",
+          "supports": "German labels: „Home“-Tab, „Downloads“, „Kontoaktivität“, PDF or CSV, „Herunterladen“; reports for a chosen period only in the web app."
+        },
+        {
+          "url": "https://support.n26.com/en-de/account-and-personal-details/bank-statements-and-confirmations/how-to-get-bank-statement-n26",
+          "checked": "2026-10-27",
+          "supports": "English labels: “Home”, “Downloads”, “Account Activity”, “Download”."
+        },
+        {
+          "url": "https://support.n26.com/en-eu/fixing-an-issue/payments-and-transfers/how-to-export-a-list-of-my-transactions",
+          "checked": "2026-10-27",
+          "supports": "The same export steps."
+        },
+        {
+          "url": "https://support.n26.com/en-de/security/passwords-and-codes/how-to-log-in-with-two-factor-authentication",
+          "checked": "2026-10-27",
+          "supports": "A web login is confirmed in the paired phone's N26 app."
+        }
+      ],
+      "notes": "Each account or Space is exported on its own. Not checked: whether app.n26.com works in Safari on the iPhone or sends you to the app (then use a computer). File: the CSV carries the other party's IBAN („Partner Iban“). App: The N26 app gives only monthly PDF statements. The CSV is only on app.n26.com."
+    },
+    {
+      "id": "revolut",
+      "title": "Revolut",
+      "profiles": [
+        "revolut"
+      ],
+      "names": [
+        "Revolut",
+        "Revolut Bank"
+      ],
+      "website": {
+        "status": "unsure",
+        "englishSite": "yes, labels not found",
+        "de": [
+          "Melde dich auf app.revolut.com an.",
+          "Öffne das Konto und such den Kontoauszug.",
+          "Wähle Excel, den Zeitraum und erstelle die Datei."
+        ],
+        "en": [
+          "Log in at app.revolut.com.",
+          "Open the account and look for the statement.",
+          "Choose Excel and the period, then create the file."
+        ]
+      },
+      "app": {
+        "status": "found",
+        "de": [
+          "Tippe unter deinem Kontostand auf „Konten“.",
+          "Wähle das Währungskonto, z. B. EUR.",
+          "Tippe auf „Mehr“ und dann auf „Kontoauszug“.",
+          "Wähle die Daten und als Dokumenttyp „Excel“.",
+          "Tippe auf „Generieren“.",
+          "Teile die Datei an Aresium."
+        ],
+        "en": [
+          "Tap “Accounts” under your balance.",
+          "Choose the currency account, e.g. EUR.",
+          "Tap “More”, then “Statement”.",
+          "Select the dates and the document type “Excel”.",
+          "Tap “Generate”.",
+          "Share the file to Aresium."
+        ]
+      },
+      "toAresium": [
+        "share"
+      ],
+      "fileType": {
+        "pick": [
+          "Excel"
+        ],
+        "de": "„Excel“ gibt hier eine Datei, die Aresium lesen kann.",
+        "en": "Here “Excel” gives a file Aresium can read.",
+        "offered": [
+          "PDF",
+          "Excel (a CSV file)"
+        ]
+      },
+      "limits": {
+        "de": "Eine Datei pro Währungskonto; Pockets und Vaults haben eigene. Zurück bis zur Kontoeröffnung.",
+        "en": "One file per currency account; Pockets and Vaults have their own. Back to account opening."
+      },
+      "confidence": {
+        "website": "low",
+        "app": "medium"
+      },
+      "sources": [
+        {
+          "url": "https://www.revolut.com/de-DE/ways-to-bank/online-banking/",
+          "checked": "2026-10-27",
+          "supports": "Official German steps: „Konten“, „Mehr“, „Kontoauszug“, „PDF“ or „Excel“, „Generieren“ (read through a reader proxy; the site blocks direct fetching)."
+        },
+        {
+          "url": "https://www.revolut.com/en-DE/ways-to-bank/online-banking/",
+          "checked": "2026-10-27",
+          "supports": "Official English steps: “Accounts”, “More”, “Statement”, “PDF or Excel”, “Generate”."
+        },
+        {
+          "url": "https://help.revolut.com/business/help/managing-my-business/viewing-my-account-statements/how-to-get-a-monthly-statement/",
+          "checked": "2026-10-27",
+          "supports": "PDF, CSV, XML (Camt.053) and TXT (MT940) statements for Business accounts; one statement per currency; no start before account opening."
+        },
+        {
+          "url": "https://kleev.ai/blog/export-revolut-csv",
+          "checked": "2026-10-27",
+          "supports": "“Excel” hands you a CSV; one file per account; a web route via “Statement” (2026-07-24, third party)."
+        },
+        {
+          "url": "https://scancompte.com/banks/export-revolut-statement",
+          "checked": "2026-10-27",
+          "supports": "One statement per currency; Pockets and Vaults separate (2026-08-07, third party)."
+        }
+      ],
+      "notes": "The file has no IBAN column. That “Excel” gives a .csv comes from third-party guides only. The share or save button after „Generieren“ has no confirmed label. Web steps: only a third-party guide; no official web path found. File: CAMT and MT940 are only for Business accounts. The statement/export label in website step 2 is not confirmed."
+    },
+    {
+      "id": "trade-republic",
+      "title": "Trade Republic",
+      "profiles": [
+        "trade-republic"
+      ],
+      "names": [
+        "Trade Republic",
+        "TR",
+        "Trade Republic Girokonto",
+        "Trade Republic Karte"
+      ],
+      "website": {
+        "status": "none",
+        "englishSite": "unsure"
+      },
+      "app": {
+        "status": "found",
+        "de": [
+          "Öffne die App und tippe auf dein Profil (Namenssymbol).",
+          "Tippe auf „Kontoauszüge“.",
+          "Tippe auf „Transaktionsexport“.",
+          "Tippe auf „Teilen“ und wähle Start- und Enddatum.",
+          "Tippe auf „Erstellen“.",
+          "Teile die Datei an Aresium."
+        ],
+        "en": [
+          "Open the app and tap your profile.",
+          "Tap “Statements”.",
+          "Tap “Transactions Export”.",
+          "Tap “Share” and choose start and end date.",
+          "Tap “Create”.",
+          "Share the file to Aresium."
+        ]
+      },
+      "toAresium": [
+        "share"
+      ],
+      "fileType": {
+        "pick": {
+          "de": [
+            "Transaktionsexport"
+          ],
+          "en": [
+            "Transactions Export"
+          ]
+        },
+        "de": "Der Export hat alle Buchungen; der monatliche Kontoauszug ist nur ein PDF.",
+        "en": "The export has every payment; the monthly statement is only a PDF.",
+        "offered": [
+          "CSV (Transaktionsexport)",
+          "PDF (Kontoauszug)"
+        ]
+      },
+      "limits": {
+        "de": "Beliebiger Zeitraum bis zur Kontoeröffnung.",
+        "en": "Any period back to account opening."
+      },
+      "confidence": {
+        "website": "medium",
+        "app": "medium"
+      },
+      "sources": [
+        {
+          "url": "https://aktiengram.de/trade-republic-csv-export-neuer-kundenservice/",
+          "checked": "2026-10-27",
+          "supports": "„Kontoauszüge > Transaktionsexport > Teilen“ (2026-04-15)."
+        },
+        {
+          "url": "https://privatsparer.de/trade-republic-in-cointracking-importieren/",
+          "checked": "2026-10-27",
+          "supports": "„Öffne oben rechts dein Namenssymbol“, „Kontoauszüge“, „Transaktionsexport“, „Teilen“, start and end date, „Erstellen“ (2026-06-22)."
+        },
+        {
+          "url": "https://traderepublic.community/threads/exportm%C3%B6glichkeit-besteht.2546/",
+          "checked": "2026-10-27",
+          "supports": "Profile icon → Kontoauszüge → Transaktionsexport (2026-04-19)."
+        },
+        {
+          "url": "https://intercom.help/blockpit/en/articles/15452549",
+          "checked": "2026-10-27",
+          "supports": "English labels: “Statements”, “Transactions Export”, “Share”, “Create”."
+        },
+        {
+          "url": "https://acutic.io/blog/trade-republic-csv-export",
+          "checked": "2026-10-27",
+          "supports": "Only in the app; the web shows the history without a CSV download (2026-07-22)."
+        },
+        {
+          "url": "https://forum.portfolio-performance.info/t/import-trade-republic-csv-transaktionsexport/39126",
+          "checked": "2026-10-27",
+          "supports": "The CSV export arrived on 2026-04-15 (app 4.2616.2)."
+        },
+        {
+          "url": "https://github.com/dickwolff/Export-To-Ghostfolio/issues/329",
+          "checked": "2026-10-27",
+          "supports": "The CSV header incl. counterparty_name, counterparty_iban, payment_reference (2026-05-08)."
+        }
+      ],
+      "notes": "No official help article; the German labels agree across several 2026 guides, the English ones vary (“Account Statements”, “Statements & transaction export”, “Export Transaction”). The profile icon is top right in most guides, bottom right in one. One file holds the securities account and the cash account (column account_type): the engine should be checked for securities rows being read as payments. A newer file adds a value_date column (2026-10). File: the CSV carries the other party's IBAN. Website: The website app.traderepublic.com offers no export. Use the app."
+    },
+    {
+      "id": "consorsbank",
+      "title": "Consorsbank",
+      "profiles": [
+        "consorsbank"
+      ],
+      "names": [
+        "Consorsbank",
+        "Consors",
+        "Cortal Consors",
+        "Consorsbank Girokonto",
+        "Verrechnungskonto"
+      ],
+      "website": {
+        "status": "unsure",
+        "englishSite": "unsure",
+        "de": [
+          "Melde dich auf consorsbank.de im Online-Banking an.",
+          "Öffne „Mein Konto & Depot“ und klicke auf dein Girokonto.",
+          "Wähle den Monat oder Zeitraum der Umsätze.",
+          "Scrolle ganz nach unten zum Export.",
+          "Wähle CSV (nicht Excel oder PDF) und speichere die Datei."
+        ],
+        "en": [
+          "Log in to online banking on consorsbank.de.",
+          "Open “Mein Konto & Depot” (my account & portfolio), click your current account.",
+          "Choose the month or period.",
+          "Scroll to the very bottom to the export.",
+          "Choose CSV (not Excel or PDF) and save the file."
+        ]
+      },
+      "app": {
+        "status": "none"
+      },
+      "toAresium": [
+        "safari",
+        "computer",
+        "desktopSite"
+      ],
+      "fileType": {
+        "pick": [
+          "CSV"
+        ],
+        "de": "Excel und PDF kann Aresium nicht lesen.",
+        "en": "Aresium cannot read Excel or PDF.",
+        "offered": [
+          "PDF",
+          "CSV",
+          "Excel"
+        ]
+      },
+      "limits": {
+        "de": "Oft ein Monat pro Export; Umsätze älter als 6 Monate liegen im „OnlineArchiv“.",
+        "en": "Often one month per export; transactions older than 6 months are in the “OnlineArchiv”."
+      },
+      "confidence": {
+        "website": "low",
+        "app": "medium"
+      },
+      "sources": [
+        {
+          "url": "https://www.consorsbank.de/web/Wissen/FAQ/kontokarten/OnlineArchiv",
+          "checked": "2026-10-27",
+          "supports": "Official: „Fahren Sie mit der Maus über „Mein Konto & Depot““."
+        },
+        {
+          "url": "https://simontutorial.de/consorsbank/",
+          "checked": "2026-10-27",
+          "supports": "„Ganz unten können wir auch alle Transaktionen von einem Monat als PDF, CSV oder Excel-Datei exportieren“; older than 6 months moves to the OnlineArchiv (2024-11-12)."
+        },
+        {
+          "url": "https://homebanking-hilfe.de/forum/topic.php?t=22336",
+          "checked": "2026-10-27",
+          "supports": "Export below the transaction list as *.xls or *.csv; two years back (2018-11-13)."
+        },
+        {
+          "url": "https://depotstudent.de/consorsbank-export-csv-excel/",
+          "checked": "2026-10-27",
+          "supports": "Export only on the desktop website, not in the app (2024-02-14)."
+        }
+      ],
+      "notes": "Only „Mein Konto & Depot“ is confirmed by Consorsbank; its help pages load their text by script and could not be read. The export button's label, the period picker and how far back are unknown, so the steps do not quote them. Two converter sites contradict each other (one claims MT940 and camt.053, one PDF only); neither is used. File: the CSV carries the other party's IBAN. App: The Consorsbank app exports no transactions file. Use the website. Limits (moved out of the screen, 2026-10-27): one month per export is unsure."
+    },
+    {
+      "id": "c24",
+      "title": "C24",
+      "profiles": [
+        "c24"
+      ],
+      "names": [
+        "C24",
+        "C24 Bank",
+        "C24 Smartkonto",
+        "CHECK24 Bank",
+        "C24 Pockets"
+      ],
+      "website": {
+        "status": "found",
+        "englishSite": "no",
+        "de": [
+          "Öffne am Computer c24.de: „Anmelden“ → „Online Banking“.",
+          "In der C24-App: Profil-Icon oben links → „Online Banking“.",
+          "Scanne den QR-Code und gib deine PIN ein.",
+          "Klicke bei „Transaktionen“ auf das Export-Symbol neben dem Filter.",
+          "Wähle den Zeitraum und das „CSV-Format“.",
+          "Klicke auf „Exportieren“."
+        ],
+        "en": [
+          "On a computer, open c24.de: “Anmelden” (log in) → “Online Banking”.",
+          "In the C24 app: profile icon top left → “Online Banking”.",
+          "Scan the QR code and enter your PIN.",
+          "At “Transaktionen” (transactions), click the export icon next to the filter.",
+          "Pick the period and “CSV-Format” (CSV).",
+          "Click “Exportieren” (export)."
+        ]
+      },
+      "app": {
+        "status": "unsure"
+      },
+      "toAresium": [
+        "computer"
+      ],
+      "fileType": {
+        "pick": [
+          "CSV-Format"
+        ],
+        "de": "Sie hat alles, was Aresium braucht.",
+        "en": "It has everything Aresium needs.",
+        "offered": [
+          "CSV-Format",
+          "Excel-Format"
+        ]
+      },
+      "limits": {
+        "de": "Alle Transaktionen oder ein Zeitraum; keine Grenze genannt.",
+        "en": "All transactions or a period; no limit stated."
+      },
+      "confidence": {
+        "website": "high",
+        "app": "medium"
+      },
+      "sources": [
+        {
+          "url": "https://hilfe.c24.de/hc/de/articles/8082169487250-Wie-kann-ich-meine-Transaktionen-exportieren",
+          "checked": "2026-10-27",
+          "supports": "Official: „Transaktionen“, the export icon next to the filter, „CSV-Format“ / „Excel-Format“, „Exportieren“, the file's fields incl. IBAN (updated 2026-10-21; read through the help centre's public API)."
+        },
+        {
+          "url": "https://hilfe.c24.de/hc/de/articles/360016153859-Wie-kann-ich-die-Online-Banking-Funktion-auf-meinem-Computer-nutzen",
+          "checked": "2026-10-27",
+          "supports": "Computer login: c24.de → „Anmelden“ → „Online Banking“, in the app the profile icon → „Online Banking“, scan the QR code (updated 2026-10-27)."
+        },
+        {
+          "url": "https://hilfe.c24.de/hc/de/articles/4407442902930-Wie-kann-ich-Transaktionen-suchen",
+          "checked": "2026-10-27",
+          "supports": "The app's transaction search: no export mentioned."
+        }
+      ],
+      "notes": "The web banking is opened by scanning a QR code with the phone, so it needs a second screen (a computer); the file then goes to the iPhone by AirDrop or iCloud Drive. One vendor page claims an app export without a path. Whether one file holds several accounts or Pockets is unknown (the engine reads them as one account). The PIN's length (6 digits) is from the help page. File: the CSV carries the other party's IBAN. App: C24 describes the export only in online banking. Use a computer."
+    },
+    {
+      "id": "amex",
+      "title": "American Express",
+      "profiles": [
+        "amex"
+      ],
+      "names": [
+        "American Express",
+        "Amex",
+        "Amex Gold",
+        "Amex Platinum",
+        "Payback Amex",
+        "americanexpress.de"
+      ],
+      "website": {
+        "status": "found",
+        "englishSite": "unsure",
+        "de": [
+          "Melde dich auf americanexpress.com/de-de an.",
+          "Klicke auf „Kontobewegungen und Abrechnungen“.",
+          "Klicke auf „Transaktionen herunterladen“.",
+          "Wähle den Zeitraum und das Format CSV.",
+          "Hak „alle weiteren Transaktionsdetails einschließen“ an.",
+          "Klicke auf „Herunterladen“ (Datei: activity.csv)."
+        ],
+        "en": [
+          "Log in at americanexpress.com/de-de.",
+          "Click “Kontobewegungen und Abrechnungen” (activity and statements).",
+          "Click “Transaktionen herunterladen” (download transactions).",
+          "Pick the period and the CSV format.",
+          "Tick “alle weiteren Transaktionsdetails einschließen” (include all details).",
+          "Click “Herunterladen” (download); the file is activity.csv."
+        ]
+      },
+      "app": {
+        "status": "unsure"
+      },
+      "toAresium": [
+        "safari",
+        "computer",
+        "desktopSite"
+      ],
+      "fileType": {
+        "pick": [
+          "CSV"
+        ],
+        "de": "Hak „alle weiteren Transaktionsdetails einschließen“ an: dann erkennt Aresium die Datei.",
+        "en": "Tick “alle weiteren Transaktionsdetails einschließen” (include all details): then Aresium knows the file.",
+        "offered": [
+          "CSV",
+          "QIF (not for every customer)",
+          "Excel (one source)"
+        ]
+      },
+      "limits": {
+        "de": "",
+        "en": ""
+      },
+      "confidence": {
+        "website": "medium",
+        "app": "low"
+      },
+      "sources": [
+        {
+          "url": "https://handbuch.fibuscan.de/module_4_9_3.htm",
+          "checked": "2026-10-27",
+          "supports": "„Kontobewegungen und Abrechnungen“, „Transaktionen herunterladen“, tick „alle weiteren Transaktionsdetails einschließen“, „Herunterladen“ (Stand 2026-10-08)."
+        },
+        {
+          "url": "https://finanzmanagerhilfe.blob.core.windows.net/faq/FinanzManager_AMEXImport.pdf",
+          "checked": "2026-10-27",
+          "supports": "The file is saved as activity.csv; comma-separated; purchases positive (Lexware FinanzManager 2025)."
+        },
+        {
+          "url": "https://www.lexware.de/support/faq/faq-beitrag/000033961/",
+          "checked": "2026-10-27",
+          "supports": "Pick the period and click „Herunterladen“; QIF not offered to every customer."
+        },
+        {
+          "url": "https://help.lexware.de/de-form/articles/548879-lexware-office-american-express-als-konto-ohne-verbindung-fuhren",
+          "checked": "2026-10-27",
+          "supports": "CSV export; purchases positive, payments negative."
+        },
+        {
+          "url": "https://academy.domonda.com/academy/csv-export-von-zahlungsanbietern",
+          "checked": "2026-10-27",
+          "supports": "CSV export; advises unticking the details (2023 template) – disagrees with FIBUscan."
+        }
+      ],
+      "notes": "Only accounting tools' guides; Amex's own help pages could not be read. Tick the details box: Aresium's 'amex' profile matches the header with „Weitere Details … Betreff“ (the fixture's header), which the file has only with the details included; one guide (domonda) says to untick it, which would give a shorter header that the profile does not match (then Aresium asks for the columns). The CSV's format label (“CSV” vs “CSV-Datei”) was not quoted, so the step names the format without quotes. App: No source describes an export in the Amex app. Use the website. Limits (moved out of the screen, 2026-10-27): how far back is unclear."
+    },
+    {
+      "id": "targobank",
+      "title": "Targobank",
+      "profiles": [
+        "targobank"
+      ],
+      "names": [
+        "Targobank",
+        "TARGOBANK",
+        "Targo Bank"
+      ],
+      "website": {
+        "status": "unsure",
+        "englishSite": "no",
+        "de": [
+          "Gehe auf targobank.de, klicke auf „Login“ und melde dich an.",
+          "Klicke oben auf „Konten“ und öffne deine Kontoübersicht.",
+          "Klicke auf „Download der Umsätze“.",
+          "Wähle Konto, Zeitraum und das CSV-Format.",
+          "Speichere die Datei."
+        ],
+        "en": [
+          "Go to targobank.de, click “Login” and log in.",
+          "Click “Konten” (accounts) at the top and open your account overview.",
+          "Click “Download der Umsätze” (download transactions).",
+          "Pick the account, the period and the CSV format.",
+          "Save the file."
+        ]
+      },
+      "app": {
+        "status": "unsure"
+      },
+      "toAresium": [
+        "safari",
+        "computer",
+        "desktopSite"
+      ],
+      "fileType": {
+        "pick": [
+          "CSV"
+        ],
+        "de": "Lass die Einstellungen so, wie die Bank sie vorschlägt.",
+        "en": "Leave the settings as the bank suggests them.",
+        "offered": [
+          "CSV (comma decimals)",
+          "CSV (point decimals)",
+          "QIF",
+          "Excel (XLSX)"
+        ]
+      },
+      "limits": {
+        "de": "Die Kreditkarte hat keinen Export.",
+        "en": "The credit card has no export."
+      },
+      "confidence": {
+        "website": "medium",
+        "app": "low"
+      },
+      "sources": [
+        {
+          "url": "https://www.targobank.de/de/service/konto-und-zahlung.html",
+          "checked": "2026-10-27",
+          "supports": "Official: „Umsätze im Excel-Format herunterladen … unter Konten > Übersicht > Download der Umsätze“."
+        },
+        {
+          "url": "https://www.targobank.de/de/service/online-banking/index.html",
+          "checked": "2026-10-27",
+          "supports": "Online banking and app features: no export in the app listed."
+        },
+        {
+          "url": "https://www.targobank.de/de/amc-content/pdf/dlst-07-11-b/Lastschriften%20im%20Online-Banking%20auf%20www.targobank.de%20widerrufen.pdf",
+          "checked": "2026-10-27",
+          "supports": "Targobank's own online-banking guide (08.25): „Login“, „Konten“, the submenu „Meine Konten“ / „Überweisen“ / „Haushaltsbuch“."
+        },
+        {
+          "url": "https://github.com/nicolettas-muggelbude/RechnungsFee/blob/main/vorlagen/bank-csv/README.md",
+          "checked": "2026-10-27",
+          "supports": "Targobank's formats: two CSV variants, QIF, XLSX; the CSV has no header row."
+        },
+        {
+          "url": "https://www.starmoney.de/forum/viewtopic.php?t=40427",
+          "checked": "2026-10-27",
+          "supports": "No transaction export for the credit card (2019)."
+        }
+      ],
+      "notes": "The official FAQ (undated) names „Konten > Übersicht > Download der Umsätze“ and an 'Excel format'; a Targobank guide from 2025-08 confirms „Login“ and „Konten“ but shows the submenu „Meine Konten“ / „Überweisen“ / „Haushaltsbuch“, so „Übersicht“ may be outdated and the steps do not quote it. Where „Download der Umsätze“ sits today (a download icon next to the print icon, per one source) and the format dialog's labels are unconfirmed; the format choices come from third-party sample files. The CSV has no header row; the engine recognises it by its seven columns. File: the default CSV's last column holds the IBAN. App: The Targobank app shows accounts and PDF documents, no export. Use the website. Limits (moved out of the screen, 2026-10-27): how far back is unclear."
+    },
+    {
+      "id": "barclays",
+      "title": "Barclays (easybank)",
+      "profiles": [
+        "barclays"
+      ],
+      "names": [
+        "Barclays",
+        "Barclays Visa",
+        "Barclaycard",
+        "easybank",
+        "easybank Deutschland"
+      ],
+      "website": {
+        "status": "unsure",
+        "englishSite": "no",
+        "de": [
+          "Melde dich auf banking.easybank.de an (früher Barclays).",
+          "Öffne die Umsätze deiner Kreditkarte.",
+          "Lade die Umsätze als Excel-Datei herunter.",
+          "Über 30 Tage fragt die Bank eventuell eine TAN ab.",
+          "Mach aus der Excel-Datei mit „Numbers“ eine CSV."
+        ],
+        "en": [
+          "Log in at banking.easybank.de (formerly Barclays).",
+          "Open your credit card's transactions.",
+          "Download them as an Excel file.",
+          "For more than 30 days the bank may ask for a TAN.",
+          "Turn the Excel file into a CSV with Numbers."
+        ]
+      },
+      "app": {
+        "status": "none"
+      },
+      "toAresium": [
+        "numbers",
+        "safari",
+        "computer"
+      ],
+      "fileType": {
+        "pick": [
+          "Excel"
+        ],
+        "de": "Die Bank gibt nur Excel. Mit „Numbers“ wird daraus eine Datei, die Aresium liest.",
+        "en": "The bank gives only Excel. Numbers turns it into a file Aresium reads.",
+        "offered": [
+          "Excel (.xlsx)",
+          "PDF statements"
+        ]
+      },
+      "limits": {
+        "de": "Über 30 Tage eventuell mit TAN; nur gebuchte Umsätze.",
+        "en": "Over 30 days possibly with a TAN; booked transactions only."
+      },
+      "confidence": {
+        "website": "low",
+        "app": "medium"
+      },
+      "sources": [
+        {
+          "url": "https://www.biallo.de/verbraucherschutz/news/aus-barclays-wird-easybank-das-aendert-sich-jetzt-fuer-kunden/",
+          "checked": "2026-10-27",
+          "supports": "Barclays Germany became easybank in Feb 2026; the login stays the same (2026-02-04)."
+        },
+        {
+          "url": "https://www.easybank.de/easybank-de/hilfe-und-kontakt/easybank-app",
+          "checked": "2026-10-27",
+          "supports": "Online banking at banking.easybank.de; the app „easybank Deutschland“."
+        },
+        {
+          "url": "https://www.easybank.de/easybank-de/hilfe-und-kontakt/kontoauszug-kreditkarte",
+          "checked": "2026-10-27",
+          "supports": "Only PDF statements („Kontoauszüge“) are described."
+        },
+        {
+          "url": "https://apps.apple.com/de/app/id868737672",
+          "checked": "2026-10-27",
+          "supports": "App features: check transactions, download statements (PDF)."
+        },
+        {
+          "url": "https://scripting-forum.derrichter.de/viewtopic.php?t=1198",
+          "checked": "2026-10-27",
+          "supports": "An Excel download; a TAN for more than 30 days (2021)."
+        },
+        {
+          "url": "https://github.com/firefly-iii/import-configurations/blob/main/de/barclays/Readme.md",
+          "checked": "2026-10-27",
+          "supports": "Barclays exports Excel only; save it as CSV for import."
+        },
+        {
+          "url": "https://www.capitalo.de/anbieter/easybank/news/barclays-easybank-umstellung-kreditkarten-2026",
+          "checked": "2026-10-27",
+          "supports": "Cards and login stay the same; the move to BAWAG's systems is planned for Q1 2027 (2026-05-19)."
+        }
+      ],
+      "notes": "No public page from easybank describes the transactions download; the Excel export rests on 2013/2021 forum posts and Firefly III's import notes, and the button's name is unknown. The technical move to BAWAG's systems is planned for Q1 2027 and may change the export. App: The easybank app downloads only PDF statements. Use the website. The statement/export label in website step 3 is not confirmed."
+    },
+    {
+      "id": "paypal",
+      "title": "PayPal",
+      "profiles": [],
+      "names": [
+        "PayPal",
+        "Paypal",
+        "PayPal Aktivitäten",
+        "PayPal Kontoauszug"
+      ],
+      "website": {
+        "status": "unsure",
+        "englishSite": "yes, labels not found",
+        "de": [
+          "Melde dich im Browser auf paypal.com an.",
+          "Klicke oben auf „Aktivitäten“, dann auf das Download-Symbol.",
+          "Wähle „Benutzerdefiniert“ und den Bericht mit deinen Zahlungen.",
+          "Wähle den Zeitraum (höchstens 12 Monate) und CSV.",
+          "Klicke auf „Bericht erstellen“; PayPal mailt, wenn er fertig ist.",
+          "Klicke auf „Herunterladen“."
+        ],
+        "en": [
+          "Log in at paypal.com in a browser.",
+          "Open “Aktivitäten” (activity) at the top, then the download icon.",
+          "Choose “Benutzerdefiniert” (custom) and the report with your payments.",
+          "Pick the period (12 months at most) and CSV.",
+          "Create the report; PayPal emails you when it is ready.",
+          "Click “Herunterladen” (download)."
+        ]
+      },
+      "app": {
+        "status": "none"
+      },
+      "toAresium": [
+        "safari",
+        "desktopSite",
+        "computer",
+        "unzip"
+      ],
+      "fileType": {
+        "pick": [
+          "CSV"
+        ],
+        "de": "Aresium braucht darin „Transaktionscode“ und „Netto“ oder „Brutto“.",
+        "en": "Aresium needs “Transaktionscode” (transaction code) and “Netto” or “Brutto” in it.",
+        "offered": [
+          "PDF",
+          "Quicken",
+          "QuickBooks",
+          "CSV",
+          "TAB"
+        ]
+      },
+      "limits": {
+        "de": "Höchstens 12 Monate pro Datei, bis 7 Jahre zurück. Große Berichte kommen als ZIP.",
+        "en": "12 months per file at most, up to 7 years back. Large reports come as a ZIP."
+      },
+      "confidence": {
+        "website": "low",
+        "app": "medium"
+      },
+      "sources": [
+        {
+          "url": "https://www.paypal.com/de/cshelp/article/wie-kann-ich-kontoausz%C3%BCge-und-berichte-anzeigen-und-herunterladen-help145",
+          "checked": "2026-10-27",
+          "supports": "Official: „Aktivitäten“, „Download-Symbol“, „Benutzerdefiniert“, pick a report, „Herunterladen“; PDF, Quicken, QuickBooks, CSV or TAB; 12 months per request, 7 years back; an e-mail when large files are ready (up to 5 working days)."
+        },
+        {
+          "url": "https://www.giga.de/tech/paypal-kontoauszug-in-2-minuten-so-erhaltet-ihr-den-nachweis-zum-ausdrucken--01KXNJD9699H7JMV367B13D1N6",
+          "checked": "2026-10-27",
+          "supports": "2026-07-16: „Aktivitäten“ → download button → „Detailierte Kontoauszüge herunterladen“ → „Benutzerdefiniert“ → tab „Zahlungen“ → Guthabenbericht → „Bericht erstellen“ → date range → „Erstellen“; only on the desktop website, not in the app."
+        },
+        {
+          "url": "https://developer.paypal.com/reports/activity-download",
+          "checked": "2026-10-27",
+          "supports": "Activity download: 7 years back, 12 months per report, CSV over 50,000 rows split and packaged as a ZIP; “Balance Impact” is column 59 and not selected by default (updated 2026-10-13)."
+        },
+        {
+          "url": "https://developer.paypal.com/reports/monthly-custom-statements",
+          "checked": "2026-10-27",
+          "supports": "Custom statements: 3 years back, 18 columns (Date, Time, Time Zone, Description, Currency, Gross, Fee, Net, Balance, Transaction ID, …; no Type, no Balance Impact), over 150,000 rows as a ZIP (updated 2026-10-13)."
+        },
+        {
+          "url": "https://wiki.lotzapp.org/books/modul-buchhaltung/page/15-csv-datei-umsatzbericht-von-paypal-herunterladen",
+          "checked": "2026-10-27",
+          "supports": "PayPal CSV report download for accounting (Stand 2026-04-20)."
+        }
+      ],
+      "notes": "PayPal has two CSV reports with different columns: the activity download (with „Typ“, and „Auswirkung auf Guthaben“ only if that field is added: PayPal's docs say it is not selected by default) and the balance/custom statement (Guthabenbericht; no type column). Aresium's PayPal reader (src/import/paypal-csv.ts) needs a transaction id and „Netto“/„Brutto“; it drops memo rows by „Auswirkung auf Guthaben“ and recognises bank top-ups by „Typ“, so either missing column changes its result. The official help says only 'choose the report that suits you'; GIGA (July 2026) leads to the Guthabenbericht. Which report names a private account shows today, and which CSV comes out, is unsure: check once with a real account. The English menu label is “History” in PayPal's English help and “Activity” in other guides. A report over 50,000 rows comes as a ZIP (unzip in Files). App: The PayPal app cannot create reports. Use the website (desktop view)."
+    },
+    {
+      "id": "other",
+      "profiles": [],
+      "names": [
+        "Andere Bank",
+        "Another bank",
+        "Meine Bank fehlt",
+        "My bank is missing"
+      ],
+      "website": {
+        "status": "found",
+        "englishSite": "unsure",
+        "de": [
+          "Melde dich im Online-Banking deiner Bank an.",
+          "Öffne dein Girokonto und dort die „Umsätze“ (oder „Umsatzanzeige“).",
+          "Stell den Zeitraum ein.",
+          "Such „Export“, „Exportieren“, „Download“ oder drei Punkte.",
+          "Wähle CAMT (XML), sonst CSV, sonst MT940.",
+          "Speichere die Datei und importiere sie in Aresium."
+        ],
+        "en": [
+          "Log in to your bank's online banking.",
+          "Open your current account and its “Umsätze” (transactions).",
+          "Set the period.",
+          "Look for “Export”, “Exportieren”, “Download” or three dots.",
+          "Pick CAMT (XML), else CSV, else MT940.",
+          "Save the file and import it in Aresium."
+        ]
+      },
+      "app": {
+        "status": "unsure",
+        "de": [
+          "Öffne in der App deiner Bank dein Konto.",
+          "Such nach „Exportieren“, „Teilen“ oder drei Punkten.",
+          "Findest du nichts: Viele Bank-Apps exportieren keine Datei, nimm die Website."
+        ],
+        "en": [
+          "Open your account in your bank's app.",
+          "Look for an export, Share or three dots.",
+          "If there is nothing: many bank apps export no file, use the website."
+        ]
+      },
+      "toAresium": [
+        "safari",
+        "share",
+        "computer",
+        "unzip",
+        "desktopSite"
+      ],
+      "fileType": {
+        "pick": [
+          "CAMT",
+          "CSV",
+          "MT940"
+        ],
+        "de": "Aresium liest alle drei; nimm das erste, das deine Bank anbietet. Kommt „CAMT“ als ZIP, nimm „CSV“.",
+        "en": "Aresium reads all three; take the first your bank offers. If “CAMT” comes as a ZIP, take “CSV”.",
+        "offered": []
+      },
+      "limits": {
+        "de": "Viele Banken: TAN ab 90 Tagen, bis etwa 1–2 Jahre zurück.",
+        "en": "Many banks: a TAN beyond 90 days, about 1–2 years back."
+      },
+      "confidence": {
+        "website": "medium",
+        "app": "low"
+      },
+      "sources": [
+        {
+          "url": "https://www.postbank.de/privatkunden/services/online-banking/anleitungen/umsaetze-exportieren.html",
+          "checked": "2026-10-27",
+          "supports": "A three-dot menu → „Als CSV exportieren“ (one of the common patterns)."
+        },
+        {
+          "url": "https://atruvia.scene7.com/is/content/atruvia/OnlineBanking%20Ums%C3%A4tze%20exportieren%20(MT940,%20CSV%20oder%20PDF)pdf",
+          "checked": "2026-10-27",
+          "supports": "„Umsätze“ → „Export“ → CSV / MT940; a TAN over 90 days."
+        },
+        {
+          "url": "https://www.commerzbank.de/service/wie-kann-ich-meine-umsaetze-exportieren/",
+          "checked": "2026-10-27",
+          "supports": "„Umsätze exportieren“ → CSV."
+        },
+        {
+          "url": "https://help.lexware.de/de-form/articles/548799-csv-vorlagen-fur-den-import-von-bank-kreditkarten-und-paypal-umsatzen",
+          "checked": "2026-10-27",
+          "supports": "Any bank's CSV export from online banking can be imported; PDF and Excel cannot."
+        }
+      ],
+      "notes": "Generic steps built from the patterns the banks above share: „Umsätze“ / „Umsatzanzeige“ / „Kontoumsätze“, then „Export“, „Exportieren“, „Download“, „Herunterladen“, a download icon or a three-dot menu. Excel and PDF files cannot be read (Excel: save as CSV with Numbers first). An unknown CSV opens Aresium's column check. File: CAMT usually carries the other party's IBAN."
+    }
+  ]
+}

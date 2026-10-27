@@ -327,6 +327,16 @@
         }
       }
     },
+    "A ZIP file" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eine ZIP-Datei"
+          }
+        }
+      }
+    },
     "A category of your own" : {
       "localizations" : {
         "de" : {
@@ -383,6 +393,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ein vergessener Code lässt sich nicht zurücksetzen. Ohne ihn und ohne Face ID kommst du nur wieder hinein, indem du die Aresium-Daten auf diesem iPhone löschst. Exportier deine Daten also vorher."
+          }
+        }
+      }
+    },
+    "A tour with made-up sample data" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tour mit Beispieldaten"
           }
         }
       }
@@ -477,12 +497,42 @@
         }
       }
     },
+    "An Excel file" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eine Excel-Datei"
+          }
+        }
+      }
+    },
     "An export can only be restored while Aresium has no data on this iPhone." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ein Export lässt sich nur wiederherstellen, solange Aresium auf diesem iPhone keine Daten hat."
+          }
+        }
+      }
+    },
+    "Another bank" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Andere Bank"
+          }
+        }
+      }
+    },
+    "App" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App"
           }
         }
       }
@@ -513,6 +563,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Aresium kennt die Datei dieser Bank noch nicht. Prüf, was in jeder Spalte steht; die ersten Buchungen unten werden so gelesen. Aresium merkt es sich für die nächste Datei."
+          }
+        }
+      }
+    },
+    "Aresium knows no way in the bank's app; the website works." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einen Weg in der App der Bank kennt Aresium nicht; auf der Website geht es."
+          }
+        }
+      }
+    },
+    "Aresium knows no way on the website; the bank's app works." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einen Weg auf der Website kennt Aresium nicht; in der App der Bank geht es."
           }
         }
       }
@@ -563,6 +633,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Aresiums Rechenkern fehlt in der App."
+          }
+        }
+      }
+    },
+    "At your bank a button may be called a little differently." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bei deiner Bank kann ein Knopf etwas anders heißen."
           }
         }
       }
@@ -693,6 +773,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kategorien wählen"
+          }
+        }
+      }
+    },
+    "Choose file" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Datei auswählen"
+          }
+        }
+      }
+    },
+    "Clear" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leeren"
+          }
+        }
+      }
+    },
+    "Climbing" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Klettern"
+          }
+        }
+      }
+    },
+    "Closed" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zu"
           }
         }
       }
@@ -867,12 +987,32 @@
         }
       }
     },
+    "Done. Now with your own data." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fertig. Jetzt mit deinen eigenen Daten."
+          }
+        }
+      }
+    },
     "EUR" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "EUR"
+          }
+        }
+      }
+    },
+    "End tour" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tour beenden"
           }
         }
       }
@@ -923,6 +1063,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Gib deinen jetzigen Code ein"
+          }
+        }
+      }
+    },
+    "Every payment in detail." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jede Buchung im Detail."
           }
         }
       }
@@ -987,6 +1137,26 @@
         }
       }
     },
+    "File from your bank" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Datei von der Bank"
+          }
+        }
+      }
+    },
+    "Find your bank: step by step, how to get a file of your payments out of it." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Such deine Bank: Schritt für Schritt, wie du eine Datei mit deinen Buchungen bekommst."
+          }
+        }
+      }
+    },
     "First payments" : {
       "localizations" : {
         "de" : {
@@ -1027,6 +1197,26 @@
         }
       }
     },
+    "From Safari" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aus Safari"
+          }
+        }
+      }
+    },
+    "From a computer" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vom Computer"
+          }
+        }
+      }
+    },
     "From now on, payments from %@ go to %@." : {
       "localizations" : {
         "de" : {
@@ -1043,12 +1233,42 @@
         }
       }
     },
+    "From the bank's app" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aus der App der Bank"
+          }
+        }
+      }
+    },
+    "Get the file from your bank" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Datei von der Bank holen"
+          }
+        }
+      }
+    },
     "Getting around" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Unterwegs"
+          }
+        }
+      }
+    },
+    "Good to know" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gut zu wissen"
           }
         }
       }
@@ -1063,12 +1283,42 @@
         }
       }
     },
+    "Here you choose categories and add your own." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hier wählst du Kategorien und legst eigene an."
+          }
+        }
+      }
+    },
     "Home" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Wohnen"
+          }
+        }
+      }
+    },
+    "How do I get my file?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wie komme ich an meine Datei?"
+          }
+        }
+      }
+    },
+    "How the file gets to Aresium" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "So kommt die Datei zu Aresium"
           }
         }
       }
@@ -1133,12 +1383,52 @@
         }
       }
     },
+    "In the app" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In der App"
+          }
+        }
+      }
+    },
+    "In the bank's app" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In der App der Bank"
+          }
+        }
+      }
+    },
+    "In the tour, Settings shows only the categories." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In der Tour zeigen die Einstellungen nur die Kategorien."
+          }
+        }
+      }
+    },
     "Income" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Einnahmen"
+          }
+        }
+      }
+    },
+    "Its usual steps" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die üblichen Schritte"
           }
         }
       }
@@ -1209,6 +1499,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Mit Touch ID sperren"
+          }
+        }
+      }
+    },
+    "Look around first?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erst umsehen?"
+          }
+        }
+      }
+    },
+    "Making up sample data…" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beispieldaten werden angelegt …"
           }
         }
       }
@@ -1313,6 +1623,26 @@
         }
       }
     },
+    "New files from your bank come in here." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hier kommen neue Dateien von deiner Bank rein."
+          }
+        }
+      }
+    },
+    "Next" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Weiter"
+          }
+        }
+      }
+    },
     "No activity" : {
       "localizations" : {
         "de" : {
@@ -1329,6 +1659,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Keine Buchungen erfasst."
+          }
+        }
+      }
+    },
+    "No export on the iPhone?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kein Export auf dem iPhone?"
           }
         }
       }
@@ -1453,6 +1793,16 @@
         }
       }
     },
+    "On the website" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auf der Website"
+          }
+        }
+      }
+    },
     "On this iPhone" : {
       "localizations" : {
         "de" : {
@@ -1489,6 +1839,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nur, solange Aresium leer ist"
+          }
+        }
+      }
+    },
+    "Open" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Offen"
           }
         }
       }
@@ -1539,6 +1899,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Überblick"
+          }
+        }
+      }
+    },
+    "Overview shows all months." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Überblick zeigt alle Monate."
           }
         }
       }
@@ -1803,6 +2173,16 @@
         }
       }
     },
+    "Sorted wrong? Pick the right category. Aresium remembers the shop." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Falsch einsortiert? Wähl die richtige Kategorie. Aresium merkt sich den Laden."
+          }
+        }
+      }
+    },
     "Source" : {
       "localizations" : {
         "de" : {
@@ -1843,12 +2223,32 @@
         }
       }
     },
+    "Swipe sideways: your income." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wisch zur Seite: deine Einnahmen."
+          }
+        }
+      }
+    },
     "Switch" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Verschieben"
+          }
+        }
+      }
+    },
+    "Tap a category: its payments this month." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tippe auf eine Kategorie: ihre Buchungen in diesem Monat."
           }
         }
       }
@@ -1889,6 +2289,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Die Datei ist leer."
+          }
+        }
+      }
+    },
+    "The tour could not start." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Tour konnte nicht starten."
+          }
+        }
+      }
+    },
+    "The trend as a graph." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Verlauf als Grafik."
           }
         }
       }
@@ -1943,6 +2363,26 @@
         }
       }
     },
+    "This doesn't work in the bank's app, only on the website." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In der App der Bank geht das nicht, nur auf der Website."
+          }
+        }
+      }
+    },
+    "This doesn't work on the website, only in the bank's app." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auf der Website geht das nicht, nur in der App der Bank."
+          }
+        }
+      }
+    },
     "This file could not be read." : {
       "localizations" : {
         "de" : {
@@ -1959,6 +2399,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Diese Datei ist kein Aresium-Export oder beschädigt. Nichts wurde wiederhergestellt."
+          }
+        }
+      }
+    },
+    "This is Aresium with made-up sample data." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das ist Aresium mit erfundenen Beispieldaten."
           }
         }
       }
@@ -2039,6 +2489,32 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Zu viele falsche Codes. Versuch es später noch einmal."
+          }
+        }
+      }
+    },
+    "Tour of Aresium" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tour durch Aresium"
+          }
+        }
+      }
+    },
+    "Tour · %lld of %lld" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tour · %lld von %lld"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Tour · %1$lld of %2$lld"
           }
         }
       }
@@ -2183,12 +2659,62 @@
         }
       }
     },
+    "Website" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Website"
+          }
+        }
+      }
+    },
+    "Website and app" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Website und App"
+          }
+        }
+      }
+    },
+    "Where" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wo"
+          }
+        }
+      }
+    },
+    "Which file" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Welche Datei"
+          }
+        }
+      }
+    },
     "With it, Aresium opens with Face ID or this code, not with the iPhone's code." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Damit öffnet sich Aresium mit Face ID oder diesem Code, nicht mit dem Code des iPhones."
+          }
+        }
+      }
+    },
+    "With made-up sample data" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mit erfundenen Beispieldaten"
           }
         }
       }
@@ -2229,6 +2755,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Deine IBAN"
+          }
+        }
+      }
+    },
+    "Your bank" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Bank"
+          }
+        }
+      }
+    },
+    "Your bank is not in the list yet. Its usual steps:" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Bank ist noch nicht in der Liste. Die üblichen Schritte:"
           }
         }
       }

@@ -18,18 +18,21 @@ struct SettingsApp {
 
 /// Every app's Settings (the gear in its header), one sheet in the family look: the app's own section (optional, the
 /// `appSection` slot, e.g. Arestemis's application texts), then General (Language, Appearance; Notifications in apps
-/// that send them), Help (Contact & support), About (Privacy, Imprint, Fonts & licences, Version) and Account (email, Change
-/// password, Log out; then Leave <app> and Delete Ares account, `AccountScreens.swift`).
+/// that send them), Help (the app's own help rows, optional, the `help` slot, e.g. Aresium's bank guide and tour; then
+/// Contact & support), About (Privacy, Imprint, Fonts & licences, Version) and Account (email, Change password, Log out;
+/// then Leave <app> and Delete Ares account, `AccountScreens.swift`).
 /// An app that works without an account (Aresium) shows, while no Ares app on the iPhone is logged in, a quiet "Ares
 /// account" section in place of Account: Sign in (`SignInSheet`) and the app's line on what an account is for.
 /// Log out does what the app's log-out did before (in sample mode it leaves the sample); so does the end of leaving or
 /// deleting in sample mode, where nothing is sent.
-struct SettingsScreen<AppSection: View>: View {
+struct SettingsScreen<AppSection: View, AppHelp: View>: View {
     let app: SettingsApp
     let session: EmpireSession          // the account's email; the login the support form sends with (brief E5)
     var sample = false                  // sample mode: a made-up email, nothing is sent
     let logOut: () -> Void
     let appSection: AppSection
+    /// The app's own rows at the top of Help (rows with `SettingsDivider` between them), above Contact & support.
+    let appHelp: AppHelp
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
@@ -67,12 +70,13 @@ struct SettingsScreen<AppSection: View>: View {
     #endif
 
     init(app: SettingsApp, session: EmpireSession, sample: Bool = false, logOut: @escaping () -> Void,
-         @ViewBuilder appSection: () -> AppSection) {
+         @ViewBuilder appSection: () -> AppSection, @ViewBuilder help: () -> AppHelp) {
         self.app = app
         self.session = session
         self.sample = sample
         self.logOut = logOut
         self.appSection = appSection()
+        self.appHelp = help()
         #if DEBUG
         _path = State(initialValue: AccountPage.launched().map { [$0] } ?? [])
         #endif
@@ -170,6 +174,10 @@ struct SettingsScreen<AppSection: View>: View {
 
     private var help: some View {
         SettingsSection(String(localized: LocalizedStringResource("Help", table: "Shared", locale: .appLanguage))) {
+            if !(appHelp is EmptyView) {
+                appHelp
+                SettingsDivider()
+            }
             Button { showsSupport = true } label: {
                 SettingsRow(title: String(localized: LocalizedStringResource("Contact & support", table: "Shared",
                                                                              locale: .appLanguage)))
@@ -300,7 +308,14 @@ struct SettingsScreen<AppSection: View>: View {
     }
 }
 
-extension SettingsScreen where AppSection == EmptyView {
+extension SettingsScreen where AppHelp == EmptyView {
+    init(app: SettingsApp, session: EmpireSession, sample: Bool = false, logOut: @escaping () -> Void,
+         @ViewBuilder appSection: () -> AppSection) {
+        self.init(app: app, session: session, sample: sample, logOut: logOut, appSection: appSection) { EmptyView() }
+    }
+}
+
+extension SettingsScreen where AppSection == EmptyView, AppHelp == EmptyView {
     init(app: SettingsApp, session: EmpireSession, sample: Bool = false, logOut: @escaping () -> Void) {
         self.init(app: app, session: session, sample: sample, logOut: logOut) { EmptyView() }
     }

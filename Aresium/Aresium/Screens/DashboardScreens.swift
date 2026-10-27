@@ -7,6 +7,58 @@ struct DashboardRoute: Hashable {
     var month: String? = nil
 }
 
+/// Where a dashboard is: the screens pushed, Current or Overview, the expenses or income page, the graph, the payment
+/// open. The person's dashboard keeps it in `ContentView`, the tour's in `TourModel` (so the tour can move it).
+struct DashboardPlace {
+    var path: [DashboardRoute] = []
+    var current = true
+    var side = DashboardSide.expenses
+    var graph = false
+    /// The payment whose detail is open.
+    var payment: Transaction?
+}
+
+/// The dashboard's navigation: the start screen (or what the owner shows in its place), a category's months and a month's
+/// payments, each under the owner's header. The person's dashboard and the tour's are this same view on their own stores.
+struct DashboardStack<Top: View, Root: View>: View {
+    let store: DashboardStore
+    let palette: Palette
+    @Binding var place: DashboardPlace
+    let band: AresiumBand
+    /// The header (and any line under it) of the start screen (nil) or a pushed screen.
+    @ViewBuilder let top: (DashboardRoute?) -> Top
+    /// The start screen.
+    @ViewBuilder let root: () -> Root
+
+    var body: some View {
+        NavigationStack(path: $place.path) {
+            VStack(spacing: 0) {
+                top(nil)
+                root()
+            }
+            .background { Wall(palette: palette) }
+            .toolbar(.hidden, for: .navigationBar)
+            .tourSpotlight()
+            .navigationDestination(for: DashboardRoute.self) { route in
+                VStack(spacing: 0) {
+                    top(route)
+                    if route.month != nil {
+                        TransactionsScreen(route: route, store: store, palette: palette, band: band,
+                                           selection: $place.payment)
+                    } else {
+                        CategoryScreen(route: route, store: store, palette: palette, graph: $place.graph,
+                                       band: band) { place.path.append($0) }
+                    }
+                }
+                .background { Wall(palette: palette) }
+                .toolbar(.hidden, for: .navigationBar)
+                .tourSpotlight()
+            }
+        }
+        .task { if store.dashboard == nil { await store.reload() } }
+    }
+}
+
 struct StartScreen: View {
     let store: DashboardStore
     let imports: ImportStore
@@ -18,7 +70,10 @@ struct StartScreen: View {
     /// Phone mode: the bank files it imports, and the category picker first while none is chosen.
     var importTypes: [UTType] = [.commaSeparatedText, .xml]
     var beforeImport: (() -> Void)? = nil
+    /// "How do I get my file?" under an empty page (nil: not offered).
+    var openGuide: (() -> Void)? = nil
     let pick: (DashboardRoute) -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
         VStack(spacing: 0) {
             HStack {
@@ -26,11 +81,14 @@ struct StartScreen: View {
                     Text("Current").tag(true)
                     Text("Overview").tag(false)
                 }.pickerStyle(.segmented).frame(maxWidth: 235)
+                    .tourAnchor(.range)
                 Spacer()
                 ImportButton(store: imports, sample: store.isSample, palette: palette, types: importTypes, instead: beforeImport)
+                    .tourAnchor(.importButton)
                 IconButton(symbol: "chart.line.uptrend.xyaxis", label: String(localized: "Toggle graph"), palette: palette, active: graph) {
-                    withAnimation(.easeInOut(duration: 0.3)) { graph.toggle() }
+                    withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.3)) { graph.toggle() }
                 }
+                .tourAnchor(.graph)
             }.padding(.horizontal, 14).padding(.bottom, 8)
             DashboardStatus(store: store, palette: palette)
             if graph {
@@ -41,17 +99,18 @@ struct StartScreen: View {
             }
             HStack(spacing: 9) {
                 ForEach(DashboardSide.allCases, id: \.self) { page in
-                    Button { withAnimation { side = page } } label: {
+                    Button { withAnimation(reduceMotion ? nil : .default) { side = page } } label: {
                         Circle().fill(page == side ? palette.ink : palette.muted.opacity(0.5))
                             .frame(width: page == side ? 8 : 7, height: page == side ? 8 : 7)
                             .frame(width: 30, height: 24)
                     }.buttonStyle(.plain).accessibilityLabel(page.title)
                         .accessibilityAddTraits(page == side ? .isSelected : [])
                 }
-            }.padding(.vertical, 2)
+            }.tourAnchor(.pageDots).padding(.vertical, 2)
             TabView(selection: $side) {
                 ForEach(DashboardSide.allCases, id: \.self) { page in
-                    StartPage(store: store, palette: palette, side: page, current: current, band: band, pick: pick).tag(page)
+                    StartPage(store: store, palette: palette, side: page, current: current, band: band,
+                              openGuide: openGuide, pick: pick).tag(page)
                 }
             }.tabViewStyle(.page(indexDisplayMode: .never))
         }
@@ -64,6 +123,7 @@ private struct StartPage: View {
     let side: DashboardSide
     let current: Bool
     let band: AresiumBand
+    var openGuide: (() -> Void)?
     let pick: (DashboardRoute) -> Void
     private var rows: [DisplayRow] { store.rows(side: side, current: current) }
     var body: some View {
@@ -91,16 +151,19 @@ private struct StartPage: View {
                                 ValueRow(title: row.category.shownName, category: row.category, total: row.total,
                                          maximum: rows.map(\.total).max() ?? 0, palette: palette)
                             }.buttonStyle(.plain)
+                                .tourAnchor(.category(row.category.name))
                         }
                         if rows.isEmpty && !store.isLoading {
                             EmptyMessage(text: side == .income ? String(localized: "No income recorded.")
                                                                        : String(localized: "No spending recorded."),
                                          palette: palette)
+                            if let openGuide { GuideLink(tint: palette.secondary, action: openGuide).padding(.top, -14) }
                         }
                     }.padding(.horizontal, 12).padding(.top, 8)
                 }
             } band: { _ in band }
             .refreshable { await store.reload() }.scrollBounceBehavior(.always)
+            .tourScrollsToTarget()
             #if DEBUG
             .task(id: store.dashboard == nil) {
                 // Screenshots: `-scrollToEnd` shows the band.
@@ -170,7 +233,8 @@ struct TransactionsScreen: View {
     let store: DashboardStore
     let palette: Palette
     let band: AresiumBand
-    @State private var selectedTransaction: Transaction?
+    /// The payment whose detail is open (the dashboard's place).
+    @Binding var selection: Transaction?
     var body: some View {
         VStack(spacing: 0) {
             DashboardStatus(store: store, palette: palette)
@@ -179,7 +243,7 @@ struct TransactionsScreen: View {
                 LazyVStack(spacing: 0) {
                     ForEach(rows) { row in
                         let transaction = row.transaction
-                        Button { selectedTransaction = transaction } label: {
+                        Button { selection = transaction } label: {
                             HStack(spacing: 12) {
                                 DayTile(palette: palette) { Text(String(transaction.day)) }
                                 VStack(alignment: .leading, spacing: 2) {
@@ -198,13 +262,15 @@ struct TransactionsScreen: View {
                                     .foregroundStyle(transaction.amount < 0 ? palette.expenseText : palette.income).fixedSize()
                             }.padding(.horizontal, 12).padding(.vertical, 11).contentShape(Rectangle())
                         }.buttonStyle(.plain)
+                            .tourAnchor(.payment(transaction.id))
                     }
                     if rows.isEmpty { EmptyMessage(text: String(localized: "No transactions this month."), palette: palette) }
                 }.padding(.horizontal, 12).padding(.top, 8)
             } band: { _ in band }
             .refreshable { await store.reload() }.scrollBounceBehavior(.always)
+            .tourScrollsToTarget()
         }
-        .sheet(item: $selectedTransaction) { transaction in
+        .sheet(item: $selection) { transaction in
             TransactionDetailSheet(store: store.transactionDetailStore(for: transaction), palette: palette)
         }
         .task {
@@ -212,13 +278,13 @@ struct TransactionsScreen: View {
             let arguments = LaunchArguments.current
             if store.isSample, let index = arguments.firstIndex(of: "-sampleTransaction"),
                arguments.indices.contains(index + 1) {
-                selectedTransaction = store.dashboard?.transactions.first { $0.id == arguments[index + 1] }
+                selection = store.dashboard?.transactions.first { $0.id == arguments[index + 1] }
             }
             // Phone sample (ids are made on import): the first payment of this list whose place contains the text.
             if !store.isSample, let index = arguments.firstIndex(of: "-samplePhoneTransaction"),
                arguments.indices.contains(index + 1) {
                 for _ in 0..<40 where store.dashboard == nil { try? await Task.sleep(for: .milliseconds(100)) }
-                selectedTransaction = store.transactions(category: route.category, month: route.month ?? "", side: route.side)
+                selection = store.transactions(category: route.category, month: route.month ?? "", side: route.side)
                     .first { $0.transaction.place.localizedCaseInsensitiveContains(arguments[index + 1]) }?.transaction
             }
             #endif

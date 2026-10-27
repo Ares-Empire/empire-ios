@@ -133,6 +133,7 @@ final class TransactionDetailStore {
             // The merchant's other payments: asked in the open sheet, which closes with the answer.
             if let followUp { self.followUp = followUp } else { showsRecategorisation = false }
             await dashboardStore.reloadAfterTransactionChange()
+            if followUp == nil { dashboardStore.onRecategorised?() }
         } catch {
             guard isCurrent(generation, token: token) else { return }
             dashboardStore.session.handleAuthFailure(error, generation: generation, token: token)
@@ -159,13 +160,18 @@ final class TransactionDetailStore {
     }
 
     private func finish(_ followUp: MerchantFollowUp, moveOthers: Bool) async {
-        guard moveOthers else { showsRecategorisation = false; return }
+        guard moveOthers else {
+            showsRecategorisation = false
+            dashboardStore.onRecategorised?()
+            return
+        }
         isSaving = true
         defer { isSaving = false }
         do {
             try await followUp.apply()
             showsRecategorisation = false
             await dashboardStore.reloadAfterTransactionChange()
+            dashboardStore.onRecategorised?()
         } catch {
             saveError = error.localizedDescription
         }
