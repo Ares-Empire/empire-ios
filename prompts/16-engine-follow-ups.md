@@ -1,6 +1,6 @@
 # 16: Engine follow-ups: stricter own transfers, English PayPal, the bench sees the whole list
 
-Status: draft
+Status: merged 2026-10-27 (PayPal funding parity on the real database: changed 0)
 Repo: aresium · Worktree: `~/aresium-16-follow-ups` (branch `claude/16-follow-ups`) · Built by: a Claude agent
 
 ## Goal
