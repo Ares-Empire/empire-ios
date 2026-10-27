@@ -1,6 +1,6 @@
 # 22: Aresium without an account, with an optional lock
 
-Status: open (2026-10-27)
+Status: merged 2026-10-27 (Aresium 189, Empire 204 tests; other apps build; deleting the data also removes left-behind stores)
 Repo: empire-ios · Worktree: `../empire-ios-22-no-account` (branch `claude/22-no-account`) · Built by: a Claude agent
 (data, flows and the look of the new screens)
 
