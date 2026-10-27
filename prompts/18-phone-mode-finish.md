@@ -1,6 +1,6 @@
 # 18: Phone mode finished: the look of the new screens, German, and the loose ends
 
-Status: draft
+Status: merged 2026-10-27
 Repo: empire-ios · Worktree: `../empire-ios-18-phone-finish` (branch `claude/18-phone-finish`) · Built by: a Claude
 agent (design work)
 
