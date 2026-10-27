@@ -45,6 +45,23 @@
         }
       }
     },
+    "NSCameraUsageDescription" : {
+      "comment" : "Why Aresium asks for the camera (Import → Scan receipt)",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mit der Kamera scannst du Belege. Das Foto bleibt auf diesem iPhone und wird nicht gespeichert."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The camera scans your receipts. The photo stays on this iPhone and is not kept."
+          }
+        }
+      }
+    },
     "NSFaceIDUsageDescription" : {
       "comment" : "Why Aresium asks for Face ID (Settings → Lock)",
       "localizations" : {

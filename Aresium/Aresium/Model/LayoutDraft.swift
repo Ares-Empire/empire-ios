@@ -325,3 +325,12 @@ nonisolated struct PreviewPayment: Equatable, Sendable {
         return calendar.date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2]))
     }
 }
+
+extension PreviewPayment {
+    /// A stored payment, drawn as the file check window draws a file's payments (the receipt's question, its page).
+    init(_ payment: LedgerPayment, language: AppLanguage = .current) {
+        self.init(BankTxn(externalId: payment.externalId, bookingDate: payment.bookingDate, amount: payment.amount,
+                          currency: payment.currency, description: payment.text, counterparty: payment.counterparty),
+                  language: language)
+    }
+}

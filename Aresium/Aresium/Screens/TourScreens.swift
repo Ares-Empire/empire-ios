@@ -287,7 +287,7 @@ struct TourScreen<Header: View>: View {
                 } root: {
                     StartScreen(store: world.dashboard, imports: world.imports, palette: palette,
                                 current: place.current, side: place.side, graph: place.graph, band: band,
-                                importTypes: PhoneImportTypes.all, importInstead: { tour.importTapped() }) {
+                                importChoices: .tour { tour.importTapped() }) {
                         place.wrappedValue.path.append($0)
                     }
                 }

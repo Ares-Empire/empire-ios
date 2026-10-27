@@ -281,4 +281,102 @@ nonisolated struct DashboardSourceInput: Codable, Equatable, Sendable {
     let categories: [SourceCategory]
     /// Today, `YYYY-MM-DD`: the current month counts up to this day.
     let today: String
+    /// The phone's receipts (brief 31). Without them (nil, left out of the JSON) the dashboard is as before.
+    var receipts: [SourceReceipt]? = nil
+}
+
+// MARK: - receipts (aresium/src/engine/receipts, brief 30)
+
+/// Card or cash.
+nonisolated enum ReceiptMethod: String, Codable, Equatable, Sendable, CaseIterable {
+    case card, cash
+}
+
+/// `readReceipt`'s answer: what the engine made of Vision's text. A value not found is nil; `sure` says which came
+/// from the register's code or a clear line (the check window asks the others first).
+nonisolated struct ReceiptReading: Codable, Equatable, Sendable {
+    struct Sure: Codable, Equatable, Sendable {
+        var shop: Bool
+        var date: Bool
+        var total: Bool
+        var method: Bool
+    }
+    var shop: String?
+    /// The shop list's category id for the shop ("groceries"), when the list knows it.
+    var categoryId: String?
+    /// `YYYY-MM-DD` and `HH:MM`.
+    var date: String?
+    var time: String?
+    var total: Double?
+    /// ISO 4217; "EUR" when the receipt names none; nil only for an undecided "kr".
+    var currency: String?
+    var method: ReceiptMethod?
+    var language: String?
+    /// "code" (the register's QR code was read) or "text".
+    var from: String
+    /// The receipt's lines, top to bottom (look-alike letters made Latin): kept instead of a photo.
+    var rows: [String]
+    var sure: Sure
+
+    /// Nothing read: the check window's empty fields (in euros, as the engine assumes when a receipt names none).
+    static let nothing = ReceiptReading(currency: "EUR", from: "text", rows: [],
+                                        sure: Sure(shop: false, date: false, total: false, method: false))
+}
+
+/// `matchReceipt`'s receipt: its day, total, currency and shop.
+nonisolated struct MatchReceipt: Codable, Equatable, Sendable {
+    let date: String
+    let total: Double
+    var currency: String?
+    var shop: String?
+}
+
+/// `matchReceipt`'s payments: the stored ones (negative = money out).
+nonisolated struct MatchPayment: Codable, Equatable, Sendable {
+    let id: String
+    let date: String
+    let amount: Double
+    var currency: String?
+    var counterparty: String?
+    var description: String?
+}
+
+/// A payment the person is asked about ("Is this the same payment?"), and why.
+nonisolated struct ReceiptCandidate: Codable, Equatable, Sendable {
+    enum Why: String, Codable, Equatable, Sendable {
+        /// One of two or more payments with the receipt's exact amount.
+        case severalSame
+        /// The same shop with a bank amount larger by up to 200 (cash back, a tip) or smaller by less than 2 %.
+        case amountDiffers
+        /// The receipt is in another currency than the payment.
+        case otherCurrency
+    }
+    let id: String
+    let why: Why
+    /// Days from the receipt to the booking (0–7).
+    let days: Int
+    /// Bank amount minus the receipt's total (positive: the bank took more); nil for another currency.
+    let difference: Double?
+}
+
+/// `matchReceipt`'s answer: the one payment to join without asking, or the ones to ask about (best first, at most 5).
+nonisolated struct ReceiptMatch: Codable, Equatable, Sendable {
+    let exact: String?
+    let candidates: [ReceiptCandidate]
+
+    static let none = ReceiptMatch(exact: nil, candidates: [])
+}
+
+/// A stored receipt for `buildDashboardSource` (`SourceReceipt`): a cash receipt in another currency comes with its
+/// euro amount as its total, in EUR.
+nonisolated struct SourceReceipt: Codable, Equatable, Sendable {
+    let id: String
+    let date: String
+    let total: Double
+    let currency: String
+    let method: ReceiptMethod
+    /// The category's name on the person's list, or nil.
+    var category: String?
+    var shop: String?
+    var paymentId: String?
 }

@@ -90,6 +90,15 @@ nonisolated struct Transaction: Codable, Identifiable {
     let city: String
     let categoriesIn: [String]
     let incomeBuckets: [String]
+    /// Phone mode's receipts (brief 31; absent from the server's JSON): the receipt this row is (a cash receipt, or a
+    /// card receipt not joined yet), a card receipt waiting for its bank payment, and on a withdrawal's "covered by
+    /// receipts" row the receipts that took the cash.
+    var receiptId: String? = nil
+    var provisional: Bool? = nil
+    var coveredBy: [String]? = nil
+
+    /// A card receipt counted on its own until its bank payment comes.
+    var isWaitingReceipt: Bool { provisional == true }
 }
 
 nonisolated struct Overview: Codable {

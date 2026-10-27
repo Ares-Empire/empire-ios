@@ -43,6 +43,56 @@ enum PhoneSample {
 
         """
 
+    /// `-sampleReceipts`: made-up receipts kept through the real flow (`saveReceipt`): a card receipt waiting for its bank
+    /// payment (Groceries), a cash one after this month's withdrawal (Eating out; Cash shows its covered row), one joined
+    /// to the month's first REWE payment, and a card receipt in pounds (only in Settings → Receipts until joined).
+    static func addReceipts(_ phone: PhoneBackend, now: Date = .now) async throws {
+        let calendar = ReceiptDay.calendar
+        let today = ReceiptDay.day(now)
+        func day(_ offset: Int, from start: String = today) -> String {
+            let date = calendar.date(byAdding: .day, value: offset, to: ReceiptDay.date(start) ?? now) ?? now
+            return min(ReceiptDay.day(date), today)
+        }
+        let payments = try await phone.ledger.payments()
+        let month = String(today.prefix(7))
+        func draft(_ shop: String, _ date: String, _ total: Double, _ method: ReceiptMethod, _ category: String?,
+                   currency: String = "EUR", rows: [String]) -> ReceiptDraft {
+            ReceiptDraft(date: date, shop: shop, total: total, currency: currency, method: method, category: category,
+                         categorySource: category == nil ? .none : .starter, rows: rows, from: "text")
+        }
+        _ = try await phone.saveReceipt(draft(ReceiptSample.shop, day(-1), 27.65, .card, "groceries",
+                                              rows: ReceiptSample.textRows))
+        if let withdrawal = payments.last(where: { $0.counterparty?.contains("Geldautomat") == true }) {
+            _ = try await phone.saveReceipt(draft("Cafe Fiktiva", day(2, from: withdrawal.bookingDate), 8.40, .cash,
+                                                  "eating-out", rows: ["CAFE FIKTIVA", "Cappuccino 3,40", "Croissant 2,20",
+                                                                       "Apfelschorle 2,80", "8,40"]))
+        }
+        if let rewe = payments.first(where: { $0.bookingDate.hasPrefix(month) && $0.counterparty == "REWE Markt GmbH" }) {
+            let total = -rewe.amountValue
+            let amount = ReceiptAmount.field(total, language: .german)
+            _ = try await phone.saveReceipt(draft("REWE", rewe.bookingDate, total, .card, "groceries",
+                                                  rows: ["REWE Markt GmbH", "Fiktivstraße 1", "SUMME EUR \(amount)",
+                                                         "Geg. Mastercard EUR \(amount)"]))
+        }
+        _ = try await phone.saveReceipt(draft("Fictional Bookshop", day(-3), 12.40, .card, nil, currency: "GBP",
+                                              rows: ["FICTIONAL BOOKSHOP", "1 Example Lane, London", "TOTAL £12.40",
+                                                     "CARD PAYMENT"]))
+    }
+
+    /// `-sampleReceiptQuestion`: bank payments the made-up receipt (27,65 on 26 Oct 2026) may be: two of its exact amount
+    /// and one €20 more at the same shop, so saving it asks "Is this the same payment?".
+    static func addQuestionPayments(_ phone: PhoneBackend) async throws {
+        let csv = """
+            IBAN Auftragskonto;Buchungstag;Valutadatum;Name Zahlungsbeteiligter;Buchungstext;Verwendungszweck;Betrag;Währung;Soll/Haben;Saldo nach Buchung
+            ;26.10.2026;26.10.2026;MUSTERMARKT LINDE;Kartenzahlung;Girocard 4711;27,65;EUR;S;
+            ;27.10.2026;27.10.2026;MUSTERMARKT LINDE;Kartenzahlung;Girocard 4712;27,65;EUR;S;
+            ;27.10.2026;27.10.2026;MUSTERMARKT LINDE;Kartenzahlung;Girocard 4713;47,65;EUR;S;
+
+            """
+        _ = try await phone.importFiles([ImportFile(name: "Umsaetze-Fragen.csv", data: Data(csv.utf8))],
+                                        auth: BackendAuth(token: nil))
+    }
+
     /// A made-up unknown bank's CSV (the engine's fixture), for the layout confirmation sheet (`-sampleLayout`).
     static func unknownBankFile() -> ImportFile? {
         guard let url = Bundle.main.url(forResource: "sample-unknown-bank", withExtension: "csv"),

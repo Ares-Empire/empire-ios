@@ -11,8 +11,14 @@ nonisolated enum CategorySource: String, Codable, Sendable, CaseIterable {
     case starter
     /// The person, by hand (Switch, Add, or answering where an unticked category's payments go).
     case manual
+    /// The receipt joined to it (brief 31): a payment not sorted takes its receipt's category.
+    case receipt
     /// Nothing yet: not sorted.
     case none
+
+    /// A category the person gave (by hand, or through the receipt they checked): sorting and the "also the others"
+    /// answer never change it.
+    static func keeps(_ source: String) -> Bool { source == manual.rawValue || source == receipt.rawValue }
 }
 
 nonisolated struct LedgerAccount: Codable, Equatable, Sendable {
@@ -85,10 +91,11 @@ nonisolated struct LedgerSummary: Equatable, Sendable {
     var accounts = 0
     var learned = 0
     var layouts = 0
+    var receipts = 0
     var chosen: [ChosenCategory] = []
 
-    /// Nothing imported or learned yet (chosen categories may exist): an export can be restored into it.
-    var isEmpty: Bool { payments == 0 && accounts == 0 && learned == 0 && layouts == 0 }
+    /// Nothing imported, kept or learned yet (chosen categories may exist): an export can be restored into it.
+    var isEmpty: Bool { payments == 0 && accounts == 0 && learned == 0 && layouts == 0 && receipts == 0 }
 }
 
 /// The payments added from one file.
@@ -113,6 +120,7 @@ nonisolated enum LedgerError: LocalizedError, Equatable {
     case invalidExport(String)
     case nameTaken
     case emptyName
+    case receiptNotFound
 
     var errorDescription: String? {
         switch self {
@@ -121,6 +129,7 @@ nonisolated enum LedgerError: LocalizedError, Equatable {
         case .invalidExport: String(localized: "This file is not an Aresium export, or it is damaged. Nothing was restored.")
         case .nameTaken: String(localized: "There is already a category with this name.")
         case .emptyName: String(localized: "Type a name for the category.")
+        case .receiptNotFound: String(localized: "This receipt is no longer on this iPhone.")
         }
     }
 }
@@ -139,6 +148,7 @@ actor PhoneLedger {
                       accounts: try modelContext.fetchCount(FetchDescriptor<StoredAccount>()),
                       learned: try modelContext.fetchCount(FetchDescriptor<StoredRule>()),
                       layouts: try modelContext.fetchCount(FetchDescriptor<StoredLayout>()),
+                      receipts: try modelContext.fetchCount(FetchDescriptor<StoredReceipt>()),
                       chosen: try chosen())
     }
 
@@ -182,6 +192,10 @@ actor PhoneLedger {
         }
         for payment in try modelContext.fetch(FetchDescriptor<StoredPayment>()) where payment.extraCategories.contains(id) {
             payment.extraCategories.removeAll { $0 == id }
+        }
+        for receipt in try modelContext.fetch(FetchDescriptor<StoredReceipt>(predicate: #Predicate { $0.category == id })) {
+            receipt.category = target
+            receipt.categorySource = (target == nil ? CategorySource.none : .manual).rawValue
         }
         if ChosenCategory.isCustom(id) {
             try modelContext.fetch(FetchDescriptor<StoredRule>(predicate: #Predicate { $0.category == id }))
@@ -311,7 +325,7 @@ actor PhoneLedger {
                               uniquingKeysWith: { first, _ in first })
         var sortedFresh: [String: String?] = [:]
         for (id, result) in zip(ids, results) {
-            guard let payment = byID[id], payment.categorySource != CategorySource.manual.rawValue else { continue }
+            guard let payment = byID[id], !CategorySource.keeps(payment.categorySource) else { continue }
             let source = result.categoryId == nil ? CategorySource.none : CategorySource(rawValue: result.source ?? "") ?? .none
             let wasStructural = payment.categorySource == CategorySource.structural.rawValue
             let applies = fresh.contains(id) || payment.category == nil || wasStructural != (source == .structural)
@@ -341,12 +355,111 @@ actor PhoneLedger {
     func move(_ ids: [String], to category: String, source: CategorySource) throws {
         let wanted = Set(ids)
         for payment in try modelContext.fetch(FetchDescriptor<StoredPayment>()) where wanted.contains(payment.id) {
-            guard payment.categorySource != CategorySource.manual.rawValue else { continue }
+            guard !CategorySource.keeps(payment.categorySource) else { continue }
             payment.category = category
             payment.categorySource = source.rawValue
             payment.extraCategories.removeAll { $0 == category }
         }
         try modelContext.save()
+    }
+
+    // MARK: receipts
+
+    /// Every receipt, newest purchase first (then the newest kept).
+    func receipts() throws -> [LedgerReceipt] {
+        try modelContext.fetch(FetchDescriptor<StoredReceipt>(sortBy: [SortDescriptor(\.date, order: .reverse),
+                                                                       SortDescriptor(\.created, order: .reverse)]))
+            .map(Self.value)
+    }
+
+    func receipt(_ id: String) throws -> LedgerReceipt? {
+        try storedReceipt(id).map(Self.value)
+    }
+
+    /// The receipt joined to this payment, if one is.
+    func receipt(joinedTo paymentID: String) throws -> LedgerReceipt? {
+        try modelContext.fetch(FetchDescriptor<StoredReceipt>(predicate: #Predicate { $0.paymentID == paymentID }))
+            .first.map(Self.value)
+    }
+
+    func addReceipt(_ receipt: LedgerReceipt) throws {
+        modelContext.insert(StoredReceipt(receipt))
+        try modelContext.save()
+    }
+
+    /// The payments other receipts are joined to (a payment takes one receipt).
+    func takenPayments(besides receiptID: String?) throws -> Set<String> {
+        Set(try modelContext.fetch(FetchDescriptor<StoredReceipt>()).compactMap { $0.id == receiptID ? nil : $0.paymentID })
+    }
+
+    /// Joins a receipt to its bank payment. A payment not sorted takes the receipt's category (source `receipt`).
+    /// - Returns: whether the payment took the receipt's category.
+    @discardableResult
+    func join(_ receiptID: String, to paymentID: String) throws -> Bool {
+        guard let receipt = try storedReceipt(receiptID) else { throw LedgerError.receiptNotFound }
+        guard let payment = try storedPayment(paymentID) else { throw LedgerError.notFound }
+        receipt.paymentID = paymentID
+        receipt.declined.removeAll { $0 == paymentID }
+        var gave = false
+        if payment.category == nil, let category = receipt.category {
+            payment.category = category
+            payment.categorySource = CategorySource.receipt.rawValue
+            payment.extraCategories.removeAll { $0 == category }
+            gave = true
+        }
+        try modelContext.save()
+        return gave
+    }
+
+    /// Unjoins a receipt: it waits for its bank payment again, and a category the payment took from it goes (the
+    /// payment is sorted again with the others not sorted).
+    func unjoin(_ receiptID: String) throws {
+        guard let receipt = try storedReceipt(receiptID) else { throw LedgerError.receiptNotFound }
+        if let paymentID = receipt.paymentID {
+            takeBackCategory(of: paymentID)
+            receipt.declined.removeAll { $0 == paymentID }
+        }
+        receipt.paymentID = nil
+        try modelContext.save()
+    }
+
+    /// "None of these": the person said these payments are not the receipt's.
+    func decline(_ paymentIDs: [String], for receiptID: String) throws {
+        guard let receipt = try storedReceipt(receiptID) else { throw LedgerError.receiptNotFound }
+        for id in paymentIDs where !receipt.declined.contains(id) { receipt.declined.append(id) }
+        try modelContext.save()
+    }
+
+    /// Deletes a receipt: its payment, if joined, loses a category it took from it; the cash it covered is uncovered
+    /// (the dashboard counts again without it).
+    func deleteReceipt(_ receiptID: String) throws {
+        guard let receipt = try storedReceipt(receiptID) else { throw LedgerError.receiptNotFound }
+        if let paymentID = receipt.paymentID { takeBackCategory(of: paymentID) }
+        modelContext.delete(receipt)
+        try modelContext.save()
+    }
+
+    /// The receipt's category, set by the person (or nil: not sorted).
+    func setReceiptCategory(_ receiptID: String, category: String?, source: CategorySource) throws {
+        guard let receipt = try storedReceipt(receiptID) else { throw LedgerError.receiptNotFound }
+        receipt.category = category
+        receipt.categorySource = (category == nil ? CategorySource.none : source).rawValue
+        try modelContext.save()
+    }
+
+    private func takeBackCategory(of paymentID: String) {
+        guard let payment = try? storedPayment(paymentID),
+              payment.categorySource == CategorySource.receipt.rawValue else { return }
+        payment.category = nil
+        payment.categorySource = CategorySource.none.rawValue
+    }
+
+    private func storedReceipt(_ id: String) throws -> StoredReceipt? {
+        try modelContext.fetch(FetchDescriptor<StoredReceipt>(predicate: #Predicate { $0.id == id })).first
+    }
+
+    private func storedPayment(_ id: String) throws -> StoredPayment? {
+        try modelContext.fetch(FetchDescriptor<StoredPayment>(predicate: #Predicate { $0.id == id })).first
     }
 
     // MARK: export and restore
@@ -357,7 +470,8 @@ actor PhoneLedger {
                      learned: try modelContext.fetch(FetchDescriptor<StoredRule>(sortBy: [SortDescriptor(\.merchant)]))
                         .map { LearnedRule(merchant: $0.merchant, category: $0.category) },
                      layouts: try modelContext.fetch(FetchDescriptor<StoredLayout>(sortBy: [SortDescriptor(\.savedAt)]))
-                        .compactMap { try? JSONDecoder().decode(CsvLayout.self, from: $0.layout) })
+                        .compactMap { try? JSONDecoder().decode(CsvLayout.self, from: $0.layout) },
+                     receipts: try receipts().reversed())
     }
 
     /// Restores an export: only into a store without data (chosen categories are replaced), checked first, all or
@@ -380,6 +494,7 @@ actor PhoneLedger {
                 modelContext.insert(StoredLayout(id: Self.layoutID(layout), layout: try JSONEncoder().encode(layout),
                                                  savedAt: Date(timeIntervalSince1970: TimeInterval(index))))
             }
+            for receipt in export.receipts { modelContext.insert(StoredReceipt(receipt)) }
             try modelContext.save()
         } catch {
             modelContext.rollback()
@@ -402,6 +517,15 @@ actor PhoneLedger {
                       category: payment.category,
                       categorySource: CategorySource(rawValue: payment.categorySource) ?? .none,
                       extraCategories: payment.extraCategories, sequence: payment.sequence)
+    }
+
+    private static func value(_ receipt: StoredReceipt) -> LedgerReceipt {
+        LedgerReceipt(id: receipt.id, date: receipt.date, time: receipt.time, shop: receipt.shop, total: receipt.total,
+                      currency: receipt.currency, euroAmount: receipt.euroAmount,
+                      method: ReceiptMethod(rawValue: receipt.method) ?? .card, category: receipt.category,
+                      categorySource: CategorySource(rawValue: receipt.categorySource) ?? .none, rows: receipt.rows,
+                      from: receipt.from, paymentID: receipt.paymentID, declined: receipt.declined,
+                      created: receipt.created)
     }
 
     private static func value(_ account: StoredAccount) -> LedgerAccount {

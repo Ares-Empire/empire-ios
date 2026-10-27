@@ -84,8 +84,9 @@ struct ModeStatusScreen: View {
 
 /// Phone mode without data (brief 25, Patrik 2026-10-27): a calm empty state a little above the middle, as the store's
 /// own states look (`ModeStatusScreen`: a mark in a thin circle, a title, a line): "No data yet", what Aresium does and
-/// that it all stays on this iPhone, then Import data (the main button: the file picker; the category picker follows an
-/// import that added payments while none is chosen, `ImportStore`) and Start tour (quiet, the header's button look),
+/// that it all stays on this iPhone, then Import data (the main button: Import's menu, `ImportMenu`, whose Choose file
+/// opens the file picker; the category picker follows an import that added payments while none is chosen,
+/// `ImportStore`) and Start tour (quiet, the header's button look),
 /// then two quiet links: How do I get my file? and Restore from an export. It comes back after the tour while there is
 /// no data (`MainScreen`). It is the main screen for now, so it ends with the band.
 struct PhoneFirstScreen: View {
@@ -94,7 +95,8 @@ struct PhoneFirstScreen: View {
     let band: AresiumBand
     /// Why the last restore did not go through.
     var restoreProblem: String?
-    let importData: () -> Void
+    /// Import data: Choose file, Scan receipt, Choose photo.
+    let importChoices: ImportChoices
     let startTour: () -> Void
     /// The bank guide (`BankGuideSheet`).
     let openGuide: () -> Void
@@ -132,7 +134,7 @@ struct PhoneFirstScreen: View {
                 .multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
                 .padding(.top, 10)
             VStack(spacing: 10) {
-                Button(action: importData) {
+                ImportMenu(choices: importChoices) {
                     BusyLabel(text: imports.isBusy ? Text("Reading the file…") : Text("Import data"), busy: imports.isBusy)
                 }
                 .buttonStyle(FormButtonStyle(accent: nil, busy: imports.isBusy))
@@ -395,8 +397,15 @@ private struct UntickSheet: View {
 struct PhoneSettingsSection: View {
     let modes: ModeStore
     @State var data: PhoneDataModel
+    let palette: Palette
     @State private var confirmsDelete = false
     @State private var pickingExport = false
+    #if DEBUG
+    /// Screenshots: `-openReceipts` opens Receipts at once.
+    @State private var showsReceipts = LaunchArguments.current.contains("-openReceipts")
+    #else
+    @State private var showsReceipts = false
+    #endif
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -408,6 +417,11 @@ struct PhoneSettingsSection: View {
                         })
                     } label: {
                         SettingsRow(title: String(localized: "Categories"), value: String(phone.summary.chosen.count))
+                    }
+                    .buttonStyle(SettingsRowStyle())
+                    SettingsDivider()
+                    Button { showsReceipts = true } label: {
+                        SettingsRow(title: String(localized: "Receipts"), value: String(phone.summary.receipts))
                     }
                     .buttonStyle(SettingsRowStyle())
                     SettingsDivider()
@@ -447,12 +461,17 @@ struct PhoneSettingsSection: View {
             if let message = data.message { FormNote(text: message).padding(.top, 10) }
             if let problem = data.problem { FormProblem(text: problem).padding(.top, 10) }
         }
+        .navigationDestination(isPresented: $showsReceipts) {
+            if let phone = modes.phone {
+                ReceiptListView(phone: phone, palette: palette) { await modes.dashboard.reloadAfterTransactionChange() }
+            }
+        }
         .confirmationDialog(Text("Delete Aresium data on this iPhone?"), isPresented: $confirmsDelete,
                             titleVisibility: .visible) {
             Button("Delete", role: .destructive) { Task { await data.deleteAll() } }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Your payments, categories and learned sorting on this iPhone go for good. Export them first to keep a copy.")
+            Text("Your payments, receipts, categories and learned sorting on this iPhone go for good. Export them first to keep a copy.")
         }
         .sheet(item: Binding(get: { data.exportFile }, set: { if $0 == nil { data.exportClosed() } })) { file in
             ShareSheet(url: file.url) { data.exportClosed() }

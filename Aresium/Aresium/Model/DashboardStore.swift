@@ -54,6 +54,8 @@ final class DashboardStore {
     /// Where the data comes from: the server or the phone's own store (`AresiumBackend`); nil while the phone's store
     /// opens (`ModeStore`), so nothing is asked of the wrong one.
     private(set) var backend: (any AresiumBackend)?
+    /// Phone mode's backend (receipts are phone mode's); nil in server mode.
+    var phone: PhoneBackend? { backend as? PhoneBackend }
     var generation: Int { session.generation }
     private var fetchGeneration = 0
     private(set) var lastSuccessfulLoad: Date?

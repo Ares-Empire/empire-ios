@@ -468,13 +468,15 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   through `AresiumBackend` and never know which. **Storage:** SwiftData, one store per iPhone in `Application
   Support/Aresium/local/ledger.store`, file protection complete (`PhoneLedger`, `PhoneStorage`): accounts, payments
   (unique by account, source and `externalId`; who set the category), chosen categories, learned merchants, the CSV
-  layouts the person confirmed. **Moving over** (builds before 22 kept one store per account in `Aresium/<account
+  layouts the person confirmed, receipts (schema version 2, brief 31; version 1 stores move on by a lightweight stage,
+  `LedgerMigrationPlan`; a model change always adds the next version, never edits one in place). **Moving over** (builds before 22 kept one store per account in `Aresium/<account
   id>/`): when there is no `local/` store, the most recently changed older store (its newest file) is moved (never
   copied) to `local/` at the first open; with several, the others stay untouched where they are (logged, category
   `storage`). **Lifecycle:** the data belongs to the iPhone, not to a login: logging in or out, leaving Aresium and
   deleting the Ares account never touch it; it goes only with Settings → Delete Aresium data on this iPhone or the
-  lock's "Forgot the code?". Settings → Your data on this iPhone (phone mode): Categories, Export (one JSON file, schema
-  1, `Aresium-<date>.json`, through the share sheet), Restore from an export (only into an empty store, all or nothing).
+  lock's "Forgot the code?". Settings → Your data on this iPhone (phone mode): Categories, Receipts, Export (one JSON file,
+  schema 2 with the receipts, `Aresium-<date>.json`, through the share sheet), Restore from an export (only into an
+  empty store, all or nothing; schema 1 files still restore).
   **The widget snapshot** belongs to the store it shows: phone mode's carries `phone: true` and is shown whoever is
   logged in; server mode's carries its account and follows the marker as before (`WidgetSnapshotStore.readShown`).
   **The lock** (brief 22, `Model/AppLock.swift`, `Screens/LockScreen.swift`, `Screens/LockSettings.swift`): optional,
@@ -614,7 +616,7 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   `PhoneModeTests`, `PhoneBackendTests`, `PhoneStoreTests` (with the moving over), `PhoneEngineTests`,
   `PhoneLookTests`, `LockTests`, `SupportContactTests`, `CategoryRouteTests`, `FileCheckTests`, `BankFormatTests`,
   `BankRequestTests`, `FirstScreenTests`, `ImportThenCategoriesTests`, `CategoryCountsTests`, `PaymentPageTests`,
-  `OneMonthTests`.
+  `OneMonthTests`, `ReceiptCaptureTests`, `ReceiptBookTests`.
   Screenshots of every phone-mode screen in both looks and languages, and at the largest text size: `build/18-*.png`
   (2026-10-27); without an account and the lock: `build/22-*.png`, contact sheet `build/22-sheet.png`; the unknown
   file's window and sending: `build/23-*.png`, contact sheet `build/23-sheet.png`; the first screen, the lighter tour
@@ -655,6 +657,60 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   arguments (DEBUG, with `-samplePhone` or `-samplePhoneEmpty`): `-openGuide list|<bank id>` (`-guidePlace
   app|website`, `-guideSearch <text>`, `-scrollToEnd` the page's end), `-tour <1–12>` (`-tourSettings`: its Settings open). Tests: `BankGuideTests`,
   `TourTests`. Screenshots: `build/24-*.png`, contact sheet `build/24-sheet.png`.
+  **Receipts** (brief 31, Patrik 2026-10-27; D8 in `ares-empire/docs/ARESIUM-FOR-OTHERS.md` → part 6; phone mode
+  only). **Capture:** in phone mode Import (the first screen's Import data, the dashboard's import button) is Apple's
+  menu: Choose file, Scan receipt (only where `VNDocumentCameraViewController.isSupported`; the iOS 27 simulator says
+  yes but cannot record, so there the scanner stops: "The scanner stopped. Try again."), Choose photo (`PhotosPicker`,
+  no library access needed); server mode keeps its button; in the tour every item only answers the import step
+  (`ImportChoices.tour`). `NSCameraUsageDescription` (German in `InfoPlist.xcstrings`). Reading on the phone
+  (`Model/ReceiptCapture.swift`): `RecognizeTextRequest` (accurate, the language detected, minimum text height 0.005:
+  the default dropped pieces of a long receipt) and `DetectBarcodesRequest` for QR codes, which falls back to Core
+  Image's QR detector when it throws (its model does not load on the simulator); off the main actor, cancelled with
+  its sheet; the image is never written and is released after reading. Vision's boxes become the engine's in one place
+  (`ReceiptBox`: top left, y down, page n at y = n). **The engine:** `readReceipt` (shop, date, total, currency, card or
+  cash, the rows, what it is sure of), `matchReceipt`, and `buildDashboardSource`'s `receipts` (`AresiumEngine`,
+  `EngineTypes.swift`). **The check window** (`Model/ReceiptCheck.swift`, `Screens/ReceiptCheckView.swift`, the file
+  check window's look): "This is what Aresium read from the receipt:", the fields not sure or not found first under
+  "Please check" (each says which: "Aresium is not sure about this." / "Not found on the receipt."), then "Read from
+  the receipt"; Shop (text), Date (Apple's date picker), Total (with the currency when it is not EUR; an undecided
+  "kr" must be chosen), Paid by Card / Cash (segmented; not read: Card only when a stored bank payment matches, with
+  that said, else nothing and Save waits), Amount in euros (another currency paid in cash, required), Category (the
+  person's categories and Not sorted; the shop list's one preset when chosen; one picked by hand teaches the shop),
+  "As on the receipt" folded, "Does this look right?" and Save (the line above it says what is still missing).
+  Nothing read: the same window empty ("Aresium couldn't read this receipt. Type what it says:"). **Keeping and
+  joining** (`Model/Receipts.swift`, `Model/PhoneReceipts.swift`, `StoredReceipt`): the read rows and the confirmed
+  values, never the image. A card receipt is matched on Save (`taken`: other receipts' payments and the ones the person
+  declined): one exact match joins at once (a payment Not sorted takes the receipt's category, source `receipt`:
+  "Sorted by its receipt."), candidates ask **"Is this the same payment?"** in the same sheet (the receipt, then the
+  payments as the dashboard's rows with what differs: "€20.00 more: cash back or a tip?", "One of 2 payments with this
+  amount", "Paid in another currency"; "None of these" declines them and it waits), none waits ("Waiting for the bank
+  statement", counted on its own meanwhile, `provisional`). After every bank import (`PhoneBackend.importFiles` →
+  `matchWaitingReceipts`) the waiting card receipts are matched again: exact ones join (the result line adds "· 1
+  receipt joined"), candidates queue in `PhoneBackend.receiptQuestions` and ContentView asks them once each after the
+  import's windows and the category picker (`ReceiptQuestionSheet`; closing it lets the receipt wait). A saved
+  receipt's line goes to the import's result banner. **Cash** counts in its category and is taken out of the
+  withdrawals before it by the engine: the withdrawal's category shows a "Covered by receipts" row (`coveredBy`), which
+  opens those receipts. A card receipt in another currency waits outside the dashboard until joined (Settings → Receipts
+  shows it). **Pages:** a receipt row in a payment list (a clock mark and "Waiting for the bank statement" or "Paid in
+  cash") opens the receipt's page (`Screens/ReceiptPageView.swift`, `ReceiptPageModel`: shop, amount, the day written
+  out, Paid by and where it stands, Category with Change (learns the shop), the bank payment with Unjoin or Join with a
+  payment… (the engine's candidates, else money out from the receipt's day to a week later), "As on the receipt",
+  Delete receipt: unjoins, a category its payment took from it goes, the cash is uncovered). A joined payment's page has
+  a Receipt section (shop, day, the rows folded, Unjoin). Settings → Your data → Receipts lists them newest first with
+  where each stands. The tour's import step: "New files from your bank and your receipts come in here."; the tour never
+  opens the camera or reads anything. Launch arguments (DEBUG, with `-samplePhone`/`-samplePhoneEmpty`):
+  `-sampleReceipt` (the made-up receipt, `ReceiptSample`, read through Vision and the engine: the check window, all
+  read but the shop; `-sampleReceiptShop REWE` prints a chain the shop list knows: all sure), `-sampleReceiptUnsure` (a café receipt without code, payment line or total word),
+  `-sampleReceiptBlank` (nothing read), `-sampleReceiptQuestion` (saved with two payments of its amount and one €20
+  more: the question), `-sampleReceipts` (kept receipts: waiting in Groceries, cash after the month's withdrawal, one
+  joined to the month's first REWE payment, one in pounds; then `-sampleCategory Groceries -sampleMonth <YYYY-MM>
+  -samplePhoneTransaction <shop>` opens a page, `-samplePhoneTransaction Covered` in Cash the covered receipts,
+  `-samplePhoneTransaction REWE` the joined payment), `-openSheet settings -openReceipts` (Settings → Receipts),
+  `-openReceiptText` ("As on the receipt" open), `-choosePhoto` (the photo picker). Tests: `ReceiptCaptureTests`
+  (Vision, boxes, pages, photos, cancelling), `ReceiptBookTests` (a version 1 store from
+  `AresiumTests/Fixtures/ledger-v1`, export 2 and 1, joining, asking, waiting, after an import, cash and its covered
+  row, deleting, foreign cash, card or cash not read, the words in both languages). Screenshots: `build/31-*.png`
+  (part A), `build/31b-*.png`.
 - Targets: `Aresium` (app), `AresiumWidgetExtension` (widgets, folder `Aresium/AresiumWidget/`, embedded in the
   app), `AresiumTests`. `Aresium/AresiumShared/` is compiled into both app and widget (theme, `AppTheme`, `AppGroup`,
   widget snapshot); everything else belongs to one target. App Group `group.de.ares-empire.aresium` in both

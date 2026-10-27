@@ -2138,6 +2138,7 @@ var __AresiumEngine = (() => {
     detectBankFile: () => detectBankFile,
     guessCsvLayout: () => guessCsvLayout,
     learn: () => learn,
+    matchReceipt: () => matchReceipt,
     merchantKey: () => merchantKey,
     ownTransfers: () => ownTransfers,
     parseCamt: () => parseCamt2,
@@ -2148,6 +2149,7 @@ var __AresiumEngine = (() => {
     readCamt: () => readCamt,
     readCsv: () => readCsv,
     readMt940: () => readMt940,
+    readReceipt: () => readReceipt,
     readingsOfUnknownFile: () => readingsOfUnknownFile,
     shareableLayout: () => shareableLayout,
     sortPayments: () => sortPayments,
@@ -5292,9 +5294,9 @@ var __AresiumEngine = (() => {
     for (const row of rows) {
       const rawAmount = pick(row, COLS.amount);
       if (rawAmount === void 0) continue;
-      let amount = parseAmount(rawAmount);
+      let amount2 = parseAmount(rawAmount);
       const sh = pick(row, COLS.sign);
-      if (sh && /^(s|d|soll)/i.test(sh) && !amount.startsWith("-")) amount = `-${amount}`;
+      if (sh && /^(s|d|soll)/i.test(sh) && !amount2.startsWith("-")) amount2 = `-${amount2}`;
       iban = iban || pick(row, COLS.ownIban);
       const ccy = pick(row, COLS.currency) || "EUR";
       currency = ccy;
@@ -5303,12 +5305,12 @@ var __AresiumEngine = (() => {
       const purpose = pick(row, COLS.purpose) || pick(row, COLS.bookingText) || "(no description)";
       const counterparty = pick(row, COLS.name) || null;
       const balanceRaw = pick(row, COLS.balance);
-      const externalId = sha1(`${bookingDate2.toISOString()}|${amount}|${purpose}|${counterparty ?? ""}`).slice(0, 24);
+      const externalId = sha1(`${bookingDate2.toISOString()}|${amount2}|${purpose}|${counterparty ?? ""}`).slice(0, 24);
       transactions.push({
         externalId,
         bookingDate: bookingDate2,
         valueDate: valueRaw ? parseDateFlexible(valueRaw) : null,
-        amount,
+        amount: amount2,
         balance: balanceRaw ? parseAmount(balanceRaw) : null,
         currency: ccy,
         description: purpose,
@@ -5356,7 +5358,7 @@ var __AresiumEngine = (() => {
       currency = stmt?.Acct?.Ccy || currency;
       for (const ntry of arr(stmt.Ntry)) {
         const isDebit = ntry.CdtDbtInd === "DBIT";
-        const amount = `${isDebit ? "-" : ""}${parseAmount(textOf(ntry.Amt))}`;
+        const amount2 = `${isDebit ? "-" : ""}${parseAmount(textOf(ntry.Amt))}`;
         const ccy = ntry.Amt && typeof ntry.Amt === "object" ? ntry.Amt["@_Ccy"] : void 0;
         const bookingDate2 = new Date(ntry.BookgDt?.Dt || ntry.BookgDt?.DtTm || ntry.ValDt?.Dt);
         const valueDate = ntry.ValDt?.Dt ? new Date(ntry.ValDt.Dt) : null;
@@ -5367,12 +5369,12 @@ var __AresiumEngine = (() => {
         const counterpartyRaw = (isDebit ? creditor : debtor) || creditor || debtor;
         const counterparty = counterpartyRaw ? String(counterpartyRaw) : null;
         const ref = ntry.AcctSvcrRef || tx?.Refs?.AcctSvcrRef || tx?.Refs?.EndToEndId || tx?.Refs?.TxId;
-        const externalId = ref && ref !== "NOTPROVIDED" ? String(ref) : sha1(`${bookingDate2.toISOString()}|${amount}|${remittance2}|${counterparty ?? ""}`).slice(0, 24);
+        const externalId = ref && ref !== "NOTPROVIDED" ? String(ref) : sha1(`${bookingDate2.toISOString()}|${amount2}|${remittance2}|${counterparty ?? ""}`).slice(0, 24);
         transactions.push({
           externalId,
           bookingDate: bookingDate2,
           valueDate,
-          amount,
+          amount: amount2,
           currency: ccy || currency,
           description: remittance2,
           counterparty,
@@ -5489,24 +5491,25 @@ var __AresiumEngine = (() => {
         dayBalance
       }];
     }));
-    const add = (map, name, amount) => map.set(name, (map.get(name) || 0) + amount);
+    const add = (map, name, amount2) => map.set(name, (map.get(name) || 0) + amount2);
     const transactions = [];
     for (const t of source.transactions) {
       const month = t.date.slice(0, 7);
-      const day = parseInt(t.date.slice(8), 10);
+      const day2 = parseInt(t.date.slice(8), 10);
       const index = monthIndex.get(month);
       const mo = index === void 0 ? void 0 : byMonth[month];
-      const validDay = !!mo && day >= 1 && day <= mo.dayExpense.length;
+      const validDay = !!mo && day2 >= 1 && day2 <= mo.dayExpense.length;
       const tags = t.tags || [];
-      const unsortedIn = t.amount > 0 && isUnsorted(t.categoryName);
+      const covered = t.coveredBy !== void 0;
+      const unsortedIn = t.amount > 0 && isUnsorted(t.categoryName) && !covered;
       const categoriesIn = [.../* @__PURE__ */ new Set([t.categoryName, ...tags])].filter((name) => !(unsortedIn && isUnsorted(name)));
       const isTransfer = catByName.get(t.categoryName)?.kind === "transfer";
       const primaryBucket = isUnsorted(t.categoryName) ? "Other" : incomeBucketKeep.has(t.categoryName) ? t.categoryName : "Refunds";
-      const buckets = t.amount > 0 && !isTransfer ? [.../* @__PURE__ */ new Set([primaryBucket, ...tags.filter((n) => incomeBucketKeep.has(n))])] : [];
-      transactions.push({
+      const buckets = t.amount > 0 && !isTransfer && !covered ? [.../* @__PURE__ */ new Set([primaryBucket, ...tags.filter((n) => incomeBucketKeep.has(n))])] : [];
+      const txn = {
         id: t.id,
         date: t.date,
-        day,
+        day: day2,
         month,
         amount: t.amount,
         categoryName: t.categoryName,
@@ -5515,12 +5518,16 @@ var __AresiumEngine = (() => {
         city: t.city,
         categoriesIn,
         incomeBuckets: buckets
-      });
+      };
+      if (t.receiptId !== void 0) txn.receiptId = t.receiptId;
+      if (t.provisional) txn.provisional = true;
+      if (covered) txn.coveredBy = [...t.coveredBy];
+      transactions.push(txn);
       if (catByName.get(t.categoryName)?.kind === "spend" && !unsortedIn) {
         total.expense += -t.amount;
         if (mo) {
           mo.expense += -t.amount;
-          if (validDay) mo.dayExpense[day - 1] += -t.amount;
+          if (validDay) mo.dayExpense[day2 - 1] += -t.amount;
         }
       }
       for (const name of categoriesIn) {
@@ -5530,14 +5537,14 @@ var __AresiumEngine = (() => {
         if (index !== void 0) {
           add(categoryMonths[index], name, -t.amount);
           series.months[index] += -t.amount;
-          if (validDay) series.days[month][day - 1] += -t.amount;
+          if (validDay) series.days[month][day2 - 1] += -t.amount;
         }
       }
-      if (t.amount > 0 && !isTransfer) {
+      if (t.amount > 0 && !isTransfer && !covered) {
         total.income += t.amount;
         if (mo) {
           mo.income += t.amount;
-          if (validDay) mo.dayIncome[day - 1] += t.amount;
+          if (validDay) mo.dayIncome[day2 - 1] += t.amount;
         }
         for (const bucket of buckets) {
           if (!income.has(bucket)) income.set(bucket, makeSeries());
@@ -5546,7 +5553,7 @@ var __AresiumEngine = (() => {
             add(incomeMonths[index], bucket, t.amount);
             const series = income.get(bucket);
             series.months[index] += t.amount;
-            if (validDay) series.days[month][day - 1] += t.amount;
+            if (validDay) series.days[month][day2 - 1] += t.amount;
           }
         }
       }
@@ -5772,7 +5779,7 @@ var __AresiumEngine = (() => {
   }
 
   // src/engine/sorting/shop-matcher.ts
-  var moneyOf = (amount) => typeof amount !== "number" || !Number.isFinite(amount) || amount === 0 ? null : amount < 0 ? "out" : "in";
+  var moneyOf = (amount2) => typeof amount2 !== "number" || !Number.isFinite(amount2) || amount2 === 0 ? null : amount2 < 0 ? "out" : "in";
   var applies = (direction, money2) => money2 === null || direction === "both" || direction === money2;
   var references = /\b(?:eref|mref|cred|kref|iban|bic|mandatsreferenz|mandatsref|gläubiger-id|glaeubiger-id|kundenreferenz)\s*[:+]\s*\S+/giu;
   var branchNumber = /^((?:\D*[^\p{L}\p{N}])?)\d{2,6}(?![\p{L}\p{N}]|[.,:]\d)/u;
@@ -5783,30 +5790,30 @@ var __AresiumEngine = (() => {
     const seen = /* @__PURE__ */ new Set();
     const otherWords = new Set(list.plainVowelWords ?? []);
     const noBranches = new Set((list.noBranches ?? []).flatMap((name) => shopSpellings(name, otherWords)));
-    const add = (index, name, categoryId, rank, direction) => {
+    const add = (index, name, categoryId, rank, direction, source) => {
       for (const spelling of shopSpellings(name, otherWords)) {
         if (seen.has(spelling)) continue;
         seen.add(spelling);
         const words2 = spelling.split(" ");
         const bucket = index.get(words2[0]) ?? [];
-        bucket.push({ words: words2, categoryId, rank, direction });
+        bucket.push({ words: words2, categoryId, rank, direction, source });
         index.set(words2[0], bucket);
       }
     };
     for (const [categoryId, names2, direction = "both"] of list.rules) for (const name of names2) {
-      add(handWritten, name, categoryId, rules.length, direction);
+      add(handWritten, name, categoryId, rules.length, direction, "rule");
       rules.push({ pattern: name, categoryId, source: "rule", direction });
     }
     for (const [categoryId, names2, direction = "both"] of list.merchants) for (const name of names2) {
       for (const spelling of shopSpellings(name, otherWords)) {
-        if (!merchants.has(spelling)) merchants.set(spelling, { categoryId, direction });
+        if (!merchants.has(spelling)) merchants.set(spelling, { categoryId, direction, name: spelling });
       }
       rules.push({ pattern: name, categoryId, source: "merchant", direction });
     }
     const specificity = (name) => [shopWords(name).length, shopWords(name).join("").length];
     const ranked = list.brands.flatMap(([categoryId, names2]) => names2.map((name) => ({ name, categoryId, size: specificity(name) }))).sort((a, b) => b.size[0] - a.size[0] || b.size[1] - a.size[1] || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
     for (const { name, categoryId } of ranked) {
-      add(brands, name, categoryId, rules.length, "both");
+      add(brands, name, categoryId, rules.length, "both", "brand");
       rules.push({ pattern: name, categoryId, source: "brand", direction: "both" });
     }
     function find(index, words2) {
@@ -5829,27 +5836,34 @@ var __AresiumEngine = (() => {
         const inside = covering.some((o) => o.start <= m.start && o.end >= m.end && o.end - o.start > m.end - m.start);
         if (!inside && (!winner || m.entry.rank < winner.entry.rank)) winner = m;
       }
-      return winner?.entry.categoryId ?? null;
+      if (!winner) return null;
+      const { categoryId, words: words2, source, direction } = winner.entry;
+      return { categoryId, name: words2.join(" "), source, direction, at: [winner.start, winner.end] };
     }
     function branchMerchant(payment) {
       const head = payeeText(payment).replace(BOOKING_TYPE, "").match(branchNumber)?.[1];
       const name = head === void 0 ? "" : shopWords(head).join(" ");
       return name && !noBranches.has(name) ? merchants.get(name) ?? null : null;
     }
+    function decide(payment) {
+      const money2 = moneyOf(payment.amount);
+      const text2 = `${payment.counterparty ?? ""} ${payment.description ?? payment.bookingText ?? ""}`;
+      const words2 = shopWords(text2.replace(references, " "));
+      const written = find(handWritten, words2);
+      const rule = best(written, written, money2);
+      if (rule) return rule;
+      const merchant = merchants.get(shopWords(merchantKey(payment)).join(" ")) ?? branchMerchant(payment);
+      if (merchant) {
+        const { categoryId, direction, name } = merchant;
+        return applies(direction, money2) ? { categoryId, name, source: "merchant", direction, at: null } : null;
+      }
+      const branded = find(brands, words2);
+      return best(branded, [...written, ...branded], money2);
+    }
     return {
       rules,
-      match(payment) {
-        const money2 = moneyOf(payment.amount);
-        const text2 = `${payment.counterparty ?? ""} ${payment.description ?? payment.bookingText ?? ""}`;
-        const words2 = shopWords(text2.replace(references, " "));
-        const written = find(handWritten, words2);
-        const rule = best(written, written, money2);
-        if (rule) return rule;
-        const merchant = merchants.get(shopWords(merchantKey(payment)).join(" ")) ?? branchMerchant(payment);
-        if (merchant) return applies(merchant.direction, money2) ? merchant.categoryId : null;
-        const branded = find(brands, words2);
-        return best(branded, [...written, ...branded], money2);
-      }
+      match: (payment) => decide(payment)?.categoryId ?? null,
+      find: decide
     };
   }
 
@@ -9375,6 +9389,7 @@ var __AresiumEngine = (() => {
     const categoryId = matcher.match(payment);
     return categoryId !== null && categories.some((c) => c.id === categoryId) ? categoryId : null;
   }
+  var findShop = (payment) => matcher.find(payment);
 
   // src/engine/dates.ts
   var daysInMonth = (y, m) => new Date(Date.UTC(y, m, 0)).getUTCDate();
@@ -9384,7 +9399,7 @@ var __AresiumEngine = (() => {
     const [y, m, d] = [Number(match[1]), Number(match[2]), Number(match[3])];
     return m >= 1 && m <= 12 && d >= 1 && d <= daysInMonth(y, m) ? { y, m, d } : null;
   }
-  var dayNumber = (day) => Date.UTC(day.y, day.m - 1, day.d) / 864e5;
+  var dayNumber = (day2) => Date.UTC(day2.y, day2.m - 1, day2.d) / 864e5;
 
   // src/engine/paypal.ts
   var ENGLISH_FUNDING = /* @__PURE__ */ new Set([
@@ -9482,12 +9497,12 @@ var __AresiumEngine = (() => {
     const groups2 = /* @__PURE__ */ new Map();
     payments.forEach((p, index) => {
       const date = parseDay(p.date);
-      const amount = p.amount;
-      if (!p.account || !date || typeof amount !== "number" || !Number.isFinite(amount)) return;
-      const cents = Math.round(Math.abs(amount) * 100);
-      if (cents === 0) return;
-      const group = groups2.get(cents) ?? { out: [], in: [] };
-      (amount < 0 ? group.out : group.in).push({
+      const amount2 = p.amount;
+      if (!p.account || !date || typeof amount2 !== "number" || !Number.isFinite(amount2)) return;
+      const cents4 = Math.round(Math.abs(amount2) * 100);
+      if (cents4 === 0) return;
+      const group = groups2.get(cents4) ?? { out: [], in: [] };
+      (amount2 < 0 ? group.out : group.in).push({
         index,
         account: p.account,
         day: dayNumber(date),
@@ -9496,7 +9511,7 @@ var __AresiumEngine = (() => {
         other: ibanKey(p.counterpartyIban),
         says: saysOwnTransfer(p)
       });
-      groups2.set(cents, group);
+      groups2.set(cents4, group);
     });
     const candidates = [];
     for (const { out, in: incoming } of groups2.values()) {
@@ -9539,12 +9554,97 @@ var __AresiumEngine = (() => {
     return key ? { ...learned, [key]: categoryId } : { ...learned };
   }
 
+  // src/engine/receipts/count.ts
+  var DASHBOARD_CURRENCY = "EUR";
+  var CASH_LOOKBACK_DAYS = 92;
+  var COVERED_PLACE = "Covered by receipts";
+  var cents = (n) => Math.round(n * 100);
+  var day = (date) => date.slice(0, 10);
+  function checked2(receipts) {
+    for (const r of receipts) {
+      if (!parseDay(r?.date)) throw new Error(`Receipt ${r?.id}: the date is not an ISO date (YYYY-MM-DD)`);
+      if (typeof r.total !== "number" || !Number.isFinite(r.total)) throw new Error(`Receipt ${r.id}: the total is not a number`);
+      if (r.method !== "card" && r.method !== "cash") throw new Error(`Receipt ${r.id}: the method is neither card nor cash`);
+    }
+    return receipts.filter((r) => r.total > 0);
+  }
+  var isCashWithdrawal = (p) => p.amount < 0 && findShop({ counterparty: p.counterparty, description: p.description, amount: p.amount })?.categoryId === "cash";
+  function receiptRows(payments, receipts, paymentIds) {
+    const rows = [];
+    const row = (r) => ({
+      id: r.id,
+      externalId: "",
+      date: day(r.date),
+      amount: -r.total,
+      currency: DASHBOARD_CURRENCY,
+      balance: null,
+      description: r.shop ?? "",
+      counterparty: r.shop ?? "",
+      category: r.category,
+      receiptId: r.id
+    });
+    const cash = [];
+    for (const r of checked2(receipts)) {
+      if (r.paymentId != null && paymentIds.has(r.paymentId)) continue;
+      if ((r.currency || DASHBOARD_CURRENCY).toUpperCase() !== DASHBOARD_CURRENCY) continue;
+      if (r.method === "card") rows.push({ ...row(r), provisional: true });
+      else {
+        rows.push(row(r));
+        cash.push(r);
+      }
+    }
+    const number = (date) => dayNumber(parseDay(date));
+    const pool = payments.filter(isCashWithdrawal).map((p) => ({ payment: p, day: number(p.date), left: cents(-p.amount), taken: 0, by: [] }));
+    const latestFirst = [...pool].sort((a, b) => b.day - a.day);
+    const byDay = (a, b) => day(a.date) < day(b.date) ? -1 : day(a.date) > day(b.date) ? 1 : 0;
+    for (const r of [...cash].sort(byDay)) {
+      let need = cents(r.total);
+      const on = number(r.date);
+      for (const w of latestFirst) {
+        if (need === 0) break;
+        if (w.left === 0 || w.day > on || on - w.day > CASH_LOOKBACK_DAYS) continue;
+        const take = Math.min(w.left, need);
+        w.left -= take;
+        w.taken += take;
+        need -= take;
+        w.by.push(r.id);
+      }
+    }
+    for (const w of pool) {
+      if (w.taken === 0) continue;
+      rows.push({
+        id: `${w.payment.id}:covered`,
+        externalId: "",
+        date: day(w.payment.date),
+        amount: w.taken / 100,
+        currency: DASHBOARD_CURRENCY,
+        balance: null,
+        description: COVERED_PLACE,
+        counterparty: COVERED_PLACE,
+        category: w.payment.category,
+        tags: [...w.payment.tags ?? []],
+        coveredBy: w.by
+      });
+    }
+    return rows;
+  }
+  function withReceiptRows(payments, rows) {
+    const extra = [...rows].sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
+    const merged = [];
+    let next = 0;
+    for (const p of payments) {
+      while (next < extra.length && extra[next].date < day(p.date)) merged.push(extra[next++]);
+      merged.push(p);
+    }
+    return merged.concat(extra.slice(next));
+  }
+
   // src/engine/source.ts
   var UNCATEGORISED = Object.freeze({ name: "Uncategorised", icon: "CircleHelp", color: "#9ca3af", kind: "spend" });
   var MONTH_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   var pad = (n) => String(n).padStart(2, "0");
   var byDate = (a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0;
-  function checked2(transactions) {
+  function checked3(transactions) {
     for (const p of transactions) {
       if (!parseDay(p.date)) throw new Error(`Payment ${p.id}: the date is not an ISO date (YYYY-MM-DD)`);
       if (typeof p.amount !== "number" || !Number.isFinite(p.amount)) throw new Error(`Payment ${p.id}: the amount is not a number`);
@@ -9555,7 +9655,8 @@ var __AresiumEngine = (() => {
   function buildDashboardSource(input) {
     const today = parseDay(input.today);
     if (!today) throw new Error("today is not an ISO date (YYYY-MM-DD)");
-    const payments = counted(checked2(input.transactions)).rows;
+    const stored = counted(checked3(input.transactions)).rows;
+    const payments = input.receipts?.length ? withReceiptRows(stored, receiptRows(stored, input.receipts, new Set(input.transactions.map((p) => p.id)))) : stored;
     const known = new Set(input.categories.map((c) => c.name));
     const categoryOf = (p) => p.category != null && known.has(p.category) ? p.category : null;
     const net = /* @__PURE__ */ new Map();
@@ -9581,14 +9682,18 @@ var __AresiumEngine = (() => {
       tags: [...p.tags ?? []],
       // extra ("Add") categories: shown there, never re-summed into totals
       place: p.counterparty || p.description,
-      city: p.city ?? ""
+      city: p.city ?? "",
+      // Receipts only (brief 30); payments never carry these, so the server's JSON stays as it was.
+      ...p.receiptId !== void 0 ? { receiptId: p.receiptId } : {},
+      ...p.provisional ? { provisional: true } : {},
+      ...p.coveredBy ? { coveredBy: [...p.coveredBy] } : {}
     }));
     const months = [];
     if (payments.length) {
       const first = parseDay(payments[0].date);
-      const last = parseDay(payments[payments.length - 1].date);
+      const last2 = parseDay(payments[payments.length - 1].date);
       let y = first.y, m = first.m - 1;
-      while (y < last.y || y === last.y && m <= last.m - 1) {
+      while (y < last2.y || y === last2.y && m <= last2.m - 1) {
         const isCurrent = y === today.y && m === today.m - 1;
         months.push({
           key: `${y}-${pad(m + 1)}`,
@@ -9616,9 +9721,9 @@ var __AresiumEngine = (() => {
       let balance = openingBalance;
       for (const mo of months) {
         for (let d = 1; d <= mo.days; d++) {
-          const day = `${mo.key}-${pad(d)}`;
-          if (balanceAt.has(day)) balance = balanceAt.get(day);
-          balanceByDay[day] = balance;
+          const day2 = `${mo.key}-${pad(d)}`;
+          if (balanceAt.has(day2)) balance = balanceAt.get(day2);
+          balanceByDay[day2] = balance;
         }
       }
     }
@@ -9848,10 +9953,10 @@ var __AresiumEngine = (() => {
     if (!m) return null;
     let year = +m[order[0]];
     if (m[order[0]].length === 2) year += 2e3;
-    const month = +m[order[1]], day = +m[order[2]];
-    if (year < 1970 || year > 2100 || month < 1 || month > 12 || day < 1) return null;
-    if (day > new Date(Date.UTC(year, month, 0)).getUTCDate()) return null;
-    return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    const month = +m[order[1]], day2 = +m[order[2]];
+    if (year < 1970 || year > 2100 || month < 1 || month > 12 || day2 < 1) return null;
+    if (day2 > new Date(Date.UTC(year, month, 0)).getUTCDate()) return null;
+    return `${year}-${String(month).padStart(2, "0")}-${String(day2).padStart(2, "0")}`;
   }
   function canonicalAmount(negative, whole, fraction) {
     const intPart = whole.replace(/^0+(?=\d)/, "") || "0";
@@ -9886,13 +9991,13 @@ var __AresiumEngine = (() => {
     if (m[3] !== void 0) return canonicalAmount(negative, "0", m[3]);
     return canonicalAmount(negative, m[1].split(group).join(""), m[2] ?? "");
   }
-  var isNegative = (amount) => amount.startsWith("-");
-  var negate = (amount) => isNegative(amount) ? amount.slice(1) : /^0\.0+$/.test(amount) ? amount : `-${amount}`;
-  var absolute = (amount) => isNegative(amount) ? amount.slice(1) : amount;
+  var isNegative = (amount2) => amount2.startsWith("-");
+  var negate = (amount2) => isNegative(amount2) ? amount2.slice(1) : /^0\.0+$/.test(amount2) ? amount2 : `-${amount2}`;
+  var absolute = (amount2) => isNegative(amount2) ? amount2.slice(1) : amount2;
   var SCALE = 5;
-  function toUnits(amount) {
-    const negative = isNegative(amount);
-    const [whole, fraction = ""] = absolute(amount).split(".");
+  function toUnits(amount2) {
+    const negative = isNegative(amount2);
+    const [whole, fraction = ""] = absolute(amount2).split(".");
     const units = BigInt(whole) * 10n ** BigInt(SCALE) + BigInt(fraction.padEnd(SCALE, "0").slice(0, SCALE) || "0");
     return negative ? -units : units;
   }
@@ -10034,39 +10139,39 @@ var __AresiumEngine = (() => {
         skipped++;
         continue;
       }
-      let amount = null;
+      let amount2 = null;
       if (c.amount !== void 0) {
-        amount = parseAmountStrict(cell(row, c.amount), layout.numberFormat);
+        amount2 = parseAmountStrict(cell(row, c.amount), layout.numberFormat);
         const mark = signMark(cell(row, c.sign));
-        if (amount && c.sign !== void 0) {
-          if (mark === "debit") amount = negate(absolute(amount));
-          else if (mark === "credit") amount = absolute(amount);
+        if (amount2 && c.sign !== void 0) {
+          if (mark === "debit") amount2 = negate(absolute(amount2));
+          else if (mark === "credit") amount2 = absolute(amount2);
         }
       } else {
         const debit = parseAmountStrict(cell(row, c.debit), layout.numberFormat);
         const credit = parseAmountStrict(cell(row, c.credit), layout.numberFormat);
-        if (debit && !/^0\.0+$/.test(debit)) amount = negate(absolute(debit));
-        else if (credit) amount = absolute(credit);
-        else if (debit) amount = debit;
+        if (debit && !/^0\.0+$/.test(debit)) amount2 = negate(absolute(debit));
+        else if (credit) amount2 = absolute(credit);
+        else if (debit) amount2 = debit;
       }
-      if (!amount) {
+      if (!amount2) {
         skipped++;
         continue;
       }
-      if (layout.invertSign) amount = negate(amount);
+      if (layout.invertSign) amount2 = negate(amount2);
       for (const j of c.fees ?? []) {
         const fee = parseAmountStrict(cell(row, j), layout.numberFormat);
-        if (fee) amount = addAmounts(amount, negate(absolute(fee)));
+        if (fee) amount2 = addAmounts(amount2, negate(absolute(fee)));
       }
       for (const j of c.addAmounts ?? []) {
         const extra = parseAmountStrict(cell(row, j), layout.numberFormat);
-        if (extra) amount = addAmounts(amount, extra);
+        if (extra) amount2 = addAmounts(amount2, extra);
       }
-      if (/^-?0\.0+$/.test(amount)) {
+      if (/^-?0\.0+$/.test(amount2)) {
         skipped++;
         continue;
       }
-      const out = amount.startsWith("-");
+      const out = amount2.startsWith("-");
       let counterparty = (out ? cell(row, c.payee) || cell(row, c.payer) : cell(row, c.payer) || cell(row, c.payee)) || (c.counterparty ?? []).map((i) => cell(row, i)).find(Boolean) || "";
       let paymentText = sepaPaymentText(cleanText(...(c.text ?? []).map((i) => cell(row, i))));
       if (layout.labelledText) {
@@ -10091,7 +10196,7 @@ var __AresiumEngine = (() => {
       transactions.push({
         bookingDate: `${date}T00:00:00.000Z`,
         ...c.valueDate !== void 0 ? { valueDate: valueDate ? `${valueDate}T00:00:00.000Z` : null } : {},
-        amount,
+        amount: amount2,
         ...c.balance !== void 0 ? { balance: balance ?? null } : {},
         currency: rowCurrency,
         description,
@@ -10101,7 +10206,7 @@ var __AresiumEngine = (() => {
       });
       idFields.push([
         date,
-        amount,
+        amount2,
         ...[c.payer, c.payee, ...c.counterparty ?? [], ...c.text ?? []].map((i) => cleanText(cell(row, i))),
         cell(row, c.iban).replace(/\s/g, "")
       ].join("|"));
@@ -10163,13 +10268,13 @@ var __AresiumEngine = (() => {
     return distinct.length > 3 ? `${distinct.slice(0, 3).join(" / ")} / \u2026` : distinct.join(" / ");
   }
   function signedAmount(node) {
-    const amount = parseAmountStrict(textOf2(node.Amt), "en");
-    if (!amount) return null;
-    return node.CdtDbtInd === "DBIT" ? negate(amount) : amount;
+    const amount2 = parseAmountStrict(textOf2(node.Amt), "en");
+    if (!amount2) return null;
+    return node.CdtDbtInd === "DBIT" ? negate(amount2) : amount2;
   }
   function vrCamtId(ntry) {
     const isDebit = ntry.CdtDbtInd === "DBIT";
-    const amount = `${isDebit ? "-" : ""}${parseAmount(textOf2(ntry.Amt))}`;
+    const amount2 = `${isDebit ? "-" : ""}${parseAmount(textOf2(ntry.Amt))}`;
     const bookingDate2 = new Date(ntry.BookgDt?.Dt || ntry.BookgDt?.DtTm || ntry.ValDt?.Dt);
     const tx = arr2(ntry.NtryDtls?.TxDtls)[0];
     const remittance2 = arr2(tx?.RmtInf?.Ustrd).map(textOf2).join(" ").trim() || textOf2(ntry.AddtlNtryInf).trim() || "(no description)";
@@ -10178,7 +10283,7 @@ var __AresiumEngine = (() => {
     const counterpartyRaw = (isDebit ? creditor : debtor) || creditor || debtor;
     const counterparty = counterpartyRaw ? String(counterpartyRaw) : null;
     const time = bookingDate2.getTime();
-    const fields2 = `${isNaN(time) ? "Invalid Date" : bookingDate2.toISOString()}|${amount}|${remittance2}|${counterparty ?? ""}`;
+    const fields2 = `${isNaN(time) ? "Invalid Date" : bookingDate2.toISOString()}|${amount2}|${remittance2}|${counterparty ?? ""}`;
     const ref = ntry.AcctSvcrRef || tx?.Refs?.AcctSvcrRef || tx?.Refs?.EndToEndId || tx?.Refs?.TxId;
     return { id: ref && ref !== "NOTPROVIDED" ? String(ref) : hashId(fields2), fields: fields2 };
   }
@@ -10193,10 +10298,10 @@ var __AresiumEngine = (() => {
     const out = {};
     for (const bal of arr2(stmt.Bal)) {
       const code = textOf2(bal?.Tp?.CdOrPrtry?.Cd).toUpperCase();
-      const amount = signedAmount(bal);
-      if (!amount) continue;
-      if ((code === "OPBD" || code === "PRCD") && out.opening === void 0) out.opening = amount;
-      if (code === "CLBD") out.closing = amount;
+      const amount2 = signedAmount(bal);
+      if (!amount2) continue;
+      if ((code === "OPBD" || code === "PRCD") && out.opening === void 0) out.opening = amount2;
+      if (code === "CLBD") out.closing = amount2;
     }
     return out;
   }
@@ -10225,13 +10330,13 @@ var __AresiumEngine = (() => {
       const { opening, closing } = balances(stmt);
       const start = transactions.length;
       for (const ntry of arr2(stmt.Ntry)) {
-        const amount = signedAmount(ntry);
+        const amount2 = signedAmount(ntry);
         const bookingDate2 = dateOnly(ntry.BookgDt?.Dt ?? ntry.BookgDt?.DtTm) ?? dateOnly(ntry.ValDt?.Dt ?? ntry.ValDt?.DtTm);
-        if (PENDING.has(statusOf(ntry)) || !amount || !bookingDate2) {
+        if (PENDING.has(statusOf(ntry)) || !amount2 || !bookingDate2) {
           skipped++;
           continue;
         }
-        const out = amount.startsWith("-");
+        const out = amount2.startsWith("-");
         const details = arr2(ntry.NtryDtls).flatMap((d) => arr2(d?.TxDtls));
         const tx = details[0];
         const parties = tx?.RltdPties ?? {};
@@ -10245,7 +10350,7 @@ var __AresiumEngine = (() => {
         transactions.push({
           bookingDate: bookingDate2,
           valueDate: dateOnly(ntry.ValDt?.Dt ?? ntry.ValDt?.DtTm),
-          amount,
+          amount: amount2,
           currency: ccy,
           description,
           counterparty,
@@ -10257,7 +10362,7 @@ var __AresiumEngine = (() => {
           const ref = textOf2(ntry.AcctSvcrRef) || textOf2(tx?.Refs?.AcctSvcrRef);
           const fields2 = [
             bookingDate2.slice(0, 10),
-            amount,
+            amount2,
             description,
             counterparty ?? "",
             counterpartyIban,
@@ -10659,9 +10764,9 @@ ${line}`;
   var amountOf = (value) => parseAmountStrict(value.endsWith(",") ? `${value}00` : value, "de");
   function balanceOf(value) {
     const m = /^([CD])(\d{6})([A-Z]{3})([\d,]+)/.exec(value.trim());
-    const amount = m ? amountOf(m[4]) : null;
-    if (!m || !amount) return null;
-    return { amount: m[1] === "D" ? negate(amount) : amount, currency: m[3] };
+    const amount2 = m ? amountOf(m[4]) : null;
+    if (!m || !amount2) return null;
+    return { amount: m[1] === "D" ? negate(amount2) : amount2, currency: m[3] };
   }
   var LINE_61 = /^(\d{6})(\d{4})?(RC|RD|C|D)([A-Z])?(\d+,\d*)([NFS][A-Z0-9]{3})(.*)$/;
   function bookingDate(valueDate, entry) {
@@ -10711,16 +10816,16 @@ ${line}`;
     let statement = -1, intraday = false;
     const openings = /* @__PURE__ */ new Map(), closings = /* @__PURE__ */ new Map();
     const intradayStatements = /* @__PURE__ */ new Set();
-    let last = null;
+    let last2 = null;
     for (const field2 of list) {
       if (field2.tag === "20") {
         statement++;
         intraday = false;
-        last = null;
+        last2 = null;
         continue;
       }
       if (field2.tag === "end") {
-        last = null;
+        last2 = null;
         continue;
       }
       if (field2.tag === "25") {
@@ -10739,22 +10844,22 @@ ${line}`;
       } else if (field2.tag === "62F" || field2.tag === "62M") {
         const bal = balanceOf(field2.value);
         if (bal) closings.set(statement, bal.amount);
-        last = null;
+        last2 = null;
       } else if (field2.tag === "61") {
-        last = null;
+        last2 = null;
         const [first] = field2.value.split("\n");
         const m = LINE_61.exec(first.trim());
         const valueDate = m ? date6(m[1]) : null;
-        const amount = m ? amountOf(m[5]) : null;
-        if (!m || !valueDate || !amount || intraday) {
+        const amount2 = m ? amountOf(m[5]) : null;
+        if (!m || !valueDate || !amount2 || intraday) {
           skipped++;
           continue;
         }
         const debit = m[3] === "D" || m[3] === "RC";
-        last = {
+        last2 = {
           bookingDate: `${bookingDate(valueDate, m[2])}T00:00:00.000Z`,
           valueDate: `${valueDate}T00:00:00.000Z`,
-          amount: debit ? negate(amount) : amount,
+          amount: debit ? negate(amount2) : amount2,
           currency,
           description: "(no description)",
           counterparty: null,
@@ -10762,15 +10867,15 @@ ${line}`;
           idFields: field2.value.trim(),
           statement
         };
-        transactions.push(last);
-      } else if (field2.tag === "86" && last) {
+        transactions.push(last2);
+      } else if (field2.tag === "86" && last2) {
         const d = details86(field2.value);
-        last.description = d.text || d.kind || d.name || "(no description)";
-        last.counterparty = d.name || null;
-        if (d.iban) last.counterpartyIban = d.iban;
-        last.raw[":86:"] = field2.value;
-        last.idFields += `${field2.value.replace(/\s+/g, " ").trim()}`;
-        last = null;
+        last2.description = d.text || d.kind || d.name || "(no description)";
+        last2.counterparty = d.name || null;
+        if (d.iban) last2.counterpartyIban = d.iban;
+        last2.raw[":86:"] = field2.value;
+        last2.idFields += `${field2.value.replace(/\s+/g, " ").trim()}`;
+        last2 = null;
       }
     }
     for (const [index, opening] of openings) {
@@ -11790,10 +11895,10 @@ ${line}`;
   var average = (col) => col.values.reduce((n, v) => n + v.length, 0) / Math.max(col.values.length, 1);
   var shown = (preview) => JSON.stringify(preview.map((t) => [t.bookingDate.slice(0, 10), t.counterparty ?? "", t.description, t.amount]));
   function readingsOfUnknownText(text2, savedLayouts = []) {
-    const clean = text2.replace(/^\uFEFF/, "");
-    const detected = detectBankFile(clean, savedLayouts);
+    const clean2 = text2.replace(/^\uFEFF/, "");
+    const detected = detectBankFile(clean2, savedLayouts);
     if (detected.format !== "csv" || detected.layout) return [];
-    const { guess, columns, rows, payments: guessed } = analyseCsv(clean);
+    const { guess, columns, rows, payments: guessed } = analyseCsv(clean2);
     if (!guess.layout) return [];
     const read2 = (layout) => {
       const start = findTable(rows, layout);
@@ -11948,6 +12053,890 @@ ${line}`;
     };
     if (utf8Length(JSON.stringify(shared)) > MAX_BYTES) return no("tooLarge");
     return { ok: true, layout: shared };
+  }
+
+  // src/engine/receipts/register-code.ts
+  var amount = (text2) => /^-?\d+\.\d{2}$/.test(text2) ? parseAmountStrict(text2, "en") : null;
+  function readRegisterCode(code) {
+    if (typeof code !== "string") return null;
+    const fields2 = code.trim().split(";");
+    if (fields2.length < 8 || fields2[0] !== "V0" || fields2[2] !== "Kassenbeleg-V1") return null;
+    const [kind, gross, payments = ""] = fields2[3].split("^");
+    if (kind !== "Beleg") return null;
+    const perRate = (gross ?? "").split("_").map(amount);
+    if (perRate.length !== 5) return null;
+    let total = "0.00";
+    for (const a of perRate) {
+      if (a === null) return null;
+      total = addAmounts(total, a);
+    }
+    let cash = false, card = false;
+    for (const payment of payments ? payments.split("_") : []) {
+      const [value, how] = payment.split(":");
+      const paid = amount(value ?? "");
+      if (paid === null || how !== "Bar" && how !== "Unbar") return null;
+      if (Number(paid) <= 0) continue;
+      if (how === "Bar") cash = true;
+      else card = true;
+    }
+    const when = germanTime(fields2[7]) ?? germanTime(fields2[6]);
+    return { total: Number(total), method: cash === card ? null : cash ? "cash" : "card", date: when?.date ?? null, time: when?.time ?? null };
+  }
+  var pad2 = (n) => String(n).padStart(2, "0");
+  var lastSunday = (year, month) => {
+    const last2 = new Date(Date.UTC(year, month, 0));
+    return last2.getUTCDate() - last2.getUTCDay();
+  };
+  function germanTime(value) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?(Z)?$/.exec(value?.trim() ?? "");
+    if (!m) return null;
+    const [y, mo, d, h, mi] = [1, 2, 3, 4, 5].map((i) => Number(m[i]));
+    let utc = Date.UTC(y, mo - 1, d, h, mi);
+    if (Number.isNaN(utc) || mo < 1 || mo > 12 || d < 1 || d > 31 || h > 23 || mi > 59) return null;
+    if (m[7]) {
+      const summerStart = Date.UTC(y, 2, lastSunday(y, 3), 1);
+      const summerEnd = Date.UTC(y, 9, lastSunday(y, 10), 1);
+      utc += (utc >= summerStart && utc < summerEnd ? 2 : 1) * 36e5;
+    }
+    const t = new Date(utc);
+    return {
+      date: `${t.getUTCFullYear()}-${pad2(t.getUTCMonth() + 1)}-${pad2(t.getUTCDate())}`,
+      time: `${pad2(t.getUTCHours())}:${pad2(t.getUTCMinutes())}`
+    };
+  }
+
+  // src/engine/receipts/rows.ts
+  var LOOK_ALIKES = {
+    // Cyrillic
+    \u0410: "A",
+    \u0412: "B",
+    \u0415: "E",
+    \u041A: "K",
+    \u041C: "M",
+    \u041D: "H",
+    \u041E: "O",
+    \u0420: "P",
+    \u0421: "C",
+    \u0422: "T",
+    \u0425: "X",
+    \u0423: "Y",
+    \u0406: "I",
+    \u0408: "J",
+    \u0405: "S",
+    "\u051A": "Q",
+    "\u051C": "W",
+    \u0430: "a",
+    \u0435: "e",
+    \u043E: "o",
+    \u0440: "p",
+    \u0441: "c",
+    \u0443: "y",
+    \u0445: "x",
+    \u0456: "i",
+    \u0458: "j",
+    \u0455: "s",
+    "\u051B": "q",
+    "\u051D": "w",
+    \u0432: "B",
+    \u043A: "K",
+    \u043C: "M",
+    \u043D: "H",
+    \u0442: "T",
+    // Greek
+    \u0391: "A",
+    \u0392: "B",
+    \u0395: "E",
+    \u0396: "Z",
+    \u0397: "H",
+    \u0399: "I",
+    \u039A: "K",
+    \u039C: "M",
+    \u039D: "N",
+    \u039F: "O",
+    \u03A1: "P",
+    \u03A4: "T",
+    \u03A5: "Y",
+    \u03A7: "X",
+    \u03B1: "a",
+    \u03B9: "i",
+    \u03BA: "k",
+    \u03BD: "v",
+    \u03BF: "o",
+    \u03C1: "p",
+    \u03C5: "u",
+    \u03C7: "x"
+  };
+  var OTHER_SCRIPT = /[\p{Script=Cyrillic}\p{Script=Greek}]/gu;
+  var LATIN_OR_DIGIT = /[\p{Script=Latin}\p{N}]/gu;
+  function latinLookAlikes(text2) {
+    const other = text2.match(OTHER_SCRIPT)?.length ?? 0;
+    if (other === 0) return text2;
+    const latin = text2.match(LATIN_OR_DIGIT)?.length ?? 0;
+    return text2.replace(/[\p{L}\p{N}]+/gu, (word) => {
+      const mixed = /[\p{Script=Latin}\p{N}]/u.test(word);
+      const single = [...word].length === 1 && latin > other;
+      return mixed || single ? [...word].map((c) => LOOK_ALIKES[c] ?? c).join("") : word;
+    });
+  }
+  var finite = (n) => typeof n === "number" && Number.isFinite(n);
+  var median = (values) => {
+    if (!values.length) return 0;
+    const sorted = [...values].sort((a, b) => a - b);
+    const mid = sorted.length >> 1;
+    return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+  };
+  function slopeOf(pieces, height) {
+    const slopes = [];
+    for (const a of pieces) for (const b of pieces) {
+      if (b.left < a.right || b.cx - a.cx < 0.05) continue;
+      const dy = b.cy - a.cy;
+      if (Math.abs(dy) < 0.6 * height) slopes.push(dy / (b.cx - a.cx));
+    }
+    return median(slopes);
+  }
+  function receiptRows2(observations) {
+    const pieces = [];
+    for (const o of observations ?? []) {
+      const text2 = typeof o?.text === "string" ? o.text.replace(/\s+/g, " ").trim() : "";
+      if (!text2 || ![o.x, o.y, o.width, o.height].every(finite)) continue;
+      pieces.push({ text: text2, left: o.x, right: o.x + o.width, cx: o.x + o.width / 2, cy: o.y + o.height / 2, height: Math.abs(o.height) });
+    }
+    const pages = /* @__PURE__ */ new Map();
+    for (const p of pieces) {
+      const page = Math.floor(p.cy);
+      pages.set(page, [...pages.get(page) ?? [], p]);
+    }
+    const rows = [];
+    for (const page of [...pages.keys()].sort((a, b) => a - b)) {
+      const onPage = pages.get(page);
+      const height = median(onPage.map((p) => p.height)) || 0.01;
+      const slope = slopeOf(onPage, height);
+      const level = (p) => p.cy - slope * p.cx;
+      const ordered = [...onPage].sort((a, b) => level(a) - level(b) || a.left - b.left);
+      const lines = [];
+      for (const p of ordered) {
+        const line = lines.at(-1);
+        const overlaps = line?.pieces.some((q) => Math.min(q.right, p.right) - Math.max(q.left, p.left) > 0.3 * Math.min(q.right - q.left, p.right - p.left));
+        if (line && Math.abs(level(p) - line.y) <= 0.5 * height && !overlaps) {
+          line.pieces.push(p);
+          line.y = line.pieces.reduce((sum, q) => sum + level(q), 0) / line.pieces.length;
+        } else {
+          lines.push({ y: level(p), pieces: [p] });
+        }
+      }
+      for (const line of lines) rows.push(latinLookAlikes(line.pieces.sort((a, b) => a.left - b.left).map((p) => p.text).join(" ")));
+    }
+    return rows;
+  }
+
+  // src/engine/receipts/words.ts
+  var RECEIPT_WORDS = {
+    de: {
+      due: ["zu zahlen", "zahlbetrag", "zu zahlender betrag"],
+      total: ["summe", "gesamt", "gesamtbetrag", "gesamtsumme", "endsumme", "endbetrag", "bonsumme", "rechnungsbetrag", "summe eur"],
+      amount: ["betrag"],
+      subtotal: ["zwischensumme", "zw summe", "zwsumme"],
+      tax: ["mwst", "ust", "steuer", "netto", "brutto", "nettobetrag", "steuerbetrag", "mehrwertsteuer", "umsatzsteuer", "mwst satz", "steuersatz"],
+      deposit: ["pfand", "leergut", "pfandr\xFCckgabe", "pfandbon", "leergutbon", "pfandgutschrift", "flaschenpfand"],
+      tip: ["trinkgeld"],
+      other: ["rabatt", "ersparnis", "gespart", "sie sparen", "nachlass", "payback", "punkte", "gutschein"],
+      card: ["karte", "kartenzahlung", "girocard", "ec karte", "ec cash", "ec", "kreditkarte", "debitkarte", "kontaktlos", "bankkarte", "electronic cash", "elv"],
+      cash: ["bar", "barzahlung", "bargeld", "in bar"],
+      given: ["gegeben", "geg", "erhalten"],
+      change: ["r\xFCckgeld", "zur\xFCck", "wechselgeld"],
+      register: ["kasse", "kassierer", "kassiererin", "bediener", "bon", "bon nr", "bonnr", "beleg", "beleg nr", "belegnr", "filiale", "tse", "transaktion", "seriennummer", "signatur", "signaturz\xE4hler", "terminal", "trace", "kassenbon", "quittung", "rechnung", "kundenbeleg", "h\xE4ndlerbeleg", "ust id", "ust idnr", "st nr", "steuernummer", "steuer nr", "uid", "uid nr", "inh", "inhaber"],
+      greeting: ["willkommen", "danke", "vielen dank", "auf wiedersehen", "bis bald", "ihr einkauf"],
+      street: ["stra\xDFe", "str", "weg", "platz", "allee", "gasse", "ring", "damm", "chaussee", "ufer"],
+      phone: ["tel", "telefon", "fon", "fax"],
+      date: ["datum"],
+      validity: ["g\xFCltig", "g\xFCltig bis", "bis", "mhd", "haltbar", "ablauf", "einl\xF6sbar"]
+    },
+    en: {
+      due: ["amount due", "balance due", "total due", "to pay", "total to pay", "amount to pay"],
+      total: ["total", "grand total", "total gbp", "total usd"],
+      amount: ["amount", "purchase", "sale"],
+      subtotal: ["subtotal", "sub total"],
+      tax: ["vat", "tax", "sales tax", "net", "excl vat", "incl vat", "vat rate", "gst", "hst"],
+      deposit: ["deposit", "bottle deposit", "bottle return"],
+      tip: ["tip", "gratuity", "service charge"],
+      other: ["savings", "you saved", "saved", "discount", "points", "clubcard", "nectar"],
+      card: ["card", "debit", "credit", "chip", "debit card", "credit card", "card payment"],
+      cash: ["cash"],
+      given: ["tendered", "cash tendered", "tender", "given"],
+      change: ["change", "change due"],
+      register: ["till", "cashier", "operator", "receipt", "receipt no", "terminal", "transaction", "trans", "auth code", "vat no", "vat reg", "store no"],
+      greeting: ["welcome", "thank you", "thanks", "see you"],
+      street: ["street", "st", "road", "rd", "avenue", "ave", "lane", "way", "square", "blvd", "boulevard", "drive"],
+      phone: ["tel", "phone", "telephone"],
+      date: ["date"],
+      validity: ["valid", "valid until", "until", "expires", "exp"]
+    },
+    fr: {
+      due: ["net \xE0 payer", "\xE0 payer", "total \xE0 payer", "montant d\xFB"],
+      total: ["total", "total ttc", "montant ttc", "total eur"],
+      amount: ["montant"],
+      subtotal: ["sous total"],
+      tax: ["tva", "ht", "total ht", "total tva", "montant ht", "taux", "montant tva"],
+      deposit: ["consigne"],
+      tip: ["pourboire"],
+      other: ["remise", "\xE9conomie", "\xE9conomies", "r\xE9duction", "points", "fid\xE9lit\xE9"],
+      card: ["carte", "cb", "carte bancaire", "carte bleue", "sans contact", "paiement carte", "carte cr\xE9dit"],
+      cash: ["esp\xE8ces", "en esp\xE8ces", "liquide"],
+      given: ["re\xE7u", "esp\xE8ces re\xE7ues", "donn\xE9", "montant re\xE7u"],
+      change: ["rendu", "monnaie rendue", "\xE0 rendre", "rendu monnaie", "monnaie"],
+      register: ["caisse", "caissier", "caissi\xE8re", "ticket", "facture", "terminal", "transaction", "siret", "siren", "n tva"],
+      greeting: ["bienvenue", "merci", "\xE0 bient\xF4t", "au revoir"],
+      street: ["rue", "avenue", "av", "boulevard", "bd", "place", "chemin", "all\xE9e", "quai", "impasse", "route"],
+      phone: ["t\xE9l", "tel", "t\xE9l\xE9phone"],
+      date: ["date"],
+      validity: ["valable", "jusqu", "expire"]
+    },
+    it: {
+      due: ["da pagare", "totale da pagare", "importo pagato"],
+      total: ["totale", "totale complessivo", "totale euro"],
+      amount: ["importo"],
+      subtotal: ["subtotale", "sub totale"],
+      tax: ["iva", "imponibile", "di cui iva", "imposta", "aliquota"],
+      deposit: ["vuoto", "cauzione"],
+      tip: ["mancia"],
+      other: ["sconto", "risparmio", "punti"],
+      card: ["carta", "bancomat", "pagobancomat", "carta di credito", "carta di debito", "pagamento elettronico", "elettronico"],
+      cash: ["contanti", "contante", "pagamento contante"],
+      given: ["ricevuto", "contante ricevuto", "pagato"],
+      change: ["resto"],
+      register: ["cassa", "cassiere", "scontrino", "documento commerciale", "ricevuta", "doc n", "partita iva", "p iva", "matricola", "terminale"],
+      greeting: ["benvenuti", "grazie", "arrivederci"],
+      street: ["via", "viale", "piazza", "corso", "largo", "vicolo", "strada"],
+      phone: ["tel", "telefono"],
+      date: ["data"],
+      validity: ["valido", "scadenza", "fino"]
+    },
+    es: {
+      due: ["a pagar", "total a pagar"],
+      total: ["total", "importe total", "total eur"],
+      amount: ["importe"],
+      subtotal: ["subtotal", "sub total"],
+      tax: ["iva", "base imponible", "base", "cuota", "impuestos", "igic"],
+      deposit: ["envase"],
+      tip: ["propina"],
+      other: ["descuento", "ahorro", "puntos"],
+      card: ["tarjeta", "tarjeta cr\xE9dito", "tarjeta d\xE9bito", "pago con tarjeta", "sin contacto", "dat\xE1fono"],
+      cash: ["efectivo", "met\xE1lico", "en efectivo", "contado"],
+      given: ["entregado", "recibido", "efectivo entregado", "entrega"],
+      change: ["cambio", "vuelto", "su cambio", "a devolver"],
+      register: ["caja", "cajero", "cajera", "ticket", "factura", "factura simplificada", "nif", "cif", "terminal", "operaci\xF3n"],
+      greeting: ["bienvenido", "gracias", "hasta pronto"],
+      street: ["calle", "c", "avenida", "avda", "plaza", "paseo", "carretera", "camino"],
+      phone: ["tel", "tel\xE9fono", "tfno"],
+      date: ["fecha"],
+      validity: ["v\xE1lido", "hasta", "caduca"]
+    },
+    nl: {
+      due: ["te betalen", "totaal te betalen"],
+      total: ["totaal", "totaal bedrag", "eindtotaal"],
+      amount: ["bedrag"],
+      subtotal: ["subtotaal"],
+      tax: ["btw", "excl btw", "incl btw", "netto", "grondslag"],
+      deposit: ["statiegeld", "emballage", "leeggoed"],
+      tip: ["fooi"],
+      other: ["korting", "voordeel", "bespaard", "punten"],
+      card: ["pin", "pinnen", "gepind", "pinbetaling", "betaalkaart", "bankpas", "contactloos", "creditcard"],
+      cash: ["contant", "contanten", "contant betaald"],
+      given: ["ontvangen", "betaald"],
+      change: ["wisselgeld", "terug", "retour"],
+      register: ["kassa", "kassabon", "bon", "bon nr", "caissi\xE8re", "medewerker", "terminal", "transactie", "kvk", "btw nr"],
+      greeting: ["welkom", "bedankt", "dank u", "tot ziens"],
+      street: ["straat", "laan", "weg", "plein", "gracht", "kade", "singel", "dijk"],
+      phone: ["tel", "telefoon"],
+      date: ["datum"],
+      validity: ["geldig", "tot"]
+    },
+    pt: {
+      due: ["a pagar", "total a pagar"],
+      total: ["total", "valor total", "total eur"],
+      amount: ["valor"],
+      subtotal: ["subtotal"],
+      tax: ["iva", "taxa", "base tribut\xE1vel", "incid\xEAncia", "valor iva"],
+      deposit: ["tara", "vasilhame"],
+      tip: ["gorjeta"],
+      other: ["desconto", "poupan\xE7a", "pontos"],
+      card: ["cart\xE3o", "multibanco", "mb", "cart\xE3o cr\xE9dito", "cart\xE3o d\xE9bito", "d\xE9bito", "cr\xE9dito", "mb way", "tpa"],
+      cash: ["dinheiro", "numer\xE1rio", "em dinheiro"],
+      given: ["entregue", "recebido", "valor entregue", "valor recebido"],
+      change: ["troco"],
+      register: ["caixa", "operador", "fatura", "fatura simplificada", "fatura recibo", "nif", "contribuinte", "atcud", "tal\xE3o", "terminal"],
+      greeting: ["bem vindo", "obrigado", "obrigada", "volte sempre"],
+      street: ["rua", "avenida", "av", "pra\xE7a", "largo", "travessa", "estrada", "alameda"],
+      phone: ["tel", "telefone"],
+      date: ["data"],
+      validity: ["v\xE1lido", "at\xE9", "validade"]
+    }
+  };
+  var SHARED_WORDS = {
+    card: [
+      "visa",
+      "mastercard",
+      "master card",
+      "maestro",
+      "v pay",
+      "vpay",
+      "amex",
+      "american express",
+      "apple pay",
+      "google pay",
+      "jcb",
+      "unionpay",
+      "diners",
+      "visa debit",
+      "debit mastercard",
+      "contactless"
+    ],
+    other: ["coupon"]
+  };
+  var STREET_ENDINGS = ["strasse", "str", "weg", "platz", "allee", "gasse", "ring", "damm", "straat", "laan", "plein", "gracht", "kade", "dijk", "singel"];
+  var FUZZY_KINDS = ["due", "total"];
+  var FUZZY_MIN_LENGTH = 5;
+  var ISO_CURRENCIES = [
+    "EUR",
+    "GBP",
+    "USD",
+    "CHF",
+    "SEK",
+    "NOK",
+    "DKK",
+    "PLN",
+    "CZK",
+    "HUF",
+    "RON",
+    "BGN",
+    "JPY",
+    "CAD",
+    "AUD",
+    "BRL",
+    "ISK"
+  ];
+  var CURRENCY_SIGNS = [
+    ["US$", "USD"],
+    ["CA$", "CAD"],
+    ["C$", "CAD"],
+    ["AU$", "AUD"],
+    ["A$", "AUD"],
+    ["R$", "BRL"],
+    ["\u20AC", "EUR"],
+    ["\xA3", "GBP"],
+    ["$", "USD"],
+    ["SFr.", "CHF"],
+    ["Fr.", "CHF"],
+    ["Fr", "CHF"],
+    ["z\u0142", "PLN"],
+    ["K\u010D", "CZK"],
+    ["Ft", "HUF"],
+    ["lei", "RON"],
+    ["\u043B\u0432", "BGN"],
+    ["\u20BA", "TRY"],
+    ["TL", "TRY"],
+    ["\xA5", "JPY"],
+    ["\u20B9", "INR"],
+    ["kr", "kr"]
+  ];
+  var KRONE_BY_PHONE = { "+45": "DKK", "+46": "SEK", "+47": "NOK", "+354": "ISK" };
+
+  // src/engine/receipts/read.ts
+  var phrasesOf = (table, language) => Object.entries(table).flatMap(([kind, list]) => (list ?? []).map((text2) => ({ words: shopWords(text2), kind, language })));
+  var PHRASES = [
+    ...Object.entries(RECEIPT_WORDS).flatMap(([language, table]) => phrasesOf(table, language)),
+    ...phrasesOf(SHARED_WORDS, null)
+  ].filter((p) => p.words.length > 0);
+  var BY_FIRST_WORD = /* @__PURE__ */ new Map();
+  for (const p of PHRASES) BY_FIRST_WORD.set(p.words[0], [...BY_FIRST_WORD.get(p.words[0]) ?? [], p]);
+  var FUZZY = PHRASES.filter((p) => p.words.length === 1 && FUZZY_KINDS.includes(p.kind) && p.words[0].length >= FUZZY_MIN_LENGTH);
+  var LANGUAGES = Object.keys(RECEIPT_WORDS);
+  function nearlySame(a, b) {
+    if (Math.abs(a.length - b.length) > 1) return false;
+    let i = 0, j = 0, edits = 0;
+    while (i < a.length && j < b.length) {
+      if (a[i] === b[j]) {
+        i++;
+        j++;
+        continue;
+      }
+      if (++edits > 1) return false;
+      if (a.length > b.length) i++;
+      else if (b.length > a.length) j++;
+      else {
+        i++;
+        j++;
+      }
+    }
+    return edits + (a.length - i) + (b.length - j) <= 1;
+  }
+  function hitsIn(words2) {
+    const hits = [];
+    for (let start = 0; start < words2.length; start++) {
+      for (const p of BY_FIRST_WORD.get(words2[start]) ?? []) {
+        const end = start + p.words.length;
+        if (end <= words2.length && p.words.every((w, k) => words2[start + k] === w)) {
+          hits.push({ start, end, kind: p.kind, language: p.language, fuzzy: false, phrase: p.words.join(" ") });
+        }
+      }
+    }
+    words2.forEach((word, i) => {
+      if (word.length < FUZZY_MIN_LENGTH - 1 || !/\p{L}/u.test(word) || hits.some((h) => h.start <= i && i < h.end)) return;
+      for (const p of FUZZY) {
+        if (nearlySame(word, p.words[0])) hits.push({ start: i, end: i + 1, kind: p.kind, language: p.language, fuzzy: true, phrase: p.words[0] });
+      }
+    });
+    return hits.filter((h) => !hits.some((o) => o.start <= h.start && o.end >= h.end && o.end - o.start > h.end - h.start));
+  }
+  var AMOUNT2 = /(?<![\p{L}\p{N}.,'])([-−–]\s?)?(?:US\$|CA\$|AU\$|R\$|[€£$]|EUR|CHF|GBP|USD)?\s?(\d{1,3}(?:[.,']\d{3})+|\d+)([.,])(\d{2})(?![\p{N}]|[.,]\d)(\s?[-−])?/gu;
+  var PRICE_WITH_OS = /^([-−]?[€£$]?)([\dOo]+(?:[.,'][\dOo]{3})*[.,][\dOo]{2})([-−]?[A-Z€£$]?)$/;
+  var zeroes = (text2) => text2.split(/(\s+)/).map((piece) => {
+    const m = PRICE_WITH_OS.exec(piece);
+    return m && /\d/.test(m[2]) ? m[1] + m[2].replace(/[Oo]/g, "0") + m[3] : piece;
+  }).join("");
+  function amountsIn(raw) {
+    const text2 = zeroes(raw).replace(/’/g, "'").replace(/(\d)\s*[xX*]\s*(\d)/g, "$1 x $2");
+    const amounts = [];
+    for (const m of text2.matchAll(AMOUNT2)) {
+      const after = text2.slice(m.index + m[0].length);
+      if (/^\s?(?:%|uhr\b|h\b)/iu.test(after)) continue;
+      const value = parseAmountStrict(`${(m[1] ?? "").trim()}${m[2]}${m[3]}${m[4]}${(m[5] ?? "").trim()}`, m[3] === "," ? "de" : "en");
+      if (value !== null) amounts.push(Number(value));
+    }
+    return amounts;
+  }
+  var MONTH_NAMES = [
+    ["january", "januar", "janvier", "gennaio", "enero", "januari", "janeiro", "jaenner"],
+    ["february", "februar", "fevrier", "febbraio", "febrero", "februari", "fevereiro"],
+    ["march", "maerz", "mars", "marzo", "maart", "marco", "mrt"],
+    ["april", "avril", "aprile", "abril"],
+    ["may", "mai", "maggio", "mayo", "mei", "maio"],
+    ["june", "juni", "juin", "giugno", "junio", "junho"],
+    ["july", "juli", "juillet", "luglio", "julio", "julho"],
+    ["august", "aout", "agosto", "augustus"],
+    ["september", "septembre", "settembre", "septiembre", "setembro"],
+    ["october", "oktober", "octobre", "ottobre", "octubre", "outubro"],
+    ["november", "novembre", "noviembre", "novembro"],
+    ["december", "dezember", "decembre", "dicembre", "diciembre", "dezembro"]
+  ];
+  var monthOf = (word) => {
+    const w = shopWords(word)[0] ?? "";
+    if (w.length < 3) return null;
+    const index = MONTH_NAMES.findIndex((names2) => names2.some((name) => name.startsWith(w)));
+    return index < 0 ? null : index + 1;
+  };
+  var fullYear2 = (y) => y.length === 2 ? `20${y}` : y;
+  function datesIn(text2, monthFirst) {
+    const found = [];
+    for (const m of text2.matchAll(/(?<!\d)(\d{4})-(\d{1,2})-(\d{1,2})(T\d)?(?!\d)/g)) {
+      const day2 = parseDate(`${m[1]}-${m[2]}-${m[3]}`, "YYYY-MM-DD");
+      if (day2) found.push({ day: day2, ambiguous: false, utc: !!m[4] });
+    }
+    for (const m of text2.matchAll(/(?<![\d./-])(\d{1,2})([./-])(\d{1,2})\2(\d{4}|\d{2})(?![\d.]\d|\d)/g)) {
+      const year = fullYear2(m[4]);
+      const dayFirst = parseDate(`${m[1]}.${m[3]}.${year}`, "DD.MM.YYYY");
+      if (m[2] === ".") {
+        if (dayFirst) found.push({ day: dayFirst, ambiguous: false, utc: false });
+        continue;
+      }
+      const monthFirstDay = parseDate(`${m[1]}/${m[3]}/${year}`, "MM/DD/YYYY");
+      const day2 = monthFirst ? monthFirstDay ?? dayFirst : dayFirst ?? monthFirstDay;
+      if (day2) found.push({ day: day2, ambiguous: !!dayFirst && !!monthFirstDay && dayFirst !== monthFirstDay, utc: false });
+    }
+    const named = [
+      { re: /(?<!\d)(\d{1,2})\.?\s*(?:de\s+)?(\p{L}{3,})\.?,?\s*(?:de\s+)?(\d{4})(?!\d)/gu, d: 1, mo: 2, y: 3 },
+      { re: /(?<!\p{L})(\p{L}{3,})\.?\s+(\d{1,2}),?\s+(\d{4})(?!\d)/gu, d: 2, mo: 1, y: 3 }
+    ];
+    for (const { re, d, mo, y } of named) {
+      for (const m of text2.matchAll(re)) {
+        const month = monthOf(m[mo]);
+        const day2 = month && parseDate(`${m[d]}.${month}.${m[y]}`, "DD.MM.YYYY");
+        if (day2) found.push({ day: day2, ambiguous: false, utc: false });
+      }
+    }
+    return found;
+  }
+  var pad3 = (n) => String(n).padStart(2, "0");
+  function timesIn(text2) {
+    const times = [];
+    for (const m of text2.matchAll(/(?<![\d:.])(\d{1,2})(?::|h)(\d{2})(?::\d{2})?(?![\d])(?:\s*([ap])\.?\s?m\b\.?)?/giu)) {
+      let hour = Number(m[1]);
+      const minute = Number(m[2]);
+      if (minute > 59) continue;
+      if (m[3]) {
+        if (hour < 1 || hour > 12) continue;
+        hour = hour % 12 + (m[3].toLowerCase() === "p" ? 12 : 0);
+      } else if (hour > 23) continue;
+      times.push(`${pad3(hour)}:${pad3(minute)}`);
+    }
+    return times;
+  }
+  var has = (line, ...kinds) => kinds.some((k) => line.kinds.has(k));
+  var last = (line) => line.amounts.at(-1) ?? null;
+  var cents2 = (n) => Math.round(n * 100);
+  function readLine(text2, index, monthFirst) {
+    const words2 = shopWords(text2);
+    const hits = hitsIn(words2);
+    const dates = datesIn(text2, monthFirst);
+    const times = timesIn(text2);
+    const amounts = dates.length ? [] : amountsIn(text2);
+    return { index, text: text2, words: words2, hits, kinds: new Set(hits.map((h) => h.kind)), amounts, dates, times };
+  }
+  var SIGNS = CURRENCY_SIGNS.map(([sign, code]) => {
+    const escaped = sign.replace(/[.$]/g, "\\$&");
+    return { code, re: new RegExp(/^\p{L}/u.test(sign) ? `(?<![\\p{L}])${escaped}(?![\\p{L}])` : escaped, "gu") };
+  });
+  function currencyOf(lines, totalLine) {
+    const votes = /* @__PURE__ */ new Map();
+    const vote = (code, weight) => votes.set(code, (votes.get(code) ?? 0) + weight);
+    for (const line of lines) {
+      const weight = line === totalLine ? 3 : 1;
+      for (const code of line.text.match(/(?<![\p{L}])[A-Z]{3}(?![\p{L}])/gu) ?? []) if (ISO_CURRENCIES.includes(code)) vote(code, weight);
+      if (!line.amounts.length) continue;
+      let rest = line.text;
+      for (const { code, re } of SIGNS) {
+        const without = rest.replace(re, " ");
+        if (without !== rest) {
+          vote(code, weight);
+          rest = without;
+        }
+      }
+    }
+    if (votes.size === 0) return "EUR";
+    const [best] = [...votes].sort((a, b) => b[1] - a[1]);
+    if (best[0] !== "kr") return best[0];
+    const iso = ["SEK", "NOK", "DKK", "ISK"].find((code) => votes.has(code));
+    if (iso) return iso;
+    const all = lines.map((l) => l.text).join(" ");
+    const phone = Object.keys(KRONE_BY_PHONE).find((prefix) => all.includes(prefix));
+    return phone ? KRONE_BY_PHONE[phone] : null;
+  }
+  function languageOf(lines, currency) {
+    const score = /* @__PURE__ */ new Map();
+    for (const line of lines) for (const h of line.hits) {
+      if (h.language) score.set(h.language, (score.get(h.language) ?? /* @__PURE__ */ new Set()).add(h.phrase));
+    }
+    let best = null, bestScore = 0;
+    for (const language of LANGUAGES) {
+      const s = (score.get(language)?.size ?? 0) + (language === "en" && (currency === "GBP" || currency === "USD") ? 0.5 : 0);
+      if (s > bestScore) {
+        best = language;
+        bestScore = s;
+      }
+    }
+    return score.size ? best : null;
+  }
+  var STRENGTH = { due: 3, total: 2, amount: 1 };
+  var TOTAL_KINDS = ["due", "total", "amount"];
+  var NEVER_TOTAL = ["subtotal", "tax", "deposit", "tip", "other", "given", "change"];
+  function totalOf(lines) {
+    const candidates = [];
+    for (const line of lines) {
+      const amount2 = last(line);
+      if (amount2 === null || amount2 <= 0 || has(line, ...NEVER_TOTAL)) continue;
+      const totalHits = line.hits.filter((h) => STRENGTH[h.kind]);
+      if (!totalHits.length) continue;
+      const strength = Math.max(...totalHits.map((h) => STRENGTH[h.kind]));
+      candidates.push({ line, amount: amount2, strength, fuzzy: totalHits.every((h) => h.fuzzy) });
+    }
+    const paying = candidates.length ? lines.slice(candidates[0].line.index) : lines;
+    const given = paying.find((l) => has(l, "given") && !has(l, "change", "card") && (last(l) ?? 0) > 0) ?? paying.find((l) => has(l, "cash") && !has(l, "card", "change", ...TOTAL_KINDS) && (last(l) ?? 0) > 0);
+    const change = paying.find((l) => has(l, "change") && !has(l, "deposit") && last(l) !== null && last(l) >= 0);
+    const byChange = given && change ? (cents2(last(given)) - cents2(last(change))) / 100 : null;
+    const tips = lines.filter((l) => has(l, "tip") && (last(l) ?? 0) > 0).map((l) => last(l));
+    if (candidates.length) {
+      const top = Math.max(...candidates.map((c) => c.strength));
+      const best = candidates.filter((c) => c.strength === top);
+      const amounts = [...new Set(best.map((c) => cents2(c.amount)))];
+      const confirmed = (c) => byChange !== null && cents2(c.amount) === cents2(byChange);
+      let pick2, sure;
+      if (amounts.length === 1) {
+        pick2 = best.find((c) => !c.fuzzy) ?? best[0];
+        sure = !pick2.fuzzy || confirmed(pick2);
+      } else {
+        const byTip = best.find((b) => best.some((a) => tips.some((t) => cents2(a.amount) + cents2(t) === cents2(b.amount))));
+        const explained = byTip ?? best.find(confirmed);
+        pick2 = explained ?? best.at(-1);
+        sure = !!explained && (!pick2.fuzzy || confirmed(pick2));
+      }
+      if (byChange !== null && !confirmed(pick2)) sure = false;
+      return { total: pick2.amount, sure, line: pick2.line, first: candidates[0].line };
+    }
+    const plain2 = lines.filter((l) => !has(l, "given", "change", "tax", "other", "deposit", "tip") && (last(l) ?? 0) > 0);
+    const confirmedLine = byChange !== null && byChange > 0 ? plain2.find((l) => l.amounts.some((a) => cents2(a) === cents2(byChange))) : void 0;
+    if (confirmedLine) return { total: byChange, sure: false, line: confirmedLine, first: null };
+    let largest = null;
+    for (const l of plain2) if (!largest || last(l) > last(largest)) largest = l;
+    return { total: largest ? last(largest) : null, sure: false, line: largest, first: null };
+  }
+  function methodOf(lines) {
+    const card = lines.some((l) => has(l, "card") && !has(l, "other", "deposit"));
+    const cash = lines.some((l) => !has(l, "card", "deposit") && (last(l) ?? 0) > 0 && has(l, "cash", "given", "change"));
+    return card === cash ? null : card ? "card" : "cash";
+  }
+  function dateOf(lines) {
+    let best = null;
+    const all = [];
+    for (const line2 of lines) for (const hit2 of line2.dates) {
+      const utc = hit2.utc || line2.words.includes("tse");
+      const score = (line2.times.length ? 2 : 0) + (has(line2, "date") ? 1 : 0) - (has(line2, "validity") ? 3 : 0) - (utc ? 1 : 0);
+      all.push({ hit: hit2, score, utc });
+      if (!best || score > best.score) best = { line: line2, hit: hit2, score };
+    }
+    if (!best) return { date: null, time: null, sure: false };
+    const { line, hit } = best;
+    const near = [line, lines[line.index + 1], lines[line.index - 1]].filter(Boolean);
+    const time = near.find((l) => l.times.length)?.times[0] ?? null;
+    const others = all.filter((d) => d.score >= 0 && !d.utc && d.hit.day !== hit.day);
+    return { date: hit.day, time, sure: !hit.ambiguous && others.length === 0 };
+  }
+  var WEB = /https?:|www\.|@|\.(?:de|com|fr|it|es|nl|pt|ch|at|be|uk)\b/i;
+  function isAddress(line) {
+    const t = line.text;
+    if (/\d/.test(t) && (has(line, "street") || line.words.some((w) => STREET_ENDINGS.some((e) => w.length > e.length + 2 && w.endsWith(e))))) return true;
+    return /\b\d{4,5}\s+\p{L}{2,}/u.test(t) || /\b\d{4}-\d{3}\b/.test(t) || /\b\d{4}\s?[A-Z]{2}\b/.test(t) || /\b[A-Z]{1,2}\d[A-Z\d]?\s\d[A-Z]{2}\b/.test(t) || /\b[A-Z]{2}\s\d{5}(?:-\d{4})?\b/.test(t);
+  }
+  function isNameLine(line) {
+    const letters = (line.text.match(/\p{L}/gu) ?? []).length;
+    const digits = (line.text.match(/\p{N}/gu) ?? []).length;
+    if (letters < 2 || digits > letters || line.amounts.length || line.dates.length || line.times.length) return false;
+    if (has(line, "due", "total", "amount", "subtotal", "tax", "card", "cash", "given", "change", "register", "greeting", "phone", "date", "validity")) return false;
+    return !isAddress(line) && !WEB.test(line.text) && !/\b[A-Z]{2}\s?\d{8,12}\b/.test(line.text) && !/\d[\d\s/-]{5,}\d/.test(line.text);
+  }
+  function printedWords(text2) {
+    const tokens = [...text2.normalize("NFC").matchAll(/[\p{L}\p{M}\p{N}'’‘`´]+|[&+]/gu)].filter((m) => shopWords(m[0]).length === 1);
+    return tokens.length === shopWords(text2).length ? tokens.map((m) => ({ index: m.index, end: m.index + m[0].length })) : null;
+  }
+  var chainLike = (found) => found.source !== "rule" || found.direction === "both";
+  var clean = (text2) => text2.replace(/\s+/g, " ").replace(/^[\s*#.,:;|-]+|[\s*#,:;|-]+$/g, "");
+  function shopIn(text2, found, whole) {
+    if (whole && !chainLike(found)) return clean(text2);
+    const spans = found.at && printedWords(text2);
+    if (!spans || !found.at) return clean(text2);
+    return clean(text2.slice(spans[found.at[0]].index, spans[found.at[1] - 1].end));
+  }
+  function shopOf(lines, itemsFrom, itemsTo) {
+    const find = (text2) => findShop({ counterparty: text2, amount: -1 });
+    const top = lines.slice(0, Math.min(itemsFrom, 10)).filter((l) => !l.amounts.length && !l.dates.length && !l.times.length && !isAddress(l) && !WEB.test(l.text));
+    for (const line of top) {
+      const found = find(line.text);
+      if (found && (chainLike(found) || isNameLine(line))) return { shop: shopIn(line.text, found, true), categoryId: found.categoryId, sure: true };
+    }
+    const header = top.filter(isNameLine);
+    if (header.length) {
+      const first = header[0].text.split(/\s+/)[0];
+      const found = first ? find(first) : null;
+      if (found && chainLike(found)) return { shop: clean(first), categoryId: found.categoryId, sure: true };
+    }
+    for (const line of lines) {
+      if (line.index >= itemsFrom && line.index < itemsTo || has(line, "due", "total", "amount", "card", "cash", "given", "change")) continue;
+      const found = find(line.text);
+      if (found && chainLike(found)) return { shop: shopIn(line.text, found, false), categoryId: found.categoryId, sure: true };
+    }
+    return header.length ? { shop: clean(header[0].text), categoryId: null, sure: false } : { shop: null, categoryId: null, sure: false };
+  }
+  function readReceipt(input) {
+    const rows = receiptRows2(input?.observations ?? []);
+    const firstPass = rows.map((text2, i) => readLine(text2, i, false));
+    const dollars = currencyOf(firstPass, null) === "USD";
+    const lines = dollars ? rows.map((text2, i) => readLine(text2, i, true)) : firstPass;
+    const total = totalOf(lines);
+    const currency = currencyOf(lines, total.line);
+    const firstAmount = lines.findIndex((l) => l.amounts.length > 0);
+    const itemsFrom = firstAmount < 0 ? lines.length : firstAmount;
+    const itemsTo = total.first?.index ?? total.line?.index ?? lines.length;
+    const payment = lines.slice(total.first?.index ?? 0);
+    const method = methodOf(payment);
+    const date = dateOf(lines);
+    const shop = shopOf(lines, itemsFrom, itemsTo);
+    const reading = {
+      shop: shop.shop,
+      categoryId: shop.categoryId,
+      date: date.date,
+      time: date.time,
+      total: total.total,
+      currency,
+      method,
+      language: languageOf(lines, currency),
+      from: "text",
+      rows,
+      sure: { shop: shop.sure, date: date.sure, total: total.sure, method: method !== null }
+    };
+    const code = (input?.codes ?? []).map(readRegisterCode).find((c) => c !== null);
+    if (!code) return reading;
+    return {
+      ...reading,
+      from: "code",
+      total: code.total,
+      currency: "EUR",
+      method: code.method ?? reading.method,
+      date: code.date ?? reading.date,
+      time: code.date ? code.time : reading.time,
+      sure: { shop: shop.sure, date: code.date ? true : date.sure, total: true, method: code.method !== null }
+    };
+  }
+
+  // src/engine/receipts/match.ts
+  var WINDOW_DAYS = 7;
+  var MORE_AT_MOST = 2e4;
+  var LESS_UNDER = 0.02;
+  var MAX_CANDIDATES = 5;
+  var PROCESSORS = [
+    "sumup",
+    "zettle",
+    "izettle",
+    "sq",
+    "stripe",
+    "adyen",
+    "worldline",
+    "nexi",
+    "concardis",
+    "payone",
+    "elavon",
+    "telecash",
+    "ingenico",
+    "mollie",
+    "klarna",
+    "paypal",
+    "ccv",
+    "unzer",
+    "computop",
+    "fiserv",
+    "vr payment",
+    "global payments",
+    "first data",
+    "viva wallet",
+    "apple pay",
+    "google pay"
+  ].map((name) => name.split(" "));
+  var BOOKING = /* @__PURE__ */ new Set([
+    "girocard",
+    "debitkarte",
+    "debitk",
+    "kreditkarte",
+    "visa",
+    "mastercard",
+    "maestro",
+    "vpay",
+    "kontaktlos",
+    "contactless",
+    "karte",
+    "card",
+    "pos",
+    "nfc",
+    "kartenzahlung",
+    "zahlung",
+    "kaufumsatz",
+    "terminal",
+    "kfn",
+    "uhr",
+    "datum",
+    "deu"
+  ]);
+  var FILLERS = /* @__PURE__ */ new Set([
+    "markt",
+    "filiale",
+    "store",
+    "shop",
+    "gmbh",
+    "ltd",
+    "inc",
+    "llc",
+    "sa",
+    "sl",
+    "srl",
+    "spa",
+    "bv",
+    "nv",
+    "lda",
+    "sas",
+    "sarl",
+    "und",
+    "and",
+    "the",
+    "der",
+    "die",
+    "das",
+    "le",
+    "la",
+    "il",
+    "el",
+    "de",
+    "da",
+    "di",
+    "do",
+    "van"
+  ]);
+  var chainLike2 = (found) => !!found && (found.source !== "rule" || found.direction === "both");
+  var generic = (word) => {
+    const found = findShop({ counterparty: word, amount: -1 });
+    return !!found && !chainLike2(found);
+  };
+  var nameWords = (words2, drop) => words2.filter((w) => w.length >= 3 && !/^\d+$/.test(w) && !drop(w));
+  function withoutProcessors(words2) {
+    const kept = [];
+    for (let i = 0; i < words2.length; ) {
+      const name = PROCESSORS.find((p) => p.every((w, k) => words2[i + k] === w));
+      if (name) i += name.length;
+      else kept.push(words2[i++]);
+    }
+    return kept;
+  }
+  var sameWord = (a, b) => a === b || Math.min(a.length, b.length) >= 4 && (a.startsWith(b) || b.startsWith(a));
+  function receiptShop(shop) {
+    if (!shop?.trim()) return null;
+    const receipt = { counterparty: shop, amount: -1 };
+    const found = findShop(receipt);
+    const key = merchantKey(receipt);
+    return { chain: chainLike2(found) ? found : null, key, words: nameWords(shopWords(key), (w) => FILLERS.has(w) || generic(w)) };
+  }
+  function sameShop(shop, payment) {
+    if (!shop) return "unknown";
+    const bank = { counterparty: payment.counterparty ?? null, description: payment.description ?? "", amount: payment.amount };
+    const theirs = findShop(bank);
+    if (shop.chain && chainLike2(theirs)) {
+      const a = shop.chain.name.split(" "), b = theirs.name.split(" ");
+      return a.every((w, i) => b[i] === void 0 || b[i] === w) || b.every((w, i) => a[i] === void 0 || a[i] === w) ? "similar" : "different";
+    }
+    if (shop.key && shop.key === merchantKey(bank)) return "similar";
+    const bankWords = nameWords(withoutProcessors(shopWords(merchantKey(bank))), (w) => BOOKING.has(w));
+    if (!bankWords.length || !shop.words.length) return "unknown";
+    return shop.words.every((w) => bankWords.some((b) => sameWord(w, b))) ? "similar" : "different";
+  }
+  var cents3 = (n) => Math.round(n * 100);
+  var currencyOf2 = (code) => (code?.trim() || "EUR").toUpperCase();
+  function matchReceipt(receipt, payments, taken = []) {
+    const day2 = parseDay(receipt?.date);
+    const total = receipt?.total;
+    if (!day2 || typeof total !== "number" || !Number.isFinite(total) || total <= 0) return { exact: null, candidates: [] };
+    const used = new Set(taken);
+    const currency = currencyOf2(receipt.currency);
+    const shopOfReceipt = receiptShop(receipt.shop);
+    const exact = [], differs = [], other = [];
+    for (const payment of payments ?? []) {
+      const booked = parseDay(payment?.date);
+      if (!booked || used.has(payment.id) || typeof payment.amount !== "number" || !(payment.amount < 0)) continue;
+      const days = dayNumber(booked) - dayNumber(day2);
+      if (days < 0 || days > WINDOW_DAYS) continue;
+      const shop = sameShop(shopOfReceipt, payment);
+      if (shop === "different") continue;
+      if (currencyOf2(payment.currency) !== currency) {
+        if (shop === "similar") other.push({ id: payment.id, why: "otherCurrency", days, difference: null, shop });
+        continue;
+      }
+      const difference = cents3(-payment.amount) - cents3(total);
+      if (difference === 0) exact.push({ id: payment.id, why: "severalSame", days, difference: 0, shop });
+      else if (shop === "similar" && (difference > 0 ? difference <= MORE_AT_MOST : -difference < LESS_UNDER * cents3(total))) {
+        differs.push({ id: payment.id, why: "amountDiffers", days, difference: difference / 100, shop });
+      }
+    }
+    if (exact.length === 1) return { exact: exact[0].id, candidates: [] };
+    const nearer = (a, b) => a.days - b.days;
+    exact.sort((a, b) => (a.shop === b.shop ? 0 : a.shop === "similar" ? -1 : 1) || nearer(a, b));
+    differs.sort((a, b) => Math.abs(a.difference) - Math.abs(b.difference) || nearer(a, b));
+    other.sort(nearer);
+    const candidates = [...exact, ...differs, ...other].slice(0, MAX_CANDIDATES).map(({ shop: _shop, ...candidate }) => candidate);
+    return { exact: null, candidates };
   }
 
   // src/engine/index.ts

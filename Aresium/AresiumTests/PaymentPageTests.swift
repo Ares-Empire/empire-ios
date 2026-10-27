@@ -29,6 +29,7 @@ struct PaymentPageTests {
             "learned": "Aresium learned this from a change you made.",
             "starter": "Sorted by Aresium's built-in list.",
             "manual": "You chose this category.",
+            "receipt": "Sorted by its receipt.",
             // Server mode.
             "rule": "Sorted by a rule.",
             "llm": "Sorted automatically."
@@ -38,6 +39,7 @@ struct PaymentPageTests {
             "learned": "Aresium hat das aus einer Änderung von dir gelernt.",
             "starter": "Nach Aresiums eingebauter Liste sortiert.",
             "manual": "Du hast diese Kategorie gewählt.",
+            "receipt": "Nach seinem Beleg sortiert.",
             "rule": "Nach einer Regel sortiert.",
             "llm": "Automatisch sortiert."
         ]

@@ -4,12 +4,42 @@
     "" : {
       "shouldTranslate" : false
     },
+    "%@ in euros" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ in Euro"
+          }
+        }
+      }
+    },
     "%@ is too large (max 25 MB before JSON encoding)" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ ist zu groß (max. 25 MB vor der JSON-Kodierung)"
+          }
+        }
+      }
+    },
+    "%@ less than the receipt" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ weniger als auf dem Beleg"
+          }
+        }
+      }
+    },
+    "%@ more: cash back or a tip?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ mehr: Bargeld an der Kasse oder Trinkgeld?"
           }
         }
       }
@@ -267,6 +297,46 @@
         }
       }
     },
+    "%lld receipts joined" : {
+      "localizations" : {
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Beleg verbunden"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Belege verbunden"
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld receipt joined"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld receipts joined"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld skipped" : {
       "localizations" : {
         "de" : {
@@ -437,6 +507,16 @@
         }
       }
     },
+    "Amount in euros" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Betrag in Euro"
+          }
+        }
+      }
+    },
     "Amounts" : {
       "localizations" : {
         "de" : {
@@ -527,12 +607,32 @@
         }
       }
     },
+    "Aresium couldn't read this receipt. Type what it says:" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aresium konnte diesen Beleg nicht lesen. Tipp ein, was draufsteht:"
+          }
+        }
+      }
+    },
     "Aresium doesn't know this bank yet. This is how your payments would look:" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Aresium kennt diese Bank noch nicht. So würden deine Buchungen aussehen:"
+          }
+        }
+      }
+    },
+    "Aresium is not sure about this." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hier ist sich Aresium nicht sicher."
           }
         }
       }
@@ -573,6 +673,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Aresium sperrt sich beim Öffnen und wenn du länger als 10 Sekunden weg warst. Solange die Sperre an ist, zeigen die Widgets keine Zahlen."
+          }
+        }
+      }
+    },
+    "Aresium may not use the camera. Allow it in Settings → Apps → Aresium." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aresium darf die Kamera nicht nutzen. Erlaube es unter Einstellungen → Apps → Aresium."
           }
         }
       }
@@ -633,6 +743,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "So steht es in der Bankdatei"
+          }
+        }
+      }
+    },
+    "As on the receipt" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "So steht es auf dem Beleg"
           }
         }
       }
@@ -707,6 +827,26 @@
         }
       }
     },
+    "Bank payment" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buchung"
+          }
+        }
+      }
+    },
+    "Bank payments" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buchungen"
+          }
+        }
+      }
+    },
     "Bar" : {
       "localizations" : {
         "de" : {
@@ -753,6 +893,36 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Abbrechen"
+          }
+        }
+      }
+    },
+    "Card" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Karte"
+          }
+        }
+      }
+    },
+    "Cash" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bar"
+          }
+        }
+      }
+    },
+    "Cash spent with receipts" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bargeld mit Belegen ausgegeben"
           }
         }
       }
@@ -807,12 +977,62 @@
         }
       }
     },
+    "Check the receipt" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beleg prüfen"
+          }
+        }
+      }
+    },
+    "Choose" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wählen"
+          }
+        }
+      }
+    },
+    "Choose card or cash." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähl Karte oder Bar."
+          }
+        }
+      }
+    },
     "Choose file" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Datei auswählen"
+          }
+        }
+      }
+    },
+    "Choose photo" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Foto auswählen"
+          }
+        }
+      }
+    },
+    "Choose the currency." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähl die Währung."
           }
         }
       }
@@ -887,6 +1107,26 @@
         }
       }
     },
+    "Counted as its bank payment" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zählt als seine Buchung"
+          }
+        }
+      }
+    },
+    "Covered by receipts" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Durch Belege gedeckt"
+          }
+        }
+      }
+    },
     "Currency" : {
       "localizations" : {
         "de" : {
@@ -913,6 +1153,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Derzeit in"
+          }
+        }
+      }
+    },
+    "Date" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Datum"
           }
         }
       }
@@ -983,6 +1233,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Aresium-Daten auf diesem iPhone löschen?"
+          }
+        }
+      }
+    },
+    "Delete receipt" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beleg löschen"
+          }
+        }
+      }
+    },
+    "Delete this receipt?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diesen Beleg löschen?"
           }
         }
       }
@@ -1553,12 +1823,52 @@
         }
       }
     },
+    "Is this the same payment?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ist das dieselbe Buchung?"
+          }
+        }
+      }
+    },
+    "Its bank payment, if it has one, counts as before." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seine Buchung, falls er eine hat, zählt wie vorher."
+          }
+        }
+      }
+    },
     "Its usual steps" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Die üblichen Schritte"
+          }
+        }
+      }
+    },
+    "Join with a payment" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mit einer Buchung verbinden"
+          }
+        }
+      }
+    },
+    "Join with a payment…" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mit einer Buchung verbinden …"
           }
         }
       }
@@ -1833,6 +2143,16 @@
         }
       }
     },
+    "Name on the receipt" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Name auf dem Beleg"
+          }
+        }
+      }
+    },
     "Needs a code on this iPhone" : {
       "localizations" : {
         "de" : {
@@ -1843,12 +2163,12 @@
         }
       }
     },
-    "New files from your bank come in here." : {
+    "New files from your bank and your receipts come in here." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hier kommen neue Dateien von deiner Bank rein."
+            "value" : "Hier kommen neue Dateien von deiner Bank und deine Belege rein."
           }
         }
       }
@@ -1893,6 +2213,16 @@
         }
       }
     },
+    "No bank payment fits yet. The receipt waits for the bank statement." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch passt keine Buchung. Der Beleg wartet auf den Kontoauszug."
+          }
+        }
+      }
+    },
     "No data yet" : {
       "localizations" : {
         "de" : {
@@ -1929,6 +2259,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Mit diesen Spalten ließ sich keine Buchung lesen."
+          }
+        }
+      }
+    },
+    "No receipts yet. Import → Scan receipt or Choose photo adds one." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch keine Belege. Importieren → Beleg scannen oder Foto auswählen fügt einen hinzu."
           }
         }
       }
@@ -1973,6 +2313,16 @@
         }
       }
     },
+    "None of these" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keine davon"
+          }
+        }
+      }
+    },
     "Not available with sample data" : {
       "localizations" : {
         "de" : {
@@ -1983,12 +2333,32 @@
         }
       }
     },
+    "Not found on the receipt." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nicht auf dem Beleg gefunden."
+          }
+        }
+      }
+    },
     "Not now" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nicht jetzt"
+          }
+        }
+      }
+    },
+    "Not on the receipt. Card is chosen because a bank payment matches." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nicht auf dem Beleg. Karte ist gewählt, weil eine Buchung passt."
           }
         }
       }
@@ -2069,6 +2439,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Auf der Website"
+          }
+        }
+      }
+    },
+    "One of %lld payments with this amount" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eine von %lld Buchungen mit diesem Betrag"
           }
         }
       }
@@ -2243,6 +2623,36 @@
         }
       }
     },
+    "Paid by" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bezahlt mit"
+          }
+        }
+      }
+    },
+    "Paid in another currency" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In einer anderen Währung bezahlt"
+          }
+        }
+      }
+    },
+    "Paid in cash" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bar bezahlt"
+          }
+        }
+      }
+    },
     "Payment" : {
       "localizations" : {
         "de" : {
@@ -2259,6 +2669,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Verwendungszweck"
+          }
+        }
+      }
+    },
+    "Payments from the receipt's day to a week later. Tap the one this receipt belongs to." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buchungen vom Tag des Belegs bis eine Woche später. Tipp auf die, zu der dieser Beleg gehört."
           }
         }
       }
@@ -2313,6 +2733,16 @@
         }
       }
     },
+    "Please check" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bitte prüfen"
+          }
+        }
+      }
+    },
     "Protect Aresium with Face ID or a code of your own." : {
       "localizations" : {
         "de" : {
@@ -2343,6 +2773,16 @@
         }
       }
     },
+    "Read from the receipt" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vom Beleg gelesen"
+          }
+        }
+      }
+    },
     "Reading the file…" : {
       "localizations" : {
         "de" : {
@@ -2353,12 +2793,82 @@
         }
       }
     },
+    "Reading the receipt…" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beleg wird gelesen …"
+          }
+        }
+      }
+    },
     "Recategorise" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Umkategorisieren"
+          }
+        }
+      }
+    },
+    "Receipt" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beleg"
+          }
+        }
+      }
+    },
+    "Receipt saved." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beleg gespeichert."
+          }
+        }
+      }
+    },
+    "Receipt saved. It counts as its bank payment." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beleg gespeichert. Er zählt als seine Buchung."
+          }
+        }
+      }
+    },
+    "Receipt saved. It waits for the bank statement." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beleg gespeichert. Er wartet auf den Kontoauszug."
+          }
+        }
+      }
+    },
+    "Receipts" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Belege"
+          }
+        }
+      }
+    },
+    "Receipts you scanned or picked, newest first. Only what was read is kept, never the photo." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Belege, die du gescannt oder ausgewählt hast, die neuesten zuerst. Gespeichert wird nur, was gelesen wurde, nie das Foto."
           }
         }
       }
@@ -2503,6 +3013,16 @@
         }
       }
     },
+    "Scan receipt" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beleg scannen"
+          }
+        }
+      }
+    },
     "Semicolon" : {
       "localizations" : {
         "de" : {
@@ -2563,6 +3083,16 @@
         }
       }
     },
+    "Shop" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Geschäft"
+          }
+        }
+      }
+    },
     "Shop names for sorting" : {
       "localizations" : {
         "de" : {
@@ -2619,6 +3149,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nach einer Regel sortiert."
+          }
+        }
+      }
+    },
+    "Sorted by its receipt." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nach seinem Beleg sortiert."
           }
         }
       }
@@ -2849,6 +3389,36 @@
         }
       }
     },
+    "The receipt" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Beleg"
+          }
+        }
+      }
+    },
+    "The receipt could not be read." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Beleg ließ sich nicht lesen."
+          }
+        }
+      }
+    },
+    "The scanner stopped. Try again." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Scanner hat abgebrochen. Versuch es noch einmal."
+          }
+        }
+      }
+    },
     "The tour could not start." : {
       "localizations" : {
         "de" : {
@@ -2899,6 +3469,16 @@
         }
       }
     },
+    "Then the receipt waits for the bank statement and counts on its own until then." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dann wartet der Beleg auf den Kontoauszug und zählt bis dahin für sich."
+          }
+        }
+      }
+    },
     "There is already a category with this name." : {
       "localizations" : {
         "de" : {
@@ -2925,6 +3505,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Diese XML-Datei ist kein Kontoauszug, den Aresium lesen kann."
+          }
+        }
+      }
+    },
+    "This cash was spent with these receipts, so it is counted with them." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieses Bargeld wurde mit diesen Belegen ausgegeben, darum zählt es bei ihnen."
           }
         }
       }
@@ -2989,6 +3579,16 @@
         }
       }
     },
+    "This is what Aresium read from the receipt:" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das hat Aresium vom Beleg gelesen:"
+          }
+        }
+      }
+    },
     "This month's spending" : {
       "localizations" : {
         "de" : {
@@ -3005,6 +3605,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Diese Buchung ist nicht mehr auf diesem iPhone."
+          }
+        }
+      }
+    },
+    "This photo could not be read." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieses Foto ließ sich nicht lesen."
+          }
+        }
+      }
+    },
+    "This receipt is no longer on this iPhone." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieser Beleg ist nicht mehr auf diesem iPhone."
           }
         }
       }
@@ -3075,6 +3695,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Zu viele falsche Codes. Versuch es später noch einmal."
+          }
+        }
+      }
+    },
+    "Total" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Summe"
           }
         }
       }
@@ -3175,6 +3805,36 @@
         }
       }
     },
+    "Type the total." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tipp die Summe ein."
+          }
+        }
+      }
+    },
+    "Type what it cost in euros." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tipp ein, was es in Euro gekostet hat."
+          }
+        }
+      }
+    },
+    "Unjoin" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trennen"
+          }
+        }
+      }
+    },
     "Unlock" : {
       "localizations" : {
         "de" : {
@@ -3261,6 +3921,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Senkrechter Strich"
+          }
+        }
+      }
+    },
+    "Waiting for the bank statement" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wartet auf den Kontoauszug"
           }
         }
       }
@@ -3505,6 +4175,16 @@
         }
       }
     },
+    "Your bank statement has payments that may be this receipt. Tap the one it belongs to, so it counts once." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auf deinem Kontoauszug sind Buchungen, die dieser Beleg sein können. Tipp auf die richtige, damit er nur einmal zählt."
+          }
+        }
+      }
+    },
     "Your data on this iPhone" : {
       "localizations" : {
         "de" : {
@@ -3545,12 +4225,12 @@
         }
       }
     },
-    "Your payments, categories and learned sorting on this iPhone go for good. Export them first to keep a copy." : {
+    "Your payments, receipts, categories and learned sorting on this iPhone go for good. Export them first to keep a copy." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Deine Buchungen, Kategorien und gelernten Zuordnungen auf diesem iPhone sind dann endgültig weg. Exportier sie vorher, um eine Kopie zu behalten."
+            "value" : "Deine Buchungen, Belege, Kategorien und gelernten Zuordnungen auf diesem iPhone sind dann endgültig weg. Exportier sie vorher, um eine Kopie zu behalten."
           }
         }
       }

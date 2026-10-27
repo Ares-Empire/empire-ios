@@ -1,11 +1,14 @@
 import Foundation
 
-/// Settings → Export: everything Aresium keeps on this iPhone for one account, as one JSON file the person keeps
-/// themselves (`Aresium-<date>.json`, through the share sheet). Restoring reads it back into an empty store, checked
-/// first, all or nothing. Schema version 1; a change to these fields (or to `LedgerPayment`, `LedgerAccount`,
-/// `ChosenCategory`, `LearnedRule`, `CsvLayout`) is a new version, and `restore` keeps reading version 1.
+/// Settings → Export: everything Aresium keeps on this iPhone, as one JSON file the person keeps themselves
+/// (`Aresium-<date>.json`, through the share sheet). Restoring reads it back into an empty store, checked first, all or
+/// nothing. Schema version 2 (brief 31) adds the receipts; version 1 (no receipts) still restores. A change to these
+/// fields (or to `LedgerPayment`, `LedgerAccount`, `ChosenCategory`, `LearnedRule`, `CsvLayout`, `LedgerReceipt`) is a
+/// new version, and `restore` keeps reading the older ones.
 nonisolated struct LedgerExport: Codable, Equatable, Sendable {
-    static let currentSchema = 1
+    static let currentSchema = 2
+    /// The versions `decode` reads.
+    static let readableSchemas = 1...2
     static let appName = "Aresium"
 
     var app = Self.appName
@@ -17,6 +20,32 @@ nonisolated struct LedgerExport: Codable, Equatable, Sendable {
     var categories: [ChosenCategory]
     var learned: [LearnedRule]
     var layouts: [CsvLayout]
+    /// Schema 2: the receipts (none in a version 1 file).
+    var receipts: [LedgerReceipt] = []
+
+    init(exported: String, accounts: [LedgerAccount], payments: [LedgerPayment], categories: [ChosenCategory],
+         learned: [LearnedRule], layouts: [CsvLayout], receipts: [LedgerReceipt] = []) {
+        self.exported = exported
+        self.accounts = accounts
+        self.payments = payments
+        self.categories = categories
+        self.learned = learned
+        self.layouts = layouts
+        self.receipts = receipts
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        app = try container.decode(String.self, forKey: .app)
+        schema = try container.decode(Int.self, forKey: .schema)
+        exported = try container.decode(String.self, forKey: .exported)
+        accounts = try container.decode([LedgerAccount].self, forKey: .accounts)
+        payments = try container.decode([LedgerPayment].self, forKey: .payments)
+        categories = try container.decode([ChosenCategory].self, forKey: .categories)
+        learned = try container.decode([LearnedRule].self, forKey: .learned)
+        layouts = try container.decode([CsvLayout].self, forKey: .layouts)
+        receipts = try container.decodeIfPresent([LedgerReceipt].self, forKey: .receipts) ?? []
+    }
 
     /// The file's name: `Aresium-2026-10-27.json`.
     var fileName: String { "Aresium-\(exported).json" }
@@ -24,16 +53,20 @@ nonisolated struct LedgerExport: Codable, Equatable, Sendable {
     func encoded() throws -> Data {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+        encoder.dateEncodingStrategy = .iso8601
         return try encoder.encode(self)
     }
 
-    /// Reads an export; anything that is not one (another JSON, another schema) is `invalidExport`.
+    /// Reads an export; anything that is not one (another JSON, a schema it does not know) is `invalidExport`.
     static func decode(_ data: Data) throws -> LedgerExport {
         let export: LedgerExport
-        do { export = try JSONDecoder().decode(LedgerExport.self, from: data) }
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        do { export = try decoder.decode(LedgerExport.self, from: data) }
         catch { throw LedgerError.invalidExport("not an export: \(error)") }
         guard export.app == appName else { throw LedgerError.invalidExport("app \(export.app)") }
-        guard export.schema == currentSchema else { throw LedgerError.invalidExport("schema \(export.schema)") }
+        guard readableSchemas.contains(export.schema) else { throw LedgerError.invalidExport("schema \(export.schema)") }
+        guard export.schema >= 2 || export.receipts.isEmpty else { throw LedgerError.invalidExport("receipts in schema 1") }
         return export
     }
 
@@ -82,6 +115,23 @@ nonisolated struct LedgerExport: Codable, Equatable, Sendable {
         for rule in learned {
             guard !rule.merchant.isEmpty, merchants.insert(rule.merchant).inserted, ruleCategories.contains(rule.category)
             else { throw fail("learned rule") }
+        }
+        var receiptIDs = Set<String>(), joined = Set<String>()
+        for receipt in receipts {
+            guard receiptIDs.insert(receipt.id).inserted else { throw fail("duplicate receipt") }
+            guard Self.isDay(receipt.date) else { throw fail("receipt date") }
+            guard Self.isAmount(receipt.total), receipt.totalValue > 0, receipt.euroAmount.map(Self.isAmount) ?? true
+            else { throw fail("receipt amount") }
+            guard receipt.currency.count == 3, receipt.currency.allSatisfy({ $0.isASCII && $0.isUppercase })
+            else { throw fail("receipt currency") }
+            if let category = receipt.category {
+                guard chosenIDs.contains(category) else { throw fail("receipt category \(category)") }
+            }
+            guard (receipt.category == nil) == (receipt.categorySource == .none) else { throw fail("receipt category source") }
+            if let payment = receipt.paymentID {
+                guard receipt.method == .card, ids.contains(payment), joined.insert(payment).inserted
+                else { throw fail("receipt payment") }
+            }
         }
     }
 

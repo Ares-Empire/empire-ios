@@ -59,6 +59,10 @@
 	<!-- Settings → Lock: Face ID unlocks Aresium (Model/AppLock.swift). German in InfoPlist.xcstrings. -->
 	<key>NSFaceIDUsageDescription</key>
 	<string>Face ID unlocks Aresium when you turn on its lock.</string>
+	<!-- Import → Scan receipt: Apple's document scanner (Screens/ReceiptCaptureScreens.swift). German in
+	     InfoPlist.xcstrings. -->
+	<key>NSCameraUsageDescription</key>
+	<string>The camera scans your receipts. The photo stays on this iPhone and is not kept.</string>
 	<!-- The team prefix of the shared Keychain group (Shared/EmpireShared.swift). -->
 	<key>AppIdentifierPrefix</key>
 	<string>$(AppIdentifierPrefix)</string>

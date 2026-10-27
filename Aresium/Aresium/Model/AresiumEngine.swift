@@ -131,6 +131,18 @@ actor AresiumEngine {
         return dashboard
     }
 
+    /// `readReceipt`: what Vision read on a receipt (`ReceiptCapture`, the JSON the engine takes) → shop, date, total,
+    /// currency, card or cash, the rows, and which of them it is sure of.
+    func readReceipt(_ capture: ReceiptCapture) throws -> ReceiptReading {
+        try call("readReceipt", capture, as: ReceiptReading.self)
+    }
+
+    /// `matchReceipt`: the bank payment a card receipt belongs to, exactly one (`exact`), or the ones to ask about.
+    /// `taken`: payments the person's other receipts are joined to, and the ones they said are not this one.
+    func matchReceipt(_ receipt: MatchReceipt, payments: [MatchPayment], taken: [String]) throws -> ReceiptMatch {
+        try call("matchReceipt", MatchInput(receipt: receipt, payments: payments, taken: taken), as: ReceiptMatch.self)
+    }
+
     /// The engine's own version (`version` in index.ts).
     func version() throws -> String { try call("version", Empty(), as: String.self) }
 
@@ -160,6 +172,8 @@ actor AresiumEngine {
         learn: (input) => E.learn(input.learned, input.payment, input.categoryId),
         merchantKeys: (payments) => payments.map((payment) => E.merchantKey(payment)),
         shareableLayout: (layout) => E.shareableLayout(layout),
+        readReceipt: (capture) => E.readReceipt(capture),
+        matchReceipt: (input) => E.matchReceipt(input.receipt, input.payments, input.taken),
         // The engine exports no `looksPersonal` of its own: a layout whose one column is named `text` runs exactly that
         // check. A layout it calls invalid would hide every answer, so that is an error here.
         personalData: (text) => {
@@ -254,6 +268,11 @@ actor AresiumEngine {
         let payments: [SortingPayment]
         let categories: [CategoryID]
         let learned: [String: String]
+    }
+    private nonisolated struct MatchInput: Encodable {
+        let receipt: MatchReceipt
+        let payments: [MatchPayment]
+        let taken: [String]
     }
     private nonisolated struct LearnInput: Encodable {
         let learned: [String: String]

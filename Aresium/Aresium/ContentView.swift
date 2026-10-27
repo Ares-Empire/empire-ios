@@ -40,6 +40,11 @@ struct ContentView: View {
     /// Import data's file picker (the first screen). The category picker follows an import that added payments while
     /// none is chosen (`ImportStore.asksForCategories`).
     @State private var picksFiles = false
+    /// Import's receipts in phone mode: the document scanner, the photo picker and the sheet that reads, checks and keeps
+    /// the receipt.
+    @State private var receipts: ReceiptCaptureModel
+    /// The after-import question shown now ("Is this the same payment?"), so closing it lets only that receipt wait.
+    @State private var askedReceipt: String?
     @State private var restoringExport = false
     /// Where the band was when it was tapped (from the screen's bottom edge to its word), so the intro's word lands
     /// there; nil when the header started the transition.
@@ -112,6 +117,13 @@ struct ContentView: View {
         #endif
         let imports = ImportStore(dashboard: store, outbox: outbox)
         let modes = ModeStore(session: session, dashboard: store, markerDefaults: markerDefaults)
+        // A kept receipt: its line in the import's result banner, and the dashboard built again.
+        let receipts = ReceiptCaptureModel { [modes] in modes.phone }
+        receipts.saved = { [imports, store] line in
+            imports.show(line, success: true)
+            await store.reloadAfterTransactionChange()
+        }
+        _receipts = State(initialValue: receipts)
         _store = State(initialValue: store)
         _imports = State(initialValue: imports)
         _modes = State(initialValue: modes)
@@ -192,13 +204,14 @@ struct ContentView: View {
                             ProgressView().tint(palette.secondary).frame(maxWidth: .infinity, maxHeight: .infinity)
                         case .firstScreen:
                             PhoneFirstScreen(imports: imports, palette: palette, band: band(in: geometry),
-                                             restoreProblem: phoneData.problem, importData: importData,
+                                             restoreProblem: phoneData.problem, importChoices: phoneImportChoices,
                                              startTour: startTour, openGuide: { showsGuide = true },
                                              restore: { restoringExport = true })
                         default:
                             StartScreen(store: store, imports: imports, palette: palette, current: $place.current,
                                         side: $place.side, graph: $place.graph, band: band(in: geometry),
-                                        importTypes: importTypes, openGuide: { showsGuide = true }) {
+                                        importChoices: modes.phone == nil ? nil : phoneImportChoices,
+                                        openGuide: { showsGuide = true }) {
                                 place.path.append($0)
                             }
                         }
@@ -295,7 +308,7 @@ struct ContentView: View {
                                                 signInNote: String(localized: "Only for an Aresium server of your own. Your data here stays on this iPhone."),
                                                 licences: [.shopList()]),
                                session: session, sample: sampleActive, logOut: logOut) {
-                    if modes.phone != nil { PhoneSettingsSection(modes: modes, data: phoneData) }
+                    if modes.phone != nil { PhoneSettingsSection(modes: modes, data: phoneData, palette: palette) }
                     LockSettingsSection(lock: lock)
                 } help: {
                     NavigationLink {
@@ -345,6 +358,16 @@ struct ContentView: View {
                 // An unknown bank's file: "Does this look right?", then the column check.
                 if let phone = modes.phone {
                     FileCheckSheet(model: FileCheckModel(request: request, phone: phone, imports: imports), palette: palette)
+                }
+            }
+            .receiptCapture(receipts, palette: palette)
+            .sheet(item: Binding(get: { pendingReceiptQuestion }, set: { if $0 == nil { receiptQuestionClosed() } })) { question in
+                // After a bank import: a waiting card receipt with payments to ask about, once each.
+                if let phone = modes.phone {
+                    ReceiptQuestionSheet(question: question, phone: phone, palette: palette) {
+                        await store.reloadAfterTransactionChange()
+                    }
+                    .onAppear { askedReceipt = question.id }
                 }
             }
             .fileImporter(isPresented: $restoringExport, allowedContentTypes: [.json]) { result in
@@ -431,10 +454,31 @@ struct ContentView: View {
         picksFiles = true
     }
 
+    /// Phone mode's Import (the first screen's Import data, the dashboard's import button): Choose file, Scan receipt,
+    /// Choose photo. Server mode keeps its own button (no receipts there yet).
+    private var phoneImportChoices: ImportChoices {
+        ImportChoices(chooseFile: importData, scanReceipt: receipts.scan, choosePhoto: receipts.choosePhoto)
+    }
+
     /// The category picker after an import shows in phone mode once no other sheet of the app is open (a file shared in
     /// while Settings or the guide is open waits for it to close).
     private var showsCategoriesAfterImport: Bool {
         imports.asksForCategories && modes.phone != nil && !showsSettings && !showsGuide
+    }
+
+    /// The after-import question to show now: once the import, its file check window and the category picker are done
+    /// (the picker first when both are due), and no other window of the app is open.
+    private var pendingReceiptQuestion: ReceiptQuestion? {
+        guard let phone = modes.phone, !imports.isBusy, !imports.asksForCategories, imports.layoutRequest == nil,
+              !showsSettings, !showsGuide, receipts.reading == nil, tour == nil else { return nil }
+        return phone.receiptQuestions.first
+    }
+
+    /// The question was closed without an answer: that receipt waits (asked again only after the next import).
+    private func receiptQuestionClosed() {
+        guard let phone = modes.phone, let id = askedReceipt,
+              let question = phone.receiptQuestions.first(where: { $0.id == id }) else { return }
+        phone.dismissQuestion(question)
     }
 
     /// Server mode before its login is renewed at launch: nothing to show yet.
@@ -471,9 +515,15 @@ struct ContentView: View {
         let arguments = LaunchArguments.current
         do {
             let (phone, storage) = try await PhoneSample.backend(empty: arguments.contains("-samplePhoneEmpty"))
+            // Kept receipts before the store shows, so the first dashboard (and a page opened at launch) has them.
+            if arguments.contains("-sampleReceipts") { try await PhoneSample.addReceipts(phone) }
             await modes.showFixed(phone, storage: storage)
             // `-importData`: the first screen's Import data at launch (the file picker).
             if arguments.contains("-importData") { importData() }
+            // `-choosePhoto`: Import → Choose photo at launch (the photo picker). Receipts (the simulator has no camera):
+            // the made-up receipt read through the real Vision path and the engine, as a scanned one.
+            if arguments.contains("-choosePhoto") { receipts.choosePhoto() }
+            await startReceiptSample(phone, arguments: arguments)
             // `-sampleImport`: the made-up bank file imported as if picked; on `-samplePhoneEmpty` (no category chosen)
             // the category picker opens after it, as after a real import (`-sampleTick`, `-samplePickerDone` in it).
             if arguments.contains("-sampleImport") { imports.debugImport([TourData.bankFile(now: .now)]) }
@@ -488,6 +538,31 @@ struct ContentView: View {
             }
         } catch {
             modes.debugShow(.failed(error.localizedDescription))
+        }
+    }
+
+    /// Receipts in the phone sample (`ReceiptSample`, `PhoneSample.addReceipts`): `-sampleReceipt` the check window read
+    /// from the register's code (the made-up shop's name is not sure; `-sampleReceiptShop REWE` prints a chain the shop
+    /// list knows, so everything is sure), `-sampleReceiptUnsure` with fields to check first (no code, no
+    /// payment line, a damaged total), `-sampleReceiptBlank` nothing read; `-sampleReceiptQuestion` the receipt saved
+    /// with two bank payments of its amount: "Is this the same payment?"; `-sampleReceipts` made-up receipts kept in
+    /// the store (waiting, cash, joined, another currency), then `-sampleCategory … -samplePhoneTransaction <shop>`
+    /// opens one, `-openSheet settings -openReceipts` Settings → Receipts.
+    private func startReceiptSample(_ phone: PhoneBackend, arguments: [String]) async {
+        if arguments.contains("-sampleReceiptQuestion") {
+            try? await PhoneSample.addQuestionPayments(phone)
+            receipts.read([ReceiptPage(image: ReceiptSample.image())])
+            await receipts.finished()
+            if case let .checking(check)? = receipts.reading?.phase {
+                check.method = .card
+                await receipts.save(check)
+            }
+        } else if arguments.contains("-sampleReceipt") {
+            receipts.read([ReceiptPage(image: ReceiptSample.image(shop: LaunchArguments.value("-sampleReceiptShop")))])
+        } else if arguments.contains("-sampleReceiptUnsure") {
+            receipts.read([ReceiptPage(image: ReceiptSample.unsureImage())])
+        } else if arguments.contains("-sampleReceiptBlank") {
+            receipts.read([ReceiptPage(image: ReceiptSample.blankImage())])
         }
     }
 

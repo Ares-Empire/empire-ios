@@ -1,5 +1,4 @@
 import SwiftUI
-import UniformTypeIdentifiers
 
 struct DashboardRoute: Hashable {
     let category: String
@@ -67,10 +66,9 @@ struct StartScreen: View {
     @Binding var side: DashboardSide
     @Binding var graph: Bool
     let band: AresiumBand
-    /// The bank files the import button offers: the server's, or phone mode's (`PhoneImportTypes`).
-    var importTypes: [UTType] = [.commaSeparatedText, .xml]
-    /// The tour: the import button only answers its step, no file is picked (`TourModel.importTapped`).
-    var importInstead: (() -> Void)? = nil
+    /// Phone mode and the tour: Import's menu (Choose file, Scan receipt, Choose photo; in the tour each only answers
+    /// its step, `TourModel.importTapped`). Nil: server mode's import button.
+    var importChoices: ImportChoices? = nil
     /// "How do I get my file?" under an empty page (nil: not offered).
     var openGuide: (() -> Void)? = nil
     let pick: (DashboardRoute) -> Void
@@ -84,7 +82,7 @@ struct StartScreen: View {
                 }.pickerStyle(.segmented).frame(maxWidth: 235)
                     .tourAnchor(.range)
                 Spacer()
-                ImportButton(store: imports, sample: store.isSample, palette: palette, types: importTypes, instead: importInstead)
+                ImportButton(store: imports, sample: store.isSample, palette: palette, choices: importChoices)
                     .tourAnchor(.importButton)
                 IconButton(symbol: "chart.line.uptrend.xyaxis", label: String(localized: "Toggle graph"), palette: palette, active: graph) {
                     withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.3)) { graph.toggle() }
@@ -249,7 +247,14 @@ struct TransactionsScreen: View {
                                 DayTile(palette: palette) { Text(String(transaction.day)) }
                                 VStack(alignment: .leading, spacing: 2) {
                                     HStack(spacing: 5) {
-                                        Text(transaction.place).font(AppFont.text(14.5, weight: .semibold)).lineLimit(1)
+                                        Text(verbatim: ReceiptRowWording.title(transaction))
+                                            .font(AppFont.text(14.5, weight: .semibold)).lineLimit(1)
+                                        if transaction.isWaitingReceipt {
+                                            // A card receipt counted until its bank payment comes: a quiet mark.
+                                            Image(systemName: "clock").font(.system(size: 11, weight: .semibold))
+                                                .foregroundStyle(palette.muted)
+                                                .accessibilityLabel(Text("Waiting for the bank statement"))
+                                        }
                                         if row.tagged {
                                             Text("tag").font(AppFont.text(9, weight: .semibold)).foregroundStyle(palette.secondary)
                                                 .padding(.horizontal, 4).padding(.vertical, 2)
@@ -257,7 +262,8 @@ struct TransactionsScreen: View {
                                                 .accessibilityLabel("Added here by tag; primary category \(CategoryName.shown(transaction.categoryName))")
                                         }
                                     }
-                                    Text(transaction.city).font(AppFont.text(12.5)).foregroundStyle(palette.muted).lineLimit(1)
+                                    Text(verbatim: ReceiptRowWording.line(transaction)).font(AppFont.text(12.5))
+                                        .foregroundStyle(palette.muted).lineLimit(1)
                                 }.frame(maxWidth: .infinity, alignment: .leading)
                                 Text(Money.transaction(transaction.amount)).font(AppFont.number(14))
                                     .foregroundStyle(transaction.amount < 0 ? palette.expenseText : palette.income).fixedSize()
@@ -272,7 +278,18 @@ struct TransactionsScreen: View {
             .tourScrollsToTarget()
         }
         .sheet(item: $selection) { transaction in
-            TransactionDetailSheet(store: store.transactionDetailStore(for: transaction), palette: palette)
+            // Phone mode's receipt rows open the receipt, a withdrawal's covered row the receipts that took its cash.
+            if let phone = store.phone, let receiptID = transaction.receiptId {
+                ReceiptPageSheet(model: ReceiptPageModel(id: receiptID, phone: phone) {
+                    await store.reloadAfterTransactionChange()
+                }, palette: palette)
+            } else if let phone = store.phone, let receiptIDs = transaction.coveredBy {
+                CoveredReceiptsSheet(phone: phone, receiptIDs: receiptIDs, palette: palette) {
+                    await store.reloadAfterTransactionChange()
+                }
+            } else {
+                TransactionDetailSheet(store: store.transactionDetailStore(for: transaction), palette: palette)
+            }
         }
         .task {
             #if DEBUG

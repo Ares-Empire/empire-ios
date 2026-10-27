@@ -58,7 +58,7 @@ struct PaymentPage {
 
 /// The page's words for single stored values, each a pure function of the value and the language.
 nonisolated enum PaymentWording {
-    /// Why a payment is in its category. Phone mode stores `structural | learned | starter | manual | none`
+    /// Why a payment is in its category. Phone mode stores `structural | learned | starter | manual | receipt | none`
     /// (`CategorySource`), the server `rule | llm | manual`; `manual` means the same in both. `none`, an empty or an
     /// unknown value gives nil (the chip already says Not sorted when nothing sorted it).
     static func categoryReason(_ source: String?, language: AppLanguage = .current) -> String? {
@@ -67,6 +67,7 @@ nonisolated enum PaymentWording {
         case "structural": language.string("A transfer between your own accounts.")
         case "learned": language.string("Aresium learned this from a change you made.")
         case "starter": language.string("Sorted by Aresium's built-in list.")
+        case "receipt": language.string("Sorted by its receipt.")
         // Both modes.
         case "manual": language.string("You chose this category.")
         // Server mode (aresium `src/data/queries.ts` → `getTransactionDetail`).

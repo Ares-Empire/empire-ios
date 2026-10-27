@@ -29,7 +29,7 @@ nonisolated enum TourStep: Int, CaseIterable, Sendable {
         case .categories: language.string("Here you choose categories and add your own.")
         case .lock: language.string("Protect Aresium with Face ID or a code of your own.")
         case .contact: language.string("Questions, ideas, problems? Write to us here.")
-        case .importFiles: language.string("New files from your bank come in here.")
+        case .importFiles: language.string("New files from your bank and your receipts come in here.")
         case .done: language.string("Done. Now with your own data.")
         }
     }

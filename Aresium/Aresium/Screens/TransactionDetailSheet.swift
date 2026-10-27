@@ -11,6 +11,11 @@ struct TransactionDetailSheet: View {
     #else
     @State private var originalExpanded = false
     #endif
+    #if DEBUG
+    @State private var receiptRowsOpen = LaunchArguments.current.contains("-openReceiptText")
+    #else
+    @State private var receiptRowsOpen = false
+    #endif
 
     var body: some View {
         NavigationStack {
@@ -80,6 +85,7 @@ struct TransactionDetailSheet: View {
             Text(page.date).font(AppFont.text(13.5)).foregroundStyle(palette.secondary)
         }.padding(.bottom, 20)
         lines(of: detail, page: page)
+        if let receipt = store.receipt { receiptSection(receipt) }
         if let rows = detail.originalRows {
             DisclosureGroup(page.originalTitle, isExpanded: $originalExpanded) {
                 VStack(alignment: .leading, spacing: 8) {
@@ -167,6 +173,27 @@ struct TransactionDetailSheet: View {
     }
 
     private var divider: some View { Rectangle().fill(palette.grid).frame(height: 1) }
+
+    /// Phone mode: the receipt joined to this payment (so it counts once): its shop and day, its lines folded, Unjoin.
+    private func receiptSection(_ receipt: LedgerReceipt) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Receipt").font(AppFont.text(12, weight: .semibold)).foregroundStyle(palette.muted)
+            Text(verbatim: ReceiptPageWording.title(receipt)).font(AppFont.text(13.5))
+            Text(verbatim: ReceiptPageWording.line(receipt, withState: false)).font(AppFont.text(12.5))
+                .foregroundStyle(palette.secondary)
+            if !receipt.rows.isEmpty {
+                ReceiptTextDisclosure(rows: receipt.rows, isExpanded: $receiptRowsOpen).padding(.horizontal, -4)
+                    .padding(.top, 6)
+            }
+            if let error = store.saveError, !store.showsRecategorisation {
+                Text(error).font(AppFont.text(12.5)).foregroundStyle(palette.expenseText)
+            }
+            Button("Unjoin") { Task { await store.unjoinReceipt() } }
+                .buttonStyle(.bordered).controlSize(.small).disabled(store.isSaving).padding(.top, 6)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.top, 20)
+    }
 
     /// One row of the page, in order: the category, the other categories it is also in, the account, then the plain rows.
     private enum Line: Identifiable {

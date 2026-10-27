@@ -27,6 +27,8 @@ final class TransactionDetailStore {
     private(set) var extras: [String] = []
     /// Phone mode, after a Switch: "Also the N other payments from <shop>?", asked before the sheet closes.
     private(set) var followUp: MerchantFollowUp?
+    /// Phone mode: the receipt joined to this payment (its page's Receipt section).
+    private(set) var receipt: LedgerReceipt?
     private let transaction: Transaction
     private let dashboardStore: DashboardStore
     private var retryDropCurrent = false
@@ -75,6 +77,7 @@ final class TransactionDetailStore {
                 guard isCurrent(generation, token: token) else { return }
             }
             detail = loaded
+            if let phone = backend as? PhoneBackend { receipt = try? await phone.receipt(joinedTo: loaded.id) }
         } catch {
             guard isCurrent(generation, token: token) else { return }
             dashboardStore.session.handleAuthFailure(error, generation: generation, token: token)
@@ -142,6 +145,23 @@ final class TransactionDetailStore {
     }
 
     func retrySave() async { await save(dropCurrent: retryDropCurrent) }
+
+    /// The Receipt section's Unjoin: the receipt waits for its bank payment again (and counts on its own); a category
+    /// this payment took from it goes.
+    func unjoinReceipt() async {
+        guard let receipt, let phone = backend as? PhoneBackend, !isSaving else { return }
+        isSaving = true
+        saveError = nil
+        defer { isSaving = false }
+        do {
+            try await phone.unjoin(receipt: receipt.id)
+            self.receipt = nil
+            await dashboardStore.reloadAfterTransactionChange()
+            if let id = detail?.id { detail = try await phone.transactionDetail(id: id, auth: BackendAuth(token: nil)) }
+        } catch {
+            saveError = error.localizedDescription
+        }
+    }
 
     /// The answer to "Also the N other payments from <shop>?" from the dialog: taken at once (so a dismissal that follows
     /// a button finds nothing left to answer), then carried out.

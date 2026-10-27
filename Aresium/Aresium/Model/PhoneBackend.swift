@@ -21,6 +21,8 @@ nonisolated struct PhoneImportResult: Equatable, Sendable {
     var format: BankFormat?
     /// The payments this file added, so its sorted and not sorted can be counted again later (`PhoneBackend.recount`).
     var newIDs: [String] = []
+    /// Waiting card receipts that joined one of this file's payments.
+    var receiptsJoined = 0
 
     var displayMessage: String {
         if let error, !error.isEmpty { return "\(name): \(error)" }
@@ -51,6 +53,8 @@ nonisolated enum ImportWording {
         let sorted = results.reduce(0) { $0 + $1.sorted }, waiting = results.reduce(0) { $0 + $1.waiting }
         let failed = results.filter { $0.error?.isEmpty == false }.count
         var line = language.string("\(added) new · \(already) already there · \(sorted) sorted · \(waiting) not sorted")
+        let joined = results.reduce(0) { $0 + $1.receiptsJoined }
+        if joined > 0 { line += " · " + language.string("\(joined) receipts joined") }
         if failed > 0 { line += " · " + language.string("\(failed) files failed") }
         return line
     }
@@ -68,6 +72,9 @@ final class PhoneBackend: AresiumBackend {
     private(set) var catalog: CategoryCatalog?
     /// Today as `YYYY-MM-DD` for the dashboard (tests pin it).
     @ObservationIgnored var today: () -> String = { LedgerExport.day(.now) }
+    /// "Is this the same payment?" for waiting card receipts, found after a bank import (`matchWaitingReceipts`): asked
+    /// once each, after the category picker when both are due (ContentView presents them).
+    var receiptQuestions: [ReceiptQuestion] = []
 
     init(ledger: PhoneLedger, engine: AresiumEngine) {
         self.ledger = ledger
@@ -98,7 +105,7 @@ final class PhoneBackend: AresiumBackend {
     func dashboard(auth: BackendAuth) async throws -> Dashboard {
         let list = try await categories()
         let payments = try await ledger.payments()
-        let input = PhoneDashboard.input(payments: payments, list: list, today: today())
+        let input = PhoneDashboard.input(payments: payments, list: list, today: today(), receipts: try await ledger.receipts())
         return try await engine.dashboard(input)
     }
 
@@ -133,7 +140,8 @@ final class PhoneBackend: AresiumBackend {
         let payments = try await ledger.payments()
         let keys = try await engine.merchantKeys(payments.map { $0.sorting(raw: false) })
         return zip(payments, keys).compactMap { payment, key in
-            key == merchant && payment.id != id && payment.categorySource != .manual && payment.category != target
+            key == merchant && payment.id != id && !CategorySource.keeps(payment.categorySource.rawValue)
+                && payment.category != target
                 ? payment.id : nil
         }
     }
@@ -201,6 +209,13 @@ final class PhoneBackend: AresiumBackend {
                 let ids = fresh[index]
                 results[index].sorted = ids.filter { id in (sorted[id] ?? nil) != nil }.count
                 results[index].waiting = ids.count - results[index].sorted
+            }
+            // Receipts waiting for these payments: an exact match joins now (counted with the file its payment came
+            // from), the others are asked after the import.
+            let round = try await matchWaitingReceipts()
+            for payment in round.joined.values {
+                let index = fresh.firstIndex { $0.contains(payment) } ?? 0
+                if results.indices.contains(index) { results[index].receiptsJoined += 1 }
             }
         }
         try await refresh()
@@ -347,7 +362,8 @@ final class PhoneBackend: AresiumBackend {
 
 /// Stored payments → the engine's input, and a payment → its detail. Pure, so tests pin them.
 nonisolated enum PhoneDashboard {
-    static func input(payments: [LedgerPayment], list: PhoneCategoryList, today: String) -> DashboardSourceInput {
+    static func input(payments: [LedgerPayment], list: PhoneCategoryList, today: String,
+                      receipts: [LedgerReceipt] = []) -> DashboardSourceInput {
         let named = Dictionary(list.sortingIDs.compactMap { id in list.name(of: id).map { (id, $0) } },
                                uniquingKeysWith: { first, _ in first })
         let transactions = payments.map { payment in
@@ -358,7 +374,18 @@ nonisolated enum PhoneDashboard {
                           category: payment.category.flatMap { named[$0] },
                           tags: payment.extraCategories.compactMap { named[$0] })
         }
-        return DashboardSourceInput(transactions: transactions, categories: list.sourceCategories, today: today)
+        return DashboardSourceInput(transactions: transactions, categories: list.sourceCategories, today: today,
+                                    receipts: receipts.isEmpty ? nil : receipts.map { source($0, named: named) })
+    }
+
+    /// A receipt as the engine counts it: in euros (a cash receipt in another currency with the euro amount typed for
+    /// it); a card receipt in another currency keeps its currency, and the engine leaves it out until it is joined.
+    static func source(_ receipt: LedgerReceipt, named: [String: String]) -> SourceReceipt {
+        let euros = receipt.euros
+        return SourceReceipt(id: receipt.id, date: receipt.date, total: euros ?? receipt.totalValue,
+                             currency: euros == nil ? receipt.currency : ReceiptAmount.euro, method: receipt.method,
+                             category: receipt.category.flatMap { named[$0] }, shop: receipt.shop,
+                             paymentId: receipt.paymentID)
     }
 
     /// The dashboard's own name and look for payments without a category (the engine's `UNCATEGORISED`).

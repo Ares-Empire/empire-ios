@@ -61,6 +61,12 @@ Why these and not others:
   ID come only from someone who signs in (Settings → Ares account, only for an Aresium server of one's own) or, Email
   and Name, from Contact & support without a login (the account server's `contact` collection). The data types stay
   ticked, since the app can send them; they are still linked (an email address identifies its owner).
+- **Aresium's camera and photos: nothing collected** (brief 31, 2026-10-27). Import → Scan receipt uses the camera
+  through Apple's document scanner (`NSCameraUsageDescription`: "The camera scans your receipts. The photo stays on
+  this iPhone and is not kept."); Choose photo uses Apple's photo picker, which needs no access to the photo library.
+  The receipt is read on the iPhone (Vision), only the read lines are kept in the phone's store, never the image, and
+  nothing is sent. So Photos or Videos stays unticked, and the privacy manifest is unchanged (no new required-reason
+  API).
 - **Aresium and Financial Info: not collected** (changed 2026-10-27). Everyone but Patrik uses phone mode: their bank
   files, payments and categories stay on their iPhone and are never sent (Apple: data processed only on the device
   is not "collected"). Server mode is only Patrik's own account (the owner list), his own data on his own server, so
@@ -91,15 +97,17 @@ Beta App Description (English; German in brackets for a German localization):
 - **Ares Empire:** "The Ares Empire hub on the iPhone: your provinces on the ring with their live status, the
   chronicle, and each province's app one tap away." (*Der Ares-Empire-Hub auf dem iPhone: deine Provinzen im Ring mit
   ihrem aktuellen Stand, die Chronik und die App jeder Provinz mit einem Tipp.*)
-- **Aresium:** "Personal finances from bank and PayPal exports: spending by month and category, import from the share
-  sheet, home-screen widgets." (*Persönliche Finanzen aus Bank- und PayPal-Exporten: Ausgaben nach Monat und
-  Kategorie, Import über das Teilen-Menü, Widgets für den Home-Bildschirm.*)
+- **Aresium:** "Personal finances from bank and PayPal exports: spending by month and category, receipts read on the
+  iPhone, import from the share sheet, home-screen widgets." (*Persönliche Finanzen aus Bank- und PayPal-Exporten:
+  Ausgaben nach Monat und Kategorie, Belege auf dem iPhone gelesen, Import über das Teilen-Menü, Widgets für den
+  Home-Bildschirm.*)
 
 **Aresium's Test Information differs** (brief 22, 2026-10-27): *Sign-in required* **No**, no demo account. Review
 notes: "Aresium needs no account: it keeps your bank data on this iPhone and sorts it there; nothing about your money
 is sent anywhere. To try it: choose a few categories, then import the attached made-up bank file
-(Files → Aresium-Sample.csv, or share it to Aresium). Settings → Lock turns on Face ID or a code of Aresium's own.
-Settings → Ares account is only for the developer's own server and is not needed." Attach a made-up bank file to the
+(Files → Aresium-Sample.csv, or share it to Aresium). Import → Scan receipt (or Choose photo) reads a shop receipt on
+the iPhone; the photo is not kept. Settings → Lock turns on Face ID or a code of Aresium's own. Settings → Ares account
+is only for the developer's own server and is not needed." Attach a made-up bank file to the
 review notes (App Store Connect takes an attachment): the richest is the nine-month VR Bank file the DEBUG phone sample
 builds (`PhoneSample.vrBankCSV` in `Aresium/Aresium/Model/PhoneSample.swift`, made-up shops and amounts), saved once
 as `Aresium-Sample.csv`; the engine's small made-up fixtures in `Aresium/AresiumTests/Engine/` (`vrbank.csv`,
