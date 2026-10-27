@@ -1,6 +1,6 @@
 # 24: A tour with made-up data, and "How do I get my file?" per bank
 
-Status: open (2026-10-27)
+Status: merged 2026-10-27 (Aresium 224 tests with brief 23; research notes kept off the screen)
 Repo: empire-ios · Worktree: `../empire-ios-24-tour` (branch `claude/24-tour`) · Built by: a Claude agent (flow,
 data and the look)
 
