@@ -1,6 +1,6 @@
 # 30: Receipts in the engine: read a receipt, find its bank payment, count cash once
 
-Status: running
+Status: merged 2026-10-27 (aresium 008a420; engine tests 335; server /api/data identical on real data, deployed)
 Repo: **aresium** · Worktree: `../aresium-30-receipts` (branch `claude/30-receipts`) · Built by: a Claude agent ·
 Rules: `~/aresium/AGENTS.md`
 
