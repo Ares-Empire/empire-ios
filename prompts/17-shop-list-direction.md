@@ -1,6 +1,6 @@
 # 17: The shop list knows money in from money out, and branch numbers
 
-Status: draft
+Status: merged 2026-10-27 (M1 98.4% right, M2 51 fixes in 14 months on the real data)
 Repo: aresium · Worktree: `~/aresium-17-direction` (branch `claude/17-direction`) · Built by: a Claude agent
 
 ## Goal
