@@ -17,7 +17,7 @@ filled the placeholders.
   | Bundle | Collected (all linked to the account, App Functionality, no tracking) | Required-reason APIs |
   |---|---|---|
   | Ares Empire | Email Address, Name, User ID, Device ID, Customer Support | UserDefaults `CA92.1` (language), `1C8F.1` (App Group) |
-  | Aresium | Email Address, Name, User ID, Other Financial Info, Customer Support | UserDefaults `CA92.1` (theme, language), `1C8F.1` |
+  | Aresium | Email Address, Name, User ID, Customer Support | UserDefaults `CA92.1` (theme, language), `1C8F.1` |
   | Aresium widget | none (reads the app's saved figures) | UserDefaults `1C8F.1` (the app's language) |
   | Arestemis | Email Address, Name, User ID, Device ID, Search History, Other User Content, Customer Support | UserDefaults `CA92.1`, `1C8F.1` |
   | Aresus | Email Address, Name, User ID, Device ID, Customer Support | UserDefaults `CA92.1`, `1C8F.1` |
@@ -41,7 +41,7 @@ For every app: **"Do you or your third-party partners collect data from this app
 | App | Data types to tick (App Store Connect's names) |
 |---|---|
 | Ares Empire | Contact Info → Email Address, Name · Identifiers → User ID, Device ID · User Content → Customer Support |
-| Aresium | Contact Info → Email Address, Name · Financial Info → Other Financial Info · Identifiers → User ID · User Content → Customer Support |
+| Aresium | Contact Info → Email Address, Name · Identifiers → User ID · User Content → Customer Support |
 | Arestemis | Contact Info → Email Address, Name · Identifiers → User ID, Device ID · Search History · User Content → Other User Content, Customer Support |
 | Aresus | Contact Info → Email Address, Name · Identifiers → User ID, Device ID · User Content → Customer Support |
 | Arestoteles | Contact Info → Email Address, Name · Identifiers → User ID · User Content → Other User Content, Customer Support |
@@ -57,6 +57,11 @@ Why these and not others:
 - **Not collected:** location
   (Arestemis's places are where to search, not where the phone is; IP addresses are not used for location),
   diagnostics (no crash or analytics SDK), contacts, photos, purchases, browsing history.
+- **Aresium and Financial Info: not collected** (changed 2026-10-27). Everyone but Patrik uses phone mode: their bank
+  files, payments and categories stay on their iPhone and are never sent (Apple: data processed only on the device
+  is not "collected"). Server mode is only Patrik's own account (the owner list), his own data on his own server, so
+  no user's financial info is collected. If server mode is ever given to someone else, tick Financial Info → Other
+  Financial Info again (and the manifest).
 - **Groq** (Arestemis's AI check) is a processor working for the app's function; its data is already covered by the
   types above.
 - **[Patrik to decide] Arestoteles and "Sensitive Info":** the vault holds political views, which Apple counts as
