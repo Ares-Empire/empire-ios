@@ -2148,6 +2148,8 @@ var __AresiumEngine = (() => {
     readCamt: () => readCamt,
     readCsv: () => readCsv,
     readMt940: () => readMt940,
+    readingsOfUnknownFile: () => readingsOfUnknownFile,
+    shareableLayout: () => shareableLayout,
     sortPayments: () => sortPayments,
     starterCategory: () => starterCategory,
     version: () => version
@@ -5451,6 +5453,7 @@ var __AresiumEngine = (() => {
 
   // src/data/dashboard.ts
   var money = (n) => Math.round(n * 100) / 100;
+  var isUnsorted = (categoryName) => !categoryName || categoryName === "Uncategorised";
   var INCOME_META = {
     Refunds: { name: "Refunds", icon: "RotateCcw", color: "#34E27A", kind: "income" },
     Other: { name: "Other", icon: "CircleHelp", color: "#9AA6B8", kind: "income" }
@@ -5495,9 +5498,10 @@ var __AresiumEngine = (() => {
       const mo = index === void 0 ? void 0 : byMonth[month];
       const validDay = !!mo && day >= 1 && day <= mo.dayExpense.length;
       const tags = t.tags || [];
-      const categoriesIn = [.../* @__PURE__ */ new Set([t.categoryName, ...tags])];
+      const unsortedIn = t.amount > 0 && isUnsorted(t.categoryName);
+      const categoriesIn = [.../* @__PURE__ */ new Set([t.categoryName, ...tags])].filter((name) => !(unsortedIn && isUnsorted(name)));
       const isTransfer = catByName.get(t.categoryName)?.kind === "transfer";
-      const primaryBucket = !t.categoryName || t.categoryName === "Uncategorised" ? "Other" : incomeBucketKeep.has(t.categoryName) ? t.categoryName : "Refunds";
+      const primaryBucket = isUnsorted(t.categoryName) ? "Other" : incomeBucketKeep.has(t.categoryName) ? t.categoryName : "Refunds";
       const buckets = t.amount > 0 && !isTransfer ? [.../* @__PURE__ */ new Set([primaryBucket, ...tags.filter((n) => incomeBucketKeep.has(n))])] : [];
       transactions.push({
         id: t.id,
@@ -5512,7 +5516,7 @@ var __AresiumEngine = (() => {
         categoriesIn,
         incomeBuckets: buckets
       });
-      if (catByName.get(t.categoryName)?.kind === "spend") {
+      if (catByName.get(t.categoryName)?.kind === "spend" && !unsortedIn) {
         total.expense += -t.amount;
         if (mo) {
           mo.expense += -t.amount;
@@ -9987,6 +9991,10 @@ var __AresiumEngine = (() => {
   }
   var DEBIT_MARK = /^(s|soll|d|db|dbit|debit|belastung|lastschrift|-)$/i;
   var CREDIT_MARK = /^(h|haben|c|cr|crdt|credit|gutschrift|\+)$/i;
+  function signMark(value) {
+    const v = value.trim();
+    return DEBIT_MARK.test(v) ? "debit" : CREDIT_MARK.test(v) ? "credit" : null;
+  }
   function accountName(bank, iban) {
     return iban ? `${bank} \u2022\u2022${iban.slice(-4)}` : bank;
   }
@@ -10029,10 +10037,10 @@ var __AresiumEngine = (() => {
       let amount = null;
       if (c.amount !== void 0) {
         amount = parseAmountStrict(cell(row, c.amount), layout.numberFormat);
-        const mark = cell(row, c.sign);
+        const mark = signMark(cell(row, c.sign));
         if (amount && c.sign !== void 0) {
-          if (DEBIT_MARK.test(mark)) amount = negate(absolute(amount));
-          else if (CREDIT_MARK.test(mark)) amount = absolute(amount);
+          if (mark === "debit") amount = negate(absolute(amount));
+          else if (mark === "credit") amount = absolute(amount);
         }
       } else {
         const debit = parseAmountStrict(cell(row, c.debit), layout.numberFormat);
@@ -10424,6 +10432,9 @@ var __AresiumEngine = (() => {
     return sample.length > 0 && sample.every(isData) ? { headerRow: -1, width } : null;
   }
   function guessCsvLayout(text2) {
+    return analyseCsv(text2).guess;
+  }
+  function analyseCsv(text2) {
     const separator = detectSeparator(text2);
     const rows = splitCsv(text2, separator);
     const table = findTableStart(rows);
@@ -10570,7 +10581,12 @@ var __AresiumEngine = (() => {
     const dateFormat = dateCol?.dateFormat ?? "DD.MM.YYYY";
     if (dateCol?.ambiguous) unsure.add("dateFormat");
     if (missing.length > 0) {
-      return { layout: null, confidence: 0, unsure: [...unsure], missing, separator, header, headerRow, columns: info, preview: [] };
+      return {
+        guess: { layout: null, confidence: 0, unsure: [...unsure], missing, separator, header, headerRow, columns: info, preview: [] },
+        columns,
+        rows,
+        payments: []
+      };
     }
     const layout = {
       version: 1,
@@ -10606,15 +10622,20 @@ var __AresiumEngine = (() => {
     if (unsure.has("text")) confidence *= 0.9;
     if (unsure.has("counterparty")) confidence *= 0.9;
     return {
-      layout,
-      confidence: Math.round(confidence * 100) / 100,
-      unsure: [...unsure],
-      missing,
-      separator,
-      header,
-      headerRow,
-      columns: info,
-      preview: read2.transactions.slice(0, 5)
+      guess: {
+        layout,
+        confidence: Math.round(confidence * 100) / 100,
+        unsure: [...unsure],
+        missing,
+        separator,
+        header,
+        headerRow,
+        columns: info,
+        preview: read2.transactions.slice(0, 5)
+      },
+      columns,
+      rows,
+      payments: read2.transactions
     };
   }
 
@@ -11691,6 +11712,242 @@ ${line}`;
         throw new BankFileError(code, messages[detected.reason]);
       }
     }
+  }
+
+  // src/engine/readers/readings.ts
+  var MAX_READINGS = 4;
+  var PREVIEW_PAYMENTS = 5;
+  var ORDER = [
+    "dateFormat",
+    "debitCredit",
+    "amount",
+    "sign",
+    "invertSign",
+    "counterpartyText",
+    "counterparty",
+    "valueDate"
+  ];
+  var OTHER_DAY_ORDER = { "DD/MM/YYYY": "MM/DD/YYYY", "MM/DD/YYYY": "DD/MM/YYYY" };
+  function usedColumns(layout) {
+    return new Set(Object.values(layout.columns).flat().filter((i) => typeof i === "number"));
+  }
+  function withColumns(layout, change) {
+    const columns = { ...layout.columns, ...change };
+    for (const key of Object.keys(columns)) if (columns[key] === void 0) delete columns[key];
+    return { ...layout, columns };
+  }
+  function alternatives(guess, columns, guessed) {
+    const layout = guess.layout, c = layout.columns;
+    const unsure = new Set(guess.unsure);
+    const used = usedColumns(layout);
+    const freeText = columns.filter((col) => col.kind === "text" && !used.has(col.index));
+    const out = [];
+    const offer = (reason, changed, doubted) => out.push({ layout: changed, reason, doubted });
+    const otherOrder = OTHER_DAY_ORDER[layout.dateFormat];
+    if (otherOrder) offer("dateFormat", { ...layout, dateFormat: otherOrder }, unsure.has("dateFormat"));
+    if (c.debit !== void 0 && c.credit !== void 0 && unsure.has("amount")) {
+      offer("debitCredit", withColumns(layout, { debit: c.credit, credit: c.debit }), true);
+    }
+    if (c.amount !== void 0 && unsure.has("amount")) {
+      for (const col of columns.filter((col2) => col2.kind === "amount" && !used.has(col2.index))) {
+        offer("amount", withColumns(layout, { amount: col.index }), true);
+      }
+    }
+    if (c.amount !== void 0 && c.sign === void 0) {
+      const amounts = (j) => columns[j].values.map((v) => parseAmountStrict(v, layout.numberFormat));
+      for (const col of columns.filter((col2) => col2.kind === "amount" && !used.has(col2.index))) {
+        if (!complementary(amounts(c.amount), amounts(col.index))) continue;
+        const [left, right] = [c.amount, col.index].sort((a, b) => a - b);
+        const minus = (j) => amounts(j).filter((v) => v !== null && !/^-?0\.0+$/.test(v)).every((v) => v.startsWith("-"));
+        const [debit, credit] = minus(right) && !minus(left) ? [right, left] : [left, right];
+        const pair = { amount: void 0, debit, credit };
+        offer("debitCredit", withColumns(layout, pair), true);
+        offer("debitCredit", withColumns(layout, { ...pair, debit: credit, credit: debit }), true);
+      }
+    }
+    if (c.amount !== void 0 && c.sign === void 0) {
+      for (const col of columns.filter((col2) => col2.index !== c.date && col2.index !== c.amount)) {
+        const marks = col.values.filter((v) => v.trim() !== "").map(signMark);
+        if (marks.length > 0 && marks.every(Boolean) && marks.includes("debit") && marks.includes("credit")) {
+          offer("sign", withColumns(layout, { sign: col.index }), unsure.has("sign"));
+        }
+      }
+      const proven2 = c.balance !== void 0 && balanceFits(guessed.map((t) => t.amount), guessed.map((t) => t.balance ?? null)) >= 0.8;
+      if (!proven2) offer("invertSign", { ...layout, invertSign: true }, unsure.has("sign"));
+    }
+    const party = c.counterparty, text2 = c.text;
+    const unsureText = unsure.has("text") || unsure.has("counterparty");
+    if (party?.length && text2?.length) offer("counterpartyText", withColumns(layout, { counterparty: text2, text: party }), unsureText);
+    else if (text2?.length) {
+      const longest = [...freeText].sort((a, b) => average(b) - average(a))[0];
+      offer("counterpartyText", withColumns(layout, { counterparty: text2, text: longest ? [longest.index] : void 0 }), unsureText);
+      if (longest) offer("counterparty", withColumns(layout, { counterparty: [longest.index] }), unsureText);
+    } else if (party?.length) offer("counterpartyText", withColumns(layout, { counterparty: void 0, text: party }), unsureText);
+    if (c.valueDate !== void 0) offer("valueDate", withColumns(layout, { date: c.valueDate, valueDate: c.date }), unsure.has("date"));
+    const rank = (x) => (x.doubted ? 0 : ORDER.length) + ORDER.indexOf(x.reason);
+    return out.map((x, i) => ({ x, i })).sort((a, b) => rank(a.x) - rank(b.x) || a.i - b.i).map(({ x }) => x);
+  }
+  var average = (col) => col.values.reduce((n, v) => n + v.length, 0) / Math.max(col.values.length, 1);
+  var shown = (preview) => JSON.stringify(preview.map((t) => [t.bookingDate.slice(0, 10), t.counterparty ?? "", t.description, t.amount]));
+  function readingsOfUnknownText(text2, savedLayouts = []) {
+    const clean = text2.replace(/^\uFEFF/, "");
+    const detected = detectBankFile(clean, savedLayouts);
+    if (detected.format !== "csv" || detected.layout) return [];
+    const { guess, columns, rows, payments: guessed } = analyseCsv(clean);
+    if (!guess.layout) return [];
+    const read2 = (layout) => {
+      const start = findTable(rows, layout);
+      return start === null ? [] : readTable(rows, start, layout).transactions;
+    };
+    const candidates = [
+      { layout: guess.layout, reason: null, payments: guessed },
+      ...alternatives({ ...guess, layout: guess.layout }, columns, guessed).map((x) => ({ ...x, payments: read2(x.layout) }))
+    ];
+    const most = Math.max(...candidates.map((x) => x.payments.length));
+    const readings = [];
+    const seen = /* @__PURE__ */ new Set();
+    for (const { layout, reason, payments } of candidates) {
+      if (payments.length === 0 || payments.length < most) continue;
+      const preview = payments.slice(0, PREVIEW_PAYMENTS);
+      const key = shown(preview);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      readings.push({ layout, reason, preview });
+      if (readings.length === MAX_READINGS) break;
+    }
+    return readings;
+  }
+  function readingsOfUnknownFile(bytes, savedLayouts = []) {
+    return readingsOfUnknownText(decodeBankFile(bytes), savedLayouts);
+  }
+
+  // src/engine/readers/share.ts
+  var MAX_CELL = 60;
+  var MAX_COLUMNS = 80;
+  var MAX_BYTES = 8e3;
+  var MONTH = "(jan|januar|january|feb|februar|february|m\xE4r|m\xE4rz|maerz|mar|march|apr|april|mai|may|jun|juni|june|jul|juli|july|aug|august|sep|sept|september|okt|oktober|oct|october|nov|november|dez|dezember|dec|december)\\.?(?![a-z\xE4\xF6\xFC\xDF])";
+  var DATE = new RegExp(`\\d{1,4}\\s*[./-]\\s*\\d{1,2}\\s*[./-]\\s*\\d{1,4}|\\d{1,2}[\\s./-]*${MONTH}|(^|[^a-z\xE4\xF6\xFC\xDF])${MONTH}[\\s./,-]*\\d`, "i");
+  var CURRENCY = "(\u20AC|\\$|\xA3|\xA5|[Ee]uro?|EURO?|[A-Z]{3})(?![A-Za-z])";
+  var AMOUNT = new RegExp(`\\d\\s*[.,]\\s*\\d|\\d\\s*${CURRENCY}|(^|[^A-Za-z])${CURRENCY}\\s*\\d`);
+  var DIGIT_GROUPS = /\d[\d\s./-]*\d/g;
+  var digitCount = (run) => run.replace(/\D/g, "").length;
+  var LOOKS_PERSONAL = [
+    ["email", (t) => t.includes("@")],
+    // Two letters, two check digits, then letters and digits in groups, with 8 or more digits (every country's IBAN
+    // has), so that "since 2023 at Postbank" is not one.
+    ["iban", (t) => (t.match(/[a-z]{2}\s?\d{2}(\s?[a-z0-9]){10,}/gi) ?? []).some((run) => digitCount(run) >= 8)],
+    ["date", (t) => DATE.test(t)],
+    ["amount", (t) => AMOUNT.test(t)],
+    ["digits", (t) => /\d(\s?\d){4,}/.test(t) || (t.match(DIGIT_GROUPS) ?? []).some((run) => digitCount(run) >= 8)]
+  ];
+  function looksPersonal(text2) {
+    for (const [reason, test] of LOOKS_PERSONAL) if (test(text2)) return reason;
+    return text2.length > MAX_CELL ? "tooLong" : null;
+  }
+  function utf8Length(text2) {
+    let bytes = 0;
+    for (const ch of text2) {
+      const code = ch.codePointAt(0);
+      bytes += code < 128 ? 1 : code < 2048 ? 2 : code < 65536 ? 3 : 4;
+    }
+    return bytes;
+  }
+  var isColumn = (v) => Number.isInteger(v) && v >= 0 && v < MAX_COLUMNS;
+  var isColumnList = (v) => Array.isArray(v) && v.length > 0 && v.length <= MAX_COLUMNS && v.every(isColumn);
+  var isWordList = (v) => Array.isArray(v) && v.length <= MAX_COLUMNS && v.every((w) => typeof w === "string");
+  var SINGLE = [
+    "valueDate",
+    "amount",
+    "debit",
+    "credit",
+    "sign",
+    "payer",
+    "payee",
+    "kind",
+    "iban",
+    "accountIban",
+    "balance",
+    "currency",
+    "reference",
+    "status"
+  ];
+  var LISTS = ["counterparty", "text", "fees", "addAmounts"];
+  function shareableLayout(layout) {
+    const no = (reason) => ({ ok: false, reason });
+    const input = layout;
+    if (!input || typeof input !== "object" || input.version !== 1) return no("invalid");
+    const {
+      separator,
+      header,
+      columnCount,
+      dateFormat,
+      numberFormat,
+      columns,
+      skipStatus,
+      keepStatus,
+      invertSign,
+      labelledText,
+      currency
+    } = input;
+    if (!SEPARATORS.includes(separator) || !DATE_FORMATS.includes(dateFormat)) return no("invalid");
+    if (numberFormat !== "de" && numberFormat !== "en") return no("invalid");
+    if (!Array.isArray(header) || !header.every((h) => typeof h === "string")) return no("invalid");
+    if (header.length > MAX_COLUMNS) return no("tooWide");
+    if (header.length === 0 && columnCount === void 0) return no("invalid");
+    if (columnCount !== void 0) {
+      if (!Number.isInteger(columnCount) || columnCount < 1) return no("invalid");
+      if (columnCount > MAX_COLUMNS) return no("tooWide");
+    }
+    if (!columns || typeof columns !== "object") return no("invalid");
+    const given = columns;
+    if (!isColumn(given.date)) return no("invalid");
+    const copy2 = { date: given.date };
+    for (const role of SINGLE) {
+      if (given[role] === void 0) continue;
+      if (!isColumn(given[role])) return no("invalid");
+      copy2[role] = given[role];
+    }
+    for (const role of LISTS) {
+      if (given[role] === void 0) continue;
+      if (!isColumnList(given[role])) return no("invalid");
+      copy2[role] = [...given[role]];
+    }
+    if (copy2.amount === void 0 && (copy2.debit === void 0 || copy2.credit === void 0)) return no("invalid");
+    for (const list of [skipStatus, keepStatus]) if (list !== void 0 && !isWordList(list)) return no("invalid");
+    let labels;
+    if (labelledText !== void 0) {
+      const l = labelledText;
+      if (!l || typeof l !== "object" || !isWordList(l.labels) || !isWordList(l.counterparty) || !isWordList(l.text)) return no("invalid");
+      labels = { labels: [...l.labels], counterparty: [...l.counterparty], text: [...l.text] };
+    }
+    if (currency !== void 0 && (typeof currency !== "string" || !/^[A-Z]{3}$/.test(currency))) return no("invalid");
+    if (invertSign !== void 0 && typeof invertSign !== "boolean") return no("invalid");
+    const words2 = [
+      ...header,
+      ...skipStatus ?? [],
+      ...keepStatus ?? [],
+      ...labels ? [...labels.labels, ...labels.counterparty, ...labels.text] : []
+    ];
+    for (const word of words2) {
+      const reason = looksPersonal(word);
+      if (reason) return no(reason);
+    }
+    const shared = {
+      version: 1,
+      separator,
+      header: [...header],
+      ...columnCount !== void 0 ? { columnCount } : {},
+      dateFormat,
+      numberFormat,
+      columns: copy2,
+      ...skipStatus !== void 0 ? { skipStatus: [...skipStatus] } : {},
+      ...keepStatus !== void 0 ? { keepStatus: [...keepStatus] } : {},
+      ...invertSign === true ? { invertSign: true } : {},
+      ...labels ? { labelledText: labels } : {},
+      ...currency !== void 0 ? { currency } : {}
+    };
+    if (utf8Length(JSON.stringify(shared)) > MAX_BYTES) return no("tooLarge");
+    return { ok: true, layout: shared };
   }
 
   // src/engine/index.ts
