@@ -54,28 +54,24 @@ private struct ImportToast: View {
     let banner: ImportBanner
     let store: ImportStore
     let palette: Palette
+    /// The content's own height: the result is never taller, and scrolls when the screen is shorter.
+    @State private var height: CGFloat = 0
+
+    private var asking: Bool {
+        guard let share = banner.share else { return false }
+        return share.shown == .asking || share.shown == .sending
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 9) {
-                Image(systemName: banner.success ? "checkmark.circle" : "exclamationmark.circle")
-                    .foregroundStyle(banner.success ? palette.income : palette.expenseText)
-                Text(banner.message).font(AppFont.text(13, weight: .semibold))
-                    .foregroundStyle(palette.ink).fixedSize(horizontal: false, vertical: true)
-            }
-            ForEach(Array(banner.files.enumerated()), id: \.offset) { _, result in
-                Text(result).font(AppFont.text(12)).foregroundStyle(palette.secondary)
-            }
-            HStack(spacing: 24) {
-                if store.canRetry {
-                    Button("Retry") { Task { await store.importPendingFiles() } }
-                    Button("Discard") { store.discard() }
-                } else {
-                    Button("Dismiss") { store.dismiss() }
-                }
-            }.font(AppFont.text(13, weight: .bold)).tint(palette.ink)
+        ScrollView {
+            content
+                .padding(14)
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height = $0 }
         }
-        .padding(14)
+        .scrollBounceBehavior(.basedOnSize)
+        .scrollIndicators(.hidden)
+        .frame(maxHeight: height)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
         .background {
             // The website's toast (`.import-toast`): the second card colour over a blur, so the list under it never
             // shows through the words, and a soft shadow.
@@ -89,5 +85,36 @@ private struct ImportToast: View {
         .padding(.horizontal, 18).padding(.bottom, 14)
         .accessibilityElement(children: .contain)
         .accessibilityAddTraits(.updatesFrequently)
+    }
+
+    private var content: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 9) {
+                Image(systemName: banner.success ? "checkmark.circle" : "exclamationmark.circle")
+                    .foregroundStyle(banner.success ? palette.income : palette.expenseText)
+                Text(banner.message).font(AppFont.text(13, weight: .semibold))
+                    .foregroundStyle(palette.ink).fixedSize(horizontal: false, vertical: true)
+            }
+            ForEach(Array(banner.files.enumerated()), id: \.offset) { _, result in
+                Text(result).font(AppFont.text(12)).foregroundStyle(palette.secondary)
+            }
+            if let share = banner.share {
+                // Phone mode, an unknown bank's file just read with the confirmed layout: the offer to send its format.
+                Rectangle().fill(palette.line).frame(height: 1).padding(.vertical, 2)
+                BankFormatCardView(card: share, palette: palette) { store.close() }
+            }
+            // While the card asks, its Not now closes the result.
+            if !asking {
+                HStack(spacing: 24) {
+                    if store.canRetry {
+                        Button("Retry") { Task { await store.importPendingFiles() } }
+                        Button("Discard") { store.discard() }
+                    } else {
+                        Button("Dismiss") { store.close() }
+                    }
+                }.font(AppFont.text(13, weight: .bold)).tint(palette.ink)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }

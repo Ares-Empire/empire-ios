@@ -11,6 +11,8 @@ struct ContentView: View {
     @State private var modes: ModeStore
     /// Phone mode's export, restore and delete (Settings and the first run).
     @State private var phoneData: PhoneDataModel
+    /// Unknown banks' formats on their way to us, sent again at the start and on return (`BankFormatOutbox`).
+    @State private var formats: BankFormatOutbox
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage(ThemeState.preferenceKey) private var rememberedRed = false
     @AppStorage(Appearance.key) private var appearance = Appearance.iPhone.rawValue
@@ -94,12 +96,20 @@ struct ContentView: View {
         let store = sample && !phoneSample
             ? DashboardStore(session: session, sample: true, widgetPublisher: publisher)
             : DashboardStore(session: session, backend: nil, widgetPublisher: publisher)
-        let imports = ImportStore(dashboard: store)
+        // Samples (and the app while tests run) only pretend to send a bank's format.
+        #if DEBUG
+        let formats = sample || DebugLaunch.isTesting ? BankFormatOutbox.sample()
+                                                      : BankFormatOutbox(file: PhoneStorage.standard.bankFormatsURL)
+        #else
+        let formats = BankFormatOutbox(file: PhoneStorage.standard.bankFormatsURL)
+        #endif
+        let imports = ImportStore(dashboard: store, formats: formats)
         let modes = ModeStore(session: session, dashboard: store, markerDefaults: markerDefaults)
         _store = State(initialValue: store)
         _imports = State(initialValue: imports)
         _modes = State(initialValue: modes)
         _phoneData = State(initialValue: PhoneDataModel(modes: modes))
+        _formats = State(initialValue: formats)
         _sampleActive = State(initialValue: sample)
         _samplePhone = State(initialValue: phoneSample)
         #if DEBUG
@@ -211,6 +221,7 @@ struct ContentView: View {
                 if restoresOnLaunch { await session.restore() }
                 if !sampleActive { await modes.update() }
             }
+            .task { await formats.sendWaiting() }          // formats kept for later go at the start
             #if DEBUG
             .task { await startPhoneSample() }
             #endif
@@ -222,6 +233,7 @@ struct ContentView: View {
                 await session.followSharedLogin()    // another Empire app may have logged in or out
                 await modes.update()
                 await store.refreshOnForeground()
+                await formats.sendWaiting()
             }
             .task { store.setWidgetRedMode(theme.red) }
             .onChange(of: session.generation) { _, _ in
@@ -283,9 +295,9 @@ struct ContentView: View {
                 }
             }
             .sheet(item: Binding(get: { imports.layoutRequest }, set: { _ in })) { request in
+                // An unknown bank's file: "Does this look right?", then the column check.
                 if let phone = modes.phone {
-                    LayoutConfirmSheet(model: LayoutConfirmModel(request: request, phone: phone, imports: imports),
-                                       palette: palette)
+                    FileCheckSheet(model: FileCheckModel(request: request, phone: phone, imports: imports), palette: palette)
                 }
             }
             .fileImporter(isPresented: $restoringExport, allowedContentTypes: [.json]) { result in
@@ -356,8 +368,9 @@ struct ContentView: View {
             }
             await modes.showFixed(phone, storage: storage)
             if arguments.contains("-sampleLayout"), let file = PhoneSample.unknownBankFile() {
-                imports.debugImport([file])
+                imports.debugImport([file])           // the window; `-sampleReading 2|columns` in it
             }
+            if arguments.contains("-sampleFormat") { await showSampleFormat(phone) }
             if arguments.contains("-sampleImportResult") {
                 // An import's result line, as a bank file of 45 payments leaves it (made-up numbers).
                 let result = PhoneImportResult(name: "Umsaetze-Girokonto.csv", added: 42, already: 3, sorted: 38, waiting: 4)
@@ -365,6 +378,28 @@ struct ContentView: View {
             }
         } catch {
             modes.debugShow(.failed(error.localizedDescription))
+        }
+    }
+
+    /// `-sampleFormat`: the made-up unknown bank's file, confirmed as the engine reads it first, imported for real: the
+    /// result with the send card. `-formatBank <name>` types the name, `-formatPhase sending|sent|kept|refused|badName`
+    /// shows a state (`-formatMessage <text>`: the server's refusal), `-openFormatDetails` opens "What is sent?",
+    /// `-formatFocus` the keyboard on the name.
+    private func showSampleFormat(_ phone: PhoneBackend) async {
+        guard let file = PhoneSample.unknownBankFile(),
+              let layout = try? await phone.engine.readings(file.data, layouts: []).first?.layout else { return }
+        try? await phone.saveLayout(layout)
+        imports.debugImport([file])
+        for _ in 0..<50 where imports.banner?.share == nil { try? await Task.sleep(for: .milliseconds(100)) }
+        guard let card = imports.banner?.share else { return }
+        if let bank = LaunchArguments.value("-formatBank") { card.bank = bank }
+        switch LaunchArguments.value("-formatPhase") {
+        case "sending": card.debugPhase(.sending)
+        case "sent": card.debugPhase(.sent)
+        case "kept": card.debugPhase(.kept)
+        case "refused": card.debugPhase(.refused(LaunchArguments.value("-formatMessage") ?? BankFormatCard.refusedLine()))
+        case "badName": card.debugProblem(LaunchArguments.value("-formatMessage") ?? BankFormatCard.refusedLine())
+        default: break
         }
     }
     #endif

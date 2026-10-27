@@ -66,7 +66,7 @@ struct PhoneBackendTests {
         #expect(request.file.name == "Fiktivbank.csv" && phone.summary.payments == 0)
         #expect(transport.requests.allSatisfy { $0.url?.host != "aresium.de" })   // nothing left the phone
 
-        let model = LayoutConfirmModel(request: request, phone: phone, imports: imports)
+        let model = ColumnCheckModel(request: request, phone: phone, imports: imports)
         #expect(model.canConfirm)
         #expect(await model.confirm())
         #expect(imports.layoutRequest == nil)
@@ -87,7 +87,7 @@ struct PhoneBackendTests {
         imports.debugImport([try PhoneTest.fixture("unknown-fiktivbank.csv")])
         await imports.importPendingFiles()
         let request = try #require(imports.layoutRequest)
-        LayoutConfirmModel(request: request, phone: phone, imports: imports).cancel()
+        ColumnCheckModel(request: request, phone: phone, imports: imports).cancel()
         #expect(imports.layoutRequest == nil && imports.waitingCount == 0)
         #expect(phone.summary.payments == 0 && phone.summary.layouts == 0)
     }

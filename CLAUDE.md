@@ -495,14 +495,41 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   `InfoPlist.xcstrings`. **Contact & support** without a login: the `contact` path (above). **Push:** Aresium never
   registers a device (only the cleanup-only center that removes the other apps' devices when someone logs out here).
   **Current view:** a category opens this month's payments directly (`CategoryRoute`; the widget's category links too);
-  Overview keeps the month list first. **Screens** (`Screens/PhoneScreens.swift`, Claude's look from the dashboard's
-  rows, `CategoryTile`/`DayTile`, and the Settings pieces; ink only): the first run (what Aresium does with the data,
+  Overview keeps the month list first. **Screens** (`Screens/PhoneScreens.swift` and `Screens/FileCheck*.swift`,
+  Claude's look from the dashboard's rows, `CategoryTile`/`DayTile`, and the Settings pieces; ink only): the first run
+  (what Aresium does with the data,
   two steps, Restore as a quiet link; it ends with the band), the category picker (the default list by group, nothing
-  ticked at first, one's own names; unticking a category with payments asks where they go, Not sorted first), the
-  column check for an unknown CSV (each column's meaning as a menu, the first payments read that way, Confirm and import
-  saves the layout), after a Switch the alert "Also the other payments from <shop>?" (the count on its button), the
-  store's opening state. The dashboard's own "Uncategorised" (engine and server) shows as "Not sorted" in both modes and
-  the widget through `CategoryName.shown` (AresiumShared); Switch, Add, routes and links keep the real name. Settings →
+  ticked at first, one's own names; unticking a category with payments asks where they go, Not sorted first), after a
+  Switch the alert "Also the other payments from <shop>?" (the count on its button), the store's opening state.
+  **An unknown bank's file** (brief 23, Patrik 2026-10-27: most people don't know what a CSV is;
+  `Model/FileCheck.swift`,
+  `Screens/FileCheckSheet.swift`): a window with the file's name, "Aresium doesn't know this bank yet. This is how your
+  payments would look:", the first 3 payments as the dashboard's rows (day tile, who or the text, the whole date, the
+  amount; no column names) and "Does this look right?" with Yes, import / No. The readings are the engine's
+  (`readingsOfUnknownFile`, up to 4, best first, computed at import and carried by `LayoutRequest`); No shows the next
+  one with a line on what changed (`FileCheckWording`: "Day and month swapped", "Money in and out swapped", "Name and
+  payment text swapped", …; none for the first shown or a reason without a plain sentence); after the last one (or with
+  none) the column check, the last resort (`ColumnCheckModel`, `Screens/FileCheckColumns.swift`): plain questions
+  ("Which column is the date?", the amount or two columns for money out and in, the name, the payment text) as menus of
+  the file's columns by name and first value, how dates and amounts are written, the first payments read that way,
+  Import. Cancel everywhere leaves the file out; only the layout the person confirmed is saved. **Sending the format**
+  (`Model/BankFormatShare.swift`, `Screens/FileCheckSend.swift`): when a file is read with a confirmed layout whose
+  `shareableLayout` is ok (else nothing is offered and only the engine's reason is logged, category `formats`), the
+  import's result shows one quiet card, "Help Aresium learn your bank": the bank's name (the engine's name for it as a
+  suggestion when it has one; for an unknown file it has none today) and Send (the keyboard's Send too); "What is
+  sent?" opens the format as `SharedFormat` shows it (every column with what it holds, date and number style, separator,
+  any other setting, the name, the app's version and language). Send posts `{bank, layout, app_version, language}` to
+  the account server's `bank_formats` (`BankFormatAPI`, no token, `Accept-Language` of the request; ares-empire
+  `docs/ACCOUNTS.md` → Bank formats). Not now, closing the result and Send each mean the layout is never offered again
+  (a SHA-256 of its separator and header in `Application Support/Aresium/bank-formats.json`,
+  `PhoneStorage.bankFormatsURL`,
+  deleted with Aresium's data). Offline or a server error: kept in the same file (only the request's body and the
+  failed tries) and sent by itself at the next start or foreground (`BankFormatOutbox.sendWaiting`, one round a
+  minute), at most 3 tries (a try without a connection does not count); a 400 is final (a card still on screen shows
+  the server's sentence; a 400 about the name only lets the person type it again); a 429 waits for the next start.
+  Sent: "Thank you. Aresium learns your bank with the next update." Sample mode only pretends. The dashboard's own
+  "Uncategorised" (engine and server) shows as "Not sorted" in both modes and the widget through `CategoryName.shown`
+  (AresiumShared); Switch, Add, routes and links keep the real name. Settings →
   About → Fonts & licences also lists the shop list's name-suggestion-index notice (BSD-3-Clause,
   `BundledLicence.shopList`, Aresium only). **Engine:** `bash scripts/aresium-engine.sh` runs `npm run engine` in
   aresium and copies the bundle (its commit in `Engine/engine-version.txt`), the engine's test files and the licence
@@ -510,14 +537,19 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   `-samplePhone` (a made-up store in a temporary folder, filled through the real import), `-samplePhoneEmpty` (the
   first run; `-sampleChosen` after the categories), `-sampleSignedIn` (signed in on the made-up account server),
   `-openSheet categories|settings`, `-sampleUntick <category id>` (in the picker), `-sampleLayout` (an unknown bank's
-  CSV: the column check), `-sampleCategory <name> -sampleMonth <YYYY-MM> -samplePhoneTransaction <text>` (a payment's
-  detail; `-samplePhoneSwitch <category>` switches it, then the merchant question), `-sampleImportResult` (the result
+  CSV: "Does this look right?"; `-sampleReading 2` the second reading, `-sampleReading columns` the column check),
+  `-sampleFormat` (that file confirmed and imported: the result with the send card; `-formatBank <name>`,
+  `-formatPhase sending|sent|kept|refused|badName`, `-formatMessage <the server's sentence>`, `-openFormatDetails`
+  "What is sent?", `-formatFocus` the keyboard on the name), `-sampleCategory <name> -sampleMonth <YYYY-MM>
+  -samplePhoneTransaction <text>` (a payment's detail; `-samplePhoneSwitch <category>` switches it, then the merchant
+  question), `-sampleImportResult` (the result
   line); the lock in memory: `-sampleLock faceID|code|both` (the code is 123456), `-sampleUnlocked` (open at launch),
   `-sampleWrongCodes <n>`, `-openCode` (Settings → Lock → Own code), `-openCodeEntry set|change|remove`. Tests:
   `PhoneModeTests`, `PhoneBackendTests`, `PhoneStoreTests` (with the moving over), `PhoneEngineTests`,
-  `PhoneLookTests`, `LockTests`, `SupportContactTests`, `CategoryRouteTests`. Screenshots of every phone-mode screen in
-  both looks and languages, and at the largest text size: `build/18-*.png` (2026-10-27); without an account and the
-  lock: `build/22-*.png`, contact sheet `build/22-sheet.png`.
+  `PhoneLookTests`, `LockTests`, `SupportContactTests`, `CategoryRouteTests`, `FileCheckTests`, `BankFormatTests`.
+  Screenshots of every phone-mode screen in both looks and languages, and at the largest text size: `build/18-*.png`
+  (2026-10-27); without an account and the lock: `build/22-*.png`, contact sheet `build/22-sheet.png`; the unknown
+  file's window and sending: `build/23-*.png`, contact sheet `build/23-sheet.png`.
 - Targets: `Aresium` (app), `AresiumWidgetExtension` (widgets, folder `Aresium/AresiumWidget/`, embedded in the
   app), `AresiumTests`. `Aresium/AresiumShared/` is compiled into both app and widget (theme, `AppTheme`, `AppGroup`,
   widget snapshot); everything else belongs to one target. App Group `group.de.ares-empire.aresium` in both

@@ -6,7 +6,7 @@ import UniformTypeIdentifiers
 // of `ValueRow` and the payment list: 38 pt tiles, 14.5 pt titles, 12.5 pt lines; the website's `.cat-row` and
 // `.txn-row`), the Settings pieces (`SettingsSection`, glass cards, `FormNote`, `FormButtonStyle`) and Aresium's palette.
 // Ink only: the colours are the categories' own and the dashboard's expense and income. The logic is in Model/
-// (ModeStore, CategoryPickerModel, LayoutConfirmModel, PhoneDataModel).
+// (ModeStore, CategoryPickerModel, PhoneDataModel). An unknown bank's file has its own window (FileCheck*.swift).
 
 /// The file types phone mode imports: bank CSVs, CAMT XML, MT940 (`.sta`, `.mt940`, `.txt`) and ZIP (which gets "unzip
 /// it first").
@@ -21,7 +21,7 @@ extension UTType {
 }
 
 /// The line between rows that start with a 38 pt tile: it begins under the row's words, as iOS's own lists do.
-private struct TileRowDivider: View {
+struct TileRowDivider: View {
     var body: some View { SettingsDivider().padding(.leading, 48) }
 }
 
@@ -371,205 +371,6 @@ private struct UntickSheet: View {
             .accessibilityElement(children: .combine)
         }
         .buttonStyle(SettingsRowStyle())
-    }
-}
-
-// MARK: - layout confirmation
-
-/// An unknown CSV: the file, each column with its first values and what it holds (a menu), the formats, and the first
-/// payments read that way, as the dashboard's payment rows. Confirm saves the layout and reads the file; Cancel leaves
-/// the file out.
-struct LayoutConfirmSheet: View {
-    @State var model: LayoutConfirmModel
-    let palette: Palette
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 0) {
-                        file.padding(.top, 16)
-                        FormNote(text: String(localized: "Aresium doesn't know this bank's file yet. Check what each column holds; the first payments below are read that way. Aresium remembers it for the next file."))
-                            .padding(.top, 14)
-                        SettingsSection(String(localized: "Columns")) {
-                            ForEach(Array(model.columns.enumerated()), id: \.element.index) { index, column in
-                                if index > 0 { SettingsDivider() }
-                                columnRow(column)
-                            }
-                        }
-                        SettingsSection(String(localized: "Formats")) {
-                            formatRow(Text("Dates")) {
-                                Picker(selection: Binding(get: { model.draft.dateFormat }, set: { model.setDateFormat($0) })) {
-                                    ForEach(LayoutDraft.dateFormats, id: \.self) {
-                                        Text(verbatim: LayoutDraft.example(of: $0)).tag($0)
-                                    }
-                                } label: { EmptyView() }
-                            } label: {
-                                MenuChip(text: LayoutDraft.example(of: model.draft.dateFormat), mono: true)
-                            }
-                            SettingsDivider()
-                            formatRow(Text("Amounts")) {
-                                Picker(selection: Binding(get: { model.draft.numberFormat }, set: { model.setNumberFormat($0) })) {
-                                    ForEach(LayoutDraft.numberFormats, id: \.self) {
-                                        Text(verbatim: LayoutDraft.example(ofNumberFormat: $0)).tag($0)
-                                    }
-                                } label: { EmptyView() }
-                            } label: {
-                                MenuChip(text: LayoutDraft.example(ofNumberFormat: model.draft.numberFormat), mono: true)
-                            }
-                        }
-                        SettingsSection(String(localized: "First payments")) {
-                            if model.preview.isEmpty {
-                                Text(model.draft.missing.isEmpty ? String(localized: "Nothing to show yet.")
-                                                                  : String(localized: "Pick the date column and the amount (or money out and money in)."))
-                                    .font(AppFont.text(13)).foregroundStyle(Ink.muted)
-                                    .fixedSize(horizontal: false, vertical: true)
-                                    .padding(16).frame(maxWidth: .infinity, alignment: .leading)
-                            }
-                            ForEach(Array(model.preview.enumerated()), id: \.offset) { index, payment in
-                                if index > 0 { TileRowDivider() }
-                                previewRow(PreviewPayment(payment))
-                            }
-                        }
-                        if let problem = model.previewProblem { FormProblem(text: problem).padding(.top, 12) }
-                    }
-                    .padding(.horizontal, 18).padding(.bottom, 24)
-                }
-                .scrollIndicators(.hidden)
-                actions
-            }
-            .background { Ink.background.ignoresSafeArea() }
-            .navigationTitle(Text("Check the columns"))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        model.cancel()
-                        dismiss()
-                    }
-                    .disabled(model.isSaving)
-                }
-            }
-        }
-        .tint(Ink.primary)
-        .presentationBackground(Ink.background)
-        .interactiveDismissDisabled()
-    }
-
-    /// The file, as the payment rows start: a document in a day tile, its name and how many columns it has.
-    private var file: some View {
-        HStack(spacing: 12) {
-            DayTile(palette: palette) { Image(systemName: "doc.text").font(.system(size: 16, weight: .medium)) }
-            VStack(alignment: .leading, spacing: 2) {
-                Text(verbatim: model.request.file.name).font(AppFont.text(14.5, weight: .semibold))
-                    .foregroundStyle(Ink.primary).lineLimit(2).truncationMode(.middle)
-                Text("\(model.columns.count) columns").font(AppFont.text(12.5)).foregroundStyle(Ink.muted)
-            }
-        }
-        .padding(.horizontal, 4)
-        .accessibilityElement(children: .combine)
-    }
-
-    private var actions: some View {
-        VStack(spacing: 10) {
-            if let problem = model.saveProblem { FormProblem(text: problem) }
-            Button { Task { if await model.confirm() { dismiss() } } } label: {
-                BusyLabel(text: Text("Confirm and import"), busy: model.isSaving)
-            }
-            .buttonStyle(FormButtonStyle(accent: nil, busy: model.isSaving))
-            .disabled(model.draft.layout == nil)
-            .allowsHitTesting(!model.isSaving)
-        }
-        .padding(.horizontal, 18).padding(.top, 10).padding(.bottom, 10)
-    }
-
-    /// A column: its header (or its place) and what it holds as a menu, side by side when they fit and the menu under
-    /// the name when not (a long bank header, the largest text sizes); its first values in mono below.
-    private func columnRow(_ column: ColumnInfo) -> some View {
-        let meaning = model.draft.meaning(of: column.index)
-        let name = column.header.trimmingCharacters(in: .whitespaces).isEmpty
-            ? String(localized: "Column \(column.index + 1)") : column.header
-        let title = Text(verbatim: name).font(AppFont.text(14.5, weight: .semibold)).foregroundStyle(Ink.primary)
-        let menu = Menu {
-            Picker(selection: Binding(get: { meaning }, set: { model.set($0, for: column.index) })) {
-                ForEach(ColumnMeaning.allCases) { Text($0.title()).tag($0) }
-            } label: { EmptyView() }
-        } label: {
-            MenuChip(text: meaning.title(), quiet: meaning == .ignore)
-        }
-        .accessibilityLabel(Text(verbatim: name))
-        .accessibilityValue(Text(meaning.title()))
-        return VStack(alignment: .leading, spacing: 5) {
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 12) {
-                    title.lineLimit(1)
-                    Spacer(minLength: 8)
-                    menu
-                }
-                VStack(alignment: .leading, spacing: 8) {
-                    title.fixedSize(horizontal: false, vertical: true)
-                    menu
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            if !column.samples.isEmpty {
-                Text(verbatim: column.samples.joined(separator: " · ")).font(AppFont.number(11.5, weight: .regular))
-                    .foregroundStyle(Ink.muted).lineLimit(1)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 16).padding(.vertical, 11)
-    }
-
-    private func formatRow<Choices: View>(_ title: Text, @ViewBuilder choices: () -> Choices,
-                                          @ViewBuilder label: () -> MenuChip) -> some View {
-        HStack(spacing: 12) {
-            title.font(AppFont.text(15, weight: .medium)).foregroundStyle(Ink.primary)
-            Spacer(minLength: 8)
-            Menu { choices() } label: { label() }
-        }
-        .padding(.horizontal, 16).frame(minHeight: 54)
-    }
-
-    /// A payment read with the columns, as the dashboard's payment list draws it; the line under it carries the whole
-    /// date, so a wrong date column shows at once.
-    private func previewRow(_ payment: PreviewPayment) -> some View {
-        HStack(spacing: 12) {
-            DayTile(palette: palette) { Text(verbatim: payment.day.map(String.init) ?? "–") }
-            VStack(alignment: .leading, spacing: 2) {
-                Text(verbatim: payment.title).font(AppFont.text(14.5, weight: .semibold)).foregroundStyle(Ink.primary)
-                    .lineLimit(1)
-                Text(verbatim: ([payment.date] + [payment.detail].compactMap { $0 }).joined(separator: " · "))
-                    .font(AppFont.text(12.5)).foregroundStyle(Ink.muted).lineLimit(1)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            Text(verbatim: Money.transaction(payment.amount)).font(AppFont.number(14))
-                .foregroundStyle(payment.amount < 0 ? palette.expenseText : palette.income).fixedSize()
-        }
-        .padding(.horizontal, 14).padding(.vertical, 10)
-        .accessibilityElement(children: .combine)
-    }
-}
-
-/// A menu's current choice: a quiet outlined chip (the website's `.md-edit`), muted while nothing is chosen.
-private struct MenuChip: View {
-    let text: String
-    var quiet = false
-    var mono = false
-
-    var body: some View {
-        HStack(spacing: 6) {
-            Text(verbatim: text)
-                .font(mono ? AppFont.number(13, weight: .medium) : AppFont.text(13.5, weight: .semibold))
-                .foregroundStyle(quiet ? Ink.muted : Ink.primary).lineLimit(1)
-            Image(systemName: "chevron.up.chevron.down").font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(Ink.muted)
-        }
-        .padding(.horizontal, 11).frame(minHeight: 32)
-        .background(Ink.field, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 9, style: .continuous).strokeBorder(Ink.line))
-        .fixedSize()
     }
 }
 

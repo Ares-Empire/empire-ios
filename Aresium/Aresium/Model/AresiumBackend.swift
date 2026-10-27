@@ -61,6 +61,16 @@ enum ImportFileResult {
         if case let .phone(result) = self { result.layout } else { nil }
     }
 
+    /// The engine's readings of that unknown CSV (phone mode).
+    var readings: [FileReading] {
+        if case let .phone(result) = self { result.readings } else { [] }
+    }
+
+    /// A file read with a layout the person confirmed, whose format may be sent to us (phone mode).
+    var bankFormat: BankFormat? {
+        if case let .phone(result) = self { result.format } else { nil }
+    }
+
     var displayMessage: String {
         switch self {
         case let .server(result): result.displayMessage
