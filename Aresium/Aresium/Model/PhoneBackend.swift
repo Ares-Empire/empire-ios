@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import os
 
 /// One file's import in phone mode: how many payments were new, already there, sorted, and waiting for a category.
 nonisolated struct PhoneImportResult: Equatable, Sendable {
@@ -12,6 +13,12 @@ nonisolated struct PhoneImportResult: Equatable, Sendable {
     var error: String?
     /// An unknown CSV: the guessed layout, which the person confirms before the file is read.
     var layout: LayoutGuess?
+    /// An unknown CSV: the engine's ways of reading it, best first, for "Does this look right?" (empty: the column
+    /// check).
+    var readings: [FileReading] = []
+    /// A file read with a layout the person confirmed (an unknown bank), when that layout may be sent to us: the result
+    /// offers to send it (`BankFormatOutbox`).
+    var format: BankFormat?
 
     var displayMessage: String {
         if let error, !error.isEmpty { return "\(name): \(error)" }
@@ -158,18 +165,25 @@ final class PhoneBackend: AresiumBackend {
         var results: [PhoneImportResult] = []
         var fresh: [[String]] = []          // per file: its new payment ids
         let layouts = try await ledger.layouts()
+        let confirmed = Set(layouts.map(PhoneLedger.layoutID))
         for file in files {
             var result = PhoneImportResult(name: file.name)
             do {
                 let read = try await engine.readBankFile(file.data, layouts: layouts)
                 if let guess = read.needsLayout {
                     result.layout = guess
+                    result.readings = await readings(of: file, layouts: layouts)
                 } else {
                     let added = try await ledger.add(read, account: AccountKey.account(for: read))
                     result.added = added.newIDs.count
                     result.already = added.already
                     result.account = added.accountName
                     fresh.append(added.newIDs)
+                    // An unknown bank's file, read with the layout the person confirmed: its format may go to us.
+                    if read.format == "csv", read.bank == nil, let layout = read.layout,
+                       confirmed.contains(PhoneLedger.layoutID(layout)) {
+                        result.format = await bankFormat(of: layout, read: read)
+                    }
                 }
             } catch let error as EngineError {
                 result.error = error.localizedDescription
@@ -237,10 +251,38 @@ final class PhoneBackend: AresiumBackend {
 
     // MARK: layouts
 
-    /// The file read with a layout the person is building (the confirmation sheet's preview).
+    /// The file read with a layout the person is building (the column check's preview).
     func preview(_ file: ImportFile, layout: CsvLayout) async throws -> [BankTxn] {
         try await engine.read(file.data, with: layout).transactions
     }
+
+    /// The engine's readings of an unknown CSV; none when the engine could not offer any (the column check then).
+    private func readings(of file: ImportFile, layouts: [CsvLayout]) async -> [FileReading] {
+        do { return try await engine.readings(file.data, layouts: layouts) }
+        catch {
+            Self.log.error("no readings for an unknown file: \(String(describing: error), privacy: .public)")
+            return []
+        }
+    }
+
+    /// A confirmed layout as it may be sent to us (`shareableLayout`), or nil when it may not: then the result offers
+    /// nothing, and only the engine's reason is logged (never a value from the file).
+    private func bankFormat(of layout: CsvLayout, read: BankFile) async -> BankFormat? {
+        do {
+            switch try await engine.shareableLayout(layout) {
+            case let .shareable(shared):
+                return BankFormat(layout: shared, key: BankFormat.key(of: layout), suggestion: read.bank?.name ?? layout.name)
+            case let .notShareable(reason):
+                Self.log.notice("a confirmed layout is not offered for sending: \(reason, privacy: .public)")
+                return nil
+            }
+        } catch {
+            Self.log.error("shareableLayout failed: \(String(describing: error), privacy: .public)")
+            return nil
+        }
+    }
+
+    private static let log = Logger(subsystem: "de.ares-empire.aresium", category: "formats")
 
     /// Saves a layout the person confirmed from a guess (never a known bank's: that would freeze it).
     func saveLayout(_ layout: CsvLayout) async throws {

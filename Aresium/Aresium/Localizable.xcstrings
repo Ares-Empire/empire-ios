@@ -115,46 +115,6 @@
         }
       }
     },
-    "%lld columns" : {
-      "localizations" : {
-        "de" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld Spalte"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld Spalten"
-                }
-              }
-            }
-          }
-        },
-        "en" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld column"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld columns"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "%lld files failed" : {
       "localizations" : {
         "de" : {
@@ -313,16 +273,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld übersprungen"
-          }
-        }
-      }
-    },
-    "A CSV, CAMT or MT940 file from your bank" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "CSV-, CAMT- oder MT940-Datei"
           }
         }
       }
@@ -527,12 +477,32 @@
         }
       }
     },
+    "Answer the date and the amount first." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beantworte zuerst Datum und Betrag."
+          }
+        }
+      }
+    },
     "App" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "App"
+          }
+        }
+      }
+    },
+    "App version" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App-Version"
           }
         }
       }
@@ -557,12 +527,12 @@
         }
       }
     },
-    "Aresium doesn't know this bank's file yet. Check what each column holds; the first payments below are read that way. Aresium remembers it for the next file." : {
+    "Aresium doesn't know this bank yet. This is how your payments would look:" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aresium kennt die Datei dieser Bank noch nicht. Prüf, was in jeder Spalte steht; die ersten Buchungen unten werden so gelesen. Aresium merkt es sich für die nächste Datei."
+            "value" : "Aresium kennt diese Bank noch nicht. So würden deine Buchungen aussehen:"
           }
         }
       }
@@ -677,6 +647,16 @@
         }
       }
     },
+    "Bank" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bank"
+          }
+        }
+      }
+    },
     "Bank account" : {
       "localizations" : {
         "de" : {
@@ -757,12 +737,12 @@
         }
       }
     },
-    "Check the columns" : {
+    "Check the file" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Spalten prüfen"
+            "value" : "Datei prüfen"
           }
         }
       }
@@ -837,12 +817,12 @@
         }
       }
     },
-    "Confirm and import" : {
+    "Comma" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bestätigen und importieren"
+            "value" : "Komma"
           }
         }
       }
@@ -903,6 +883,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tag"
+          }
+        }
+      }
+    },
+    "Day and month swapped" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tag und Monat getauscht"
           }
         }
       }
@@ -973,6 +963,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Entfernen"
+          }
+        }
+      }
+    },
+    "Does this look right?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sieht das richtig aus?"
           }
         }
       }
@@ -1137,6 +1137,16 @@
         }
       }
     },
+    "Fees" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gebühren"
+          }
+        }
+      }
+    },
     "File from your bank" : {
       "localizations" : {
         "de" : {
@@ -1173,16 +1183,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Code vergessen?"
-          }
-        }
-      }
-    },
-    "Formats" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Formate"
           }
         }
       }
@@ -1283,6 +1283,16 @@
         }
       }
     },
+    "Help Aresium learn your bank" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hilf Aresium, deine Bank zu lernen"
+          }
+        }
+      }
+    },
     "Here you choose categories and add your own." : {
       "localizations" : {
         "de" : {
@@ -1313,12 +1323,42 @@
         }
       }
     },
+    "How it is written" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wie es geschrieben ist"
+          }
+        }
+      }
+    },
+    "How it is written (example)" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wie es geschrieben ist (Beispiel)"
+          }
+        }
+      }
+    },
     "How the file gets to Aresium" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "So kommt die Datei zu Aresium"
+          }
+        }
+      }
+    },
+    "Import" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Importieren"
           }
         }
       }
@@ -1429,6 +1469,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Die üblichen Schritte"
+          }
+        }
+      }
+    },
+    "Labels in the text" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beschriftungen im Text"
+          }
+        }
+      }
+    },
+    "Language" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sprache"
           }
         }
       }
@@ -1553,6 +1613,36 @@
         }
       }
     },
+    "Money in and out" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einnahmen und Ausgaben"
+          }
+        }
+      }
+    },
+    "Money in and out read another way" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einnahmen und Ausgaben anders gelesen"
+          }
+        }
+      }
+    },
+    "Money in and out swapped" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einnahmen und Ausgaben getauscht"
+          }
+        }
+      }
+    },
     "Money out" : {
       "localizations" : {
         "de" : {
@@ -1613,6 +1703,36 @@
         }
       }
     },
+    "Name" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Name"
+          }
+        }
+      }
+    },
+    "Name and payment text swapped" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Name und Verwendungszweck getauscht"
+          }
+        }
+      }
+    },
+    "Name of the bank" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Name der Bank"
+          }
+        }
+      }
+    },
     "Needs a code on this iPhone" : {
       "localizations" : {
         "de" : {
@@ -1639,6 +1759,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Weiter"
+          }
+        }
+      }
+    },
+    "No" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nein"
           }
         }
       }
@@ -1723,6 +1853,16 @@
         }
       }
     },
+    "None" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keine"
+          }
+        }
+      }
+    },
     "Not available with sample data" : {
       "localizations" : {
         "de" : {
@@ -1733,12 +1873,42 @@
         }
       }
     },
+    "Not now" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nicht jetzt"
+          }
+        }
+      }
+    },
+    "Not sent yet. Aresium sends it by itself as soon as it can." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch nicht gesendet. Aresium sendet es von selbst, sobald es geht."
+          }
+        }
+      }
+    },
     "Not sorted" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nicht sortiert"
+          }
+        }
+      }
+    },
+    "Not typed yet" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch nicht eingegeben"
           }
         }
       }
@@ -1823,6 +1993,36 @@
         }
       }
     },
+    "Only how its file is laid out goes to us, never a payment." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nur der Aufbau der Datei geht an uns, nie eine Buchung."
+          }
+        }
+      }
+    },
+    "Only how your bank's file is laid out: its column names, what each one holds and how dates and amounts are written. Never a payment, an amount, an IBAN or a name." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nur der Aufbau der Datei deiner Bank: die Namen der Spalten, was in jeder steht und wie Daten und Beträge geschrieben sind. Nie eine Buchung, ein Betrag, eine IBAN oder ein Name."
+          }
+        }
+      }
+    },
+    "Only rows marked" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nur Zeilen mit"
+          }
+        }
+      }
+    },
     "Only this one" : {
       "localizations" : {
         "de" : {
@@ -1893,6 +2093,26 @@
         }
       }
     },
+    "Other amounts" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Andere Beträge"
+          }
+        }
+      }
+    },
+    "Other names" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Andere Namen"
+          }
+        }
+      }
+    },
     "Overview" : {
       "localizations" : {
         "de" : {
@@ -1943,12 +2163,12 @@
         }
       }
     },
-    "Pick the date column and the amount (or money out and money in)." : {
+    "Pick one" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wähl die Datumsspalte und den Betrag (oder Ausgaben und Einnahmen)."
+            "value" : "Wählen"
           }
         }
       }
@@ -2093,6 +2313,16 @@
         }
       }
     },
+    "Rows left out" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ausgelassene Zeilen"
+          }
+        }
+      }
+    },
     "Save" : {
       "localizations" : {
         "de" : {
@@ -2119,6 +2349,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Speichert…"
+          }
+        }
+      }
+    },
+    "Semicolon" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Semikolon"
+          }
+        }
+      }
+    },
+    "Send" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Senden"
+          }
+        }
+      }
+    },
+    "Sent with it" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dazu gesendet"
+          }
+        }
+      }
+    },
+    "Separator" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trennzeichen"
           }
         }
       }
@@ -2223,6 +2493,22 @@
         }
       }
     },
+    "Suggestion %lld of %lld" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vorschlag %lld von %lld"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Suggestion %1$lld of %2$lld"
+          }
+        }
+      }
+    },
     "Swipe sideways: your income." : {
       "localizations" : {
         "de" : {
@@ -2243,12 +2529,32 @@
         }
       }
     },
+    "Tab" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tabulator"
+          }
+        }
+      }
+    },
     "Tap a category: its payments this month." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tippe auf eine Kategorie: ihre Buchungen in diesem Monat."
+          }
+        }
+      }
+    },
+    "Thank you. Aresium learns your bank with the next update." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Danke. Aresium lernt deine Bank mit dem nächsten Update."
           }
         }
       }
@@ -2293,6 +2599,26 @@
         }
       }
     },
+    "The file's other date" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das andere Datum der Datei"
+          }
+        }
+      }
+    },
+    "The format was not accepted." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das Format wurde nicht angenommen."
+          }
+        }
+      }
+    },
     "The tour could not start." : {
       "localizations" : {
         "de" : {
@@ -2319,6 +2645,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "IBAN der Gegenseite"
+          }
+        }
+      }
+    },
+    "Then show Aresium where things are in your file. The payments below follow your answers." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dann zeig Aresium, wo was in deiner Datei steht. Die Buchungen unten folgen deinen Antworten."
           }
         }
       }
@@ -2569,6 +2905,26 @@
         }
       }
     },
+    "Two columns" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zwei Spalten"
+          }
+        }
+      }
+    },
+    "Two columns: money out and money in" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zwei Spalten: Ausgaben und Einnahmen"
+          }
+        }
+      }
+    },
     "Type a name for the category." : {
       "localizations" : {
         "de" : {
@@ -2659,6 +3015,16 @@
         }
       }
     },
+    "Vertical bar" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Senkrechter Strich"
+          }
+        }
+      }
+    },
     "Website" : {
       "localizations" : {
         "de" : {
@@ -2679,12 +3045,102 @@
         }
       }
     },
+    "What is sent" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was gesendet wird"
+          }
+        }
+      }
+    },
+    "What is sent?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was wird gesendet?"
+          }
+        }
+      }
+    },
     "Where" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Wo"
+          }
+        }
+      }
+    },
+    "Where is what" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wo steht was"
+          }
+        }
+      }
+    },
+    "Which column is money in?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Welche Spalte sind die Einnahmen?"
+          }
+        }
+      }
+    },
+    "Which column is money out?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Welche Spalte sind die Ausgaben?"
+          }
+        }
+      }
+    },
+    "Which column is the amount?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Welche Spalte ist der Betrag?"
+          }
+        }
+      }
+    },
+    "Which column is the date?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Welche Spalte ist das Datum?"
+          }
+        }
+      }
+    },
+    "Which column is the name?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Welche Spalte ist der Name?"
+          }
+        }
+      }
+    },
+    "Which column is the payment text?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Welche Spalte ist der Verwendungszweck?"
           }
         }
       }
@@ -2749,6 +3205,16 @@
         }
       }
     },
+    "Yes, import" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ja, importieren"
+          }
+        }
+      }
+    },
     "Your IBAN" : {
       "localizations" : {
         "de" : {
@@ -2809,6 +3275,16 @@
         }
       }
     },
+    "Your payments as a file from your bank" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Buchungen als Datei von deiner Bank"
+          }
+        }
+      }
+    },
     "Your payments, categories and learned sorting on this iPhone go for good. Export them first to keep a copy." : {
       "localizations" : {
         "de" : {
@@ -2855,6 +3331,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tag"
+          }
+        }
+      }
+    },
+    "the other way round" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "umgekehrt"
           }
         }
       }

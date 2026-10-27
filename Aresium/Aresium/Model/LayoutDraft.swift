@@ -1,8 +1,8 @@
 import Foundation
 import Observation
 
-/// What a CSV column holds, as the person picks it on the layout confirmation sheet (the guesser's roles,
-/// aresium/src/engine/readers/guess.ts).
+/// What a CSV column holds (the guesser's roles, aresium/src/engine/readers/guess.ts): what the column check's questions
+/// set, and what "What is sent?" names for each column.
 nonisolated enum ColumnMeaning: String, CaseIterable, Identifiable, Sendable {
     case ignore, date, valueDate, amount, debit, credit, sign, counterparty, text, kind, iban, accountIban, balance,
          currency, reference, status
@@ -21,7 +21,7 @@ nonisolated enum ColumnMeaning: String, CaseIterable, Identifiable, Sendable {
         case .debit: language.string("Money out")
         case .credit: language.string("Money in")
         case .sign: language.string("In or out mark")
-        case .counterparty: language.string("Counterparty")
+        case .counterparty: language.string("Name")
         case .text: language.string("Payment text")
         case .kind: language.string("Booking type")
         case .iban: language.string("Their IBAN")
@@ -35,7 +35,8 @@ nonisolated enum ColumnMeaning: String, CaseIterable, Identifiable, Sendable {
 }
 
 /// The layout the person builds from the engine's guess: one meaning per column, the date format and the number format.
-/// `layout` is the `CsvLayout` to save, once a date and an amount (or money out and money in) are picked.
+/// `layout` is the `CsvLayout` to save, once a date and an amount (or money out and money in) are picked. The column
+/// check asks one question per meaning ("Which column is the date?", `choose`); the guess's other meanings stay.
 nonisolated struct LayoutDraft: Equatable, Sendable {
     static let dateFormats = ["DD.MM.YYYY", "DD.MM.YY", "YYYY-MM-DD", "DD/MM/YYYY", "MM/DD/YYYY", "DD-MM-YYYY", "YYYYMMDD"]
     /// Number formats: "de" 1.234,56 · "en" 1,234.56.
@@ -55,6 +56,8 @@ nonisolated struct LayoutDraft: Equatable, Sendable {
     private(set) var meanings: [ColumnMeaning]
     var dateFormat: String
     var numberFormat: String
+    /// Money out and money in come from two columns (the amount question's last choice), not from one amount column.
+    private(set) var amountInTwoColumns: Bool
 
     init(guess: LayoutGuess) {
         self.guess = guess
@@ -81,12 +84,32 @@ nonisolated struct LayoutDraft: Equatable, Sendable {
             put(.status, columns.status)
         }
         self.meanings = meanings
+        amountInTwoColumns = !meanings.contains(.amount) && (meanings.contains(.debit) || meanings.contains(.credit))
         dateFormat = guess.layout?.dateFormat
             ?? guess.columns.first { $0.kind == "date" }?.dateFormat ?? Self.dateFormats[0]
         numberFormat = guess.layout?.numberFormat ?? "de"
     }
 
     func meaning(of column: Int) -> ColumnMeaning { meanings.indices.contains(column) ? meanings[column] : .ignore }
+
+    /// The columns that hold a meaning, left to right.
+    func columns(of meaning: ColumnMeaning) -> [Int] { meanings.indices.filter { meanings[$0] == meaning } }
+
+    /// A question's answer: this one column holds the meaning (nil: none does). The meaning leaves every other column,
+    /// so a payment text read from two columns becomes one. Picking one amount column ends "two columns".
+    mutating func choose(_ meaning: ColumnMeaning, column: Int?) {
+        guard meaning != .ignore else { return }
+        for index in meanings.indices where meanings[index] == meaning { meanings[index] = .ignore }
+        if meaning == .amount { amountInTwoColumns = false }
+        if let column { set(meaning, for: column) }
+    }
+
+    /// The amount question's "two columns": money out and money in, each asked for; the amount column picked so far
+    /// becomes the money out column.
+    mutating func useTwoAmountColumns() {
+        amountInTwoColumns = true
+        if let amount = meanings.firstIndex(of: .amount) { set(.debit, for: amount) }
+    }
 
     /// Gives a column a meaning. A meaning of one column moves there from the column that had it; one amount column
     /// and money out/in exclude each other. Picking the date column takes its date format.
@@ -96,8 +119,8 @@ nonisolated struct LayoutDraft: Equatable, Sendable {
             for index in meanings.indices where meanings[index] == meaning { meanings[index] = .ignore }
         }
         if !meaning.allowsSeveral { clear(meaning) }
-        if meaning == .amount { clear(.debit); clear(.credit) }
-        if meaning == .debit || meaning == .credit { clear(.amount); clear(.sign) }
+        if meaning == .amount { clear(.debit); clear(.credit); amountInTwoColumns = false }
+        if meaning == .debit || meaning == .credit { clear(.amount); clear(.sign); amountInTwoColumns = true }
         meanings[column] = meaning
         if meaning == .date, let format = guess.columns.first(where: { $0.index == column })?.dateFormat {
             dateFormat = format
@@ -143,10 +166,36 @@ nonisolated struct LayoutDraft: Equatable, Sendable {
     }
 }
 
-/// The layout confirmation sheet's model: the draft, a preview of the first rows read with it (by the engine), and
-/// Confirm (the layout is saved and the file read again) or Cancel (the file is not imported).
+/// One column as the column check's menus offer it: its name (the file's header, or "Column 3") and its first value, so
+/// the person can tell the columns apart without knowing the file.
+nonisolated struct ColumnChoice: Equatable, Identifiable, Sendable {
+    let index: Int
+    let name: String
+    /// The column's first values ("03.10.2026 · 04.10.2026"), empty when it has none.
+    let samples: String
+
+    var id: Int { index }
+
+    init(_ column: ColumnInfo, language: AppLanguage = .current) {
+        index = column.index
+        let header = column.header.trimmingCharacters(in: .whitespaces)
+        name = header.isEmpty ? language.string("Column \(column.index + 1)") : header
+        samples = column.samples.map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }.prefix(3)
+            .joined(separator: " · ")
+    }
+
+    /// The menu's line: "Buchungstag · 03.10.2026".
+    var label: String {
+        guard let first = samples.split(separator: " · ").first else { return name }
+        return "\(name) · \(first)"
+    }
+}
+
+/// The column check, the last resort when no reading of an unknown CSV looks right: plain questions ("Which column is
+/// the date?") over the draft, how dates and amounts are written, the first payments read that way (by the engine),
+/// and Import (the layout is saved and the file read again) or Cancel (the file is not imported).
 @MainActor @Observable
-final class LayoutConfirmModel {
+final class ColumnCheckModel {
     let request: LayoutRequest
     private(set) var draft: LayoutDraft
     private(set) var preview: [BankTxn]
@@ -156,8 +205,8 @@ final class LayoutConfirmModel {
     @ObservationIgnored private let phone: PhoneBackend
     @ObservationIgnored private let imports: ImportStore
     @ObservationIgnored private var previewTask: Task<Void, Never>?
-    /// How many rows the preview shows.
-    static let previewRows = 5
+    /// How many payments the preview shows (as many as the readings show).
+    static let previewRows = FileCheckModel.shownPayments
 
     init(request: LayoutRequest, phone: PhoneBackend, imports: ImportStore) {
         self.request = request
@@ -168,10 +217,22 @@ final class LayoutConfirmModel {
     }
 
     var columns: [ColumnInfo] { request.guess.columns }
+    var choices: [ColumnChoice] { columns.map { ColumnChoice($0) } }
     var canConfirm: Bool { draft.layout != nil && !isSaving }
 
-    func set(_ meaning: ColumnMeaning, for column: Int) {
-        draft.set(meaning, for: column)
+    /// The column chosen for a meaning (the first, if the guess read it from several).
+    func chosen(_ meaning: ColumnMeaning) -> ColumnChoice? {
+        guard let index = draft.columns(of: meaning).first else { return nil }
+        return choices.first { $0.index == index }
+    }
+
+    func choose(_ meaning: ColumnMeaning, column: Int?) {
+        draft.choose(meaning, column: column)
+        refreshPreview()
+    }
+
+    func useTwoAmountColumns() {
+        draft.useTwoAmountColumns()
         refreshPreview()
     }
 
@@ -226,7 +287,7 @@ final class LayoutConfirmModel {
     func cancel() { imports.layoutSkipped(request) }
 }
 
-/// One payment of the column check's preview as its row shows it: the day of the month for the tile, the whole date in
+/// One payment of the file check's first payments as its row shows it: the day of the month for the tile, the whole date in
 /// the app's language (so the person sees the date column read right), who and what, and the amount with its sign.
 nonisolated struct PreviewPayment: Equatable, Sendable {
     /// The day of the month, nil when the booking date is not `YYYY-MM-DD`.

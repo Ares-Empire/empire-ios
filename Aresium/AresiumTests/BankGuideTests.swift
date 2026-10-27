@@ -27,7 +27,12 @@ struct BankGuideTests {
             #expect(!bank.names.isEmpty)
             #expect(!bank.fileType.pick(.german).isEmpty && !bank.fileType.pick(.english).isEmpty)
             #expect(!bank.fileType.why(.german).isEmpty && !bank.fileType.why(.english).isEmpty)
-            #expect(!bank.limits(.german).isEmpty && !bank.limits(.english).isEmpty)
+            // "Good to know" may be empty (the page leaves the section out), but never in one language only.
+            #expect(bank.limits(.german).isEmpty == bank.limits(.english).isEmpty, "\(bank.id): limits in both languages")
+            for line in [bank.limits(.german), bank.limits(.english)] {
+                #expect(line.range(of: #"unsure|unsicher|unklar|unclear"#, options: [.regularExpression, .caseInsensitive]) == nil,
+                        "\(bank.id): no research notes on the screen")
+            }
             #expect(!bank.toAresium.isEmpty)
             for key in bank.toAresium { #expect(guide.ways[key] != nil, "\(bank.id): way \(key.rawValue)") }
         }
