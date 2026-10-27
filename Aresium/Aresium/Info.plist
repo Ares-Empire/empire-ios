@@ -56,6 +56,9 @@
 			</dict>
 		</dict>
 	</array>
+	<!-- Settings → Lock: Face ID unlocks Aresium (Model/AppLock.swift). German in InfoPlist.xcstrings. -->
+	<key>NSFaceIDUsageDescription</key>
+	<string>Face ID unlocks Aresium when you turn on its lock.</string>
 	<!-- The team prefix of the shared Keychain group (Shared/EmpireShared.swift). -->
 	<key>AppIdentifierPrefix</key>
 	<string>$(AppIdentifierPrefix)</string>

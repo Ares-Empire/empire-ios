@@ -9,9 +9,9 @@ struct SettingsApp {
     /// The app's `DELETE …/me` when its server keeps data per account (today only Arestemis): leaving the app deletes it
     /// there first. nil: the server keeps nothing per account (Aresium, Aresus, Arestoteles hold only Patrik's data).
     var serverData: URL? = nil
-    /// Deletes what the app keeps of the account on this iPhone and nowhere else (Aresium's phone mode: the person's
-    /// payments). Leave <app> and Delete Ares account run it after the server said yes; logging out never does.
-    var localData: (@MainActor () async throws -> Void)? = nil
+    /// In an app that works without an account (`EmpireAppIdentity.accountOptional`, Aresium): the line under the
+    /// signed-out "Ares account" row, what an account is for in this app.
+    var signInNote: String? = nil
     /// Licences besides the fonts', on the Fonts & licences page (Aresium: its shop list's).
     var licences: [BundledLicence] = []
 }
@@ -20,6 +20,8 @@ struct SettingsApp {
 /// `appSection` slot, e.g. Arestemis's application texts), then General (Language, Appearance; Notifications in apps
 /// that send them), Help (Contact & support), About (Privacy, Imprint, Fonts & licences, Version) and Account (email, Change
 /// password, Log out; then Leave <app> and Delete Ares account, `AccountScreens.swift`).
+/// An app that works without an account (Aresium) shows, while no Ares app on the iPhone is logged in, a quiet "Ares
+/// account" section in place of Account: Sign in (`SignInSheet`) and the app's line on what an account is for.
 /// Log out does what the app's log-out did before (in sample mode it leaves the sample); so does the end of leaving or
 /// deleting in sample mode, where nothing is sent.
 struct SettingsScreen<AppSection: View>: View {
@@ -31,7 +33,12 @@ struct SettingsScreen<AppSection: View>: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
+    #if DEBUG
+    /// Screenshots: `-openSupport` opens Contact & support at once.
+    @State private var showsSupport = LaunchArguments.current.contains("-openSupport")
+    #else
     @State private var showsSupport = false
+    #endif
     #if DEBUG
     /// Screenshots: `-openLanguage` opens Settings → Language at once.
     @State private var showsLanguage = LaunchArguments.current.contains("-openLanguage")
@@ -52,6 +59,12 @@ struct SettingsScreen<AppSection: View>: View {
     #endif
     @AppStorage(Appearance.key) private var appearance = Appearance.iPhone.rawValue
     @State private var path: [AccountPage] = []
+    #if DEBUG
+    /// Screenshots: `-openSignIn` opens the sign-in sheet at once (an app that works without an account, signed out).
+    @State private var showsSignIn = LaunchArguments.current.contains("-openSignIn")
+    #else
+    @State private var showsSignIn = false
+    #endif
 
     init(app: SettingsApp, session: EmpireSession, sample: Bool = false, logOut: @escaping () -> Void,
          @ViewBuilder appSection: () -> AppSection) {
@@ -79,8 +92,8 @@ struct SettingsScreen<AppSection: View>: View {
                     .padding(.horizontal, 18).padding(.top, 4).padding(.bottom, 34)
                 }
                 #if DEBUG
-                .task {
-                    // Screenshots: `-scrollToAccount` shows the Account section.
+                .task(id: session.token == nil) {
+                    // Screenshots: `-scrollToAccount` shows the Account section (again once a sample login arrived).
                     guard LaunchArguments.current.contains("-scrollToAccount") else { return }
                     try? await Task.sleep(for: .milliseconds(300))
                     proxy.scrollTo(Self.accountID, anchor: .bottom)
@@ -112,7 +125,13 @@ struct SettingsScreen<AppSection: View>: View {
         .sheet(isPresented: $showsSupport) {
             SupportSheet(session: session, accent: app.accent, sample: sample)
         }
+        .sheet(isPresented: $showsSignIn) {
+            SignInSheet(session: session, accent: app.accent, note: app.signInNote)
+        }
     }
+
+    /// The app works without an account and no Ares app on the iPhone is logged in: Settings offers to sign in.
+    private var signedOut: Bool { session.app.accountOptional && session.token == nil }
 
     private static var accountID: String { "settings-account" }
 
@@ -192,9 +211,31 @@ struct SettingsScreen<AppSection: View>: View {
         }
     }
 
-    private var account: some View {
+    @ViewBuilder private var account: some View {
+        if signedOut { signIn } else { signedIn }
+    }
+
+    /// Signed out, in an app that works without an account: a quiet row to sign in, and what an account is for here.
+    private var signIn: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            SettingsSection(String(localized: LocalizedStringResource("Ares account", table: "Shared",
+                                                                      locale: .appLanguage))) {
+                Button { showsSignIn = true } label: {
+                    SettingsRow(title: String(localized: LocalizedStringResource("Sign in", table: "Shared",
+                                                                                 locale: .appLanguage)),
+                                tint: Ink.secondary)
+                }
+                .buttonStyle(SettingsRowStyle())
+            }
+            if let note = app.signInNote { FormNote(text: note) }
+        }
+    }
+
+    private var signedIn: some View {
         VStack(spacing: 12) {
-            SettingsSection(String(localized: LocalizedStringResource("Account", table: "Shared", locale: .appLanguage))) {
+            SettingsSection(session.app.accountOptional
+                            ? String(localized: LocalizedStringResource("Ares account", table: "Shared", locale: .appLanguage))
+                            : String(localized: LocalizedStringResource("Account", table: "Shared", locale: .appLanguage))) {
                 if let email = sample ? "sample@example.com" : session.email {
                     VStack(alignment: .leading, spacing: 3) {
                         Text("Signed in as", tableName: "Shared").font(AppFont.text(12)).foregroundStyle(Ink.muted)
@@ -224,14 +265,17 @@ struct SettingsScreen<AppSection: View>: View {
                 }
                 .buttonStyle(SettingsRowStyle())
             }
-            // Leaving and deleting apart from the everyday rows, in the hub's soft red.
+            // Leaving and deleting apart from the everyday rows, in the hub's soft red. Leaving only while the account
+            // has this app (an app that works without an account opens with any login).
             VStack(spacing: 0) {
-                NavigationLink(value: AccountPage.leave) {
-                    SettingsRow(title: String(localized: LocalizedStringResource("Leave \(app.name)", table: "Shared",
-                                                                                 locale: .appLanguage)), tint: FormButtonStyle.dangerInk)
+                if sample || session.services.contains(session.app.service) {
+                    NavigationLink(value: AccountPage.leave) {
+                        SettingsRow(title: String(localized: LocalizedStringResource("Leave \(app.name)", table: "Shared",
+                                                                                     locale: .appLanguage)), tint: FormButtonStyle.dangerInk)
+                    }
+                    .buttonStyle(SettingsRowStyle())
+                    SettingsDivider()
                 }
-                .buttonStyle(SettingsRowStyle())
-                SettingsDivider()
                 NavigationLink(value: AccountPage.delete) {
                     SettingsRow(title: String(localized: LocalizedStringResource("Delete Ares account",
                                                                                  table: "Shared", locale: .appLanguage)),
@@ -243,8 +287,9 @@ struct SettingsScreen<AppSection: View>: View {
         }
     }
 
-    /// The account left this app or was deleted: close Settings (the app shows its no-access screen or the login).
-    /// In sample mode nothing was sent, so leave the sample for the login, as Log out does.
+    /// The account left this app or was deleted: close Settings (the app shows its no-access screen or the login; an
+    /// app that works without an account goes on as it is). In sample mode nothing was sent, so leave the sample for the
+    /// login, as Log out does.
     private func accountEnded() {
         dismiss()
         if sample { logOut() }

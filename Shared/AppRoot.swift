@@ -274,11 +274,12 @@ nonisolated enum LaunchArguments {
         "-openSheet", "-openProvince", "-openRun", "-openMatch", "-openNote", "-openPosition", "-openBestMatch",
         "-tab", "-filter", "-library", "-search", "-tabSearch", "-scrollTo", "-sampleCategory", "-sampleMonth",
         "-sampleTransaction", "-sampleRecategorise", "-sampleIntroProgress", "-supportKind", "-supportText",
-        "-supportPhase", "-confirmLanguage", "-switchLanguage", "-openAccount", "-accountEmail", "-accountPhase",
+        "-supportPhase", "-supportEmail", "-confirmLanguage", "-switchLanguage", "-openAccount", "-accountEmail",
+        "-accountPhase", "-openCodeEntry",
     ]
     private static let opens: Set<String> = [
         "-scrollToEnd", "-scrollBottom", "-sampleIntro", "-sampleImportResult", "-sampleImportFailed", "-openLanguage",
-        "-openAppearance",
+        "-openAppearance", "-openCode", "-openSupport", "-openSignIn",
         "-scrollToAccount", "-sampleAccountDeleted",
     ]
 }

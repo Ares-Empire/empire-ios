@@ -1,8 +1,9 @@
 import Foundation
+import os
 import SwiftData
 
-// Phone mode's storage: SwiftData, one store per Ares account in Application Support (`Aresium/<account id>/`), with
-// complete file protection (readable only while the iPhone is unlocked). The iPhone's own backup includes it.
+// Phone mode's storage: SwiftData, one store per iPhone in Application Support (`Aresium/local/`), with complete file
+// protection (readable only while the iPhone is unlocked). The iPhone's own backup includes it.
 //
 // Migration: these are the models of schema version 1 (`LedgerSchemaV1`). Once a build with them has reached a phone,
 // they are never changed in place: a change adds `LedgerSchemaV2` (copying the models it keeps) and a stage in
@@ -134,7 +135,9 @@ typealias StoredChosen = LedgerSchemaV1.Chosen
 typealias StoredRule = LedgerSchemaV1.Rule
 typealias StoredLayout = LedgerSchemaV1.Layout
 
-/// Where each account's store lives, and opening and deleting it.
+/// Where the phone's one store lives (`Application Support/Aresium/local/`), opening and deleting it, and moving an
+/// older per-account store over. Aresium's data belongs to the iPhone, not to an account (Patrik, 2026-10-27): until
+/// then each Ares account had its own store in `Application Support/Aresium/<account id>/`.
 nonisolated struct PhoneStorage: Sendable {
     let root: URL
 
@@ -143,23 +146,21 @@ nonisolated struct PhoneStorage: Sendable {
         PhoneStorage(root: URL.applicationSupportDirectory.appending(path: "Aresium", directoryHint: .isDirectory))
     }
 
-    /// A store's folder: `<root>/<account id>/`. Ares account ids are letters and digits; anything else is escaped, so
-    /// an id can never name another folder.
-    func directory(for account: String) -> URL {
-        let allowed = CharacterSet(charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_")
-        let name = account.addingPercentEncoding(withAllowedCharacters: allowed) ?? "account"
-        return root.appending(path: name.isEmpty || name.hasPrefix(".") ? "account" : name, directoryHint: .isDirectory)
-    }
+    static let storeName = "ledger.store"
+    private static let log = Logger(subsystem: "de.ares-empire.aresium", category: "storage")
 
-    func storeURL(for account: String) -> URL { directory(for: account).appending(path: "ledger.store") }
+    /// The store's folder: `<root>/local/`. (Ares account ids, the old folders' names, are 15 letters and digits, so
+    /// "local" is never one of them.)
+    var directory: URL { root.appending(path: "local", directoryHint: .isDirectory) }
 
-    func hasStore(for account: String) -> Bool {
-        FileManager.default.fileExists(atPath: storeURL(for: account).path)
-    }
+    var storeURL: URL { directory.appending(path: Self.storeName) }
 
-    /// Opens (or creates) the account's store. Call off the main actor: the ledger then works on its own.
-    func open(account: String) throws -> PhoneLedger {
-        let directory = directory(for: account)
+    var hasStore: Bool { FileManager.default.fileExists(atPath: storeURL.path) }
+
+    /// Opens (or creates) the phone's store, after moving an older per-account store over (`moveOldStore`). Call off the
+    /// main actor: the ledger then works on its own.
+    func open() throws -> PhoneLedger {
+        try moveOldStore()
         let manager = FileManager.default
         if manager.fileExists(atPath: directory.path) {
             try manager.setAttributes([.protectionKey: FileProtectionType.complete], ofItemAtPath: directory.path)
@@ -168,7 +169,7 @@ nonisolated struct PhoneStorage: Sendable {
                                         attributes: [.protectionKey: FileProtectionType.complete])
         }
         let schema = Schema(versionedSchema: LedgerSchemaV1.self)
-        let configuration = ModelConfiguration("Aresium", schema: schema, url: storeURL(for: account),
+        let configuration = ModelConfiguration("Aresium", schema: schema, url: storeURL,
                                                allowsSave: true, cloudKitDatabase: .none)
         let container = try ModelContainer(for: schema, migrationPlan: LedgerMigrationPlan.self,
                                            configurations: configuration)
@@ -179,11 +180,59 @@ nonisolated struct PhoneStorage: Sendable {
         return PhoneLedger(modelContainer: container)
     }
 
-    /// Deletes the account's store and its folder. Only three paths call this: Leave Aresium, Delete Ares account (each
-    /// after the server said yes) and Settings → "Delete Aresium data on this iPhone".
-    func delete(account: String) throws {
-        let directory = directory(for: account)
-        guard FileManager.default.fileExists(atPath: directory.path) else { return }
-        try FileManager.default.removeItem(at: directory)
+    /// Deletes the phone's store and its folder, and any older per-account store left behind by the moving over, so
+    /// nothing of Aresium's payments stays on the iPhone (the privacy policy promises that for this action). Only
+    /// Settings → "Delete Aresium data on this iPhone" and the lock's "Forgot the code?" call this; logging out,
+    /// leaving Aresium and deleting the Ares account never do.
+    func delete() throws {
+        let manager = FileManager.default
+        for old in oldStores() { try manager.removeItem(at: old.folder) }
+        guard manager.fileExists(atPath: directory.path) else { return }
+        try manager.removeItem(at: directory)
+    }
+
+    // MARK: moving an older store over
+
+    /// What `moveOldStore` did.
+    enum Move: Equatable {
+        /// The phone's store exists already, or there is no older one: nothing moved.
+        case nothing
+        /// The older store in this folder became the phone's store; `leftBehind` older stores stay as they are.
+        case moved(from: String, leftBehind: Int)
+    }
+
+    /// Before the phone's store exists: an older per-account store (`<root>/<account id>/ledger.store`) becomes it, by
+    /// moving its folder (never a copy, so the data is never twice on the phone). With several, the most recently
+    /// changed one moves (its newest file decides) and the others stay untouched, where an update could still reach them.
+    @discardableResult
+    func moveOldStore() throws -> Move {
+        guard !hasStore else { return .nothing }
+        let candidates = oldStores()
+        guard let newest = candidates.max(by: { $0.changed < $1.changed }) else { return .nothing }
+        let manager = FileManager.default
+        // A folder without a store file holds nothing that opens (left from a store deleted half-way): it makes room.
+        if manager.fileExists(atPath: directory.path) { try manager.removeItem(at: directory) }
+        try manager.moveItem(at: newest.folder, to: directory)
+        let others = candidates.count - 1
+        Self.log.notice("an older per-account store became this iPhone's store; \(others, privacy: .public) other per-account stores stay untouched")
+        return .moved(from: newest.folder.lastPathComponent, leftBehind: others)
+    }
+
+    /// Every older per-account store: a folder in `root` other than `local` with a store file, and when its newest file
+    /// last changed.
+    func oldStores() -> [(folder: URL, changed: Date)] {
+        let manager = FileManager.default
+        let keys: [URLResourceKey] = [.isDirectoryKey, .contentModificationDateKey]
+        guard let folders = try? manager.contentsOfDirectory(at: root, includingPropertiesForKeys: keys,
+                                                             options: [.skipsHiddenFiles]) else { return [] }
+        return folders.compactMap { folder in
+            guard folder.lastPathComponent != directory.lastPathComponent,
+                  (try? folder.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true,
+                  manager.fileExists(atPath: folder.appending(path: Self.storeName).path) else { return nil }
+            let files = (try? manager.contentsOfDirectory(at: folder, includingPropertiesForKeys: keys)) ?? []
+            let changed = files.compactMap { try? $0.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate }
+                .max() ?? .distantPast
+            return (folder, changed)
+        }
     }
 }

@@ -76,9 +76,6 @@ struct SupportMessage: Encodable, Equatable, Sendable {
     /// How long the message is for the server's limit.
     static func length(_ text: String) -> Int { trimmed(text).unicodeScalars.count }
 
-    /// Whether a text can be sent as it is: something written, and not over the limit.
-    static func isSendable(_ text: String) -> Bool { (1...maxLength).contains(length(text)) }
-
     /// - Parameters:
     ///   - token: the Empire login; the message names its account (`EmpireToken.accountID`), as the server requires.
     init(kind: SupportKind, text: String, token: String, app: EmpireAppIdentity, device: SupportDevice,
@@ -94,6 +91,66 @@ struct SupportMessage: Encodable, Equatable, Sendable {
         appVersion = String(device.appVersion.prefix(Self.maxVersionLength))
         system = String(device.system.prefix(Self.maxSystemLength))
         self.language = language.code
+    }
+}
+
+/// One message for "Contact & support" without a login: the second path, only for an app that works without an account
+/// (Aresium; every other app always has a login and sends a `SupportMessage`). As the account server's open `contact`
+/// collection takes it (`POST /api/collections/contact/records`, which the website's contact form uses too;
+/// ares-empire accounts/pb_migrations/1793200000_contact.js, mailed to Patrik by pb_hooks/contact.pb.js): an email to
+/// answer to, an optional name, the message with a short footer naming the app, the phone and the topic (the collection
+/// has no fields for them), the language, and the honeypot `website`, always empty (any text in it is refused).
+struct ContactMessage: Encodable, Equatable, Sendable {
+    let name: String
+    let email: String
+    let message: String
+    let language: String
+    let website: String
+
+    /// The server's limits: the whole message (with the footer) at most 5,000 characters, the name at most 100.
+    static let maxLength = SupportMessage.maxLength
+    static let maxNameLength = 100
+
+    enum Invalid: Error, Equatable { case empty, tooLong, email }
+
+    /// - Parameters:
+    ///   - text: what the person wrote; the footer is added below it.
+    ///   - email: where Patrik answers; it must look like an email address.
+    ///   - name: optional; cut to the server's limit.
+    init(kind: SupportKind, text: String, email: String, name: String, app: EmpireAppIdentity, device: SupportDevice,
+         language: AppLanguage = .current) throws(Invalid) {
+        let written = SupportMessage.trimmed(text)
+        guard !written.isEmpty else { throw .empty }
+        let footer = Self.footer(kind: kind, app: app, device: device)
+        guard written.unicodeScalars.count <= Self.maxTextLength(footer: footer) else { throw .tooLong }
+        let email = AccountInput.trimmedEmail(email)
+        guard AccountInput.looksLikeEmail(email) else { throw .email }
+        self.name = String(name.trimmingCharacters(in: .whitespacesAndNewlines).prefix(Self.maxNameLength))
+        self.email = email
+        message = written + "\n\n" + footer
+        self.language = language.code
+        website = ""
+    }
+
+    /// "— Aresium 1.0 (12) · iOS 27.0 · iPhone · Problem": the app, its version, the phone and the topic, in English (for
+    /// Patrik, like the `feedback` emails' words).
+    static func footer(kind: SupportKind, app: EmpireAppIdentity, device: SupportDevice) -> String {
+        "— \(app.name) \(device.appVersion) · \(device.system) · \(kind.englishName)"
+    }
+
+    /// How long the written text may be, so that it and the footer stay within the server's limit.
+    static func maxTextLength(footer: String) -> Int { maxLength - 2 - footer.unicodeScalars.count }
+}
+
+extension SupportKind {
+    /// The topic as the `feedback` emails name it (accounts/pb_hooks/feedback.pb.js), for the contact message's footer.
+    var englishName: String {
+        switch self {
+        case .problem: "Problem"
+        case .idea: "Idea"
+        case .question: "Question"
+        case .other: "Other"
+        }
     }
 }
 

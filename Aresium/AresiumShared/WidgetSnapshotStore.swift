@@ -36,11 +36,13 @@ nonisolated struct WidgetSnapshotStore {
 
     func load() -> WidgetSnapshot? { read().snapshot }
 
-    /// The widgets check at every use, including quick snapshots and category pickers. Old files without an account
-    /// are discarded too; nil must never match a missing marker.
-    func readForCurrentLogin(in defaults: UserDefaults? = EmpireShared.defaults) -> ReadResult {
+    /// The snapshot the widgets may show; they check at every use, including quick snapshots and category pickers.
+    /// Phone mode's numbers belong to the iPhone and are shown whoever is logged in. Server mode's are shown only while
+    /// their account is the saved login's (the central logout); on a mismatch, or for an old file naming no account,
+    /// the file is deleted. Nil must never match a missing marker.
+    func readShown(in defaults: UserDefaults? = EmpireShared.defaults) -> ReadResult {
         let result = read()
-        guard case .snapshot(let snapshot) = result else { return result }
+        guard case .snapshot(let snapshot) = result, !snapshot.phone else { return result }
         guard let account = LoginMarker.account(in: defaults), snapshot.account == account else {
             try? delete()
             return .missing
@@ -67,5 +69,17 @@ nonisolated struct WidgetSnapshotStore {
 
     func saveRedMode(_ red: Bool) throws {
         try JSONEncoder().encode(red).write(to: file("widget-red-mode.json"), options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+    }
+
+    /// Whether Aresium's lock is on: the widgets then show no numbers, only that Aresium is locked, and the app keeps
+    /// none here (`WidgetSnapshotPublisher`). Off when nothing is saved.
+    var isLocked: Bool {
+        guard let url = try? file("widget-locked.json"), let data = try? Data(contentsOf: url),
+              let locked = try? JSONDecoder().decode(Bool.self, from: data) else { return false }
+        return locked
+    }
+
+    func saveLocked(_ locked: Bool) throws {
+        try JSONEncoder().encode(locked).write(to: file("widget-locked.json"), options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
     }
 }

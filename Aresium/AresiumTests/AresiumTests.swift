@@ -196,15 +196,16 @@ struct AresiumTests {
         #expect(session.token == nil)
     }
 
-    /// The login is saved for all Empire apps (it is valid), but Aresium itself stays closed for this account.
-    @Test func accountWithoutAresiumAccessKeepsSharedLoginButIsDenied() async {
+    /// Aresium works without an account (brief 22): a login without its service is saved for all Empire apps and opens
+    /// Aresium all the same (phone mode); it is never the no-access screen.
+    @Test func accountWithoutAresiumOpensItAllTheSame() async {
         let storage = MemoryTokenStorage()
         let response = Data(#"{"token":"fictional-token","record":{"id":"fictional-user","approved":true,"services":["empire"]}}"#.utf8)
         let session = EmpireSession(app: .aresium, storage: storage, client: EmpireAuthClient(transport: FakeTransport(data: response)))
         await session.login(email: "fictional@example.invalid", password: "fictional-password")
         #expect(storage.token == "fictional-token")
-        #expect(session.isDenied && !session.isSignedIn)
-        #expect(session.error == "This account has no access to Aresium.")
+        #expect(!session.isDenied && session.isSignedIn && session.error == nil && !session.canAskForAccess)
+        #expect(EmpireAppIdentity.aresium.accountOptional && !EmpireAppIdentity.arestemis.accountOptional)
     }
 
     @Test func failedReloadPreservesStaleDashboard() async throws {
@@ -771,7 +772,8 @@ struct AresiumTests {
     }
 
     /// 403 from the account server's refresh: the login itself is gone, everywhere. 503: keep everything, retry.
-    /// 200 without the `aresium` service: the shared login stays (other Empire apps), Aresium forgets its data.
+    /// 200 without the `aresium` service: the login stays and Aresium is not closed (it works without an account; its
+    /// mode follows the services, `ModeStore`).
     @Test(arguments: [403, 503, 200])
     func revokedOrUnavailableRestoreHandlesSavedSessionAndWidget(status: Int) async throws {
         let storage = MemoryTokenStorage()
@@ -799,10 +801,8 @@ struct AresiumTests {
             #expect(!session.needsRestoreRetry)
             #expect(session.error == "Aresium access revoked")
         default:
-            #expect(storage.token == "fictional-new")
-            #expect(session.isDenied && !session.isSignedIn)
-            #expect(store.widgetPublisher.store.load() == nil)
-            #expect(session.error == "This account has no access to Aresium.")
+            #expect(storage.token == "fictional-new" && session.services == ["empire"])
+            #expect(!session.isDenied && session.isSignedIn && session.error == nil)
         }
     }
 

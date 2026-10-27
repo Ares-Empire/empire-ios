@@ -27,8 +27,8 @@ private struct TileRowDivider: View {
 
 // MARK: - the mode
 
-/// While the account's mode is asked, when it cannot be asked the first time, or when the phone's store did not open: a
-/// calm centred state (a mark in a thin circle, as `CalmDone`) with Try again.
+/// While the phone's store opens (a moment at launch), or when it did not open: a calm centred state (a mark in a thin
+/// circle, as `CalmDone`) with Try again.
 struct ModeStatusScreen: View {
     let modes: ModeStore
     let palette: Palette
@@ -36,9 +36,6 @@ struct ModeStatusScreen: View {
     var body: some View {
         Group {
             switch modes.state {
-            case .needsConnection:
-                state(symbol: "wifi.slash", title: Text("Aresium needs a connection the first time"),
-                      text: Text("After that, your data on this iPhone works without one."))
             case .failed(let message):
                 state(symbol: "exclamationmark", title: Text("Aresium could not open your data"),
                       text: Text(verbatim: message))

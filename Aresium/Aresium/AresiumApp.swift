@@ -3,10 +3,17 @@ import SwiftUI
 @main
 struct AresiumApp: App {
     @UIApplicationDelegateAdaptor(InboxLaunchDelegate.self) private var launchDelegate
+    /// The lock and its window, one per launch: a language restart builds the screens again but keeps them (it is no
+    /// new launch, so it does not lock).
+    @State private var lockWindow: LockWindow
 
-    init() { AppFont.register() }
+    init() {
+        AppFont.register()
+        _lockWindow = State(initialValue: LockWindow(lock: AppLock.forLaunch()))
+    }
+
     var body: some Scene {
-        WindowGroup { AppRoot(widget: .aresium) { ContentView() } }
+        WindowGroup { AppRoot(widget: .aresium) { ContentView(lockWindow: lockWindow) } }
     }
 }
 

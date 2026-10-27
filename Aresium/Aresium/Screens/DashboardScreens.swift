@@ -86,7 +86,8 @@ private struct StartPage: View {
                     }.padding(.horizontal, 18).padding(.top, 6).padding(.bottom, 8)
                     LazyVStack(spacing: 0) {
                         ForEach(rows) { row in
-                            Button { pick(DashboardRoute(category: row.category.name, side: side)) } label: {
+                            // Current: this month's payments of the category at once; Overview: its months.
+                            Button { pick(store.route(category: row.category.name, side: side, current: current)) } label: {
                                 ValueRow(title: row.category.shownName, category: row.category, total: row.total,
                                          maximum: rows.map(\.total).max() ?? 0, palette: palette)
                             }.buttonStyle(.plain)

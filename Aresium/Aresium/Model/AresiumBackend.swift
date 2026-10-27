@@ -1,7 +1,8 @@
 import Foundation
 
-/// Which mode an account uses (`GET /api/mode`, aresium/docs/API-DATA.md → Mode): Patrik's accounts keep their data on
-/// the server; everyone else's stays on their iPhone and the shared engine computes there.
+/// Which mode Aresium is in: phone mode (the default, no account needed: the data stays on this iPhone and the shared
+/// engine computes there), or server mode for an account the Aresium server keeps the data of (`GET /api/mode`,
+/// aresium/docs/API-DATA.md → Mode: Patrik's owner list).
 nonisolated enum AresiumMode: String, Codable, Sendable {
     case server, phone
 }
@@ -74,8 +75,6 @@ enum ImportFileResult {
 @MainActor
 protocol AresiumBackend: AnyObject {
     var mode: AresiumMode { get }
-    /// Phone mode: the account whose store this is (the widget snapshot names it). Server mode: nil (the session's).
-    var account: String? { get }
     /// Whether requests can be made now: the server needs the login; the phone's store is there while it is open.
     func isReady(_ session: EmpireSession) -> Bool
 
@@ -102,7 +101,6 @@ final class ServerBackend: AresiumBackend {
     init(client: APIClient = APIClient()) { self.client = client }
 
     var mode: AresiumMode { .server }
-    var account: String? { nil }
     func isReady(_ session: EmpireSession) -> Bool { session.isSignedIn && session.token != nil }
 
     func dashboard(auth: BackendAuth) async throws -> Dashboard {

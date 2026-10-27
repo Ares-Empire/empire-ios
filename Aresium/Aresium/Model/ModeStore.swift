@@ -5,61 +5,67 @@ import os
 extension APIClient {
     /// `GET /api/mode` (aresium/docs/API-DATA.md → Mode): which mode this account uses. The only route a phone-mode
     /// account may call; it stores and logs nothing about the account.
-    func mode(token: String, onUnauthorized: () -> Void) async throws -> AresiumMode {
+    func mode(token: String) async throws -> AresiumMode {
         var request = URLRequest(url: baseURL.appendingPathComponent("api/mode"))
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.timeoutInterval = 30
         let (data, response) = try await transport.send(request)
-        try checkResponse(response, data: data, onUnauthorized: onUnauthorized)
+        try checkResponse(response, data: data, onUnauthorized: {})
         return try decodeAnswer(ModeAnswer.self, from: data, answer: "GET /api/mode").mode
     }
 }
 
 private nonisolated struct ModeAnswer: Decodable { let mode: AresiumMode }
 
-/// Which mode the app is in, and the backend that goes with it.
+/// Which mode the app is in, and the backend that goes with it (Patrik, 2026-10-27: Aresium needs no account).
 ///
-/// After a login (and at every session start: a launch, a login picked up from another app) the app asks
-/// `GET /api/mode` once and remembers the answer per account id in the app's defaults. A remembered mode is used at once,
-/// so phone mode works without a connection; the answer then only updates it. Unknown and offline: a calm line with Try
-/// again. Phone mode opens the account's own store (`PhoneStorage`); logging out closes it (nothing is shown, nothing
-/// deleted), the same account logging in opens it again, another account gets its own. The data is deleted only by
-/// `deleteLocalData` (Leave Aresium, Delete Ares account, Settings → Delete Aresium data on this iPhone).
+/// - **Phone mode** is Aresium: the phone's one store (`PhoneStorage`), opened at launch without asking anyone. No login
+///   is needed, and none changes it: logging in or out, here or in another Ares app, never closes or deletes it.
+/// - **Server mode** is for the owner list only, through the shared Ares login: while a login whose account has the
+///   Aresium service exists, the app asks `GET /api/mode` once per session and remembers the answer per account id in
+///   the app's defaults. `server` → today's server dashboard; anything else (`phone`, 401, 403, an error, offline without
+///   a remembered answer) → phone mode. A remembered `server` works offline, also at launch before the login is renewed.
+///   When that login ends (a logout here or in another app, the central logout's marker, the server's 403), the app goes
+///   back to phone mode: the server's dashboard and its widget numbers go (`DashboardStore`), the phone's store is
+///   untouched.
+///
+/// The phone's data is deleted only by `deleteLocalData` (Settings → "Delete Aresium data on this iPhone", the lock's
+/// "Forgot the code?").
 @MainActor @Observable
 final class ModeStore {
     enum State: Equatable {
-        /// No session: the login (or the no-access panel) shows.
-        case signedOut
-        /// Asking `GET /api/mode` for an account whose mode is not known yet.
-        case asking
-        /// The mode is not known and the server could not be asked: "Aresium needs a connection the first time".
-        case needsConnection
-        /// Phone mode's store could not be opened.
+        /// The phone's store is opening (at launch, and after its data was deleted).
+        case opening
+        /// The phone's store did not open.
         case failed(String)
+        /// Phone mode, on the phone's own store.
+        case phone
+        /// Server mode, on the owner's login.
         case server
-        /// Phone mode, with the account's own store.
-        case phone(String)
     }
 
-    private(set) var state: State = .signedOut
-    /// The open phone store's backend (phone mode only).
-    private(set) var phone: PhoneBackend?
-    /// Phone mode on the saved login while the account server could not be asked at launch (offline): the login's
-    /// account comes from the shared marker, and the store closes when the marker names someone else.
-    private(set) var isOffline = false
+    private(set) var state: State
+    /// The phone's own store, once opened. It stays open in server mode, so going back is instant.
+    private(set) var local: PhoneBackend?
 
     let session: EmpireSession
     let dashboard: DashboardStore
     @ObservationIgnored private let client: APIClient
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let markerDefaults: UserDefaults?
-    @ObservationIgnored let storage: PhoneStorage
+    @ObservationIgnored private(set) var storage: PhoneStorage
     @ObservationIgnored private let makeEngine: () throws -> AresiumEngine
     @ObservationIgnored private var engine: AresiumEngine?
+    /// The opening of the phone's store under way, so every caller waits for the same one.
+    @ObservationIgnored private var opening: Task<PhoneBackend, Error>?
+    /// Counts deletions of the phone's store, so an opening that started before one is not used.
+    @ObservationIgnored private var storeGeneration = 0
+    /// The account server mode shows; before the login is renewed (offline at launch) it comes from the shared marker.
+    @ObservationIgnored private var serverAccount: String?
     /// The session generation whose mode was asked (once per session).
     @ObservationIgnored private var askedGeneration: Int?
-    /// Counts opening attempts, so a store that opens after a logout is not used.
-    @ObservationIgnored private var openID = 0
+    /// Counts switches, so a slow opening of the phone's store does not undo a later switch to the server.
+    @ObservationIgnored private var switchID = 0
     @ObservationIgnored private var fixed = false
     private static let log = Logger(subsystem: "de.ares-empire.aresium", category: "mode")
 
@@ -76,12 +82,20 @@ final class ModeStore {
         self.markerDefaults = markerDefaults
         self.storage = storage
         self.makeEngine = makeEngine
-        // Logout or no access: the phone's store closes; its data stays.
-        session.onAppDataReset { [weak self] in self?.close() }
+        // The saved login's account was in server mode: start there, so the phone's screens never show in between.
+        if let account = LoginMarker.account(in: markerDefaults), defaults.string(forKey: Self.key(for: account)) == AresiumMode.server.rawValue {
+            state = .server
+            serverAccount = account
+            dashboard.use(ServerBackend(client: client))
+        } else {
+            state = .opening
+        }
+        // The login ended or the server refused it: back to the phone's store.
+        session.onAppDataReset { [weak self] in self?.loginEnded() }
     }
 
-    /// The app shows Aresium's screens (not the login): a mode is known, being asked, or missing a connection.
-    var showsApp: Bool { state != .signedOut }
+    /// Phone mode's store, nil in server mode (Settings' and the first run's phone screens).
+    var phone: PhoneBackend? { state == .phone ? local : nil }
 
     // MARK: remembered modes
 
@@ -97,162 +111,203 @@ final class ModeStore {
 
     // MARK: following the session
 
+    /// At launch: opens the phone's store at once (unless the saved login starts in server mode). Nothing waits for a
+    /// login or the network.
+    func start() async {
+        guard !fixed, state == .opening else { return }
+        await showPhone()
+    }
+
     /// Brings the mode in line with the session: call at launch (after the saved login was restored), whenever the
-    /// session changes, and on coming to the foreground.
+    /// session or the account's services change, and on coming to the foreground. Asks `GET /api/mode` once per
+    /// session for a login whose account has Aresium.
     func update() async {
-        guard !fixed else { return }
-        if session.isSignedIn, let account = session.accountID {
-            isOffline = false
-            let generation = session.generation
-            if let mode = remembered(for: account) { await apply(mode, account: account) }
-            else if state != .asking { close(); state = .asking }
-            guard askedGeneration != generation else { return }
-            askedGeneration = generation
-            await ask(account: account, generation: generation)
-        } else if session.token == nil, session.needsRestoreRetry, let account = LoginMarker.account(in: markerDefaults),
-                  remembered(for: account) == .phone {
-            // Offline at launch with a saved login of a phone-mode account: its data is on this iPhone.
-            isOffline = true
-            await apply(.phone, account: account)
-        } else if state != .signedOut {
-            close()
-        }
+        guard !fixed, !session.isRestoring else { return }
+        if let account = wantedServerAccount() { await showServer(account) } else { await showPhone() }
+        guard session.token != nil, let account = session.accountID, hasAresium,
+              askedGeneration != session.generation else { return }
+        askedGeneration = session.generation
+        await ask(account: account, generation: session.generation)
     }
 
-    /// "Try again" after "Aresium needs a connection the first time" (or a store that did not open).
+    /// "Try again" when the phone's store did not open.
     func retry() async {
-        askedGeneration = nil
-        if case .failed = state { state = .asking }
-        await update()
+        guard case .failed = state else { return }
+        state = .opening
+        await showPhone()
     }
 
-    /// On coming to the foreground, before anything async: phone mode on the saved login (offline) closes when another
-    /// app logged out or another account logged in meanwhile.
+    /// On coming to the foreground, before anything async: server mode on a saved login that could not be renewed yet
+    /// (offline at launch) ends when another app logged out or another account logged in meanwhile.
     func followMarker() {
-        guard isOffline, case .phone(let account) = state, LoginMarker.account(in: markerDefaults) != account else { return }
-        Self.log.notice("the offline phone store closes: the saved login changed")
-        close()
+        guard !fixed, state == .server, session.token == nil, let serverAccount,
+              LoginMarker.account(in: markerDefaults) != serverAccount else { return }
+        Self.log.notice("server mode ends: the saved login changed in another app")
+        dashboard.clear()
+        Task { await showPhone() }
+    }
+
+    /// The login's account may use Aresium's server at all (its service; it is never asked otherwise).
+    private var hasAresium: Bool { !session.isDenied && session.services.contains(session.app.service) }
+
+    /// The account server mode should show now, or nil for phone mode.
+    private func wantedServerAccount() -> String? {
+        if session.token != nil, let account = session.accountID {
+            return hasAresium && remembered(for: account) == .server ? account : nil
+        }
+        // Offline at launch with a saved login of a server-mode account: its server mode, until the login is renewed.
+        if session.needsRestoreRetry, let account = LoginMarker.account(in: markerDefaults),
+           remembered(for: account) == .server {
+            return account
+        }
+        return nil
     }
 
     private func ask(account: String, generation: Int) async {
         guard let token = session.token else { return }
+        let answer: AresiumMode
         do {
-            let mode = try await client.mode(token: token) {
-                self.session.handleAuthFailure(HTTPError.unauthorized, generation: generation, token: token)
-            }
-            // Only for the session that asked, while it may still use Aresium (a stale remembered mode can have closed
-            // the app meanwhile: a 403 from the server's data).
-            guard generation == session.generation, session.isSignedIn, session.accountID == account else { return }
-            remember(mode, for: account)
-            await apply(mode, account: account)
+            answer = try await client.mode(token: token)
+        } catch HTTPError.unauthorized {
+            // The login itself is refused: it ends everywhere (the session's rule), and phone mode follows.
+            session.handleAuthFailure(HTTPError.unauthorized, generation: generation, token: token)
+            return
         } catch {
-            guard generation == session.generation else { return }
-            session.handleAuthFailure(error, generation: generation, token: token)    // 401 logs out, 403 closes the app
-            guard generation == session.generation, session.isSignedIn else { return }
-            // Known: the remembered mode stays. Unknown: say a connection is needed, and ask again on Try again.
-            if remembered(for: account) == nil {
-                askedGeneration = nil
-                state = .needsConnection
-            }
-        }
-    }
-
-    private func apply(_ mode: AresiumMode, account: String) async {
-        switch mode {
-        case .server:
-            closePhone()
-            if !(dashboard.backend is ServerBackend) { dashboard.use(ServerBackend(client: client)) }
-            if state != .server {
-                state = .server
-                await dashboard.reload()
-            }
-        case .phone:
-            if let phone, phone.account == account {
-                state = .phone(account)
+            if Self.refusesAccount(error) {
+                answer = .phone                     // the server keeps no data for this account
+            } else {
+                // Offline or the server is down: the remembered mode stays (none: phone mode); the next foreground asks
+                // again.
+                if generation == session.generation { askedGeneration = nil }
                 return
             }
-            closePhone()
-            openID += 1
-            let id = openID
-            if state != .asking, state != .needsConnection { state = .asking }
-            do {
-                let backend = try await open(account: account)
-                guard id == openID else { return }
-                phone = backend
-                dashboard.use(backend)
-                state = .phone(account)
-                await dashboard.reload()
-            } catch {
-                guard id == openID else { return }
-                Self.log.error("the phone store did not open: \(String(describing: error), privacy: .public)")
-                state = .failed(error.localizedDescription)
-            }
+        }
+        guard generation == session.generation, session.accountID == account else { return }
+        remember(answer, for: account)
+        await update()
+    }
+
+    /// A 403 of any kind: this account's data is not on the server.
+    private static func refusesAccount(_ error: Error) -> Bool {
+        switch error {
+        case HTTPError.server(403, _), HTTPError.forbidden: true
+        default: false
         }
     }
 
-    private func open(account: String) async throws -> PhoneBackend {
-        let engine = try self.engine ?? makeEngine()
-        self.engine = engine
+    /// The session ended its login here (a logout anywhere, the marker, a refused login) or the server refused this
+    /// account: server mode ends; phone mode goes on as it is.
+    private func loginEnded() {
+        askedGeneration = nil
+        guard !fixed, state == .server else { return }
+        if session.isDenied, let serverAccount { remember(.phone, for: serverAccount) }
+        Self.log.notice("server mode ends with its login")
+        Task { await showPhone() }
+    }
+
+    // MARK: switching
+
+    private func showServer(_ account: String) async {
+        switchID += 1
+        serverAccount = account
+        state = .server
+        if !(dashboard.backend is ServerBackend) { dashboard.use(ServerBackend(client: client)) }
+        if dashboard.dashboard == nil { await dashboard.reload() }
+    }
+
+    private func showPhone() async {
+        serverAccount = nil
+        if state == .phone, let local, dashboard.backend === local { return }
+        switchID += 1
+        let id = switchID
+        if dashboard.backend is ServerBackend {
+            dashboard.clear()                       // the server's dashboard and its widget numbers
+            dashboard.use(nil)
+        }
+        if local == nil { state = .opening }
+        do {
+            let backend = try await openLocal()
+            guard id == switchID else { return }
+            state = .phone
+            dashboard.use(backend)
+            await dashboard.reload()
+        } catch {
+            guard id == switchID else { return }
+            Self.log.error("the phone's store did not open: \(String(describing: error), privacy: .public)")
+            state = .failed(error.localizedDescription)
+        }
+    }
+
+    /// The phone's store, opened once (off the main actor, so the store's work runs on its own).
+    private func openLocal() async throws -> PhoneBackend {
+        if let local { return local }
+        if let opening { return try await opening.value }
         let storage = storage
-        // Off the main actor, so the store's work runs on its own.
-        let ledger = try await Task.detached { try storage.open(account: account) }.value
-        let backend = PhoneBackend(account: account, ledger: ledger, engine: engine)
-        try await backend.load()
+        let generation = storeGeneration
+        let task = Task { () throws -> PhoneBackend in
+            let engine = try self.engine ?? self.makeEngine()
+            self.engine = engine
+            let ledger = try await Task.detached { try storage.open() }.value
+            let backend = PhoneBackend(ledger: ledger, engine: engine)
+            try await backend.load()
+            return backend
+        }
+        opening = task
+        let backend: PhoneBackend
+        do { backend = try await task.value } catch {
+            if generation == storeGeneration { opening = nil }
+            throw error
+        }
+        // The store was deleted while it opened: this one is gone.
+        guard generation == storeGeneration else { throw CancellationError() }
+        opening = nil
+        local = backend
         return backend
-    }
-
-    /// Closes the phone store (if one is open) and goes back to no mode. Nothing is deleted.
-    func close() {
-        closePhone()
-        openID += 1
-        isOffline = false
-        dashboard.use(nil)
-        state = .signedOut
-    }
-
-    private func closePhone() {
-        guard phone != nil else { return }
-        phone = nil
-        if dashboard.backend is PhoneBackend { dashboard.use(nil) }
     }
 
     // MARK: deleting the phone's data
 
-    /// Deletes the phone store of the account in use, and the widget's numbers with it. Leave Aresium and Delete Ares
-    /// account run it after the server said yes (`SettingsApp.localData`, `reopen: false`: the app closes right after);
-    /// Settings → "Delete Aresium data on this iPhone" with `reopen: true`, and the same account starts again with an
-    /// empty store.
-    func deleteLocalData(reopen: Bool) async throws {
-        let account: String?
-        if case .phone(let open) = state { account = open } else { account = session.accountID }
-        let wasOpen = phone != nil
-        closePhone()
-        openID += 1
-        if let account {
-            try storage.delete(account: account)
-            Self.log.notice("the phone store was deleted")
+    /// Deletes the phone's store, and the widget's numbers when they are the phone's; an empty store opens in its place.
+    /// Settings → "Delete Aresium data on this iPhone" and the lock's "Forgot the code?" run it; nothing else does.
+    func deleteLocalData() async throws {
+        let shown = state != .server
+        switchID += 1
+        storeGeneration += 1
+        opening = nil
+        local = nil
+        if dashboard.backend is PhoneBackend { dashboard.use(nil) }
+        if shown { state = .opening }
+        try storage.delete()
+        Self.log.notice("the phone's store was deleted")
+        if shown {
+            do { try dashboard.widgetPublisher.clear() }
+            catch { Self.log.error("the widget snapshot was not deleted: \(String(describing: error), privacy: .public)") }
+            await showPhone()
         }
-        do { try dashboard.widgetPublisher.clear() }
-        catch { Self.log.error("the widget snapshot was not deleted: \(String(describing: error), privacy: .public)") }
-        guard reopen, wasOpen, let account else { return }
-        if fixed { await showFixed(try await open(account: account)) }
-        else { await apply(.phone, account: account) }
     }
 
     // MARK: samples
 
     #if DEBUG
-    /// Screenshots: shows a state as it is (`-sampleModeOffline`).
+    /// Screenshots and the samples: shows a state as it is.
     func debugShow(_ state: State) { self.state = state }
+
+    /// DEBUG samples: held as they are from the start, so following the session never opens the phone's real store
+    /// (`-sampleData`: the server's bundled sample; `-samplePhone`: its made-up store comes with `showFixed`).
+    func holdForSample(server: Bool) {
+        fixed = true
+        state = server ? .server : .opening
+    }
     #endif
 
-    /// DEBUG `-samplePhone`: phone mode without a login or network, on a store of its own.
-    func showFixed(_ backend: PhoneBackend) async {
+    /// DEBUG `-samplePhone`: phone mode without a login or network, on a made-up store in a folder of its own (deleting
+    /// its data deletes only that).
+    func showFixed(_ backend: PhoneBackend, storage: PhoneStorage) async {
         fixed = true
-        phone = backend
+        self.storage = storage
+        local = backend
         dashboard.use(backend)
-        state = .phone(backend.account ?? "")
+        state = .phone
         await dashboard.reload()
     }
-
 }

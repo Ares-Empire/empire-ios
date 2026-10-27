@@ -52,7 +52,6 @@ nonisolated enum ImportWording {
 /// categories, the merchant question, layouts, export and restore.
 @MainActor @Observable
 final class PhoneBackend: AresiumBackend {
-    let account: String?
     @ObservationIgnored let ledger: PhoneLedger
     @ObservationIgnored let engine: AresiumEngine
     /// What the store holds, for the first run and Settings; refreshed after every change.
@@ -61,8 +60,7 @@ final class PhoneBackend: AresiumBackend {
     /// Today as `YYYY-MM-DD` for the dashboard (tests pin it).
     @ObservationIgnored var today: () -> String = { LedgerExport.day(.now) }
 
-    init(account: String, ledger: PhoneLedger, engine: AresiumEngine) {
-        self.account = account
+    init(ledger: PhoneLedger, engine: AresiumEngine) {
         self.ledger = ledger
         self.engine = engine
     }

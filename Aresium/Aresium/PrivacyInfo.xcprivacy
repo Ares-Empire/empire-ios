@@ -27,11 +27,25 @@
 				<string>1C8F.1</string>
 			</array>
 		</dict>
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryFileTimestamp</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<!-- C617.1: files inside the app's own container. Model/PhoneStore.swift (`PhoneStorage.oldStores`) reads
+				     when an older per-account store last changed, to move the most recent one over as this iPhone's
+				     store (brief 22). -->
+				<string>C617.1</string>
+			</array>
+		</dict>
 	</array>
-	<!-- Everything is linked to the account and used only to run the app. -->
+	<!-- Used only to run the app. The account (email, name, user id) only for someone who signs in, which Aresium does not
+	     need (brief 22: only for an Aresium server of one's own); Contact & support without a login sends the email and
+	     the optional name typed into the form (the account server's `contact` collection). -->
 	<key>NSPrivacyCollectedDataTypes</key>
 	<array>
-		<!-- Email address: the Empire login (Shared/Auth), kept by the account server. -->
+		<!-- Email address: the Empire login (Shared/Auth), kept by the account server; or the address typed into Contact &
+		     support without a login (Shared/Support, `ContactMessage`), so Patrik can answer. -->
 		<dict>
 			<key>NSPrivacyCollectedDataType</key>
 			<string>NSPrivacyCollectedDataTypeEmailAddress</string>
@@ -44,7 +58,8 @@
 				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
 			</array>
 		</dict>
-		<!-- Name: optional when creating an account in the app (Shared/Auth, sign-up), kept by the account server. -->
+		<!-- Name: optional in Contact & support without a login (Shared/Support), kept by the account server. (Aresium no
+		     longer creates accounts; another Ares app's sign-up may have asked for it.) -->
 		<dict>
 			<key>NSPrivacyCollectedDataType</key>
 			<string>NSPrivacyCollectedDataTypeName</string>

@@ -152,7 +152,11 @@ server's `feedback` collection, which emails Patrik), About (Privacy and Imprint
 "in all Ares apps on this iPhone", which does what the app's log-out did before; then, in the hub's soft red, Leave
 <app> and Delete Ares account: pages in `Shared/Design/AccountScreens.swift`, see "Accounts in every app" below). An app
 whose server keeps data per account passes its `DELETE …/me` as `SettingsApp(serverData:)` (today only Arestemis:
-`ArestemisAPI.accountDataURL`); leaving deletes it there first. Links: `Shared/Settings/SettingsInfo.swift`. Every
+`ArestemisAPI.accountDataURL`); leaving deletes it there first. An app that works without an account
+(`EmpireAppIdentity.accountOptional`, only Aresium, brief 22) shows, while no Ares app is logged in, a quiet "Ares
+account" section last instead: Sign in (`Shared/Design/SignInSheet.swift`, the login without Create account) and the
+app's line `SettingsApp(signInNote:)`; signed in, the account section as everywhere (Leave <app> only while the account
+has the app). Screenshots: `-openSignIn`, `-openSupport`. Links: `Shared/Settings/SettingsInfo.swift`. Every
 login screen ends with "Privacy · Imprint" (`LoginScroll`). Screenshots: `-sampleData -openSheet settings` in every app
 (`-scrollToAccount` shows the Account section; `-openFonts` the Fonts & licences page, `-openLicence <name>` one of the
 app's own licences). A new app: a gear in its header and `SettingsScreen` in a sheet. The
@@ -218,7 +222,8 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
    server; Patrik's own stays on the server for aresium.de). Its section in the privacy policy says so before it opens.
    Plan: `ares-empire/docs/ARESIUM-FOR-OTHERS.md`. **Phone mode is built** (briefs 15 and 18, 2026-10-27; "Aresium phone
    mode" under Setup state): data, engine, imports, categories, sorting, the screens in both languages; logout keeps the
-   data. Before it opens (plan part 7): the privacy policy's Aresium section, the App Store information, external
+   data. **No account needed** (brief 22, 2026-10-27): it opens without a login on the phone's one store, with an
+   optional lock (Face ID and/or an own code); the login is only for Patrik's server mode. Before it opens (plan part 7): the privacy policy's Aresium section, the App Store information, external
    TestFlight, then `open` in the hub catalog.
 6. **Push, once Apple approves** (`ares-empire/docs/PUSH.md` → Operating): create the APNs key (.p8) in the developer
    portal, put it on the server, set `APNS_KEY_ID`/`APNS_TEAM_ID`, restart `empire-push`; enable the Push Notifications
@@ -263,8 +268,9 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   Apple ID could install on the phone, but those builds stop opening after 7 days, so we don't use it).
 - Xcode project `Aresium/Aresium.xcodeproj` (2026-10-23): app + tests, folder-synchronized groups (new Swift
   files need no `project.pbxproj` edits), bundle id `de.ares-empire.aresium`, iOS 26+. Signing team: set to the
-  paid team once approved. Launch argument `-sampleData` skips login and shows the bundled sample
-  (`-scrollToEnd`: the start screen at its band).
+  paid team once approved. Launch argument `-sampleData` shows the server's bundled sample (`-scrollToEnd`: the start
+  screen at its band); every sample runs on `SampleAccount`'s made-up account server, signed out
+  (`-sampleSignedIn`: signed in).
 - Test fixtures `AresiumTests/server-dashboard.sample.json` + `.expected.json`: the Aresium server's sample and
   the website's answers for it. When `/api/data` changes: `npm run sample` in aresium, then
   `node scripts/aresium-fixtures.mjs`.
@@ -279,7 +285,9 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   Group `group.de.ares-empire.shared` (deleted by iOS only with the last Empire app). Rules in
   `Shared/Auth/EmpireSession.swift`: an invalid login (401, refresh refused) logs out everywhere; an account without
   this app's service, or a 403 from the app's server, closes only this app (`access = .denied`, the app forgets its
-  data via `onAppDataReset`); a failed new login never ends an existing one. A refusal counts only for the login it
+  data via `onAppDataReset`); a failed new login never ends an existing one. **Aresium works without it** (Patrik,
+  2026-10-27, brief 22; `EmpireAppIdentity.aresium.accountOptional`): no login screen; any login, or none, opens it, a
+  login without the `aresium` service is not denied, and only its server's 403 denies (which means phone mode there). A refusal counts only for the login it
   was made with: every caller passes the token it sent (`handleAuthFailure(_:generation:token:)`), so a late 401 for
   an older token (one renewed or replaced in another app) changes nothing, and a 401 deletes the saved login only
   while it is still the refused token (council 2026-10-25). Only a 403 with the code `no_access`, or none, closes the
@@ -311,8 +319,8 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   through Safari.
 - **Accounts in every app** (2026-10-25, brief F2; contract `docs/build-2026-10-25/briefs/F-accounts-contract.md`,
   server side `ares-empire/docs/ACCOUNTS.md` → Accounts in every app): one Ares account, made and run from any app.
-  The login (`AresLogin` in `Shared/Design/ProvinceLogin.swift`, used by the provinces and the Empire app; Aresium's
-  `LoginScreen` uses the same pieces) says "One Ares account for all Ares apps" and offers Create account (email,
+  The login (`AresLogin` in `Shared/Design/ProvinceLogin.swift`, used by the provinces and the Empire app; Aresium has
+  no login screen since brief 22, only Settings' `SignInSheet` from the same pieces) says "One Ares account for all Ares apps" and offers Create account (email,
   password twice, optional name; asks for this app's service, sends the app's language; then "confirm your email,
   Patrik approves, an email follows") and Forgot password? (sheets, `Shared/Design/AccountSheets.swift`). Its error
   names an account not confirmed or approved yet too. An account without this app sees the no-access panel
@@ -321,7 +329,8 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   again with the new password at once and saves that login for all apps; while it does, a 401 of an older request is
   no logout, `EmpireSession.isChangingPassword`; if that login fails the page offers Try again, and leaving it logs out
   with a line), Leave <app> (the app's server data first, then `POST /api/empire/leave`; the session then closes this
-  app like a denied one: its data on the phone and its push device go, the login stays), Delete Ares account (password
+  app like a denied one: its data on the phone and its push device go, the login stays; Aresium is not closed and its
+  data on the iPhone stays, it only loses server mode), Delete Ares account (password
   checked with a login first, then a confirmation, then `DELETE` with that login; logged out everywhere with a calm
   line, `EmpireSession.notice`). Logic in `Shared/Auth/EmpireAccountClient.swift` (calls, PocketBase errors → one line,
   `AccountFailure`) and `AccountForms.swift` (one model per action, on the session's transport); tests in
@@ -374,7 +383,13 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   (`ares-empire/docs/ACCOUNTS.md` → Contact & support). Logic in `SupportForm`/`SupportMessage`/`SupportAPI` (tests in
   `EmpireTests/SupportTests`); a 401 logs out, a 429 says "too many", a 403 never closes the app; sample mode only
   pretends. Screenshots (DEBUG, any app showing the sheet): `-supportKind <kind>`, `-supportText <text>`,
-  `-supportPhase sending|sent|offline|tooMany|loggedOut|other`.
+  `-supportPhase sending|sent|offline|tooMany|loggedOut|other|invalidEmail`, `-supportEmail <text>`. **Without a login**
+  (brief 22, only an app that works without an account, Aresium; `SupportForm.sendsWithoutLogin`): the form also asks
+  for an email to answer to and an optional name, and posts a `ContactMessage` without a token to the account server's
+  open `contact` collection (the website's form's; `name`, `email`, `message` with the footer "— Aresium <version> ·
+  iOS … · <topic>", `language`, the empty honeypot `website`; 5 an hour per address). Tests in
+  `AresiumTests/SupportContactTests`. The account server's mail for it still says "the website's contact form"
+  (`accounts/pb_hooks/contact.pb.js`); the footer names the app.
 - **Push** (2026-10-24): `Shared/Push/` (`PushCenter`, `PushAppDelegate`, tests in `EmpireTests/PushCenterTests`)
   registers devices with the Empire push service (`ares-empire/docs/PUSH.md`; dry run until the APNs key). Wired into
   Aresus, Arestemis and the Empire app (`@UIApplicationDelegateAdaptor(PushAppDelegate.self)` in the App, `push.start`
@@ -432,40 +447,77 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   server's best matches (`GET /search`, by words and meaning; `BestMatches`: asked once typing pauses, a newer query
   cancels the older, 5 s timeout, nothing shown on failure) above the device's results; sample mode answers every
   query with `Samples/search.json`.
-- **Aresium phone mode** (2026-10-27, briefs 15 and 18; plan `ares-empire/docs/ARESIUM-FOR-OTHERS.md`): everyone but
-  Patrik keeps their Aresium data on their iPhone. After a login the app asks `GET /api/mode` once per session and
-  remembers the answer per account id (`aresium.mode.<id>` in the app's defaults); unknown and offline: "Aresium needs a
-  connection the first time" with Try again; known and offline: the remembered mode, so phone mode works without a
-  connection (`ModeStore`). Server mode is today's app on `APIClient` (`ServerBackend`); phone mode (`PhoneBackend`)
-  reads bank files, sorts and builds the same `Dashboard` with the shared engine, the server's own TypeScript
-  (`aresium/src/engine`) bundled as `Engine/aresium-engine.js` and run in JavaScriptCore (`AresiumEngine`, an actor with
-  one `JSContext`). `DashboardStore`, `TransactionDetailStore` and `ImportStore` go through `AresiumBackend` and never
-  know which. **Storage:** SwiftData per account in `Application Support/Aresium/<account id>/ledger.store`, file
-  protection complete (`PhoneLedger`, `PhoneStorage`): accounts, payments (unique by account, source and `externalId`;
-  who set the category), chosen categories, learned merchants, the CSV layouts the person confirmed. **Lifecycle:**
-  logout closes the store and deletes nothing (the same account opens it again, another account gets its own); the
-  data goes only with Leave Aresium or Delete Ares account (`SettingsApp.localData`, after the server's yes) or Settings
-  → Delete Aresium data on this iPhone. Settings → Your data on this iPhone: Categories, Export (one JSON file, schema
+- **Aresium phone mode** (2026-10-27, briefs 15, 18 and 22; plan `ares-empire/docs/ARESIUM-FOR-OTHERS.md`): everyone
+  but Patrik keeps their Aresium data on their iPhone. **No account** (Patrik, 2026-10-27, brief 22): Aresium opens in
+  phone mode on the phone's one store at once, without a login and without waiting for any server (`ModeStore.start`);
+  the first run or the dashboard. **Server mode** stays for the owner through the shared Ares login: while a login
+  whose account has the `aresium` service exists, the app asks `GET /api/mode` once per session and remembers the answer
+  per account id (`aresium.mode.<id>` in the app's defaults): `server` → today's server dashboard (`ServerBackend` on
+  `APIClient`); `phone`, 401 (logs out everywhere), 403 (remembered as phone), an error or offline without a
+  remembered answer → phone mode. A remembered `server` works offline, at launch too (the saved login's account from
+  the marker; `ModeStore` starts there, so the phone screens never flash for Patrik). When that login ends (a logout
+  here or elsewhere, the central logout's marker, the server's 403, leaving Aresium) the app goes back to phone mode:
+  the server dashboard and its widget numbers go (`DashboardStore` clears only server data), the phone's store is
+  untouched. Phone mode (`PhoneBackend`) reads bank files, sorts and builds the same `Dashboard` with the shared engine,
+  the server's own TypeScript (`aresium/src/engine`) bundled as `Engine/aresium-engine.js` and run in JavaScriptCore
+  (`AresiumEngine`, an actor with one `JSContext`). `DashboardStore`, `TransactionDetailStore` and `ImportStore` go
+  through `AresiumBackend` and never know which. **Storage:** SwiftData, one store per iPhone in `Application
+  Support/Aresium/local/ledger.store`, file protection complete (`PhoneLedger`, `PhoneStorage`): accounts, payments
+  (unique by account, source and `externalId`; who set the category), chosen categories, learned merchants, the CSV
+  layouts the person confirmed. **Moving over** (builds before 22 kept one store per account in `Aresium/<account
+  id>/`): when there is no `local/` store, the most recently changed older store (its newest file) is moved (never
+  copied) to `local/` at the first open; with several, the others stay untouched where they are (logged, category
+  `storage`). **Lifecycle:** the data belongs to the iPhone, not to a login: logging in or out, leaving Aresium and
+  deleting the Ares account never touch it; it goes only with Settings → Delete Aresium data on this iPhone or the
+  lock's "Forgot the code?". Settings → Your data on this iPhone (phone mode): Categories, Export (one JSON file, schema
   1, `Aresium-<date>.json`, through the share sheet), Restore from an export (only into an empty store, all or nothing).
-  **Screens** (`Screens/PhoneScreens.swift`, Claude's look from the dashboard's rows, `CategoryTile`/`DayTile`, and the
-  Settings pieces; ink only): the first run (what Aresium does with the data, two steps, Restore as a quiet link; it
-  ends with the band), the category picker (the default list by group, nothing ticked at first, one's own names;
-  unticking a category with payments asks where they go, Not sorted first), the column check for an unknown CSV (each
-  column's meaning as a menu, the first payments read that way, Confirm and import saves the layout), after a Switch
-  the alert "Also the other payments from <shop>?" (the count on its button), the connection state. The dashboard's
-  own "Uncategorised" (engine and server) shows as "Not sorted" in both modes and the widget through
-  `CategoryName.shown` (AresiumShared); Switch, Add, routes and links keep the real name. Settings → About → Fonts &
-  licences also lists the shop list's name-suggestion-index notice (BSD-3-Clause, `BundledLicence.shopList`, Aresium
-  only). **Engine:** `bash scripts/aresium-engine.sh` runs `npm run engine` in aresium and copies the bundle (its commit
-  in `Engine/engine-version.txt`), the engine's test files and the licence notice (`Engine/name-suggestion-index-
-  licence.txt`); the bundle is never edited by hand. Launch arguments (DEBUG): `-samplePhone` (a made-up store filled
-  through the real import), `-samplePhoneEmpty` (the first run; `-sampleChosen` after the categories),
+  **The widget snapshot** belongs to the store it shows: phone mode's carries `phone: true` and is shown whoever is
+  logged in; server mode's carries its account and follows the marker as before (`WidgetSnapshotStore.readShown`).
+  **The lock** (brief 22, `Model/AppLock.swift`, `Screens/LockScreen.swift`, `Screens/LockSettings.swift`): optional,
+  off by default; Settings → Lock (both modes): "Lock with Face ID" (Touch ID on such phones; without an own code the
+  iPhone's code is the fallback, `deviceOwnerAuthentication`; turning it on or, when it is the whole lock, off asks
+  Face ID first) and Own code (set, change, remove; 6 digits; changing and removing ask the current code; with it only
+  Face ID or the code opens Aresium, `deviceOwnerAuthenticationWithBiometrics`). The code is kept as a salted
+  PBKDF2-SHA256 hash (310,000 rounds, CommonCrypto), with the Face ID switch and the wrong-code count, in one Keychain
+  item of Aresium's own group (`$(AppIdentifierPrefix)de.ares-empire.aresium`, named explicitly, since the default
+  group is the first in the entitlements, the shared one; `AfterFirstUnlockThisDeviceOnly`). Wrong codes: after 5 wait
+  1 minute, then 5, 15, 60 (the count survives a restart; a clock set back never shortens a wait). A file
+  `Application Support/Aresium/lock-in-use` marks a lock set in this install: a Keychain lock without it is left from a
+  deleted install and is removed. It locks at launch and after more than 10 seconds in the background (`LockTiming`;
+  inactive, as under the Files picker, the share sheet or Control Center, never locks). The lock screen is a window of
+  its own above everything, the app switcher cover included (`LockWindow`, level alert + 2; the cover is alert + 1),
+  shown before the app is seen when it comes back; it is the cover's wall and band with the code pad (a Face ID key
+  when Face ID is on; "Forgot the code?" deletes Aresium's data on this iPhone and the lock, and in server mode also
+  logs out, so the lock never opens the server's data to someone without the code) or, with Face ID alone, one Face ID
+  button under the band where the cover has it. Face ID is offered once by itself when locked and active. A file shared
+  into Aresium while locked waits until it is unlocked. While the lock is on, the widgets show only "Locked" (no numbers
+  are kept for them: `widget-locked.json` in the App Group). `NSFaceIDUsageDescription` in `Info.plist`, German in
+  `InfoPlist.xcstrings`. **Contact & support** without a login: the `contact` path (above). **Push:** Aresium never
+  registers a device (only the cleanup-only center that removes the other apps' devices when someone logs out here).
+  **Current view:** a category opens this month's payments directly (`CategoryRoute`; the widget's category links too);
+  Overview keeps the month list first. **Screens** (`Screens/PhoneScreens.swift`, Claude's look from the dashboard's
+  rows, `CategoryTile`/`DayTile`, and the Settings pieces; ink only): the first run (what Aresium does with the data,
+  two steps, Restore as a quiet link; it ends with the band), the category picker (the default list by group, nothing
+  ticked at first, one's own names; unticking a category with payments asks where they go, Not sorted first), the
+  column check for an unknown CSV (each column's meaning as a menu, the first payments read that way, Confirm and import
+  saves the layout), after a Switch the alert "Also the other payments from <shop>?" (the count on its button), the
+  store's opening state. The dashboard's own "Uncategorised" (engine and server) shows as "Not sorted" in both modes and
+  the widget through `CategoryName.shown` (AresiumShared); Switch, Add, routes and links keep the real name. Settings →
+  About → Fonts & licences also lists the shop list's name-suggestion-index notice (BSD-3-Clause,
+  `BundledLicence.shopList`, Aresium only). **Engine:** `bash scripts/aresium-engine.sh` runs `npm run engine` in
+  aresium and copies the bundle (its commit in `Engine/engine-version.txt`), the engine's test files and the licence
+  notice (`Engine/name-suggestion-index-licence.txt`); the bundle is never edited by hand. Launch arguments (DEBUG):
+  `-samplePhone` (a made-up store in a temporary folder, filled through the real import), `-samplePhoneEmpty` (the
+  first run; `-sampleChosen` after the categories), `-sampleSignedIn` (signed in on the made-up account server),
   `-openSheet categories|settings`, `-sampleUntick <category id>` (in the picker), `-sampleLayout` (an unknown bank's
   CSV: the column check), `-sampleCategory <name> -sampleMonth <YYYY-MM> -samplePhoneTransaction <text>` (a payment's
   detail; `-samplePhoneSwitch <category>` switches it, then the merchant question), `-sampleImportResult` (the result
-  line), `-sampleModeOffline` (the connection state). Tests: `PhoneModeTests`, `PhoneBackendTests`, `PhoneStoreTests`,
-  `PhoneEngineTests`, `PhoneLookTests`. Screenshots of every phone-mode screen in both looks and languages, and at the
-  largest text size: `build/18-*.png` (2026-10-27).
+  line); the lock in memory: `-sampleLock faceID|code|both` (the code is 123456), `-sampleUnlocked` (open at launch),
+  `-sampleWrongCodes <n>`, `-openCode` (Settings → Lock → Own code), `-openCodeEntry set|change|remove`. Tests:
+  `PhoneModeTests`, `PhoneBackendTests`, `PhoneStoreTests` (with the moving over), `PhoneEngineTests`,
+  `PhoneLookTests`, `LockTests`, `SupportContactTests`, `CategoryRouteTests`. Screenshots of every phone-mode screen in
+  both looks and languages, and at the largest text size: `build/18-*.png` (2026-10-27); without an account and the
+  lock: `build/22-*.png`, contact sheet `build/22-sheet.png`.
 - Targets: `Aresium` (app), `AresiumWidgetExtension` (widgets, folder `Aresium/AresiumWidget/`, embedded in the
   app), `AresiumTests`. `Aresium/AresiumShared/` is compiled into both app and widget (theme, `AppTheme`, `AppGroup`,
   widget snapshot); everything else belongs to one target. App Group `group.de.ares-empire.aresium` in both
