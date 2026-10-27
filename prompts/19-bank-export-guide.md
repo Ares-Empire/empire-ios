@@ -1,6 +1,6 @@
 # 19: How to get the bank file: exact steps per bank (research)
 
-Status: open (2026-10-27)
+Status: merged 2026-10-27 (docs/bank-export-guide: 18 entries; the screen comes in a later brief)
 Repo: empire-ios · Worktree: `../empire-ios-19-bank-guide` (branch `claude/19-bank-guide`) · Built by: a Claude agent
 (research; no app code)
 
