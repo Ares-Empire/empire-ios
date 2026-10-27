@@ -2,22 +2,24 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 // "How do I get my file?" (brief 24): a search over the banks, then a bank's page with its steps on the website or in
-// its app, which file to pick and why, what to know, how the file reaches Aresium, and Choose file. Built from
-// Aresium's pieces: Settings' sections and rows, the first run's numbered tiles (`DayTile`), `FormNote`,
-// `FormButtonStyle`; ink only. The data and the search are `Model/BankGuide.swift`.
+// its app, which file to pick and why, what to know, how the file reaches Aresium, and Choose file. When the search finds
+// no bank (brief 25), the list shows Another bank's general steps in place, under a note and "Tell us about your bank"
+// (`BankRequestCard`); Another bank's own page ends with the same card. Built from Aresium's pieces: Settings' sections
+// and rows, the first screen's numbered tiles (`DayTile`), `FormNote`, `FormButtonStyle`; ink only. The data and the
+// search are `Model/BankGuide.swift`.
 
 /// What the guide's Choose file does, given by whoever opens the guide; without it (the tour) there is no button.
 struct GuideImport {
     /// What the file picker offers.
     let types: [UTType]
-    /// Phone mode while no category is chosen: the category picker comes first, then the file picker.
+    /// Phone mode while no category is chosen: the category picker comes first, then the file picker (`ImportFlow`).
     var phone: PhoneBackend? = nil
     var categoriesChanged: () async -> Void = {}
     /// The picked files (or why the picker failed); the owner imports them once the guide has closed.
     let finished: (Result<[URL], Error>) -> Void
 }
 
-/// A quiet link to the guide: under the first run's import step, an empty dashboard page, the tour's import step.
+/// A quiet link to the guide: on the first screen, under an empty dashboard page, at the tour's import step.
 struct GuideLink: View {
     /// The screen's second ink (Aresium's palette on the dashboard, `Ink` in sheets).
     var tint: Color = Ink.secondary
@@ -36,9 +38,11 @@ struct GuideLink: View {
     }
 }
 
-/// The guide as a sheet of its own (the first run, an empty dashboard, the tour): the bank list with Done.
+/// The guide as a sheet of its own (the first screen, an empty dashboard, the tour): the bank list with Done.
 struct BankGuideSheet: View {
     var importing: GuideImport?
+    /// Where "Tell us about your bank" sends the name; nil in the tour.
+    var outbox: BankOutbox?
     @Environment(\.dismiss) private var dismiss
     #if DEBUG
     /// Screenshots: `-openGuide <bank id>` opens that bank's page at once (`-openGuide list`: the list).
@@ -47,7 +51,7 @@ struct BankGuideSheet: View {
 
     var body: some View {
         NavigationStack {
-            BankGuideList(importing: importing)
+            BankGuideList(importing: importing, outbox: outbox)
                 .toolbar {
                     ToolbarItem(placement: .confirmationAction) {
                         Button { dismiss() } label: { Text("Done", tableName: "Shared") }
@@ -56,7 +60,7 @@ struct BankGuideSheet: View {
                 #if DEBUG
                 .navigationDestination(item: $shown) { id in
                     if let guide = try? BankGuide.bundled(), let bank = guide.bank(id) {
-                        BankGuidePage(bank: bank, guide: guide, importing: importing)
+                        BankGuidePage(bank: bank, guide: guide, importing: importing, outbox: outbox)
                     }
                 }
                 #endif
@@ -67,53 +71,82 @@ struct BankGuideSheet: View {
     }
 }
 
-/// The banks: a line on what this is, the search field ("Your bank"), the matching banks, Another bank last. The
+/// The banks: a line on what this is, the search field ("Your bank"), the matching banks, Another bank last. When the
+/// search finds none: the note, Tell us about your bank, and Another bank's steps in place, with Choose file. The
 /// sheet's root, or pushed in Settings → Help.
 struct BankGuideList: View {
     var importing: GuideImport?
+    var outbox: BankOutbox?
     @State private var guide: BankGuide? = try? BankGuide.bundled()
     #if DEBUG
     @State private var query = LaunchArguments.value("-guideSearch") ?? ""
     #else
     @State private var query = ""
     #endif
+    /// Website or app for Another bank's steps in the no-match state (nil: its usual place).
+    @State private var otherKind: BankGuide.PlaceKind?
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                FormNote(text: String(localized: "Find your bank: step by step, how to get a file of your payments out of it."))
-                    .padding(.top, 16)
-                searchField.padding(.top, 14)
-                if let guide {
-                    let found = guide.search(query)
-                    let banks = found.filter { !$0.isOther }
-                    if !banks.isEmpty {
-                        VStack(spacing: 0) {
-                            ForEach(Array(banks.enumerated()), id: \.element.id) { index, bank in
-                                if index > 0 { SettingsDivider() }
-                                row(bank, guide: guide)
+        let results = guide?.results(query)
+        // The search found no bank: Another bank's steps show in place.
+        let unknown: BankGuide.Bank? = if case let .unknown(other) = results { other } else { nil }
+        VStack(spacing: 0) {
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 0) {
+                        FormNote(text: String(localized: "Find your bank: step by step, how to get a file of your payments out of it."))
+                            .padding(.top, 16)
+                        searchField.padding(.top, 14)
+                        if let guide {
+                            if let unknown {
+                                noMatch(unknown, guide: guide)
+                            } else if case let .banks(found) = results {
+                                let banks = found.filter { !$0.isOther }
+                                VStack(spacing: 0) {
+                                    ForEach(Array(banks.enumerated()), id: \.element.id) { index, bank in
+                                        if index > 0 { SettingsDivider() }
+                                        row(bank, guide: guide)
+                                    }
+                                }
+                                .glassCard()
+                                .padding(.top, 14)
+                                ForEach(found.filter(\.isOther)) { other in
+                                    VStack(spacing: 0) { row(other, guide: guide) }
+                                        .glassCard()
+                                        .padding(.top, 22)
+                                }
                             }
                         }
-                        .glassCard()
-                        .padding(.top, 14)
-                    } else {
-                        FormNote(text: String(localized: "Your bank is not in the list yet. Its usual steps:"))
-                            .padding(.top, 16)
                     }
-                    ForEach(found.filter(\.isOther)) { other in
-                        VStack(spacing: 0) { row(other, guide: guide) }
-                            .glassCard()
-                            .padding(.top, banks.isEmpty ? 10 : 22)
-                    }
+                    .padding(.horizontal, 18).padding(.bottom, 24)
                 }
+                .scrollIndicators(.hidden)
+                .scrollDismissesKeyboard(.interactively)
+                #if DEBUG
+                .task {
+                    // Screenshots: `-scrollToEnd` shows the end of the no-match state.
+                    guard LaunchArguments.current.contains("-scrollToEnd") else { return }
+                    try? await Task.sleep(for: .milliseconds(400))
+                    proxy.scrollTo(BankGuideSteps.end, anchor: .bottom)
+                }
+                #endif
             }
-            .padding(.horizontal, 18).padding(.bottom, 34)
+            if unknown != nil, let importing { ChooseFileBar(importing: importing) }
         }
-        .scrollIndicators(.hidden)
-        .scrollDismissesKeyboard(.interactively)
         .background { Ink.background.ignoresSafeArea() }
         .navigationTitle(Text("File from your bank"))
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    /// No bank matches: the note with Tell us about your bank (the name is what was typed), then Another bank's steps.
+    private func noMatch(_ other: BankGuide.Bank, guide: BankGuide) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            BankRequestCard(lead: Text("We don't know this bank yet. The general steps below may help."),
+                            outbox: outbox, prefill: query)
+                .padding(.top, 14)
+            BankGuideSteps(bank: other, guide: guide,
+                           kind: Binding(get: { otherKind ?? other.firstPlace }, set: { otherKind = $0 }))
+        }
     }
 
     /// The search: a field in a glass card, like the category picker's own-name row.
@@ -142,7 +175,7 @@ struct BankGuideList: View {
     /// A bank: its name and where the file can be had (website, app or both).
     private func row(_ bank: BankGuide.Bank, guide: BankGuide) -> some View {
         NavigationLink {
-            BankGuidePage(bank: bank, guide: guide, importing: importing)
+            BankGuidePage(bank: bank, guide: guide, importing: importing, outbox: outbox)
         } label: {
             SettingsRow(title: bank.title(), subtitle: bank.isOther ? String(localized: "Its usual steps")
                                                                     : Self.where(bank))
@@ -159,23 +192,20 @@ struct BankGuideList: View {
     }
 }
 
-/// A bank's page: Website / App (only the places with steps; for the other one line), the numbered steps, which file
-/// and why, what to know, how the file gets to Aresium, and Choose file at the bottom.
+/// A bank's page: its steps (`BankGuideSteps`), for Another bank "Your bank is missing?" at the end, and Choose file at
+/// the bottom.
 struct BankGuidePage: View {
     let bank: BankGuide.Bank
     let guide: BankGuide
     var importing: GuideImport?
+    var outbox: BankOutbox?
     @State private var kind: BankGuide.PlaceKind
-    /// The ways opened beyond the usual one.
-    @State private var opened: Set<BankGuide.Way.Key> = []
-    @State private var pickingFile = false
-    @State private var choosingCategories = false
-    @Environment(\.dismiss) private var dismiss
 
-    init(bank: BankGuide.Bank, guide: BankGuide, importing: GuideImport?) {
+    init(bank: BankGuide.Bank, guide: BankGuide, importing: GuideImport?, outbox: BankOutbox?) {
         self.bank = bank
         self.guide = guide
         self.importing = importing
+        self.outbox = outbox
         var kind = bank.firstPlace
         #if DEBUG
         // Screenshots: `-guidePlace app|website`.
@@ -190,59 +220,84 @@ struct BankGuidePage: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
-                        if bank.placesWithSteps.count > 1 {
-                            Picker(selection: $kind) {
-                                Text("Website").tag(BankGuide.PlaceKind.website)
-                                Text("App").tag(BankGuide.PlaceKind.app)
-                            } label: { Text("Where") }
-                            .pickerStyle(.segmented)
-                            .padding(.top, 16)
-                        } else if let line = bank.otherPlaceLine() {
-                            FormNote(text: line).padding(.top, 16)
+                        BankGuideSteps(bank: bank, guide: guide, kind: $kind, marksEnd: !bank.isOther)
+                        if bank.isOther {
+                            BankRequestCard(lead: Text("Your bank is missing? Tell us which one."), outbox: outbox)
+                                .padding(.top, 26)
+                                .id(BankGuideSteps.end)
                         }
-                        SettingsSection(kind == .website ? String(localized: "On the website") : String(localized: "In the bank's app")) {
-                            let steps = bank.place(kind).steps()
-                            ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
-                                if index > 0 { SettingsDivider().padding(.leading, 48) }
-                                NumberedStep(number: index + 1, text: step)
-                            }
-                        }
-                        if bank.mayDiffer(kind) {
-                            FormNote(text: String(localized: "At your bank a button may be called a little differently."))
-                                .padding(.top, 10)
-                        }
-                        SettingsSection(String(localized: "Which file")) { fileType }
-                        if !bank.limits().isEmpty {
-                            SettingsSection(String(localized: "Good to know")) {
-                                Text(verbatim: bank.limits()).font(AppFont.text(14)).foregroundStyle(Ink.secondary).lineSpacing(3)
-                                    .fixedSize(horizontal: false, vertical: true)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding(.horizontal, 16).padding(.vertical, 14)
-                            }
-                        }
-                        SettingsSection(String(localized: "How the file gets to Aresium")) { ways }
-                            .id(Self.end)
                     }
                     .padding(.horizontal, 18).padding(.bottom, 24)
                 }
                 .scrollIndicators(.hidden)
+                .scrollDismissesKeyboard(.interactively)
                 #if DEBUG
                 .task {
                     // Screenshots: `-scrollToEnd` shows the end of the page.
                     guard LaunchArguments.current.contains("-scrollToEnd") else { return }
                     try? await Task.sleep(for: .milliseconds(400))
-                    proxy.scrollTo(Self.end, anchor: .bottom)
+                    proxy.scrollTo(BankGuideSteps.end, anchor: .bottom)
                 }
                 #endif
             }
-            if let importing { chooseFile(importing) }
+            if let importing { ChooseFileBar(importing: importing) }
         }
         .background { Ink.background.ignoresSafeArea() }
         .navigationTitle(Text(verbatim: bank.title()))
         .navigationBarTitleDisplayMode(.inline)
     }
+}
 
-    private static let end = "guide-page-end"
+/// A bank's steps, as sections of a scroll view: Website / App (only the places with steps; for the other one line),
+/// the numbered steps, which file and why, what to know, how the file gets to Aresium. Its page and the list's no-match
+/// state show it.
+struct BankGuideSteps: View {
+    let bank: BankGuide.Bank
+    let guide: BankGuide
+    @Binding var kind: BankGuide.PlaceKind
+    /// The last section carries `end` (screenshots scroll to it); off when something follows it.
+    var marksEnd = true
+    /// The ways opened beyond the usual one.
+    @State private var opened: Set<BankGuide.Way.Key> = []
+
+    static let end = "guide-page-end"
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if bank.placesWithSteps.count > 1 {
+                Picker(selection: $kind) {
+                    Text("Website").tag(BankGuide.PlaceKind.website)
+                    Text("App").tag(BankGuide.PlaceKind.app)
+                } label: { Text("Where") }
+                .pickerStyle(.segmented)
+                .padding(.top, 16)
+            } else if let line = bank.otherPlaceLine() {
+                FormNote(text: line).padding(.top, 16)
+            }
+            SettingsSection(kind == .website ? String(localized: "On the website") : String(localized: "In the bank's app")) {
+                let steps = bank.place(kind).steps()
+                ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
+                    if index > 0 { SettingsDivider().padding(.leading, 48) }
+                    NumberedStep(number: index + 1, text: step)
+                }
+            }
+            if bank.mayDiffer(kind) {
+                FormNote(text: String(localized: "At your bank a button may be called a little differently."))
+                    .padding(.top, 10)
+            }
+            SettingsSection(String(localized: "Which file")) { fileType }
+            if !bank.limits().isEmpty {
+                SettingsSection(String(localized: "Good to know")) {
+                    Text(verbatim: bank.limits()).font(AppFont.text(14)).foregroundStyle(Ink.secondary).lineSpacing(3)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 16).padding(.vertical, 14)
+                }
+            }
+            SettingsSection(String(localized: "How the file gets to Aresium")) { ways }
+                .id(marksEnd ? Self.end : "guide-ways")
+        }
+    }
 
     /// The label(s) to pick as quiet chips, the why in one line under them.
     private var fileType: some View {
@@ -294,30 +349,34 @@ struct BankGuidePage: View {
         case .numbers: String(localized: "An Excel file")
         }
     }
+}
 
-    /// Choose file at the bottom: the import picker (in phone mode, the categories first while none is chosen).
-    private func chooseFile(_ importing: GuideImport) -> some View {
+/// Choose file at the bottom of a page: Import data's flow (`ImportFlow`: in phone mode the categories first while none
+/// is chosen, then the file picker); the picked files go to the guide's owner.
+private struct ChooseFileBar: View {
+    let importing: GuideImport
+    @State private var flow = ImportFlow()
+
+    var body: some View {
         Button {
-            if let phone = importing.phone, !phone.hasChosenCategories { choosingCategories = true }
-            else { pickingFile = true }
+            flow.start(hasCategories: importing.phone?.hasChosenCategories ?? true)
         } label: {
             Text("Choose file")
         }
         .buttonStyle(FormButtonStyle(accent: nil))
         .padding(.horizontal, 18).padding(.top, 10).padding(.bottom, 10)
-        .fileImporter(isPresented: $pickingFile, allowedContentTypes: importing.types,
+        .fileImporter(isPresented: $flow.picksFiles, allowedContentTypes: importing.types,
                       allowsMultipleSelection: true) { result in
             if case let .success(urls) = result, urls.isEmpty { return }
             importing.finished(result)
         }
-        .sheet(isPresented: $choosingCategories, onDismiss: {
-            // Categories chosen: on to the file.
-            if importing.phone?.hasChosenCategories == true { pickingFile = true }
+        .sheet(isPresented: $flow.choosesCategories, onDismiss: {
+            flow.categoriesClosed(hasCategories: importing.phone?.hasChosenCategories == true)
         }) {
             if let phone = importing.phone {
                 NavigationStack {
                     CategoryPickerScreen(model: CategoryPickerModel(phone: phone, changed: importing.categoriesChanged),
-                                         done: { choosingCategories = false })
+                                         done: { flow.choosesCategories = false })
                 }
                 .presentationBackground(Ink.background)
             }
@@ -325,7 +384,7 @@ struct BankGuidePage: View {
     }
 }
 
-/// One numbered step, as the first run's steps: its number in a day tile (`DayTile`'s metrics, in `Ink`, which the
+/// One numbered step: its number in a day tile (`DayTile`'s metrics, in `Ink`, which the
 /// sheets use), the sentence beside it.
 private struct NumberedStep: View {
     let number: Int

@@ -2,7 +2,7 @@ import Foundation
 import Observation
 import os
 
-/// The category picker (first run, and Settings → Categories): the default list by group with a toggle each, a field
+/// The category picker (before the first import, and Settings → Categories): the default list by group with a toggle each, a field
 /// for one's own names; nothing is ticked at first (Patrik, 2026-10-26). Unticking a category with payments asks where
 /// they go. Every change is saved at once and the dashboard rebuilt.
 @MainActor @Observable

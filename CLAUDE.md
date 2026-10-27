@@ -385,11 +385,14 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   `EmpireTests/SupportTests`); a 401 logs out, a 429 says "too many", a 403 never closes the app; sample mode only
   pretends. Screenshots (DEBUG, any app showing the sheet): `-supportKind <kind>`, `-supportText <text>`,
   `-supportPhase sending|sent|offline|tooMany|loggedOut|other|invalidEmail`, `-supportEmail <text>`. **Without a login**
-  (brief 22, only an app that works without an account, Aresium; `SupportForm.sendsWithoutLogin`): the form also asks
-  for an email to answer to and an optional name, and posts a `ContactMessage` without a token to the account server's
-  open `contact` collection (the website's form's; `name`, `email`, `message` with the footer "— Aresium <version> ·
-  iOS … · <topic>", `language`, the empty honeypot `website`; 5 an hour per address). Tests in
-  `AresiumTests/SupportContactTests`. The account server's mail for it still says "the website's contact form"
+  (brief 22; since brief 25 **always** in Aresium, also while an Ares login exists, Patrik 2026-10-27: the privacy policy
+  handles Aresium's messages like the website's contact form, without accounts). It is a property of the app's identity,
+  `EmpireAppIdentity.supportWithoutLogin` (only `.aresium`; `SupportForm.sendsWithoutLogin` reads it), never a check in
+  a view; every other app always sends the account-linked `feedback` record. The form also asks for an email to answer
+  to (filled with the account's address when one is logged in, editable) and an optional name, and posts a
+  `ContactMessage` without a token to the account server's open `contact` collection (the website's form's; `name`,
+  `email`, `message` with the footer "— Aresium <version> · iOS … · <topic>", `language`, the empty honeypot `website`;
+  5 an hour per address). Tests in `AresiumTests/SupportContactTests` (a signed-in Aresium still posts `contact`). The account server's mail for it still says "the website's contact form"
   (`accounts/pb_hooks/contact.pb.js`); the footer names the app.
 - **Push** (2026-10-24): `Shared/Push/` (`PushCenter`, `PushAppDelegate`, tests in `EmpireTests/PushCenterTests`)
   registers devices with the Empire push service (`ares-empire/docs/PUSH.md`; dry run until the APNs key). Wired into
@@ -451,7 +454,7 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
 - **Aresium phone mode** (2026-10-27, briefs 15, 18 and 22; plan `ares-empire/docs/ARESIUM-FOR-OTHERS.md`): everyone
   but Patrik keeps their Aresium data on their iPhone. **No account** (Patrik, 2026-10-27, brief 22): Aresium opens in
   phone mode on the phone's one store at once, without a login and without waiting for any server (`ModeStore.start`);
-  the first run or the dashboard. **Server mode** stays for the owner through the shared Ares login: while a login
+  the first screen or the dashboard. **Server mode** stays for the owner through the shared Ares login: while a login
   whose account has the `aresium` service exists, the app asks `GET /api/mode` once per session and remembers the answer
   per account id (`aresium.mode.<id>` in the app's defaults): `server` → today's server dashboard (`ServerBackend` on
   `APIClient`); `phone`, 401 (logs out everywhere), 403 (remembered as phone), an error or offline without a
@@ -493,13 +496,20 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   button under the band where the cover has it. Face ID is offered once by itself when locked and active. A file shared
   into Aresium while locked waits until it is unlocked. While the lock is on, the widgets show only "Locked" (no numbers
   are kept for them: `widget-locked.json` in the App Group). `NSFaceIDUsageDescription` in `Info.plist`, German in
-  `InfoPlist.xcstrings`. **Contact & support** without a login: the `contact` path (above). **Push:** Aresium never
+  `InfoPlist.xcstrings`. **Contact & support** always without a login: the `contact` path (above). **Push:** Aresium never
   registers a device (only the cleanup-only center that removes the other apps' devices when someone logs out here).
   **Current view:** a category opens this month's payments directly (`CategoryRoute`; the widget's category links too);
   Overview keeps the month list first. **Screens** (`Screens/PhoneScreens.swift` and `Screens/FileCheck*.swift`,
-  Claude's look from the dashboard's rows, `CategoryTile`/`DayTile`, and the Settings pieces; ink only): the first run
-  (what Aresium does with the data,
-  two steps, Restore as a quiet link; it ends with the band), the category picker (the default list by group, nothing
+  Claude's look from the dashboard's rows, `CategoryTile`/`DayTile`, and the Settings pieces; ink only): **the first
+  screen** (brief 25, Patrik 2026-10-27; `PhoneFirstScreen`, logic `Model/FirstScreen.swift`): while phone mode has no
+  payment, a calm empty state a little above the middle (a mark in a thin circle as the store's own states): "No data
+  yet", one line on what Aresium does and that everything stays on this iPhone, **Import data** (the main button) and
+  **Start tour** (quiet), then the quiet links "How do I get my file?" and "Restore from an export"; it ends with the
+  band. Choosing categories is no step of its own: Import data (and the dashboard's import button, and the guide's
+  Choose file) opens the category picker first while none is chosen, then the file picker once it closes with
+  categories (`ImportFlow`). What shows is `MainScreen.choose` (the tour, the store's state, the first screen, the
+  dashboard): after the tour, finished or ended early, the first screen is back while there is no data, so the made-up
+  data is never shown outside the tour. Then the category picker (the default list by group, nothing
   ticked at first, one's own names; unticking a category with payments asks where they go, Not sorted first), after a
   Switch the alert "Also the other payments from <shop>?" (the count on its button), the store's opening state.
   **An unknown bank's file** (brief 23, Patrik 2026-10-27: most people don't know what a CSV is;
@@ -520,15 +530,30 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   suggestion when it has one; for an unknown file it has none today) and Send (the keyboard's Send too); "What is
   sent?" opens the format as `SharedFormat` shows it (every column with what it holds, date and number style, separator,
   any other setting, the name, the app's version and language). Send posts `{bank, layout, app_version, language}` to
-  the account server's `bank_formats` (`BankFormatAPI`, no token, `Accept-Language` of the request; ares-empire
-  `docs/ACCOUNTS.md` → Bank formats). Not now, closing the result and Send each mean the layout is never offered again
-  (a SHA-256 of its separator and header in `Application Support/Aresium/bank-formats.json`,
-  `PhoneStorage.bankFormatsURL`,
-  deleted with Aresium's data). Offline or a server error: kept in the same file (only the request's body and the
-  failed tries) and sent by itself at the next start or foreground (`BankFormatOutbox.sendWaiting`, one round a
-  minute), at most 3 tries (a try without a connection does not count); a 400 is final (a card still on screen shows
-  the server's sentence; a 400 about the name only lets the person type it again); a 429 waits for the next start.
-  Sent: "Thank you. Aresium learns your bank with the next update." Sample mode only pretends. The dashboard's own
+  the account server's `bank_formats` (no token, `Accept-Language` of the request; ares-empire `docs/ACCOUNTS.md` → Bank
+  formats). Not now, closing the result and Send each mean the layout is never offered again (a SHA-256 of its separator
+  and header in the outbox's file, below). Sent: "Thank you. Aresium learns your bank with the next update."
+  **"My bank is missing"** (brief 25; `Model/BankRequest.swift`, `Screens/BankRequestView.swift`): when the guide's
+  search finds no bank (`BankGuide.results` → `.unknown`), the list shows Another bank's steps in place under a card,
+  "We don't know this bank yet. The general steps below may help." with **Tell us about your bank**: it opens the name
+  (prefilled with the search text, following it until edited) and Send, so two taps; Another bank's own page ends with
+  the same card ("Your bank is missing? Tell us which one.", the field empty and focused). Send posts `{bank,
+  app_version, language}` to the account server's `bank_requests` (brief 26, ares-empire; `Accept-Language`, no token;
+  200, 400 with `message` and `data.bank.code`, 429 at 5 an hour per address). Sent: "Thank you. We'll look at adding
+  it." Not in the tour (its guide gets no outbox: nothing real is sent there). **One outbox for both**
+  (`Model/BankOutbox.swift`, generalised from brief 23's `BankFormatOutbox`): `BankOutbox` carries a `BankSubmission`
+  (`.format` or `.request`, each to its own collection through `BankOutboxAPI`) and keeps what could not go at once in
+  one file, `Application Support/Aresium/bank-outbox.json` (`PhoneStorage.bankOutboxURL`: the request bodies with their
+  kind and failed tries, and the asked format layouts; brief 23's `bank-formats.json` reached no phone, so nothing moves
+  over; an entry without a kind still reads as a format), deleted with Aresium's data. Offline or a server error: sent by
+  itself at the next start or foreground (`sendWaiting`, one round a minute), at most 3 tries (a try without a
+  connection does not count); a 400 is final (a card or form still on screen shows the server's sentence; a 400 about
+  the name only lets the person type it again); a 429 waits for the next start. **A name that looks like personal
+  data** (an IBAN, an email, a date, an amount, a long number) is not sent: "Only the bank's name, please: no account
+  number, IBAN, email, date or amount." under the field, for both kinds. The rule is the engine's own (`looksPersonal`,
+  which `shareableLayout` applies to a format's words; the bundle exports no `looksPersonal`, so the bridge's
+  `personalData` runs it through a one-column `shareableLayout`, `AresiumEngine.personalData`), loaded the first time a
+  name is checked (`BankNameCheck`); the server checks again. Sample mode only pretends. The dashboard's own
   "Uncategorised" (engine and server) shows as "Not sorted" in both modes and the widget through `CategoryName.shown`
   (AresiumShared); Switch, Add, routes and links keep the real name. Settings →
   About → Fonts & licences also lists the shop list's name-suggestion-index notice (BSD-3-Clause,
@@ -536,21 +561,26 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   aresium and copies the bundle (its commit in `Engine/engine-version.txt`), the engine's test files and the licence
   notice (`Engine/name-suggestion-index-licence.txt`); the bundle is never edited by hand. Launch arguments (DEBUG):
   `-samplePhone` (a made-up store in a temporary folder, filled through the real import), `-samplePhoneEmpty` (the
-  first run; `-sampleChosen` after the categories), `-sampleSignedIn` (signed in on the made-up account server),
+  first screen; `-sampleChosen` with categories chosen, so Import data opens the files; `-importData` taps Import data
+  at launch), `-sampleSignedIn` (signed in on the made-up account server),
   `-openSheet categories|settings`, `-sampleUntick <category id>` (in the picker), `-sampleLayout` (an unknown bank's
   CSV: "Does this look right?"; `-sampleReading 2` the second reading, `-sampleReading columns` the column check),
   `-sampleFormat` (that file confirmed and imported: the result with the send card; `-formatBank <name>`,
   `-formatPhase sending|sent|kept|refused|badName`, `-formatMessage <the server's sentence>`, `-openFormatDetails`
-  "What is sent?", `-formatFocus` the keyboard on the name), `-sampleCategory <name> -sampleMonth <YYYY-MM>
+  "What is sent?", `-formatFocus` the keyboard on the name), in the guide (`-openGuide list -guideSearch <a name no bank
+  matches>`) `-bankRequest` (the name and Send open) and `-bankRequestPhase sending|sent|kept|refused|personal`
+  (`-bankRequestMessage <the server's sentence>`), `-sampleCategory <name> -sampleMonth <YYYY-MM>
   -samplePhoneTransaction <text>` (a payment's detail; `-samplePhoneSwitch <category>` switches it, then the merchant
   question), `-sampleImportResult` (the result
   line); the lock in memory: `-sampleLock faceID|code|both` (the code is 123456), `-sampleUnlocked` (open at launch),
   `-sampleWrongCodes <n>`, `-openCode` (Settings → Lock → Own code), `-openCodeEntry set|change|remove`. Tests:
   `PhoneModeTests`, `PhoneBackendTests`, `PhoneStoreTests` (with the moving over), `PhoneEngineTests`,
-  `PhoneLookTests`, `LockTests`, `SupportContactTests`, `CategoryRouteTests`, `FileCheckTests`, `BankFormatTests`.
+  `PhoneLookTests`, `LockTests`, `SupportContactTests`, `CategoryRouteTests`, `FileCheckTests`, `BankFormatTests`,
+  `BankRequestTests`, `FirstScreenTests`.
   Screenshots of every phone-mode screen in both looks and languages, and at the largest text size: `build/18-*.png`
   (2026-10-27); without an account and the lock: `build/22-*.png`, contact sheet `build/22-sheet.png`; the unknown
-  file's window and sending: `build/23-*.png`, contact sheet `build/23-sheet.png`.
+  file's window and sending: `build/23-*.png`, contact sheet `build/23-sheet.png`; the first screen, the lighter tour
+  with the lock and contact, the guide's no-match and sent states: `build/25-*.png`, contact sheet `build/25-sheet.png`.
   **"How do I get my file?"** (brief 24, Patrik 2026-10-27: he did not know how the first time): the per-bank steps of
   brief 19's research, now in the app (`Guide/bank-steps.json`, one copy; how it was researched and what is unsure:
   `docs/bank-export-guide/README.md`; `Model/BankGuide.swift`, `Screens/BankGuideScreens.swift`). A list with a search
@@ -561,23 +591,28 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   how the file gets to Aresium (the bank's `toAresium` ways, the usual one open), Choose file (the import picker; in
   phone mode the category picker first while none is chosen; the files are imported once the guide has closed). No
   sources and no format names in the screen's own sentences (`BankGuideTests` checks the data). Opened from the first
-  run (a link under the import step), an empty dashboard page and Settings → Help → Get the file from your bank
+  screen, an empty dashboard page and Settings → Help → Get the file from your bank
   (`SettingsScreen`'s `help` slot, Shared). **The tour** (brief 24, `Model/TourModel.swift`, `Model/TourData.swift`,
-  `Screens/TourScreens.swift`): offered as "Look around first?" on the first run and Settings → Help → Tour of Aresium,
-  never by itself. The real dashboard (`DashboardStack`, the same view as the person's, on its own `DashboardPlace`) on
+  `Screens/TourScreens.swift`): offered as Start tour on the first screen and Settings → Help → Tour of Aresium, never by
+  itself; when it ends the first screen comes back while there is no data. The real dashboard (`DashboardStack`, the same view as the person's, on its own `DashboardPlace`) on
   `TourWorld`: a store in `tmp/aresium-tour-<uuid>/` filled through the real import with `TourData` (a made-up VR Bank
   file, this month always full), its own session (never logged in) and widget numbers inside that folder; the person's
   store, categories and learned shops are never opened. The folder is deleted on End tour (always on the card), at the
   end, when a widget's link or a shared file opens the app, and at the next launch if the app was closed during a tour
-  (`removeLeftovers`). Ten steps (`TourStep`), each pointing at a real control (`.tourAnchor`, anchor preferences;
-  `.tourSpotlight` on each screen and sheet draws the veil in the wall's colour and the ink ring, and keeps taps off the
-  rest except at the swipe step; `.tourCard` the glass card with Next and End tour); a step goes on when the person does
-  the thing (`TourModel.update`, `importTapped`, `paymentRecategorised` through `DashboardStore.onRecategorised`) or taps
-  Next, and Next gets the step's screen ready (`prepare`). In the tour the gear opens the tour's own Settings (only
-  Categories), the import button only answers its step, the band does not enter red mode. VoiceOver: the card takes the
+  (`removeLeftovers`). Twelve steps (`TourStep`, brief 25): welcome, income, overview, graph, category, payment, switch,
+  categories, lock, contact, import, done; each points at a real control (`.tourAnchor`, anchor preferences;
+  `.tourSpotlight` on each screen and sheet draws a light veil in the wall's colour, `TourVeil.veil` 0.3 (brief 24 had
+  0.74, far too dark: the app under it must read easily, Patrik 2026-10-27), and the full-ink ring, and keeps taps off
+  the rest except at the swipe step; `.tourCard` the glass card with Next and End tour); a step goes on when the person
+  does the thing (`TourModel.update`, `importTapped`, `lockTapped`, `contactTapped`, `paymentRecategorised` through
+  `DashboardStore.onRecategorised`) or taps Next, and Next gets the step's screen ready (`prepare`; the lock and contact
+  steps open the tour's Settings). In the tour the gear opens the tour's own Settings: Categories on the made-up store,
+  and the Lock section and Contact & support as the person's Settings show them, which only point and go on (the switch
+  is a picture, no lock is set, no form opens, nothing is sent; the tour never sees `AppLock` or the support form); the
+  import button only answers its step, the band does not enter red mode. VoiceOver: the card takes the
   focus at each step, the highlighted control stays reachable; Reduce Motion: the ring jumps, nothing slides. Launch
   arguments (DEBUG, with `-samplePhone` or `-samplePhoneEmpty`): `-openGuide list|<bank id>` (`-guidePlace
-  app|website`, `-guideSearch <text>`, `-scrollToEnd` the page's end), `-tour <1–10>` (`-tourSettings`: its Settings open). Tests: `BankGuideTests`,
+  app|website`, `-guideSearch <text>`, `-scrollToEnd` the page's end), `-tour <1–12>` (`-tourSettings`: its Settings open). Tests: `BankGuideTests`,
   `TourTests`. Screenshots: `build/24-*.png`, contact sheet `build/24-sheet.png`.
 - Targets: `Aresium` (app), `AresiumWidgetExtension` (widgets, folder `Aresium/AresiumWidget/`, embedded in the
   app), `AresiumTests`. `Aresium/AresiumShared/` is compiled into both app and widget (theme, `AppTheme`, `AppGroup`,

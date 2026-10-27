@@ -4,8 +4,8 @@ import Observation
 /// The state of the "Contact & support" form (`SupportSheet`): what is written, and how sending goes.
 /// Sending builds a `SupportMessage` with the session's login and posts it (`SupportAPI`). A rejected login (401) goes
 /// through `session.handleAuthFailure` (the app logs out, everywhere); a 403 here is about this message only and never
-/// closes the app. In an app that works without an account (Aresium) and while no Ares app is logged in, the message
-/// goes without a login instead (`sendsWithoutLogin`, a `ContactMessage` with an email to answer to); the other apps
+/// closes the app. An app whose identity says so (`EmpireAppIdentity.supportWithoutLogin`, Aresium) always sends without
+/// a login instead, logged in or not (`sendsWithoutLogin`, a `ContactMessage` with an email to answer to); the other apps
 /// never take that path. In sample mode nothing is sent: a short pause, then success.
 @MainActor @Observable
 final class SupportForm {
@@ -34,11 +34,13 @@ final class SupportForm {
         self.device = device
         self.language = language
         self.sampleDelay = sampleDelay
+        // Signed in, the account's address is the likely one to answer to; it stays editable.
+        if session.app.supportWithoutLogin, let address = session.email { email = address }
     }
 
-    /// The message goes without a login (`ContactMessage`): the app works without an account and no Ares app on the
-    /// iPhone is logged in. The form then asks for an email to answer to.
-    var sendsWithoutLogin: Bool { session.app.accountOptional && session.token == nil }
+    /// The message goes without a login (`ContactMessage`), whether or not an Ares login exists: the app's identity
+    /// says so (`supportWithoutLogin`, Aresium). The form then asks for an email to answer to.
+    var sendsWithoutLogin: Bool { session.app.supportWithoutLogin }
 
     /// The message's length against the server's limit (without a login, less the footer the message carries).
     var length: Int { SupportMessage.length(text) }

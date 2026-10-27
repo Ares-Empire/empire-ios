@@ -4,7 +4,8 @@ import Testing
 
 /// Contact & support without a login (brief 22, Aresium only): the message goes to the account server's open `contact`
 /// collection with an email to answer to, a short footer naming the app and the phone, the language and the empty
-/// honeypot; no token is sent. Signed in, it stays the `feedback` record.
+/// honeypot; no token is sent. Always, also while an Ares login exists (brief 25, Patrik 2026-10-27); the other apps
+/// keep the account-linked `feedback` record.
 @MainActor
 struct SupportContactTests {
     static let device = SupportDevice(appVersion: "1.0 (12)", system: "iOS 27.0 · iPhone")
@@ -85,16 +86,33 @@ struct SupportContactTests {
         #expect(form.phase == .failed(.tooMany) && form.canSend)
     }
 
-    @Test func signedInItStaysTheFeedbackRecord() async {
+    @Test func signedInAresiumStillBuildsAContactRecord() async {
         let server = RoutedTransport()
-        server.answer("POST /api/collections/feedback/records", 200, ["id": "fictional"])
-        let (form, _) = await form(server: server, signedIn: true)
-        #expect(!form.sendsWithoutLogin && form.maxLength == SupportMessage.maxLength)
-        form.text = "Fictional"
+        server.answer("POST /api/collections/contact/records", 200, ["id": "fictional"])
+        let (form, session) = await form(server: server, signedIn: true)
+        #expect(session.token != nil)
+        #expect(form.sendsWithoutLogin && form.maxLength < SupportMessage.maxLength)
+        // The account's address is there to answer to, and can be changed.
+        #expect(form.email == "fictionalA@example.invalid")
+        form.kind = .idea
+        form.text = "Fictional wish"
         await form.send()
-        #expect(form.phase == .sent && server.requests(to: "POST /api/collections/contact/records").isEmpty)
+        #expect(form.phase == .sent && server.requests.count == 1)
+        #expect(server.requests(to: "POST /api/collections/feedback/records").isEmpty)
         let request = server.requests.first
-        #expect(request?.value(forHTTPHeaderField: "Authorization") == "Bearer \(PhoneTest.token("fictionalA"))")
-        #expect(Self.body(request)?["app"] == "aresium" && Self.body(request)?["user"] == "fictionalA")
+        #expect(request?.url == URL(string: "https://auth.ares-empire.de/api/collections/contact/records"))
+        #expect(request?.value(forHTTPHeaderField: "Authorization") == nil)          // the login never goes with it
+        #expect(Self.body(request) == [
+            "name": "", "email": "fictionalA@example.invalid",
+            "message": "Fictional wish\n\n— Aresium 1.0 (12) · iOS 27.0 · iPhone · Idea",
+            "language": "de", "website": "",
+        ])
+    }
+
+    /// Only Aresium's identity sends without a login; every other app keeps its account-linked `feedback`.
+    @Test func onlyAresiumSendsWithoutALogin() {
+        #expect(EmpireAppIdentity.aresium.supportWithoutLogin)
+        let others = EmpireAppIdentity.all.filter { $0 != .aresium }
+        #expect(others.count == 4 && others.allSatisfy { !$0.supportWithoutLogin })
     }
 }

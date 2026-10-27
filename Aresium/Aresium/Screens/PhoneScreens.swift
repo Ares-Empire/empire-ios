@@ -80,141 +80,87 @@ struct ModeStatusScreen: View {
     }
 }
 
-// MARK: - first run
+// MARK: - the first screen
 
-/// Phone mode with nothing imported yet: what Aresium does with the data, then the two steps (choose categories, import
-/// a bank file) with "How do I get my file?" under them and, quietly, the tour and restoring an export. It is the main
-/// screen for now, so it ends with the band.
-struct PhoneFirstRun: View {
-    let phone: PhoneBackend
+/// Phone mode without data (brief 25, Patrik 2026-10-27): a calm empty state a little above the middle, as the store's
+/// own states look (`ModeStatusScreen`: a mark in a thin circle, a title, a line): "No data yet", what Aresium does and
+/// that it all stays on this iPhone, then Import data (the main button; the category picker first while none is chosen,
+/// `ImportFlow`) and Start tour (quiet, the header's button look), then two quiet links: How do I get my file? and
+/// Restore from an export. It comes back after the tour while there is no data (`MainScreen`). It is the main screen for
+/// now, so it ends with the band.
+struct PhoneFirstScreen: View {
     let imports: ImportStore
     let palette: Palette
     let band: AresiumBand
     /// Why the last restore did not go through.
     var restoreProblem: String?
-    let chooseCategories: () -> Void
-    let restore: () -> Void
-    /// The bank guide (`BankGuideSheet`) and the tour with made-up data (`TourModel`).
-    let openGuide: () -> Void
+    let importData: () -> Void
     let startTour: () -> Void
-    @State private var pickingFiles = false
+    /// The bank guide (`BankGuideSheet`).
+    let openGuide: () -> Void
+    let restore: () -> Void
+    /// The scroll view's height: the content stands a little above its middle.
+    @State private var visibleHeight: CGFloat = 0
 
     var body: some View {
         WordmarkScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                Text(String(localized: "On this iPhone").uppercased()).font(AppFont.text(11, weight: .semibold))
-                    .tracking(1.3).foregroundStyle(palette.muted)
-                    .accessibilityAddTraits(.isHeader)
-                Text("Set up Aresium").font(AppFont.text(21, weight: .bold)).foregroundStyle(palette.ink)
-                    .padding(.top, 4)
-                Text("Aresium reads your bank's export files and sorts every payment into your categories. It all stays on this iPhone: nothing about your money goes to a server.")
-                    .font(AppFont.text(14)).foregroundStyle(palette.secondary).lineSpacing(3)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, 10)
-                VStack(spacing: 0) {
-                    Button(action: chooseCategories) {
-                        FirstRunStep(number: 1, title: Text("Choose categories"),
-                                     detail: phone.hasChosenCategories ? Text("\(phone.summary.chosen.count) chosen")
-                                                                       : Text("Nothing is ticked yet"),
-                                     state: phone.hasChosenCategories ? .done : .next, palette: palette)
-                    }
-                    .buttonStyle(SettingsRowStyle())
-                    TileRowDivider()
-                    Button { pickingFiles = true } label: {
-                        FirstRunStep(number: 2, title: Text("Import a bank file"),
-                                     detail: imports.isBusy ? Text("Reading the file…")
-                                                            : Text("Your payments as a file from your bank"),
-                                     state: phone.hasChosenCategories ? .next : .later, busy: imports.isBusy,
-                                     palette: palette)
-                    }
-                    .buttonStyle(SettingsRowStyle())
-                    .disabled(!phone.hasChosenCategories || imports.isBusy)
+            content
+                .padding(.horizontal, 28).padding(.vertical, 24)
+                .frame(maxWidth: .infinity)
+                .frame(minHeight: visibleHeight * 0.82)
+                .onGeometryChange(for: CGFloat.self) { $0.bounds(of: .scrollView)?.height ?? 0 } action: {
+                    visibleHeight = $0
                 }
-                .glassCard(edge: palette.red ? palette.line : nil)
-                .padding(.top, 22)
-                Text("Export it in your bank's app or on its website, then pick it here or share it to Aresium.")
-                    .font(AppFont.text(12.5)).foregroundStyle(palette.muted).lineSpacing(3)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, 10).padding(.horizontal, 4)
-                GuideLink(tint: palette.secondary, action: openGuide)
-                    .padding(.top, 4).padding(.horizontal, 4)
-                quietLink(title: Text("Look around first?"), detail: Text("A tour with made-up sample data"),
-                          action: startTour)
-                    .padding(.top, 30)
-                quietLink(title: Text("Restore from an export"), detail: Text("A file you exported from Aresium before"),
-                          action: restore)
-                    .padding(.top, 20)
-                if let restoreProblem { FormProblem(text: restoreProblem).padding(.top, 10) }
-            }
-            .padding(.horizontal, 18).padding(.top, 14)
         } band: { _ in band }
         .scrollBounceBehavior(.always)
-        .fileImporter(isPresented: $pickingFiles, allowedContentTypes: PhoneImportTypes.all, allowsMultipleSelection: true) { result in
-            switch result {
-            case let .success(urls): if !urls.isEmpty { Task { await imports.receive(urls) } }
-            case let .failure(error): imports.show(error.localizedDescription, success: false)
-            }
-        }
     }
 
-    /// A quiet choice under the steps: a title in the second ink, one line under it.
-    private func quietLink(title: Text, detail: Text, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            VStack(alignment: .leading, spacing: 3) {
-                title.font(AppFont.text(14, weight: .semibold)).foregroundStyle(palette.secondary)
-                detail.font(AppFont.text(12)).foregroundStyle(palette.muted)
+    private var content: some View {
+        VStack(spacing: 0) {
+            ZStack {
+                Circle().fill(palette.card2)
+                Circle().strokeBorder(palette.line, lineWidth: 1)
+                Image(systemName: "tray").font(.system(size: 22, weight: .medium)).foregroundStyle(palette.secondary)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .padding(.horizontal, 4)
-    }
-}
-
-/// One step of the first run, as a row of the dashboard: its number in a day tile (filled with ink while it is the
-/// next step, a check once done), the title and one line.
-private struct FirstRunStep: View {
-    enum State { case next, done, later }
-
-    let number: Int
-    let title: Text
-    let detail: Text
-    let state: State
-    var busy = false
-    let palette: Palette
-
-    var body: some View {
-        HStack(spacing: 12) {
-            tile
-            VStack(alignment: .leading, spacing: 2) {
-                title.font(AppFont.text(14.5, weight: .semibold)).foregroundStyle(palette.ink)
-                detail.font(AppFont.text(12.5)).foregroundStyle(palette.muted)
+            .frame(width: 64, height: 64)
+            .accessibilityHidden(true)
+            Text("No data yet").font(AppFont.text(21, weight: .bold)).foregroundStyle(palette.ink)
+                .multilineTextAlignment(.center).padding(.top, 22)
+                .accessibilityAddTraits(.isHeader)
+            Text("Aresium sorts the payments from your bank's file into categories and adds them up. Everything stays on this iPhone.")
+                .font(AppFont.text(14)).foregroundStyle(palette.secondary).lineSpacing(3)
+                .multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 10)
+            VStack(spacing: 10) {
+                Button(action: importData) {
+                    BusyLabel(text: imports.isBusy ? Text("Reading the file…") : Text("Import data"), busy: imports.isBusy)
+                }
+                .buttonStyle(FormButtonStyle(accent: nil, busy: imports.isBusy))
+                .allowsHitTesting(!imports.isBusy)
+                // The header's quiet button look (card and line), with words.
+                Button(action: startTour) {
+                    Text("Start tour").font(AppFont.text(15, weight: .semibold)).foregroundStyle(palette.ink)
+                        .lineLimit(1).minimumScaleFactor(0.85)
+                        .padding(.horizontal, 16).frame(maxWidth: .infinity, minHeight: 50)
+                        .background(palette.card, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(palette.line))
+                        .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
+                .buttonStyle(.plain)
             }
-            .fixedSize(horizontal: false, vertical: true)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            if busy {
-                ProgressView().tint(palette.secondary)
-            } else {
-                Image(systemName: "chevron.right").font(.system(size: 11, weight: .medium)).foregroundStyle(palette.muted)
+            .frame(maxWidth: 360)
+            .padding(.top, 28)
+            VStack(spacing: 2) {
+                GuideLink(tint: palette.secondary, action: openGuide)
+                Button(action: restore) {
+                    Text("Restore from an export").font(AppFont.text(13.5, weight: .semibold))
+                        .foregroundStyle(palette.secondary)
+                        .frame(minHeight: 32).contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
             }
-        }
-        .padding(.horizontal, 14).padding(.vertical, 12)
-        .opacity(state == .later ? 0.45 : 1)
-        .contentShape(Rectangle())
-        .accessibilityElement(children: .combine)
-    }
-
-    @ViewBuilder private var tile: some View {
-        switch state {
-        case .next:
-            Text(verbatim: String(number)).font(AppFont.number(15)).foregroundStyle(palette.background)
-                .frame(width: 38, height: 38)
-                .background(palette.ink, in: RoundedRectangle(cornerRadius: 9))
-        case .done:
-            DayTile(palette: palette) { Image(systemName: "checkmark").font(.system(size: 14, weight: .semibold)) }
-        case .later:
-            DayTile(palette: palette) { Text(verbatim: String(number)) }
+            .padding(.top, 18)
+            if let restoreProblem { FormProblem(text: restoreProblem).padding(.top, 10).frame(maxWidth: 360) }
         }
     }
 }
@@ -223,7 +169,7 @@ private struct FirstRunStep: View {
 
 /// The category picker: the default list by group, each category as the dashboard's rows draw it with a tick on the
 /// right; one's own names below; unticking a category with payments asks where they go (`UntickSheet`). Pushed from
-/// Settings, or in a sheet at the first run.
+/// Settings, or in a sheet before the first import.
 struct CategoryPickerScreen: View {
     @State var model: CategoryPickerModel
     var done: (() -> Void)? = nil

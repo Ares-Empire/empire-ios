@@ -2,14 +2,16 @@ import Foundation
 import Observation
 import os
 
-// The tour (brief 24): the real dashboard on a made-up store of its own, ten steps, each pointing at one real control with
-// one short sentence; it goes on when the person does the thing or taps Next. Everything the tour shows and changes is
-// in `TourWorld`, a store in a temporary folder that is deleted when the tour ends: the person's own store, categories
-// and learned shops are never opened by it. The look is `Screens/TourScreens.swift`.
+// The tour (briefs 24 and 25): the real dashboard on a made-up store of its own, twelve steps, each pointing at one real
+// control with one short sentence; it goes on when the person does the thing or taps Next. Everything the tour shows and
+// changes is in `TourWorld`, a store in a temporary folder that is deleted when the tour ends: the person's own store,
+// categories and learned shops are never opened by it. Its Settings also point at the lock and at Contact & support,
+// which in the tour only go on: no lock is set and nothing is sent. The look is `Screens/TourScreens.swift`.
 
 /// The tour's steps, in order.
 nonisolated enum TourStep: Int, CaseIterable, Sendable {
-    case welcome = 1, income, overview, graph, category, payment, switchCategory, categories, importFiles, done
+    case welcome = 1, income, overview, graph, category, payment, switchCategory, categories, lock, contact, importFiles,
+         done
 
     /// The step after this one; nil after the last.
     var next: TourStep? { TourStep(rawValue: rawValue + 1) }
@@ -25,6 +27,8 @@ nonisolated enum TourStep: Int, CaseIterable, Sendable {
         case .payment: language.string("Every payment in detail.")
         case .switchCategory: language.string("Sorted wrong? Pick the right category. Aresium remembers the shop.")
         case .categories: language.string("Here you choose categories and add your own.")
+        case .lock: language.string("Protect Aresium with Face ID or a code of your own.")
+        case .contact: language.string("Questions, ideas, problems? Write to us here.")
         case .importFiles: language.string("New files from your bank come in here.")
         case .done: language.string("Done. Now with your own data.")
         }
@@ -43,8 +47,8 @@ nonisolated enum TourTarget: Hashable, Sendable {
     case payment(String)
     /// "Change" in a payment's detail.
     case change
-    /// Settings → Categories (the tour's Settings).
-    case categoriesRow
+    /// Settings → Categories, the Lock section and Contact & support (the tour's Settings).
+    case categoriesRow, lockRow, contactRow
 }
 
 /// The tour's state, one model that tests drive step by step: the step, where its dashboard is (`DashboardPlace`), which
@@ -65,7 +69,8 @@ final class TourModel {
     private(set) var step = TourStep.welcome
     /// Where the tour's dashboard is: its pushed screens, Current or Overview, the page, the graph, the open payment.
     private(set) var place = DashboardPlace()
-    /// The tour's Settings (only its categories), and its category picker pushed there.
+    /// The tour's Settings (its categories, and the lock and Contact & support to point at), and its category picker
+    /// pushed there.
     private(set) var showsSettings = false
     private(set) var showsCategories = false
     /// "How do I get my file?" from the import step.
@@ -153,6 +158,16 @@ final class TourModel {
         if phase == .running && step == .importFiles { next() }
     }
 
+    /// The Lock rows in the tour's Settings: in the tour they only answer their step (no lock is set).
+    func lockTapped() {
+        if phase == .running && step == .lock { next() }
+    }
+
+    /// Contact & support in the tour's Settings: it only answers its step (no form opens, nothing is sent).
+    func contactTapped() {
+        if phase == .running && step == .contact { next() }
+    }
+
     /// A payment's category change finished (its sheet closed, the shop question answered).
     func paymentRecategorised() {
         if phase == .running && step == .switchCategory { next() }
@@ -173,6 +188,8 @@ final class TourModel {
         case .payment: return firstPayment.map { .payment($0.id) }
         case .switchCategory: return place.payment != nil ? .change : firstPayment.map { .payment($0.id) }
         case .categories: return showsCategories ? nil : showsSettings ? .categoriesRow : .settings
+        case .lock: return showsSettings ? .lockRow : .settings
+        case .contact: return showsSettings ? .contactRow : .settings
         case .importFiles: return .importButton
         }
     }
@@ -228,6 +245,12 @@ final class TourModel {
             // The gear is in every screen's header: the list stays, the payment closes.
             closeSheets()
             place.payment = nil
+        case .lock, .contact:
+            // The tour's Settings, open on its rows (the category picker closes).
+            showsGuide = false
+            showsCategories = false
+            place.payment = nil
+            showsSettings = true
         }
     }
 

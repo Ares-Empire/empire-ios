@@ -2,9 +2,10 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 // The tour's look (the logic is `Model/TourModel.swift`). The real dashboard runs on the tour's made-up store; each
-// step lays a veil in the wall's colour over the screen, leaves the control it points at clear with a thin ink ring
-// (anchor preferences, so the ring follows the control), and shows one card in Aresium's glass at the bottom: the step,
-// one sentence, Next, End tour. Ink only. Reduce Motion: nothing moves, the ring and the card change in place.
+// step lays a light veil in the wall's colour over the screen (the app stays easy to read under it, Patrik 2026-10-27),
+// leaves the control it points at clear at full strength with an ink ring (anchor preferences, so the ring follows the
+// control), and shows one card in Aresium's glass at the bottom: the step, one sentence, Next, End tour. Ink only.
+// Reduce Motion: nothing moves, the ring and the card change in place.
 
 // MARK: - the tour in the environment
 
@@ -118,8 +119,8 @@ private struct TourSpotlight: ViewModifier {
     }
 }
 
-/// The wall's colour laid over the screen, with the control left clear and ringed in ink. Taps on the rest stop here
-/// (`holdsTheRest`), taps on the control go through.
+/// The wall's colour laid lightly over the screen, with the control left clear and ringed in ink. Taps on the rest stop
+/// here (`holdsTheRest`), taps on the control go through.
 private struct TourVeil: View {
     let hole: CGRect
     /// The screen's frame: the ring stays a little inside it (a full-width row).
@@ -127,6 +128,9 @@ private struct TourVeil: View {
     let holdsTheRest: Bool
     private static let margin: CGFloat = 6
     private static let radius: CGFloat = 14
+    /// How much of the wall lies over the rest of the screen: enough to set the control apart, little enough that the
+    /// app under it reads easily (brief 24 had 0.74; tuned by eye in light and dark, 2026-10-27).
+    static let veil: Double = 0.3
 
     var body: some View {
         let around = hole.insetBy(dx: -Self.margin, dy: -Self.margin)
@@ -134,9 +138,10 @@ private struct TourVeil: View {
         let clear = inside.isNull ? around : inside
         let shape = VeilShape(hole: clear, radius: Self.radius)
         ZStack {
-            shape.fill(Ink.background.opacity(0.74), style: FillStyle(eoFill: true))
+            shape.fill(Ink.background.opacity(Self.veil), style: FillStyle(eoFill: true))
+            // With the lighter veil the ring does the setting apart: full ink, a little thicker.
             RoundedRectangle(cornerRadius: Self.radius, style: .continuous)
-                .strokeBorder(Ink.primary.opacity(0.85), lineWidth: 1.5)
+                .strokeBorder(Ink.primary, lineWidth: 2)
                 .frame(width: clear.width, height: clear.height)
                 .position(x: clear.midX, y: clear.midY)
                 .allowsHitTesting(false)
@@ -179,7 +184,7 @@ private struct TourCardInset: ViewModifier {
 
 // MARK: - the card
 
-/// The step's card: "Tour · 3 of 10", the sentence, Next (ink, like the first run's next step) and End tour; at the
+/// The step's card: "Tour · 3 of 12", the sentence, Next (ink, the main button's look) and End tour; at the
 /// import step a link to the bank guide, at the last step one button that ends the tour.
 private struct TourCard: View {
     let tour: TourModel
@@ -247,7 +252,7 @@ private struct TourCard: View {
     }
 
     /// Next, or at the last step the one button that ends the tour. Ink filled, the words in the wall's colour (the
-    /// first run's next step).
+    /// first screen's Import data).
     private var mainButton: some View {
         Button {
             withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.3)) { tour.next() }
@@ -299,7 +304,8 @@ struct TourScreen<Header: View>: View {
             if let world = tour.world { TourSettingsSheet(tour: tour, world: world).environment(\.tour, tour) }
         }
         .sheet(isPresented: Binding(get: { tour.showsGuide }, set: { tour.showsGuide = $0 })) {
-            BankGuideSheet(importing: nil).environment(\.tour, tour)
+            // Nothing real happens in the tour: no Choose file, no bank's name sent.
+            BankGuideSheet(importing: nil, outbox: nil).environment(\.tour, tour)
         }
     }
 
@@ -336,8 +342,10 @@ struct TourScreen<Header: View>: View {
     }
 }
 
-/// The tour's Settings: only "Your data on this iPhone → Categories", on the made-up store (the rest of Settings
-/// belongs to the person's own app and is not part of the tour).
+/// The tour's Settings: "Your data on this iPhone → Categories" on the made-up store, and the Lock section and Contact &
+/// support as the person's own Settings show them. Those two only point and go on (`TourModel.lockTapped`,
+/// `contactTapped`): no lock is set, no form opens, nothing is sent. The rest of Settings belongs to the person's own
+/// app and is not part of the tour.
 private struct TourSettingsSheet: View {
     let tour: TourModel
     let world: TourWorld
@@ -355,12 +363,24 @@ private struct TourSettingsSheet: View {
                         .buttonStyle(SettingsRowStyle())
                         .tourAnchor(.categoriesRow)
                     }
-                    FormNote(text: String(localized: "In the tour, Settings shows only the categories."))
+                    lock
+                    SettingsSection(String(localized: LocalizedStringResource("Help", table: "Shared",
+                                                                              locale: .appLanguage))) {
+                        Button { tour.contactTapped() } label: {
+                            SettingsRow(title: String(localized: LocalizedStringResource("Contact & support",
+                                                                                         table: "Shared",
+                                                                                         locale: .appLanguage)))
+                        }
+                        .buttonStyle(SettingsRowStyle())
+                        .tourAnchor(.contactRow)
+                    }
+                    FormNote(text: String(localized: "In the tour, Settings shows only these rows, and they change nothing."))
                         .padding(.top, 10)
                 }
                 .padding(.horizontal, 18).padding(.bottom, 34)
             }
             .scrollIndicators(.hidden)
+            .tourScrollsToTarget()
             .background { Ink.background.ignoresSafeArea() }
             .tourSpotlight()
             .navigationTitle(Text("Settings", tableName: "Shared"))
@@ -380,5 +400,31 @@ private struct TourSettingsSheet: View {
         .tint(Ink.primary)
         .presentationBackground(Ink.background)
         .tourCard()
+    }
+
+    /// The Lock section as the person's Settings shows it with no lock set (`LockSettingsSection`): the Face ID switch
+    /// off and Own code off. One button over both rows: in the tour it only answers its step; the switch is a picture
+    /// (it takes no taps) and never asks for Face ID.
+    private var lock: some View {
+        SettingsSection(String(localized: "Lock")) {
+            Button { tour.lockTapped() } label: {
+                VStack(spacing: 0) {
+                    Toggle(isOn: .constant(false)) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Lock with Face ID").font(AppFont.text(15, weight: .medium)).foregroundStyle(Ink.primary)
+                            Text("Or the iPhone's code").font(AppFont.text(12)).foregroundStyle(Ink.muted)
+                        }
+                    }
+                    .tint(Ink.secondary)
+                    .allowsHitTesting(false)
+                    .padding(.horizontal, 16).frame(minHeight: 58)
+                    SettingsDivider()
+                    SettingsRow(title: String(localized: "Own code"), value: String(localized: "Off"))
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(SettingsRowStyle())
+            .tourAnchor(.lockRow)
+        }
     }
 }

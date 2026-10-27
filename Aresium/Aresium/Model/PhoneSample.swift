@@ -4,7 +4,7 @@ import Foundation
 /// DEBUG `-samplePhone`: phone mode without a login or network, its store (in a temporary folder) filled through the
 /// real import from made-up files: the tour's VR Bank CSV for the last nine months (`TourData`: made-up shops and
 /// amounts, so the dashboard is full and current) and the engine's own made-up fixtures (`Preview Content/PhoneSample`).
-/// For screenshots and UI checks; `-samplePhoneEmpty` is the first run.
+/// For screenshots and UI checks; `-samplePhoneEmpty` is the first screen.
 @MainActor
 enum PhoneSample {
     /// The categories the sample person ticked, and one of their own (the tour's).

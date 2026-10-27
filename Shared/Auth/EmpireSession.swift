@@ -10,7 +10,13 @@ struct EmpireAppIdentity: Equatable, Sendable {
     /// (or none) opens it, and its service matters only to the app itself (Aresium's server mode for the owner). Every
     /// other app needs a login with its service.
     var accountOptional = false
-    static let aresium = EmpireAppIdentity(service: "aresium", name: "Aresium", accountOptional: true)
+    /// Contact & support always goes as a contact message without the login (the account server's open `contact`
+    /// collection, the website's form's: an email to answer to, an optional name), also while an Ares login exists
+    /// (Aresium, Patrik 2026-10-27: the privacy policy handles its messages like the website's contact form, without
+    /// accounts). Every other app sends the account-linked `feedback` record with its login.
+    var supportWithoutLogin = false
+    static let aresium = EmpireAppIdentity(service: "aresium", name: "Aresium", accountOptional: true,
+                                           supportWithoutLogin: true)
     static let empire = EmpireAppIdentity(service: "empire", name: "Ares Empire")
     static let arestemis = EmpireAppIdentity(service: "arestemis", name: "Arestemis")
     static let aresus = EmpireAppIdentity(service: "aresus", name: "Aresus")

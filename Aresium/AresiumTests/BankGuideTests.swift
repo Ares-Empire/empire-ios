@@ -119,4 +119,24 @@ struct BankGuideTests {
         #expect(ids("Sparda-Bank") == ["other"])                                   // not in the list: Another bank
         #expect(ids("   ") == ids(""))
     }
+
+    /// Brief 25: when the search finds no bank, the list shows Another bank's steps in place (with Tell us about your
+    /// bank); with nothing typed, or a bank found, it is the list.
+    @Test func noMatchShowsAnotherBanksSteps() throws {
+        let guide = try guide()
+        func unknown(_ query: String) -> String? {
+            if case let .unknown(bank) = guide.results(query) { bank.id } else { nil }
+        }
+        func listed(_ query: String) -> [String]? {
+            if case let .banks(banks) = guide.results(query) { banks.map(\.id) } else { nil }
+        }
+        #expect(unknown("Sparda-Bank") == BankGuide.Bank.otherID)
+        #expect(unknown("Fiktivbank Süd") == BankGuide.Bank.otherID)
+        #expect(listed("") == guide.search("").map(\.id))
+        #expect(listed("   ") == guide.search("").map(\.id), "only spaces: nothing typed")
+        #expect(listed("spark") == ["sparkasse-camt", "other"])
+        // Another bank's steps are there to show: a place with steps, which file, the ways.
+        let other = try #require(guide.bank(BankGuide.Bank.otherID))
+        #expect(!other.placesWithSteps.isEmpty && !other.ways(for: other.firstPlace).isEmpty)
+    }
 }
