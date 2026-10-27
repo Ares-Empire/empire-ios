@@ -7,7 +7,7 @@ struct ImportButton: View {
     let palette: Palette
     /// What the file picker offers: the server's CSV and XML, or phone mode's bank files (`PhoneImportTypes`).
     var types: [UTType] = [.commaSeparatedText, .xml]
-    /// Phone mode before any category is chosen: the button opens the category picker instead.
+    /// Done instead of opening the file picker (the tour, which picks no file into its made-up store).
     var instead: (() -> Void)? = nil
     @State private var pickingFiles = false
 

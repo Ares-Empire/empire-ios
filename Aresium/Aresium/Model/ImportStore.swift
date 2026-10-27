@@ -4,12 +4,15 @@ import UIKit
 
 struct ImportBanner: Identifiable {
     let id = UUID()
-    let message: String
+    var message: String
     let success: Bool
     var files: [String] = []
     /// Phone mode, after a file of an unknown bank was read with the layout the person confirmed: the quiet card that
     /// offers to send its format to us (`BankFormatCard`). While it shows, the result stays until it is answered.
     var share: BankFormatCard?
+    /// The import results `message` sums up (empty for other lines), so it can be counted again after the category
+    /// picker sorted the payments (`ImportStore.categoriesClosed`).
+    var results: [ImportFileResult] = []
 }
 
 /// Phone mode: a CSV whose layout the engine does not know. The person sees its first payments read the engine's ways
@@ -57,6 +60,12 @@ final class ImportStore {
     @ObservationIgnored private var uploadTask: Task<Void, Never>?
     /// Files whose layout the person confirms first, one sheet at a time (phone mode).
     private(set) var layoutQueue: [LayoutRequest] = []
+    /// Phone mode: an import that added payments ended while no category is chosen, so the category picker shows over
+    /// the app (ContentView), saying they are in; ticking sorts them at once. Decided here, at the import's end, for
+    /// every way files come in (`finishIfDone`).
+    private(set) var asksForCategories = false
+    /// Payments the import under way has added so far: all its files, those confirmed in the file check window too.
+    @ObservationIgnored private var addedSoFar = 0
     private var generation = 0
     private var uploadID: UUID?
     private let dashboard: DashboardStore
@@ -107,9 +116,10 @@ final class ImportStore {
 
     func showSampleUnavailable() { show("Not available with sample data", success: false) }
 
-    func show(_ message: String, success: Bool, files: [String] = [], share: BankFormatCard? = nil) {
+    func show(_ message: String, success: Bool, files: [String] = [], share: BankFormatCard? = nil,
+              results: [ImportFileResult] = []) {
         bannerTask?.cancel()
-        let banner = ImportBanner(message: message, success: success, files: files, share: share)
+        let banner = ImportBanner(message: message, success: success, files: files, share: share, results: results)
         self.banner = banner
         // With the send card the result waits for an answer; once answered it goes after the same pause. (Only the id
         // is captured: the banner holds the card, so capturing it would keep both alive.)
@@ -138,6 +148,7 @@ final class ImportStore {
 
     func discard() {
         generation += 1
+        addedSoFar = 0
         uploadTask?.cancel()
         uploadTask = nil
         uploadID = nil
@@ -158,7 +169,7 @@ final class ImportStore {
         // Before the mode is known (files shared before login), only what both modes read.
         let extensions = backend?.importExtensions ?? ImportFileReader.serverExtensions
         readingCount += 1
-        defer { readingCount -= 1; schedulePendingImport() }
+        defer { readingCount -= 1; schedulePendingImport(); finishIfDone() }
         do {
             // Capture the bytes while access is available; shared Inbox copies are removed after reading.
             let files = try await Task.detached {
@@ -172,8 +183,10 @@ final class ImportStore {
         }
     }
 
-    /// The login or the mode changed: files waiting for either are imported now.
+    /// The login or the mode changed: files waiting for either are imported now. The category picker an import of the
+    /// phone's store asked for is not asked any more once the app left phone mode.
     func sessionChanged() async {
+        if asksForCategories, backend?.waitsForCategories != true { asksForCategories = false }
         if isReady { await importPendingFiles() }
     }
 
@@ -198,6 +211,7 @@ final class ImportStore {
             self.uploadID = nil
             self.isImporting = false
             self.schedulePendingImport()
+            self.finishIfDone()
         }
         uploadTask = task
         background.begin { [weak self] in self?.uploadTask?.cancel() }
@@ -228,6 +242,7 @@ final class ImportStore {
                 guard current() else { return }
                 try Task.checkCancellation()
                 results.append(contentsOf: batch)
+                addedSoFar += batch.reduce(0) { $0 + $1.added }
                 changed = true
                 // Keep failed files and any files the server did not report; completed requests need no retry. A file
                 // whose layout the person confirms first waits in `layoutQueue`.
@@ -242,7 +257,8 @@ final class ImportStore {
             }
             guard generation == self.generation else { return }
             show(backend.importSummary(results), success: attempted.isEmpty && !results.contains { $0.failed },
-                 files: results.map(\.displayMessage), share: outbox?.card(for: results.compactMap(\.bankFormat)))
+                 files: results.map(\.displayMessage), share: outbox?.card(for: results.compactMap(\.bankFormat)),
+                 results: results)
         } catch {
             guard current() else { return }
             dashboard.session.handleAuthFailure(error, generation: sessionGeneration, token: token)
@@ -267,6 +283,49 @@ final class ImportStore {
     /// The person did not confirm a layout: the file is not imported.
     func layoutSkipped(_ request: LayoutRequest) {
         layoutQueue.removeAll { $0.id == request.id }
+        finishIfDone()
+    }
+
+    // MARK: the category picker after an import
+
+    /// An import is done when nothing is read, waiting, imported or checked in the file check window any more (files
+    /// that failed and wait for Retry do not hold it: Retry is an import of its own). When it added payments while no
+    /// category is chosen (phone mode), the category picker opens: once per import, whether the files came from the
+    /// picker, the share sheet or the file check window. Not after a cancelled picker, a failed file, a file whose
+    /// payments were all there already, or with categories chosen; a restore from an export and the tour do not import
+    /// through here.
+    private func finishIfDone() {
+        guard !isBusy, pending.isEmpty, layoutQueue.isEmpty else { return }
+        let added = addedSoFar
+        addedSoFar = 0
+        guard added > 0, backend?.waitsForCategories == true else { return }
+        bannerTask?.cancel()            // the result waits under the picker; it is counted again when the picker closes
+        asksForCategories = true
+    }
+
+    /// The category picker after an import closed (Done, or swiped away; closing with nothing ticked is allowed: the
+    /// payments stay Not sorted and the next import asks again). The result line is counted again as the store holds
+    /// it now, so it never claims numbers the picker changed, then goes after the usual pause.
+    @discardableResult
+    func categoriesClosed() -> Task<Void, Never>? {
+        guard asksForCategories else { return nil }
+        asksForCategories = false
+        return Task { await recountBanner() }
+    }
+
+    private func recountBanner() async {
+        guard let shown = banner, !shown.results.isEmpty, let backend else { return }
+        do {
+            let results = try await backend.recount(shown.results)
+            guard banner?.id == shown.id else { return }        // a newer result is showing
+            banner?.message = backend.importSummary(results)
+            banner?.results = results
+        } catch {
+            // The numbers could not be read again: the line goes rather than claim old ones.
+            if banner?.id == shown.id { dismiss() }
+            return
+        }
+        if shown.success, shown.share == nil { dismissLater(shown.id) }
     }
 
     private func schedulePendingImport() {

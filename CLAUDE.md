@@ -505,13 +505,32 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   payment, a calm empty state a little above the middle (a mark in a thin circle as the store's own states): "No data
   yet", one line on what Aresium does and that everything stays on this iPhone, **Import data** (the main button) and
   **Start tour** (quiet), then the quiet links "How do I get my file?" and "Restore from an export"; it ends with the
-  band. Choosing categories is no step of its own: Import data (and the dashboard's import button, and the guide's
-  Choose file) opens the category picker first while none is chosen, then the file picker once it closes with
-  categories (`ImportFlow`). What shows is `MainScreen.choose` (the tour, the store's state, the first screen, the
-  dashboard): after the tour, finished or ended early, the first screen is back while there is no data, so the made-up
-  data is never shown outside the tour. Then the category picker (the default list by group, nothing
-  ticked at first, one's own names; unticking a category with payments asks where they go, Not sorted first), after a
-  Switch the alert "Also the other payments from <shop>?" (the count on its button), the store's opening state.
+  band. **The file first** (brief 27, Patrik 2026-10-27: Import data had opened the categories, which felt wrong):
+  Import data, the dashboard's import button and the guide's Choose file open the file picker at once. Choosing
+  categories is no step of its own: **when an import in phone mode ended and added payments while no category is
+  chosen, the category picker opens** over the dashboard with the payments already in, whatever brought the files (the
+  file picker, the share sheet, the file check window), once per import (several files: after the last, also after a
+  file check that was skipped). Not after a cancelled picker, a failed file, a file whose payments were all there
+  already, a restore from an export, the tour, or with categories chosen. It is decided in one place, the import's end
+  (`ImportStore.finishIfDone` → `asksForCategories`, with `AresiumBackend.waitsForCategories`; ContentView only presents
+  it, once no other sheet is open). Its line on top: "Your payments are in. Aresium sorts them as you tick." Ticking
+  sorts the waiting payments at once (`PhoneBackend.choose`); closing it with nothing ticked is allowed (the payments
+  stay Not sorted and the next import asks again). **The result line stays true:** the import's line ("4 new · 0
+  already there · 0 sorted · 4 not sorted") waits under the picker and, when it closes, is counted again from the store
+  for that import's own payments (`PhoneImportResult.newIDs`, `AresiumBackend.recount`), then goes after the usual
+  pause; the files' lines claim no sorting. What shows is `MainScreen.choose` (the tour, the store's state, the first
+  screen, the dashboard): after the tour, finished or ended early, the first screen is back while there is no data, so
+  the made-up data is never shown outside the tour. Then the category picker (the default list by group, nothing
+  ticked at first, one's own names; unticking a category with payments asks where they go, Not sorted first; **each row
+  shows a quiet number** (brief 27, Patrik 2026-10-27; `PhoneBackend.categoryCounts`): a ticked category and one's own
+  the payments in them, a default one not ticked how many of the payments waiting as Not sorted it would get if ticked
+  (one dry run of `sortPayments` over the waiting payments with every default category besides the chosen ones; nothing
+  stored; an estimate, since a learned shop's unticked category can take a payment), none at 0 or before any payment,
+  counted again after every change; in muted ink before the tick, under the name at the accessibility text sizes; read
+  out as "34 payments"; with numbers on the rows the picker's note adds "The number by a category is how many of your
+  payments it has, or would get once ticked."; in every picker: after an import, Settings → Categories, the tour's
+  Settings), after a Switch the alert "Also the other payments from <shop>?" (the count on its button), the store's
+  opening state.
   **An unknown bank's file** (brief 23, Patrik 2026-10-27: most people don't know what a CSV is;
   `Model/FileCheck.swift`,
   `Screens/FileCheckSheet.swift`): a window with the file's name, "Aresium doesn't know this bank yet. This is how your
@@ -561,9 +580,11 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   aresium and copies the bundle (its commit in `Engine/engine-version.txt`), the engine's test files and the licence
   notice (`Engine/name-suggestion-index-licence.txt`); the bundle is never edited by hand. Launch arguments (DEBUG):
   `-samplePhone` (a made-up store in a temporary folder, filled through the real import), `-samplePhoneEmpty` (the
-  first screen; `-sampleChosen` with categories chosen, so Import data opens the files; `-importData` taps Import data
-  at launch), `-sampleSignedIn` (signed in on the made-up account server),
-  `-openSheet categories|settings`, `-sampleUntick <category id>` (in the picker), `-sampleLayout` (an unknown bank's
+  first screen; `-importData` taps Import data at launch: the file picker; `-sampleImport` imports the tour's made-up
+  bank file as if picked, so on the empty store the category picker opens after it as after a real import),
+  `-sampleSignedIn` (signed in on the made-up account server), `-openSheet settings`, in the picker
+  `-sampleTick <id,id,…>` (ticks those), `-sampleUntick <category id>`, `-scrollToCategory <id>` and
+  `-samplePickerDone` (then Done: the dashboard with the result line counted again), `-sampleLayout` (an unknown bank's
   CSV: "Does this look right?"; `-sampleReading 2` the second reading, `-sampleReading columns` the column check),
   `-sampleFormat` (that file confirmed and imported: the result with the send card; `-formatBank <name>`,
   `-formatPhase sending|sent|kept|refused|badName`, `-formatMessage <the server's sentence>`, `-openFormatDetails`
@@ -576,11 +597,13 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   `-sampleWrongCodes <n>`, `-openCode` (Settings → Lock → Own code), `-openCodeEntry set|change|remove`. Tests:
   `PhoneModeTests`, `PhoneBackendTests`, `PhoneStoreTests` (with the moving over), `PhoneEngineTests`,
   `PhoneLookTests`, `LockTests`, `SupportContactTests`, `CategoryRouteTests`, `FileCheckTests`, `BankFormatTests`,
-  `BankRequestTests`, `FirstScreenTests`.
+  `BankRequestTests`, `FirstScreenTests`, `ImportThenCategoriesTests`, `CategoryCountsTests`.
   Screenshots of every phone-mode screen in both looks and languages, and at the largest text size: `build/18-*.png`
   (2026-10-27); without an account and the lock: `build/22-*.png`, contact sheet `build/22-sheet.png`; the unknown
   file's window and sending: `build/23-*.png`, contact sheet `build/23-sheet.png`; the first screen, the lighter tour
-  with the lock and contact, the guide's no-match and sent states: `build/25-*.png`, contact sheet `build/25-sheet.png`.
+  with the lock and contact, the guide's no-match and sent states: `build/25-*.png`, contact sheet `build/25-sheet.png`;
+  Import data's file picker, the category picker after an import with its numbers, the dashboard after ticking (both
+  languages and looks, the largest text size): `build/27-*.png`, contact sheet `build/27-sheet.png`.
   **"How do I get my file?"** (brief 24, Patrik 2026-10-27: he did not know how the first time): the per-bank steps of
   brief 19's research, now in the app (`Guide/bank-steps.json`, one copy; how it was researched and what is unsure:
   `docs/bank-export-guide/README.md`; `Model/BankGuide.swift`, `Screens/BankGuideScreens.swift`). A list with a search
@@ -588,8 +611,8 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   Another bank always last; a bank's page: Website / App (only places with steps; for the other one line, "doesn't work"
   or "Aresium knows no way" when no source describes one), the numbered steps, the quiet line "a button may be called a
   little differently" below high confidence, which file (the bank's labels as chips) and why, Good to know (the limits),
-  how the file gets to Aresium (the bank's `toAresium` ways, the usual one open), Choose file (the import picker; in
-  phone mode the category picker first while none is chosen; the files are imported once the guide has closed). No
+  how the file gets to Aresium (the bank's `toAresium` ways, the usual one open), Choose file (the file picker; the
+  files are imported once the guide has closed, and in phone mode the category picker follows while none is chosen). No
   sources and no format names in the screen's own sentences (`BankGuideTests` checks the data). Opened from the first
   screen, an empty dashboard page and Settings → Help → Get the file from your bank
   (`SettingsScreen`'s `help` slot, Shared). **The tour** (brief 24, `Model/TourModel.swift`, `Model/TourData.swift`,

@@ -1,6 +1,6 @@
 # 27: Import data opens the file first; the categories come after the import
 
-Status: running
+Status: merged 2026-10-27
 Repo: empire-ios · Worktree: `../empire-ios-27-import-first` (branch `claude/27-import-first`) · Built by: a Claude
 agent (flow and the picker's wording)
 

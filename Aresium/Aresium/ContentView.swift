@@ -37,8 +37,9 @@ struct ContentView: View {
     /// Files shared into Aresium while it was locked: imported once it is unlocked.
     @State private var heldFiles: [URL] = []
     @State private var showsSettings = false
-    /// Import data in phone mode: the category picker first while none is chosen, then the file picker.
-    @State private var importFlow = ImportFlow()
+    /// Import data's file picker (the first screen). The category picker follows an import that added payments while
+    /// none is chosen (`ImportStore.asksForCategories`).
+    @State private var picksFiles = false
     @State private var restoringExport = false
     /// Where the band was when it was tapped (from the screen's bottom edge to its word), so the intro's word lands
     /// there; nil when the header started the transition.
@@ -121,11 +122,6 @@ struct ContentView: View {
         #if DEBUG
         if phoneSample, let index = arguments.firstIndex(of: "-openSheet"), arguments.indices.contains(index + 1) {
             _showsSettings = State(initialValue: arguments[index + 1] == "settings")
-            if arguments[index + 1] == "categories" {
-                let flow = ImportFlow()
-                flow.showCategories()
-                _importFlow = State(initialValue: flow)
-            }
         }
         if phoneSample, let index = arguments.firstIndex(of: "-sampleCategory"), arguments.indices.contains(index + 1) {
             var routes = [DashboardRoute(category: arguments[index + 1], side: .expenses)]
@@ -196,8 +192,9 @@ struct ContentView: View {
                         default:
                             StartScreen(store: store, imports: imports, palette: palette, current: $place.current,
                                         side: $place.side, graph: $place.graph, band: band(in: geometry),
-                                        importTypes: importTypes, beforeImport: chooseCategoriesFirst,
-                                        openGuide: { showsGuide = true }) { place.path.append($0) }
+                                        importTypes: importTypes, openGuide: { showsGuide = true }) {
+                                place.path.append($0)
+                            }
                         }
                     }
                 }
@@ -313,15 +310,14 @@ struct ContentView: View {
             .sheet(isPresented: $showsGuide, onDismiss: importPickedInGuide) {
                 BankGuideSheet(importing: guideImport { showsGuide = false }, outbox: outbox)
             }
-            .sheet(isPresented: $importFlow.choosesCategories, onDismiss: {
-                // Categories chosen: on to the file (`ImportFlow`).
-                importFlow.categoriesClosed(hasCategories: modes.phone?.hasChosenCategories == true)
-            }) {
+            .sheet(isPresented: Binding(get: { showsCategoriesAfterImport },
+                                        set: { if !$0 { imports.categoriesClosed() } })) {
+                // After an import that added payments while no category is chosen (`ImportStore`): ticking sorts them.
                 if let phone = modes.phone {
                     NavigationStack {
                         CategoryPickerScreen(model: CategoryPickerModel(phone: phone) {
                             await store.reloadAfterTransactionChange()
-                        }, done: { importFlow.choosesCategories = false })
+                        }, afterImport: true, done: { imports.categoriesClosed() })
                     }
                     .presentationBackground(Ink.background)
                 }
@@ -329,7 +325,7 @@ struct ContentView: View {
             .background {
                 // Import data's file picker, on a view of its own (one file picker per view; the restore's is below).
                 Color.clear
-                    .fileImporter(isPresented: $importFlow.picksFiles, allowedContentTypes: importTypes,
+                    .fileImporter(isPresented: $picksFiles, allowedContentTypes: importTypes,
                                   allowsMultipleSelection: true) { result in
                         switch result {
                         case let .success(urls): if !urls.isEmpty { Task { await imports.receive(urls) } }
@@ -370,11 +366,10 @@ struct ContentView: View {
     /// What the bank files picker offers: the server's CSV and XML, or phone mode's bank files.
     private var importTypes: [UTType] { modes.phone == nil ? [.commaSeparatedText, .xml] : PhoneImportTypes.all }
 
-    /// The guide's Choose file: the picker for this mode (the categories first in phone mode while none is chosen);
-    /// the files are imported once the guide's sheet has closed (`close`, then `importPickedInGuide`).
+    /// The guide's Choose file: the file picker for this mode; the files are imported once the guide's sheet has closed
+    /// (`close`, then `importPickedInGuide`), so the import's own windows can show.
     private func guideImport(close: @escaping () -> Void) -> GuideImport {
-        GuideImport(types: importTypes, phone: modes.phone,
-                    categoriesChanged: { await store.reloadAfterTransactionChange() }) { result in
+        GuideImport(types: importTypes) { result in
             switch result {
             case let .success(urls): pickedInGuide = urls
             case let .failure(error): imports.show(error.localizedDescription, success: false)
@@ -423,21 +418,20 @@ struct ContentView: View {
                           phonePayments: modes.phone?.summary.payments)
     }
 
-    /// Import data (the first screen): the category picker first while none is chosen, then the file picker.
+    /// Import data (the first screen): the file picker.
     private func importData() {
-        importFlow.start(hasCategories: modes.phone?.hasChosenCategories ?? true)
+        picksFiles = true
+    }
+
+    /// The category picker after an import shows in phone mode once no other sheet of the app is open (a file shared in
+    /// while Settings or the guide is open waits for it to close).
+    private var showsCategoriesAfterImport: Bool {
+        imports.asksForCategories && modes.phone != nil && !showsSettings && !showsGuide
     }
 
     /// Server mode before its login is renewed at launch: nothing to show yet.
     private var waitsForServerLogin: Bool {
         modes.state == .server && !sampleActive && store.dashboard == nil && session.isRestoring
-    }
-
-    /// Phone mode before any category is chosen: the import button opens the category picker first, then the file
-    /// picker (`ImportFlow`).
-    private var chooseCategoriesFirst: (() -> Void)? {
-        guard let phone = modes.phone, !phone.hasChosenCategories else { return nil }
-        return { importFlow.start(hasCategories: false) }
     }
 
     /// The dashboard (or phone mode's first screen) shows: the server sample, or a mode with its backend.
@@ -469,13 +463,12 @@ struct ContentView: View {
         let arguments = LaunchArguments.current
         do {
             let (phone, storage) = try await PhoneSample.backend(empty: arguments.contains("-samplePhoneEmpty"))
-            // `-samplePhoneEmpty -sampleChosen`: the first screen with categories chosen (Import data opens the files).
-            if arguments.contains("-sampleChosen"), phone.summary.chosen.isEmpty {
-                for id in PhoneSample.chosen { try await phone.choose(id) }
-            }
             await modes.showFixed(phone, storage: storage)
-            // `-importData`: the first screen's Import data at launch (the category picker first, or the files).
+            // `-importData`: the first screen's Import data at launch (the file picker).
             if arguments.contains("-importData") { importData() }
+            // `-sampleImport`: the made-up bank file imported as if picked; on `-samplePhoneEmpty` (no category chosen)
+            // the category picker opens after it, as after a real import (`-sampleTick`, `-samplePickerDone` in it).
+            if arguments.contains("-sampleImport") { imports.debugImport([TourData.bankFile(now: .now)]) }
             if arguments.contains("-sampleLayout"), let file = PhoneSample.unknownBankFile() {
                 imports.debugImport([file])           // the window; `-sampleReading 2|columns` in it
             }

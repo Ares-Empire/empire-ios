@@ -4,7 +4,7 @@ import Testing
 
 /// The first screen (brief 25): phone mode without data shows "No data yet", the tour shows in its place while it runs,
 /// and the first screen comes back after the tour (finished or ended early) while there is no data: the made-up data is
-/// never shown outside the tour. Import data opens the category picker first while none is chosen.
+/// never shown outside the tour. (Import data and the category picker after it: `ImportThenCategoriesTests`.)
 @MainActor
 struct FirstScreenTests {
     /// 27 Oct 2026, noon, as the tour's tests.
@@ -57,34 +57,5 @@ struct FirstScreenTests {
         try await person.refresh()
         #expect(person.summary.payments == 0, "the made-up data never reaches the person's store")
         #expect(screen(person, tour: nil) == .firstScreen)
-    }
-
-    @Test func importDataOpensTheCategoryPickerFirst() async throws {
-        let person = try await PhoneTest.backend()
-        let flow = ImportFlow()
-        flow.start(hasCategories: person.hasChosenCategories)
-        #expect(flow.choosesCategories && !flow.picksFiles, "no category yet: the picker first")
-
-        try await person.choose("groceries")
-        flow.categoriesClosed(hasCategories: person.hasChosenCategories)
-        #expect(!flow.choosesCategories && flow.picksFiles, "then the file picker")
-
-        // Closed without choosing any: it ends there.
-        let empty = try await PhoneTest.backend()
-        let other = ImportFlow()
-        other.start(hasCategories: empty.hasChosenCategories)
-        other.categoriesClosed(hasCategories: empty.hasChosenCategories)
-        #expect(!other.choosesCategories && !other.picksFiles)
-
-        // With categories: the file picker at once.
-        let ready = ImportFlow()
-        ready.start(hasCategories: person.hasChosenCategories)
-        #expect(ready.picksFiles && !ready.choosesCategories)
-
-        // The picker opened on its own (Settings' way, `-openSheet categories`) is not followed by the files.
-        let alone = ImportFlow()
-        alone.showCategories()
-        alone.categoriesClosed(hasCategories: true)
-        #expect(!alone.picksFiles)
     }
 }

@@ -48,6 +48,14 @@ enum ImportFileResult {
         }
     }
 
+    /// The payments this file added.
+    var added: Int {
+        switch self {
+        case let .server(result): result.added
+        case let .phone(result): result.added
+        }
+    }
+
     /// The file could not be imported; it stays for Retry.
     var failed: Bool {
         switch self {
@@ -102,6 +110,13 @@ protocol AresiumBackend: AnyObject {
     func importFiles(_ files: [ImportFile], auth: BackendAuth) async throws -> [ImportFileResult]
     /// The banner's line for a finished import.
     func importSummary(_ results: [ImportFileResult]) -> String
+    /// Payments this mode imports wait for a category the person has not chosen yet (phone mode before any is ticked):
+    /// the category picker opens after an import that added some (`ImportStore.asksForCategories`). The server sorts by
+    /// itself.
+    var waitsForCategories: Bool { get }
+    /// An import's results as the store holds them now: phone mode counts each file's new payments as sorted or not
+    /// again (the category picker sorts them after the import); the server's stay as they were.
+    func recount(_ results: [ImportFileResult]) async throws -> [ImportFileResult]
 }
 
 /// Server mode: today's `APIClient` behind the interface, behaviour unchanged (aresium/docs/API-DATA.md).
@@ -146,6 +161,9 @@ final class ServerBackend: AresiumBackend {
     func importSummary(_ results: [ImportFileResult]) -> String {
         ImportResponse(results: results.compactMap { if case let .server(result) = $0 { result } else { nil } }).summary
     }
+
+    var waitsForCategories: Bool { false }
+    func recount(_ results: [ImportFileResult]) async throws -> [ImportFileResult] { results }
 
     private func token(_ auth: BackendAuth) throws -> String {
         guard let token = auth.token else { throw HTTPError.unauthorized }

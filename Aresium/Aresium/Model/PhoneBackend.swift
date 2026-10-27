@@ -19,6 +19,8 @@ nonisolated struct PhoneImportResult: Equatable, Sendable {
     /// A file read with a layout the person confirmed (an unknown bank), when that layout may be sent to us: the result
     /// offers to send it (`BankOutbox`).
     var format: BankFormat?
+    /// The payments this file added, so its sorted and not sorted can be counted again later (`PhoneBackend.recount`).
+    var newIDs: [String] = []
 
     var displayMessage: String {
         if let error, !error.isEmpty { return "\(name): \(error)" }
@@ -176,6 +178,7 @@ final class PhoneBackend: AresiumBackend {
                 } else {
                     let added = try await ledger.add(read, account: AccountKey.account(for: read))
                     result.added = added.newIDs.count
+                    result.newIDs = added.newIDs
                     result.already = added.already
                     result.account = added.accountName
                     fresh.append(added.newIDs)
@@ -206,6 +209,20 @@ final class PhoneBackend: AresiumBackend {
 
     func importSummary(_ results: [ImportFileResult]) -> String {
         ImportWording.summary(results.compactMap { if case let .phone(result) = $0 { result } else { nil } })
+    }
+
+    /// No category chosen yet: what an import adds waits as Not sorted, so the category picker follows it.
+    var waitsForCategories: Bool { !hasChosenCategories }
+
+    /// Each file's new payments counted as sorted or not as the store holds them now.
+    func recount(_ results: [ImportFileResult]) async throws -> [ImportFileResult] {
+        let sorted = Set(try await ledger.payments().filter { $0.category != nil }.map(\.id))
+        return results.map { result in
+            guard case var .phone(file) = result else { return result }
+            file.sorted = file.newIDs.filter(sorted.contains).count
+            file.waiting = file.newIDs.count - file.sorted
+            return .phone(file)
+        }
     }
 
     // MARK: sorting
@@ -241,6 +258,25 @@ final class PhoneBackend: AresiumBackend {
     }
 
     func paymentCount(in id: String) async throws -> Int { try await ledger.paymentCount(in: id) }
+
+    /// The picker's numbers, category id → payments (no entry for none): a ticked category, or one's own, the payments in
+    /// it now; a default category not ticked, how many of the payments waiting as Not sorted the engine would sort into
+    /// it if it were ticked. That is one dry run of the sorting with every default category besides the chosen ones;
+    /// nothing is stored. An estimate: ticked alone, a category can get a few more (a learned shop whose own category
+    /// stays unticked then falls back to the shop list).
+    func categoryCounts() async throws -> [String: Int] {
+        var counts = try await ledger.paymentCounts()
+        let list = PhoneCategoryList(catalog: try await catalogValue(), chosen: try await ledger.chosen())
+        let unticked = list.catalog.defaults.map(\.id).filter { !list.isChosen($0) }
+        let waiting = try await ledger.sortingSnapshot(waitingOnly: true)
+        if !unticked.isEmpty, !waiting.ids.isEmpty {
+            let results = try await engine.sortPayments(waiting.payments, categories: list.sortingIDs + unticked,
+                                                        learned: waiting.learned)
+            let estimated = Set(unticked)
+            for case let id? in results.map(\.categoryId) where estimated.contains(id) { counts[id, default: 0] += 1 }
+        }
+        return counts.filter { $0.value > 0 }
+    }
 
     /// Unticks a category; its payments go to `target` (or Not sorted, then sorted again with the rest of the list).
     func unchoose(_ id: String, moveTo target: String?) async throws {

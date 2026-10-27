@@ -2639,6 +2639,16 @@
         }
       }
     },
+    "The number by a category is how many of your payments it has, or would get once ticked." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Zahl bei einer Kategorie: wie viele deiner Buchungen sie hat oder bekäme, wenn du sie wählst."
+          }
+        }
+      }
+    },
     "The tour could not start." : {
       "localizations" : {
         "de" : {
@@ -3291,6 +3301,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Eigene"
+          }
+        }
+      }
+    },
+    "Your payments are in. Aresium sorts them as you tick." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Buchungen sind da. Aresium sortiert sie, sobald du Kategorien wählst."
           }
         }
       }

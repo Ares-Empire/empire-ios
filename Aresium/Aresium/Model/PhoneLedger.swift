@@ -162,6 +162,15 @@ actor PhoneLedger {
         try modelContext.fetchCount(FetchDescriptor<StoredPayment>(predicate: #Predicate { $0.category == category }))
     }
 
+    /// `paymentCount(in:)` for every category that has payments, by id.
+    func paymentCounts() throws -> [String: Int] {
+        var counts: [String: Int] = [:]
+        for payment in try modelContext.fetch(FetchDescriptor<StoredPayment>()) {
+            if let category = payment.category { counts[category, default: 0] += 1 }
+        }
+        return counts
+    }
+
     /// Unticks a category. Its payments move to `target` (set by hand) or, with nil, to Not sorted; it is taken off
     /// every payment's extra categories. Learned rules into one's own category go with it; rules into a default one
     /// stay (the engine ignores them while it is not on the list, and they work again when it is ticked again).
@@ -280,8 +289,9 @@ actor PhoneLedger {
         try modelContext.fetch(FetchDescriptor<StoredAccount>(predicate: #Predicate { $0.id == id })).first.map(Self.value)
     }
 
-    func sortingSnapshot() throws -> SortingSnapshot {
-        let payments = try storedPayments()
+    /// - Parameter waitingOnly: only the payments without a category (Not sorted), for the picker's estimate.
+    func sortingSnapshot(waitingOnly: Bool = false) throws -> SortingSnapshot {
+        let payments = try storedPayments().filter { !waitingOnly || $0.category == nil }
         let ibans = Dictionary(try accounts().map { ($0.id, $0.iban) }, uniquingKeysWith: { first, _ in first })
         return SortingSnapshot(ids: payments.map(\.id),
                                payments: payments.map { Self.value($0).sorting(accountIban: ibans[$0.account] ?? nil) },

@@ -19,7 +19,8 @@ struct PhoneBackendTests {
         ])
         let results = PhoneTest.phoneResults(try await phone.importFiles([file], auth: none))
         #expect(results == [PhoneImportResult(name: "vr.csv", added: 3, already: 0, sorted: 2, waiting: 1,
-                                               account: results.first?.account)])
+                                               account: results.first?.account, newIDs: results.first?.newIDs ?? [])])
+        #expect(Set(results.first?.newIDs ?? []) == Set(try await phone.ledger.payments().map(\.id)))
         #expect(phone.importSummary(results.map { .phone($0) })
                 == "3 new · 0 already there · 2 sorted · 1 not sorted")
         #expect(results.first?.displayMessage == "vr.csv: 3 new · 0 already there")

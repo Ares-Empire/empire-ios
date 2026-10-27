@@ -12,10 +12,8 @@ import UniformTypeIdentifiers
 struct GuideImport {
     /// What the file picker offers.
     let types: [UTType]
-    /// Phone mode while no category is chosen: the category picker comes first, then the file picker (`ImportFlow`).
-    var phone: PhoneBackend? = nil
-    var categoriesChanged: () async -> Void = {}
-    /// The picked files (or why the picker failed); the owner imports them once the guide has closed.
+    /// The picked files (or why the picker failed); the owner imports them once the guide has closed (in phone mode the
+    /// category picker follows the import while none is chosen, `ImportStore.asksForCategories`).
     let finished: (Result<[URL], Error>) -> Void
 }
 
@@ -351,35 +349,21 @@ struct BankGuideSteps: View {
     }
 }
 
-/// Choose file at the bottom of a page: Import data's flow (`ImportFlow`: in phone mode the categories first while none
-/// is chosen, then the file picker); the picked files go to the guide's owner.
+/// Choose file at the bottom of a page: the file picker, as Import data; the picked files go to the guide's owner.
 private struct ChooseFileBar: View {
     let importing: GuideImport
-    @State private var flow = ImportFlow()
+    @State private var picksFiles = false
 
     var body: some View {
-        Button {
-            flow.start(hasCategories: importing.phone?.hasChosenCategories ?? true)
-        } label: {
+        Button { picksFiles = true } label: {
             Text("Choose file")
         }
         .buttonStyle(FormButtonStyle(accent: nil))
         .padding(.horizontal, 18).padding(.top, 10).padding(.bottom, 10)
-        .fileImporter(isPresented: $flow.picksFiles, allowedContentTypes: importing.types,
+        .fileImporter(isPresented: $picksFiles, allowedContentTypes: importing.types,
                       allowsMultipleSelection: true) { result in
             if case let .success(urls) = result, urls.isEmpty { return }
             importing.finished(result)
-        }
-        .sheet(isPresented: $flow.choosesCategories, onDismiss: {
-            flow.categoriesClosed(hasCategories: importing.phone?.hasChosenCategories == true)
-        }) {
-            if let phone = importing.phone {
-                NavigationStack {
-                    CategoryPickerScreen(model: CategoryPickerModel(phone: phone, changed: importing.categoriesChanged),
-                                         done: { flow.choosesCategories = false })
-                }
-                .presentationBackground(Ink.background)
-            }
         }
     }
 }

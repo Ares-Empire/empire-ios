@@ -67,9 +67,10 @@ struct StartScreen: View {
     @Binding var side: DashboardSide
     @Binding var graph: Bool
     let band: AresiumBand
-    /// Phone mode: the bank files it imports, and the category picker first while none is chosen.
+    /// The bank files the import button offers: the server's, or phone mode's (`PhoneImportTypes`).
     var importTypes: [UTType] = [.commaSeparatedText, .xml]
-    var beforeImport: (() -> Void)? = nil
+    /// The tour: the import button only answers its step, no file is picked (`TourModel.importTapped`).
+    var importInstead: (() -> Void)? = nil
     /// "How do I get my file?" under an empty page (nil: not offered).
     var openGuide: (() -> Void)? = nil
     let pick: (DashboardRoute) -> Void
@@ -83,7 +84,7 @@ struct StartScreen: View {
                 }.pickerStyle(.segmented).frame(maxWidth: 235)
                     .tourAnchor(.range)
                 Spacer()
-                ImportButton(store: imports, sample: store.isSample, palette: palette, types: importTypes, instead: beforeImport)
+                ImportButton(store: imports, sample: store.isSample, palette: palette, types: importTypes, instead: importInstead)
                     .tourAnchor(.importButton)
                 IconButton(symbol: "chart.line.uptrend.xyaxis", label: String(localized: "Toggle graph"), palette: palette, active: graph) {
                     withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.3)) { graph.toggle() }

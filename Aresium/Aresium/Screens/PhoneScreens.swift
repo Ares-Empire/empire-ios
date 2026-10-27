@@ -84,10 +84,10 @@ struct ModeStatusScreen: View {
 
 /// Phone mode without data (brief 25, Patrik 2026-10-27): a calm empty state a little above the middle, as the store's
 /// own states look (`ModeStatusScreen`: a mark in a thin circle, a title, a line): "No data yet", what Aresium does and
-/// that it all stays on this iPhone, then Import data (the main button; the category picker first while none is chosen,
-/// `ImportFlow`) and Start tour (quiet, the header's button look), then two quiet links: How do I get my file? and
-/// Restore from an export. It comes back after the tour while there is no data (`MainScreen`). It is the main screen for
-/// now, so it ends with the band.
+/// that it all stays on this iPhone, then Import data (the main button: the file picker; the category picker follows an
+/// import that added payments while none is chosen, `ImportStore`) and Start tour (quiet, the header's button look),
+/// then two quiet links: How do I get my file? and Restore from an export. It comes back after the tour while there is
+/// no data (`MainScreen`). It is the main screen for now, so it ends with the band.
 struct PhoneFirstScreen: View {
     let imports: ImportStore
     let palette: Palette
@@ -168,36 +168,62 @@ struct PhoneFirstScreen: View {
 // MARK: - categories
 
 /// The category picker: the default list by group, each category as the dashboard's rows draw it with a tick on the
-/// right; one's own names below; unticking a category with payments asks where they go (`UntickSheet`). Pushed from
-/// Settings, or in a sheet before the first import.
+/// right and, quietly before it, how many payments it has or would get if ticked; one's own names below; unticking a
+/// category with payments asks where they go (`UntickSheet`). Pushed from Settings, or in a sheet after an import that
+/// added payments while none is chosen, with a line on top that they are in.
 struct CategoryPickerScreen: View {
     @State var model: CategoryPickerModel
+    /// Opened after an import (`ImportStore.asksForCategories`): the line that the payments are in.
+    var afterImport = false
     var done: (() -> Void)? = nil
     @FocusState private var typing: Bool
+    @Environment(\.dynamicTypeSize) private var typeSize
+
+    /// What the picker is for; with numbers on the rows, also what they mean.
+    private var note: String {
+        let note = String(localized: "Tick the categories you use. Aresium sorts payments only into these; what fits none of them waits as Not sorted.")
+        guard model.showsCounts else { return note }
+        return note + " " + String(localized: "The number by a category is how many of your payments it has, or would get once ticked.")
+    }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                FormNote(text: String(localized: "Tick the categories you use. Aresium sorts payments only into these; what fits none of them waits as Not sorted."))
-                    .padding(.top, 16)
-                ForEach(model.groups) { group in
-                    SettingsSection(group.title) {
-                        ForEach(Array(group.items.enumerated()), id: \.element.id) { index, item in
-                            if index > 0 { TileRowDivider() }
-                            row(item)
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    if afterImport {
+                        Text("Your payments are in. Aresium sorts them as you tick.")
+                            .font(AppFont.text(14.5, weight: .semibold)).foregroundStyle(Ink.primary).lineSpacing(3)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 4).padding(.top, 16)
+                    }
+                    FormNote(text: note)
+                        .padding(.top, afterImport ? 8 : 16)
+                    ForEach(model.groups) { group in
+                        SettingsSection(group.title) {
+                            ForEach(Array(group.items.enumerated()), id: \.element.id) { index, item in
+                                if index > 0 { TileRowDivider() }
+                                row(item)
+                            }
                         }
                     }
-                }
-                SettingsSection(String(localized: "Your own")) {
-                    ForEach(model.custom) { item in
-                        row(item)
-                        TileRowDivider()
+                    SettingsSection(String(localized: "Your own")) {
+                        ForEach(model.custom) { item in
+                            row(item)
+                            TileRowDivider()
+                        }
+                        addRow
                     }
-                    addRow
+                    if let problem = model.problem { FormProblem(text: problem).padding(.top, 12) }
                 }
-                if let problem = model.problem { FormProblem(text: problem).padding(.top, 12) }
+                .padding(.horizontal, 18).padding(.bottom, 34)
             }
-            .padding(.horizontal, 18).padding(.bottom, 34)
+            .task {
+                await model.load()
+                #if DEBUG
+                await debugLaunch(proxy)
+                #endif
+            }
         }
         .scrollIndicators(.hidden)
         .scrollDismissesKeyboard(.interactively)
@@ -211,27 +237,47 @@ struct CategoryPickerScreen: View {
             }
         }
         .tint(Ink.primary)
-        .task {
-            await model.load()
-            #if DEBUG
-            // Screenshots: `-sampleUntick <category id>` unticks it at once (the question where its payments go).
-            let arguments = LaunchArguments.current
-            if let index = arguments.firstIndex(of: "-sampleUntick"), arguments.indices.contains(index + 1) {
-                await model.toggle(arguments[index + 1])
-            }
-            #endif
-        }
         .sheet(item: Binding(get: { model.untick }, set: { if $0 == nil { model.cancelUntick() } })) { untick in
             UntickSheet(untick: untick) { model.resolve(moveTo: $0) }
         }
     }
 
+    #if DEBUG
+    /// Screenshots: `-sampleTick <id,id,…>` ticks those at once, `-sampleUntick <category id>` unticks one (the question
+    /// where its payments go), `-scrollToCategory <id>` scrolls to its row, `-samplePickerDone` then closes the picker.
+    private func debugLaunch(_ proxy: ScrollViewProxy) async {
+        let arguments = LaunchArguments.current
+        let ticked = Set((model.groups.flatMap(\.items) + model.custom).filter(\.chosen).map(\.id))
+        for id in (LaunchArguments.value("-sampleTick") ?? "").split(separator: ",").map(String.init)
+        where !ticked.contains(id) { await model.toggle(id) }
+        if let index = arguments.firstIndex(of: "-sampleUntick"), arguments.indices.contains(index + 1) {
+            await model.toggle(arguments[index + 1])
+        }
+        if let id = LaunchArguments.value("-scrollToCategory") {
+            try? await Task.sleep(for: .milliseconds(300))
+            proxy.scrollTo(id, anchor: .top)
+        }
+        if arguments.contains("-samplePickerDone") { done?() }
+    }
+    #endif
+
     private func row(_ item: CategoryGroup.Item) -> some View {
-        Button { Task { await model.toggle(item.id) } } label: {
+        let count = model.count(of: item.id)
+        let name = Text(verbatim: item.name).font(AppFont.text(14.5, weight: .semibold)).foregroundStyle(Ink.primary)
+        return Button { Task { await model.toggle(item.id) } } label: {
             HStack(spacing: 12) {
                 CategoryTile(icon: item.look.icon, color: item.look.color)
-                Text(verbatim: item.name).font(AppFont.text(14.5, weight: .semibold)).foregroundStyle(Ink.primary)
+                if typeSize.isAccessibilitySize {
+                    // The largest text sizes: the number under the name, so the name keeps the row's width.
+                    VStack(alignment: .leading, spacing: 2) {
+                        name
+                        if let count { countLabel(count) }
+                    }
                     .frame(maxWidth: .infinity, alignment: .leading)
+                } else {
+                    name.frame(maxWidth: .infinity, alignment: .leading)
+                    if let count { countLabel(count) }
+                }
                 Image(systemName: item.chosen ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 21, weight: .regular))
                     .foregroundStyle(item.chosen ? Ink.primary : Ink.muted)
@@ -244,6 +290,13 @@ struct CategoryPickerScreen: View {
         .buttonStyle(SettingsRowStyle())
         .disabled(model.isWorking)
         .accessibilityAddTraits(item.chosen ? .isSelected : [])
+    }
+
+    /// How many payments a category has (or would get): a quiet number, read out as "34 payments".
+    private func countLabel(_ count: Int) -> some View {
+        Text(count, format: .number).font(AppFont.number(12.5, weight: .medium)).foregroundStyle(Ink.muted)
+            .lineLimit(1).fixedSize()
+            .accessibilityLabel(Text("\(count) payments"))
     }
 
     /// A name of one's own: a plus tile, the field, Add.

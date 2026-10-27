@@ -2,9 +2,11 @@ import Foundation
 import Observation
 import os
 
-/// The category picker (before the first import, and Settings → Categories): the default list by group with a toggle each, a field
-/// for one's own names; nothing is ticked at first (Patrik, 2026-10-26). Unticking a category with payments asks where
-/// they go. Every change is saved at once and the dashboard rebuilt.
+/// The category picker (after an import while no category is chosen, Settings → Categories, the tour's Settings): the
+/// default list by group with a toggle each, a field for one's own names; nothing is ticked at first (Patrik,
+/// 2026-10-26). Each row carries how many payments its category has, or would get if ticked (`counts`). Unticking a
+/// category with payments asks where they go. Every change is saved at once, the numbers counted again and the
+/// dashboard rebuilt.
 @MainActor @Observable
 final class CategoryPickerModel {
     /// Unticking a category that has payments: where they go (another ticked category, or Not sorted).
@@ -28,6 +30,9 @@ final class CategoryPickerModel {
     private(set) var problem: String?
     private(set) var isWorking = false
     private(set) var untick: Untick?
+    /// Category id → payments (`PhoneBackend.categoryCounts`): in it now, or for a default one not ticked, how many it
+    /// would get. Counted at the start and after every change.
+    private(set) var counts: [String: Int] = [:]
     @ObservationIgnored let phone: PhoneBackend
     /// After every change: the dashboard is built again.
     @ObservationIgnored private let changed: () async -> Void
@@ -41,10 +46,32 @@ final class CategoryPickerModel {
     var custom: [CategoryGroup.Item] { list?.custom ?? [] }
     var chosenCount: Int { list?.chosen.count ?? 0 }
 
+    /// The number a row shows; nil at 0 (and so while there are no payments).
+    func count(of id: String) -> Int? {
+        counts[id].flatMap { $0 > 0 ? $0 : nil }
+    }
+
+    /// Some row shows a number: the picker says what the numbers mean.
+    var showsCounts: Bool {
+        (groups.flatMap(\.items) + custom).contains { count(of: $0.id) != nil }
+    }
+
     func load() async {
         do { list = try await phone.categories() }
         catch { problem = error.localizedDescription }
+        await loadCounts()
     }
+
+    /// The numbers help to choose but are not needed for it: when they cannot be counted, none show (never old ones).
+    private func loadCounts() async {
+        do { counts = try await phone.categoryCounts() }
+        catch {
+            counts = [:]
+            Self.log.error("the picker's numbers were not counted: \(String(describing: error), privacy: .public)")
+        }
+    }
+
+    private static let log = Logger(subsystem: "de.ares-empire.aresium", category: "categories")
 
     /// Ticks or unticks a category. Unticking one with payments asks first (`untick`).
     func toggle(_ id: String) async {
@@ -103,6 +130,7 @@ final class CategoryPickerModel {
         do {
             try await action()
             list = try await phone.categories()
+            await loadCounts()
             await changed()
         } catch { problem = error.localizedDescription }
     }
