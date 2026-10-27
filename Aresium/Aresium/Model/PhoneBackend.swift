@@ -35,12 +35,13 @@ nonisolated enum ImportWording {
         }
     }
 
-    /// "12 new · 3 already there · 10 sorted · 2 waiting for a category" (and how many files failed).
+    /// "12 new · 3 already there · 10 sorted · 2 not sorted" (and how many files failed); "not sorted" is the name the
+    /// dashboard shows for payments without a category (`CategoryName`).
     static func summary(_ results: [PhoneImportResult], language: AppLanguage = .current) -> String {
         let added = results.reduce(0) { $0 + $1.added }, already = results.reduce(0) { $0 + $1.already }
         let sorted = results.reduce(0) { $0 + $1.sorted }, waiting = results.reduce(0) { $0 + $1.waiting }
         let failed = results.filter { $0.error?.isEmpty == false }.count
-        var line = language.string("\(added) new · \(already) already there · \(sorted) sorted · \(waiting) waiting for a category")
+        var line = language.string("\(added) new · \(already) already there · \(sorted) sorted · \(waiting) not sorted")
         if failed > 0 { line += " · " + language.string("\(failed) files failed") }
         return line
     }

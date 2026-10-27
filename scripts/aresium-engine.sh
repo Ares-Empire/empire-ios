@@ -6,7 +6,10 @@
 # 2. copies dist/aresium-engine.js to Aresium/Aresium/Engine/ (the app's copy; the tests use it too) and writes the
 #    aresium commit it came from to Engine/engine-version.txt,
 # 3. refreshes the engine's test files in Aresium/AresiumTests/Engine/ (the sample source, the timing sources and the
-#    readers' inputs with the server's answers), so the tests compare the bundle with answers of the same commit.
+#    readers' inputs with the server's answers), so the tests compare the bundle with answers of the same commit,
+# 4. writes the shop list's licence notice (name-suggestion-index, from the header of
+#    src/engine/sorting/shops.de.json) to Engine/name-suggestion-index-licence.txt, which Settings → About → Fonts &
+#    licences shows (`BundledLicence.shopList`; `LicenceTests` checks it against the bundle).
 # The bundle is never edited by hand.
 set -euo pipefail
 
@@ -34,5 +37,14 @@ done
 for file in unknown-fiktivbank.csv dkb.csv; do
   cp "$aresium/src/engine/fixtures/banks/$file" "$tests/$file"
 done
+
+# The licence notice of the brand names in the shop list: the copyright line, what it covers, then the licence's text.
+node -e '
+const nsi = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")).nsi;
+const [copyright, ...licence] = nsi.licenceText;
+const about = `Aresium sorts payments with brand names from the ${nsi.name} (${nsi.homepage}), version ${nsi.version}, `
+  + `under the ${nsi.licence} licence:`;
+require("fs").writeFileSync(process.argv[2], [copyright, about, ...licence].join("\n\n") + "\n");
+' "$aresium/src/engine/sorting/shops.de.json" "$app/name-suggestion-index-licence.txt"
 
 echo "Engine copied: $(wc -c < "$app/aresium-engine.js" | tr -d ' ') bytes from aresium $commit"

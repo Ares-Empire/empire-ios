@@ -87,7 +87,7 @@ private struct StartPage: View {
                     LazyVStack(spacing: 0) {
                         ForEach(rows) { row in
                             Button { pick(DashboardRoute(category: row.category.name, side: side)) } label: {
-                                ValueRow(title: row.category.name, category: row.category, total: row.total,
+                                ValueRow(title: row.category.shownName, category: row.category, total: row.total,
                                          maximum: rows.map(\.total).max() ?? 0, palette: palette)
                             }.buttonStyle(.plain)
                         }
@@ -180,10 +180,7 @@ struct TransactionsScreen: View {
                         let transaction = row.transaction
                         Button { selectedTransaction = transaction } label: {
                             HStack(spacing: 12) {
-                                Text(String(transaction.day)).font(AppFont.number(15))
-                                    .foregroundStyle(palette.secondary).frame(width: 38, height: 38)
-                                    .background(palette.card2, in: RoundedRectangle(cornerRadius: 9))
-                                    .overlay(RoundedRectangle(cornerRadius: 9).stroke(palette.line))
+                                DayTile(palette: palette) { Text(String(transaction.day)) }
                                 VStack(alignment: .leading, spacing: 2) {
                                     HStack(spacing: 5) {
                                         Text(transaction.place).font(AppFont.text(14.5, weight: .semibold)).lineLimit(1)
@@ -191,7 +188,7 @@ struct TransactionsScreen: View {
                                             Text("tag").font(AppFont.text(9, weight: .semibold)).foregroundStyle(palette.secondary)
                                                 .padding(.horizontal, 4).padding(.vertical, 2)
                                                 .background(palette.card2, in: RoundedRectangle(cornerRadius: 4))
-                                                .accessibilityLabel("Added here by tag; primary category \(transaction.categoryName)")
+                                                .accessibilityLabel("Added here by tag; primary category \(CategoryName.shown(transaction.categoryName))")
                                         }
                                     }
                                     Text(transaction.city).font(AppFont.text(12.5)).foregroundStyle(palette.muted).lineLimit(1)

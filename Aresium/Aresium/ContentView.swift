@@ -141,8 +141,9 @@ struct ContentView: View {
                         VStack(spacing: 0) {
                             header()
                             restoreFeedback
-                            if let phone = modes.phone, phone.summary.payments == 0 {
-                                PhoneFirstRun(phone: phone, imports: imports, palette: palette,
+                            if let phone = firstRunPhone {
+                                PhoneFirstRun(phone: phone, imports: imports, palette: palette, band: band(in: geometry),
+                                              restoreProblem: phoneData.problem,
                                               chooseCategories: { showsCategories = true },
                                               restore: { restoringExport = true })
                             } else {
@@ -247,7 +248,7 @@ struct ContentView: View {
             .sheet(isPresented: $showsSettings) {
                 SettingsScreen(app: SettingsApp(name: "Aresium", localData: { [modes] in
                     try await modes.deleteLocalData(reopen: false)
-                }), session: session, sample: sampleActive, logOut: logOut) {
+                }, licences: [.shopList()]), session: session, sample: sampleActive, logOut: logOut) {
                     if modes.phone != nil { PhoneSettingsSection(modes: modes, data: phoneData) }
                 }
             }
@@ -258,22 +259,31 @@ struct ContentView: View {
                             await store.reloadAfterTransactionChange()
                         }, done: { showsCategories = false })
                     }
+                    .presentationBackground(Ink.background)
                 }
             }
             .sheet(item: Binding(get: { imports.layoutRequest }, set: { _ in })) { request in
                 if let phone = modes.phone {
-                    LayoutConfirmSheet(model: LayoutConfirmModel(request: request, phone: phone, imports: imports))
+                    LayoutConfirmSheet(model: LayoutConfirmModel(request: request, phone: phone, imports: imports),
+                                       palette: palette)
                 }
             }
             .fileImporter(isPresented: $restoringExport, allowedContentTypes: [.json]) { result in
                 if case let .success(url) = result { Task { await phoneData.restore(from: url) } }
             }
             .overlay(alignment: .bottom) {
-                if let problem = phoneData.problem, !showsSettings {
+                // A restore from the first run shows its problem there.
+                if let problem = phoneData.problem, !showsSettings, firstRunPhone == nil {
                     Text(problem).font(AppFont.text(13)).foregroundStyle(palette.expenseText).padding(18)
                 }
             }
         }
+    }
+
+    /// Phone mode with nothing imported yet: the first run shows in place of the dashboard.
+    private var firstRunPhone: PhoneBackend? {
+        guard let phone = modes.phone, phone.summary.payments == 0 else { return nil }
+        return phone
     }
 
     /// Phone mode before any category is chosen: importing opens the category picker first.
@@ -297,11 +307,21 @@ struct ContentView: View {
         guard samplePhone, modes.phone == nil else { return }
         let arguments = LaunchArguments.current
         do {
-            await modes.showFixed(try await PhoneSample.backend(empty: arguments.contains("-samplePhoneEmpty")))
+            let phone = try await PhoneSample.backend(empty: arguments.contains("-samplePhoneEmpty"))
+            // `-samplePhoneEmpty -sampleChosen`: the first run after the categories, its second step next.
+            if arguments.contains("-sampleChosen"), phone.summary.chosen.isEmpty {
+                for id in PhoneSample.chosen { try await phone.choose(id) }
+            }
+            await modes.showFixed(phone)
             if arguments.contains("-sampleLayout"), let file = PhoneSample.unknownBankFile() {
                 imports.debugImport([file])
             }
             if arguments.contains("-sampleModeOffline") { modes.debugShow(.needsConnection) }
+            if arguments.contains("-sampleImportResult") {
+                // An import's result line, as a bank file of 45 payments leaves it (made-up numbers).
+                let result = PhoneImportResult(name: "Umsaetze-Girokonto.csv", added: 42, already: 3, sorted: 38, waiting: 4)
+                imports.debugShowResult(ImportWording.summary([result]), files: [result.displayMessage])
+            }
         } catch {
             modes.debugShow(.failed(error.localizedDescription))
         }
@@ -364,7 +384,8 @@ struct ContentView: View {
             }
             return route.side == .income ? String(localized: "Monthly income") : String(localized: "Monthly spend")
         }
-        return ScreenHeader(title: route?.category ?? "Aresium", subtitle: subtitle, category: category, palette: palette,
+        return ScreenHeader(title: route.map { CategoryName.shown($0.category) } ?? "Aresium", subtitle: subtitle,
+                            category: category, palette: palette,
                             back: route == nil ? nil : { if !path.isEmpty { path.removeLast() } },
                             toggleTheme: {
             guard !theme.isAnimating else { return }

@@ -12,6 +12,8 @@ struct SettingsApp {
     /// Deletes what the app keeps of the account on this iPhone and nowhere else (Aresium's phone mode: the person's
     /// payments). Leave <app> and Delete Ares account run it after the server said yes; logging out never does.
     var localData: (@MainActor () async throws -> Void)? = nil
+    /// Licences besides the fonts', on the Fonts & licences page (Aresium: its shop list's).
+    var licences: [BundledLicence] = []
 }
 
 /// Every app's Settings (the gear in its header), one sheet in the family look: the app's own section (optional, the
@@ -41,6 +43,12 @@ struct SettingsScreen<AppSection: View>: View {
     @State private var showsAppearance = LaunchArguments.current.contains("-openAppearance")
     #else
     @State private var showsAppearance = false
+    #endif
+    #if DEBUG
+    /// Screenshots: `-openFonts` opens Settings → About → Fonts & licences at once.
+    @State private var showsFonts = LaunchArguments.current.contains("-openFonts")
+    #else
+    @State private var showsFonts = false
     #endif
     @AppStorage(Appearance.key) private var appearance = Appearance.iPhone.rawValue
     @State private var path: [AccountPage] = []
@@ -167,11 +175,12 @@ struct SettingsScreen<AppSection: View>: View {
             }
             .buttonStyle(SettingsRowStyle())
             SettingsDivider()
-            NavigationLink { FontsScreen(accent: app.accent) } label: {
+            Button { showsFonts = true } label: {
                 SettingsRow(title: String(localized: LocalizedStringResource("Fonts & licences", table: "Shared",
                                                                              locale: .appLanguage)))
             }
             .buttonStyle(SettingsRowStyle())
+            .navigationDestination(isPresented: $showsFonts) { FontsScreen(accent: app.accent, licences: app.licences) }
             SettingsDivider()
             HStack {
                 Text("Version", tableName: "Shared").font(AppFont.text(15, weight: .medium)).foregroundStyle(Ink.primary)
@@ -329,55 +338,98 @@ struct SettingsWall: View {
 
 // MARK: - About pages
 
-/// Settings → About → Fonts & licences: the two typefaces, each opening its licence.
+/// Settings → About → Fonts & licences: the two typefaces, each opening its licence, and the app's other licences
+/// (`SettingsApp.licences`) in a card of their own; with none, the fonts' card alone, as before.
 struct FontsScreen: View {
     let accent: AppAccent?
+    var licences: [BundledLicence] = []
+    #if DEBUG
+    /// Screenshots: `-openLicence <name>` opens that licence at once (`-openFonts -openLicence name-suggestion-index`).
+    @State private var shown: BundledLicence?
+    #endif
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                VStack(spacing: 0) {
-                    ForEach(Array(BundledFont.allCases.enumerated()), id: \.element) { index, font in
-                        if index > 0 { SettingsDivider() }
-                        NavigationLink { LicenceScreen(font: font, accent: accent) } label: {
-                            HStack(spacing: 10) {
-                                VStack(alignment: .leading, spacing: 3) {
-                                    Text(verbatim: font.rawValue)
-                                        .font(font == .jetBrainsMono ? AppFont.number(15, weight: .medium)
-                                                                     : AppFont.text(15, weight: .medium))
-                                        .foregroundStyle(Ink.primary)
-                                    Text(verbatim: BundledFont.licenceName).font(AppFont.text(12)).foregroundStyle(Ink.muted)
-                                }
-                                Spacer(minLength: 12)
-                                Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold))
-                                    .foregroundStyle(Ink.muted)
+                if licences.isEmpty {
+                    VStack(spacing: 0) { fonts }.glassCard().padding(.top, 22)
+                } else {
+                    SettingsSection(String(localized: LocalizedStringResource("Fonts", table: "Shared",
+                                                                              locale: .appLanguage))) { fonts }
+                    SettingsSection(String(localized: LocalizedStringResource("Data", table: "Shared",
+                                                                              locale: .appLanguage))) {
+                        ForEach(Array(licences.enumerated()), id: \.element.id) { index, licence in
+                            if index > 0 { SettingsDivider() }
+                            NavigationLink {
+                                LicenceScreen(title: licence.name, text: licence.text(), accent: accent)
+                            } label: {
+                                row(Text(verbatim: licence.name).font(AppFont.text(15, weight: .medium)),
+                                    detail: "\(licence.purpose) · \(licence.licenceName)")
                             }
-                            .frame(minHeight: 58).padding(.horizontal, 16).contentShape(Rectangle())
-                            .accessibilityElement(children: .combine)
+                            .buttonStyle(SettingsRowStyle())
                         }
-                        .buttonStyle(SettingsRowStyle())
                     }
                 }
-                .glassCard()
             }
-            .padding(.horizontal, 18).padding(.top, 22).padding(.bottom, 34)
+            .padding(.horizontal, 18).padding(.bottom, 34)
         }
         .scrollIndicators(.hidden)
         .background { SettingsWall(accent: accent) }
         .navigationTitle(Text("Fonts & licences", tableName: "Shared"))
         .navigationBarTitleDisplayMode(.inline)
+        #if DEBUG
+        .navigationDestination(item: $shown) { licence in
+            LicenceScreen(title: licence.name, text: licence.text(), accent: accent)
+        }
+        .task {
+            let arguments = LaunchArguments.current
+            if let index = arguments.firstIndex(of: "-openLicence"), arguments.indices.contains(index + 1) {
+                shown = licences.first { $0.name == arguments[index + 1] }
+            }
+        }
+        #endif
+    }
+
+    /// The typefaces' rows (the card is the caller's: alone, or a section's).
+    @ViewBuilder private var fonts: some View {
+        ForEach(Array(BundledFont.allCases.enumerated()), id: \.element) { index, font in
+            if index > 0 { SettingsDivider() }
+            NavigationLink {
+                LicenceScreen(title: font.rawValue, text: font.licence(), accent: accent)
+            } label: {
+                row(Text(verbatim: font.rawValue)
+                        .font(font == .jetBrainsMono ? AppFont.number(15, weight: .medium) : AppFont.text(15, weight: .medium)),
+                    detail: BundledFont.licenceName)
+            }
+            .buttonStyle(SettingsRowStyle())
+        }
+    }
+
+    private func row(_ title: Text, detail: String) -> some View {
+        HStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: 3) {
+                title.foregroundStyle(Ink.primary)
+                Text(verbatim: detail).font(AppFont.text(12)).foregroundStyle(Ink.muted)
+            }
+            Spacer(minLength: 12)
+            Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(Ink.muted)
+        }
+        .frame(minHeight: 58).padding(.horizontal, 16).contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
     }
 }
 
-/// One typeface's licence file, as it ships with the app (English, like the licence itself).
+/// One licence file, as it ships with the app (English, like the licence itself): a typeface's or another licence's.
 struct LicenceScreen: View {
-    let font: BundledFont
+    let title: String
+    let text: String?
     let accent: AppAccent?
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
-                let paragraphs = font.licence().map(LicenceParagraph.paragraphs) ?? []
+                let paragraphs = text.map(LicenceParagraph.paragraphs) ?? []
                 ForEach(Array(paragraphs.enumerated()), id: \.offset) { index, paragraph in
                     if paragraph.isHeading {
                         SectionHeading(text: paragraph.text).padding(.top, 10)
@@ -394,7 +446,7 @@ struct LicenceScreen: View {
         }
         .scrollIndicators(.hidden)
         .background { SettingsWall(accent: accent) }
-        .navigationTitle(Text(verbatim: font.rawValue))
+        .navigationTitle(Text(verbatim: title))
         .navigationBarTitleDisplayMode(.inline)
     }
 }

@@ -16,11 +16,11 @@ struct RecategoriseSheet: View {
                             CategoryChip(name: detail.category, color: detail.categoryColor)
                         }
                         Picker("Mode", selection: $store.mode) {
-                            ForEach(RecategorisationMode.allCases, id: \.self) { mode in Text(mode.rawValue).tag(mode) }
+                            ForEach(RecategorisationMode.allCases, id: \.self) { mode in Text(mode.title).tag(mode) }
                         }.pickerStyle(.segmented)
                         Text(store.mode == .switchCategory
                              ? "Wrong category? Pick the one it belongs in — it moves there."
-                             : "Also show this under other categories. It stays counted once (in \(detail.category)), so nothing is double-counted.")
+                             : "Also show this under other categories. It stays counted once (in \(CategoryName.shown(detail.category))), so nothing is double-counted.")
                             .font(AppFont.text(13)).foregroundStyle(palette.secondary)
                         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 9) {
                             ForEach(store.choices) { category in choice(category, current: detail.category) }
@@ -56,24 +56,24 @@ struct RecategoriseSheet: View {
         }
         .font(AppFont.text(14)).foregroundStyle(palette.ink).tint(palette.balance)
         .interactiveDismissDisabled(store.isSaving || store.followUp != nil)
-        // Phone mode, after a Switch: the merchant's other payments (structure only; Claude designs it).
-        .confirmationDialog(followUpTitle, isPresented: followUpShown, titleVisibility: .visible,
-                            presenting: store.followUp) { followUp in
-            Button("Move them to \(followUp.category)") { store.answer(moveOthers: true) }
+        // Phone mode, after a Switch: the merchant's other payments, as a short centred question. The count is on the
+        // button, so every sentence reads right for one payment or many.
+        .alert(followUpTitle, isPresented: followUpShown, presenting: store.followUp) { followUp in
+            Button("Move \(followUp.count) more") { store.answer(moveOthers: true) }
             Button("Only this one", role: .cancel) { store.answer(moveOthers: false) }
         } message: { followUp in
-            Text("They were sorted by a rule, or not at all. Future payments from \(followUp.shop) go to \(followUp.category).")
+            Text("From now on, payments from \(followUp.shop) go to \(followUp.category).")
         }
+        .tint(palette.ink)      // the question's buttons in ink; the sheet inside keeps its own tint
     }
 
     private var followUpTitle: Text {
         guard let followUp = store.followUp else { return Text(verbatim: "") }
-        return Text("Also the \(followUp.count) other payments from \(followUp.shop)?")
+        return Text("Also the other payments from \(followUp.shop)?")
     }
 
     private var followUpShown: Binding<Bool> {
-        // A tap outside (the dialog is a popover on iOS 27, without its cancel button) is "Only this one"; after a
-        // button the answer is already taken, so nothing is answered twice.
+        // After a button the answer is already taken, so a dismissal that follows answers nothing twice.
         Binding(get: { store.followUp != nil }, set: { shown in if !shown { store.answer(moveOthers: false) } })
     }
 
@@ -84,7 +84,7 @@ struct RecategoriseSheet: View {
             HStack(spacing: 7) {
                 Image(systemName: CategorySymbol.name(for: category.icon)).frame(width: 20)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(category.name).font(AppFont.text(13, weight: .semibold))
+                    Text(category.shownName).font(AppFont.text(13, weight: .semibold))
                     if category.name == current { Text("current").font(AppFont.text(9, weight: .semibold)) }
                 }.frame(maxWidth: .infinity, alignment: .leading)
                 if selected { Image(systemName: "checkmark").font(.system(size: 11, weight: .bold)) }
@@ -93,7 +93,7 @@ struct RecategoriseSheet: View {
                 .overlay(RoundedRectangle(cornerRadius: 10).stroke(color.opacity(selected ? 1 : 0.33), lineWidth: selected ? 2 : 1))
         }.buttonStyle(.plain)
             .disabled(store.mode == .add && category.name == current)
-            .accessibilityLabel(category.name == current ? String(localized: "\(category.name), current") : category.name)
+            .accessibilityLabel(category.name == current ? String(localized: "\(category.shownName), current") : category.shownName)
             .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }

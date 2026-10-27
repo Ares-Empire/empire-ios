@@ -4,7 +4,7 @@ nonisolated struct SpendCategoryEntity: AppEntity {
     static let typeDisplayRepresentation: TypeDisplayRepresentation = "Spending category"
     static let defaultQuery = SpendCategoryQuery()
     let id: String
-    var displayRepresentation: DisplayRepresentation { DisplayRepresentation(title: "\(id)") }
+    var displayRepresentation: DisplayRepresentation { DisplayRepresentation(title: "\(CategoryName.shown(id))") }
 }
 
 nonisolated struct SpendCategoryQuery: EntityQuery {

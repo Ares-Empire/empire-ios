@@ -40,6 +40,14 @@ nonisolated struct LayoutDraft: Equatable, Sendable {
     static let dateFormats = ["DD.MM.YYYY", "DD.MM.YY", "YYYY-MM-DD", "DD/MM/YYYY", "MM/DD/YYYY", "DD-MM-YYYY", "YYYYMMDD"]
     /// Number formats: "de" 1.234,56 · "en" 1,234.56.
     static let numberFormats = ["de", "en"]
+    /// A date format as a date people read (31 December 2026), so the menu needs no format codes: "DD.MM.YYYY" →
+    /// "31.12.2026", "MM/DD/YYYY" → "12/31/2026".
+    static func example(of dateFormat: String) -> String {
+        dateFormat.replacingOccurrences(of: "YYYY", with: "2026").replacingOccurrences(of: "YY", with: "26")
+            .replacingOccurrences(of: "MM", with: "12").replacingOccurrences(of: "DD", with: "31")
+    }
+    /// A number format as an amount: "de" → "1.234,56", "en" → "1,234.56".
+    static func example(ofNumberFormat format: String) -> String { format == "en" ? "1,234.56" : "1.234,56" }
     /// Rows not booked yet, when a status column is picked (the guesser's own list).
     static let pendingStatus = ["vorgemerkt", "pending", "offen", "reverted", "declined", "failed", "storniert"]
 
@@ -216,4 +224,43 @@ final class LayoutConfirmModel {
     }
 
     func cancel() { imports.layoutSkipped(request) }
+}
+
+/// One payment of the column check's preview as its row shows it: the day of the month for the tile, the whole date in
+/// the app's language (so the person sees the date column read right), who and what, and the amount with its sign.
+nonisolated struct PreviewPayment: Equatable, Sendable {
+    /// The day of the month, nil when the booking date is not `YYYY-MM-DD`.
+    let day: Int?
+    /// "3 Oct 2026" / "3. Okt. 2026", or the engine's text when it is not a date.
+    let date: String
+    let title: String
+    /// The payment text when the title is the counterparty.
+    let detail: String?
+    let amount: Double
+
+    init(_ payment: BankTxn, language: AppLanguage = .current) {
+        let parsed = Self.parse(payment.day)
+        day = parsed.map { Self.calendar.component(.day, from: $0) }
+        date = parsed.map {
+            $0.formatted(Date.FormatStyle(date: .omitted, time: .omitted, locale: language.locale, calendar: Self.calendar,
+                                          timeZone: Self.calendar.timeZone).day().month(.abbreviated).year())
+        } ?? payment.day
+        let counterparty = payment.counterparty?.trimmingCharacters(in: .whitespaces) ?? ""
+        let text = payment.description.trimmingCharacters(in: .whitespaces)
+        title = counterparty.isEmpty ? text : counterparty
+        detail = counterparty.isEmpty || text.isEmpty || text == counterparty ? nil : text
+        amount = Double(payment.amount) ?? 0
+    }
+
+    private static let calendar: Calendar = {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC")!
+        return calendar
+    }()
+
+    private static func parse(_ day: String) -> Date? {
+        let parts = day.split(separator: "-").compactMap { Int($0) }
+        guard parts.count == 3 else { return nil }
+        return calendar.date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2]))
+    }
 }

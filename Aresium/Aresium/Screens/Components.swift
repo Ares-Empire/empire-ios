@@ -61,12 +61,7 @@ struct ValueRow: View {
     let palette: Palette
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: CategorySymbol.name(for: category.icon))
-                .font(.system(size: 19, weight: .medium))
-                .foregroundStyle(Color(hex: category.color))
-                .frame(width: 38, height: 38)
-                .background(Color(hex: category.color).opacity(0.12), in: RoundedRectangle(cornerRadius: 9))
-                .overlay(RoundedRectangle(cornerRadius: 9).stroke(Color(hex: category.color).opacity(0.20)))
+            CategoryTile(icon: category.icon, color: category.color)
             VStack(alignment: .leading, spacing: 7) {
                 Text(title).font(AppFont.text(14.5, weight: .semibold)).lineLimit(1)
                 GeometryReader { geometry in
@@ -80,6 +75,36 @@ struct ValueRow: View {
             Image(systemName: "chevron.right").font(.system(size: 11, weight: .medium)).foregroundStyle(palette.muted)
         }.foregroundStyle(palette.ink).padding(.horizontal, 12).padding(.vertical, 11)
             .contentShape(Rectangle())
+    }
+}
+
+/// A category's mark as the dashboard's rows draw it (the website's `.cat-icon`): its icon in its colour on a faint tile
+/// of the same colour. The category picker and the untick question use it too.
+struct CategoryTile: View {
+    let icon: String
+    let color: String
+
+    var body: some View {
+        Image(systemName: CategorySymbol.name(for: icon))
+            .font(.system(size: 19, weight: .medium))
+            .foregroundStyle(Color(hex: color))
+            .frame(width: 38, height: 38)
+            .background(Color(hex: color).opacity(0.12), in: RoundedRectangle(cornerRadius: 9))
+            .overlay(RoundedRectangle(cornerRadius: 9).stroke(Color(hex: color).opacity(0.20)))
+    }
+}
+
+/// The square that starts a payment row (the website's `.txn-day`): the day of the month in mono on the second card
+/// colour. The column check's first payments and the first run's steps use it too.
+struct DayTile<Label: View>: View {
+    let palette: Palette
+    @ViewBuilder let label: Label
+
+    var body: some View {
+        label.font(AppFont.number(15)).foregroundStyle(palette.secondary)
+            .frame(width: 38, height: 38)
+            .background(palette.card2, in: RoundedRectangle(cornerRadius: 9))
+            .overlay(RoundedRectangle(cornerRadius: 9).stroke(palette.line))
     }
 }
 

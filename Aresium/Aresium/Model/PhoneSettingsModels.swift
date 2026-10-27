@@ -12,12 +12,15 @@ final class CategoryPickerModel {
         struct Target: Identifiable, Equatable {
             let id: String
             let name: String
+            let look: CategoryLook
         }
         let id: String
         let name: String
+        let look: CategoryLook
         let count: Int
         let targets: [Target]
         let notSortedName: String
+        let notSortedLook: CategoryLook
     }
 
     private(set) var list: PhoneCategoryList?
@@ -57,10 +60,11 @@ final class CategoryPickerModel {
                 await work { try await self.phone.unchoose(id, moveTo: nil) }
             } else {
                 let targets = list.chosen.filter { $0.id != id }.compactMap { chosen in
-                    list.name(of: chosen.id).map { Untick.Target(id: chosen.id, name: $0) }
+                    list.name(of: chosen.id).map { Untick.Target(id: chosen.id, name: $0, look: list.look(of: chosen.id)) }
                 }
-                untick = Untick(id: id, name: list.name(of: id) ?? id, count: count, targets: targets,
-                                notSortedName: list.notSortedName)
+                untick = Untick(id: id, name: list.name(of: id) ?? id, look: list.look(of: id), count: count,
+                                targets: targets, notSortedName: list.notSortedName,
+                                notSortedLook: list.look(of: CategoryCatalog.notSorted))
             }
         } catch { problem = error.localizedDescription }
     }

@@ -3,6 +3,14 @@ import Observation
 
 enum RecategorisationMode: String, CaseIterable {
     case switchCategory = "Switch", add = "Add"
+
+    /// The segment's word in the app's language (the raw value is the website's English word).
+    var title: String {
+        switch self {
+        case .switchCategory: String(localized: "Switch")
+        case .add: String(localized: "Add")
+        }
+    }
 }
 
 @MainActor @Observable

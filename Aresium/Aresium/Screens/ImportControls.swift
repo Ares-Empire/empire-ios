@@ -76,7 +76,15 @@ private struct ImportToast: View {
             }.font(AppFont.text(13, weight: .bold)).tint(palette.ink)
         }
         .padding(14)
-        .background(palette.card2, in: RoundedRectangle(cornerRadius: 14))
+        .background {
+            // The website's toast (`.import-toast`): the second card colour over a blur, so the list under it never
+            // shows through the words, and a soft shadow.
+            ZStack {
+                RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial)
+                RoundedRectangle(cornerRadius: 14).fill(palette.card2)
+            }
+            .shadow(color: Ink.shadow, radius: 20, y: 12)
+        }
         .overlay(RoundedRectangle(cornerRadius: 14).stroke(palette.line))
         .padding(.horizontal, 18).padding(.bottom, 14)
         .accessibilityElement(children: .contain)

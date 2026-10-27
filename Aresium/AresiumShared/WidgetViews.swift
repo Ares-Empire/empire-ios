@@ -96,7 +96,7 @@ struct CategoriesWidgetView: View {
                 Image(systemName: CategorySymbol.name(for: category.icon))
                     .font(.system(size: 17, weight: .medium)).frame(width: 21)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(category.name).font(AppFont.text(11)).lineLimit(1).minimumScaleFactor(0.7)
+                    Text(CategoryName.shown(category.name)).font(AppFont.text(11)).lineLimit(1).minimumScaleFactor(0.7)
                     Text(Money.precise(category.total)).privacySensitive().font(AppFont.number(16)).lineLimit(1).minimumScaleFactor(0.7)
                 }
                 Spacer(minLength: 0)

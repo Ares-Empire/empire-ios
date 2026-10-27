@@ -21,7 +21,7 @@ struct PhoneBackendTests {
         #expect(results == [PhoneImportResult(name: "vr.csv", added: 3, already: 0, sorted: 2, waiting: 1,
                                                account: results.first?.account)])
         #expect(phone.importSummary(results.map { .phone($0) })
-                == "3 new · 0 already there · 2 sorted · 1 waiting for a category")
+                == "3 new · 0 already there · 2 sorted · 1 not sorted")
         #expect(results.first?.displayMessage == "vr.csv: 3 new · 0 already there")
         let payments = try await phone.ledger.payments()
         #expect(payments.map(\.category) == ["groceries", "rent", nil])
@@ -74,7 +74,7 @@ struct PhoneBackendTests {
         #expect(phone.summary.payments == 4)
         // How many the shop rules sort depends on the engine's shop list; the counts add up either way.
         let line = try #require(imports.banner?.message)
-        #expect(line.hasPrefix("4 new · 0 already there · ") && line.hasSuffix(" waiting for a category"))
+        #expect(line.hasPrefix("4 new · 0 already there · ") && line.hasSuffix(" not sorted"))
         #expect(dashboard.dashboard?.transactions.count == 4)
         #expect(transport.requests.allSatisfy { $0.url?.host != "aresium.de" })
     }
@@ -280,7 +280,7 @@ struct PhoneBackendTests {
         let results = [PhoneImportResult(name: "a.csv", added: 12, already: 3, sorted: 10, waiting: 2),
                        PhoneImportResult(name: "b.zip", error: "Unzip the file first, then import what is inside.")]
         #expect(ImportWording.summary(results)
-                == "12 new · 3 already there · 10 sorted · 2 waiting for a category · 1 file failed")
+                == "12 new · 3 already there · 10 sorted · 2 not sorted · 1 file failed")
         #expect(ImportWording.bankFileProblem("noTable") == "No table of payments was found in this file.")
     }
 }

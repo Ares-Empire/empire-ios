@@ -228,6 +228,16 @@
         }
       }
     },
+    "Data" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Daten"
+          }
+        }
+      }
+    },
     "Delete Ares account" : {
       "localizations" : {
         "de" : {
@@ -324,6 +334,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Alle Ares-Apps auf diesem iPhone melden sich ab. Das lässt sich nicht rückgängig machen."
+          }
+        }
+      }
+    },
+    "Fonts" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schriften"
           }
         }
       }

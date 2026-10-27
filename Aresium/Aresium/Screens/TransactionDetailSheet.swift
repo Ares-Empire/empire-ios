@@ -44,6 +44,8 @@ struct TransactionDetailSheet: View {
                arguments.indices.contains(index + 1) {
                 store.beginRecategorisation()
                 store.select(arguments[index + 1])
+                // After the sheet has come up: a question asked while it still slides in is not shown.
+                try? await Task.sleep(for: .milliseconds(900))
                 await store.save()
             }
             #endif
@@ -110,7 +112,7 @@ struct CategoryChip: View {
     let name: String
     let color: String
     var body: some View {
-        Text(name).font(AppFont.text(12.5, weight: .semibold)).foregroundStyle(Color(hex: color))
+        Text(CategoryName.shown(name)).font(AppFont.text(12.5, weight: .semibold)).foregroundStyle(Color(hex: color))
             .padding(.horizontal, 10).padding(.vertical, 4)
             .background(Color(hex: color).opacity(0.12), in: Capsule())
             .overlay(Capsule().stroke(Color(hex: color).opacity(0.20)))

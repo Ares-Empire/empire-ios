@@ -148,13 +148,14 @@ app's own (a view-builder slot, built with `SettingsSection` / `SettingsRow`; Ar
 hunt notifications there), General (Language; Appearance; Notifications, opening the app's notification page in iOS
 Settings, in apps with `sendsNotifications`), Help (Contact & support: the form from `Shared/Support`, sent to the account
 server's `feedback` collection, which emails Patrik), About (Privacy and Imprint open `LegalPage` in the app's language, Fonts & licences shows the OFL texts from
-`Shared/Fonts`, Version), Account (the email from the login answer, `EmpireSession.email`; Change password; Log out
+`Shared/Fonts` and an app's own licences, `SettingsApp.licences`: Aresium's shop list, Version), Account (the email from the login answer, `EmpireSession.email`; Change password; Log out
 "in all Ares apps on this iPhone", which does what the app's log-out did before; then, in the hub's soft red, Leave
 <app> and Delete Ares account: pages in `Shared/Design/AccountScreens.swift`, see "Accounts in every app" below). An app
 whose server keeps data per account passes its `DELETE …/me` as `SettingsApp(serverData:)` (today only Arestemis:
 `ArestemisAPI.accountDataURL`); leaving deletes it there first. Links: `Shared/Settings/SettingsInfo.swift`. Every
 login screen ends with "Privacy · Imprint" (`LoginScroll`). Screenshots: `-sampleData -openSheet settings` in every app
-(`-scrollToAccount` shows the Account section). A new app: a gear in its header and `SettingsScreen` in a sheet. The
+(`-scrollToAccount` shows the Account section; `-openFonts` the Fonts & licences page, `-openLicence <name>` one of the
+app's own licences). A new app: a gear in its header and `SettingsScreen` in a sheet. The
 sheet follows the app's appearance (dark in Aresium's red mode).
 
 ## Light mode (every app, 2026-10-25)
@@ -215,8 +216,10 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
 5. Later (decided): Aresium for several users, then Aresium `open` in the hub catalog. **Other people's Aresium data
    stays on their iPhone** (Patrik, 2026-10-25: imports, categories and storage on the device; no bank data on the
    server; Patrik's own stays on the server for aresium.de). Its section in the privacy policy says so before it opens.
-   Plan (draft 2026-10-26, waits for Patrik's decisions D1–D8): `ares-empire/docs/ARESIUM-FOR-OTHERS.md`. In phone mode
-   logout must keep the data (the phone has the only copy).
+   Plan: `ares-empire/docs/ARESIUM-FOR-OTHERS.md`. **Phone mode is built** (briefs 15 and 18, 2026-10-27; "Aresium phone
+   mode" under Setup state): data, engine, imports, categories, sorting, the screens in both languages; logout keeps the
+   data. Before it opens (plan part 7): the privacy policy's Aresium section, the App Store information, external
+   TestFlight, then `open` in the hub catalog.
 6. **Push, once Apple approves** (`ares-empire/docs/PUSH.md` → Operating): create the APNs key (.p8) in the developer
    portal, put it on the server, set `APNS_KEY_ID`/`APNS_TEAM_ID`, restart `empire-push`; enable the Push Notifications
    capability for Arestemis, Aresus and the Empire app, Time Sensitive for Arestemis and Aresus (entitlements are
@@ -429,14 +432,50 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   server's best matches (`GET /search`, by words and meaning; `BestMatches`: asked once typing pauses, a newer query
   cancels the older, 5 s timeout, nothing shown on failure) above the device's results; sample mode answers every
   query with `Samples/search.json`.
+- **Aresium phone mode** (2026-10-27, briefs 15 and 18; plan `ares-empire/docs/ARESIUM-FOR-OTHERS.md`): everyone but
+  Patrik keeps their Aresium data on their iPhone. After a login the app asks `GET /api/mode` once per session and
+  remembers the answer per account id (`aresium.mode.<id>` in the app's defaults); unknown and offline: "Aresium needs a
+  connection the first time" with Try again; known and offline: the remembered mode, so phone mode works without a
+  connection (`ModeStore`). Server mode is today's app on `APIClient` (`ServerBackend`); phone mode (`PhoneBackend`)
+  reads bank files, sorts and builds the same `Dashboard` with the shared engine, the server's own TypeScript
+  (`aresium/src/engine`) bundled as `Engine/aresium-engine.js` and run in JavaScriptCore (`AresiumEngine`, an actor with
+  one `JSContext`). `DashboardStore`, `TransactionDetailStore` and `ImportStore` go through `AresiumBackend` and never
+  know which. **Storage:** SwiftData per account in `Application Support/Aresium/<account id>/ledger.store`, file
+  protection complete (`PhoneLedger`, `PhoneStorage`): accounts, payments (unique by account, source and `externalId`;
+  who set the category), chosen categories, learned merchants, the CSV layouts the person confirmed. **Lifecycle:**
+  logout closes the store and deletes nothing (the same account opens it again, another account gets its own); the
+  data goes only with Leave Aresium or Delete Ares account (`SettingsApp.localData`, after the server's yes) or Settings
+  → Delete Aresium data on this iPhone. Settings → Your data on this iPhone: Categories, Export (one JSON file, schema
+  1, `Aresium-<date>.json`, through the share sheet), Restore from an export (only into an empty store, all or nothing).
+  **Screens** (`Screens/PhoneScreens.swift`, Claude's look from the dashboard's rows, `CategoryTile`/`DayTile`, and the
+  Settings pieces; ink only): the first run (what Aresium does with the data, two steps, Restore as a quiet link; it
+  ends with the band), the category picker (the default list by group, nothing ticked at first, one's own names;
+  unticking a category with payments asks where they go, Not sorted first), the column check for an unknown CSV (each
+  column's meaning as a menu, the first payments read that way, Confirm and import saves the layout), after a Switch
+  the alert "Also the other payments from <shop>?" (the count on its button), the connection state. The dashboard's
+  own "Uncategorised" (engine and server) shows as "Not sorted" in both modes and the widget through
+  `CategoryName.shown` (AresiumShared); Switch, Add, routes and links keep the real name. Settings → About → Fonts &
+  licences also lists the shop list's name-suggestion-index notice (BSD-3-Clause, `BundledLicence.shopList`, Aresium
+  only). **Engine:** `bash scripts/aresium-engine.sh` runs `npm run engine` in aresium and copies the bundle (its commit
+  in `Engine/engine-version.txt`), the engine's test files and the licence notice (`Engine/name-suggestion-index-
+  licence.txt`); the bundle is never edited by hand. Launch arguments (DEBUG): `-samplePhone` (a made-up store filled
+  through the real import), `-samplePhoneEmpty` (the first run; `-sampleChosen` after the categories),
+  `-openSheet categories|settings`, `-sampleUntick <category id>` (in the picker), `-sampleLayout` (an unknown bank's
+  CSV: the column check), `-sampleCategory <name> -sampleMonth <YYYY-MM> -samplePhoneTransaction <text>` (a payment's
+  detail; `-samplePhoneSwitch <category>` switches it, then the merchant question), `-sampleImportResult` (the result
+  line), `-sampleModeOffline` (the connection state). Tests: `PhoneModeTests`, `PhoneBackendTests`, `PhoneStoreTests`,
+  `PhoneEngineTests`, `PhoneLookTests`. Screenshots of every phone-mode screen in both looks and languages, and at the
+  largest text size: `build/18-*.png` (2026-10-27).
 - Targets: `Aresium` (app), `AresiumWidgetExtension` (widgets, folder `Aresium/AresiumWidget/`, embedded in the
   app), `AresiumTests`. `Aresium/AresiumShared/` is compiled into both app and widget (theme, `AppTheme`, `AppGroup`,
   widget snapshot); everything else belongs to one target. App Group `group.de.ares-empire.aresium` in both
   entitlements files (on the simulator Xcode embeds them as "simulated" entitlements; on the phone it needs
   the paid team).
 - `Aresium/Aresium/Info.plist` holds only what build settings cannot (document types: the share sheet offers
-  "Aresium" for `.csv`/`.xml` exports); it is merged with the generated plist and excluded from the folder's
-  resources in the project file.
+  "Aresium" for `.csv`/`.xml` exports and MT940 `.sta`/`.mt940`, an imported type `de.ares-empire.aresium.mt940`; not
+  `.txt`, which iOS knows only as plain text, so Aresium would be offered for every text file; `.txt` statements are
+  picked inside the app); it is merged with the generated plist and excluded from the folder's resources in the project
+  file.
 - **Privacy** (2026-10-24, brief E6): each app and widget folder has its `PrivacyInfo.xcprivacy` (what it collects,
   the required-reason APIs its Release binary really imports); each app's `Info.plist` has
   `ITSAppUsesNonExemptEncryption = NO`. A new data type or API means updating the manifest, `docs/APP-STORE.md` (App

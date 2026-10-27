@@ -255,6 +255,11 @@ final class ImportStore {
         pending.append(contentsOf: files)
         schedulePendingImport()
     }
+    /// `-sampleImportResult` in the phone sample: an import's result that stays (no timer), for screenshots.
+    func debugShowResult(_ message: String, files: [String]) {
+        bannerTask?.cancel()
+        banner = ImportBanner(message: message, success: true, files: files)
+    }
     func seedDebugImportFailure() {
         attempted = [ImportFile(name: "bank.csv", content: "fictional")]
         show("Import failed", success: false, files: ["bank.csv: Unknown format"])

@@ -45,6 +45,22 @@ nonisolated enum BundledFont: String, CaseIterable, Identifiable, Sendable {
     }
 }
 
+/// A licence an app ships besides the fonts, under Settings → About → Fonts & licences: what the licensed work is, the
+/// licence's short name, and its text file in the app's own bundle. Only the app that ships the work names it (Aresium:
+/// the shop list's brand names from name-suggestion-index, `BundledLicence.shopList`).
+nonisolated struct BundledLicence: Identifiable, Hashable, Sendable {
+    let name: String            // the work, as its authors name it ("name-suggestion-index")
+    let purpose: String         // what the app uses it for, in the app's language
+    let licenceName: String     // "BSD-3-Clause"
+    let file: String            // the text file's name in the bundle, without ".txt"
+    var id: String { name }
+
+    /// The licence text from the app's bundle; nil if the file is missing.
+    func text(in bundle: Bundle = .main) -> String? {
+        bundle.url(forResource: file, withExtension: "txt").flatMap { try? String(contentsOf: $0, encoding: .utf8) }
+    }
+}
+
 /// A plain-text licence (hard-wrapped at about 70 characters) as paragraphs that wrap on the phone's width: lines are
 /// joined within a paragraph, blank lines end one, rules made of dashes are dropped, and a short all-capital line that
 /// starts a paragraph and ends without punctuation ("PREAMBLE", "PERMISSION & CONDITIONS") becomes a heading.
