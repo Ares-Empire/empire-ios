@@ -22,10 +22,14 @@ struct ContentView: View {
     @State private var theme: ThemeState
     private let pausedIntroProgress: Double?
     private let restoresOnLaunch: Bool
-    @State private var current = true
-    @State private var side = DashboardSide.expenses
-    @State private var graph = false
-    @State private var path: [DashboardRoute] = []
+    /// Where the person's dashboard is (pushed screens, Current/Overview, the page, the graph, the open payment).
+    @State private var place = DashboardPlace()
+    /// The tour, while it runs in place of the dashboard (on a made-up store of its own, `TourModel`).
+    @State private var tour: TourModel?
+    /// "How do I get my file?" as a sheet (the first run, an empty dashboard).
+    @State private var showsGuide = false
+    /// Files picked in the guide, imported once its sheet (or Settings) has closed, so the import's own sheets can show.
+    @State private var pickedInGuide: [URL] = []
     @State private var sampleActive: Bool
     /// DEBUG `-samplePhone` / `-samplePhoneEmpty`: phone mode on a made-up store, without a login.
     @State private var samplePhone: Bool
@@ -122,8 +126,10 @@ struct ContentView: View {
             if let month = arguments.firstIndex(of: "-sampleMonth"), arguments.indices.contains(month + 1) {
                 routes.append(DashboardRoute(category: arguments[index + 1], side: .expenses, month: arguments[month + 1]))
             }
-            _path = State(initialValue: routes)
+            _place = State(initialValue: DashboardPlace(path: routes))
         }
+        // Screenshots: `-openGuide list|<bank id>` (the guide), `-tour <step>` (the tour at that step, 1–10).
+        if sample, LaunchArguments.value("-openGuide") != nil { _showsGuide = State(initialValue: true) }
         if sample { modes.holdForSample(server: !phoneSample) }
         if sample && !phoneSample {
             if let index = arguments.firstIndex(of: "-openSheet"), arguments.indices.contains(index + 1) {
@@ -134,17 +140,17 @@ struct ContentView: View {
                 imports.show("12 new transactions imported · 1 skipped", success: true)
             }
             let side: DashboardSide = arguments.contains("-sampleIncome") ? .income : .expenses
-            _side = State(initialValue: side)
-            _current = State(initialValue: !arguments.contains("-sampleOverview"))
-            _graph = State(initialValue: arguments.contains("-sampleGraph"))
+            var place = DashboardPlace(current: !arguments.contains("-sampleOverview"), side: side,
+                                       graph: arguments.contains("-sampleGraph"))
             if let index = arguments.firstIndex(of: "-sampleCategory"), arguments.indices.contains(index + 1) {
                 let name = arguments[index + 1]
                 var routes = [DashboardRoute(category: name, side: side)]
                 if let index = arguments.firstIndex(of: "-sampleMonth"), arguments.indices.contains(index + 1) {
                     routes.append(DashboardRoute(category: name, side: side, month: arguments[index + 1]))
                 }
-                _path = State(initialValue: routes)
+                place.path = routes
             }
+            _place = State(initialValue: place)
         }
         #endif
     }
@@ -152,41 +158,33 @@ struct ContentView: View {
     var body: some View {
         GeometryReader { geometry in
             Group {
-                if showsDashboard {
-                    NavigationStack(path: $path) {
-                        VStack(spacing: 0) {
-                            header()
-                            restoreFeedback
-                            if waitsForServerLogin {
-                                // Server mode at launch: the saved login is being renewed before the server is asked.
-                                ProgressView().tint(palette.secondary).frame(maxWidth: .infinity, maxHeight: .infinity)
-                            } else if let phone = firstRunPhone {
-                                PhoneFirstRun(phone: phone, imports: imports, palette: palette, band: band(in: geometry),
-                                              restoreProblem: phoneData.problem,
-                                              chooseCategories: { showsCategories = true },
-                                              restore: { restoringExport = true })
-                            } else {
-                                StartScreen(store: store, imports: imports, palette: palette, current: $current, side: $side,
-                                            graph: $graph, band: band(in: geometry),
-                                            importTypes: modes.phone == nil ? [.commaSeparatedText, .xml] : PhoneImportTypes.all,
-                                            beforeImport: chooseCategoriesFirst) { path.append($0) }
-                            }
+                if let tour {
+                    // The tour in place of the dashboard; the person's own stays as it was, untouched.
+                    TourScreen(tour: tour, palette: palette, band: tourBand(in: geometry)) { route, openSettings in
+                        header(route, in: tour.world?.dashboard, openSettings: openSettings)
+                    }
+                    .transition(.opacity)
+                } else if showsDashboard {
+                    DashboardStack(store: store, palette: palette, place: $place, band: band(in: geometry)) { route in
+                        header(route)
+                        restoreFeedback
+                    } root: {
+                        if waitsForServerLogin {
+                            // Server mode at launch: the saved login is being renewed before the server is asked.
+                            ProgressView().tint(palette.secondary).frame(maxWidth: .infinity, maxHeight: .infinity)
+                        } else if let phone = firstRunPhone {
+                            PhoneFirstRun(phone: phone, imports: imports, palette: palette, band: band(in: geometry),
+                                          restoreProblem: phoneData.problem,
+                                          chooseCategories: { showsCategories = true },
+                                          restore: { restoringExport = true },
+                                          openGuide: { showsGuide = true }, startTour: startTour)
+                        } else {
+                            StartScreen(store: store, imports: imports, palette: palette, current: $place.current,
+                                        side: $place.side, graph: $place.graph, band: band(in: geometry),
+                                        importTypes: importTypes, beforeImport: chooseCategoriesFirst,
+                                        openGuide: { showsGuide = true }) { place.path.append($0) }
                         }
-                        .background { Wall(palette: palette) }
-                        .toolbar(.hidden, for: .navigationBar)
-                        .navigationDestination(for: DashboardRoute.self) { route in
-                            VStack(spacing: 0) {
-                                header(route)
-                                restoreFeedback
-                                if route.month != nil {
-                                    TransactionsScreen(route: route, store: store, palette: palette, band: band(in: geometry))
-                                } else {
-                                    CategoryScreen(route: route, store: store, palette: palette, graph: $graph,
-                                                   band: band(in: geometry)) { path.append($0) }
-                                }
-                            }.background { Wall(palette: palette) }.toolbar(.hidden, for: .navigationBar)
-                        }
-                    }.task { if store.dashboard == nil { await store.reload() } }
+                    }
                 } else {
                     // The phone's store is opening, or did not open.
                     VStack(spacing: 0) {
@@ -245,7 +243,7 @@ struct ContentView: View {
             .onChange(of: session.services) { _, _ in Task { await modes.update() } }    // left Aresium, say
             .onChange(of: session.needsRestoreRetry) { _, _ in Task { await modes.update() } }
             .onChange(of: modes.state) { old, new in
-                if old != new { path = [] }                      // the other mode's data
+                if old != new { place.path = [] }                // the other mode's data
                 Task { await imports.sessionChanged() }       // files waiting for the phone's store
             }
             .onChange(of: lock.isOn) { _, on in
@@ -258,31 +256,53 @@ struct ContentView: View {
                 Task { await imports.receive(files, source: .shared) }
             }
             .onOpenURL { url in
+                // A file shared to Aresium or a widget's link ends a tour first (its made-up store goes): the file goes
+                // to the person's own store, the link opens their own dashboard.
+                tour?.end()
                 if url.isFileURL {
                     // Shared into Aresium while locked: it waits until Aresium is unlocked.
                     if lock.isLocked { heldFiles.append(url) }
                     else { Task { await imports.receive([url], source: .shared) } }
                 } else if let destination = AresiumURL(url: url) {
-                    current = true
-                    side = .expenses
-                    graph = false
+                    place.current = true
+                    place.side = .expenses
+                    place.graph = false
                     switch destination {
-                    case .start: path = []
-                    case .category(let name): path = [store.route(category: name, side: .expenses, current: true)]
+                    case .start: place.path = []
+                    case .category(let name): place.path = [store.route(category: name, side: .expenses, current: true)]
                     }
                 }
             }
             .overlay(alignment: .bottom) {
                 ImportFeedback(store: imports, palette: palette)
             }
-            .sheet(isPresented: $showsSettings) {
+            .sheet(isPresented: $showsSettings, onDismiss: importPickedInGuide) {
                 SettingsScreen(app: SettingsApp(name: "Aresium",
                                                 signInNote: String(localized: "Only for an Aresium server of your own. Your data here stays on this iPhone."),
                                                 licences: [.shopList()]),
                                session: session, sample: sampleActive, logOut: logOut) {
                     if modes.phone != nil { PhoneSettingsSection(modes: modes, data: phoneData) }
                     LockSettingsSection(lock: lock)
+                } help: {
+                    NavigationLink {
+                        BankGuideList(importing: guideImport { showsSettings = false })
+                    } label: {
+                        SettingsRow(title: String(localized: "Get the file from your bank"))
+                    }
+                    .buttonStyle(SettingsRowStyle())
+                    SettingsDivider()
+                    Button {
+                        showsSettings = false
+                        startTour()
+                    } label: {
+                        SettingsRow(title: String(localized: "Tour of Aresium"),
+                                    subtitle: String(localized: "With made-up sample data"), trailing: .none)
+                    }
+                    .buttonStyle(SettingsRowStyle())
                 }
+            }
+            .sheet(isPresented: $showsGuide, onDismiss: importPickedInGuide) {
+                BankGuideSheet(importing: guideImport { showsGuide = false })
             }
             .sheet(isPresented: $showsCategories) {
                 if let phone = modes.phone {
@@ -314,7 +334,63 @@ struct ContentView: View {
         .accessibilityHidden(lock.isLocked)
         .background { LockWindowReader(lockWindow: lockWindow) }
         .task { handOverForgotCode() }
+        // A tour the app was closed in left its made-up store behind: it goes now (no tour runs yet).
+        .task { if tour == nil { TourWorld.removeLeftovers() } }
+        .onChange(of: tour?.phase == .ended) { _, ended in
+            if ended { withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.25)) { tour = nil } }
+        }
+        #if DEBUG
+        .task { await startDebugTour() }
+        #endif
     }
+
+    /// What the bank files picker offers: the server's CSV and XML, or phone mode's bank files.
+    private var importTypes: [UTType] { modes.phone == nil ? [.commaSeparatedText, .xml] : PhoneImportTypes.all }
+
+    /// The guide's Choose file: the picker for this mode (the categories first in phone mode while none is chosen);
+    /// the files are imported once the guide's sheet has closed (`close`, then `importPickedInGuide`).
+    private func guideImport(close: @escaping () -> Void) -> GuideImport {
+        GuideImport(types: importTypes, phone: modes.phone,
+                    categoriesChanged: { await store.reloadAfterTransactionChange() }) { result in
+            switch result {
+            case let .success(urls): pickedInGuide = urls
+            case let .failure(error): imports.show(error.localizedDescription, success: false)
+            }
+            close()
+        }
+    }
+
+    private func importPickedInGuide() {
+        guard !pickedInGuide.isEmpty else { return }
+        let urls = pickedInGuide
+        pickedInGuide = []
+        Task { await imports.receive(urls) }
+    }
+
+    /// The tour, from the first run or Settings → Help: it fills its made-up store and shows in place of the dashboard.
+    private func startTour() {
+        guard tour == nil else { return }
+        let model = TourModel()
+        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.25)) { tour = model }
+        Task { await model.start() }
+    }
+
+    /// The band in the tour: the word ends its screens as everywhere, but red mode is not part of the tour.
+    private func tourBand(in geometry: GeometryProxy) -> AresiumBand {
+        AresiumBand(palette: palette, width: geometry.size.width, hidden: theme.isAnimating) { _ in }
+    }
+
+    #if DEBUG
+    /// Screenshots: `-tour <step>` starts the tour at that step (1–10); `-tourSettings` opens its Settings.
+    private func startDebugTour() async {
+        guard sampleActive, tour == nil, let value = LaunchArguments.value("-tour"),
+              let step = Int(value).flatMap(TourStep.init(rawValue:)) else { return }
+        let model = TourModel()
+        tour = model
+        await model.start(at: step)
+        if LaunchArguments.current.contains("-tourSettings") { model.openSettings() }
+    }
+    #endif
 
     /// Phone mode with nothing imported yet: the first run shows in place of the dashboard.
     private var firstRunPhone: PhoneBackend? {
@@ -453,7 +529,10 @@ struct ContentView: View {
         }
     }
 
-    private func header(_ route: DashboardRoute? = nil) -> some View {
+    /// A screen's header; the tour's screens name its store (`in`) and open its own Settings.
+    private func header(_ route: DashboardRoute? = nil, in dashboard: DashboardStore? = nil,
+                        openSettings: (() -> Void)? = nil) -> some View {
+        let store = dashboard ?? store
         let category = route.flatMap { store.category($0.category, side: $0.side) }
         let subtitle: String? = route.map { route in
             if let key = route.month {
@@ -464,7 +543,7 @@ struct ContentView: View {
         }
         return ScreenHeader(title: route.map { CategoryName.shown($0.category) } ?? "Aresium", subtitle: subtitle,
                             category: category, palette: palette,
-                            back: route == nil ? nil : { if !path.isEmpty { path.removeLast() } },
+                            back: route == nil ? nil : { back(route) },
                             toggleTheme: {
             guard !theme.isAnimating else { return }
             if theme.red {
@@ -473,13 +552,24 @@ struct ContentView: View {
             } else {
                 appearance = Appearance.toggled(from: appearanceScheme).rawValue    // the sun: the app's appearance
             }
-        }, openSettings: { showsSettings = true })
+        }, openSettings: openSettings ?? { showsSettings = true })
+    }
+
+    /// The header's back button: the tour's dashboard or the person's, whichever shows.
+    private func back(_ route: DashboardRoute?) {
+        if let tour {
+            var place = tour.place
+            if !place.path.isEmpty { place.path.removeLast() }
+            tour.update(place)
+        } else if !place.path.isEmpty {
+            place.path.removeLast()
+        }
     }
 
     /// Settings → Log out: ends the shared login in every Ares app. Server mode ends with it; phone mode's data stays on
     /// the phone (it never belonged to the login).
     private func logOut() {
-        path = []
+        place.path = []
         session.logOut()
     }
 }

@@ -83,7 +83,8 @@ struct ModeStatusScreen: View {
 // MARK: - first run
 
 /// Phone mode with nothing imported yet: what Aresium does with the data, then the two steps (choose categories, import
-/// a bank file) and, quietly, restoring an export. It is the main screen for now, so it ends with the band.
+/// a bank file) with "How do I get my file?" under them and, quietly, the tour and restoring an export. It is the main
+/// screen for now, so it ends with the band.
 struct PhoneFirstRun: View {
     let phone: PhoneBackend
     let imports: ImportStore
@@ -93,6 +94,9 @@ struct PhoneFirstRun: View {
     var restoreProblem: String?
     let chooseCategories: () -> Void
     let restore: () -> Void
+    /// The bank guide (`BankGuideSheet`) and the tour with made-up data (`TourModel`).
+    let openGuide: () -> Void
+    let startTour: () -> Void
     @State private var pickingFiles = false
 
     var body: some View {
@@ -119,7 +123,7 @@ struct PhoneFirstRun: View {
                     Button { pickingFiles = true } label: {
                         FirstRunStep(number: 2, title: Text("Import a bank file"),
                                      detail: imports.isBusy ? Text("Reading the file…")
-                                                            : Text("A CSV, CAMT or MT940 file from your bank"),
+                                                            : Text("Your payments as a file from your bank"),
                                      state: phone.hasChosenCategories ? .next : .later, busy: imports.isBusy,
                                      palette: palette)
                     }
@@ -132,17 +136,14 @@ struct PhoneFirstRun: View {
                     .font(AppFont.text(12.5)).foregroundStyle(palette.muted).lineSpacing(3)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 10).padding(.horizontal, 4)
-                Button(action: restore) {
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("Restore from an export").font(AppFont.text(14, weight: .semibold))
-                            .foregroundStyle(palette.secondary)
-                        Text("A file you exported from Aresium before").font(AppFont.text(12)).foregroundStyle(palette.muted)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .padding(.top, 34).padding(.horizontal, 4)
+                GuideLink(tint: palette.secondary, action: openGuide)
+                    .padding(.top, 4).padding(.horizontal, 4)
+                quietLink(title: Text("Look around first?"), detail: Text("A tour with made-up sample data"),
+                          action: startTour)
+                    .padding(.top, 30)
+                quietLink(title: Text("Restore from an export"), detail: Text("A file you exported from Aresium before"),
+                          action: restore)
+                    .padding(.top, 20)
                 if let restoreProblem { FormProblem(text: restoreProblem).padding(.top, 10) }
             }
             .padding(.horizontal, 18).padding(.top, 14)
@@ -154,6 +155,20 @@ struct PhoneFirstRun: View {
             case let .failure(error): imports.show(error.localizedDescription, success: false)
             }
         }
+    }
+
+    /// A quiet choice under the steps: a title in the second ink, one line under it.
+    private func quietLink(title: Text, detail: Text, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 3) {
+                title.font(AppFont.text(14, weight: .semibold)).foregroundStyle(palette.secondary)
+                detail.font(AppFont.text(12)).foregroundStyle(palette.muted)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 4)
     }
 }
 

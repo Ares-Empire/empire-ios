@@ -48,6 +48,7 @@ struct ScreenHeader: View {
                 IconButton(symbol: palette.red ? "xmark" : palette.dark ? "sun.max.fill" : "moon.fill",
                            label: palette.red ? String(localized: "Exit Aresium mode") : String(localized: "Toggle theme"), palette: palette, action: toggleTheme)
                 IconButton(symbol: "gearshape", label: String(localized: "Settings"), palette: palette, action: openSettings)
+                    .tourAnchor(.settings)
             }
         }.padding(.horizontal, 14).padding(.top, 8).padding(.bottom, 10)
     }

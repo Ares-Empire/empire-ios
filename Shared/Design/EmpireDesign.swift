@@ -14,9 +14,11 @@ extension Color {
                   blue: Double(hex & 0xFF) / 255, opacity: opacity)
     }
 
-    /// One colour for each appearance; the screen picks as it draws, so it follows a switch at once.
-    init(light: Color, dark: Color) {
-        self.init(uiColor: UIColor { traits in UIColor(traits.userInterfaceStyle == .dark ? dark : light) })
+    /// One colour for each appearance; the screen picks as it draws, so it follows a switch at once. Nonisolated:
+    /// SwiftUI may resolve a colour off the main thread (it draws some animations on a render thread), where a
+    /// main-actor closure stops the app (seen with the tour's veil, 2026-10-27).
+    nonisolated init(light: Color, dark: Color) {
+        self.init(uiColor: UIColor { @Sendable traits in UIColor(traits.userInterfaceStyle == .dark ? dark : light) })
     }
 }
 

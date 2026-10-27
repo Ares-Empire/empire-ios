@@ -58,6 +58,9 @@ final class DashboardStore {
     private var fetchGeneration = 0
     private(set) var lastSuccessfulLoad: Date?
     private var foregroundRefreshing = false
+    /// Told when a payment's category change is finished: its sheet closed after Switch or Add, the shop question
+    /// answered (the tour moves on with it).
+    @ObservationIgnored var onRecategorised: (() -> Void)?
 
     /// Server mode from the start (tests, the server sample).
     convenience init(session: EmpireSession, client: APIClient = APIClient(), sample: Bool = false,

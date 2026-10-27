@@ -18,7 +18,9 @@ struct TransactionDetailSheet: View {
                     if let detail = store.detail { record(detail) }
                 }.padding(20)
             }
+            .tourScrollsToTarget()
             .background { Wall(palette: palette) }
+            .tourSpotlight()
             .navigationTitle("Transaction").navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() } }
@@ -27,6 +29,7 @@ struct TransactionDetailSheet: View {
                 RecategoriseSheet(store: store, palette: palette)
             }
         }
+        .tourCard()
         .font(AppFont.text(14)).foregroundStyle(palette.ink).tint(palette.balance)
         .task {
             if store.detail == nil { await store.load() }
@@ -69,6 +72,7 @@ struct TransactionDetailSheet: View {
                     if !store.choices.isEmpty {
                         Button("Change") { store.beginRecategorisation() }.buttonStyle(.bordered)
                             .controlSize(.small).accessibilityIdentifier("changeCategory")
+                            .tourAnchor(.change)
                     }
                 }
             }

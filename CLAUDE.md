@@ -169,7 +169,8 @@ both widgets. **Settings → General → Appearance**: Like the iPhone (default)
 (`Shared/Settings/Appearance.swift`, page `Shared/Design/AppearanceScreen.swift`); it switches at once, open sheets with
 it, no restart.
 
-- **Colours are light/dark pairs.** `Color(light:dark:)` (`Shared/Design/EmpireDesign.swift`) resolves as it draws.
+- **Colours are light/dark pairs.** `Color(light:dark:)` (`Shared/Design/EmpireDesign.swift`) resolves as it draws
+  (nonisolated: SwiftUI resolves some colours on its render thread during animations, 2026-10-27).
   `Ink` (background, primary, secondary, muted, line, grid, card, card2, press, field, edge, shadow), `AppAccent.color`
   (a deeper shade on the light wall, at least 4.5:1; `AppAccent.onColor` for words on an accent fill),
   `StatusTone.activeColor`/`issueColor`, `FormButtonStyle`, `LoginStyle.standard`. The light values are Aresium's
@@ -550,6 +551,34 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   Screenshots of every phone-mode screen in both looks and languages, and at the largest text size: `build/18-*.png`
   (2026-10-27); without an account and the lock: `build/22-*.png`, contact sheet `build/22-sheet.png`; the unknown
   file's window and sending: `build/23-*.png`, contact sheet `build/23-sheet.png`.
+  **"How do I get my file?"** (brief 24, Patrik 2026-10-27: he did not know how the first time): the per-bank steps of
+  brief 19's research, now in the app (`Guide/bank-steps.json`, one copy; how it was researched and what is unsure:
+  `docs/bank-export-guide/README.md`; `Model/BankGuide.swift`, `Screens/BankGuideScreens.swift`). A list with a search
+  ("Your bank": every typed word starts a word of a bank's names, or a name is among the typed words, `BankSearch`),
+  Another bank always last; a bank's page: Website / App (only places with steps; for the other one line, "doesn't work"
+  or "Aresium knows no way" when no source describes one), the numbered steps, the quiet line "a button may be called a
+  little differently" below high confidence, which file (the bank's labels as chips) and why, Good to know (the limits),
+  how the file gets to Aresium (the bank's `toAresium` ways, the usual one open), Choose file (the import picker; in
+  phone mode the category picker first while none is chosen; the files are imported once the guide has closed). No
+  sources and no format names in the screen's own sentences (`BankGuideTests` checks the data). Opened from the first
+  run (a link under the import step), an empty dashboard page and Settings → Help → Get the file from your bank
+  (`SettingsScreen`'s `help` slot, Shared). **The tour** (brief 24, `Model/TourModel.swift`, `Model/TourData.swift`,
+  `Screens/TourScreens.swift`): offered as "Look around first?" on the first run and Settings → Help → Tour of Aresium,
+  never by itself. The real dashboard (`DashboardStack`, the same view as the person's, on its own `DashboardPlace`) on
+  `TourWorld`: a store in `tmp/aresium-tour-<uuid>/` filled through the real import with `TourData` (a made-up VR Bank
+  file, this month always full), its own session (never logged in) and widget numbers inside that folder; the person's
+  store, categories and learned shops are never opened. The folder is deleted on End tour (always on the card), at the
+  end, when a widget's link or a shared file opens the app, and at the next launch if the app was closed during a tour
+  (`removeLeftovers`). Ten steps (`TourStep`), each pointing at a real control (`.tourAnchor`, anchor preferences;
+  `.tourSpotlight` on each screen and sheet draws the veil in the wall's colour and the ink ring, and keeps taps off the
+  rest except at the swipe step; `.tourCard` the glass card with Next and End tour); a step goes on when the person does
+  the thing (`TourModel.update`, `importTapped`, `paymentRecategorised` through `DashboardStore.onRecategorised`) or taps
+  Next, and Next gets the step's screen ready (`prepare`). In the tour the gear opens the tour's own Settings (only
+  Categories), the import button only answers its step, the band does not enter red mode. VoiceOver: the card takes the
+  focus at each step, the highlighted control stays reachable; Reduce Motion: the ring jumps, nothing slides. Launch
+  arguments (DEBUG, with `-samplePhone` or `-samplePhoneEmpty`): `-openGuide list|<bank id>` (`-guidePlace
+  app|website`, `-guideSearch <text>`, `-scrollToEnd` the page's end), `-tour <1–10>` (`-tourSettings`: its Settings open). Tests: `BankGuideTests`,
+  `TourTests`. Screenshots: `build/24-*.png`, contact sheet `build/24-sheet.png`.
 - Targets: `Aresium` (app), `AresiumWidgetExtension` (widgets, folder `Aresium/AresiumWidget/`, embedded in the
   app), `AresiumTests`. `Aresium/AresiumShared/` is compiled into both app and widget (theme, `AppTheme`, `AppGroup`,
   widget snapshot); everything else belongs to one target. App Group `group.de.ares-empire.aresium` in both
