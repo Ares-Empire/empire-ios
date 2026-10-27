@@ -1,6 +1,6 @@
 # 23: An unknown bank file: "Does this look right?", and sending its format in two taps
 
-Status: open (2026-10-27)
+Status: merged 2026-10-27 (Aresium 214 tests; the inbox is not deployed yet: the Send button reaches it once Claude deploys it with the policy)
 Repo: empire-ios · Worktree: `../empire-ios-23-file-check` (branch `claude/23-file-check`) · Built by: a Claude agent
 (flow, data and the look)
 
