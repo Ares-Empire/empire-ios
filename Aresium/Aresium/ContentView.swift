@@ -249,7 +249,9 @@ struct ContentView: View {
             .onChange(of: session.services) { _, _ in Task { await modes.update() } }    // left Aresium, say
             .onChange(of: session.needsRestoreRetry) { _, _ in Task { await modes.update() } }
             .onChange(of: modes.state) { old, new in
-                if old != new { place.path = [] }                // the other mode's data
+                // The other mode's data. While the phone's store opened nothing was shown, so a path set meanwhile (a
+                // DEBUG sample's `-sampleCategory`) stays.
+                if old != new, old == .phone || old == .server { place.path = [] }
                 Task { await imports.sessionChanged() }       // files waiting for the phone's store
             }
             .onChange(of: lock.isOn) { _, on in

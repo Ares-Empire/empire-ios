@@ -294,7 +294,7 @@ struct AresiumTests {
         #expect(detail.valueDate == "2026-10-03" && detail.balance == 1420.75)
         #expect(detail.category == "Groceries" && detail.categoryColor == "#E8B85C")
         #expect(detail.tags == ["Dining"] && detail.categorySource == "rule" && detail.categorized)
-        #expect(detail.counterparty == "Sample Market" && detail.accountLabel == "Sample current account")
+        #expect(detail.counterparty == "Sample Market" && detail.account == "Sample current account")
         #expect(detail.iban == nil && detail.source == "bank")
         #expect(detail.city == "Sample City" && detail.country == "DE")
         #expect(detail.trip == nil && detail.tripKind == nil && !detail.recurring)
@@ -302,9 +302,10 @@ struct AresiumTests {
         #expect(detail.signedAmount == "−42.50")
         #expect(detail.originalRows?.first { $0.label == "Amount" }?.value == "-42.5")
         #expect(detail.originalRows?.first { $0.label == "Note" }?.value == "—")
-        #expect(!detail.rows.contains { ["Trip", "Recurring"].contains($0.label) })
-        #expect(detail.rows.first { $0.label == "Balance after" }?.value == "€1,420.75")
-        #expect(detail.rows.first { $0.label == "Location" }?.value == "Sample City, DE")
+        let page = PaymentPage(detail, language: .english)
+        #expect(!page.rows.contains { ["Trip", "Recurring"].contains($0.label) })
+        #expect(page.rows.first { $0.label == "Balance after" }?.value == "€1,420.75")
+        #expect(page.rows.first { $0.label == "Location" }?.value == "Sample City, Germany")
         let roundTrip = try JSONDecoder().decode(TransactionDetail.self, from: JSONEncoder().encode(detail))
         #expect(roundTrip.raw == detail.raw)
     }
@@ -321,10 +322,11 @@ struct AresiumTests {
         json["currency"] = "USD"
         json["raw"] = ["nested": ["sample": true], "list": [1, 2], "empty": ""]
         let detail = try JSONDecoder().decode(TransactionDetail.self, from: JSONSerialization.data(withJSONObject: json))
-        #expect(detail.accountLabel == nil && detail.signedAmount == "−42.50 USD")
-        #expect(detail.rows.map(\.label) == ["Source", "Booking date", "Balance after", "Trip", "Recurring", "External ID"])
-        #expect(detail.rows.first { $0.label == "Balance after" }?.value == "€0.00")
-        #expect(detail.rows.first { $0.label == "Trip" }?.value == "Sample trip (travel)")
+        let page = PaymentPage(detail, language: .english)
+        #expect(page.account == nil && page.categoryReason == nil && detail.signedAmount == "−42.50 USD")
+        #expect(page.rows.map(\.label) == ["Balance after", "Trip", "Recurring"])
+        #expect(page.rows.first { $0.label == "Balance after" }?.value == "€0.00")
+        #expect(page.rows.first { $0.label == "Trip" }?.value == "Sample trip · one day")
         #expect(detail.originalRows?.first { $0.label == "empty" }?.value == "—")
     }
 

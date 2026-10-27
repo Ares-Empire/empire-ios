@@ -4,7 +4,13 @@ struct TransactionDetailSheet: View {
     @State var store: TransactionDetailStore
     let palette: Palette
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dynamicTypeSize) private var typeSize
+    #if DEBUG
+    /// Screenshots: `-openOriginal` opens the bank's own row at once and shows the page's end.
+    @State private var originalExpanded = LaunchArguments.current.contains("-openOriginal")
+    #else
     @State private var originalExpanded = false
+    #endif
 
     var body: some View {
         NavigationStack {
@@ -18,10 +24,11 @@ struct TransactionDetailSheet: View {
                     if let detail = store.detail { record(detail) }
                 }.padding(20)
             }
+            .defaultScrollAnchor(showsEnd ? .bottom : .top)
             .tourScrollsToTarget()
             .background { Wall(palette: palette) }
             .tourSpotlight()
-            .navigationTitle("Transaction").navigationBarTitleDisplayMode(.inline)
+            .navigationTitle("Payment").navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() } }
             }
@@ -55,41 +62,26 @@ struct TransactionDetailSheet: View {
         }
     }
 
+    /// DEBUG `-openOriginal`: the page opens at its end, where the bank's own row is.
+    private var showsEnd: Bool {
+        #if DEBUG
+        LaunchArguments.current.contains("-openOriginal")
+        #else
+        false
+        #endif
+    }
+
     @ViewBuilder private func record(_ detail: TransactionDetail) -> some View {
+        let page = PaymentPage(detail)
         VStack(alignment: .leading, spacing: 7) {
             Text(detail.place).font(AppFont.text(22, weight: .bold))
             Text(detail.signedAmount).font(AppFont.number(28, weight: .bold))
                 .foregroundStyle(detail.amount < 0 ? palette.expenseText : palette.balance)
-            Text(detail.bookingDate).font(AppFont.number(12)).foregroundStyle(palette.muted)
+            Text(page.date).font(AppFont.text(13.5)).foregroundStyle(palette.secondary)
         }.padding(.bottom, 20)
-        detailRow(String(localized: "Category")) {
-            VStack(alignment: .leading, spacing: 8) {
-                CategoryChip(name: detail.category, color: detail.categoryColor)
-                HStack(spacing: 10) {
-                    if let source = detail.categorySource, !source.isEmpty {
-                        Text("via \(source)").foregroundStyle(palette.muted)
-                    }
-                    if !store.choices.isEmpty {
-                        Button("Change") { store.beginRecategorisation() }.buttonStyle(.bordered)
-                            .controlSize(.small).accessibilityIdentifier("changeCategory")
-                            .tourAnchor(.change)
-                    }
-                }
-            }
-        }
-        if !detail.tags.isEmpty {
-            detailRow(String(localized: "Also in")) {
-                VStack(alignment: .leading, spacing: 6) {
-                    ForEach(detail.tags, id: \.self) { name in
-                        CategoryChip(name: name, color: store.categoryColor(for: name))
-                    }
-                }
-            }
-        }
-        if let account = detail.accountLabel { detailRow(String(localized: "Account")) { Text(account) } }
-        ForEach(detail.rows) { row in detailRow(row.label) { Text(row.value) } }
+        lines(of: detail, page: page)
         if let rows = detail.originalRows {
-            DisclosureGroup("Original \(detail.source) record", isExpanded: $originalExpanded) {
+            DisclosureGroup(page.originalTitle, isExpanded: $originalExpanded) {
                 VStack(alignment: .leading, spacing: 8) {
                     ForEach(rows) { row in
                         VStack(alignment: .leading, spacing: 3) {
@@ -102,13 +94,107 @@ struct TransactionDetailSheet: View {
         }
     }
 
-    private func detailRow<Content: View>(_ label: String, @ViewBuilder content: () -> Content) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 12) {
-            Text(label).font(AppFont.text(12, weight: .semibold)).foregroundStyle(palette.muted)
-                .frame(width: 94, alignment: .leading)
-            content().font(AppFont.text(13.5)).frame(maxWidth: .infinity, alignment: .leading)
-                .textSelection(.enabled)
-        }.padding(.vertical, 10).overlay(alignment: .bottom) { Rectangle().fill(palette.grid).frame(height: 1) }
+    /// The page's rows: the label beside its value, the labels in one column as wide as the longest (German's
+    /// "Verwendungszweck" too); at the accessibility text sizes each label above its value.
+    @ViewBuilder private func lines(of detail: TransactionDetail, page: PaymentPage) -> some View {
+        let lines = Line.all(detail: detail, page: page)
+        if typeSize.isAccessibilitySize {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(lines) { line in
+                    VStack(alignment: .leading, spacing: 5) {
+                        label(line)
+                        value(line, detail: detail, page: page)
+                    }.frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 10)
+                    .overlay(alignment: .bottom) { divider }
+                }
+            }
+        } else {
+            Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 12, verticalSpacing: 0) {
+                ForEach(lines) { line in
+                    GridRow {
+                        label(line).fixedSize().padding(.vertical, 10)
+                        value(line, detail: detail, page: page).frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.vertical, 10)
+                    }
+                    divider.gridCellUnsizedAxes(.horizontal)
+                }
+            }
+        }
+    }
+
+    private func label(_ line: Line) -> some View {
+        Text(line.label).font(AppFont.text(12, weight: .semibold)).foregroundStyle(palette.muted)
+    }
+
+    @ViewBuilder private func value(_ line: Line, detail: TransactionDetail, page: PaymentPage) -> some View {
+        Group {
+            switch line {
+            case .category:
+                VStack(alignment: .leading, spacing: 8) {
+                    CategoryChip(name: detail.category, color: detail.categoryColor)
+                    if let reason = page.categoryReason {
+                        Text(reason).font(AppFont.text(12.5)).foregroundStyle(palette.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    if !store.choices.isEmpty {
+                        Button("Change") { store.beginRecategorisation() }.buttonStyle(.bordered)
+                            .controlSize(.small).accessibilityIdentifier("changeCategory")
+                            .tourAnchor(.change)
+                    }
+                }
+            case .tags:
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(detail.tags, id: \.self) { name in
+                        CategoryChip(name: name, color: store.categoryColor(for: name))
+                    }
+                }
+            case .account:
+                if let account = page.account {
+                    VStack(alignment: .leading, spacing: 3) {
+                        if let name = account.name { Text(name) }
+                        if let iban = account.iban {
+                            Text(verbatim: iban).font(AppFont.number(12, weight: .regular)).foregroundStyle(palette.secondary)
+                        }
+                        if let note = account.note {
+                            Text(note).font(AppFont.text(12.5)).foregroundStyle(palette.secondary)
+                        }
+                    }
+                }
+            case let .row(row):
+                Text(row.value)
+            }
+        }.font(AppFont.text(13.5)).textSelection(.enabled)
+    }
+
+    private var divider: some View { Rectangle().fill(palette.grid).frame(height: 1) }
+
+    /// One row of the page, in order: the category, the other categories it is also in, the account, then the plain rows.
+    private enum Line: Identifiable {
+        case category, tags, account
+        case row(DetailRow)
+
+        var id: String {
+            switch self {
+            case .category: "category"
+            case .tags: "tags"
+            case .account: "account"
+            case let .row(row): "row:" + row.label
+            }
+        }
+
+        var label: String {
+            switch self {
+            case .category: String(localized: "Category")
+            case .tags: String(localized: "Also in")
+            case .account: String(localized: "Account")
+            case let .row(row): row.label
+            }
+        }
+
+        static func all(detail: TransactionDetail, page: PaymentPage) -> [Line] {
+            [.category] + (detail.tags.isEmpty ? [] : [.tags]) + (page.account == nil ? [] : [.account])
+                + page.rows.map(Line.row)
+        }
     }
 }
 

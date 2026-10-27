@@ -574,7 +574,19 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   `personalData` runs it through a one-column `shareableLayout`, `AresiumEngine.personalData`), loaded the first time a
   name is checked (`BankNameCheck`); the server checks again. Sample mode only pretends. The dashboard's own
   "Uncategorised" (engine and server) shows as "Not sorted" in both modes and the widget through `CategoryName.shown`
-  (AresiumShared); Switch, Add, routes and links keep the real name. Settings →
+  (AresiumShared); Switch, Add, routes and links keep the real name. **The payment page** (brief 28, Patrik 2026-10-27;
+  `Screens/TransactionDetailSheet.swift`, its words in `Model/PaymentPage.swift`, one place for both modes): "Payment" /
+  "Buchung"; the shop, the amount, the booking date written out ("Sunday, 4 October 2026" / "Sonntag, 4. Oktober 2026");
+  the category's chip, one sentence on why it is there (`PaymentWording.categoryReason`; phone `structural` "A transfer
+  between your own accounts.", `learned` "Aresium learned this from a change you made.", `starter` "Sorted by Aresium's
+  built-in list.", `manual` "You chose this category."; server `rule` "Sorted by a rule.", `llm` "Sorted
+  automatically."; nothing for `none`, a payment not sorted, or a value it does not know) and Change; then Account (name,
+  IBAN in groups of four, "From your PayPal file" only when a PayPal payment's account is not called PayPal), To / From
+  (An / Von) by the direction, Payment text (Verwendungszweck; not when it repeats the title), Balance after, Value date
+  only when it is another day, and the server's Location, Trip, Kind of place (only the place types it knows) and
+  Recurring. No Source, Booking date or External ID rows. The bank's own row comes last, closed ("As in your bank's
+  file", or PayPal's). The labels form one column as wide as the longest (a `Grid`), above their values at the
+  accessibility text sizes. Settings →
   About → Fonts & licences also lists the shop list's name-suggestion-index notice (BSD-3-Clause,
   `BundledLicence.shopList`, Aresium only). **Engine:** `bash scripts/aresium-engine.sh` runs `npm run engine` in
   aresium and copies the bundle (its commit in `Engine/engine-version.txt`), the engine's test files and the licence
@@ -592,18 +604,21 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   matches>`) `-bankRequest` (the name and Send open) and `-bankRequestPhase sending|sent|kept|refused|personal`
   (`-bankRequestMessage <the server's sentence>`), `-sampleCategory <name> -sampleMonth <YYYY-MM>
   -samplePhoneTransaction <text>` (a payment's detail; `-samplePhoneSwitch <category>` switches it, then the merchant
-  question), `-sampleImportResult` (the result
+  question; `-openOriginal` opens the bank's own row and shows the page's end; an own transfer: `-sampleCategory "Own
+  transfers" -sampleMonth 2026-02 -samplePhoneTransaction PayPal`, the sample's made-up PayPal bank line),
+  `-sampleImportResult` (the result
   line); the lock in memory: `-sampleLock faceID|code|both` (the code is 123456), `-sampleUnlocked` (open at launch),
   `-sampleWrongCodes <n>`, `-openCode` (Settings → Lock → Own code), `-openCodeEntry set|change|remove`. Tests:
   `PhoneModeTests`, `PhoneBackendTests`, `PhoneStoreTests` (with the moving over), `PhoneEngineTests`,
   `PhoneLookTests`, `LockTests`, `SupportContactTests`, `CategoryRouteTests`, `FileCheckTests`, `BankFormatTests`,
-  `BankRequestTests`, `FirstScreenTests`, `ImportThenCategoriesTests`, `CategoryCountsTests`.
+  `BankRequestTests`, `FirstScreenTests`, `ImportThenCategoriesTests`, `CategoryCountsTests`, `PaymentPageTests`.
   Screenshots of every phone-mode screen in both looks and languages, and at the largest text size: `build/18-*.png`
   (2026-10-27); without an account and the lock: `build/22-*.png`, contact sheet `build/22-sheet.png`; the unknown
   file's window and sending: `build/23-*.png`, contact sheet `build/23-sheet.png`; the first screen, the lighter tour
   with the lock and contact, the guide's no-match and sent states: `build/25-*.png`, contact sheet `build/25-sheet.png`;
   Import data's file picker, the category picker after an import with its numbers, the dashboard after ticking (both
-  languages and looks, the largest text size): `build/27-*.png`, contact sheet `build/27-sheet.png`.
+  languages and looks, the largest text size): `build/27-*.png`, contact sheet `build/27-sheet.png`; the payment page
+  (phone, own transfer, server sample, the tour's payment steps): `build/28-*.png`, contact sheet `build/28-sheet.png`.
   **"How do I get my file?"** (brief 24, Patrik 2026-10-27: he did not know how the first time): the per-bank steps of
   brief 19's research, now in the app (`Guide/bank-steps.json`, one copy; how it was researched and what is unsure:
   `docs/bank-export-guide/README.md`; `Model/BankGuide.swift`, `Screens/BankGuideScreens.swift`). A list with a search

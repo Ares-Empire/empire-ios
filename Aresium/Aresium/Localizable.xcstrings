@@ -347,6 +347,16 @@
         }
       }
     },
+    "A transfer between your own accounts." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eine Umbuchung zwischen deinen eigenen Konten."
+          }
+        }
+      }
+    },
     "Account" : {
       "localizations" : {
         "de" : {
@@ -547,6 +557,16 @@
         }
       }
     },
+    "Aresium learned this from a change you made." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aresium hat das aus einer Änderung von dir gelernt."
+          }
+        }
+      }
+    },
     "Aresium locks when it opens and after more than 10 seconds away. While the lock is on, the widgets show no numbers." : {
       "localizations" : {
         "de" : {
@@ -597,6 +617,26 @@
         }
       }
     },
+    "As in your PayPal file" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "So steht es in der PayPal-Datei"
+          }
+        }
+      }
+    },
+    "As in your bank's file" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "So steht es in der Bankdatei"
+          }
+        }
+      }
+    },
     "At your bank a button may be called a little differently." : {
       "localizations" : {
         "de" : {
@@ -617,6 +657,16 @@
         }
       }
     },
+    "Bakery" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bäckerei"
+          }
+        }
+      }
+    },
     "Balance" : {
       "localizations" : {
         "de" : {
@@ -632,7 +682,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Saldo danach"
+            "value" : "Kontostand danach"
           }
         }
       }
@@ -657,6 +707,16 @@
         }
       }
     },
+    "Bar" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bar"
+          }
+        }
+      }
+    },
     "Booking date" : {
       "localizations" : {
         "de" : {
@@ -673,6 +733,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Buchungsart"
+          }
+        }
+      }
+    },
+    "Café" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Café"
           }
         }
       }
@@ -777,6 +847,16 @@
         }
       }
     },
+    "Clothes shop" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kleidungsgeschäft"
+          }
+        }
+      }
+    },
     "Column %lld" : {
       "localizations" : {
         "de" : {
@@ -803,16 +883,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Komma"
-          }
-        }
-      }
-    },
-    "Counterparty" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Partner"
           }
         }
       }
@@ -917,16 +987,6 @@
         }
       }
     },
-    "Description" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Beschreibung"
-          }
-        }
-      }
-    },
     "Discard" : {
       "localizations" : {
         "de" : {
@@ -943,6 +1003,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Entfernen"
+          }
+        }
+      }
+    },
+    "Doctor or clinic" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arztpraxis oder Klinik"
           }
         }
       }
@@ -1097,16 +1167,6 @@
         }
       }
     },
-    "External ID" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Externe ID"
-          }
-        }
-      }
-    },
     "Fees" : {
       "localizations" : {
         "de" : {
@@ -1147,6 +1207,16 @@
         }
       }
     },
+    "Food shop" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lebensmittelladen"
+          }
+        }
+      }
+    },
     "Forgot the code?" : {
       "localizations" : {
         "de" : {
@@ -1163,6 +1233,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Freizeit"
+          }
+        }
+      }
+    },
+    "From" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Von"
           }
         }
       }
@@ -1213,6 +1293,16 @@
         }
       }
     },
+    "From your PayPal file" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aus deiner PayPal-Datei"
+          }
+        }
+      }
+    },
     "Get the file from your bank" : {
       "localizations" : {
         "de" : {
@@ -1239,6 +1329,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Gut zu wissen"
+          }
+        }
+      }
+    },
+    "Gym" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fitnessstudio"
+          }
+        }
+      }
+    },
+    "Hairdresser or beauty" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Friseur oder Kosmetik"
           }
         }
       }
@@ -1279,6 +1389,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Wohnen"
+          }
+        }
+      }
+    },
+    "Hotel" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hotel"
           }
         }
       }
@@ -1439,6 +1559,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Die üblichen Schritte"
+          }
+        }
+      }
+    },
+    "Kind of place" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Art des Orts"
           }
         }
       }
@@ -1659,6 +1789,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Buchungen verschieben nach"
+          }
+        }
+      }
+    },
+    "Museum or gallery" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Museum oder Galerie"
           }
         }
       }
@@ -2043,16 +2183,6 @@
         }
       }
     },
-    "Original %@ record" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Originaldatensatz von %@"
-          }
-        }
-      }
-    },
     "Other" : {
       "localizations" : {
         "de" : {
@@ -2113,12 +2243,42 @@
         }
       }
     },
+    "Payment" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buchung"
+          }
+        }
+      }
+    },
     "Payment text" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Verwendungszweck"
+          }
+        }
+      }
+    },
+    "Petrol station" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tankstelle"
+          }
+        }
+      }
+    },
+    "Pharmacy" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apotheke"
           }
         }
       }
@@ -2149,16 +2309,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Wähl den Export deiner Bank: eine .csv-, CAMT-.xml- oder MT940-Datei."
-          }
-        }
-      }
-    },
-    "Place type" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Art des Orts"
           }
         }
       }
@@ -2239,6 +2389,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Code entfernen"
+          }
+        }
+      }
+    },
+    "Restaurant" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restaurant"
           }
         }
       }
@@ -2423,22 +2583,52 @@
         }
       }
     },
+    "Sight" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sehenswürdigkeit"
+          }
+        }
+      }
+    },
+    "Sorted automatically." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatisch sortiert."
+          }
+        }
+      }
+    },
+    "Sorted by Aresium's built-in list." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nach Aresiums eingebauter Liste sortiert."
+          }
+        }
+      }
+    },
+    "Sorted by a rule." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nach einer Regel sortiert."
+          }
+        }
+      }
+    },
     "Sorted wrong? Pick the right category. Aresium remembers the shop." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Falsch einsortiert? Wähl die richtige Kategorie. Aresium merkt sich den Laden."
-          }
-        }
-      }
-    },
-    "Source" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Quelle"
           }
         }
       }
@@ -2495,6 +2685,16 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Suggestion %1$lld of %2$lld"
+          }
+        }
+      }
+    },
+    "Supermarket" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Supermarkt"
           }
         }
       }
@@ -2669,6 +2869,16 @@
         }
       }
     },
+    "Theatre or cinema" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Theater oder Kino"
+          }
+        }
+      }
+    },
     "Their IBAN" : {
       "localizations" : {
         "de" : {
@@ -2809,6 +3019,16 @@
         }
       }
     },
+    "To" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "An"
+          }
+        }
+      }
+    },
     "Toggle graph" : {
       "localizations" : {
         "de" : {
@@ -2881,16 +3101,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Tour · %1$lld of %2$lld"
-          }
-        }
-      }
-    },
-    "Transaction" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Buchung"
           }
         }
       }
@@ -3255,6 +3465,16 @@
         }
       }
     },
+    "You chose this category." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du hast diese Kategorie gewählt."
+          }
+        }
+      }
+    },
     "Your IBAN" : {
       "localizations" : {
         "de" : {
@@ -3345,12 +3565,32 @@
         }
       }
     },
+    "one day" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ein Tag"
+          }
+        }
+      }
+    },
     "received" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "erhalten"
+          }
+        }
+      }
+    },
+    "several days" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "mehrere Tage"
           }
         }
       }
@@ -3381,16 +3621,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "umgekehrt"
-          }
-        }
-      }
-    },
-    "via %@" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "über %@"
           }
         }
       }
