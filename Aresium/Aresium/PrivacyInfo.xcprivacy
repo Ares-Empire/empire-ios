@@ -70,19 +70,8 @@
 				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
 			</array>
 		</dict>
-		<!-- Other financial info: bank and PayPal transactions and imports (Aresium API). -->
-		<dict>
-			<key>NSPrivacyCollectedDataType</key>
-			<string>NSPrivacyCollectedDataTypeOtherFinancialInfo</string>
-			<key>NSPrivacyCollectedDataTypeLinked</key>
-			<true/>
-			<key>NSPrivacyCollectedDataTypeTracking</key>
-			<false/>
-			<key>NSPrivacyCollectedDataTypePurposes</key>
-			<array>
-				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
-			</array>
-		</dict>
+		<!-- No financial info: other people's bank data stays on their iPhone (phone mode); server mode is only the
+		     owner's own data. Why: docs/APP-STORE.md. -->
 		<!-- Customer support: the Contact & support form (Shared/Support, brief E5): message, app and iOS version, language. -->
 		<dict>
 			<key>NSPrivacyCollectedDataType</key>
