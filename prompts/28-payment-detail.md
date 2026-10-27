@@ -1,6 +1,6 @@
 # 28: The payment page in plain words
 
-Status: running
+Status: merged 2026-10-27 (Aresium 250 tests)
 Repo: empire-ios · Worktree: `../empire-ios-28-payment-detail` (branch `claude/28-payment-detail`) · Built by: a
 Claude agent (the look and the wording)
 

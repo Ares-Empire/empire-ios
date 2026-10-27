@@ -22,7 +22,8 @@ enum PhoneSample {
         guard !empty else { return (backend, storage) }
         for id in chosen { try await ledger.choose(id) }
         try await backend.addCustom(named: customName)
-        var files = [ImportFile(name: "Umsaetze-Girokonto.csv", data: Data(TourData.vrBankCSV(now: .now).utf8))]
+        var files = [ImportFile(name: "Umsaetze-Girokonto.csv", data: Data(TourData.vrBankCSV(now: .now).utf8)),
+                     ImportFile(name: "Umsaetze-Girokonto-Februar.csv", data: Data(paypalBankLine.utf8))]
         for name in ["sample-paypal.csv", "sample-camt.xml"] {
             let parts = name.split(separator: ".")
             if let url = Bundle.main.url(forResource: String(parts[0]), withExtension: String(parts[1])) {
@@ -32,6 +33,15 @@ enum PhoneSample {
         _ = try await backend.importFiles(files, auth: BackendAuth(token: nil))
         return (backend, storage)
     }
+
+    /// The bank's side of the sample PayPal export's purchase at Märchenladen (made up, in the VR Bank layout): with the
+    /// PayPal export imported too it is an own transfer, so the sample has one to open
+    /// (`-sampleCategory "Own transfers" -sampleMonth 2026-02 -samplePhoneTransaction PayPal`).
+    private static let paypalBankLine = """
+        IBAN Auftragskonto;Buchungstag;Valutadatum;Name Zahlungsbeteiligter;Buchungstext;Verwendungszweck;Betrag;Währung;Soll/Haben;Saldo nach Buchung
+        ;03.02.2026;03.02.2026;PayPal Europe S.a.r.l. et Cie S.C.A;Lastschrift;Ihr Einkauf bei Märchenladen;18,90;EUR;S;
+
+        """
 
     /// A made-up unknown bank's CSV (the engine's fixture), for the layout confirmation sheet (`-sampleLayout`).
     static func unknownBankFile() -> ImportFile? {
