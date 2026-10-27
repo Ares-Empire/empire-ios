@@ -1,6 +1,6 @@
 # 15: Aresium phone mode: other people's data on their iPhone
 
-Status: running (2026-10-27; 12 and 14 merged, `/api/mode` live on aresium.de)
+Status: merged 2026-10-27 (Aresium 159, Empire 206 tests; next: Claude styles the new screens and writes the German)
 Repo: empire-ios · Worktree: `../empire-ios-15-phone-mode` (branch `claude/15-phone-mode`) · Built by: a Claude agent
 
 ## Goal
