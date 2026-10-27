@@ -123,12 +123,18 @@ struct ContentView: View {
         if phoneSample, let index = arguments.firstIndex(of: "-openSheet"), arguments.indices.contains(index + 1) {
             _showsSettings = State(initialValue: arguments[index + 1] == "settings")
         }
-        if phoneSample, let index = arguments.firstIndex(of: "-sampleCategory"), arguments.indices.contains(index + 1) {
-            var routes = [DashboardRoute(category: arguments[index + 1], side: .expenses)]
-            if let month = arguments.firstIndex(of: "-sampleMonth"), arguments.indices.contains(month + 1) {
-                routes.append(DashboardRoute(category: arguments[index + 1], side: .expenses, month: arguments[month + 1]))
+        if phoneSample {
+            // Screenshots: `-sampleOverview` (Overview, not Current), `-sampleGraph` (the graph shown), `-sampleCategory`.
+            var place = DashboardPlace(current: !arguments.contains("-sampleOverview"),
+                                       graph: arguments.contains("-sampleGraph"))
+            if let index = arguments.firstIndex(of: "-sampleCategory"), arguments.indices.contains(index + 1) {
+                place.path = [DashboardRoute(category: arguments[index + 1], side: .expenses)]
+                if let month = arguments.firstIndex(of: "-sampleMonth"), arguments.indices.contains(month + 1) {
+                    place.path.append(DashboardRoute(category: arguments[index + 1], side: .expenses,
+                                                     month: arguments[month + 1]))
+                }
             }
-            _place = State(initialValue: DashboardPlace(path: routes))
+            _place = State(initialValue: place)
         }
         // Screenshots: `-openGuide list|<bank id>` (the guide), `-tour <step>` (the tour at that step, 1–12).
         if sample, LaunchArguments.value("-openGuide") != nil { _showsGuide = State(initialValue: true) }

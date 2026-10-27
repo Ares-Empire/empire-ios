@@ -594,7 +594,9 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   `-samplePhone` (a made-up store in a temporary folder, filled through the real import), `-samplePhoneEmpty` (the
   first screen; `-importData` taps Import data at launch: the file picker; `-sampleImport` imports the tour's made-up
   bank file as if picked, so on the empty store the category picker opens after it as after a real import),
-  `-sampleSignedIn` (signed in on the made-up account server), `-openSheet settings`, in the picker
+  `-sampleSignedIn` (signed in on the made-up account server), `-sampleOverview` (Overview, not Current) and
+  `-sampleGraph` (the graph shown; with only one month of data each graph is one point, drawn as a stem with a dot,
+  `ChartAxis.singlePointDomain`, `OneMonthTests`), `-openSheet settings`, in the picker
   `-sampleTick <id,id,…>` (ticks those), `-sampleUntick <category id>`, `-scrollToCategory <id>` and
   `-samplePickerDone` (then Done: the dashboard with the result line counted again), `-sampleLayout` (an unknown bank's
   CSV: "Does this look right?"; `-sampleReading 2` the second reading, `-sampleReading columns` the column check),
@@ -611,7 +613,8 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   `-sampleWrongCodes <n>`, `-openCode` (Settings → Lock → Own code), `-openCodeEntry set|change|remove`. Tests:
   `PhoneModeTests`, `PhoneBackendTests`, `PhoneStoreTests` (with the moving over), `PhoneEngineTests`,
   `PhoneLookTests`, `LockTests`, `SupportContactTests`, `CategoryRouteTests`, `FileCheckTests`, `BankFormatTests`,
-  `BankRequestTests`, `FirstScreenTests`, `ImportThenCategoriesTests`, `CategoryCountsTests`, `PaymentPageTests`.
+  `BankRequestTests`, `FirstScreenTests`, `ImportThenCategoriesTests`, `CategoryCountsTests`, `PaymentPageTests`,
+  `OneMonthTests`.
   Screenshots of every phone-mode screen in both looks and languages, and at the largest text size: `build/18-*.png`
   (2026-10-27); without an account and the lock: `build/22-*.png`, contact sheet `build/22-sheet.png`; the unknown
   file's window and sending: `build/23-*.png`, contact sheet `build/23-sheet.png`; the first screen, the lighter tour

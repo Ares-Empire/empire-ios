@@ -137,14 +137,31 @@ struct SeriesChart: View {
     let xTitle: String
     var onPick: ((Int) -> Void)? = nil
     var body: some View {
-        Chart(points) { point in
-            AreaMark(x: .value(xTitle, point.index), y: .value("EUR", point.value))
-                .foregroundStyle(LinearGradient(colors: [color.opacity(0.36), color.opacity(0)], startPoint: .top, endPoint: .bottom))
-            LineMark(x: .value(xTitle, point.index), y: .value("EUR", point.value))
-                .foregroundStyle(color).lineStyle(StrokeStyle(lineWidth: 2.6, lineCap: .round, lineJoin: .round))
-                .accessibilityLabel(point.label).accessibilityValue(Money.total(point.value))
+        // One point (only one month of data so far): a line and its area need two, so they would draw nothing and leave
+        // an empty plot. That point stands as a stem from zero with a dot, in the middle of the plot.
+        if let domain = ChartAxis.singlePointDomain(points) {
+            chart.chartXScale(domain: domain, range: .plotDimension(padding: 16))
+        } else {
+            chart.chartXScale(range: .plotDimension(padding: 16))
         }
-        .chartXScale(range: .plotDimension(padding: 16))
+    }
+
+    private var chart: some View {
+        Chart(points) { point in
+            if points.count == 1 {
+                RuleMark(x: .value(xTitle, point.index), yStart: .value("EUR", 0), yEnd: .value("EUR", point.value))
+                    .foregroundStyle(color).lineStyle(StrokeStyle(lineWidth: 2.6, lineCap: .round))
+                PointMark(x: .value(xTitle, point.index), y: .value("EUR", point.value))
+                    .foregroundStyle(color).symbolSize(90)
+                    .accessibilityLabel(point.label).accessibilityValue(Money.total(point.value))
+            } else {
+                AreaMark(x: .value(xTitle, point.index), y: .value("EUR", point.value))
+                    .foregroundStyle(LinearGradient(colors: [color.opacity(0.36), color.opacity(0)], startPoint: .top, endPoint: .bottom))
+                LineMark(x: .value(xTitle, point.index), y: .value("EUR", point.value))
+                    .foregroundStyle(color).lineStyle(StrokeStyle(lineWidth: 2.6, lineCap: .round, lineJoin: .round))
+                    .accessibilityLabel(point.label).accessibilityValue(Money.total(point.value))
+            }
+        }
         .chartYScale(domain: .automatic(includesZero: true))
         .chartXAxis {
             AxisMarks(values: ChartAxis.ticks(points)) { value in

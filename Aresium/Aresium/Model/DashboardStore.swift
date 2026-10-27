@@ -203,7 +203,8 @@ final class DashboardStore {
 
     func rangeLabel(current: Bool) -> String {
         guard let first = dashboard?.months.first, let last = currentMonth else { return String(localized: "No activity") }
-        return current ? last.title() : "\(first.title()) – \(last.title())"
+        // One month of data: "February 2026", not "February 2026 – February 2026".
+        return current || first.key == last.key ? last.title() : "\(first.title()) – \(last.title())"
     }
 
     func totals(current: Bool) -> Totals? {

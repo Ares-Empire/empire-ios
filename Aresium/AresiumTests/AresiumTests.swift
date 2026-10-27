@@ -272,6 +272,10 @@ struct AresiumTests {
         #expect(ChartAxis.ticks(days) == [0, 5, 10, 15, 20, 22])
         #expect(ChartAxis.ticks(Array(days.prefix(3))) == [0, 1, 2])
         #expect(ChartAxis.ticks([]).isEmpty)
+        // One month of data: the chart gets a range around its one point (a line of one point draws nothing).
+        #expect(ChartAxis.singlePointDomain([ChartPoint(index: 0, label: "Feb", value: 29.57)]) == -1...1)
+        #expect(ChartAxis.singlePointDomain(Array(days.prefix(2))) == nil)
+        #expect(ChartAxis.singlePointDomain([]) == nil)
     }
 
     @Test func bundledFontsAndCategorySymbolsResolve() {
