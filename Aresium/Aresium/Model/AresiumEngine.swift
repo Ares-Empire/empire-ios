@@ -72,11 +72,25 @@ actor AresiumEngine {
         return try answer(value, as: BankFile.self)
     }
 
-    /// The file read with one layout (`decodeBankFile`, then `readCsv`): the confirmation sheet's preview.
+    /// The file read with one layout (`decodeBankFile`, then `readCsv`): the column check's preview.
     func read(_ bytes: Data, with layout: CsvLayout) throws -> BankFile {
         let array = try uint8Array(bytes)
         let value = context.objectForKeyedSubscript("__aresiumReadWithLayout")?.call(withArguments: [array, try json(layout)])
         return try answer(value, as: BankFile.self)
+    }
+
+    /// `readingsOfUnknownFile`: the ways an unknown CSV can be read, best first (at most 4, each with its first
+    /// payments), for "Does this look right?". Empty when the file is not an unknown CSV or nothing reads it (then the
+    /// person picks the columns). `layouts` are the layouts the person confirmed before.
+    func readings(_ bytes: Data, layouts: [CsvLayout]) throws -> [FileReading] {
+        let array = try uint8Array(bytes)
+        let value = context.objectForKeyedSubscript("__aresiumReadings")?.call(withArguments: [array, try json(layouts)])
+        return try answer(value, as: [FileReading].self)
+    }
+
+    /// `shareableLayout`: a confirmed layout as it may be sent to us (the format only), or why it may not.
+    func shareableLayout(_ layout: CsvLayout) throws -> ShareCheck {
+        try call("shareableLayout", layout, as: ShareCheck.self)
     }
 
     /// `sortPayments` over all of the person's payments (the own-transfer rules look across them): one result per
@@ -138,6 +152,7 @@ actor AresiumEngine {
         sortPayments: (input) => E.sortPayments(input.payments, { categories: input.categories, learned: input.learned }),
         learn: (input) => E.learn(input.learned, input.payment, input.categoryId),
         merchantKeys: (payments) => payments.map((payment) => E.merchantKey(payment)),
+        shareableLayout: (layout) => E.shareableLayout(layout),
         version: () => E.version,
       };
       globalThis.__aresiumCall = (name, json) => wrap(() => {
@@ -146,6 +161,7 @@ actor AresiumEngine {
       });
       globalThis.__aresiumReadBankFile = (bytes, layouts) => wrap(() => E.readBankFile(bytes, JSON.parse(layouts)));
       globalThis.__aresiumReadWithLayout = (bytes, layout) => wrap(() => E.readCsv(E.decodeBankFile(bytes), JSON.parse(layout)));
+      globalThis.__aresiumReadings = (bytes, layouts) => wrap(() => E.readingsOfUnknownFile(bytes, JSON.parse(layouts)));
     })();
     """
 

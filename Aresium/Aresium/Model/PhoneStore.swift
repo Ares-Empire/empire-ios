@@ -157,6 +157,10 @@ nonisolated struct PhoneStorage: Sendable {
 
     var hasStore: Bool { FileManager.default.fileExists(atPath: storeURL.path) }
 
+    /// `<root>/bank-formats.json`: the bank formats waiting to be sent to us and the layouts already asked about
+    /// (`BankFormatOutbox`). Outside `local/`, so the moving over never meets it; deleted with the store.
+    var bankFormatsURL: URL { root.appending(path: "bank-formats.json") }
+
     /// Opens (or creates) the phone's store, after moving an older per-account store over (`moveOldStore`). Call off the
     /// main actor: the ledger then works on its own.
     func open() throws -> PhoneLedger {
@@ -187,6 +191,8 @@ nonisolated struct PhoneStorage: Sendable {
     func delete() throws {
         let manager = FileManager.default
         for old in oldStores() { try manager.removeItem(at: old.folder) }
+        // A bank format not sent yet names the person's bank: it goes with the rest.
+        if manager.fileExists(atPath: bankFormatsURL.path) { try manager.removeItem(at: bankFormatsURL) }
         guard manager.fileExists(atPath: directory.path) else { return }
         try manager.removeItem(at: directory)
     }

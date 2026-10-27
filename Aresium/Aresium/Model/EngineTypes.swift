@@ -165,6 +165,60 @@ nonisolated struct LayoutGuess: Codable, Equatable, Sendable {
     let preview: [BankTxn]
 }
 
+// MARK: - readings of an unknown file (aresium/src/engine/readers/readings.ts)
+
+/// What a reading changes in the guessed layout (`ReadingReason`). `other` stands for a reason a newer engine might add,
+/// so an unknown word never breaks the whole answer.
+nonisolated enum ReadingReason: String, Codable, Equatable, Sendable, CaseIterable {
+    /// Day and month the other way round (03/04 is 3 April or 4 March).
+    case dateFormat
+    /// Money out and money in the other way round (or read from two columns).
+    case debitCredit
+    /// Another amount column is the payment's amount.
+    case amount
+    /// A column of S/H, Soll/Haben, Lastschrift/Gutschrift marks says which way the money went.
+    case sign
+    /// Every amount the other way round (cards that list purchases as positive amounts).
+    case invertSign
+    /// The other party and the payment text the other way round.
+    case counterpartyText
+    /// Another text column is the other party.
+    case counterparty
+    /// The booking date and the value date the other way round.
+    case valueDate
+    case other
+
+    init(from decoder: Decoder) throws {
+        self = ReadingReason(rawValue: try decoder.singleValueContainer().decode(String.self)) ?? .other
+    }
+}
+
+/// One way of reading an unknown CSV (`FileReading`): a complete layout, ready to save, and the first payments it reads
+/// (at most 5). `reason` is nil for the engine's own guess, which comes first whenever it reads the file.
+nonisolated struct FileReading: Codable, Equatable, Sendable {
+    let reason: ReadingReason?
+    let layout: CsvLayout
+    let preview: [BankTxn]
+}
+
+/// `shareableLayout`'s answer: the layout as it may be sent (without `name` and `profile`), or why it may not
+/// (`iban`, `email`, `date`, `amount`, `digits`, `tooLong`, `tooWide`, `tooLarge`, `invalid`).
+nonisolated enum ShareCheck: Decodable, Equatable, Sendable {
+    case shareable(CsvLayout)
+    case notShareable(reason: String)
+
+    private enum CodingKeys: String, CodingKey { case ok, layout, reason }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        if try container.decode(Bool.self, forKey: .ok) {
+            self = .shareable(try container.decode(CsvLayout.self, forKey: .layout))
+        } else {
+            self = .notShareable(reason: try container.decodeIfPresent(String.self, forKey: .reason) ?? "invalid")
+        }
+    }
+}
+
 // MARK: - sorting (aresium/src/engine/sorting)
 
 /// A payment as the sorting rules see it (`TransferPayment` in sorting/transfers.ts): the text for the shop rules and

@@ -7,14 +7,20 @@ struct ImportBanner: Identifiable {
     let message: String
     let success: Bool
     var files: [String] = []
+    /// Phone mode, after a file of an unknown bank was read with the layout the person confirmed: the quiet card that
+    /// offers to send its format to us (`BankFormatCard`). While it shows, the result stays until it is answered.
+    var share: BankFormatCard?
 }
 
-/// Phone mode: a CSV whose layout the engine does not know. The person confirms the guessed columns (or changes them);
-/// the layout is saved and the file read again (`LayoutConfirmModel`).
+/// Phone mode: a CSV whose layout the engine does not know. The person sees its first payments read the engine's ways
+/// ("Does this look right?", `FileCheckModel`) and, if none fits, picks the columns; the layout is saved and the file
+/// read again.
 struct LayoutRequest: Identifiable {
     let id = UUID()
     let file: ImportFile
     let guess: LayoutGuess
+    /// The engine's readings, best first; empty: the column check at once.
+    var readings: [FileReading] = []
 }
 
 @MainActor
@@ -58,6 +64,8 @@ final class ImportStore {
     private let fixedBackend: (any AresiumBackend)?
     private let background: any ImportBackgroundActivity
     private let maximumRequestBytes: Int
+    /// Where a confirmed unknown bank's format goes when the person sends it (phone mode); nil: never offered.
+    private let formats: BankFormatOutbox?
 
     var isBusy: Bool { readingCount > 0 || isImporting || batchScheduled }
     var waitingCount: Int { pending.count + attempted.count }
@@ -66,11 +74,12 @@ final class ImportStore {
 
     /// Imports go where the dashboard's data comes from (`DashboardStore.backend`).
     init(dashboard: DashboardStore, background: any ImportBackgroundActivity = ApplicationImportActivity(),
-         maximumRequestBytes: Int = ImportRequestPlan.maximumBytes) {
+         maximumRequestBytes: Int = ImportRequestPlan.maximumBytes, formats: BankFormatOutbox? = nil) {
         self.dashboard = dashboard
         fixedBackend = nil
         self.background = background
         self.maximumRequestBytes = maximumRequestBytes
+        self.formats = formats
         // Files on their way to the server go with its login; the phone's imports do not depend on one.
         dashboard.session.onAppDataReset { [weak self] in
             if self?.backend?.mode == .server { self?.discard() }
@@ -85,6 +94,7 @@ final class ImportStore {
         fixedBackend = ServerBackend(client: client)
         self.background = background
         self.maximumRequestBytes = maximumRequestBytes
+        formats = nil
         // Files on their way to the server go with its login; the phone's imports do not depend on one.
         dashboard.session.onAppDataReset { [weak self] in
             if self?.backend?.mode == .server { self?.discard() }
@@ -97,18 +107,34 @@ final class ImportStore {
 
     func showSampleUnavailable() { show("Not available with sample data", success: false) }
 
-    func show(_ message: String, success: Bool, files: [String] = []) {
+    func show(_ message: String, success: Bool, files: [String] = [], share: BankFormatCard? = nil) {
         bannerTask?.cancel()
-        let banner = ImportBanner(message: message, success: success, files: files)
+        let banner = ImportBanner(message: message, success: success, files: files, share: share)
         self.banner = banner
-        guard success else { return }
+        // With the send card the result waits for an answer; once answered it goes after the same pause. (Only the id
+        // is captured: the banner holds the card, so capturing it would keep both alive.)
+        let id = banner.id
+        share?.onAnswered = { [weak self] in self?.dismissLater(id) }
+        guard success, share == nil else { return }
+        dismissLater(id)
+    }
+
+    private func dismissLater(_ id: UUID) {
+        bannerTask?.cancel()
         bannerTask = Task { [weak self] in
             do { try await Task.sleep(for: .milliseconds(4500)) } catch { return }
-            if self?.banner?.id == banner.id { self?.banner = nil }
+            if self?.banner?.id == id { self?.banner = nil }
         }
     }
 
     func dismiss() { bannerTask?.cancel(); banner = nil }
+
+    /// The person closes the result: a send card not answered yet counts as "Not now" (never asked again for that
+    /// layout).
+    func close() {
+        banner?.share?.notNow()
+        dismiss()
+    }
 
     func discard() {
         generation += 1
@@ -208,13 +234,15 @@ final class ImportStore {
                 for result in batch where !result.failed {
                     if let index = attempted.firstIndex(where: { $0.name == result.name }) {
                         let file = attempted.remove(at: index)
-                        if let guess = result.layoutGuess { layoutQueue.append(LayoutRequest(file: file, guess: guess)) }
+                        if let guess = result.layoutGuess {
+                            layoutQueue.append(LayoutRequest(file: file, guess: guess, readings: result.readings))
+                        }
                     }
                 }
             }
             guard generation == self.generation else { return }
             show(backend.importSummary(results), success: attempted.isEmpty && !results.contains { $0.failed },
-                 files: results.map(\.displayMessage))
+                 files: results.map(\.displayMessage), share: formats?.card(for: results.compactMap(\.bankFormat)))
         } catch {
             guard current() else { return }
             dashboard.session.handleAuthFailure(error, generation: sessionGeneration, token: token)
