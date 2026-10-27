@@ -1,6 +1,6 @@
 # 25: The first screen, a lighter tour with the lock and contact, and "my bank is missing"
 
-Status: open (2026-10-27)
+Status: merged 2026-10-27 (Aresium 241, Empire 204 tests)
 Repo: empire-ios · Worktree: `../empire-ios-25-first-screen` (branch `claude/25-first-screen`) · Built by: a Claude
 agent (flow, data and the look)
 
