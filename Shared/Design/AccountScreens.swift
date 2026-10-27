@@ -127,17 +127,21 @@ struct ChangePasswordScreen: View {
 
 /// What leaving takes (this app's access, its data on its server where it keeps any, its data on this iPhone) and what
 /// stays (the account, the other apps), a confirmation, then `LeaveAppFlow`. Afterwards the Settings sheet closes and the
-/// app shows its no-access screen.
+/// app shows its no-access screen. An app that works without an account (Aresium) keeps its data on this iPhone and
+/// goes on without the account's access.
 struct LeaveAppScreen: View {
     let app: SettingsApp
     let closeSettings: () -> Void
+    /// The app works without an account (Aresium): its data on this iPhone stays, and so does the app.
+    private let accountOptional: Bool
     @State private var flow: LeaveAppFlow
     @State private var confirms = false
 
     init(app: SettingsApp, session: EmpireSession, sample: Bool, closeSettings: @escaping () -> Void) {
         self.app = app
         self.closeSettings = closeSettings
-        let flow = LeaveAppFlow(session: session, serverData: app.serverData, localData: app.localData, sample: sample)
+        accountOptional = session.app.accountOptional
+        let flow = LeaveAppFlow(session: session, serverData: app.serverData, sample: sample)
         #if DEBUG
         flow.applyDebugArguments(LaunchArguments.current)
         #endif
@@ -148,18 +152,7 @@ struct LeaveAppScreen: View {
         AccountPageFrame(title: Text("Leave \(app.name)", tableName: "Shared"), accent: app.accent,
                          holds: flow.phase == .leaving) {
             ScrollView {
-                AccountExplanation(
-                    main: app.serverData == nil
-                        ? String(localized: LocalizedStringResource("Removes your access to \(app.name) and its data on this iPhone.",
-                                                                    table: "Shared", locale: .appLanguage))
-                        : String(localized: LocalizedStringResource("Removes your access to \(app.name) and deletes your \(app.name) data, on its server and on this iPhone.",
-                                                                    table: "Shared", locale: .appLanguage)),
-                    rest: refused
-                        ? String(localized: LocalizedStringResource("Your Ares account and the other apps stay.",
-                                                                    table: "Shared", locale: .appLanguage))
-                        : String(localized: LocalizedStringResource("Your Ares account and the other apps stay. You can ask for access again later.",
-                                                                    table: "Shared", locale: .appLanguage)),
-                    accent: app.accent)
+                AccountExplanation(main: main, rest: rest, accent: app.accent)
                     .padding(.horizontal, 18).padding(.top, 22).padding(.bottom, 24)
             }
             .scrollIndicators(.hidden)
@@ -182,7 +175,12 @@ struct LeaveAppScreen: View {
                     Button(role: .destructive) { leave() } label: { Text("Leave \(app.name)", tableName: "Shared") }
                     Button(role: .cancel) {} label: { Text("Cancel", tableName: "Shared") }
                 } message: {
-                    Text("Your access and your data in \(app.name) go. Your Ares account stays.", tableName: "Shared")
+                    if accountOptional {
+                        Text("Your account's access to \(app.name) goes. Your data on this iPhone and your Ares account stay.",
+                             tableName: "Shared")
+                    } else {
+                        Text("Your access and your data in \(app.name) go. Your Ares account stays.", tableName: "Shared")
+                    }
                 }
             }
         }
@@ -190,6 +188,30 @@ struct LeaveAppScreen: View {
 
     /// The server refused to let this account leave (the admin account): asking for access again does not apply.
     private var refused: Bool { if case .refused = flow.failure { true } else { false } }
+
+    private var main: String {
+        if accountOptional {
+            return String(localized: LocalizedStringResource("Removes your Ares account's access to \(app.name).",
+                                                             table: "Shared", locale: .appLanguage))
+        }
+        return app.serverData == nil
+            ? String(localized: LocalizedStringResource("Removes your access to \(app.name) and its data on this iPhone.",
+                                                        table: "Shared", locale: .appLanguage))
+            : String(localized: LocalizedStringResource("Removes your access to \(app.name) and deletes your \(app.name) data, on its server and on this iPhone.",
+                                                        table: "Shared", locale: .appLanguage))
+    }
+
+    private var rest: String {
+        if accountOptional {
+            return String(localized: LocalizedStringResource("\(app.name) and its data on this iPhone stay, as do your Ares account and the other apps.",
+                                                             table: "Shared", locale: .appLanguage))
+        }
+        return refused
+            ? String(localized: LocalizedStringResource("Your Ares account and the other apps stay.",
+                                                        table: "Shared", locale: .appLanguage))
+            : String(localized: LocalizedStringResource("Your Ares account and the other apps stay. You can ask for access again later.",
+                                                        table: "Shared", locale: .appLanguage))
+    }
 
     private func leave() {
         Task {
@@ -206,6 +228,8 @@ struct LeaveAppScreen: View {
 struct DeleteAccountScreen: View {
     let app: SettingsApp
     let closeSettings: () -> Void
+    /// The app works without an account (Aresium): its data on this iPhone stays.
+    private let accountOptional: Bool
     @State private var flow: DeleteAccountFlow
     @State private var confirms = false
     @FocusState private var typing: Bool
@@ -213,7 +237,8 @@ struct DeleteAccountScreen: View {
     init(app: SettingsApp, session: EmpireSession, sample: Bool, closeSettings: @escaping () -> Void) {
         self.app = app
         self.closeSettings = closeSettings
-        let flow = DeleteAccountFlow(session: session, localData: app.localData, sample: sample)
+        accountOptional = session.app.accountOptional
+        let flow = DeleteAccountFlow(session: session, sample: sample)
         #if DEBUG
         flow.applyDebugArguments(LaunchArguments.current)
         #endif
@@ -228,7 +253,10 @@ struct DeleteAccountScreen: View {
                     AccountExplanation(
                         main: String(localized: LocalizedStringResource("Deletes your Ares account and its data in every Ares app, for good.",
                                                                         table: "Shared", locale: .appLanguage)),
-                        rest: String(localized: LocalizedStringResource("Every Ares app on this iPhone logs out. This can't be undone.",
+                        rest: accountOptional
+                            ? String(localized: LocalizedStringResource("Every Ares app on this iPhone logs out. This can't be undone. \(app.name)'s data on this iPhone stays.",
+                                                                        table: "Shared", locale: .appLanguage))
+                            : String(localized: LocalizedStringResource("Every Ares app on this iPhone logs out. This can't be undone.",
                                                                         table: "Shared", locale: .appLanguage)),
                         accent: app.accent)
                     FormField(placeholder: String(localized: LocalizedStringResource("Password", table: "Shared",

@@ -8,11 +8,14 @@ struct SpendingWidgetView: View {
     let theme: AppTheme
     let date: Date
     var calendar: Calendar = .current
+    var locked = false
     private var palette: Palette { Palette(theme: theme) }
 
     var body: some View {
         Group {
-            if let snapshot, let note = WidgetMonthNote(snapshot: snapshot, now: date, calendar: calendar) {
+            if locked {
+                LockedWidgetView(palette: palette)
+            } else if let snapshot, let note = WidgetMonthNote(snapshot: snapshot, now: date, calendar: calendar) {
                 WidgetMonthNoteView(note: note, palette: palette, compact: false)
             } else if let snapshot {
                 VStack(alignment: .leading, spacing: 6) {
@@ -65,11 +68,14 @@ struct CategoriesWidgetView: View {
     let theme: AppTheme
     let date: Date
     var calendar: Calendar = .current
+    var locked = false
     private var palette: Palette { Palette(theme: theme) }
 
     var body: some View {
         Group {
-            if let snapshot, let note = WidgetMonthNote(snapshot: snapshot, now: date, calendar: calendar) {
+            if locked {
+                LockedWidgetView(palette: palette)
+            } else if let snapshot, let note = WidgetMonthNote(snapshot: snapshot, now: date, calendar: calendar) {
                 WidgetMonthNoteView(note: note, palette: palette, compact: true)
             } else if let snapshot {
                 VStack(alignment: .leading, spacing: 10) {
@@ -132,6 +138,22 @@ private struct WidgetMonthNoteView: View {
                 }
             }.foregroundStyle(palette.secondary)
         }.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+}
+
+/// While Aresium's lock is on: no numbers, only the name and that it is locked (the empty state's layout).
+private struct LockedWidgetView: View {
+    let palette: Palette
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(verbatim: "Aresium").font(AppFont.text(15)).foregroundStyle(palette.ink)
+            Label {
+                Text("Locked", tableName: "AresiumShared")
+            } icon: {
+                Image(systemName: "lock.fill").font(.system(size: 11, weight: .semibold))
+            }
+            .font(AppFont.text(13)).foregroundStyle(palette.secondary)
+        }.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
     }
 }
 

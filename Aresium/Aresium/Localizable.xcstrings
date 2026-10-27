@@ -195,46 +195,6 @@
         }
       }
     },
-    "%lld files waiting, imported after login" : {
-      "localizations" : {
-        "de" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld Datei wartet, Import nach der Anmeldung"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld Dateien warten, Import nach der Anmeldung"
-                }
-              }
-            }
-          }
-        },
-        "en" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld file waiting, imported after login"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld files waiting, imported after login"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "%lld new transactions imported" : {
       "localizations" : {
         "de" : {
@@ -287,6 +247,22 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$lld new · %2$lld already there · %3$lld sorted · %4$lld not sorted"
+          }
+        }
+      }
+    },
+    "%lld of %lld digits" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld von %lld Ziffern"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld of %2$lld digits"
           }
         }
       }
@@ -361,12 +337,52 @@
         }
       }
     },
+    "A code of 6 digits, only for Aresium." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein Code aus 6 Ziffern, nur für Aresium."
+          }
+        }
+      }
+    },
     "A file you exported from Aresium before" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Eine frühere Exportdatei aus Aresium"
+          }
+        }
+      }
+    },
+    "A forgotten code can't be reset. Deleting Aresium's data on this iPhone removes the code with it and logs out of your Ares account; afterwards you can restore an export." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein vergessener Code lässt sich nicht zurücksetzen. Wenn du die Aresium-Daten auf diesem iPhone löschst, geht der Code mit und du wirst von deinem Ares-Konto abgemeldet; danach kannst du einen Export wiederherstellen."
+          }
+        }
+      }
+    },
+    "A forgotten code can't be reset. Deleting Aresium's data on this iPhone removes the code with it; afterwards you can restore an export." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein vergessener Code lässt sich nicht zurücksetzen. Wenn du die Aresium-Daten auf diesem iPhone löschst, geht der Code mit; danach kannst du einen Export wiederherstellen."
+          }
+        }
+      }
+    },
+    "A forgotten code can't be reset. Without it and without Face ID, the only way back is deleting Aresium's data on this iPhone, so export your data first." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein vergessener Code lässt sich nicht zurücksetzen. Ohne ihn und ohne Face ID kommst du nur wieder hinein, indem du die Aresium-Daten auf diesem iPhone löschst. Exportier deine Daten also vorher."
           }
         }
       }
@@ -397,16 +413,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Hier per Tag hinzugefügt; Hauptkategorie %@"
-          }
-        }
-      }
-    },
-    "After that, your data on this iPhone works without one." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Danach funktionieren deine Daten auf diesem iPhone auch ohne."
           }
         }
       }
@@ -511,12 +517,12 @@
         }
       }
     },
-    "Aresium needs a connection the first time" : {
+    "Aresium locks when it opens and after more than 10 seconds away. While the lock is on, the widgets show no numbers." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aresium braucht beim ersten Mal eine Verbindung"
+            "value" : "Aresium sperrt sich beim Öffnen und wenn du länger als 10 Sekunden weg warst. Solange die Sperre an ist, zeigen die Widgets keine Zahlen."
           }
         }
       }
@@ -661,6 +667,16 @@
         }
       }
     },
+    "Change code" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Code ändern"
+          }
+        }
+      }
+    },
     "Check the columns" : {
       "localizations" : {
         "de" : {
@@ -781,6 +797,16 @@
         }
       }
     },
+    "Delete Aresium data" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aresium-Daten löschen"
+          }
+        }
+      }
+    },
     "Delete Aresium data on this iPhone" : {
       "localizations" : {
         "de" : {
@@ -851,22 +877,52 @@
         }
       }
     },
-    "Email" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "E-Mail"
-          }
-        }
-      }
-    },
     "Enter Aresium mode" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Aresium-Modus starten"
+          }
+        }
+      }
+    },
+    "Enter a new code" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gib einen neuen Code ein"
+          }
+        }
+      }
+    },
+    "Enter it again" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gib ihn noch einmal ein"
+          }
+        }
+      }
+    },
+    "Enter your code" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gib deinen Code ein"
+          }
+        }
+      }
+    },
+    "Enter your current code" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gib deinen jetzigen Code ein"
           }
         }
       }
@@ -937,6 +993,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Erste Buchungen"
+          }
+        }
+      }
+    },
+    "Forgot the code?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Code vergessen?"
           }
         }
       }
@@ -1107,12 +1173,42 @@
         }
       }
     },
-    "Log in" : {
+    "Lock" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Anmelden"
+            "value" : "Sperre"
+          }
+        }
+      }
+    },
+    "Lock with Face ID" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mit Face ID sperren"
+          }
+        }
+      }
+    },
+    "Lock with Optic ID" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mit Optic ID sperren"
+          }
+        }
+      }
+    },
+    "Lock with Touch ID" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mit Touch ID sperren"
           }
         }
       }
@@ -1203,6 +1299,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Buchungen verschieben nach"
+          }
+        }
+      }
+    },
+    "Needs a code on this iPhone" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Braucht einen Code auf diesem iPhone"
           }
         }
       }
@@ -1327,12 +1433,42 @@
         }
       }
     },
+    "Off" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aus"
+          }
+        }
+      }
+    },
+    "On" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "An"
+          }
+        }
+      }
+    },
     "On this iPhone" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Auf diesem iPhone"
+          }
+        }
+      }
+    },
+    "Only for an Aresium server of your own. Your data here stays on this iPhone." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nur für einen eigenen Aresium-Server. Deine Daten hier bleiben auf diesem iPhone."
           }
         }
       }
@@ -1353,6 +1489,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nur, solange Aresium leer ist"
+          }
+        }
+      }
+    },
+    "Or the iPhone's code" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Oder mit dem Code des iPhones"
+          }
+        }
+      }
+    },
+    "Or your own code" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Oder mit deinem eigenen Code"
           }
         }
       }
@@ -1387,12 +1543,12 @@
         }
       }
     },
-    "Password" : {
+    "Own code" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Passwort"
+            "value" : "Eigener Code"
           }
         }
       }
@@ -1497,6 +1653,16 @@
         }
       }
     },
+    "Remove code" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Code entfernen"
+          }
+        }
+      }
+    },
     "Restore from an export" : {
       "localizations" : {
         "de" : {
@@ -1547,16 +1713,6 @@
         }
       }
     },
-    "Restoring session…" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Anmeldung wird wiederhergestellt…"
-          }
-        }
-      }
-    },
     "Retry" : {
       "localizations" : {
         "de" : {
@@ -1593,6 +1749,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Speichert…"
+          }
+        }
+      }
+    },
+    "Set code" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Code festlegen"
           }
         }
       }
@@ -1683,6 +1849,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Verschieben"
+          }
+        }
+      }
+    },
+    "The code needs 6 digits." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Code braucht 6 Ziffern."
+          }
+        }
+      }
+    },
+    "The codes didn't match. Enter a new code again." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Codes waren nicht gleich. Gib noch einmal einen neuen Code ein."
           }
         }
       }
@@ -1837,6 +2023,26 @@
         }
       }
     },
+    "Too many wrong codes. Try again in %@." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zu viele falsche Codes. Versuch es in %@ noch einmal."
+          }
+        }
+      }
+    },
+    "Too many wrong codes. Try again later." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zu viele falsche Codes. Versuch es später noch einmal."
+          }
+        }
+      }
+    },
     "Transaction" : {
       "localizations" : {
         "de" : {
@@ -1867,12 +2073,82 @@
         }
       }
     },
+    "Turn off the lock" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sperre ausschalten"
+          }
+        }
+      }
+    },
+    "Turn on the lock" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sperre einschalten"
+          }
+        }
+      }
+    },
     "Type a name for the category." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Gib einen Namen für die Kategorie ein."
+          }
+        }
+      }
+    },
+    "Unlock" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Entsperren"
+          }
+        }
+      }
+    },
+    "Unlock Aresium" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aresium entsperren"
+          }
+        }
+      }
+    },
+    "Unlock with Face ID" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mit Face ID entsperren"
+          }
+        }
+      }
+    },
+    "Unlock with Optic ID" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mit Optic ID entsperren"
+          }
+        }
+      }
+    },
+    "Unlock with Touch ID" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mit Touch ID entsperren"
           }
         }
       }
@@ -1907,12 +2183,32 @@
         }
       }
     },
+    "With it, Aresium opens with Face ID or this code, not with the iPhone's code." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Damit öffnet sich Aresium mit Face ID oder diesem Code, nicht mit dem Code des iPhones."
+          }
+        }
+      }
+    },
     "Wrong category? Pick the one it belongs in — it moves there." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Falsche Kategorie? Wähl die richtige – die Buchung wandert dorthin."
+          }
+        }
+      }
+    },
+    "Wrong code" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Falscher Code"
           }
         }
       }

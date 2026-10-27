@@ -272,7 +272,7 @@ struct PhoneBackendTests {
         #expect(loaded.pick.spend.contains("Groceries") && loaded.pick.income.contains("Salary & side jobs"))
         #expect(loaded.pick.income.contains("Own transfers"))
         let snapshot = try #require(dashboard.widgetPublisher.store.load())
-        #expect(snapshot.account == session.accountID && snapshot.expense == 28.45)
+        #expect(snapshot.phone && snapshot.account == nil && snapshot.expense == 28.45)   // the iPhone's, not the login's
         #expect(transport.requests.allSatisfy { $0.url?.host != "aresium.de" })
     }
 

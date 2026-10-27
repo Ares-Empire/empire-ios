@@ -18,9 +18,24 @@ struct WidgetSnapshotPublisher {
         return Self(store: WidgetSnapshotStore(directory: directory), reloadTimelines: {})
     }
 
-    func publish(_ dashboard: Dashboard, account: String? = nil) throws {
-        if let snapshot = WidgetSnapshot(dashboard: dashboard, account: account) { try store.save(snapshot) }
+    /// Saves the dashboard's numbers for the widgets: phone mode's as the iPhone's own (`phone`), server mode's with
+    /// the account they belong to. While Aresium's lock is on, none are kept (`setLocked`).
+    func publish(_ dashboard: Dashboard, account: String? = nil, phone: Bool = false) throws {
+        if store.isLocked {
+            if store.load() != nil { try clear() }
+            return
+        }
+        if let snapshot = WidgetSnapshot(dashboard: dashboard, account: account, phone: phone) { try store.save(snapshot) }
         else { try store.delete() }
+        reloadTimelines()
+    }
+
+    /// Aresium's lock turned on or off: on, the numbers go and the widgets show only that Aresium is locked; off, the
+    /// next `publish` brings them back. Reloads the widgets only when it changed.
+    func setLocked(_ locked: Bool) throws {
+        guard store.isLocked != locked else { return }
+        try store.saveLocked(locked)
+        if locked { try store.delete() }
         reloadTimelines()
     }
 

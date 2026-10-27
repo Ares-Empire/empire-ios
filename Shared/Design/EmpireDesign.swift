@@ -229,11 +229,19 @@ struct WordmarkBand: View {
                                                     .init(color: Color(hex: 0x7F7F7F, opacity: 0.18), location: 1.16)],
                                             startPoint: .top, endPoint: .bottom))
 
+    /// The letters' size for a word across a width.
+    static func letterSize(of word: String, width: CGFloat) -> CGFloat {
+        min(220, max(48, width / CGFloat(max(word.count, 1)) * 1.08))
+    }
+
+    /// How tall the band is (a screen that places things around it, as Aresium's lock screen).
+    static func height(of word: String, width: CGFloat) -> CGFloat { letterSize(of: word, width: width) * 0.74 }
+
     var body: some View {
         let letters = Array(word.uppercased())
-        let size = min(220, max(48, width / CGFloat(max(letters.count, 1)) * 1.08))
+        let size = Self.letterSize(of: word, width: width)
         Rectangle().fill(fill)
-            .frame(width: width, height: size * 0.74)
+            .frame(width: width, height: Self.height(of: word, width: width))
             .mask {
                 Canvas { context, canvasSize in
                     let glyphs = letters.map {

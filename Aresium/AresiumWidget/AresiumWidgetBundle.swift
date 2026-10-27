@@ -15,7 +15,7 @@ struct MonthlySpendingWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: "AresiumMonthlySpending", provider: SpendingProvider()) { entry in
             AresiumWidgetLook(red: entry.red) { theme in
-                SpendingWidgetView(snapshot: entry.snapshot, theme: theme, date: entry.date)
+                SpendingWidgetView(snapshot: entry.snapshot, theme: theme, date: entry.date, locked: entry.locked)
             }
             .environment(\.locale, AppLanguage.current.locale)          // the app's language (`WidgetLanguage`)
         }
@@ -31,7 +31,8 @@ struct SpendingCategoriesWidget: Widget {
                                provider: CategoriesProvider()) { entry in
             AresiumWidgetLook(red: entry.red) { theme in
                 CategoriesWidgetView(snapshot: entry.snapshot, firstCategory: entry.firstCategory,
-                                     secondCategory: entry.secondCategory, theme: theme, date: entry.date)
+                                     secondCategory: entry.secondCategory, theme: theme, date: entry.date,
+                                     locked: entry.locked)
             }
             .environment(\.locale, AppLanguage.current.locale)          // the app's language (`WidgetLanguage`)
         }
@@ -72,4 +73,10 @@ struct AresiumWidgetLook<Content: View>: View {
     SpendingCategoriesWidget()
 } timeline: {
     CategoriesEntry(date: .now, snapshot: nil, red: false, firstCategory: nil, secondCategory: nil)
+}
+
+#Preview("Locked", as: .systemMedium) {
+    MonthlySpendingWidget()
+} timeline: {
+    SpendingEntry(date: .now, snapshot: nil, red: false, locked: true)
 }

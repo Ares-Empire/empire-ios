@@ -186,14 +186,14 @@ final class PhoneDataModel {
         }
     }
 
-    /// Deletes everything Aresium keeps on this iPhone for this account (after the person confirmed); the app starts
-    /// again with an empty store.
+    /// Deletes Aresium's data on this iPhone (after the person confirmed); the app starts again with an empty store.
     func deleteAll() async {
         guard !isWorking else { return }
         isWorking = true
         problem = nil
+        message = nil
         defer { isWorking = false }
-        do { try await modes.deleteLocalData(reopen: true) }
+        do { try await modes.deleteLocalData() }
         catch { problem = error.localizedDescription }
     }
 }

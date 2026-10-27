@@ -17,9 +17,13 @@ nonisolated struct WidgetSnapshot: Codable, Equatable {
     let expense: Double
     let newestTransactionDate: String?
     let categories: [SpendCategory]
+    /// Server mode: the Ares account whose numbers these are; shown only while it is the saved login's
+    /// (`WidgetSnapshotStore.readShown`).
     let account: String?
+    /// Phone mode: the numbers of this iPhone's own store, which belong to the iPhone and not to a login.
+    let phone: Bool
 
-    init?(dashboard: Dashboard, account: String? = nil) {
+    init?(dashboard: Dashboard, account: String? = nil, phone: Bool = false) {
         guard let month = dashboard.months.last, let data = dashboard.byMonth[month.key],
               let date = WidgetFormatting.monthDate(month.key),
               let days = WidgetFormatting.calendar.range(of: .day, in: .month, for: date)?.count else { return nil }
@@ -28,12 +32,32 @@ nonisolated struct WidgetSnapshot: Codable, Equatable {
         daysInMonth = days
         dayExpenseRunning = data.dayExpenseRunning
         expense = data.expense
-        self.account = account
+        self.account = phone ? nil : account
+        self.phone = phone
         newestTransactionDate = dashboard.transactions.map(\.date).max()
         categories = dashboard.categories.filter { $0.kind == .spend }.map { category in
             SpendCategory(name: category.name, icon: category.icon, color: category.color,
                           total: data.categories.first { $0.name == category.name }?.total ?? 0)
         }
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case monthKey, monthLabel, daysInMonth, dayExpenseRunning, expense, newestTransactionDate, categories, account,
+             phone
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        monthKey = try container.decode(String.self, forKey: .monthKey)
+        monthLabel = try container.decode(String.self, forKey: .monthLabel)
+        daysInMonth = try container.decode(Int.self, forKey: .daysInMonth)
+        dayExpenseRunning = try container.decode([Double].self, forKey: .dayExpenseRunning)
+        expense = try container.decode(Double.self, forKey: .expense)
+        newestTransactionDate = try container.decodeIfPresent(String.self, forKey: .newestTransactionDate)
+        categories = try container.decode([SpendCategory].self, forKey: .categories)
+        account = try container.decodeIfPresent(String.self, forKey: .account)
+        // Missing in the files of builds before 2026-10-27, which named an account in either mode.
+        phone = try container.decodeIfPresent(Bool.self, forKey: .phone) ?? false
     }
 
     /// Reserve an available named default before filling missing slots. Never default to Rent.

@@ -1,5 +1,4 @@
 import Foundation
-import os
 import Observation
 
 // The account's own actions, one small model each, so the screens only show them (Shared/Design/AccountSheets.swift,
@@ -334,18 +333,13 @@ final class ChangePasswordForm {
     #endif
 }
 
-/// The account flows' log (`log show --predicate 'subsystem == "de.ares-empire.shared" && category == "account"'`).
-enum AccountFlowLog {
-    static let log = Logger(subsystem: "de.ares-empire.shared", category: "account")
-}
-
 // MARK: - leaving this app (Settings → Account)
 
-/// "Leave <app>": this app's access goes, with its data on its server (where it keeps any) and on this iPhone; the
-/// account and the other apps stay. The order matters: the server's data first (once the access is gone, the server
-/// refuses this account), then the access, then the data the app keeps only on this iPhone (`localData`, Aresium's
-/// phone mode), once the server said yes. Afterwards the session closes this app (`updateAccess`), which forgets its
-/// data on the phone and removes its push device; the shared login stays.
+/// "Leave <app>": this app's access goes, with its data on its server (where it keeps any); the account and the other
+/// apps stay. The order matters: the server's data first (once the access is gone, the server refuses this account),
+/// then the access. Afterwards the session closes this app (`updateAccess`), which forgets its data on the phone and
+/// removes its push device; the shared login stays. (Aresium works without an account: its data on this iPhone belongs
+/// to the iPhone and stays.)
 @MainActor @Observable
 final class LeaveAppFlow {
     enum Phase: Equatable { case ready, leaving, left, failed(AccountFailure) }
@@ -354,23 +348,15 @@ final class LeaveAppFlow {
     /// The app's server deleted the account's data, but the access is still there (the second step failed).
     private(set) var serverDataDeleted = false
 
-    /// The access is gone, but the app's data on this iPhone could not be deleted (it stays until the app is deleted).
-    private(set) var localDataFailed = false
-
     @ObservationIgnored private let session: EmpireSession
     @ObservationIgnored private let serverData: URL?
-    @ObservationIgnored private let localData: (@MainActor () async throws -> Void)?
     @ObservationIgnored private let sample: Bool
     @ObservationIgnored private let sampleDelay: Duration
 
-    /// - Parameters:
-    ///   - serverData: the app's `DELETE …/me`, when its server keeps data per account (today Arestemis).
-    ///   - localData: deletes what the app keeps only on this iPhone (`SettingsApp.localData`).
-    init(session: EmpireSession, serverData: URL?, localData: (@MainActor () async throws -> Void)? = nil,
-         sample: Bool = false, sampleDelay: Duration = .seconds(1.2)) {
+    /// - Parameter serverData: the app's `DELETE …/me`, when its server keeps data per account (today Arestemis).
+    init(session: EmpireSession, serverData: URL?, sample: Bool = false, sampleDelay: Duration = .seconds(1.2)) {
         self.session = session
         self.serverData = serverData
-        self.localData = localData
         self.sample = sample
         self.sampleDelay = sampleDelay
     }
@@ -396,7 +382,6 @@ final class LeaveAppFlow {
             }
             let access = try await client.leave(service: service, token: token)
             guard generation == session.generation else { phase = .failed(.loggedOut); return }
-            await deleteLocalData()
             phase = .left
             // The server took the access away: this app closes, also if its answer still named the service.
             session.updateAccess(services: access.services.filter { $0 != service },
@@ -404,16 +389,6 @@ final class LeaveAppFlow {
         } catch {
             if error == .loggedOut { session.handleAuthFailure(HTTPError.unauthorized, generation: generation, token: token) }
             phase = .failed(error)
-        }
-    }
-
-    /// The server said yes: the data on this iPhone goes too. A failure does not undo the leaving (it is logged).
-    private func deleteLocalData() async {
-        guard let localData else { return }
-        do { try await localData() }
-        catch {
-            localDataFailed = true
-            AccountFlowLog.log.error("\(self.session.app.service, privacy: .public): the app's data on this iPhone was not deleted: \(String(describing: error), privacy: .public)")
         }
     }
 
@@ -428,9 +403,8 @@ final class LeaveAppFlow {
 // MARK: - deleting the account (Settings → Account)
 
 /// "Delete Ares account": the password is checked first (a login with it), then the person confirms, then the account
-/// is deleted with that fresh login; the account server deletes its data in every service, and this app deletes what it
-/// keeps only on this iPhone (`localData`). Afterwards the login ends in every app. Until the deletion answers 204
-/// nothing changes on the phone.
+/// is deleted with that fresh login; the account server deletes its data in every service. Afterwards the login ends in
+/// every app. Until the deletion answers 204 nothing changes on the phone.
 @MainActor @Observable
 final class DeleteAccountFlow {
     enum Phase: Equatable { case writing, checking, confirming, deleting, deleted, failed(AccountFailure) }
@@ -438,21 +412,14 @@ final class DeleteAccountFlow {
     var password = ""
     private(set) var phase: Phase = .writing
 
-    /// The account is deleted, but the app's data on this iPhone could not be deleted.
-    private(set) var localDataFailed = false
-
     @ObservationIgnored private let session: EmpireSession
-    @ObservationIgnored private let localData: (@MainActor () async throws -> Void)?
     @ObservationIgnored private let sample: Bool
     @ObservationIgnored private let sampleDelay: Duration
     /// The login the password check made: it proves the password and deletes the account. Never saved.
     @ObservationIgnored private var checkedLogin: String?
 
-    /// - Parameter localData: deletes what the app keeps only on this iPhone (`SettingsApp.localData`).
-    init(session: EmpireSession, localData: (@MainActor () async throws -> Void)? = nil, sample: Bool = false,
-         sampleDelay: Duration = .seconds(1.2)) {
+    init(session: EmpireSession, sample: Bool = false, sampleDelay: Duration = .seconds(1.2)) {
         self.session = session
-        self.localData = localData
         self.sample = sample
         self.sampleDelay = sampleDelay
     }
@@ -516,13 +483,6 @@ final class DeleteAccountFlow {
         checkedLogin = nil
         do {
             try await session.accountClient.deleteAccount(id: id, token: token)
-            if let localData {
-                do { try await localData() }
-                catch {
-                    localDataFailed = true
-                    AccountFlowLog.log.error("\(self.session.app.service, privacy: .public): the app's data on this iPhone was not deleted: \(String(describing: error), privacy: .public)")
-                }
-            }
             phase = .deleted
             session.accountDeleted()
         } catch {

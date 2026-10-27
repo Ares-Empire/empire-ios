@@ -2,25 +2,101 @@ import Foundation
 import Testing
 @testable import Aresium
 
-/// Phone mode's storage (`PhoneLedger`, `PhoneStorage`): one store per account, payments unique by (account, source,
-/// export id), categories, rules and layouts kept, export and restore.
+/// Phone mode's storage (`PhoneLedger`, `PhoneStorage`): one store per iPhone, an older per-account store moved over,
+/// payments unique by (account, source, export id), categories, rules and layouts kept, export and restore.
 @MainActor
 struct PhoneStoreTests {
-    @Test func eachAccountHasItsOwnProtectedStore() async throws {
+    @Test func thePhoneHasOneProtectedStoreThatOpensAgain() async throws {
         let storage = PhoneTest.storage()
-        let first = try await PhoneTest.backend(account: "fictionalA", storage: storage, chosen: ["groceries"])
+        let first = try await PhoneTest.backend(storage: storage, chosen: ["groceries"])
         _ = try await first.importFiles([PhoneTest.fixture("dkb.csv")], auth: BackendAuth(token: nil))
         #expect(first.summary.payments > 0)
-        let other = try await PhoneTest.backend(account: "fictionalB", storage: storage)
-        #expect(other.summary.payments == 0 && other.summary.chosen.isEmpty)
-        // Opened again later (a new login of the same account), the data is there.
-        let again = try await PhoneTest.backend(account: "fictionalA", storage: storage)
+        #expect(storage.directory.lastPathComponent == "local" && storage.hasStore)
+        // Opened again later (a new launch, whoever is logged in), the data is there.
+        let again = try await PhoneTest.backend(storage: storage)
         #expect(again.summary.payments == first.summary.payments)
         #expect(again.summary.chosen.map(\.id) == ["groceries"])
-        #expect(storage.directory(for: "fictionalA") != storage.directory(for: "fictionalB"))
-        #expect(storage.directory(for: "../escape").lastPathComponent != "..")
-        let attributes = try FileManager.default.attributesOfItem(atPath: storage.directory(for: "fictionalA").path)
+        let attributes = try FileManager.default.attributesOfItem(atPath: storage.directory.path)
         if let protection = attributes[.protectionKey] as? FileProtectionType { #expect(protection == .complete) }
+        try storage.delete()
+        #expect(!storage.hasStore && !FileManager.default.fileExists(atPath: storage.directory.path))
+    }
+
+    // MARK: moving an older per-account store over
+
+    /// An older build's store for an account: `<root>/<account id>/ledger.store`, with these payments, changed `daysAgo`.
+    private func oldStore(_ account: String, in storage: PhoneStorage, payments: Int, daysAgo: Double) async throws {
+        let folder = storage.root.appending(path: account, directoryHint: .isDirectory)
+        let old = PhoneStorage(root: folder.deletingLastPathComponent().appending(path: "build-\(account)",
+                                                                                 directoryHint: .isDirectory))
+        // Filled in a scope of its own, so its store is closed before it moves.
+        func fill() async throws {
+            let backend = try await PhoneTest.backend(storage: old, chosen: ["groceries"])
+            let rows = (0..<payments).map { ("0\($0 + 1).10.2026", "REWE Markt GmbH", "REWE \(account) \($0)", -1000 - $0) }
+            if !rows.isEmpty { _ = try await backend.importFiles([PhoneTest.vrBank(rows)], auth: BackendAuth(token: nil)) }
+        }
+        try await fill()
+        try await Task.sleep(for: .milliseconds(100))
+        try FileManager.default.createDirectory(at: storage.root, withIntermediateDirectories: true)
+        try FileManager.default.moveItem(at: old.directory, to: folder)
+        try? FileManager.default.removeItem(at: old.root)
+        let date = Date.now.addingTimeInterval(-daysAgo * 86_400)
+        for file in try FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil) {
+            try FileManager.default.setAttributes([.modificationDate: date], ofItemAtPath: file.path)
+        }
+    }
+
+    @Test func oneOldStoreBecomesThePhonesStoreByMoving() async throws {
+        let storage = PhoneTest.storage()
+        try await oldStore("fictionalAccountA", in: storage, payments: 2, daysAgo: 1)
+        #expect(!storage.hasStore)
+        let phone = try await PhoneTest.backend(storage: storage)        // opening moves it
+        #expect(phone.summary.payments == 2 && phone.summary.chosen.map(\.id) == ["groceries"])
+        #expect(storage.hasStore)
+        #expect(!FileManager.default.fileExists(atPath: storage.root.appending(path: "fictionalAccountA").path))  // moved
+        #expect(try storage.moveOldStore() == .nothing)
+    }
+
+    @Test func withSeveralTheMostRecentlyChangedMovesAndTheOthersStay() async throws {
+        let storage = PhoneTest.storage()
+        try await oldStore("fictionalAccountA", in: storage, payments: 1, daysAgo: 9)
+        try await oldStore("fictionalAccountB", in: storage, payments: 3, daysAgo: 1)
+        try await oldStore("fictionalAccountC", in: storage, payments: 2, daysAgo: 30)
+        #expect(try storage.moveOldStore() == .moved(from: "fictionalAccountB", leftBehind: 2))
+        let phone = try await PhoneTest.backend(storage: storage)
+        #expect(phone.summary.payments == 3)
+        for account in ["fictionalAccountA", "fictionalAccountC"] {
+            #expect(FileManager.default.fileExists(atPath: storage.root.appending(path: "\(account)/ledger.store").path))
+        }
+        // The phone has its store now: nothing moves any more.
+        #expect(try storage.moveOldStore() == .nothing && storage.oldStores().count == 2)
+    }
+
+    @Test func deletingTheDataAlsoRemovesOlderStoresLeftBehind() async throws {
+        let storage = PhoneTest.storage()
+        try await oldStore("fictionalAccountA", in: storage, payments: 1, daysAgo: 9)
+        try await oldStore("fictionalAccountB", in: storage, payments: 3, daysAgo: 1)
+        _ = try await PhoneTest.backend(storage: storage)                // opening moves B, A stays behind
+        #expect(storage.hasStore && storage.oldStores().count == 1)
+        try storage.delete()
+        #expect(!storage.hasStore && storage.oldStores().isEmpty)
+    }
+
+    @Test func anExistingPhoneStoreIsNeverReplaced() async throws {
+        let storage = PhoneTest.storage()
+        let phone = try await PhoneTest.backend(storage: storage, chosen: ["rent"])
+        _ = try await phone.importFiles([PhoneTest.vrBank([("01.10.2026", "Fiktiv Laden", "Einkauf", -500)])],
+                                        auth: BackendAuth(token: nil))
+        try await oldStore("fictionalAccountA", in: storage, payments: 4, daysAgo: 0)
+        #expect(try storage.moveOldStore() == .nothing)
+        let again = try await PhoneTest.backend(storage: storage)
+        #expect(again.summary.payments == 1)
+        #expect(FileManager.default.fileExists(atPath: storage.root.appending(path: "fictionalAccountA/ledger.store").path))
+    }
+
+    @Test func nothingToMoveOnAFreshInstall() throws {
+        let storage = PhoneTest.storage()
+        #expect(try storage.moveOldStore() == .nothing && storage.oldStores().isEmpty)
     }
 
     @Test func aPaymentIsStoredOnceByAccountSourceAndExportID() async throws {
@@ -84,7 +160,7 @@ struct PhoneStoreTests {
         #expect(export.schema == 1 && export.fileName.hasPrefix("Aresium-") && export.fileName.hasSuffix(".json"))
         let data = try export.encoded()
 
-        let fresh = try await PhoneTest.backend(account: "fictionalB")
+        let fresh = try await PhoneTest.backend()
         try await fresh.restore(data)
         let restored = try await fresh.export()
         #expect(restored == export)
@@ -108,7 +184,7 @@ struct PhoneStoreTests {
         let source = try await PhoneTest.backend(chosen: ["rent"])
         _ = try await source.importFiles([PhoneTest.fixture("dkb.csv")], auth: BackendAuth(token: nil))
         var export = try await source.export()
-        let target = try await PhoneTest.backend(account: "fictionalB", chosen: ["groceries"])
+        let target = try await PhoneTest.backend(chosen: ["groceries"])
 
         var orphan = export
         orphan.accounts = []                                               // payments without their account

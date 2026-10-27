@@ -9,14 +9,14 @@ nonisolated struct SpendCategoryEntity: AppEntity {
 
 nonisolated struct SpendCategoryQuery: EntityQuery {
     func entities(for identifiers: [String]) async throws -> [SpendCategoryEntity] {
-        let categories = WidgetSnapshotStore().readForCurrentLogin().snapshot?.categories ?? []
+        let categories = WidgetSnapshotStore().readShown().snapshot?.categories ?? []
         return identifiers.compactMap { id in
             categories.contains { $0.name == id } ? SpendCategoryEntity(id: id) : nil
         }
     }
 
     func suggestedEntities() async throws -> [SpendCategoryEntity] {
-        (WidgetSnapshotStore().readForCurrentLogin().snapshot?.categories ?? []).map { SpendCategoryEntity(id: $0.name) }
+        (WidgetSnapshotStore().readShown().snapshot?.categories ?? []).map { SpendCategoryEntity(id: $0.name) }
     }
 }
 
@@ -32,7 +32,7 @@ struct SpendingCategoriesIntent: WidgetConfigurationIntent {
     }
 
     init() {
-        let defaults = WidgetSnapshotStore().readForCurrentLogin().snapshot?.defaultCategoryNames ?? []
+        let defaults = WidgetSnapshotStore().readShown().snapshot?.defaultCategoryNames ?? []
         firstCategory = defaults.first.map { SpendCategoryEntity(id: $0) }
         secondCategory = defaults.dropFirst().first.map { SpendCategoryEntity(id: $0) }
     }

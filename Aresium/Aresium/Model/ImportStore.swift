@@ -71,7 +71,10 @@ final class ImportStore {
         fixedBackend = nil
         self.background = background
         self.maximumRequestBytes = maximumRequestBytes
-        dashboard.session.onAppDataReset { [weak self] in self?.discard() }
+        // Files on their way to the server go with its login; the phone's imports do not depend on one.
+        dashboard.session.onAppDataReset { [weak self] in
+            if self?.backend?.mode == .server { self?.discard() }
+        }
     }
 
     /// Imports to this server (tests).
@@ -82,7 +85,10 @@ final class ImportStore {
         fixedBackend = ServerBackend(client: client)
         self.background = background
         self.maximumRequestBytes = maximumRequestBytes
-        dashboard.session.onAppDataReset { [weak self] in self?.discard() }
+        // Files on their way to the server go with its login; the phone's imports do not depend on one.
+        dashboard.session.onAppDataReset { [weak self] in
+            if self?.backend?.mode == .server { self?.discard() }
+        }
     }
 
     private var backend: (any AresiumBackend)? { fixedBackend ?? dashboard.backend }
@@ -247,9 +253,6 @@ final class ImportStore {
         }
     }
     #if DEBUG
-    func seedDebugWaitingFiles() {
-        pending = [ImportFile(name: "bank.csv", content: "fictional"), ImportFile(name: "paypal.xml", content: "<fictional/>")]
-    }
     /// `-sampleLayout`: imports made-up files as if they were picked.
     func debugImport(_ files: [ImportFile]) {
         pending.append(contentsOf: files)

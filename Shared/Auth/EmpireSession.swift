@@ -6,7 +6,11 @@ import os
 struct EmpireAppIdentity: Equatable, Sendable {
     let service: String
     let name: String
-    static let aresium = EmpireAppIdentity(service: "aresium", name: "Aresium")
+    /// The app works without an Ares account (Aresium, Patrik 2026-10-27): it never shows a login screen, any login
+    /// (or none) opens it, and its service matters only to the app itself (Aresium's server mode for the owner). Every
+    /// other app needs a login with its service.
+    var accountOptional = false
+    static let aresium = EmpireAppIdentity(service: "aresium", name: "Aresium", accountOptional: true)
     static let empire = EmpireAppIdentity(service: "empire", name: "Ares Empire")
     static let arestemis = EmpireAppIdentity(service: "arestemis", name: "Arestemis")
     static let aresus = EmpireAppIdentity(service: "aresus", name: "Aresus")
@@ -98,7 +102,8 @@ struct EmpireAuthClient {
 ///   everywhere.
 /// - The account is fine but may not use THIS app (its `services` lack this app's service, or the app's server
 ///   answers 403): `access = .denied` in this app only; this app forgets its own data (`onAppDataReset`), the shared
-///   login stays for the other apps.
+///   login stays for the other apps. An app that works without an account (`accountOptional`, Aresium) is denied only
+///   by its server's 403; a login without its service opens it all the same.
 /// - The account's own actions (Settings → Account, the login's sheets, "Ask for access") are in `AccountForms.swift`;
 ///   they change the session only through `updateAccess`, `takeOverLogin`, `accountDeleted` and the password-change
 ///   guard below.
@@ -296,7 +301,7 @@ final class EmpireSession {
         services = response.record.services
         requested = response.record.requested
         lastRenewedAt = .now
-        if response.record.services.contains(app.service) {
+        if app.accountOptional || response.record.services.contains(app.service) {
             if isDenied { error = nil }             // the no-access line goes with the denial
             access = .granted
         } else {
@@ -403,7 +408,7 @@ final class EmpireSession {
         guard token != nil else { return }
         self.services = services
         self.requested = requested
-        if !services.contains(app.service), !isDenied { deny(noAccessMessage) }
+        if !app.accountOptional, !services.contains(app.service), !isDenied { deny(noAccessMessage) }
     }
 
     /// After a password change: the login with the new password replaces the refused token here and, through the

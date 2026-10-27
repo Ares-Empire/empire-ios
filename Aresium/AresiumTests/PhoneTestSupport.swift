@@ -58,20 +58,22 @@ enum PhoneTest {
          "record": ["id": account, "approved": true, "services": services, "email": "\(account)@example.invalid"]]
     }
 
-    /// A session logged in as `account` through `transport` (the account server's answers are queued there).
-    static func session(_ account: String = "fictionalA", transport: RoutedTransport, tokens: PhoneTokens = PhoneTokens(),
+    /// A session logged in as `account` through `transport` (the account server's answers are queued there); nil:
+    /// nobody is logged in.
+    static func session(_ account: String? = "fictionalA", services: [String] = ["empire", "aresium"],
+                        transport: RoutedTransport, tokens: PhoneTokens = PhoneTokens(),
                         markerDefaults: UserDefaults? = nil) async -> EmpireSession {
-        transport.answer("POST " + login, 200, loginAnswer(account))
         let session = EmpireSession(app: .aresium, storage: tokens, client: EmpireAuthClient(transport: transport),
                                     restoreOnLaunch: false, sharedDefaults: markerDefaults)
-        await session.login(email: "\(account)@example.invalid", password: "fictional-password")
-        transport.routes["POST " + login] = nil
+        if let account { await login(session, as: account, services: services, transport: transport) }
         return session
     }
 
-    static func login(_ session: EmpireSession, as account: String, transport: RoutedTransport) async {
-        transport.routes["POST " + login] = [(200, try! JSONSerialization.data(withJSONObject: loginAnswer(account)))]
+    static func login(_ session: EmpireSession, as account: String, services: [String] = ["empire", "aresium"],
+                      transport: RoutedTransport) async {
+        transport.routes["POST " + login] = [(200, try! JSONSerialization.data(withJSONObject: loginAnswer(account, services: services)))]
         await session.login(email: "\(account)@example.invalid", password: "fictional-password")
+        transport.routes["POST " + login] = nil
     }
 
     static func defaults() -> UserDefaults {
@@ -81,19 +83,19 @@ enum PhoneTest {
         return defaults
     }
 
+    /// A storage root of its own in the worktree's build folder (never the simulator's real Application Support).
     static func storage() -> PhoneStorage {
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
-            .deletingLastPathComponent().appending(path: "build/15-test-stores/\(UUID().uuidString)", directoryHint: .isDirectory)
+            .deletingLastPathComponent().appending(path: "build/22-test-stores/\(UUID().uuidString)", directoryHint: .isDirectory)
         return PhoneStorage(root: root)
     }
 
     static func engine() throws -> AresiumEngine { try AresiumEngine.bundled() }
 
-    /// A phone backend on a new store of its own, with these categories ticked.
-    static func backend(account: String = "fictionalA", storage: PhoneStorage = storage(),
-                        chosen: [String] = []) async throws -> PhoneBackend {
-        let ledger = try await Task.detached { try storage.open(account: account) }.value
-        let backend = PhoneBackend(account: account, ledger: ledger, engine: try engine())
+    /// A phone backend on the storage's store (a new one of its own by default), with these categories ticked.
+    static func backend(storage: PhoneStorage = storage(), chosen: [String] = []) async throws -> PhoneBackend {
+        let ledger = try await Task.detached { try storage.open() }.value
+        let backend = PhoneBackend(ledger: ledger, engine: try engine())
         backend.today = { "2026-10-27" }
         try await backend.load()
         for id in chosen { try await ledger.choose(id) }

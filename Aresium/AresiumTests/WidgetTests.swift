@@ -285,7 +285,7 @@ struct WidgetTests {
         let store = WidgetSnapshotStore(directory: root)
         let snapshot = try #require(WidgetSnapshot(dashboard: serverDashboard(), account: "account-a"))
         try store.save(snapshot)
-        let result = store.readForCurrentLogin(in: defaults)
+        let result = store.readShown(in: defaults)
         if account == "account-a" {
             #expect(result.snapshot == snapshot && store.load() == snapshot)
         } else {
@@ -294,12 +294,35 @@ struct WidgetTests {
         }
     }
 
+    /// Phone mode's numbers belong to the iPhone: shown whoever is logged in (or nobody), never deleted on a mismatch.
+    @Test(arguments: ["account-a", nil] as [String?])
+    func thePhonesNumbersAreShownWhoeverIsLoggedIn(account: String?) throws {
+        let root = try directory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let suite = "aresium.tests.widget-phone." + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        if let account { LoginMarker.save(account, in: defaults) }
+        let store = WidgetSnapshotStore(directory: root)
+        let snapshot = try #require(WidgetSnapshot(dashboard: serverDashboard(), account: "account-b", phone: true))
+        #expect(snapshot.phone && snapshot.account == nil)
+        try store.save(snapshot)
+        #expect(store.readShown(in: defaults).snapshot == snapshot && store.load() == snapshot)
+        // A file of an older build has no `phone`: read as server mode's, as before.
+        let old = try JSONSerialization.jsonObject(with: JSONEncoder().encode(snapshot)) as? [String: Any]
+        var legacy = try #require(old)
+        legacy["phone"] = nil
+        legacy["account"] = "account-a"
+        let decoded = try JSONDecoder().decode(WidgetSnapshot.self, from: JSONSerialization.data(withJSONObject: legacy))
+        #expect(!decoded.phone && decoded.account == "account-a")
+    }
+
     @Test func legacySnapshotWithNoAccountIsNeverShownEvenWithNoMarker() throws {
         let root = try directory()
         defer { try? FileManager.default.removeItem(at: root) }
         let store = WidgetSnapshotStore(directory: root)
         try store.save(#require(WidgetSnapshot.sample))
-        #expect(store.readForCurrentLogin(in: nil).snapshot == nil && store.load() == nil)
+        #expect(store.readShown(in: nil).snapshot == nil && store.load() == nil)
     }
 
     @Test func everyWidgetReadStateRefreshesWithinAnHourThroughoutTheMonth() throws {
@@ -355,6 +378,14 @@ struct WidgetTests {
                    name: "07-medium-note", width: 364)
         try render(CategoriesWidgetView(snapshot: noteSnapshot, firstCategory: nil, secondCategory: nil, theme: .dark,
                                         date: noteDate, calendar: WidgetFormatting.calendar), name: "07-small-note", width: 170)
+        // Aresium's lock is on (brief 22): no numbers, only that it is locked.
+        for theme in [AppTheme.dark, .light] {
+            try render(SpendingWidgetView(snapshot: nil, theme: theme, date: sampleDate, locked: true),
+                       name: "22-widget-locked-medium-" + theme.rawValue, width: 364, theme: theme)
+            try render(CategoriesWidgetView(snapshot: nil, firstCategory: nil, secondCategory: nil, theme: theme,
+                                            date: sampleDate, locked: true),
+                       name: "22-widget-locked-small-" + theme.rawValue, width: 170, theme: theme)
+        }
         for theme in [AppTheme.light, .red] {
             try render(SpendingWidgetView(snapshot: sample, theme: theme, date: sampleDate), name: "05-medium-" + theme.rawValue, width: 364, theme: theme)
             try render(CategoriesWidgetView(snapshot: sample, firstCategory: "Uncategorised", secondCategory: "Dining", theme: theme, date: sampleDate),

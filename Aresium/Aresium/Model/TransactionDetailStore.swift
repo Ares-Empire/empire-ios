@@ -171,7 +171,9 @@ final class TransactionDetailStore {
         }
     }
 
+    /// The answer still counts: the phone's store does not depend on a login (one made meanwhile in another app changes
+    /// nothing); the server's answer belongs to the login it was asked with.
     private func isCurrent(_ generation: Int, token: String?) -> Bool {
-        dashboardStore.generation == generation
+        backend?.mode == .phone || dashboardStore.generation == generation
     }
 }

@@ -439,55 +439,18 @@ struct AccountTests {
         #expect(flow.phase == .failed(.loggedOut) && storage.token == nil && server.requests.count == 1)
     }
 
-    /// An app's data kept only on this iPhone (Aresium's phone mode) goes after the server said yes, before the app
-    /// closes; never when the server refused, never in sample mode.
-    @Test func leavingRunsTheAppsLocalDeleteOnlyAfterTheServerSaidYes() async {
+    /// An app that works without an account (Aresium) is not closed by leaving it: the account only loses its access
+    /// (Aresium's server mode), the app goes on with its data on this iPhone.
+    @Test func leavingAnAppThatNeedsNoAccountKeepsItOpen() async {
         let server = EmpireFakeTransport()
-        let (session, _) = await signedIn(.aresium, services: ["empire", "aresium"], server: server)
-        var steps: [String] = []
-        session.onAppDataReset { steps.append("closed") }
-        server.responses = [(503, Data())]
-        let refused = LeaveAppFlow(session: session, serverData: nil, localData: { steps.append("local") })
-        await refused.leave()
-        #expect(refused.phase == .failed(.unavailable) && steps.isEmpty)
-
+        let (session, storage) = await signedIn(.aresium, services: ["empire", "aresium"], server: server)
+        var closed = false
+        session.onAppDataReset { closed = true }
         server.responses = [(200, Self.json(["services": ["empire"], "requested": [String]()]))]
-        let flow = LeaveAppFlow(session: session, serverData: nil, localData: { steps.append("local") })
+        let flow = LeaveAppFlow(session: session, serverData: nil)
         await flow.leave()
-        #expect(flow.phase == .left && steps == ["local", "closed"] && !flow.localDataFailed)
-
-        let sample = LeaveAppFlow(session: session, serverData: nil, localData: { steps.append("sample") }, sample: true,
-                                  sampleDelay: .zero)
-        await sample.leave()
-        #expect(!steps.contains("sample"))
-    }
-
-    @Test func aLocalDeleteThatFailsDoesNotUndoTheLeaving() async {
-        let server = EmpireFakeTransport()
-        let (session, _) = await signedIn(.aresium, services: ["empire", "aresium"], server: server)
-        server.responses = [(200, Self.json(["services": ["empire"], "requested": [String]()]))]
-        let flow = LeaveAppFlow(session: session, serverData: nil, localData: { throw CocoaError(.fileWriteNoPermission) })
-        await flow.leave()
-        #expect(flow.phase == .left && flow.localDataFailed && session.isDenied)
-    }
-
-    @Test func deletingTheAccountRunsTheAppsLocalDeleteAfterTheServerSaidYes() async {
-        let server = EmpireFakeTransport()
-        let (session, _) = await signedIn(.aresium, services: ["empire", "aresium"], server: server)
-        var ran = 0
-        server.responses = [(200, Self.login(Self.newToken, services: ["empire", "aresium"])), (500, Data())]
-        let refused = DeleteAccountFlow(session: session, localData: { ran += 1 })
-        refused.password = "fictional-password"
-        await refused.check()
-        await refused.delete()
-        #expect(refused.phase == .failed(.other) && ran == 0 && session.isSignedIn)
-
-        server.responses = [(200, Self.login(Self.newToken, services: ["empire", "aresium"])), (204, Data())]
-        let flow = DeleteAccountFlow(session: session, localData: { ran += 1 })
-        flow.password = "fictional-password"
-        await flow.check()
-        await flow.delete()
-        #expect(flow.phase == .deleted && ran == 1 && session.token == nil)
+        #expect(flow.phase == .left && !closed && !session.isDenied && session.isSignedIn)
+        #expect(session.services == ["empire"] && storage.token != nil)
     }
 
     // MARK: deleting the account

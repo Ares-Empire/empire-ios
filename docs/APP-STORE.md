@@ -17,14 +17,14 @@ filled the placeholders.
   | Bundle | Collected (all linked to the account, App Functionality, no tracking) | Required-reason APIs |
   |---|---|---|
   | Ares Empire | Email Address, Name, User ID, Device ID, Customer Support | UserDefaults `CA92.1` (language), `1C8F.1` (App Group) |
-  | Aresium | Email Address, Name, User ID, Customer Support | UserDefaults `CA92.1` (theme, language), `1C8F.1` |
+  | Aresium | Email Address, Name, User ID, Customer Support | UserDefaults `CA92.1` (theme, language), `1C8F.1`; File timestamp `C617.1` (moving an older per-account store over, brief 22) |
   | Aresium widget | none (reads the app's saved figures) | UserDefaults `1C8F.1` (the app's language) |
   | Arestemis | Email Address, Name, User ID, Device ID, Search History, Other User Content, Customer Support | UserDefaults `CA92.1`, `1C8F.1` |
   | Aresus | Email Address, Name, User ID, Device ID, Customer Support | UserDefaults `CA92.1`, `1C8F.1` |
   | Aresus widget | User ID (fetches with the shared login) | UserDefaults `1C8F.1` (the app's language) |
   | Arestoteles | Email Address, Name, User ID, Other User Content, Customer Support | UserDefaults `CA92.1`, `1C8F.1` |
 
-  To check again after a change (no file timestamps, boot time, disk space or keyboards are used today):
+  To check again after a change (no boot time, disk space or keyboards are used today; file timestamps only in Aresium):
   `nm -u <App>.app/<App> | grep -E "NSUserDefaults|stat|getattrlist|mach_absolute_time|systemUptime|Volume.*Capacity|activeInputModes"`
   on a Release build, or Xcode → Organizer → an archive → *Generate Privacy Report*.
 - **Encryption:** `ITSAppUsesNonExemptEncryption = NO` in each app's `Info.plist` (only HTTPS through Apple's
@@ -41,7 +41,7 @@ For every app: **"Do you or your third-party partners collect data from this app
 | App | Data types to tick (App Store Connect's names) |
 |---|---|
 | Ares Empire | Contact Info → Email Address, Name · Identifiers → User ID, Device ID · User Content → Customer Support |
-| Aresium | Contact Info → Email Address, Name · Identifiers → User ID · User Content → Customer Support |
+| Aresium | Contact Info → Email Address, Name · Identifiers → User ID · User Content → Customer Support (all optional: only who signs in, or writes to support) |
 | Arestemis | Contact Info → Email Address, Name · Identifiers → User ID, Device ID · Search History · User Content → Other User Content, Customer Support |
 | Aresus | Contact Info → Email Address, Name · Identifiers → User ID, Device ID · User Content → Customer Support |
 | Arestoteles | Contact Info → Email Address, Name · Identifiers → User ID · User Content → Other User Content, Customer Support |
@@ -57,6 +57,10 @@ Why these and not others:
 - **Not collected:** location
   (Arestemis's places are where to search, not where the phone is; IP addresses are not used for location),
   diagnostics (no crash or analytics SDK), contacts, photos, purchases, browsing history.
+- **Aresium needs no account** (Patrik, 2026-10-27, brief 22): it opens without a login; Email Address, Name and User
+  ID come only from someone who signs in (Settings → Ares account, only for an Aresium server of one's own) or, Email
+  and Name, from Contact & support without a login (the account server's `contact` collection). The data types stay
+  ticked, since the app can send them; they are still linked (an email address identifies its owner).
 - **Aresium and Financial Info: not collected** (changed 2026-10-27). Everyone but Patrik uses phone mode: their bank
   files, payments and categories stay on their iPhone and are never sent (Apple: data processed only on the device
   is not "collected"). Server mode is only Patrik's own account (the owner list), his own data on his own server, so
@@ -90,6 +94,16 @@ Beta App Description (English; German in brackets for a German localization):
 - **Aresium:** "Personal finances from bank and PayPal exports: spending by month and category, import from the share
   sheet, home-screen widgets." (*Persönliche Finanzen aus Bank- und PayPal-Exporten: Ausgaben nach Monat und
   Kategorie, Import über das Teilen-Menü, Widgets für den Home-Bildschirm.*)
+
+**Aresium's Test Information differs** (brief 22, 2026-10-27): *Sign-in required* **No**, no demo account. Review
+notes: "Aresium needs no account: it keeps your bank data on this iPhone and sorts it there; nothing about your money
+is sent anywhere. To try it: choose a few categories, then import the attached made-up bank file
+(Files → Aresium-Sample.csv, or share it to Aresium). Settings → Lock turns on Face ID or a code of Aresium's own.
+Settings → Ares account is only for the developer's own server and is not needed." Attach a made-up bank file to the
+review notes (App Store Connect takes an attachment): the richest is the nine-month VR Bank file the DEBUG phone sample
+builds (`PhoneSample.vrBankCSV` in `Aresium/Aresium/Model/PhoneSample.swift`, made-up shops and amounts), saved once
+as `Aresium-Sample.csv`; the engine's small made-up fixtures in `Aresium/AresiumTests/Engine/` (`vrbank.csv`,
+`dkb.csv`) work too. Never a real export.
 - **Arestemis:** "Flat hunting: set a search, start the hunt, and get every new listing from WG-Gesucht,
   Kleinanzeigen and Immowelt that an AI checked against your whole search, with an application text ready to copy."
   (*Wohnungssuche: Suche festlegen, Jagd starten und jedes neue Angebot von WG-Gesucht, Kleinanzeigen und Immowelt
@@ -116,14 +130,16 @@ testing, which Apple does not review (Patrik, 2026-10-25). Never the existing te
 4. Enter user name and password under *Sign-in required*. Keep the account while builds are reviewed; remove its
    services when no review is pending.
 
-**Aresium, Arestoteles and Aresus** hold only Patrik's own data and let in only their owner (`EMPIRE_ALLOWED_USERS`
-in each server, 2026-10-25), so a demo account gets 403 there. **Aresus** (and Aresync) stay Patrik's own tools and
-never go to others (Patrik, 2026-10-25): internal TestFlight only. Arestoteles likewise for now; Aresium gets its
-version for other people first (`ares-empire/EMPIRE.md` → Now and next, step 3).
+**Arestoteles and Aresus** hold only Patrik's own data and let in only their owner (`EMPIRE_ALLOWED_USERS` in each
+server, 2026-10-25), so a demo account gets 403 there. **Aresus** (and Aresync) stay Patrik's own tools and never go to
+others (Patrik, 2026-10-25): internal TestFlight only. Arestoteles likewise for now. **Aresium** needs no demo account
+any more (above): everyone but Patrik uses it without one, on their iPhone; its server mode stays the owner's.
 
 ## Missing before the App Store
 
-1. **Delete your account inside each app** (App Review Guideline 5.1.1(v)): built 2026-10-25 (brief F2): Settings →
+1. **Delete your account inside each app** (App Review Guideline 5.1.1(v)): Aresium needs no account at all since
+   2026-10-27 (brief 22), which 5.1.1(v) asks of apps without account-based features; signing in there is optional
+   and the deletion below is offered once signed in. Built 2026-10-25 (brief F2): Settings →
    Account → *Delete Ares account* (password, confirmation, `DELETE …/users/records/<id>`, logged out everywhere) and
    *Leave <app>*; the servers' deletions run from the account server (brief F1, `ares-empire/docs/ACCOUNTS.md`). The
    privacy policy says so (live 2026-10-25). Optional: the same on the website (a page on the hub); the policy also

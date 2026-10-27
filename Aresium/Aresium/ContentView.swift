@@ -2,9 +2,12 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct ContentView: View {
+    /// The lock's window (one per launch, `AresiumApp`), and through it the lock.
+    let lockWindow: LockWindow
+    private var lock: AppLock { lockWindow.lock }
     @State private var store: DashboardStore
     @State private var imports: ImportStore
-    /// Server or phone mode, and phone mode's store (`ModeStore`).
+    /// Phone mode (the phone's own store, no account needed) or the owner's server mode (`ModeStore`).
     @State private var modes: ModeStore
     /// Phone mode's export, restore and delete (Settings and the first run).
     @State private var phoneData: PhoneDataModel
@@ -24,6 +27,8 @@ struct ContentView: View {
     @State private var sampleActive: Bool
     /// DEBUG `-samplePhone` / `-samplePhoneEmpty`: phone mode on a made-up store, without a login.
     @State private var samplePhone: Bool
+    /// Files shared into Aresium while it was locked: imported once it is unlocked.
+    @State private var heldFiles: [URL] = []
     @State private var showsSettings = false
     @State private var showsCategories = false
     @State private var restoringExport = false
@@ -35,18 +40,20 @@ struct ContentView: View {
     private var palette: Palette { Palette(theme: shownTheme) }
     private var session: EmpireSession { store.session }
 
-    init(arguments: [String] = LaunchArguments.current) {
+    init(lockWindow: LockWindow, arguments: [String] = LaunchArguments.current) {
+        self.lockWindow = lockWindow
         var sample = false
         var phoneSample = false
-        var skipRestore = false
+        var restores = true
         #if DEBUG
         phoneSample = arguments.contains("-samplePhone") || arguments.contains("-samplePhoneEmpty")
         sample = arguments.contains("-sampleData") || phoneSample
-        // Screenshots of the login and the no-access screen (`SampleAccount`): a made-up account, no server.
+        // Samples and screenshots run on a made-up account server and a login in memory (`SampleAccount`), never the
+        // real ones: signed out, or with `-sampleSignedIn` signed in.
         let account = SampleAccount.session(app: .aresium, arguments: arguments)
-        let debugLaunch = DebugLaunch.isTesting || sample || arguments.contains("-sampleAuthUnavailable")
-            || arguments.contains("-sampleLoginWaiting") || account != nil
-        skipRestore = DebugLaunch.isTesting || arguments.contains("-sampleLoginWaiting") || account?.restores == false
+            ?? (sample ? SampleAccount.session(app: .aresium, start: .login) : nil)
+        let debugLaunch = DebugLaunch.isTesting || sample || account != nil
+        restores = !DebugLaunch.isTesting && (account?.restores ?? true)
         #endif
         var initialTheme = ThemeState(red: UserDefaults.standard.bool(forKey: ThemeState.preferenceKey))
         var pausedProgress: Double?
@@ -68,12 +75,11 @@ struct ContentView: View {
         #endif
         _theme = State(initialValue: initialTheme)
         pausedIntroProgress = pausedProgress
-        restoresOnLaunch = !sample && !skipRestore
+        restoresOnLaunch = restores
         #if DEBUG
-        var session = EmpireSession(app: .aresium, restoreOnLaunch: !sample && !skipRestore,
+        var session = EmpireSession(app: .aresium, restoreOnLaunch: restores,
                                     sharedDefaults: debugLaunch ? nil : EmpireShared.defaults)
         if DebugLaunch.isTesting { session = DebugLaunch.testingSession() }
-        if arguments.contains("-sampleAuthUnavailable") { session = DebugLaunch.unavailableSession() }
         if let account { session = account.session }
         let publisher: WidgetSnapshotPublisher = debugLaunch ? .temporary() : WidgetSnapshotPublisher()
         PushCenter.removeDevicesOnLogout(of: session, sharedDefaults: debugLaunch ? nil : EmpireShared.defaults)
@@ -84,7 +90,7 @@ struct ContentView: View {
         PushCenter.removeDevicesOnLogout(of: session, sharedDefaults: EmpireShared.defaults)
         let markerDefaults = EmpireShared.defaults
         #endif
-        // The server sample shows the bundled dashboard; otherwise the backend comes with the account's mode.
+        // The server sample shows the bundled dashboard; otherwise the backend comes with the mode (`ModeStore`).
         let store = sample && !phoneSample
             ? DashboardStore(session: session, sample: true, widgetPublisher: publisher)
             : DashboardStore(session: session, backend: nil, widgetPublisher: publisher)
@@ -97,7 +103,6 @@ struct ContentView: View {
         _sampleActive = State(initialValue: sample)
         _samplePhone = State(initialValue: phoneSample)
         #if DEBUG
-        if arguments.contains("-sampleLoginWaiting") { imports.seedDebugWaitingFiles() }
         if phoneSample, let index = arguments.firstIndex(of: "-openSheet"), arguments.indices.contains(index + 1) {
             _showsSettings = State(initialValue: arguments[index + 1] == "settings")
             _showsCategories = State(initialValue: arguments[index + 1] == "categories")
@@ -109,6 +114,7 @@ struct ContentView: View {
             }
             _path = State(initialValue: routes)
         }
+        if sample { modes.holdForSample(server: !phoneSample) }
         if sample && !phoneSample {
             if let index = arguments.firstIndex(of: "-openSheet"), arguments.indices.contains(index + 1) {
                 _showsSettings = State(initialValue: arguments[index + 1] == "settings")
@@ -141,7 +147,10 @@ struct ContentView: View {
                         VStack(spacing: 0) {
                             header()
                             restoreFeedback
-                            if let phone = firstRunPhone {
+                            if waitsForServerLogin {
+                                // Server mode at launch: the saved login is being renewed before the server is asked.
+                                ProgressView().tint(palette.secondary).frame(maxWidth: .infinity, maxHeight: .infinity)
+                            } else if let phone = firstRunPhone {
                                 PhoneFirstRun(phone: phone, imports: imports, palette: palette, band: band(in: geometry),
                                               restoreProblem: phoneData.problem,
                                               chooseCategories: { showsCategories = true },
@@ -168,17 +177,12 @@ struct ContentView: View {
                             }.background { Wall(palette: palette) }.toolbar(.hidden, for: .navigationBar)
                         }
                     }.task { if store.dashboard == nil { await store.reload() } }
-                } else if modes.showsApp || session.isSignedIn {
-                    // The account's mode is being asked, needs a connection, or its store did not open.
+                } else {
+                    // The phone's store is opening, or did not open.
                     VStack(spacing: 0) {
                         header()
-                        restoreFeedback
                         ModeStatusScreen(modes: modes, palette: palette)
                     }
-                } else if session.isRestoring {
-                    ProgressView("Restoring session…").font(AppFont.text(14)).frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else {
-                    LoginScreen(session: session, palette: palette, waitingFiles: imports.waitingCount)
                 }
             }
             .foregroundStyle(palette.ink).background { Wall(palette: palette) }
@@ -201,15 +205,17 @@ struct ContentView: View {
                 if !store.isSample { rememberedRed = red }
                 store.setWidgetRedMode(red)
             }
+            // Phone mode opens at once; nothing waits for a login or the network.
+            .task { if !sampleActive { await modes.start() } }
             .task {
                 if restoresOnLaunch { await session.restore() }
-                await modes.update()
+                if !sampleActive { await modes.update() }
             }
             #if DEBUG
             .task { await startPhoneSample() }
             #endif
             .onChange(of: scenePhase) { _, phase in
-                // Before anything async: the offline phone store closes when the saved login changed elsewhere.
+                // Before anything async: server mode on a login not renewed yet ends when the saved login changed.
                 if phase == .active { modes.followMarker() }
             }
             .onEmpireForeground(session: session) {
@@ -219,26 +225,38 @@ struct ContentView: View {
             }
             .task { store.setWidgetRedMode(theme.red) }
             .onChange(of: session.generation) { _, _ in
-                if !session.isSignedIn { path = [] }
                 Task {
                     await modes.update()
                     await imports.sessionChanged()
                 }
             }
+            .onChange(of: session.services) { _, _ in Task { await modes.update() } }    // left Aresium, say
             .onChange(of: session.needsRestoreRetry) { _, _ in Task { await modes.update() } }
-            .onChange(of: modes.state) { _, _ in
-                if !showsDashboard { path = [] }
-                Task { await imports.sessionChanged() }       // files waiting for the mode
+            .onChange(of: modes.state) { old, new in
+                if old != new { path = [] }                      // the other mode's data
+                Task { await imports.sessionChanged() }       // files waiting for the phone's store
+            }
+            .onChange(of: lock.isOn) { _, on in
+                if !on { store.republishWidget() }            // the lock kept no numbers for the widgets
+            }
+            .onChange(of: lock.isLocked) { _, locked in
+                guard !locked, !heldFiles.isEmpty else { return }
+                let files = heldFiles
+                heldFiles = []
+                Task { await imports.receive(files, source: .shared) }
             }
             .onOpenURL { url in
-                if url.isFileURL { Task { await imports.receive([url], source: .shared) } }
-                else if let destination = AresiumURL(url: url) {
+                if url.isFileURL {
+                    // Shared into Aresium while locked: it waits until Aresium is unlocked.
+                    if lock.isLocked { heldFiles.append(url) }
+                    else { Task { await imports.receive([url], source: .shared) } }
+                } else if let destination = AresiumURL(url: url) {
                     current = true
                     side = .expenses
                     graph = false
                     switch destination {
                     case .start: path = []
-                    case .category(let name): path = [DashboardRoute(category: name, side: .expenses)]
+                    case .category(let name): path = [store.route(category: name, side: .expenses, current: true)]
                     }
                 }
             }
@@ -246,10 +264,12 @@ struct ContentView: View {
                 ImportFeedback(store: imports, palette: palette)
             }
             .sheet(isPresented: $showsSettings) {
-                SettingsScreen(app: SettingsApp(name: "Aresium", localData: { [modes] in
-                    try await modes.deleteLocalData(reopen: false)
-                }, licences: [.shopList()]), session: session, sample: sampleActive, logOut: logOut) {
+                SettingsScreen(app: SettingsApp(name: "Aresium",
+                                                signInNote: String(localized: "Only for an Aresium server of your own. Your data here stays on this iPhone."),
+                                                licences: [.shopList()]),
+                               session: session, sample: sampleActive, logOut: logOut) {
                     if modes.phone != nil { PhoneSettingsSection(modes: modes, data: phoneData) }
+                    LockSettingsSection(lock: lock)
                 }
             }
             .sheet(isPresented: $showsCategories) {
@@ -278,6 +298,10 @@ struct ContentView: View {
                 }
             }
         }
+        // While locked, the lock window is all there is: the app below is not read out either.
+        .accessibilityHidden(lock.isLocked)
+        .background { LockWindowReader(lockWindow: lockWindow) }
+        .task { handOverForgotCode() }
     }
 
     /// Phone mode with nothing imported yet: the first run shows in place of the dashboard.
@@ -286,18 +310,36 @@ struct ContentView: View {
         return phone
     }
 
+    /// Server mode before its login is renewed at launch: nothing to show yet.
+    private var waitsForServerLogin: Bool {
+        modes.state == .server && !sampleActive && store.dashboard == nil && session.isRestoring
+    }
+
     /// Phone mode before any category is chosen: importing opens the category picker first.
     private var chooseCategoriesFirst: (() -> Void)? {
         guard let phone = modes.phone, !phone.hasChosenCategories else { return nil }
         return { showsCategories = true }
     }
 
-    /// The dashboard (or phone mode's first run) shows: the server sample, or a known mode with its backend.
+    /// The dashboard (or phone mode's first run) shows: the server sample, or a mode with its backend.
     private var showsDashboard: Bool {
         if sampleActive && !samplePhone { return true }
         switch modes.state {
         case .server, .phone: return true
-        default: return false
+        case .opening, .failed: return false
+        }
+    }
+
+    /// The lock screen's "Forgot the code?": Aresium's data on this iPhone goes, then the lock. In server mode the
+    /// login ends too, so the lock never opens the server's data to someone without the code.
+    private func handOverForgotCode() {
+        let modes = modes, session = session, lock = lock
+        lockWindow.forgotLogsOut = { modes.state == .server && session.token != nil }
+        lockWindow.forgot = {
+            let logsOut = modes.state == .server && session.token != nil
+            try await modes.deleteLocalData()
+            if logsOut { session.logOut() }
+            lock.reset()
         }
     }
 
@@ -307,16 +349,15 @@ struct ContentView: View {
         guard samplePhone, modes.phone == nil else { return }
         let arguments = LaunchArguments.current
         do {
-            let phone = try await PhoneSample.backend(empty: arguments.contains("-samplePhoneEmpty"))
+            let (phone, storage) = try await PhoneSample.backend(empty: arguments.contains("-samplePhoneEmpty"))
             // `-samplePhoneEmpty -sampleChosen`: the first run after the categories, its second step next.
             if arguments.contains("-sampleChosen"), phone.summary.chosen.isEmpty {
                 for id in PhoneSample.chosen { try await phone.choose(id) }
             }
-            await modes.showFixed(phone)
+            await modes.showFixed(phone, storage: storage)
             if arguments.contains("-sampleLayout"), let file = PhoneSample.unknownBankFile() {
                 imports.debugImport([file])
             }
-            if arguments.contains("-sampleModeOffline") { modes.debugShow(.needsConnection) }
             if arguments.contains("-sampleImportResult") {
                 // An import's result line, as a bank file of 45 payments leaves it (made-up numbers).
                 let result = PhoneImportResult(name: "Umsaetze-Girokonto.csv", added: 42, already: 3, sorted: 38, waiting: 4)
@@ -328,8 +369,10 @@ struct ContentView: View {
     }
     #endif
 
+    /// Server mode's line when its login could not be renewed (offline at launch), with Retry. Phone mode needs no
+    /// login, so it never shows there.
     @ViewBuilder private var restoreFeedback: some View {
-        if session.needsRestoreRetry, let error = session.error {
+        if modes.state == .server, session.needsRestoreRetry, let error = session.error {
             HStack {
                 Text(error).foregroundStyle(palette.expenseText)
                 Button("Retry") {
@@ -398,25 +441,14 @@ struct ContentView: View {
         }, openSettings: { showsSettings = true })
     }
 
-    /// Settings → Log out: ends the shared login; in sample mode it leaves the sample for the real login. In phone mode
-    /// the data stays on the phone (the store only closes, `ModeStore`).
+    /// Settings → Log out: ends the shared login in every Ares app. Server mode ends with it; phone mode's data stays on
+    /// the phone (it never belonged to the login).
     private func logOut() {
         path = []
-        store.clear()
-        if sampleActive {
-            sampleActive = false
-            samplePhone = false
-            let session = EmpireSession(app: .aresium, restoreOnLaunch: false, sharedDefaults: EmpireShared.defaults)
-            PushCenter.removeDevicesOnLogout(of: session, sharedDefaults: EmpireShared.defaults)
-            store = DashboardStore(session: session, backend: nil, widgetPublisher: WidgetSnapshotPublisher())
-            imports = ImportStore(dashboard: store)
-            modes = ModeStore(session: session, dashboard: store, markerDefaults: EmpireShared.defaults)
-            phoneData = PhoneDataModel(modes: modes)
-        }
-        else { session.logOut() }
+        session.logOut()
     }
 }
 
 #if DEBUG
-#Preview { ContentView(arguments: ["-sampleData"]) }
+#Preview { ContentView(lockWindow: LockWindow(lock: .forLaunch(arguments: ["-sampleData"])), arguments: ["-sampleData"]) }
 #endif

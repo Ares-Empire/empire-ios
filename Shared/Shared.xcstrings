@@ -1,6 +1,16 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "%@ and its data on this iPhone stay, as do your Ares account and the other apps." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ und die Daten der App auf diesem iPhone bleiben, ebenso dein Ares-Konto und die anderen Apps."
+          }
+        }
+      }
+    },
     "%@ restarts in English." : {
       "localizations" : {
         "de" : {
@@ -67,12 +77,32 @@
         }
       }
     },
+    "Answer to" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Antwort an"
+          }
+        }
+      }
+    },
     "Appearance" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Darstellung"
+          }
+        }
+      }
+    },
+    "Ares account" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ares-Konto"
           }
         }
       }
@@ -334,6 +364,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Alle Ares-Apps auf diesem iPhone melden sich ab. Das lässt sich nicht rückgängig machen."
+          }
+        }
+      }
+    },
+    "Every Ares app on this iPhone logs out. This can't be undone. %@'s data on this iPhone stays." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alle Ares-Apps auf diesem iPhone melden sich ab. Das lässt sich nicht rückgängig machen. Die Daten von %@ auf diesem iPhone bleiben."
           }
         }
       }
@@ -752,6 +792,16 @@
         }
       }
     },
+    "Removes your Ares account's access to %@." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Entfernt den Zugang deines Ares-Kontos zu %@."
+          }
+        }
+      }
+    },
     "Removes your access to %@ and deletes your %@ data, on its server and on this iPhone." : {
       "localizations" : {
         "de" : {
@@ -854,6 +904,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Einstellungen"
+          }
+        }
+      }
+    },
+    "Sign in" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anmelden"
           }
         }
       }
@@ -1235,12 +1295,32 @@
         }
       }
     },
+    "Your account's access to %@ goes. Your data on this iPhone and your Ares account stay." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Zugang deines Kontos zu %@ wird entfernt. Deine Daten auf diesem iPhone und dein Ares-Konto bleiben."
+          }
+        }
+      }
+    },
     "Your account's email. You get a link there to choose a new password." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Die E-Mail-Adresse deines Kontos. Dorthin bekommst du einen Link, um ein neues Passwort zu wählen."
+          }
+        }
+      }
+    },
+    "Your app version, iOS version and language are sent with it. The answer comes by email, to this address." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App-Version, iOS-Version und Sprache werden mitgeschickt. Die Antwort kommt per E-Mail an diese Adresse."
           }
         }
       }
