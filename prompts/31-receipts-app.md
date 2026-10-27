@@ -1,6 +1,6 @@
 # 31: Receipts in the app: scan or pick a receipt, check it, keep it once
 
-Status: running (part A done and checked 2026-10-27; part B running)
+Status: merged 2026-10-28 (Aresium 303, Empire 204 tests; engine 08d5f74: cash from the latest withdrawal, at most 92 days back)
 Repo: empire-ios · Worktree: `../empire-ios-31-receipts` (branch `claude/31-receipts`) · Built by: a Claude agent
 (flow, data and the look)
 
