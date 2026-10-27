@@ -1,6 +1,6 @@
 # 21: An inbox for bank formats people share from Aresium
 
-Status: open (2026-10-27)
+Status: merged 2026-10-27 (not deployed yet: deploy with the app feature and the policy text)
 Repo: ares-empire · Worktree: `~/ares-empire-21-format-inbox` (branch `claude/21-format-inbox`) · Built by: a Claude
 agent
 
