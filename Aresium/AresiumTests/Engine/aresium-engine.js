@@ -1589,11 +1589,11 @@ var __AresiumEngine = (() => {
       function prettify(node, options) {
         return compress(node, options);
       }
-      function compress(arr2, options, jPath) {
+      function compress(arr3, options, jPath) {
         let text2;
         const compressedObj = {};
-        for (let i = 0; i < arr2.length; i++) {
-          const tagObj = arr2[i];
+        for (let i = 0; i < arr3.length; i++) {
+          const tagObj = arr3[i];
           const property = propName(tagObj);
           let newJpath = "";
           if (jPath === void 0) newJpath = property;
@@ -1676,7 +1676,7 @@ var __AresiumEngine = (() => {
       var OrderedObjParser = require_OrderedObjParser();
       var { prettify } = require_node2json();
       var validator = require_validator();
-      var XMLParser2 = class {
+      var XMLParser3 = class {
         constructor(options) {
           this.externalEntities = {};
           this.options = buildOptions(options);
@@ -1723,7 +1723,7 @@ var __AresiumEngine = (() => {
           }
         }
       };
-      module.exports = XMLParser2;
+      module.exports = XMLParser3;
     }
   });
 
@@ -1738,19 +1738,19 @@ var __AresiumEngine = (() => {
         }
         return arrToStr(jArray, options, "", indentation);
       }
-      function arrToStr(arr2, options, jPath, indentation) {
+      function arrToStr(arr3, options, jPath, indentation) {
         let xmlStr = "";
         let isPreviousElementTag = false;
-        if (!Array.isArray(arr2)) {
-          if (arr2 !== void 0 && arr2 !== null) {
-            let text2 = arr2.toString();
+        if (!Array.isArray(arr3)) {
+          if (arr3 !== void 0 && arr3 !== null) {
+            let text2 = arr3.toString();
             text2 = replaceEntitiesValue(text2, options);
             return text2;
           }
           return "";
         }
-        for (let i = 0; i < arr2.length; i++) {
-          const tagObj = arr2[i];
+        for (let i = 0; i < arr3.length; i++) {
+          const tagObj = arr3[i];
           const tagName = propName(tagObj);
           if (tagName === void 0) continue;
           let newJPath = "";
@@ -2111,10 +2111,10 @@ var __AresiumEngine = (() => {
     "node_modules/fast-xml-parser/src/fxp.js"(exports, module) {
       "use strict";
       var validator = require_validator();
-      var XMLParser2 = require_XMLParser();
+      var XMLParser3 = require_XMLParser();
       var XMLBuilder = require_json2xml();
       module.exports = {
-        XMLParser: XMLParser2,
+        XMLParser: XMLParser3,
         XMLValidator: validator,
         XMLBuilder
       };
@@ -2124,10 +2124,32 @@ var __AresiumEngine = (() => {
   // src/engine/index.ts
   var index_exports = {};
   __export(index_exports, {
+    BANK_PROFILES: () => BANK_PROFILES,
+    BUILT_IN_CATEGORIES: () => BUILT_IN_CATEGORIES,
+    CATEGORY_LOOK: () => CATEGORY_LOOK,
+    CUSTOM_CATEGORY_LOOK: () => CUSTOM_CATEGORY_LOOK,
+    DEFAULT_CATEGORIES: () => DEFAULT_CATEGORIES,
+    OWN_TRANSFERS: () => OWN_TRANSFERS,
+    STARTER_RULES: () => STARTER_RULES,
     buildDashboard: () => buildDashboard,
+    buildDashboardSource: () => buildDashboardSource,
+    categoryLook: () => categoryLook,
+    decodeBankFile: () => decodeBankFile,
+    detectBankFile: () => detectBankFile,
+    guessCsvLayout: () => guessCsvLayout,
+    learn: () => learn,
+    merchantKey: () => merchantKey,
+    ownTransfers: () => ownTransfers,
     parseCamt: () => parseCamt2,
     parsePaypalCsv: () => parsePaypalCsv2,
     parseVrBankCsv: () => parseVrBankCsv2,
+    readBankFile: () => readBankFile,
+    readBankText: () => readBankText,
+    readCamt: () => readCamt,
+    readCsv: () => readCsv,
+    readMt940: () => readMt940,
+    sortPayments: () => sortPayments,
+    starterCategory: () => starterCategory,
     version: () => version
   });
 
@@ -2151,30 +2173,30 @@ var __AresiumEngine = (() => {
     if (!inited) {
       init();
     }
-    var i, j, l, tmp, placeHolders, arr2;
+    var i, j, l, tmp, placeHolders, arr3;
     var len = b64.length;
     if (len % 4 > 0) {
       throw new Error("Invalid string. Length must be a multiple of 4");
     }
     placeHolders = b64[len - 2] === "=" ? 2 : b64[len - 1] === "=" ? 1 : 0;
-    arr2 = new Arr(len * 3 / 4 - placeHolders);
+    arr3 = new Arr(len * 3 / 4 - placeHolders);
     l = placeHolders > 0 ? len - 4 : len;
     var L = 0;
     for (i = 0, j = 0; i < l; i += 4, j += 3) {
       tmp = revLookup[b64.charCodeAt(i)] << 18 | revLookup[b64.charCodeAt(i + 1)] << 12 | revLookup[b64.charCodeAt(i + 2)] << 6 | revLookup[b64.charCodeAt(i + 3)];
-      arr2[L++] = tmp >> 16 & 255;
-      arr2[L++] = tmp >> 8 & 255;
-      arr2[L++] = tmp & 255;
+      arr3[L++] = tmp >> 16 & 255;
+      arr3[L++] = tmp >> 8 & 255;
+      arr3[L++] = tmp & 255;
     }
     if (placeHolders === 2) {
       tmp = revLookup[b64.charCodeAt(i)] << 2 | revLookup[b64.charCodeAt(i + 1)] >> 4;
-      arr2[L++] = tmp & 255;
+      arr3[L++] = tmp & 255;
     } else if (placeHolders === 1) {
       tmp = revLookup[b64.charCodeAt(i)] << 10 | revLookup[b64.charCodeAt(i + 1)] << 4 | revLookup[b64.charCodeAt(i + 2)] >> 2;
-      arr2[L++] = tmp >> 8 & 255;
-      arr2[L++] = tmp & 255;
+      arr3[L++] = tmp >> 8 & 255;
+      arr3[L++] = tmp & 255;
     }
-    return arr2;
+    return arr3;
   }
   function tripletToBase64(num) {
     return lookup[num >> 18 & 63] + lookup[num >> 12 & 63] + lookup[num >> 6 & 63] + lookup[num & 63];
@@ -2294,8 +2316,8 @@ var __AresiumEngine = (() => {
     buffer[offset + i - d] |= s * 128;
   }
   var toString = {}.toString;
-  var isArray = Array.isArray || function(arr2) {
-    return toString.call(arr2) == "[object Array]";
+  var isArray = Array.isArray || function(arr3) {
+    return toString.call(arr3) == "[object Array]";
   };
   var INSPECT_MAX_BYTES = 50;
   Buffer2.TYPED_ARRAY_SUPPORT = global$1.TYPED_ARRAY_SUPPORT !== void 0 ? global$1.TYPED_ARRAY_SUPPORT : true;
@@ -2333,9 +2355,9 @@ var __AresiumEngine = (() => {
     return from(this, arg, encodingOrOffset, length);
   }
   Buffer2.poolSize = 8192;
-  Buffer2._augment = function(arr2) {
-    arr2.__proto__ = Buffer2.prototype;
-    return arr2;
+  Buffer2._augment = function(arr3) {
+    arr3.__proto__ = Buffer2.prototype;
+    return arr3;
   };
   function from(that, value, encodingOrOffset, length) {
     if (typeof value === "number") {
@@ -2772,14 +2794,14 @@ var __AresiumEngine = (() => {
     }
     throw new TypeError("val must be string, number or Buffer");
   }
-  function arrayIndexOf(arr2, val, byteOffset, encoding, dir) {
+  function arrayIndexOf(arr3, val, byteOffset, encoding, dir) {
     var indexSize = 1;
-    var arrLength = arr2.length;
+    var arrLength = arr3.length;
     var valLength = val.length;
     if (encoding !== void 0) {
       encoding = String(encoding).toLowerCase();
       if (encoding === "ucs2" || encoding === "ucs-2" || encoding === "utf16le" || encoding === "utf-16le") {
-        if (arr2.length < 2 || val.length < 2) {
+        if (arr3.length < 2 || val.length < 2) {
           return -1;
         }
         indexSize = 2;
@@ -2799,7 +2821,7 @@ var __AresiumEngine = (() => {
     if (dir) {
       var foundIndex = -1;
       for (i = byteOffset; i < arrLength; i++) {
-        if (read2(arr2, i) === read2(val, foundIndex === -1 ? 0 : i - foundIndex)) {
+        if (read2(arr3, i) === read2(val, foundIndex === -1 ? 0 : i - foundIndex)) {
           if (foundIndex === -1) foundIndex = i;
           if (i - foundIndex + 1 === valLength) return foundIndex * indexSize;
         } else {
@@ -2812,7 +2834,7 @@ var __AresiumEngine = (() => {
       for (i = byteOffset; i >= 0; i--) {
         var found = true;
         for (var j = 0; j < valLength; j++) {
-          if (read2(arr2, i + j) !== read2(val, j)) {
+          if (read2(arr3, i + j) !== read2(val, j)) {
             found = false;
             break;
           }
@@ -4325,7 +4347,7 @@ var __AresiumEngine = (() => {
   };
   var isRecordEmpty = function(record) {
     return record.every(
-      (field) => field == null || field.toString && field.toString().trim() === ""
+      (field2) => field2 == null || field2.toString && field2.toString().trim() === ""
     );
   };
   var cr = 13;
@@ -4358,7 +4380,7 @@ var __AresiumEngine = (() => {
       state: init_state(options),
       __needMoreData: function(i, bufLen, end) {
         if (end) return false;
-        const { encoding, escape, quote } = this.options;
+        const { encoding, escape: escape2, quote } = this.options;
         const { quoting, needMoreDataSize, recordDelimiterMaxLength } = this.state;
         const numOfCharLeft = bufLen - i - 1;
         const requiredLength = Math.max(
@@ -4371,7 +4393,7 @@ var __AresiumEngine = (() => {
           // recordDelimiterMaxLength,
           recordDelimiterMaxLength === 0 ? Buffer2.from("\r\n", encoding).length : recordDelimiterMaxLength,
           // Skip if remaining buffer can be an escaped quote
-          quoting ? (escape === null ? 0 : escape.length) + quote.length : 0,
+          quoting ? (escape2 === null ? 0 : escape2.length) + quote.length : 0,
           // Skip if remaining buffer can be record delimiter following the closing quote
           quoting ? quote.length + recordDelimiterMaxLength : 0
         );
@@ -4393,7 +4415,7 @@ var __AresiumEngine = (() => {
           to,
           to_line
         } = this.options;
-        let { comment, escape, quote, record_delimiter } = this.options;
+        let { comment, escape: escape2, quote, record_delimiter } = this.options;
         const { bomSkipped, previousBuf, rawBuffer, escapeIsQuote } = this.state;
         let buf;
         if (previousBuf === void 0) {
@@ -4426,7 +4448,7 @@ var __AresiumEngine = (() => {
                   ...this.original_options,
                   encoding: encoding2
                 });
-                ({ comment, escape, quote } = this.options);
+                ({ comment, escape: escape2, quote } = this.options);
                 break;
               }
             }
@@ -4467,16 +4489,16 @@ var __AresiumEngine = (() => {
           if (this.state.escaping === true) {
             this.state.escaping = false;
           } else {
-            if (escape !== null && this.state.quoting === true && this.__isEscape(buf, pos, chr) && pos + escape.length < bufLen) {
+            if (escape2 !== null && this.state.quoting === true && this.__isEscape(buf, pos, chr) && pos + escape2.length < bufLen) {
               if (escapeIsQuote) {
-                if (this.__isQuote(buf, pos + escape.length)) {
+                if (this.__isQuote(buf, pos + escape2.length)) {
                   this.state.escaping = true;
-                  pos += escape.length - 1;
+                  pos += escape2.length - 1;
                   continue;
                 }
               } else {
                 this.state.escaping = true;
-                pos += escape.length - 1;
+                pos += escape2.length - 1;
                 continue;
               }
             }
@@ -4491,8 +4513,8 @@ var __AresiumEngine = (() => {
                   nextChr
                 );
                 const isNextChrRecordDelimiter = record_delimiter.length === 0 ? this.__autoDiscoverRecordDelimiter(buf, pos + quote.length) : this.__isRecordDelimiter(nextChr, buf, pos + quote.length);
-                if (escape !== null && this.__isEscape(buf, pos, chr) && this.__isQuote(buf, pos + escape.length)) {
-                  pos += escape.length - 1;
+                if (escape2 !== null && this.__isEscape(buf, pos, chr) && this.__isQuote(buf, pos + escape2.length)) {
+                  pos += escape2.length - 1;
                 } else if (!nextChr || isNextChrDelimiter || isNextChrRecordDelimiter || isNextChrComment || isNextChrTrimable) {
                   this.state.quoting = false;
                   this.state.wasQuoting = true;
@@ -4869,18 +4891,18 @@ var __AresiumEngine = (() => {
         if (enabled === false) {
           return this.__resetField();
         }
-        let field = this.state.field.toString(encoding);
+        let field2 = this.state.field.toString(encoding);
         if (rtrim === true && wasQuoting === false) {
-          field = field.trimRight();
+          field2 = field2.trimRight();
         }
         if (cast === true) {
-          const [err, f] = this.__cast(field);
+          const [err, f] = this.__cast(field2);
           if (err !== void 0) return err;
-          field = f;
+          field2 = f;
         }
-        this.state.record.push(field);
-        if (max_record_size !== 0 && typeof field === "string") {
-          this.state.record_length += field.length;
+        this.state.record.push(field2);
+        if (max_record_size !== 0 && typeof field2 === "string") {
+          this.state.record_length += field2.length;
         }
         this.__resetField();
       },
@@ -4904,7 +4926,7 @@ var __AresiumEngine = (() => {
         push(record);
       },
       // Return a tuple with the error and the casted value
-      __cast: function(field) {
+      __cast: function(field2) {
         const { columns, relax_column_count } = this.options;
         const isColumns = Array.isArray(columns);
         if (isColumns === true && relax_column_count && this.options.columns.length <= this.state.record.length) {
@@ -4913,18 +4935,18 @@ var __AresiumEngine = (() => {
         if (this.state.castField !== null) {
           try {
             const info2 = this.__infoField();
-            return [void 0, this.state.castField.call(null, field, info2)];
+            return [void 0, this.state.castField.call(null, field2, info2)];
           } catch (err) {
             return [err];
           }
         }
-        if (this.__isFloat(field)) {
-          return [void 0, parseFloat(field)];
+        if (this.__isFloat(field2)) {
+          return [void 0, parseFloat(field2)];
         } else if (this.options.cast_date !== false) {
           const info2 = this.__infoField();
-          return [void 0, this.options.cast_date.call(null, field, info2)];
+          return [void 0, this.options.cast_date.call(null, field2, info2)];
         }
-        return [void 0, field];
+        return [void 0, field2];
       },
       // Helper to test if a character is a space or a line delimiter
       __isCharTrimable: function(buf, pos) {
@@ -4995,12 +5017,12 @@ var __AresiumEngine = (() => {
         return 0;
       },
       __isEscape: function(buf, pos, chr) {
-        const { escape } = this.options;
-        if (escape === null) return false;
-        const l = escape.length;
-        if (escape[0] === chr) {
+        const { escape: escape2 } = this.options;
+        if (escape2 === null) return false;
+        const l = escape2.length;
+        if (escape2[0] === chr) {
           for (let i = 0; i < l; i++) {
-            if (escape[i] !== buf[pos + i]) {
+            if (escape2[i] !== buf[pos + i]) {
               return false;
             }
           }
@@ -5088,18 +5110,18 @@ var __AresiumEngine = (() => {
       data = Buffer2.from(data);
     }
     const records = opts && opts.objname ? {} : [];
-    const parser2 = transform(opts);
+    const parser3 = transform(opts);
     const push = (record) => {
-      if (parser2.options.objname === void 0) records.push(record);
+      if (parser3.options.objname === void 0) records.push(record);
       else {
         records[record[0]] = record[1];
       }
     };
     const close = () => {
     };
-    const err1 = parser2.parse(data, false, push, close);
+    const err1 = parser3.parse(data, false, push, close);
     if (err1 !== void 0) throw err1;
-    const err2 = parser2.parse(void 0, true, push, close);
+    const err2 = parser3.parse(void 0, true, push, close);
     if (err2 !== void 0) throw err2;
     return records;
   };
@@ -5274,15 +5296,15 @@ var __AresiumEngine = (() => {
       iban = iban || pick(row, COLS.ownIban);
       const ccy = pick(row, COLS.currency) || "EUR";
       currency = ccy;
-      const bookingDate = parseDateFlexible(pick(row, COLS.booking) ?? "");
+      const bookingDate2 = parseDateFlexible(pick(row, COLS.booking) ?? "");
       const valueRaw = pick(row, COLS.value);
       const purpose = pick(row, COLS.purpose) || pick(row, COLS.bookingText) || "(no description)";
       const counterparty = pick(row, COLS.name) || null;
       const balanceRaw = pick(row, COLS.balance);
-      const externalId = sha1(`${bookingDate.toISOString()}|${amount}|${purpose}|${counterparty ?? ""}`).slice(0, 24);
+      const externalId = sha1(`${bookingDate2.toISOString()}|${amount}|${purpose}|${counterparty ?? ""}`).slice(0, 24);
       transactions.push({
         externalId,
-        bookingDate,
+        bookingDate: bookingDate2,
         valueDate: valueRaw ? parseDateFlexible(valueRaw) : null,
         amount,
         balance: balanceRaw ? parseAmount(balanceRaw) : null,
@@ -5334,23 +5356,23 @@ var __AresiumEngine = (() => {
         const isDebit = ntry.CdtDbtInd === "DBIT";
         const amount = `${isDebit ? "-" : ""}${parseAmount(textOf(ntry.Amt))}`;
         const ccy = ntry.Amt && typeof ntry.Amt === "object" ? ntry.Amt["@_Ccy"] : void 0;
-        const bookingDate = new Date(ntry.BookgDt?.Dt || ntry.BookgDt?.DtTm || ntry.ValDt?.Dt);
+        const bookingDate2 = new Date(ntry.BookgDt?.Dt || ntry.BookgDt?.DtTm || ntry.ValDt?.Dt);
         const valueDate = ntry.ValDt?.Dt ? new Date(ntry.ValDt.Dt) : null;
         const tx = arr(ntry.NtryDtls?.TxDtls)[0];
-        const remittance = arr(tx?.RmtInf?.Ustrd).map(textOf).join(" ").trim() || textOf(ntry.AddtlNtryInf).trim() || "(no description)";
+        const remittance2 = arr(tx?.RmtInf?.Ustrd).map(textOf).join(" ").trim() || textOf(ntry.AddtlNtryInf).trim() || "(no description)";
         const creditor = tx?.RltdPties?.Cdtr?.Nm;
         const debtor = tx?.RltdPties?.Dbtr?.Nm;
         const counterpartyRaw = (isDebit ? creditor : debtor) || creditor || debtor;
         const counterparty = counterpartyRaw ? String(counterpartyRaw) : null;
         const ref = ntry.AcctSvcrRef || tx?.Refs?.AcctSvcrRef || tx?.Refs?.EndToEndId || tx?.Refs?.TxId;
-        const externalId = ref && ref !== "NOTPROVIDED" ? String(ref) : sha1(`${bookingDate.toISOString()}|${amount}|${remittance}|${counterparty ?? ""}`).slice(0, 24);
+        const externalId = ref && ref !== "NOTPROVIDED" ? String(ref) : sha1(`${bookingDate2.toISOString()}|${amount}|${remittance2}|${counterparty ?? ""}`).slice(0, 24);
         transactions.push({
           externalId,
-          bookingDate,
+          bookingDate: bookingDate2,
           valueDate,
           amount,
           currency: ccy || currency,
-          description: remittance,
+          description: remittance2,
           counterparty,
           raw: ntry
         });
@@ -5437,6 +5459,7 @@ var __AresiumEngine = (() => {
     const { months, categories, balanceByDay } = source;
     const catByName = new Map(categories.map((c) => [c.name, c]));
     const incomeKeep = /* @__PURE__ */ new Set(["Tax", ...categories.filter((c) => c.kind !== "spend").map((c) => c.name)]);
+    const incomeBucketKeep = /* @__PURE__ */ new Set(["Tax", ...categories.filter((c) => c.kind === "income").map((c) => c.name)]);
     const monthIndex = new Map(months.map((m, i) => [m.key, i]));
     const makeSeries = () => ({
       months: months.map(() => 0),
@@ -5473,8 +5496,9 @@ var __AresiumEngine = (() => {
       const validDay = !!mo && day >= 1 && day <= mo.dayExpense.length;
       const tags = t.tags || [];
       const categoriesIn = [.../* @__PURE__ */ new Set([t.categoryName, ...tags])];
-      const primaryBucket = !t.categoryName || t.categoryName === "Uncategorised" ? "Other" : incomeKeep.has(t.categoryName) ? t.categoryName : "Refunds";
-      const buckets = t.amount > 0 ? [.../* @__PURE__ */ new Set([primaryBucket, ...tags.filter((n) => incomeKeep.has(n))])] : [];
+      const isTransfer = catByName.get(t.categoryName)?.kind === "transfer";
+      const primaryBucket = !t.categoryName || t.categoryName === "Uncategorised" ? "Other" : incomeBucketKeep.has(t.categoryName) ? t.categoryName : "Refunds";
+      const buckets = t.amount > 0 && !isTransfer ? [.../* @__PURE__ */ new Set([primaryBucket, ...tags.filter((n) => incomeBucketKeep.has(n))])] : [];
       transactions.push({
         id: t.id,
         date: t.date,
@@ -5505,7 +5529,7 @@ var __AresiumEngine = (() => {
           if (validDay) series.days[month][day - 1] += -t.amount;
         }
       }
-      if (t.amount > 0) {
+      if (t.amount > 0 && !isTransfer) {
         total.income += t.amount;
         if (mo) {
           mo.income += t.amount;
@@ -5546,8 +5570,8 @@ var __AresiumEngine = (() => {
         for (const m of months) series.days[m.key] = series.days[m.key].map(round);
       }
     }
-    const ordered = (names, order) => names.slice().sort((a, b) => {
-      const ia = order.indexOf(a), ib = order.indexOf(b);
+    const ordered = (names2, order2) => names2.slice().sort((a, b) => {
+      const ia = order2.indexOf(a), ib = order2.indexOf(b);
       if (ia !== -1 && ib !== -1) return ia - ib;
       if (ia !== -1) return -1;
       if (ib !== -1) return 1;
@@ -5578,14 +5602,2467 @@ var __AresiumEngine = (() => {
     };
   }
 
+  // src/engine/categories.ts
+  var groups = [
+    ["Everyday", "spend", [
+      ["groceries", "Groceries", "Lebensmittel"],
+      ["drugstore", "Drugstore", "Drogerie"],
+      ["eating-out", "Eating out", "Essen gehen"],
+      ["coffee-snacks", "Coffee & snacks", "Kaffee & Snacks"]
+    ]],
+    ["Home", "spend", [
+      ["rent", "Rent", "Miete"],
+      ["utilities", "Utilities", "Nebenkosten"],
+      ["internet-phone", "Internet & phone", "Internet & Handy"],
+      ["household", "Household", "Haushalt"],
+      ["pets", "Pets", "Haustiere"]
+    ]],
+    ["Getting around", "spend", [
+      ["bus-train", "Bus & train", "Bus & Bahn"],
+      ["car-fuel", "Car & fuel", "Auto & Tanken"],
+      ["taxi-sharing", "Taxi & sharing", "Taxi & Sharing"],
+      ["travel", "Travel", "Reisen"]
+    ]],
+    ["Health & care", "spend", [
+      ["health", "Health", "Gesundheit"],
+      ["sports-fitness", "Sports & fitness", "Sport & Fitness"],
+      ["personal-care", "Personal care", "K\xF6rperpflege"]
+    ]],
+    ["Free time", "spend", [
+      ["going-out", "Going out", "Ausgehen"],
+      ["entertainment", "Entertainment", "Unterhaltung"],
+      ["hobbies", "Hobbies", "Hobbys"],
+      ["subscriptions", "Subscriptions", "Abos"]
+    ]],
+    ["Shopping", "spend", [
+      ["clothes", "Clothes", "Kleidung"],
+      ["electronics", "Electronics", "Elektronik"],
+      ["shopping", "Shopping", "Shopping"],
+      ["gifts", "Gifts", "Geschenke"]
+    ]],
+    ["Study & work", "spend", [["education", "Education", "Bildung"], ["work", "Work", "Arbeit"]]],
+    ["Money", "spend", [
+      ["insurance", "Insurance", "Versicherungen"],
+      ["taxes", "Taxes", "Steuern"],
+      ["fees", "Fees", "Geb\xFChren"],
+      ["memberships", "Memberships", "Mitgliedschaften"],
+      ["donations", "Donations", "Spenden"],
+      ["cash", "Cash", "Bargeld"],
+      ["friends", "Friends", "Freunde"]
+    ]],
+    ["Money", "transfer", [["savings-investing", "Savings & investing", "Sparen & Anlegen"]]],
+    ["Income", "income", [
+      ["salary", "Salary & side jobs", "Gehalt & Nebenjob"],
+      ["bafoeg-scholarships", "BAf\xF6G & scholarships", "BAf\xF6G & Stipendium"],
+      ["parents-family", "Parents & family", "Eltern & Familie"],
+      ["kindergeld", "Kindergeld", "Kindergeld"],
+      ["selling-things", "Selling things", "Verk\xE4ufe"],
+      ["interest-dividends", "Interest & dividends", "Zinsen & Dividenden"],
+      ["other-income", "Other income", "Sonstige Einnahmen"]
+    ]],
+    ["Other", "spend", [["other", "Other", "Sonstiges"]]]
+  ];
+  var DEFAULT_CATEGORIES = groups.flatMap(([group, kind, entries]) => entries.map(([id, en, de]) => ({ id, name: { en, de }, group, kind })));
+  var BUILT_IN_CATEGORIES = [
+    { id: "own-transfers", name: { en: "Own transfers", de: "Eigene Umbuchungen" }, group: "Built in", kind: "transfer" },
+    { id: "not-sorted", name: { en: "Not sorted", de: "Nicht sortiert" }, group: "Built in", kind: "spend" }
+  ];
+  var CATEGORY_LOOK = {
+    "groceries": { icon: "ShoppingCart", color: "#26E07A" },
+    "drugstore": { icon: "SprayCan", color: "#10DBAE" },
+    "eating-out": { icon: "Utensils", color: "#FF7A33" },
+    "coffee-snacks": { icon: "Coffee", color: "#E0A458" },
+    "rent": { icon: "House", color: "#6366FF" },
+    "utilities": { icon: "Zap", color: "#FFD23F" },
+    "internet-phone": { icon: "Smartphone", color: "#4FC3F7" },
+    "household": { icon: "Sofa", color: "#B388FF" },
+    "pets": { icon: "PawPrint", color: "#FF9F80" },
+    "bus-train": { icon: "TrainFront", color: "#13C8E8" },
+    "car-fuel": { icon: "Fuel", color: "#F25F5C" },
+    "taxi-sharing": { icon: "CarTaxiFront", color: "#FFC857" },
+    "travel": { icon: "Plane", color: "#3B82F6" },
+    "health": { icon: "Pill", color: "#FF4D6D" },
+    "sports-fitness": { icon: "Dumbbell", color: "#34E27A" },
+    "personal-care": { icon: "Scissors", color: "#FF7AD9" },
+    "going-out": { icon: "Beer", color: "#FFC02E" },
+    "entertainment": { icon: "Ticket", color: "#FF6B9A" },
+    "hobbies": { icon: "Palette", color: "#9B8CFF" },
+    "subscriptions": { icon: "Tv", color: "#A36BFF" },
+    "clothes": { icon: "Shirt", color: "#FF5CC8" },
+    "electronics": { icon: "Laptop", color: "#8FA0C4" },
+    "shopping": { icon: "ShoppingBag", color: "#C77BFF" },
+    "gifts": { icon: "Gift", color: "#FF5C8A" },
+    "education": { icon: "GraduationCap", color: "#FFB020" },
+    "work": { icon: "Briefcase", color: "#7C8DB5" },
+    "insurance": { icon: "Shield", color: "#5B8CFF" },
+    "taxes": { icon: "Receipt", color: "#E0894A" },
+    "fees": { icon: "Landmark", color: "#94A3B8" },
+    "memberships": { icon: "Handshake", color: "#3DA0FF" },
+    "donations": { icon: "HandHeart", color: "#FF6F91" },
+    "cash": { icon: "Banknote", color: "#6BCB77" },
+    "friends": { icon: "Users", color: "#2BB0FF" },
+    "savings-investing": { icon: "TrendingUp", color: "#25E0B0" },
+    "salary": { icon: "Wallet", color: "#25E07A" },
+    "bafoeg-scholarships": { icon: "BookOpen", color: "#84CC16" },
+    "parents-family": { icon: "HeartHandshake", color: "#2BB0FF" },
+    "kindergeld": { icon: "Baby", color: "#7DD3FC" },
+    "selling-things": { icon: "Package", color: "#F59E0B" },
+    "interest-dividends": { icon: "Percent", color: "#22C55E" },
+    "other-income": { icon: "Coins", color: "#A3E635" },
+    "other": { icon: "Ellipsis", color: "#9CA3AF" },
+    "own-transfers": { icon: "Repeat", color: "#9AA6B8" },
+    "not-sorted": { icon: "CircleHelp", color: "#9CA3AF" }
+  };
+  var CUSTOM_CATEGORY_LOOK = { icon: "Tag", color: "#9CA3AF" };
+  var categoryLook = (id) => CATEGORY_LOOK[id] ?? CUSTOM_CATEGORY_LOOK;
+
+  // src/engine/sorting/merchant.ts
+  var citySuffix = /(?:[\s,/*-]+)(?:münchen|muenchen|berlin|hamburg|köln|koeln|frankfurt(?: am main)?|stuttgart|düsseldorf|duesseldorf|leipzig|dresden|hannover|nürnberg|nuernberg|bremen|heidelberg|mannheim|karlsruhe|augsburg|bonn|essen|dortmund)(?:\s+(?:de|deu|deutschland))?\s*$/u;
+  function merchantKey(payment) {
+    let text2 = (payment.counterparty?.trim() || payment.description || payment.bookingText || "").toLowerCase().normalize("NFC");
+    const processor = /^paypal(?:\s|$|\()/u;
+    if (processor.test(text2)) {
+      const details = (payment.description ?? payment.bookingText ?? "").toLowerCase().normalize("NFC");
+      const seller = text2.match(/ihr einkauf bei\s+(.+?)(?:\.\s|$)/u)?.[1] ?? details.match(/ihr einkauf bei\s+(.+?)(?:\.\s|$)/u)?.[1] ?? text2.match(/^paypal\s*\*\s*(.+)/u)?.[1] ?? details.match(/^paypal\s*\*\s*(.+)/u)?.[1];
+      if (!seller) return "";
+      text2 = seller;
+    }
+    text2 = text2.replace(/^paypal\s*\*\s*/u, "");
+    text2 = text2.replace(/^(?:(?:sepa[ -])?(?:basis[ -]?)?lastschrift|kartenzahlung|debitkartenzahlung|kaufumsatz|sepa überweisung)\s*[:/-]?\s*/u, "");
+    text2 = text2.split(/\b(?:eref|mref|cred|iban|bic|mandatsreferenz|gläubiger-id|glaeubiger-id|kundenreferenz)\s*[:+]/u)[0];
+    text2 = text2.replace(/\b(?:karte(?:nnr|nnummer)?|karten-nr|card(?: number)?|terminal|beleg|trace|folge-nr)\.?\s*[:#-]?\s*[\d*x.-]+/gu, " ");
+    text2 = text2.replace(/\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}[./-]\d{1,2}[./-]\d{2,4}\b|\b\d{1,2}:\d{2}(?::\d{2})?\b/gu, " ");
+    text2 = text2.replace(/\b(?:filiale|fil\.?|markt-nr\.?|branch)\s*[:#-]?\s*\d+\b/gu, " ");
+    text2 = text2.replace(/\d{5,}|\b\d{3,}\b|\bx{2,}\d*\b|\*{2,}\d*/gu, " ");
+    text2 = text2.replace(/^((?:rewe(?:\s+markt)?|dm(?:-drogerie\s*markt)?))\s+\d+\b/u, "$1 ");
+    text2 = text2.replace(/\bsagt\s+danke\b|\bdankt\b/gu, " ");
+    text2 = text2.replace(/\bgmbh\s*(?:&|\+|und)\s*co\.?\s*kg\b/gu, " ");
+    text2 = text2.replace(/\b(?:gmbh|aktiengesellschaft|ag|se|kg|ohg)\b|\be\s*\.\s*k\b\s*\.?/gu, " ");
+    text2 = text2.replace(/\b(?:und\s+)?co\b/gu, " ").replace(/&/gu, " ");
+    text2 = text2.replace(/[\/;,|]+/gu, " ").replace(/\s+/gu, " ").replace(/[\s.*#-]+$/gu, "").trim();
+    text2 = text2.replace(citySuffix, "").replace(/[\s.*#-]+$/gu, "").trim();
+    return text2;
+  }
+
+  // src/engine/sorting/starter-rules.ts
+  var patterns = {
+    "kindergeld": ["familienkasse", "kindergeld"],
+    "taxes": ["finanzamt", "steuerverwaltung", "einkommensteuer", "steuererstattung"],
+    "bafoeg-scholarships": ["baf\xF6g", "bafoeg", "stipendium", "stipendien"],
+    "salary": ["gehalt", "gehaltszahlung", "lohn", "lohnzahlung", "honorar"],
+    "own-transfers": ["eigen\xFCbertrag", "eigenuebertrag", "umbuchung", "bankgutschrift auf paypal", "bank deposit to pp account", "von nutzer eingeleitete abbuchung"],
+    "savings-investing": ["sparplan", "tagesgeld", "union investment", "uniondepot"],
+    "subscriptions": ["netflix", "spotify", "disney+", "disney plus", "youtube premium", "amazon prime", "dazn", "audible", "icloud", "google one"],
+    "taxi-sharing": ["uber", "free now", "freenow", "bolt", "share now", "sharenow", "miles mobility", "cambio", "nextbike", "call a bike", "taxi"],
+    "eating-out": ["uber eats", "mcdonald", "mcdonalds", "mcdonald's", "burger king", "kfc", "subway", "restaurant", "pizza", "pizzeria", "d\xF6ner", "doener", "kebab", "imbiss", "bistro", "lieferando", "wolt", "mensa", "vapiano", "nordsee", "l'osteria", "losteria"],
+    "coffee-snacks": ["b\xE4ckerei", "baeckerei", "backwerk", "ditsch", "starbucks", "coffee fellows", "caf\xE9", "cafe"],
+    "groceries": ["rewe", "edeka", "aldi", "lidl", "penny", "netto", "kaufland", "tegut", "hit fil", "interspar", "eurospar", "spar dankt", "spar markt", "denns", "dennree", "famila", "norma", "nahkauf", "e-center", "e center", "globus sb"],
+    "drugstore": ["dm", "rossmann", "budni", "m\xFCller drogerie", "drogeriemarkt"],
+    "bus-train": ["mvg", "mvv", "bvg", "hvv", "db", "deutsche bahn", "db vertrieb", "db fernverkehr", "bahn.de", "deutschlandticket", "flixbus", "flixtrain", "\xF6bb", "oebb"],
+    "car-fuel": ["aral", "shell", "esso", "totalenergies", "jet tankstelle", "avia", "tankstelle", "kfz-steuer", "kfz steuer", "atu", "autow\xE4sche", "autowaesche", "parkhaus", "easypark"],
+    "travel": ["booking.com", "airbnb", "ryanair", "eurowings", "lufthansa", "easyjet", "sixt", "bergbahn", "seilbahn"],
+    "utilities": ["stadtwerke", "e.on", "eon energie", "enbw", "vattenfall", "rwe", "eprimo", "yello strom", "rundfunkbeitrag", "ard zdf", "nebenkosten"],
+    "internet-phone": ["telekom", "vodafone", "o2", "telefonica", "1&1", "1und1", "congstar", "freenet", "sim.de", "simplytel", "blau mobilfunk"],
+    "insurance": ["allianz", "huk-coburg", "huk24", "axa", "ergo versicherung", "debeka", "signal iduna", "gothaer", "r+v", "versicherung", "barmer", "techniker krankenkasse", "aok"],
+    "fees": ["kontof\xFChrung", "kontofuehrung", "kontof\xFChrungsgeb\xFChr", "kontofuehrungsgebuehr", "kartenentgelt", "kontoentgelt", "abschlussentgelt", "bankgeb\xFChren"],
+    "cash": ["bargeldauszahlung", "bargeldabhebung", "geldautomat", "atm withdrawal", "cash withdrawal"],
+    "pets": ["fressnapf", "zooplus", "das futterhaus", "tierarzt", "tierklinik"],
+    "household": ["ikea", "bauhaus", "obi", "hornbach", "toom", "h\xF6ffner", "hoeffner", "xxxlutz", "m\xF6max", "moemax", "jysk"],
+    "entertainment": ["cinemaxx", "cinestar", "uci kino", "kinopolis", "math\xE4ser", "mathaeser", "eventim", "ticketmaster", "kino"],
+    "rent": ["kaltmiete", "warmmiete", "hausverwaltung", "miete"],
+    "health": ["apotheke", "arztpraxis", "zahnarzt", "podolog", "physiotherapie", "klinik", "kontaktlinsen", "sanit\xE4tshaus", "brillen"],
+    "sports-fitness": ["clever fit", "cleverfit", "finion", "mcfit", "fitx", "fitnessstudio", "urban sports", "body & soul", "kletterhalle", "boulder"],
+    "personal-care": ["friseur", "hairstyling", "barber", "kosmetik", "nagelstudio"],
+    "going-out": ["bar tapas", "cocktail", "brauhaus", "biergarten", "kneipe", "irish pub", "weinbar", "sports bar"],
+    "clothes": ["zalando", "h&m", "h & m", "zara", "c&a", "primark", "tk maxx", "tkmaxx", "snipes", "about you", "aboutyou", "jack wolfskin", "humana"],
+    "shopping": ["tedi", "woolworth", "kik fil", "flying tiger", "nanu-nana", "nanu nana", "euroshop", "tiger store"],
+    "electronics": ["apple store", "mediamarkt", "media markt", "saturn", "cyberport", "notebooksbilliger", "conrad electronic", "gravis", "alternate"],
+    "education": ["fahrschule", "semesterbeitrag", "technische universit\xE4t", "hochschule", "sprachschule"],
+    "memberships": ["mitgliedsbeitrag", "gewerkschaft"],
+    "donations": ["spende", "greenpeace", "amnesty"]
+  };
+  var order = Object.entries(patterns);
+  var eats = order.findIndex(([id]) => id === "eating-out");
+  var taxi = order.findIndex(([id]) => id === "taxi-sharing");
+  [order[eats], order[taxi]] = [order[taxi], order[eats]];
+  var STARTER_RULES = order.flatMap(([categoryId, entries]) => entries.map((pattern) => ({ pattern, categoryId })));
+  var escape = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  var compiled = STARTER_RULES.map((rule) => ({
+    ...rule,
+    re: new RegExp(`(?:^|[^\\p{L}\\p{N}])${escape(rule.pattern)}(?=$|[^\\p{L}\\p{N}])`, "iu")
+  }));
+  function starterCategory(payment, categories) {
+    const allowed = new Set(categories.map((c) => c.id));
+    const text2 = `${payment.counterparty ?? ""} ${payment.description ?? payment.bookingText ?? ""}`.normalize("NFC");
+    const rule = compiled.find(({ re }) => re.test(text2));
+    return rule && allowed.has(rule.categoryId) ? rule.categoryId : null;
+  }
+
+  // src/engine/dates.ts
+  var daysInMonth = (y, m) => new Date(Date.UTC(y, m, 0)).getUTCDate();
+  function parseDay(value) {
+    const match = typeof value === "string" ? /^(\d{4})-(\d{2})-(\d{2})/.exec(value) : null;
+    if (!match) return null;
+    const [y, m, d] = [Number(match[1]), Number(match[2]), Number(match[3])];
+    return m >= 1 && m <= 12 && d >= 1 && d <= daysInMonth(y, m) ? { y, m, d } : null;
+  }
+  var dayNumber = (day) => Date.UTC(day.y, day.m - 1, day.d) / 864e5;
+
+  // src/engine/sorting/transfers.ts
+  var OWN_TRANSFERS = "own-transfers";
+  var TRANSFER_DAYS = 3;
+  var PAYPAL_NAME = /^paypal(?:$|[\s(*.,])/iu;
+  var PAYPAL_IN_TEXT = /(?:^|[^\p{L}\p{N}])paypal\s*(?:\(\s*europe|europe\b|\*)/iu;
+  function isPaypalBankLine(payment) {
+    if (payment.source === "paypal") return false;
+    const who = (payment.counterparty?.trim() || payment.description || payment.bookingText || "").trim();
+    if (PAYPAL_NAME.test(who)) return true;
+    return [payment.counterparty, payment.description, payment.bookingText].some((text2) => typeof text2 === "string" && PAYPAL_IN_TEXT.test(text2));
+  }
+  function ownTransfers(payments) {
+    const result = payments.map(() => null);
+    if (payments.some((p) => p.source === "paypal")) {
+      payments.forEach((p, i) => {
+        if (isPaypalBankLine(p)) result[i] = { rule: "paypal" };
+      });
+    }
+    const groups2 = /* @__PURE__ */ new Map();
+    payments.forEach((p, index) => {
+      const date = parseDay(p.date);
+      const amount = p.amount;
+      if (!p.account || !date || typeof amount !== "number" || !Number.isFinite(amount)) return;
+      const day = dayNumber(date);
+      const cents = Math.round(Math.abs(amount) * 100);
+      if (cents === 0) return;
+      const group = groups2.get(cents) ?? { out: [], in: [] };
+      (amount < 0 ? group.out : group.in).push({ index, account: p.account, day, currency: p.currency || null });
+      groups2.set(cents, group);
+    });
+    const candidates = [];
+    for (const { out, in: incoming } of groups2.values()) {
+      for (const o of out) {
+        for (const i of incoming) {
+          const distance = Math.abs(o.day - i.day);
+          if (distance > TRANSFER_DAYS || o.account === i.account) continue;
+          if (o.currency && i.currency && o.currency !== i.currency) continue;
+          candidates.push({ a: Math.min(o.index, i.index), b: Math.max(o.index, i.index), distance });
+        }
+      }
+    }
+    candidates.sort((x, y) => x.distance - y.distance || x.a - y.a || x.b - y.b);
+    const paired = /* @__PURE__ */ new Set();
+    for (const { a, b } of candidates) {
+      if (paired.has(a) || paired.has(b)) continue;
+      paired.add(a).add(b);
+      result[a] = { rule: "accounts", pairedWith: b };
+      result[b] = { rule: "accounts", pairedWith: a };
+    }
+    return result;
+  }
+
+  // src/engine/sorting/sort.ts
+  function sortPayments(payments, options) {
+    const allowed = new Set(options.categories.map((c) => c.id));
+    const transfers = ownTransfers(payments);
+    return payments.map((payment, index) => {
+      if (transfers[index]) return { categoryId: OWN_TRANSFERS, source: "structural" };
+      const key = merchantKey(payment);
+      const remembered = key && options.learned && Object.hasOwn(options.learned, key) ? options.learned[key] : null;
+      if (remembered && allowed.has(remembered)) return { categoryId: remembered, source: "learned" };
+      const categoryId = starterCategory(payment, options.categories);
+      return { categoryId, source: categoryId ? "starter" : null };
+    });
+  }
+  function learn(learned, payment, categoryId) {
+    const key = merchantKey(payment);
+    return key ? { ...learned, [key]: categoryId } : { ...learned };
+  }
+
+  // src/engine/paypal.ts
+  function isPaypalBankFunding(t) {
+    const hay = (t.description + " " + JSON.stringify(t.raw ?? "")).toLowerCase();
+    return hay.includes("bankgutschrift auf paypal");
+  }
+  var CONVERSION_TYPES = /* @__PURE__ */ new Set(["Allgemeine W\xE4hrungsumrechnung", "General Currency Conversion"]);
+  var TYPE_KEYS = ["Typ", "Type"];
+  var RELATED_KEYS = ["Zugeh\xF6riger Transaktionscode", "Reference Txn ID"];
+  var EUR = "EUR";
+  function field(raw, keys) {
+    if (!raw || typeof raw !== "object") return void 0;
+    for (const key of keys) {
+      const value = raw[key];
+      if (typeof value === "string" && value.trim()) return value.trim();
+    }
+    return void 0;
+  }
+  var isConversion = (row) => CONVERSION_TYPES.has(field(row.raw, TYPE_KEYS) ?? "");
+  function foldPaypalConversions(rows) {
+    const eurLegByPurchase = /* @__PURE__ */ new Map();
+    const conversionsByPurchase = /* @__PURE__ */ new Map();
+    for (const row of rows) {
+      if (!isConversion(row)) continue;
+      const purchase = field(row.raw, RELATED_KEYS);
+      if (!purchase) continue;
+      conversionsByPurchase.set(purchase, [...conversionsByPurchase.get(purchase) ?? [], row]);
+      if (row.currency === EUR) eurLegByPurchase.set(purchase, row);
+    }
+    const dropped = /* @__PURE__ */ new Set();
+    const replaced = /* @__PURE__ */ new Map();
+    const unmatched = [];
+    for (const row of rows) {
+      if (row.currency === EUR || isConversion(row) || !row.externalId) continue;
+      const eurLeg = eurLegByPurchase.get(row.externalId);
+      if (!eurLeg) {
+        unmatched.push(row.externalId);
+        continue;
+      }
+      replaced.set(row, { ...row, amount: eurLeg.amount, currency: EUR });
+      for (const conversion of conversionsByPurchase.get(row.externalId) ?? []) dropped.add(conversion);
+    }
+    return {
+      rows: rows.filter((row) => !dropped.has(row)).map((row) => replaced.get(row) ?? row),
+      unmatched
+    };
+  }
+
+  // src/engine/source.ts
+  var UNCATEGORISED = Object.freeze({ name: "Uncategorised", icon: "CircleHelp", color: "#9ca3af", kind: "spend" });
+  var MONTH_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  var pad = (n) => String(n).padStart(2, "0");
+  var byDate = (a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0;
+  function checked2(transactions) {
+    for (const p of transactions) {
+      if (!parseDay(p.date)) throw new Error(`Payment ${p.id}: the date is not an ISO date (YYYY-MM-DD)`);
+      if (typeof p.amount !== "number" || !Number.isFinite(p.amount)) throw new Error(`Payment ${p.id}: the amount is not a number`);
+    }
+    return [...transactions].sort(byDate);
+  }
+  var counted = (ordered) => foldPaypalConversions(ordered.filter((p) => !isPaypalBankFunding(p)));
+  function buildDashboardSource(input) {
+    const today = parseDay(input.today);
+    if (!today) throw new Error("today is not an ISO date (YYYY-MM-DD)");
+    const payments = counted(checked2(input.transactions)).rows;
+    const known = new Set(input.categories.map((c) => c.name));
+    const categoryOf = (p) => p.category != null && known.has(p.category) ? p.category : null;
+    const net = /* @__PURE__ */ new Map();
+    let hasUncategorised = false;
+    for (const p of payments) {
+      const category = categoryOf(p);
+      if (category === null) hasUncategorised = true;
+      const name = category ?? UNCATEGORISED.name;
+      net.set(name, (net.get(name) ?? 0) + p.amount);
+    }
+    const categories = input.categories.map((c) => ({
+      name: c.name,
+      icon: c.icon,
+      color: c.color,
+      kind: c.excludeFromTotals ? "transfer" : (net.get(c.name) ?? 0) > 0 ? "income" : "spend"
+    }));
+    if (hasUncategorised) categories.push({ ...UNCATEGORISED });
+    const transactions = payments.map((p) => ({
+      id: p.id,
+      date: p.date.slice(0, 10),
+      amount: p.amount,
+      categoryName: categoryOf(p) ?? UNCATEGORISED.name,
+      tags: [...p.tags ?? []],
+      // extra ("Add") categories: shown there, never re-summed into totals
+      place: p.counterparty || p.description,
+      city: p.city ?? ""
+    }));
+    const months = [];
+    if (payments.length) {
+      const first = parseDay(payments[0].date);
+      const last = parseDay(payments[payments.length - 1].date);
+      let y = first.y, m = first.m - 1;
+      while (y < last.y || y === last.y && m <= last.m - 1) {
+        const isCurrent = y === today.y && m === today.m - 1;
+        months.push({
+          key: `${y}-${pad(m + 1)}`,
+          label: `${MONTH_ABBR[m]} ${y}`,
+          short: MONTH_ABBR[m],
+          year: y,
+          month: m,
+          days: isCurrent ? today.d : daysInMonth(y, m + 1),
+          partial: isCurrent
+        });
+        m++;
+        if (m > 11) {
+          m = 0;
+          y++;
+        }
+      }
+    }
+    const balanceByDay = {};
+    let openingBalance = 0;
+    if (months.length) {
+      const balanceAt = /* @__PURE__ */ new Map();
+      for (const p of payments) if (p.balance != null) balanceAt.set(p.date.slice(0, 10), p.balance);
+      const firstKnown = payments.find((p) => p.balance != null);
+      openingBalance = firstKnown?.balance ?? 0;
+      let balance = openingBalance;
+      for (const mo of months) {
+        for (let d = 1; d <= mo.days; d++) {
+          const day = `${mo.key}-${pad(d)}`;
+          if (balanceAt.has(day)) balance = balanceAt.get(day);
+          balanceByDay[day] = balance;
+        }
+      }
+    }
+    return {
+      categories,
+      months,
+      transactions,
+      balanceByDay,
+      openingBalance,
+      databaseCategoryNames: input.categories.map((c) => c.name)
+    };
+  }
+
+  // src/engine/readers/decode.ts
+  var WINDOWS_1252_HIGH = [
+    8364,
+    129,
+    8218,
+    402,
+    8222,
+    8230,
+    8224,
+    8225,
+    710,
+    8240,
+    352,
+    8249,
+    338,
+    141,
+    381,
+    143,
+    144,
+    8216,
+    8217,
+    8220,
+    8221,
+    8226,
+    8211,
+    8212,
+    732,
+    8482,
+    353,
+    8250,
+    339,
+    157,
+    382,
+    376
+  ];
+  function fromCodePoints(points) {
+    let text2 = "";
+    for (let i = 0; i < points.length; i += 8192) text2 += String.fromCodePoint(...points.slice(i, i + 8192));
+    return text2;
+  }
+  function utf8(bytes, start) {
+    const points = [];
+    for (let i = start; i < bytes.length; ) {
+      const b = bytes[i];
+      if (b < 128) {
+        points.push(b);
+        i++;
+        continue;
+      }
+      let need, cp, min;
+      if (b >= 194 && b <= 223) {
+        need = 1;
+        cp = b & 31;
+        min = 128;
+      } else if (b >= 224 && b <= 239) {
+        need = 2;
+        cp = b & 15;
+        min = 2048;
+      } else if (b >= 240 && b <= 244) {
+        need = 3;
+        cp = b & 7;
+        min = 65536;
+      } else return null;
+      for (let k = 1; k <= need; k++) {
+        const c = bytes[i + k];
+        if (c === void 0 || (c & 192) !== 128) return null;
+        cp = cp << 6 | c & 63;
+      }
+      if (cp < min || cp > 1114111 || cp >= 55296 && cp <= 57343) return null;
+      points.push(cp);
+      i += need + 1;
+    }
+    return fromCodePoints(points);
+  }
+  function windows1252(bytes) {
+    const points = new Array(bytes.length);
+    for (let i = 0; i < bytes.length; i++) {
+      const b = bytes[i];
+      points[i] = b >= 128 && b <= 159 ? WINDOWS_1252_HIGH[b - 128] : b;
+    }
+    return fromCodePoints(points);
+  }
+  function utf16(bytes, littleEndian) {
+    const units = [];
+    for (let i = 2; i + 1 < bytes.length; i += 2) {
+      units.push(littleEndian ? bytes[i] | bytes[i + 1] << 8 : bytes[i] << 8 | bytes[i + 1]);
+    }
+    let text2 = "";
+    for (let i = 0; i < units.length; i += 8192) text2 += String.fromCharCode(...units.slice(i, i + 8192));
+    return text2;
+  }
+  function decodeBankFileWithEncoding(bytes) {
+    if (bytes[0] === 255 && bytes[1] === 254) return { text: utf16(bytes, true), encoding: "utf-16le" };
+    if (bytes[0] === 254 && bytes[1] === 255) return { text: utf16(bytes, false), encoding: "utf-16be" };
+    const bom = bytes[0] === 239 && bytes[1] === 187 && bytes[2] === 191;
+    const text2 = utf8(bytes, bom ? 3 : 0);
+    if (text2 !== null) return { text: text2, encoding: "utf-8" };
+    return { text: windows1252(bytes), encoding: "windows-1252" };
+  }
+  function decodeBankFile(bytes) {
+    return decodeBankFileWithEncoding(bytes).text;
+  }
+
+  // src/engine/readers/camt.ts
+  var import_fast_xml_parser2 = __toESM(require_fxp(), 1);
+
+  // src/engine/readers/ids.ts
+  var hashId = (fields2) => sha1(fields2).slice(0, 24);
+  function withOccurrences(candidates) {
+    const seen = /* @__PURE__ */ new Map();
+    return candidates.map(({ id, fields: fields2 }) => {
+      const occurrence = (seen.get(id) ?? 0) + 1;
+      seen.set(id, occurrence);
+      return occurrence === 1 ? id : hashId(`${fields2}|${occurrence}`);
+    });
+  }
+  var bookingIds = (fields2) => withOccurrences(fields2.map((f) => ({ id: hashId(f), fields: f })));
+
+  // src/engine/readers/csv.ts
+  var SEPARATORS = [";", ",", "	", "|"];
+  function splitCsv(text2, separator) {
+    const rows = [];
+    let row = [];
+    let field2 = "";
+    let quoted = false;
+    let fieldStarted = false;
+    for (let i = 0; i < text2.length; i++) {
+      const ch = text2[i];
+      if (quoted) {
+        if (ch === '"') {
+          if (text2[i + 1] === '"') {
+            field2 += '"';
+            i++;
+          } else quoted = false;
+        } else field2 += ch;
+        continue;
+      }
+      if (ch === '"' && !fieldStarted) {
+        quoted = true;
+        fieldStarted = true;
+        continue;
+      }
+      if (ch === separator) {
+        row.push(field2);
+        field2 = "";
+        fieldStarted = false;
+        continue;
+      }
+      if (ch === "\n" || ch === "\r") {
+        if (ch === "\r" && text2[i + 1] === "\n") i++;
+        row.push(field2);
+        rows.push(row);
+        row = [];
+        field2 = "";
+        fieldStarted = false;
+        continue;
+      }
+      field2 += ch;
+      if (ch !== " ") fieldStarted = true;
+    }
+    if (field2 !== "" || row.length > 0) {
+      row.push(field2);
+      rows.push(row);
+    }
+    return rows;
+  }
+  function countsPerLine(text2, separator, maxLines) {
+    const counts = [];
+    let count = 0, quoted = false;
+    for (let i = 0; i < text2.length && counts.length < maxLines; i++) {
+      const ch = text2[i];
+      if (ch === '"') quoted = !quoted;
+      else if (!quoted && ch === separator) count++;
+      else if (!quoted && (ch === "\n" || ch === "\r")) {
+        if (ch === "\r" && text2[i + 1] === "\n") i++;
+        counts.push(count);
+        count = 0;
+      }
+    }
+    if (counts.length < maxLines && count > 0) counts.push(count);
+    return counts;
+  }
+  function detectSeparator(text2) {
+    let best = ";", bestScore = -1;
+    for (const separator of SEPARATORS) {
+      const counts = countsPerLine(text2, separator, 200).filter((n) => n > 0);
+      const frequency = /* @__PURE__ */ new Map();
+      for (const n of counts) frequency.set(n, (frequency.get(n) ?? 0) + 1);
+      let score = 0;
+      for (const [n, lines] of frequency) if (n >= 1 && lines * Math.min(n, 4) > score) score = lines * Math.min(n, 4);
+      if (score > bestScore) {
+        best = separator;
+        bestScore = score;
+      }
+    }
+    return best;
+  }
+
+  // src/engine/readers/values.ts
+  var DATE_FORMATS = ["DD.MM.YYYY", "DD.MM.YY", "YYYY-MM-DD", "DD/MM/YYYY", "MM/DD/YYYY", "DD-MM-YYYY", "YYYYMMDD"];
+  var DATE_PATTERNS = {
+    // order: the match groups holding year, month, day. A time after the date ("2024-01-05 10:22:33") is ignored.
+    "DD.MM.YYYY": { re: /^(\d{1,2})\.(\d{1,2})\.(\d{4})(?:$|[\sT,])/, order: [3, 2, 1] },
+    "DD.MM.YY": { re: /^(\d{1,2})\.(\d{1,2})\.(\d{2})(?:$|[\sT,])/, order: [3, 2, 1] },
+    "YYYY-MM-DD": { re: /^(\d{4})-(\d{1,2})-(\d{1,2})(?:$|[\sT,])/, order: [1, 2, 3] },
+    "DD/MM/YYYY": { re: /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:$|[\sT,])/, order: [3, 2, 1] },
+    "MM/DD/YYYY": { re: /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:$|[\sT,])/, order: [3, 1, 2] },
+    "DD-MM-YYYY": { re: /^(\d{1,2})-(\d{1,2})-(\d{4})(?:$|[\sT,])/, order: [3, 2, 1] },
+    "YYYYMMDD": { re: /^(\d{4})(\d{2})(\d{2})$/, order: [1, 2, 3] }
+  };
+  function parseDate(value, format) {
+    const { re, order: order2 } = DATE_PATTERNS[format];
+    const m = re.exec(value.trim());
+    if (!m) return null;
+    let year = +m[order2[0]];
+    if (m[order2[0]].length === 2) year += 2e3;
+    const month = +m[order2[1]], day = +m[order2[2]];
+    if (year < 1970 || year > 2100 || month < 1 || month > 12 || day < 1) return null;
+    if (day > new Date(Date.UTC(year, month, 0)).getUTCDate()) return null;
+    return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  }
+  function canonicalAmount(negative, whole, fraction) {
+    const intPart = whole.replace(/^0+(?=\d)/, "") || "0";
+    let frac = fraction.padEnd(2, "0");
+    while (frac.length > 2 && frac.endsWith("0")) frac = frac.slice(0, -1);
+    const zero = /^0*$/.test(intPart + frac);
+    return `${negative && !zero ? "-" : ""}${intPart}.${frac}`;
+  }
+  var MINUS = /^[-−–]/;
+  function parseAmountStrict(value, format) {
+    let v = value.trim().replace(/[\s  ']/g, "");
+    v = v.replace(/^(EUR|USD|GBP|CHF|€|\$|£)/i, "").replace(/(EUR|USD|GBP|CHF|€|\$|£)$/i, "");
+    let negative = false;
+    if (/^\(.*\)$/.test(v)) {
+      negative = true;
+      v = v.slice(1, -1);
+    }
+    if (MINUS.test(v)) {
+      negative = !negative;
+      v = v.slice(1);
+    } else if (v.startsWith("+")) v = v.slice(1);
+    else if (/[-−]$/.test(v)) {
+      negative = !negative;
+      v = v.slice(0, -1);
+    } else if (v.endsWith("+")) v = v.slice(0, -1);
+    const [group, decimal] = format === "de" ? [".", ","] : [",", "."];
+    const groupRe = group === "." ? "\\." : ",";
+    const decimalRe = decimal === "." ? "\\." : ",";
+    const re = new RegExp(`^(\\d{1,3}(?:${groupRe}\\d{3})+|\\d+)(?:${decimalRe}(\\d+))?$|^${decimalRe}(\\d+)$`);
+    const m = re.exec(v);
+    if (!m) return null;
+    if (m[3] !== void 0) return canonicalAmount(negative, "0", m[3]);
+    return canonicalAmount(negative, m[1].split(group).join(""), m[2] ?? "");
+  }
+  var isNegative = (amount) => amount.startsWith("-");
+  var negate = (amount) => isNegative(amount) ? amount.slice(1) : /^0\.0+$/.test(amount) ? amount : `-${amount}`;
+  var absolute = (amount) => isNegative(amount) ? amount.slice(1) : amount;
+  var SCALE = 5;
+  function toUnits(amount) {
+    const negative = isNegative(amount);
+    const [whole, fraction = ""] = absolute(amount).split(".");
+    const units = BigInt(whole) * 10n ** BigInt(SCALE) + BigInt(fraction.padEnd(SCALE, "0").slice(0, SCALE) || "0");
+    return negative ? -units : units;
+  }
+  function fromUnits(units) {
+    const negative = units < 0n;
+    const digits = (negative ? -units : units).toString().padStart(SCALE + 1, "0");
+    return canonicalAmount(negative, digits.slice(0, -SCALE), digits.slice(-SCALE));
+  }
+  var addAmounts = (a, b) => fromUnits(toUnits(a) + toUnits(b));
+  var sameAmount = (a, b) => toUnits(a) === toUnits(b);
+  function normalizeIban(value) {
+    const v = value.replace(/[\s'"]/g, "").toUpperCase();
+    if (!/^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/.test(v)) return null;
+    const moved = v.slice(4) + v.slice(0, 4);
+    let rest = 0;
+    for (const ch of moved) {
+      const n = ch >= "A" ? ch.charCodeAt(0) - 55 : +ch;
+      rest = n >= 10 ? (rest * 100 + n) % 97 : (rest * 10 + n) % 97;
+    }
+    return rest === 1 ? v : null;
+  }
+  function headerKey(name) {
+    return name.normalize("NFC").toLowerCase().replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/ß/g, "ss").replace(/€/g, "eur").replace(/[^a-z0-9]/g, "");
+  }
+  function cleanText(...parts) {
+    return parts.map((p) => (p ?? "").replace(/\s+/g, " ").trim()).filter(Boolean).join(" ");
+  }
+  var SEPA_KEYS = /(EREF|KREF|MREF|CRED|DEBT|SVWZ|ABWA|ABWE|COAM|OAMT|IBAN|BIC)\+/g;
+  function sepaPaymentText(text2) {
+    const keys = [...text2.matchAll(SEPA_KEYS)];
+    const svwz = keys.findIndex((m) => m[1] === "SVWZ");
+    if (svwz < 0) return cleanText(text2.slice(0, keys[0]?.index ?? text2.length));
+    const start = keys[svwz].index + 5;
+    const end = keys[svwz + 1]?.index ?? text2.length;
+    return cleanText(text2.slice(start, end));
+  }
+
+  // src/engine/readers/table.ts
+  var BankFileError = class extends Error {
+    constructor(code, message) {
+      super(message);
+      __publicField(this, "code", code);
+      this.name = "BankFileError";
+    }
+  };
+  function trimRow(row) {
+    let end = row.length;
+    while (end > 0 && row[end - 1].trim() === "") end--;
+    return row.slice(0, end).map((cell2) => cell2.trim());
+  }
+  function findHeaderRow(rows, keys) {
+    for (let i = 0; i < Math.min(rows.length, 60); i++) {
+      const present = new Set(rows[i].map(headerKey));
+      if (keys.every((group) => group.some((k) => present.has(k)))) return i;
+    }
+    return -1;
+  }
+  function findTable(rows, layout) {
+    if (layout.header.length === 0) {
+      const first = rows.find((r) => r.some((v) => v.trim() !== ""));
+      const fits = first !== void 0 && (layout.columnCount === void 0 || first.length === layout.columnCount) && parseDate(cell(first, layout.columns.date), layout.dateFormat) !== null;
+      return fits ? -1 : null;
+    }
+    const want = trimRow(layout.header).map(headerKey).join("");
+    for (let i = 0; i < Math.min(rows.length, 60); i++) {
+      if (trimRow(rows[i]).map(headerKey).join("") === want) return i;
+    }
+    return null;
+  }
+  function uniqueHeader(header) {
+    const seen = /* @__PURE__ */ new Map();
+    return header.map((name, i) => {
+      const base = name.trim() || `Column ${i + 1}`;
+      const n = (seen.get(base) ?? 0) + 1;
+      seen.set(base, n);
+      return n === 1 ? base : `${base} (${n})`;
+    });
+  }
+  function findIban(text2) {
+    for (const m of text2.toUpperCase().matchAll(/[A-Z]{2}\d{2}(?:\s?[A-Z0-9]){11,30}/g)) {
+      const compact = m[0].replace(/\s/g, "");
+      for (let len = compact.length; len >= 15; len--) {
+        const iban = normalizeIban(compact.slice(0, len));
+        if (iban) return iban;
+      }
+    }
+    return void 0;
+  }
+  function labelledPart(text2, label, labels) {
+    const escape2 = (l) => l.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&");
+    const start = label === "" ? { index: 0, 0: "" } : new RegExp(`(?:^|\\s)${escape2(label)}\\s*[:.]`, "i").exec(text2);
+    if (!start) return "";
+    const rest = text2.slice(start.index + start[0].length);
+    const next = new RegExp(`(?:^|\\s)(?:${labels.map(escape2).join("|")})\\s*[:.]`, "i").exec(rest);
+    return cleanText(next ? rest.slice(0, next.index) : rest);
+  }
+  var DEBIT_MARK = /^(s|soll|d|db|dbit|debit|belastung|lastschrift|-)$/i;
+  var CREDIT_MARK = /^(h|haben|c|cr|crdt|credit|gutschrift|\+)$/i;
+  function accountName(bank, iban) {
+    return iban ? `${bank} \u2022\u2022${iban.slice(-4)}` : bank;
+  }
+  function cell(row, index) {
+    return index === void 0 ? "" : (row[index] ?? "").trim();
+  }
+  function readCsv(text2, layout) {
+    const rows = splitCsv(text2, layout.separator);
+    if (rows.length === 0) throw new BankFileError("empty", "The file is empty.");
+    const headerIndex = findTable(rows, layout);
+    if (headerIndex === null) throw new BankFileError("headerMismatch", "The file's header row does not match the layout.");
+    return readTable(rows, headerIndex, layout);
+  }
+  function readTable(rows, headerIndex, layout) {
+    const c = layout.columns;
+    const width = layout.columnCount ?? Math.max(0, ...rows.slice(0, 50).map((r) => r.length));
+    const names2 = uniqueHeader(headerIndex >= 0 ? rows[headerIndex].map((h) => h.trim()) : new Array(width).fill(""));
+    const transactions = [];
+    const idFields = [];
+    const references = [];
+    let skipped = 0;
+    let ownIban;
+    let currency = layout.currency ?? "EUR";
+    const skip = (layout.skipStatus ?? []).map((s) => s.toLowerCase());
+    const keep = (layout.keepStatus ?? []).map((s) => s.toLowerCase());
+    const dateHeader = headerIndex >= 0 ? headerKey(rows[headerIndex][c.date] ?? "") : "";
+    for (let r = headerIndex + 1; r < rows.length; r++) {
+      const row = rows[r];
+      if (row.every((v) => v.trim() === "")) continue;
+      if (dateHeader && headerKey(cell(row, c.date)) === dateHeader) {
+        skipped += rows.slice(r).filter((rest) => rest.some((v) => v.trim() !== "")).length;
+        break;
+      }
+      const date = parseDate(cell(row, c.date), layout.dateFormat);
+      const status = cell(row, c.status).toLowerCase();
+      if (!date || c.status !== void 0 && (skip.some((s) => status.includes(s)) || keep.length > 0 && !keep.some((s) => status.includes(s)))) {
+        skipped++;
+        continue;
+      }
+      let amount = null;
+      if (c.amount !== void 0) {
+        amount = parseAmountStrict(cell(row, c.amount), layout.numberFormat);
+        const mark = cell(row, c.sign);
+        if (amount && c.sign !== void 0) {
+          if (DEBIT_MARK.test(mark)) amount = negate(absolute(amount));
+          else if (CREDIT_MARK.test(mark)) amount = absolute(amount);
+        }
+      } else {
+        const debit = parseAmountStrict(cell(row, c.debit), layout.numberFormat);
+        const credit = parseAmountStrict(cell(row, c.credit), layout.numberFormat);
+        if (debit && !/^0\.0+$/.test(debit)) amount = negate(absolute(debit));
+        else if (credit) amount = absolute(credit);
+        else if (debit) amount = debit;
+      }
+      if (!amount) {
+        skipped++;
+        continue;
+      }
+      if (layout.invertSign) amount = negate(amount);
+      for (const j of c.fees ?? []) {
+        const fee = parseAmountStrict(cell(row, j), layout.numberFormat);
+        if (fee) amount = addAmounts(amount, negate(absolute(fee)));
+      }
+      for (const j of c.addAmounts ?? []) {
+        const extra = parseAmountStrict(cell(row, j), layout.numberFormat);
+        if (extra) amount = addAmounts(amount, extra);
+      }
+      if (/^-?0\.0+$/.test(amount)) {
+        skipped++;
+        continue;
+      }
+      const out = amount.startsWith("-");
+      let counterparty = (out ? cell(row, c.payee) || cell(row, c.payer) : cell(row, c.payer) || cell(row, c.payee)) || (c.counterparty ?? []).map((i) => cell(row, i)).find(Boolean) || "";
+      let paymentText = sepaPaymentText(cleanText(...(c.text ?? []).map((i) => cell(row, i))));
+      if (layout.labelledText) {
+        const { labels, counterparty: names3, text: texts2 } = layout.labelledText;
+        const whole = paymentText;
+        counterparty || (counterparty = names3.map((l) => labelledPart(whole, l, labels)).find(Boolean) ?? "");
+        const labelled = texts2.map((l) => labelledPart(whole, l, labels)).find(Boolean);
+        if (labelled !== void 0) paymentText = labelled;
+        else if (counterparty) paymentText = "";
+      }
+      const description = paymentText || cleanText(cell(row, c.kind)) || cleanText(counterparty) || "(no description)";
+      const valueDate = c.valueDate !== void 0 ? parseDate(cell(row, c.valueDate), layout.dateFormat) : void 0;
+      const balance = c.balance !== void 0 ? parseAmountStrict(cell(row, c.balance), layout.numberFormat) : void 0;
+      const rowCurrency = /^[A-Za-z]{3}$/.test(cell(row, c.currency)) ? cell(row, c.currency).toUpperCase() : currency;
+      currency = rowCurrency;
+      ownIban ?? (ownIban = c.accountIban !== void 0 ? normalizeIban(cell(row, c.accountIban)) ?? void 0 : void 0);
+      const raw = {};
+      names2.forEach((name2, i) => {
+        raw[name2] = (row[i] ?? "").trim();
+      });
+      transactions.push({
+        bookingDate: `${date}T00:00:00.000Z`,
+        ...c.valueDate !== void 0 ? { valueDate: valueDate ? `${valueDate}T00:00:00.000Z` : null } : {},
+        amount,
+        ...c.balance !== void 0 ? { balance: balance ?? null } : {},
+        currency: rowCurrency,
+        description,
+        counterparty: cleanText(counterparty) || null,
+        raw
+      });
+      idFields.push([
+        date,
+        amount,
+        ...[c.payer, c.payee, ...c.counterparty ?? [], ...c.text ?? []].map((i) => cleanText(cell(row, i))),
+        cell(row, c.iban).replace(/\s/g, "")
+      ].join("|"));
+      references.push(cell(row, c.reference).replace(/^'+|'+$/g, "") || void 0);
+    }
+    if (!ownIban) for (const row of rows.slice(0, Math.max(headerIndex, 0))) ownIban ?? (ownIban = findIban(row.join(" ")));
+    const hashed = bookingIds(idFields);
+    const ids = withReferences(references, hashed);
+    const name = layout.name ?? "Bank";
+    const account = { name: accountName(name, ownIban), currency };
+    if (ownIban) account.iban = ownIban;
+    return {
+      format: "csv",
+      account,
+      transactions: transactions.map((t, i) => ({ externalId: ids[i], ...t })),
+      skipped,
+      layout
+    };
+  }
+  function withReferences(references, hashed) {
+    const counts = /* @__PURE__ */ new Map();
+    for (const ref of references) if (ref) counts.set(ref, (counts.get(ref) ?? 0) + 1);
+    return references.map((ref, i) => ref && counts.get(ref) === 1 ? ref : hashed[i]);
+  }
+
+  // src/engine/readers/camt.ts
+  var parser2 = new import_fast_xml_parser2.XMLParser({
+    ignoreAttributes: false,
+    attributeNamePrefix: "@_",
+    parseTagValue: false,
+    // keep IBANs and amounts as strings
+    removeNSPrefix: true
+    // <ns2:Document> and friends
+  });
+  function arr2(x) {
+    if (x === void 0 || x === null) return [];
+    return Array.isArray(x) ? x : [x];
+  }
+  function textOf2(node) {
+    if (node && typeof node === "object" && "#text" in node) return String(node["#text"]);
+    return node == null || typeof node === "object" ? "" : String(node);
+  }
+  var dateOnly = (value) => {
+    const v = textOf2(value).trim();
+    return /^\d{4}-\d{2}-\d{2}/.test(v) ? `${v.slice(0, 10)}T00:00:00.000Z` : null;
+  };
+  var nameOf = (party) => cleanText(textOf2(party?.Nm) || textOf2(party?.Pty?.Nm));
+  var ibanOf = (account) => textOf2(account?.Id?.IBAN).replace(/\s/g, "");
+  var remittance = (tx) => cleanText(...arr2(tx?.RmtInf?.Ustrd).map(textOf2)) || cleanText(...arr2(tx?.RmtInf?.Strd).map((s) => textOf2(s?.CdtrRefInf?.Ref))) || cleanText(textOf2(tx?.AddtlTxInf));
+  function batchText(texts2) {
+    const distinct = [...new Set(texts2.filter(Boolean))];
+    return distinct.length > 3 ? `${distinct.slice(0, 3).join(" / ")} / \u2026` : distinct.join(" / ");
+  }
+  function signedAmount(node) {
+    const amount = parseAmountStrict(textOf2(node.Amt), "en");
+    if (!amount) return null;
+    return node.CdtDbtInd === "DBIT" ? negate(amount) : amount;
+  }
+  function vrCamtId(ntry) {
+    const isDebit = ntry.CdtDbtInd === "DBIT";
+    const amount = `${isDebit ? "-" : ""}${parseAmount(textOf2(ntry.Amt))}`;
+    const bookingDate2 = new Date(ntry.BookgDt?.Dt || ntry.BookgDt?.DtTm || ntry.ValDt?.Dt);
+    const tx = arr2(ntry.NtryDtls?.TxDtls)[0];
+    const remittance2 = arr2(tx?.RmtInf?.Ustrd).map(textOf2).join(" ").trim() || textOf2(ntry.AddtlNtryInf).trim() || "(no description)";
+    const creditor = tx?.RltdPties?.Cdtr?.Nm;
+    const debtor = tx?.RltdPties?.Dbtr?.Nm;
+    const counterpartyRaw = (isDebit ? creditor : debtor) || creditor || debtor;
+    const counterparty = counterpartyRaw ? String(counterpartyRaw) : null;
+    const time = bookingDate2.getTime();
+    const fields2 = `${isNaN(time) ? "Invalid Date" : bookingDate2.toISOString()}|${amount}|${remittance2}|${counterparty ?? ""}`;
+    const ref = ntry.AcctSvcrRef || tx?.Refs?.AcctSvcrRef || tx?.Refs?.EndToEndId || tx?.Refs?.TxId;
+    return { id: ref && ref !== "NOTPROVIDED" ? String(ref) : hashId(fields2), fields: fields2 };
+  }
+  function isVrBank(iban, bic) {
+    if (!iban && !bic) return true;
+    if (bic.toUpperCase().startsWith("GENO")) return true;
+    return /^DE\d{2}\d{3}[69]/.test(iban);
+  }
+  var PENDING = /* @__PURE__ */ new Set(["PDNG", "INFO", "FUTR"]);
+  var statusOf = (ntry) => textOf2(ntry.Sts?.Cd ?? ntry.Sts).trim().toUpperCase();
+  function balances(stmt) {
+    const out = {};
+    for (const bal of arr2(stmt.Bal)) {
+      const code = textOf2(bal?.Tp?.CdOrPrtry?.Cd).toUpperCase();
+      const amount = signedAmount(bal);
+      if (!amount) continue;
+      if ((code === "OPBD" || code === "PRCD") && out.opening === void 0) out.opening = amount;
+      if (code === "CLBD") out.closing = amount;
+    }
+    return out;
+  }
+  function readCamt(xml) {
+    let doc;
+    try {
+      doc = parser2.parse(xml);
+    } catch {
+      throw new BankFileError("camt", "This XML file could not be read.");
+    }
+    const root = doc.Document;
+    const container = root?.BkToCstmrStmt ?? root?.BkToCstmrAcctRpt ?? root?.BkToCstmrDbtCdtNtfctn;
+    if (!container) throw new BankFileError("camt", "This XML file is not a CAMT bank statement (camt.052, .053 or .054).");
+    const statements = arr2(container.Stmt ?? container.Rpt ?? container.Ntfctn);
+    const transactions = [];
+    const candidates = [];
+    let iban = "", bic = "", bankName2 = "", currency = "EUR", skipped = 0;
+    for (const stmt of statements) {
+      iban || (iban = ibanOf(stmt.Acct));
+      bic || (bic = textOf2(stmt.Acct?.Svcr?.FinInstnId?.BIC ?? stmt.Acct?.Svcr?.FinInstnId?.BICFI));
+      bankName2 || (bankName2 = cleanText(textOf2(stmt.Acct?.Svcr?.FinInstnId?.Nm)));
+      currency = textOf2(stmt.Acct?.Ccy) || currency;
+    }
+    const vr = isVrBank(iban, bic);
+    for (const stmt of statements) {
+      const { opening, closing } = balances(stmt);
+      const start = transactions.length;
+      for (const ntry of arr2(stmt.Ntry)) {
+        const amount = signedAmount(ntry);
+        const bookingDate2 = dateOnly(ntry.BookgDt?.Dt ?? ntry.BookgDt?.DtTm) ?? dateOnly(ntry.ValDt?.Dt ?? ntry.ValDt?.DtTm);
+        if (PENDING.has(statusOf(ntry)) || !amount || !bookingDate2) {
+          skipped++;
+          continue;
+        }
+        const out = amount.startsWith("-");
+        const details = arr2(ntry.NtryDtls).flatMap((d) => arr2(d?.TxDtls));
+        const tx = details[0];
+        const parties = tx?.RltdPties ?? {};
+        const creditor = nameOf(parties.Cdtr) || nameOf(parties.UltmtCdtr);
+        const debtor = nameOf(parties.Dbtr) || nameOf(parties.UltmtDbtr);
+        const counterparty = (out ? creditor || debtor : debtor || creditor) || null;
+        const counterpartyIban = ibanOf(out ? parties.CdtrAcct : parties.DbtrAcct);
+        const description = batchText(details.map(remittance)) || cleanText(textOf2(ntry.AddtlNtryInf)) || "(no description)";
+        const ccy = (ntry.Amt && typeof ntry.Amt === "object" ? ntry.Amt["@_Ccy"] : void 0) || currency;
+        transactions.push({
+          bookingDate: bookingDate2,
+          valueDate: dateOnly(ntry.ValDt?.Dt ?? ntry.ValDt?.DtTm),
+          amount,
+          currency: ccy,
+          description,
+          counterparty,
+          raw: ntry
+        });
+        if (vr) candidates.push(vrCamtId(ntry));
+        else {
+          const ref = textOf2(ntry.AcctSvcrRef) || textOf2(tx?.Refs?.AcctSvcrRef);
+          const fields2 = [
+            bookingDate2.slice(0, 10),
+            amount,
+            description,
+            counterparty ?? "",
+            counterpartyIban,
+            textOf2(tx?.Refs?.EndToEndId)
+          ].join("|");
+          candidates.push({ id: ref && ref !== "NOTPROVIDED" ? ref : hashId(fields2), fields: fields2 });
+        }
+      }
+      const own = transactions.slice(start);
+      if (opening !== void 0 && own.length > 0 && own.every((t, i) => i === 0 || own[i - 1].bookingDate <= t.bookingDate)) {
+        let running = opening;
+        const after = own.map((t) => running = addAmounts(running, t.amount));
+        if (closing === void 0 || sameAmount(running, closing)) own.forEach((t, i) => {
+          t.balance = after[i];
+        });
+      }
+    }
+    const ids = withOccurrences(candidates);
+    const account = { name: accountName(bankName2 || "Bank", iban || void 0), currency };
+    if (iban) account.iban = iban;
+    return {
+      format: "camt",
+      account,
+      transactions: transactions.map((t, i) => ({ externalId: ids[i], ...t })),
+      skipped
+    };
+  }
+
+  // src/engine/readers/guess.ts
+  var WORDS = {
+    date: [
+      "buchungstag",
+      "buchungsdatum",
+      "buchung",
+      "datum",
+      "date",
+      "bookingdate",
+      "completeddate",
+      "transactiondate",
+      "umsatztag",
+      "belegdatum",
+      "booked",
+      "tag"
+    ],
+    valueDate: ["valuta", "valutadatum", "wertstellung", "wert", "valuedate"],
+    amount: ["betrag", "umsatz", "amount", "summe", "value", "total", "betrageur", "amounteur"],
+    debit: ["soll", "belastung", "debit", "ausgang", "ausgabe", "moneyout", "paidout", "withdrawal", "lastschrift"],
+    credit: ["haben", "gutschrift", "credit", "eingang", "einnahme", "moneyin", "paidin", "deposit"],
+    balance: ["saldo", "kontostand", "balance", "guthaben", "saldonachbuchung", "runningbalance"],
+    counterparty: [
+      "zahlungsbeteiligter",
+      "namezahlungsbeteiligter",
+      "beguenstigter",
+      "zahlungspflichtiger",
+      "empfaenger",
+      "auftraggeber",
+      "name",
+      "payee",
+      "payer",
+      "partner",
+      "partnername",
+      "merchant",
+      "counterparty",
+      "haendler",
+      "gegenpartei",
+      "gegenseite",
+      "beguenstigterzahlungspflichtiger",
+      "auftraggeberempfaenger",
+      "recipient",
+      "sender"
+    ],
+    text: [
+      "verwendungszweck",
+      "zweck",
+      "purpose",
+      "reference",
+      "paymentreference",
+      "referenz",
+      "memo",
+      "description",
+      "beschreibung",
+      "details",
+      "buchungsdetails",
+      "text",
+      "notes",
+      "notiz",
+      "betreff",
+      "vorgangverwendungszweck",
+      "information",
+      "buchungsinformation"
+    ],
+    kind: ["buchungstext", "umsatzart", "vorgang", "type", "transactiontype", "art", "buchungsart", "umsatztyp", "typ"],
+    iban: ["iban", "kontonummer", "accountnumber", "konto", "partneriban", "ibanzahlungsbeteiligter", "kontonummeriban"],
+    accountIban: ["auftragskonto", "ibanauftragskonto", "eigeneiban", "ownaccount"],
+    currency: ["waehrung", "currency", "ccy"],
+    reference: ["transactionid", "transaktionsid", "transaktionscode", "referenznummer", "buchungsreferenz", "id"],
+    status: ["status", "state", "zustand", "info"]
+  };
+  function wordScore(header, role) {
+    const key = headerKey(header);
+    let best = 0;
+    for (const word of WORDS[role]) {
+      const fits = word.length <= 4 ? key === word || key === `${word}eur` : key.includes(word);
+      if (fits && word.length > best) best = word.length;
+    }
+    return best;
+  }
+  var hasLetter = (v) => /\p{L}/u.test(v);
+  var DE_DECIMAL = /\d,\d{1,2}(?!\d)/;
+  var EN_DECIMAL = /\d\.\d{1,2}(?!\d)/;
+  var isDateLike = (v) => DATE_FORMATS.some((f) => parseDate(v, f) !== null);
+  var SIGN_VALUE = /^(s|h|soll|haben|d|c|db|cr|dbit|crdt|debit|credit|\+|-)$/i;
+  function findHeader(rows) {
+    for (let i = 0; i < Math.min(rows.length, 60); i++) {
+      const cells = trimRow(rows[i]);
+      const filled = cells.filter(Boolean);
+      if (filled.length < 3 || filled.length < cells.length * 0.6) continue;
+      if (!filled.every((v) => hasLetter(v) && !isDateLike(v) && !DE_DECIMAL.test(v) && !EN_DECIMAL.test(v))) continue;
+      const next = rows.slice(i + 1, i + 6).map(trimRow).filter((r) => r.length > 0);
+      if (next.some((r) => r.length >= cells.length - 2 && r.some(isDateLike))) return i;
+    }
+    return -1;
+  }
+  function bestDateFormat(values) {
+    let best = "DD.MM.YYYY", share = 0;
+    const full = [];
+    for (const format of DATE_FORMATS) {
+      const ok = values.filter((v) => parseDate(v, format) !== null).length / Math.max(values.length, 1);
+      if (ok > share) {
+        best = format;
+        share = ok;
+      }
+      if (ok === 1) full.push(format);
+    }
+    let ambiguous = false;
+    if (full.includes("DD/MM/YYYY") && full.includes("MM/DD/YYYY")) {
+      const sorted = (format) => {
+        const dates = values.map((v) => parseDate(v, format));
+        const up = dates.every((d, i) => i === 0 || dates[i - 1] <= d), down = dates.every((d, i) => i === 0 || dates[i - 1] >= d);
+        return up || down;
+      };
+      const dm = sorted("DD/MM/YYYY"), md = sorted("MM/DD/YYYY");
+      best = md && !dm ? "MM/DD/YYYY" : "DD/MM/YYYY";
+      ambiguous = dm === md;
+    }
+    return { format: best, share, ambiguous };
+  }
+  function balanceFits(amounts, balances2) {
+    let fits = 0, pairs = 0;
+    for (let i = 1; i < amounts.length; i++) {
+      const a0 = amounts[i - 1], a1 = amounts[i], b0 = balances2[i - 1], b1 = balances2[i];
+      if (!a0 || !a1 || !b0 || !b1) continue;
+      pairs++;
+      if (sameAmount(addAmounts(b0, a1), b1) || sameAmount(addAmounts(b1, a0), b0)) fits++;
+    }
+    return pairs === 0 ? 0 : fits / pairs;
+  }
+  var filledAmount = (v) => v !== null && !/^-?0\.0+$/.test(v);
+  function complementary(a, b) {
+    return !a.some((v, i) => filledAmount(v) && filledAmount(b[i])) && a.some(filledAmount) && b.some(filledAmount);
+  }
+  function outAndIn(out, inn) {
+    return out.map((v, i) => filledAmount(v) ? `-${v.replace(/^-/, "")}` : filledAmount(inn[i]) ? inn[i].replace(/^-/, "") : null);
+  }
+  function findTableStart(rows) {
+    const headerRow = findHeader(rows);
+    if (headerRow >= 0) return { headerRow, width: trimRow(rows[headerRow]).length };
+    const filled = rows.filter((r) => r.some((v) => v.trim() !== ""));
+    const sample = filled.slice(0, 5);
+    const width = sample[0]?.length ?? 0;
+    const isData = (r) => r.length === width && trimRow(r).length >= 3 && r.some(isDateLike) && r.some((v) => !isDateLike(v) && (DE_DECIMAL.test(v) || EN_DECIMAL.test(v)));
+    return sample.length > 0 && sample.every(isData) ? { headerRow: -1, width } : null;
+  }
+  function guessCsvLayout(text2) {
+    const separator = detectSeparator(text2);
+    const rows = splitCsv(text2, separator);
+    const table = findTableStart(rows);
+    if (!table) throw new BankFileError("noTable", "No table with a header row and dates was found in this file.");
+    const { headerRow, width } = table;
+    const header = headerRow >= 0 ? trimRow(rows[headerRow]) : [];
+    const names2 = headerRow >= 0 ? header : Array.from({ length: width }, (_, i) => `Column ${i + 1}`);
+    const data = rows.slice(headerRow + 1, headerRow + 401).map(trimRow).filter((r) => r.length >= Math.ceil(width / 2) && r.some(isDateLike)).slice(0, 300);
+    const column = (j) => data.map((r) => r[j] ?? "");
+    let de = 0, en = 0;
+    for (const r of data) for (const v of r) {
+      if (isDateLike(v)) continue;
+      if (DE_DECIMAL.test(v)) de++;
+      if (EN_DECIMAL.test(v)) en++;
+    }
+    const numberFormat = en > de ? "en" : "de";
+    const decimalMark = numberFormat === "de" ? DE_DECIMAL : EN_DECIMAL;
+    const columns = [];
+    for (let j = 0; j < width; j++) {
+      const all = column(j), values = all.filter(Boolean);
+      let kind = "text";
+      let dateFormat2, ambiguous = false;
+      if (values.length === 0) kind = "empty";
+      else {
+        const date = bestDateFormat(values);
+        const amounts = values.filter((v) => parseAmountStrict(v, numberFormat) !== null).length / values.length;
+        const decimals = values.filter((v) => decimalMark.test(v)).length / values.length;
+        if (date.share >= 0.9) {
+          kind = "date";
+          dateFormat2 = date.format;
+          ambiguous = date.ambiguous;
+        } else if (values.filter((v) => normalizeIban(v)).length / values.length >= 0.8) kind = "iban";
+        else if (amounts >= 0.9 && decimals >= 0.5) kind = "amount";
+        else if (values.every((v) => SIGN_VALUE.test(v)) && new Set(values.map((v) => v.toLowerCase())).size <= 4) kind = "sign";
+        else if (values.every((v) => /^[A-Z]{3}$/.test(v)) && new Set(values).size <= 3) kind = "currency";
+        else if (values.every((v) => /^[\d\s/-]+$/.test(v))) kind = "number";
+      }
+      columns.push({ index: j, header: names2[j], kind, samples: values.slice(0, 3), values: all, dateFormat: dateFormat2, ambiguous });
+    }
+    const roles = {};
+    const unsure = /* @__PURE__ */ new Set();
+    const taken = /* @__PURE__ */ new Set();
+    const take = (role, j) => {
+      roles[role] = j;
+      taken.add(j);
+    };
+    const byWord = (role, kinds) => columns.filter((col) => !taken.has(col.index) && kinds.includes(col.kind) && wordScore(col.header, role) > 0).sort((a, b) => wordScore(b.header, role) - wordScore(a.header, role))[0];
+    const dates = columns.filter((col) => col.kind === "date");
+    const booking = [...dates].sort((a, b) => wordScore(b.header, "date") - wordScore(b.header, "valueDate") - (wordScore(a.header, "date") - wordScore(a.header, "valueDate")) || a.index - b.index)[0];
+    if (booking) {
+      take("date", booking.index);
+      if (wordScore(booking.header, "date") === 0) unsure.add("date");
+      const value = dates.find((col) => col !== booking && wordScore(col.header, "valueDate") > 0) ?? dates.find((col) => col !== booking);
+      if (value) take("valueDate", value.index);
+    }
+    const amountCols = columns.filter((col) => col.kind === "amount");
+    const parsed = (j) => columns[j].values.map((v) => parseAmountStrict(v, numberFormat));
+    const balanceWord = byWord("balance", ["amount"]);
+    if (balanceWord) take("balance", balanceWord.index);
+    const debitWord = byWord("debit", ["amount"]), creditWord = byWord("credit", ["amount"]);
+    const amountWord = byWord("amount", ["amount"]);
+    if (amountWord) take("amount", amountWord.index);
+    else if (debitWord && creditWord) {
+      take("debit", debitWord.index);
+      take("credit", creditWord.index);
+    } else {
+      let rest = amountCols.filter((col) => !taken.has(col.index));
+      if (roles.balance === void 0) {
+        const movesBy = (b) => rest.some((a) => a.index !== b && balanceFits(parsed(a.index), parsed(b)) >= 0.8) || rest.some((x) => rest.some((y) => x !== y && x.index !== b && y.index !== b && complementary(parsed(x.index), parsed(y.index)) && balanceFits(outAndIn(parsed(x.index), parsed(y.index)), parsed(b)) >= 0.8));
+        const moving = rest.find((col) => movesBy(col.index));
+        if (moving) {
+          take("balance", moving.index);
+          rest = rest.filter((col) => col !== moving);
+        }
+      }
+      const pair = rest.length === 2 ? debitCredit(rest[0].index, rest[1].index) : null;
+      if (pair) {
+        take("debit", pair.debit);
+        take("credit", pair.credit);
+        if (!pair.sure) unsure.add("amount");
+      } else {
+        const balanceCol = roles.balance;
+        const fitting = balanceCol !== void 0 ? rest.find((col) => balanceFits(parsed(col.index), parsed(balanceCol)) >= 0.8) : void 0;
+        if (fitting) take("amount", fitting.index);
+        else if (rest[0]) {
+          take("amount", rest[0].index);
+          unsure.add("amount");
+        }
+      }
+    }
+    if (roles.balance === void 0 && roles.amount !== void 0) {
+      const fitting = amountCols.find((col) => !taken.has(col.index) && balanceFits(parsed(roles.amount), parsed(col.index)) >= 0.8);
+      if (fitting) take("balance", fitting.index);
+    }
+    function debitCredit(a, b) {
+      const pa = parsed(a), pb = parsed(b);
+      if (!complementary(pa, pb)) return null;
+      if (debitWord?.index === a || creditWord?.index === b) return { debit: a, credit: b, sure: true };
+      if (debitWord?.index === b || creditWord?.index === a) return { debit: b, credit: a, sure: true };
+      if (roles.balance !== void 0) {
+        const balance = parsed(roles.balance);
+        if (balanceFits(outAndIn(pa, pb), balance) >= 0.8) return { debit: a, credit: b, sure: true };
+        if (balanceFits(outAndIn(pb, pa), balance) >= 0.8) return { debit: b, credit: a, sure: true };
+      }
+      if (pa.filter(filledAmount).every((v) => v.startsWith("-"))) return { debit: a, credit: b, sure: true };
+      if (pb.filter(filledAmount).every((v) => v.startsWith("-"))) return { debit: b, credit: a, sure: true };
+      return { debit: a, credit: b, sure: false };
+    }
+    const sign = columns.find((col) => col.kind === "sign");
+    const anyNegative = roles.amount !== void 0 && parsed(roles.amount).some((a) => a?.startsWith("-"));
+    if (sign && roles.amount !== void 0 && !anyNegative) taken.add(sign.index);
+    else if (roles.amount !== void 0 && !anyNegative) unsure.add("sign");
+    for (const col of columns.filter((c) => c.kind === "iban" && !taken.has(c.index))) {
+      const distinct = new Set(col.values.filter(Boolean).map((v) => v.replace(/\s/g, "")));
+      if (distinct.size === 1 && data.length > 1 || wordScore(col.header, "accountIban") > 0) {
+        if (roles.accountIban === void 0) take("accountIban", col.index);
+      } else if (roles.iban === void 0) take("iban", col.index);
+    }
+    const currency = byWord("currency", ["currency", "text"]) ?? columns.find((col) => col.kind === "currency" && !taken.has(col.index));
+    if (currency) take("currency", currency.index);
+    const status = byWord("status", ["text"]);
+    if (status && new Set(status.values).size <= 6) take("status", status.index);
+    const reference = byWord("reference", ["text", "number"]);
+    if (reference && new Set(reference.values.filter(Boolean)).size === reference.values.filter(Boolean).length) take("reference", reference.index);
+    for (const role of ["kind", "counterparty", "text"]) {
+      const col = byWord(role, ["text"]);
+      if (col) take(role, col.index);
+    }
+    const freeText = columns.filter((col) => col.kind === "text" && !taken.has(col.index));
+    const avg = (col) => col.values.reduce((n, v) => n + v.length, 0) / Math.max(col.values.length, 1);
+    if (roles.text === void 0) {
+      const longest = [...freeText].sort((a, b) => avg(b) - avg(a))[0];
+      if (longest) {
+        take("text", longest.index);
+        unsure.add("text");
+      }
+    }
+    if (roles.counterparty === void 0) unsure.add("counterparty");
+    const missing = [];
+    if (roles.date === void 0) missing.push("date");
+    if (roles.amount === void 0 && (roles.debit === void 0 || roles.credit === void 0)) missing.push("amount");
+    const info = columns.map(({ index, header: h, kind, samples, dateFormat: f }) => ({ index, header: h, kind, samples, ...f ? { dateFormat: f } : {} }));
+    const dateCol = roles.date !== void 0 ? columns[roles.date] : void 0;
+    const dateFormat = dateCol?.dateFormat ?? "DD.MM.YYYY";
+    if (dateCol?.ambiguous) unsure.add("dateFormat");
+    if (missing.length > 0) {
+      return { layout: null, confidence: 0, unsure: [...unsure], missing, separator, header, headerRow, columns: info, preview: [] };
+    }
+    const layout = {
+      version: 1,
+      separator,
+      header,
+      ...headerRow < 0 ? { columnCount: width } : {},
+      dateFormat,
+      numberFormat,
+      columns: {
+        date: roles.date,
+        ...roles.valueDate !== void 0 ? { valueDate: roles.valueDate } : {},
+        ...roles.amount !== void 0 ? { amount: roles.amount } : { debit: roles.debit, credit: roles.credit },
+        ...sign && roles.amount !== void 0 && !anyNegative ? { sign: sign.index } : {},
+        ...roles.counterparty !== void 0 ? { counterparty: [roles.counterparty] } : {},
+        ...roles.text !== void 0 ? { text: [roles.text] } : {},
+        ...roles.kind !== void 0 ? { kind: roles.kind } : {},
+        ...roles.iban !== void 0 ? { iban: roles.iban } : {},
+        ...roles.accountIban !== void 0 ? { accountIban: roles.accountIban } : {},
+        ...roles.balance !== void 0 ? { balance: roles.balance } : {},
+        ...roles.currency !== void 0 ? { currency: roles.currency } : {},
+        ...roles.reference !== void 0 ? { reference: roles.reference } : {},
+        ...roles.status !== void 0 ? { status: roles.status } : {}
+      },
+      ...roles.status !== void 0 ? { skipStatus: ["vorgemerkt", "pending", "offen", "reverted", "declined", "failed", "storniert"] } : {}
+    };
+    const read2 = readTable(rows, headerRow, layout);
+    const rowsRead = read2.transactions.length / Math.max(data.length, 1);
+    let confidence = Math.min(1, rowsRead);
+    if (unsure.has("date")) confidence *= 0.85;
+    if (unsure.has("dateFormat")) confidence *= 0.7;
+    if (unsure.has("amount")) confidence *= 0.75;
+    if (unsure.has("sign")) confidence *= 0.7;
+    if (unsure.has("text")) confidence *= 0.9;
+    if (unsure.has("counterparty")) confidence *= 0.9;
+    return {
+      layout,
+      confidence: Math.round(confidence * 100) / 100,
+      unsure: [...unsure],
+      missing,
+      separator,
+      header,
+      headerRow,
+      columns: info,
+      preview: read2.transactions.slice(0, 5)
+    };
+  }
+
+  // src/engine/readers/mt940.ts
+  function fields(text2) {
+    const out = [];
+    for (const line of text2.replace(/\r\n?/g, "\n").split("\n")) {
+      const m = /^:(\d{2}[A-Z]?):(.*)$/.exec(line);
+      if (m) out.push({ tag: m[1], value: m[2] });
+      else if (/^-}?\s*$/.test(line) || line.startsWith("{")) out.push({ tag: "end", value: "" });
+      else if (out.length > 0 && out[out.length - 1].tag !== "end") out[out.length - 1].value += `
+${line}`;
+    }
+    return out;
+  }
+  function date6(value) {
+    const m = /^(\d{2})(\d{2})(\d{2})$/.exec(value);
+    if (!m || +m[2] < 1 || +m[2] > 12 || +m[3] < 1 || +m[3] > 31) return null;
+    return `20${m[1]}-${m[2]}-${m[3]}`;
+  }
+  var amountOf = (value) => parseAmountStrict(value.endsWith(",") ? `${value}00` : value, "de");
+  function balanceOf(value) {
+    const m = /^([CD])(\d{6})([A-Z]{3})([\d,]+)/.exec(value.trim());
+    const amount = m ? amountOf(m[4]) : null;
+    if (!m || !amount) return null;
+    return { amount: m[1] === "D" ? negate(amount) : amount, currency: m[3] };
+  }
+  var LINE_61 = /^(\d{6})(\d{4})?(RC|RD|C|D)([A-Z])?(\d+,\d*)([NFS][A-Z0-9]{3})(.*)$/;
+  function bookingDate(valueDate, entry) {
+    if (!entry) return valueDate;
+    let year = +valueDate.slice(0, 4);
+    const valueMonth = +valueDate.slice(5, 7), month = +entry.slice(0, 2);
+    if (month - valueMonth > 6) year--;
+    if (valueMonth - month > 6) year++;
+    return `${year}-${entry.slice(0, 2)}-${entry.slice(2, 4)}`;
+  }
+  function joinSubfields(parts) {
+    let text2 = "";
+    parts.forEach((part, i) => {
+      text2 += (i > 0 && parts[i - 1].length < 27 ? " " : "") + part;
+    });
+    return text2.replace(/\s+/g, " ").trim();
+  }
+  function details86(value) {
+    const joined = value.replace(/\n/g, "");
+    const m = /^(\d{3})(\D)/.exec(joined);
+    if (!m) return { kind: "", text: cleanText(joined), name: "" };
+    const separator = m[2];
+    const sub = /* @__PURE__ */ new Map();
+    const parts = joined.slice(4).split(new RegExp(`\\${separator}(\\d{2})`));
+    for (let i = 1; i < parts.length; i += 2) sub.set(parts[i], (sub.get(parts[i]) ?? "") + parts[i + 1]);
+    const codes = (from2, to) => {
+      const out = [];
+      for (let n = from2; n <= to; n++) if (sub.has(String(n))) out.push(sub.get(String(n)));
+      return out;
+    };
+    const purpose = joinSubfields([...codes(20, 29), ...codes(60, 63)]);
+    return {
+      kind: cleanText(sub.get("00")),
+      text: sepaPaymentText(purpose),
+      name: joinSubfields(codes(32, 33))
+    };
+  }
+  function readMt940(text2) {
+    const list = fields(text2);
+    if (!list.some((f) => f.tag === "61") && !list.some((f) => f.tag === "20")) {
+      throw new BankFileError("mt940", "This file is not an MT940 statement.");
+    }
+    const transactions = [];
+    let iban, accountNumber = "", currency = "EUR", skipped = 0;
+    let statement = -1, intraday = false;
+    const openings = /* @__PURE__ */ new Map(), closings = /* @__PURE__ */ new Map();
+    const intradayStatements = /* @__PURE__ */ new Set();
+    let last = null;
+    for (const field2 of list) {
+      if (field2.tag === "20") {
+        statement++;
+        intraday = false;
+        last = null;
+        continue;
+      }
+      if (field2.tag === "end") {
+        last = null;
+        continue;
+      }
+      if (field2.tag === "25") {
+        const value = field2.value.trim();
+        iban ?? (iban = findIban(value));
+        accountNumber || (accountNumber = value.split("/").pop().replace(/[^0-9]/g, ""));
+      } else if (field2.tag === "34F" || field2.tag === "13D" || field2.tag === "13") {
+        intraday = true;
+        intradayStatements.add(statement);
+      } else if (field2.tag === "60F" || field2.tag === "60M") {
+        const bal = balanceOf(field2.value);
+        if (bal) {
+          openings.set(statement, bal.amount);
+          currency = bal.currency;
+        }
+      } else if (field2.tag === "62F" || field2.tag === "62M") {
+        const bal = balanceOf(field2.value);
+        if (bal) closings.set(statement, bal.amount);
+        last = null;
+      } else if (field2.tag === "61") {
+        last = null;
+        const [first] = field2.value.split("\n");
+        const m = LINE_61.exec(first.trim());
+        const valueDate = m ? date6(m[1]) : null;
+        const amount = m ? amountOf(m[5]) : null;
+        if (!m || !valueDate || !amount || intraday) {
+          skipped++;
+          continue;
+        }
+        const debit = m[3] === "D" || m[3] === "RC";
+        last = {
+          bookingDate: `${bookingDate(valueDate, m[2])}T00:00:00.000Z`,
+          valueDate: `${valueDate}T00:00:00.000Z`,
+          amount: debit ? negate(amount) : amount,
+          currency,
+          description: "(no description)",
+          counterparty: null,
+          raw: { ":61:": field2.value, ":86:": "" },
+          idFields: field2.value.trim(),
+          statement
+        };
+        transactions.push(last);
+      } else if (field2.tag === "86" && last) {
+        const d = details86(field2.value);
+        last.description = d.text || d.kind || d.name || "(no description)";
+        last.counterparty = d.name || null;
+        last.raw[":86:"] = field2.value;
+        last.idFields += `${field2.value.replace(/\s+/g, " ").trim()}`;
+        last = null;
+      }
+    }
+    for (const [index, opening] of openings) {
+      if (intradayStatements.has(index)) continue;
+      const own = transactions.filter((t) => t.statement === index);
+      if (!own.every((t, i) => i === 0 || own[i - 1].bookingDate <= t.bookingDate)) continue;
+      let running = opening;
+      const after = own.map((t) => running = addAmounts(running, t.amount));
+      const closing = closings.get(index);
+      if (own.length > 0 && (closing === void 0 || sameAmount(running, closing))) own.forEach((t, i) => {
+        t.balance = after[i];
+      });
+    }
+    const ids = bookingIds(transactions.map((t) => t.idFields));
+    const account = { name: iban ? accountName("Bank", iban) : accountNumber ? `Bank \u2022\u2022${accountNumber.slice(-4)}` : "Bank", currency };
+    if (iban) account.iban = iban;
+    return {
+      format: "mt940",
+      account,
+      transactions: transactions.map(({ idFields: _, statement: __, ...t }, i) => ({ externalId: ids[i], ...t })),
+      skipped
+    };
+  }
+
+  // src/engine/readers/bank-profiles.ts
+  var GH = "https://github.com/";
+  var BANK_PROFILES = [
+    {
+      id: "sparkasse-camt",
+      bank: "Sparkasse",
+      variant: "CSV-CAMT V2 / V8",
+      sources: [
+        `${GH}nicolettas-muggelbude/RechnungsFee/blob/main/vorlagen/bank-csv/sparkasse-lzo-camt-v2.csv`,
+        `${GH}nicolettas-muggelbude/RechnungsFee/blob/main/vorlagen/bank-csv/sparkasse-lzo-camt-v8.csv`,
+        `${GH}omarkohl/ofxstatement-sparkasse-freiburg/blob/HEAD/src/ofxstatement/plugins/germany_sparkasse_freiburg.py`,
+        `${GH}barredterra/camt-to-erpnext`,
+        `${GH}firefly-iii/import-configurations/blob/main/de/sparkasse/csv-camt52v8.json`
+      ],
+      separator: ";",
+      match: [
+        "Auftragskonto",
+        "Buchungstag",
+        "Valutadatum",
+        "Buchungstext",
+        "Verwendungszweck",
+        "Kundenreferenz (End-to-End)",
+        "Beguenstigter/Zahlungspflichtiger",
+        "Kontonummer/IBAN",
+        "Betrag",
+        "Info"
+      ],
+      dateFormat: ["DD.MM.YY", "DD.MM.YYYY"],
+      numberFormat: "de",
+      columns: {
+        date: "Buchungstag",
+        valueDate: "Valutadatum",
+        amount: "Betrag",
+        counterparty: ["Beguenstigter/Zahlungspflichtiger"],
+        text: ["Verwendungszweck"],
+        kind: "Buchungstext",
+        iban: "Kontonummer/IBAN",
+        accountIban: "Auftragskonto",
+        currency: "Waehrung",
+        status: "Info"
+      },
+      skipStatus: ["vorgemerkt"]
+    },
+    {
+      id: "sparkasse-mt940",
+      bank: "Sparkasse",
+      variant: "CSV-MT940",
+      sources: [
+        `${GH}nicolettas-muggelbude/RechnungsFee/blob/main/vorlagen/bank-csv/sparkasse-lzo-mt940.csv`,
+        `${GH}firefly-iii/import-configurations/blob/main/de/sparkasse/neubrandenburg-demmin/csv-mt940.json`,
+        `${GH}pretix/pretix/blob/master/src/tests/plugins/banktransfer/csvimport_data_de_sparkassernn.csv`
+      ],
+      unconfirmed: "An older variant (2015) wrote the booking day without its year (09.03); such rows are skipped.",
+      separator: ";",
+      match: [
+        "Auftragskonto",
+        "Buchungstag",
+        "Valutadatum",
+        "Buchungstext",
+        "Verwendungszweck",
+        "Beguenstigter/Zahlungspflichtiger",
+        "Kontonummer",
+        "BLZ",
+        "Betrag",
+        "Info"
+      ],
+      dateFormat: ["DD.MM.YY", "DD.MM.YYYY"],
+      numberFormat: "de",
+      columns: {
+        date: "Buchungstag",
+        valueDate: "Valutadatum",
+        amount: "Betrag",
+        counterparty: ["Beguenstigter/Zahlungspflichtiger"],
+        text: ["Verwendungszweck"],
+        kind: "Buchungstext",
+        iban: "Kontonummer",
+        accountIban: "Auftragskonto",
+        currency: "Waehrung",
+        status: "Info"
+      },
+      skipStatus: ["vorgemerkt"]
+    },
+    {
+      id: "volksbank",
+      bank: "VR Bank",
+      // Volksbanken and Raiffeisenbanken, named as the server names them
+      variant: "Atruvia CSV, since 2022",
+      sources: [
+        `${GH}sercxanto/go-homebank-csv/blob/HEAD/pkg/parser/testfiles/volksbank/Umsaetze_DE12345678901234567890_2023.10.04.csv`,
+        `${GH}nicolettas-muggelbude/RechnungsFee/blob/main/vorlagen/bank-csv/vr-teilhaberbank.csv`,
+        `${GH}Fjanks/beancount-importer-volksbank/blob/HEAD/beancount_importer_volksbank/__init__.py`,
+        `${GH}firefly-iii/import-configurations/blob/main/de/raiffeisenbank/bonn-rhein-sieg/csv-giro.json`
+      ],
+      separator: ";",
+      match: ["IBAN Auftragskonto", "Buchungstag", "Name Zahlungsbeteiligter", "Betrag"],
+      dateFormat: "DD.MM.YYYY",
+      numberFormat: "de",
+      columns: {
+        date: "Buchungstag",
+        valueDate: "Valutadatum",
+        amount: "Betrag",
+        sign: "Soll/Haben",
+        counterparty: ["Name Zahlungsbeteiligter"],
+        text: ["Verwendungszweck"],
+        kind: "Buchungstext",
+        iban: "IBAN Zahlungsbeteiligter",
+        accountIban: "IBAN Auftragskonto",
+        balance: "Saldo nach Buchung",
+        currency: ["Waehrung", "W\xE4hrung"]
+      },
+      reader: "vrbank"
+    },
+    {
+      id: "volksbank-2021",
+      bank: "VR Bank",
+      // Volksbanken and Raiffeisenbanken, named as the server names them
+      variant: "Fiducia CSV, 2021\u20132022",
+      sources: [
+        `${GH}Fjanks/beancount-importer-volksbank/blob/HEAD/beancount_importer_volksbank/__init__.py`,
+        `${GH}sercxanto/small_scripts/commit/22fa8d5728b5bb0a538f840ade3ae87e4264c257`
+      ],
+      unconfirmed: "The lines above the table and the totals below it are taken from the sources' description, not a file.",
+      separator: ";",
+      match: ["Buchungstag", "Valuta", "Textschl\xFCssel", "Primanota", "Zahlungsempf\xE4nger", "Vorgang/Verwendungszweck", "Umsatz", "Soll/Haben"],
+      dateFormat: "DD.MM.YYYY",
+      numberFormat: "de",
+      columns: {
+        date: "Buchungstag",
+        valueDate: "Valuta",
+        amount: "Umsatz",
+        sign: "Soll/Haben",
+        counterparty: ["Zahlungsempf\xE4nger"],
+        text: ["Vorgang/Verwendungszweck"],
+        iban: "Zahlungsempf\xE4ngerIBAN",
+        currency: "W\xE4hrung",
+        status: "Kundenreferenz"
+      },
+      skipStatus: ["anfangssaldo", "endsaldo"]
+      // the opening and closing balance lines below the table
+    },
+    {
+      id: "volksbank-classic",
+      bank: "VR Bank",
+      // Volksbanken and Raiffeisenbanken, named as the server names them
+      variant: "Fiducia CSV, until 2021",
+      sources: [
+        `${GH}leolabs/you-need-a-parser/blob/HEAD/packages/ynap-parsers/src/de/volksbank-eg/test-data/Umsaetze_test_2019.06.19.csv`,
+        `${GH}Fjanks/beancount-importer-volksbank/blob/HEAD/beancount_importer_volksbank/__init__.py`,
+        `${GH}bank2ynab/bank2ynab/blob/master/bank2ynab.conf`
+      ],
+      separator: ";",
+      match: ["Buchungstag", "Valuta", "Auftraggeber/Zahlungsempf\xE4nger", "Empf\xE4nger/Zahlungspflichtiger", "Vorgang/Verwendungszweck", "Umsatz"],
+      dateFormat: "DD.MM.YYYY",
+      numberFormat: "de",
+      columns: {
+        date: "Buchungstag",
+        valueDate: "Valuta",
+        amount: "Umsatz",
+        sign: 12,
+        // the S/H column has a blank name
+        counterparty: ["Empf\xE4nger/Zahlungspflichtiger"],
+        text: ["Vorgang/Verwendungszweck"],
+        iban: "IBAN",
+        currency: "W\xE4hrung",
+        status: "Kundenreferenz"
+      },
+      skipStatus: ["anfangssaldo", "endsaldo"]
+    },
+    {
+      id: "ing",
+      bank: "ING",
+      variant: "Umsatzanzeige",
+      sources: [
+        `${GH}nicolasmg-pr/FinAnt/blob/HEAD/docs/import-formats.md`,
+        `${GH}twiederk/finance/blob/HEAD/src/test/resources/Umsatzanzeige_02_rows.csv`,
+        `${GH}leolabs/you-need-a-parser/blob/HEAD/packages/ynap-parsers/src/de/ing-diba/test-data/Umsatzanzeige_DE00000105170000890000_20190403.csv`,
+        `${GH}siddhantgoel/beancount-ing/blob/main/beancount_ing/ec.py`,
+        `${GH}firefly-iii/import-configurations/blob/main/de/ing/Readme.md`
+      ],
+      unconfirmed: 'The "Referenz" column (new in 2026) is not used as an id: no source says it is unique.',
+      separator: ";",
+      match: ["Buchung", "Auftraggeber/Empf\xE4nger", "Buchungstext", "Verwendungszweck", "Betrag"],
+      dateFormat: "DD.MM.YYYY",
+      numberFormat: "de",
+      columns: {
+        date: "Buchung",
+        valueDate: ["Wertstellungsdatum", "Valuta"],
+        amount: "Betrag",
+        counterparty: ["Auftraggeber/Empf\xE4nger"],
+        text: ["Verwendungszweck"],
+        kind: "Buchungstext",
+        balance: "Saldo",
+        currency: ["W\xE4hrung (2)", "W\xE4hrung"]
+        // with a balance, the first "Währung" is the balance's
+      }
+    },
+    {
+      id: "dkb",
+      bank: "DKB",
+      variant: "Girokonto, since 2023",
+      sources: [
+        `${GH}siddhantgoel/beancount-dkb/issues/123`,
+        `${GH}siddhantgoel/beancount-dkb/issues/146`,
+        `${GH}siddhantgoel/beancount-dkb/issues/206`,
+        `${GH}milenvoutchev/2ynab/blob/HEAD/samples/DkbGirokonto2026.csv`,
+        `${GH}d-led/auto-ynab-csv/blob/HEAD/data/samples/dkb-giro.csv`
+      ],
+      separator: [";", ","],
+      // comma-separated for a while in late 2024
+      match: ["Buchungsdatum", "Wertstellung", "Status", "Zahlungspflichtige*r", "Zahlungsempf\xE4nger*in", "Verwendungszweck", "Umsatztyp"],
+      dateFormat: ["DD.MM.YY", "DD.MM.YYYY"],
+      numberFormat: "de",
+      columns: {
+        date: "Buchungsdatum",
+        valueDate: "Wertstellung",
+        amount: ["Betrag (\u20AC)", "Betrag"],
+        payer: "Zahlungspflichtige*r",
+        payee: "Zahlungsempf\xE4nger*in",
+        text: ["Verwendungszweck"],
+        iban: "IBAN",
+        status: "Status"
+      },
+      skipStatus: ["vorgemerkt"]
+    },
+    {
+      id: "dkb-old",
+      bank: "DKB",
+      variant: "Girokonto, until 2023",
+      sources: [
+        `${GH}siddhantgoel/beancount-dkb/issues/123`,
+        `${GH}siddhantgoel/beancount-dkb/blob/main/beancount_dkb/extractors/ec.py`,
+        `${GH}firefly-iii/import-configurations/blob/main/de/dkb/README.md`
+      ],
+      separator: ";",
+      match: ["Buchungstag", "Wertstellung", "Buchungstext", "Auftraggeber / Beg\xFCnstigter", "Verwendungszweck", "Kontonummer", "BLZ", "Betrag (EUR)"],
+      dateFormat: "DD.MM.YYYY",
+      numberFormat: "de",
+      columns: {
+        date: "Buchungstag",
+        valueDate: "Wertstellung",
+        amount: "Betrag (EUR)",
+        counterparty: ["Auftraggeber / Beg\xFCnstigter"],
+        text: ["Verwendungszweck"],
+        kind: "Buchungstext",
+        iban: "Kontonummer",
+        status: "Buchungstext"
+      },
+      skipStatus: ["tagessaldo"]
+      // balance lines, not payments
+    },
+    {
+      id: "dkb-visa",
+      bank: "DKB Visa",
+      variant: "Kreditkarte, since 2023",
+      sources: [
+        `${GH}siddhantgoel/beancount-dkb/issues/163`,
+        `${GH}siddhantgoel/beancount-dkb/issues/190`,
+        `${GH}siddhantgoel/beancount-dkb/issues/206`
+      ],
+      unconfirmed: "Date format and the sign of purchases are taken to be as in DKB's Girokonto export (no source states them).",
+      separator: [";", ","],
+      match: ["Belegdatum", "Wertstellung", "Status", "Beschreibung", "Umsatztyp", ["Betrag (\u20AC)", "Betrag"]],
+      dateFormat: ["DD.MM.YY", "DD.MM.YYYY"],
+      numberFormat: "de",
+      columns: {
+        date: "Belegdatum",
+        valueDate: "Wertstellung",
+        amount: ["Betrag (\u20AC)", "Betrag"],
+        counterparty: ["Beschreibung"],
+        status: "Status"
+      },
+      skipStatus: ["vorgemerkt"]
+    },
+    {
+      id: "dkb-visa-old",
+      bank: "DKB Visa",
+      variant: "Kreditkarte, until 2023",
+      sources: [
+        `${GH}siddhantgoel/beancount-dkb/issues/123`,
+        `${GH}siddhantgoel/beancount-dkb/blob/main/beancount_dkb/extractors/credit.py`
+      ],
+      separator: ";",
+      match: ["Umsatz abgerechnet und nicht im Saldo enthalten", "Wertstellung", "Belegdatum", "Beschreibung", "Betrag (EUR)"],
+      dateFormat: "DD.MM.YYYY",
+      numberFormat: "de",
+      columns: { date: "Belegdatum", valueDate: "Wertstellung", amount: "Betrag (EUR)", counterparty: ["Beschreibung"] }
+    },
+    {
+      id: "comdirect",
+      bank: "comdirect",
+      variant: "Girokonto",
+      sources: [
+        `${GH}leolabs/you-need-a-parser/blob/HEAD/packages/ynap-parsers/src/de/comdirect/test-data/umsaetze_1182395341_20190403-2324.csv`,
+        `${GH}leolabs/you-need-a-parser/blob/HEAD/packages/ynap-parsers/src/de/comdirect/comdirect.ts`,
+        `${GH}pb-/beancount-comdirect/blob/HEAD/beancount_comdirect/accounts.py`,
+        `${GH}sercxanto/go-homebank-csv/blob/HEAD/pkg/parser/testfiles/comdirect/umsaetze_1234567890_20231006_1804.csv`
+      ],
+      unconfirmed: "A file with several sections (giro account, Visa card, savings) is read up to the end of its first section.",
+      separator: ";",
+      match: ["Buchungstag", "Wertstellung (Valuta)", "Vorgang", "Buchungstext", "Umsatz in EUR"],
+      dateFormat: "DD.MM.YYYY",
+      numberFormat: "de",
+      columns: { date: "Buchungstag", valueDate: "Wertstellung (Valuta)", amount: "Umsatz in EUR", text: ["Buchungstext"], kind: "Vorgang" },
+      labelledText: {
+        labels: ["Auftraggeber", "Empf\xE4nger", "Zahlungspflichtiger", "Kto/IBAN", "BLZ/BIC", "Buchungstext", "Ref"],
+        counterparty: ["Empf\xE4nger", "Zahlungspflichtiger", "Auftraggeber"],
+        text: ["Buchungstext"]
+      }
+    },
+    {
+      id: "comdirect-visa",
+      bank: "comdirect Visa",
+      variant: "Kreditkarte",
+      sources: [
+        `${GH}pb-/beancount-comdirect/blob/HEAD/tests/test_multi_importer.py`,
+        `${GH}APACGAMONDE/APACGAMONDE-Bank-Public/blob/HEAD/SCSV_Test_2019-08-28_17-14-39-480.csv`
+      ],
+      unconfirmed: "The newest public example of this section is from 2019\u20132021.",
+      separator: ";",
+      match: ["Buchungstag", "Umsatztag", "Vorgang", "Referenz", "Buchungstext", "Umsatz in EUR"],
+      dateFormat: "DD.MM.YYYY",
+      numberFormat: "de",
+      columns: { date: "Umsatztag", valueDate: "Buchungstag", amount: "Umsatz in EUR", counterparty: ["Buchungstext"], status: "Buchungstag" },
+      skipStatus: ["offen"]
+    },
+    {
+      id: "commerzbank",
+      bank: "Commerzbank",
+      sources: [
+        `${GH}tireminnanzi/HomeExp/blob/92f4f33a87863e7a15007d2b20feb4de23f1a45c/doc%20banca/202404_202505_CMZB.csv`,
+        `${GH}nicolettas-muggelbude/RechnungsFee/blob/cd2a4903031349c3f4c667f993ff6b22956d6f82/vorlagen/bank-csv/commerzbank.csv`,
+        `${GH}siddhantgoel/beancount-commerzbank/blob/604772fcb4e7dc26cf0382990622247cba758e7d/beancount_commerzbank/ec.py`,
+        `${GH}firefly-iii/import-configurations/blob/cea1aa12a6ff5332b5f69a51f409eba5cd4b5135/de/commerzbank/csv-giro.json`,
+        `${GH}bank2ynab/bank2ynab/blob/9f3b3e89ea3d559d6c8e132d21d59659d45b7e82/test/test-data/Umsaetze_KtoNr538917600_EUR_02-03-2018_1503.CSV`
+      ],
+      unconfirmed: "The counterparty has no column of its own; it stays inside the text, which ends where the references start.",
+      separator: ";",
+      match: ["Buchungstag", "Wertstellung", "Umsatzart", "Buchungstext", "Betrag", "W\xE4hrung"],
+      dateFormat: "DD.MM.YYYY",
+      numberFormat: "de",
+      columns: {
+        date: "Buchungstag",
+        valueDate: "Wertstellung",
+        amount: "Betrag",
+        text: ["Buchungstext"],
+        kind: "Umsatzart",
+        currency: "W\xE4hrung",
+        accountIban: ["IBAN Kontoinhaber", "IBAN Auftraggeberkonto"]
+        // the account's own IBAN
+      },
+      labelledText: { labels: ["End-to-End-Ref", "Mandatsref", "Gl\xE4ubiger-ID"], counterparty: [], text: [""] }
+    },
+    {
+      id: "deutsche-bank",
+      bank: "Deutsche Bank",
+      variant: "since 2023 at Postbank, 2025 at Deutsche Bank",
+      sources: [
+        `${GH}firefly-iii/import-configurations/blob/cea1aa12a6ff5332b5f69a51f409eba5cd4b5135/de/deutschebank/Readme.md`,
+        `${GH}TMosebach/slowen/blob/62ef0cea419bed876f7b309f5914e843cba97871/test/dtbank-importtest-monat1.csv`,
+        `${GH}RtCryo/cash-cockpit/blob/4e9288ac6a2c77ab55a631ae5f90dcff9aaf683b/handler/src/test/resources/Kontoumsaetze_367_6139117_00_20231218_105036.csv`,
+        `${GH}eschmidt42/fintl/blob/3eb14d22b221b7d15726756b975e52407ef15385/tests/files/csv_files/Postbank/Kontoumsaetze_123_1234567_12_20231028_083011.csv`,
+        `${GH}BananaAccounting/Germany/blob/ff42561a7dbe2a70a7791bb9aba993eebdb48b98/importApps/deutschepostbank_import_bank_statement_csv/test/testcases/csv_deutschepostbank_example_format1_20250414.csv`
+      ],
+      separator: ";",
+      match: ["Buchungstag", "Wert", "Umsatzart", "Beg\xFCnstigter / Auftraggeber", "Verwendungszweck", "IBAN / Kontonummer", "Betrag", "Soll", "Haben"],
+      bankInPreamble: ["Postbank", "Deutsche Bank"],
+      dateFormat: "DD.MM.YYYY",
+      numberFormat: "de",
+      columns: {
+        date: "Buchungstag",
+        valueDate: "Wert",
+        amount: "Betrag",
+        counterparty: ["Beg\xFCnstigter / Auftraggeber"],
+        text: ["Verwendungszweck"],
+        kind: "Umsatzart",
+        iban: "IBAN / Kontonummer",
+        currency: "W\xE4hrung"
+      }
+    },
+    {
+      id: "deutsche-bank-old",
+      bank: "Deutsche Bank",
+      variant: "until 2025",
+      sources: [
+        `${GH}BananaAccounting/Germany/blob/ff42561a7dbe2a70a7791bb9aba993eebdb48b98/importApps/deutschebank_import_bank_statement_csv/test/testcases/csv_deutschebank_example_format3_20240131.csv`,
+        `${GH}BananaAccounting/Germany/blob/ff42561a7dbe2a70a7791bb9aba993eebdb48b98/importApps/deutschebank_import_bank_statement_csv/ch.banana.germany.import.deutschebank.js`,
+        `${GH}firefly-iii/import-configurations/commit/6dae608005f27e4fdc249c3cece537736610bcbc`
+      ],
+      separator: ";",
+      match: ["Buchungstag", "Wert", "Umsatzart", "Beg\xFCnstigter / Auftraggeber", "Verwendungszweck", "IBAN", "Soll", "Haben"],
+      dateFormat: "DD.MM.YYYY",
+      numberFormat: "de",
+      columns: {
+        date: "Buchungstag",
+        valueDate: "Wert",
+        debit: "Soll",
+        credit: "Haben",
+        counterparty: ["Beg\xFCnstigter / Auftraggeber"],
+        text: ["Verwendungszweck"],
+        kind: "Umsatzart",
+        iban: "IBAN",
+        currency: "W\xE4hrung"
+      }
+    },
+    {
+      id: "deutsche-bank-old-en",
+      bank: "Deutsche Bank",
+      variant: "until 2025, English",
+      sources: [
+        `${GH}mshogin/tx2ledger/blob/c5ff013a410c10e0a6a0e73f9bebe6553f3f1e68/testdata/tx.csv`,
+        `${GH}mafflin/moritz/blob/1d3e85210fa677e24cc20c50785b961403a16466/spec/fixtures/files/db.csv`,
+        `${GH}bank2ynab/bank2ynab/blob/9f3b3e89ea3d559d6c8e132d21d59659d45b7e82/bank2ynab/data/bank2ynab.conf`
+      ],
+      separator: ";",
+      match: ["Booking date", "Value date", "Transaction Type", "Beneficiary / Originator", "Payment Details", "Debit", "Credit"],
+      dateFormat: "MM/DD/YYYY",
+      numberFormat: "en",
+      columns: {
+        date: "Booking date",
+        valueDate: "Value date",
+        debit: "Debit",
+        credit: "Credit",
+        counterparty: ["Beneficiary / Originator"],
+        text: ["Payment Details"],
+        kind: "Transaction Type",
+        iban: "IBAN",
+        currency: "Currency"
+      }
+    },
+    {
+      id: "postbank-old",
+      bank: "Postbank",
+      variant: "Umsatzauskunft, until 2023",
+      sources: [
+        `${GH}eschmidt42/fintl/blob/3eb14d22b221b7d15726756b975e52407ef15385/tests/files/csv_files/Postbank/Umsatzauskunft_KtoNr0123456789_31-12-2021_17-20-43.csv`,
+        `${GH}Corion/Finance-Bank-Postbank_de/blob/70acd3311f203dd4c3a8c3f4e66f51226b715afc/t/accountstatement.txt`
+      ],
+      separator: ";",
+      // The booked table (the upcoming payments above it have no value date and no balance column).
+      match: ["Buchungsdatum", "Wertstellung", "Umsatzart", "Buchungsdetails", "Auftraggeber", "Empf\xE4nger", "Betrag (\u20AC)", "Saldo (\u20AC)"],
+      dateFormat: "DD.MM.YYYY",
+      numberFormat: "de",
+      columns: {
+        date: "Buchungsdatum",
+        valueDate: "Wertstellung",
+        amount: "Betrag (\u20AC)",
+        payer: "Auftraggeber",
+        payee: "Empf\xE4nger",
+        text: ["Buchungsdetails"],
+        kind: "Umsatzart",
+        balance: "Saldo (\u20AC)"
+      }
+    },
+    {
+      id: "n26",
+      bank: "N26",
+      variant: "since 2023",
+      sources: [
+        `${GH}leolabs/you-need-a-parser/issues/661`,
+        `${GH}siddhantgoel/beancount-n26/blob/e53796b58805f8396be4002ac373e0e89f613c58/CHANGELOG.md`
+      ],
+      unconfirmed: "No German-language header of this layout was found.",
+      separator: ",",
+      match: ["Booking Date", "Value Date", "Partner Name", "Partner Iban", "Type", "Payment Reference", "Amount (EUR)"],
+      dateFormat: "YYYY-MM-DD",
+      numberFormat: "en",
+      columns: {
+        date: "Booking Date",
+        valueDate: "Value Date",
+        amount: "Amount (EUR)",
+        counterparty: ["Partner Name"],
+        iban: "Partner Iban",
+        text: ["Payment Reference"]
+      }
+    },
+    {
+      id: "n26-old",
+      bank: "N26",
+      variant: "until 2023",
+      sources: [
+        `${GH}leolabs/you-need-a-parser/blob/cacad521a503c0b905bd350cffe4a6dec6930ee7/packages/ynap-parsers/src/de/n26/test-data/n26-csv-transactions-2021.csv`,
+        `${GH}siddhantgoel/beancount-n26/blob/e53796b58805f8396be4002ac373e0e89f613c58/beancount_n26/__init__.py`,
+        `${GH}simonmichael/hledger/blob/6833d59b175974f9d15ecf3f87d134347df9ae3d/examples/csv/banking/n26-main.rules`,
+        `${GH}firefly-iii/import-configurations/blob/cea1aa12a6ff5332b5f69a51f409eba5cd4b5135/de/n26/default.json`
+      ],
+      unconfirmed: "The German header's date and number format are not shown in a file; both forms are accepted.",
+      separator: ",",
+      match: [
+        ["Date", "Datum"],
+        ["Payee", "Empf\xE4nger"],
+        ["Account number", "Kontonummer"],
+        ["Transaction type", "Transaktionstyp"],
+        ["Payment reference", "Verwendungszweck"],
+        ["Amount (EUR)", "Betrag (EUR)"]
+      ],
+      dateFormat: ["YYYY-MM-DD", "DD.MM.YYYY"],
+      numberFormat: "either",
+      columns: {
+        date: ["Date", "Datum"],
+        amount: ["Amount (EUR)", "Betrag (EUR)"],
+        counterparty: [["Payee", "Empf\xE4nger"]],
+        iban: ["Account number", "Kontonummer"],
+        text: [["Payment reference", "Verwendungszweck"]]
+      }
+    },
+    {
+      id: "revolut",
+      bank: "Revolut",
+      sources: [
+        `${GH}mlaitinen/ofxstatement-revolut/tree/c3a3826cc472befd7d1413be10628302d667b314`,
+        `${GH}BananaAccounting/Universal/tree/c231b374a7c9c7d8a6cda33262487d228b45b238/extensions/import/revolut`,
+        `${GH}kelvan/money_parser_rs/blob/31343cbc104ff50e947c924f056af96b5c959fd8/src/locale/revolut.rs`,
+        `${GH}martinzoeller/revolut-grab-exporter/blob/3c172232391bdaaca8fd83e9fdc72d5c14d31036/internal/infrastructure/csv/reader.go`
+      ],
+      unconfirmed: "German status words other than ABGESCHLOSSEN were not found; only completed rows are read.",
+      separator: ",",
+      match: [
+        ["Type", "Art"],
+        ["Product", "Produkt"],
+        ["Started Date", "Datum des Beginns"],
+        ["Completed Date", "Datum des Abschlusses"],
+        ["Description", "Beschreibung"],
+        ["Amount", "Betrag"],
+        ["State", "Status"]
+      ],
+      dateFormat: "YYYY-MM-DD",
+      numberFormat: "en",
+      columns: {
+        date: ["Started Date", "Datum des Beginns"],
+        valueDate: ["Completed Date", "Datum des Abschlusses"],
+        amount: ["Amount", "Betrag"],
+        fees: [["Fee", "Geb\xFChr"]],
+        counterparty: [["Description", "Beschreibung"]],
+        balance: ["Balance", "Kontostand"],
+        currency: ["Currency", "W\xE4hrung"],
+        status: ["State", "Status"]
+      },
+      keepStatus: ["completed", "abgeschlossen"]
+      // pending, reverted and declined rows moved no money (yet)
+    },
+    {
+      id: "trade-republic",
+      bank: "Trade Republic",
+      variant: "Transaktionsexport, since 2026",
+      sources: [
+        `${GH}portfolio-performance/portfolio/blob/2a0ef52a93882c0845596b2c6b834e54f592b7ec/name.abuchen.portfolio/src/name/abuchen/portfolio/datatransfer/traderepublic/TradeRepublicCSVExtractor.java`,
+        `${GH}portfolio-performance/portfolio/tree/2a0ef52a93882c0845596b2c6b834e54f592b7ec/name.abuchen.portfolio.tests/src/name/abuchen/portfolio/datatransfer/traderepublic`,
+        `${GH}VibeNL/GhostfolioSidekick/tree/f894bcdbcd96541353b74daa8edd689cfc7900d5/Parsers.UnitTests/TestFiles/TradeRepublic/CSV`
+      ],
+      unconfirmed: "Which of the two variants (comma or semicolon) is current; no German column names were found.",
+      separator: [",", ";"],
+      match: ["datetime", "date", "category", "type", "amount", "currency", "transaction_id"],
+      dateFormat: "YYYY-MM-DD",
+      numberFormat: "en",
+      columns: {
+        date: "date",
+        valueDate: "value_date",
+        amount: "amount",
+        addAmounts: ["fee", "tax"],
+        counterparty: ["counterparty_name", "name"],
+        iban: "counterparty_iban",
+        text: ["payment_reference", "description"],
+        currency: "currency",
+        reference: "transaction_id"
+      }
+    },
+    {
+      id: "consorsbank",
+      bank: "Consorsbank",
+      sources: [
+        `${GH}Ralphovi/ofxstatement-consorsbank/tree/c7daaf4e8591e07860f1670d0ba1ed8029e8cb73`,
+        `${GH}aniav/ynab-csv/issues/1#issuecomment-369678842`,
+        `${GH}bank2ynab/bank2ynab/issues/241`
+      ],
+      unconfirmed: "The 2025\u20132026 layout comes from an importer's test file built on real exports, not from a raw export.",
+      separator: ";",
+      match: [
+        "Buchung",
+        "Valuta",
+        "Sender / Empf\xE4nger",
+        ["IBAN", "IBAN / Konto-Nr."],
+        "Buchungstext",
+        "Verwendungszweck",
+        ["Betrag", "Betrag in EUR"]
+      ],
+      dateFormat: "DD.MM.YYYY",
+      numberFormat: "de",
+      columns: {
+        date: "Buchung",
+        valueDate: "Valuta",
+        amount: ["Betrag", "Betrag in EUR"],
+        counterparty: ["Sender / Empf\xE4nger"],
+        iban: ["IBAN", "IBAN / Konto-Nr."],
+        text: ["Verwendungszweck"],
+        kind: "Buchungstext",
+        currency: "W\xE4hrung"
+      }
+    },
+    {
+      id: "c24",
+      bank: "C24",
+      variant: "Smartkonto",
+      sources: [
+        `${GH}anydef/finreport/blob/bb6aea2c1d14731880d37e94b69d331021b99da8/finreport-rs/c24-csv/src/parser.rs`,
+        `${GH}fer0n/Relay/blob/601c317a2bac55afabf8db6493e3715b30f5dd6e/RelayTests/StatementImportParsingTests.swift`,
+        `${GH}13excite/c24-expences/blob/d18a48a0fda8451c95e5f3b29fd2819da675518a/testdata/transaction.csv.mock`
+      ],
+      unconfirmed: 'One file can hold several C24 accounts ("Kontoname"); they are read as one account. Pending rows: unknown.',
+      separator: ",",
+      match: ["Transaktionstyp", "Buchungsdatum", "Betrag", "Zahlungsempf\xE4nger", "Verwendungszweck", "Beschreibung"],
+      dateFormat: "DD.MM.YYYY",
+      numberFormat: "de",
+      columns: {
+        date: "Buchungsdatum",
+        amount: "Betrag",
+        counterparty: ["Zahlungsempf\xE4nger"],
+        iban: "IBAN",
+        text: ["Verwendungszweck", "Beschreibung"],
+        kind: "Transaktionstyp"
+      }
+    },
+    {
+      id: "amex",
+      bank: "American Express",
+      sources: [
+        `${GH}Viniciussteigleder/CoupleFin/blob/77527b5982ba5b70b6358f74ce2e86f631a20f30/Sample_transaction_import/CSV/Amex/activity%20(8).csv`,
+        `${GH}adrianlemess/AMEX-UI/blob/0f99dcac47f916871a9e18f8fb80e1e07f77b8ff/apps/api/src/amex/activity.test.ts`,
+        `${GH}Galaxy102/openbank-transactions-to-hibiscus/blob/a1c79ef55b38e991a06588267c2a00cb79ead0ca/loaders/amex.py`,
+        "https://help.lexware.de/de-form/articles/548879-lexware-office-american-express-als-konto-ohne-verbindung-fuhren"
+      ],
+      unconfirmed: "How pending rows look, and the header of the English-language site.",
+      separator: ",",
+      match: ["Datum", "Beschreibung", "Karteninhaber", "Konto #", "Betrag", "Betreff"],
+      dateFormat: "DD/MM/YYYY",
+      numberFormat: "de",
+      columns: { date: "Datum", amount: "Betrag", counterparty: ["Beschreibung"], reference: "Betreff" },
+      invertSign: true
+      // purchases are positive, payments to the card negative
+    },
+    {
+      id: "targobank",
+      bank: "Targobank",
+      variant: "Girokonto",
+      sources: [
+        `${GH}nicolettas-muggelbude/RechnungsFee/blob/cd2a4903031349c3f4c667f993ff6b22956d6f82/vorlagen/bank-csv/targobank-duesseldorf.csv`,
+        `${GH}replikativ/kontor/blob/78c94812a63700f048306493d0ecf183a3919f54/modules/bank-de/test/resources/targobank-duesseldorf.csv`,
+        `${GH}Notausstieg0309/MoneyWatch/blob/200101565c93e35ff8a72df8cf3d7a933b2024e4/src/moneywatch/import_plugins/targobank.py`
+      ],
+      unconfirmed: "No header row: recognised by its seven columns with the account's IBAN last. Counterparty, IBAN and text share one column.",
+      separator: ";",
+      match: [],
+      headerless: { columnCount: 7, ibanColumn: 6 },
+      dateFormat: "DD.MM.YYYY",
+      numberFormat: "either",
+      // the same account has exported both -5,00 and -5.00
+      columns: { date: 0, text: [1], debit: 2, credit: 3, accountIban: 6 }
+    },
+    {
+      id: "barclays",
+      bank: "Barclays",
+      variant: "Excel export saved as CSV",
+      sources: [
+        `${GH}firefly-iii/import-configurations/blob/main/de/barclays/Readme.md`,
+        `${GH}firefly-iii/import-configurations/blob/main/de/barclays/barclays.json`,
+        `${GH}phdorp/firefly-cash-converter/blob/9a0a940f55f512a89da1ec27a368ecae4fbbcf7d/test/data/barclays.xlsx`,
+        `${GH}sercxanto/go-homebank-csv/blob/5c20f3ed964ceca073fa832f54406703729399ae/pkg/parser/barclaycard.go`
+      ],
+      unconfirmed: 'Barclays (now easybank) offers no CSV, only Excel (.xlsx), which the app cannot read; this reads the Excel file saved as CSV. Which of the two "Buchungsdatum" columns is the purchase day: sources disagree (here the first).',
+      separator: [";", ","],
+      match: ["Referenznummer", "Buchungsdatum", "Betrag", "Beschreibung", "Typ", "Status", "Kartennummer"],
+      dateFormat: "DD.MM.YYYY",
+      numberFormat: "de",
+      columns: {
+        date: "Buchungsdatum",
+        valueDate: "Buchungsdatum (2)",
+        amount: "Betrag",
+        counterparty: ["Beschreibung"],
+        text: [["Details", "H\xE4ndlerdetails"]],
+        kind: "Typ",
+        reference: "Referenznummer",
+        status: "Status"
+      },
+      skipStatus: ["vorgemerkt"]
+    }
+  ];
+
+  // src/engine/readers/profiles.ts
+  var separators = (profile) => Array.isArray(profile.separator) ? profile.separator : [profile.separator];
+  var formats = (profile) => Array.isArray(profile.dateFormat) ? profile.dateFormat : [profile.dateFormat];
+  var names = (column) => Array.isArray(column) ? column : [column];
+  function fitsHeaderless(profile, rows) {
+    const shape = profile.headerless;
+    const first = rows.find((r) => r.some((v) => v.trim() !== ""));
+    if (!first || first.length !== shape.columnCount || typeof profile.columns.date !== "number") return false;
+    if (!formats(profile).some((f) => parseDate(first[profile.columns.date] ?? "", f) !== null)) return false;
+    return shape.ibanColumn === void 0 || normalizeIban(first[shape.ibanColumn] ?? "") !== null;
+  }
+  function findProfile(rows, separator) {
+    let best = null;
+    for (const profile of BANK_PROFILES) {
+      if (!separators(profile).includes(separator)) continue;
+      if (profile.headerless) {
+        if (!best && fitsHeaderless(profile, rows)) best = { profile, headerRow: -1 };
+        continue;
+      }
+      const headerRow = findHeaderRow(rows, profile.match.map((m) => (Array.isArray(m) ? m : [m]).map(headerKey)));
+      if (headerRow < 0) continue;
+      if (!best || best.headerRow < 0 || headerRow < best.headerRow || headerRow === best.headerRow && profile.match.length > best.profile.match.length) best = { profile, headerRow };
+    }
+    return best;
+  }
+  function fileNumberFormat(rows, columns) {
+    let de = 0, en = 0;
+    for (const row of rows) for (const j of columns) {
+      const v = row[j] ?? "";
+      if (parseAmountStrict(v, "de") !== null && /,\d/.test(v)) de++;
+      if (parseAmountStrict(v, "en") !== null && /\.\d/.test(v)) en++;
+    }
+    return en > de ? "en" : "de";
+  }
+  function profileLayout(profile, rows, headerRow, separator) {
+    const header = headerRow >= 0 ? trimRow(rows[headerRow]) : [];
+    const keys = uniqueHeader(headerRow >= 0 ? rows[headerRow].map((h) => h.trim()) : []).map(headerKey);
+    const at = (column) => {
+      for (const name2 of column === void 0 ? [] : names(column)) {
+        if (typeof name2 === "number") return name2;
+        const i = keys.indexOf(headerKey(name2));
+        if (i >= 0) return i;
+      }
+      return void 0;
+    };
+    const p = profile.columns;
+    const columns = { date: at(p.date) ?? -1 };
+    for (const role of [
+      "valueDate",
+      "amount",
+      "debit",
+      "credit",
+      "sign",
+      "payer",
+      "payee",
+      "kind",
+      "iban",
+      "accountIban",
+      "balance",
+      "currency",
+      "reference",
+      "status"
+    ]) {
+      const i = at(p[role]);
+      if (i !== void 0) columns[role] = i;
+    }
+    for (const role of ["counterparty", "text", "fees", "addAmounts"]) {
+      const list = (p[role] ?? []).map(at).filter((i) => i !== void 0);
+      if (list.length > 0) columns[role] = list;
+    }
+    if (columns.date < 0) return null;
+    if (columns.amount === void 0 && (columns.debit === void 0 || columns.credit === void 0)) return null;
+    const amountColumns = [columns.amount, columns.debit, columns.credit].filter((i) => i !== void 0);
+    const data = rows.slice(headerRow + 1).filter((r) => r.some((v) => v.trim() !== "")).slice(0, 20);
+    const dateFormat = formats(profile).find((f) => data.some((r) => parseDate(r[columns.date] ?? "", f) !== null)) ?? formats(profile)[0];
+    const above = rows.slice(0, Math.max(headerRow, 0)).map((r) => r.join(" ").toLowerCase());
+    const name = profile.bankInPreamble?.find((n) => above.some((line) => line.includes(n.toLowerCase()))) ?? profile.bank;
+    return {
+      version: 1,
+      name,
+      profile: profile.id,
+      separator,
+      header,
+      ...profile.headerless ? { columnCount: profile.headerless.columnCount } : {},
+      dateFormat,
+      numberFormat: profile.numberFormat === "either" ? fileNumberFormat(data, amountColumns) : profile.numberFormat,
+      columns,
+      ...profile.skipStatus ? { skipStatus: profile.skipStatus } : {},
+      ...profile.keepStatus ? { keepStatus: profile.keepStatus } : {},
+      ...profile.invertSign ? { invertSign: true } : {},
+      ...profile.currency ? { currency: profile.currency } : {},
+      ...profile.labelledText ? { labelledText: profile.labelledText } : {}
+    };
+  }
+
+  // src/engine/readers/read.ts
+  var isPaypalHeader = (row) => {
+    const keys = new Set(row.map(headerKey));
+    return (keys.has("transaktionscode") || keys.has("transactionid")) && ["netto", "net", "brutto", "gross"].some((k) => keys.has(k));
+  };
+  function savedLayoutFor(text2, saved) {
+    const bySeparator = /* @__PURE__ */ new Map();
+    const ordered = [...saved].sort((a, b) => Number(a.header.length === 0) - Number(b.header.length === 0));
+    for (const layout of ordered) {
+      if (!bySeparator.has(layout.separator)) bySeparator.set(layout.separator, splitCsv(text2.slice(0, 2e5), layout.separator));
+      const headerRow = findTable(bySeparator.get(layout.separator), layout);
+      if (headerRow !== null) return { layout, headerRow };
+    }
+    return null;
+  }
+  function detectBankFile(text2, savedLayouts = []) {
+    const head = text2.replace(/^\uFEFF/, "").trimStart();
+    if (head === "") return { format: "unknown", reason: "empty" };
+    if (head.startsWith("PK")) return { format: "unknown", reason: "zip" };
+    if (head.startsWith("<")) {
+      if (!/<(\w+:)?Document[\s>]/.test(head) || !/BkToCstmr/.test(head)) return { format: "unknown", reason: "xml" };
+      const message = /camt\.05[234]\.\d{3}\.\d{2}/.exec(head)?.[0];
+      return message ? { format: "camt", message } : { format: "camt" };
+    }
+    if (/^:20:/m.test(head) && /^:(61|60F|60M):/m.test(head)) return { format: "mt940" };
+    const separator = detectSeparator(head);
+    const rows = splitCsv(head.slice(0, 2e5), separator);
+    const paypalRow = rows.slice(0, 5).findIndex(isPaypalHeader);
+    if (paypalRow >= 0) return { format: "paypal", separator, headerRow: paypalRow };
+    const saved = savedLayoutFor(head, savedLayouts);
+    if (saved) return { format: "csv", separator: saved.layout.separator, headerRow: saved.headerRow, layout: saved.layout };
+    const known = findProfile(rows, separator);
+    const layout = known ? profileLayout(known.profile, rows, known.headerRow, separator) : null;
+    if (known && layout) {
+      return { format: "csv", separator, headerRow: known.headerRow, layout, profile: { id: known.profile.id, bank: known.profile.bank } };
+    }
+    const table = findTableStart(rows);
+    return table ? { format: "csv", separator, headerRow: table.headerRow } : { format: "unknown", reason: "noTable" };
+  }
+  function isoTransactions(file) {
+    return file.transactions.map(({ bookingDate: bookingDate2, valueDate, ...txn }) => ({
+      ...txn,
+      bookingDate: bookingDate2.toISOString(),
+      ...valueDate === void 0 ? {} : { valueDate: valueDate?.toISOString() ?? null }
+    }));
+  }
+  var findKnown = (id) => BANK_PROFILES.find((p) => p.id === id);
+  var bankName = (profile) => profile.variant ? `${profile.bank} (${profile.variant})` : profile.bank;
+  function readVrBank(text2, profile) {
+    const parsed = parseVrBankCsv(text2);
+    const dateColumns = ["Buchungstag", "Buchung", "Buchungsdatum"];
+    const kept = parsed.transactions.filter((t) => {
+      const raw = t.raw;
+      const value = dateColumns.map((c) => raw[c]).find((v) => v !== void 0 && v.trim() !== "") ?? "";
+      return DATE_FORMATS.some((f) => parseDate(value, f) !== null);
+    });
+    const ids = withOccurrences(kept.map((t) => ({
+      id: t.externalId,
+      fields: `${t.bookingDate.toISOString()}|${t.amount}|${t.description}|${t.counterparty ?? ""}`
+    })));
+    const canonical = (v) => parseAmountStrict(v, "en") ?? v;
+    const transactions = isoTransactions({ ...parsed, transactions: kept }).map((t, i) => ({
+      ...t,
+      externalId: ids[i],
+      amount: canonical(t.amount),
+      ...t.balance ? { balance: canonical(t.balance) } : {}
+    }));
+    const account = { name: parsed.account.name, currency: parsed.account.currency, ...parsed.account.iban ? { iban: parsed.account.iban } : {} };
+    return {
+      format: "csv",
+      bank: { id: profile.id, name: bankName(profile) },
+      account,
+      transactions,
+      skipped: parsed.transactions.length - kept.length
+    };
+  }
+  function readBankFile(bytes, savedLayouts = []) {
+    if (bytes[0] === 80 && bytes[1] === 75 && bytes[2] === 3 && bytes[3] === 4) {
+      throw new BankFileError("zip", "This is a ZIP archive; open it and import the files inside.");
+    }
+    const { text: text2, encoding } = decodeBankFileWithEncoding(bytes);
+    return { ...readBankText(text2, savedLayouts), encoding };
+  }
+  function readBankText(text2, savedLayouts = []) {
+    const detected = detectBankFile(text2, savedLayouts);
+    switch (detected.format) {
+      case "camt":
+        return readCamt(text2);
+      case "mt940":
+        return readMt940(text2);
+      case "paypal": {
+        const table = detected.headerRow === 0 ? text2 : text2.replace(/^\uFEFF/, "").split(/\r?\n/).slice(detected.headerRow).join("\n");
+        const parsed = parsePaypalCsv(table);
+        return {
+          format: "paypal",
+          bank: { id: "paypal", name: "PayPal" },
+          account: { name: parsed.account.name, currency: parsed.account.currency },
+          transactions: isoTransactions(parsed)
+        };
+      }
+      case "csv": {
+        const { layout, profile } = detected;
+        const known = profile ? findKnown(profile.id) : void 0;
+        if (known?.reader === "vrbank" && detected.headerRow === 0) return readVrBank(text2, known);
+        if (layout) {
+          const rows = splitCsv(text2.replace(/^\uFEFF/, ""), layout.separator);
+          const file = readTable(rows, detected.headerRow, layout);
+          return known ? { ...file, bank: { id: known.id, name: bankName(known) } } : file;
+        }
+        return { format: "csv", transactions: [], needsLayout: guessCsvLayout(text2.replace(/^\uFEFF/, "")) };
+      }
+      case "unknown": {
+        const messages = {
+          empty: "The file is empty.",
+          zip: "This is a ZIP archive; open it and import the files inside.",
+          xml: "This XML file is not a CAMT bank statement (camt.052, .053 or .054).",
+          noTable: "No table with a header row and dates was found in this file."
+        };
+        const code = detected.reason === "xml" ? "camt" : detected.reason;
+        throw new BankFileError(code, messages[detected.reason]);
+      }
+    }
+  }
+
   // src/engine/index.ts
   var version = "0.1.0";
   function isoDates(file) {
     return {
       ...file,
-      transactions: file.transactions.map(({ bookingDate, valueDate, ...txn }) => ({
+      transactions: file.transactions.map(({ bookingDate: bookingDate2, valueDate, ...txn }) => ({
         ...txn,
-        bookingDate: bookingDate.toISOString(),
+        bookingDate: bookingDate2.toISOString(),
         ...valueDate === void 0 ? {} : { valueDate: valueDate?.toISOString() ?? null }
       }))
     };
