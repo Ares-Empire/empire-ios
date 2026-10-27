@@ -1,6 +1,6 @@
 # 14: Reading every German bank's export (CSV, CAMT, MT940)
 
-Status: draft
+Status: merged 2026-10-27 (25 layouts, CAMT, MT940; 224 tests on main after merging with 12)
 Repo: aresium · Worktree: `~/aresium-14-bank-readers` (branch `claude/14-bank-readers`) · Built by: a Claude agent
 
 ## Goal
