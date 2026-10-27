@@ -42,20 +42,41 @@ final class DashboardStore {
     /// Aresium's widget snapshot (App Group). The default writes to a temporary folder (tests, previews); the app
     /// passes the real one.
     let widgetPublisher: WidgetSnapshotPublisher
-    private let client: APIClient
+    /// Where the data comes from: the server or the phone's own store (`AresiumBackend`); nil until the app knows the
+    /// account's mode (`ModeStore`), so nothing is asked of the wrong one.
+    private(set) var backend: (any AresiumBackend)?
     var generation: Int { session.generation }
     private var fetchGeneration = 0
     private(set) var lastSuccessfulLoad: Date?
     private var foregroundRefreshing = false
 
-    init(session: EmpireSession, client: APIClient = APIClient(), sample: Bool = false,
+    /// Server mode from the start (tests, the server sample).
+    convenience init(session: EmpireSession, client: APIClient = APIClient(), sample: Bool = false,
+                     widgetPublisher: WidgetSnapshotPublisher = .temporary()) {
+        self.init(session: session, backend: ServerBackend(client: client), sample: sample, widgetPublisher: widgetPublisher)
+    }
+
+    init(session: EmpireSession, backend: (any AresiumBackend)?, sample: Bool = false,
          widgetPublisher: WidgetSnapshotPublisher = .temporary()) {
         self.session = session
-        self.client = client
+        self.backend = backend
         self.widgetPublisher = widgetPublisher
         isSample = sample
-        // Logout, or no access to Aresium with this login: forget the dashboard and the widget's numbers.
+        // Logout, or no access to Aresium with this login: forget the dashboard and the widget's numbers. (In phone mode
+        // the data itself stays on the phone; `ModeStore` only closes its store.)
         session.onAppDataReset { [weak self] in self?.clear() }
+    }
+
+    /// Switches to another backend (the account's mode is known, or changed): the old one's dashboard goes, and a load
+    /// still running for it is superseded.
+    func use(_ backend: (any AresiumBackend)?) {
+        guard backend !== self.backend else { return }
+        self.backend = backend
+        fetchGeneration += 1
+        isLoading = false
+        dashboard = nil
+        lastSuccessfulLoad = nil
+        error = nil
     }
 
     func reload() async {
@@ -70,18 +91,19 @@ final class DashboardStore {
             let loaded: Dashboard
             if isSample { loaded = try Dashboard.sample() }
             else {
-                guard let token else { throw HTTPError.unauthorized }
-                loaded = try await client.dashboard(token: token) {
+                guard let backend else { return }          // the account's mode is not known yet
+                loaded = try await backend.dashboard(auth: BackendAuth(token: token) {
                     if fetch == self.fetchGeneration {
                         self.session.handleAuthFailure(HTTPError.unauthorized, generation: generation, token: token)
                     }
-                }
+                })
                 guard generation == self.generation else { return }
             }
             guard generation == self.generation, fetch == fetchGeneration else { return }
             dashboard = loaded
             lastSuccessfulLoad = .now
-            try widgetPublisher.publish(loaded, account: session.accountID)
+            // Phone mode without the account server (offline at launch): the store's account names the snapshot.
+            try widgetPublisher.publish(loaded, account: session.accountID ?? backend?.account)
         } catch {
             guard generation == self.generation, fetch == fetchGeneration else { return }
             session.handleAuthFailure(error, generation: generation, token: token)
@@ -114,7 +136,7 @@ final class DashboardStore {
     }
 
     func transactionDetailStore(for transaction: Transaction) -> TransactionDetailStore {
-        TransactionDetailStore(transaction: transaction, dashboardStore: self, client: client)
+        TransactionDetailStore(transaction: transaction, dashboardStore: self)
     }
 
     // A refresh already in flight may predate the save. Supersede it so the new

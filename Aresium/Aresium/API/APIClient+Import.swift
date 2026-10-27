@@ -1,8 +1,35 @@
 import Foundation
 
-struct ImportFile: Codable, Sendable, Equatable {
+/// A file to import, as its bytes. The server gets it as text (`content`, UTF-8 with replacement characters, as the
+/// website reads files); phone mode hands the bytes to the engine, which finds the encoding itself.
+nonisolated struct ImportFile: Codable, Sendable, Equatable {
     let name: String
-    let content: String
+    let data: Data
+
+    init(name: String, data: Data) {
+        self.name = name
+        self.data = data
+    }
+
+    init(name: String, content: String) {
+        self.init(name: name, data: Data(content.utf8))
+    }
+
+    var content: String { String(decoding: data, as: UTF8.self) }
+
+    private enum CodingKeys: String, CodingKey { case name, content }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(name: try container.decode(String.self, forKey: .name),
+                  content: try container.decode(String.self, forKey: .content))
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(name, forKey: .name)
+        try container.encode(content, forKey: .content)
+    }
 }
 
 struct ImportResponse: Decodable {

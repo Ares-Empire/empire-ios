@@ -4380,7 +4380,7 @@ var __AresiumEngine = (() => {
       state: init_state(options),
       __needMoreData: function(i, bufLen, end) {
         if (end) return false;
-        const { encoding, escape: escape2, quote } = this.options;
+        const { encoding, escape, quote } = this.options;
         const { quoting, needMoreDataSize, recordDelimiterMaxLength } = this.state;
         const numOfCharLeft = bufLen - i - 1;
         const requiredLength = Math.max(
@@ -4393,7 +4393,7 @@ var __AresiumEngine = (() => {
           // recordDelimiterMaxLength,
           recordDelimiterMaxLength === 0 ? Buffer2.from("\r\n", encoding).length : recordDelimiterMaxLength,
           // Skip if remaining buffer can be an escaped quote
-          quoting ? (escape2 === null ? 0 : escape2.length) + quote.length : 0,
+          quoting ? (escape === null ? 0 : escape.length) + quote.length : 0,
           // Skip if remaining buffer can be record delimiter following the closing quote
           quoting ? quote.length + recordDelimiterMaxLength : 0
         );
@@ -4415,7 +4415,7 @@ var __AresiumEngine = (() => {
           to,
           to_line
         } = this.options;
-        let { comment, escape: escape2, quote, record_delimiter } = this.options;
+        let { comment, escape, quote, record_delimiter } = this.options;
         const { bomSkipped, previousBuf, rawBuffer, escapeIsQuote } = this.state;
         let buf;
         if (previousBuf === void 0) {
@@ -4448,7 +4448,7 @@ var __AresiumEngine = (() => {
                   ...this.original_options,
                   encoding: encoding2
                 });
-                ({ comment, escape: escape2, quote } = this.options);
+                ({ comment, escape, quote } = this.options);
                 break;
               }
             }
@@ -4489,16 +4489,16 @@ var __AresiumEngine = (() => {
           if (this.state.escaping === true) {
             this.state.escaping = false;
           } else {
-            if (escape2 !== null && this.state.quoting === true && this.__isEscape(buf, pos, chr) && pos + escape2.length < bufLen) {
+            if (escape !== null && this.state.quoting === true && this.__isEscape(buf, pos, chr) && pos + escape.length < bufLen) {
               if (escapeIsQuote) {
-                if (this.__isQuote(buf, pos + escape2.length)) {
+                if (this.__isQuote(buf, pos + escape.length)) {
                   this.state.escaping = true;
-                  pos += escape2.length - 1;
+                  pos += escape.length - 1;
                   continue;
                 }
               } else {
                 this.state.escaping = true;
-                pos += escape2.length - 1;
+                pos += escape.length - 1;
                 continue;
               }
             }
@@ -4513,8 +4513,8 @@ var __AresiumEngine = (() => {
                   nextChr
                 );
                 const isNextChrRecordDelimiter = record_delimiter.length === 0 ? this.__autoDiscoverRecordDelimiter(buf, pos + quote.length) : this.__isRecordDelimiter(nextChr, buf, pos + quote.length);
-                if (escape2 !== null && this.__isEscape(buf, pos, chr) && this.__isQuote(buf, pos + escape2.length)) {
-                  pos += escape2.length - 1;
+                if (escape !== null && this.__isEscape(buf, pos, chr) && this.__isQuote(buf, pos + escape.length)) {
+                  pos += escape.length - 1;
                 } else if (!nextChr || isNextChrDelimiter || isNextChrRecordDelimiter || isNextChrComment || isNextChrTrimable) {
                   this.state.quoting = false;
                   this.state.wasQuoting = true;
@@ -5017,12 +5017,12 @@ var __AresiumEngine = (() => {
         return 0;
       },
       __isEscape: function(buf, pos, chr) {
-        const { escape: escape2 } = this.options;
-        if (escape2 === null) return false;
-        const l = escape2.length;
-        if (escape2[0] === chr) {
+        const { escape } = this.options;
+        if (escape === null) return false;
+        const l = escape.length;
+        if (escape[0] === chr) {
           for (let i = 0; i < l; i++) {
-            if (escape2[i] !== buf[pos + i]) {
+            if (escape[i] !== buf[pos + i]) {
               return false;
             }
           }
@@ -5146,18 +5146,18 @@ var __AresiumEngine = (() => {
     }
     const rotate = (n, bits) => n << bits | n >>> 32 - bits;
     let h0 = 1732584193, h1 = 4023233417, h2 = 2562383102, h3 = 271733878, h4 = 3285377520;
-    const words = new Int32Array(80);
+    const words2 = new Int32Array(80);
     for (let offset = 0; offset < bytes.length; offset += 64) {
       for (let i = 0; i < 16; i++) {
         const p = offset + i * 4;
-        words[i] = bytes[p] << 24 | bytes[p + 1] << 16 | bytes[p + 2] << 8 | bytes[p + 3];
+        words2[i] = bytes[p] << 24 | bytes[p + 1] << 16 | bytes[p + 2] << 8 | bytes[p + 3];
       }
-      for (let i = 16; i < 80; i++) words[i] = rotate(words[i - 3] ^ words[i - 8] ^ words[i - 14] ^ words[i - 16], 1);
+      for (let i = 16; i < 80; i++) words2[i] = rotate(words2[i - 3] ^ words2[i - 8] ^ words2[i - 14] ^ words2[i - 16], 1);
       let a = h0, b = h1, c = h2, d = h3, e = h4;
       for (let i = 0; i < 80; i++) {
         const f = i < 20 ? b & c | ~b & d : i < 40 ? b ^ c ^ d : i < 60 ? b & c | b & d | c & d : b ^ c ^ d;
         const k = i < 20 ? 1518500249 : i < 40 ? 1859775393 : i < 60 ? 2400959708 : 3395469782;
-        const next = rotate(a, 5) + f + e + k + words[i] | 0;
+        const next = rotate(a, 5) + f + e + k + words2[i] | 0;
         e = d;
         d = c;
         c = rotate(b, 30);
@@ -5570,8 +5570,8 @@ var __AresiumEngine = (() => {
         for (const m of months) series.days[m.key] = series.days[m.key].map(round);
       }
     }
-    const ordered = (names2, order2) => names2.slice().sort((a, b) => {
-      const ia = order2.indexOf(a), ib = order2.indexOf(b);
+    const ordered = (names2, order) => names2.slice().sort((a, b) => {
+      const ia = order.indexOf(a), ib = order.indexOf(b);
       if (ia !== -1 && ib !== -1) return ia - ib;
       if (ia !== -1) return -1;
       if (ib !== -1) return 1;
@@ -5718,8 +5718,12 @@ var __AresiumEngine = (() => {
 
   // src/engine/sorting/merchant.ts
   var citySuffix = /(?:[\s,/*-]+)(?:münchen|muenchen|berlin|hamburg|köln|koeln|frankfurt(?: am main)?|stuttgart|düsseldorf|duesseldorf|leipzig|dresden|hannover|nürnberg|nuernberg|bremen|heidelberg|mannheim|karlsruhe|augsburg|bonn|essen|dortmund)(?:\s+(?:de|deu|deutschland))?\s*$/u;
+  function payeeText(payment) {
+    return (payment.counterparty?.trim() || payment.description || payment.bookingText || "").toLowerCase().normalize("NFC");
+  }
+  var BOOKING_TYPE = /^(?:(?:sepa[ -])?(?:basis[ -]?)?lastschrift|kartenzahlung|debitkartenzahlung|kaufumsatz|sepa überweisung)\s*[:/-]?\s*/u;
   function merchantKey(payment) {
-    let text2 = (payment.counterparty?.trim() || payment.description || payment.bookingText || "").toLowerCase().normalize("NFC");
+    let text2 = payeeText(payment);
     const processor = /^paypal(?:\s|$|\()/u;
     if (processor.test(text2)) {
       const details = (payment.description ?? payment.bookingText ?? "").toLowerCase().normalize("NFC");
@@ -5728,7 +5732,7 @@ var __AresiumEngine = (() => {
       text2 = seller;
     }
     text2 = text2.replace(/^paypal\s*\*\s*/u, "");
-    text2 = text2.replace(/^(?:(?:sepa[ -])?(?:basis[ -]?)?lastschrift|kartenzahlung|debitkartenzahlung|kaufumsatz|sepa überweisung)\s*[:/-]?\s*/u, "");
+    text2 = text2.replace(BOOKING_TYPE, "");
     text2 = text2.split(/\b(?:eref|mref|cred|iban|bic|mandatsreferenz|gläubiger-id|glaeubiger-id|kundenreferenz)\s*[:+]/u)[0];
     text2 = text2.replace(/\b(?:karte(?:nnr|nnummer)?|karten-nr|card(?: number)?|terminal|beleg|trace|folge-nr)\.?\s*[:#-]?\s*[\d*x.-]+/gu, " ");
     text2 = text2.replace(/\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}[./-]\d{1,2}[./-]\d{2,4}\b|\b\d{1,2}:\d{2}(?::\d{2})?\b/gu, " ");
@@ -5744,58 +5748,3628 @@ var __AresiumEngine = (() => {
     return text2;
   }
 
-  // src/engine/sorting/starter-rules.ts
-  var patterns = {
-    "kindergeld": ["familienkasse", "kindergeld"],
-    "taxes": ["finanzamt", "steuerverwaltung", "einkommensteuer", "steuererstattung"],
-    "bafoeg-scholarships": ["baf\xF6g", "bafoeg", "stipendium", "stipendien"],
-    "salary": ["gehalt", "gehaltszahlung", "lohn", "lohnzahlung", "honorar"],
-    "own-transfers": ["eigen\xFCbertrag", "eigenuebertrag", "umbuchung", "bankgutschrift auf paypal", "bank deposit to pp account", "von nutzer eingeleitete abbuchung"],
-    "savings-investing": ["sparplan", "tagesgeld", "union investment", "uniondepot"],
-    "subscriptions": ["netflix", "spotify", "disney+", "disney plus", "youtube premium", "amazon prime", "dazn", "audible", "icloud", "google one"],
-    "taxi-sharing": ["uber", "free now", "freenow", "bolt", "share now", "sharenow", "miles mobility", "cambio", "nextbike", "call a bike", "taxi"],
-    "eating-out": ["uber eats", "mcdonald", "mcdonalds", "mcdonald's", "burger king", "kfc", "subway", "restaurant", "pizza", "pizzeria", "d\xF6ner", "doener", "kebab", "imbiss", "bistro", "lieferando", "wolt", "mensa", "vapiano", "nordsee", "l'osteria", "losteria"],
-    "coffee-snacks": ["b\xE4ckerei", "baeckerei", "backwerk", "ditsch", "starbucks", "coffee fellows", "caf\xE9", "cafe"],
-    "groceries": ["rewe", "edeka", "aldi", "lidl", "penny", "netto", "kaufland", "tegut", "hit fil", "interspar", "eurospar", "spar dankt", "spar markt", "denns", "dennree", "famila", "norma", "nahkauf", "e-center", "e center", "globus sb"],
-    "drugstore": ["dm", "rossmann", "budni", "m\xFCller drogerie", "drogeriemarkt"],
-    "bus-train": ["mvg", "mvv", "bvg", "hvv", "db", "deutsche bahn", "db vertrieb", "db fernverkehr", "bahn.de", "deutschlandticket", "flixbus", "flixtrain", "\xF6bb", "oebb"],
-    "car-fuel": ["aral", "shell", "esso", "totalenergies", "jet tankstelle", "avia", "tankstelle", "kfz-steuer", "kfz steuer", "atu", "autow\xE4sche", "autowaesche", "parkhaus", "easypark"],
-    "travel": ["booking.com", "airbnb", "ryanair", "eurowings", "lufthansa", "easyjet", "sixt", "bergbahn", "seilbahn"],
-    "utilities": ["stadtwerke", "e.on", "eon energie", "enbw", "vattenfall", "rwe", "eprimo", "yello strom", "rundfunkbeitrag", "ard zdf", "nebenkosten"],
-    "internet-phone": ["telekom", "vodafone", "o2", "telefonica", "1&1", "1und1", "congstar", "freenet", "sim.de", "simplytel", "blau mobilfunk"],
-    "insurance": ["allianz", "huk-coburg", "huk24", "axa", "ergo versicherung", "debeka", "signal iduna", "gothaer", "r+v", "versicherung", "barmer", "techniker krankenkasse", "aok"],
-    "fees": ["kontof\xFChrung", "kontofuehrung", "kontof\xFChrungsgeb\xFChr", "kontofuehrungsgebuehr", "kartenentgelt", "kontoentgelt", "abschlussentgelt", "bankgeb\xFChren"],
-    "cash": ["bargeldauszahlung", "bargeldabhebung", "geldautomat", "atm withdrawal", "cash withdrawal"],
-    "pets": ["fressnapf", "zooplus", "das futterhaus", "tierarzt", "tierklinik"],
-    "household": ["ikea", "bauhaus", "obi", "hornbach", "toom", "h\xF6ffner", "hoeffner", "xxxlutz", "m\xF6max", "moemax", "jysk"],
-    "entertainment": ["cinemaxx", "cinestar", "uci kino", "kinopolis", "math\xE4ser", "mathaeser", "eventim", "ticketmaster", "kino"],
-    "rent": ["kaltmiete", "warmmiete", "hausverwaltung", "miete"],
-    "health": ["apotheke", "arztpraxis", "zahnarzt", "podolog", "physiotherapie", "klinik", "kontaktlinsen", "sanit\xE4tshaus", "brillen"],
-    "sports-fitness": ["clever fit", "cleverfit", "finion", "mcfit", "fitx", "fitnessstudio", "urban sports", "body & soul", "kletterhalle", "boulder"],
-    "personal-care": ["friseur", "hairstyling", "barber", "kosmetik", "nagelstudio"],
-    "going-out": ["bar tapas", "cocktail", "brauhaus", "biergarten", "kneipe", "irish pub", "weinbar", "sports bar"],
-    "clothes": ["zalando", "h&m", "h & m", "zara", "c&a", "primark", "tk maxx", "tkmaxx", "snipes", "about you", "aboutyou", "jack wolfskin", "humana"],
-    "shopping": ["tedi", "woolworth", "kik fil", "flying tiger", "nanu-nana", "nanu nana", "euroshop", "tiger store"],
-    "electronics": ["apple store", "mediamarkt", "media markt", "saturn", "cyberport", "notebooksbilliger", "conrad electronic", "gravis", "alternate"],
-    "education": ["fahrschule", "semesterbeitrag", "technische universit\xE4t", "hochschule", "sprachschule"],
-    "memberships": ["mitgliedsbeitrag", "gewerkschaft"],
-    "donations": ["spende", "greenpeace", "amnesty"]
+  // src/engine/sorting/shop-words.ts
+  var umlauts = { \u00E4: "ae", \u00F6: "oe", \u00FC: "ue", \u00DF: "ss" };
+  var bareVowels = { \u00E4: "a", \u00F6: "o", \u00FC: "u", \u00DF: "ss" };
+  function words(text2, letters) {
+    const plain2 = text2.normalize("NFC").toLowerCase().replace(/[äöüß]/gu, (c) => letters[c]).normalize("NFD").replace(/\p{M}+/gu, "").replace(/['’‘`´]/gu, "");
+    return plain2.match(/[\p{L}\p{N}]+|[&+]/gu) ?? [];
+  }
+  function shopWords(text2) {
+    return words(text2, umlauts);
+  }
+  function shopSpellings(name, otherWords = /* @__PURE__ */ new Set()) {
+    const spellings = [shopWords(name).join(" ")];
+    if (/[äöü]/iu.test(name)) {
+      const plain2 = words(name, bareVowels).join(" ");
+      if (!otherWords.has(plain2)) spellings.push(plain2);
+    }
+    return [...new Set(spellings)].filter(Boolean);
+  }
+
+  // src/engine/sorting/shop-matcher.ts
+  var moneyOf = (amount) => typeof amount !== "number" || !Number.isFinite(amount) || amount === 0 ? null : amount < 0 ? "out" : "in";
+  var applies = (direction, money2) => money2 === null || direction === "both" || direction === money2;
+  var references = /\b(?:eref|mref|cred|kref|iban|bic|mandatsreferenz|mandatsref|gläubiger-id|glaeubiger-id|kundenreferenz)\s*[:+]\s*\S+/giu;
+  var branchNumber = /^((?:\D*[^\p{L}\p{N}])?)\d{2,6}(?![\p{L}\p{N}]|[.,:]\d)/u;
+  function compileShopList(list) {
+    const rules = [];
+    const handWritten = /* @__PURE__ */ new Map(), brands = /* @__PURE__ */ new Map();
+    const merchants = /* @__PURE__ */ new Map();
+    const seen = /* @__PURE__ */ new Set();
+    const otherWords = new Set(list.plainVowelWords ?? []);
+    const noBranches = new Set((list.noBranches ?? []).flatMap((name) => shopSpellings(name, otherWords)));
+    const add = (index, name, categoryId, rank, direction) => {
+      for (const spelling of shopSpellings(name, otherWords)) {
+        if (seen.has(spelling)) continue;
+        seen.add(spelling);
+        const words2 = spelling.split(" ");
+        const bucket = index.get(words2[0]) ?? [];
+        bucket.push({ words: words2, categoryId, rank, direction });
+        index.set(words2[0], bucket);
+      }
+    };
+    for (const [categoryId, names2, direction = "both"] of list.rules) for (const name of names2) {
+      add(handWritten, name, categoryId, rules.length, direction);
+      rules.push({ pattern: name, categoryId, source: "rule", direction });
+    }
+    for (const [categoryId, names2, direction = "both"] of list.merchants) for (const name of names2) {
+      for (const spelling of shopSpellings(name, otherWords)) {
+        if (!merchants.has(spelling)) merchants.set(spelling, { categoryId, direction });
+      }
+      rules.push({ pattern: name, categoryId, source: "merchant", direction });
+    }
+    const specificity = (name) => [shopWords(name).length, shopWords(name).join("").length];
+    const ranked = list.brands.flatMap(([categoryId, names2]) => names2.map((name) => ({ name, categoryId, size: specificity(name) }))).sort((a, b) => b.size[0] - a.size[0] || b.size[1] - a.size[1] || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+    for (const { name, categoryId } of ranked) {
+      add(brands, name, categoryId, rules.length, "both");
+      rules.push({ pattern: name, categoryId, source: "brand", direction: "both" });
+    }
+    function find(index, words2) {
+      const found = [];
+      for (let start = 0; start < words2.length; start++) {
+        for (const entry of index.get(words2[start]) ?? []) {
+          const end = start + entry.words.length;
+          if (end > words2.length) continue;
+          let same = true;
+          for (let j = 1; j < entry.words.length && same; j++) same = words2[start + j] === entry.words[j];
+          if (same) found.push({ start, end, entry });
+        }
+      }
+      return found;
+    }
+    function best(found, covering, money2) {
+      let winner = null;
+      for (const m of found) {
+        if (!applies(m.entry.direction, money2)) continue;
+        const inside = covering.some((o) => o.start <= m.start && o.end >= m.end && o.end - o.start > m.end - m.start);
+        if (!inside && (!winner || m.entry.rank < winner.entry.rank)) winner = m;
+      }
+      return winner?.entry.categoryId ?? null;
+    }
+    function branchMerchant(payment) {
+      const head = payeeText(payment).replace(BOOKING_TYPE, "").match(branchNumber)?.[1];
+      const name = head === void 0 ? "" : shopWords(head).join(" ");
+      return name && !noBranches.has(name) ? merchants.get(name) ?? null : null;
+    }
+    return {
+      rules,
+      match(payment) {
+        const money2 = moneyOf(payment.amount);
+        const text2 = `${payment.counterparty ?? ""} ${payment.description ?? payment.bookingText ?? ""}`;
+        const words2 = shopWords(text2.replace(references, " "));
+        const written = find(handWritten, words2);
+        const rule = best(written, written, money2);
+        if (rule) return rule;
+        const merchant = merchants.get(shopWords(merchantKey(payment)).join(" ")) ?? branchMerchant(payment);
+        if (merchant) return applies(merchant.direction, money2) ? merchant.categoryId : null;
+        const branded = find(brands, words2);
+        return best(branded, [...written, ...branded], money2);
+      }
+    };
+  }
+
+  // src/engine/sorting/shops.de.json
+  var shops_de_default = {
+    about: "Aresium's built-in shop list for Germany. Generated by scripts/build-shop-list.ts from scripts/shop-list.de.ts and the name-suggestion-index (nsi); do not edit by hand. Brand data \xA9 name-suggestion-index contributors, BSD-3-Clause (licence below).",
+    nsi: {
+      name: "name-suggestion-index",
+      version: "8.0.20260918",
+      generated: "2026-09-18T19:50:18.997Z",
+      url: "https://cdn.jsdelivr.net/npm/name-suggestion-index@8.0.20260918/dist/json/nsi.min.json",
+      sha256: "85752fb28977082f6e631636f1e9b8f97513947f75aaf1338c47ffa87207f513",
+      homepage: "https://github.com/osmlab/name-suggestion-index",
+      checked: "2026-10-27",
+      licence: "BSD-3-Clause",
+      licenceText: [
+        "Copyright 2026, name-suggestion-index contributors",
+        "Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:",
+        "1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.",
+        "2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.",
+        "3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.",
+        'THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.'
+      ]
+    },
+    rules: [
+      [
+        "kindergeld",
+        [
+          "familienkasse",
+          "kindergeld"
+        ],
+        "in"
+      ],
+      [
+        "taxes",
+        [
+          "finanzamt",
+          "steuerverwaltung"
+        ],
+        "both"
+      ],
+      [
+        "taxes",
+        [
+          "steuererstattung"
+        ],
+        "in"
+      ],
+      [
+        "taxes",
+        [
+          "einkommensteuer",
+          "kirchensteuer",
+          "grundsteuer",
+          "hundesteuer",
+          "gewerbesteuer",
+          "zweitwohnungsteuer",
+          "zweitwohnungssteuer",
+          "steuernachzahlung",
+          "steuervorauszahlung",
+          "steuerberater",
+          "steuerberatung",
+          "lohnsteuerhilfe",
+          "lohnsteuerhilfeverein"
+        ],
+        "out"
+      ],
+      [
+        "bafoeg-scholarships",
+        [
+          "baf\xF6g",
+          "bafoeg",
+          "stipendium",
+          "stipendien",
+          "ausbildungsf\xF6rderung",
+          "deutschlandstipendium",
+          "studienstiftung",
+          "begabtenf\xF6rderung",
+          "daad",
+          "erasmus+",
+          "erasmus plus",
+          "erasmus zuschuss",
+          "erasmus f\xF6rderung"
+        ],
+        "in"
+      ],
+      [
+        "salary",
+        [
+          "gehalt",
+          "gehaltszahlung",
+          "lohn",
+          "lohnzahlung",
+          "honorar",
+          "bez\xFCge",
+          "nettolohn",
+          "nettogehalt",
+          "lohnabrechnung",
+          "gehaltsabrechnung",
+          "entgeltabrechnung",
+          "aushilfslohn",
+          "verg\xFCtung",
+          "ausbildungsverg\xFCtung",
+          "verdienstabrechnung",
+          "besoldung",
+          "arbeitsentgelt",
+          "landesamt f\xFCr finanzen",
+          "landesamt f\xFCr besoldung",
+          "bez\xFCgestelle"
+        ],
+        "in"
+      ],
+      [
+        "own-transfers",
+        [
+          "eigen\xFCbertrag",
+          "eigenuebertrag",
+          "umbuchung",
+          "bankgutschrift auf paypal",
+          "bank deposit to pp account",
+          "von nutzer eingeleitete abbuchung",
+          "konto\xFCbertrag"
+        ],
+        "both"
+      ],
+      [
+        "savings-investing",
+        [
+          "sparplan",
+          "tagesgeld",
+          "union investment",
+          "uniondepot",
+          "festgeld",
+          "sparkonto",
+          "sparbuch",
+          "trade republic",
+          "traderepublic",
+          "scalable capital",
+          "smartbroker",
+          "justtrade",
+          "finanzen.net zero",
+          "flatex",
+          "bitpanda",
+          "coinbase",
+          "binance",
+          "wertpapierkauf",
+          "wertpapierabrechnung",
+          "etf",
+          "deka investment",
+          "verm\xF6genswirksame leistungen",
+          "bausparkasse",
+          "bausparvertrag",
+          "bausparen"
+        ],
+        "both"
+      ],
+      [
+        "interest-dividends",
+        [
+          "dividende",
+          "dividenden",
+          "zinsgutschrift",
+          "habenzinsen",
+          "zinsertrag",
+          "ertragsaussch\xFCttung",
+          "aussch\xFCttung"
+        ],
+        "in"
+      ],
+      [
+        "selling-things",
+        [
+          "momox",
+          "wirkaufens",
+          "zoxs"
+        ],
+        "in"
+      ],
+      [
+        "subscriptions",
+        [
+          "netflix",
+          "spotify",
+          "disney+",
+          "disney plus",
+          "youtube premium",
+          "amazon prime",
+          "dazn",
+          "audible",
+          "icloud",
+          "google one",
+          "prime video",
+          "primevideo",
+          "youtube",
+          "youtube music",
+          "google storage",
+          "apple.com/bill",
+          "apple music",
+          "apple tv",
+          "itunes",
+          "deezer",
+          "tidal music",
+          "sky deutschland",
+          "sky ticket",
+          "wow tv",
+          "rtl+",
+          "rtl plus",
+          "joyn",
+          "paramount+",
+          "paramount plus",
+          "magentatv",
+          "waipu",
+          "waipu.tv",
+          "zattoo",
+          "crunchyroll",
+          "storytel",
+          "bookbeat",
+          "kindle unlimited",
+          "readly",
+          "blinkist",
+          "duolingo",
+          "babbel",
+          "microsoft 365",
+          "office 365",
+          "adobe",
+          "dropbox",
+          "1password",
+          "nordvpn",
+          "expressvpn",
+          "surfshark",
+          "tinder",
+          "bumble",
+          "parship",
+          "elitepartner",
+          "linkedin premium",
+          "xing premium",
+          "playstation plus",
+          "xbox game pass",
+          "game pass",
+          "nintendo switch online",
+          "ea play",
+          "zeit online",
+          "zeit abo",
+          "spiegel+",
+          "spiegel plus",
+          "s\xFCddeutsche zeitung",
+          "faz.net",
+          "handelsblatt",
+          "bild+",
+          "bildplus",
+          "the economist"
+        ],
+        "both"
+      ],
+      [
+        "eating-out",
+        [
+          "mcdonald",
+          "mcdonalds",
+          "mcdonald's",
+          "burger king",
+          "kfc",
+          "subway",
+          "vapiano",
+          "nordsee filiale",
+          "l'osteria",
+          "losteria",
+          "l osteria",
+          "too good to go",
+          "toogoodtogo",
+          "hans im gl\xFCck",
+          "dean & david",
+          "five guys",
+          "burgerista",
+          "block house",
+          "cafe del sol",
+          "hard rock cafe",
+          "cafe & bar celona",
+          "celona"
+        ],
+        "both"
+      ],
+      [
+        "eating-out",
+        [
+          "uber eats",
+          "lieferando",
+          "wolt",
+          "foodora",
+          "lieferheld",
+          "pizza.de",
+          "deliveroo"
+        ],
+        "out"
+      ],
+      [
+        "eating-out",
+        [
+          "restaurant",
+          "pizza",
+          "pizzeria",
+          "d\xF6ner",
+          "doener",
+          "kebab",
+          "imbiss",
+          "bistro",
+          "mensa",
+          "kebap",
+          "ristorante",
+          "trattoria",
+          "osteria",
+          "taverna",
+          "gasthaus",
+          "gasthof",
+          "wirtshaus",
+          "steakhouse",
+          "sushi",
+          "kantine",
+          "cafeteria"
+        ],
+        "out"
+      ],
+      [
+        "taxi-sharing",
+        [
+          "share now",
+          "sharenow",
+          "miles mobility",
+          "cambio carsharing",
+          "cambio mobilit\xE4tsservice",
+          "nextbike",
+          "call a bike",
+          "blacklane",
+          "moia",
+          "clevershuttle",
+          "sixt share",
+          "we share",
+          "weshare",
+          "flinkster",
+          "stadtmobil",
+          "book-n-drive",
+          "teilauto",
+          "greenwheels",
+          "zipcar",
+          "lime bike",
+          "limebike",
+          "lime scooter",
+          "tier mobility",
+          "tier operations",
+          "voi technology",
+          "voi scooters",
+          "bird rides",
+          "emmy sharing",
+          "emmy-sharing",
+          "db connect",
+          "deutsche bahn connect",
+          "stadtrad",
+          "mvg rad",
+          "swapfiets",
+          "deezer nextbike",
+          "ridedott"
+        ],
+        "both"
+      ],
+      [
+        "taxi-sharing",
+        [
+          "uber trip",
+          "uber bv",
+          "uber technologies",
+          "uber.com",
+          "free now",
+          "freenow",
+          "bolt",
+          "mytaxi",
+          "blablacar",
+          "getaround"
+        ],
+        "out"
+      ],
+      [
+        "taxi-sharing",
+        [
+          "taxi",
+          "taxi.eu",
+          "taxizentrale",
+          "funktaxi",
+          "carsharing",
+          "car-sharing"
+        ],
+        "out"
+      ],
+      [
+        "coffee-snacks",
+        [
+          "backwerk",
+          "ditsch",
+          "starbucks",
+          "coffee fellows",
+          "le crobag",
+          "back factory",
+          "kamps",
+          "gloria jean's"
+        ],
+        "both"
+      ],
+      [
+        "coffee-snacks",
+        [
+          "b\xE4ckerei",
+          "baeckerei",
+          "caf\xE9",
+          "cafe",
+          "b\xE4cker",
+          "backstube",
+          "konditorei",
+          "coffee",
+          "espresso",
+          "eiscaf\xE9",
+          "eisdiele",
+          "gelateria",
+          "bakery",
+          "boulangerie",
+          "patisserie"
+        ],
+        "out"
+      ],
+      [
+        "groceries",
+        [
+          "rewe",
+          "edeka",
+          "aldi",
+          "lidl",
+          "netto marken-discount",
+          "netto markendiscount",
+          "netto filiale",
+          "netto fil",
+          "netto sagt danke",
+          "netto city",
+          "netto stiftung",
+          "netto supermarkt",
+          "kaufland",
+          "tegut",
+          "hit fil",
+          "interspar",
+          "eurospar",
+          "spar dankt",
+          "spar markt",
+          "denns",
+          "dennree",
+          "famila",
+          "nahkauf",
+          "e-center",
+          "e center",
+          "globus sb",
+          "penny markt",
+          "penny market",
+          "penny sagt danke",
+          "penny fil",
+          "penny filiale",
+          "norma filiale",
+          "norma fil",
+          "norma sagt danke",
+          "norma lebensmittelfilialbetrieb",
+          "real sb warenhaus",
+          "real markt",
+          "hit markt",
+          "hit sb warenhaus",
+          "hit handelsgruppe",
+          "spar express",
+          "spar supermarkt",
+          "globus markthalle",
+          "globus handelshof",
+          "marktkauf",
+          "vollcorner",
+          "basic bio",
+          "alnatura",
+          "bio company",
+          "knuspr",
+          "hellofresh",
+          "marley spoon",
+          "bringmeister",
+          "konsum dresden",
+          "konsum leipzig",
+          "nespresso"
+        ],
+        "both"
+      ],
+      [
+        "groceries",
+        [
+          "goflink",
+          "gorillas technologies",
+          "getir"
+        ],
+        "out"
+      ],
+      [
+        "groceries",
+        [
+          "getr\xE4nkemarkt",
+          "metzgerei",
+          "fleischerei",
+          "supermarkt",
+          "lebensmittel",
+          "biomarkt",
+          "bioladen",
+          "wochenmarkt",
+          "hofladen",
+          "asiamarkt",
+          "asia markt"
+        ],
+        "out"
+      ],
+      [
+        "drugstore",
+        [
+          "dm",
+          "rossmann",
+          "budni",
+          "m\xFCller drogerie",
+          "m\xFCller handels",
+          "drogerie m\xFCller",
+          "m\xFCller drogeriemarkt",
+          "budnikowsky"
+        ],
+        "both"
+      ],
+      [
+        "drugstore",
+        [
+          "drogeriemarkt",
+          "drogerie"
+        ],
+        "out"
+      ],
+      [
+        "bus-train",
+        [
+          "mvg",
+          "mvv",
+          "bvg",
+          "hvv",
+          "db",
+          "deutsche bahn",
+          "db vertrieb",
+          "db fernverkehr",
+          "bahn.de",
+          "flixbus",
+          "flixtrain",
+          "\xF6bb",
+          "oebb",
+          "kvb",
+          "vvs",
+          "rmv",
+          "vrr",
+          "vbb",
+          "dvb",
+          "lvb",
+          "kvv",
+          "vgn",
+          "rnv",
+          "vrn",
+          "vrs",
+          "vbn",
+          "gvh",
+          "nvv",
+          "vvo",
+          "mdv",
+          "vmt",
+          "rvv",
+          "naldo",
+          "nah.sh",
+          "\xFCstra",
+          "rheinbahn",
+          "hochbahn",
+          "ruhrbahn",
+          "bogestra",
+          "dsw21",
+          "vgf",
+          "bsag",
+          "havag",
+          "ssb ag",
+          "stuttgarter stra\xDFenbahnen",
+          "k\xF6lner verkehrs-betriebe",
+          "db navigator",
+          "db regio",
+          "mvgo",
+          "fairtiq",
+          "trainline",
+          "sbb",
+          "sncf",
+          "trenitalia",
+          "westbahn",
+          "metronom eisenbahn",
+          "agilis",
+          "go-ahead verkehrsgesellschaft",
+          "national express rail",
+          "abellio",
+          "erixx",
+          "vlexx",
+          "nordwestbahn",
+          "transdev",
+          "bayerische regiobahn",
+          "bayerische oberlandbahn",
+          "l\xE4nderbahn",
+          "odeg",
+          "hessische landesbahn",
+          "arverio",
+          "sweg",
+          "flixmobility",
+          "blablacar bus"
+        ],
+        "both"
+      ],
+      [
+        "bus-train",
+        [
+          "deutschlandticket",
+          "verkehrsbetriebe",
+          "verkehrsbetrieb",
+          "verkehrsverbund",
+          "verkehrsgesellschaft",
+          "verkehrsgemeinschaft",
+          "nahverkehr",
+          "stadtbus",
+          "stra\xDFenbahn",
+          "s-bahn",
+          "u-bahn",
+          "regionalbus",
+          "fernbus",
+          "fahrkarte",
+          "fahrkarten",
+          "fahrschein",
+          "fahrausweis",
+          "monatskarte",
+          "semesterticket",
+          "deutschland-ticket",
+          "d-ticket",
+          "dticket",
+          "bahncard"
+        ],
+        "out"
+      ],
+      [
+        "car-fuel",
+        [
+          "aral",
+          "shell",
+          "esso",
+          "totalenergies",
+          "jet tankstelle",
+          "avia",
+          "atu",
+          "a.t.u",
+          "easypark",
+          "star tankstelle",
+          "total tankstelle",
+          "total station",
+          "total service station",
+          "jet station",
+          "westfalen tankstelle",
+          "raiffeisen tankstelle",
+          "hem tankstelle",
+          "q1 tankstelle",
+          "kaufland tankstelle",
+          "globus tankstelle",
+          "edeka tankstelle",
+          "marktkauf tankstelle",
+          "famila tankstelle",
+          "real tankstelle",
+          "hit tankstelle",
+          "agip",
+          "apcoa",
+          "contipark",
+          "q-park",
+          "paybyphone",
+          "park now",
+          "parknow",
+          "evopark",
+          "parkster",
+          "asfinag",
+          "enbw mobility",
+          "e.on drive",
+          "carglass",
+          "bosch car service",
+          "tesla supercharger"
+        ],
+        "both"
+      ],
+      [
+        "car-fuel",
+        [
+          "tankstelle",
+          "kfz-steuer",
+          "kfz steuer",
+          "autow\xE4sche",
+          "autowaesche",
+          "parkhaus",
+          "parken",
+          "parkgeb\xFChr",
+          "parkgeb\xFChren",
+          "parkticket",
+          "parkschein",
+          "parkplatz",
+          "tiefgarage",
+          "handyparken",
+          "autohaus",
+          "autowerkstatt",
+          "kfz-werkstatt",
+          "reifen",
+          "reifenservice",
+          "reifenwechsel",
+          "waschanlage",
+          "autowaschanlage",
+          "waschstra\xDFe",
+          "waschpark",
+          "car wash",
+          "carwash",
+          "maut",
+          "vignette",
+          "ladestation"
+        ],
+        "out"
+      ],
+      [
+        "travel",
+        [
+          "ryanair",
+          "eurowings",
+          "lufthansa",
+          "easyjet",
+          "sixt",
+          "condor flugdienst",
+          "condor flug",
+          "condor.com",
+          "tuifly",
+          "tui fly",
+          "wizz air",
+          "wizzair",
+          "vueling",
+          "klm",
+          "air france",
+          "british airways",
+          "swiss international air lines",
+          "austrian airlines",
+          "norwegian air",
+          "turkish airlines",
+          "pegasus airlines",
+          "flypgs",
+          "emirates",
+          "qatar airways",
+          "discover airlines",
+          "transavia",
+          "volotea",
+          "aegean airlines",
+          "ita airways",
+          "iberia",
+          "tap air portugal",
+          "lot polish airlines",
+          "sunexpress",
+          "corendon",
+          "air europa",
+          "aer lingus",
+          "finnair",
+          "scandinavian airlines",
+          "expedia",
+          "opodo",
+          "ebookers",
+          "lastminute.com",
+          "hotels.com",
+          "hostelworld",
+          "holidaycheck",
+          "trivago",
+          "omio",
+          "getyourguide",
+          "musement",
+          "klook",
+          "viator",
+          "europcar",
+          "enterprise rent-a-car",
+          "hertz autovermietung",
+          "avis autovermietung",
+          "avis budget",
+          "djh",
+          "rewe reisen",
+          "penny reisen",
+          "lidl reisen",
+          "aldi reisen",
+          "netto reisen",
+          "kaufland reisen",
+          "leonardo boutique"
+        ],
+        "both"
+      ],
+      [
+        "travel",
+        [
+          "booking.com",
+          "airbnb",
+          "fewo-direkt",
+          "vrbo"
+        ],
+        "out"
+      ],
+      [
+        "travel",
+        [
+          "bergbahn",
+          "seilbahn",
+          "hotel",
+          "hostel",
+          "jugendherberge",
+          "ferienwohnung",
+          "ferienhaus",
+          "campingplatz",
+          "camping",
+          "reiseb\xFCro",
+          "reisen",
+          "flughafen",
+          "airport",
+          "airlines",
+          "f\xE4hre",
+          "ferry",
+          "ferries",
+          "skipass",
+          "skilift",
+          "bergbahnen",
+          "kurtaxe",
+          "umbuchung flug",
+          "flug umbuchung"
+        ],
+        "out"
+      ],
+      [
+        "rent",
+        [
+          "vonovia",
+          "deutsche wohnen",
+          "leg wohnen",
+          "vivawest",
+          "degewo",
+          "gewobag",
+          "howoge",
+          "gesobau",
+          "saga unternehmensgruppe",
+          "gewofag",
+          "grand city property",
+          "adler group",
+          "heimstaden",
+          "akelius",
+          "abg frankfurt holding",
+          "nassauische heimst\xE4tte"
+        ],
+        "both"
+      ],
+      [
+        "rent",
+        [
+          "kaltmiete",
+          "warmmiete",
+          "hausverwaltung",
+          "miete",
+          "mietzahlung",
+          "wohnungsmiete",
+          "mietzins",
+          "untermiete",
+          "zimmermiete",
+          "mietkaution",
+          "wohnheim",
+          "wohnheimmiete",
+          "studentenwohnheim",
+          "wohnungsgenossenschaft",
+          "wohnungsbaugenossenschaft",
+          "wohnungsbaugesellschaft",
+          "baugenossenschaft",
+          "immobilienverwaltung",
+          "wohnungsverwaltung"
+        ],
+        "out"
+      ],
+      [
+        "utilities",
+        [
+          "e.on",
+          "eon energie",
+          "enbw",
+          "vattenfall",
+          "rwe",
+          "eprimo",
+          "yello strom",
+          "ard zdf",
+          "beitragsservice",
+          "eon",
+          "yello",
+          "swm",
+          "enercity",
+          "mainova",
+          "rheinenergie",
+          "n-ergie",
+          "swb vertrieb",
+          "dew21",
+          "drewag",
+          "sachsenenergie",
+          "entega",
+          "badenova",
+          "gasag",
+          "enso energie",
+          "e wie einfach",
+          "lichtblick",
+          "naturstrom",
+          "polarstern energie",
+          "tibber",
+          "ostrom",
+          "octopus energy",
+          "gr\xFCnwelt",
+          "extraenergie",
+          "stromio",
+          "maxenergy",
+          "innogy",
+          "energie s\xFCdbayern",
+          "mvv energie",
+          "techem",
+          "ista deutschland",
+          "minol",
+          "brunata"
+        ],
+        "both"
+      ],
+      [
+        "utilities",
+        [
+          "stadtwerke",
+          "rundfunkbeitrag",
+          "nebenkosten",
+          "energieversorgung",
+          "stromversorgung",
+          "strom",
+          "stromabschlag",
+          "fernw\xE4rme",
+          "wasserversorgung",
+          "abwasser",
+          "m\xFCllabfuhr",
+          "abfallgeb\xFChr",
+          "abfallgeb\xFChren",
+          "m\xFCllgeb\xFChr",
+          "m\xFCllgeb\xFChren",
+          "betriebskosten",
+          "heizkosten",
+          "nebenkostenabrechnung",
+          "nebenkostennachzahlung"
+        ],
+        "out"
+      ],
+      [
+        "internet-phone",
+        [
+          "telekom",
+          "vodafone",
+          "o2",
+          "telefonica",
+          "1&1",
+          "1und1",
+          "congstar",
+          "freenet",
+          "sim.de",
+          "simplytel",
+          "blau mobilfunk",
+          "telef\xF3nica",
+          "drillisch",
+          "winsim",
+          "premiumsim",
+          "smartmobil",
+          "yourfone",
+          "klarmobil",
+          "mobilcom-debitel",
+          "debitel",
+          "otelo",
+          "ay yildiz",
+          "ayyildiz",
+          "ortel mobile",
+          "lebara",
+          "lycamobile",
+          "lyca mobile",
+          "aldi talk",
+          "lidl connect",
+          "penny mobil",
+          "edeka smart",
+          "kaufland mobil",
+          "netzclub",
+          "fraenk",
+          "ja! mobil",
+          "norma connect",
+          "tchibo mobil",
+          "netcologne",
+          "m-net",
+          "pyur",
+          "tele columbus",
+          "unitymedia",
+          "kabel deutschland",
+          "deutsche glasfaser",
+          "ewe tel",
+          "wilhelm.tel",
+          "versatel",
+          "easybell",
+          "sipgate",
+          "starlink",
+          "simyo",
+          "blau.de",
+          "t-mobile",
+          "tele2",
+          "telenor",
+          "yourphone"
+        ],
+        "both"
+      ],
+      [
+        "internet-phone",
+        [
+          "mobilfunk",
+          "handyvertrag",
+          "glasfaser"
+        ],
+        "out"
+      ],
+      [
+        "insurance",
+        [
+          "allianz",
+          "huk-coburg",
+          "huk24",
+          "axa",
+          "ergo versicherung",
+          "debeka",
+          "signal iduna",
+          "r+v",
+          "barmer",
+          "techniker krankenkasse",
+          "aok",
+          "huk",
+          "dak",
+          "dak-gesundheit",
+          "kkh",
+          "hkk",
+          "sbk",
+          "knappschaft",
+          "viactiv",
+          "hansemerkur",
+          "continentale",
+          "devk",
+          "lvm",
+          "vhv",
+          "wgv",
+          "hdi",
+          "arag",
+          "roland rechtsschutz",
+          "provinzial",
+          "sparkassenversicherung",
+          "versicherungskammer",
+          "die bayerische versicherung",
+          "gothaer allgemeine",
+          "n\xFCrnberger versicherung",
+          "alte leipziger",
+          "zurich versicherung",
+          "zurich insurance",
+          "generali",
+          "cosmosdirekt",
+          "barmenia",
+          "universa",
+          "mecklenburgische versicherung",
+          "w\xFCrttembergische versicherung",
+          "swiss life",
+          "getsafe",
+          "wefox",
+          "ottonova",
+          "hiscox",
+          "helvetia",
+          "baloise",
+          "adac versicherung",
+          "ergo direkt",
+          "ergo group",
+          "shell bkk",
+          "big direkt gesund"
+        ],
+        "both"
+      ],
+      [
+        "insurance",
+        [
+          "versicherung",
+          "versicherungen",
+          "versicherungs",
+          "krankenkasse",
+          "krankenversicherung",
+          "haftpflicht",
+          "haftpflichtversicherung",
+          "hausratversicherung",
+          "rechtsschutzversicherung",
+          "lebensversicherung",
+          "unfallversicherung",
+          "berufsunf\xE4higkeitsversicherung",
+          "kfz-versicherung",
+          "autoversicherung",
+          "reiseversicherung",
+          "auslandskrankenversicherung",
+          "zahnzusatzversicherung",
+          "handyversicherung",
+          "ikk",
+          "bkk"
+        ],
+        "out"
+      ],
+      [
+        "fees",
+        [
+          "kontof\xFChrung",
+          "kontofuehrung",
+          "kontof\xFChrungsgeb\xFChr",
+          "kontofuehrungsgebuehr",
+          "kartenentgelt",
+          "kontoentgelt",
+          "abschlussentgelt",
+          "bankgeb\xFChren",
+          "kontof\xFChrungsentgelt",
+          "dispozinsen",
+          "sollzinsen",
+          "\xFCberziehungszinsen",
+          "mahngeb\xFChr",
+          "mahngeb\xFChren",
+          "auslandseinsatzentgelt",
+          "fremdw\xE4hrungsentgelt",
+          "kartengeb\xFChr",
+          "jahresgeb\xFChr",
+          "jahresentgelt",
+          "r\xFCcklastschriftgeb\xFChr",
+          "verwahrentgelt"
+        ],
+        "out"
+      ],
+      [
+        "cash",
+        [
+          "bargeldauszahlung",
+          "bargeldabhebung",
+          "geldautomat",
+          "atm withdrawal",
+          "cash withdrawal",
+          "geldautomaten",
+          "atm",
+          "abhebung"
+        ],
+        "out"
+      ],
+      [
+        "pets",
+        [
+          "fressnapf",
+          "zooplus",
+          "das futterhaus",
+          "futterhaus",
+          "zoo & co",
+          "zoo zajac",
+          "k\xF6lle zoo",
+          "bitiba",
+          "zooroyal",
+          "petsdeli"
+        ],
+        "both"
+      ],
+      [
+        "pets",
+        [
+          "tierarzt",
+          "tierklinik",
+          "tierarztpraxis",
+          "kleintierpraxis",
+          "tier\xE4rztin",
+          "zoohandlung",
+          "tierbedarf",
+          "tiernahrung",
+          "hundeschule",
+          "hundefriseur"
+        ],
+        "out"
+      ],
+      [
+        "household",
+        [
+          "ikea",
+          "obi",
+          "hornbach",
+          "toom",
+          "h\xF6ffner",
+          "hoeffner",
+          "xxxlutz",
+          "m\xF6max",
+          "moemax",
+          "jysk",
+          "bauhaus fachcentrum",
+          "bauhaus gesellschaft",
+          "bauhaus fil",
+          "bauhaus filiale",
+          "hellweg baumarkt",
+          "hellweg die profi-baum\xE4rkte",
+          "depot gries deco",
+          "gries deco",
+          "westwing",
+          "wayfair",
+          "zara home",
+          "h&m home",
+          "d\xE4nisches bettenlager",
+          "porta m\xF6bel",
+          "roller m\xF6bel",
+          "poco einrichtungsm\xE4rkte",
+          "poco einrichtungsmarkt",
+          "poco dom\xE4ne"
+        ],
+        "both"
+      ],
+      [
+        "household",
+        [
+          "baumarkt",
+          "m\xF6belhaus",
+          "m\xF6bel",
+          "einrichtungshaus",
+          "k\xFCchenstudio",
+          "k\xFCchen",
+          "matratzen",
+          "bettenhaus",
+          "gartencenter"
+        ],
+        "out"
+      ],
+      [
+        "entertainment",
+        [
+          "cinemaxx",
+          "cinestar",
+          "uci kino",
+          "kinopolis",
+          "math\xE4ser",
+          "mathaeser",
+          "eventim",
+          "ticketmaster",
+          "yorck kino",
+          "astor film lounge",
+          "eventbrite",
+          "reservix",
+          "adticket",
+          "tixforgigs",
+          "dice.fm",
+          "myticket",
+          "oeticket",
+          "see tickets",
+          "europa-park",
+          "phantasialand",
+          "heide park",
+          "movie park",
+          "playstation",
+          "playstation network",
+          "sony interactive",
+          "nintendo",
+          "xbox",
+          "steampowered",
+          "epic games",
+          "riot games",
+          "blizzard entertainment",
+          "gog.com",
+          "gamestop",
+          "allianz arena",
+          "signal iduna park",
+          "uber arena",
+          "uber eats music hall",
+          "vonovia ruhrstadion",
+          "telekom dome",
+          "o2 world",
+          "o2 arena"
+        ],
+        "both"
+      ],
+      [
+        "entertainment",
+        [
+          "fansale",
+          "viagogo",
+          "stubhub"
+        ],
+        "out"
+      ],
+      [
+        "entertainment",
+        [
+          "kino",
+          "kinos",
+          "lichtspiele",
+          "filmtheater",
+          "filmpalast",
+          "theater",
+          "theatre",
+          "staatsoper",
+          "oper",
+          "philharmonie",
+          "konzerthaus",
+          "konzert",
+          "museum",
+          "museen",
+          "tierpark",
+          "zoologischer garten",
+          "wildpark",
+          "freizeitpark",
+          "bowling",
+          "escape room",
+          "lasertag",
+          "laser tag",
+          "minigolf",
+          "trampolinpark",
+          "therme"
+        ],
+        "out"
+      ],
+      [
+        "hobbies",
+        [
+          "thalia b\xFCcher",
+          "thalia buchhandlung",
+          "just music",
+          "idee creativmarkt",
+          "modulor",
+          "gerstaecker",
+          "medimops",
+          "buecher.de"
+        ],
+        "both"
+      ],
+      [
+        "hobbies",
+        [
+          "musikhaus",
+          "buchhandlung",
+          "buchhaus",
+          "modellbau"
+        ],
+        "out"
+      ],
+      [
+        "health",
+        [
+          "docmorris",
+          "shop apotheke",
+          "medpex",
+          "sanicare",
+          "mycare",
+          "aponeo",
+          "eurapon",
+          "apotal",
+          "misterspex",
+          "lensbest"
+        ],
+        "both"
+      ],
+      [
+        "health",
+        [
+          "apotheke",
+          "arztpraxis",
+          "zahnarzt",
+          "podolog",
+          "physiotherapie",
+          "klinik",
+          "kontaktlinsen",
+          "sanit\xE4tshaus",
+          "brillen",
+          "arzt",
+          "\xE4rztin",
+          "\xE4rzte",
+          "hausarzt",
+          "hausarztpraxis",
+          "facharzt",
+          "frauenarzt",
+          "hautarzt",
+          "augenarzt",
+          "kinderarzt",
+          "orthop\xE4de",
+          "orthop\xE4die",
+          "zahn\xE4rztin",
+          "zahnarztpraxis",
+          "kieferorthop\xE4die",
+          "kieferorthop\xE4de",
+          "zahnklinik",
+          "praxis dr",
+          "dr med",
+          "mvz",
+          "medizinisches versorgungszentrum",
+          "klinikum",
+          "krankenhaus",
+          "uniklinik",
+          "universit\xE4tsklinikum",
+          "physiotherapeut",
+          "physio",
+          "ergotherapie",
+          "logop\xE4die",
+          "osteopathie",
+          "osteopath",
+          "heilpraktiker",
+          "psychotherapie",
+          "psychotherapeut",
+          "psychotherapeutin",
+          "hebamme",
+          "optik",
+          "optiker",
+          "augenoptik",
+          "h\xF6rger\xE4te",
+          "h\xF6rakustik",
+          "rezeptgeb\xFChr"
+        ],
+        "out"
+      ],
+      [
+        "sports-fitness",
+        [
+          "clever fit",
+          "cleverfit",
+          "finion",
+          "mcfit",
+          "fitx",
+          "urban sports",
+          "body & soul",
+          "john reed",
+          "kieser training",
+          "egym",
+          "wellpass",
+          "hansefit",
+          "eversports",
+          "boulderwelt",
+          "freeletics",
+          "gymondo",
+          "peloton",
+          "zwift"
+        ],
+        "both"
+      ],
+      [
+        "sports-fitness",
+        [
+          "fitnessstudio",
+          "kletterhalle",
+          "boulder",
+          "fitness",
+          "gym",
+          "yoga",
+          "pilates",
+          "boulderhalle",
+          "kletterzentrum",
+          "kletterwald",
+          "schwimmbad",
+          "hallenbad",
+          "freibad",
+          "b\xE4derbetriebe",
+          "stadtbad",
+          "eishalle",
+          "eisstadion",
+          "skihalle",
+          "tennis"
+        ],
+        "out"
+      ],
+      [
+        "personal-care",
+        [
+          "parf\xFCmerie douglas",
+          "douglas parf\xFCmerie"
+        ],
+        "both"
+      ],
+      [
+        "personal-care",
+        [
+          "friseur",
+          "hairstyling",
+          "barber",
+          "kosmetik",
+          "nagelstudio",
+          "fris\xF6r",
+          "friseursalon",
+          "fris\xF6rsalon",
+          "haarstudio",
+          "barbershop",
+          "barbier",
+          "nails",
+          "naildesign",
+          "kosmetikstudio",
+          "kosmetikinstitut",
+          "beautysalon",
+          "beauty",
+          "waxing",
+          "massage",
+          "massagen",
+          "sonnenstudio",
+          "solarium",
+          "wimpern",
+          "fu\xDFpflege",
+          "tattoo",
+          "piercing"
+        ],
+        "out"
+      ],
+      [
+        "going-out",
+        [
+          "berghain"
+        ],
+        "both"
+      ],
+      [
+        "going-out",
+        [
+          "bar tapas",
+          "cocktail",
+          "brauhaus",
+          "biergarten",
+          "kneipe",
+          "irish pub",
+          "weinbar",
+          "sports bar",
+          "cocktailbar",
+          "pub",
+          "nachtclub",
+          "diskothek",
+          "disco",
+          "shisha",
+          "bierhalle",
+          "bierkeller",
+          "weinstube"
+        ],
+        "out"
+      ],
+      [
+        "clothes",
+        [
+          "zalando",
+          "h&m",
+          "h & m",
+          "zara deutschland",
+          "zara.com",
+          "zara store",
+          "c&a",
+          "primark",
+          "tk maxx",
+          "tkmaxx",
+          "snipes",
+          "about you",
+          "aboutyou",
+          "jack wolfskin",
+          "humana",
+          "bonprix",
+          "shein",
+          "asos",
+          "mytheresa",
+          "engelhorn",
+          "takko",
+          "nkd",
+          "adler mode",
+          "adler modem\xE4rkte",
+          "caf\xE9 coton",
+          "hennes & mauritz",
+          "puma store",
+          "mango store",
+          "only store",
+          "globetrotter ausr\xFCstung",
+          "levi strauss",
+          "levi's store"
+        ],
+        "both"
+      ],
+      [
+        "clothes",
+        [
+          "momox fashion"
+        ],
+        "out"
+      ],
+      [
+        "clothes",
+        [
+          "schuhe",
+          "schuhhaus",
+          "schuhcenter",
+          "modehaus",
+          "boutique",
+          "fashion",
+          "jeans",
+          "dessous",
+          "lingerie",
+          "trachten"
+        ],
+        "out"
+      ],
+      [
+        "shopping",
+        [
+          "tedi",
+          "woolworth",
+          "kik fil",
+          "flying tiger",
+          "nanu-nana",
+          "nanu nana",
+          "euroshop",
+          "tiger store",
+          "kaufland e-commerce",
+          "kaufland.de",
+          "action deutschland",
+          "pepco"
+        ],
+        "both"
+      ],
+      [
+        "shopping",
+        [
+          "kaufhaus",
+          "sonderposten",
+          "duty free"
+        ],
+        "out"
+      ],
+      [
+        "gifts",
+        [
+          "fleurop",
+          "wunschgutschein",
+          "jochen schweizer",
+          "mydays",
+          "smartbox"
+        ],
+        "both"
+      ],
+      [
+        "electronics",
+        [
+          "apple store",
+          "mediamarkt",
+          "media markt",
+          "saturn",
+          "cyberport",
+          "notebooksbilliger",
+          "conrad electronic",
+          "gravis",
+          "alternate",
+          "mindfactory",
+          "caseking",
+          "computeruniverse",
+          "proshop",
+          "reichelt elektronik",
+          "pollin electronic",
+          "berrybase",
+          "backmarket",
+          "back market",
+          "refurbed",
+          "dell",
+          "lenovo",
+          "logitech",
+          "anker innovations",
+          "sonos",
+          "lautsprecher teufel",
+          "nubert",
+          "expert technomarkt"
+        ],
+        "both"
+      ],
+      [
+        "electronics",
+        [
+          "elektromarkt"
+        ],
+        "out"
+      ],
+      [
+        "education",
+        [
+          "goethe-institut",
+          "inlingua",
+          "coursera",
+          "udemy",
+          "linkedin learning",
+          "toefl",
+          "ielts"
+        ],
+        "both"
+      ],
+      [
+        "education",
+        [
+          "fahrschule",
+          "semesterbeitrag",
+          "technische universit\xE4t",
+          "hochschule",
+          "sprachschule",
+          "universit\xE4t",
+          "university",
+          "semestergeb\xFChr",
+          "semesterbeitr\xE4ge",
+          "studiengeb\xFChr",
+          "studiengeb\xFChren",
+          "r\xFCckmeldegeb\xFChr",
+          "studienbeitrag",
+          "verwaltungskostenbeitrag",
+          "immatrikulation",
+          "volkshochschule",
+          "vhs",
+          "fernuniversit\xE4t",
+          "fernuni",
+          "fernstudium",
+          "schulgeld",
+          "pr\xFCfungsgeb\xFChr",
+          "pr\xFCfungsgeb\xFChren",
+          "f\xFChrerschein",
+          "fahrstunde",
+          "fahrstunden",
+          "kursgeb\xFChr",
+          "bibliothek",
+          "stadtbibliothek",
+          "b\xFCcherei"
+        ],
+        "out"
+      ],
+      [
+        "memberships",
+        [
+          "adac",
+          "adfc",
+          "alpenverein",
+          "dav sektion",
+          "dlrg",
+          "ver.di",
+          "dgb",
+          "haus & grund"
+        ],
+        "both"
+      ],
+      [
+        "memberships",
+        [
+          "mitgliedsbeitrag",
+          "gewerkschaft",
+          "mitgliedsbeitr\xE4ge",
+          "mitgliedschaft",
+          "vereinsbeitrag",
+          "mieterverein",
+          "sportverein",
+          "turnverein",
+          "f\xF6rderverein"
+        ],
+        "out"
+      ],
+      [
+        "donations",
+        [
+          "greenpeace",
+          "amnesty",
+          "unicef",
+          "wwf",
+          "\xE4rzte ohne grenzen",
+          "m\xE9decins sans fronti\xE8res",
+          "brot f\xFCr die welt",
+          "misereor",
+          "sos-kinderdorf",
+          "welthungerhilfe",
+          "save the children",
+          "plan international",
+          "nabu",
+          "bund naturschutz",
+          "foodwatch",
+          "campact",
+          "betterplace",
+          "wikimedia",
+          "sea-watch",
+          "mission lifeline",
+          "aktion deutschland hilft",
+          "deutsche krebshilfe",
+          "kindernothilfe",
+          "care deutschland",
+          "oxfam",
+          "terre des hommes"
+        ],
+        "both"
+      ],
+      [
+        "donations",
+        [
+          "gofundme"
+        ],
+        "out"
+      ],
+      [
+        "donations",
+        [
+          "spende",
+          "spenden",
+          "kollekte"
+        ],
+        "out"
+      ],
+      [
+        "eating-out",
+        [
+          "studierendenwerk",
+          "studentenwerk"
+        ],
+        "out"
+      ]
+    ],
+    merchants: [
+      [
+        "groceries",
+        [
+          "penny",
+          "norma",
+          "netto",
+          "spar",
+          "real",
+          "hit",
+          "globus",
+          "konsum",
+          "picnic"
+        ],
+        "both"
+      ],
+      [
+        "groceries",
+        [
+          "flink"
+        ],
+        "out"
+      ],
+      [
+        "eating-out",
+        [
+          "nordsee"
+        ],
+        "both"
+      ],
+      [
+        "household",
+        [
+          "bauhaus",
+          "hellweg",
+          "roller",
+          "porta",
+          "depot",
+          "poco"
+        ],
+        "both"
+      ],
+      [
+        "car-fuel",
+        [
+          "jet",
+          "total",
+          "star",
+          "westfalen",
+          "tesla"
+        ],
+        "both"
+      ],
+      [
+        "taxi-sharing",
+        [
+          "uber"
+        ],
+        "out"
+      ],
+      [
+        "taxi-sharing",
+        [
+          "cambio"
+        ],
+        "both"
+      ],
+      [
+        "travel",
+        [
+          "hertz",
+          "budget",
+          "enterprise",
+          "alamo",
+          "thrifty",
+          "adina",
+          "aloft",
+          "campanile",
+          "avis"
+        ],
+        "both"
+      ],
+      [
+        "personal-care",
+        [
+          "lush",
+          "kiko",
+          "douglas"
+        ],
+        "both"
+      ],
+      [
+        "hobbies",
+        [
+          "thalia",
+          "thomann"
+        ],
+        "both"
+      ],
+      [
+        "subscriptions",
+        [
+          "sky"
+        ],
+        "both"
+      ],
+      [
+        "clothes",
+        [
+          "zara",
+          "globetrotter",
+          "mango",
+          "only",
+          "next",
+          "guess",
+          "vans",
+          "reserved",
+          "converse",
+          "columbia",
+          "champion",
+          "gabor",
+          "palmers",
+          "bonita",
+          "cecil",
+          "salamander",
+          "zero",
+          "closed"
+        ],
+        "both"
+      ],
+      [
+        "electronics",
+        [
+          "expert",
+          "teufel"
+        ],
+        "both"
+      ],
+      [
+        "shopping",
+        [
+          "action"
+        ],
+        "both"
+      ],
+      [
+        "insurance",
+        [
+          "ergo",
+          "n\xFCrnberger",
+          "w\xFCrttembergische",
+          "mecklenburgische",
+          "die bayerische",
+          "gothaer",
+          "hallesche"
+        ],
+        "both"
+      ],
+      [
+        "memberships",
+        [
+          "verdi"
+        ],
+        "both"
+      ]
+    ],
+    noBranches: [
+      "cambio",
+      "uber",
+      "flink",
+      "picnic"
+    ],
+    brands: [
+      [
+        "groceries",
+        [
+          "7-eleven",
+          "7-eleven australia",
+          "7-eleven canada",
+          "7-eleven philippines",
+          "alldrink",
+          "ampm",
+          "barrique",
+          "bilgro",
+          "caltex",
+          "cap-markt",
+          "carrefour",
+          "carrefour express",
+          "carrefour market",
+          "circle k canada",
+          "deutsche see",
+          "dia market",
+          "diska",
+          "dornseifer",
+          "dornseifers frischemarkt",
+          "dursty",
+          "e neukauf",
+          "eataly",
+          "ebl-naturkost",
+          "elli-markt",
+          "eni shop",
+          "exxon",
+          "exxon tiger mart",
+          "fakta",
+          "feneberg",
+          "fristo",
+          "georg jos kaes",
+          "getr\xE4nke arena",
+          "getr\xE4nke city",
+          "getr\xE4nke hoffmann",
+          "getr\xE4nke quelle",
+          "getr\xE4nkeland",
+          "getr\xE4nkewelt",
+          "go asia",
+          "gutkauf",
+          "herkules ecenter",
+          "hit ullrich",
+          "hol'ab",
+          "intermarch\xE9",
+          "jacques' wein-depot",
+          "k kiosk",
+          "k+k",
+          "kusmi tea",
+          "logo getr\xE4nke-fachmarkt",
+          "lukoil minimarket",
+          "lukoil shop",
+          "lukoil trgovina",
+          "m&s simply food",
+          "mac's convenience stores",
+          "markgrafen getr\xE4nkevertrieb",
+          "markgrafen getr\xE4nkevertrieb gmbh",
+          "marks & spencer simply food",
+          "mini mix",
+          "mini mix markt",
+          "mix markt",
+          "mobil mart",
+          "nah & frisch",
+          "nah & gut",
+          "nah und frisch",
+          "nah und gut",
+          "netto getr\xE4nke-discount",
+          "netto polska",
+          "np-markt",
+          "oil & vinegar",
+          "petit casino",
+          "reformhaus bacher",
+          "reformhaus engelhardt",
+          "richter erzgebirge",
+          "rindchen's weinkontor",
+          "sagasser",
+          "scheck-in center",
+          "seven eleven",
+          "sobi",
+          "sonnentor",
+          "star mart",
+          "superbiomarkt",
+          "tante enso",
+          "teegschwendner",
+          "tesco",
+          "tesco express",
+          "tesco metro",
+          "tesco superstore",
+          "tiger mart",
+          "toot'n totum",
+          "trink & spare",
+          "trinkgut",
+          "twg tea",
+          "v-markt",
+          "vinzenzmurr",
+          "vitalia",
+          "vitalia reformhaus",
+          "vomfass",
+          "wajos",
+          "wasgau",
+          "yorma's"
+        ]
+      ],
+      [
+        "drugstore",
+        [
+          "watsons"
+        ]
+      ],
+      [
+        "eating-out",
+        [
+          "60 seconds to napoli",
+          "aposto",
+          "applebee's",
+          "applebee's neighborhood grill & bar",
+          "applebees bar and grill",
+          "applebees grill and bar",
+          "applebees neighborhood bar and grill",
+          "asiahung",
+          "auntie anne's",
+          "auntie annes pretzels",
+          "bageterie boulevard",
+          "bb.q chicken",
+          "beets & roots",
+          "belchicken",
+          "bigchefs",
+          "brezelk\xF6nig",
+          "burgerheart",
+          "burgerme",
+          "burguer king",
+          "burrito company",
+          "carl's jr.",
+          "checkers drive-in restaurants, inc",
+          "chipotle",
+          "cinnabon",
+          "dairy queen",
+          "domino's",
+          "domino's australia",
+          "doughnut time",
+          "dunkin doughnuts",
+          "dunkin'",
+          "es teler 77",
+          "fireaway",
+          "fogo de ch\xE3o",
+          "freddy fresh",
+          "frittenwerk",
+          "fruitisimo",
+          "gosch sylt",
+          "haidilao hot pot",
+          "hardee's",
+          "haus des d\xF6ners",
+          "hesburger",
+          "hooters",
+          "ihop",
+          "international house of pancakes",
+          "johnny rockets",
+          "jollibee",
+          "kbtr",
+          "kochl\xF6ffel",
+          "krispy kreme",
+          "krispy kreme doughnuts",
+          "la donuteria",
+          "little caesars",
+          "little ceasars",
+          "long john silver's",
+          "loving hut",
+          "ma'loa",
+          "maredo",
+          "marrybrown",
+          "mealtime malatang",
+          "mission bbq",
+          "mister donut",
+          "mr. sub",
+          "nobu",
+          "o'tacos",
+          "oakberry a\xE7a\xED bowls",
+          "old chang kee",
+          "olive garden",
+          "olive garden italian kitchen",
+          "panda express",
+          "papa john",
+          "papa john's",
+          "papparich",
+          "pelicana",
+          "pelicana chicken",
+          "pepper lunch",
+          "peter pane",
+          "pita pit",
+          "pollo campero",
+          "pollo tropical",
+          "pommesfreunde",
+          "popeyes",
+          "potato corner",
+          "pret a manger",
+          "quiznos",
+          "quiznos sub",
+          "quiznos subs",
+          "red lobster",
+          "risa chicken",
+          "royal donuts",
+          "ruby tuesday",
+          "saizeriya",
+          "saravana bhavan",
+          "saravanaa bhavan",
+          "sausalitos",
+          "sbarro",
+          "schweinske",
+          "shake shack",
+          "shakey's",
+          "shiso burger",
+          "shoo loong kan",
+          "sticks'n'sushi",
+          "swing kitchen",
+          "taco bell",
+          "telepizza",
+          "tgi fridays",
+          "the chicken rice shop",
+          "tommi's burger joint",
+          "tony roma",
+          "tony roma's",
+          "veggie pret",
+          "wagamama",
+          "wahlburgers",
+          "wayback burgers",
+          "wilma wunder",
+          "wimpy restaurants",
+          "xiaolongkan",
+          "\xE7i\u011Fk\xF6ftem"
+        ]
+      ],
+      [
+        "coffee-snacks",
+        [
+          "allw\xF6rden",
+          "amorino",
+          "backhaus hackner",
+          "backhaus hennig",
+          "backhaus nahrstedt",
+          "barbarossa brotkultur",
+          "baskin-robbins",
+          "ben & jerry's",
+          "brioche dor\xE9e",
+          "brothaus",
+          "cadera",
+          "caff\xE8 pascucci",
+          "campus suite",
+          "chatime",
+          "coco fresh tea & juice",
+          "coffeeshop company",
+          "cold stone",
+          "cold stone creamery",
+          "costa drive through",
+          "costa drive thru",
+          "dallmeyers backhus",
+          "dat backhus",
+          "die lohner's",
+          "ding tea",
+          "d\xE9lifrance",
+          "d\xF6bbe",
+          "el&n london",
+          "erster wiener",
+          "espressolab",
+          "familienb\xE4cker musswessels",
+          "familienb\xE4ckerei grimminger",
+          "familienb\xE4ckerei musswessels",
+          "gilgen's",
+          "goeken backen",
+          "grimminger",
+          "g\xF6ing",
+          "haferkater",
+          "happy lemon",
+          "heberer",
+          "helbing mein lieblingsb\xE4cker",
+          "hinnerb\xE4cker",
+          "hofpfisterei",
+          "hosselmann",
+          "h\xE4agen-dazs",
+          "ihle",
+          "ihr landb\xE4cker",
+          "janny's",
+          "janny's eis",
+          "joe & the juice",
+          "julius meinl",
+          "kf tea",
+          "kolls",
+          "kolls familienb\xE4ckerei",
+          "kung fu tea",
+          "la romana",
+          "landb\xE4ckerei ihle",
+          "landb\xE4ckerei stinges",
+          "lavazza",
+          "le pain quotidien",
+          "leifert",
+          "lieblingsb\xE4cker",
+          "lohner's",
+          "luckin",
+          "l\xF6wenb\xE4cker schaper",
+          "machi machi",
+          "malzers",
+          "marble slab creamery",
+          "mccaf\xE9",
+          "mein lieblingsb\xE4cker",
+          "milkau",
+          "millie's cookies",
+          "musswessels",
+          "m\xFCller & egerer",
+          "m\xFCller egerer",
+          "m\xFCller und egerer",
+          "nahrstedt",
+          "nuttea",
+          "oebel",
+          "onezo",
+          "onezo tapioca",
+          "onezo tea",
+          "pappert",
+          "papperts",
+          "pekara",
+          "pinkberry",
+          "rischart",
+          "rischarts backhaus",
+          "rose bakeshop",
+          "royaltea",
+          "schw\xE4lmer brotladen",
+          "second cup",
+          "segafredo",
+          "sipl",
+          "stadtb\xE4ckerei kamp",
+          "stangengr\xFCner m\xFChlenb\xE4ckerei",
+          "steinecke",
+          "steiskal",
+          "sternenb\xE4ck",
+          "stinges",
+          "stinges landb\xE4ckerei",
+          "tcby",
+          "teeamo",
+          "tiger sugar",
+          "tim hortons",
+          "uncle tetsu's cheesecake",
+          "von allw\xF6rden",
+          "wiener feinb\xE4cker",
+          "wiener feinb\xE4cker heberer",
+          "wiener feinb\xE4ckerei",
+          "wiener feinb\xE4ckerei heberer",
+          "wonderwaffel",
+          "xing fu tang",
+          "yi fang fruit tea",
+          "yi fang taiwan fruit tea",
+          "yi fang tea",
+          "yogen fr\xFCz",
+          "yogorino",
+          "zeit f\xFCr brot"
+        ]
+      ],
+      [
+        "household",
+        [
+          "ace hardware",
+          "asian paints",
+          "bauking",
+          "bauspezi",
+          "boconcept",
+          "bolia",
+          "brillux",
+          "bulthaup",
+          "butlers",
+          "dehner",
+          "dille & kamille",
+          "dulux",
+          "dulux paints",
+          "emma sleep",
+          "enza home",
+          "espa\xE7o casa",
+          "farrow & ball",
+          "fissler",
+          "hagebau",
+          "hagebaumarkt",
+          "hardeck",
+          "herkules bau&garten",
+          "home24",
+          "iittala",
+          "intratuin",
+          "jotun",
+          "kibek",
+          "kodi",
+          "k\xFCchentreff",
+          "le creuset",
+          "leroy merlin",
+          "ligne roset",
+          "maisons du monde",
+          "meda k\xFCchenfachmarkt",
+          "multipolster",
+          "musterring",
+          "natuzzi",
+          "natuzzi italia",
+          "plana k\xFCchenland",
+          "poggenpohl",
+          "poltrona frau",
+          "porta k\xFCchenwelt",
+          "pottery barn",
+          "pottery barn kids",
+          "raiffeisen-markt",
+          "rhg bau & garten",
+          "richter+frenzel",
+          "roche bobois",
+          "sconto sb",
+          "screwfix",
+          "seats and sofas",
+          "segm\xFCller",
+          "sherwin williams paint store",
+          "sherwin williams paints",
+          "sherwin-williams",
+          "siematic",
+          "tedox",
+          "tefal",
+          "tempur",
+          "tescoma",
+          "villeroy & boch",
+          "west elm",
+          "wmf",
+          "xenos",
+          "yata\u015F",
+          "yata\u015F bedding",
+          "yves delorme",
+          "zg raiffeisen",
+          "zg raiffeisen baustoffe",
+          "zg raiffeisen markt",
+          "zurbr\xFCggen"
+        ]
+      ],
+      [
+        "pets",
+        [
+          "anicura",
+          "megazoo"
+        ]
+      ],
+      [
+        "bus-train",
+        [
+          "arriva",
+          "augsburger verkehrs- und tarifverbund",
+          "barnimer busgesellschaft",
+          "batik solo trans",
+          "big bus tours",
+          "blablabus",
+          "braunschweiger verkehrs-gmbh",
+          "busverkehr emsland-mitte/nord",
+          "bv emsland-mitte/nord",
+          "b\xFCrgerbus fredenbeck",
+          "b\xFCrgerbus remscheid",
+          "cebus",
+          "ch-direct",
+          "ch-integral",
+          "chemins de fer luxembourgeois",
+          "die \xF6ffies",
+          "die \xF6ffis",
+          "dingolfinger regionalbusnetz",
+          "dlov",
+          "donau-iller-nahverkehrsverbund",
+          "eurobahn",
+          "eurocity",
+          "euronight",
+          "european sleeper",
+          "filsland mobilit\xE4tsverbund",
+          "filsland mobilit\xE4tsverbund gmbh",
+          "freiburger verkehrs ag",
+          "gemeinschaftstarif mecklenburgische seenplatte",
+          "gro\xDFraum-verkehr hannover",
+          "h3nv",
+          "heidenheimer tarfivverbund",
+          "heidenheimer tarifverbund",
+          "idbus",
+          "inselbus norderney",
+          "invg",
+          "ivrpv",
+          "kalb-linien",
+          "keolis",
+          "kissingen mobil",
+          "koleje dolno\u015Bl\u0105skie",
+          "kombus",
+          "kooperationsgemeinschaft \u201Evorpommern\u201C",
+          "kreisverkehr schw\xE4bisch hall",
+          "landkreislinien schwandorf",
+          "leo express",
+          "luxemburgische eisenbahnen",
+          "mad t\u0159eb\xED\u010D",
+          "magdeburger regionalverkehrsverbund",
+          "marego",
+          "meininger busbetrieb",
+          "mhd dpmml",
+          "mhd jablonec nad nisou",
+          "mhd jihlava",
+          "mhd liberec",
+          "mhd opava",
+          "mhd prost\u011Bjov",
+          "mhd p\xEDsek",
+          "mhd uhersk\xE9 hradi\u0161t\u011B",
+          "mhd v pardubic\xEDch",
+          "mhd \u010Desk\xE1 l\xEDpa",
+          "m\xFCnchner verkehrs- und tarifverbund",
+          "nahbus nordwestmecklenburg gmbh",
+          "nahverkehrsverbund schleswig-holstein",
+          "nationale gesellschaft der luxemburgischen eisenbahnen",
+          "ostalbmobil",
+          "ouibus",
+          "ovg sonneberg",
+          "regiojet",
+          "regionalverkehr allg\xE4u",
+          "regionalverkehr oberbayern",
+          "rgtr",
+          "rhein-nahe nahverkehrsverbund",
+          "rhein-neckar-verkehr",
+          "rovg",
+          "rvs regionalbusverkehr s\xFCdwest gmbh",
+          "soci\xE9t\xE9 nationale des chemins de fer luxembourgeois",
+          "stadt-bus-verkehr straubing",
+          "stadtverkehr rosenheim",
+          "stendalbus",
+          "suburbano",
+          "swisspass",
+          "sylter linienverkehr",
+          "s\xFCdwestbus",
+          "tarifverbund ortenau",
+          "tecl",
+          "transporte urbano de linares",
+          "tuticket",
+          "t\xF3rshavn",
+          "vag verkehrs-aktiengesellschaft n\xFCrnberg",
+          "verbundtarif donauwald",
+          "verbundtarif region braunschweig",
+          "verkehrs- und tarifgemeinschaft ostharz",
+          "verkehrs- und tarifverbund stuttgart",
+          "verkehrs-gemeinschaft landkreis freudenstadt",
+          "verkehrsbetriebsgesellschaft passau",
+          "verkehrsunternehmen wartburgmobil",
+          "verkehrsunternehmens-verbund mainfranken",
+          "ver\xADkehrs\xADver\xADbund gro\xDF\xADraum n\xFCrn\xADberg",
+          "vg rd-eck",
+          "vge-s\xFCd",
+          "vwg des \xF6pnv s\xF6mmerda",
+          "waldshuter tarifverbund",
+          "werrabus",
+          "westfalentarif",
+          "xe bu\xFDt h\u1EA3i ph\xF2ng",
+          "zarz\u0105d transportu metropolitalnego",
+          "zvon",
+          "\xF6ffies",
+          "\xF6ffis"
+        ]
+      ],
+      [
+        "car-fuel",
+        [
+          "1a autoservice",
+          "afriquia",
+          "alliance tire company",
+          "ampup",
+          "apollo tyres",
+          "auto-teile-unger",
+          "autofit",
+          "bee charging solutions",
+          "beyfin",
+          "bft",
+          "bike-energy",
+          "bp america",
+          "bp connect",
+          "bp gas station",
+          "bridgestone",
+          "bridgestone india",
+          "campsa",
+          "chargeone",
+          "chargepoint",
+          "circle k",
+          "citgo",
+          "coles express",
+          "e-wald",
+          "e-wald gmbh",
+          "eemobility",
+          "eemobility gmbh",
+          "ehrle",
+          "engie vianeo",
+          "eni",
+          "eni station",
+          "eni wash",
+          "euromaster",
+          "eurooil",
+          "everfuel",
+          "evgateway",
+          "fastned",
+          "intermarch\xE9 contact",
+          "intermarch\xE9 super",
+          "ionity",
+          "ionity gmbh",
+          "junited autoglas",
+          "k\xE4rcher clean park",
+          "lukoil",
+          "mer germany gmbh",
+          "milence",
+          "milence charging hub",
+          "motrio",
+          "neste",
+          "neste oil",
+          "newmotion",
+          "nio power",
+          "nio power charger",
+          "nio power destination",
+          "nio power swap",
+          "nordoel",
+          "novacharge",
+          "novus glass",
+          "opconnect",
+          "orlen",
+          "orlen express",
+          "oxxo",
+          "oxxo gas",
+          "petrol ofisi",
+          "petrolimex",
+          "petronas",
+          "pitstop",
+          "pneuhage",
+          "pneumobil",
+          "ptt station",
+          "puma energy",
+          "pv automotive",
+          "quick reifendiscount",
+          "quiktrip",
+          "quiktrip corporation",
+          "racetrac",
+          "repsol",
+          "rubis",
+          "safeway fuel station",
+          "sb tank",
+          "superwash",
+          "swtch",
+          "tamoil",
+          "tamoil italia spa.",
+          "tankpool24",
+          "tesla destination charger",
+          "tesla france sarl",
+          "tesla wall connector",
+          "texaco",
+          "texaco service station",
+          "texaco with techron",
+          "tinq",
+          "totalerg",
+          "ubitricity",
+          "ubitricity gmbh",
+          "ultramar",
+          "valero",
+          "verg\xF6lst",
+          "vianor",
+          "wintec autoglas",
+          "wm fahrzeugteile",
+          "zg raiffeisen energie"
+        ]
+      ],
+      [
+        "taxi-sharing",
+        [
+          "cambio autodelen",
+          "deer gmbh",
+          "donkey republic",
+          "metropolradruhr",
+          "mvgmeinrad",
+          "regiorad stuttgart",
+          "scouter",
+          "sigo",
+          "sigo e-lastenrad sharing",
+          "sigo e-lastenrad standort",
+          "sprottenflotte",
+          "stattauto m\xFCnchen",
+          "tink konstanz",
+          "twsrad",
+          "usedomrad",
+          "velocity aachen",
+          "youbike"
+        ]
+      ],
+      [
+        "travel",
+        [
+          "a&o",
+          "adina hotels",
+          "akzent hotels",
+          "alila",
+          "alltours",
+          "alua",
+          "alua hotels & resorts",
+          "andaz",
+          "art'otel",
+          "autograph collection",
+          "b&b hotels",
+          "banyan tree",
+          "barcel\xF3 hotels & resorts",
+          "bed & breakfast hotels",
+          "belmond",
+          "best western",
+          "best western hotels & resorts",
+          "best western plus",
+          "best western premier",
+          "budget car rental",
+          "bw premier collection",
+          "bw signature collection",
+          "catalonia hotels & resorts",
+          "centro hotels",
+          "clayton hotels",
+          "club med",
+          "club wyndham",
+          "comfort suites",
+          "courtyard marriott",
+          "crowne plaza",
+          "curio collection",
+          "curio collection by hilton",
+          "days inn",
+          "delta hotels",
+          "dertour",
+          "design hotels",
+          "destination by hyatt",
+          "deutsches jugendherbergswerk",
+          "diamond resorts",
+          "dollar car rental",
+          "dollar rent a car",
+          "dorint",
+          "doubletree",
+          "easyhotel",
+          "enterprise car rental",
+          "eurostars",
+          "eurostars hotels",
+          "executive residency",
+          "fairmont",
+          "flair hotels",
+          "flair hotels ev",
+          "flight centre",
+          "four points by sheraton",
+          "four points flex by sheraton",
+          "four seasons",
+          "garner hotels",
+          "golden tulip",
+          "grand hyatt",
+          "green motion car rental",
+          "gut-gebucht",
+          "h-hotels",
+          "h10 hotels",
+          "hertz car rental",
+          "hertz rent a car",
+          "hilton",
+          "hilton garden inn",
+          "hilton grand vacations",
+          "hilton hotels & resorts",
+          "holiday inn",
+          "holiday inn express",
+          "holiday inn express & suites",
+          "hoteles meininger",
+          "howard johnson",
+          "hyatt",
+          "hyatt centric",
+          "hyatt house",
+          "hyatt place",
+          "hyatt regency",
+          "ibis",
+          "ibis budget",
+          "ibis styles",
+          "innside by meli\xE1",
+          "intercityhotel",
+          "intercontinental",
+          "intercontinental hotels & resorts",
+          "jdv by hyatt",
+          "jo&joe",
+          "jufa hotels",
+          "jurys",
+          "jurys inn",
+          "jw marriott",
+          "jw marriott hotels",
+          "kempinski",
+          "kimpton",
+          "kuoni",
+          "langham hotels & resorts",
+          "le m\xE9ridien",
+          "leonardo hotels",
+          "localiza",
+          "logis hotels",
+          "ltur",
+          "marriott",
+          "marriott autograph collection",
+          "marriott vacation club",
+          "me by meli\xE1",
+          "me melia",
+          "meli\xE1",
+          "meli\xE1 hotels & resorts",
+          "mercure",
+          "mercure hotels",
+          "mgallery",
+          "motel one",
+          "moxy",
+          "nh collection hotels",
+          "nh hotels",
+          "nhow",
+          "novotel",
+          "opel rent",
+          "oyo",
+          "oyo hotels",
+          "oyo rooms",
+          "pan pacific",
+          "park hyatt",
+          "park inn",
+          "park inn by radisson",
+          "park plaza hotels",
+          "parkroyal",
+          "premier inn",
+          "premi\xE8re classe",
+          "pullman",
+          "radisson",
+          "radisson blu",
+          "radisson collection",
+          "radisson hotels",
+          "radisson hotels americas",
+          "radisson red",
+          "ramada",
+          "reiseland",
+          "relais & ch\xE2teaux",
+          "renaissance hotels",
+          "residence inn",
+          "ringhotels",
+          "ritz carlton",
+          "riu",
+          "romantik hotels",
+          "romantik hotels & restaurants",
+          "scandic",
+          "scandic hotels",
+          "sheraton",
+          "six senses",
+          "sofitel",
+          "spark by hilton",
+          "st christopher's inn",
+          "st. regis",
+          "sta travel",
+          "starcar",
+          "staycity",
+          "staycity aparthotel",
+          "staycity aparthotels",
+          "super 8 by wyndham",
+          "swiss-belhotel",
+          "swiss-belinn",
+          "swiss\xF4tel",
+          "the hoxton",
+          "the niu",
+          "the ritz",
+          "the ritz-carlton",
+          "the unbound collection by hyatt",
+          "the westin",
+          "thrifty car rental",
+          "toyoko inn",
+          "trademark by wyndham",
+          "trademark collection",
+          "trademark wyndham",
+          "tribute portfolio",
+          "tryp",
+          "tui",
+          "tui reisecenter",
+          "unbound collection",
+          "unbound hyatt",
+          "van der valk",
+          "vienna house",
+          "voco",
+          "w hotels",
+          "waldorf astoria",
+          "waldorf astoria hotels & resorts",
+          "westin",
+          "westin hotels & resorts",
+          "worldhotel",
+          "worldhotels",
+          "wyndham",
+          "wyndham garden",
+          "wyndham grand",
+          "zleep hotels"
+        ]
+      ],
+      [
+        "health",
+        [
+          "ace & tate",
+          "aktivoptik",
+          "alphega pharmacy",
+          "amplifon",
+          "amplifon deutschland gmbh",
+          "amplifon france",
+          "audika",
+          "becker + fl\xF6ge",
+          "dentix",
+          "distri club medical",
+          "easyapotheke",
+          "eyes + more",
+          "eyes&more",
+          "fielmann",
+          "geers",
+          "imd berlin",
+          "meindentist",
+          "mister spex",
+          "neuroth",
+          "opticalia",
+          "specsavers",
+          "specsavers opticians",
+          "synlab",
+          "unilabs",
+          "vision express",
+          "vitakustik"
+        ]
+      ],
+      [
+        "sports-fitness",
+        [
+          "9round",
+          "a3 sport",
+          "beat81",
+          "bodystreet",
+          "crossfit",
+          "decathlon",
+          "easyfitness",
+          "equiva",
+          "fitbox",
+          "fitinn",
+          "fitseveneleven",
+          "fitshop",
+          "hapik",
+          "hervis",
+          "hervis sport",
+          "hervis sports",
+          "hoka",
+          "holmes place",
+          "ifly",
+          "injoy",
+          "intersport",
+          "kr\xE4mer pferdesport",
+          "k\xF6rperformen",
+          "mrs. sporty",
+          "skiset",
+          "sport 2000",
+          "sport-tiedje",
+          "sports direct",
+          "sportscheck",
+          "sportsdirect dot com",
+          "sportsdirect.com",
+          "stadium sports store",
+          "the hapik group",
+          "topgolf",
+          "wellyou"
+        ]
+      ],
+      [
+        "personal-care",
+        [
+          "aesop",
+          "avon",
+          "bath & body works",
+          "bobbi brown",
+          "diptyque'",
+          "equivalenza",
+          "esanelle",
+          "essanelle",
+          "faberlic",
+          "guinot",
+          "hair express",
+          "hairkiller",
+          "house of hair",
+          "inglot",
+          "itstyle",
+          "jo malone",
+          "jurlique",
+          "kiehl's",
+          "kiehl's since 1851",
+          "kiko milano",
+          "klier",
+          "l'occitane",
+          "l'occitane en provence",
+          "mac cosmetics",
+          "malin+goetz",
+          "morphe",
+          "nature republic",
+          "no+vello",
+          "oldboy",
+          "oriflame",
+          "parf\xFCmerie becker",
+          "parf\xFCmerie pieper",
+          "pupa milano",
+          "qb house",
+          "rituals",
+          "rituals cosmetics",
+          "sabon",
+          "saint algue",
+          "sassoon salon",
+          "schuback",
+          "schuback parf\xFCmerien",
+          "sephora",
+          "shiseido",
+          "stadtparf\xFCmerie pieper",
+          "stylebox",
+          "stylebox klier",
+          "styleboxx",
+          "styleboxx klier",
+          "sunpoint",
+          "super cut",
+          "the body shop",
+          "toni & guy",
+          "top hair",
+          "ziaja"
+        ]
+      ],
+      [
+        "going-out",
+        [
+          "belushi's",
+          "brewdog",
+          "coyote ugly",
+          "coyote ugly saloon"
+        ]
+      ],
+      [
+        "entertainment",
+        [
+          "cinemark",
+          "cinemotion",
+          "cineplex",
+          "cin\xE9polis",
+          "fox in a box",
+          "legoland",
+          "legoland discovery centre",
+          "uci kinowelt"
+        ]
+      ],
+      [
+        "hobbies",
+        [
+          "boesner",
+          "b\xFCcher pustet",
+          "games workshop",
+          "hugendubel",
+          "lumas",
+          "mayersche",
+          "osiander",
+          "press & books",
+          "readshop",
+          "tsutaya",
+          "warhammer",
+          "whsmith",
+          "wolle r\xF6del",
+          "yellowkorner"
+        ]
+      ],
+      [
+        "clothes",
+        [
+          "& other stories",
+          "5.11 tactical",
+          "abc schuh-center",
+          "abercrombie & fitch",
+          "abercrombie kids",
+          "adidas",
+          "adidas original",
+          "adidas originals",
+          "aeropostale",
+          "agent provocateur",
+          "aldo shoes",
+          "alexander mcqueen",
+          "allbirds",
+          "amo's style",
+          "anson's",
+          "ara shoes",
+          "arket",
+          "armani exchange",
+          "asics",
+          "athletes world",
+          "aubade",
+          "awg-modecenter",
+          "ba&sh",
+          "balenciaga",
+          "baleno",
+          "bally",
+          "banana republic",
+          "banana republic factory",
+          "bata",
+          "ben sherman",
+          "bershka",
+          "betty barclay",
+          "billabong",
+          "bimba & lola",
+          "bimba y lola",
+          "birkenstock",
+          "bleufor\xEAt",
+          "blue tomato",
+          "body glove",
+          "boggi milano",
+          "bogner",
+          "bonita men",
+          "bottega veneta",
+          "brandy melville",
+          "brax",
+          "breuninger",
+          "brooks brothers",
+          "brunello cucinelli",
+          "bruno banani",
+          "bugatti",
+          "burberry",
+          "calida",
+          "calvin klein",
+          "calzedonia",
+          "camel active",
+          "camp david",
+          "canada goose",
+          "canali",
+          "carhartt work in progress",
+          "carters babies and kids",
+          "catimini",
+          "celio",
+          "charles v\xF6gele",
+          "claire's stores",
+          "claires accessories",
+          "claudie pierlot",
+          "coach new york",
+          "coach ny",
+          "coccinelle",
+          "coccodrillo",
+          "cole haan",
+          "cosmoparis",
+          "cotton on body",
+          "cotton on kids",
+          "cot\xE9lac",
+          "crocs",
+          "defacto",
+          "deichmann",
+          "desigual",
+          "dkny",
+          "doc marten",
+          "doc martens",
+          "doctor marten",
+          "doctor martens",
+          "dolce & gabbana",
+          "dolce and gabana",
+          "dolce and gabanna",
+          "dolce and gabbanna",
+          "dolce y gabana",
+          "dolce y gabanna",
+          "dolce y gabbana",
+          "dolce y gabbanna",
+          "donna karan",
+          "donna karan new york",
+          "dr. martens",
+          "dress barn",
+          "du pareil au m\xEAme",
+          "dune london",
+          "dunhill",
+          "ecco shoes",
+          "elena mir\xF2",
+          "elisabetta franchi",
+          "emilio adani",
+          "emporio armani",
+          "engbers",
+          "ermenegildo zegna",
+          "ernsting's family",
+          "escada",
+          "esotiq",
+          "essentiel antwerp",
+          "etam",
+          "eterna",
+          "etro",
+          "falconeri",
+          "fendi",
+          "fila",
+          "foot locker",
+          "foot locker europe",
+          "foot solutions",
+          "forever 21",
+          "french connection",
+          "fusalp",
+          "fussl",
+          "g-star",
+          "g-star raw",
+          "gap kids",
+          "geox",
+          "gerry weber",
+          "giorgio armani",
+          "givenchy",
+          "golden goose",
+          "gucci",
+          "gudrun sj\xF6d\xE9n",
+          "guess accessories",
+          "g\xF6rtz",
+          "g\xF6rtz 17",
+          "hackett london",
+          "halfprice",
+          "hallhuber",
+          "hanesbrands",
+          "happy socks",
+          "havaianas",
+          "helly hansen",
+          "herzog & br\xE4uer",
+          "hollister",
+          "house of hoops",
+          "hugo boss",
+          "humanic",
+          "hunkem\xF6ller",
+          "hush puppies",
+          "iblues",
+          "intimissimi",
+          "intimissimi uomo",
+          "intrend",
+          "izod",
+          "jacadi",
+          "jack & jones",
+          "jd sports",
+          "jil sander",
+          "jimmy choo",
+          "k und k schuh-center",
+          "k+k schuh-center",
+          "karl lagerfeld",
+          "kate spade new york",
+          "kate spade ny",
+          "kenzo",
+          "kiabi",
+          "kids foot locker",
+          "kooka\xEF",
+          "koton",
+          "la martina",
+          "lacoste",
+          "lc waikiki",
+          "le coq sportif",
+          "le slip fran\xE7ais",
+          "lee cooper",
+          "leguano",
+          "leiser comfort",
+          "liebeskind berlin",
+          "liu jo",
+          "loding",
+          "longchamp",
+          "loro piana",
+          "louis vuitton",
+          "luisa spagnoli",
+          "lululemon",
+          "maison margiela",
+          "maje",
+          "manfield",
+          "marc cain",
+          "marc o'polo",
+          "marella",
+          "marina rinaldi",
+          "massimo dutti",
+          "mavi",
+          "mayer's markenschuhe",
+          "mcm",
+          "mctrek",
+          "merrell",
+          "mexx",
+          "michael kors",
+          "mister*lady",
+          "modepark r\xF6ther",
+          "momoni",
+          "moncler",
+          "monki",
+          "moser trachtenwelt",
+          "mountain warehouse",
+          "mulberry",
+          "myshoes",
+          "naf naf",
+          "napapijri",
+          "nautica",
+          "new balance",
+          "new yorker",
+          "nike",
+          "nike clearance store",
+          "nike factory store",
+          "nike well collective",
+          "north sails",
+          "ochnik",
+          "oka\xEFdi",
+          "old navy",
+          "olymp & hades",
+          "omoda",
+          "only & sons",
+          "orsay",
+          "oshkosh",
+          "oshkosh b'gosh",
+          "ovs",
+          "ovs kids",
+          "oysho",
+          "payless shoesource",
+          "peek & cloppenburg",
+          "pennyblack",
+          "penti",
+          "petit bateau",
+          "phase eight",
+          "pierre cardin",
+          "pimkie",
+          "pinko",
+          "polo ralph lauren",
+          "pom d'api",
+          "porsche design",
+          "prada",
+          "princesse tam.tam",
+          "promod",
+          "pull & bear",
+          "puma outlet",
+          "punt roma",
+          "quick schuh",
+          "quicksilver",
+          "quiksilver",
+          "rainbow shops",
+          "red wing shoes",
+          "reebok",
+          "regatta great outdoors",
+          "rieker",
+          "rimowa",
+          "riu paris",
+          "roberto cavalli",
+          "rockport",
+          "s.oliver",
+          "saint laurent",
+          "salvatore ferragamo",
+          "samsoe&samsoe",
+          "samsonite",
+          "san antonio shoe",
+          "sas shoes",
+          "schiesser",
+          "schuh-mann",
+          "schuhkay",
+          "schuhpark",
+          "scotch & soda",
+          "sebago",
+          "seidensticker",
+          "sergent major",
+          "shoe4you",
+          "sigikid",
+          "sinnleffers",
+          "sinsay",
+          "sisley",
+          "sizeer",
+          "skechers",
+          "skechers usa",
+          "sketchers",
+          "sportmax",
+          "stefanel",
+          "stella mccartney",
+          "street one",
+          "stuart weitzman",
+          "suitsupply",
+          "superdry",
+          "sweaty betty",
+          "s\xE9zane",
+          "tally weijl",
+          "tamaris",
+          "tartine et chocolat",
+          "ted baker",
+          "terranova",
+          "tezenis",
+          "the athlete's foot",
+          "the kooples",
+          "the north face",
+          "the walking company",
+          "thom browne",
+          "timberland",
+          "tom tailor",
+          "tommy hilfiger",
+          "tommy hilfiger kids",
+          "topman",
+          "topshop",
+          "tory burch",
+          "tredy",
+          "trigema",
+          "tumi",
+          "u s polo",
+          "u.s. polo assn.",
+          "ugg",
+          "ugg / ugg australia",
+          "ulla popken",
+          "under armor",
+          "under armour",
+          "under armour youth",
+          "uniqlo",
+          "united colors of benetton",
+          "urban outfitters",
+          "van heusen",
+          "van laack",
+          "vaude",
+          "vero moda",
+          "versace",
+          "vertbaudet",
+          "victoria's secret",
+          "vilebrequin",
+          "volcom",
+          "wacoal",
+          "walbusch",
+          "weekend max mara",
+          "wellensteyn",
+          "witt weiden",
+          "wolford",
+          "women's secret",
+          "women'secret",
+          "w\xF6hrl",
+          "yours clothing",
+          "zadig & voltaire",
+          "zeeman",
+          "zegna",
+          "zilli",
+          "\xE9ric bompard"
+        ]
+      ],
+      [
+        "electronics",
+        [
+          "arlt computer",
+          "bang & olufsen",
+          "beko",
+          "bose",
+          "capi electronics",
+          "coolblue",
+          "devialet",
+          "digicel",
+          "electronicpartner",
+          "euronics",
+          "harman kardon",
+          "hifi klubben",
+          "holzleitner",
+          "huawei",
+          "inmotion",
+          "jbl",
+          "k&m elektronik",
+          "la curacao",
+          "leica",
+          "lg electronics",
+          "medimax",
+          "melectronics",
+          "miele",
+          "oppo",
+          "radioshack",
+          "samsung",
+          "xiaomi"
+        ]
+      ],
+      [
+        "shopping",
+        [
+          "aktionshaus wreesmann",
+          "centershop",
+          "dufry",
+          "galeria",
+          "galeria kaufhof",
+          "galeria kaufhof gmbh",
+          "galeries lafayette",
+          "hema",
+          "hema b.v.",
+          "karstadt",
+          "karstadt kaufhof",
+          "karstadt warenhaus",
+          "karstadt warenhaus gmbh",
+          "kr\xFCmet",
+          "manufactum",
+          "miniso",
+          "muji",
+          "m\xE4c-geiz",
+          "pfennigpfeiffer",
+          "postenb\xF6rse",
+          "rusta",
+          "wreesmann",
+          "wreesmann sonderpostenmarkt"
+        ]
+      ],
+      [
+        "gifts",
+        [
+          "elbenwald",
+          "intertoys",
+          "lego",
+          "lego store",
+          "picwictoys",
+          "rofu kinderland",
+          "smyths",
+          "smyths toys",
+          "spiele max",
+          "steiff"
+        ]
+      ],
+      [
+        "education",
+        [
+          "berlitz",
+          "comcave",
+          "comcave.college",
+          "sae institute",
+          "wall street english"
+        ]
+      ],
+      [
+        "insurance",
+        [
+          "big gesundheit",
+          "bundesinnungskrankenkasse",
+          "bundesinnungskrankenkasse gesundheit",
+          "ergo direktversicherung",
+          "gm\xFCnder ersatzkasse",
+          "handelskrankenkasse",
+          "innungskrankenkasse brandenburg und berlin",
+          "innungskrankenkasse nord",
+          "mapfre",
+          "prudential",
+          "ruv",
+          "saint-gobain betriebskrankenkasse",
+          "vgh"
+        ]
+      ],
+      [
+        "taxes",
+        [
+          "lohi",
+          "lohi bw",
+          "steuerring"
+        ]
+      ],
+      [
+        "memberships",
+        [
+          "ig bau",
+          "ig bce",
+          "ig metall"
+        ]
+      ]
+    ],
+    plainVowelWords: [
+      "kuchen",
+      "fahre",
+      "going"
+    ]
   };
-  var order = Object.entries(patterns);
-  var eats = order.findIndex(([id]) => id === "eating-out");
-  var taxi = order.findIndex(([id]) => id === "taxi-sharing");
-  [order[eats], order[taxi]] = [order[taxi], order[eats]];
-  var STARTER_RULES = order.flatMap(([categoryId, entries]) => entries.map((pattern) => ({ pattern, categoryId })));
-  var escape = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  var compiled = STARTER_RULES.map((rule) => ({
-    ...rule,
-    re: new RegExp(`(?:^|[^\\p{L}\\p{N}])${escape(rule.pattern)}(?=$|[^\\p{L}\\p{N}])`, "iu")
-  }));
+
+  // src/engine/sorting/starter-rules.ts
+  var matcher = compileShopList(shops_de_default);
+  var STARTER_RULES = matcher.rules;
   function starterCategory(payment, categories) {
-    const allowed = new Set(categories.map((c) => c.id));
-    const text2 = `${payment.counterparty ?? ""} ${payment.description ?? payment.bookingText ?? ""}`.normalize("NFC");
-    const rule = compiled.find(({ re }) => re.test(text2));
-    return rule && allowed.has(rule.categoryId) ? rule.categoryId : null;
+    const categoryId = matcher.match(payment);
+    return categoryId !== null && categories.some((c) => c.id === categoryId) ? categoryId : null;
   }
 
   // src/engine/dates.ts
@@ -5808,80 +9382,23 @@ var __AresiumEngine = (() => {
   }
   var dayNumber = (day) => Date.UTC(day.y, day.m - 1, day.d) / 864e5;
 
-  // src/engine/sorting/transfers.ts
-  var OWN_TRANSFERS = "own-transfers";
-  var TRANSFER_DAYS = 3;
-  var PAYPAL_NAME = /^paypal(?:$|[\s(*.,])/iu;
-  var PAYPAL_IN_TEXT = /(?:^|[^\p{L}\p{N}])paypal\s*(?:\(\s*europe|europe\b|\*)/iu;
-  function isPaypalBankLine(payment) {
-    if (payment.source === "paypal") return false;
-    const who = (payment.counterparty?.trim() || payment.description || payment.bookingText || "").trim();
-    if (PAYPAL_NAME.test(who)) return true;
-    return [payment.counterparty, payment.description, payment.bookingText].some((text2) => typeof text2 === "string" && PAYPAL_IN_TEXT.test(text2));
-  }
-  function ownTransfers(payments) {
-    const result = payments.map(() => null);
-    if (payments.some((p) => p.source === "paypal")) {
-      payments.forEach((p, i) => {
-        if (isPaypalBankLine(p)) result[i] = { rule: "paypal" };
-      });
-    }
-    const groups2 = /* @__PURE__ */ new Map();
-    payments.forEach((p, index) => {
-      const date = parseDay(p.date);
-      const amount = p.amount;
-      if (!p.account || !date || typeof amount !== "number" || !Number.isFinite(amount)) return;
-      const day = dayNumber(date);
-      const cents = Math.round(Math.abs(amount) * 100);
-      if (cents === 0) return;
-      const group = groups2.get(cents) ?? { out: [], in: [] };
-      (amount < 0 ? group.out : group.in).push({ index, account: p.account, day, currency: p.currency || null });
-      groups2.set(cents, group);
-    });
-    const candidates = [];
-    for (const { out, in: incoming } of groups2.values()) {
-      for (const o of out) {
-        for (const i of incoming) {
-          const distance = Math.abs(o.day - i.day);
-          if (distance > TRANSFER_DAYS || o.account === i.account) continue;
-          if (o.currency && i.currency && o.currency !== i.currency) continue;
-          candidates.push({ a: Math.min(o.index, i.index), b: Math.max(o.index, i.index), distance });
-        }
-      }
-    }
-    candidates.sort((x, y) => x.distance - y.distance || x.a - y.a || x.b - y.b);
-    const paired = /* @__PURE__ */ new Set();
-    for (const { a, b } of candidates) {
-      if (paired.has(a) || paired.has(b)) continue;
-      paired.add(a).add(b);
-      result[a] = { rule: "accounts", pairedWith: b };
-      result[b] = { rule: "accounts", pairedWith: a };
-    }
-    return result;
-  }
-
-  // src/engine/sorting/sort.ts
-  function sortPayments(payments, options) {
-    const allowed = new Set(options.categories.map((c) => c.id));
-    const transfers = ownTransfers(payments);
-    return payments.map((payment, index) => {
-      if (transfers[index]) return { categoryId: OWN_TRANSFERS, source: "structural" };
-      const key = merchantKey(payment);
-      const remembered = key && options.learned && Object.hasOwn(options.learned, key) ? options.learned[key] : null;
-      if (remembered && allowed.has(remembered)) return { categoryId: remembered, source: "learned" };
-      const categoryId = starterCategory(payment, options.categories);
-      return { categoryId, source: categoryId ? "starter" : null };
-    });
-  }
-  function learn(learned, payment, categoryId) {
-    const key = merchantKey(payment);
-    return key ? { ...learned, [key]: categoryId } : { ...learned };
-  }
-
   // src/engine/paypal.ts
+  var ENGLISH_FUNDING = /* @__PURE__ */ new Set([
+    "bank deposit to pp account",
+    "general card deposit",
+    "general credit card deposit",
+    "bank deposit to paypal account",
+    "paypal balance manager funding of paypal account",
+    "ach funding for funds recovery from account balance",
+    "electronic funds transfer funding",
+    "credit card deposit for negative paypal account balance"
+  ]);
+  var plain = (value) => typeof value === "string" ? value.trim().replace(/\s+/g, " ").toLowerCase() : "";
   function isPaypalBankFunding(t) {
     const hay = (t.description + " " + JSON.stringify(t.raw ?? "")).toLowerCase();
-    return hay.includes("bankgutschrift auf paypal");
+    if (hay.includes("bankgutschrift auf paypal")) return true;
+    const values = t.raw && typeof t.raw === "object" ? Object.values(t.raw) : [];
+    return [t.description, ...values].some((value) => ENGLISH_FUNDING.has(plain(value)));
   }
   var CONVERSION_TYPES = /* @__PURE__ */ new Set(["Allgemeine W\xE4hrungsumrechnung", "General Currency Conversion"]);
   var TYPE_KEYS = ["Typ", "Type"];
@@ -5923,6 +9440,99 @@ var __AresiumEngine = (() => {
       rows: rows.filter((row) => !dropped.has(row)).map((row) => replaced.get(row) ?? row),
       unmatched
     };
+  }
+
+  // src/engine/sorting/transfers.ts
+  var OWN_TRANSFERS = "own-transfers";
+  var TRANSFER_DAYS = 3;
+  var PAYPAL_NAME = /^paypal(?:$|[\s(*.,])/iu;
+  var PAYPAL_IN_TEXT = /(?:^|[^\p{L}\p{N}])paypal\s*(?:\(\s*europe|europe\b|\*)/iu;
+  function isPaypalBankLine(payment) {
+    if (payment.source === "paypal") return false;
+    const who = (payment.counterparty?.trim() || payment.description || payment.bookingText || "").trim();
+    if (PAYPAL_NAME.test(who)) return true;
+    return [payment.counterparty, payment.description, payment.bookingText].some((text2) => typeof text2 === "string" && PAYPAL_IN_TEXT.test(text2));
+  }
+  function isPaypalFundingRow(payment) {
+    return payment.source === "paypal" && isPaypalBankFunding({ description: payment.description ?? "", raw: payment.raw });
+  }
+  var OWN_TRANSFER_WORDS = /(?<![\p{L}\p{N}])(?:umbuchung|(?:eigen|konto)?(?:übertrag|uebertrag)|eigene[ns]?\s+konto|own\s+account)(?![\p{L}\p{N}])/iu;
+  function saysOwnTransfer(payment) {
+    return [payment.counterparty, payment.description, payment.bookingText].some((text2) => typeof text2 === "string" && OWN_TRANSFER_WORDS.test(text2.normalize("NFC")));
+  }
+  var ibanKey = (value) => (value ?? "").replace(/\s/g, "").toUpperCase();
+  var IBAN_SHAPE = /^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/;
+  function ownIban(payment) {
+    const given = ibanKey(payment.accountIban);
+    if (given) return given;
+    const account = ibanKey(payment.account);
+    return IBAN_SHAPE.test(account) ? account : "";
+  }
+  var proven = (a, b) => a.other !== "" && a.other === b.iban || b.other !== "" && b.other === a.iban || a.says && b.says;
+  function ownTransfers(payments) {
+    const result = payments.map(() => null);
+    const hasPaypalExport = payments.some((p) => p.source === "paypal");
+    payments.forEach((p, i) => {
+      if (isPaypalFundingRow(p) || hasPaypalExport && isPaypalBankLine(p)) result[i] = { rule: "paypal" };
+    });
+    const groups2 = /* @__PURE__ */ new Map();
+    payments.forEach((p, index) => {
+      const date = parseDay(p.date);
+      const amount = p.amount;
+      if (!p.account || !date || typeof amount !== "number" || !Number.isFinite(amount)) return;
+      const cents = Math.round(Math.abs(amount) * 100);
+      if (cents === 0) return;
+      const group = groups2.get(cents) ?? { out: [], in: [] };
+      (amount < 0 ? group.out : group.in).push({
+        index,
+        account: p.account,
+        day: dayNumber(date),
+        currency: p.currency || null,
+        iban: ownIban(p),
+        other: ibanKey(p.counterpartyIban),
+        says: saysOwnTransfer(p)
+      });
+      groups2.set(cents, group);
+    });
+    const candidates = [];
+    for (const { out, in: incoming } of groups2.values()) {
+      for (const o of out) {
+        for (const i of incoming) {
+          const distance = Math.abs(o.day - i.day);
+          if (distance > TRANSFER_DAYS || o.account === i.account) continue;
+          if (o.currency && i.currency && o.currency !== i.currency) continue;
+          if (!proven(o, i)) continue;
+          candidates.push({ a: Math.min(o.index, i.index), b: Math.max(o.index, i.index), distance });
+        }
+      }
+    }
+    candidates.sort((x, y) => x.distance - y.distance || x.a - y.a || x.b - y.b);
+    const paired = /* @__PURE__ */ new Set();
+    for (const { a, b } of candidates) {
+      if (paired.has(a) || paired.has(b)) continue;
+      paired.add(a).add(b);
+      result[a] = { rule: "accounts", pairedWith: b };
+      result[b] = { rule: "accounts", pairedWith: a };
+    }
+    return result;
+  }
+
+  // src/engine/sorting/sort.ts
+  function sortPayments(payments, options) {
+    const allowed = new Set(options.categories.map((c) => c.id));
+    const transfers = ownTransfers(payments);
+    return payments.map((payment, index) => {
+      if (transfers[index]) return { categoryId: OWN_TRANSFERS, source: "structural" };
+      const key = merchantKey(payment);
+      const remembered = key && options.learned && Object.hasOwn(options.learned, key) ? options.learned[key] : null;
+      if (remembered && allowed.has(remembered)) return { categoryId: remembered, source: "learned" };
+      const categoryId = starterCategory(payment, options.categories);
+      return { categoryId, source: categoryId ? "starter" : null };
+    });
+  }
+  function learn(learned, payment, categoryId) {
+    const key = merchantKey(payment);
+    return key ? { ...learned, [key]: categoryId } : { ...learned };
   }
 
   // src/engine/source.ts
@@ -6229,12 +9839,12 @@ var __AresiumEngine = (() => {
     "YYYYMMDD": { re: /^(\d{4})(\d{2})(\d{2})$/, order: [1, 2, 3] }
   };
   function parseDate(value, format) {
-    const { re, order: order2 } = DATE_PATTERNS[format];
+    const { re, order } = DATE_PATTERNS[format];
     const m = re.exec(value.trim());
     if (!m) return null;
-    let year = +m[order2[0]];
-    if (m[order2[0]].length === 2) year += 2e3;
-    const month = +m[order2[1]], day = +m[order2[2]];
+    let year = +m[order[0]];
+    if (m[order[0]].length === 2) year += 2e3;
+    const month = +m[order[1]], day = +m[order[2]];
     if (year < 1970 || year > 2100 || month < 1 || month > 12 || day < 1) return null;
     if (day > new Date(Date.UTC(year, month, 0)).getUTCDate()) return null;
     return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
@@ -6368,11 +9978,11 @@ var __AresiumEngine = (() => {
     return void 0;
   }
   function labelledPart(text2, label, labels) {
-    const escape2 = (l) => l.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&");
-    const start = label === "" ? { index: 0, 0: "" } : new RegExp(`(?:^|\\s)${escape2(label)}\\s*[:.]`, "i").exec(text2);
+    const escape = (l) => l.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&");
+    const start = label === "" ? { index: 0, 0: "" } : new RegExp(`(?:^|\\s)${escape(label)}\\s*[:.]`, "i").exec(text2);
     if (!start) return "";
     const rest = text2.slice(start.index + start[0].length);
-    const next = new RegExp(`(?:^|\\s)(?:${labels.map(escape2).join("|")})\\s*[:.]`, "i").exec(rest);
+    const next = new RegExp(`(?:^|\\s)(?:${labels.map(escape).join("|")})\\s*[:.]`, "i").exec(rest);
     return cleanText(next ? rest.slice(0, next.index) : rest);
   }
   var DEBIT_MARK = /^(s|soll|d|db|dbit|debit|belastung|lastschrift|-)$/i;
@@ -6396,9 +10006,9 @@ var __AresiumEngine = (() => {
     const names2 = uniqueHeader(headerIndex >= 0 ? rows[headerIndex].map((h) => h.trim()) : new Array(width).fill(""));
     const transactions = [];
     const idFields = [];
-    const references = [];
+    const references2 = [];
     let skipped = 0;
-    let ownIban;
+    let ownIban2;
     let currency = layout.currency ?? "EUR";
     const skip = (layout.skipStatus ?? []).map((s) => s.toLowerCase());
     const keep = (layout.keepStatus ?? []).map((s) => s.toLowerCase());
@@ -6464,7 +10074,8 @@ var __AresiumEngine = (() => {
       const balance = c.balance !== void 0 ? parseAmountStrict(cell(row, c.balance), layout.numberFormat) : void 0;
       const rowCurrency = /^[A-Za-z]{3}$/.test(cell(row, c.currency)) ? cell(row, c.currency).toUpperCase() : currency;
       currency = rowCurrency;
-      ownIban ?? (ownIban = c.accountIban !== void 0 ? normalizeIban(cell(row, c.accountIban)) ?? void 0 : void 0);
+      ownIban2 ?? (ownIban2 = c.accountIban !== void 0 ? normalizeIban(cell(row, c.accountIban)) ?? void 0 : void 0);
+      const counterpartyIban = c.iban !== void 0 ? normalizeIban(cell(row, c.iban)) : null;
       const raw = {};
       names2.forEach((name2, i) => {
         raw[name2] = (row[i] ?? "").trim();
@@ -6477,6 +10088,7 @@ var __AresiumEngine = (() => {
         currency: rowCurrency,
         description,
         counterparty: cleanText(counterparty) || null,
+        ...counterpartyIban ? { counterpartyIban } : {},
         raw
       });
       idFields.push([
@@ -6485,14 +10097,14 @@ var __AresiumEngine = (() => {
         ...[c.payer, c.payee, ...c.counterparty ?? [], ...c.text ?? []].map((i) => cleanText(cell(row, i))),
         cell(row, c.iban).replace(/\s/g, "")
       ].join("|"));
-      references.push(cell(row, c.reference).replace(/^'+|'+$/g, "") || void 0);
+      references2.push(cell(row, c.reference).replace(/^'+|'+$/g, "") || void 0);
     }
-    if (!ownIban) for (const row of rows.slice(0, Math.max(headerIndex, 0))) ownIban ?? (ownIban = findIban(row.join(" ")));
+    if (!ownIban2) for (const row of rows.slice(0, Math.max(headerIndex, 0))) ownIban2 ?? (ownIban2 = findIban(row.join(" ")));
     const hashed = bookingIds(idFields);
-    const ids = withReferences(references, hashed);
+    const ids = withReferences(references2, hashed);
     const name = layout.name ?? "Bank";
-    const account = { name: accountName(name, ownIban), currency };
-    if (ownIban) account.iban = ownIban;
+    const account = { name: accountName(name, ownIban2), currency };
+    if (ownIban2) account.iban = ownIban2;
     return {
       format: "csv",
       account,
@@ -6501,10 +10113,10 @@ var __AresiumEngine = (() => {
       layout
     };
   }
-  function withReferences(references, hashed) {
+  function withReferences(references2, hashed) {
     const counts = /* @__PURE__ */ new Map();
-    for (const ref of references) if (ref) counts.set(ref, (counts.get(ref) ?? 0) + 1);
-    return references.map((ref, i) => ref && counts.get(ref) === 1 ? ref : hashed[i]);
+    for (const ref of references2) if (ref) counts.set(ref, (counts.get(ref) ?? 0) + 1);
+    return references2.map((ref, i) => ref && counts.get(ref) === 1 ? ref : hashed[i]);
   }
 
   // src/engine/readers/camt.ts
@@ -6530,6 +10142,13 @@ var __AresiumEngine = (() => {
   };
   var nameOf = (party) => cleanText(textOf2(party?.Nm) || textOf2(party?.Pty?.Nm));
   var ibanOf = (account) => textOf2(account?.Id?.IBAN).replace(/\s/g, "");
+  function entryCounterpartyIban(ntry) {
+    if (!ntry || typeof ntry !== "object") return void 0;
+    const node = ntry;
+    const tx = arr2(node.NtryDtls).flatMap((d) => arr2(d?.TxDtls))[0];
+    const parties = tx?.RltdPties ?? {};
+    return normalizeIban(ibanOf(node.CdtDbtInd === "DBIT" ? parties.CdtrAcct : parties.DbtrAcct)) ?? void 0;
+  }
   var remittance = (tx) => cleanText(...arr2(tx?.RmtInf?.Ustrd).map(textOf2)) || cleanText(...arr2(tx?.RmtInf?.Strd).map((s) => textOf2(s?.CdtrRefInf?.Ref))) || cleanText(textOf2(tx?.AddtlTxInf));
   function batchText(texts2) {
     const distinct = [...new Set(texts2.filter(Boolean))];
@@ -6612,6 +10231,7 @@ var __AresiumEngine = (() => {
         const debtor = nameOf(parties.Dbtr) || nameOf(parties.UltmtDbtr);
         const counterparty = (out ? creditor || debtor : debtor || creditor) || null;
         const counterpartyIban = ibanOf(out ? parties.CdtrAcct : parties.DbtrAcct);
+        const checkedIban = entryCounterpartyIban(ntry);
         const description = batchText(details.map(remittance)) || cleanText(textOf2(ntry.AddtlNtryInf)) || "(no description)";
         const ccy = (ntry.Amt && typeof ntry.Amt === "object" ? ntry.Amt["@_Ccy"] : void 0) || currency;
         transactions.push({
@@ -6621,6 +10241,7 @@ var __AresiumEngine = (() => {
           currency: ccy,
           description,
           counterparty,
+          ...checkedIban ? { counterpartyIban: checkedIban } : {},
           raw: ntry
         });
         if (vr) candidates.push(vrCamtId(ntry));
@@ -7040,7 +10661,7 @@ ${line}`;
   function details86(value) {
     const joined = value.replace(/\n/g, "");
     const m = /^(\d{3})(\D)/.exec(joined);
-    if (!m) return { kind: "", text: cleanText(joined), name: "" };
+    if (!m) return { kind: "", text: cleanText(joined), name: "", iban: null };
     const separator = m[2];
     const sub = /* @__PURE__ */ new Map();
     const parts = joined.slice(4).split(new RegExp(`\\${separator}(\\d{2})`));
@@ -7054,7 +10675,9 @@ ${line}`;
     return {
       kind: cleanText(sub.get("00")),
       text: sepaPaymentText(purpose),
-      name: joinSubfields(codes(32, 33))
+      name: joinSubfields(codes(32, 33)),
+      iban: normalizeIban(sub.get("31") ?? "")
+      // ?31 holds an IBAN or an old account number; only an IBAN counts
     };
   }
   function readMt940(text2) {
@@ -7123,6 +10746,7 @@ ${line}`;
         const d = details86(field2.value);
         last.description = d.text || d.kind || d.name || "(no description)";
         last.counterparty = d.name || null;
+        if (d.iban) last.counterpartyIban = d.iban;
         last.raw[":86:"] = field2.value;
         last.idFields += `${field2.value.replace(/\s+/g, " ").trim()}`;
         last = null;
@@ -7979,6 +11603,16 @@ ${line}`;
   }
   var findKnown = (id) => BANK_PROFILES.find((p) => p.id === id);
   var bankName = (profile) => profile.variant ? `${profile.bank} (${profile.variant})` : profile.bank;
+  function recordCounterpartyIban(record, profile) {
+    if (!record || typeof record !== "object" || profile.columns.iban === void 0) return void 0;
+    const names2 = [profile.columns.iban].flat().filter((name) => typeof name === "string");
+    for (const name of names2) {
+      const value = record[name];
+      const iban = typeof value === "string" ? normalizeIban(value) : null;
+      if (iban) return iban;
+    }
+    return void 0;
+  }
   function readVrBank(text2, profile) {
     const parsed = parseVrBankCsv(text2);
     const dateColumns = ["Buchungstag", "Buchung", "Buchungsdatum"];
@@ -7992,12 +11626,16 @@ ${line}`;
       fields: `${t.bookingDate.toISOString()}|${t.amount}|${t.description}|${t.counterparty ?? ""}`
     })));
     const canonical = (v) => parseAmountStrict(v, "en") ?? v;
-    const transactions = isoTransactions({ ...parsed, transactions: kept }).map((t, i) => ({
-      ...t,
-      externalId: ids[i],
-      amount: canonical(t.amount),
-      ...t.balance ? { balance: canonical(t.balance) } : {}
-    }));
+    const transactions = isoTransactions({ ...parsed, transactions: kept }).map((t, i) => {
+      const counterpartyIban = recordCounterpartyIban(t.raw, profile);
+      return {
+        ...t,
+        externalId: ids[i],
+        amount: canonical(t.amount),
+        ...t.balance ? { balance: canonical(t.balance) } : {},
+        ...counterpartyIban ? { counterpartyIban } : {}
+      };
+    });
     const account = { name: parsed.account.name, currency: parsed.account.currency, ...parsed.account.iban ? { iban: parsed.account.iban } : {} };
     return {
       format: "csv",

@@ -69,6 +69,17 @@
         }
       }
     },
+    "%@: %lld new · %lld already there" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@: %2$lld new · %3$lld already there"
+          }
+        }
+      }
+    },
+    "%@: check its columns" : {},
     "%lld added" : {
       "localizations" : {
         "de" : {
@@ -79,6 +90,7 @@
         }
       }
     },
+    "%lld categories chosen" : {},
     "%lld files failed" : {
       "localizations" : {
         "de" : {
@@ -199,6 +211,26 @@
         }
       }
     },
+    "%lld new · %lld already there · %lld sorted · %lld waiting for a category" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld new · %2$lld already there · %3$lld sorted · %4$lld waiting for a category"
+          }
+        }
+      }
+    },
+    "%lld payments are in %@. Where should they go?" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld payments are in %2$@. Where should they go?"
+          }
+        }
+      }
+    },
     "%lld skipped" : {
       "localizations" : {
         "de" : {
@@ -209,6 +241,8 @@
         }
       }
     },
+    "A file Aresium exported before, from Settings." : {},
+    "A name of your own" : {},
     "Account" : {
       "localizations" : {
         "de" : {
@@ -219,6 +253,7 @@
         }
       }
     },
+    "Add" : {},
     "Added here by tag; primary category %@" : {
       "localizations" : {
         "de" : {
@@ -229,6 +264,8 @@
         }
       }
     },
+    "After that, your data on this iPhone works without one." : {},
+    "All your Aresium data as one file" : {},
     "Also in" : {
       "localizations" : {
         "de" : {
@@ -249,6 +286,19 @@
         }
       }
     },
+    "Also the %lld other payments from %@?" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Also the %1$lld other payments from %2$@?"
+          }
+        }
+      }
+    },
+    "Amount" : {},
+    "Amounts" : {},
+    "An export can only be restored while Aresium has no data on this iPhone." : {},
     "Aresium" : {
       "localizations" : {
         "de" : {
@@ -259,6 +309,11 @@
         }
       }
     },
+    "Aresium does not know this bank's file yet. Check what each column holds; the first payments below are read that way. Aresium remembers it for the next file." : {},
+    "Aresium needs a connection the first time" : {},
+    "Aresium reads your bank's export files on this iPhone and keeps everything here. Nothing about your money goes to a server." : {},
+    "Aresium's engine could not do this." : {},
+    "Aresium's engine is missing from the app." : {},
     "Back" : {
       "localizations" : {
         "de" : {
@@ -269,6 +324,7 @@
         }
       }
     },
+    "Balance" : {},
     "Balance after" : {
       "localizations" : {
         "de" : {
@@ -279,6 +335,7 @@
         }
       }
     },
+    "Bank account" : {},
     "Booking date" : {
       "localizations" : {
         "de" : {
@@ -289,6 +346,7 @@
         }
       }
     },
+    "Booking type" : {},
     "Cancel" : {
       "localizations" : {
         "de" : {
@@ -299,6 +357,7 @@
         }
       }
     },
+    "Categories" : {},
     "Category" : {
       "localizations" : {
         "de" : {
@@ -319,6 +378,11 @@
         }
       }
     },
+    "Change categories" : {},
+    "Check the columns" : {},
+    "Choose categories" : {},
+    "Columns" : {},
+    "Confirm" : {},
     "Counterparty" : {
       "localizations" : {
         "de" : {
@@ -329,6 +393,7 @@
         }
       }
     },
+    "Currency" : {},
     "Current" : {
       "localizations" : {
         "de" : {
@@ -349,6 +414,7 @@
         }
       }
     },
+    "Dates" : {},
     "Day" : {
       "localizations" : {
         "de" : {
@@ -359,6 +425,9 @@
         }
       }
     },
+    "Delete" : {},
+    "Delete Aresium data on this iPhone" : {},
+    "Delete Aresium data on this iPhone?" : {},
     "Description" : {
       "localizations" : {
         "de" : {
@@ -429,6 +498,7 @@
         }
       }
     },
+    "Everyday" : {},
     "Exit Aresium mode" : {
       "localizations" : {
         "de" : {
@@ -449,6 +519,8 @@
         }
       }
     },
+    "Export" : {},
+    "Export a CSV, CAMT (XML) or MT940 file in your bank's app or website, then pick it here or share it to Aresium." : {},
     "External ID" : {
       "localizations" : {
         "de" : {
@@ -459,6 +531,14 @@
         }
       }
     },
+    "First payments" : {},
+    "First, choose the categories you want. Nothing is ticked yet." : {},
+    "Formats" : {},
+    "Free time" : {},
+    "Getting around" : {},
+    "Health & care" : {},
+    "Home" : {},
+    "Import a bank file" : {},
     "Import interrupted. Retry when you return to Aresium." : {
       "localizations" : {
         "de" : {
@@ -499,6 +579,7 @@
         }
       }
     },
+    "In or out mark" : {},
     "Income" : {
       "localizations" : {
         "de" : {
@@ -559,6 +640,9 @@
         }
       }
     },
+    "Money" : {},
+    "Money in" : {},
+    "Money out" : {},
     "Month" : {
       "localizations" : {
         "de" : {
@@ -589,6 +673,7 @@
         }
       }
     },
+    "Move them to %@" : {},
     "No activity" : {
       "localizations" : {
         "de" : {
@@ -619,6 +704,8 @@
         }
       }
     },
+    "No payments could be read with these columns." : {},
+    "No payments yet" : {},
     "No spending recorded." : {
       "localizations" : {
         "de" : {
@@ -629,6 +716,7 @@
         }
       }
     },
+    "No table of payments was found in this file." : {},
     "No transactions this month." : {
       "localizations" : {
         "de" : {
@@ -649,6 +737,11 @@
         }
       }
     },
+    "Not sorted" : {},
+    "Not used" : {},
+    "Nothing to show yet." : {},
+    "Only this one" : {},
+    "Only while Aresium has no data on this iPhone" : {},
     "Original %@ record" : {
       "localizations" : {
         "de" : {
@@ -659,6 +752,7 @@
         }
       }
     },
+    "Other" : {},
     "Overview" : {
       "localizations" : {
         "de" : {
@@ -679,6 +773,7 @@
         }
       }
     },
+    "Payment text" : {},
     "Pick a VR Bank or PayPal .csv (or CAMT .xml) export." : {
       "localizations" : {
         "de" : {
@@ -689,6 +784,8 @@
         }
       }
     },
+    "Pick the date column and the amount (or money out and money in)." : {},
+    "Pick your bank's export: a .csv, CAMT .xml or MT940 file." : {},
     "Place type" : {
       "localizations" : {
         "de" : {
@@ -729,6 +826,9 @@
         }
       }
     },
+    "Reference" : {},
+    "Restore from an export" : {},
+    "Restored: %lld payments." : {},
     "Restoring session…" : {
       "localizations" : {
         "de" : {
@@ -789,6 +889,7 @@
         }
       }
     },
+    "Shopping" : {},
     "Source" : {
       "localizations" : {
         "de" : {
@@ -809,6 +910,24 @@
         }
       }
     },
+    "Status" : {},
+    "Study & work" : {},
+    "The columns of this file don't match its saved layout." : {},
+    "The file is empty." : {},
+    "Their IBAN" : {},
+    "There is already a category with this name." : {},
+    "They were sorted by a rule, or not at all. Future payments from %@ go to %@." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "They were sorted by a rule, or not at all. Future payments from %1$@ go to %2$@."
+          }
+        }
+      }
+    },
+    "This MT940 file could not be read." : {},
+    "This XML file is not a bank statement Aresium can read." : {},
     "This category is no longer available." : {
       "localizations" : {
         "de" : {
@@ -819,6 +938,8 @@
         }
       }
     },
+    "This file could not be read." : {},
+    "This file is not an Aresium export, or it is damaged. Nothing was restored." : {},
     "This month's spending" : {
       "localizations" : {
         "de" : {
@@ -829,6 +950,8 @@
         }
       }
     },
+    "This payment is no longer on this iPhone." : {},
+    "Tick the categories you want. Payments are sorted only into these; the rest wait as Not sorted." : {},
     "Toggle graph" : {
       "localizations" : {
         "de" : {
@@ -879,6 +1002,10 @@
         }
       }
     },
+    "Try again" : {},
+    "Type a name for the category." : {},
+    "Untick %@?" : {},
+    "Unzip the file first, then import what is inside." : {},
     "Value date" : {
       "localizations" : {
         "de" : {
@@ -909,6 +1036,10 @@
         }
       }
     },
+    "Your IBAN" : {},
+    "Your data on this iPhone" : {},
+    "Your own" : {},
+    "Your payments, categories and learned sorting on this iPhone go for good. Export them first to keep a copy." : {},
     "current" : {
       "localizations" : {
         "de" : {

@@ -55,7 +55,26 @@ struct RecategoriseSheet: View {
             .disabled(store.isSaving)
         }
         .font(AppFont.text(14)).foregroundStyle(palette.ink).tint(palette.balance)
-        .interactiveDismissDisabled(store.isSaving)
+        .interactiveDismissDisabled(store.isSaving || store.followUp != nil)
+        // Phone mode, after a Switch: the merchant's other payments (structure only; Claude designs it).
+        .confirmationDialog(followUpTitle, isPresented: followUpShown, titleVisibility: .visible,
+                            presenting: store.followUp) { followUp in
+            Button("Move them to \(followUp.category)") { store.answer(moveOthers: true) }
+            Button("Only this one", role: .cancel) { store.answer(moveOthers: false) }
+        } message: { followUp in
+            Text("They were sorted by a rule, or not at all. Future payments from \(followUp.shop) go to \(followUp.category).")
+        }
+    }
+
+    private var followUpTitle: Text {
+        guard let followUp = store.followUp else { return Text(verbatim: "") }
+        return Text("Also the \(followUp.count) other payments from \(followUp.shop)?")
+    }
+
+    private var followUpShown: Binding<Bool> {
+        // A tap outside (the dialog is a popover on iOS 27, without its cancel button) is "Only this one"; after a
+        // button the answer is already taken, so nothing is answered twice.
+        Binding(get: { store.followUp != nil }, set: { shown in if !shown { store.answer(moveOthers: false) } })
     }
 
     private func choice(_ category: Category, current: String) -> some View {

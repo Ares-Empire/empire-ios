@@ -3,8 +3,9 @@ import JavaScriptCore
 import Testing
 @testable import Aresium
 
-/// Test resources only: generated with `npm run engine` in the aresium worktree.
-/// Copy dist's bundle/sources/CSV and src/engine/fixtures's inputs/answers into Engine/.
+/// The engine is the app's own copy (`Aresium/Engine/aresium-engine.js`, in the app bundle these hosted tests run in);
+/// the sources, CSV and the readers' inputs and answers are test resources in Engine/. `scripts/aresium-engine.sh`
+/// refreshes both from the aresium repo (`npm run engine`).
 /// JIT comparison: rerun with TEST_RUNNER_JSC_useJIT=false and
 /// TEST_RUNNER_JSC_dumpOptions=1; JSC's option dump verifies the effective setting.
 @Suite(.serialized)
@@ -13,7 +14,7 @@ struct EngineTests {
     private static let directory = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
 
     @Test func dashboardMatchesServerExactlyAndDecodes() throws {
-        let engine = try EngineHarness(bundle: resourceText("aresium-engine.js"))
+        let engine = try EngineHarness(bundle: appEngine())
         let result = try engine.dashboard(resourceText("dashboard.sample-source.json"))
         let expected = try Data(contentsOf: Self.directory.appendingPathComponent("server-dashboard.sample.json"))
         try expectSameJSON(Data(result.utf8), expected)
@@ -25,19 +26,19 @@ struct EngineTests {
 
     @Test(arguments: [("vrbank.csv", "parseVrBankCsv"), ("camt.xml", "parseCamt"), ("paypal.csv", "parsePaypalCsv")])
     func parsersMatchNodeExactly(file: String, parser: String) throws {
-        let engine = try EngineHarness(bundle: resourceText("aresium-engine.js"))
+        let engine = try EngineHarness(bundle: appEngine())
         let result = try engine.parse(parser, text: resourceText(file))
         try expectSameJSON(Data(result.utf8), resourceData(file + ".expected.json"))
     }
 
     @Test func javascriptExceptionsBecomeSwiftErrors() throws {
-        let engine = try EngineHarness(bundle: resourceText("aresium-engine.js"))
+        let engine = try EngineHarness(bundle: appEngine())
         #expect(throws: EngineFailure.self) { try engine.evaluate("throw new Error('Fictional exception')") }
         #expect(throws: EngineFailure.self) { try engine.parse("parseCamt", text: "<Fictional/>") }
     }
 
     @Test func timings() throws {
-        let bundle = try resourceText("aresium-engine.js")
+        let bundle = try appEngine()
         let requestedJIT = ProcessInfo.processInfo.environment["JSC_useJIT"] ?? "default"
         print("ENGINE environment JSC_useJIT=\(requestedJIT), JSC_dumpOptions=\(ProcessInfo.processInfo.environment["JSC_dumpOptions"] ?? "unset")")
         // Bundle load includes creating a fresh context and evaluating the bundle.
@@ -75,6 +76,17 @@ struct EngineTests {
         let median = milliseconds.sorted()[2]
         print("ENGINE timing \(name): median \(String(format: "%.3f", locale: Locale(identifier: "en_US_POSIX"), median)) ms (5 runs)")
         #expect(median.isFinite && median > 0)
+    }
+
+    /// The bundle the app ships and runs (`AresiumEngine.bundled()`).
+    private func appEngine() throws -> String {
+        try String(contentsOf: #require(AresiumEngine.bundledScriptURL(), "The app has no engine bundle"), encoding: .utf8)
+    }
+
+    @Test func noTestCopyOfTheBundle() {
+        // One copy only: the app's. The tests must not quietly check an older bundle of their own.
+        #expect(Bundle(for: EngineResourceAnchor.self).url(forResource: "aresium-engine", withExtension: "js") == nil)
+        #expect(AresiumEngine.bundledScriptURL() != nil)
     }
 
     private func resourceData(_ name: String) throws -> Data {

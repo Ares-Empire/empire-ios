@@ -17,16 +17,19 @@ final class TransactionDetailStore {
     private(set) var target: String?
     // Keep insertion order: with dropCurrent, the server promotes categories[0].
     private(set) var extras: [String] = []
+    /// Phone mode, after a Switch: "Also the N other payments from <shop>?", asked before the sheet closes.
+    private(set) var followUp: MerchantFollowUp?
     private let transaction: Transaction
     private let dashboardStore: DashboardStore
-    private let client: APIClient
     private var retryDropCurrent = false
 
-    init(transaction: Transaction, dashboardStore: DashboardStore, client: APIClient) {
+    init(transaction: Transaction, dashboardStore: DashboardStore) {
         self.transaction = transaction
         self.dashboardStore = dashboardStore
-        self.client = client
     }
+
+    /// The backend of the dashboard this payment was opened from (server or phone).
+    private var backend: (any AresiumBackend)? { dashboardStore.backend }
 
     var isSample: Bool { dashboardStore.isSample }
     var choices: [Category] {
@@ -55,12 +58,12 @@ final class TransactionDetailStore {
             let loaded: TransactionDetail
             if isSample { loaded = try TransactionDetail.sample(for: transaction) }
             else {
-                guard let token else { throw HTTPError.unauthorized }
-                loaded = try await client.transactionDetail(id: transaction.id, token: token) {
+                guard let backend else { throw HTTPError.unauthorized }
+                loaded = try await backend.transactionDetail(id: transaction.id, auth: BackendAuth(token: token) {
                     if self.isCurrent(generation, token: token) {
                         self.dashboardStore.session.handleAuthFailure(HTTPError.unauthorized, generation: generation, token: token)
                     }
-                }
+                })
                 guard isCurrent(generation, token: token) else { return }
             }
             detail = loaded
@@ -102,23 +105,25 @@ final class TransactionDetailStore {
         let generation = dashboardStore.generation
         let token = dashboardStore.session.token
         do {
-            guard let token else { throw HTTPError.unauthorized }
-            let onUnauthorized = {
+            guard let backend else { throw HTTPError.unauthorized }
+            let auth = BackendAuth(token: token) {
                 if self.isCurrent(generation, token: token) {
                     self.dashboardStore.session.handleAuthFailure(HTTPError.unauthorized, generation: generation, token: token)
                 }
             }
             let updated: TransactionDetail
+            var followUp: MerchantFollowUp?
             if mode == .switchCategory, let target {
-                updated = try await client.switchCategory(id: detail.id, category: target,
-                                                          token: token, onUnauthorized: onUnauthorized)
+                let result = try await backend.switchCategory(id: detail.id, to: target, auth: auth)
+                updated = result.detail
+                followUp = result.followUp
             } else {
-                updated = try await client.setTransactionTags(id: detail.id, categories: extras, dropCurrent: dropCurrent,
-                                                              token: token, onUnauthorized: onUnauthorized)
+                updated = try await backend.setTags(id: detail.id, categories: extras, dropCurrent: dropCurrent, auth: auth)
             }
             guard isCurrent(generation, token: token) else { return }
             self.detail = updated
-            showsRecategorisation = false
+            // The merchant's other payments: asked in the open sheet, which closes with the answer.
+            if let followUp { self.followUp = followUp } else { showsRecategorisation = false }
             await dashboardStore.reloadAfterTransactionChange()
         } catch {
             guard isCurrent(generation, token: token) else { return }
@@ -128,6 +133,35 @@ final class TransactionDetailStore {
     }
 
     func retrySave() async { await save(dropCurrent: retryDropCurrent) }
+
+    /// The answer to "Also the N other payments from <shop>?" from the dialog: taken at once (so a dismissal that follows
+    /// a button finds nothing left to answer), then carried out.
+    func answer(moveOthers: Bool) {
+        guard let followUp else { return }
+        self.followUp = nil
+        Task { await finish(followUp, moveOthers: moveOthers) }
+    }
+
+    /// The answer to "Also the N other payments from <shop>?": yes moves them (they follow the learned merchant), no
+    /// leaves them. Either way the sheet closes.
+    func answerFollowUp(moveOthers: Bool) async {
+        guard let followUp else { return }
+        self.followUp = nil
+        await finish(followUp, moveOthers: moveOthers)
+    }
+
+    private func finish(_ followUp: MerchantFollowUp, moveOthers: Bool) async {
+        guard moveOthers else { showsRecategorisation = false; return }
+        isSaving = true
+        defer { isSaving = false }
+        do {
+            try await followUp.apply()
+            showsRecategorisation = false
+            await dashboardStore.reloadAfterTransactionChange()
+        } catch {
+            saveError = error.localizedDescription
+        }
+    }
 
     private func isCurrent(_ generation: Int, token: String?) -> Bool {
         dashboardStore.generation == generation

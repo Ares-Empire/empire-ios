@@ -5,11 +5,16 @@ struct ImportButton: View {
     let store: ImportStore
     let sample: Bool
     let palette: Palette
+    /// What the file picker offers: the server's CSV and XML, or phone mode's bank files (`PhoneImportTypes`).
+    var types: [UTType] = [.commaSeparatedText, .xml]
+    /// Phone mode before any category is chosen: the button opens the category picker instead.
+    var instead: (() -> Void)? = nil
     @State private var pickingFiles = false
 
     var body: some View {
         Button {
             if sample { store.showSampleUnavailable() }
+            else if let instead { instead() }
             else { pickingFiles = true }
         } label: {
             Group {
@@ -24,7 +29,7 @@ struct ImportButton: View {
         .buttonStyle(.plain)
         .accessibilityLabel(store.isBusy ? "Importing statements" : "Import statements")
         .disabled(store.isBusy)
-        .fileImporter(isPresented: $pickingFiles, allowedContentTypes: [.commaSeparatedText, .xml], allowsMultipleSelection: true) { result in
+        .fileImporter(isPresented: $pickingFiles, allowedContentTypes: types, allowsMultipleSelection: true) { result in
             switch result {
             case let .success(urls):
                 if !urls.isEmpty { Task { await store.receive(urls) } }

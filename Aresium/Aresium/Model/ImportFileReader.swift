@@ -4,11 +4,13 @@ nonisolated enum ImportFileSource: Sendable { case picker, shared }
 
 enum ImportFileError: LocalizedError {
     case noExports
+    case noBankFiles
     case tooLarge(String)
 
     var errorDescription: String? {
         switch self {
         case .noExports: String(localized: "Pick a VR Bank or PayPal .csv (or CAMT .xml) export.")
+        case .noBankFiles: String(localized: "Pick your bank's export: a .csv, CAMT .xml or MT940 file.")
         case let .tooLarge(name): String(localized: "\(name) is too large (max 25 MB before JSON encoding)")
         }
     }
@@ -16,14 +18,19 @@ enum ImportFileError: LocalizedError {
 
 enum ImportFileReader {
     nonisolated static let maximumBytes = 25 * 1024 * 1024
+    /// Server mode: bank and PayPal CSVs and CAMT XML, as the server reads them.
+    nonisolated static let serverExtensions: Set<String> = ["csv", "xml"]
+    /// Phone mode: also MT940 (`.sta`, `.mt940`, `.txt`) and ZIP, which the engine refuses with "unzip it first".
+    nonisolated static let phoneExtensions: Set<String> = ["csv", "xml", "sta", "mt940", "txt", "zip"]
 
     nonisolated static func read(_ urls: [URL], source: ImportFileSource = .picker,
+                                 extensions: Set<String> = serverExtensions,
                                  container: URL = URL(fileURLWithPath: NSHomeDirectory())) throws -> [ImportFile] {
         defer {
             if source == .shared { urls.forEach { removeSharedCopy($0, container: container) } }
         }
         let files = try urls.filter {
-            $0.isFileURL && ["csv", "xml"].contains($0.pathExtension.lowercased())
+            $0.isFileURL && extensions.contains($0.pathExtension.lowercased())
         }.map { url in
             let scoped = url.startAccessingSecurityScopedResource()
             defer { if scoped { url.stopAccessingSecurityScopedResource() } }
@@ -35,9 +42,11 @@ enum ImportFileReader {
                 data.append(chunk)
                 guard data.count <= maximumBytes else { throw ImportFileError.tooLarge(url.lastPathComponent) }
             }
-            return ImportFile(name: url.lastPathComponent, content: String(decoding: data, as: UTF8.self))
+            return ImportFile(name: url.lastPathComponent, data: data)
         }
-        guard !files.isEmpty else { throw ImportFileError.noExports }
+        guard !files.isEmpty else {
+            throw extensions == serverExtensions ? ImportFileError.noExports : ImportFileError.noBankFiles
+        }
         return files
     }
     nonisolated static func removeSharedCopy(_ url: URL, container: URL) {

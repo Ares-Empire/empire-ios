@@ -137,7 +137,7 @@ struct LeaveAppScreen: View {
     init(app: SettingsApp, session: EmpireSession, sample: Bool, closeSettings: @escaping () -> Void) {
         self.app = app
         self.closeSettings = closeSettings
-        let flow = LeaveAppFlow(session: session, serverData: app.serverData, sample: sample)
+        let flow = LeaveAppFlow(session: session, serverData: app.serverData, localData: app.localData, sample: sample)
         #if DEBUG
         flow.applyDebugArguments(LaunchArguments.current)
         #endif
@@ -213,7 +213,7 @@ struct DeleteAccountScreen: View {
     init(app: SettingsApp, session: EmpireSession, sample: Bool, closeSettings: @escaping () -> Void) {
         self.app = app
         self.closeSettings = closeSettings
-        let flow = DeleteAccountFlow(session: session, sample: sample)
+        let flow = DeleteAccountFlow(session: session, localData: app.localData, sample: sample)
         #if DEBUG
         flow.applyDebugArguments(LaunchArguments.current)
         #endif
