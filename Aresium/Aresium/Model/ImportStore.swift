@@ -65,7 +65,7 @@ final class ImportStore {
     private let background: any ImportBackgroundActivity
     private let maximumRequestBytes: Int
     /// Where a confirmed unknown bank's format goes when the person sends it (phone mode); nil: never offered.
-    private let formats: BankFormatOutbox?
+    private let outbox: BankOutbox?
 
     var isBusy: Bool { readingCount > 0 || isImporting || batchScheduled }
     var waitingCount: Int { pending.count + attempted.count }
@@ -74,12 +74,12 @@ final class ImportStore {
 
     /// Imports go where the dashboard's data comes from (`DashboardStore.backend`).
     init(dashboard: DashboardStore, background: any ImportBackgroundActivity = ApplicationImportActivity(),
-         maximumRequestBytes: Int = ImportRequestPlan.maximumBytes, formats: BankFormatOutbox? = nil) {
+         maximumRequestBytes: Int = ImportRequestPlan.maximumBytes, outbox: BankOutbox? = nil) {
         self.dashboard = dashboard
         fixedBackend = nil
         self.background = background
         self.maximumRequestBytes = maximumRequestBytes
-        self.formats = formats
+        self.outbox = outbox
         // Files on their way to the server go with its login; the phone's imports do not depend on one.
         dashboard.session.onAppDataReset { [weak self] in
             if self?.backend?.mode == .server { self?.discard() }
@@ -94,7 +94,7 @@ final class ImportStore {
         fixedBackend = ServerBackend(client: client)
         self.background = background
         self.maximumRequestBytes = maximumRequestBytes
-        formats = nil
+        outbox = nil
         // Files on their way to the server go with its login; the phone's imports do not depend on one.
         dashboard.session.onAppDataReset { [weak self] in
             if self?.backend?.mode == .server { self?.discard() }
@@ -242,7 +242,7 @@ final class ImportStore {
             }
             guard generation == self.generation else { return }
             show(backend.importSummary(results), success: attempted.isEmpty && !results.contains { $0.failed },
-                 files: results.map(\.displayMessage), share: formats?.card(for: results.compactMap(\.bankFormat)))
+                 files: results.map(\.displayMessage), share: outbox?.card(for: results.compactMap(\.bankFormat)))
         } catch {
             guard current() else { return }
             dashboard.session.handleAuthFailure(error, generation: sessionGeneration, token: token)

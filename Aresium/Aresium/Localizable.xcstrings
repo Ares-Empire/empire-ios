@@ -347,16 +347,6 @@
         }
       }
     },
-    "A tour with made-up sample data" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tour mit Beispieldaten"
-          }
-        }
-      }
-    },
     "Account" : {
       "localizations" : {
         "de" : {
@@ -567,12 +557,12 @@
         }
       }
     },
-    "Aresium reads your bank's export files and sorts every payment into your categories. It all stays on this iPhone: nothing about your money goes to a server." : {
+    "Aresium sorts the payments from your bank's file into categories and adds them up. Everything stays on this iPhone." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aresium liest die Exportdateien deiner Bank und sortiert jede Buchung in deine Kategorien. Alles bleibt auf diesem iPhone: Nichts über dein Geld geht an einen Server."
+            "value" : "Aresium sortiert die Buchungen aus der Datei deiner Bank in Kategorien und rechnet sie zusammen. Alles bleibt auf diesem iPhone."
           }
         }
       }
@@ -743,16 +733,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Datei prüfen"
-          }
-        }
-      }
-    },
-    "Choose categories" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kategorien wählen"
           }
         }
       }
@@ -1117,16 +1097,6 @@
         }
       }
     },
-    "Export it in your bank's app or on its website, then pick it here or share it to Aresium." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Exportier sie in der App oder auf der Website deiner Bank, dann wähl sie hier aus oder teil sie mit Aresium."
-          }
-        }
-      }
-    },
     "External ID" : {
       "localizations" : {
         "de" : {
@@ -1363,12 +1333,12 @@
         }
       }
     },
-    "Import a bank file" : {
+    "Import data" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bankdatei importieren"
+            "value" : "Daten importieren"
           }
         }
       }
@@ -1443,12 +1413,12 @@
         }
       }
     },
-    "In the tour, Settings shows only the categories." : {
+    "In the tour, Settings shows only these rows, and they change nothing." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "In der Tour zeigen die Einstellungen nur die Kategorien."
+            "value" : "In der Tour zeigen die Einstellungen nur diese Zeilen, und sie ändern nichts."
           }
         }
       }
@@ -1559,16 +1529,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Mit Touch ID sperren"
-          }
-        }
-      }
-    },
-    "Look around first?" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Erst umsehen?"
           }
         }
       }
@@ -1793,6 +1753,16 @@
         }
       }
     },
+    "No data yet" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch keine Daten"
+          }
+        }
+      }
+    },
     "No export on the iPhone?" : {
       "localizations" : {
         "de" : {
@@ -1923,16 +1893,6 @@
         }
       }
     },
-    "Nothing is ticked yet" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Noch nichts ausgewählt"
-          }
-        }
-      }
-    },
     "Nothing to show yet." : {
       "localizations" : {
         "de" : {
@@ -1973,16 +1933,6 @@
         }
       }
     },
-    "On this iPhone" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Auf diesem iPhone"
-          }
-        }
-      }
-    },
     "Only for an Aresium server of your own. Your data here stays on this iPhone." : {
       "localizations" : {
         "de" : {
@@ -2019,6 +1969,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nur Zeilen mit"
+          }
+        }
+      }
+    },
+    "Only the bank's name, please: no account number, IBAN, email, date or amount." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bitte nur den Namen der Bank: ohne Kontonummer, IBAN, E-Mail, Datum oder Betrag."
+          }
+        }
+      }
+    },
+    "Only the name goes to us, with the app's version and language." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nur der Name geht an uns, mit der Version und Sprache der App."
           }
         }
       }
@@ -2189,6 +2159,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Art des Orts"
+          }
+        }
+      }
+    },
+    "Protect Aresium with Face ID or a code of your own." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schütze Aresium mit Face ID oder einem eigenen Code."
+          }
+        }
+      }
+    },
+    "Questions, ideas, problems? Write to us here." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fragen, Ideen, Probleme? Schreib uns hier."
           }
         }
       }
@@ -2403,16 +2393,6 @@
         }
       }
     },
-    "Set up Aresium" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aresium einrichten"
-          }
-        }
-      }
-    },
     "Settings" : {
       "localizations" : {
         "de" : {
@@ -2469,6 +2449,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ausgegeben"
+          }
+        }
+      }
+    },
+    "Start tour" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tour starten"
           }
         }
       }
@@ -2549,12 +2539,32 @@
         }
       }
     },
+    "Tell us about your bank" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Bank melden"
+          }
+        }
+      }
+    },
     "Thank you. Aresium learns your bank with the next update." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Danke. Aresium lernt deine Bank mit dem nächsten Update."
+          }
+        }
+      }
+    },
+    "Thank you. We'll look at adding it." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Danke. Wir prüfen, ob wir sie aufnehmen."
           }
         }
       }
@@ -2615,6 +2625,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Das Format wurde nicht angenommen."
+          }
+        }
+      }
+    },
+    "The name was not accepted." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Name wurde nicht angenommen."
           }
         }
       }
@@ -3025,6 +3045,16 @@
         }
       }
     },
+    "We don't know this bank yet. The general steps below may help." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Bank kennen wir noch nicht. Die allgemeinen Schritte unten helfen vielleicht."
+          }
+        }
+      }
+    },
     "Website" : {
       "localizations" : {
         "de" : {
@@ -3235,12 +3265,12 @@
         }
       }
     },
-    "Your bank is not in the list yet. Its usual steps:" : {
+    "Your bank is missing? Tell us which one." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Deine Bank ist noch nicht in der Liste. Die üblichen Schritte:"
+            "value" : "Deine Bank fehlt? Sag uns, welche."
           }
         }
       }
@@ -3271,16 +3301,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Deine Buchungen liegen nur auf diesem iPhone und in seinem Backup. Ein Export ist eine Kopie, die du selbst aufbewahrst."
-          }
-        }
-      }
-    },
-    "Your payments as a file from your bank" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Deine Buchungen als Datei von deiner Bank"
           }
         }
       }

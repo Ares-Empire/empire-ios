@@ -9,10 +9,11 @@ struct ContentView: View {
     @State private var imports: ImportStore
     /// Phone mode (the phone's own store, no account needed) or the owner's server mode (`ModeStore`).
     @State private var modes: ModeStore
-    /// Phone mode's export, restore and delete (Settings and the first run).
+    /// Phone mode's export, restore and delete (Settings and the first screen).
     @State private var phoneData: PhoneDataModel
-    /// Unknown banks' formats on their way to us, sent again at the start and on return (`BankFormatOutbox`).
-    @State private var formats: BankFormatOutbox
+    /// Unknown banks' formats and the names of banks the guide does not know, on their way to us; what could not go at
+    /// once is sent again at the start and on return (`BankOutbox`).
+    @State private var outbox: BankOutbox
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage(ThemeState.preferenceKey) private var rememberedRed = false
     @AppStorage(Appearance.key) private var appearance = Appearance.iPhone.rawValue
@@ -26,7 +27,7 @@ struct ContentView: View {
     @State private var place = DashboardPlace()
     /// The tour, while it runs in place of the dashboard (on a made-up store of its own, `TourModel`).
     @State private var tour: TourModel?
-    /// "How do I get my file?" as a sheet (the first run, an empty dashboard).
+    /// "How do I get my file?" as a sheet (the first screen, an empty dashboard).
     @State private var showsGuide = false
     /// Files picked in the guide, imported once its sheet (or Settings) has closed, so the import's own sheets can show.
     @State private var pickedInGuide: [URL] = []
@@ -36,7 +37,8 @@ struct ContentView: View {
     /// Files shared into Aresium while it was locked: imported once it is unlocked.
     @State private var heldFiles: [URL] = []
     @State private var showsSettings = false
-    @State private var showsCategories = false
+    /// Import data in phone mode: the category picker first while none is chosen, then the file picker.
+    @State private var importFlow = ImportFlow()
     @State private var restoringExport = false
     /// Where the band was when it was tapped (from the screen's bottom edge to its word), so the intro's word lands
     /// there; nil when the header started the transition.
@@ -100,26 +102,30 @@ struct ContentView: View {
         let store = sample && !phoneSample
             ? DashboardStore(session: session, sample: true, widgetPublisher: publisher)
             : DashboardStore(session: session, backend: nil, widgetPublisher: publisher)
-        // Samples (and the app while tests run) only pretend to send a bank's format.
+        // Samples (and the app while tests run) only pretend to send a bank's format or name.
         #if DEBUG
-        let formats = sample || DebugLaunch.isTesting ? BankFormatOutbox.sample()
-                                                      : BankFormatOutbox(file: PhoneStorage.standard.bankFormatsURL)
+        let outbox = sample || DebugLaunch.isTesting ? BankOutbox.sample()
+                                                     : BankOutbox(file: PhoneStorage.standard.bankOutboxURL)
         #else
-        let formats = BankFormatOutbox(file: PhoneStorage.standard.bankFormatsURL)
+        let outbox = BankOutbox(file: PhoneStorage.standard.bankOutboxURL)
         #endif
-        let imports = ImportStore(dashboard: store, formats: formats)
+        let imports = ImportStore(dashboard: store, outbox: outbox)
         let modes = ModeStore(session: session, dashboard: store, markerDefaults: markerDefaults)
         _store = State(initialValue: store)
         _imports = State(initialValue: imports)
         _modes = State(initialValue: modes)
         _phoneData = State(initialValue: PhoneDataModel(modes: modes))
-        _formats = State(initialValue: formats)
+        _outbox = State(initialValue: outbox)
         _sampleActive = State(initialValue: sample)
         _samplePhone = State(initialValue: phoneSample)
         #if DEBUG
         if phoneSample, let index = arguments.firstIndex(of: "-openSheet"), arguments.indices.contains(index + 1) {
             _showsSettings = State(initialValue: arguments[index + 1] == "settings")
-            _showsCategories = State(initialValue: arguments[index + 1] == "categories")
+            if arguments[index + 1] == "categories" {
+                let flow = ImportFlow()
+                flow.showCategories()
+                _importFlow = State(initialValue: flow)
+            }
         }
         if phoneSample, let index = arguments.firstIndex(of: "-sampleCategory"), arguments.indices.contains(index + 1) {
             var routes = [DashboardRoute(category: arguments[index + 1], side: .expenses)]
@@ -128,7 +134,7 @@ struct ContentView: View {
             }
             _place = State(initialValue: DashboardPlace(path: routes))
         }
-        // Screenshots: `-openGuide list|<bank id>` (the guide), `-tour <step>` (the tour at that step, 1–10).
+        // Screenshots: `-openGuide list|<bank id>` (the guide), `-tour <step>` (the tour at that step, 1–12).
         if sample, LaunchArguments.value("-openGuide") != nil { _showsGuide = State(initialValue: true) }
         if sample { modes.holdForSample(server: !phoneSample) }
         if sample && !phoneSample {
@@ -158,38 +164,41 @@ struct ContentView: View {
     var body: some View {
         GeometryReader { geometry in
             Group {
-                if let tour {
+                switch mainScreen {
+                case .tour:
                     // The tour in place of the dashboard; the person's own stays as it was, untouched.
-                    TourScreen(tour: tour, palette: palette, band: tourBand(in: geometry)) { route, openSettings in
-                        header(route, in: tour.world?.dashboard, openSettings: openSettings)
+                    if let tour {
+                        TourScreen(tour: tour, palette: palette, band: tourBand(in: geometry)) { route, openSettings in
+                            header(route, in: tour.world?.dashboard, openSettings: openSettings)
+                        }
+                        .transition(.opacity)
                     }
-                    .transition(.opacity)
-                } else if showsDashboard {
+                case .opening:
+                    // The phone's store is opening, or did not open.
+                    VStack(spacing: 0) {
+                        header()
+                        ModeStatusScreen(modes: modes, palette: palette)
+                    }
+                case .waitingForLogin, .firstScreen, .dashboard:
                     DashboardStack(store: store, palette: palette, place: $place, band: band(in: geometry)) { route in
                         header(route)
                         restoreFeedback
                     } root: {
-                        if waitsForServerLogin {
+                        switch mainScreen {
+                        case .waitingForLogin:
                             // Server mode at launch: the saved login is being renewed before the server is asked.
                             ProgressView().tint(palette.secondary).frame(maxWidth: .infinity, maxHeight: .infinity)
-                        } else if let phone = firstRunPhone {
-                            PhoneFirstRun(phone: phone, imports: imports, palette: palette, band: band(in: geometry),
-                                          restoreProblem: phoneData.problem,
-                                          chooseCategories: { showsCategories = true },
-                                          restore: { restoringExport = true },
-                                          openGuide: { showsGuide = true }, startTour: startTour)
-                        } else {
+                        case .firstScreen:
+                            PhoneFirstScreen(imports: imports, palette: palette, band: band(in: geometry),
+                                             restoreProblem: phoneData.problem, importData: importData,
+                                             startTour: startTour, openGuide: { showsGuide = true },
+                                             restore: { restoringExport = true })
+                        default:
                             StartScreen(store: store, imports: imports, palette: palette, current: $place.current,
                                         side: $place.side, graph: $place.graph, band: band(in: geometry),
                                         importTypes: importTypes, beforeImport: chooseCategoriesFirst,
                                         openGuide: { showsGuide = true }) { place.path.append($0) }
                         }
-                    }
-                } else {
-                    // The phone's store is opening, or did not open.
-                    VStack(spacing: 0) {
-                        header()
-                        ModeStatusScreen(modes: modes, palette: palette)
                     }
                 }
             }
@@ -219,7 +228,7 @@ struct ContentView: View {
                 if restoresOnLaunch { await session.restore() }
                 if !sampleActive { await modes.update() }
             }
-            .task { await formats.sendWaiting() }          // formats kept for later go at the start
+            .task { await outbox.sendWaiting() }           // formats and bank names kept for later go at the start
             #if DEBUG
             .task { await startPhoneSample() }
             #endif
@@ -231,7 +240,7 @@ struct ContentView: View {
                 await session.followSharedLogin()    // another Empire app may have logged in or out
                 await modes.update()
                 await store.refreshOnForeground()
-                await formats.sendWaiting()
+                await outbox.sendWaiting()
             }
             .task { store.setWidgetRedMode(theme.red) }
             .onChange(of: session.generation) { _, _ in
@@ -285,7 +294,7 @@ struct ContentView: View {
                     LockSettingsSection(lock: lock)
                 } help: {
                     NavigationLink {
-                        BankGuideList(importing: guideImport { showsSettings = false })
+                        BankGuideList(importing: guideImport { showsSettings = false }, outbox: outbox)
                     } label: {
                         SettingsRow(title: String(localized: "Get the file from your bank"))
                     }
@@ -302,17 +311,31 @@ struct ContentView: View {
                 }
             }
             .sheet(isPresented: $showsGuide, onDismiss: importPickedInGuide) {
-                BankGuideSheet(importing: guideImport { showsGuide = false })
+                BankGuideSheet(importing: guideImport { showsGuide = false }, outbox: outbox)
             }
-            .sheet(isPresented: $showsCategories) {
+            .sheet(isPresented: $importFlow.choosesCategories, onDismiss: {
+                // Categories chosen: on to the file (`ImportFlow`).
+                importFlow.categoriesClosed(hasCategories: modes.phone?.hasChosenCategories == true)
+            }) {
                 if let phone = modes.phone {
                     NavigationStack {
                         CategoryPickerScreen(model: CategoryPickerModel(phone: phone) {
                             await store.reloadAfterTransactionChange()
-                        }, done: { showsCategories = false })
+                        }, done: { importFlow.choosesCategories = false })
                     }
                     .presentationBackground(Ink.background)
                 }
+            }
+            .background {
+                // Import data's file picker, on a view of its own (one file picker per view; the restore's is below).
+                Color.clear
+                    .fileImporter(isPresented: $importFlow.picksFiles, allowedContentTypes: importTypes,
+                                  allowsMultipleSelection: true) { result in
+                        switch result {
+                        case let .success(urls): if !urls.isEmpty { Task { await imports.receive(urls) } }
+                        case let .failure(error): imports.show(error.localizedDescription, success: false)
+                        }
+                    }
             }
             .sheet(item: Binding(get: { imports.layoutRequest }, set: { _ in })) { request in
                 // An unknown bank's file: "Does this look right?", then the column check.
@@ -324,8 +347,8 @@ struct ContentView: View {
                 if case let .success(url) = result { Task { await phoneData.restore(from: url) } }
             }
             .overlay(alignment: .bottom) {
-                // A restore from the first run shows its problem there.
-                if let problem = phoneData.problem, !showsSettings, firstRunPhone == nil {
+                // A restore from the first screen shows its problem there.
+                if let problem = phoneData.problem, !showsSettings, mainScreen != .firstScreen {
                     Text(problem).font(AppFont.text(13)).foregroundStyle(palette.expenseText).padding(18)
                 }
             }
@@ -367,7 +390,8 @@ struct ContentView: View {
         Task { await imports.receive(urls) }
     }
 
-    /// The tour, from the first run or Settings → Help: it fills its made-up store and shows in place of the dashboard.
+    /// The tour, from the first screen or Settings → Help: it fills its made-up store and shows in place of the
+    /// dashboard. When it ends, the first screen comes back while there is no data (`MainScreen`).
     private func startTour() {
         guard tour == nil else { return }
         let model = TourModel()
@@ -381,7 +405,7 @@ struct ContentView: View {
     }
 
     #if DEBUG
-    /// Screenshots: `-tour <step>` starts the tour at that step (1–10); `-tourSettings` opens its Settings.
+    /// Screenshots: `-tour <step>` starts the tour at that step (1–12); `-tourSettings` opens its Settings.
     private func startDebugTour() async {
         guard sampleActive, tour == nil, let value = LaunchArguments.value("-tour"),
               let step = Int(value).flatMap(TourStep.init(rawValue:)) else { return }
@@ -392,10 +416,16 @@ struct ContentView: View {
     }
     #endif
 
-    /// Phone mode with nothing imported yet: the first run shows in place of the dashboard.
-    private var firstRunPhone: PhoneBackend? {
-        guard let phone = modes.phone, phone.summary.payments == 0 else { return nil }
-        return phone
+    /// What shows in place of the dashboard: the tour, the store's state, the first screen (phone mode without data) or
+    /// the dashboard.
+    private var mainScreen: MainScreen {
+        MainScreen.choose(tour: tour?.phase, hasMode: showsDashboard, waitsForServerLogin: waitsForServerLogin,
+                          phonePayments: modes.phone?.summary.payments)
+    }
+
+    /// Import data (the first screen): the category picker first while none is chosen, then the file picker.
+    private func importData() {
+        importFlow.start(hasCategories: modes.phone?.hasChosenCategories ?? true)
     }
 
     /// Server mode before its login is renewed at launch: nothing to show yet.
@@ -403,13 +433,14 @@ struct ContentView: View {
         modes.state == .server && !sampleActive && store.dashboard == nil && session.isRestoring
     }
 
-    /// Phone mode before any category is chosen: importing opens the category picker first.
+    /// Phone mode before any category is chosen: the import button opens the category picker first, then the file
+    /// picker (`ImportFlow`).
     private var chooseCategoriesFirst: (() -> Void)? {
         guard let phone = modes.phone, !phone.hasChosenCategories else { return nil }
-        return { showsCategories = true }
+        return { importFlow.start(hasCategories: false) }
     }
 
-    /// The dashboard (or phone mode's first run) shows: the server sample, or a mode with its backend.
+    /// The dashboard (or phone mode's first screen) shows: the server sample, or a mode with its backend.
     private var showsDashboard: Bool {
         if sampleActive && !samplePhone { return true }
         switch modes.state {
@@ -438,11 +469,13 @@ struct ContentView: View {
         let arguments = LaunchArguments.current
         do {
             let (phone, storage) = try await PhoneSample.backend(empty: arguments.contains("-samplePhoneEmpty"))
-            // `-samplePhoneEmpty -sampleChosen`: the first run after the categories, its second step next.
+            // `-samplePhoneEmpty -sampleChosen`: the first screen with categories chosen (Import data opens the files).
             if arguments.contains("-sampleChosen"), phone.summary.chosen.isEmpty {
                 for id in PhoneSample.chosen { try await phone.choose(id) }
             }
             await modes.showFixed(phone, storage: storage)
+            // `-importData`: the first screen's Import data at launch (the category picker first, or the files).
+            if arguments.contains("-importData") { importData() }
             if arguments.contains("-sampleLayout"), let file = PhoneSample.unknownBankFile() {
                 imports.debugImport([file])           // the window; `-sampleReading 2|columns` in it
             }

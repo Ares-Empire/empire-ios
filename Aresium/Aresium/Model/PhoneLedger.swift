@@ -78,7 +78,7 @@ nonisolated struct LearnedRule: Codable, Equatable, Sendable {
     let category: String
 }
 
-/// What the phone store holds, in numbers, for the screens (first run, Settings).
+/// What the phone store holds, in numbers, for the screens (the first screen, Settings).
 nonisolated struct LedgerSummary: Equatable, Sendable {
     var payments = 0
     var unsorted = 0

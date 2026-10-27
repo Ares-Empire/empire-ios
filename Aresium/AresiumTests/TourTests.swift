@@ -2,8 +2,9 @@ import Foundation
 import Testing
 @testable import Aresium
 
-/// The tour (brief 24): its steps go on when the person does the thing or taps Next, and it runs on a made-up store of
-/// its own that is deleted when it ends, at any step, without touching the person's store.
+/// The tour (briefs 24 and 25): its twelve steps go on when the person does the thing or taps Next, the lock and contact
+/// steps only point and go on, and it runs on a made-up store of its own that is deleted when it ends, at any step,
+/// without touching the person's store.
 @MainActor
 struct TourTests {
     /// 27 Oct 2026, noon: the made-up months end in October.
@@ -100,10 +101,25 @@ struct TourTests {
 
         tour.openSettings()
         #expect(tour.target == .categoriesRow)
+        tour.lockTapped()
+        tour.contactTapped()
+        #expect(tour.step == .categories, "the lock and contact rows answer only their own steps")
         tour.setCategoriesShown(true)
         #expect(tour.target == nil, "free to choose and add categories")
         try await world.phone.addCustom(named: "Fiktiv-Kategorie")
         tour.next()
+        #expect(tour.step == .lock)
+        #expect(tour.showsSettings && !tour.showsCategories, "back in the tour's Settings, at its Lock section")
+        #expect(tour.target == .lockRow)
+        tour.closeSettings()
+        #expect(tour.target == .settings, "closed: the gear again")
+        tour.openSettings()
+        tour.lockTapped()
+        #expect(tour.step == .contact && tour.showsSettings)
+        #expect(tour.target == .contactRow)
+        tour.lockTapped()
+        #expect(tour.step == .contact)
+        tour.contactTapped()
         #expect(tour.step == .importFiles)
         #expect(!tour.showsSettings && tour.place.path.isEmpty)
         #expect(tour.target == .importButton)
@@ -132,6 +148,10 @@ struct TourTests {
             case .categories:
                 #expect(tour.place.payment == nil)
                 #expect(tour.target == .settings)
+            case .lock:
+                #expect(tour.showsSettings && tour.target == .lockRow)
+            case .contact:
+                #expect(tour.showsSettings && tour.target == .contactRow)
             case .importFiles, .welcome, .done:
                 #expect(tour.place.path.isEmpty && tour.place.payment == nil)
             default:
@@ -142,6 +162,7 @@ struct TourTests {
             if tour.phase == .running { seen.append(tour.step) }
         }
         #expect(seen == TourStep.allCases)
+        #expect(seen.count == 12)
         #expect(Self.tourFolders(in: parent).isEmpty)
     }
 

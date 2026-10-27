@@ -94,7 +94,7 @@ final class ModeStore {
         session.onAppDataReset { [weak self] in self?.loginEnded() }
     }
 
-    /// Phone mode's store, nil in server mode (Settings' and the first run's phone screens).
+    /// Phone mode's store, nil in server mode (Settings' and the first screen's phone screens).
     var phone: PhoneBackend? { state == .phone ? local : nil }
 
     // MARK: remembered modes

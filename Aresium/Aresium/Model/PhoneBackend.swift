@@ -17,7 +17,7 @@ nonisolated struct PhoneImportResult: Equatable, Sendable {
     /// check).
     var readings: [FileReading] = []
     /// A file read with a layout the person confirmed (an unknown bank), when that layout may be sent to us: the result
-    /// offers to send it (`BankFormatOutbox`).
+    /// offers to send it (`BankOutbox`).
     var format: BankFormat?
 
     var displayMessage: String {
@@ -61,7 +61,7 @@ nonisolated enum ImportWording {
 final class PhoneBackend: AresiumBackend {
     @ObservationIgnored let ledger: PhoneLedger
     @ObservationIgnored let engine: AresiumEngine
-    /// What the store holds, for the first run and Settings; refreshed after every change.
+    /// What the store holds, for the first screen and Settings; refreshed after every change.
     private(set) var summary = LedgerSummary()
     private(set) var catalog: CategoryCatalog?
     /// Today as `YYYY-MM-DD` for the dashboard (tests pin it).

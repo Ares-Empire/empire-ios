@@ -93,6 +93,13 @@ actor AresiumEngine {
         try call("shareableLayout", layout, as: ShareCheck.self)
     }
 
+    /// Whether a text a person typed (a bank's name) looks like personal data, by the engine's own rule (`looksPersonal`
+    /// in readers/share.ts, the one `shareableLayout` applies to a format's words): the reason (`email`, `iban`, `date`,
+    /// `amount`, `digits`), or nil. Being longer than a column's name may be (`tooLong`) does not count here.
+    func personalData(in text: String) throws -> String? {
+        try call("personalData", text, as: PersonalCheck.self).reason
+    }
+
     /// `sortPayments` over all of the person's payments (the own-transfer rules look across them): one result per
     /// payment, in order. `categories` are the ids the person may be sorted into.
     func sortPayments(_ payments: [SortingPayment], categories: [String],
@@ -153,6 +160,15 @@ actor AresiumEngine {
         learn: (input) => E.learn(input.learned, input.payment, input.categoryId),
         merchantKeys: (payments) => payments.map((payment) => E.merchantKey(payment)),
         shareableLayout: (layout) => E.shareableLayout(layout),
+        // The engine exports no `looksPersonal` of its own: a layout whose one column is named `text` runs exactly that
+        // check. A layout it calls invalid would hide every answer, so that is an error here.
+        personalData: (text) => {
+          const answer = E.shareableLayout({ version: 1, separator: ";", header: [text], dateFormat: "DD.MM.YYYY",
+                                             numberFormat: "de", columns: { date: 0, amount: 0 } });
+          if (answer.ok || answer.reason === "tooLong") return { reason: null };
+          if (answer.reason === "invalid") throw new Error("personalData: the check's layout is invalid");
+          return { reason: answer.reason };
+        },
         version: () => E.version,
       };
       globalThis.__aresiumCall = (name, json) => wrap(() => {
@@ -232,6 +248,7 @@ actor AresiumEngine {
     }
 
     private nonisolated struct Empty: Encodable {}
+    private nonisolated struct PersonalCheck: Decodable { let reason: String? }
     private nonisolated struct CategoryID: Encodable { let id: String }
     private nonisolated struct SortInput: Encodable {
         let payments: [SortingPayment]

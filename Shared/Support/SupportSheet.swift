@@ -2,8 +2,8 @@ import SwiftUI
 
 /// "Contact & support" (every app's Settings → Help): pick what it is about, write it, send it. The account server mails
 /// it to Patrik (ares-empire/docs/ACCOUNTS.md → Contact & support); the answer comes by email to the account's address.
-/// Without a login (Aresium only, `SupportForm.sendsWithoutLogin`) the form also asks for the email to answer to and,
-/// optionally, a name.
+/// Without a login (Aresium only, always: `EmpireAppIdentity.supportWithoutLogin`) the form also asks for the email to
+/// answer to and, optionally, a name.
 /// Present it as a sheet: `SupportSheet(session: session, accent: app.accent, sample: sample)`; it sets its own detent
 /// and background, and asks before closing over unsent text.
 struct SupportSheet: View {

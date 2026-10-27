@@ -3,8 +3,10 @@ import Testing
 @testable import Aresium
 
 /// Sending an unknown bank's format (brief 23): offered only for a confirmed unknown layout that `shareableLayout`
-/// accepts, the request's body, the outbox (offline, retries, a final 400, a 429 that waits for the next start), "not
-/// now" never asking again, and "What is sent?". A fake transport answers; nothing reaches the real account server.
+/// accepts, the request's body, the outbox (offline, retries, a final 400, a 429 that waits for the next start; shared
+/// with the bank requests since brief 25, `BankRequestTests`), "not now" never asking again, a name that looks like
+/// personal data kept on the phone, and "What is sent?". A fake transport answers; nothing reaches the real account
+/// server.
 @MainActor
 struct BankFormatTests {
     private let none = BackendAuth(token: nil)
@@ -18,12 +20,12 @@ struct BankFormatTests {
 
     /// An outbox on a file of its own, a fake transport, and a clock the test moves.
     private final class Clock { var now = Date(timeIntervalSince1970: 1_800_000_000) }
-    private func outbox(file: URL? = nil, transport: RoutedTransport, clock: Clock = Clock()) -> BankFormatOutbox {
-        BankFormatOutbox(file: file ?? PhoneTest.storage().bankFormatsURL,
-                         api: BankFormatAPI(transport: transport), appVersion: "1.0 (7)", now: { clock.now })
+    private func outbox(file: URL? = nil, transport: RoutedTransport, clock: Clock = Clock()) -> BankOutbox {
+        BankOutbox(file: file ?? PhoneTest.storage().bankOutboxURL,
+                   api: BankOutboxAPI(transport: transport), appVersion: "1.0 (7)", now: { clock.now })
     }
 
-    private func card(_ outbox: BankFormatOutbox, bank: String = "Fiktivbank eG") throws -> BankFormatCard {
+    private func card(_ outbox: BankOutbox, bank: String = "Fiktivbank eG") throws -> BankFormatCard {
         let card = try #require(outbox.card(for: [Self.format]))
         card.bank = bank
         return card
@@ -73,7 +75,7 @@ struct BankFormatTests {
         let phone = try await PhoneTest.backend(chosen: ["groceries"])
         let formats = outbox(transport: transport)
         let imports = ImportStore(dashboard: DashboardStore(session: session, backend: phone), background: PhoneActivity(),
-                                  formats: formats)
+                                  outbox: formats)
         imports.debugImport([PhoneTest.vrBank([("01.10.2026", "REWE Markt GmbH", "REWE SAGT DANKE", -2345)])])
         await imports.importPendingFiles()
         #expect(imports.banner?.share == nil)
@@ -98,7 +100,7 @@ struct BankFormatTests {
 
     @Test func notNowNeverAsksAgainForThatLayout() throws {
         let transport = RoutedTransport()
-        let file = PhoneTest.storage().bankFormatsURL
+        let file = PhoneTest.storage().bankOutboxURL
         let first = outbox(file: file, transport: transport)
         try card(first).notNow()
         #expect(first.card(for: [Self.format]) == nil)
@@ -120,7 +122,7 @@ struct BankFormatTests {
         let submission = try BankFormatSubmission(format: Self.format, bank: "  Fiktiv\nBank   eG ",
                                                   appVersion: "1.0 (7)\u{0}<x@y>", language: .german)
         #expect(submission.bank == "Fiktiv Bank eG" && submission.appVersion == "1.0 (7)xy" && submission.language == "de")
-        let request = try BankFormatAPI().request(submission)
+        let request = try BankOutboxAPI().request(.format(submission))
         #expect(request.url?.absoluteString == "https://auth.ares-empire.de/api/collections/bank_formats/records")
         #expect(request.httpMethod == "POST")
         #expect(request.value(forHTTPHeaderField: "Content-Type") == "application/json")
@@ -139,7 +141,7 @@ struct BankFormatTests {
     }
 
     @Test func theBanksNameIsOneLineOfAtMost100Characters() throws {
-        #expect(throws: BankFormatSubmission.Invalid.noBank) {
+        #expect(throws: BankSubmission.Invalid.noBank) {
             _ = try BankFormatSubmission(format: Self.format, bank: " \n ", appVersion: "1", language: .english)
         }
         let long = try BankFormatSubmission(format: Self.format, bank: String(repeating: "Bank ", count: 40),
@@ -166,7 +168,7 @@ struct BankFormatTests {
         let transport = RoutedTransport()
         transport.offline = true
         let clock = Clock()
-        let file = PhoneTest.storage().bankFormatsURL
+        let file = PhoneTest.storage().bankOutboxURL
         let formats = outbox(file: file, transport: transport, clock: clock)
         let card = try card(formats)
         await card.send()
@@ -174,7 +176,8 @@ struct BankFormatTests {
         // Kept on the phone: only the request's body (the format, the name, the version, the language) and the tries.
         let waiting = try #require(formats.waiting.first)
         #expect(formats.waiting.count == 1 && waiting.tries == 0)
-        #expect(waiting.submission.bank == "Fiktivbank eG" && waiting.submission.layout == Self.layout)
+        #expect(waiting.submission == .format(try BankFormatSubmission(format: Self.format, bank: "Fiktivbank eG",
+                                                                       appVersion: "1.0 (7)", language: .english)))
 
         // Still offline at the next foreground: nothing lost, no try counted.
         clock.now += 120
@@ -234,7 +237,7 @@ struct BankFormatTests {
                                            "data": ["bank": ["code": "personal_data", "message": "looks personal"]]])
         transport.answer(Self.route, 200, ["id": "fictional4"])
         let formats = outbox(transport: transport)
-        let card = try card(formats, bank: "Fiktivbank 1234567")
+        let card = try card(formats, bank: "Fiktivbank Nord")
         await card.send()
         // Nothing kept, nothing sent again by itself; the card asks for the name again with the server's sentence.
         #expect(card.shown == .asking && card.problem == sentence && formats.waiting.isEmpty)
@@ -242,6 +245,20 @@ struct BankFormatTests {
         #expect(card.problem == nil && card.canSend)
         await card.send()
         #expect(card.shown == .sent && transport.requests(to: Self.route).count == 2)
+    }
+
+    /// The app's own check comes first (the engine's rule): a name with an account number never leaves the phone.
+    @Test func aNameThatLooksPersonalIsNotSent() async throws {
+        let transport = RoutedTransport()
+        transport.answer(Self.route, 200, ["id": "fictional5"])
+        let formats = outbox(transport: transport)
+        let card = try card(formats, bank: "Fiktivbank 1234567")
+        await card.send()
+        #expect(card.shown == .asking && card.problem == BankSubmission.personalLine())
+        #expect(transport.requests.isEmpty && formats.waiting.isEmpty && !formats.hasAsked(Self.format.key))
+        card.bank = "Fiktivbank"
+        await card.send()
+        #expect(card.shown == .sent && transport.requests(to: Self.route).count == 1)
     }
 
     @Test func a400OnALaterTryDropsItAndAStillShownCardSaysWhy() async throws {
@@ -263,7 +280,7 @@ struct BankFormatTests {
         transport.answer(Self.route, 429, ["message": "Too Many Requests."])
         transport.answer(Self.route, 200, ["id": "fictional3"])
         let clock = Clock()
-        let file = PhoneTest.storage().bankFormatsURL
+        let file = PhoneTest.storage().bankOutboxURL
         let formats = outbox(file: file, transport: transport, clock: clock)
         let card = try card(formats)
         await card.send()
@@ -280,7 +297,7 @@ struct BankFormatTests {
 
     @Test func theSampleOnlyPretends() async throws {
         let transport = RoutedTransport()
-        let formats = BankFormatOutbox.sample(sampleDelay: .milliseconds(1))
+        let formats = BankOutbox.sample(sampleDelay: .milliseconds(1))
         let card = try #require(formats.card(for: [Self.format]))
         card.bank = "Fiktivbank"
         await card.send()
@@ -293,11 +310,11 @@ struct BankFormatTests {
         let transport = RoutedTransport()
         transport.offline = true
         let storage = PhoneStorage.init(root: PhoneTest.storage().root)
-        let formats = outbox(file: storage.bankFormatsURL, transport: transport)
+        let formats = outbox(file: storage.bankOutboxURL, transport: transport)
         try await card(formats).send()
-        #expect(FileManager.default.fileExists(atPath: storage.bankFormatsURL.path))
+        #expect(FileManager.default.fileExists(atPath: storage.bankOutboxURL.path))
         try storage.delete()
-        #expect(!FileManager.default.fileExists(atPath: storage.bankFormatsURL.path))
+        #expect(!FileManager.default.fileExists(atPath: storage.bankOutboxURL.path))
         #expect(formats.waiting.isEmpty && !formats.hasAsked(Self.format.key))
     }
 
@@ -332,7 +349,7 @@ struct BankFormatTests {
     }
 
     @Test func theCardShowsExactlyWhatItSends() throws {
-        let formats = BankFormatOutbox.sample()
+        let formats = BankOutbox.sample()
         let card = try #require(formats.card(for: [Self.format]))
         card.bank = "  Fiktiv   Bank "
         #expect(card.shared.bank == "Fiktiv Bank" && card.shared.columns.count == Self.layout.header.count)

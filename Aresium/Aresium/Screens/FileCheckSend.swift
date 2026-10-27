@@ -3,7 +3,7 @@ import SwiftUI
 // Sending an unknown bank's format (brief 23): one quiet card inside the import's result, two taps (type the bank's
 // name, Send). Built from the result's own look (the toast's palette ink, its line between parts) and the form pieces
 // (`FormButtonStyle`, the field look of the login's fields). "What is sent?" is a Settings-style page of exactly what
-// goes out (`SharedFormat`). Logic: `BankFormatCard`, `BankFormatOutbox`.
+// goes out (`SharedFormat`). Logic: `BankFormatCard`, `BankOutbox`.
 
 /// The card: "Help Aresium learn your bank", the bank's name and Send, "What is sent?" and Not now; then one line with
 /// how it went.

@@ -1,7 +1,7 @@
 import SwiftUI
 
-// An unknown bank's file (brief 23): "Does this look right?". Built from Aresium's own pieces: the file as the first run's
-// rows start (a day tile), the first payments as the dashboard's payment list draws them (`DayTile`, the place, a muted
+// An unknown bank's file (brief 23): "Does this look right?". Built from Aresium's own pieces: the file as a payment row
+// starts (a day tile), the first payments as the dashboard's payment list draws them (`DayTile`, the place, a muted
 // line, the amount in the money style and the expense/income ink), the Settings pieces (`SettingsSection`, glass card,
 // `FormButtonStyle`). No column names here; those wait in the column check (FileCheckColumns.swift), the last resort.
 // The flow is `FileCheckModel`.
@@ -155,7 +155,7 @@ struct FileCheckSheet: View {
 
 // MARK: - pieces (the column check uses them too)
 
-/// The file, as the first run's rows start: a document in a day tile and its name.
+/// The file, as a payment row starts: a document in a day tile and its name.
 struct FileCheckFileRow: View {
     let name: String
     let palette: Palette

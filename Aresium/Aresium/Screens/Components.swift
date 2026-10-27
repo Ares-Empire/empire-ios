@@ -96,7 +96,7 @@ struct CategoryTile: View {
 }
 
 /// The square that starts a payment row (the website's `.txn-day`): the day of the month in mono on the second card
-/// colour. The column check's first payments and the first run's steps use it too.
+/// colour. The column check's first payments and the guide's numbered steps use it too.
 struct DayTile<Label: View>: View {
     let palette: Palette
     @ViewBuilder let label: Label

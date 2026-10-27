@@ -50,6 +50,24 @@ nonisolated struct BankGuide: Decodable, Sendable {
         guard !words.isEmpty else { return named + other }
         return named.filter { BankSearch.matches(words, names: $0.names + [$0.title.en]) } + other
     }
+
+    /// What the guide's list shows for a search.
+    enum Results {
+        /// The matching banks (every bank before anything is typed), Another bank last.
+        case banks([Bank])
+        /// Something was typed and no bank matches: Another bank's steps show in place, with "Tell us about your
+        /// bank" (brief 25).
+        case unknown(Bank)
+    }
+
+    func results(_ query: String) -> Results {
+        let found = search(query)
+        if !BankSearch.words(query).isEmpty, !found.contains(where: { !$0.isOther }),
+           let other = found.first(where: \.isOther) {
+            return .unknown(other)
+        }
+        return .banks(found)
+    }
 }
 
 // MARK: - the parts
