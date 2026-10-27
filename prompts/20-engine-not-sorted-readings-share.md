@@ -1,6 +1,6 @@
 # 20: Engine: "Not sorted" counts only money out; several readings of an unknown file; a format people can share
 
-Status: open (2026-10-27)
+Status: merged 2026-10-27 (aresium.de deployed: real data 1 payment, 7.94 EUR in one month; the app has the new engine)
 Repo: aresium · Worktree: `~/aresium-20-readings` (branch `claude/20-readings`) · Built by: a Claude agent
 
 ## Goal
