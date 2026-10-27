@@ -1,7 +1,6 @@
 # 15: Aresium phone mode: other people's data on their iPhone
 
-Status: draft (starts after 12 and 14 are merged: it needs `buildDashboardSource`, the transfer rules, `/api/mode` and
-`readBankFile`)
+Status: draft (12 and 14 merged 2026-10-27; `/api/mode` is live on aresium.de)
 Repo: empire-ios · Worktree: `../empire-ios-15-phone-mode` (branch `claude/15-phone-mode`) · Built by: a Claude agent
 
 ## Goal
@@ -75,6 +74,17 @@ needed; Claude does the look of those screens afterwards.
     empty store, validated first, all or nothing. Tests round-trip it.
 11. **Sample.** DEBUG `-samplePhone`: phone mode without a login or network, its store filled from made-up files (the
     engine fixtures), for screenshots and UI checks; `-samplePhoneEmpty` for the first run.
+
+## Notes from the engine briefs (12, 14)
+
+- `sortPayments` needs **all** of the person's payments in one call (with `source`, `account`, `amount`, `date`):
+  the structural rules (PayPal lines when a PayPal export is present, own transfers between two accounts) look across
+  payments. Re-sort affected payments after each import.
+- `readBankFile` throws errors with a `code` (`empty`, `noTable`, `headerMismatch`, `camt`, `mt940`, `zip`); word each
+  in the app (English, plain). A ZIP file (Sparkasse's CAMT) gets "Unzip the file first, then import what is inside".
+- **Save only layouts the person confirmed from a guess**, never a known profile's layout (a saved layout wins over a
+  profile and would freeze it).
+- Transfer categories count as neither spending nor income in the dashboard (changed 2026-10-27).
 
 ## Settled: do not re-open
 
