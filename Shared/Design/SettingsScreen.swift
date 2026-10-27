@@ -9,6 +9,9 @@ struct SettingsApp {
     /// The app's `DELETE …/me` when its server keeps data per account (today only Arestemis): leaving the app deletes it
     /// there first. nil: the server keeps nothing per account (Aresium, Aresus, Arestoteles hold only Patrik's data).
     var serverData: URL? = nil
+    /// Deletes what the app keeps of the account on this iPhone and nowhere else (Aresium's phone mode: the person's
+    /// payments). Leave <app> and Delete Ares account run it after the server said yes; logging out never does.
+    var localData: (@MainActor () async throws -> Void)? = nil
 }
 
 /// Every app's Settings (the gear in its header), one sheet in the family look: the app's own section (optional, the

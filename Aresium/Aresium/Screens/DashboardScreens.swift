@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct DashboardRoute: Hashable {
     let category: String
@@ -14,6 +15,9 @@ struct StartScreen: View {
     @Binding var side: DashboardSide
     @Binding var graph: Bool
     let band: AresiumBand
+    /// Phone mode: the bank files it imports, and the category picker first while none is chosen.
+    var importTypes: [UTType] = [.commaSeparatedText, .xml]
+    var beforeImport: (() -> Void)? = nil
     let pick: (DashboardRoute) -> Void
     var body: some View {
         VStack(spacing: 0) {
@@ -23,7 +27,7 @@ struct StartScreen: View {
                     Text("Overview").tag(false)
                 }.pickerStyle(.segmented).frame(maxWidth: 235)
                 Spacer()
-                ImportButton(store: imports, sample: store.isSample, palette: palette)
+                ImportButton(store: imports, sample: store.isSample, palette: palette, types: importTypes, instead: beforeImport)
                 IconButton(symbol: "chart.line.uptrend.xyaxis", label: String(localized: "Toggle graph"), palette: palette, active: graph) {
                     withAnimation(.easeInOut(duration: 0.3)) { graph.toggle() }
                 }
@@ -211,6 +215,13 @@ struct TransactionsScreen: View {
             if store.isSample, let index = arguments.firstIndex(of: "-sampleTransaction"),
                arguments.indices.contains(index + 1) {
                 selectedTransaction = store.dashboard?.transactions.first { $0.id == arguments[index + 1] }
+            }
+            // Phone sample (ids are made on import): the first payment of this list whose place contains the text.
+            if !store.isSample, let index = arguments.firstIndex(of: "-samplePhoneTransaction"),
+               arguments.indices.contains(index + 1) {
+                for _ in 0..<40 where store.dashboard == nil { try? await Task.sleep(for: .milliseconds(100)) }
+                selectedTransaction = store.transactions(category: route.category, month: route.month ?? "", side: route.side)
+                    .first { $0.transaction.place.localizedCaseInsensitiveContains(arguments[index + 1]) }?.transaction
             }
             #endif
         }

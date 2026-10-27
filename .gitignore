@@ -26,3 +26,8 @@ __pycache__/
 !Aresium/AresiumTests/Engine/vrbank.csv
 !Aresium/AresiumTests/Engine/paypal.csv
 !Aresium/AresiumTests/Engine/timing-vr-5000.csv
+# Made-up bank files from the engine's fixtures (aresium/src/engine/fixtures/banks), for the phone-mode tests and the
+# DEBUG phone sample (`-samplePhone`).
+!Aresium/AresiumTests/Engine/unknown-fiktivbank.csv
+!Aresium/AresiumTests/Engine/dkb.csv
+!Aresium/Aresium/Preview Content/PhoneSample/*.csv

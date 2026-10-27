@@ -39,6 +39,13 @@ struct TransactionDetailSheet: View {
                 store.beginRecategorisation()
                 store.mode = arguments[index + 1] == "add" ? .add : .switchCategory
             }
+            // Phone sample: a Switch to this category at once (the "also the N others" question follows).
+            if !store.isSample, let index = arguments.firstIndex(of: "-samplePhoneSwitch"),
+               arguments.indices.contains(index + 1) {
+                store.beginRecategorisation()
+                store.select(arguments[index + 1])
+                await store.save()
+            }
             #endif
         }
     }

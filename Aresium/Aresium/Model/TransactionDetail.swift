@@ -88,8 +88,9 @@ struct DetailRow: Identifiable {
     init(label: String, value: String?) { self.label = label; self.value = value ?? "" }
 }
 
-// `raw` is the service's arbitrary JSON export row, not a fixed bank schema.
-enum JSONValue: Codable, Equatable {
+// `raw` is the service's arbitrary JSON export row, not a fixed bank schema. Also the engine's original rows in phone
+// mode (`BankTxn.raw`), so it is usable off the main actor.
+nonisolated enum JSONValue: Codable, Equatable, Sendable {
     case null, string(String), number(Double), bool(Bool), array([JSONValue]), object([String: JSONValue])
 
     init(from decoder: Decoder) throws {

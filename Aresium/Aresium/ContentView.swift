@@ -1,8 +1,14 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct ContentView: View {
     @State private var store: DashboardStore
     @State private var imports: ImportStore
+    /// Server or phone mode, and phone mode's store (`ModeStore`).
+    @State private var modes: ModeStore
+    /// Phone mode's export, restore and delete (Settings and the first run).
+    @State private var phoneData: PhoneDataModel
+    @Environment(\.scenePhase) private var scenePhase
     @AppStorage(ThemeState.preferenceKey) private var rememberedRed = false
     @AppStorage(Appearance.key) private var appearance = Appearance.iPhone.rawValue
     /// Light or dark as Settings → Appearance (or the iPhone) says; red mode shows over it.
@@ -16,7 +22,11 @@ struct ContentView: View {
     @State private var graph = false
     @State private var path: [DashboardRoute] = []
     @State private var sampleActive: Bool
+    /// DEBUG `-samplePhone` / `-samplePhoneEmpty`: phone mode on a made-up store, without a login.
+    @State private var samplePhone: Bool
     @State private var showsSettings = false
+    @State private var showsCategories = false
+    @State private var restoringExport = false
     /// Where the band was when it was tapped (from the screen's bottom edge to its word), so the intro's word lands
     /// there; nil when the header started the transition.
     @State private var bandLanding: CGFloat?
@@ -27,9 +37,11 @@ struct ContentView: View {
 
     init(arguments: [String] = LaunchArguments.current) {
         var sample = false
+        var phoneSample = false
         var skipRestore = false
         #if DEBUG
-        sample = arguments.contains("-sampleData")
+        phoneSample = arguments.contains("-samplePhone") || arguments.contains("-samplePhoneEmpty")
+        sample = arguments.contains("-sampleData") || phoneSample
         // Screenshots of the login and the no-access screen (`SampleAccount`): a made-up account, no server.
         let account = SampleAccount.session(app: .aresium, arguments: arguments)
         let debugLaunch = DebugLaunch.isTesting || sample || arguments.contains("-sampleAuthUnavailable")
@@ -65,19 +77,39 @@ struct ContentView: View {
         if let account { session = account.session }
         let publisher: WidgetSnapshotPublisher = debugLaunch ? .temporary() : WidgetSnapshotPublisher()
         PushCenter.removeDevicesOnLogout(of: session, sharedDefaults: debugLaunch ? nil : EmpireShared.defaults)
+        let markerDefaults = debugLaunch ? nil : EmpireShared.defaults
         #else
         let session = EmpireSession(app: .aresium, sharedDefaults: EmpireShared.defaults)
         let publisher = WidgetSnapshotPublisher()
         PushCenter.removeDevicesOnLogout(of: session, sharedDefaults: EmpireShared.defaults)
+        let markerDefaults = EmpireShared.defaults
         #endif
-        let store = DashboardStore(session: session, sample: sample, widgetPublisher: publisher)
+        // The server sample shows the bundled dashboard; otherwise the backend comes with the account's mode.
+        let store = sample && !phoneSample
+            ? DashboardStore(session: session, sample: true, widgetPublisher: publisher)
+            : DashboardStore(session: session, backend: nil, widgetPublisher: publisher)
         let imports = ImportStore(dashboard: store)
+        let modes = ModeStore(session: session, dashboard: store, markerDefaults: markerDefaults)
         _store = State(initialValue: store)
         _imports = State(initialValue: imports)
+        _modes = State(initialValue: modes)
+        _phoneData = State(initialValue: PhoneDataModel(modes: modes))
         _sampleActive = State(initialValue: sample)
+        _samplePhone = State(initialValue: phoneSample)
         #if DEBUG
         if arguments.contains("-sampleLoginWaiting") { imports.seedDebugWaitingFiles() }
-        if sample {
+        if phoneSample, let index = arguments.firstIndex(of: "-openSheet"), arguments.indices.contains(index + 1) {
+            _showsSettings = State(initialValue: arguments[index + 1] == "settings")
+            _showsCategories = State(initialValue: arguments[index + 1] == "categories")
+        }
+        if phoneSample, let index = arguments.firstIndex(of: "-sampleCategory"), arguments.indices.contains(index + 1) {
+            var routes = [DashboardRoute(category: arguments[index + 1], side: .expenses)]
+            if let month = arguments.firstIndex(of: "-sampleMonth"), arguments.indices.contains(month + 1) {
+                routes.append(DashboardRoute(category: arguments[index + 1], side: .expenses, month: arguments[month + 1]))
+            }
+            _path = State(initialValue: routes)
+        }
+        if sample && !phoneSample {
             if let index = arguments.firstIndex(of: "-openSheet"), arguments.indices.contains(index + 1) {
                 _showsSettings = State(initialValue: arguments[index + 1] == "settings")
             }
@@ -104,13 +136,21 @@ struct ContentView: View {
     var body: some View {
         GeometryReader { geometry in
             Group {
-                if sampleActive || session.isSignedIn {
+                if showsDashboard {
                     NavigationStack(path: $path) {
                         VStack(spacing: 0) {
                             header()
                             restoreFeedback
-                            StartScreen(store: store, imports: imports, palette: palette, current: $current, side: $side,
-                                        graph: $graph, band: band(in: geometry)) { path.append($0) }
+                            if let phone = modes.phone, phone.summary.payments == 0 {
+                                PhoneFirstRun(phone: phone, imports: imports, palette: palette,
+                                              chooseCategories: { showsCategories = true },
+                                              restore: { restoringExport = true })
+                            } else {
+                                StartScreen(store: store, imports: imports, palette: palette, current: $current, side: $side,
+                                            graph: $graph, band: band(in: geometry),
+                                            importTypes: modes.phone == nil ? [.commaSeparatedText, .xml] : PhoneImportTypes.all,
+                                            beforeImport: chooseCategoriesFirst) { path.append($0) }
+                            }
                         }
                         .background { Wall(palette: palette) }
                         .toolbar(.hidden, for: .navigationBar)
@@ -127,6 +167,13 @@ struct ContentView: View {
                             }.background { Wall(palette: palette) }.toolbar(.hidden, for: .navigationBar)
                         }
                     }.task { if store.dashboard == nil { await store.reload() } }
+                } else if modes.showsApp || session.isSignedIn {
+                    // The account's mode is being asked, needs a connection, or its store did not open.
+                    VStack(spacing: 0) {
+                        header()
+                        restoreFeedback
+                        ModeStatusScreen(modes: modes, palette: palette)
+                    }
                 } else if session.isRestoring {
                     ProgressView("Restoring session…").font(AppFont.text(14)).frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
@@ -155,15 +202,32 @@ struct ContentView: View {
             }
             .task {
                 if restoresOnLaunch { await session.restore() }
+                await modes.update()
+            }
+            #if DEBUG
+            .task { await startPhoneSample() }
+            #endif
+            .onChange(of: scenePhase) { _, phase in
+                // Before anything async: the offline phone store closes when the saved login changed elsewhere.
+                if phase == .active { modes.followMarker() }
             }
             .onEmpireForeground(session: session) {
                 await session.followSharedLogin()    // another Empire app may have logged in or out
+                await modes.update()
                 await store.refreshOnForeground()
             }
             .task { store.setWidgetRedMode(theme.red) }
             .onChange(of: session.generation) { _, _ in
                 if !session.isSignedIn { path = [] }
-                Task { await imports.sessionChanged() }
+                Task {
+                    await modes.update()
+                    await imports.sessionChanged()
+                }
+            }
+            .onChange(of: session.needsRestoreRetry) { _, _ in Task { await modes.update() } }
+            .onChange(of: modes.state) { _, _ in
+                if !showsDashboard { path = [] }
+                Task { await imports.sessionChanged() }       // files waiting for the mode
             }
             .onOpenURL { url in
                 if url.isFileURL { Task { await imports.receive([url], source: .shared) } }
@@ -181,10 +245,68 @@ struct ContentView: View {
                 ImportFeedback(store: imports, palette: palette)
             }
             .sheet(isPresented: $showsSettings) {
-                SettingsScreen(app: SettingsApp(name: "Aresium"), session: session, sample: sampleActive, logOut: logOut)
+                SettingsScreen(app: SettingsApp(name: "Aresium", localData: { [modes] in
+                    try await modes.deleteLocalData(reopen: false)
+                }), session: session, sample: sampleActive, logOut: logOut) {
+                    if modes.phone != nil { PhoneSettingsSection(modes: modes, data: phoneData) }
+                }
+            }
+            .sheet(isPresented: $showsCategories) {
+                if let phone = modes.phone {
+                    NavigationStack {
+                        CategoryPickerScreen(model: CategoryPickerModel(phone: phone) {
+                            await store.reloadAfterTransactionChange()
+                        }, done: { showsCategories = false })
+                    }
+                }
+            }
+            .sheet(item: Binding(get: { imports.layoutRequest }, set: { _ in })) { request in
+                if let phone = modes.phone {
+                    LayoutConfirmSheet(model: LayoutConfirmModel(request: request, phone: phone, imports: imports))
+                }
+            }
+            .fileImporter(isPresented: $restoringExport, allowedContentTypes: [.json]) { result in
+                if case let .success(url) = result { Task { await phoneData.restore(from: url) } }
+            }
+            .overlay(alignment: .bottom) {
+                if let problem = phoneData.problem, !showsSettings {
+                    Text(problem).font(AppFont.text(13)).foregroundStyle(palette.expenseText).padding(18)
+                }
             }
         }
     }
+
+    /// Phone mode before any category is chosen: importing opens the category picker first.
+    private var chooseCategoriesFirst: (() -> Void)? {
+        guard let phone = modes.phone, !phone.hasChosenCategories else { return nil }
+        return { showsCategories = true }
+    }
+
+    /// The dashboard (or phone mode's first run) shows: the server sample, or a known mode with its backend.
+    private var showsDashboard: Bool {
+        if sampleActive && !samplePhone { return true }
+        switch modes.state {
+        case .server, .phone: return true
+        default: return false
+        }
+    }
+
+    #if DEBUG
+    /// `-samplePhone` / `-samplePhoneEmpty`: the made-up phone store, then the screens the arguments ask for.
+    private func startPhoneSample() async {
+        guard samplePhone, modes.phone == nil else { return }
+        let arguments = LaunchArguments.current
+        do {
+            await modes.showFixed(try await PhoneSample.backend(empty: arguments.contains("-samplePhoneEmpty")))
+            if arguments.contains("-sampleLayout"), let file = PhoneSample.unknownBankFile() {
+                imports.debugImport([file])
+            }
+            if arguments.contains("-sampleModeOffline") { modes.debugShow(.needsConnection) }
+        } catch {
+            modes.debugShow(.failed(error.localizedDescription))
+        }
+    }
+    #endif
 
     @ViewBuilder private var restoreFeedback: some View {
         if session.needsRestoreRetry, let error = session.error {
@@ -255,17 +377,20 @@ struct ContentView: View {
         }, openSettings: { showsSettings = true })
     }
 
-    /// Settings → Log out: ends the shared login; in sample mode it leaves the sample for the real login.
+    /// Settings → Log out: ends the shared login; in sample mode it leaves the sample for the real login. In phone mode
+    /// the data stays on the phone (the store only closes, `ModeStore`).
     private func logOut() {
         path = []
         store.clear()
         if sampleActive {
             sampleActive = false
+            samplePhone = false
             let session = EmpireSession(app: .aresium, restoreOnLaunch: false, sharedDefaults: EmpireShared.defaults)
             PushCenter.removeDevicesOnLogout(of: session, sharedDefaults: EmpireShared.defaults)
-            store = DashboardStore(session: session,
-                                   widgetPublisher: WidgetSnapshotPublisher())
+            store = DashboardStore(session: session, backend: nil, widgetPublisher: WidgetSnapshotPublisher())
             imports = ImportStore(dashboard: store)
+            modes = ModeStore(session: session, dashboard: store, markerDefaults: EmpireShared.defaults)
+            phoneData = PhoneDataModel(modes: modes)
         }
         else { session.logOut() }
     }
