@@ -71,3 +71,12 @@ The payment detail page, the engine, the server, other apps.
 - Final message: files changed, test counts, the screenshots, what you chose for the result line, anything doubtful.
   Never commit, push, merge or deploy; never touch the server, any database or other repos. No real data: there are no
   real payments on this Mac and you must not look for any; use the made-up tour/sample files.
+
+## Added (Patrik, 2026-10-27, sent to the running agent)
+
+**Counts in the picker:** each row shows how many of the person's payments the category has (ticked; own categories)
+or would get if ticked (default categories not ticked: one `sortPayments` dry run over the payments waiting as Not
+sorted with every default category plus the chosen ones; nothing stored), as a quiet number ("34", read as "34
+payments"). None at 0 or without payments. Recounted after every tick. Nothing preselected; the list's order stays.
+Shown wherever the picker shows (after an import, Settings → Categories, the tour's Settings). One function on the
+phone side (category id → count), tested.
