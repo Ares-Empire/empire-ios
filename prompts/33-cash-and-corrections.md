@@ -45,13 +45,58 @@ with part 6 and D8):
    corrections. Export/restore **schema 3** (still reads 2 and 1). A test opens a version 2 store made by today's main
    (as brief 31's fixture did for version 1).
 
-## Part B (after Claude's go: the engine's exact shapes come with it)
+## Part B (Claude's go: engine merged as aresium 4de0b4b; Claude copies the bundle into your worktree)
 
-In short (details follow): "Add cash" in the import menu and on the Cash page (spent or received, amount, date, what or
-from whom, category: spending categories for spent, income ones for received); the **Cash page** (from a row on the
-dashboard when there is any cash movement): the month's withdrawn, received, spent and not accounted for, every
-movement from the wallet's side, tap one to open it; on a cash receipt's or entry's page **Paid from** (automatic, or
-one of the sources before it); the renamed "Cash withdrawals" / "Abhebungen" category comes from the engine.
+The engine's shapes, exactly (brief 32's final message):
+
+- `SourceReceipt` (what `PhoneBackend` passes to `buildDashboardSource`) gains three optional fields from the stored
+  receipt: `direction: "out" | "in"` (default "out"; "in" only with `method: "cash"`), `kind: "receipt" | "manual"`
+  (labels only), `paidFrom: string | null` (cash out only: a withdrawal's payment id or a received entry's id; one that
+  names nothing is ignored). **Never set `paymentId` on a hand entry** (a joined entry adds nothing and leaves the page).
+- Cash received counts as money in, in its category (no category: "Other" income, as any money in), and is a source in
+  the pool; it gets no covered row. Cash out takes first from its `paidFrom` source (no 92-day limit for a chosen one),
+  then the latest source on or before its day (92 days back at most), the rest is spending of its own. On the same day
+  a withdrawal is taken before a gift.
+- Only when `receipts` is given (the app always gives it): withdrawals' dashboard transactions carry
+  `cashWithdrawal: true`, and the dashboard has `cash: { months: { "YYYY-MM": { withdrawn, received, spent, unaccounted } },
+  movements: [{ id, date, amount (wallet side: + in, − out), kind: "withdrawal" | "received" | "receipt" | "manual",
+  place, category (the dashboard's name; "Uncategorised" for none), paidFrom: [source ids] | null (outs; [] = all from
+  elsewhere), coveredBy: [ids] | null (ins: the outs that took from it), left: number | null (ins: what it still
+  holds) }] }`, movements by date, newest last (same day: money in first). All four month numbers are positive euros;
+  `unaccounted` is what the month's withdrawals still hold (the number their category shows). Card receipts, joined
+  receipts and foreign-currency entries are not movements.
+- The default category `cash` is now "Cash withdrawals" / "Abhebungen" (id unchanged).
+
+Build:
+
+1. **Add cash** ("Add cash" / "Bargeld eintragen"): a fourth item in phone mode's import menu, and on the Cash page.
+   One window in the check window's look: **Spent / Received** (segmented), amount, date, what (spent: where or what
+   for; received: from whom or what for), category (spent: the spending categories and Not sorted; received: the income
+   categories and Not sorted), and for Spent **Paid from** (below). Stored as a receipt with `kind` manual, `method`
+   cash, its `direction`, no rows. Its page (the receipt page's look) with Edit and Delete.
+2. **The Cash page** ("Cash" / "Bargeld"): from a row on the dashboard (a wallet mark, below the categories, shown only
+   when `dashboard.cash` has any movement; never counted in a total). On top the month (following the dashboard's
+   Current / Overview and month like a category does): withdrawn, received, spent, **not accounted for**
+   (`unaccounted`, with one plain line: in the wallet still, or spent without a receipt). Then the movements, newest
+   first, from the wallet's side (+ / −), each with its kind in words (Withdrawal, Received, Receipt, Entry), place,
+   category; a source shows what it still holds (`left`), a payment out where it came from ("from the withdrawal of
+   3 Oct"). Tapping opens the withdrawal's payment page, the receipt's or the entry's page. Buttons: Add spending, Add
+   received cash. Empty state when nothing yet.
+3. **Paid from** on a cash receipt's or spent entry's page and in their windows: Automatic (default) or one source on or
+   before its day (withdrawals and received entries, newest first, each with what it still holds). Saved as `paidFrom`;
+   the dashboard is rebuilt.
+4. **Names:** "Cash" / "Bargeld" is the page, so the own-category name check refuses them (the engine no longer
+   reserves them); the withdrawals category's name comes from the engine. The covered row's words must now fit
+   receipts and hand entries alike (your wording).
+5. **Deleting** a received entry: what took from it is matched again automatically (the engine does it on the next
+   build; check the page shows it).
+6. `CLAUDE.md` (the Receipts part grows a Cash part: flow, files, launch arguments, tests).
+
+**Tests:** a hand entry spent and received, stored with the right fields and never joined; Paid from saved and passed;
+the Cash page's numbers from the engine's `cash` (two months, a gift spent, a withdrawal partly covered); deleting a
+gift; the name check refusing Cash / Bargeld in both languages. **Screenshots** `build/33b-*.png` (de/en, light/dark,
+one at the largest text size): Add cash (spent, received), the Cash page (with movements; empty), Paid from, an entry's
+page, the dashboard row. DEBUG arguments to reach each with made-up data.
 
 ## Settled: do not re-open
 
