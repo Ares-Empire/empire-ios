@@ -1,6 +1,6 @@
 # 33: Receipts you can correct, cash entries by hand, and one Cash page
 
-Status: running (part A; part B starts when Claude says the engine of brief 32 is merged)
+Status: merged 2026-10-28 (Aresium 328, Empire 204 tests; engine 4de0b4b)
 Repo: empire-ios · Worktree: `../empire-ios-33-cash` (branch `claude/33-cash`) · Built by: a Claude agent (flow, data
 and the look)
 
