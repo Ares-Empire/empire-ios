@@ -1,6 +1,6 @@
 # 32: Cash in the engine: cash entries by hand, gifts, and one place for every cash movement
 
-Status: running
+Status: merged 2026-10-28 (aresium; engine tests 347; server /api/data identical on real data, deployed)
 Repo: **aresium** · Worktree: `../aresium-32-cash` (branch `claude/32-cash`) · Built by: a Claude agent ·
 Rules: `~/aresium/AGENTS.md`
 
