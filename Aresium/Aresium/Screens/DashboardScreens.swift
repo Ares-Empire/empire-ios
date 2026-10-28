@@ -4,6 +4,8 @@ struct DashboardRoute: Hashable {
     let category: String
     let side: DashboardSide
     var month: String? = nil
+    /// The Cash page (brief 33): a month's (with `month`) or its months (Overview); `category` is unused.
+    var cash = false
 }
 
 /// Where a dashboard is: the screens pushed, Current or Overview, the expenses or income page, the graph, the payment
@@ -41,7 +43,11 @@ struct DashboardStack<Top: View, Root: View>: View {
             .navigationDestination(for: DashboardRoute.self) { route in
                 VStack(spacing: 0) {
                     top(route)
-                    if route.month != nil {
+                    if route.cash, let month = route.month {
+                        CashScreen(month: month, store: store, palette: palette, band: band)
+                    } else if route.cash {
+                        CashMonthsScreen(store: store, palette: palette, band: band) { place.path.append($0) }
+                    } else if route.month != nil {
                         TransactionsScreen(route: route, store: store, palette: palette, band: band,
                                            selection: $place.payment)
                     } else {
@@ -158,6 +164,15 @@ private struct StartPage: View {
                                          palette: palette)
                             if let openGuide { GuideLink(tint: palette.secondary, action: openGuide).padding(.top, -14) }
                         }
+                        // The Cash page (brief 33): below the categories, only when there is any cash movement. It
+                        // counts in no total, so a hairline sets it apart from the categories above.
+                        if store.hasCash {
+                            Rectangle().fill(palette.grid).frame(height: 1).padding(.horizontal, 12).padding(.vertical, 6)
+                            Button { pick(store.cashRoute(current: current)) } label: {
+                                CashRow(store: store, palette: palette, current: current)
+                            }
+                            .buttonStyle(.plain)
+                        }
                     }.padding(.horizontal, 12).padding(.top, 8)
                 }
             } band: { _ in band }
@@ -247,7 +262,7 @@ struct TransactionsScreen: View {
                                 DayTile(palette: palette) { Text(String(transaction.day)) }
                                 VStack(alignment: .leading, spacing: 2) {
                                     HStack(spacing: 5) {
-                                        Text(verbatim: ReceiptRowWording.title(transaction))
+                                        Text(verbatim: ReceiptRowWording.title(transaction, movement: store.cashMovement(transaction.receiptId)))
                                             .font(AppFont.text(14.5, weight: .semibold)).lineLimit(1)
                                         if transaction.isWaitingReceipt {
                                             // A card receipt counted until its bank payment comes: a quiet mark.
@@ -262,7 +277,7 @@ struct TransactionsScreen: View {
                                                 .accessibilityLabel("Added here by tag; primary category \(CategoryName.shown(transaction.categoryName))")
                                         }
                                     }
-                                    Text(verbatim: ReceiptRowWording.line(transaction)).font(AppFont.text(12.5))
+                                    Text(verbatim: ReceiptRowWording.line(transaction, movement: store.cashMovement(transaction.receiptId))).font(AppFont.text(12.5))
                                         .foregroundStyle(palette.muted).lineLimit(1)
                                 }.frame(maxWidth: .infinity, alignment: .leading)
                                 Text(Money.transaction(transaction.amount)).font(AppFont.number(14))

@@ -157,7 +157,7 @@ struct PhoneStoreTests {
         try await phone.saveLayout(try #require(guess.layout))
         try await phone.ledger.remember(["fiktiv laden": "groceries"])
         let export = try await phone.export()
-        #expect(export.schema == 2 && export.fileName.hasPrefix("Aresium-") && export.fileName.hasSuffix(".json"))
+        #expect(export.schema == 3 && export.fileName.hasPrefix("Aresium-") && export.fileName.hasSuffix(".json"))
         let data = try export.encoded()
 
         let fresh = try await PhoneTest.backend()
@@ -198,7 +198,7 @@ struct PhoneStoreTests {
                                             bookingDate: "2026-02-30", amount: "1.00", currency: "EUR", text: "x",
                                             categorySource: .none, extraCategories: [], sequence: 1)
         await #expect(throws: LedgerError.self) { try await target.restore(badDate.encoded()) }
-        export.schema = 3                                                  // a version this app does not know
+        export.schema = LedgerExport.currentSchema + 1                     // a version this app does not know
         await #expect(throws: LedgerError.self) { try await target.restore(export.encoded()) }
         await #expect(throws: LedgerError.self) { try await target.restore(Data(#"{"files":[]}"#.utf8)) }
         // Nothing was written: the store is as it was (its one chosen category, no data).

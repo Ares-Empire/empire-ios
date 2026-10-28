@@ -2,15 +2,21 @@ import SwiftUI
 
 // A receipt's check window and its question (brief 31), in the file check window's look and wording style
 // (FileCheckSheet: `Ink`, the Settings cards, the dashboard's payment rows, "Does this look right?" at the bottom with
-// the main button). Apple's own controls for the values: a text field, the date picker, the segmented Card / Cash, the
-// menu of categories. The logic is `ReceiptCheckModel` and `PhoneBackend`'s receipt work.
+// the main button). Apple's own controls for the values: text fields, the date picker, the segmented Card / Cash, menus
+// for the currency and the category. Every value looks like something to tap (brief 33, Patrik 2026-10-28: the window
+// asked "Does this look right?" but seemed to offer nothing to do when it was not): the text fields sit in the fields'
+// box (`Ink.field`, a thin line), the menus are the column check's `MenuChip`, the date picker and the segmented control
+// are Apple's own. The logic is `ReceiptCheckModel` and `PhoneBackend`'s receipt work.
 
-/// "Does this look right?": what was read, the fields to check first, Save.
+/// "Does this look right?": what was read, the fields to check first, Save. Also the window that edits a saved receipt.
 struct ReceiptCheckView: View {
     @Bindable var model: ReceiptCheckModel
     let palette: Palette
     let save: () async -> Void
     @Environment(\.dynamicTypeSize) private var typeSize
+    /// The text field being typed in: a tap anywhere on a field's box puts the cursor there.
+    @FocusState private var typing: TextBox?
+    private enum TextBox: Hashable { case shop, total, euros }
     #if DEBUG
     /// Screenshots: `-openReceiptText` opens "As on the receipt".
     @State private var rowsOpen = LaunchArguments.current.contains("-openReceiptText")
@@ -22,19 +28,17 @@ struct ReceiptCheckView: View {
         VStack(spacing: 0) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    Text(model.nothingRead ? "Aresium couldn't read this receipt. Type what it says:"
-                                           : "This is what Aresium read from the receipt:")
-                        .font(AppFont.text(14)).foregroundStyle(Ink.secondary).lineSpacing(3)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(.horizontal, 4).padding(.top, 16)
-                    if model.nothingRead {
+                    intro
+                    if model.editing != nil {
+                        section(String(localized: "The receipt"), fields: ReceiptCheckModel.Field.allCases, notes: false)
+                    } else if model.nothingRead {
                         section(String(localized: "The receipt"), fields: ReceiptCheckModel.Field.allCases, notes: false)
                     } else {
                         if !model.fieldsToCheck.isEmpty {
                             section(String(localized: "Please check"), fields: model.fieldsToCheck, notes: true)
                         }
                         if !model.fieldsRead.isEmpty {
-                            section(String(localized: "Read from the receipt"), fields: model.fieldsRead, notes: false)
+                            section(String(localized: "Read from the receipt"), fields: model.fieldsRead, notes: true)
                         }
                     }
                     // Its own card, without a heading (its row says Category).
@@ -54,6 +58,24 @@ struct ReceiptCheckView: View {
         }
     }
 
+    /// What the window shows, and the quiet line that says every value can be changed.
+    private var intro: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Group {
+                if model.editing != nil { Text("This is the receipt as you saved it.") }
+                else if model.nothingRead { Text("Aresium couldn't read this receipt. Type what it says:") }
+                else { Text("This is what Aresium read from the receipt:") }
+            }
+            .font(AppFont.text(14)).foregroundStyle(Ink.secondary).lineSpacing(3)
+            if !model.nothingRead || model.editing != nil {
+                Text("Something wrong? Tap it and change it.")
+                    .font(AppFont.text(13)).foregroundStyle(Ink.muted).lineSpacing(2)
+            }
+        }
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(.horizontal, 4).padding(.top, 16)
+    }
+
     // MARK: the fields
 
     private func section(_ title: String, fields: [ReceiptCheckModel.Field], notes: Bool) -> some View {
@@ -66,26 +88,36 @@ struct ReceiptCheckView: View {
                         Label {
                             Text(verbatim: note)
                         } icon: {
-                            Image(systemName: model.mark(field) == .missing ? "exclamationmark.circle" : "questionmark.circle")
+                            Image(systemName: Self.symbol(model.mark(field)))
                         }
                         .font(AppFont.text(12.5)).foregroundStyle(Ink.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.horizontal, 16).padding(.bottom, 12).padding(.top, -4)
                     }
-                    if field == .total { moneyRows }
+                    if field == .total { euroRow }
                 }
             }
         }
         .padding(.top, 22)
     }
 
+    private static func symbol(_ mark: ReceiptCheckModel.Mark) -> String {
+        switch mark {
+        case .missing: "exclamationmark.circle"
+        case .corrected: "checkmark.circle"
+        case .sure, .unsure: "questionmark.circle"
+        }
+    }
+
     @ViewBuilder private func row(_ field: ReceiptCheckModel.Field) -> some View {
         switch field {
         case .shop:
             FieldRow(label: String(localized: "Shop")) {
-                TextField(String(localized: "Name on the receipt"), text: $model.shop)
+                TextField("", text: $model.shop, prompt: Text("Name on the receipt").foregroundStyle(Ink.muted))
                     .textInputAutocapitalization(.words).autocorrectionDisabled()
-                    .multilineTextAlignment(.trailing)
+                    .accessibilityLabel(Text("Shop"))
+                    .focused($typing, equals: .shop)
+                    .fieldBox { typing = .shop }
             }
         case .date:
             FieldRow(label: String(localized: "Date")) {
@@ -94,12 +126,16 @@ struct ReceiptCheckView: View {
             }
         case .total:
             FieldRow(label: String(localized: "Total")) {
-                HStack(spacing: 6) {
-                    TextField(ReceiptAmount.field(0), text: $model.totalText)
+                HStack(spacing: 8) {
+                    TextField("", text: $model.totalText,
+                              prompt: Text(verbatim: ReceiptAmount.field(0)).foregroundStyle(Ink.muted))
                         .keyboardType(.decimalPad).multilineTextAlignment(.trailing)
                         .font(AppFont.number(15))
-                    Text(verbatim: model.currency ?? "").font(AppFont.text(13, weight: .semibold))
-                        .foregroundStyle(Ink.muted)
+                        .accessibilityLabel(Text("Total"))
+                        .focused($typing, equals: .total)
+                        .fieldBox { typing = .total }
+                        .frame(maxWidth: 150)
+                    currencyMenu
                 }
             }
         case .method:
@@ -113,25 +149,34 @@ struct ReceiptCheckView: View {
         }
     }
 
-    /// Under the total: the currency when it is not euros, and what it cost in euros when paid in cash.
-    @ViewBuilder private var moneyRows: some View {
-        if model.showsCurrency {
-            SettingsDivider()
-            FieldRow(label: String(localized: "Currency")) {
-                Picker(String(localized: "Currency"), selection: $model.currency) {
-                    if model.currency == nil { Text("Choose").tag(String?.none) }
-                    ForEach(currencies, id: \.self) { code in Text(verbatim: code).tag(String?.some(code)) }
-                }
-                .pickerStyle(.menu)
-            }
+    /// The total's currency, beside it: any receipt's can be changed (an undecided "kr" must be chosen).
+    private var currencyMenu: some View {
+        Menu {
+            Picker(selection: $model.currency) {
+                if model.currency == nil { Text("Choose").tag(String?.none) }
+                ForEach(currencies, id: \.self) { code in Text(verbatim: code).tag(String?.some(code)) }
+            } label: { EmptyView() }
+        } label: {
+            MenuChip(text: model.currency ?? String(localized: "Choose"), quiet: model.currency == nil, mono: true)
         }
+        .accessibilityLabel(Text("Currency"))
+        .accessibilityValue(Text(verbatim: model.currency ?? ""))
+    }
+
+    /// Under the total: what it cost in euros, for another currency paid in cash.
+    @ViewBuilder private var euroRow: some View {
         if model.needsEuros {
             SettingsDivider()
             FieldRow(label: String(localized: "Amount in euros")) {
-                HStack(spacing: 6) {
-                    TextField(ReceiptAmount.field(0), text: $model.euroText)
+                HStack(spacing: 8) {
+                    TextField("", text: $model.euroText,
+                              prompt: Text(verbatim: ReceiptAmount.field(0)).foregroundStyle(Ink.muted))
                         .keyboardType(.decimalPad).multilineTextAlignment(.trailing).font(AppFont.number(15))
-                    Text(verbatim: ReceiptAmount.euro).font(AppFont.text(13, weight: .semibold)).foregroundStyle(Ink.muted)
+                        .accessibilityLabel(Text("Amount in euros"))
+                        .focused($typing, equals: .euros)
+                        .fieldBox { typing = .euros }
+                        .frame(maxWidth: 150)
+                    Text(verbatim: ReceiptAmount.euro).font(AppFont.number(13, weight: .medium)).foregroundStyle(Ink.muted)
                 }
             }
         }
@@ -145,10 +190,14 @@ struct ReceiptCheckView: View {
 
     private var categoryRow: some View {
         FieldRow(label: String(localized: "Category")) {
-            Picker(String(localized: "Category"), selection: $model.category) {
-                ForEach(model.choices) { choice in Text(verbatim: choice.name).tag(choice.id) }
+            Menu {
+                Picker(selection: $model.category) {
+                    ForEach(model.choices) { choice in Text(verbatim: choice.name).tag(choice.id) }
+                } label: { EmptyView() }
+            } label: {
+                MenuChip(text: model.choices.first { $0.id == model.category }?.name ?? "")
             }
-            .pickerStyle(.menu)
+            .accessibilityLabel(Text("Category"))
         }
     }
 
@@ -160,6 +209,10 @@ struct ReceiptCheckView: View {
             else if let missing = model.missing {
                 Label { Text(verbatim: missing) } icon: { Image(systemName: "exclamationmark.circle") }
                     .font(AppFont.text(13)).foregroundStyle(Ink.secondary).padding(.horizontal, 4)
+            } else if let again = model.matchesAgainNote {
+                Label { Text(verbatim: again) } icon: { Image(systemName: "arrow.triangle.2.circlepath") }
+                    .font(AppFont.text(13)).foregroundStyle(Ink.secondary).padding(.horizontal, 4)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             Text("Does this look right?").font(AppFont.text(17, weight: .semibold)).foregroundStyle(Ink.primary)
                 .fixedSize(horizontal: false, vertical: true).padding(.horizontal, 4)
@@ -174,6 +227,19 @@ struct ReceiptCheckView: View {
             .allowsHitTesting(!model.isSaving)
         }
         .padding(.horizontal, 18).padding(.top, 14).padding(.bottom, 10)
+    }
+}
+
+extension View {
+    /// A text field's box in a form row (the column check's chips and the bank name's field: the field fill and a thin
+    /// line), so it reads as something to type in; `focus` puts the cursor in the field when the box around it is tapped.
+    func fieldBox(focus: @escaping () -> Void) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 9, style: .continuous)
+        return padding(.horizontal, 10).padding(.vertical, 6).frame(minHeight: 36)
+            .background(Ink.field, in: shape)
+            .overlay(shape.strokeBorder(Ink.line))
+            .contentShape(shape)
+            .onTapGesture(perform: focus)
     }
 }
 
@@ -320,7 +386,7 @@ struct ReceiptSummaryRow: View {
 
     private var amount: some View {
         Text(verbatim: ReceiptPageWording.amount(receipt)).font(AppFont.number(14))
-            .foregroundStyle(palette.expenseText).fixedSize()
+            .foregroundStyle(receipt.direction == .in ? palette.income : palette.expenseText).fixedSize()
     }
 }
 

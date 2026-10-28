@@ -29,6 +29,8 @@ final class TransactionDetailStore {
     private(set) var followUp: MerchantFollowUp?
     /// Phone mode: the receipt joined to this payment (its page's Receipt section).
     private(set) var receipt: LedgerReceipt?
+    /// The Receipt section's Edit (brief 33): the receipt's page model, whose edit sheet is open.
+    private(set) var receiptEditor: ReceiptPageModel?
     private let transaction: Transaction
     private let dashboardStore: DashboardStore
     private var retryDropCurrent = false
@@ -161,6 +163,28 @@ final class TransactionDetailStore {
         } catch {
             saveError = error.localizedDescription
         }
+    }
+
+    /// The Receipt section's Edit: the check window filled from the joined receipt (`ReceiptPageModel.beginEdit`). After
+    /// a change the dashboard is built again and this page shows the payment as it is now (a new total or day may have
+    /// unjoined the receipt).
+    func editReceipt() async {
+        guard let receipt, let phone = backend as? PhoneBackend, !isSaving else { return }
+        saveError = nil
+        let editor = ReceiptPageModel(id: receipt.id, phone: phone) { [weak self] in await self?.receiptChanged() }
+        receiptEditor = editor
+        await editor.beginEdit()
+        if editor.editing == nil {
+            saveError = editor.problem
+            receiptEditor = nil
+        }
+    }
+
+    private func receiptChanged() async {
+        await dashboardStore.reloadAfterTransactionChange()
+        guard let phone = backend as? PhoneBackend, let id = detail?.id else { return }
+        if let reloaded = try? await phone.transactionDetail(id: id, auth: BackendAuth(token: nil)) { detail = reloaded }
+        receipt = try? await phone.receipt(joinedTo: id)
     }
 
     /// The answer to "Also the N other payments from <shop>?" from the dialog: taken at once (so a dismissal that follows

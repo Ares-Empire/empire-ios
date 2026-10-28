@@ -12,6 +12,9 @@ nonisolated struct Dashboard: Codable {
     let spend: [String: Series]
     let income: [String: Series]
     let pick: CategoryChoices
+    /// Phone mode (brief 32; absent from the server's JSON): every cash movement, for the Cash page. A view, counted in
+    /// no total.
+    var cash: CashView? = nil
 
     static func decode(_ data: Data) throws -> Dashboard {
         let dashboard = try JSONDecoder().decode(Dashboard.self, from: data)
@@ -96,9 +99,63 @@ nonisolated struct Transaction: Codable, Identifiable {
     var receiptId: String? = nil
     var provisional: Bool? = nil
     var coveredBy: [String]? = nil
+    /// Phone mode (brief 32): a cash withdrawal (the shop list's cash rule), a source of the wallet.
+    var cashWithdrawal: Bool? = nil
 
     /// A card receipt counted on its own until its bank payment comes.
     var isWaitingReceipt: Bool { provisional == true }
+}
+
+/// The Cash page's data (the engine's `cash`, brief 32): each month's numbers and every cash movement from the
+/// wallet's side. Card receipts, joined receipts and entries in another currency are not movements.
+nonisolated struct CashView: Codable, Equatable {
+    /// By `YYYY-MM`: only months with a movement.
+    let months: [String: CashMonth]
+    /// By date, oldest first (on one day, money in first).
+    let movements: [CashMovement]
+}
+
+/// One month of cash, in positive euros. `unaccounted`: what the month's withdrawals still hold after everything that
+/// took from them (the number their category shows): in the wallet still, or spent without a receipt.
+nonisolated struct CashMonth: Codable, Equatable {
+    let withdrawn: Double
+    let received: Double
+    let spent: Double
+    let unaccounted: Double
+
+    static let none = CashMonth(withdrawn: 0, received: 0, spent: 0, unaccounted: 0)
+}
+
+/// One movement of the wallet.
+nonisolated struct CashMovement: Codable, Equatable, Identifiable {
+    enum Kind: String, Codable, Equatable {
+        /// Cash from the bank (a payment).
+        case withdrawal
+        /// Cash received, entered by hand.
+        case received
+        /// A cash receipt.
+        case receipt
+        /// Cash spent, entered by hand.
+        case manual
+    }
+    /// The payment's id (a withdrawal) or the receipt's.
+    let id: String
+    let date: String
+    /// From the wallet's side: + in, − out.
+    let amount: Double
+    let kind: Kind
+    let place: String
+    /// The category's name on the dashboard ("Uncategorised" for none).
+    let category: String
+    /// Money out: the sources it took from ([]: all from elsewhere); nil for money in.
+    let paidFrom: [String]?
+    /// Money in: the movements out that took from it; nil for money out.
+    let coveredBy: [String]?
+    /// Money in: what it still holds; nil for money out.
+    let left: Double?
+
+    var isSource: Bool { kind == .withdrawal || kind == .received }
+    var month: String { String(date.prefix(7)) }
 }
 
 nonisolated struct Overview: Codable {

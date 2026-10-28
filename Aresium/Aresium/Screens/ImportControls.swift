@@ -9,21 +9,25 @@ struct ImportChoices {
     let chooseFile: () -> Void
     let scanReceipt: (() -> Void)?
     let choosePhoto: () -> Void
+    /// Cash spent or received by hand (brief 33).
+    let addCash: () -> Void
 
-    init(chooseFile: @escaping () -> Void, scanReceipt: @escaping () -> Void, choosePhoto: @escaping () -> Void) {
+    init(chooseFile: @escaping () -> Void, scanReceipt: @escaping () -> Void, choosePhoto: @escaping () -> Void,
+         addCash: @escaping () -> Void) {
         self.chooseFile = chooseFile
         self.scanReceipt = VNDocumentCameraViewController.isSupported ? scanReceipt : nil
         self.choosePhoto = choosePhoto
+        self.addCash = addCash
     }
 
-    /// The tour: every choice only answers its import step; nothing is picked, scanned or read.
+    /// The tour: every choice only answers its import step; nothing is picked, scanned, read or entered.
     static func tour(_ answer: @escaping () -> Void) -> ImportChoices {
-        ImportChoices(chooseFile: answer, scanReceipt: answer, choosePhoto: answer)
+        ImportChoices(chooseFile: answer, scanReceipt: answer, choosePhoto: answer, addCash: answer)
     }
 }
 
-/// Import as Apple's usual menu: Choose file, Scan receipt, Choose photo, opened from `label` (the first screen's main
-/// button, the dashboard's import button).
+/// Import as Apple's usual menu: Choose file, Scan receipt, Choose photo, Add cash, opened from `label` (the first
+/// screen's main button, the dashboard's import button).
 struct ImportMenu<Label: View>: View {
     let choices: ImportChoices
     @ViewBuilder let label: () -> Label
@@ -35,6 +39,7 @@ struct ImportMenu<Label: View>: View {
                 Button("Scan receipt", systemImage: "doc.viewfinder", action: scan)
             }
             Button("Choose photo", systemImage: "photo", action: choices.choosePhoto)
+            Button("Add cash", systemImage: "banknote", action: choices.addCash)
         } label: {
             label()
         }

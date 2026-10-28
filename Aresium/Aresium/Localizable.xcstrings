@@ -24,6 +24,16 @@
         }
       }
     },
+    "%@ left" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ übrig"
+          }
+        }
+      }
+    },
     "%@ less than the receipt" : {
       "localizations" : {
         "de" : {
@@ -40,6 +50,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ mehr: Bargeld an der Kasse oder Trinkgeld?"
+          }
+        }
+      }
+    },
+    "%@ not accounted for" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ nicht erfasst"
           }
         }
       }
@@ -437,12 +457,52 @@
         }
       }
     },
+    "Accounted for" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erfasst"
+          }
+        }
+      }
+    },
     "Add" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Hinzufügen"
+          }
+        }
+      }
+    },
+    "Add cash" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bargeld eintragen"
+          }
+        }
+      }
+    },
+    "Add received cash" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einnahme eintragen"
+          }
+        }
+      }
+    },
+    "Add spending" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ausgabe eintragen"
           }
         }
       }
@@ -677,6 +737,16 @@
         }
       }
     },
+    "Aresium looks for its bank payment again when you save." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beim Speichern sucht Aresium seine Buchung neu."
+          }
+        }
+      }
+    },
     "Aresium may not use the camera. Allow it in Settings → Apps → Aresium." : {
       "localizations" : {
         "de" : {
@@ -763,6 +833,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Bei deiner Bank kann ein Knopf etwas anders heißen."
+          }
+        }
+      }
+    },
+    "Automatic" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatisch"
+          }
+        }
+      }
+    },
+    "Automatic takes it from the latest withdrawal or cash received up to this day." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatisch heißt: aus der letzten Abhebung oder dem zuletzt erhaltenen Bargeld bis zu diesem Tag."
           }
         }
       }
@@ -877,6 +967,16 @@
         }
       }
     },
+    "By month" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nach Monat"
+          }
+        }
+      }
+    },
     "Café" : {
       "localizations" : {
         "de" : {
@@ -912,17 +1012,77 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bar"
+            "value" : "Bargeld"
           }
         }
       }
     },
-    "Cash spent with receipts" : {
+    "Cash entry" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bargeld mit Belegen ausgegeben"
+            "value" : "Bargeld-Eintrag"
+          }
+        }
+      }
+    },
+    "Cash received" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bargeld erhalten"
+          }
+        }
+      }
+    },
+    "Cash received on %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bargeld erhalten am %@"
+          }
+        }
+      }
+    },
+    "Cash spent" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bargeld ausgegeben"
+          }
+        }
+      }
+    },
+    "Cash you got that never came from your bank: a gift, money from selling something." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bargeld, das nicht von deiner Bank kam: ein Geschenk, Geld aus einem Verkauf."
+          }
+        }
+      }
+    },
+    "Cash you paid with, when there is no receipt to scan." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bargeld, mit dem du bezahlt hast, wenn es keinen Beleg zum Scannen gibt."
+          }
+        }
+      }
+    },
+    "Cash, entered by hand" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bargeld, von Hand eingetragen"
           }
         }
       }
@@ -1107,6 +1267,16 @@
         }
       }
     },
+    "Corrected by you before." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Von dir schon einmal korrigiert."
+          }
+        }
+      }
+    },
     "Counted as its bank payment" : {
       "localizations" : {
         "de" : {
@@ -1117,12 +1287,12 @@
         }
       }
     },
-    "Covered by receipts" : {
+    "Counted where it was spent" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Durch Belege gedeckt"
+            "value" : "Dort gezählt, wo es ausgegeben wurde"
           }
         }
       }
@@ -1237,12 +1407,32 @@
         }
       }
     },
+    "Delete entry" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eintrag löschen"
+          }
+        }
+      }
+    },
     "Delete receipt" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Beleg löschen"
+          }
+        }
+      }
+    },
+    "Delete this entry?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diesen Eintrag löschen?"
           }
         }
       }
@@ -1327,6 +1517,36 @@
         }
       }
     },
+    "Edit" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bearbeiten"
+          }
+        }
+      }
+    },
+    "Edit entry" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eintrag bearbeiten"
+          }
+        }
+      }
+    },
+    "Edit receipt" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beleg bearbeiten"
+          }
+        }
+      }
+    },
     "End tour" : {
       "localizations" : {
         "de" : {
@@ -1383,6 +1603,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Gib deinen jetzigen Code ein"
+          }
+        }
+      }
+    },
+    "Entered by hand" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Von Hand eingetragen"
+          }
+        }
+      }
+    },
+    "Entry" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eintrag"
           }
         }
       }
@@ -1517,6 +1757,32 @@
         }
       }
     },
+    "From %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aus %@"
+          }
+        }
+      }
+    },
+    "From %@ and %lld more" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aus %@ und %lld weiteren"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "From %1$@ and %2$lld more"
+          }
+        }
+      }
+    },
     "From Safari" : {
       "localizations" : {
         "de" : {
@@ -1533,6 +1799,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Vom Computer"
+          }
+        }
+      }
+    },
+    "From cash not recorded here" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aus Bargeld, das hier nicht erfasst ist"
           }
         }
       }
@@ -1559,6 +1835,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Aus der App der Bank"
+          }
+        }
+      }
+    },
+    "From whom or what for" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Von wem oder wofür"
           }
         }
       }
@@ -1813,6 +2099,16 @@
         }
       }
     },
+    "In your wallet still, or spent without a receipt." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch im Portemonnaie oder ohne Beleg ausgegeben."
+          }
+        }
+      }
+    },
     "Income" : {
       "localizations" : {
         "de" : {
@@ -1829,6 +2125,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ist das dieselbe Buchung?"
+          }
+        }
+      }
+    },
+    "It no longer counts in its category." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dann zählt er nicht mehr in seiner Kategorie."
           }
         }
       }
@@ -1899,6 +2205,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sprache"
+          }
+        }
+      }
+    },
+    "Left" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Übrig"
           }
         }
       }
@@ -2223,6 +2539,26 @@
         }
       }
     },
+    "No cash this month." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diesen Monat kein Bargeld."
+          }
+        }
+      }
+    },
+    "No cash yet." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch kein Bargeld."
+          }
+        }
+      }
+    },
     "No data yet" : {
       "localizations" : {
         "de" : {
@@ -2303,6 +2639,16 @@
         }
       }
     },
+    "No withdrawal or cash received on or before this day yet." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bis zu diesem Tag gibt es noch keine Abhebung und kein erhaltenes Bargeld."
+          }
+        }
+      }
+    },
     "None" : {
       "localizations" : {
         "de" : {
@@ -2319,6 +2665,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Keine davon"
+          }
+        }
+      }
+    },
+    "Not accounted for" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nicht erfasst"
           }
         }
       }
@@ -2633,6 +2989,16 @@
         }
       }
     },
+    "Paid from" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bezahlt aus"
+          }
+        }
+      }
+    },
     "Paid in another currency" : {
       "localizations" : {
         "de" : {
@@ -2863,12 +3229,32 @@
         }
       }
     },
-    "Receipts you scanned or picked, newest first. Only what was read is kept, never the photo." : {
+    "Receipts you scanned or picked and cash you entered, newest first. Of a receipt only what was read is kept, never the photo." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Belege, die du gescannt oder ausgewählt hast, die neuesten zuerst. Gespeichert wird nur, was gelesen wurde, nie das Foto."
+            "value" : "Belege, die du gescannt oder gewählt hast, und Bargeld, das du eingetragen hast, das Neueste zuerst. Von einem Beleg bleibt nur, was gelesen wurde, nie das Foto."
+          }
+        }
+      }
+    },
+    "Received" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erhalten"
+          }
+        }
+      }
+    },
+    "Received %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erhalten %@"
           }
         }
       }
@@ -3003,6 +3389,26 @@
         }
       }
     },
+    "Saved: cash received." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gespeichert: Bargeld erhalten."
+          }
+        }
+      }
+    },
+    "Saved: cash spent." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gespeichert: Bargeld ausgegeben."
+          }
+        }
+      }
+    },
     "Saving…" : {
       "localizations" : {
         "de" : {
@@ -3113,12 +3519,32 @@
         }
       }
     },
+    "Show older" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ältere anzeigen"
+          }
+        }
+      }
+    },
     "Sight" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sehenswürdigkeit"
+          }
+        }
+      }
+    },
+    "Something wrong? Tap it and change it." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stimmt etwas nicht? Tipp es an und ändere es."
           }
         }
       }
@@ -3179,6 +3605,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ausgegeben"
+          }
+        }
+      }
+    },
+    "Spent %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ausgegeben %@"
+          }
+        }
+      }
+    },
+    "Spent or received" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ausgegeben oder erhalten"
           }
         }
       }
@@ -3509,12 +3955,12 @@
         }
       }
     },
-    "This cash was spent with these receipts, so it is counted with them." : {
+    "This cash was spent with these receipts and entries, so it is counted with them." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dieses Bargeld wurde mit diesen Belegen ausgegeben, darum zählt es bei ihnen."
+            "value" : "Dieses Bargeld wurde mit diesen Belegen und Einträgen ausgegeben und wird dort gezählt."
           }
         }
       }
@@ -3575,6 +4021,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Das ist Aresium mit erfundenen Beispieldaten."
+          }
+        }
+      }
+    },
+    "This is the receipt as you saved it." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "So hast du den Beleg gespeichert."
           }
         }
       }
@@ -3805,6 +4261,16 @@
         }
       }
     },
+    "Type the amount." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gib den Betrag ein."
+          }
+        }
+      }
+    },
     "Type the total." : {
       "localizations" : {
         "de" : {
@@ -3965,6 +4431,16 @@
         }
       }
     },
+    "What" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was"
+          }
+        }
+      }
+    },
     "What is sent" : {
       "localizations" : {
         "de" : {
@@ -3985,6 +4461,16 @@
         }
       }
     },
+    "What was paid from it is taken from other cash again." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was davon bezahlt wurde, kommt dann wieder aus anderem Bargeld."
+          }
+        }
+      }
+    },
     "Where" : {
       "localizations" : {
         "de" : {
@@ -4001,6 +4487,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Wo steht was"
+          }
+        }
+      }
+    },
+    "Where or what for" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wo oder wofür"
+          }
+        }
+      }
+    },
+    "Where this cash came from. Automatic takes it from the latest withdrawal or cash received up to this day." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Woher dieses Bargeld kam. Automatisch heißt: aus der letzten Abhebung oder dem zuletzt erhaltenen Bargeld bis zu diesem Tag."
           }
         }
       }
@@ -4091,6 +4597,66 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Mit erfundenen Beispieldaten"
+          }
+        }
+      }
+    },
+    "Withdrawal" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abhebung"
+          }
+        }
+      }
+    },
+    "Withdrawal of %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abhebung vom %@"
+          }
+        }
+      }
+    },
+    "Withdrawals from your bank, cash you received and what you paid with it show here." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hier stehen Abhebungen von deiner Bank, erhaltenes Bargeld und was du damit bezahlt hast."
+          }
+        }
+      }
+    },
+    "Withdrawals, cash received and spent" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abhebungen, Erhaltenes und Ausgaben"
+          }
+        }
+      }
+    },
+    "Withdrawn" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abgehoben"
+          }
+        }
+      }
+    },
+    "Withdrawn %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abgehoben %@"
           }
         }
       }
@@ -4295,12 +4861,32 @@
         }
       }
     },
+    "the cash received on %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "dem erhaltenen Bargeld vom %@"
+          }
+        }
+      }
+    },
     "the other way round" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "umgekehrt"
+          }
+        }
+      }
+    },
+    "the withdrawal of %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "der Abhebung vom %@"
           }
         }
       }

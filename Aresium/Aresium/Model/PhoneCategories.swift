@@ -8,8 +8,9 @@ nonisolated struct PhoneCategoryList: Sendable {
     let chosen: [ChosenCategory]
     var language: AppLanguage = .current
 
-    /// Names the dashboard itself uses for its own entries; one's own category may not take them.
-    static let reservedNames = ["Uncategorised", "Refunds", "Other", "Tax"]
+    /// Names the dashboard itself uses for its own entries; one's own category may not take them. "Cash" / "Bargeld"
+    /// is the Cash page since the withdrawals' category became "Cash withdrawals" / "Abhebungen" (brief 33).
+    static let reservedNames = ["Uncategorised", "Refunds", "Other", "Tax", "Cash", "Bargeld"]
 
     /// The ids payments may be sorted into: the chosen ones in their order, then the built-in own transfers (always
     /// there, never listed).

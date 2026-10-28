@@ -45,6 +45,8 @@ struct ContentView: View {
     @State private var receipts: ReceiptCaptureModel
     /// The after-import question shown now ("Is this the same payment?"), so closing it lets only that receipt wait.
     @State private var askedReceipt: String?
+    /// Import → Add cash (brief 33): the window for a hand entry, while it is open.
+    @State private var cashEntry: CashEntryModel?
     @State private var restoringExport = false
     /// Where the band was when it was tapped (from the screen's bottom edge to its word), so the intro's word lands
     /// there; nil when the header started the transition.
@@ -145,6 +147,11 @@ struct ContentView: View {
                     place.path.append(DashboardRoute(category: arguments[index + 1], side: .expenses,
                                                      month: arguments[month + 1]))
                 }
+            }
+            // `-openCash`: the Cash page (this month's; `-cashMonth <YYYY-MM>` another; with `-sampleOverview` its months).
+            if arguments.contains("-openCash") {
+                let month = LaunchArguments.value("-cashMonth") ?? String(LedgerExport.day(.now).prefix(7))
+                place.path = [DashboardRoute(category: "", side: .expenses, month: place.current ? month : nil, cash: true)]
             }
             _place = State(initialValue: place)
         }
@@ -361,6 +368,7 @@ struct ContentView: View {
                 }
             }
             .receiptCapture(receipts, palette: palette)
+            .cashEntry($cashEntry, saved: cashEntrySaved)
             .sheet(item: Binding(get: { pendingReceiptQuestion }, set: { if $0 == nil { receiptQuestionClosed() } })) { question in
                 // After a bank import: a waiting card receipt with payments to ask about, once each.
                 if let phone = modes.phone {
@@ -446,7 +454,7 @@ struct ContentView: View {
     /// the dashboard.
     private var mainScreen: MainScreen {
         MainScreen.choose(tour: tour?.phase, hasMode: showsDashboard, waitsForServerLogin: waitsForServerLogin,
-                          phonePayments: modes.phone?.summary.payments)
+                          phoneRecords: modes.phone.map { $0.summary.payments + $0.summary.receipts })
     }
 
     /// Import data (the first screen): the file picker.
@@ -457,7 +465,21 @@ struct ContentView: View {
     /// Phone mode's Import (the first screen's Import data, the dashboard's import button): Choose file, Scan receipt,
     /// Choose photo. Server mode keeps its own button (no receipts there yet).
     private var phoneImportChoices: ImportChoices {
-        ImportChoices(chooseFile: importData, scanReceipt: receipts.scan, choosePhoto: receipts.choosePhoto)
+        ImportChoices(chooseFile: importData, scanReceipt: receipts.scan, choosePhoto: receipts.choosePhoto,
+                      addCash: addCash)
+    }
+
+    /// Import → Add cash: the window for cash spent or received by hand.
+    private func addCash() {
+        guard let phone = modes.phone else { return }
+        cashEntry = CashEntryModel(phone: phone)
+    }
+
+    /// Add cash saved: its line in the import's result banner, and the dashboard built again.
+    private func cashEntrySaved(_ entry: LedgerReceipt) async {
+        let line = entry.direction == .in ? String(localized: "Saved: cash received.") : String(localized: "Saved: cash spent.")
+        imports.show(line, success: true)
+        await store.reloadAfterTransactionChange()
     }
 
     /// The category picker after an import shows in phone mode once no other sheet of the app is open (a file shared in
@@ -470,7 +492,7 @@ struct ContentView: View {
     /// (the picker first when both are due), and no other window of the app is open.
     private var pendingReceiptQuestion: ReceiptQuestion? {
         guard let phone = modes.phone, !imports.isBusy, !imports.asksForCategories, imports.layoutRequest == nil,
-              !showsSettings, !showsGuide, receipts.reading == nil, tour == nil else { return nil }
+              !showsSettings, !showsGuide, receipts.reading == nil, cashEntry == nil, tour == nil else { return nil }
         return phone.receiptQuestions.first
     }
 
@@ -517,12 +539,17 @@ struct ContentView: View {
             let (phone, storage) = try await PhoneSample.backend(empty: arguments.contains("-samplePhoneEmpty"))
             // Kept receipts before the store shows, so the first dashboard (and a page opened at launch) has them.
             if arguments.contains("-sampleReceipts") { try await PhoneSample.addReceipts(phone) }
+            if arguments.contains("-sampleCash") { try await PhoneSample.addCash(phone) }
             await modes.showFixed(phone, storage: storage)
             // `-importData`: the first screen's Import data at launch (the file picker).
             if arguments.contains("-importData") { importData() }
             // `-choosePhoto`: Import → Choose photo at launch (the photo picker). Receipts (the simulator has no camera):
             // the made-up receipt read through the real Vision path and the engine, as a scanned one.
             if arguments.contains("-choosePhoto") { receipts.choosePhoto() }
+            // `-addCash spent|received` without `-openCash`: Import → Add cash at launch (`-openPaidFrom`: its Paid from).
+            if !arguments.contains("-openCash"), let direction = LaunchArguments.value("-addCash") {
+                cashEntry = CashEntryModel(direction: direction == "received" ? .in : .out, phone: phone)
+            }
             await startReceiptSample(phone, arguments: arguments)
             // `-sampleImport`: the made-up bank file imported as if picked; on `-samplePhoneEmpty` (no category chosen)
             // the category picker opens after it, as after a real import (`-sampleTick`, `-samplePickerDone` in it).
@@ -547,8 +574,14 @@ struct ContentView: View {
     /// payment line, a damaged total), `-sampleReceiptBlank` nothing read; `-sampleReceiptQuestion` the receipt saved
     /// with two bank payments of its amount: "Is this the same payment?"; `-sampleReceipts` made-up receipts kept in
     /// the store (waiting, cash, joined, another currency), then `-sampleCategory … -samplePhoneTransaction <shop>`
-    /// opens one, `-openSheet settings -openReceipts` Settings → Receipts.
+    /// opens one (`-editReceipt`: its Edit at once), `-openSheet settings -openReceipts` Settings → Receipts.
+    /// `-sampleShopCorrection <name>`: the made-up receipt's shop was corrected to this name before (brief 33), so
+    /// `-sampleReceipt` shows it as "Corrected by you before".
     private func startReceiptSample(_ phone: PhoneBackend, arguments: [String]) async {
+        if let name = LaunchArguments.value("-sampleShopCorrection"),
+           let change = ShopNames.change(read: ReceiptSample.shop, saved: name) {
+            try? await phone.ledger.apply(change)
+        }
         if arguments.contains("-sampleReceiptQuestion") {
             try? await PhoneSample.addQuestionPayments(phone)
             receipts.read([ReceiptPage(image: ReceiptSample.image())])
@@ -642,15 +675,18 @@ struct ContentView: View {
     private func header(_ route: DashboardRoute? = nil, in dashboard: DashboardStore? = nil,
                         openSettings: (() -> Void)? = nil) -> some View {
         let store = dashboard ?? store
-        let category = route.flatMap { store.category($0.category, side: $0.side) }
+        let category = route.flatMap { $0.cash ? nil : store.category($0.category, side: $0.side) }
         let subtitle: String? = route.map { route in
+            // The Cash page: its month, or its months (Overview).
+            if route.cash { return route.month.map { store.monthTitle($0) } ?? String(localized: "By month") }
             if let key = route.month {
                 let month = store.dashboard?.months.first { $0.key == key }?.title() ?? key
                 return String(localized: "\(month) · activities")
             }
             return route.side == .income ? String(localized: "Monthly income") : String(localized: "Monthly spend")
         }
-        return ScreenHeader(title: route.map { CategoryName.shown($0.category) } ?? "Aresium", subtitle: subtitle,
+        let title = route.map { $0.cash ? String(localized: "Cash") : CategoryName.shown($0.category) } ?? "Aresium"
+        return ScreenHeader(title: title, subtitle: subtitle,
                             category: category, palette: palette,
                             back: route == nil ? nil : { back(route) },
                             toggleTheme: {

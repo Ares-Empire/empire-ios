@@ -6,7 +6,8 @@ import Foundation
 // counts in its category and takes its amount out of the cash withdrawals before it (the engine counts both,
 // `buildDashboardSource`).
 
-/// A stored receipt as a value (also its shape in an export, schema version 2).
+/// A stored receipt as a value (also its shape in an export, schema version 2; schema 3 adds `direction`, `kind`,
+/// `paidFrom` and `shopAsRead`, which an older file leaves out and which then take their defaults).
 nonisolated struct LedgerReceipt: Codable, Equatable, Sendable, Identifiable {
     let id: String
     /// The purchase day, `YYYY-MM-DD`; its time `HH:MM` when the receipt printed one.
@@ -31,6 +32,72 @@ nonisolated struct LedgerReceipt: Codable, Equatable, Sendable, Identifiable {
     /// Payments the person said are not this receipt's (never offered for it again).
     var declined: [String] = []
     var created: Date
+    /// Schema 3 (brief 33): money out (a purchase) or, for cash entered by hand, money received.
+    var direction: ReceiptDirection = .out
+    /// A scanned or picked receipt, or a cash entry typed by hand.
+    var kind: ReceiptKind = .receipt
+    /// Cash out: the withdrawal payment or received-cash entry it was paid from, when the person chose one (nil:
+    /// automatic, the engine's rule).
+    var paidFrom: String?
+    /// The shop's name as the engine read it, when it was read: a later change of the shop teaches Aresium the name for
+    /// it (`ShopNames`), also after saving.
+    var shopAsRead: String?
+
+    private enum CodingKeys: String, CodingKey {
+        case id, date, time, shop, total, currency, euroAmount, method, category, categorySource, rows, from, paymentID,
+             declined, created, direction, kind, paidFrom, shopAsRead
+    }
+
+    init(id: String, date: String, time: String?, shop: String?, total: String, currency: String, euroAmount: String?,
+         method: ReceiptMethod, category: String?, categorySource: CategorySource, rows: [String], from: String,
+         paymentID: String?, declined: [String] = [], created: Date, direction: ReceiptDirection = .out,
+         kind: ReceiptKind = .receipt, paidFrom: String? = nil, shopAsRead: String? = nil) {
+        self.id = id
+        self.date = date
+        self.time = time
+        self.shop = shop
+        self.total = total
+        self.currency = currency
+        self.euroAmount = euroAmount
+        self.method = method
+        self.category = category
+        self.categorySource = categorySource
+        self.rows = rows
+        self.from = from
+        self.paymentID = paymentID
+        self.declined = declined
+        self.created = created
+        self.direction = direction
+        self.kind = kind
+        self.paidFrom = paidFrom
+        self.shopAsRead = shopAsRead
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        date = try container.decode(String.self, forKey: .date)
+        time = try container.decodeIfPresent(String.self, forKey: .time)
+        shop = try container.decodeIfPresent(String.self, forKey: .shop)
+        total = try container.decode(String.self, forKey: .total)
+        currency = try container.decode(String.self, forKey: .currency)
+        euroAmount = try container.decodeIfPresent(String.self, forKey: .euroAmount)
+        method = try container.decode(ReceiptMethod.self, forKey: .method)
+        category = try container.decodeIfPresent(String.self, forKey: .category)
+        categorySource = try container.decode(CategorySource.self, forKey: .categorySource)
+        rows = try container.decode([String].self, forKey: .rows)
+        from = try container.decode(String.self, forKey: .from)
+        paymentID = try container.decodeIfPresent(String.self, forKey: .paymentID)
+        declined = try container.decodeIfPresent([String].self, forKey: .declined) ?? []
+        created = try container.decode(Date.self, forKey: .created)
+        direction = try container.decodeIfPresent(ReceiptDirection.self, forKey: .direction) ?? .out
+        kind = try container.decodeIfPresent(ReceiptKind.self, forKey: .kind) ?? .receipt
+        paidFrom = try container.decodeIfPresent(String.self, forKey: .paidFrom)
+        shopAsRead = try container.decodeIfPresent(String.self, forKey: .shopAsRead)
+    }
+
+    /// Only schema 3 can say these (a file of schema 2 or 1 never does).
+    var usesSchema3: Bool { direction != .out || kind != .receipt || paidFrom != nil || shopAsRead != nil }
 
     var totalValue: Double { Double(total) ?? 0 }
     var isEuro: Bool { currency.uppercased() == ReceiptAmount.euro }
@@ -47,6 +114,18 @@ nonisolated struct LedgerReceipt: Codable, Equatable, Sendable, Identifiable {
         if isEuro { return totalValue }
         return method == .cash ? euroAmount.flatMap(Double.init) : nil
     }
+}
+
+/// Which way the money went (the engine's `direction`): out (a purchase) or in (cash received, entered by hand).
+nonisolated enum ReceiptDirection: String, Codable, Equatable, Sendable {
+    case out
+    case `in`
+}
+
+/// Where a receipt came from (the engine's `kind`): scanned or picked, or typed by hand.
+nonisolated enum ReceiptKind: String, Codable, Equatable, Sendable {
+    case receipt
+    case manual
 }
 
 /// Where a receipt stands.

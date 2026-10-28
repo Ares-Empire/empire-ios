@@ -18,6 +18,8 @@ nonisolated struct ReceiptDraft: Equatable, Sendable {
     var categorySource: CategorySource
     var rows: [String]
     var from: String
+    /// The shop's name as the engine read it (nil: none read): a name the person typed instead is remembered for it.
+    var shopAsRead: String? = nil
 
     func receipt(id: String = UUID().uuidString, created: Date = .now) -> LedgerReceipt {
         let foreignCash = currency.uppercased() != ReceiptAmount.euro && method == .cash
@@ -25,7 +27,18 @@ nonisolated struct ReceiptDraft: Equatable, Sendable {
                              total: ReceiptAmount.stored(total), currency: currency.uppercased(),
                              euroAmount: foreignCash ? euroAmount.map(ReceiptAmount.stored) : nil, method: method,
                              category: category, categorySource: category == nil ? .none : categorySource, rows: rows,
-                             from: from, paymentID: nil, created: created)
+                             from: from, paymentID: nil, created: created,
+                             shopAsRead: shopAsRead.flatMap { $0.isEmpty ? nil : $0 })
+    }
+}
+
+/// What correcting a saved receipt changes (brief 33): a new total, date, currency or card or cash makes it another
+/// payment as far as the bank statement goes, so it leaves its bank payment and is matched again by the D8 rules; a
+/// new shop or category (or euro amount) only updates it.
+nonisolated enum ReceiptEdit {
+    static func matchesAgain(_ before: LedgerReceipt, _ after: LedgerReceipt) -> Bool {
+        before.total != after.total || before.date != after.date || before.currency != after.currency
+            || before.method != after.method
     }
 }
 
@@ -54,6 +67,8 @@ nonisolated enum ReceiptSaved: Equatable, Sendable {
     case waiting
     /// A cash receipt.
     case cash
+    /// A saved receipt corrected without matching it again (its shop, category or euro amount changed).
+    case updated
 }
 
 /// What matching the waiting card receipts after a bank import did.
@@ -88,9 +103,61 @@ extension PhoneBackend {
         let receipt = draft.receipt()
         try await ledger.addReceipt(receipt)
         if draft.categorySource == .manual, let category = receipt.category { try await learnShop(of: receipt, category: category) }
+        if let change = ShopNames.change(read: receipt.shopAsRead, saved: receipt.shop) { try await ledger.apply(change) }
         let saved = try await matchSaved(receipt)
         try await refresh()
         return saved
+    }
+
+    /// Keeps a saved receipt's corrected values (Edit on its page, brief 33). A new total, date, currency or card or cash
+    /// unjoins it and matches it again as on Save (`ReceiptEdit.matchesAgain`: one exact match joins, candidates are
+    /// asked, none waits; the payments declined before may be offered again); a new shop or category only updates it. A
+    /// category picked by hand teaches the shop and a new shop name is remembered for the shop as read, as on Save.
+    func updateReceipt(_ id: String, with draft: ReceiptDraft) async throws -> ReceiptSaved {
+        guard let before = try await ledger.receipt(id) else { throw LedgerError.receiptNotFound }
+        var after = draft.receipt(id: id, created: before.created)
+        after.time = draft.date == before.date ? before.time : nil
+        after.rows = before.rows
+        after.from = before.from
+        after.shopAsRead = before.shopAsRead
+        after.direction = before.direction
+        after.kind = before.kind
+        let again = ReceiptEdit.matchesAgain(before, after)
+        after.paymentID = again ? nil : before.paymentID
+        after.declined = again ? [] : before.declined
+        // Card money comes from the bank, so it is paid from nothing in the wallet.
+        after.paidFrom = after.method == .cash ? before.paidFrom : nil
+        try await ledger.updateReceipt(after)
+        if draft.categorySource == .manual, let category = after.category, category != before.category {
+            try await learnShop(of: after, category: category)
+        }
+        if after.shop != before.shop, let change = ShopNames.change(read: after.shopAsRead, saved: after.shop) {
+            try await ledger.apply(change)
+        }
+        // A payment left without the category it had from the receipt is sorted again with the others not sorted.
+        if before.paymentID != nil, after.paymentID == nil || after.category == nil { try await sort() }
+        let saved = again ? try await matchSaved(after) : ReceiptSaved.updated
+        try await refresh()
+        return saved
+    }
+
+    /// The name the person gave a shop read as `read` before (`ShopNames`), if they corrected it.
+    func correctedShopName(read: String?) async throws -> String? {
+        guard let read else { return nil }
+        let key = ShopNames.key(read)
+        guard !key.isEmpty else { return nil }
+        return try await ledger.shopName(read: key)
+    }
+
+    /// The category Aresium learned for a shop (a receipt's category picked by hand, or a Switch of one of its bank
+    /// payments), when that category is on the person's list.
+    func learnedCategory(forShop shop: String?) async throws -> String? {
+        guard let shop = shop?.trimmingCharacters(in: .whitespacesAndNewlines), !shop.isEmpty else { return nil }
+        guard let key = try await engine.merchantKeys([Self.shopPayment(shop, total: 0, currency: ReceiptAmount.euro,
+                                                                         date: ReceiptDay.day(.now))]).first,
+              !key.isEmpty,
+              let category = try await ledger.learned()[key] else { return nil }
+        return try await categories().isChosen(category) ? category : nil
     }
 
     private func matchSaved(_ receipt: LedgerReceipt) async throws -> ReceiptSaved {
@@ -144,10 +211,13 @@ extension PhoneBackend {
         try await refresh()
     }
 
-    /// The receipt's category, changed by the person: Aresium learns its shop, as a Switch does.
+    /// The receipt's category, changed by the person: Aresium learns its shop, as a Switch does (not for a hand entry,
+    /// `addCashEntry`).
     func setReceiptCategory(_ receiptID: String, to category: String?) async throws {
         try await ledger.setReceiptCategory(receiptID, category: category, source: .manual)
-        if let category, let receipt = try await ledger.receipt(receiptID) { try await learnShop(of: receipt, category: category) }
+        if let category, let receipt = try await ledger.receipt(receiptID), receipt.kind == .receipt {
+            try await learnShop(of: receipt, category: category)
+        }
         try await refresh()
     }
 
@@ -230,9 +300,14 @@ extension PhoneBackend {
     /// Teaches Aresium the receipt's shop (`learn`, as a Switch does with a payment's merchant).
     private func learnShop(of receipt: LedgerReceipt, category: String) async throws {
         guard let shop = receipt.shop, !shop.isEmpty else { return }
-        let payment = SortingPayment(counterparty: shop, description: shop, source: "bank", account: "receipt",
-                                     amount: -receipt.totalValue, currency: receipt.currency, date: receipt.date)
+        let payment = Self.shopPayment(shop, total: receipt.totalValue, currency: receipt.currency, date: receipt.date)
         try await ledger.remember(try await engine.learn(payment, categoryID: category))
+    }
+
+    /// A shop as the sorting rules see a payment of it: the merchant a receipt teaches and looks up.
+    private static func shopPayment(_ shop: String, total: Double, currency: String, date: String) -> SortingPayment {
+        SortingPayment(counterparty: shop, description: shop, source: "bank", account: "receipt", amount: -total,
+                       currency: currency, date: date)
     }
 }
 
@@ -288,7 +363,7 @@ nonisolated enum ReceiptWording {
         switch saved {
         case .joined: language.string("Receipt saved. It counts as its bank payment.")
         case .waiting, .question: language.string("Receipt saved. It waits for the bank statement.")
-        case .cash: language.string("Receipt saved.")
+        case .cash, .updated: language.string("Receipt saved.")
         }
     }
 

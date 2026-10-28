@@ -63,6 +63,11 @@ struct TransactionDetailSheet: View {
                 try? await Task.sleep(for: .milliseconds(900))
                 await store.save()
             }
+            // Phone sample: the joined receipt's Edit at once (`-editReceipt`).
+            if !store.isSample, arguments.contains("-editReceipt"), store.receipt != nil {
+                await store.editReceipt()
+                store.receiptEditor?.debugType(total: LaunchArguments.value("-editReceiptTotal"))
+            }
             #endif
         }
     }
@@ -174,7 +179,8 @@ struct TransactionDetailSheet: View {
 
     private var divider: some View { Rectangle().fill(palette.grid).frame(height: 1) }
 
-    /// Phone mode: the receipt joined to this payment (so it counts once): its shop and day, its lines folded, Unjoin.
+    /// Phone mode: the receipt joined to this payment (so it counts once): its shop and day, its lines folded, Edit
+    /// (the check window filled from it, brief 33) and Unjoin.
     private func receiptSection(_ receipt: LedgerReceipt) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Receipt").font(AppFont.text(12, weight: .semibold)).foregroundStyle(palette.muted)
@@ -188,11 +194,18 @@ struct TransactionDetailSheet: View {
             if let error = store.saveError, !store.showsRecategorisation {
                 Text(error).font(AppFont.text(12.5)).foregroundStyle(palette.expenseText)
             }
-            Button("Unjoin") { Task { await store.unjoinReceipt() } }
-                .buttonStyle(.bordered).controlSize(.small).disabled(store.isSaving).padding(.top, 6)
+            HStack(spacing: 8) {
+                Button("Edit") { Task { await store.editReceipt() } }
+                Button("Unjoin") { Task { await store.unjoinReceipt() } }
+            }
+            .buttonStyle(.bordered).controlSize(.small).disabled(store.isSaving).padding(.top, 6)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.top, 20)
+        .sheet(isPresented: Binding(get: { store.receiptEditor?.editing != nil },
+                                    set: { if !$0 { store.receiptEditor?.endEdit() } })) {
+            if let editor = store.receiptEditor { ReceiptEditSheet(page: editor, palette: palette) }
+        }
     }
 
     /// One row of the page, in order: the category, the other categories it is also in, the account, then the plain rows.

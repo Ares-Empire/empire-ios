@@ -24,13 +24,14 @@ nonisolated enum MainScreen: Equatable, Sendable {
     ///   - tour: the running tour's phase; nil without a tour. An ended tour shows nothing any more.
     ///   - hasMode: the mode is known and has its backend (or the server sample shows).
     ///   - waitsForServerLogin: server mode before its login is renewed.
-    ///   - phonePayments: phone mode's payments on this iPhone; nil in server mode.
+    ///   - phoneRecords: phone mode's payments, receipts and cash entries on this iPhone (brief 33: cash entered by hand
+    ///     or a receipt is data too, so it never disappears behind "No data yet"); nil in server mode.
     @MainActor static func choose(tour: TourModel.Phase?, hasMode: Bool, waitsForServerLogin: Bool,
-                                  phonePayments: Int?) -> MainScreen {
+                                  phoneRecords: Int?) -> MainScreen {
         if let tour, tour != .ended { return .tour }
         guard hasMode else { return .opening }
         if waitsForServerLogin { return .waitingForLogin }
-        if phonePayments == 0 { return .firstScreen }
+        if phoneRecords == 0 { return .firstScreen }
         return .dashboard
     }
 }

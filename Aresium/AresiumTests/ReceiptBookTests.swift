@@ -63,7 +63,7 @@ struct ReceiptBookTests {
         _ = try await phone.saveReceipt(draft())                                     // joins
         _ = try await phone.saveReceipt(draft("Café Fiktiva", total: 8.40, method: .cash, category: "eating-out"))
         let export = try await phone.export()
-        #expect(export.schema == 2 && export.receipts.count == 2)
+        #expect(export.schema == 3 && export.receipts.count == 2)
         let file = try export.encoded()
         #expect(String(decoding: file, as: UTF8.self).contains("\"receipts\""))
 
@@ -213,7 +213,7 @@ struct ReceiptBookTests {
         let receiptRow = try #require(dashboard.transactions.first { $0.receiptId != nil })
         #expect(receiptRow.amount == -23.40 && receiptRow.categoryName == "Eating out" && !receiptRow.isWaitingReceipt)
         let covered = try #require(dashboard.transactions.first { $0.coveredBy != nil })
-        #expect(covered.amount == 23.40 && covered.categoryName == "Cash" && covered.coveredBy == [receiptRow.receiptId!])
+        #expect(covered.amount == 23.40 && covered.categoryName == "Cash withdrawals" && covered.coveredBy == [receiptRow.receiptId!])
         #expect(covered.incomeBuckets.isEmpty, "never income")
         #expect(dashboard.byMonth["2026-10"]?.expense == before, "the spending stays the same")
     }
@@ -312,7 +312,7 @@ struct ReceiptBookTests {
         let phone = try await phone()
         let check = ReceiptCheckModel(reading: reading(shop: "Fictional Café", total: 12.40, currency: "GBP", method: .cash),
                                       phone: phone, language: .english)
-        #expect(check.showsCurrency && check.needsEuros && !check.canSave)
+        #expect(check.isForeign && check.needsEuros && !check.canSave)
         #expect(check.missing == "Type what it cost in euros.")
         check.euroText = "14,56"
         #expect(check.canSave)

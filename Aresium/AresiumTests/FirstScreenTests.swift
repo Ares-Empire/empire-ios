@@ -20,21 +20,21 @@ struct FirstScreenTests {
     /// What the app shows for the person's phone store and the tour, as ContentView asks.
     private func screen(_ person: PhoneBackend, tour: TourModel?) -> MainScreen {
         MainScreen.choose(tour: tour?.phase, hasMode: true, waitsForServerLogin: false,
-                          phonePayments: person.summary.payments)
+                          phoneRecords: person.summary.payments + person.summary.receipts)
     }
 
     @Test func whatShows() {
-        #expect(MainScreen.choose(tour: nil, hasMode: true, waitsForServerLogin: false, phonePayments: 0) == .firstScreen)
-        #expect(MainScreen.choose(tour: nil, hasMode: true, waitsForServerLogin: false, phonePayments: 12) == .dashboard)
+        #expect(MainScreen.choose(tour: nil, hasMode: true, waitsForServerLogin: false, phoneRecords: 0) == .firstScreen)
+        #expect(MainScreen.choose(tour: nil, hasMode: true, waitsForServerLogin: false, phoneRecords: 12) == .dashboard)
         // Server mode (no phone store) never shows the first screen.
-        #expect(MainScreen.choose(tour: nil, hasMode: true, waitsForServerLogin: false, phonePayments: nil) == .dashboard)
-        #expect(MainScreen.choose(tour: nil, hasMode: true, waitsForServerLogin: true, phonePayments: nil) == .waitingForLogin)
-        #expect(MainScreen.choose(tour: nil, hasMode: false, waitsForServerLogin: false, phonePayments: nil) == .opening)
+        #expect(MainScreen.choose(tour: nil, hasMode: true, waitsForServerLogin: false, phoneRecords: nil) == .dashboard)
+        #expect(MainScreen.choose(tour: nil, hasMode: true, waitsForServerLogin: true, phoneRecords: nil) == .waitingForLogin)
+        #expect(MainScreen.choose(tour: nil, hasMode: false, waitsForServerLogin: false, phoneRecords: nil) == .opening)
         // The tour, from the moment it is asked for until it ends, over anything.
         for phase: TourModel.Phase in [.preparing, .running, .failed("x")] {
-            #expect(MainScreen.choose(tour: phase, hasMode: true, waitsForServerLogin: false, phonePayments: 0) == .tour)
+            #expect(MainScreen.choose(tour: phase, hasMode: true, waitsForServerLogin: false, phoneRecords: 0) == .tour)
         }
-        #expect(MainScreen.choose(tour: .ended, hasMode: true, waitsForServerLogin: false, phonePayments: 0) == .firstScreen)
+        #expect(MainScreen.choose(tour: .ended, hasMode: true, waitsForServerLogin: false, phoneRecords: 0) == .firstScreen)
     }
 
     /// Without data: the first screen; the tour in its place; after the tour (to its end, or ended at any step) the first

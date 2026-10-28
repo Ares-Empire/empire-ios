@@ -5522,6 +5522,7 @@ var __AresiumEngine = (() => {
       if (t.receiptId !== void 0) txn.receiptId = t.receiptId;
       if (t.provisional) txn.provisional = true;
       if (covered) txn.coveredBy = [...t.coveredBy];
+      if (t.cashWithdrawal) txn.cashWithdrawal = true;
       transactions.push(txn);
       if (catByName.get(t.categoryName)?.kind === "spend" && !unsortedIn) {
         total.expense += -t.amount;
@@ -5609,7 +5610,8 @@ var __AresiumEngine = (() => {
         expense: months.map((m) => byMonth[m.key].expense),
         income: months.map((m) => byMonth[m.key].income),
         balance: months.map((m) => byMonth[m.key].endBalance)
-      }
+      },
+      ...source.cash ? { cash: source.cash } : {}
     };
   }
 
@@ -5652,13 +5654,14 @@ var __AresiumEngine = (() => {
       ["gifts", "Gifts", "Geschenke"]
     ]],
     ["Study & work", "spend", [["education", "Education", "Bildung"], ["work", "Work", "Arbeit"]]],
+    // "cash" holds the withdrawals: "Cash withdrawals" / "Abhebungen" since brief 32 (D9), so "Bargeld" is the Cash page.
     ["Money", "spend", [
       ["insurance", "Insurance", "Versicherungen"],
       ["taxes", "Taxes", "Steuern"],
       ["fees", "Fees", "Geb\xFChren"],
       ["memberships", "Memberships", "Mitgliedschaften"],
       ["donations", "Donations", "Spenden"],
-      ["cash", "Cash", "Bargeld"],
+      ["cash", "Cash withdrawals", "Abhebungen"],
       ["friends", "Friends", "Freunde"]
     ]],
     ["Money", "transfer", [["savings-investing", "Savings & investing", "Sparen & Anlegen"]]],
@@ -9560,22 +9563,27 @@ var __AresiumEngine = (() => {
   var COVERED_PLACE = "Covered by receipts";
   var cents = (n) => Math.round(n * 100);
   var day = (date) => date.slice(0, 10);
+  var byDay = (a, b) => day(a.date) < day(b.date) ? -1 : day(a.date) > day(b.date) ? 1 : 0;
   function checked2(receipts) {
     for (const r of receipts) {
       if (!parseDay(r?.date)) throw new Error(`Receipt ${r?.id}: the date is not an ISO date (YYYY-MM-DD)`);
       if (typeof r.total !== "number" || !Number.isFinite(r.total)) throw new Error(`Receipt ${r.id}: the total is not a number`);
       if (r.method !== "card" && r.method !== "cash") throw new Error(`Receipt ${r.id}: the method is neither card nor cash`);
+      if (r.direction != null && r.direction !== "out" && r.direction !== "in") throw new Error(`Receipt ${r.id}: the direction is neither out nor in`);
+      if (r.direction === "in" && r.method !== "cash") throw new Error(`Receipt ${r.id}: money received is cash only`);
+      if (r.kind != null && r.kind !== "receipt" && r.kind !== "manual") throw new Error(`Receipt ${r.id}: the kind is neither receipt nor manual`);
+      if (r.paidFrom != null && typeof r.paidFrom !== "string") throw new Error(`Receipt ${r.id}: paidFrom is not an id`);
     }
     return receipts.filter((r) => r.total > 0);
   }
   var isCashWithdrawal = (p) => p.amount < 0 && findShop({ counterparty: p.counterparty, description: p.description, amount: p.amount })?.categoryId === "cash";
-  function receiptRows(payments, receipts, paymentIds) {
+  function countReceipts(payments, receipts, paymentIds) {
     const rows = [];
-    const row = (r) => ({
+    const row = (r, amount2) => ({
       id: r.id,
       externalId: "",
       date: day(r.date),
-      amount: -r.total,
+      amount: amount2,
       currency: DASHBOARD_CURRENCY,
       balance: null,
       description: r.shop ?? "",
@@ -9583,50 +9591,75 @@ var __AresiumEngine = (() => {
       category: r.category,
       receiptId: r.id
     });
-    const cash = [];
+    const received = [];
+    const spent = [];
     for (const r of checked2(receipts)) {
       if (r.paymentId != null && paymentIds.has(r.paymentId)) continue;
       if ((r.currency || DASHBOARD_CURRENCY).toUpperCase() !== DASHBOARD_CURRENCY) continue;
-      if (r.method === "card") rows.push({ ...row(r), provisional: true });
-      else {
-        rows.push(row(r));
-        cash.push(r);
+      if (r.method === "card") rows.push({ ...row(r, -r.total), provisional: true });
+      else if (r.direction === "in") {
+        rows.push(row(r, r.total));
+        received.push(r);
+      } else {
+        rows.push(row(r, -r.total));
+        spent.push(r);
       }
     }
     const number = (date) => dayNumber(parseDay(date));
-    const pool = payments.filter(isCashWithdrawal).map((p) => ({ payment: p, day: number(p.date), left: cents(-p.amount), taken: 0, by: [] }));
-    const latestFirst = [...pool].sort((a, b) => b.day - a.day);
-    const byDay = (a, b) => day(a.date) < day(b.date) ? -1 : day(a.date) > day(b.date) ? 1 : 0;
-    for (const r of [...cash].sort(byDay)) {
+    const withdrawals = payments.filter(isCashWithdrawal);
+    const source = (kind, id, date, euros2, place, category, payment) => ({ kind, id, date: day(date), day: number(date), place, category, amount: cents(euros2), left: cents(euros2), by: [], payment });
+    const sources = [
+      ...withdrawals.map((p) => source("withdrawal", p.id, p.date, -p.amount, p.counterparty || p.description, p.category, p)),
+      ...received.map((r) => source("received", r.id, r.date, r.total, r.shop ?? "", r.category, null))
+    ];
+    const named = /* @__PURE__ */ new Map();
+    for (const s of sources) if (!named.has(s.id)) named.set(s.id, s);
+    const latestFirst = [...sources].sort((a, b) => b.day - a.day);
+    const outs = [...spent].sort(byDay).map((r) => {
       let need = cents(r.total);
       const on = number(r.date);
-      for (const w of latestFirst) {
+      const from2 = [];
+      const take = (s) => {
+        const amount2 = Math.min(s.left, need);
+        s.left -= amount2;
+        need -= amount2;
+        s.by.push(r.id);
+        from2.push(s.id);
+      };
+      const chosen = r.paidFrom != null ? named.get(r.paidFrom) : void 0;
+      if (chosen && chosen.day <= on && chosen.left > 0) take(chosen);
+      for (const s of latestFirst) {
         if (need === 0) break;
-        if (w.left === 0 || w.day > on || on - w.day > CASH_LOOKBACK_DAYS) continue;
-        const take = Math.min(w.left, need);
-        w.left -= take;
-        w.taken += take;
-        need -= take;
-        w.by.push(r.id);
+        if (s.left === 0 || s.day > on || on - s.day > CASH_LOOKBACK_DAYS) continue;
+        take(s);
       }
-    }
-    for (const w of pool) {
-      if (w.taken === 0) continue;
+      return {
+        kind: r.kind === "manual" ? "manual" : "receipt",
+        id: r.id,
+        date: day(r.date),
+        place: r.shop ?? "",
+        category: r.category,
+        amount: cents(r.total),
+        from: from2
+      };
+    });
+    for (const s of sources) {
+      if (s.payment === null || s.left === s.amount) continue;
       rows.push({
-        id: `${w.payment.id}:covered`,
+        id: `${s.id}:covered`,
         externalId: "",
-        date: day(w.payment.date),
-        amount: w.taken / 100,
+        date: s.date,
+        amount: (s.amount - s.left) / 100,
         currency: DASHBOARD_CURRENCY,
         balance: null,
         description: COVERED_PLACE,
         counterparty: COVERED_PLACE,
-        category: w.payment.category,
-        tags: [...w.payment.tags ?? []],
-        coveredBy: w.by
+        category: s.payment.category,
+        tags: [...s.payment.tags ?? []],
+        coveredBy: [...s.by]
       });
     }
-    return rows;
+    return { rows, withdrawals: new Set(withdrawals), sources, outs };
   }
   function withReceiptRows(payments, rows) {
     const extra = [...rows].sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
@@ -9637,6 +9670,48 @@ var __AresiumEngine = (() => {
       merged.push(p);
     }
     return merged.concat(extra.slice(next));
+  }
+  function cashView(count, categoryName) {
+    const ins = count.sources.map((s) => ({
+      id: s.id,
+      date: s.date,
+      amount: s.amount / 100,
+      kind: s.kind,
+      place: s.place,
+      category: categoryName(s.category),
+      paidFrom: null,
+      coveredBy: [...s.by],
+      left: s.left / 100
+    }));
+    const outs = count.outs.map((o) => ({
+      id: o.id,
+      date: o.date,
+      amount: -o.amount / 100,
+      kind: o.kind,
+      place: o.place,
+      category: categoryName(o.category),
+      paidFrom: [...o.from],
+      coveredBy: null,
+      left: null
+    }));
+    const movements = [...ins, ...outs].sort(byDay);
+    const tally = /* @__PURE__ */ new Map();
+    for (const m of movements) {
+      const key = m.date.slice(0, 7);
+      const month = tally.get(key) ?? { withdrawn: 0, received: 0, spent: 0, unaccounted: 0 };
+      tally.set(key, month);
+      const amount2 = cents(Math.abs(m.amount));
+      if (m.kind === "withdrawal") {
+        month.withdrawn += amount2;
+        month.unaccounted += cents(m.left);
+      } else if (m.kind === "received") month.received += amount2;
+      else month.spent += amount2;
+    }
+    const months = {};
+    for (const [key, m] of tally) {
+      months[key] = { withdrawn: m.withdrawn / 100, received: m.received / 100, spent: m.spent / 100, unaccounted: m.unaccounted / 100 };
+    }
+    return { months, movements };
   }
 
   // src/engine/source.ts
@@ -9656,9 +9731,11 @@ var __AresiumEngine = (() => {
     const today = parseDay(input.today);
     if (!today) throw new Error("today is not an ISO date (YYYY-MM-DD)");
     const stored = counted(checked3(input.transactions)).rows;
-    const payments = input.receipts?.length ? withReceiptRows(stored, receiptRows(stored, input.receipts, new Set(input.transactions.map((p) => p.id)))) : stored;
+    const fromReceipts = input.receipts ? countReceipts(stored, input.receipts, new Set(input.transactions.map((p) => p.id))) : null;
+    const payments = fromReceipts?.rows.length ? withReceiptRows(stored, fromReceipts.rows) : stored;
     const known = new Set(input.categories.map((c) => c.name));
-    const categoryOf = (p) => p.category != null && known.has(p.category) ? p.category : null;
+    const nameOf2 = (category) => category != null && known.has(category) ? category : null;
+    const categoryOf = (p) => nameOf2(p.category);
     const net = /* @__PURE__ */ new Map();
     let hasUncategorised = false;
     for (const p of payments) {
@@ -9683,10 +9760,11 @@ var __AresiumEngine = (() => {
       // extra ("Add") categories: shown there, never re-summed into totals
       place: p.counterparty || p.description,
       city: p.city ?? "",
-      // Receipts only (brief 30); payments never carry these, so the server's JSON stays as it was.
+      // Receipts only (briefs 30, 32): marks only when receipts are given, so the server's JSON stays as it was.
       ...p.receiptId !== void 0 ? { receiptId: p.receiptId } : {},
       ...p.provisional ? { provisional: true } : {},
-      ...p.coveredBy ? { coveredBy: [...p.coveredBy] } : {}
+      ...p.coveredBy ? { coveredBy: [...p.coveredBy] } : {},
+      ...fromReceipts?.withdrawals.has(p) ? { cashWithdrawal: true } : {}
     }));
     const months = [];
     if (payments.length) {
@@ -9733,7 +9811,9 @@ var __AresiumEngine = (() => {
       transactions,
       balanceByDay,
       openingBalance,
-      databaseCategoryNames: input.categories.map((c) => c.name)
+      databaseCategoryNames: input.categories.map((c) => c.name),
+      // The Cash page (brief 32): a view, counted nowhere.
+      ...fromReceipts ? { cash: cashView(fromReceipts, (category) => nameOf2(category) ?? UNCATEGORISED.name) } : {}
     };
   }
 
@@ -12194,7 +12274,7 @@ ${line}`;
     }
     return median(slopes);
   }
-  function receiptRows2(observations) {
+  function receiptRows(observations) {
     const pieces = [];
     for (const o of observations ?? []) {
       const text2 = typeof o?.text === "string" ? o.text.replace(/\s+/g, " ").trim() : "";
@@ -12736,7 +12816,7 @@ ${line}`;
     return header.length ? { shop: clean(header[0].text), categoryId: null, sure: false } : { shop: null, categoryId: null, sure: false };
   }
   function readReceipt(input) {
-    const rows = receiptRows2(input?.observations ?? []);
+    const rows = receiptRows(input?.observations ?? []);
     const firstPass = rows.map((text2, i) => readLine(text2, i, false));
     const dollars = currencyOf(firstPass, null) === "USD";
     const lines = dollars ? rows.map((text2, i) => readLine(text2, i, true)) : firstPass;

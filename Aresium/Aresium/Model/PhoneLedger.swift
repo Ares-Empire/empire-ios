@@ -430,13 +430,21 @@ actor PhoneLedger {
         try modelContext.save()
     }
 
-    /// Deletes a receipt: its payment, if joined, loses a category it took from it; the cash it covered is uncovered
-    /// (the dashboard counts again without it).
+    /// Deletes a receipt or cash entry: its payment, if joined, loses a category it took from it; the cash it covered is
+    /// uncovered (the dashboard counts again without it); what was paid from it (cash received) goes back to automatic.
     func deleteReceipt(_ receiptID: String) throws {
         guard let receipt = try storedReceipt(receiptID) else { throw LedgerError.receiptNotFound }
         if let paymentID = receipt.paymentID { takeBackCategory(of: paymentID) }
+        try forgetPaidFrom(receiptID, saving: false)
         modelContext.delete(receipt)
         try modelContext.save()
+    }
+
+    /// The receipts and entries paid from `sourceID` go back to automatic (it is gone, or no source any more).
+    func forgetPaidFrom(_ sourceID: String, saving: Bool = true) throws {
+        let paid = try modelContext.fetch(FetchDescriptor<StoredReceipt>(predicate: #Predicate { $0.paidFrom == sourceID }))
+        for receipt in paid { receipt.paidFrom = nil }
+        if saving { try modelContext.save() }
     }
 
     /// The receipt's category, set by the person (or nil: not sorted).
@@ -444,7 +452,75 @@ actor PhoneLedger {
         guard let receipt = try storedReceipt(receiptID) else { throw LedgerError.receiptNotFound }
         receipt.category = category
         receipt.categorySource = (category == nil ? CategorySource.none : source).rawValue
+        followCategory(of: receipt)
         try modelContext.save()
+    }
+
+    /// A receipt corrected after saving (brief 33): its values as the person confirmed them now. When it leaves the
+    /// payment it was joined to (`value.paymentID` differs), that payment loses a category it took from the receipt
+    /// (sorted again with the others not sorted); while it stays joined, such a payment follows the receipt's new
+    /// category.
+    func updateReceipt(_ value: LedgerReceipt) throws {
+        guard let receipt = try storedReceipt(value.id) else { throw LedgerError.receiptNotFound }
+        if let joined = receipt.paymentID, joined != value.paymentID { takeBackCategory(of: joined) }
+        receipt.date = value.date
+        receipt.time = value.time
+        receipt.shop = value.shop
+        receipt.total = value.total
+        receipt.currency = value.currency
+        receipt.euroAmount = value.euroAmount
+        receipt.method = value.method.rawValue
+        receipt.category = value.category
+        receipt.categorySource = (value.category == nil ? CategorySource.none : value.categorySource).rawValue
+        receipt.paymentID = value.paymentID
+        receipt.declined = value.declined
+        receipt.direction = value.direction.rawValue
+        receipt.kind = value.kind.rawValue
+        receipt.paidFrom = value.paidFrom
+        receipt.shopAsRead = value.shopAsRead
+        followCategory(of: receipt)
+        try modelContext.save()
+    }
+
+    /// A joined payment that took its category from this receipt keeps taking it: the receipt's category now, or Not
+    /// sorted (then sorted again with the others).
+    private func followCategory(of receipt: StoredReceipt) {
+        guard let paymentID = receipt.paymentID, let payment = try? storedPayment(paymentID),
+              payment.categorySource == CategorySource.receipt.rawValue else { return }
+        payment.category = receipt.category
+        payment.categorySource = (receipt.category == nil ? CategorySource.none : .receipt).rawValue
+        if let category = receipt.category { payment.extraCategories.removeAll { $0 == category } }
+    }
+
+    // MARK: shop names the person corrected
+
+    /// The name the person gave the shop read as `read` (normalised, `ShopNames.key`), if they corrected it before.
+    func shopName(read: String) throws -> String? {
+        try modelContext.fetch(FetchDescriptor<StoredShopName>(predicate: #Predicate { $0.read == read })).first?.name
+    }
+
+    /// Remembers (or replaces) a corrected shop name, or drops one (`ShopNames.Change`).
+    func apply(_ change: ShopNames.Change, at date: Date = .now) throws {
+        switch change {
+        case let .remember(correction):
+            let read = correction.read
+            if let stored = try modelContext.fetch(FetchDescriptor<StoredShopName>(predicate: #Predicate { $0.read == read })).first {
+                stored.name = correction.name
+                stored.saved = date
+            } else {
+                modelContext.insert(StoredShopName(read: correction.read, name: correction.name, saved: date))
+            }
+        case let .forget(read):
+            try modelContext.fetch(FetchDescriptor<StoredShopName>(predicate: #Predicate { $0.read == read }))
+                .forEach(modelContext.delete)
+        }
+        try modelContext.save()
+    }
+
+    /// Every corrected shop name, by the shop as read.
+    func shopNames() throws -> [ShopNameCorrection] {
+        try modelContext.fetch(FetchDescriptor<StoredShopName>(sortBy: [SortDescriptor(\.read)]))
+            .map { ShopNameCorrection(read: $0.read, name: $0.name) }
     }
 
     private func takeBackCategory(of paymentID: String) {
@@ -471,16 +547,17 @@ actor PhoneLedger {
                         .map { LearnedRule(merchant: $0.merchant, category: $0.category) },
                      layouts: try modelContext.fetch(FetchDescriptor<StoredLayout>(sortBy: [SortDescriptor(\.savedAt)]))
                         .compactMap { try? JSONDecoder().decode(CsvLayout.self, from: $0.layout) },
-                     receipts: try receipts().reversed())
+                     receipts: try receipts().reversed(), shopNames: try shopNames())
     }
 
-    /// Restores an export: only into a store without data (chosen categories are replaced), checked first, all or
-    /// nothing.
+    /// Restores an export: only into a store without data (chosen categories and corrected shop names are replaced:
+    /// neither counts as data), checked first, all or nothing.
     func restore(_ export: LedgerExport, catalog: CategoryCatalog) throws {
         guard try summary().isEmpty else { throw LedgerError.notEmpty }
         try export.validate(catalog: catalog)
         do {
             try modelContext.fetch(FetchDescriptor<StoredChosen>()).forEach(modelContext.delete)
+            try modelContext.fetch(FetchDescriptor<StoredShopName>()).forEach(modelContext.delete)
             for account in export.accounts {
                 modelContext.insert(StoredAccount(id: account.id, name: account.name, iban: account.iban,
                                                   bank: account.bank, currency: account.currency))
@@ -495,6 +572,10 @@ actor PhoneLedger {
                                                  savedAt: Date(timeIntervalSince1970: TimeInterval(index))))
             }
             for receipt in export.receipts { modelContext.insert(StoredReceipt(receipt)) }
+            for (index, correction) in export.shopNames.enumerated() {
+                modelContext.insert(StoredShopName(read: correction.read, name: correction.name,
+                                                   saved: Date(timeIntervalSince1970: TimeInterval(index))))
+            }
             try modelContext.save()
         } catch {
             modelContext.rollback()
@@ -525,7 +606,9 @@ actor PhoneLedger {
                       method: ReceiptMethod(rawValue: receipt.method) ?? .card, category: receipt.category,
                       categorySource: CategorySource(rawValue: receipt.categorySource) ?? .none, rows: receipt.rows,
                       from: receipt.from, paymentID: receipt.paymentID, declined: receipt.declined,
-                      created: receipt.created)
+                      created: receipt.created, direction: ReceiptDirection(rawValue: receipt.direction) ?? .out,
+                      kind: ReceiptKind(rawValue: receipt.kind) ?? .receipt, paidFrom: receipt.paidFrom,
+                      shopAsRead: receipt.shopAsRead)
     }
 
     private static func value(_ account: StoredAccount) -> LedgerAccount {

@@ -281,7 +281,9 @@ nonisolated struct DashboardSourceInput: Codable, Equatable, Sendable {
     let categories: [SourceCategory]
     /// Today, `YYYY-MM-DD`: the current month counts up to this day.
     let today: String
-    /// The phone's receipts (brief 31). Without them (nil, left out of the JSON) the dashboard is as before.
+    /// The phone's receipts and cash entries (briefs 31, 32). Phone mode always sends them (possibly none), so the
+    /// dashboard carries the Cash page's `cash` and marks the withdrawals; nil (left out of the JSON) is the server's
+    /// dashboard as before.
     var receipts: [SourceReceipt]? = nil
 }
 
@@ -379,4 +381,10 @@ nonisolated struct SourceReceipt: Codable, Equatable, Sendable {
     var category: String?
     var shop: String?
     var paymentId: String?
+    /// Brief 32: "out" (default) or "in" (cash received, entered by hand; cash only).
+    var direction: ReceiptDirection? = nil
+    /// "receipt" (default) or "manual": for the Cash page's words.
+    var kind: ReceiptKind? = nil
+    /// Cash out: the withdrawal's payment id or the received entry's id it was paid from; nil: automatic.
+    var paidFrom: String? = nil
 }

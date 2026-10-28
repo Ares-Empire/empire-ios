@@ -79,6 +79,31 @@ enum PhoneSample {
                                                      "CARD PAYMENT"]))
     }
 
+    /// `-sampleCash`: made-up cash entered by hand (brief 33), around the sample's withdrawal on the 18th of each month:
+    /// this month a gift from grandma (€50, Parents & family), a flea market paid from it (€12, Clothes), an ice cream
+    /// after the withdrawal (€6.50, Eating out, automatic); last month a bike sold (€80, not sorted) and a cinema ticket
+    /// paid from it (€11, automatic).
+    static func addCash(_ phone: PhoneBackend, now: Date = .now) async throws {
+        let calendar = ReceiptDay.calendar
+        let today = ReceiptDay.day(now)
+        let thisMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: now)) ?? now
+        func day(_ number: Int, monthsBack: Int = 0) -> String {
+            let month = calendar.date(byAdding: .month, value: -monthsBack, to: thisMonth) ?? thisMonth
+            let date = calendar.date(byAdding: .day, value: number - 1, to: month) ?? month
+            return min(ReceiptDay.day(date), today)
+        }
+        let gift = try await phone.addCashEntry(CashEntryDraft(direction: .in, amount: 50, date: day(3),
+                                                               what: "Geburtstag Oma", category: "parents-family"))
+        try await phone.addCashEntry(CashEntryDraft(direction: .out, amount: 12, date: day(6), what: "Flohmarkt",
+                                                    category: "clothes", paidFrom: gift.id))
+        try await phone.addCashEntry(CashEntryDraft(direction: .out, amount: 6.50, date: day(20), what: "Eis mit Freunden",
+                                                    category: "eating-out"))
+        try await phone.addCashEntry(CashEntryDraft(direction: .in, amount: 80, date: day(10, monthsBack: 1),
+                                                    what: "Fahrrad verkauft"))
+        try await phone.addCashEntry(CashEntryDraft(direction: .out, amount: 11, date: day(12, monthsBack: 1),
+                                                    what: "Kino", category: "other"))
+    }
+
     /// `-sampleReceiptQuestion`: bank payments the made-up receipt (27,65 on 26 Oct 2026) may be: two of its exact amount
     /// and one €20 more at the same shop, so saving it asks "Is this the same payment?".
     static func addQuestionPayments(_ phone: PhoneBackend) async throws {

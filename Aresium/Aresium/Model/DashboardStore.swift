@@ -203,6 +203,38 @@ final class DashboardStore {
 
     var currentMonth: Month? { dashboard?.months.last }
 
+    // MARK: the Cash page (brief 33)
+
+    /// Phone mode with any cash movement: the dashboard shows the Cash row.
+    var hasCash: Bool { dashboard?.cash?.movements.isEmpty == false }
+
+    /// Where the Cash row leads: as a category, this month's page in Current, its months in Overview.
+    func cashRoute(current: Bool) -> DashboardRoute {
+        DashboardRoute(category: "", side: .expenses, month: current ? currentMonth?.key : nil, cash: true)
+    }
+
+    /// What the Cash row's line counts: this month's cash not accounted for (Current), or every month's (Overview).
+    func cashUnaccounted(current: Bool) -> Double {
+        guard let cash = dashboard?.cash else { return 0 }
+        if current { return currentMonth.flatMap { cash.months[$0.key]?.unaccounted } ?? 0 }
+        return cash.months.values.reduce(0) { $0 + $1.unaccounted }
+    }
+
+    /// A receipt row's cash movement (which tells a hand entry from a cash receipt).
+    func cashMovement(_ receiptID: String?) -> CashMovement? {
+        guard let receiptID else { return nil }
+        return dashboard?.cash?.movements.first { $0.id == receiptID }
+    }
+
+    /// A month's name, from the dashboard's months, else from its key.
+    func monthTitle(_ key: String) -> String {
+        if let month = dashboard?.months.first(where: { $0.key == key }) { return month.title() }
+        guard let date = ReceiptDay.date(key + "-01") else { return key }
+        let calendar = ReceiptDay.calendar
+        return date.formatted(Date.FormatStyle(date: .omitted, time: .omitted, locale: AppLanguage.current.locale,
+                                               calendar: calendar, timeZone: calendar.timeZone).month(.abbreviated).year())
+    }
+
     func rangeLabel(current: Bool) -> String {
         guard let first = dashboard?.months.first, let last = currentMonth else { return String(localized: "No activity") }
         // One month of data: "February 2026", not "February 2026 – February 2026".

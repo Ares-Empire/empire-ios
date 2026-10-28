@@ -374,18 +374,23 @@ nonisolated enum PhoneDashboard {
                           category: payment.category.flatMap { named[$0] },
                           tags: payment.extraCategories.compactMap { named[$0] })
         }
+        // Always the receipts, even none: the dashboard then carries the Cash page's `cash` (brief 32).
         return DashboardSourceInput(transactions: transactions, categories: list.sourceCategories, today: today,
-                                    receipts: receipts.isEmpty ? nil : receipts.map { source($0, named: named) })
+                                    receipts: receipts.map { source($0, named: named) })
     }
 
-    /// A receipt as the engine counts it: in euros (a cash receipt in another currency with the euro amount typed for
-    /// it); a card receipt in another currency keeps its currency, and the engine leaves it out until it is joined.
+    /// A receipt or cash entry as the engine counts it: in euros (a cash receipt in another currency with the euro
+    /// amount typed for it); a card receipt in another currency keeps its currency, and the engine leaves it out until
+    /// it is joined. A hand entry never carries a payment (the engine would drop it as joined).
     static func source(_ receipt: LedgerReceipt, named: [String: String]) -> SourceReceipt {
         let euros = receipt.euros
+        let manual = receipt.kind == .manual
         return SourceReceipt(id: receipt.id, date: receipt.date, total: euros ?? receipt.totalValue,
                              currency: euros == nil ? receipt.currency : ReceiptAmount.euro, method: receipt.method,
                              category: receipt.category.flatMap { named[$0] }, shop: receipt.shop,
-                             paymentId: receipt.paymentID)
+                             paymentId: manual ? nil : receipt.paymentID, direction: receipt.direction,
+                             kind: receipt.kind,
+                             paidFrom: receipt.method == .cash && receipt.direction == .out ? receipt.paidFrom : nil)
     }
 
     /// The dashboard's own name and look for payments without a category (the engine's `UNCATEGORISED`).

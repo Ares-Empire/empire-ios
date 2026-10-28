@@ -1,11 +1,16 @@
 import Foundation
 import Observation
 
-/// The check window after a receipt is read (brief 31): shop, date, total, card or cash, the category, and the currency
-/// and the amount in euros where they matter. The fields the engine is not sure of, or did not find, come first and say
-/// so; the order is fixed when the window opens, so nothing jumps while the person types. Card or cash is never
-/// guessed silently (D8): not read, Card is chosen only when a stored bank payment matches, otherwise nothing is chosen
-/// and Save waits. Nothing read at all gives the same window with empty fields to type in.
+/// The check window after a receipt is read (brief 31): shop, date, total with its currency, card or cash, the category,
+/// and the amount in euros where it matters. Every field can be changed (brief 33). The fields the engine is not sure
+/// of, or did not find, come first and say so; the order is fixed when the window opens, so nothing jumps while the
+/// person types. Card or cash is never guessed silently (D8): not read, Card is chosen only when a stored bank payment
+/// matches, otherwise nothing is chosen and Save waits. Nothing read at all gives the same window with empty fields to
+/// type in. A shop the person renamed before shows that name ("Corrected by you before"), and a category learned for
+/// the shop is preset (`ReceiptCorrections.swift`).
+///
+/// The same window edits a saved receipt (`init(editing:)`, its page's Edit): filled from the stored values, nothing
+/// marked, saved with `PhoneBackend.updateReceipt`.
 @MainActor @Observable
 final class ReceiptCheckModel {
     enum Field: String, CaseIterable, Identifiable, Sendable {
@@ -21,6 +26,8 @@ final class ReceiptCheckModel {
         case unsure
         /// Not found on the receipt.
         case missing
+        /// The shop's name as the person corrected it for this reading before (`ShopNames`): nothing to check.
+        case corrected
     }
 
     /// A category the receipt can go to: one of the person's (or Not sorted, `id` nil).
@@ -34,6 +41,8 @@ final class ReceiptCheckModel {
     static let currencies = ["EUR", "GBP", "USD", "CHF", "SEK", "NOK", "DKK", "PLN", "CZK", "HUF"]
 
     let reading: ReceiptReading
+    /// Editing a saved receipt (nil: checking a new reading).
+    let editing: LedgerReceipt?
     @ObservationIgnored let phone: PhoneBackend
     var shop: String
     var date: Date
@@ -45,8 +54,13 @@ final class ReceiptCheckModel {
     /// A category id; nil: Not sorted.
     var category: String?
     private(set) var choices: [Choice] = []
-    /// The shop list's category for the shop, when the person has that category.
+    /// The category preset for the shop: the one Aresium learned for it, else the shop list's (when the person has
+    /// that category). For a saved receipt, its category as saved.
     private(set) var presetCategory: String?
+    /// Who set `presetCategory`.
+    private(set) var presetSource: CategorySource = .starter
+    /// The shop's name as the person corrected it before for this reading (`shop` starts with it).
+    private(set) var correctedShop: String?
     /// Card was chosen because a stored bank payment matches the receipt (it did not say card or cash).
     private(set) var cardBecauseOfMatch = false
     private(set) var isSaving = false
@@ -56,6 +70,7 @@ final class ReceiptCheckModel {
 
     init(reading: ReceiptReading, phone: PhoneBackend, today: Date = .now, language: AppLanguage = .current) {
         self.reading = reading
+        self.editing = nil
         self.phone = phone
         self.language = language
         shop = reading.shop ?? ""
@@ -66,9 +81,32 @@ final class ReceiptCheckModel {
         method = reading.method
     }
 
+    /// The window for a saved receipt: its values as the person confirmed them, every field as read (nothing to check
+    /// first), the category as saved.
+    init(editing receipt: LedgerReceipt, phone: PhoneBackend, language: AppLanguage = .current) {
+        reading = ReceiptReading(shop: receipt.shop, date: receipt.date, time: receipt.time, total: receipt.totalValue,
+                                 currency: receipt.currency, method: receipt.method, from: receipt.from,
+                                 rows: receipt.rows, sure: .init(shop: true, date: true, total: true, method: true))
+        editing = receipt
+        self.phone = phone
+        self.language = language
+        shop = receipt.shop ?? ""
+        readDay = ReceiptDay.date(receipt.date) == nil ? nil : receipt.date
+        date = ReceiptDay.date(receipt.date) ?? .now
+        totalText = ReceiptAmount.field(receipt.totalValue, language: language)
+        currency = receipt.currency
+        method = receipt.method
+        euroText = receipt.euroAmount.flatMap(Double.init).map { ReceiptAmount.field($0, language: language) } ?? ""
+        category = receipt.category
+        presetCategory = receipt.category
+        presetSource = receipt.categorySource
+    }
+
     // MARK: what the window shows
 
     func mark(_ field: Field) -> Mark {
+        if editing != nil { return .sure }
+        if field == .shop, correctedShop != nil { return .corrected }
         let found: Bool, sure: Bool
         switch field {
         case .shop: (found, sure) = (reading.shop?.isEmpty == false, reading.sure.shop)
@@ -80,16 +118,16 @@ final class ReceiptCheckModel {
     }
 
     /// The fields to check first: not sure or not found, in the window's order.
-    var fieldsToCheck: [Field] { Field.allCases.filter { mark($0) != .sure } }
-    /// The fields read clearly.
-    var fieldsRead: [Field] { Field.allCases.filter { mark($0) == .sure } }
+    var fieldsToCheck: [Field] { Field.allCases.filter { [.unsure, .missing].contains(mark($0)) } }
+    /// The fields read clearly (and a shop the person corrected before).
+    var fieldsRead: [Field] { Field.allCases.filter { [.sure, .corrected].contains(mark($0)) } }
     /// Nothing at all was read: every field waits to be typed.
     var nothingRead: Bool { Field.allCases.allSatisfy { mark($0) == .missing } }
 
-    /// The currency row shows for a receipt not in euros (or one whose currency is undecided).
-    var showsCurrency: Bool { currency != ReceiptAmount.euro }
+    /// A receipt not in euros (or one whose currency is undecided).
+    var isForeign: Bool { currency != ReceiptAmount.euro }
     /// Another currency paid in cash: what it cost in euros is asked (the bank statement will never say).
-    var needsEuros: Bool { showsCurrency && method == .cash }
+    var needsEuros: Bool { isForeign && method == .cash }
 
     var total: Double? { ReceiptAmount.typed(totalText) }
     var euros: Double? { ReceiptAmount.typed(euroText) }
@@ -105,10 +143,22 @@ final class ReceiptCheckModel {
 
     var canSave: Bool { missing == nil && !isSaving }
 
+    /// Editing: the values that decide its bank payment changed, so saving matches it again (`ReceiptEdit`). Said
+    /// above Save when it was joined or will be a card receipt (a cash receipt joins nothing).
+    var matchesAgainNote: String? {
+        guard let editing, let draft = draft() else { return nil }
+        let after = draft.receipt(id: editing.id, created: editing.created)
+        guard ReceiptEdit.matchesAgain(editing, after), editing.paymentID != nil || after.method == .card else { return nil }
+        return language.string("Aresium looks for its bank payment again when you save.")
+    }
+
     /// The line under a field that is not sure or not found.
     func note(_ field: Field) -> String? {
         switch (field, mark(field)) {
         case (_, .sure): nil
+        case (_, .corrected):
+            // Only while it still shows that name: one typed over it is the person's own again.
+            shop == correctedShop ? language.string("Corrected by you before.") : nil
         case (.method, .missing) where cardBecauseOfMatch:
             language.string("Not on the receipt. Card is chosen because a bank payment matches.")
         case (_, .missing): language.string("Not found on the receipt.")
@@ -118,17 +168,30 @@ final class ReceiptCheckModel {
 
     // MARK: work
 
-    /// The person's categories (and the shop list's one preset when they have it), and Card when the receipt did not
-    /// say card or cash but a stored bank payment matches it.
+    /// The person's categories; for a new reading also the shop's name as they corrected it before, the category
+    /// preset (the one learned for the shop, else the shop list's when the person has it), and Card when the receipt
+    /// did not say card or cash but a stored bank payment matches it. Called before the window shows.
     func load() async {
-        if let list = try? await phone.categories(language: language) {
+        let list = try? await phone.categories(language: language)
+        if let list {
             choices = list.chosen.compactMap { chosen in
                 list.name(of: chosen.id).map { Choice(id: chosen.id, name: $0, look: list.look(of: chosen.id)) }
             } + [Choice(id: nil, name: list.notSortedName, look: nil)]
-            if let id = reading.categoryId, list.isChosen(id) {
-                presetCategory = id
-                category = id
-            }
+        }
+        guard editing == nil else { return }
+        if let corrected = try? await phone.correctedShopName(read: reading.shop), corrected != reading.shop,
+           shop == (reading.shop ?? "") {
+            correctedShop = corrected
+            shop = corrected
+        }
+        if let learned = try? await phone.learnedCategory(forShop: trimmedShop) {
+            presetCategory = learned
+            presetSource = .learned
+            category = learned
+        } else if let list, let id = reading.categoryId, list.isChosen(id) {
+            presetCategory = id
+            presetSource = .starter
+            category = id
         }
         guard reading.method == nil, method == nil, let total, let currency else { return }
         let matches = (try? await phone.hasMatch(date: ReceiptDay.day(date), total: total, currency: currency,
@@ -139,13 +202,17 @@ final class ReceiptCheckModel {
         }
     }
 
-    /// Keeps the receipt (and joins or asks, `PhoneBackend.saveReceipt`); nil when it could not be saved (`problem`).
+    /// Keeps the receipt (and joins or asks, `PhoneBackend.saveReceipt`; editing: `updateReceipt`); nil when it could
+    /// not be saved (`problem`).
     func save() async -> ReceiptSaved? {
         guard canSave, let draft = draft() else { return nil }
         isSaving = true
         problem = nil
         defer { isSaving = false }
-        do { return try await phone.saveReceipt(draft) }
+        do {
+            if let editing { return try await phone.updateReceipt(editing.id, with: draft) }
+            return try await phone.saveReceipt(draft)
+        }
         catch {
             problem = error.localizedDescription
             return nil
@@ -156,10 +223,11 @@ final class ReceiptCheckModel {
     func draft() -> ReceiptDraft? {
         guard let total, let currency, let method else { return nil }
         let day = ReceiptDay.day(date)
-        let source: CategorySource = category == nil ? .none : category == presetCategory ? .starter : .manual
+        let source: CategorySource = category == nil ? .none : category == presetCategory ? presetSource : .manual
         return ReceiptDraft(date: day, time: day == readDay ? reading.time : nil, shop: trimmedShop, total: total,
                             currency: currency, euroAmount: needsEuros ? euros : nil, method: method,
-                            category: category, categorySource: source, rows: reading.rows, from: reading.from)
+                            category: category, categorySource: source, rows: reading.rows, from: reading.from,
+                            shopAsRead: editing == nil ? reading.shop : editing?.shopAsRead)
     }
 
     private var trimmedShop: String? {
