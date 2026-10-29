@@ -204,7 +204,10 @@ the phone until Apple approves the developer account.
 2026-10-25, "Light mode" above) → TestFlight once Apple approves (1–3, 6) → Aresium for other people (5) → Aresync file sharing from the phone (11, on
 hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people. The other items fit in between.
 
-1. **TestFlight, once Apple approves:** set the paid team (project level, all five projects); the App Groups
+1. **TestFlight** (Apple approved 2026-10-29): **Aresium done**: 0.1 (1) uploaded with `scripts/testflight.sh` and installed
+   on Patrik's iPhone through internal TestFlight (group in App Store Connect → Aresium → TestFlight → Internal
+   Testing). Next Aresium upload: build 2. The other four: an App Store Connect record each, then the script. Original
+   list: set the paid team (project level, all five projects; done); the App Groups
    `group.de.ares-empire.aresium` + `group.de.ares-empire.shared` registered for the bundle ids, the widgets' too
    (`de.ares-empire.aresium.widget`, `de.ares-empire.aresus.widget`) (Xcode's automatic
    signing can do it; the shared Keychain group needs only the team prefix); an App Store Connect record per app;
