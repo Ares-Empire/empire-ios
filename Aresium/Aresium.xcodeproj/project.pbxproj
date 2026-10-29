@@ -365,6 +365,7 @@
 		8B6AF6E4A14580DBA946686D /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				DEVELOPMENT_TEAM = WQN8SHAH9B;
 				CURRENT_PROJECT_VERSION = 1;
 				MARKETING_VERSION = 0.1;
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -393,6 +394,7 @@
 		6A069D23C48EDDDC8F0180A5 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				DEVELOPMENT_TEAM = WQN8SHAH9B;
 				CURRENT_PROJECT_VERSION = 1;
 				MARKETING_VERSION = 0.1;
 				ALWAYS_SEARCH_USER_PATHS = NO;
