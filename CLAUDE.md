@@ -214,7 +214,9 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
    Release build for a generic device; archive and upload each (README). For people besides Patrik: external
    testing with a public TestFlight link per app, entered as `install` in `ares-empire/webauth/apps.json` (the Empire
    app's Install button shows it to accounts that have the app).
-2. **On the phone:** the checks in `docs/reviews/2026-10-23-pre-testflight.md` (widgets incl. row taps), the shared
+2. **On the phone:** Patrik's first Aresium test, 2026-10-30: `docs/reviews/2026-10-30-aresium-phone-test.md` (PayPal
+   counted twice after "also move the others", day-one sorting, the slow category picker; to fix before build 2).
+   The checks in `docs/reviews/2026-10-23-pre-testflight.md` (widgets incl. row taps), the shared
    login across the apps on the real device, the Empire app opening Aresium (`aresium://`), no connection; the
    Aresus widget placed on the home and lock screen (refreshes by itself, the medium one's rows open their province).
 3. ~~**Council over the Empire app before its first upload**~~: done 2026-10-25, "Corrected"
