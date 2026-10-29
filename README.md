@@ -54,7 +54,12 @@ Empire app). A new province app: `python3 scripts/new-app-project.py <Name> <bun
 
 ## Releasing to the phone (TestFlight)
 
-1. Bump `CURRENT_PROJECT_VERSION` (project-level build settings, the one place for app and widget), Product → Archive in Xcode, *Distribute App* → *App Store Connect* (not *TestFlight Internal Only*: such a build can never go to external testers or the App Store; internal testers need no review either way). Each of the five apps is archived and uploaded on its own.
+1. Bump `CURRENT_PROJECT_VERSION` (project-level build settings, the one place for app and widget), commit, then
+   `scripts/testflight.sh <App>`: it archives the app (the archive appears in Xcode's Organizer) and uploads it as an
+   *App Store Connect* build (not *TestFlight Internal Only*: such a build can never go to external testers or the App
+   Store; internal testers need no review either way). `--export-only` signs without uploading. By hand, the same is
+   Product → Archive in Xcode, *Distribute App* → *App Store Connect*. Each of the five apps is uploaded on its own,
+   and its App Store Connect record must exist first (Apps → + → New App, with its bundle id).
 2. After processing (a few minutes) the build shows up in the TestFlight app on the iPhone → *Update*.
 3. Each build stays installable for 90 days; any newer build restarts that clock.
 

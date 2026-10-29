@@ -263,13 +263,18 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
 - MacBook: Xcode 27.1 with two simulator runtimes (2026-10-23): **iOS 27.0** for all normal iPhones (use this)
   and iOS 27.1, which only supports the foldable "iPhone Duo" (its screenshots came out black). The simulator
   window app is called **DeviceHub** in Xcode 27; `xcrun simctl` works without it.
-- Apple Developer Program (paid, for TestFlight; decided in `ares-empire/docs/IPHONE-APPS.md`): payment confirmed,
-  enrollment **pending** at Apple (2026-10-23). Xcode is signed in, so far with only the free "Personal Team"; the
-  paid team appears under the same account once Apple approves (check: Xcode → Settings → Apple Accounts). Until then: simulator only, no TestFlight (a free
-  Apple ID could install on the phone, but those builds stop opening after 7 days, so we don't use it).
+- Apple Developer Program (paid, for TestFlight; decided in `ares-empire/docs/IPHONE-APPS.md`): **approved
+  2026-10-29**, team id `WQN8SHAH9B` (the former Personal Team, upgraded in place; Xcode's cached team list may still
+  call it free). Set as `DEVELOPMENT_TEAM` at project level in all five projects and in `scripts/new-app-project.py`.
+  Signing is automatic: Xcode made the Apple Development certificate on this Mac, and the App Store builds use Apple's
+  cloud-managed distribution certificate (nothing to keep on the Mac). Patrik's iPhone 17 (Developer Mode on) is
+  registered: Apple issues no profile while a team has no device,
+  so `xcodebuild archive` failed until it was. Aresium (app, widget, both App Groups, the shared Keychain group) is
+  registered with Apple; the other four register the same way on their first device build or archive
+  (`-allowProvisioningUpdates`). Uploads: `scripts/testflight.sh <App>` (README → Releasing).
 - Xcode project `Aresium/Aresium.xcodeproj` (2026-10-23): app + tests, folder-synchronized groups (new Swift
-  files need no `project.pbxproj` edits), bundle id `de.ares-empire.aresium`, iOS 26+. Signing team: set to the
-  paid team once approved. Launch argument `-sampleData` shows the server's bundled sample (`-scrollToEnd`: the start
+  files need no `project.pbxproj` edits), bundle id `de.ares-empire.aresium`, iOS 26+. Signing team: `WQN8SHAH9B`
+  (project level). Launch argument `-sampleData` shows the server's bundled sample (`-scrollToEnd`: the start
   screen at its band); every sample runs on `SampleAccount`'s made-up account server, signed out
   (`-sampleSignedIn`: signed in).
 - Test fixtures `AresiumTests/server-dashboard.sample.json` + `.expected.json`: the Aresium server's sample and
