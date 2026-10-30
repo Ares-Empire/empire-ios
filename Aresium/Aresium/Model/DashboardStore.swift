@@ -120,9 +120,11 @@ final class DashboardStore {
                 })
             }
             guard current() else { return }
-            dashboard = loaded
-            lastSuccessfulLoad = .now
-            try publishWidget(loaded)
+            try PickerTiming.measure("dashboard.publish") {
+                dashboard = loaded
+                lastSuccessfulLoad = .now
+                try publishWidget(loaded)
+            }
         } catch {
             guard current() else { return }
             if backend?.mode != .phone { session.handleAuthFailure(error, generation: generation, token: token) }

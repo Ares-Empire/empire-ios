@@ -140,19 +140,29 @@ nonisolated enum LedgerError: LocalizedError, Equatable {
 /// Phone mode's storage work: the person's accounts and payments, chosen categories, learned rules and saved layouts,
 /// export and restore. Values in, values out; the models never leave the actor. The engine is not used here
 /// (`PhoneBackend` brings the two together).
-@ModelActor
-actor PhoneLedger {
+actor PhoneLedger: ModelActor {
+    nonisolated let modelContainer: ModelContainer
+    private nonisolated let executor: PhoneLedgerExecutor
+    nonisolated var modelExecutor: any ModelExecutor { executor }
+    nonisolated var unownedExecutor: UnownedSerialExecutor { executor.asUnownedSerialExecutor() }
+
+    init(modelContainer: ModelContainer) {
+        self.modelContainer = modelContainer
+        executor = PhoneLedgerExecutor(container: modelContainer)
+    }
 
     // MARK: summary
 
     func summary() throws -> LedgerSummary {
-        LedgerSummary(payments: try modelContext.fetchCount(FetchDescriptor<StoredPayment>()),
-                      unsorted: try modelContext.fetchCount(FetchDescriptor<StoredPayment>(predicate: #Predicate { $0.category == nil })),
-                      accounts: try modelContext.fetchCount(FetchDescriptor<StoredAccount>()),
-                      learned: try modelContext.fetchCount(FetchDescriptor<StoredRule>()),
-                      layouts: try modelContext.fetchCount(FetchDescriptor<StoredLayout>()),
-                      receipts: try modelContext.fetchCount(FetchDescriptor<StoredReceipt>()),
-                      chosen: try chosen())
+        try PickerTiming.measure("ledger.summary") {
+            LedgerSummary(payments: try modelContext.fetchCount(FetchDescriptor<StoredPayment>()),
+                          unsorted: try modelContext.fetchCount(FetchDescriptor<StoredPayment>(predicate: #Predicate { $0.category == nil })),
+                          accounts: try modelContext.fetchCount(FetchDescriptor<StoredAccount>()),
+                          learned: try modelContext.fetchCount(FetchDescriptor<StoredRule>()),
+                          layouts: try modelContext.fetchCount(FetchDescriptor<StoredLayout>()),
+                          receipts: try modelContext.fetchCount(FetchDescriptor<StoredReceipt>()),
+                          chosen: try chosen())
+        }
     }
 
     // MARK: categories
@@ -165,15 +175,17 @@ actor PhoneLedger {
     /// Ticks a default category (or adds one's own, with `name`, and gives it its look beside the other own ones,
     /// `OwnCategoryLook`). Ticking one that is on the list changes nothing.
     func choose(_ id: String, name: String? = nil) throws {
-        let all = try modelContext.fetch(FetchDescriptor<StoredChosen>())
-        guard !all.contains(where: { $0.id == id }) else { return }
-        var look: CategoryLook?
-        if ChosenCategory.isCustom(id) {
-            let others = all.filter { ChosenCategory.isCustom($0.id) }.compactMap(Self.look)
-            look = OwnCategoryLook.look(for: name ?? "", besides: others)
+        try PickerTiming.measure("ledger.choose") {
+            let all = try modelContext.fetch(FetchDescriptor<StoredChosen>())
+            guard !all.contains(where: { $0.id == id }) else { return }
+            var look: CategoryLook?
+            if ChosenCategory.isCustom(id) {
+                let others = all.filter { ChosenCategory.isCustom($0.id) }.compactMap(Self.look)
+                look = OwnCategoryLook.look(for: name ?? "", besides: others)
+            }
+            modelContext.insert(StoredChosen(id: id, customName: name, order: (all.map(\.order).max() ?? -1) + 1, look: look))
+            try modelContext.save()
         }
-        modelContext.insert(StoredChosen(id: id, customName: name, order: (all.map(\.order).max() ?? -1) + 1, look: look))
-        try modelContext.save()
     }
 
     /// One's own categories without a look (made before brief 36, or restored from an older export) get theirs, in the
@@ -204,35 +216,39 @@ actor PhoneLedger {
 
     /// `paymentCount(in:)` for every category that has payments, by id.
     func paymentCounts() throws -> [String: Int] {
-        var counts: [String: Int] = [:]
-        for payment in try modelContext.fetch(FetchDescriptor<StoredPayment>()) {
-            if let category = payment.category { counts[category, default: 0] += 1 }
+        try PickerTiming.measure("ledger.paymentCounts") {
+            var counts: [String: Int] = [:]
+            for payment in try modelContext.fetch(FetchDescriptor<StoredPayment>()) {
+                if let category = payment.category { counts[category, default: 0] += 1 }
+            }
+            return counts
         }
-        return counts
     }
 
     /// Unticks a category. Its payments move to `target` (set by hand) or, with nil, to Not sorted; it is taken off
     /// every payment's extra categories. Learned rules into one's own category go with it; rules into a default one
     /// stay (the engine ignores them while it is not on the list, and they work again when it is ticked again).
     func unchoose(_ id: String, moveTo target: String?) throws {
-        for payment in try modelContext.fetch(FetchDescriptor<StoredPayment>(predicate: #Predicate { $0.category == id })) {
-            payment.category = target
-            payment.categorySource = (target == nil ? CategorySource.none : .manual).rawValue
-            payment.extraCategories.removeAll { $0 == id || $0 == target }
+        try PickerTiming.measure("ledger.unchoose") {
+            for payment in try modelContext.fetch(FetchDescriptor<StoredPayment>(predicate: #Predicate { $0.category == id })) {
+                payment.category = target
+                payment.categorySource = (target == nil ? CategorySource.none : .manual).rawValue
+                payment.extraCategories.removeAll { $0 == id || $0 == target }
+            }
+            for payment in try modelContext.fetch(FetchDescriptor<StoredPayment>()) where payment.extraCategories.contains(id) {
+                payment.extraCategories.removeAll { $0 == id }
+            }
+            for receipt in try modelContext.fetch(FetchDescriptor<StoredReceipt>(predicate: #Predicate { $0.category == id })) {
+                receipt.category = target
+                receipt.categorySource = (target == nil ? CategorySource.none : .manual).rawValue
+            }
+            if ChosenCategory.isCustom(id) {
+                try modelContext.fetch(FetchDescriptor<StoredRule>(predicate: #Predicate { $0.category == id }))
+                    .forEach(modelContext.delete)
+            }
+            try modelContext.fetch(FetchDescriptor<StoredChosen>(predicate: #Predicate { $0.id == id })).forEach(modelContext.delete)
+            try modelContext.save()
         }
-        for payment in try modelContext.fetch(FetchDescriptor<StoredPayment>()) where payment.extraCategories.contains(id) {
-            payment.extraCategories.removeAll { $0 == id }
-        }
-        for receipt in try modelContext.fetch(FetchDescriptor<StoredReceipt>(predicate: #Predicate { $0.category == id })) {
-            receipt.category = target
-            receipt.categorySource = (target == nil ? CategorySource.none : .manual).rawValue
-        }
-        if ChosenCategory.isCustom(id) {
-            try modelContext.fetch(FetchDescriptor<StoredRule>(predicate: #Predicate { $0.category == id }))
-                .forEach(modelContext.delete)
-        }
-        try modelContext.fetch(FetchDescriptor<StoredChosen>(predicate: #Predicate { $0.id == id })).forEach(modelContext.delete)
-        try modelContext.save()
     }
 
     // MARK: learned rules and layouts
@@ -356,7 +372,9 @@ actor PhoneLedger {
     /// Every payment in booking order (then the order they were added in): the order the sorting rules and the
     /// dashboard get them in.
     func payments() throws -> [LedgerPayment] {
-        try storedPayments().map(Self.value)
+        try PickerTiming.measure("ledger.payments") {
+            try storedPayments().map(Self.value)
+        }
     }
 
     func payment(_ id: String) throws -> LedgerPayment? {
@@ -373,11 +391,13 @@ actor PhoneLedger {
 
     /// - Parameter waitingOnly: only the payments without a category (Not sorted), for the picker's estimate.
     func sortingSnapshot(waitingOnly: Bool = false) throws -> SortingSnapshot {
-        let payments = try storedPayments().filter { !waitingOnly || $0.category == nil }
-        let ibans = Dictionary(try accounts().map { ($0.id, $0.iban) }, uniquingKeysWith: { first, _ in first })
-        return SortingSnapshot(ids: payments.map(\.id),
-                               payments: payments.map { Self.value($0).sorting(accountIban: ibans[$0.account] ?? nil) },
-                               chosen: try chosen().map(\.id), learned: try learned())
+        try PickerTiming.measure("ledger.sortingSnapshot") {
+            let payments = try storedPayments().filter { !waitingOnly || $0.category == nil }
+            let ibans = Dictionary(try accounts().map { ($0.id, $0.iban) }, uniquingKeysWith: { first, _ in first })
+            return SortingSnapshot(ids: payments.map(\.id),
+                                   payments: payments.map { Self.value($0).sorting(accountIban: ibans[$0.account] ?? nil) },
+                                   chosen: try chosen().map(\.id), learned: try learned())
+        }
     }
 
     /// Applies `sortPayments`'s results (one per id of `snapshot`, in order) to the payments they concern: every
@@ -388,23 +408,25 @@ actor PhoneLedger {
     /// - Returns: the new category of each payment in `fresh` (nil: not sorted).
     @discardableResult
     func applySort(ids: [String], results: [SortResult], fresh: Set<String>) throws -> [String: String?] {
-        guard ids.count == results.count else { throw EngineError.invalidAnswer("sort results do not match") }
-        let byID = Dictionary(try modelContext.fetch(FetchDescriptor<StoredPayment>()).map { ($0.id, $0) },
-                              uniquingKeysWith: { first, _ in first })
-        var sortedFresh: [String: String?] = [:]
-        for (id, result) in zip(ids, results) {
-            guard let payment = byID[id], !CategorySource.keeps(payment.categorySource) else { continue }
-            let source = result.categoryId == nil ? CategorySource.none : CategorySource(rawValue: result.source ?? "") ?? .none
-            let wasStructural = payment.categorySource == CategorySource.structural.rawValue
-            let applies = fresh.contains(id) || payment.category == nil || wasStructural != (source == .structural)
-            guard applies else { continue }
-            payment.category = result.categoryId
-            payment.categorySource = source.rawValue
-            if let category = result.categoryId { payment.extraCategories.removeAll { $0 == category } }
-            if fresh.contains(id) { sortedFresh[id] = result.categoryId }
+        try PickerTiming.measure("ledger.applySort") {
+            guard ids.count == results.count else { throw EngineError.invalidAnswer("sort results do not match") }
+            let byID = Dictionary(try modelContext.fetch(FetchDescriptor<StoredPayment>()).map { ($0.id, $0) },
+                                  uniquingKeysWith: { first, _ in first })
+            var sortedFresh: [String: String?] = [:]
+            for (id, result) in zip(ids, results) {
+                guard let payment = byID[id], !CategorySource.keeps(payment.categorySource) else { continue }
+                let source = result.categoryId == nil ? CategorySource.none : CategorySource(rawValue: result.source ?? "") ?? .none
+                let wasStructural = payment.categorySource == CategorySource.structural.rawValue
+                let applies = fresh.contains(id) || payment.category == nil || wasStructural != (source == .structural)
+                guard applies else { continue }
+                if payment.category != result.categoryId { payment.category = result.categoryId }
+                if payment.categorySource != source.rawValue { payment.categorySource = source.rawValue }
+                if let category = result.categoryId { payment.extraCategories.removeAll { $0 == category } }
+                if fresh.contains(id) { sortedFresh[id] = result.categoryId }
+            }
+            if modelContext.hasChanges { try modelContext.save() }
+            return sortedFresh
         }
-        try modelContext.save()
-        return sortedFresh
     }
 
     /// Moves one payment to a category (or Not sorted) and its extra categories (Switch and Add).
@@ -416,7 +438,7 @@ actor PhoneLedger {
         var kept: [String] = []
         for extra in extras ?? payment.extraCategories where extra != category && !kept.contains(extra) { kept.append(extra) }
         payment.extraCategories = kept
-        try modelContext.save()
+        if modelContext.hasChanges { try modelContext.save() }
     }
 
     /// Moves several payments to one category (the "also the N others" answer).
@@ -429,7 +451,7 @@ actor PhoneLedger {
             payment.categorySource = source.rawValue
             payment.extraCategories.removeAll { $0 == category }
         }
-        try modelContext.save()
+        if modelContext.hasChanges { try modelContext.save() }
     }
 
     // MARK: receipts

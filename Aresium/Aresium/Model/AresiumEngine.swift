@@ -42,6 +42,14 @@ actor AresiumEngine {
         return try AresiumEngine(script: String(contentsOf: url, encoding: .utf8))
     }
 
+    /// Phone mode creates the VM away from the UI run loop as well as calling it off main. JavaScriptCore schedules
+    /// incremental sweep timers on the run loop where its context is created; creating it on main brings GC back
+    /// there after a sort, even though the engine call itself runs on this actor.
+    @concurrent
+    nonisolated static func bundledForPhone(in bundle: Bundle = .main) async throws -> AresiumEngine {
+        try PickerTiming.measure("engine.initialize") { try bundled(in: bundle) }
+    }
+
     init(script: String) throws {
         guard let context = JSContext() else { throw EngineError.javascript("JavaScriptCore could not start") }
         context.name = "Aresium engine"

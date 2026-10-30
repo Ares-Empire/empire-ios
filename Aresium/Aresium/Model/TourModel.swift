@@ -309,12 +309,12 @@ final class TourWorld {
 
     /// Makes and fills the store in a new folder inside `parent` (the app's temporary folder; tests give their own).
     static func make(in parent: URL = FileManager.default.temporaryDirectory, now: Date = .now,
-                     makeEngine: () throws -> AresiumEngine = { try AresiumEngine.bundled() }) async throws -> TourWorld {
+                     makeEngine: () async throws -> AresiumEngine = { try await AresiumEngine.bundledForPhone() }) async throws -> TourWorld {
         let root = parent.appending(path: folderPrefix + UUID().uuidString, directoryHint: .isDirectory)
         do {
             let storage = PhoneStorage(root: root)
             let ledger = try await Task.detached { try storage.open() }.value
-            let phone = PhoneBackend(ledger: ledger, engine: try makeEngine(),
+            let phone = PhoneBackend(ledger: ledger, engine: try await makeEngine(),
                                      defaults: UserDefaults(suiteName: "aresium.phone.tour")!)
             phone.today = { LedgerExport.day(now) }
             try await phone.load()

@@ -17,7 +17,10 @@ struct PhoneCountingTests {
                 configurations: ModelConfiguration(schema: schema, isStoredInMemoryOnly: true, cloudKitDatabase: .none))
             return PhoneLedger(modelContainer: container)
         }.value
-        let phone = PhoneBackend(ledger: ledger, engine: try engine ?? PhoneTest.engine(),
+        let resolvedEngine: AresiumEngine
+        if let engine { resolvedEngine = engine }
+        else { resolvedEngine = try await AresiumEngine.bundledForPhone() }
+        let phone = PhoneBackend(ledger: ledger, engine: resolvedEngine,
                                  defaults: defaults ?? PhoneTest.defaults(), engineVersion: { version })
         phone.today = { "2026-10-30" }
         try await phone.load()

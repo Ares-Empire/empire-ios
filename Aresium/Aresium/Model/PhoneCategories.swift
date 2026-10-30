@@ -3,7 +3,7 @@ import Foundation
 /// The person's categories in phone mode, by id (what the store keeps) and by name (what the dashboard and the Switch/Add
 /// choices use). Default and built-in categories are named in the app's language from the engine's list; one's own keep
 /// the name as typed. Names are unique in both languages (`checkedName`), so a name always leads back to one id.
-nonisolated struct PhoneCategoryList: Sendable {
+nonisolated struct PhoneCategoryList: Equatable, Sendable {
     let catalog: CategoryCatalog
     let chosen: [ChosenCategory]
     var language: AppLanguage = .current

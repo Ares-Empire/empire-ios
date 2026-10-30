@@ -86,7 +86,7 @@ struct PhonePickerBatchTests {
         await picker.toggle("groceries")
         #expect(phone.summary.unsorted == 2)
         await picker.toggle("groceries")
-        #expect(changes.count == 1 && picker.untick?.count == 1)
+        #expect(changes.count == 0 && picker.untick?.count == 1) // Sorting for the question leaves the dashboard deferred.
         await picker.resolveUntick(moveTo: nil)
         #expect(picker.list?.isChosen("groceries") == false)
         #expect(await picker.flush())
