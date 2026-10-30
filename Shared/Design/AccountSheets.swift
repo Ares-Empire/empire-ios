@@ -55,10 +55,13 @@ struct SignUpSheet: View {
 
     var body: some View {
         AccountSheetFrame(title: Text("Create account", tableName: "Shared"), accent: accent,
-                          showsClose: form.phase != .done, busy: form.phase == .sending) {
+                          busy: form.phase == .sending, confirmsAccountDiscard: form.hasSomethingToDiscard) {
             if form.phase == .done { done } else { fields }
         } actions: {
             actions
+        }
+        .onDisappear {
+            if form.accountCreated { created(form.email) }
         }
     }
 
@@ -139,7 +142,6 @@ struct SignUpSheet: View {
 
     private func primary() {
         if form.phase == .done {
-            created(form.email)
             dismiss()
         } else {
             send()
@@ -231,14 +233,16 @@ struct PasswordResetSheet: View {
 // MARK: - the frame
 
 /// A form sheet's frame (the contact form's): a navigation bar with the title and a close button, the content, the
-/// actions at the bottom, the app's wall; dark in every app.
+/// actions at the bottom, the app's wall.
 struct AccountSheetFrame<Content: View, Actions: View>: View {
     let title: Text
     let accent: AppAccent?
     var showsClose = true
     var busy = false
+    var confirmsAccountDiscard = false
     @ViewBuilder var content: Content
     @ViewBuilder var actions: Actions
+    @State private var showsDiscardQuestion = false
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -253,7 +257,12 @@ struct AccountSheetFrame<Content: View, Actions: View>: View {
             .toolbar {
                 if showsClose {
                     ToolbarItem(placement: .topBarTrailing) {
-                        Button(role: .close) { dismiss() }.disabled(busy)
+                        Button(role: .close, action: close).disabled(busy)
+                            .confirmationDialog(Text("Discard this account?", tableName: "Shared"),
+                                                isPresented: $showsDiscardQuestion, titleVisibility: .visible) {
+                                Button(role: .destructive) { dismiss() } label: { Text("Discard", tableName: "Shared") }
+                                Button(role: .cancel) {} label: { Text("Keep editing", tableName: "Shared") }
+                            }
                     }
                 }
             }
@@ -262,6 +271,19 @@ struct AccountSheetFrame<Content: View, Actions: View>: View {
         .animation(.easeOut(duration: 0.2), value: showsClose)
         .presentationDetents([.large])
         .presentationBackground(Ink.background)
-        .interactiveDismissDisabled(busy)
+        .interactiveDismissDisabled(busy || confirmsAccountDiscard)
+        #if DEBUG
+        .task {
+            // Screenshots: fill with `-accountEmail`, then `-closeAccount` taps the same close action as the X.
+            if LaunchArguments.current.contains("-closeAccount") {
+                try? await Task.sleep(for: .seconds(2))
+                if !busy { close() }
+            }
+        }
+        #endif
+    }
+
+    private func close() {
+        if confirmsAccountDiscard { showsDiscardQuestion = true } else { dismiss() }
     }
 }

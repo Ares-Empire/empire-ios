@@ -328,6 +328,16 @@
         }
       }
     },
+    "Discard this account?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Konto verwerfen?"
+          }
+        }
+      }
+    },
     "Discard this message?" : {
       "localizations" : {
         "de" : {
@@ -505,6 +515,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Das hat nicht geklappt. Versuch es noch mal."
+          }
+        }
+      }
+    },
+    "Keep editing" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Weiter bearbeiten"
           }
         }
       }

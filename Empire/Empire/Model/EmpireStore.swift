@@ -24,6 +24,9 @@ final class EmpireStore {
     private var approvalsGeneration = 0
     private var foregroundRefreshing = false
     private var sampleApprovals: [PendingAccount]?
+    #if DEBUG
+    private var sampleApprovalsLoads = 0
+    #endif
 
     init(session: EmpireSession, client: EmpireAPI = EmpireAPI(), sample: Bool = EmpireSamples.isEnabled,
          sampleUser: Bool = EmpireSamples.isUser, sampleCatalog: Bool = EmpireSamples.isCatalog) {
@@ -239,6 +242,17 @@ final class EmpireStore {
 
     private func fetchApprovals(_ context: Context) async throws -> [PendingAccount] {
         if isSample {
+            #if DEBUG
+            // Screenshots: fail the first sample load; later loads use the sample list. A slow retry gives time to
+            // see refresh progress without contacting a server.
+            sampleApprovalsLoads += 1
+            if sampleApprovalsLoads == 1 && LaunchArguments.current.contains("-sampleApprovalsFailure") {
+                throw URLError(.notConnectedToInternet)
+            }
+            if sampleApprovalsLoads > 1 && LaunchArguments.current.contains("-sampleApprovalsSlow") {
+                try await Task.sleep(for: .seconds(12))
+            }
+            #endif
             let pending = sampleApprovals ?? (sampleUser ? [] : EmpireSamples.approvals)
             sampleApprovals = pending
             return pending
