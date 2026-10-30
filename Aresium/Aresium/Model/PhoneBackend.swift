@@ -120,11 +120,7 @@ final class PhoneBackend: AresiumBackend {
     private func rebuildLearnedKeys(force: Bool = false) async throws -> Bool {
         let version = try engineVersion()
         guard force || defaults.string(forKey: Self.learnedVersionKey) != version else { return false }
-        let manual = try await ledger.payments().filter { $0.categorySource == .manual && $0.category != nil }
-        let keys = try await engine.merchantKeys(manual.map { $0.sorting(raw: false) })
-        var rules: [String: String] = [:]
-        for (payment, key) in zip(manual, keys) where !key.isEmpty { rules[key] = payment.category }
-        try await ledger.remember(rules)
+        try await ledger.rebuildMerchantRules(engine: engine)
         defaults.set(version, forKey: Self.learnedVersionKey)
         return true
     }
@@ -168,25 +164,16 @@ final class PhoneBackend: AresiumBackend {
         try await refresh()
         let detail = try await transactionDetail(id: id, auth: auth)
         guard let merchant = rules.keys.first else { return SwitchResult(detail: detail) }
-        let others = try await otherPayments(of: merchant, besides: id, target: target)
-        guard !others.isEmpty else { return SwitchResult(detail: detail) }
-        let followUp = MerchantFollowUp(shop: payment.place, category: category, count: others.count) { [weak self] in
+        let others = try await ledger.otherShopPayments(of: merchant, besides: id, target: target, engine: engine)
+        guard !others.ids.isEmpty else { return SwitchResult(detail: detail) }
+        let followUp = MerchantFollowUp(shop: payment.place, category: category, count: others.ids.count) { [weak self] in
             guard let self else { return }
-            try await self.ledger.move(others, to: target, source: .learned)
+            // Replace every existing or current key's rule, so an old exact rule cannot win on the next import.
+            try await self.ledger.remember(Dictionary(uniqueKeysWithValues: others.keys.map { ($0, target) }))
+            try await self.ledger.move(others.ids, to: target, source: .learned)
             try await self.refresh()
         }
         return SwitchResult(detail: detail, followUp: followUp)
-    }
-
-    /// Payments of this merchant, other than `id`, not set by hand and not in `target` already.
-    private func otherPayments(of merchant: String, besides id: String, target: String) async throws -> [String] {
-        let payments = try await ledger.payments()
-        let keys = try await engine.merchantKeys(payments.map { $0.sorting(raw: false) })
-        return zip(payments, keys).compactMap { payment, key in
-            key == merchant && payment.id != id && !CategorySource.keeps(payment.categorySource.rawValue)
-                && payment.categorySource != .structural && payment.category != target
-                ? payment.id : nil
-        }
     }
 
     func setTags(id: String, categories names: [String], dropCurrent: Bool, auth: BackendAuth) async throws -> TransactionDetail {

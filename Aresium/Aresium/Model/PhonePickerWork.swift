@@ -30,21 +30,17 @@ extension PhoneLedger {
 
     func dashboard(engine: AresiumEngine, catalog: CategoryCatalog, language: AppLanguage, today: String, ownNames: Bool = true) async throws -> Dashboard {
         let list = PhoneCategoryList(catalog: catalog, chosen: try chosen(), language: language)
-        let payments = try payments()
-        let receipts = try receipts()
+        let snapshot = try await shopSnapshot(engine: engine)
+        let payments = snapshot.payments
+        let receipts = snapshot.receipts
         let input = PickerTiming.measure("dashboard.input") {
             PhoneDashboard.input(payments: payments, list: list, today: today, receipts: receipts)
         }
         var dashboard = try await engine.dashboard(input)
-        let paymentKeys = try await engine.merchantKeys(payments.map { $0.sorting(raw: false) })
-        let receiptKeys = try await engine.merchantKeys(receipts.map {
-            SortingPayment(counterparty: $0.shop, description: $0.shop ?? "", source: "bank", account: "receipt",
-                           amount: -$0.totalValue, currency: $0.currency, date: $0.date)
-        })
-        let rules = Dictionary(uniqueKeysWithValues: try paymentNames().map { ($0.merchant, $0.name) })
         PickerTiming.measure("names.groups") {
-            PaymentNames.apply(to: &dashboard, payments: payments, paymentKeys: paymentKeys, receipts: receipts,
-                               receiptKeys: receiptKeys, rules: rules, enabled: ownNames)
+            PaymentNames.apply(to: &dashboard, payments: payments, paymentKeys: snapshot.paymentKeys, receipts: receipts,
+                               receiptKeys: snapshot.receiptKeys, rules: snapshot.shops.rules(snapshot.names),
+                               identities: snapshot.shops, enabled: ownNames)
         }
         return dashboard
     }

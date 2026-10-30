@@ -250,6 +250,7 @@ struct PaymentNamesTests {
             _ = try await phone.dashboard(auth: auth)
         }
         let names = recording.values.filter { $0.name.hasPrefix("names.") }
+        #expect(names.contains { $0.name == "names.identities" })
         #expect(names.contains { $0.name == "names.groups" })
         #expect(names.contains { $0.name == "names.normalize" })
         #expect(names.contains { $0.name == "names.snapshot" })

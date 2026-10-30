@@ -24,6 +24,7 @@ nonisolated struct PaymentRenameInfo: Equatable, Sendable {
     }
     /// "Use the bank's name" → Only this one (brief 47): this payment shows the bank's name while its shop keeps its name.
     var keepsBankName: Bool { paymentOwnName != nil && ownName == nil }
+    var shopIdentity: String = ""
     var canRename: Bool { true } // Only produced for a stored bank/PayPal payment.
     var canRenameShop: Bool { !merchantKey.isEmpty }
 }
@@ -50,7 +51,7 @@ nonisolated enum PaymentNames {
     /// characters). Empty for a bank line without words, where it cannot be kept.
     static func keptBankName(_ bankName: String) -> String { normalized(bankName) }
 
-    /// Prefixes keep a person's name, an engine key and an exact bank line in separate namespaces.
+    /// Prefixes keep a person's name, an engine shop identity and an exact bank line in separate namespaces.
     static func key(ownName: String?, merchant: String, bankName: String) -> String {
         if let ownName {
             return "own:" + ownName.folding(options: [.caseInsensitive, .diacriticInsensitive],
@@ -61,7 +62,7 @@ nonisolated enum PaymentNames {
 
     /// After the engine has finished counting: names never enter its sorting, receipt matching or cash allocation.
     static func apply(to dashboard: inout Dashboard, payments: [LedgerPayment], paymentKeys: [String],
-                      receipts: [LedgerReceipt], receiptKeys: [String], rules: [String: String], enabled: Bool) {
+                      receipts: [LedgerReceipt], receiptKeys: [String], rules: [String: String], identities: ShopIdentities, enabled: Bool) {
         assert(!Thread.isMainThread)
         let bank = Dictionary(uniqueKeysWithValues: zip(payments, paymentKeys).map { ($0.0.id, ($0.0, $0.1)) })
         let shops = Dictionary(uniqueKeysWithValues: zip(receipts, receiptKeys).map { ($0.0.id, ($0.0, $0.1)) })
@@ -71,14 +72,14 @@ nonisolated enum PaymentNames {
             if let receiptID = row.receiptId, let (receipt, merchant) = shops[receiptID] {
                 // A receipt/entry keeps its editable Shop. Its identity joins the shop's bank payments.
                 let own = enabled && !merchant.isEmpty ? rules[merchant] : nil
-                row.nameKey = key(ownName: own, merchant: merchant, bankName: receipt.shop ?? row.place)
+                row.nameKey = key(ownName: own, merchant: identities.identity(merchant), bankName: receipt.shop ?? row.place)
             } else if let (payment, merchant) = bank[row.id] {
                 let own = enabled ? shown(payment: payment.ownName, shop: rules[merchant], bankName: payment.place) : nil
                 row.place = own ?? payment.place
                 row.bankName = row.place == payment.place ? nil : payment.place
                 row.isOwnName = own != nil
                 row.ownNameSource = own == nil ? nil : payment.ownName == own ? .payment : .shop
-                row.nameKey = key(ownName: own, merchant: merchant, bankName: payment.place)
+                row.nameKey = key(ownName: own, merchant: identities.identity(merchant), bankName: payment.place)
             }
             dashboard.transactions[index] = row
         }
@@ -139,7 +140,7 @@ extension PhoneLedger {
             detail.bankName = detail.place == info.bankName ? nil : info.bankName
             detail.isOwnName = own != nil
             detail.ownNameSource = own == nil ? nil : info.source
-            detail.nameKey = PaymentNames.key(ownName: own, merchant: info.merchantKey, bankName: info.bankName)
+            detail.nameKey = PaymentNames.key(ownName: own, merchant: info.shopIdentity, bankName: info.bankName)
             return detail
         }
     }
@@ -152,28 +153,65 @@ extension PhoneLedger {
     /// Fetching, key construction, counting and the lifetime of the full payment array stay on the ledger worker.
     func renameInfo(id: String, engine: AresiumEngine) async throws -> PaymentRenameInfo {
         assert(!Thread.isMainThread)
-        let all = try PickerTiming.measure("names.snapshot") { try payments() }
-        guard let payment = all.first(where: { $0.id == id }) else { throw LedgerError.notFound }
-        let keys = try await engine.merchantKeys(all.map { $0.sorting(raw: false) })
-        let merchant = keys[all.firstIndex(where: { $0.id == id })!]
-        let rule = try paymentNames().first { $0.merchant == merchant }?.name
-        let count = merchant.isEmpty ? 0 : zip(all, keys).filter { $0.0.id != id && $0.1 == merchant }.count
+        let snapshot = try await shopSnapshot(engine: engine)
+        guard let index = snapshot.payments.firstIndex(where: { $0.id == id }) else { throw LedgerError.notFound }
+        let payment = snapshot.payments[index]
+        let merchant = snapshot.paymentKeys[index]
+        let identity = snapshot.shops.identity(merchant)
+        let rule = snapshot.shops.rules(snapshot.names)[merchant]
+        let count = merchant.isEmpty ? 0 : zip(snapshot.payments, snapshot.paymentKeys).filter {
+            $0.0.id != id && snapshot.shops.identity($0.1) == identity
+        }.count
         return PaymentRenameInfo(bankName: payment.place, merchantKey: merchant, paymentOwnName: payment.ownName,
-                                 shopOwnName: rule, otherPaymentCount: count)
+                                 shopOwnName: rule, otherPaymentCount: count, shopIdentity: identity)
+    }
+
+    /// Engine revisions can shorten foreign-card keys. Keep absent shops, and move only obsolete name keys to
+    /// their longest current whole-word prefix. An existing current rule wins; lexical old-key order breaks ties.
+    func rebuildMerchantRules(engine: AresiumEngine) async throws {
+        assert(!Thread.isMainThread)
+        let all = try payments()
+        let keys = try await engine.merchantKeys(all.map { $0.sorting(raw: false) })
+        var learned: [String: String] = [:]
+        for (payment, key) in zip(all, keys)
+            where !key.isEmpty && payment.categorySource == .manual && payment.category != nil {
+            learned[key] = payment.category
+        }
+        try remember(learned)
+        let current = Set(keys.filter { !$0.isEmpty })
+        let candidates = current.sorted { $0.count == $1.count ? $0 < $1 : $0.count > $1.count }
+        let stored = try modelContext.fetch(FetchDescriptor<StoredPaymentName>(sortBy: [SortDescriptor(\.merchant)]))
+        var occupied = Set(stored.map(\.merchant))
+        for rule in stored where !current.contains(rule.merchant) {
+            guard let key = candidates.first(where: { rule.merchant.hasPrefix($0 + " ") }) else { continue }
+            if !occupied.contains(key) {
+                modelContext.insert(StoredPaymentName(merchant: key, name: rule.name))
+                occupied.insert(key)
+            }
+            modelContext.delete(rule)
+        }
+        try modelContext.save()
     }
 
     func rename(id: String, name: String, scope: PaymentNameScope, engine: AresiumEngine) async throws {
         assert(!Thread.isMainThread)
-        guard let payment = try payment(id) else { throw LedgerError.notFound }
+        guard try payment(id) != nil else { throw LedgerError.notFound }
         let normalized = PickerTiming.measure("names.normalize") { PaymentNames.normalized(name) }
         switch scope {
         case .payment:
             let stored = try modelContext.fetch(FetchDescriptor<StoredPayment>(predicate: #Predicate { $0.id == id })).first
             stored?.ownName = normalized.isEmpty ? nil : normalized
         case .shop:
-            let merchant = try await engine.merchantKeys([payment.sorting(raw: false)])[0]
+            let snapshot = try await shopSnapshot(engine: engine)
+            guard let index = snapshot.payments.firstIndex(where: { $0.id == id }) else { throw LedgerError.notFound }
+            let merchant = snapshot.paymentKeys[index]
             guard !merchant.isEmpty else { throw LedgerError.notFound }
-            let stored = try modelContext.fetch(FetchDescriptor<StoredPaymentName>(predicate: #Predicate { $0.merchant == merchant })).first
+            let identity = snapshot.shops.identity(merchant)
+            let rules = try modelContext.fetch(FetchDescriptor<StoredPaymentName>())
+            for rule in rules where rule.merchant != merchant && snapshot.shops.identity(rule.merchant) == identity {
+                modelContext.delete(rule)
+            }
+            let stored = rules.first { $0.merchant == merchant }
             if normalized.isEmpty {
                 if let stored { modelContext.delete(stored) }
             } else if let stored { stored.name = normalized }
