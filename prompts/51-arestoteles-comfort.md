@@ -1,6 +1,6 @@
 # 51: Arestoteles comfort before its first TestFlight build (Patrik's list nos. 23–26)
 
-Status: draft
+Status: merged 2026-10-30 (130 tests; Positions, the discard questions, note pages and the undo bar checked on the simulator)
 Branch: `codex/51-arestoteles-comfort` · Worktree: `../empire-ios-51-arestoteles-comfort` · Model: `gpt-6.1-sol`, effort `high`
 
 ## Goal
