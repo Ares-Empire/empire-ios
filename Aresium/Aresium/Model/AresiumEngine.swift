@@ -131,6 +131,16 @@ actor AresiumEngine {
         return keys
     }
 
+    /// `shopIdentities` for each merchant key, in the same order and length.
+    func shopIdentities(_ keys: [String]) throws -> [String] {
+        try PickerTiming.measure("names.identities") {
+            assert(!Thread.isMainThread)
+            let identities = try call("shopIdentities", keys, as: [String].self)
+            guard identities.count == keys.count else { throw EngineError.invalidAnswer("shopIdentities: wrong count") }
+            return identities
+        }
+    }
+
     /// The dashboard from stored payments: `buildDashboardSource`, then `buildDashboard`, in one call. The same
     /// `Dashboard` the server sends.
     func dashboard(_ input: DashboardSourceInput) throws -> Dashboard {
@@ -179,6 +189,7 @@ actor AresiumEngine {
         sortPayments: (input) => E.sortPayments(input.payments, { categories: input.categories, learned: input.learned }),
         learn: (input) => E.learn(input.learned, input.payment, input.categoryId),
         merchantKeys: (payments) => payments.map((payment) => E.merchantKey(payment)),
+        shopIdentities: (keys) => E.shopIdentities(keys),
         shareableLayout: (layout) => E.shareableLayout(layout),
         readReceipt: (capture) => E.readReceipt(capture),
         matchReceipt: (input) => E.matchReceipt(input.receipt, input.payments, input.taken),

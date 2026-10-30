@@ -222,8 +222,9 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
    on Patrik's iPhone through internal TestFlight (group in App Store Connect → Aresium → TestFlight → Internal
    Testing). Build 2 (2026-10-30): the fixes of Patrik's first test (briefs 34–37). Build 3: the picker's scroll, the
    back swipe and the comfort items (briefs 38–41). Build 4 (2026-10-30 evening): own names and the name's page with the
-   left swipe, the graph as a setting, Aresium's own messages (briefs 42–46). The other four: first their approved comfort items (15 below, briefs 49–52), then
-   the script. Their App Store Connect records exist (Patrik, 2026-10-30: Arestemis, Aresus, Arestoteles, Ares Empire),
+   left swipe, the graph as a setting, Aresium's own messages (briefs 42–46). **Arestemis 0.1 (1) uploaded 2026-10-30** (after its comfort items, brief 49). The other
+   three (Aresus, Arestoteles, Empire) have their comfort items merged (briefs 50–52) and wait only for
+   `scripts/testflight.sh <App>`. Their App Store Connect records exist (Patrik, 2026-10-30: Arestemis, Aresus, Arestoteles, Ares Empire),
    each with an internal group that gets every build automatically (Arestemis's checked: Patrik as tester). Original
    list: set the paid team (project level, all five projects; done); the App Groups
    `group.de.ares-empire.aresium` + `group.de.ares-empire.shared` registered for the bundle ids, the widgets' too
@@ -284,7 +285,10 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
 14. **Arestemis sample with real details:** `Arestemis/Arestemis/Samples/settings.json` (and Arestemis's `docs/samples/`)
    holds Patrik's real application text (name, TUM, Garching, age), so the showcase leaves that screen out. Replace it
    with a made-up text if Patrik wants that screen shown (offered 2026-10-26).
-15. **Comfort items for Empire, Arestemis, Aresus, Arestoteles** (Patrik approved all, 2026-10-30): build each app's
+15. ~~**Comfort items for Empire, Arestemis, Aresus, Arestoteles**~~: **built and merged 2026-10-30** (briefs 49 Arestemis,
+   50 Aresus with the aresus server's province links, 51 Arestoteles, 52 Empire and Shared 2; the shared undo bar
+   `Shared/Design/UndoBar.swift`; no. 18 = option (b), the key says Done). On the phone: try each once. The original
+   item (Patrik approved all, 2026-10-30): build each app's
    before its first TestFlight upload, from `docs/reviews/2026-10-30-swipe-and-comfort.md` → "The other four apps":
    Empire 1 (approvals: pull to refresh, Try again); Arestemis 1–7 (undo for Dismiss, actions on Hunt → Latest, Search's
    Save at the top and a kept draft, 44 pt chip buttons, Listings loading on, Add place's keyboard key, a regular "More");
@@ -554,11 +558,23 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   names with the store. Names trim whitespace and keep at most 60 characters (Swift grapheme clusters); empty removes
   only the selected scope. Removing a payment override reveals a remaining shop rule; changing/removing a shop rule
   leaves payment overrides intact. An empty merchant key allows only the payment scope.
+  **Shop identities** (brief 54): one engine `shopIdentities` call per name/lookup job over the distinct keys of all
+  bank payments, receipts, stored name rules and learned category rules (`ShopIdentities.swift`, `names.identities`).
+  Original merchant keys and stored/exported rules stay unchanged. Different names of one shop group together, including
+  receipts and cash entries; payment-only names and exact bank-line grouping for empty keys keep their behavior. A name
+  rule uses the exact merchant key first, then the lexical first rule of its shop. Renaming/removing a shop name
+  removes the other name rules of that identity. The category question counts that shop’s eligible other payments;
+  All replaces the learned rules of every current/stored key of the shop, so an older exact rule cannot win later.
+  Manual, receipt-set and own-transfer categories never move with it. Receipt learned-category presets use the same
+  exact-first, then valid lexical rule precedence as sorting, over the receipt's key and the learned keys only (as
+  `sortPayments` does for one payment), so opening a receipt never reads every stored payment. Receipt OCR name corrections still match the print as read.
+  When the engine revision changes (also on restore), manual corrections rebuild learned keys and obsolete name keys
+  move to their longest current whole-word prefix; an existing rule at that current key wins. Absent shops stay stored.
   **Brief 44 API:** get a `TransactionDetailStore` with `DashboardStore.transactionDetailStore(for:)` as for category
   changes. `await prepareRename()` loads the detail and `renameInfo` (`PaymentRenameInfo`, nil in server mode);
   `canRename` is false there. The info has `bankName`, effective `ownName`/`source` (`.shop` or `.payment`), both
   `paymentOwnName` and `shopOwnName` for scope-specific editing/removal, `canRenameShop`, and `otherPaymentCount` (N,
-  all other bank payments with that merchant key, 0 for an empty key). Call `await rename(to:scope:)` with `.shop` or
+  all other bank payments of the same shop identity, 0 for an empty key). Call `await rename(to:scope:)` with `.shop` or
   `.payment`: saves, refreshes the detail/info and rebuilds the dashboard/widget; use the existing `isSaving` and
   `saveError`. Row and page use the same store. Phone samples use their real temporary ledger, as category changes do.
   The lower-level `PhoneBackend.renameInfo(id:)` returns that info; `rename(id:name:scope:)` saves and returns the new
@@ -572,7 +588,7 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   by a row’s `nameKey` (nil for excluded/covered rows or server mode). `PaymentNameGroup` has `rows` newest first,
   `count`, separate positive `moneyOut`/`moneyIn`, and `months[YYYY-MM]` (`PaymentNameAmounts`, the same two numbers),
   including zeroes for every dashboard month. Built once per dashboard on the ledger worker, after the engine counted
-  it: own names fold case and diacritics; otherwise merchant keys, or exact bank lines for empty merchant keys.
+  it: own names fold case and diacritics; otherwise the engine’s shop identities, or exact bank lines for empty merchant keys.
   Receipts/entries keep their Shop on screen but join that shop’s key/rule (waiting card receipts count until joined,
   as on the dashboard). Covered rows and payments counting in neither overall total are excluded; tags cannot add
   them back. The ledger executor also does name saving, merchant-key input and the question’s count off main;

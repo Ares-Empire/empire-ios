@@ -11,6 +11,38 @@ import Testing
 @Suite(.serialized, .enabled(if: ProcessInfo.processInfo.environment["PICKER_TIMINGS"] == "1"))
 @MainActor
 struct PickerTimingTests {
+    @Test func shopIdentityWork() async throws {
+        let phone = try await PhoneCountingTests.backend()
+        let file = try PhoneTest.fixture("timing-vr-5000.csv")
+        let header = String(decoding: file.data, as: UTF8.self).components(separatedBy: "\n")[0]
+        try await phone.saveLayout(CsvLayout(separator: ";", header: header.components(separatedBy: ";"),
+            dateFormat: "YYYY-MM-DD", numberFormat: "de",
+            columns: .init(date: 0, valueDate: 1, amount: 4, counterparty: [2], text: [3], currency: 5)))
+        _ = try await phone.importFiles([file], auth: BackendAuth(token: nil))
+        #expect(phone.summary.payments == 5000)
+        let id = try #require(try await phone.ledger.payments().first?.id)
+        var dashboards: [Double] = [], infos: [Double] = []
+        for round in 0..<6 {
+            let recording = PickerTiming.Recording()
+            try await PickerTiming.$recording.withValue(recording) {
+                var start = ProcessInfo.processInfo.systemUptime
+                _ = try await phone.dashboard(auth: BackendAuth(token: nil))
+                let dashboard = (ProcessInfo.processInfo.systemUptime - start) * 1000
+                start = ProcessInfo.processInfo.systemUptime
+                _ = try await phone.renameInfo(id: id)
+                let info = (ProcessInfo.processInfo.systemUptime - start) * 1000
+                if round > 0 { dashboards.append(dashboard); infos.append(info) }
+            }
+            if round > 0 {
+                print("SHOP TIMING round=\(round) dashboard-ms=\(dashboards.last!) renameInfo-ms=\(infos.last!)")
+                for sample in recording.values where sample.name == "names.identities" {
+                    print("SHOP SPAN \(sample.name) kind=\(sample.kind) ms=\(sample.ms)")
+                }
+            }
+        }
+        print("SHOP TIMING size=5000 median-dashboard-ms=\(dashboards.sorted()[2]) median-renameInfo-ms=\(infos.sorted()[2])")
+    }
+
     @Test func pickerSteps() async throws {
         let sizes = ProcessInfo.processInfo.environment["PICKER_SIZE"].flatMap(Int.init).map { [$0] } ?? [0, 1000, 5000]
         for size in sizes {
