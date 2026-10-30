@@ -147,9 +147,14 @@ Every app has one Settings sheet, opened by the gear (`gearshape`) in its header
 app's own (a view-builder slot, built with `SettingsSection` / `SettingsRow`; Arestemis puts its application texts and
 hunt notifications there), General (Language; Appearance; Notifications, opening the app's notification page in iOS
 Settings, in apps with `sendsNotifications`), Help (Contact & support: the form from `Shared/Support`, sent to the account
-server's `feedback` collection, which emails Patrik), About (Privacy and Imprint open `LegalPage` in the app's language, Fonts & licences shows the OFL texts from
+server's `feedback` collection, which emails Patrik), About (Privacy and Imprint open `LegalPage` in the app's language, inside the app in Apple's in-app browser (`SFSafariViewController`, closed with its own X), brief 41, `Shared/Design/InAppBrowser.swift`: SwiftUI's own
+`openURL(_:prefersInApp:)` presents from the window's root, which iOS 27.0 refuses while a sheet such as Settings is open; Fonts & licences shows the OFL texts from
 `Shared/Fonts` and an app's own licences, `SettingsApp.licences`: Aresium's shop list, Version), Account (the email from the login answer, `EmpireSession.email`; Change password; Log out
-"in all Ares apps on this iPhone", which does what the app's log-out did before; then, in the hub's soft red, Leave
+"in all Ares apps on this iPhone", which asks first (brief 41, `Shared/Settings/LogOutQuestion.swift`: Apple's
+confirmation dialog, as Leave and Delete, "Log out?" / "You'll be logged out of all Ares apps on this iPhone.", in an app
+that works without an account plus "Your data in <app> stays."; Log out, destructive, and Cancel, which iOS 26 shows as a
+popover from the row, cancelled by a tap outside) and then does what the
+app's log-out did before (in sample mode it leaves the sample, as before); then, in the hub's soft red, Leave
 <app> and Delete Ares account: pages in `Shared/Design/AccountScreens.swift`, see "Accounts in every app" below). An app
 whose server keeps data per account passes its `DELETE …/me` as `SettingsApp(serverData:)` (today only Arestemis:
 `ArestemisAPI.accountDataURL`); leaving deletes it there first. An app that works without an account
@@ -157,7 +162,8 @@ whose server keeps data per account passes its `DELETE …/me` as `SettingsApp(s
 account" section last instead: Sign in (`Shared/Design/SignInSheet.swift`, the login without Create account) and the
 app's line `SettingsApp(signInNote:)`; signed in, the account section as everywhere (Leave <app> only while the account
 has the app). Screenshots: `-openSignIn`, `-openSupport`. Links: `Shared/Settings/SettingsInfo.swift`. Every
-login screen ends with "Privacy · Imprint" (`LoginScroll`). Screenshots: `-sampleData -openSheet settings` in every app
+login screen ends with "Privacy · Imprint" (`LoginScroll`), opening inside the app too (`InAppBrowser` as the links'
+`openURL`; the Aresium widget compiles it with the rest of `Shared/`). Aresium's Sign in sheet has no such footer. Screenshots: `-sampleData -openSheet settings` in every app
 (`-scrollToAccount` shows the Account section; `-openFonts` the Fonts & licences page, `-openLicence <name>` one of the
 app's own licences). A new app: a gear in its header and `SettingsScreen` in a sheet. The
 sheet follows the app's appearance (dark in Aresium's red mode).
@@ -630,7 +636,28 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   only when it is another day, and the server's Location, Trip, Kind of place (only the place types it knows) and
   Recurring. No Source, Booking date or External ID rows. The bank's own row comes last, closed ("As in your bank's
   file", or PayPal's). The labels form one column as wide as the longest (a `Grid`), above their values at the
-  accessibility text sizes. Settings →
+  accessibility text sizes. Its Change, Edit and Unjoin are Apple's regular-size bordered buttons (brief 41; drawn 32 pt
+  tall, they take taps about 5 pt beyond their edges by themselves, measured on iOS 27.0; neither a tap area in the label
+  nor a content shape on the button widens that).
+  **Comfort on the dashboard** (brief 41, Patrik's approved list of 2026-10-30,
+  `docs/reviews/2026-10-30-swipe-and-comfort.md`): **a long press on a payment row** (a month's list, both modes) is
+  Apple's context menu with what the row's page offers (`Model/PaymentRows.swift`: `DashboardStore.page(for:)` decides
+  what a row's tap opens and `rowActions(for:)` its menu, so the two never differ): a payment Change category (only when
+  its page shows Change), opening the same change sheet at once (`TransactionDetailStore.beginRecategorisationFromRow`:
+  it fills as the payment loads, or says why it could not, with Retry) with the same flow after it (the shop question,
+  learning, the tour's `paymentRecategorised`); a receipt or cash entry row Edit (the window its page's Edit opens,
+  `ReceiptEditSheet`; if it cannot open, the row's page opens); a withdrawal's covered row nothing (its long hold
+  opens its list, as a tap). The Cash page's movement rows have no menu yet (`CashScreens.swift` was brief 40's). The back swipe and
+  this menu are the dashboard's shortcuts (`DashboardStack.shortcuts`): the tour turns both off while it holds the
+  screen (at the payment step the ringed row must open the page the card speaks of). **The import result goes with a
+  swipe down** (`ImportStore.closesBySwipe`: where Dismiss or the send card's Not now would, never while Retry and
+  Discard are offered or the format is sending, nor while the result scrolls; VoiceOver's escape does the same); a
+  success still goes by itself after 4.5 s. DEBUG `-sampleBannerDrag <points>` shows it moved as halfway through the
+  swipe (with `-sampleImportResult` or `-sampleFormat`). **Tap areas of 44 pt** (`minimumTapArea()` in `Screens/Components.swift`:
+  the area grows around a control drawn smaller, layout unchanged): the result's Dismiss, Retry, Discard, "What is
+  sent?" and Not now, the header's 42 pt buttons (`IconButton`) and the import button; the Expenses/Income dots are 44 ×
+  44 pt each. Tests: `DashboardComfortTests` (`PaymentRowMenuTests`, `ImportBannerSwipeTests`, `LogOutQuestionTests`).
+  Screenshots: `build/41-*.png`. Settings →
   About → Fonts & licences also lists the shop list's name-suggestion-index notice (BSD-3-Clause,
   `BundledLicence.shopList`, Aresium only). **Engine:** `bash scripts/aresium-engine.sh` runs `npm run engine` in
   aresium and copies the bundle (its commit in `Engine/engine-version.txt`), the engine's test files and the licence

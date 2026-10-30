@@ -3,7 +3,8 @@ import SwiftUI
 /// Switch or Add for one payment. Like every iOS edit sheet, Cancel is top left and Save top right (brief 36, Patrik's
 /// phone test: Save at the bottom was far from a category at the top), in ink like the app's other sheets; in Add mode
 /// "Save & remove from current" follows the choices as the quiet second answer. After a Switch in phone mode the
-/// merchant's other payments are asked about before the sheet closes.
+/// merchant's other payments are asked about before the sheet closes. Opened from the payment's page (Change) or from its
+/// row's long press (brief 41), which opens it before the payment has loaded.
 struct RecategoriseSheet: View {
     @Bindable var store: TransactionDetailStore
     let palette: Palette
@@ -44,6 +45,17 @@ struct RecategoriseSheet: View {
                     }
                     .padding(20)
                     .font(AppFont.text(14)).foregroundStyle(palette.ink)
+                } else if let error = store.loadError {
+                    // Opened from a payment row's long press (brief 41): the payment could not be loaded.
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text(error).font(AppFont.text(14)).foregroundStyle(palette.expenseText)
+                        Button("Retry") { Task { await store.beginRecategorisationFromRow() } }
+                            .font(AppFont.text(14, weight: .semibold))
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading).padding(20)
+                } else {
+                    // Opened from a payment row: the payment loads (a moment, the page's own load).
+                    ProgressView().tint(palette.secondary).frame(maxWidth: .infinity).padding(30)
                 }
             }
             .background { Wall(palette: palette) }

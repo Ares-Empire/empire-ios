@@ -1,6 +1,6 @@
 # 41: Aresium's dashboard: hold a payment to change its category, swipe the banner away, room to tap; Privacy in the app, a question before Log out
 
-Status: running
+Status: merged 2026-10-30 (Aresium 402 tests + 2 opt-in timing with brief 40; the other four apps build; payment page buttons about 42 pt, the Cash page rows without the menu)
 Branch: `claude/41-dashboard` · Worktree: `../empire-ios-41-dashboard` · Built by: a Claude agent (flow and the feel)
 
 ## Goal

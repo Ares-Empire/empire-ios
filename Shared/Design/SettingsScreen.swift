@@ -62,6 +62,10 @@ struct SettingsScreen<AppSection: View, AppHelp: View>: View {
     #endif
     @AppStorage(Appearance.key) private var appearance = Appearance.iPhone.rawValue
     @State private var path: [AccountPage] = []
+    /// Log out asks first (brief 41).
+    @State private var logOutQuestion = LogOutQuestion()
+    /// Privacy and Imprint inside the app (brief 41).
+    @State private var browser = InAppBrowser()
     #if DEBUG
     /// Screenshots: `-openSignIn` opens the sign-in sheet at once (an app that works without an account, signed out).
     @State private var showsSignIn = LaunchArguments.current.contains("-openSignIn")
@@ -123,6 +127,7 @@ struct SettingsScreen<AppSection: View, AppHelp: View>: View {
                 }
             }
         }
+        .inAppBrowser(browser)
         .tint(Ink.primary)
         .presentationDetents([.large])
         .presentationBackground(Ink.background)
@@ -188,14 +193,15 @@ struct SettingsScreen<AppSection: View, AppHelp: View>: View {
 
     private var about: some View {
         SettingsSection(String(localized: LocalizedStringResource("About", table: "Shared", locale: .appLanguage))) {
-            Button { openURL(LegalPage.privacy.url()) } label: {
+            // Privacy and Imprint open inside the app, in Apple's in-app browser with its own close button (brief 41), not in Safari.
+            Button { openLegal(.privacy) } label: {
                 SettingsRow(title: String(localized: LocalizedStringResource("Privacy", table: "Shared",
                                                                              locale: .appLanguage)),
                             trailing: .external)
             }
             .buttonStyle(SettingsRowStyle())
             SettingsDivider()
-            Button { openURL(LegalPage.imprint.url()) } label: {
+            Button { openLegal(.imprint) } label: {
                 SettingsRow(title: String(localized: LocalizedStringResource("Imprint", table: "Shared",
                                                                              locale: .appLanguage)),
                             trailing: .external)
@@ -260,10 +266,7 @@ struct SettingsScreen<AppSection: View, AppHelp: View>: View {
                 }
                 .buttonStyle(SettingsRowStyle())
                 SettingsDivider()
-                Button {
-                    dismiss()
-                    logOut()
-                } label: {
+                Button { logOutQuestion.ask() } label: {
                     SettingsRow(title: String(localized: LocalizedStringResource("Log out", table: "Shared",
                                                                                  locale: .appLanguage)),
                                 subtitle: String(localized: LocalizedStringResource("In all Ares apps on this iPhone",
@@ -272,6 +275,21 @@ struct SettingsScreen<AppSection: View, AppHelp: View>: View {
                                 trailing: .none)
                 }
                 .buttonStyle(SettingsRowStyle())
+                // Asked first (brief 41): one login serves every Ares app on this iPhone.
+                .confirmationDialog(Text(verbatim: LogOutQuestion.title()),
+                                    isPresented: Binding(get: { logOutQuestion.isAsking },
+                                                         set: { if !$0 { logOutQuestion.cancel() } }),
+                                    titleVisibility: .visible) {
+                    Button(role: .destructive) {
+                        logOutQuestion.confirm {
+                            dismiss()
+                            logOut()
+                        }
+                    } label: { Text("Log out", tableName: "Shared") }
+                    Button(role: .cancel) { logOutQuestion.cancel() } label: { Text("Cancel", tableName: "Shared") }
+                } message: {
+                    Text(verbatim: LogOutQuestion.message(app: app.name, keepsData: session.app.accountOptional))
+                }
             }
             // Leaving and deleting apart from the everyday rows, in the hub's soft red. Leaving only while the account
             // has this app (an app that works without an account opens with any login).
@@ -305,6 +323,11 @@ struct SettingsScreen<AppSection: View, AppHelp: View>: View {
 
     private func open(_ string: String) {
         if let url = URL(string: string) { openURL(url) }
+    }
+
+    /// A legal page inside the app; Safari only if the in-app browser cannot show it.
+    private func openLegal(_ page: LegalPage) {
+        if !browser.open(page.url()) { openURL(page.url()) }
     }
 }
 

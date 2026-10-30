@@ -96,6 +96,19 @@ final class TransactionDetailStore {
         showsRecategorisation = true
     }
 
+    /// A payment row's long press → Change category (brief 41): the change sheet the page's Change opens, at once, with
+    /// the same flow after it. It shows the payment as soon as it has loaded, or why it could not, with Retry.
+    func beginRecategorisationFromRow() async {
+        showsRecategorisation = true
+        if detail == nil { await load() }
+        guard detail != nil else { return }                      // the sheet shows the load error
+        guard !choices.isEmpty else {                            // the page would show no Change either
+            showsRecategorisation = false
+            return
+        }
+        beginRecategorisation()
+    }
+
     func select(_ name: String) {
         guard !isSaving, choices.contains(where: { $0.name == name }) else { return }
         if mode == .switchCategory { target = name }
