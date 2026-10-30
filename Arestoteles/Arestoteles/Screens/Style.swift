@@ -15,15 +15,26 @@ enum Look {
 /// Settings on the right.
 struct ScreenHeader: View {
     let title: String
+    var addPositionTo: String? = nil
+    var isSending = false
     @Environment(AppNavigation.self) private var navigation
 
     var body: some View {
         ZStack {
-            Text(title).font(AppFont.text(17, weight: .bold)).foregroundStyle(Ink.primary).lineLimit(1)
-                .accessibilityAddTraits(.isHeader)
+            if addPositionTo == nil { heading }
             HStack(spacing: 8) {
                 Image("Bust").resizable().scaledToFit().frame(width: 38, height: 38).accessibilityHidden(true)
-                Spacer()
+                if addPositionTo == nil {
+                    Spacer()
+                } else {
+                    heading.frame(maxWidth: .infinity)
+                }
+                if let target = addPositionTo {
+                    GlassIconButton(symbol: "plus", label: String(localized: "Add a position")) {
+                        navigation.sheet = .position(.add(note: target))
+                    }
+                    .disabled(isSending)
+                }
                 GlassIconButton(symbol: "square.and.pencil", label: String(localized: "Quick note")) {
                     navigation.sheet = .quickNote(about: nil)
                 }
@@ -34,6 +45,11 @@ struct ScreenHeader: View {
         }
         .frame(minHeight: 44)
         .padding(.horizontal, Look.side).padding(.top, 4).padding(.bottom, 6)
+    }
+
+    private var heading: some View {
+        Text(title).font(AppFont.text(17, weight: .bold)).foregroundStyle(Ink.primary).lineLimit(1)
+            .accessibilityAddTraits(.isHeader)
     }
 }
 

@@ -1,6 +1,13 @@
 import Foundation
 import Observation
 
+/// New text ignores empty whitespace; loaded text compares exactly with the version the person saw.
+enum DraftChanges {
+    static func hasChanges(_ text: String, original: String = "") -> Bool {
+        original.isEmpty ? !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty : text != original
+    }
+}
+
 /// A position being reworded, changed, dropped or added: what is typed, whether it can be sent, and the server's
 /// answer. The sheet shows it; the store sends it.
 @MainActor @Observable
@@ -40,20 +47,33 @@ final class PositionDraft {
     private(set) var isSaving = false
     /// What the server said when it refused, or why sending failed.
     private(set) var problem: String?
+    private let originalText: String
+    private let originalNote: String
 
     init(_ kind: Kind, index: VaultIndex) {
         self.kind = kind
+        let initialText: String
+        let initialNote: String
         switch kind {
         case let .reword(position), let .change(position):
-            text = index.position(position).map { InlineMarkdown.plain($0.text) } ?? ""
-            note = Position.note(ofID: position)
+            initialText = index.position(position).map { InlineMarkdown.plain($0.text) } ?? ""
+            initialNote = Position.note(ofID: position)
         case let .drop(position):
-            text = ""
-            note = Position.note(ofID: position)
+            initialText = ""
+            initialNote = Position.note(ofID: position)
         case let .add(target):
-            text = ""
-            note = target
+            initialText = ""
+            initialNote = target
         }
+        text = initialText
+        note = initialNote
+        originalText = initialText
+        originalNote = initialNote
+    }
+
+    var hasChanges: Bool {
+        DraftChanges.hasChanges(text, original: originalText) || DraftChanges.hasChanges(why)
+            || note != originalNote || !evidence.isEmpty
     }
 
     var needsText: Bool { if case .drop = kind { false } else { true } }

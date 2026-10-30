@@ -1,15 +1,22 @@
 import SwiftUI
 import UIKit
 
-/// A sheet's frame: its own navigation bar with a title and Close, on the wall.
+/// A sheet's frame: its own navigation bar with a title and Close, on the wall. Close asks before discarding a changed
+/// draft; its question is anchored to the button, like the shared support sheet's.
 struct SheetFrame<Content: View, Actions: ToolbarContent>: View {
     let title: String
     let content: Content
     let actions: Actions
+    var hasChanges = false
+    var discardQuestion = ""
+    @State private var confirmsDiscard = false
     @Environment(\.dismiss) private var dismiss
 
-    init(title: String, @ViewBuilder content: () -> Content, @ToolbarContentBuilder actions: () -> Actions) {
+    init(title: String, hasChanges: Bool = false, discardQuestion: String = "",
+         @ViewBuilder content: () -> Content, @ToolbarContentBuilder actions: () -> Actions) {
         self.title = title
+        self.hasChanges = hasChanges
+        self.discardQuestion = discardQuestion
         self.content = content()
         self.actions = actions()
     }
@@ -22,7 +29,13 @@ struct SheetFrame<Content: View, Actions: ToolbarContent>: View {
                 .navigationTitle(title)
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
-                    ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } }
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Close") { if hasChanges { confirmsDiscard = true } else { dismiss() } }
+                            .confirmationDialog(Text(discardQuestion), isPresented: $confirmsDiscard,
+                                                titleVisibility: .visible) {
+                                Button("Discard", role: .destructive) { dismiss() }
+                            }
+                    }
                     actions
                 }
         }
@@ -292,7 +305,8 @@ struct QuickNoteSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        SheetFrame(title: about == nil ? String(localized: "Quick note") : String(localized: "Note")) {
+        SheetFrame(title: about == nil ? String(localized: "Quick note") : String(localized: "Note"),
+                   hasChanges: DraftChanges.hasChanges(text), discardQuestion: String(localized: "Discard this note?")) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
                     if let about { SubjectLine(subject: about) }
@@ -331,6 +345,7 @@ struct QuickNoteSheet: View {
                 .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
         }
+        .interactiveDismissDisabled(DraftChanges.hasChanges(text))
         .onAppear { focused = true }
     }
 }
@@ -339,6 +354,7 @@ struct QuickNoteSheet: View {
 
 /// The "discuss later" marks not yet discussed: what each is about and the question, with Now (Claude) and Done.
 struct DiscussionsSheet: View {
+    @State private var undoOffer: UndoOffer?
     @Environment(VaultStore.self) private var store
     @Environment(AppNavigation.self) private var navigation
 
@@ -355,6 +371,7 @@ struct DiscussionsSheet: View {
                 .padding(.horizontal, Look.side).padding(.vertical, 12)
             }
         }
+        .undoBar($undoOffer, accent: Look.accent)
     }
 
     private func row(_ note: Note) -> some View {
@@ -371,7 +388,7 @@ struct DiscussionsSheet: View {
                     Button { navigation.sheet = .discuss(subject) } label: { Label("Now", systemImage: "bubble.left.and.text.bubble.right") }
                         .buttonStyle(.pill)
                 }
-                Button { Task { await store.setInboxStatus(of: note.id, processed: true) } } label: {
+                Button { Task { undoOffer = await store.markDiscussed(of: note.id) } } label: {
                     Label("Done", systemImage: "checkmark")
                 }
                 .buttonStyle(.pill)
@@ -393,6 +410,7 @@ struct PassageSheet: View {
     let note: String
     let lines: LineRange
     @State private var text = ""
+    @State private var original = ""
     @State private var source: NoteSource?
     @State private var problem: String?
     @State private var saving = false
@@ -401,7 +419,8 @@ struct PassageSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        SheetFrame(title: String(localized: "Edit")) {
+        SheetFrame(title: String(localized: "Edit"), hasChanges: DraftChanges.hasChanges(text, original: original),
+                   discardQuestion: String(localized: "Discard your changes?")) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
                     if source == nil && problem == nil {
@@ -441,10 +460,12 @@ struct PassageSheet: View {
                 .disabled(source == nil || saving || text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
         }
+        .interactiveDismissDisabled(DraftChanges.hasChanges(text, original: original) || saving)
         .task {
             switch await store.passage(of: note, lines: lines) {
             case let .success(loaded):
                 text = loaded.text
+                original = loaded.text
                 source = loaded.source
                 focused = true
             case let .failure(failure):
@@ -479,6 +500,7 @@ struct PendingRow: View {
 /// Reword, change my view (asks why), drop (asks why), add a position (where, the sentence, evidence picked from the
 /// notes).
 struct PositionSheet: View {
+    @State private var confirmsDiscard = false
     @State private var draft: PositionDraft
     @Environment(VaultStore.self) private var store
     @Environment(AppNavigation.self) private var navigation
@@ -529,7 +551,12 @@ struct PositionSheet: View {
             .navigationTitle(Text(title))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { if draft.hasChanges { confirmsDiscard = true } else { dismiss() } }
+                        .confirmationDialog("Discard your changes?", isPresented: $confirmsDiscard, titleVisibility: .visible) {
+                            Button("Discard", role: .destructive) { dismiss() }
+                        }
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     if draft.isSaving {
                         ProgressView()
@@ -542,7 +569,7 @@ struct PositionSheet: View {
                 }
             }
         }
-        .interactiveDismissDisabled(draft.isSaving)
+        .interactiveDismissDisabled(draft.hasChanges || draft.isSaving)
         .onDisappear { navigation.showsEvidencePicker = false }
     }
 

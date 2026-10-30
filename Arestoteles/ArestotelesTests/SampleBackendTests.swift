@@ -51,6 +51,16 @@ struct SampleBackendTests {
         #expect(await store.addQuickNote("on the train") == .waiting)
     }
 
+    @Test func discussedSampleDisappearsAndUndoBringsItBack() async throws {
+        let (store, _) = try store()
+        await store.update()
+        let note = try #require(store.index.openDiscussions.first?.id)
+        let offer = try #require(await store.markDiscussed(of: note))
+        #expect(!store.index.openDiscussions.contains { $0.id == note })
+        await offer.undo()
+        #expect(store.index.openDiscussions.contains { $0.id == note })
+    }
+
     @Test func sourcesForEveryNote() async throws {
         let backend = try SampleBackend()
         #expect(try await backend.source(note: "Spread of print").markdown.hasPrefix("# Spread of print"))

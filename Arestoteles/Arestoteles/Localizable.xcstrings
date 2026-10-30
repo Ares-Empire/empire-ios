@@ -426,6 +426,16 @@
         }
       }
     },
+    "Discard this note?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notiz verwerfen?"
+          }
+        }
+      }
+    },
     "Discard your changes?" : {
       "localizations" : {
         "de" : {
@@ -772,6 +782,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Markdown wie in Obsidian: [[Links]] und **fett** bleiben, wie sie sind."
+          }
+        }
+      }
+    },
+    "Marked as discussed." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Als besprochen markiert."
           }
         }
       }
