@@ -1,6 +1,6 @@
 # 43: Aresium remembers names the person gives payments, and adds up all payments of one name (the data)
 
-Status: draft
+Status: merged 2026-10-30 (Aresium tests pass, 0 failed; ledger schema 5, export schema 4; API in CLAUDE.md → Aresium phone mode)
 Branch: `codex/43-own-names` · Worktree: `../empire-ios-43-own-names` · Model: `gpt-6.1-sol`, effort `high`
 
 ## Goal
