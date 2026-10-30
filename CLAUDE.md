@@ -490,7 +490,15 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   never move with a shop's other payments; the same bank payment from two file formats is matched by account, day,
   amount and currency, one to one (`PhoneLedger.add`); every way a payment could count twice has a test
   (`PhoneCountingTests`, `PhoneConversionTests`). **The picker** sorts once the taps stop (`CategoryPickerModel.settle`,
-  half a second) or when it closes; learned merchants are rebuilt from corrections when the bundled engine changes
+  half a second) or when it closes, and rebuilds the dashboard only when it closes (brief 39). **Off the main thread**
+  (brief 39, measured: a settled burst held the main thread 404 ms at 5,000 payments, now 0.2 ms): SwiftData ran the
+  `@ModelActor` ledger's jobs on the main thread even when made elsewhere, so `PhoneLedger` has its own serial queue
+  (`PhoneLedgerExecutor`, the context made and used only there); the sort, the counts and the dashboard's input are built
+  inside the ledger (`PhonePickerWork.swift`), so the big arrays live and die there too; the engine's `JSContext` is made
+  off the main thread (`AresiumEngine.bundledForPhone`), since JavaScriptCore runs its clean-up timers on the run loop it
+  was made on; values are set only when they changed, and the picker's rows are equatable. Signposts: subsystem
+  `de.ares-empire.aresium`, category `picker` (`PickerTiming`; Instruments on the phone shows them); the timing run:
+  `TEST_RUNNER_PICKER_TIMINGS=1` with `-only-testing:AresiumTests/PickerTimingTests`. Learned merchants are rebuilt from corrections when the bundled engine changes
   (`PhoneBackend.rebuildLearnedKeys`). **Moving over** (builds before 22 kept one store per account in `Aresium/<account
   id>/`): when there is no `local/` store, the most recently changed older store (its newest file) is moved (never
   copied) to `local/` at the first open; with several, the others stay untouched where they are (logged, category

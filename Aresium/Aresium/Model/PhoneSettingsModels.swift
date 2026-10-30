@@ -5,8 +5,8 @@ import os
 /// The category picker (after an import while no category is chosen, Settings → Categories, the tour's Settings): the
 /// default list by group with a toggle each, a field for one's own names; nothing is ticked at first (Patrik,
 /// 2026-10-26). Each row carries how many payments its category has, or would get if ticked (`counts`). Unticking a
-/// category with payments asks where they go. Choices are saved per tap; sorting, counts and the dashboard wait
-/// until taps stop, or the picker closes.
+/// category with payments asks where they go. Choices are saved per tap; sorting and counts wait until taps stop.
+/// The dashboard is refreshed when the picker closes, before returning to it.
 @MainActor @Observable
 final class CategoryPickerModel {
     /// Unticking a category that has payments: where they go (another ticked category, or Not sorted).
@@ -36,9 +36,10 @@ final class CategoryPickerModel {
     @ObservationIgnored private var workTail: Task<Bool, Never>?
     @ObservationIgnored private var debounce: Task<Void, Never>?
     @ObservationIgnored private var pendingSort = false
-    private var workCount = 0
+    @ObservationIgnored private var pendingDashboard = false
+    @ObservationIgnored private var workCount = 0
     @ObservationIgnored let phone: PhoneBackend
-    /// After every change: the dashboard is built again.
+    /// At closing, after all changes: the dashboard is built again before it is shown.
     @ObservationIgnored private let changed: () async -> Void
     /// How long the taps must stop before the sort runs. Tests that check the batching pass a long one and flush
     /// themselves, so a busy machine never decides the result.
@@ -50,7 +51,7 @@ final class CategoryPickerModel {
         self.changed = changed
     }
 
-    var groups: [CategoryGroup] { list?.groups ?? [] }
+    var groups: [CategoryGroup] { PickerTiming.measure("picker.groups") { list?.groups ?? [] } }
     var custom: [CategoryGroup.Item] { list?.custom ?? [] }
     var chosenCount: Int { list?.chosen.count ?? 0 }
 
@@ -61,20 +62,25 @@ final class CategoryPickerModel {
 
     /// Some row shows a number: the picker says what the numbers mean.
     var showsCounts: Bool {
-        (groups.flatMap(\.items) + custom).contains { count(of: $0.id) != nil }
+        PickerTiming.measure("picker.showsCounts") { (groups.flatMap(\.items) + custom).contains { count(of: $0.id) != nil } }
     }
 
     func load() async {
-        do { list = try await phone.categories() }
+        do { publishList(try await phone.categories()) }
         catch { problem = error.localizedDescription }
         await loadCounts()
     }
 
     /// The numbers help to choose but are not needed for it: when they cannot be counted, none show (never old ones).
     private func loadCounts() async {
-        do { counts = try await phone.categoryCounts() }
+        let interval = PickerTiming.begin("loadCounts")
+        defer { interval.end() }
+        do {
+            let value = try await phone.categoryCounts()
+            PickerTiming.measure("counts.publish") { if counts != value { counts = value } }
+        }
         catch {
-            counts = [:]
+            if !counts.isEmpty { counts = [:] }
             Self.log.error("the picker's numbers were not counted: \(String(describing: error), privacy: .public)")
         }
     }
@@ -83,13 +89,15 @@ final class CategoryPickerModel {
 
     /// Ticks or unticks a category. Unticking one with payments asks first (`untick`).
     func toggle(_ id: String) async {
+        let interval = PickerTiming.begin("toggle")
+        defer { interval.end() }
         await work {
             guard let list = self.list else { return }
             self.problem = nil
             if !list.isChosen(id) {
                 // Update the tick before waiting for storage; queued actions preserve tap order.
                 self.list = PhoneCategoryList(catalog: list.catalog,
-                    chosen: list.chosen + [ChosenCategory(id: id, order: list.chosen.count)])
+                    chosen: list.chosen + [ChosenCategory(id: id, order: (list.chosen.map(\.order).max() ?? -1) + 1)])
                 try await self.phone.choose(id, sorting: false)
                 try await self.selectionChanged()
                 return
@@ -151,21 +159,45 @@ final class CategoryPickerModel {
     /// Done and Back await the same queue as taps, including a tap whose save is still under way.
     @discardableResult
     func flush() async -> Bool {
+        let interval = PickerTiming.begin("close-or-settle")
+        defer { interval.end() }
         debounce?.cancel()
         debounce = nil
-        return await work { try await self.flushPending() }
+        return await work {
+            try await self.flushPending()
+            if self.pendingDashboard {
+                let interval = PickerTiming.begin("changed")
+                await self.changed()
+                interval.end()
+                self.pendingDashboard = false
+            }
+        }
+    }
+
+    private func publishList(_ value: PhoneCategoryList?) {
+        PickerTiming.measure("list.publish") { if list != value { list = value } }
     }
 
     private func selectionChanged() async throws {
-        list = try await phone.categories()
+        let value = try await phone.categories()
+        publishList(value)
         pendingSort = true
+        pendingDashboard = true
         debounce?.cancel()
         debounce = Task { [weak self] in
             do { try await Task.sleep(for: self?.settle ?? .milliseconds(500)) }
             catch { return }
             guard let self else { return }
-            await self.flush()
+            await self.settleSelection()
         }
+    }
+
+    /// The settle updates the picker and storage while leaving the covered dashboard alone. Closing uses `flush`.
+    @discardableResult
+    func settleSelection() async -> Bool {
+        let interval = PickerTiming.begin("settled-flush")
+        defer { interval.end() }
+        return await work { try await self.flushPending() }
     }
 
     /// Called only inside the serial work queue. A cancelled wait never cancels a sort already in progress.
@@ -174,7 +206,6 @@ final class CategoryPickerModel {
         try await phone.sort()
         try await phone.refresh()
         await loadCounts()
-        await changed()
         pendingSort = false
     }
 
@@ -182,19 +213,20 @@ final class CategoryPickerModel {
     private func work(_ action: @escaping () async throws -> Void) async -> Bool {
         let previous = workTail
         workCount += 1
-        isWorking = true
+        if !isWorking { isWorking = true }
         let task = Task { @MainActor in
             _ = await previous?.value
             defer {
                 self.workCount -= 1
-                self.isWorking = self.workCount > 0
+                let working = self.workCount > 0
+                if self.isWorking != working { self.isWorking = working }
             }
             do {
                 try await action()
                 return true
             } catch {
                 self.problem = error.localizedDescription
-                self.list = try? await self.phone.categories()
+                self.publishList(try? await self.phone.categories())
                 return false
             }
         }

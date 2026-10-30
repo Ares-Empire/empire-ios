@@ -12,12 +12,12 @@ enum PhoneSample {
     static let customName = "Climbing"
 
     /// A store in a temporary folder of its own (never the phone's real one), filled unless `empty`.
-    static func backend(empty: Bool) async throws -> (backend: PhoneBackend, storage: PhoneStorage) {
+    static func backend(empty: Bool, storage suppliedStorage: PhoneStorage? = nil) async throws -> (backend: PhoneBackend, storage: PhoneStorage) {
         let root = FileManager.default.temporaryDirectory.appending(path: "aresium-sample-phone-" + UUID().uuidString,
                                                                      directoryHint: .isDirectory)
-        let storage = PhoneStorage(root: root)
+        let storage = suppliedStorage ?? PhoneStorage(root: root)
         let ledger = try await Task.detached { try storage.open() }.value
-        let backend = PhoneBackend(ledger: ledger, engine: try AresiumEngine.bundled(),
+        let backend = PhoneBackend(ledger: ledger, engine: try await AresiumEngine.bundledForPhone(),
                                    defaults: UserDefaults(suiteName: "aresium.phone.sample")!)
         try await backend.load()
         guard !empty else { return (backend, storage) }

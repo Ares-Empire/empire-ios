@@ -179,7 +179,6 @@ struct CategoryPickerScreen: View {
     var afterImport = false
     var done: (() -> Void)? = nil
     @FocusState private var typing: Bool
-    @Environment(\.dynamicTypeSize) private var typeSize
 
     /// What the picker is for; with numbers on the rows, also what they mean.
     private var note: String {
@@ -191,7 +190,7 @@ struct CategoryPickerScreen: View {
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
+                LazyVStack(alignment: .leading, spacing: 0) {
                     if afterImport {
                         Text("Your payments are in. Aresium sorts them as you tick.")
                             .font(AppFont.text(14.5, weight: .semibold)).foregroundStyle(Ink.primary).lineSpacing(3)
@@ -202,12 +201,10 @@ struct CategoryPickerScreen: View {
                     FormNote(text: note)
                         .padding(.top, afterImport ? 8 : 16)
                     ForEach(model.groups) { group in
-                        SettingsSection(group.title) {
-                            ForEach(Array(group.items.enumerated()), id: \.element.id) { index, item in
-                                if index > 0 { TileRowDivider() }
-                                row(item)
-                            }
-                        }
+                        CategoryPickerSection(group: group,
+                            counts: model.counts.filter { entry in group.items.contains { $0.id == entry.key } }, model: model)
+                            .equatable()
+                            .id(group.id)
                     }
                     SettingsSection(String(localized: "Your own")) {
                         ForEach(model.custom) { item in
@@ -216,6 +213,7 @@ struct CategoryPickerScreen: View {
                         }
                         addRow
                     }
+                    .id("picker-own")
                     if let problem = model.problem { FormProblem(text: problem).padding(.top, 12) }
                 }
                 .padding(.horizontal, 18).padding(.bottom, 34)
@@ -261,6 +259,13 @@ struct CategoryPickerScreen: View {
         }
         if let id = LaunchArguments.value("-scrollToCategory") {
             try? await Task.sleep(for: .milliseconds(300))
+            // A lazy section must exist before ScrollViewReader can address a row inside its card.
+            if let group = model.groups.first(where: { $0.items.contains(where: { $0.id == id }) }) {
+                proxy.scrollTo(group.id, anchor: .top)
+            } else {
+                proxy.scrollTo("picker-own", anchor: .top)
+            }
+            try? await Task.sleep(for: .milliseconds(100))
             proxy.scrollTo(id, anchor: .top)
         }
         if arguments.contains("-samplePickerDone"), await model.flush() { done?() }
@@ -268,9 +273,68 @@ struct CategoryPickerScreen: View {
     #endif
 
     private func row(_ item: CategoryGroup.Item) -> some View {
-        let count = model.count(of: item.id)
+        CategoryPickerRow(item: item, count: model.count(of: item.id), model: model).equatable()
+    }
+
+    /// A name of one's own: a plus tile, the field, Add.
+    private var addRow: some View {
+        let canAdd = !model.newName.trimmingCharacters(in: .whitespaces).isEmpty && !model.isWorking
+        return HStack(spacing: 12) {
+            Image(systemName: "plus").font(.system(size: 16, weight: .medium)).foregroundStyle(Ink.secondary)
+                .frame(width: 38, height: 38)
+                .background(Ink.card2, in: RoundedRectangle(cornerRadius: 9))
+                .overlay(RoundedRectangle(cornerRadius: 9).stroke(Ink.line))
+                .accessibilityHidden(true)
+            TextField("", text: $model.newName, prompt: Text("A category of your own").foregroundStyle(Ink.muted))
+                .font(AppFont.text(15)).foregroundStyle(Ink.primary)
+                .textInputAutocapitalization(.sentences)
+                .focused($typing).submitLabel(.done).onSubmit(add)
+            Button("Add", action: add)
+                .font(AppFont.text(14.5, weight: .semibold)).foregroundStyle(canAdd ? Ink.primary : Ink.muted)
+                .buttonStyle(.plain)
+                .disabled(!canAdd)
+        }
+        .padding(.horizontal, 14).padding(.vertical, 10)
+    }
+
+    private func add() {
+        Task { await model.addCustom() }
+    }
+}
+
+/// Ticks and count changes redraw only their section and row. Equal sections keep their existing layout.
+private struct CategoryPickerSection: View, Equatable {
+    let group: CategoryGroup
+    let counts: [String: Int]
+    let model: CategoryPickerModel
+
+    nonisolated static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.group == rhs.group && lhs.counts == rhs.counts && lhs.model === rhs.model
+    }
+
+    var body: some View {
+        SettingsSection(group.title) {
+            ForEach(Array(group.items.enumerated()), id: \.element.id) { index, item in
+                if index > 0 { TileRowDivider() }
+                CategoryPickerRow(item: item, count: counts[item.id], model: model).equatable()
+            }
+        }
+    }
+}
+
+private struct CategoryPickerRow: View, Equatable {
+    let item: CategoryGroup.Item
+    let count: Int?
+    let model: CategoryPickerModel
+    @Environment(\.dynamicTypeSize) private var typeSize
+
+    nonisolated static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.item == rhs.item && lhs.count == rhs.count && lhs.model === rhs.model
+    }
+
+    var body: some View {
         let name = Text(verbatim: item.name).font(AppFont.text(14.5, weight: .semibold)).foregroundStyle(Ink.primary)
-        return Button { Task { await model.toggle(item.id) } } label: {
+        Button { Task { await model.toggle(item.id) } } label: {
             HStack(spacing: 12) {
                 CategoryTile(icon: item.look.icon, color: item.look.color)
                 if typeSize.isAccessibilitySize {
@@ -302,31 +366,6 @@ struct CategoryPickerScreen: View {
         Text(count, format: .number).font(AppFont.number(12.5, weight: .medium)).foregroundStyle(Ink.muted)
             .lineLimit(1).fixedSize()
             .accessibilityLabel(Text("\(count) payments"))
-    }
-
-    /// A name of one's own: a plus tile, the field, Add.
-    private var addRow: some View {
-        let canAdd = !model.newName.trimmingCharacters(in: .whitespaces).isEmpty && !model.isWorking
-        return HStack(spacing: 12) {
-            Image(systemName: "plus").font(.system(size: 16, weight: .medium)).foregroundStyle(Ink.secondary)
-                .frame(width: 38, height: 38)
-                .background(Ink.card2, in: RoundedRectangle(cornerRadius: 9))
-                .overlay(RoundedRectangle(cornerRadius: 9).stroke(Ink.line))
-                .accessibilityHidden(true)
-            TextField("", text: $model.newName, prompt: Text("A category of your own").foregroundStyle(Ink.muted))
-                .font(AppFont.text(15)).foregroundStyle(Ink.primary)
-                .textInputAutocapitalization(.sentences)
-                .focused($typing).submitLabel(.done).onSubmit(add)
-            Button("Add", action: add)
-                .font(AppFont.text(14.5, weight: .semibold)).foregroundStyle(canAdd ? Ink.primary : Ink.muted)
-                .buttonStyle(.plain)
-                .disabled(!canAdd)
-        }
-        .padding(.horizontal, 14).padding(.vertical, 10)
-    }
-
-    private func add() {
-        Task { await model.addCustom() }
     }
 }
 
