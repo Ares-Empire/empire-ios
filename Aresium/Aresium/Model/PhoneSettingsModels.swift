@@ -40,9 +40,13 @@ final class CategoryPickerModel {
     @ObservationIgnored let phone: PhoneBackend
     /// After every change: the dashboard is built again.
     @ObservationIgnored private let changed: () async -> Void
+    /// How long the taps must stop before the sort runs. Tests that check the batching pass a long one and flush
+    /// themselves, so a busy machine never decides the result.
+    @ObservationIgnored private let settle: Duration
 
-    init(phone: PhoneBackend, changed: @escaping () async -> Void) {
+    init(phone: PhoneBackend, settle: Duration = .milliseconds(500), changed: @escaping () async -> Void) {
         self.phone = phone
+        self.settle = settle
         self.changed = changed
     }
 
@@ -157,7 +161,7 @@ final class CategoryPickerModel {
         pendingSort = true
         debounce?.cancel()
         debounce = Task { [weak self] in
-            do { try await Task.sleep(for: .milliseconds(500)) }
+            do { try await Task.sleep(for: self?.settle ?? .milliseconds(500)) }
             catch { return }
             guard let self else { return }
             await self.flush()

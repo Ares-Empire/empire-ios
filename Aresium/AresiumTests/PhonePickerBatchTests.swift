@@ -27,20 +27,22 @@ struct PhonePickerBatchTests {
         return try AresiumEngine(script: script)
     }
 
-    private func setup() async throws -> (PhoneBackend, CategoryPickerModel, ChangeCounter) {
+    private func setup(settle: Duration = .milliseconds(500)) async throws -> (PhoneBackend, CategoryPickerModel, ChangeCounter) {
         let phone = try await PhoneCountingTests.backend(engine: Self.countingEngine(paymentCount: 2))
         _ = try await phone.importFiles([PhoneTest.vrBank([
             ("01.10.2026", "REWE", "REWE", -2000),
             ("02.10.2026", "Fictional Landlord", "Miete", -80000),
         ])], auth: auth)
         let changes = ChangeCounter()
-        let picker = CategoryPickerModel(phone: phone) { changes.count += 1 }
+        let picker = CategoryPickerModel(phone: phone, settle: settle) { changes.count += 1 }
         await picker.load()
         return (phone, picker, changes)
     }
 
+    /// Timing-free: the wait is far longer than the test, so taps never reach it; the flushes stand for the taps
+    /// stopping. (With the real half second, a busy machine let the wait run out between two taps.)
     @Test func fiveQuickTogglesSortOnceAndEqualFiveSlowToggles() async throws {
-        let (quick, picker, changes) = try await setup()
+        let (quick, picker, changes) = try await setup(settle: .seconds(3600))
         let start = Int(try await quick.engine.version())!
         for id in choices {
             await picker.toggle(id)
@@ -48,16 +50,14 @@ struct PhonePickerBatchTests {
             #expect(try await quick.ledger.chosen().contains { $0.id == id })
         }
         #expect(changes.count == 0) // Saves happened; sorting has not.
-        try await Task.sleep(for: .milliseconds(650))
         #expect(await picker.flush())
         #expect(changes.count == 1)
         #expect(Int(try await quick.engine.version()) == start + 1)
 
-        let (slow, slowPicker, slowChanges) = try await setup()
+        let (slow, slowPicker, slowChanges) = try await setup(settle: .seconds(3600))
         let slowStart = Int(try await slow.engine.version())!
         for id in choices {
             await slowPicker.toggle(id)
-            try await Task.sleep(for: .milliseconds(650))
             #expect(await slowPicker.flush())
         }
         #expect(slowChanges.count == 5)
