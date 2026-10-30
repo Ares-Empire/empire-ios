@@ -215,7 +215,8 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
 1. **TestFlight** (Apple approved 2026-10-29): **Aresium done**: 0.1 (1) uploaded with `scripts/testflight.sh` and installed
    on Patrik's iPhone through internal TestFlight (group in App Store Connect → Aresium → TestFlight → Internal
    Testing). Build 2 (2026-10-30): the fixes of Patrik's first test (briefs 34–37). Build 3: the picker's scroll, the
-   back swipe and the comfort items (briefs 38–41). The other four: first their approved comfort items (15 below), then
+   back swipe and the comfort items (briefs 38–41). Build 4 (2026-10-30 evening): own names and the name's page with the
+   left swipe, the graph as a setting, Aresium's own messages (briefs 42–46). The other four: first their approved comfort items (15 below), then
    an App Store Connect record each, then the script. Original
    list: set the paid team (project level, all five projects; done); the App Groups
    `group.de.ares-empire.aresium` + `group.de.ares-empire.shared` registered for the bundle ids, the widgets' too
