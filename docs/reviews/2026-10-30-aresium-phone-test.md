@@ -90,3 +90,26 @@ main-thread pause of more than about 8 ms shows while scrolling):
   press on a payment to change its category, the import result swiped away, 44 pt tap areas, Privacy and Imprint
   inside the app, Log out asks first); the other four apps' wait for their first TestFlight (CLAUDE.md → Open 15).
 - Also: the German "Done" is "Fertig" now, iOS's own word (was "Erledigt").
+
+## Third round: wishes after build 3 (2026-10-30 evening), built for build 4
+
+Patrik, after testing build 3 ("fantastic work"), asked for:
+
+11. **Rename payments** to names one remembers; Aresium keeps the name with the bank's, so new imports are still
+    sorted by the bank's name and get the name automatically; the payment's page shows the bank's name small under the
+    own name; a setting switches between own and bank names. *Built:* briefs 43 (data, Codex) and 44 (screens).
+    Renaming asks, as the category change does, "Also the other N payments from <bank name>?" (All: the shop, also
+    future imports; Only this one). Without renaming, "the same name" is Aresium's shop recognition, so the spellings
+    of one shop count together.
+12. **Add up all payments of one name**, reached by swiping a row (like Mail). *Decided (Patrik):* swipe left only, no
+    direction setting (a right swipe would take the back swipe from the middle). Claude added, since a swipe cannot be
+    seen: a visible "All from <name>" card on the payment's page and the same entry in the long press. *Built:* brief
+    44 (the name's page: totals, graph, months, payments).
+13. **The graph was off again after reopening the app;** he prefers it on. *Built:* brief 42: the graph is a setting
+    (Settings → Dashboard → Graph, on by default, kept); the header's sun and graph buttons are gone (light and dark:
+    Settings → General → Appearance). A category's page shows the graph above its months.
+14. **Aresium's messages from the app, not Telegram,** with settings for whether, which and how often. *Done:* the
+    Telegram bot (`aresium-bot.service`) stopped and disabled on the server. *Decided (Patrik):* two messages, an import
+    reminder that names no bank or service, and a month review. *Built:* briefs 45 (local notifications, Codex) and 46
+    (Settings → Messages, a one-time offer after the first import). Also: red mode's expense graph line was nearly
+    black on the red; now light.

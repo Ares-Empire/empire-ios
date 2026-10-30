@@ -1,6 +1,6 @@
 # 45: Aresium's own messages: the import reminder and the month review (the logic)
 
-Status: draft
+Status: merged 2026-10-30 (Aresium tests pass with briefs 42 and 43; Claude added PhoneImportResult.accountID, the review focus ending in the background, the German)
 Branch: `codex/45-messages` · Worktree: `../empire-ios-45-messages` · Model: `gpt-6.1-sol`, effort `high`
 
 ## Goal

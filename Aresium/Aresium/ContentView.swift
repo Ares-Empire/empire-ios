@@ -16,14 +16,16 @@ struct ContentView: View {
     @State private var outbox: BankOutbox
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage(ThemeState.preferenceKey) private var rememberedRed = false
-    @AppStorage(Appearance.key) private var appearance = Appearance.iPhone.rawValue
+    /// Settings → Dashboard → Graph (brief 42): the dashboard's graph, on by default and kept across launches.
+    @AppStorage(GraphSetting.key) private var showsGraph = GraphSetting.shownByDefault
     /// Light or dark as Settings → Appearance (or the iPhone) says; red mode shows over it.
     @Environment(\.appearanceScheme) private var appearanceScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var theme: ThemeState
     private let pausedIntroProgress: Double?
     private let restoresOnLaunch: Bool
-    /// Where the person's dashboard is (pushed screens, Current/Overview, the page, the graph, the open payment).
+    private let messagesActive: Bool
+    /// Where the person's dashboard is (pushed screens, Current/Overview, the page, the open payment).
     @State private var place = DashboardPlace()
     /// The tour, while it runs in place of the dashboard (on a made-up store of its own, `TourModel`).
     @State private var tour: TourModel?
@@ -36,6 +38,7 @@ struct ContentView: View {
     @State private var samplePhone: Bool
     /// Files shared into Aresium while it was locked: imported once it is unlocked.
     @State private var heldFiles: [URL] = []
+    @State private var heldLink: URL?
     @State private var showsSettings = false
     /// Import data's file picker (the first screen). The category picker follows an import that added payments while
     /// none is chosen (`ImportStore.asksForCategories`).
@@ -110,6 +113,11 @@ struct ContentView: View {
         let store = sample && !phoneSample
             ? DashboardStore(session: session, sample: true, widgetPublisher: publisher)
             : DashboardStore(session: session, backend: nil, widgetPublisher: publisher)
+        #if DEBUG
+        messagesActive = !debugLaunch
+        #else
+        messagesActive = true
+        #endif
         // Samples (and the app while tests run) only pretend to send a bank's format or name.
         #if DEBUG
         let outbox = sample || DebugLaunch.isTesting ? BankOutbox.sample()
@@ -138,9 +146,8 @@ struct ContentView: View {
             _showsSettings = State(initialValue: arguments[index + 1] == "settings")
         }
         if phoneSample {
-            // Screenshots: `-sampleOverview` (Overview, not Current), `-sampleGraph` (the graph shown), `-sampleCategory`.
-            var place = DashboardPlace(current: !arguments.contains("-sampleOverview"),
-                                       graph: arguments.contains("-sampleGraph"))
+            // Screenshots: `-sampleOverview` (Overview, not Current), `-sampleCategory`. The graph follows the setting.
+            var place = DashboardPlace(current: !arguments.contains("-sampleOverview"))
             if let index = arguments.firstIndex(of: "-sampleCategory"), arguments.indices.contains(index + 1) {
                 place.path = [DashboardRoute(category: arguments[index + 1], side: .expenses)]
                 if let month = arguments.firstIndex(of: "-sampleMonth"), arguments.indices.contains(month + 1) {
@@ -167,8 +174,7 @@ struct ContentView: View {
                 imports.show("12 new transactions imported · 1 skipped", success: true)
             }
             let side: DashboardSide = arguments.contains("-sampleIncome") ? .income : .expenses
-            var place = DashboardPlace(current: !arguments.contains("-sampleOverview"), side: side,
-                                       graph: arguments.contains("-sampleGraph"))
+            var place = DashboardPlace(current: !arguments.contains("-sampleOverview"), side: side)
             if let index = arguments.firstIndex(of: "-sampleCategory"), arguments.indices.contains(index + 1) {
                 let name = arguments[index + 1]
                 var routes = [DashboardRoute(category: name, side: side)]
@@ -201,7 +207,8 @@ struct ContentView: View {
                         ModeStatusScreen(modes: modes, palette: palette)
                     }
                 case .waitingForLogin, .firstScreen, .dashboard:
-                    DashboardStack(store: store, palette: palette, place: $place, band: band(in: geometry)) { route in
+                    DashboardStack(store: store, palette: palette, place: $place, graph: showsGraph,
+                                   band: band(in: geometry)) { route in
                         header(route)
                         restoreFeedback
                     } root: {
@@ -216,7 +223,7 @@ struct ContentView: View {
                                              restore: { restoringExport = true })
                         default:
                             StartScreen(store: store, imports: imports, palette: palette, current: $place.current,
-                                        side: $place.side, graph: $place.graph, band: band(in: geometry),
+                                        side: $place.side, graph: showsGraph, band: band(in: geometry),
                                         importChoices: modes.phone == nil ? nil : phoneImportChoices,
                                         openGuide: { showsGuide = true }) {
                                 place.path.append($0)
@@ -258,6 +265,9 @@ struct ContentView: View {
             .onChange(of: scenePhase) { _, phase in
                 // Before anything async: server mode on a login not renewed yet ends when the saved login changed.
                 if phase == .active { modes.followMarker() }
+                // A month review opened from its message stays on screen while the person reads it; leaving the app
+                // brings Current back to this month, so it never quietly shows an old month later.
+                if phase == .background { store.showReview(month: nil) }
             }
             .onEmpireForeground(session: session) {
                 await session.followSharedLogin()    // another Empire app may have logged in or out
@@ -289,26 +299,9 @@ struct ContentView: View {
                 heldFiles = []
                 Task { await imports.receive(files, source: .shared) }
             }
-            .onOpenURL { url in
-                // A file shared to Aresium or a widget's link ends a tour first (its made-up store goes): the file goes
-                // to the person's own store, the link opens their own dashboard.
-                tour?.end()
-                if url.isFileURL {
-                    // Shared into Aresium while locked: it waits until Aresium is unlocked.
-                    if lock.isLocked { heldFiles.append(url) }
-                    else { Task { await imports.receive([url], source: .shared) } }
-                } else if let destination = AresiumURL(url: url) {
-                    place.current = true
-                    place.side = .expenses
-                    place.graph = false
-                    switch destination {
-                    case .start: place.path = []
-                    case .category(let name): place.path = [store.route(category: name, side: .expenses, current: true)]
-                    }
-                }
-            }
+            .onOpenURL(perform: route)
             .overlay(alignment: .bottom) {
-                ImportFeedback(store: imports, palette: palette)
+                ImportFeedback(store: imports, palette: palette, offer: reminderOffer)
             }
             .sheet(isPresented: $showsSettings, onDismiss: importPickedInGuide) {
                 SettingsScreen(app: SettingsApp(name: "Aresium",
@@ -316,7 +309,13 @@ struct ContentView: View {
                                                 licences: [.shopList()]),
                                session: session, sample: sampleActive, logOut: logOut) {
                     if modes.phone != nil { PhoneSettingsSection(modes: modes, data: phoneData, palette: palette) }
+                    // Brief 46: Aresium's own messages (phone mode), after the data they are about, before the Lock.
+                    if modes.phone != nil, let messages = store.messages {
+                        MessagesSettingsSection(messages: messages, lock: lock)
+                    }
                     LockSettingsSection(lock: lock)
+                    // Last of Aresium's own, so it sits just above General → Appearance: how the app looks.
+                    DashboardSettingsSection()
                 } help: {
                     NavigationLink {
                         BankGuideList(importing: guideImport { showsSettings = false }, outbox: outbox)
@@ -389,8 +388,15 @@ struct ContentView: View {
             }
         }
         // While locked, the lock window is all there is: the app below is not read out either.
+        .onChange(of: MessageTapRouter.shared.openedURL, initial: true) { _, _ in
+            if let url = MessageTapRouter.shared.take() { route(url) }
+        }
+        .onChange(of: tour != nil) { _, touring in store.messages?.setTour(touring) }
+        .onChange(of: modes.state) { _, _ in routeHeldLink() }
+        .onChange(of: lock.isLocked) { _, _ in routeHeldLink() }
         .accessibilityHidden(lock.isLocked)
         .background { LockWindowReader(lockWindow: lockWindow) }
+        .task { store.installMessages(lock: lock, active: messagesActive) }
         .task { handOverForgotCode() }
         // A tour the app was closed in left its made-up store behind: it goes now (no tour runs yet).
         .task { if tour == nil { TourWorld.removeLeftovers() } }
@@ -424,8 +430,38 @@ struct ContentView: View {
         Task { await imports.receive(urls) }
     }
 
-    /// The tour, from the first screen or Settings → Help: it fills its made-up store and shows in place of the
-    /// dashboard. When it ends, the first screen comes back while there is no data (`MainScreen`).
+    /// Widget links, notification taps and shared files all end the tour before opening the person's own store.
+    private func route(_ url: URL) {
+        tour?.end()
+        if url.isFileURL {
+            if lock.isLocked { heldFiles.append(url) }
+            else { Task { await imports.receive([url], source: .shared) } }
+        } else if let destination = AresiumURL(url: url) {
+            // A cold-launch tap waits for the phone's store; a picker waits for the lock window to open too.
+            if modes.state == .opening || (destination == .importData && lock.isLocked) {
+                heldLink = url
+                return
+            }
+            place.current = true
+            place.side = .expenses
+            switch destination {
+            case .start: store.showReview(month: nil); place.path = []
+            case .importData: picksFiles = modes.phone != nil
+            case .review(let month): store.showReview(month: month); place.path = []
+            case .category(let name):
+                store.showReview(month: nil)
+                place.path = [store.route(category: name, side: .expenses, current: true)]
+            }
+        }
+    }
+
+    private func routeHeldLink() {
+        guard let url = heldLink else { return }
+        heldLink = nil
+        route(url)
+    }
+
+    /// The tour, from the first screen or Settings → Help: fills its made-up store in place of the dashboard.
     private func startTour() {
         guard tour == nil else { return }
         let model = TourModel()
@@ -496,6 +532,36 @@ struct ContentView: View {
         return phone.receiptQuestions.first
     }
 
+    /// The one-time offer of the messages (brief 46), in the import result's place: after the first import that added
+    /// payments, once its result (with the send card), the category picker and any other window are done. Never in the
+    /// tour, nor in the samples (their messages are none, or a pretend model that offers only with
+    /// `-sampleReminderOffer`).
+    private var reminderOffer: ReminderOfferChoice? {
+        guard let messages = store.messages else { return nil }
+        let windowOpen = showsSettings || showsGuide || picksFiles || restoringExport || imports.layoutRequest != nil
+            || pendingReceiptQuestion != nil || receipts.reading != nil || receipts.scanning || receipts.pickingPhoto
+            || cashEntry != nil
+        let moment = ReminderOffer.Moment(messages: messages, imports: imports, tour: tour != nil, locked: lock.isLocked,
+                                          window: windowOpen)
+        guard ReminderOffer.shows(moment) else { return nil }
+        return ReminderOfferChoice(interval: messages.preferences.interval,
+                                   turnOn: { acceptReminderOffer(messages) },
+                                   notNow: { messages.declineReminderOffer() })
+    }
+
+    /// The offer's Turn on: both messages on (iOS asks now, the first time); once iOS allowed them, a line in the
+    /// result's place says where they are changed. Waiting for iOS's answer happens off the tap (`idle`).
+    private func acceptReminderOffer(_ messages: AresiumMessages) {
+        messages.acceptReminderOffer()
+        Task {
+            await messages.idle()
+            // Never in place of a result that came meanwhile.
+            if messages.authorization == .allowed, messages.preferences.enabled, imports.banner == nil, !imports.isBusy {
+                imports.show(String(localized: "Messages are on. You can change them in Settings."), success: true)
+            }
+        }
+    }
+
     /// The question was closed without an answer: that receipt waits (asked again only after the next import).
     private func receiptQuestionClosed() {
         guard let phone = modes.phone, let id = askedReceipt,
@@ -542,6 +608,8 @@ struct ContentView: View {
             if arguments.contains("-sampleCash") { try await PhoneSample.addCash(phone) }
             if arguments.contains("-sampleImportQuestion") { try await PhoneSample.addImportQuestions(phone) }
             await modes.showFixed(phone, storage: storage)
+            // Settings → Messages and the offer on the sample (brief 46): a pretend model; nothing reaches iOS.
+            store.installSampleMessages()
             // `-importData`: the first screen's Import data at launch (the file picker).
             if arguments.contains("-importData") { importData() }
             // `-choosePhoto`: Import → Choose photo at launch (the photo picker). Receipts (the simulator has no camera):
@@ -692,14 +760,10 @@ struct ContentView: View {
         return ScreenHeader(title: title, subtitle: subtitle,
                             category: category, palette: palette,
                             back: route == nil ? nil : { back(route) },
-                            toggleTheme: {
-            guard !theme.isAnimating else { return }
-            if theme.red {
-                bandLanding = nil
-                theme.send(.header, reduceMotion: reduceMotion)       // the X: back to light or dark
-            } else {
-                appearance = Appearance.toggled(from: appearanceScheme).rawValue    // the sun: the app's appearance
-            }
+                            leaveRed: {
+            guard !theme.isAnimating, theme.red else { return }
+            bandLanding = nil
+            theme.send(.header, reduceMotion: reduceMotion)           // the X: back to light or dark
         }, openSettings: openSettings ?? { showsSettings = true })
     }
 

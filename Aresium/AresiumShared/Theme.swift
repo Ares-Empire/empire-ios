@@ -13,8 +13,9 @@ struct Palette {
     var grid: Color { red ? Color(hex: "FFD2D8").opacity(0.10) : (dark ? Color.white : Color(hex: "0F1428")).opacity(dark ? 0.05 : 0.07) }
     var card: Color { red ? Color(hex: "2C050F").opacity(0.52) : dark ? Color(hex: "0F1015").opacity(0.55) : Color.white.opacity(0.74) }
     var card2: Color { red ? Color(hex: "400915").opacity(0.56) : Color(hex: dark ? "1A1C23" : "F7F8FB").opacity(dark ? 0.62 : 0.82) }
-    /// The expense series in charts (the website's colour: black on the red wall).
-    var expense: Color { Color(hex: red ? "0A0A0A" : dark ? "FF2D4B" : "E11030") }
+    /// The expense series in charts. On the red wall the light ink, as the widget's line and the expense text: the
+    /// website's black (0A0A0A) all but vanished on the app's darker red wall (about 1.3:1, brief 46).
+    var expense: Color { red ? ink : Color(hex: dark ? "FF2D4B" : "E11030") }
     /// Text in the expense colour (headings, amounts, errors): in red mode the light ink, since black text on the red
     /// wall cannot be read (about 1.3:1).
     var expenseText: Color { red ? ink : expense }

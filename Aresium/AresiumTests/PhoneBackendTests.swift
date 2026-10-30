@@ -19,7 +19,10 @@ struct PhoneBackendTests {
         ])
         let results = PhoneTest.phoneResults(try await phone.importFiles([file], auth: none))
         #expect(results == [PhoneImportResult(name: "vr.csv", added: 3, already: 0, sorted: 2, waiting: 1,
-                                               account: results.first?.account, newIDs: results.first?.newIDs ?? [])])
+                                               account: results.first?.account, accountID: results.first?.accountID,
+                                               newIDs: results.first?.newIDs ?? [])])
+        // The stored account's id, which Aresium's messages use to know the account was imported (brief 45).
+        #expect(results.first?.accountID == (try await phone.ledger.payments().first?.account))
         #expect(Set(results.first?.newIDs ?? []) == Set(try await phone.ledger.payments().map(\.id)))
         #expect(phone.importSummary(results.map { .phone($0) })
                 == "3 new · 0 already there · 2 sorted · 1 not sorted")

@@ -272,6 +272,7 @@ final class ModeStore {
     /// Deletes the phone's store, and the widget's numbers when they are the phone's; an empty store opens in its place.
     /// Settings → "Delete Aresium data on this iPhone" and the lock's "Forgot the code?" run it; nothing else does.
     func deleteLocalData() async throws {
+        await dashboard.messages?.deleteAll()
         let shown = state != .server
         switchID += 1
         storeGeneration += 1

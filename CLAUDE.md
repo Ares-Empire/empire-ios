@@ -191,7 +191,8 @@ it, no restart.
   when the iPhone switched while an app was open, brief 36).
 - **Widgets follow the home screen** (light or dark like the widgets around them), not the app's choice; Aresium's
   also shows its red mode (`WidgetSnapshotStore.redMode`, `AresiumWidgetLook`).
-- **Aresium:** light or dark is the shared appearance; the sun button in its header switches it (writes the choice);
+- **Aresium:** light or dark is the shared appearance, chosen only in Settings → General → Appearance (the header's sun
+  button is gone since brief 42);
   red is Aresium's own mode over either (`ThemeState.red`, remembered), entered and left with the band.
 - **Empire app: the marble hall** (light): ivory wall, antique gold (`EmpireStyle.goldText`/`goldName` as pairs), the
   bust laid in with multiply, parchment coins, a plain gold chronicle line with amber dust. The phone hub's greys keep
@@ -557,6 +558,35 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   as on the dashboard). Covered rows and payments counting in neither overall total are excluded; tags cannot add
   them back. The ledger executor also does name saving, merchant-key input and the question’s count off main;
   `PaymentNamesTests` checks the worker spans (`names.*`) and opens an actual schema 3 store with all record types.
+  **Renaming and the name's page** (brief 44, the screens; Patrik 2026-10-30: swipe left only, no direction setting):
+  the payment's page shows the shown name as its title and, when it is an own name, the bank's name small under it; a
+  **Name** row (as Category/Change: where the name comes from, "Your name for this payment." / "Your name for all
+  payments from <bank>." / "The name your bank gives it.", and a bordered **Rename**; hidden while Own names is off)
+  opens `RenameSheet` (`Model/PaymentRename.swift`: `RenamePlan`, `PaymentRenameModel`): one field starting with the
+  shown name, Cancel and Save at the top (Save off while unchanged; Cancel after typing asks, `DiscardingCancel`), "Use
+  the bank's name" while an own name shows. A new name asks whenever there is a merchant key and N > 0: "Also the other
+  payments from <bank>?" with "With All, new payments … get the name too.", **All N+1** (the shop's rule; this payment's
+  own name is dropped) or **Only this one**. Removing a name that other payments share through the shop's rule asks
+  first (brief 43's API cannot leave one payment on the bank's name while its shop keeps a name). **"All from <name>"**
+  (a card under the date on the payment's page, a withdrawal's too, only when the group has more than this payment; the
+  long press; the swipe) opens the **name's page** (`Screens/NameScreen.swift`, `DashboardRoute.name`, pushed on the
+  dashboard's stack, so the arrow and the back swipe work; from the payment's sheet it closes the sheet first): the count
+  and range, Spent (and Received when any), the graph above the months (`showsGraph` = the Graph setting), the months
+  oldest first as a category's (a tap or a graph point scrolls to that month's payments, so the rows end in
+  `chevron.down`), then the payments newest first under month headers; after a whole-shop rename it follows the new
+  name. **The swipe** (`Screens/RowSwipe.swift`: `RowSwipeRule`, tested, inside a `UIPanGestureRecognizer` subclass,
+  since a plain recognizer got no moves inside the scroll view): only a drag at least twice as sideways as vertical and
+  leftward (rightward on an open row closes it); it opens at 84 pt and fires at 55 % of the row (at least 168 pt) with a
+  haptic at the threshold; one row open at a time, closed by a scroll or a tap elsewhere; the action is a quiet grey
+  "All" with a stack icon, VoiceOver's action "All from <name>", Reduce Motion fades it in. The month's list and the
+  name's page share one row (`Screens/PaymentList.swift`: tap, long press, swipe, and the windows they open). The long
+  press adds Rename and All from where the page offers them (`PaymentRowAction`). Receipt rows swipe too but have no
+  "All from" in their menu (the receipt page has no line); the Cash page's movement rows have no swipe. **Own names**
+  ("Eigene Namen") is a toggle in Settings → Your data on this iPhone (`DashboardStore.setOwnNames`). Launch arguments
+  (DEBUG, with `-samplePhone`): `-sampleNames` (made-up own names), `-ownNames off`, `-openRename`, `-renameText
+  <text>`, `-renameSave`, `-renameBankName`, `-openAllFrom`, `-openName <text>`, `-sampleSwipe <pt> -swipeRow <text>`.
+  Tests: `PaymentNameScreensTests`. Screenshots: `build/44-*.png`. Real-touch checks (a temporary UI test, deleted):
+  a slanted vertical drag scrolls and opens nothing; the back swipe from the middle still works 6 of 6.
   **The widget snapshot** belongs to the store it shows: phone mode's carries `phone: true` and is shown whoever is
   logged in; server mode's carries its account and follows the marker as before (`WidgetSnapshotStore.readShown`).
   **The lock** (brief 22, `Model/AppLock.swift`, `Screens/LockScreen.swift`, `Screens/LockSettings.swift`): optional,
@@ -580,6 +610,87 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   are kept for them: `widget-locked.json` in the App Group). `NSFaceIDUsageDescription` in `Info.plist`, German in
   `InfoPlist.xcstrings`. **Contact & support** always without a login: the `contact` path (above). **Push:** Aresium never
   registers a device (only the cleanup-only center that removes the other apps' devices when someone logs out here).
+  **Local messages** (brief 45, logic only; Settings and the offer are brief 46): phone mode uses
+  `UNUserNotificationCenter`, never remote push. `DashboardStore.messages: AresiumMessages?` is the page's model;
+  only the live `ContentView` installs it (`installMessages(lock:active:)`). Tests and the server sample have none (the
+  phone sample a pretend one since brief 46, below); the tour
+  suspends scheduling and removes Aresium's pending/delivered messages until it ends. The model and its serial queue
+  survive a language restart (`AresiumMessages.live`); the rebuilt store supplies the new language and dashboard.
+  All notification-center calls and review planning run on `MessageScheduler`, a worker actor. Account reductions
+  run on the ledger's own executor (`MessageScheduler.swift`'s extension), without returning its payment array.
+  **Brief 46's API:**
+  - `preferences: MessagePreferences` (read-only): `enabled` (default false), `importReminder` (true),
+    `interval: MessageInterval` (`week`, `fortnight` default, `month`), `monthReview` (true), `hour` (18), `minute` (0).
+    Copy the struct, change a field and call `setPreferences(_:)`; `setEnabled(_:)` changes just the master switch.
+    Settings/history live under `aresium.messages.preferences` and `aresium.messages.history` in UserDefaults;
+    `aresium.messages.progress` keeps consumed reminder slots and their scheduled dates (no amounts).
+  - `authorization: MessageAuthorization`: `notAsked`, `allowed`, `denied`; `error: String?` reports a scheduling
+    failure. Enabling asks once for **alert and sound**, no badge; a refusal leaves all choices intact. `refresh()`
+    refreshes permission and schedules again (also called on foreground/launch). `idle()` awaits queued work.
+  - `shouldOfferReminder: Bool`: true after an import added payments, while Messages is off and the offer was never
+    answered. `finishReminderOffer()` consumes it, including Not now; the offer page saves its switches separately.
+  - `recordImport(accounts:addedPayments:at:)`: stable account IDs and a completion time; every account timestamp
+    advances, but the reminder and offer move only with new payments. `ImportStore` calls `importFinished(_:ledger:)`
+    after each batch, including confirmed layouts, before rebuilding the dashboard. Each file read into an account counts
+    as an import of it, also one that added nothing (`PhoneImportResult.accountID`).
+  - `dashboardBuilt(_:)`, `setPhoneMode(_:ledger:)`, `setTour(_:)`, `setLocked(_:)`: wired to dashboard builds,
+    backend switches, the tour and `AppLock`'s saved settings. `deleteAll()` resets all message defaults and removes
+    owned pending/delivered notifications; `ModeStore.deleteLocalData()` awaits it (Settings and Forgot the code).
+  Reminders are three absolute one-shot requests (`aresium.reminder.1...3`), each another interval after the anchor,
+  at the chosen wall-clock time, using calendar arithmetic across DST. The anchor is the last import that added
+  payments; before one exists it is when the reminder was enabled. Past dates are never queued again; persisted elapsed slots prevent a time/interval change or relaunch
+  from resetting the limit. An import starts the three dates again. Text: "Time for new statements" / "Your last
+  import was 14 days ago." (calendar days at delivery, then 28/42 for a fortnight); before any import, or with the lock
+  on, the body is "Import your statements to keep your dashboard up to date." (the lock hides the day count too).
+  The next review is at the next 3rd, for its preceding calendar month, only with payments in the dashboard. It uses
+  `byMonth`'s expense/income/category totals unchanged; complete requires every participating ledger account to have
+  an import timestamp at or after the following month's midnight. No complete history means "Import your statements
+  to complete October."; complete: "October: 1,234 € spent, 2,100 € in. Most on Groceries: 320 €." (up to two decimal
+  places); no spending omits the category sentence. Locked: "Your October review is ready." Turning the lock on also
+  clears delivered messages, so earlier numbers disappear. Turning Messages off removes only `aresium.reminder.` and
+  `aresium.review.` pending/delivered identifiers; unrelated notifications are preserved.
+  **Taps:** Aresium's own `InboxLaunchDelegate` is the notification delegate (set before launch finishes), retaining
+  a tapped URL in `MessageTapRouter`; no shared push registration changes. `ContentView` feeds it into the existing
+  file/widget URL route, ending a tour first. `AresiumURL.importData` (`aresium://import`) opens phone mode's file
+  picker after the store and lock are ready; `.review("2026-10")` (`aresium://review/2026-10`) opens that month's
+  dashboard totals/categories/graph (`DashboardStore.showReview(month:)`). This month stays focused until the app goes to the background, a widget/start
+  link, backend switch or a rebuilt root; `showReview(month: nil)` restores the latest month. No new screen.
+  **DEBUG verification:** `-enableMessages -logMessages` enables live local messages and logs owned pending IDs;
+  never combine it with sample/test arguments (those install no live model). It uses the normal interval, with no
+  accelerated delivery argument. Verified on `codex-45` (2026-10-30): Allow, three pending reminders
+  (`build/45-pending.log`), and the import route opening the file picker (`build/45-import-route.png`).
+  `MessageTests` injects clock, calendar and center; no system scheduling in tests.
+  **English catalog keys added, German left to Claude:** "Time for new statements", "Your last import was %lld days
+  ago.", "Import your statements to keep your dashboard up to date.", "Month review", "Your %@ review is ready.", "Import
+  your statements to complete %@.", "%@: %@ spent, %@ in. Most on %@: %@.", "%@: %@ spent, %@ in.".
+  **Settings → Messages and the offer** (brief 46, the screens; `Screens/MessagesSettings.swift`, words and choices in
+  `Model/MessageSettings.swift`): phone mode only, a section "Messages" / "Mitteilungen" of its own after "Your data on
+  this iPhone" and before Lock (the messages are about the data; Dashboard stays last, above Appearance), one row
+  "Reminder and review" / "Erinnerung & Rückblick" (the ampersand keeps it on one line beside "Nur Erinnerung") with its
+  state on the right (`MessageWording.state`: Off, On, Reminder only, Review only, None
+  chosen, Off in iOS). The page: the Messages switch (iOS asks the first time, brief 45); while on, Import reminder with
+  its line and How often (Apple's menu from the column check's `MenuChip`: every week, every 2 weeks, every month), Month
+  review with its line, Time (Apple's compact time picker, `MessageTime`); while iOS has the notifications off, a line
+  and Allow in iOS Settings (`openNotificationSettingsURLString`), the switches keep what was chosen; `error` as a
+  `FormProblem`; the note "made on this iPhone, nothing sent", plus "no numbers" while the lock is on. **The offer**
+  (`ReminderOffer`): in the import result's place and card (`BottomToast` in `Screens/ImportControls.swift`, the
+  result's chrome and swipe, shared since brief 46), only once the result (with its send card), the category picker
+  after an import, the import's work and every other window are gone, never in the tour or behind the lock
+  (`ReminderOffer.shows`, built from the stores by `ReminderOffer.Moment(messages:imports:…)`): "Remind you to import
+  new statements?", the line names the reminder's interval and the review, Turn on (both messages, interval and time
+  kept; then, once iOS allowed, "Messages are on. You can change them in Settings." in the result's place) and Not now
+  (also a swipe down); both answer it for good. The start screen's expense graph in red mode draws the light ink
+  (`Palette.expense`; the website's black read at about 1.3:1 on the app's darker red), as the widget's line; income
+  keeps its green (about 10:1). **DEBUG** (with `-samplePhone`/`-samplePhoneEmpty`; the sample gets a pretend model,
+  `Model/MessageSample.swift`: its own defaults emptied at launch, a center that reaches nothing in iOS):
+  `-openMessages` (with `-openSheet settings`: the page), `-sampleMessages on|reminder|review|none` (Messages on with
+  both, one or none), `-sampleNotifications allowed|denied|notAsked` (the pretend iOS's answer; allowed by default),
+  `-sampleReminderOffer` (the sample may offer: a made-up import at launch, so the offer shows on the dashboard; with
+  `-samplePhoneEmpty -sampleImport -samplePickerDone` after the picker and the result, as live), `-sampleMessagesFail`
+  (planning fails: the page's failure line). Without these the sample neither offers nor plans anything. Tests:
+  `MessageScreensTests` (the row's words, the page's words and time, the offer after the picker and the result and never
+  with the send card, once; Turn on; the red graph's contrast). Screenshots: `build/46-*.png`, contact sheet
+  `build/46-sheet.png`.
   **Current view:** a category opens this month's payments directly (`CategoryRoute`; the widget's category links too);
   Overview keeps the month list first. **Screens** (`Screens/PhoneScreens.swift` and `Screens/FileCheck*.swift`,
   Claude's look from the dashboard's rows, `CategoryTile`/`DayTile`, and the Settings pieces; ink only): **the first
@@ -698,7 +809,8 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   first screen; `-importData` taps Import data at launch: the file picker; `-sampleImport` imports the tour's made-up
   bank file as if picked, so on the empty store the category picker opens after it as after a real import),
   `-sampleSignedIn` (signed in on the made-up account server), `-sampleOverview` (Overview, not Current) and
-  `-sampleGraph` (the graph shown; with only one month of data each graph is one point, drawn as a stem with a dot,
+  the graph (Settings → Dashboard → Graph, `aresium.graph`, on by default since brief 42, `Model/GraphSetting.swift`; on
+  a category's page above its months; `-toggleGraph` flips the saved setting once; with only one month of data each graph is one point, drawn as a stem with a dot,
   `ChartAxis.singlePointDomain`, `OneMonthTests`), `-openSheet settings`, in the picker
   `-sampleTick <id,id,…>` (ticks those), `-sampleUntick <category id>`, `-scrollToCategory <id>` and
   `-samplePickerDone` (then Done: the dashboard with the result line counted again), `-sampleLayout` (an unknown bank's
@@ -744,7 +856,7 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   file, this month always full), its own session (never logged in) and widget numbers inside that folder; the person's
   store, categories and learned shops are never opened. The folder is deleted on End tour (always on the card), at the
   end, when a widget's link or a shared file opens the app, and at the next launch if the app was closed during a tour
-  (`removeLeftovers`). Twelve steps (`TourStep`, brief 25): welcome, income, overview, graph, category, payment, switch,
+  (`removeLeftovers`). Twelve steps, eleven while the graph is hidden (`TourStep`, brief 25; brief 42: the graph step points at the graph and goes on with Next): welcome, income, overview, graph, category, payment, switch,
   categories, lock, contact, import, done; each points at a real control (`.tourAnchor`, anchor preferences;
   `.tourSpotlight` on each screen and sheet draws a light veil in the wall's colour, `TourVeil.veil` 0.3 (brief 24 had
   0.74, far too dark: the app under it must read easily, Patrik 2026-10-27), and the full-ink ring, and keeps taps off

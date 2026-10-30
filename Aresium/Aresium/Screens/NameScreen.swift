@@ -11,7 +11,7 @@ struct NameScreen: View {
     let store: DashboardStore
     let palette: Palette
     let band: AresiumBand
-    /// The graph above the months, drawn as a category's page draws it (brief 42 makes it a setting: Claude wires it).
+    /// The graph above the months, drawn as a category's page draws it (Settings → Dashboard → Graph, `GraphSetting`).
     var showsGraph = true
     /// The rows' long press (`DashboardStack.shortcuts`).
     var shortcuts = true
@@ -64,7 +64,7 @@ struct NameScreen: View {
                     guard let months = store.dashboard?.months, months.indices.contains(index) else { return }
                     show(months[index].key, page: page, proxy: proxy)
                 }
-                .frame(height: 235)
+                .frame(height: SeriesChart.dashboardHeight)
             }
             LazyVStack(spacing: 0) {
                 let maximum = page.months.map(\.total).max() ?? 0

@@ -5,17 +5,16 @@ struct IconButton: View {
     let symbol: String
     let label: String
     let palette: Palette
-    var active = false
     let action: () -> Void
     var body: some View {
         Button(action: action) {
             Image(systemName: symbol).font(.system(size: 17, weight: .medium))
                 .frame(width: 42, height: 42)
-                .foregroundStyle(active ? palette.ink : palette.secondary)
-                .background(active ? palette.card2 : palette.card, in: RoundedRectangle(cornerRadius: 12))
-                .overlay(RoundedRectangle(cornerRadius: 12).stroke(active ? palette.muted : palette.line))
+                .foregroundStyle(palette.secondary)
+                .background(palette.card, in: RoundedRectangle(cornerRadius: 12))
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(palette.line))
                 .minimumTapArea()
-        }.buttonStyle(.plain).accessibilityLabel(label).accessibilityAddTraits(active ? .isSelected : [])
+        }.buttonStyle(.plain).accessibilityLabel(label)
     }
 }
 
@@ -43,17 +42,20 @@ private struct MinimumTapArea: ViewModifier {
     }
 }
 
+/// A screen's header: Aresium's mark or the back arrow, the title, and the gear; in red mode the X before the gear.
+/// Light and dark are chosen in Settings → General → Appearance (brief 42: the sun button that switched them is gone).
 struct ScreenHeader: View {
     let title: String
     var subtitle: String? = nil
     var category: Category? = nil
     let palette: Palette
     var back: (() -> Void)? = nil
-    let toggleTheme: () -> Void
+    /// Red mode's X, the way out of it (red is entered through the band).
+    let leaveRed: () -> Void
     let openSettings: () -> Void
     var body: some View {
         HStack(spacing: 10) {
-            // The arrow, sun and gear are drawn at 42 pt and take taps over 44 pt (`IconButton`).
+            // The arrow, red mode's X and the gear are drawn at 42 pt and take taps over 44 pt (`IconButton`).
             if let back {
                 IconButton(symbol: "chevron.left", label: String(localized: "Back"), palette: palette, action: back)
             } else {
@@ -70,9 +72,13 @@ struct ScreenHeader: View {
                 }
                 if let subtitle { Text(subtitle).font(AppFont.text(12)).foregroundStyle(palette.muted).lineLimit(1) }
             }.frame(maxWidth: .infinity)
+            // Outside red mode the gear stands alone, as wide as the mark or arrow on the left, so the title sits in the
+            // middle; in red mode the X keeps its place before the gear.
             HStack(spacing: 8) {
-                IconButton(symbol: palette.red ? "xmark" : palette.dark ? "sun.max.fill" : "moon.fill",
-                           label: palette.red ? String(localized: "Exit Aresium mode") : String(localized: "Toggle theme"), palette: palette, action: toggleTheme)
+                if palette.red {
+                    IconButton(symbol: "xmark", label: String(localized: "Exit Aresium mode"), palette: palette,
+                               action: leaveRed)
+                }
                 IconButton(symbol: "gearshape", label: String(localized: "Settings"), palette: palette, action: openSettings)
                     .tourAnchor(.settings)
             }
@@ -159,6 +165,9 @@ struct DashboardStatus: View {
 }
 
 struct SeriesChart: View {
+    /// The graph's height on the start screen and on a category's page (the same on both, brief 42).
+    static let dashboardHeight: CGFloat = 235
+
     let points: [ChartPoint]
     let color: Color
     let palette: Palette

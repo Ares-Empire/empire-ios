@@ -184,7 +184,7 @@ private struct TourCardInset: ViewModifier {
 
 // MARK: - the card
 
-/// The step's card: "Tour · 3 of 12", the sentence, Next (ink, the main button's look) and End tour; at the
+/// The step's card: "Tour · 3 of 12" (of the steps this tour shows), the sentence, Next (ink, the main button's look) and End tour; at the
 /// import step a link to the bank guide, at the last step one button that ends the tour.
 private struct TourCard: View {
     let tour: TourModel
@@ -195,10 +195,10 @@ private struct TourCard: View {
         let step = tour.step
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline, spacing: 12) {
-                SectionHeading(text: String(localized: "Tour · \(step.rawValue) of \(tour.count)"))
+                SectionHeading(text: String(localized: "Tour · \(tour.number) of \(tour.count)"))
                     .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 8)
-                if step.next != nil {
+                if tour.nextStep != nil {
                     Button { tour.end() } label: {
                         Text("End tour").font(AppFont.text(13.5, weight: .semibold)).foregroundStyle(Ink.secondary)
                             .multilineTextAlignment(.trailing)
@@ -257,7 +257,7 @@ private struct TourCard: View {
         Button {
             withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.3)) { tour.next() }
         } label: {
-            (tour.step.next == nil ? Text("End tour") : Text("Next"))
+            (tour.nextStep == nil ? Text("End tour") : Text("Next"))
                 .font(AppFont.text(15, weight: .semibold)).foregroundStyle(Ink.background)
                 .padding(.horizontal, 22).frame(minHeight: 44)
                 .background(Ink.primary, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
@@ -282,12 +282,13 @@ struct TourScreen<Header: View>: View {
     var body: some View {
         Group {
             if tour.phase == .running, let world = tour.world {
-                DashboardStack(store: world.dashboard, palette: palette, place: place, band: band,
-                               shortcuts: !tour.holdsTheScreen) { route in
+                // The graph as the person's setting was when the tour started (`TourModel.showsGraph`).
+                DashboardStack(store: world.dashboard, palette: palette, place: place, graph: tour.showsGraph,
+                               band: band, shortcuts: !tour.holdsTheScreen) { route in
                     header(route) { tour.openSettings() }
                 } root: {
                     StartScreen(store: world.dashboard, imports: world.imports, palette: palette,
-                                current: place.current, side: place.side, graph: place.graph, band: band,
+                                current: place.current, side: place.side, graph: tour.showsGraph, band: band,
                                 importChoices: .tour { tour.importTapped() }) {
                         place.wrappedValue.path.append($0)
                     }
