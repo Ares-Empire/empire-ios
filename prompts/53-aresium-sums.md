@@ -1,6 +1,6 @@
 # 53: Adding up payments of one name inside a category's list
 
-Status: draft
+Status: merged 2026-10-30 (566 Aresium tests pass with briefs 47 and 54; words Add up / Summieren, Separate / Auflösen; the full swipe stays All)
 Branch: `claude/53-sums` · Worktree: `../empire-ios-53-sums` · Built by: a Claude agent (the look and the feel)
 
 ## Goal
