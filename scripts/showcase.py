@@ -78,13 +78,13 @@ class Shot:
 # The arguments are listed in CLAUDE.md (Setup state) and read in each app's ContentView / LaunchArguments.
 SHOTS = [
     Shot("aresium", "01-overview-dark", "Three months of spending by category, with the monthly chart",
-         "dark", 6, ("-sampleData", "-sampleOverview", "-sampleGraph")),
+         "dark", 6, ("-sampleData", "-sampleOverview")),
     Shot("aresium", "02-overview-light", "The same overview in light mode",
-         "light", 6, ("-sampleData", "-sampleOverview", "-sampleGraph")),
+         "light", 6, ("-sampleData", "-sampleOverview")),
     Shot("aresium", "03-red-mode", "Red mode: the overview with its chart, scrolled down to the ARESIUM band",
-         "dark", 6, ("-sampleData", "-sampleRed", "-sampleOverview", "-sampleGraph", "-scrollToEnd")),
+         "dark", 6, ("-sampleData", "-sampleRed", "-sampleOverview", "-scrollToEnd")),
     Shot("aresium", "04-income-dark", "The income side: where the money came from over three months",
-         "dark", 6, ("-sampleData", "-sampleIncome", "-sampleOverview", "-sampleGraph")),
+         "dark", 6, ("-sampleData", "-sampleIncome", "-sampleOverview")),
     Shot("aresium", "05-transaction-light", "A transaction's details, with its category and where else it counts",
          "light", 7, ("-sampleData", "-sampleCategory", "Groceries", "-sampleMonth", "2026-10",
                       "-sampleTransaction", "sample-19")),
