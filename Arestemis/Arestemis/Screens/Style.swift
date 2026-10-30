@@ -125,10 +125,12 @@ struct Chip: View {
             if let onRemove {
                 Button(action: onRemove) {
                     Image(systemName: "xmark").font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(Ink.muted).frame(width: 22, height: 22).contentShape(Rectangle())
+                        .foregroundStyle(Ink.muted).frame(width: 22, height: 22)
+                        .padding(11).contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Remove \(text)")
+                .padding(-11) // 44 pt button, occupying the original 22 pt in the chip's layout.
                 .padding(.trailing, -6)
             }
         }
@@ -136,7 +138,6 @@ struct Chip: View {
         .padding(.horizontal, 13).frame(minHeight: 34)
         .background(selected ? Look.accent.color.opacity(0.14) : Ink.field, in: Capsule())
         .overlay(Capsule().strokeBorder(selected ? Look.accent.color.opacity(0.75) : Ink.line.opacity(1.6)))
-        .contentShape(Capsule())
     }
 }
 

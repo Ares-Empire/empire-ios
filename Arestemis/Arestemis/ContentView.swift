@@ -39,7 +39,9 @@ struct ContentView: View {
     private static func makeStore(session: EmpireSession, options: LaunchOptions) -> ArestemisStore {
         #if DEBUG
         if options.sample, let sample = try? SampleBackend(options: .init(noHunt: options.noHunt, paused: options.paused,
-                                                                             hangs: options.loading)) {
+                                                                             hangs: options.loading, moreLoading: options.moreLoading,
+                                                                             moreFailure: options.moreFailure,
+                                                                             longDescription: options.longDescription)) {
             return ArestemisStore(session: session, backend: sample, sample: true)
         }
         #endif
@@ -83,7 +85,17 @@ struct ContentView: View {
             if !session.isSignedIn { navigation.reset() }
         }
         .onChange(of: store.overview != nil) { _, loaded in
-            if loaded { options.apply(to: navigation, firstMatch: store.latest.first?.id) }
+            if loaded {
+                options.apply(to: navigation, firstMatch: store.latest.first?.id)
+                #if DEBUG
+                if store.isSample, options.sampleUndo, let id = store.latest.first?.id {
+                    Task {
+                        try? await Task.sleep(for: .seconds(1))
+                        await store.setState(.dismissed, for: id)
+                    }
+                }
+                #endif
+            }
         }
         .onOpenURL { url in
             if let link = ArestemisLink(url: url) { navigation.follow(link) }

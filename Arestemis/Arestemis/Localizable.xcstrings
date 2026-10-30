@@ -446,6 +446,18 @@
         }
       }
     },
+    "Could not load older listings." : {
+      "comment" : "DEBUG pagination failure sample; release exports do not scan SampleBackend.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ältere Angebote konnten nicht geladen werden."
+          }
+        }
+      }
+    },
     "Could not mark the listing as applied." : {
       "localizations" : {
         "de" : {
@@ -802,6 +814,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Neueste"
+          }
+        }
+      }
+    },
+    "Listing dismissed." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Angebot ausgeblendet."
           }
         }
       }
@@ -1332,16 +1354,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Zeigen"
-          }
-        }
-      }
-    },
-    "Show older" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ältere zeigen"
           }
         }
       }

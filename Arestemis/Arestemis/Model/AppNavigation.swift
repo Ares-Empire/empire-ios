@@ -111,12 +111,17 @@ final class AppNavigation {
 /// DEBUG launch arguments for screenshots: `-sampleData`, `-sampleNoHunt`, `-samplePaused`, `-sampleLoading`,
 /// `-tab hunt|listings|search`, `-filter new|saved|applied|all`, `-openMatch <id>`,
 /// `-openSheet settings|application|rejected|place|describe`, `-scrollBottom` (Hunt and Search),
-/// `-scrollTo size|rent|movein` (Search). In a release build all are ignored.
+/// `-scrollTo size|rent|movein` (Search), `-sampleUndo`, `-sampleSearchDraft`,
+/// `-sampleMoreLoading`, `-sampleMoreFailure`, `-sampleLongDescription`. In a release build all are ignored.
 struct LaunchOptions {
     var sample = false
     var noHunt = false
     var paused = false
     var loading = false
+    var sampleUndo = false
+    var moreLoading = false
+    var moreFailure = false
+    var longDescription = false
     var tab: AppTab?
     var filter: MatchFilter?
     var openMatch: Int?
@@ -133,6 +138,10 @@ struct LaunchOptions {
         noHunt = arguments.contains("-sampleNoHunt")
         paused = arguments.contains("-samplePaused")
         loading = arguments.contains("-sampleLoading")
+        sampleUndo = arguments.contains("-sampleUndo")
+        moreLoading = arguments.contains("-sampleMoreLoading")
+        moreFailure = arguments.contains("-sampleMoreFailure")
+        longDescription = arguments.contains("-sampleLongDescription")
         tab = value("-tab").flatMap(AppTab.init(rawValue:))
         filter = value("-filter").flatMap(MatchFilter.init(rawValue:))
         openMatch = value("-openMatch").flatMap(Int.init)

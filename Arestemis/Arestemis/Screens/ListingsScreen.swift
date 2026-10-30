@@ -3,7 +3,7 @@ import SwiftUI
 /// Every match by state (New · Saved · Applied · All), as glass cards: swipe right to save, left to dismiss, tap for the
 /// match. At the end, the listings the AI filtered out.
 struct ListingsScreen: View {
-    let store: ArestemisStore
+    @Bindable var store: ArestemisStore
     @Bindable var navigation: AppNavigation
 
     private var filter: MatchFilter { navigation.filter }
@@ -37,6 +37,16 @@ struct ListingsScreen: View {
             }
             .task { if !store.rejectedLoaded { await store.loadRejected() } }
         }
+        .undoBar(visibleUndo, accent: Look.accent)
+    }
+
+    /// Only the visible tab owns the shared offer's timer; cancelling a hidden tab must not clear it.
+    private var visibleUndo: Binding<UndoOffer?> {
+        // Read the offer here so Observation redraws the bar when the store changes it.
+        _ = store.undo
+        return Binding(get: { navigation.tab == .listings ? store.undo : nil }, set: { offer in
+            if navigation.tab == .listings { store.undo = offer }
+        })
     }
 
     private var header: some View {
@@ -75,6 +85,7 @@ struct ListingsScreen: View {
                     MatchRow(match: match, showsNewDot: store.showsNewDot(match), showsState: filter == .all)
                 }
                 .buttonStyle(.plain)
+                .contextMenu { MatchRowActions(match: match, store: store) }
                 .plainRow(vertical: Look.rowGap / 2)
                 .swipeActions(edge: .leading, allowsFullSwipe: true) {
                     if match.state == .new {
@@ -93,11 +104,22 @@ struct ListingsScreen: View {
                 .accessibilityAction(named: "Save") { Task { await store.setState(.saved, for: match.id) } }
                 .accessibilityAction(named: "Dismiss") { Task { await store.setState(.dismissed, for: match.id) } }
             }
-            if list.more {
-                Button("Show older") { Task { await store.loadMatches(filter, more: true) } }
-                    .buttonStyle(.quiet).disabled(list.isLoading)
-                    .frame(maxWidth: .infinity)
-                    .plainRow()
+        }
+        if list.more {
+            Group {
+                if let error = list.error {
+                    CalmMessage(text: error, action: (String(localized: "Try again"), {
+                        Task { await store.loadMatches(filter, more: true) }
+                    }))
+                } else {
+                    ProgressView().controlSize(.small).tint(Ink.muted)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                }
+            }
+            .plainRow()
+            .task(id: list.ids.last) {
+                guard list.error == nil else { return }
+                await store.loadMatches(filter, more: true)
             }
         }
         if !store.rejected.isEmpty {

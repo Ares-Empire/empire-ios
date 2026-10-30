@@ -36,6 +36,7 @@ final class ArestemisStore {
     let isSample: Bool
     let places: PlaceSearch
     private let backend: any ArestemisBackend
+    private let keptDraft: KeptSearchDraft
 
     // overview
     private(set) var overview: Overview?
@@ -69,14 +70,16 @@ final class ArestemisStore {
 
     /// The last action that failed, shown briefly over the tabs.
     private(set) var notice: Notice?
+    var undo: UndoOffer?
 
     private var resetGeneration = 0
     private var foregroundRefreshing = false
 
     init(session: EmpireSession, backend: any ArestemisBackend, sample: Bool = false,
-         placeDelay: Duration = .milliseconds(300)) {
+         placeDelay: Duration = .milliseconds(300), defaults: UserDefaults = .standard) {
         self.session = session
         self.backend = backend
+        keptDraft = KeptSearchDraft(defaults: defaults)
         #if DEBUG
         isSample = sample
         #else
@@ -149,6 +152,32 @@ final class ArestemisStore {
         }
     }
 
+    // MARK: - search draft
+
+    func searchDraft() -> SearchDraft {
+        #if DEBUG
+        if isSample, LaunchArguments.current.contains("-sampleSearchDraft") {
+            var draft = hunt.map { SearchDraft($0.search) } ?? SearchDraft()
+            draft.people = draft.people == 1 ? 2 : 1
+            return draft
+        }
+        #endif
+        guard !isSample, let account = session.accountID else {
+            return hunt.map { SearchDraft($0.search) } ?? SearchDraft()
+        }
+        return keptDraft.restore(for: hunt?.search, account: account)
+    }
+
+    func keepSearchDraft(_ draft: SearchDraft, baseline: Search?) {
+        guard !isSample, canAct, let account = session.accountID else { return }
+        keptDraft.keep(draft, baseline: baseline, account: account)
+    }
+
+    private func dropSearchDraft() {
+        guard !isSample, let account = session.accountID else { return }
+        keptDraft.drop(account: account)
+    }
+
     // MARK: - hunt
 
     /// Start or pause, shown at once; rolled back if the server refuses.
@@ -187,6 +216,7 @@ final class ArestemisStore {
                 saved = try await backend.createHunt(search)
             }
             guard isCurrent(context) else { return false }
+            dropSearchDraft()
             overview?.hunt = saved
             await reloadOverview(quiet: true)
             return true
@@ -208,6 +238,7 @@ final class ArestemisStore {
         do {
             try await backend.deleteHunt(id: hunt.id)
             guard isCurrent(context) else { return false }
+            dropSearchDraft()
             overview?.hunt = nil
             overview?.latest = []
             forgetMatches()
@@ -254,7 +285,7 @@ final class ArestemisStore {
     func loadMatches(_ filter: MatchFilter, more: Bool = false, quiet: Bool = false) async {
         guard canAct, !(lists[filter]?.isLoading ?? false) else { return }
         let before = more ? lists[filter]?.ids.min() : nil
-        if more && before == nil { return }
+        if more && (before == nil || lists[filter]?.more != true) { return }
         lists[filter, default: MatchList()].isLoading = true
         if !quiet { lists[filter]?.error = nil }
         let context = context
@@ -292,6 +323,7 @@ final class ArestemisStore {
     /// Save, mark applied, dismiss: shown at once, rolled back with a notice if the server refuses.
     func setState(_ state: MatchState, for id: Int) async {
         guard canAct, !changingState.contains(id), let current = match(id), current.state != state else { return }
+        if state == .dismissed { undo = nil }
         changingState.insert(id)
         var changed = current
         changed.state = state
@@ -302,6 +334,13 @@ final class ArestemisStore {
             let returned = try await backend.setState(state, match: id)
             guard isCurrent(context) else { return }
             matchesByID[id] = returned
+            // Offered as soon as the server confirmed, before the counts reload, so it follows the swipe at once.
+            if state == .dismissed, returned.state == .dismissed {
+                undo = UndoOffer(message: String(localized: "Listing dismissed.")) { [weak self] in
+                    guard let self, self.isCurrent(context), self.match(id)?.state == .dismissed else { return }
+                    await self.setState(current.state, for: id)
+                }
+            }
             await reloadOverview(quiet: true)          // the counts are the server's
         } catch {
             guard isCurrent(context) else { return }
@@ -407,6 +446,8 @@ final class ArestemisStore {
 
     /// Everything this app knows about the account (logout, or this app denied).
     func clear() {
+        if !isSample { keptDraft.clear() }
+        undo = nil
         resetGeneration += 1
         overview = nil
         overviewError = nil
@@ -427,6 +468,7 @@ final class ArestemisStore {
     }
 
     private func forgetMatches() {
+        undo = nil
         matchesByID = [:]
         lists = [:]
         seen = []

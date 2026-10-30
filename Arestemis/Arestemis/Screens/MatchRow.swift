@@ -84,3 +84,25 @@ struct ListingPhoto: View {
         .accessibilityHidden(true)
     }
 }
+
+/// Shared by the Latest stack and the Listings list; the detail page uses these same state icons.
+struct MatchRowActions: View {
+    let match: Match
+    let store: ArestemisStore
+
+    var body: some View {
+        if match.state == .new {
+            Button { change(.saved) } label: { Label("Save", systemImage: "bookmark") }
+        }
+        if match.state != .applied && match.state != .dismissed {
+            Button { change(.applied) } label: { Label("Mark applied", systemImage: "checkmark.circle") }
+        }
+        if match.state != .dismissed {
+            Button { change(.dismissed) } label: { Label("Dismiss", systemImage: "xmark.circle") }
+        }
+    }
+
+    private func change(_ state: MatchState) {
+        Task { await store.setState(state, for: match.id) }
+    }
+}

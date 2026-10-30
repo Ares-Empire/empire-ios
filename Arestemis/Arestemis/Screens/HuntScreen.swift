@@ -3,7 +3,7 @@ import SwiftUI
 /// The main tab: the hunt (status, the search in two lines, start or pause), today's figures, the portals, the
 /// latest matches, and the ARESTEMIS band at the end of the scroll (`WordmarkScrollView`).
 struct HuntScreen: View {
-    let store: ArestemisStore
+    @Bindable var store: ArestemisStore
     @Bindable var navigation: AppNavigation
     var scrollsToBottom = false
     @Environment(\.scenePhase) private var scenePhase
@@ -49,6 +49,16 @@ struct HuntScreen: View {
             }
             .task(id: scenePhase) { await keepFresh() }
         }
+        .undoBar(visibleUndo, accent: Look.accent)
+    }
+
+    /// Only the visible tab owns the shared offer's timer; cancelling a hidden tab must not clear it.
+    private var visibleUndo: Binding<UndoOffer?> {
+        // Read the offer here so Observation redraws the bar when the store changes it.
+        _ = store.undo
+        return Binding(get: { navigation.tab == .hunt ? store.undo : nil }, set: { offer in
+            if navigation.tab == .hunt { store.undo = offer }
+        })
     }
 
     // MARK: figures
@@ -118,6 +128,7 @@ struct HuntScreen: View {
                             MatchRow(match: match, showsNewDot: store.showsNewDot(match), showsState: true)
                         }
                         .buttonStyle(.plain)
+                        .contextMenu { MatchRowActions(match: match, store: store) }
                     }
                 }
                 Button { show(.all) } label: {

@@ -49,6 +49,9 @@ final class SampleBackend: ArestemisBackend {
         var noHunt = false          // -sampleNoHunt: no search yet
         var paused = false          // -samplePaused
         var hangs = false           // -sampleLoading: the overview never arrives
+        var moreLoading = false     // -sampleMoreLoading: pause the next listings page
+        var moreFailure = false     // -sampleMoreFailure: fail the next listings page
+        var longDescription = false // -sampleLongDescription: a description with More
     }
 
     private var base: Overview
@@ -69,6 +72,16 @@ final class SampleBackend: ArestemisBackend {
         let page = try ArestemisSamples.decode(MatchPage.self, from: "matches", shift: shift)
         let single = try ArestemisSamples.decode(Match.self, from: "match", shift: shift)
         matches = page.items + (page.items.contains { $0.id == single.id } ? [] : [single])
+        if options.longDescription {
+            // Extend only the fictional listing description, leaving the contract's fields unchanged.
+            matches = try matches.map { match in
+                var object = try JSONSerialization.jsonObject(with: JSONEncoder().encode(match)) as! [String: Any]
+                var listing = object["listing"] as! [String: Any]
+                listing["description"] = Array(repeating: match.listing.description, count: 4).joined(separator: "\n\n")
+                object["listing"] = listing
+                return try JSONDecoder().decode(Match.self, from: JSONSerialization.data(withJSONObject: object))
+            }
+        }
         rejectedItems = try ArestemisSamples.decode(RejectedPage.self, from: "rejected", shift: shift).items
         settingsValue = try ArestemisSamples.decode(Settings.self, from: "settings")
         let suggestions = try ArestemisSamples.decode([Place].self, from: "places")
@@ -152,10 +165,14 @@ final class SampleBackend: ArestemisBackend {
     }
 
     func matches(states: [MatchState]?, limit: Int, before: Int?) async throws -> MatchPage {
+        if before != nil {
+            if options.moreLoading { try await Task.sleep(for: .seconds(3600)) }
+            if options.moreFailure { throw HTTPError.server(500, String(localized: "Could not load older listings.")) }
+        }
         let wanted = matches.filter { match in
             (states?.contains(match.state) ?? (match.state != .dismissed)) && match.id < (before ?? .max)
         }.sorted { $0.id > $1.id }
-        return MatchPage(items: Array(wanted.prefix(limit)), more: wanted.count > limit)
+        return MatchPage(items: Array(wanted.prefix(limit)), more: wanted.count > limit || (before == nil && (options.moreLoading || options.moreFailure)))
     }
 
     func match(id: Int) async throws -> Match {

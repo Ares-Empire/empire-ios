@@ -219,8 +219,7 @@ struct ExpandableText: View {
                 .textSelection(.enabled)
             if !expanded && fullHeight > shortHeight + 1 {
                 Button("More") { withAnimation(.easeOut(duration: 0.25)) { expanded = true } }
-                    .font(AppFont.text(13, weight: .semibold)).foregroundStyle(Ink.primary)
-                    .buttonStyle(.plain)
+                    .buttonStyle(.quiet)
             }
         }
     }

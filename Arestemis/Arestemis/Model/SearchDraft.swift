@@ -4,9 +4,9 @@ import Foundation
 /// Every filter is optional on its own (`nil` = any); only a place and a portal are required. Converting back to the
 /// contract's `Search` drops what does not apply to the chosen type (the flat's size and rooms for WG only, the room's
 /// size and flatmates for flats only).
-struct SearchDraft: Equatable {
+struct SearchDraft: Codable, Equatable {
     /// What the user looks for: either, a whole flat, or a room in a WG.
-    enum OfferType: String, CaseIterable, Identifiable {
+    enum OfferType: String, Codable, CaseIterable, Identifiable {
         case any, flat, wg
         var id: String { rawValue }
 
@@ -25,7 +25,7 @@ struct SearchDraft: Equatable {
     }
 
     /// A min/max pair; either end may be empty.
-    struct Range: Equatable {
+    struct Range: Codable, Equatable {
         var min: Double?
         var max: Double?
         var isInOrder: Bool { guard let min, let max else { return true }; return min <= max }

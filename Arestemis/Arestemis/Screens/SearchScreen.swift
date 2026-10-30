@@ -22,7 +22,19 @@ struct SearchScreen: View {
     var body: some View {
         NavigationStack {
           VStack(spacing: 0) {
-            AppHeader(title: String(localized: "Search"))
+            AppHeader(title: String(localized: "Search")) {
+                if isDirty && draft.isValid {
+                    Button(action: saveSearch) {
+                        HStack(spacing: 6) {
+                            if store.isSavingSearch { ProgressView().controlSize(.small).tint(Look.accent.color) }
+                            // The app's accent, so it reads as the action it is (grey read as switched off).
+                            Text("Save").foregroundStyle(Look.accent.color)
+                        }
+                    }
+                    .buttonStyle(.quiet)
+                    .disabled(store.isSavingSearch)
+                }
+            }
             ScrollViewReader { reader in
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
@@ -81,13 +93,14 @@ struct SearchScreen: View {
         .onAppear { sync(force: false) }
         .onChange(of: store.hunt?.search) { _, _ in sync(force: false) }
         .onChange(of: store.hunt?.id) { _, _ in sync(force: false) }
+        .onChange(of: draft) { _, new in store.keepSearchDraft(new, baseline: baseline) }
     }
 
-    /// Takes the saved search into the form, unless the form holds unsaved changes (`force` overrides).
+    /// Restores edits only while their original server search is still current (`force` takes the server).
     private func sync(force: Bool) {
-        guard force || !isDirty else { return }
+        // The kept draft is checked against the current server search even when this tab stayed alive.
         baseline = store.hunt?.search
-        draft = baseline.map { SearchDraft($0) } ?? SearchDraft()
+        draft = force ? (baseline.map { SearchDraft($0) } ?? SearchDraft()) : store.searchDraft()
     }
 
     private func section<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
@@ -183,9 +196,11 @@ struct SearchScreen: View {
                             Button(action: addDistrict) {
                                 Image(systemName: "plus").font(.system(size: 11, weight: .bold))
                                     .foregroundStyle(Look.accent.color).frame(width: 22, height: 22)
+                                    .padding(11).contentShape(Rectangle())
                             }
                             .buttonStyle(.plain)
                             .accessibilityLabel("Add area")
+                            .padding(-11)
                         }
                     }
                     .padding(.horizontal, 13).frame(minHeight: 34)
@@ -325,23 +340,25 @@ struct SearchScreen: View {
 
     // MARK: save
 
+    private func saveSearch() {
+        endTyping()
+        let creating = !hasHunt
+        Task {
+            guard await store.saveSearch(draft.search()) else { return }
+            sync(force: true)
+            if creating {
+                navigation.tab = .hunt
+            } else {
+                withAnimation { savedNote = true }
+                try? await Task.sleep(for: .seconds(2))
+                withAnimation { savedNote = false }
+            }
+        }
+    }
+
     private var save: some View {
         VStack(spacing: 12) {
-            Button {
-                endTyping()
-                let creating = !hasHunt
-                Task {
-                    guard await store.saveSearch(draft.search()) else { return }
-                    sync(force: true)
-                    if creating {
-                        navigation.tab = .hunt
-                    } else {
-                        withAnimation { savedNote = true }
-                        try? await Task.sleep(for: .seconds(2))
-                        withAnimation { savedNote = false }
-                    }
-                }
-            } label: {
+            Button(action: saveSearch) {
                 HStack(spacing: 8) {
                     if store.isSavingSearch { ProgressView().controlSize(.small).tint(Look.onAccent) }
                     if savedNote { Image(systemName: "checkmark").font(.system(size: 13, weight: .bold)) }
@@ -470,7 +487,8 @@ struct PlaceSearchSheet: View {
                         TextField("", text: $text, prompt: Text("Town or city").foregroundStyle(Ink.muted))
                             .font(AppFont.text(16)).foregroundStyle(Ink.primary)
                             .textInputAutocapitalization(.words).autocorrectionDisabled()
-                            .submitLabel(.search)
+                            .submitLabel(.done)
+                            .onSubmit { focused = false }
                             .focused($focused)
                         if search.isSearching { ProgressView().controlSize(.small).tint(Ink.muted) }
                     }
