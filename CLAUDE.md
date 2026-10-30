@@ -222,7 +222,8 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
    on Patrik's iPhone through internal TestFlight (group in App Store Connect → Aresium → TestFlight → Internal
    Testing). Build 2 (2026-10-30): the fixes of Patrik's first test (briefs 34–37). Build 3: the picker's scroll, the
    back swipe and the comfort items (briefs 38–41). Build 4 (2026-10-30 evening): own names and the name's page with the
-   left swipe, the graph as a setting, Aresium's own messages (briefs 42–46). **Arestemis 0.1 (1) uploaded 2026-10-30** (after its comfort items, brief 49). The other
+   left swipe, the graph as a setting, Aresium's own messages (briefs 42–46). Build 5 (2026-10-30 night): the payment page with pens, switches readable in
+   dark, no cover flash, one shop under changing names, adding up names in a list (briefs 47, 48, 53, 54). **Arestemis 0.1 (1) uploaded 2026-10-30** (after its comfort items, brief 49). The other
    three (Aresus, Arestoteles, Empire) have their comfort items merged (briefs 50–52) and wait only for
    `scripts/testflight.sh <App>`. Their App Store Connect records exist (Patrik, 2026-10-30: Arestemis, Aresus, Arestoteles, Ares Empire),
    each with an internal group that gets every build automatically (Arestemis's checked: Patrik as tester). Original
