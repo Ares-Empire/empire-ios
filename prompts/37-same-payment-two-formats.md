@@ -1,6 +1,6 @@
 # 37: The same bank payment from two file formats counts once
 
-Status: running
+Status: merged 2026-10-30 (Aresium 367 tests, serial and parallel)
 Branch: `codex/37-two-formats` · Worktree: `../empire-ios-37-two-formats` · Model: `gpt-6.1-sol`, effort `high`
 
 ## Goal
