@@ -84,7 +84,7 @@ struct AppRoot<Content: View>: View {
             #endif
     }
 
-    /// The iPhone's look, read from the screen (the app's look is set on the window, below the scene and the screen),
+    /// The iPhone's look, read from the scene (the app's look is set on the window, below the scene),
     /// whenever the scene's look changes or the app comes to the front.
     private func readIPhoneScheme() {
         if let style = window.iPhoneStyle { iPhoneScheme = ColorScheme(style) }
@@ -166,9 +166,12 @@ private final class WindowReference {
         window?.overrideUserInterfaceStyle = style
     }
 
-    /// The iPhone's own light or dark, whatever the app shows.
+    /// The iPhone's own light or dark, whatever the app shows: the scene's, whose change `WindowReader` hears (the
+    /// window's look is set below it). Not the screen's: when the iPhone switched while the app was open, the screen
+    /// still had the old look at that moment, so Aresium stayed one switch behind (light with the iPhone dark, then
+    /// dark with it light; seen on the simulator 2026-10-30, brief 36).
     var iPhoneStyle: UIUserInterfaceStyle? {
-        window?.windowScene?.screen.traitCollection.userInterfaceStyle
+        window?.windowScene?.traitCollection.userInterfaceStyle
     }
 
     /// Dismisses every sheet and alert over the window's root, waiting for one that is still on its way in or out

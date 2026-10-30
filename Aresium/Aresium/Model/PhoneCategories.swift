@@ -29,7 +29,11 @@ nonisolated struct PhoneCategoryList: Sendable {
         sortingIDs.first { self.name(of: $0) == name }
     }
 
-    func look(of id: String) -> CategoryLook { catalog.look(id) }
+    /// A category's icon and colour: one's own as stored with it (`OwnCategoryLook`), the others the engine's.
+    func look(of id: String) -> CategoryLook {
+        if ChosenCategory.isCustom(id), let look = chosen.first(where: { $0.id == id })?.look { return look }
+        return catalog.look(id)
+    }
 
     /// Transfers (own transfers, savings) count as neither spending nor income.
     func isTransfer(_ id: String) -> Bool { catalog.category(id)?.kind == "transfer" }

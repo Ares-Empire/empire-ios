@@ -401,21 +401,19 @@ struct PhoneSettingsSection: View {
     @State private var confirmsDelete = false
     @State private var pickingExport = false
     #if DEBUG
-    /// Screenshots: `-openReceipts` opens Receipts at once.
+    /// Screenshots: `-openReceipts` opens Receipts at once, `-openCategories` Categories.
     @State private var showsReceipts = LaunchArguments.current.contains("-openReceipts")
+    @State private var showsCategories = LaunchArguments.current.contains("-openCategories")
     #else
     @State private var showsReceipts = false
+    @State private var showsCategories = false
     #endif
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             SettingsSection(String(localized: "Your data on this iPhone")) {
                 if let phone = modes.phone {
-                    NavigationLink {
-                        CategoryPickerScreen(model: CategoryPickerModel(phone: phone) {
-                            await modes.dashboard.reloadAfterTransactionChange()
-                        })
-                    } label: {
+                    Button { showsCategories = true } label: {
                         SettingsRow(title: String(localized: "Categories"), value: String(phone.summary.chosen.count))
                     }
                     .buttonStyle(SettingsRowStyle())
@@ -460,6 +458,13 @@ struct PhoneSettingsSection: View {
             .padding(.top, 16)
             if let message = data.message { FormNote(text: message).padding(.top, 10) }
             if let problem = data.problem { FormProblem(text: problem).padding(.top, 10) }
+        }
+        .navigationDestination(isPresented: $showsCategories) {
+            if let phone = modes.phone {
+                CategoryPickerScreen(model: CategoryPickerModel(phone: phone) {
+                    await modes.dashboard.reloadAfterTransactionChange()
+                })
+            }
         }
         .navigationDestination(isPresented: $showsReceipts) {
             if let phone = modes.phone {

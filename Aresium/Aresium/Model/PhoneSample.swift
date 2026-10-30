@@ -22,6 +22,10 @@ enum PhoneSample {
         guard !empty else { return (backend, storage) }
         for id in chosen { try await ledger.choose(id) }
         try await backend.addCustom(named: customName)
+        // `-sampleOwn <name,name,…>`: more own categories after Climbing, each with the look its name gives it.
+        for name in (LaunchArguments.value("-sampleOwn") ?? "").split(separator: ",") {
+            try await backend.addCustom(named: String(name))
+        }
         var files = [ImportFile(name: "Umsaetze-Girokonto.csv", data: Data(TourData.vrBankCSV(now: .now).utf8)),
                      ImportFile(name: "Umsaetze-Girokonto-Februar.csv", data: Data(paypalBankLine.utf8))]
         for name in ["sample-paypal.csv", "sample-camt.xml"] {

@@ -30,6 +30,8 @@ nonisolated enum CategorySymbol {
     static func name(for icon: String) -> String {
         symbols[icon] ?? "tag"
     }
+    /// Whether the app has a symbol for this icon name (else it draws the tag).
+    static func knows(_ icon: String) -> Bool { symbols[icon] != nil }
     private static let symbols = [
         "Beer": "mug", "CircleHelp": "questionmark.circle", "Code": "chevron.left.forwardslash.chevron.right",
         "Dumbbell": "dumbbell", "GraduationCap": "graduationcap", "Handshake": "hands.clap",
@@ -45,6 +47,17 @@ nonisolated enum CategorySymbol {
         "Fuel": "fuelpump", "Gift": "gift", "HandHeart": "heart", "HeartHandshake": "figure.2.and.child.holdinghands",
         "Landmark": "building.columns", "Package": "shippingbox", "Palette": "paintpalette", "PawPrint": "pawprint",
         "Percent": "percent", "Plane": "airplane", "Shield": "shield", "Smartphone": "iphone", "Sofa": "sofa",
-        "Ticket": "ticket", "Zap": "bolt"
+        "Ticket": "ticket", "Zap": "bolt",
+        // One's own categories (brief 36, `OwnCategoryLook` in the app): icons that fit a name, then the spare marks.
+        "Bike": "bicycle", "Book": "book.closed", "Cake": "birthday.cake", "Camera": "camera", "Car": "car.side",
+        "Cat": "cat", "Dice5": "die.face.5", "Dog": "dog", "Drama": "theatermasks", "Film": "film",
+        "Flower2": "camera.macro", "Gamepad2": "gamecontroller", "Glasses": "eyeglasses", "Guitar": "guitars",
+        "Hammer": "hammer", "Headphones": "headphones", "Lamp": "lamp.desk", "Luggage": "suitcase.rolling",
+        "Mountain": "mountain.2", "Music": "music.note", "PartyPopper": "party.popper", "Popcorn": "popcorn",
+        "Puzzle": "puzzlepiece", "Sparkles": "sparkles", "Sprout": "leaf", "Stethoscope": "stethoscope",
+        "Tent": "tent", "Trophy": "trophy", "Waves": "water.waves", "Wine": "wineglass",
+        "Wrench": "wrench.and.screwdriver",
+        "Bell": "bell", "Bookmark": "bookmark", "Diamond": "diamond", "Flag": "flag", "Hexagon": "hexagon",
+        "Key": "key", "Lightbulb": "lightbulb", "Shapes": "square.on.circle", "Star": "star"
     ]
 }

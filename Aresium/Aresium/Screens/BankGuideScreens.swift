@@ -270,7 +270,7 @@ struct BankGuideSteps: View {
                 .pickerStyle(.segmented)
                 .padding(.top, 16)
             } else if let line = bank.otherPlaceLine() {
-                FormNote(text: line).padding(.top, 16)
+                PlaceLine(text: line).padding(.top, 16)
             }
             SettingsSection(kind == .website ? String(localized: "On the website") : String(localized: "In the bank's app")) {
                 let steps = bank.place(kind).steps()
@@ -365,6 +365,20 @@ private struct ChooseFileBar: View {
             if case let .success(urls) = result, urls.isEmpty { return }
             importing.finished(result)
         }
+    }
+}
+
+/// Where the steps do not work ("In der App der Bank geht das nicht, nur auf der Website."), in place of Website / App:
+/// part of the guide, so in the steps' size and the second ink, which reads well on both walls (brief 36: as a form
+/// note, 12.5 pt in muted ink, it was too small and faint, in dark mode most of all).
+private struct PlaceLine: View {
+    let text: String
+
+    var body: some View {
+        Text(verbatim: text).font(AppFont.text(14.5, weight: .medium)).foregroundStyle(Ink.secondary).lineSpacing(2)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 4)
     }
 }
 
