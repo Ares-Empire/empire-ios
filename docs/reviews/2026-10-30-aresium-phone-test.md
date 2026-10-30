@@ -136,3 +136,9 @@ Vinted UAB, dm, Apple, cut-off names, names in another order, card fee text) →
   show on; tapping one turns it off for that category only).
 - **One name in every category:** a switch on the name's page.
 - The more specific choice wins (a name unsummed in one category stays single even when everything is summed).
+
+**In build 5** (2026-10-30 night): C, A, B and the gaps (brief 47; E measured equal to Apple's Settings: a slow drag
+goes back past about half the width, a flick of about 53 pt at once, so nothing changed); È (brief 48 in the engine,
+aresium 01ebd85, brief 54 in the app: groups, names, "also the others" and receipt presets per shop); D as agreed
+(brief 53: "Add up" / "Summieren", "Separate" / "Auflösen", the full swipe stays All). F (silky smooth) is no item of
+its own: each brief kept work off the main thread and measured where it could.
