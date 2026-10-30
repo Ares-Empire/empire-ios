@@ -101,3 +101,21 @@ nonisolated final class LanguageSwitchUITests: XCTestCase {
         app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", part)).firstMatch
     }
 }
+
+/// Both tabs share Settings, and the report can close without scrolling its log.
+nonisolated final class ComfortUITests: XCTestCase {
+    @MainActor func testRunCloseAndAresyncSettings() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-sampleData", "-openRun", "612", "-AppleLanguages", "(en)"]
+        app.launch()
+        let close = app.navigationBars.buttons.firstMatch
+        XCTAssertTrue(close.waitForExistence(timeout: 15))
+        close.tap()
+        let settings = app.buttons["Settings"]
+        XCTAssertTrue(settings.waitForExistence(timeout: 5), "Aresync's gear after closing the report")
+        settings.tap()
+        XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Language")).firstMatch.exists)
+    }
+}

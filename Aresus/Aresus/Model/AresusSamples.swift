@@ -80,7 +80,7 @@ nonisolated struct AresusSamples: Sendable {
                      summary: incident.summary)
         }
         return ProvinceDetail(slug: detail.slug, name: detail.name, logo: detail.logo, state: .active, word: "Active",
-                              line: "Website 182 ms", since: detail.since, about: detail.about, checks: checks,
+                              line: "Website 182 ms", since: detail.since, about: detail.about, url: detail.url, app: detail.app, checks: checks,
                               deploy: detail.deploy, incidents: incidents, uptime: detail.uptime)
     }
 
@@ -116,7 +116,7 @@ nonisolated struct AresusSamples: Sendable {
         }
         return ProvinceDetail(slug: province.slug, name: province.name, logo: province.logo, state: province.state,
                               word: province.word, line: province.line, since: province.since,
-                              about: abouts[province.slug], checks: checks, deploy: deploy, incidents: [],
+                              about: abouts[province.slug], url: nil, app: nil, checks: checks, deploy: deploy, incidents: [],
                               uptime: province.word == "Planned" ? [] : days)
     }
 
