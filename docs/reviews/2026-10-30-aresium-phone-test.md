@@ -58,3 +58,21 @@ on his files with the engine (numbers below are from that run, every default cat
   is mostly people and services only the person can name: one correction each now.
 - 3: brief 35. 4–6: brief 36. 7: brief 36 found a real bug (an open app stayed one light/dark switch behind) and fixed
   it in `AppRoot`, for every app.
+
+## Second round: build 2 (2026-10-30)
+
+Patrik: every finding above is fixed on the phone. New, about comfort (his phone is an iPhone 17, 120 Hz, so a
+main-thread pause of more than about 8 ms shows while scrolling):
+
+8. **Scrolling the category picker is sometimes jerky, most of all after ticking some.** Likely cause, from the code:
+   after the taps stop, the picker sorts, counts and rebuilds the dashboard behind it (`CategoryPickerModel.flushPending`
+   → `changed()`), and parts of that run on the main actor (`PhoneBackend` is `@MainActor`: `dashboard(auth:)` builds
+   the engine's input from every payment there); each tap also replaces the whole list twice. *Fix:* brief 39 measures
+   first, then moves the work off the main thread.
+9. **No swipe back on the dashboard's screens** (Expenses → Groceries → a month: only the arrow goes back). Cause: the
+   dashboard draws its own header (`ScreenHeader` with its back arrow) and hides the system navigation bar on every
+   screen (`DashboardStack`), and iOS turns its back swipe off when the bar is hidden. Arestemis, Aresus and Arestoteles
+   hide the bar on their tab roots too. *Fix:* brief 38 (the swipe, doing what the arrow does).
+10. **Patrik's request:** find every other screen in the five apps that cannot be left with the usual gesture but
+    should be, and other comfort gaps; he chooses which get fixed. Brief 38 (Aresium) and a read-only check of the other
+    four apps.
