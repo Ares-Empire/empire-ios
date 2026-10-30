@@ -696,6 +696,8 @@ nonisolated enum LedgerMigrationPlan: SchemaMigrationPlan {
     }
 }
 
+/// The version the app opens its store with; tests that make a store use it too, so a new version needs no change there.
+typealias LedgerSchemaCurrent = LedgerSchemaV4
 typealias StoredAccount = LedgerSchemaV4.Account
 typealias StoredPayment = LedgerSchemaV4.Payment
 typealias StoredChosen = LedgerSchemaV4.Chosen
@@ -742,7 +744,7 @@ nonisolated struct PhoneStorage: Sendable {
             try manager.createDirectory(at: directory, withIntermediateDirectories: true,
                                         attributes: [.protectionKey: FileProtectionType.complete])
         }
-        let schema = Schema(versionedSchema: LedgerSchemaV4.self)
+        let schema = Schema(versionedSchema: LedgerSchemaCurrent.self)
         let configuration = ModelConfiguration("Aresium", schema: schema, url: storeURL,
                                                allowsSave: true, cloudKitDatabase: .none)
         let container = try ModelContainer(for: schema, migrationPlan: LedgerMigrationPlan.self,

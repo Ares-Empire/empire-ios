@@ -11,7 +11,7 @@ struct PhoneCountingTests {
 
     static func backend(chosen: [String] = [], engine: AresiumEngine? = nil,
                         defaults: UserDefaults? = nil, version: String = "counting-test") async throws -> PhoneBackend {
-        let schema = Schema(versionedSchema: LedgerSchemaV3.self)
+        let schema = Schema(versionedSchema: LedgerSchemaCurrent.self)
         let ledger = try await Task.detached {
             let container = try ModelContainer(for: schema,
                 configurations: ModelConfiguration(schema: schema, isStoredInMemoryOnly: true, cloudKitDatabase: .none))
