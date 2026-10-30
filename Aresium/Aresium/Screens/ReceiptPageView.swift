@@ -7,7 +7,8 @@ import SwiftUI
 /// The receipt's page: shop, amount, day, Card or Cash and where it stands, its category with Change, the bank payment
 /// it is joined to (Unjoin) or Join with a payment…, "As on the receipt", Delete receipt; Edit in the bar opens the check
 /// window filled from it (brief 33). A cash receipt or spent entry has Paid from (Automatic or a source, with where the
-/// cash came from); a hand entry's page is the same page with Edit opening Add cash's window and Delete entry.
+/// cash came from); a hand entry's page is the same page with Edit opening Add cash's window and Delete entry. A tapped
+/// button shows the spinner while its work runs, the others are greyed (brief 40).
 struct ReceiptPageView: View {
     @State var model: ReceiptPageModel
     let palette: Palette
@@ -36,8 +37,17 @@ struct ReceiptPageView: View {
         .navigationTitle(isEntry ? Text("Cash entry") : Text("Receipt")).navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Button { Task { await model.beginEdit() } } label: { Text("Edit") }
-                    .disabled(model.receipt == nil || model.isWorking)
+                // In the bar the spinner stands in the word's place while Edit's window loads, as in Apple's bars. The
+                // word is greyed by hand: under the sheet's tint iOS 26 draws a disabled bar button in full ink.
+                Button { Task { await model.beginEdit() } } label: {
+                    if model.working == .edit {
+                        ProgressView().tint(Ink.primary)
+                    } else {
+                        Text("Edit").foregroundStyle(model.isWorking || model.receipt == nil ? Ink.muted : Ink.primary)
+                    }
+                }
+                .disabled(model.receipt == nil)
+                .whileWorking(model.isWorking, tapped: model.working == .edit)
             }
         }
         .navigationDestination(isPresented: $choosingPayment) { ReceiptJoinList(model: model, palette: palette) }
@@ -70,6 +80,17 @@ struct ReceiptPageView: View {
             if LaunchArguments.current.contains("-editReceipt"), model.editing == nil {
                 await model.beginEdit()
                 model.debugType(total: LaunchArguments.value("-editReceiptTotal"))
+            }
+            // Screenshots: `-tapWork category|unjoin|delete` taps that button once the page has loaded (with
+            // `-holdWork` its spinner stays).
+            switch LaunchArguments.value("-tapWork") {
+            case "category":
+                if let other = model.choices.first(where: { $0.id != model.receipt?.category }) {
+                    await model.setCategory(other.id)
+                }
+            case "unjoin": await model.unjoin()
+            case "delete": await model.delete()
+            default: break
             }
             #endif
         }
@@ -118,8 +139,11 @@ struct ReceiptPageView: View {
                             Text(verbatim: from).font(AppFont.text(12.5)).foregroundStyle(Ink.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
-                        Button("Change") { choosingSource = true }
-                            .buttonStyle(.bordered).controlSize(.small).disabled(model.isWorking)
+                        Button { choosingSource = true } label: {
+                            BusyLabel(text: Text("Change"), busy: model.working == .paidFrom, tint: Ink.primary)
+                        }
+                        .buttonStyle(.bordered).controlSize(.small)
+                        .whileWorking(model.isWorking, tapped: model.working == .paidFrom)
                     }
                 }
             }
@@ -134,9 +158,10 @@ struct ReceiptPageView: View {
                                 ForEach(model.choices) { choice in Text(verbatim: choice.name).tag(choice.id) }
                             }
                         } label: {
-                            Text("Change")
+                            BusyLabel(text: Text("Change"), busy: model.working == .category, tint: Ink.primary)
                         }
-                        .buttonStyle(.bordered).controlSize(.small).disabled(model.isWorking)
+                        .buttonStyle(.bordered).controlSize(.small)
+                        .whileWorking(model.isWorking, tapped: model.working == .category)
                     }
                 }
             }
@@ -147,8 +172,11 @@ struct ReceiptPageView: View {
                         Text(verbatim: [PaymentWording.date(payment.bookingDate) ?? payment.bookingDate,
                                         Money.transaction(payment.amountValue)].joined(separator: " · "))
                             .font(AppFont.text(12.5)).foregroundStyle(Ink.secondary)
-                        Button("Unjoin") { Task { await model.unjoin() } }
-                            .buttonStyle(.bordered).controlSize(.small).disabled(model.isWorking)
+                        Button { Task { await model.unjoin() } } label: {
+                            BusyLabel(text: Text("Unjoin"), busy: model.working == .unjoin, tint: Ink.primary)
+                        }
+                        .buttonStyle(.bordered).controlSize(.small)
+                        .whileWorking(model.isWorking, tapped: model.working == .unjoin)
                     }
                 }
             }
@@ -166,15 +194,18 @@ struct ReceiptPageView: View {
                     Text("Join with a payment…")
                 }
                 .buttonStyle(QuietButtonStyle())
+                .disabled(model.isWorking)
             }
             Button(role: .destructive) {
                 confirmsDelete = true
             } label: {
-                (isEntry ? Text("Delete entry") : Text("Delete receipt")).foregroundStyle(FormButtonStyle.dangerInk)
+                BusyLabel(text: isEntry ? Text("Delete entry") : Text("Delete receipt"), busy: model.working == .delete,
+                          tint: FormButtonStyle.dangerInk)
+                    .foregroundStyle(FormButtonStyle.dangerInk)
             }
-            .buttonStyle(FormButtonStyle(kind: .destructive, accent: nil))
+            .buttonStyle(FormButtonStyle(kind: .destructive, accent: nil, busy: model.working == .delete))
+            .whileWorking(model.isWorking, tapped: model.working == .delete)
         }
-        .disabled(model.isWorking)
         .padding(.top, 28)
     }
 
@@ -201,8 +232,9 @@ struct ReceiptPageView: View {
 }
 
 /// Edit: the check window filled from the saved receipt, then (when the corrected values have bank payments to ask
-/// about) "Is this the same payment?" in the same sheet. Cancel leaves the receipt as it was; the window closes only
-/// with Cancel, so typed values are not lost by a swipe.
+/// about) "Is this the same payment?" in the same sheet, with Later. Cancel leaves the receipt as it was, and asks first
+/// when something was changed ("Discard your changes?", brief 40); the window closes only with Cancel, so typed values
+/// are not lost by a swipe.
 struct ReceiptEditSheet: View {
     let page: ReceiptPageModel
     let palette: Palette
@@ -214,9 +246,9 @@ struct ReceiptEditSheet: View {
                 case .checking(let check)?:
                     ReceiptCheckView(model: check, palette: palette) { await page.saveEdit(check) }
                 case .asking(let question)?:
-                    ReceiptQuestionView(question: question, palette: palette, problem: page.problem) { paymentID in
-                        await page.answerEdit(question, with: paymentID)
-                    }
+                    ReceiptQuestionView(question: question, palette: palette, problem: page.problem,
+                                        answer: { paymentID in await page.answerEdit(question, with: paymentID) },
+                                        later: { page.endEdit() })
                 case .entry(let entry)?:
                     CashEntryView(model: entry) { await page.saveEntry(entry) }
                 case nil:
@@ -228,9 +260,20 @@ struct ReceiptEditSheet: View {
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                if !isAsking {                      // the question is answered in the window; a swipe lets it wait
+                // The question has Later (ReceiptQuestionView).
+                if case .checking(let check)? = page.editing?.phase {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancel") { page.endEdit() }
+                        DiscardingCancel(asks: check.hasSomethingToDiscard, question: Text("Discard your changes?")) {
+                            page.endEdit()
+                        }
+                        .disabled(check.isSaving)
+                    }
+                } else if case .entry(let entry)? = page.editing?.phase {
+                    ToolbarItem(placement: .cancellationAction) {
+                        DiscardingCancel(asks: entry.hasChanges, question: Text("Discard your changes?")) {
+                            page.endEdit()
+                        }
+                        .disabled(entry.isSaving)
                     }
                 }
             }
@@ -293,6 +336,7 @@ struct ReceiptJoinList: View {
                         SettingsSection(String(localized: "Bank payments")) {
                             ForEach(Array(options.enumerated()), id: \.element.id) { index, option in
                                 if index > 0 { TileRowDivider() }
+                                let tapped = model.working == .join(option.payment.id)
                                 Button {
                                     Task {
                                         await model.join(option.payment.id)
@@ -300,7 +344,8 @@ struct ReceiptJoinList: View {
                                     }
                                 } label: {
                                     VStack(alignment: .leading, spacing: 0) {
-                                        FileCheckPaymentRow(payment: PreviewPayment(option.payment), palette: palette)
+                                        FileCheckPaymentRow(payment: PreviewPayment(option.payment), palette: palette,
+                                                            busy: tapped)
                                         if let difference = ReceiptWording.difference(option.candidate, sameAmount: same) {
                                             Text(verbatim: difference).font(AppFont.text(12.5)).foregroundStyle(Ink.secondary)
                                                 .padding(.leading, 64).padding(.trailing, 14).padding(.bottom, 10)
@@ -309,7 +354,7 @@ struct ReceiptJoinList: View {
                                     }
                                     .contentShape(Rectangle())
                                 }
-                                .buttonStyle(.plain).disabled(model.isWorking)
+                                .buttonStyle(.plain).whileWorking(model.isWorking, tapped: tapped)
                             }
                         }
                         .padding(.top, 22)

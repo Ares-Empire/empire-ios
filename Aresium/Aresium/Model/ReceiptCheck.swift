@@ -67,6 +67,8 @@ final class ReceiptCheckModel {
     private(set) var problem: String?
     private let readDay: String?
     private let language: AppLanguage
+    /// The values as the window opened (after `load`'s presets), to tell what the person changed.
+    @ObservationIgnored private var start: Values?
 
     init(reading: ReceiptReading, phone: PhoneBackend, today: Date = .now, language: AppLanguage = .current) {
         self.reading = reading
@@ -79,6 +81,7 @@ final class ReceiptCheckModel {
         totalText = reading.total.map { ReceiptAmount.field($0, language: language) } ?? ""
         currency = reading.currency?.uppercased()
         method = reading.method
+        start = values
     }
 
     /// The window for a saved receipt: its values as the person confirmed them, every field as read (nothing to check
@@ -100,6 +103,7 @@ final class ReceiptCheckModel {
         category = receipt.category
         presetCategory = receipt.category
         presetSource = receipt.categorySource
+        start = values
     }
 
     // MARK: what the window shows
@@ -166,12 +170,47 @@ final class ReceiptCheckModel {
         }
     }
 
+    // MARK: Cancel
+
+    /// The values the person can change, compared by what they mean (the day, the amounts as numbers).
+    private struct Values: Equatable {
+        let shop: String
+        let day: String
+        let total: String
+        let currency: String?
+        let method: ReceiptMethod?
+        let euros: String
+        let category: String?
+    }
+
+    private var values: Values {
+        Values(shop: shop, day: ReceiptDay.day(date), total: Self.meaning(totalText), currency: currency, method: method,
+               euros: Self.meaning(euroText), category: category)
+    }
+
+    /// An amount field by its number when it reads as one ("27,65" and "27.65" are the same), else as typed.
+    private static func meaning(_ text: String) -> String {
+        ReceiptAmount.typed(text).map { String($0) } ?? text
+    }
+
+    /// Something was typed or changed since the window opened.
+    var hasChanges: Bool { values != start }
+
+    /// Cancel would lose something, so it asks first (brief 40): a new reading always, unless nothing at all was read
+    /// (the photo is not kept, so a reading cannot be had again); a saved receipt's Edit only when something changed.
+    var hasSomethingToDiscard: Bool {
+        if editing != nil { return hasChanges }
+        return !nothingRead || !reading.rows.isEmpty || hasChanges
+    }
+
     // MARK: work
 
     /// The person's categories; for a new reading also the shop's name as they corrected it before, the category
     /// preset (the one learned for the shop, else the shop list's when the person has it), and Card when the receipt
     /// did not say card or cash but a stored bank payment matches it. Called before the window shows.
     func load() async {
+        // What `load` presets is no change of the person's (it runs before the window shows).
+        defer { start = values }
         let list = try? await phone.categories(language: language)
         if let list {
             choices = list.chosen.compactMap { chosen in

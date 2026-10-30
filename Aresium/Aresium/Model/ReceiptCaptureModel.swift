@@ -111,6 +111,20 @@ final class ReceiptCaptureModel {
         }
     }
 
+    /// Later on "Is this the same payment?" after Save (brief 40): the receipt was kept on Save and now waits for the bank
+    /// statement; nothing is declined, so the next import asks again. Its line goes to the banner and the dashboard is
+    /// built again, as after an answer.
+    func later() {
+        guard case .asking? = reading?.phase else { return }
+        close()
+        Task { await saved(ReceiptWording.answered(joined: false)) }
+    }
+
+    /// The sheet was swiped away: on the question that is Later; anywhere else (reading, a failure) the reading stops.
+    func swipedAway() {
+        if case .asking? = reading?.phase { later() } else { close() }
+    }
+
     /// The sheet closed: the reading stops and nothing of it stays.
     func close() {
         task?.cancel()

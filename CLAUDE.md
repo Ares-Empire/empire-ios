@@ -812,6 +812,28 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   payment to the engine, the window's categories and Edit, Paid from saved and passed, deleting a gift, the page over
   two months, the words in both languages, the name check, only cash shows the dashboard). Screenshots:
   `build/33b-*.png`.
+  **Comfort in the windows** (brief 40, Patrik 2026-10-30; `docs/reviews/2026-10-30-swipe-and-comfort.md`; the pieces
+  in `Screens/WindowComfort.swift`). "Is this the same payment?" has **Later** top left (in the receipt window after
+  Save, in Edit receipt, after an import): what a swipe down does, the receipt waits and nothing is declined; after Save
+  it (and the swipe) shows "Receipt saved. It waits for the bank statement." and builds the dashboard again
+  (`ReceiptCaptureModel.later`); after an import the next queued question opens after it, and the next import asks
+  again. The file check has **Back** beside No from the second reading (Back and No share No's half, Yes keeps its own,
+  `EqualWidthRow`) and beside Import in the column check when there were readings (to the last reading; the column
+  check keeps its answers; `FileCheckModel.back`). **Number pads** (Total, Amount in euros, Add cash's Amount) have
+  Done above them (`numberPadDone`; iOS 26 floats it outside the keyboard's safe area, so the bottom bar rises clear of
+  it, `clearOfKeyboardDone`); Shop's Return moves to Total, What's Return closes the keyboard. **Cancel asks first**
+  (`DiscardingCancel`, as Contact & support's X: "Discard this receipt?" / "Discard this entry?" / "Discard your
+  changes?", Discard, Keep editing) when something would be lost: a new reading always (unless nothing was read or
+  typed), Edit receipt, Add cash and Edit entry once a value changed (`hasSomethingToDiscard`, `hasChanges`: amounts by
+  their number, the date by its day); Add cash's swipe down is held back on the same rule. **The busy sign:** the
+  tapped button shows the spinner (`BusyLabel`; a payment row in its amount's place; Edit in the bar in its word's
+  place), the others are greyed (`whileWorking`): a receipt's page (Edit, both Change, Unjoin, Delete;
+  `ReceiptPageModel.working`), Join with a payment, the question's rows and None of these. Launch arguments (DEBUG):
+  `-sampleImportQuestion` (two waiting receipts asked after a made-up import; `-tapLater` taps Later on the first),
+  `-typeIn shop|total|euros|amount|what` (the cursor there; several comma-separated, one every 2 s), `-askDiscard`
+  (Cancel tapped once there is something to discard; `-cashAmount <text>` types Add cash's amount), `-holdWork` (a
+  tapped button's work waits a minute) with `-tapWork category|unjoin|delete` on a receipt's page or `-tapAnswer
+  first|none` on the question. Tests: `WindowComfortTests`. Screenshots: `build/40-*.png`.
 - Targets: `Aresium` (app), `AresiumWidgetExtension` (widgets, folder `Aresium/AresiumWidget/`, embedded in the
   app), `AresiumTests`. `Aresium/AresiumShared/` is compiled into both app and widget (theme, `AppTheme`, `AppGroup`,
   widget snapshot); everything else belongs to one target. App Group `group.de.ares-empire.aresium` in both

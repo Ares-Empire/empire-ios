@@ -84,7 +84,8 @@ nonisolated enum ReceiptRowWording {
 
 /// A receipt's page (from its dashboard row, a withdrawal's covered row, Settings → Receipts): its category with
 /// Change, Edit (the check window filled from the stored receipt, brief 33), joining and unjoining by hand, and Delete.
-/// Every change is saved at once and the dashboard built again.
+/// Every change is saved at once and the dashboard built again. While one of them works (`working`), its button shows
+/// the spinner and the others are greyed (brief 40).
 @MainActor @Observable
 final class ReceiptPageModel: Identifiable {
     /// Edit's sheet: the check window, then, when the corrected values have bank payments to ask about, the question.
@@ -99,6 +100,13 @@ final class ReceiptPageModel: Identifiable {
         var phase: Phase
     }
 
+    /// What the page is doing after a tap, so that button shows the spinner.
+    enum Work: Equatable {
+        case edit, paidFrom, category, unjoin, delete
+        /// Join with a payment…: the payment tapped.
+        case join(String)
+    }
+
     let id: String
     @ObservationIgnored let phone: PhoneBackend
     private(set) var receipt: LedgerReceipt?
@@ -109,7 +117,9 @@ final class ReceiptPageModel: Identifiable {
     private(set) var choices: [ReceiptCheckModel.Choice] = []
     /// "Join with a payment…": the payments offered (nil until asked for).
     private(set) var joinOptions: [ReceiptOption]?
-    private(set) var isWorking = false
+    /// The work under way (nil: none).
+    private(set) var working: Work?
+    var isWorking: Bool { working != nil }
     private(set) var problem: String?
     /// Deleted: the page closes.
     private(set) var isDeleted = false
@@ -175,12 +185,12 @@ final class ReceiptPageModel: Identifiable {
 
     func setPaidFrom(_ source: String?) async {
         guard source != receipt?.paidFrom else { return }
-        await work { try await self.phone.setPaidFrom(self.id, to: source) }
+        await work(.paidFrom) { try await self.phone.setPaidFrom(self.id, to: source) }
     }
 
     func setCategory(_ category: String?) async {
         guard category != receipt?.category else { return }
-        await work { try await self.phone.setReceiptCategory(self.id, to: category) }
+        await work(.category) { try await self.phone.setReceiptCategory(self.id, to: category) }
     }
 
     func loadJoinOptions() async {
@@ -189,16 +199,16 @@ final class ReceiptPageModel: Identifiable {
     }
 
     func join(_ paymentID: String) async {
-        await work { try await self.phone.join(receipt: self.id, to: paymentID) }
+        await work(.join(paymentID)) { try await self.phone.join(receipt: self.id, to: paymentID) }
         joinOptions = nil
     }
 
     func unjoin() async {
-        await work { try await self.phone.unjoin(receipt: self.id) }
+        await work(.unjoin) { try await self.phone.unjoin(receipt: self.id) }
     }
 
     func delete() async {
-        await work(reload: false) { try await self.phone.deleteReceipt(self.id) }
+        await work(.delete, reload: false) { try await self.phone.deleteReceipt(self.id) }
         if problem == nil { isDeleted = true }
     }
 
@@ -207,7 +217,9 @@ final class ReceiptPageModel: Identifiable {
     /// Opens Edit: the check window with the receipt as stored now.
     func beginEdit() async {
         guard editing == nil, !isWorking else { return }
+        working = .edit
         problem = nil
+        defer { working = nil }
         do {
             guard let stored = try await phone.receipt(id) else { throw LedgerError.receiptNotFound }
             if stored.kind == .manual {
@@ -274,11 +286,14 @@ final class ReceiptPageModel: Identifiable {
         await load()
     }
 
-    private func work(reload: Bool = true, _ change: @escaping () async throws -> Void) async {
+    private func work(_ kind: Work, reload: Bool = true, _ change: @escaping () async throws -> Void) async {
         guard !isWorking else { return }
-        isWorking = true
+        working = kind
         problem = nil
-        defer { isWorking = false }
+        defer { working = nil }
+        #if DEBUG
+        await DebugLaunch.holdWork()
+        #endif
         do {
             try await change()
             await changed()

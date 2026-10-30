@@ -123,6 +123,36 @@ enum PhoneSample {
                                         auth: BackendAuth(token: nil))
     }
 
+    /// `-sampleImportQuestion`: two made-up card receipts wait for their bank payments, then a made-up bank file brings
+    /// two payments of each one's amount, so after that import both are asked ("Is this the same payment?"), one after
+    /// the other: Later on the first shows the second.
+    static func addImportQuestions(_ phone: PhoneBackend, now: Date = .now) async throws {
+        let calendar = ReceiptDay.calendar
+        func day(_ offset: Int) -> Date { calendar.date(byAdding: .day, value: offset, to: now) ?? now }
+        func bank(_ date: Date) -> String {
+            let parts = ReceiptDay.day(date).split(separator: "-")
+            return "\(parts[2]).\(parts[1]).\(parts[0])"
+        }
+        let receipts: [(shop: String, day: Int, total: Double, category: String)] = [
+            ("Mustermarkt Linde", -3, 31.17, "groceries"), ("Pizzeria Fiktiva", -2, 23.43, "eating-out"),
+        ]
+        var rows = ["IBAN Auftragskonto;Buchungstag;Valutadatum;Name Zahlungsbeteiligter;Buchungstext;Verwendungszweck;Betrag;Währung;Soll/Haben;Saldo nach Buchung"]
+        for (index, receipt) in receipts.enumerated() {
+            let amount = ReceiptAmount.field(receipt.total, language: .german)
+            _ = try await phone.saveReceipt(ReceiptDraft(
+                date: ReceiptDay.day(day(receipt.day)), shop: receipt.shop, total: receipt.total, currency: "EUR",
+                method: .card, category: receipt.category, categorySource: .starter,
+                rows: [receipt.shop.uppercased(), "SUMME EUR \(amount)", "Geg. girocard EUR \(amount)"], from: "text"))
+            for (offset, card) in [(receipt.day, 4720 + 2 * index), (receipt.day + 1, 4721 + 2 * index)] {
+                let date = bank(day(min(offset, 0)))
+                rows.append(";\(date);\(date);\(receipt.shop.uppercased());Kartenzahlung;Girocard \(card);\(amount);EUR;S;")
+            }
+        }
+        let csv = rows.joined(separator: "\n") + "\n"
+        _ = try await phone.importFiles([ImportFile(name: "Umsaetze-Belege.csv", data: Data(csv.utf8))],
+                                        auth: BackendAuth(token: nil))
+    }
+
     /// A made-up unknown bank's CSV (the engine's fixture), for the layout confirmation sheet (`-sampleLayout`).
     static func unknownBankFile() -> ImportFile? {
         guard let url = Bundle.main.url(forResource: "sample-unknown-bank", withExtension: "csv"),

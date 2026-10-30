@@ -244,6 +244,8 @@ final class CashEntryModel: Identifiable {
     private(set) var isSaving = false
     private(set) var problem: String?
     private let language: AppLanguage
+    /// The values as the window opened, to tell what the person changed.
+    @ObservationIgnored private var start: Values?
 
     init(direction: ReceiptDirection = .out, phone: PhoneBackend, today: Date = .now, language: AppLanguage = .current) {
         editing = nil
@@ -251,6 +253,7 @@ final class CashEntryModel: Identifiable {
         self.language = language
         self.direction = direction
         date = today
+        start = values
     }
 
     /// The window for a saved entry, filled from it.
@@ -264,6 +267,7 @@ final class CashEntryModel: Identifiable {
         what = entry.shop ?? ""
         category = entry.category
         paidFrom = entry.paidFrom
+        start = values
     }
 
     /// The categories offered: spending ones for spent, income ones for received, then Not sorted.
@@ -287,9 +291,34 @@ final class CashEntryModel: Identifiable {
         guard let list = try? await phone.categories(language: language) else { return }
         spendChoices = CashCategories.choices(list, for: .out)
         incomeChoices = CashCategories.choices(list, for: .in)
-        if !self.choices.contains(where: { $0.id == category }) { category = nil }
+        if !self.choices.contains(where: { $0.id == category }) {
+            // A saved category no longer offered is dropped by the window, not by the person.
+            if start?.category == category { start?.category = nil }
+            category = nil
+        }
         await loadSources()
     }
+
+    // MARK: Cancel
+
+    /// The values the person can change, compared by what they mean (the day, the amount as a number).
+    private struct Values: Equatable {
+        var direction: ReceiptDirection
+        var amount: String
+        var day: String
+        var what: String
+        var category: String?
+        var paidFrom: String?
+    }
+
+    private var values: Values {
+        Values(direction: direction, amount: ReceiptAmount.typed(amountText).map { String($0) } ?? amountText, day: day,
+               what: what, category: category, paidFrom: paidFrom)
+    }
+
+    /// Something was typed or changed since the window opened: Cancel asks before discarding it, and a new entry's
+    /// swipe down is held back (brief 40).
+    var hasChanges: Bool { values != start }
 
     /// Paid from's sources on or before the day chosen (the entry itself left out).
     func loadSources() async {
