@@ -76,15 +76,46 @@ final class PhoneBackend: AresiumBackend {
     /// once each, after the category picker when both are due (ContentView presents them).
     var receiptQuestions: [ReceiptQuestion] = []
 
-    init(ledger: PhoneLedger, engine: AresiumEngine) {
+    static let learnedVersionKey = "aresium.phone.learnedEngineVersion"
+    @ObservationIgnored private let defaults: UserDefaults
+    @ObservationIgnored private let engineVersion: () throws -> String
+
+    init(ledger: PhoneLedger, engine: AresiumEngine, defaults: UserDefaults = .standard,
+         engineVersion: @escaping () throws -> String = PhoneBackend.bundledEngineVersion) {
         self.ledger = ledger
         self.engine = engine
+        self.defaults = defaults
+        self.engineVersion = engineVersion
     }
 
     /// Reads the engine's categories and the store's numbers; call once after opening.
     func load() async throws {
         catalog = try await engine.catalog()
+        if try await rebuildLearnedKeys() { try await sort() }
         try await refresh()
+    }
+
+    /// The bundle revision, rather than the engine API's version (which can stay the same across key changes).
+    nonisolated static func bundledEngineVersion() throws -> String {
+        guard let url = Bundle.main.url(forResource: "engine-version", withExtension: "txt") else {
+            throw EngineError.missingBundle
+        }
+        return try String(contentsOf: url, encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// Keep old rules (including shops absent from this store), and add current keys from manual corrections.
+    /// Booking order, then import sequence, makes the newest payment win when several now share a key.
+    @discardableResult
+    private func rebuildLearnedKeys(force: Bool = false) async throws -> Bool {
+        let version = try engineVersion()
+        guard force || defaults.string(forKey: Self.learnedVersionKey) != version else { return false }
+        let manual = try await ledger.payments().filter { $0.categorySource == .manual && $0.category != nil }
+        let keys = try await engine.merchantKeys(manual.map { $0.sorting(raw: false) })
+        var rules: [String: String] = [:]
+        for (payment, key) in zip(manual, keys) where !key.isEmpty { rules[key] = payment.category }
+        try await ledger.remember(rules)
+        defaults.set(version, forKey: Self.learnedVersionKey)
+        return true
     }
 
     func refresh() async throws { summary = try await ledger.summary() }
@@ -141,7 +172,7 @@ final class PhoneBackend: AresiumBackend {
         let keys = try await engine.merchantKeys(payments.map { $0.sorting(raw: false) })
         return zip(payments, keys).compactMap { payment, key in
             key == merchant && payment.id != id && !CategorySource.keeps(payment.categorySource.rawValue)
-                && payment.category != target
+                && payment.categorySource != .structural && payment.category != target
                 ? payment.id : nil
         }
     }
@@ -256,9 +287,9 @@ final class PhoneBackend: AresiumBackend {
     // MARK: categories (the picker)
 
     /// Ticks a default category; payments not sorted yet are sorted again with it.
-    func choose(_ id: String) async throws {
+    func choose(_ id: String, sorting: Bool = true) async throws {
         try await ledger.choose(id)
-        try await sort()
+        if sorting { try await sort() }
         try await refresh()
     }
 
@@ -294,9 +325,9 @@ final class PhoneBackend: AresiumBackend {
     }
 
     /// Unticks a category; its payments go to `target` (or Not sorted, then sorted again with the rest of the list).
-    func unchoose(_ id: String, moveTo target: String?) async throws {
+    func unchoose(_ id: String, moveTo target: String?, sorting: Bool = true) async throws {
         try await ledger.unchoose(id, moveTo: target)
-        try await sort()
+        if sorting { try await sort() }
         try await refresh()
     }
 
@@ -349,6 +380,8 @@ final class PhoneBackend: AresiumBackend {
     func restore(_ data: Data) async throws {
         let export = try LedgerExport.decode(data)
         try await ledger.restore(export, catalog: try await catalogValue())
+        try await rebuildLearnedKeys(force: true)
+        try await sort()
         try await refresh()
     }
 

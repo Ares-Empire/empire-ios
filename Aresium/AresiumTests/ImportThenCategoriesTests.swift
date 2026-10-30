@@ -190,9 +190,11 @@ struct ImportThenCategoriesTests {
         await picker.load()
 
         await picker.toggle("groceries")
+        #expect(await picker.flush())
         #expect(s.phone.summary.unsorted == 2, "both REWE payments went to Groceries at once")
         #expect(s.dashboard.dashboard?.transactions.filter { $0.categoryName == "Groceries" }.count == 2)
         await picker.toggle("rent")
+        #expect(await picker.flush())
         #expect(s.phone.summary.unsorted == 1)
         #expect(try await s.phone.ledger.payments().map(\.category) == ["groceries", "rent", nil, "groceries"])
     }
@@ -207,6 +209,7 @@ struct ImportThenCategoriesTests {
         let picker = CategoryPickerModel(phone: s.phone) { await s.dashboard.reloadAfterTransactionChange() }
         await picker.load()
         await picker.toggle("groceries")
+        #expect(await picker.flush())
         await s.imports.categoriesClosed()?.value
 
         // The same result, its numbers as the store holds them now.
@@ -231,6 +234,7 @@ struct ImportThenCategoriesTests {
         let picker = CategoryPickerModel(phone: s.phone) {}
         await picker.load()
         await picker.toggle("groceries")
+        #expect(await picker.flush())
         await s.imports.categoriesClosed()?.value
         let results = try #require(s.imports.banner?.results)
         let files = PhoneTest.phoneResults(results)

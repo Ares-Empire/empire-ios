@@ -309,7 +309,8 @@ final class TourWorld {
         do {
             let storage = PhoneStorage(root: root)
             let ledger = try await Task.detached { try storage.open() }.value
-            let phone = PhoneBackend(ledger: ledger, engine: try makeEngine())
+            let phone = PhoneBackend(ledger: ledger, engine: try makeEngine(),
+                                     defaults: UserDefaults(suiteName: "aresium.phone.tour")!)
             phone.today = { LedgerExport.day(now) }
             try await phone.load()
             for id in TourData.chosen { try await ledger.choose(id) }
