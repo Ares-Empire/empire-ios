@@ -1,6 +1,6 @@
 # 46: Aresium's messages in Settings, and the offer after the first import (the screens)
 
-Status: draft
+Status: merged 2026-10-30 (448 passed, 0 failed, 2 opt-in skipped on the branch; Settings → Messages after Your data, the offer in the import result's card)
 Branch: `claude/46-messages-screens` · Worktree: `../empire-ios-46-messages-screens` · Built by: a Claude agent (the look)
 
 ## Goal
