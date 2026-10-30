@@ -61,12 +61,14 @@ struct CategoryCountsTests {
         let estimate = try #require(picker.count(of: "rent"))
 
         await picker.toggle("rent")
+        #expect(await picker.flush())
         // Ticked, it holds what the estimate said, and the others still show theirs.
         #expect(try await phone.paymentCount(in: "rent") == estimate)
         #expect(picker.count(of: "rent") == estimate && picker.count(of: "groceries") == 2)
         #expect(phone.summary.unsorted == 4)
 
         await picker.toggle("groceries")
+        #expect(await picker.flush())
         #expect(picker.count(of: "groceries") == 2 && phone.summary.unsorted == 2)
     }
 

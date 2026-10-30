@@ -235,9 +235,13 @@ struct CategoryPickerScreen: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if let done {
-                ToolbarItem(placement: .confirmationAction) { Button("Done", action: done) }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { Task { if await model.flush() { done() } } }
+                }
             }
         }
+        // The system Back button and its edge swipe stay: a sort still waiting runs as the picker goes.
+        .onDisappear { Task { await model.flush() } }
         .tint(Ink.primary)
         .sheet(item: Binding(get: { model.untick }, set: { if $0 == nil { model.cancelUntick() } })) { untick in
             UntickSheet(untick: untick) { model.resolve(moveTo: $0) }
@@ -259,7 +263,7 @@ struct CategoryPickerScreen: View {
             try? await Task.sleep(for: .milliseconds(300))
             proxy.scrollTo(id, anchor: .top)
         }
-        if arguments.contains("-samplePickerDone") { done?() }
+        if arguments.contains("-samplePickerDone"), await model.flush() { done?() }
     }
     #endif
 
@@ -290,7 +294,6 @@ struct CategoryPickerScreen: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(SettingsRowStyle())
-        .disabled(model.isWorking)
         .accessibilityAddTraits(item.chosen ? .isSelected : [])
     }
 

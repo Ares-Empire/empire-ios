@@ -248,7 +248,7 @@ final class ModeStore {
             let engine = try self.engine ?? self.makeEngine()
             self.engine = engine
             let ledger = try await Task.detached { try storage.open() }.value
-            let backend = PhoneBackend(ledger: ledger, engine: engine)
+            let backend = PhoneBackend(ledger: ledger, engine: engine, defaults: defaults)
             try await backend.load()
             return backend
         }

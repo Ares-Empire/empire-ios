@@ -17,7 +17,8 @@ enum PhoneSample {
                                                                      directoryHint: .isDirectory)
         let storage = PhoneStorage(root: root)
         let ledger = try await Task.detached { try storage.open() }.value
-        let backend = PhoneBackend(ledger: ledger, engine: try AresiumEngine.bundled())
+        let backend = PhoneBackend(ledger: ledger, engine: try AresiumEngine.bundled(),
+                                   defaults: UserDefaults(suiteName: "aresium.phone.sample")!)
         try await backend.load()
         guard !empty else { return (backend, storage) }
         for id in chosen { try await ledger.choose(id) }
