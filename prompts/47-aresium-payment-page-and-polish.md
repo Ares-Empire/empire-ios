@@ -1,6 +1,6 @@
 # 47: The payment's page made simpler (tap the name or the pen), build 4's gaps, and polish from Patrik's phone
 
-Status: draft
+Status: merged 2026-10-30 (Aresium 534 tests and Empire tests pass, the other apps build; switches green or the accent; back swipe equals Apple's)
 Branch: `claude/47-page-polish` · Worktree: `../empire-ios-47-page-polish` · Built by: a Claude agent (the look and the feel)
 
 ## Goal
