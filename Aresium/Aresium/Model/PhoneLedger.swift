@@ -246,8 +246,8 @@ actor PhoneLedger {
 
     // MARK: payments
 
-    /// Adds a read file's payments to its account; the ones already stored (same account, source and export id) are
-    /// counted, not added. Not sorted yet: `applySort` follows.
+    /// Adds a read file's payments to its account, counting those already stored by key or bank booking group.
+    /// Not sorted yet: `applySort` follows.
     func add(_ file: BankFile, account: LedgerAccount) throws -> AddedPayments {
         let accountID = account.id
         if let stored = try modelContext.fetch(FetchDescriptor<StoredAccount>(predicate: #Predicate { $0.id == accountID })).first {
@@ -257,13 +257,34 @@ actor PhoneLedger {
             modelContext.insert(StoredAccount(id: account.id, name: account.name, iban: account.iban, bank: account.bank,
                                               currency: account.currency))
         }
-        var keys = Set(try modelContext.fetch(FetchDescriptor<StoredPayment>(predicate: #Predicate { $0.account == accountID }))
-            .map(\.key))
+        let storedPayments = try modelContext.fetch(FetchDescriptor<StoredPayment>(predicate: #Predicate { $0.account == accountID }))
+        var keys = Set(storedPayments.map(\.key))
+        var unmatched: [BankBookingGroup: Int] = [:]
+        if file.source == "bank" {
+            // Bank formats do not share ids. Exports cover every booking of each day, so the remaining bookings
+            // of this account can answer one new row each by day, cents and currency. Reserve every key match in
+            // the whole file first, even when it comes after a new row; PayPal keeps its transaction-code matching.
+            let fileKeys = Set(file.transactions.map {
+                LedgerPayment.key(account: accountID, source: file.source, externalId: $0.externalId)
+            })
+            for stored in storedPayments where stored.source == "bank" && !fileKeys.contains(stored.key) {
+                if let group = BankBookingGroup(day: stored.bookingDate, amount: stored.amount, currency: stored.currency) {
+                    unmatched[group, default: 0] += 1
+                }
+            }
+        }
         var last = try lastSequence()
         var added = AddedPayments(accountName: account.name)
         for txn in file.transactions {
             let key = LedgerPayment.key(account: account.id, source: file.source, externalId: txn.externalId)
             guard keys.insert(key).inserted else { added.already += 1; continue }
+            if file.source == "bank",
+               let group = BankBookingGroup(day: txn.day, amount: txn.amount, currency: txn.currency),
+               let count = unmatched[group], count > 0 {
+                unmatched[group] = count - 1
+                added.already += 1
+                continue
+            }
             last += 1
             let payment = LedgerPayment(id: UUID().uuidString, account: account.id, source: file.source,
                                         externalId: txn.externalId, bookingDate: txn.day,
@@ -277,6 +298,23 @@ actor PhoneLedger {
         }
         try modelContext.save()
         return added
+    }
+
+    /// The account is already fixed by the import's fetch; decimal cents avoid differences in amount formatting.
+    nonisolated private struct BankBookingGroup: Hashable {
+        let day: String
+        let cents: Decimal
+        let currency: String
+
+        init?(day: String, amount: String, currency: String) {
+            guard let value = Decimal(string: amount, locale: Locale(identifier: "en_US_POSIX")) else { return nil }
+            var scaled = value * 100
+            var rounded = Decimal()
+            NSDecimalRound(&rounded, &scaled, 0, .plain)
+            self.day = String(day.prefix(10))
+            self.cents = rounded
+            self.currency = currency
+        }
     }
 
     private func lastSequence() throws -> Int {

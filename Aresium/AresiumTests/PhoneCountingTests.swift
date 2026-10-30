@@ -54,9 +54,8 @@ struct PhoneCountingTests {
         try await totals(phone, spending: 30, income: 1000)
     }
 
-    /// Same fields and account in both formats. The engine currently uses different ids: pin and report the gap,
-    /// without concealing it through an app-side fuzzy match.
-    @Test func csvAndCamtOfTheSameAccountReportDifferentEngineIDs() async throws {
+    @Test(arguments: [true, false])
+    func csvAndCamtOfTheSameAccountCountOnce(camtFirst: Bool) async throws {
         let phone = try await Self.backend(chosen: ["groceries", "salary"])
         let file = bankWithIBAN([("01.10.2026", "REWE", "REWE", -2000),
                                  ("02.10.2026", "Fictional Works", "Gehalt", 100000)], iban: iban)
@@ -70,12 +69,120 @@ struct PhoneCountingTests {
         <NtryDtls><TxDtls><RltdPties><Dbtr><Nm>Fictional Works</Nm></Dbtr></RltdPties>
         <RmtInf><Ustrd>Gehalt</Ustrd></RmtInf></TxDtls></NtryDtls></Ntry>
         """)
-        _ = try await phone.importFiles([file, xml], auth: auth)
+        let csvIDs = try await phone.engine.readBankFile(file.data, layouts: []).transactions.map(\.externalId)
+        let camtIDs = try await phone.engine.readBankFile(xml.data, layouts: []).transactions.map(\.externalId)
+        #expect(Set(csvIDs).isDisjoint(with: camtIDs))
+        let results = PhoneTest.phoneResults(try await phone.importFiles(camtFirst ? [xml, file] : [file, xml], auth: auth))
+        #expect(results.count == 2 && results.allSatisfy { $0.error == nil })
+        #expect(results.first?.added == 2 && results.first?.already == 0)
+        #expect(results.last?.added == 0 && results.last?.already == 2 && results.last?.newIDs.isEmpty == true)
+        #expect(results.last?.sorted == 0 && results.last?.waiting == 0)
+        #expect(phone.summary.accounts == 1 && phone.summary.payments == 2)
+        try await totals(phone, spending: 20, income: 1000)
+    }
+
+    @Test(arguments: [true, false])
+    func csvAndMt940OfTheSameAccountCountOnce(mt940First: Bool) async throws {
+        let phone = try await Self.backend(chosen: ["groceries", "salary"])
+        let csv = bankWithIBAN([("01.10.2026", "REWE", "REWE", -2000),
+                                ("02.10.2026", "Fictional Works", "Gehalt", 100000)], iban: iban)
+        let mt940 = ImportFile(name: "fictional-bank.sta", data: Data("""
+        :20:FICTIONAL
+        :25:\(iban)
+        :28C:1/1
+        :60F:C260930EUR0,00
+        :61:2610011001D20,00NTRFNONREF
+        :86:105?00Kartenzahlung?20REWE?32REWE
+        :61:2610021002C1000,00NTRFNONREF
+        :86:105?00Gutschrift?20Gehalt?32Fictional Works
+        :62F:C261002EUR980,00
+        -
+        """.utf8))
+        let results = PhoneTest.phoneResults(try await phone.importFiles(mt940First ? [mt940, csv] : [csv, mt940], auth: auth))
+        #expect(results.count == 2 && results.allSatisfy { $0.error == nil })
+        #expect(results.first?.added == 2 && results.first?.already == 0)
+        #expect(results.last?.added == 0 && results.last?.already == 2)
+        #expect(phone.summary.accounts == 1 && phone.summary.payments == 2)
+        try await totals(phone, spending: 20, income: 1000)
+    }
+
+    @Test(arguments: [1, 2, 3])
+    func sameDayAndAmountMatchOneToOne(incomingCount: Int) async throws {
+        let phone = try await Self.backend(chosen: ["groceries"])
+        let csv = bankWithIBAN([("01.10.2026", "REWE", "First purchase", -2000),
+                                ("01.10.2026", "REWE", "Second purchase", -2000)], iban: iban)
+        _ = try await phone.importFiles([csv], auth: auth)
+        let storedIDs = Set(try await phone.ledger.payments().map(\.id))
+        let xml = camt(iban: iban, entries: (1...incomingCount).map {
+            camtEntry(day: "2026-10-01", amount: "20.00", text: "Purchase \($0) in another format")
+        }.joined())
+        let result = try #require(PhoneTest.phoneResults(try await phone.importFiles([xml], auth: auth)).first)
+        #expect(result.error == nil && result.already == min(2, incomingCount))
+        #expect(result.added == max(0, incomingCount - 2))
         let payments = try await phone.ledger.payments()
-        #expect(phone.summary.accounts == 1 && payments.count == 4)
-        #expect(Set(payments.map(\.externalId)).count == 4)
-        try await totals(phone, spending: 40, income: 2000)
-        print("COUNTING engine CSV/CAMT gap: same account, 2 real payments -> 4 rows; spending 40 vs 20, income 2000 vs 1000; Not sorted 0")
+        #expect(payments.count == max(2, incomingCount))
+        #expect(storedIDs.isSubset(of: Set(payments.map(\.id))))
+        if incomingCount == 3 {
+            #expect(payments.last?.text == "Purchase 3 in another format")
+        }
+        try await totals(phone, spending: Double(max(2, incomingCount) * 20))
+    }
+
+    @Test func csvWithMoreDaysOnlyMatchesTheSharedDays() async throws {
+        let phone = try await Self.backend(chosen: ["groceries"])
+        let xml = camt(iban: iban, entries: camtEntry(day: "2026-10-02", amount: "20.00"))
+        _ = try await phone.importFiles([xml], auth: auth)
+        let csv = bankWithIBAN([("01.10.2026", "REWE", "Before", -2000),
+                                ("02.10.2026", "REWE", "Shared", -2000),
+                                ("03.10.2026", "REWE", "After", -2000)], iban: iban)
+        let result = try #require(PhoneTest.phoneResults(try await phone.importFiles([csv], auth: auth)).first)
+        #expect(result.error == nil && result.added == 2 && result.already == 1)
+        #expect(phone.summary.payments == 3)
+        try await totals(phone, spending: 60)
+        let again = try #require(PhoneTest.phoneResults(try await phone.importFiles([csv], auth: auth)).first)
+        #expect(again.error == nil && again.added == 0 && again.already == 3)
+        try await totals(phone, spending: 60)
+    }
+
+    @Test func sameDayAndAmountNeverMatchAcrossAccounts() async throws {
+        let phone = try await Self.backend(chosen: ["groceries"])
+        let csv = bankWithIBAN([("01.10.2026", "REWE", "REWE", -2000)], iban: iban)
+        let xml = camt(iban: "DE61120300000000202052", entries: camtEntry(day: "2026-10-01", amount: "20.00"))
+        let results = PhoneTest.phoneResults(try await phone.importFiles([csv, xml], auth: auth))
+        #expect(results.count == 2 && results.allSatisfy { $0.error == nil && $0.added == 1 && $0.already == 0 })
+        #expect(phone.summary.accounts == 2 && phone.summary.payments == 2)
+        try await totals(phone, spending: 40)
+    }
+
+    @Test(arguments: [true, false])
+    func keyMatchesCannotAlsoAnswerANewRow(keyMatchFirst: Bool) async throws {
+        let phone = try await Self.backend(chosen: ["groceries"])
+        let existing = ("01.10.2026", "REWE", "Existing purchase", -2000)
+        let new = ("01.10.2026", "REWE", "New purchase", -2000)
+        _ = try await phone.importFiles([bankWithIBAN([existing], iban: iban)], auth: auth)
+        let overlap = bankWithIBAN(keyMatchFirst ? [existing, new] : [new, existing], iban: iban)
+        let result = try #require(PhoneTest.phoneResults(try await phone.importFiles([overlap], auth: auth)).first)
+        #expect(result.error == nil && result.added == 1 && result.already == 1)
+        #expect(phone.summary.payments == 2)
+        try await totals(phone, spending: 40)
+    }
+
+    @Test func differentCentsCurrenciesAndSignsAreNew() async throws {
+        let phone = try await Self.backend(chosen: ["groceries"])
+        let csv = bankWithIBAN([("01.10.2026", "REWE", "REWE", -2000)], iban: iban)
+        _ = try await phone.importFiles([csv], auth: auth)
+        let entries = camtEntry(day: "2026-10-01", amount: "20.01")
+            + camtEntry(day: "2026-10-01", amount: "20.00", currency: "GBP")
+            + camtEntry(day: "2026-10-01", amount: "20.00", direction: "CRDT")
+            + camtEntry(day: "2026-10-01", amount: "20.00", text: "Different payment text")
+        let result = try #require(PhoneTest.phoneResults(try await phone.importFiles([camt(iban: iban, entries: entries)], auth: auth)).first)
+        #expect(result.error == nil && result.added == 3 && result.already == 1)
+        let payments = try await phone.ledger.payments()
+        #expect(payments.count == 4)
+        #expect(payments.filter { $0.amountValue == -20 && $0.currency == "EUR" }.count == 1)
+        #expect(payments.contains { $0.amountValue == -20.01 && $0.currency == "EUR" })
+        #expect(payments.contains { $0.amountValue == -20 && $0.currency == "GBP" })
+        #expect(payments.contains { $0.amountValue == 20 && $0.currency == "EUR" })
     }
 
     @Test func overlappingPaypalExports() async throws {
@@ -222,6 +329,16 @@ struct PhoneCountingTests {
             index == 0 ? String(line) : iban + line
         }
         return ImportFile(name: "fictional-bank.csv", data: Data(lines.joined(separator: "\n").utf8))
+    }
+
+    private func camtEntry(day: String, amount: String, currency: String = "EUR", direction: String = "DBIT",
+                           text: String = "REWE") -> String {
+        """
+        <Ntry><Amt Ccy="\(currency)">\(amount)</Amt><CdtDbtInd>\(direction)</CdtDbtInd>
+        <BookgDt><Dt>\(day)</Dt></BookgDt><ValDt><Dt>\(day)</Dt></ValDt>
+        <NtryDtls><TxDtls><RltdPties><Cdtr><Nm>REWE</Nm></Cdtr></RltdPties>
+        <RmtInf><Ustrd>\(text)</Ustrd></RmtInf></TxDtls></NtryDtls></Ntry>
+        """
     }
 
     private func camt(iban: String, entries: String) -> ImportFile {
