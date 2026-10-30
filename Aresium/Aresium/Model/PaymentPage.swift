@@ -35,7 +35,8 @@ struct PaymentPage {
         originalTitle = words.originalTitle(detail.source, language: language)
 
         let text = detail.description.trimmingCharacters(in: .whitespacesAndNewlines)
-        let repeated = [detail.place, detail.counterparty ?? ""].contains {
+        // The bank's name too (under an own name, brief 44): a payment text that only repeats it says nothing new.
+        let repeated = [detail.place, detail.bankName ?? "", detail.counterparty ?? ""].contains {
             $0.trimmingCharacters(in: .whitespacesAndNewlines).caseInsensitiveCompare(text) == .orderedSame
         }
         rows = [

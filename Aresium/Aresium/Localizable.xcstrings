@@ -64,6 +64,26 @@
         }
       }
     },
+    "%@ received" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ erhalten"
+          }
+        }
+      }
+    },
+    "%@ spent" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ausgegeben"
+          }
+        }
+      }
+    },
     "%@ · activities" : {
       "localizations" : {
         "de" : {
@@ -584,6 +604,46 @@
         }
       }
     },
+    "All" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alle"
+          }
+        }
+      }
+    },
+    "All %lld" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alle %lld"
+          }
+        }
+      }
+    },
+    "All from %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alle von %@"
+          }
+        }
+      }
+    },
+    "All payments" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alle Buchungen"
+          }
+        }
+      }
+    },
     "All your Aresium data as one file" : {
       "localizations" : {
         "de" : {
@@ -1020,6 +1080,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Buchungen"
+          }
+        }
+      }
+    },
+    "Bank's name: %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Name bei der Bank: %@"
           }
         }
       }
@@ -2876,6 +2946,16 @@
         }
       }
     },
+    "No payments with this name any more." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keine Buchungen mehr mit diesem Namen."
+          }
+        }
+      }
+    },
     "No receipts yet. Import → Scan receipt or Choose photo adds one." : {
       "localizations" : {
         "de" : {
@@ -3076,6 +3156,16 @@
         }
       }
     },
+    "Off shows the banks' names and keeps yours." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aus zeigt die Namen der Banken und behält deine."
+          }
+        }
+      }
+    },
     "On" : {
       "localizations" : {
         "de" : {
@@ -3172,6 +3262,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nur der Name geht an uns, mit der Version und Sprache der App."
+          }
+        }
+      }
+    },
+    "Only the name you see changes. Categories and sorting stay as they are." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nur der angezeigte Name ändert sich. Kategorien und Sortierung bleiben, wie sie sind."
           }
         }
       }
@@ -3282,6 +3382,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Eigener Code"
+          }
+        }
+      }
+    },
+    "Own names" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eigene Namen"
           }
         }
       }
@@ -3626,6 +3736,16 @@
         }
       }
     },
+    "Rename" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Umbenennen"
+          }
+        }
+      }
+    },
     "Restaurant" : {
       "localizations" : {
         "de" : {
@@ -3872,6 +3992,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ältere anzeigen"
+          }
+        }
+      }
+    },
+    "Shows this month's payments below" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zeigt die Buchungen dieses Monats weiter unten"
           }
         }
       }
@@ -4168,6 +4298,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Der Name wurde nicht angenommen."
+          }
+        }
+      }
+    },
+    "The name your bank gives it." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Name, den deine Bank angibt."
           }
         }
       }
@@ -4738,6 +4878,26 @@
         }
       }
     },
+    "Use the bank's name" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Namen der Bank verwenden"
+          }
+        }
+      }
+    },
+    "Use the bank's name for all %lld payments?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Für alle %lld Buchungen den Namen der Bank verwenden?"
+          }
+        }
+      }
+    },
     "Value date" : {
       "localizations" : {
         "de" : {
@@ -4958,6 +5118,16 @@
         }
       }
     },
+    "With All, new payments from %@ get the name too." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mit „Alle“ bekommen auch neue Buchungen von %@ den Namen."
+          }
+        }
+      }
+    },
     "With it, Aresium opens with Face ID or this code, not with the iPhone's code." : {
       "localizations" : {
         "de" : {
@@ -5138,6 +5308,16 @@
         }
       }
     },
+    "Your bank's name: %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Name bei deiner Bank: %@"
+          }
+        }
+      }
+    },
     "Your data on this iPhone" : {
       "localizations" : {
         "de" : {
@@ -5154,6 +5334,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dein letzter Import ist %lld Tage her."
+          }
+        }
+      }
+    },
+    "Your name for all payments from %@." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Name für alle Buchungen von %@."
+          }
+        }
+      }
+    },
+    "Your name for this payment." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Name für diese Buchung."
           }
         }
       }
@@ -5294,6 +5494,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "der Abhebung vom %@"
+          }
+        }
+      }
+    },
+    "“%@” is your name for every payment from %@." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "„%@“ ist dein Name für alle Buchungen von %@."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "“%1$@” is your name for every payment from %2$@."
           }
         }
       }

@@ -92,6 +92,8 @@ struct ValueRow: View {
     let total: Double
     let maximum: Double
     let palette: Palette
+    /// The mark at the end: the chevron of a row that opens a page; a name's page's months point down (brief 44).
+    var accessory = "chevron.right"
     var body: some View {
         HStack(spacing: 12) {
             CategoryTile(icon: category.icon, color: category.color)
@@ -105,7 +107,7 @@ struct ValueRow: View {
                 }.frame(height: 3).accessibilityHidden(true)
             }
             Text(Money.total(total)).font(AppFont.number(13.5)).fixedSize()
-            Image(systemName: "chevron.right").font(.system(size: 11, weight: .medium)).foregroundStyle(palette.muted)
+            Image(systemName: accessory).font(.system(size: 11, weight: .medium)).foregroundStyle(palette.muted)
         }.foregroundStyle(palette.ink).padding(.horizontal, 12).padding(.vertical, 11)
             .contentShape(Rectangle())
     }

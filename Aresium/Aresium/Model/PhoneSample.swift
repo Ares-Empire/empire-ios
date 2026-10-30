@@ -36,6 +36,10 @@ enum PhoneSample {
             }
         }
         _ = try await backend.importFiles(files, auth: BackendAuth(token: nil))
+        // Own names (brief 44): on unless `-ownNames off` (the sample's settings outlive a launch); `-sampleNames` names
+        // the bakery's shop and one dinner.
+        backend.setOwnNames(LaunchArguments.value("-ownNames") != "off")
+        if LaunchArguments.current.contains("-sampleNames") { try await addNames(backend) }
         return (backend, storage)
     }
 

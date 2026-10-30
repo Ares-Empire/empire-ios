@@ -318,7 +318,11 @@ struct CashScreen: View {
     let store: DashboardStore
     let palette: Palette
     let band: AresiumBand
+    /// Shows a name's page on the dashboard's stack: a withdrawal's page's "All from <name>" (brief 44), once the page
+    /// has closed.
+    var pick: ((DashboardRoute) -> Void)? = nil
     @State private var sheet: CashSheet?
+    @State private var pendingName: DashboardRoute?
     @Environment(\.dynamicTypeSize) private var typeSize
 
     private var page: CashPage? { store.dashboard?.cash.map(CashPage.init) }
@@ -354,11 +358,20 @@ struct CashScreen: View {
             } band: { _ in band }
             .refreshable { await store.reload() }.scrollBounceBehavior(.always)
         }
-        .sheet(item: $sheet) { sheet in
+        .sheet(item: $sheet, onDismiss: {
+            if let route = pendingName, let pick {
+                pendingName = nil
+                pick(route)
+            }
+        }) { sheet in
             if let phone = store.phone {
                 switch sheet {
                 case .payment(let transaction):
-                    TransactionDetailSheet(store: store.transactionDetailStore(for: transaction), palette: palette)
+                    TransactionDetailSheet(store: store.transactionDetailStore(for: transaction), palette: palette,
+                                           openName: pick == nil ? nil : { route in
+                                               pendingName = route
+                                               self.sheet = nil
+                                           })
                 case .receipt(let id):
                     ReceiptPageSheet(model: ReceiptPageModel(id: id, phone: phone) {
                         await store.reloadAfterTransactionChange()

@@ -558,6 +558,35 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   as on the dashboard). Covered rows and payments counting in neither overall total are excluded; tags cannot add
   them back. The ledger executor also does name saving, merchant-key input and the question’s count off main;
   `PaymentNamesTests` checks the worker spans (`names.*`) and opens an actual schema 3 store with all record types.
+  **Renaming and the name's page** (brief 44, the screens; Patrik 2026-10-30: swipe left only, no direction setting):
+  the payment's page shows the shown name as its title and, when it is an own name, the bank's name small under it; a
+  **Name** row (as Category/Change: where the name comes from, "Your name for this payment." / "Your name for all
+  payments from <bank>." / "The name your bank gives it.", and a bordered **Rename**; hidden while Own names is off)
+  opens `RenameSheet` (`Model/PaymentRename.swift`: `RenamePlan`, `PaymentRenameModel`): one field starting with the
+  shown name, Cancel and Save at the top (Save off while unchanged; Cancel after typing asks, `DiscardingCancel`), "Use
+  the bank's name" while an own name shows. A new name asks whenever there is a merchant key and N > 0: "Also the other
+  payments from <bank>?" with "With All, new payments … get the name too.", **All N+1** (the shop's rule; this payment's
+  own name is dropped) or **Only this one**. Removing a name that other payments share through the shop's rule asks
+  first (brief 43's API cannot leave one payment on the bank's name while its shop keeps a name). **"All from <name>"**
+  (a card under the date on the payment's page, a withdrawal's too, only when the group has more than this payment; the
+  long press; the swipe) opens the **name's page** (`Screens/NameScreen.swift`, `DashboardRoute.name`, pushed on the
+  dashboard's stack, so the arrow and the back swipe work; from the payment's sheet it closes the sheet first): the count
+  and range, Spent (and Received when any), the graph above the months (`showsGraph` = the Graph setting), the months
+  oldest first as a category's (a tap or a graph point scrolls to that month's payments, so the rows end in
+  `chevron.down`), then the payments newest first under month headers; after a whole-shop rename it follows the new
+  name. **The swipe** (`Screens/RowSwipe.swift`: `RowSwipeRule`, tested, inside a `UIPanGestureRecognizer` subclass,
+  since a plain recognizer got no moves inside the scroll view): only a drag at least twice as sideways as vertical and
+  leftward (rightward on an open row closes it); it opens at 84 pt and fires at 55 % of the row (at least 168 pt) with a
+  haptic at the threshold; one row open at a time, closed by a scroll or a tap elsewhere; the action is a quiet grey
+  "All" with a stack icon, VoiceOver's action "All from <name>", Reduce Motion fades it in. The month's list and the
+  name's page share one row (`Screens/PaymentList.swift`: tap, long press, swipe, and the windows they open). The long
+  press adds Rename and All from where the page offers them (`PaymentRowAction`). Receipt rows swipe too but have no
+  "All from" in their menu (the receipt page has no line); the Cash page's movement rows have no swipe. **Own names**
+  ("Eigene Namen") is a toggle in Settings → Your data on this iPhone (`DashboardStore.setOwnNames`). Launch arguments
+  (DEBUG, with `-samplePhone`): `-sampleNames` (made-up own names), `-ownNames off`, `-openRename`, `-renameText
+  <text>`, `-renameSave`, `-renameBankName`, `-openAllFrom`, `-openName <text>`, `-sampleSwipe <pt> -swipeRow <text>`.
+  Tests: `PaymentNameScreensTests`. Screenshots: `build/44-*.png`. Real-touch checks (a temporary UI test, deleted):
+  a slanted vertical drag scrolls and opens nothing; the back swipe from the middle still works 6 of 6.
   **The widget snapshot** belongs to the store it shows: phone mode's carries `phone: true` and is shown whoever is
   logged in; server mode's carries its account and follows the marker as before (`WidgetSnapshotStore.readShown`).
   **The lock** (brief 22, `Model/AppLock.swift`, `Screens/LockScreen.swift`, `Screens/LockSettings.swift`): optional,

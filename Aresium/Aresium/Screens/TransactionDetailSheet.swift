@@ -3,6 +3,11 @@ import SwiftUI
 struct TransactionDetailSheet: View {
     @State var store: TransactionDetailStore
     let palette: Palette
+    /// The name's page this page was opened from (its "All from" line would lead back there, so it shows none).
+    var namePage: String? = nil
+    /// "All from <name>" (brief 44): the list this page was opened from closes it and shows the name's page on the
+    /// dashboard's stack. Nil: no line (a page opened where no name's page can be shown).
+    var openName: ((DashboardRoute) -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dynamicTypeSize) private var typeSize
     #if DEBUG
@@ -40,6 +45,9 @@ struct TransactionDetailSheet: View {
             .sheet(isPresented: $store.showsRecategorisation) {
                 RecategoriseSheet(store: store, palette: palette)
             }
+            .sheet(isPresented: $store.showsRename) {
+                RenameSheet(store: store, palette: palette)
+            }
         }
         .tourCard()
         .font(AppFont.text(14)).foregroundStyle(palette.ink).tint(palette.balance)
@@ -70,6 +78,13 @@ struct TransactionDetailSheet: View {
                 await store.editReceipt()
                 store.receiptEditor?.debugType(total: LaunchArguments.value("-editReceiptTotal"))
             }
+            // Phone sample: Rename at once (`-openRename`; `-renameText`, `-renameSave` in the window), or the
+            // "All from" line tapped (`-openAllFrom`).
+            if arguments.contains("-openRename") { store.beginRename() }
+            if arguments.contains("-openAllFrom"), let openName, let line = store.nameRoute(namePage: namePage) {
+                try? await Task.sleep(for: .milliseconds(600))
+                openName(line.route)
+            }
             #endif
         }
     }
@@ -86,11 +101,24 @@ struct TransactionDetailSheet: View {
     @ViewBuilder private func record(_ detail: TransactionDetail) -> some View {
         let page = PaymentPage(detail)
         VStack(alignment: .leading, spacing: 7) {
-            Text(detail.place).font(AppFont.text(22, weight: .bold))
+            VStack(alignment: .leading, spacing: 3) {
+                Text(detail.place).font(AppFont.text(22, weight: .bold))
+                // An own name (brief 44): the bank's name stays, small, under it.
+                if let bankName = detail.bankName {
+                    Text(bankName).font(AppFont.text(13.5)).foregroundStyle(palette.secondary)
+                        .accessibilityLabel(Text("Bank's name: \(bankName)"))
+                }
+            }
             Text(detail.signedAmount).font(AppFont.number(28, weight: .bold))
                 .foregroundStyle(detail.amount < 0 ? palette.expenseText : palette.balance)
             Text(page.date).font(AppFont.text(13.5)).foregroundStyle(palette.secondary)
         }.padding(.bottom, 20)
+        if let openName, let line = store.nameRoute(namePage: namePage) {
+            Button { openName(line.route) } label: { AllFromLine(name: detail.place, group: line.group, palette: palette) }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("allFromName")
+                .padding(.bottom, 12)
+        }
         lines(of: detail, page: page)
         if let receipt = store.receipt { receiptSection(receipt) }
         if let rows = detail.originalRows {
@@ -110,7 +138,7 @@ struct TransactionDetailSheet: View {
     /// The page's rows: the label beside its value, the labels in one column as wide as the longest (German's
     /// "Verwendungszweck" too); at the accessibility text sizes each label above its value.
     @ViewBuilder private func lines(of detail: TransactionDetail, page: PaymentPage) -> some View {
-        let lines = Line.all(detail: detail, page: page)
+        let lines = Line.all(detail: detail, page: page, rename: store.offersRename)
         if typeSize.isAccessibilitySize {
             VStack(alignment: .leading, spacing: 0) {
                 ForEach(lines) { line in
@@ -142,6 +170,17 @@ struct TransactionDetailSheet: View {
     @ViewBuilder private func value(_ line: Line, detail: TransactionDetail, page: PaymentPage) -> some View {
         Group {
             switch line {
+            case .name:
+                // Where the shown name comes from, and Rename (brief 44), as the category's reason and Change below.
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(NameWording.source(detail.ownNameSource,
+                                            bankName: store.renameInfo?.bankName ?? detail.bankName ?? detail.place))
+                        .font(AppFont.text(12.5)).foregroundStyle(palette.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Button("Rename") { store.beginRename() }.buttonStyle(.bordered)
+                        .disabled(store.isSaving)
+                        .accessibilityIdentifier("renamePayment")
+                }
             case .category:
                 VStack(alignment: .leading, spacing: 8) {
                     CategoryChip(name: detail.category, color: detail.categoryColor)
@@ -212,13 +251,15 @@ struct TransactionDetailSheet: View {
         }
     }
 
-    /// One row of the page, in order: the category, the other categories it is also in, the account, then the plain rows.
+    /// One row of the page, in order: the name (phone mode, own names on), the category, the other categories it is also
+    /// in, the account, then the plain rows.
     private enum Line: Identifiable {
-        case category, tags, account
+        case name, category, tags, account
         case row(DetailRow)
 
         var id: String {
             switch self {
+            case .name: "name"
             case .category: "category"
             case .tags: "tags"
             case .account: "account"
@@ -228,6 +269,7 @@ struct TransactionDetailSheet: View {
 
         var label: String {
             switch self {
+            case .name: String(localized: "Name")
             case .category: String(localized: "Category")
             case .tags: String(localized: "Also in")
             case .account: String(localized: "Account")
@@ -235,10 +277,42 @@ struct TransactionDetailSheet: View {
             }
         }
 
-        static func all(detail: TransactionDetail, page: PaymentPage) -> [Line] {
-            [.category] + (detail.tags.isEmpty ? [] : [.tags]) + (page.account == nil ? [] : [.account])
-                + page.rows.map(Line.row)
+        static func all(detail: TransactionDetail, page: PaymentPage, rename: Bool) -> [Line] {
+            (rename ? [.name] : []) + [.category] + (detail.tags.isEmpty ? [] : [.tags])
+                + (page.account == nil ? [] : [.account]) + page.rows.map(Line.row)
         }
+    }
+}
+
+/// The payment page's "All from <name>" line (brief 44): the name's count and money, as a dashboard row in a card; it
+/// opens the name's page.
+struct AllFromLine: View {
+    let name: String
+    let group: PaymentNameGroup
+    let palette: Palette
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: 12, style: .continuous)
+        HStack(spacing: 12) {
+            Image(systemName: "rectangle.stack").font(.system(size: 17, weight: .medium)).foregroundStyle(palette.secondary)
+                .frame(width: 38, height: 38)
+                .background(palette.card2, in: RoundedRectangle(cornerRadius: 9))
+                .overlay(RoundedRectangle(cornerRadius: 9).stroke(palette.line))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(verbatim: NameWording.allFrom(name)).font(AppFont.text(14.5, weight: .semibold)).lineLimit(1)
+                Text(verbatim: NameWording.summary(group)).font(AppFont.text(12.5)).foregroundStyle(palette.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            Image(systemName: "chevron.right").font(.system(size: 11, weight: .medium)).foregroundStyle(palette.muted)
+        }
+        .foregroundStyle(palette.ink)
+        .padding(.horizontal, 12).padding(.vertical, 10)
+        .background(palette.card, in: shape)
+        .overlay(shape.stroke(palette.line))
+        .contentShape(shape)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
     }
 }
 

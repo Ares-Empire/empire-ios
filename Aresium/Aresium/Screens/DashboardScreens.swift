@@ -6,6 +6,8 @@ struct DashboardRoute: Hashable {
     var month: String? = nil
     /// The Cash page (brief 33): a month's (with `month`) or its months (Overview); `category` is unused.
     var cash = false
+    /// A name's page (brief 44): every payment of one name; `category` is unused (`init(name:)`).
+    var name: PaymentNameRoute? = nil
 }
 
 /// Where a dashboard is: the screens pushed, Current or Overview, the expenses or income page, the payment open. The
@@ -49,13 +51,17 @@ struct DashboardStack<Top: View, Root: View>: View {
             .navigationDestination(for: DashboardRoute.self) { route in
                 VStack(spacing: 0) {
                     top(route)
-                    if route.cash, let month = route.month {
-                        CashScreen(month: month, store: store, palette: palette, band: band)
+                    if let name = route.name {
+                        NameScreen(route: name, store: store, palette: palette, band: band, showsGraph: graph,
+                                   shortcuts: shortcuts,
+                                   pick: { place.path.append($0) }, replace: replaceTop)
+                    } else if route.cash, let month = route.month {
+                        CashScreen(month: month, store: store, palette: palette, band: band) { place.path.append($0) }
                     } else if route.cash {
                         CashMonthsScreen(store: store, palette: palette, band: band) { place.path.append($0) }
                     } else if route.month != nil {
                         TransactionsScreen(route: route, store: store, palette: palette, band: band,
-                                           selection: $place.payment, rowMenus: shortcuts)
+                                           selection: $place.payment, rowMenus: shortcuts) { place.path.append($0) }
                     } else {
                         CategoryScreen(route: route, store: store, palette: palette, graph: graph,
                                        band: band) { place.path.append($0) }
@@ -71,6 +77,15 @@ struct DashboardStack<Top: View, Root: View>: View {
             }
         }
         .task { if store.dashboard == nil { await store.reload() } }
+    }
+
+    /// The screen on top shows another page in its place, without the push animation (a name's page following a
+    /// rename, `PaymentNameRoute.following`).
+    private func replaceTop(_ route: DashboardRoute) {
+        guard !place.path.isEmpty else { return }
+        var quiet = SwiftUI.Transaction()
+        quiet.disablesAnimations = true
+        withTransaction(quiet) { place.path[place.path.count - 1] = route }
     }
 }
 
@@ -257,90 +272,39 @@ struct TransactionsScreen: View {
     let band: AresiumBand
     /// The payment whose detail is open (the dashboard's place).
     @Binding var selection: Transaction?
-    /// The rows' long press (brief 41); off while the tour holds the screen (`DashboardStack.shortcuts`).
+    /// The rows' long press (brief 41) and swipe (brief 44); off while the tour holds the screen
+    /// (`DashboardStack.shortcuts`).
     var rowMenus = true
-    /// A payment's change sheet opened from its row's long press: the sheet its page's Change opens, on a store of its
-    /// own for that payment.
-    @State private var changing: TransactionDetailStore?
-    /// A receipt's or entry's Edit opened from its row's long press: the window its page's Edit opens.
-    @State private var receiptEdit: ReceiptPageModel?
+    /// Shows a name's page on the dashboard's stack (the rows' swipe and long press, a payment page's line).
+    var pick: (DashboardRoute) -> Void = { _ in }
+    /// The rows' windows and the row swiped open (`PaymentList.swift`).
+    @State private var menu = PaymentRowMenu()
 
     var body: some View {
         VStack(spacing: 0) {
             DashboardStatus(store: store, palette: palette)
             WordmarkScrollView {
                 let rows = store.transactions(category: route.category, month: route.month ?? "", side: route.side)
+                #if DEBUG
+                let swiped = rows.debugSwipe()
+                #else
+                let swiped: (id: String, points: CGFloat)? = nil
+                #endif
                 LazyVStack(spacing: 0) {
                     ForEach(rows) { row in
-                        let transaction = row.transaction
-                        Button { selection = transaction } label: {
-                            HStack(spacing: 12) {
-                                DayTile(palette: palette) { Text(String(transaction.day)) }
-                                VStack(alignment: .leading, spacing: 2) {
-                                    HStack(spacing: 5) {
-                                        Text(verbatim: ReceiptRowWording.title(transaction, movement: store.cashMovement(transaction.receiptId)))
-                                            .font(AppFont.text(14.5, weight: .semibold)).lineLimit(1)
-                                        if transaction.isWaitingReceipt {
-                                            // A card receipt counted until its bank payment comes: a quiet mark.
-                                            Image(systemName: "clock").font(.system(size: 11, weight: .semibold))
-                                                .foregroundStyle(palette.muted)
-                                                .accessibilityLabel(Text("Waiting for the bank statement"))
-                                        }
-                                        if row.tagged {
-                                            Text("tag").font(AppFont.text(9, weight: .semibold)).foregroundStyle(palette.secondary)
-                                                .padding(.horizontal, 4).padding(.vertical, 2)
-                                                .background(palette.card2, in: RoundedRectangle(cornerRadius: 4))
-                                                .accessibilityLabel("Added here by tag; primary category \(CategoryName.shown(transaction.categoryName))")
-                                        }
-                                    }
-                                    Text(verbatim: ReceiptRowWording.line(transaction, movement: store.cashMovement(transaction.receiptId))).font(AppFont.text(12.5))
-                                        .foregroundStyle(palette.muted).lineLimit(1)
-                                }.frame(maxWidth: .infinity, alignment: .leading)
-                                Text(Money.transaction(transaction.amount)).font(AppFont.number(14))
-                                    .foregroundStyle(transaction.amount < 0 ? palette.expenseText : palette.income).fixedSize()
-                            }.padding(.horizontal, 12).padding(.vertical, 11).contentShape(Rectangle())
-                            // The lifted row in Apple's context menu: the row with rounded corners.
-                            .contentShape(.contextMenuPreview, RoundedRectangle(cornerRadius: 12, style: .continuous))
-                        }.buttonStyle(.plain)
-                            .contextMenu { if rowMenus { menu(for: transaction) } }
-                            .tourAnchor(.payment(transaction.id))
+                        PaymentRow(row: row, store: store, palette: palette, menu: menu, shortcuts: rowMenus,
+                                   allFrom: pick, shownAt: swiped?.id == row.id ? swiped?.points : nil) {
+                            selection = $0
+                        }
                     }
                     if rows.isEmpty { EmptyMessage(text: String(localized: "No transactions this month."), palette: palette) }
                 }.padding(.horizontal, 12).padding(.top, 8)
             } band: { _ in band }
             .refreshable { await store.reload() }.scrollBounceBehavior(.always)
+            .closesRowSwipe($menu.openRow)
             .tourScrollsToTarget()
-            .sheet(isPresented: Binding(get: { changing?.showsRecategorisation == true },
-                                        set: { if !$0 { changing?.showsRecategorisation = false } }),
-                   onDismiss: { changing = nil }) {
-                if let changing { RecategoriseSheet(store: changing, palette: palette) }
-            }
-            .sheet(isPresented: Binding(get: { receiptEdit?.editing != nil },
-                                        set: { if !$0 { receiptEdit?.endEdit() } }),
-                   onDismiss: { receiptEdit = nil }) {
-                if let receiptEdit { ReceiptEditSheet(page: receiptEdit, palette: palette) }
-            }
         }
-        .sheet(item: $selection) { transaction in
-            switch store.page(for: transaction) {
-            case let .receipt(id):
-                // Phone mode's receipt and cash entry rows open the receipt's page.
-                if let phone = store.phone {
-                    ReceiptPageSheet(model: ReceiptPageModel(id: id, phone: phone) {
-                        await store.reloadAfterTransactionChange()
-                    }, palette: palette)
-                }
-            case let .covered(receiptIDs):
-                // A withdrawal's covered row: the receipts that took its cash.
-                if let phone = store.phone {
-                    CoveredReceiptsSheet(phone: phone, receiptIDs: receiptIDs, palette: palette) {
-                        await store.reloadAfterTransactionChange()
-                    }
-                }
-            case .payment:
-                TransactionDetailSheet(store: store.transactionDetailStore(for: transaction), palette: palette)
-            }
-        }
+        .paymentListSheets(menu, store: store, palette: palette, selection: $selection, pick: pick)
         .task {
             #if DEBUG
             let arguments = LaunchArguments.current
@@ -355,43 +319,16 @@ struct TransactionsScreen: View {
                 selection = store.transactions(category: route.category, month: route.month ?? "", side: route.side)
                     .first { $0.transaction.place.localizedCaseInsensitiveContains(arguments[index + 1]) }?.transaction
             }
+            // Phone sample: `-openName <text>` shows the name's page of the first payment here whose name contains it.
+            if !store.isSample, let text = LaunchArguments.value("-openName") {
+                for _ in 0..<40 where store.dashboard == nil { try? await Task.sleep(for: .milliseconds(100)) }
+                if let row = store.transactions(category: route.category, month: route.month ?? "", side: route.side)
+                    .first(where: { $0.transaction.place.localizedCaseInsensitiveContains(text) }),
+                   let name = store.nameRoute(for: row.transaction) {
+                    pick(name)
+                }
+            }
             #endif
-        }
-    }
-
-    /// The row's long press: what its page offers (`DashboardStore.rowActions`), each opening the window that page's
-    /// button opens. None (a covered row) shows no menu.
-    @ViewBuilder private func menu(for transaction: Transaction) -> some View {
-        ForEach(store.rowActions(for: transaction), id: \.self) { action in
-            switch action {
-            case .changeCategory:
-                Button("Change category", systemImage: "tag") { change(transaction) }
-            case .edit:
-                Button("Edit", systemImage: "pencil") { edit(transaction) }
-            }
-        }
-    }
-
-    /// Change category: the change sheet at once; it fills as the payment loads, and its Save and the shop question work
-    /// as from the page (the tour's switch step, the learned shop, the dashboard built again).
-    private func change(_ transaction: Transaction) {
-        let detail = store.transactionDetailStore(for: transaction)
-        changing = detail
-        Task { await detail.beginRecategorisationFromRow() }
-    }
-
-    /// Edit: the receipt's or entry's window, filled from what is stored. If it cannot open (the receipt is gone), the
-    /// row's page opens instead and says why.
-    private func edit(_ transaction: Transaction) {
-        guard let phone = store.phone, case let .receipt(id) = store.page(for: transaction) else { return }
-        let page = ReceiptPageModel(id: id, phone: phone) { await store.reloadAfterTransactionChange() }
-        receiptEdit = page
-        Task {
-            await page.beginEdit()
-            if page.editing == nil {
-                receiptEdit = nil
-                selection = transaction
-            }
         }
     }
 }
