@@ -209,12 +209,14 @@ struct PhoneBackendTests {
         await picker.load()
         #expect(picker.groups.first?.title == "Everyday" && picker.groups.first?.items.first?.name == "Groceries")
         await picker.toggle("groceries")
+        #expect(await picker.flush())
         #expect(phone.summary.unsorted == 0 && changes.count == 1)
 
         await picker.toggle("groceries")                      // it has a payment: asks first
         let untick = try #require(picker.untick)
         #expect(untick.count == 1 && untick.targets.map(\.id) == ["rent"] && untick.notSortedName == "Not sorted")
         await picker.resolveUntick(moveTo: nil)
+        #expect(await picker.flush())
         #expect(picker.list?.isChosen("groceries") == false)
         let rewe = try #require(try await phone.ledger.payments().first { $0.counterparty == "REWE Markt GmbH" })
         #expect(rewe.category == nil && rewe.categorySource == .none)
@@ -225,6 +227,7 @@ struct PhoneBackendTests {
         picker.newName = "lebensmittel"
         await picker.addCustom()
         #expect(picker.problem == "There is already a category with this name.")
+        await picker.flush()
     }
 
     @Test func untickingIntoAnotherCategoryMovesThePaymentsByHand() async throws {

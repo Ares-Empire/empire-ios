@@ -95,7 +95,7 @@ enum PhoneTest {
     /// A phone backend on the storage's store (a new one of its own by default), with these categories ticked.
     static func backend(storage: PhoneStorage = storage(), chosen: [String] = []) async throws -> PhoneBackend {
         let ledger = try await Task.detached { try storage.open() }.value
-        let backend = PhoneBackend(ledger: ledger, engine: try engine())
+        let backend = PhoneBackend(ledger: ledger, engine: try engine(), defaults: defaults())
         backend.today = { "2026-10-27" }
         try await backend.load()
         for id in chosen { try await ledger.choose(id) }

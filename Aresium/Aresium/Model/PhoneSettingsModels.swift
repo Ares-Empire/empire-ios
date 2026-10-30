@@ -5,8 +5,8 @@ import os
 /// The category picker (after an import while no category is chosen, Settings → Categories, the tour's Settings): the
 /// default list by group with a toggle each, a field for one's own names; nothing is ticked at first (Patrik,
 /// 2026-10-26). Each row carries how many payments its category has, or would get if ticked (`counts`). Unticking a
-/// category with payments asks where they go. Every change is saved at once, the numbers counted again and the
-/// dashboard rebuilt.
+/// category with payments asks where they go. Choices are saved per tap; sorting, counts and the dashboard wait
+/// until taps stop, or the picker closes.
 @MainActor @Observable
 final class CategoryPickerModel {
     /// Unticking a category that has payments: where they go (another ticked category, or Not sorted).
@@ -33,6 +33,10 @@ final class CategoryPickerModel {
     /// Category id → payments (`PhoneBackend.categoryCounts`): in it now, or for a default one not ticked, how many it
     /// would get. Counted at the start and after every change.
     private(set) var counts: [String: Int] = [:]
+    @ObservationIgnored private var workTail: Task<Bool, Never>?
+    @ObservationIgnored private var debounce: Task<Void, Never>?
+    @ObservationIgnored private var pendingSort = false
+    private var workCount = 0
     @ObservationIgnored let phone: PhoneBackend
     /// After every change: the dashboard is built again.
     @ObservationIgnored private let changed: () async -> Void
@@ -75,25 +79,32 @@ final class CategoryPickerModel {
 
     /// Ticks or unticks a category. Unticking one with payments asks first (`untick`).
     func toggle(_ id: String) async {
-        guard !isWorking, let list else { return }
-        problem = nil
-        if !list.isChosen(id) {
-            await work { try await self.phone.choose(id) }
-            return
-        }
-        do {
-            let count = try await phone.paymentCount(in: id)
+        await work {
+            guard let list = self.list else { return }
+            self.problem = nil
+            if !list.isChosen(id) {
+                // Update the tick before waiting for storage; queued actions preserve tap order.
+                self.list = PhoneCategoryList(catalog: list.catalog,
+                    chosen: list.chosen + [ChosenCategory(id: id, order: list.chosen.count)])
+                try await self.phone.choose(id, sorting: false)
+                try await self.selectionChanged()
+                return
+            }
+            // The count must include choices made in the preceding burst.
+            try await self.flushPending()
+            let count = try await self.phone.paymentCount(in: id)
             if count == 0 {
-                await work { try await self.phone.unchoose(id, moveTo: nil) }
+                try await self.phone.unchoose(id, moveTo: nil, sorting: false)
+                try await self.selectionChanged()
             } else {
                 let targets = list.chosen.filter { $0.id != id }.compactMap { chosen in
                     list.name(of: chosen.id).map { Untick.Target(id: chosen.id, name: $0, look: list.look(of: chosen.id)) }
                 }
-                untick = Untick(id: id, name: list.name(of: id) ?? id, look: list.look(of: id), count: count,
+                self.untick = Untick(id: id, name: list.name(of: id) ?? id, look: list.look(of: id), count: count,
                                 targets: targets, notSortedName: list.notSortedName,
                                 notSortedLook: list.look(of: CategoryCatalog.notSorted))
             }
-        } catch { problem = error.localizedDescription }
+        }
     }
 
     /// The answer from the dialog: taken at once (so the dialog's dismissal that follows finds nothing to cancel), then
@@ -101,14 +112,22 @@ final class CategoryPickerModel {
     func resolve(moveTo target: String?) {
         guard let untick else { return }
         self.untick = nil
-        Task { await work { try await self.phone.unchoose(untick.id, moveTo: target) } }
+        Task {
+            await work {
+                try await self.phone.unchoose(untick.id, moveTo: target, sorting: false)
+                try await self.selectionChanged()
+            }
+        }
     }
 
     /// The answer to "where do its payments go?": another category, or nil for Not sorted.
     func resolveUntick(moveTo target: String?) async {
         guard let untick else { return }
         self.untick = nil
-        await work { try await self.phone.unchoose(untick.id, moveTo: target) }
+        await work {
+            try await self.phone.unchoose(untick.id, moveTo: target, sorting: false)
+            try await self.selectionChanged()
+        }
     }
 
     func cancelUntick() { untick = nil }
@@ -121,19 +140,64 @@ final class CategoryPickerModel {
         await work {
             try await self.phone.addCustom(named: typed)
             self.newName = ""
+            try await self.selectionChanged()
         }
     }
 
-    private func work(_ action: @escaping () async throws -> Void) async {
-        isWorking = true
-        defer { isWorking = false }
-        do {
-            try await action()
-            list = try await phone.categories()
-            await loadCounts()
-            await changed()
-        } catch { problem = error.localizedDescription }
+    /// Done and Back await the same queue as taps, including a tap whose save is still under way.
+    @discardableResult
+    func flush() async -> Bool {
+        debounce?.cancel()
+        debounce = nil
+        return await work { try await self.flushPending() }
     }
+
+    private func selectionChanged() async throws {
+        list = try await phone.categories()
+        pendingSort = true
+        debounce?.cancel()
+        debounce = Task { [weak self] in
+            do { try await Task.sleep(for: .milliseconds(500)) }
+            catch { return }
+            guard let self else { return }
+            await self.flush()
+        }
+    }
+
+    /// Called only inside the serial work queue. A cancelled wait never cancels a sort already in progress.
+    private func flushPending() async throws {
+        guard pendingSort else { return }
+        try await phone.sort()
+        try await phone.refresh()
+        await loadCounts()
+        await changed()
+        pendingSort = false
+    }
+
+    @discardableResult
+    private func work(_ action: @escaping () async throws -> Void) async -> Bool {
+        let previous = workTail
+        workCount += 1
+        isWorking = true
+        let task = Task { @MainActor in
+            _ = await previous?.value
+            defer {
+                self.workCount -= 1
+                self.isWorking = self.workCount > 0
+            }
+            do {
+                try await action()
+                return true
+            } catch {
+                self.problem = error.localizedDescription
+                self.list = try? await self.phone.categories()
+                return false
+            }
+        }
+        workTail = task
+        return await task.value
+    }
+
 }
 
 /// Settings → Aresium in phone mode: export (one JSON file through the share sheet), restore from an export (only into
