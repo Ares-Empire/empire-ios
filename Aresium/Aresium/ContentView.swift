@@ -16,14 +16,15 @@ struct ContentView: View {
     @State private var outbox: BankOutbox
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage(ThemeState.preferenceKey) private var rememberedRed = false
-    @AppStorage(Appearance.key) private var appearance = Appearance.iPhone.rawValue
+    /// Settings → Dashboard → Graph (brief 42): the dashboard's graph, on by default and kept across launches.
+    @AppStorage(GraphSetting.key) private var showsGraph = GraphSetting.shownByDefault
     /// Light or dark as Settings → Appearance (or the iPhone) says; red mode shows over it.
     @Environment(\.appearanceScheme) private var appearanceScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var theme: ThemeState
     private let pausedIntroProgress: Double?
     private let restoresOnLaunch: Bool
-    /// Where the person's dashboard is (pushed screens, Current/Overview, the page, the graph, the open payment).
+    /// Where the person's dashboard is (pushed screens, Current/Overview, the page, the open payment).
     @State private var place = DashboardPlace()
     /// The tour, while it runs in place of the dashboard (on a made-up store of its own, `TourModel`).
     @State private var tour: TourModel?
@@ -138,9 +139,8 @@ struct ContentView: View {
             _showsSettings = State(initialValue: arguments[index + 1] == "settings")
         }
         if phoneSample {
-            // Screenshots: `-sampleOverview` (Overview, not Current), `-sampleGraph` (the graph shown), `-sampleCategory`.
-            var place = DashboardPlace(current: !arguments.contains("-sampleOverview"),
-                                       graph: arguments.contains("-sampleGraph"))
+            // Screenshots: `-sampleOverview` (Overview, not Current), `-sampleCategory`. The graph follows the setting.
+            var place = DashboardPlace(current: !arguments.contains("-sampleOverview"))
             if let index = arguments.firstIndex(of: "-sampleCategory"), arguments.indices.contains(index + 1) {
                 place.path = [DashboardRoute(category: arguments[index + 1], side: .expenses)]
                 if let month = arguments.firstIndex(of: "-sampleMonth"), arguments.indices.contains(month + 1) {
@@ -167,8 +167,7 @@ struct ContentView: View {
                 imports.show("12 new transactions imported · 1 skipped", success: true)
             }
             let side: DashboardSide = arguments.contains("-sampleIncome") ? .income : .expenses
-            var place = DashboardPlace(current: !arguments.contains("-sampleOverview"), side: side,
-                                       graph: arguments.contains("-sampleGraph"))
+            var place = DashboardPlace(current: !arguments.contains("-sampleOverview"), side: side)
             if let index = arguments.firstIndex(of: "-sampleCategory"), arguments.indices.contains(index + 1) {
                 let name = arguments[index + 1]
                 var routes = [DashboardRoute(category: name, side: side)]
@@ -201,7 +200,8 @@ struct ContentView: View {
                         ModeStatusScreen(modes: modes, palette: palette)
                     }
                 case .waitingForLogin, .firstScreen, .dashboard:
-                    DashboardStack(store: store, palette: palette, place: $place, band: band(in: geometry)) { route in
+                    DashboardStack(store: store, palette: palette, place: $place, graph: showsGraph,
+                                   band: band(in: geometry)) { route in
                         header(route)
                         restoreFeedback
                     } root: {
@@ -216,7 +216,7 @@ struct ContentView: View {
                                              restore: { restoringExport = true })
                         default:
                             StartScreen(store: store, imports: imports, palette: palette, current: $place.current,
-                                        side: $place.side, graph: $place.graph, band: band(in: geometry),
+                                        side: $place.side, graph: showsGraph, band: band(in: geometry),
                                         importChoices: modes.phone == nil ? nil : phoneImportChoices,
                                         openGuide: { showsGuide = true }) {
                                 place.path.append($0)
@@ -300,7 +300,6 @@ struct ContentView: View {
                 } else if let destination = AresiumURL(url: url) {
                     place.current = true
                     place.side = .expenses
-                    place.graph = false
                     switch destination {
                     case .start: place.path = []
                     case .category(let name): place.path = [store.route(category: name, side: .expenses, current: true)]
@@ -317,6 +316,8 @@ struct ContentView: View {
                                session: session, sample: sampleActive, logOut: logOut) {
                     if modes.phone != nil { PhoneSettingsSection(modes: modes, data: phoneData, palette: palette) }
                     LockSettingsSection(lock: lock)
+                    // Last of Aresium's own, so it sits just above General → Appearance: how the app looks.
+                    DashboardSettingsSection()
                 } help: {
                     NavigationLink {
                         BankGuideList(importing: guideImport { showsSettings = false }, outbox: outbox)
@@ -690,14 +691,10 @@ struct ContentView: View {
         return ScreenHeader(title: title, subtitle: subtitle,
                             category: category, palette: palette,
                             back: route == nil ? nil : { back(route) },
-                            toggleTheme: {
-            guard !theme.isAnimating else { return }
-            if theme.red {
-                bandLanding = nil
-                theme.send(.header, reduceMotion: reduceMotion)       // the X: back to light or dark
-            } else {
-                appearance = Appearance.toggled(from: appearanceScheme).rawValue    // the sun: the app's appearance
-            }
+                            leaveRed: {
+            guard !theme.isAnimating, theme.red else { return }
+            bandLanding = nil
+            theme.send(.header, reduceMotion: reduceMotion)           // the X: back to light or dark
         }, openSettings: openSettings ?? { showsSettings = true })
     }
 

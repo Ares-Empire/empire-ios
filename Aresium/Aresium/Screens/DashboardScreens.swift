@@ -8,13 +8,13 @@ struct DashboardRoute: Hashable {
     var cash = false
 }
 
-/// Where a dashboard is: the screens pushed, Current or Overview, the expenses or income page, the graph, the payment
-/// open. The person's dashboard keeps it in `ContentView`, the tour's in `TourModel` (so the tour can move it).
+/// Where a dashboard is: the screens pushed, Current or Overview, the expenses or income page, the payment open. The
+/// person's dashboard keeps it in `ContentView`, the tour's in `TourModel` (so the tour can move it). Whether the graph
+/// shows is no part of it: that is a setting (`GraphSetting`, brief 42).
 struct DashboardPlace {
     var path: [DashboardRoute] = []
     var current = true
     var side = DashboardSide.expenses
-    var graph = false
     /// The payment whose detail is open.
     var payment: Transaction?
 }
@@ -25,6 +25,8 @@ struct DashboardStack<Top: View, Root: View>: View {
     let store: DashboardStore
     let palette: Palette
     @Binding var place: DashboardPlace
+    /// The graph on the category pages (Settings → Dashboard → Graph, `GraphSetting`); the start screen is the owner's.
+    let graph: Bool
     let band: AresiumBand
     /// The shortcuts: the back swipe on a pushed screen (`.backSwipe`, brief 38), which does what the header's back arrow
     /// does, and the payment rows' long press (brief 41), which does what a payment's or receipt's page does. They are on
@@ -55,7 +57,7 @@ struct DashboardStack<Top: View, Root: View>: View {
                         TransactionsScreen(route: route, store: store, palette: palette, band: band,
                                            selection: $place.payment, rowMenus: shortcuts)
                     } else {
-                        CategoryScreen(route: route, store: store, palette: palette, graph: $place.graph,
+                        CategoryScreen(route: route, store: store, palette: palette, graph: graph,
                                        band: band) { place.path.append($0) }
                     }
                 }
@@ -78,7 +80,8 @@ struct StartScreen: View {
     let palette: Palette
     @Binding var current: Bool
     @Binding var side: DashboardSide
-    @Binding var graph: Bool
+    /// The graph above the pages (Settings → Dashboard → Graph, `GraphSetting`).
+    let graph: Bool
     let band: AresiumBand
     /// Phone mode and the tour: Import's menu (Choose file, Scan receipt, Choose photo; in the tour each only answers
     /// its step, `TourModel.importTapped`). Nil: server mode's import button.
@@ -98,17 +101,14 @@ struct StartScreen: View {
                 Spacer()
                 ImportButton(store: imports, sample: store.isSample, palette: palette, choices: importChoices)
                     .tourAnchor(.importButton)
-                IconButton(symbol: "chart.line.uptrend.xyaxis", label: String(localized: "Toggle graph"), palette: palette, active: graph) {
-                    withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.3)) { graph.toggle() }
-                }
-                .tourAnchor(.graph)
             }.padding(.horizontal, 14).padding(.bottom, 8)
             DashboardStatus(store: store, palette: palette)
             if graph {
                 SeriesChart(points: store.startChart(side: side, current: current),
                             color: side == .income ? palette.income : palette.expense,
                             palette: palette, xTitle: current ? String(localized: "Day") : String(localized: "Month"))
-                    .frame(height: 235).transition(.opacity.combined(with: .move(edge: .top)))
+                    .frame(height: SeriesChart.dashboardHeight)
+                    .tourAnchor(.graph)
             }
             // The page dots: each takes taps over 44 × 44 pt (brief 41; they were 30 × 24) while the row keeps its height
             // in the layout (24 pt and its padding); the area reaching over the pages below lies above them (`zIndex`).
@@ -205,51 +205,48 @@ struct CategoryScreen: View {
     let route: DashboardRoute
     let store: DashboardStore
     let palette: Palette
-    @Binding var graph: Bool
+    /// The graph above the months (Settings → Dashboard → Graph, `GraphSetting`).
+    let graph: Bool
     let band: AresiumBand
     let pick: (DashboardRoute) -> Void
+    private var category: Category? { store.category(route.category, side: route.side) }
+    private var months: [MonthRow] { store.months(category: route.category, side: route.side) }
+
     var body: some View {
+        let category = category
+        let months = months
         VStack(spacing: 0) {
-            HStack {
-                Spacer()
-                IconButton(symbol: "chart.line.uptrend.xyaxis", label: String(localized: "Toggle graph"), palette: palette, active: graph) {
-                    withAnimation { graph.toggle() }
-                }
-            }.padding(.horizontal, 14).padding(.bottom, 8)
             DashboardStatus(store: store, palette: palette)
+            if graph, let category, !months.isEmpty {
+                // Above the months, as on the start screen and at its height: about eight months show below it on an
+                // iPhone 17. A tap on a month's point opens that month, as its row does; VoiceOver reads the rows.
+                SeriesChart(points: store.categoryChart(route.category, side: route.side),
+                            color: Color(hex: category.color), palette: palette, xTitle: String(localized: "Month")) { index in
+                    guard let allMonths = store.dashboard?.months, allMonths.indices.contains(index) else { return }
+                    open(allMonths[index].key)
+                }
+                .frame(height: SeriesChart.dashboardHeight)
+            }
             WordmarkScrollView {
-                if let category = store.category(route.category, side: route.side) {
-                    let months = store.months(category: route.category, side: route.side)
-                    if graph {
-                        SeriesChart(points: store.categoryChart(route.category, side: route.side),
-                                    color: Color(hex: category.color), palette: palette, xTitle: String(localized: "Month")) { index in
-                            guard let allMonths = store.dashboard?.months, allMonths.indices.contains(index) else { return }
-                            pick(DashboardRoute(category: route.category, side: route.side, month: allMonths[index].key))
-                        }.frame(height: 420)
-                        .accessibilityRepresentation {
-                            VStack {
-                                ForEach(months) { row in
-                                    Button("\(row.month.title()) · \(Money.total(row.total))") {
-                                        pick(DashboardRoute(category: route.category, side: route.side, month: row.month.key))
-                                    }
-                                }
-                            }
+                if let category {
+                    LazyVStack(spacing: 0) {
+                        ForEach(months) { row in
+                            Button { open(row.month.key) } label: {
+                                ValueRow(title: row.month.title(), category: category, total: row.total,
+                                         maximum: months.map(\.total).max() ?? 0, palette: palette)
+                            }.buttonStyle(.plain)
                         }
-                    } else {
-                        LazyVStack(spacing: 0) {
-                            ForEach(months) { row in
-                                Button { pick(DashboardRoute(category: route.category, side: route.side, month: row.month.key)) } label: {
-                                    ValueRow(title: row.month.title(), category: category, total: row.total,
-                                             maximum: months.map(\.total).max() ?? 0, palette: palette)
-                                }.buttonStyle(.plain)
-                            }
-                            if months.isEmpty { EmptyMessage(text: String(localized: "No activity recorded."), palette: palette) }
-                        }.padding(.horizontal, 12).padding(.top, 8)
-                    }
+                        if months.isEmpty { EmptyMessage(text: String(localized: "No activity recorded."), palette: palette) }
+                    }.padding(.horizontal, 12).padding(.top, 8)
                 } else { EmptyMessage(text: String(localized: "This category is no longer available."), palette: palette) }
             } band: { _ in band }
             .refreshable { await store.reload() }.scrollBounceBehavior(.always)
         }
+    }
+
+    /// A month of this category: its payments.
+    private func open(_ month: String) {
+        pick(DashboardRoute(category: route.category, side: route.side, month: month))
     }
 }
 
@@ -396,5 +393,32 @@ struct TransactionsScreen: View {
                 selection = transaction
             }
         }
+    }
+}
+
+// MARK: - Settings → Dashboard
+
+/// Aresium's own Settings, in both modes: the dashboard's graph (brief 42; `GraphSetting`), a switch in the Lock
+/// section's look (Settings pieces, ink only). It changes the dashboard under the sheet at once.
+struct DashboardSettingsSection: View {
+    @AppStorage(GraphSetting.key) private var showsGraph = GraphSetting.shownByDefault
+
+    var body: some View {
+        SettingsSection(String(localized: "Dashboard")) {
+            Toggle(isOn: $showsGraph) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Graph").font(AppFont.text(15, weight: .medium)).foregroundStyle(Ink.primary)
+                    Text("Above the categories and months").font(AppFont.text(12)).foregroundStyle(Ink.muted)
+                }
+            }
+            .tint(Ink.secondary)                    // as the Lock's switch: ink, a step down, the white knob visible
+            .padding(.horizontal, 16).frame(minHeight: 58)
+        }
+        #if DEBUG
+        .task {
+            // Screenshots and the relaunch check: `-toggleGraph` turns the switch once as it opens, as a tap does.
+            if LaunchArguments.current.contains("-toggleGraph") { showsGraph.toggle() }
+        }
+        #endif
     }
 }

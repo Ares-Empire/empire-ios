@@ -191,7 +191,8 @@ it, no restart.
   when the iPhone switched while an app was open, brief 36).
 - **Widgets follow the home screen** (light or dark like the widgets around them), not the app's choice; Aresium's
   also shows its red mode (`WidgetSnapshotStore.redMode`, `AresiumWidgetLook`).
-- **Aresium:** light or dark is the shared appearance; the sun button in its header switches it (writes the choice);
+- **Aresium:** light or dark is the shared appearance, chosen only in Settings → General → Appearance (the header's sun
+  button is gone since brief 42);
   red is Aresium's own mode over either (`ThemeState.red`, remembered), entered and left with the band.
 - **Empire app: the marble hall** (light): ivory wall, antique gold (`EmpireStyle.goldText`/`goldName` as pairs), the
   bust laid in with multiply, parchment coins, a plain gold chronicle line with amber dust. The phone hub's greys keep
@@ -698,7 +699,8 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   first screen; `-importData` taps Import data at launch: the file picker; `-sampleImport` imports the tour's made-up
   bank file as if picked, so on the empty store the category picker opens after it as after a real import),
   `-sampleSignedIn` (signed in on the made-up account server), `-sampleOverview` (Overview, not Current) and
-  `-sampleGraph` (the graph shown; with only one month of data each graph is one point, drawn as a stem with a dot,
+  the graph (Settings → Dashboard → Graph, `aresium.graph`, on by default since brief 42, `Model/GraphSetting.swift`; on
+  a category's page above its months; `-toggleGraph` flips the saved setting once; with only one month of data each graph is one point, drawn as a stem with a dot,
   `ChartAxis.singlePointDomain`, `OneMonthTests`), `-openSheet settings`, in the picker
   `-sampleTick <id,id,…>` (ticks those), `-sampleUntick <category id>`, `-scrollToCategory <id>` and
   `-samplePickerDone` (then Done: the dashboard with the result line counted again), `-sampleLayout` (an unknown bank's
@@ -744,7 +746,7 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   file, this month always full), its own session (never logged in) and widget numbers inside that folder; the person's
   store, categories and learned shops are never opened. The folder is deleted on End tour (always on the card), at the
   end, when a widget's link or a shared file opens the app, and at the next launch if the app was closed during a tour
-  (`removeLeftovers`). Twelve steps (`TourStep`, brief 25): welcome, income, overview, graph, category, payment, switch,
+  (`removeLeftovers`). Twelve steps, eleven while the graph is hidden (`TourStep`, brief 25; brief 42: the graph step points at the graph and goes on with Next): welcome, income, overview, graph, category, payment, switch,
   categories, lock, contact, import, done; each points at a real control (`.tourAnchor`, anchor preferences;
   `.tourSpotlight` on each screen and sheet draws a light veil in the wall's colour, `TourVeil.veil` 0.3 (brief 24 had
   0.74, far too dark: the app under it must read easily, Patrik 2026-10-27), and the full-ink ring, and keeps taps off

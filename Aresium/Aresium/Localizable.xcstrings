@@ -64,9 +64,6 @@
         }
       }
     },
-    "%@ · %@" : {
-      "shouldTranslate" : false
-    },
     "%@ · activities" : {
       "localizations" : {
         "de" : {
@@ -443,6 +440,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Eine Umbuchung zwischen deinen eigenen Konten."
+          }
+        }
+      }
+    },
+    "Above the categories and months" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Über den Kategorien und Monaten"
           }
         }
       }
@@ -1337,6 +1344,16 @@
         }
       }
     },
+    "Dashboard" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dashboard"
+          }
+        }
+      }
+    },
     "Date" : {
       "localizations" : {
         "de" : {
@@ -1925,6 +1942,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Gut zu wissen"
+          }
+        }
+      }
+    },
+    "Graph" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diagramm"
           }
         }
       }
@@ -3935,12 +3962,12 @@
         }
       }
     },
-    "The trend as a graph." : {
+    "The trend by day or by month. You can hide the graph in Settings." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Der Verlauf als Grafik."
+            "value" : "Der Verlauf nach Tagen oder Monaten. In den Einstellungen kannst du das Diagramm ausblenden."
           }
         }
       }
@@ -4161,26 +4188,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "An"
-          }
-        }
-      }
-    },
-    "Toggle graph" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Diagramm ein/aus"
-          }
-        }
-      }
-    },
-    "Toggle theme" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Design wechseln"
           }
         }
       }

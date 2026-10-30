@@ -1,8 +1,9 @@
 import Foundation
 
 /// Aresium's red mode and its transitions, independent of SwiftUI and wall-clock time. Light or dark is the app's
-/// appearance (Settings → Appearance, shared by every app; the header's sun button switches it), so this keeps only
-/// whether red is on: the band enters and leaves it, the header's X leaves it, and it stays on across launches.
+/// appearance (Settings → General → Appearance, shared by every app; brief 42 took the header's sun button away), so
+/// this keeps only whether red is on: the band enters and leaves it, the header's X leaves it, and it stays on across
+/// launches.
 nonisolated struct ThemeState {
     static let preferenceKey = "aresium.red"
 
@@ -24,9 +25,8 @@ nonisolated struct ThemeState {
     /// The look on screen over the appearance's light or dark (`base`).
     func theme(over base: AppTheme) -> AppTheme { red ? .red : base }
 
-    /// The band enters or leaves red; the header's X leaves it. The header outside red is the sun button, which
-    /// switches the app's appearance instead (`Appearance.toggled`), so it does nothing here. Taps while a transition
-    /// runs are ignored.
+    /// The band enters or leaves red; the header's X leaves it. The header shows its X only in red, so outside red
+    /// `.header` does nothing. Taps while a transition runs are ignored.
     mutating func send(_ action: Action, reduceMotion: Bool) {
         guard !isAnimating, action == .band || red else { return }
         if reduceMotion {
