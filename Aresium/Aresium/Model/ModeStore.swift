@@ -54,7 +54,7 @@ final class ModeStore {
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let markerDefaults: UserDefaults?
     @ObservationIgnored private(set) var storage: PhoneStorage
-    @ObservationIgnored private let makeEngine: () throws -> AresiumEngine
+    @ObservationIgnored private let makeEngine: () async throws -> AresiumEngine
     @ObservationIgnored private var engine: AresiumEngine?
     /// The opening of the phone's store under way, so every caller waits for the same one.
     @ObservationIgnored private var opening: Task<PhoneBackend, Error>?
@@ -74,7 +74,7 @@ final class ModeStore {
     ///   - markerDefaults: the shared App Group's defaults with the login marker (nil in samples and tests).
     init(session: EmpireSession, dashboard: DashboardStore, client: APIClient = APIClient(),
          defaults: UserDefaults = .standard, markerDefaults: UserDefaults?, storage: PhoneStorage = .standard,
-         makeEngine: @escaping () throws -> AresiumEngine = { try AresiumEngine.bundled() }) {
+         makeEngine: @escaping () async throws -> AresiumEngine = { try await AresiumEngine.bundledForPhone() }) {
         self.session = session
         self.dashboard = dashboard
         self.client = client
@@ -245,7 +245,9 @@ final class ModeStore {
         let storage = storage
         let generation = storeGeneration
         let task = Task { () throws -> PhoneBackend in
-            let engine = try self.engine ?? self.makeEngine()
+            let engine: AresiumEngine
+            if let existing = self.engine { engine = existing }
+            else { engine = try await self.makeEngine() }
             self.engine = engine
             let ledger = try await Task.detached { try storage.open() }.value
             let backend = PhoneBackend(ledger: ledger, engine: engine, defaults: defaults)

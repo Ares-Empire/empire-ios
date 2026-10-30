@@ -1,6 +1,6 @@
 # 39: The category picker scrolls smoothly, also right after ticking
 
-Status: running
+Status: merged 2026-10-30 (Aresium 372 tests + 2 opt-in timing; main-thread time after a burst of ticks 404 → 0.2 ms at 5,000 payments, 86 → 0.1 ms at 1,000)
 Branch: `codex/39-picker-scroll` · Worktree: `../empire-ios-39-picker-scroll` · Model: `gpt-6.1-sol`, effort `high`
 
 ## Goal

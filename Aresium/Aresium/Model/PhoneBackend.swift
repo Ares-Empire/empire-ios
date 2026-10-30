@@ -118,7 +118,12 @@ final class PhoneBackend: AresiumBackend {
         return true
     }
 
-    func refresh() async throws { summary = try await ledger.summary() }
+    func refresh() async throws {
+        let interval = PickerTiming.begin("refresh")
+        defer { interval.end() }
+        let value = try await ledger.summary()
+        PickerTiming.measure("summary.publish") { if summary != value { summary = value } }
+    }
 
     /// The person's categories as the screens and the dashboard name them, in the app's language.
     func categories(language: AppLanguage = .current) async throws -> PhoneCategoryList {
@@ -134,10 +139,7 @@ final class PhoneBackend: AresiumBackend {
     func isReady(_ session: EmpireSession) -> Bool { true }
 
     func dashboard(auth: BackendAuth) async throws -> Dashboard {
-        let list = try await categories()
-        let payments = try await ledger.payments()
-        let input = PhoneDashboard.input(payments: payments, list: list, today: today(), receipts: try await ledger.receipts())
-        return try await engine.dashboard(input)
+        try await ledger.dashboard(engine: engine, catalog: catalogValue(), language: .current, today: today())
     }
 
     func transactionDetail(id: String, auth: BackendAuth) async throws -> TransactionDetail {
@@ -262,12 +264,15 @@ final class PhoneBackend: AresiumBackend {
 
     /// Each file's new payments counted as sorted or not as the store holds them now.
     func recount(_ results: [ImportFileResult]) async throws -> [ImportFileResult] {
-        let sorted = Set(try await ledger.payments().filter { $0.category != nil }.map(\.id))
-        return results.map { result in
-            guard case var .phone(file) = result else { return result }
-            file.sorted = file.newIDs.filter(sorted.contains).count
-            file.waiting = file.newIDs.count - file.sorted
-            return .phone(file)
+        let payments = try await ledger.payments()
+        return PickerTiming.measure("import.recount") {
+            let sorted = Set(payments.filter { $0.category != nil }.map(\.id))
+            return results.map { result in
+                guard case var .phone(file) = result else { return result }
+                file.sorted = file.newIDs.filter(sorted.contains).count
+                file.waiting = file.newIDs.count - file.sorted
+                return .phone(file)
+            }
         }
     }
 
@@ -277,11 +282,9 @@ final class PhoneBackend: AresiumBackend {
     /// status changed. Returns the new categories of `fresh`.
     @discardableResult
     func sort(fresh: Set<String> = []) async throws -> [String: String?] {
-        let snapshot = try await ledger.sortingSnapshot()
-        guard !snapshot.ids.isEmpty else { return [:] }
-        let list = PhoneCategoryList(catalog: try await catalogValue(), chosen: try await ledger.chosen())
-        let results = try await engine.sortPayments(snapshot.payments, categories: list.sortingIDs, learned: snapshot.learned)
-        return try await ledger.applySort(ids: snapshot.ids, results: results, fresh: fresh)
+        let interval = PickerTiming.begin("sort")
+        defer { interval.end() }
+        return try await ledger.sort(engine: engine, catalog: catalogValue(), fresh: fresh)
     }
 
     // MARK: categories (the picker)
@@ -311,17 +314,9 @@ final class PhoneBackend: AresiumBackend {
     /// nothing is stored. An estimate: ticked alone, a category can get a few more (a learned shop whose own category
     /// stays unticked then falls back to the shop list).
     func categoryCounts() async throws -> [String: Int] {
-        var counts = try await ledger.paymentCounts()
-        let list = PhoneCategoryList(catalog: try await catalogValue(), chosen: try await ledger.chosen())
-        let unticked = list.catalog.defaults.map(\.id).filter { !list.isChosen($0) }
-        let waiting = try await ledger.sortingSnapshot(waitingOnly: true)
-        if !unticked.isEmpty, !waiting.ids.isEmpty {
-            let results = try await engine.sortPayments(waiting.payments, categories: list.sortingIDs + unticked,
-                                                        learned: waiting.learned)
-            let estimated = Set(unticked)
-            for case let id? in results.map(\.categoryId) where estimated.contains(id) { counts[id, default: 0] += 1 }
-        }
-        return counts.filter { $0.value > 0 }
+        let interval = PickerTiming.begin("categoryCounts")
+        defer { interval.end() }
+        return try await ledger.categoryCounts(engine: engine, catalog: catalogValue())
     }
 
     /// Unticks a category; its payments go to `target` (or Not sorted, then sorted again with the rest of the list).
