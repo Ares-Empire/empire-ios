@@ -76,3 +76,17 @@ main-thread pause of more than about 8 ms shows while scrolling):
 10. **Patrik's request:** find every other screen in the five apps that cannot be left with the usual gesture but
     should be, and other comfort gaps; he chooses which get fixed. Brief 38 (Aresium) and a read-only check of the other
     four apps.
+
+## Fixed in build 3 (2026-10-30)
+
+- 8: brief 39 (Codex). The suspect was real: the sort, the counts and the dashboard's input ran on the main thread, and
+  SwiftData ran the ledger actor's jobs there too. Main-thread time after a burst of ticks, measured on the simulator:
+  86 → 0.1 ms at 1,000 payments, 404 → 0.2 ms at 5,000. The dashboard is now rebuilt only when the picker closes.
+- 9: brief 38 (`Shared/Design/BackSwipe.swift`): the system's own back swipe, from the edge and from the middle, on
+  every dashboard screen with a back arrow; it does what the arrow does. Checked on the iOS 27 simulator; to check on
+  the phone.
+- 10: the list (`docs/reviews/2026-10-30-swipe-and-comfort.md`); Patrik approved every item. Aresium's are in build 3
+  (briefs 40 and 41: Later, Back in the file check, Done on the number pad, Cancel that asks, the busy sign, a long
+  press on a payment to change its category, the import result swiped away, 44 pt tap areas, Privacy and Imprint
+  inside the app, Log out asks first); the other four apps' wait for their first TestFlight (CLAUDE.md → Open 15).
+- Also: the German "Done" is "Fertig" now, iOS's own word (was "Erledigt").
