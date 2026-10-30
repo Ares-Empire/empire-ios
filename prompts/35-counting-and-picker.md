@@ -1,6 +1,6 @@
 # 35: Nothing counted twice, a quick category picker, corrections that survive an engine update
 
-Status: running
+Status: merged 2026-10-30 (Aresium 349 tests; the PayPal triple fixed; VR CSV + CAMT of the same days still doubles: engine, next)
 Branch: `codex/35-counting` · Worktree: `../empire-ios-35-counting` · Model: `gpt-6.1-sol`, effort `high`
 
 ## Goal
