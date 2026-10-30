@@ -222,8 +222,9 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
    on Patrik's iPhone through internal TestFlight (group in App Store Connect → Aresium → TestFlight → Internal
    Testing). Build 2 (2026-10-30): the fixes of Patrik's first test (briefs 34–37). Build 3: the picker's scroll, the
    back swipe and the comfort items (briefs 38–41). Build 4 (2026-10-30 evening): own names and the name's page with the
-   left swipe, the graph as a setting, Aresium's own messages (briefs 42–46). The other four: first their approved comfort items (15 below, briefs 49–52), then
-   the script. Their App Store Connect records exist (Patrik, 2026-10-30: Arestemis, Aresus, Arestoteles, Ares Empire),
+   left swipe, the graph as a setting, Aresium's own messages (briefs 42–46). **Arestemis 0.1 (1) uploaded 2026-10-30** (after its comfort items, brief 49). The other
+   three (Aresus, Arestoteles, Empire) have their comfort items merged (briefs 50–52) and wait only for
+   `scripts/testflight.sh <App>`. Their App Store Connect records exist (Patrik, 2026-10-30: Arestemis, Aresus, Arestoteles, Ares Empire),
    each with an internal group that gets every build automatically (Arestemis's checked: Patrik as tester). Original
    list: set the paid team (project level, all five projects; done); the App Groups
    `group.de.ares-empire.aresium` + `group.de.ares-empire.shared` registered for the bundle ids, the widgets' too
@@ -284,7 +285,10 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
 14. **Arestemis sample with real details:** `Arestemis/Arestemis/Samples/settings.json` (and Arestemis's `docs/samples/`)
    holds Patrik's real application text (name, TUM, Garching, age), so the showcase leaves that screen out. Replace it
    with a made-up text if Patrik wants that screen shown (offered 2026-10-26).
-15. **Comfort items for Empire, Arestemis, Aresus, Arestoteles** (Patrik approved all, 2026-10-30): build each app's
+15. ~~**Comfort items for Empire, Arestemis, Aresus, Arestoteles**~~: **built and merged 2026-10-30** (briefs 49 Arestemis,
+   50 Aresus with the aresus server's province links, 51 Arestoteles, 52 Empire and Shared 2; the shared undo bar
+   `Shared/Design/UndoBar.swift`; no. 18 = option (b), the key says Done). On the phone: try each once. The original
+   item (Patrik approved all, 2026-10-30): build each app's
    before its first TestFlight upload, from `docs/reviews/2026-10-30-swipe-and-comfort.md` → "The other four apps":
    Empire 1 (approvals: pull to refresh, Try again); Arestemis 1–7 (undo for Dismiss, actions on Hunt → Latest, Search's
    Save at the top and a kept draft, 44 pt chip buttons, Listings loading on, Add place's keyboard key, a regular "More");
