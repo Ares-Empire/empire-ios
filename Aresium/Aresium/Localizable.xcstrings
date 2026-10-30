@@ -84,6 +84,26 @@
         }
       }
     },
+    "%@: %@ spent, %@ in." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@: %@ ausgegeben, %@ eingenommen."
+          }
+        }
+      }
+    },
+    "%@: %@ spent, %@ in. Most on %@: %@." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@: %@ ausgegeben, %@ eingenommen. Am meisten für %@: %@."
+          }
+        }
+      }
+    },
     "%@: %lld added" : {
       "localizations" : {
         "de" : {
@@ -2116,6 +2136,26 @@
         }
       }
     },
+    "Import your statements to complete %@." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Importiere deine Kontoauszüge, um den %@ zu vervollständigen."
+          }
+        }
+      }
+    },
+    "Import your statements to keep your dashboard up to date." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Importiere deine Kontoauszüge, damit dein Dashboard aktuell bleibt."
+          }
+        }
+      }
+    },
     "Importing statements" : {
       "localizations" : {
         "de" : {
@@ -2462,6 +2502,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Monat"
+          }
+        }
+      }
+    },
+    "Month review" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Monatsrückblick"
           }
         }
       }
@@ -4182,6 +4232,16 @@
         }
       }
     },
+    "Time for new statements" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zeit für neue Kontoauszüge"
+          }
+        }
+      }
+    },
     "To" : {
       "localizations" : {
         "de" : {
@@ -4778,6 +4838,16 @@
         }
       }
     },
+    "Your %@ review is ready." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Rückblick auf %@ ist da."
+          }
+        }
+      }
+    },
     "Your IBAN" : {
       "localizations" : {
         "de" : {
@@ -4824,6 +4894,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Deine Daten auf diesem iPhone"
+          }
+        }
+      }
+    },
+    "Your last import was %lld days ago." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein letzter Import ist %lld Tage her."
           }
         }
       }

@@ -249,6 +249,9 @@ final class ImportStore {
                 guard current() else { return }
                 try Task.checkCancellation()
                 results.append(contentsOf: batch)
+                if let phone = backend as? PhoneBackend {
+                    await dashboard.messages?.importFinished(batch, ledger: phone.ledger)
+                }
                 addedSoFar += batch.reduce(0) { $0 + $1.added }
                 changed = true
                 // Keep failed files and any files the server did not report; completed requests need no retry. A file

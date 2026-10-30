@@ -581,6 +581,58 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   are kept for them: `widget-locked.json` in the App Group). `NSFaceIDUsageDescription` in `Info.plist`, German in
   `InfoPlist.xcstrings`. **Contact & support** always without a login: the `contact` path (above). **Push:** Aresium never
   registers a device (only the cleanup-only center that removes the other apps' devices when someone logs out here).
+  **Local messages** (brief 45, logic only; Settings and the offer are brief 46): phone mode uses
+  `UNUserNotificationCenter`, never remote push. `DashboardStore.messages: AresiumMessages?` is the page's model;
+  only the live `ContentView` installs it (`installMessages(lock:active:)`). Samples/tests have none; the tour
+  suspends scheduling and removes Aresium's pending/delivered messages until it ends. The model and its serial queue
+  survive a language restart (`AresiumMessages.live`); the rebuilt store supplies the new language and dashboard.
+  All notification-center calls and review planning run on `MessageScheduler`, a worker actor. Account reductions
+  run on the ledger's own executor (`MessageScheduler.swift`'s extension), without returning its payment array.
+  **Brief 46's API:**
+  - `preferences: MessagePreferences` (read-only): `enabled` (default false), `importReminder` (true),
+    `interval: MessageInterval` (`week`, `fortnight` default, `month`), `monthReview` (true), `hour` (18), `minute` (0).
+    Copy the struct, change a field and call `setPreferences(_:)`; `setEnabled(_:)` changes just the master switch.
+    Settings/history live under `aresium.messages.preferences` and `aresium.messages.history` in UserDefaults;
+    `aresium.messages.progress` keeps consumed reminder slots and their scheduled dates (no amounts).
+  - `authorization: MessageAuthorization`: `notAsked`, `allowed`, `denied`; `error: String?` reports a scheduling
+    failure. Enabling asks once for **alert and sound**, no badge; a refusal leaves all choices intact. `refresh()`
+    refreshes permission and schedules again (also called on foreground/launch). `idle()` awaits queued work.
+  - `shouldOfferReminder: Bool`: true after an import added payments, while Messages is off and the offer was never
+    answered. `finishReminderOffer()` consumes it, including Not now; the offer page saves its switches separately.
+  - `recordImport(accounts:addedPayments:at:)`: stable account IDs and a completion time; every account timestamp
+    advances, but the reminder and offer move only with new payments. `ImportStore` calls `importFinished(_:ledger:)`
+    after each batch, including confirmed layouts, before rebuilding the dashboard. Each file read into an account counts
+    as an import of it, also one that added nothing (`PhoneImportResult.accountID`).
+  - `dashboardBuilt(_:)`, `setPhoneMode(_:ledger:)`, `setTour(_:)`, `setLocked(_:)`: wired to dashboard builds,
+    backend switches, the tour and `AppLock`'s saved settings. `deleteAll()` resets all message defaults and removes
+    owned pending/delivered notifications; `ModeStore.deleteLocalData()` awaits it (Settings and Forgot the code).
+  Reminders are three absolute one-shot requests (`aresium.reminder.1...3`), each another interval after the anchor,
+  at the chosen wall-clock time, using calendar arithmetic across DST. The anchor is the last import that added
+  payments; before one exists it is when the reminder was enabled. Past dates are never queued again; persisted elapsed slots prevent a time/interval change or relaunch
+  from resetting the limit. An import starts the three dates again. Text: "Time for new statements" / "Your last
+  import was 14 days ago." (calendar days at delivery, then 28/42 for a fortnight); before any import, or with the lock
+  on, the body is "Import your statements to keep your dashboard up to date." (the lock hides the day count too).
+  The next review is at the next 3rd, for its preceding calendar month, only with payments in the dashboard. It uses
+  `byMonth`'s expense/income/category totals unchanged; complete requires every participating ledger account to have
+  an import timestamp at or after the following month's midnight. No complete history means "Import your statements
+  to complete October."; complete: "October: 1,234 € spent, 2,100 € in. Most on Groceries: 320 €." (up to two decimal
+  places); no spending omits the category sentence. Locked: "Your October review is ready." Turning the lock on also
+  clears delivered messages, so earlier numbers disappear. Turning Messages off removes only `aresium.reminder.` and
+  `aresium.review.` pending/delivered identifiers; unrelated notifications are preserved.
+  **Taps:** Aresium's own `InboxLaunchDelegate` is the notification delegate (set before launch finishes), retaining
+  a tapped URL in `MessageTapRouter`; no shared push registration changes. `ContentView` feeds it into the existing
+  file/widget URL route, ending a tour first. `AresiumURL.importData` (`aresium://import`) opens phone mode's file
+  picker after the store and lock are ready; `.review("2026-10")` (`aresium://review/2026-10`) opens that month's
+  dashboard totals/categories/graph (`DashboardStore.showReview(month:)`). This month stays focused until the app goes to the background, a widget/start
+  link, backend switch or a rebuilt root; `showReview(month: nil)` restores the latest month. No new screen.
+  **DEBUG verification:** `-enableMessages -logMessages` enables live local messages and logs owned pending IDs;
+  never combine it with sample/test arguments (those install no model). It uses the normal interval, with no
+  accelerated delivery argument. Verified on `codex-45` (2026-10-30): Allow, three pending reminders
+  (`build/45-pending.log`), and the import route opening the file picker (`build/45-import-route.png`).
+  `MessageTests` injects clock, calendar and center; no system scheduling in tests.
+  **English catalog keys added, German left to Claude:** "Time for new statements", "Your last import was %lld days
+  ago.", "Import your statements to keep your dashboard up to date.", "Month review", "Your %@ review is ready.", "Import
+  your statements to complete %@.", "%@: %@ spent, %@ in. Most on %@: %@.", "%@: %@ spent, %@ in.".
   **Current view:** a category opens this month's payments directly (`CategoryRoute`; the widget's category links too);
   Overview keeps the month list first. **Screens** (`Screens/PhoneScreens.swift` and `Screens/FileCheck*.swift`,
   Claude's look from the dashboard's rows, `CategoryTile`/`DayTile`, and the Settings pieces; ink only): **the first

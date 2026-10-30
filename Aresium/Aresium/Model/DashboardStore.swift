@@ -44,6 +44,9 @@ struct ChartPoint: Identifiable {
 @MainActor @Observable
 final class DashboardStore {
     private(set) var dashboard: Dashboard?
+    /// Installed only by the live app, never by a sample or test store.
+    var messages: AresiumMessages?
+    private(set) var reviewMonth: String?
     private(set) var isLoading = false
     private(set) var error: String?
     let session: EmpireSession
@@ -88,6 +91,8 @@ final class DashboardStore {
     func use(_ backend: (any AresiumBackend)?) {
         guard backend !== self.backend else { return }
         self.backend = backend
+        reviewMonth = nil
+        messages?.setPhoneMode(backend?.mode == .phone, ledger: (backend as? PhoneBackend)?.ledger)
         fetchGeneration += 1
         isLoading = false
         dashboard = nil
@@ -125,6 +130,7 @@ final class DashboardStore {
                 lastSuccessfulLoad = .now
                 try publishWidget(loaded)
             }
+            messages?.dashboardBuilt(loaded)
         } catch {
             guard current() else { return }
             if backend?.mode != .phone { session.handleAuthFailure(error, generation: generation, token: token) }
@@ -156,6 +162,7 @@ final class DashboardStore {
         fetchGeneration += 1
         isLoading = false
         dashboard = nil
+        messages?.dashboardBuilt(nil)
         lastSuccessfulLoad = nil
         error = nil
         if clearWidget {
@@ -183,6 +190,7 @@ final class DashboardStore {
     /// Coming to the foreground: the dashboard is built again when it is older than 5 minutes (a new day, a new month).
     /// Server mode also renews its login every 12 hours first, as before.
     func refreshOnForeground(now: Date = .now) async {
+        messages?.refresh()
         guard !isSample, let backend, !foregroundRefreshing, !isLoading else { return }
         foregroundRefreshing = true
         defer { foregroundRefreshing = false }
@@ -203,7 +211,13 @@ final class DashboardStore {
         CategoryRoute.route(category: category, side: side, current: current, currentMonth: currentMonth?.key)
     }
 
-    var currentMonth: Month? { dashboard?.months.last }
+    var currentMonth: Month? {
+        if let reviewMonth, let month = dashboard?.months.first(where: { $0.key == reviewMonth }) { return month }
+        return dashboard?.months.last
+    }
+
+    /// A notification opens this month's totals, categories and graph on the existing dashboard root.
+    func showReview(month: String?) { reviewMonth = month }
 
     // MARK: the Cash page (brief 33)
 
@@ -238,7 +252,9 @@ final class DashboardStore {
     }
 
     func rangeLabel(current: Bool) -> String {
-        guard let first = dashboard?.months.first, let last = currentMonth else { return String(localized: "No activity") }
+        guard let first = dashboard?.months.first, let last = (current ? currentMonth : dashboard?.months.last) else {
+            return String(localized: "No activity")
+        }
         // One month of data: "February 2026", not "February 2026 – February 2026".
         return current || first.key == last.key ? last.title() : "\(first.title()) – \(last.title())"
     }

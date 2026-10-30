@@ -1,4 +1,5 @@
 import SwiftUI
+import UserNotifications
 
 @main
 struct AresiumApp: App {
@@ -18,7 +19,24 @@ struct AresiumApp: App {
 }
 
 /// A fresh configuration lets SwiftUI wrap our delegate without wrapping its own delegate again.
-final class InboxLaunchDelegate: NSObject, UIApplicationDelegate {
+final class InboxLaunchDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
+    func application(_ application: UIApplication,
+                     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
+        UNUserNotificationCenter.current().delegate = self
+        return true
+    }
+
+    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                            willPresent notification: UNNotification) async
+        -> UNNotificationPresentationOptions { [.banner, .sound, .list] }
+
+    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                            didReceive response: UNNotificationResponse) async {
+        let action = response.actionIdentifier
+        let url = PushCenter.url(from: response.notification.request.content.userInfo)
+        await MessageTapRouter.shared.open(action: action, url: url)
+    }
+
     func application(_ application: UIApplication, configurationForConnecting connectingSceneSession: UISceneSession,
                      options: UIScene.ConnectionOptions) -> UISceneConfiguration {
         let configuration = UISceneConfiguration(name: nil, sessionRole: connectingSceneSession.role)

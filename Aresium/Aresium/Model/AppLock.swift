@@ -325,6 +325,7 @@ final class AppLock {
 
     /// Told when `isLocked` changes (the lock window shows or hides).
     @ObservationIgnored var lockedChanged: ((Bool) -> Void)?
+    @ObservationIgnored var messagePrivacyChanged: ((Bool) -> Void)?
     @ObservationIgnored let authenticator: any LockAuthenticator
     @ObservationIgnored private let storage: any LockStorage
     @ObservationIgnored private let marker: LockInstallMarker?
@@ -401,6 +402,7 @@ final class AppLock {
     }
 
     private func syncWidget() {
+        messagePrivacyChanged?(isOn || unreadable)
         guard !unreadable else { return }
         do { try widget?.setLocked(isOn) }
         catch { Self.log.error("the widgets' lock flag was not saved: \(String(describing: error), privacy: .public)") }
