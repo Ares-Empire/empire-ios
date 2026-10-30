@@ -194,6 +194,11 @@ final class TourModel {
         }
     }
 
+    /// The tour points at a control and keeps taps off the rest of the screen, the header's back arrow included. The
+    /// back swipe is off meanwhile too, since it does only what the arrow does (brief 38); a swipe the tour lets through
+    /// reaches `update` through the dashboard's path, as the arrow does.
+    var holdsTheScreen: Bool { target != nil && step.holdsTheRest }
+
     /// The category row the category step points at: the tour's first category when the page shows it, else the
     /// page's first row.
     private var firstCategory: String? {

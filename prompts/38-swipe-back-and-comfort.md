@@ -1,6 +1,6 @@
 # 38: Swipe back on Aresium's dashboard; every screen's way out and the comfort gaps, for Patrik to choose
 
-Status: running
+Status: merged 2026-10-30 (Aresium 380 tests + 2 opt-in timing; the other four apps build; swipe checked on the iOS 27 simulator, to check on the phone in build 3)
 Branch: `claude/38-swipe` · Worktree: `../empire-ios-38-swipe` · Built by: a Claude agent (flow and the feel)
 
 ## Goal

@@ -26,6 +26,9 @@ struct DashboardStack<Top: View, Root: View>: View {
     let palette: Palette
     @Binding var place: DashboardPlace
     let band: AresiumBand
+    /// Whether the back swipe pops a pushed screen (`.backSwipe`). It does what the header's back arrow does, so it is
+    /// on wherever the arrow takes taps; the tour turns it off while it holds the screen (`TourModel.holdsTheScreen`).
+    var backSwipe = true
     /// The header (and any line under it) of the start screen (nil) or a pushed screen.
     @ViewBuilder let top: (DashboardRoute?) -> Top
     /// The start screen.
@@ -57,6 +60,10 @@ struct DashboardStack<Top: View, Root: View>: View {
                 }
                 .background { Wall(palette: palette) }
                 .toolbar(.hidden, for: .navigationBar)
+                // The bar is hidden (the header is the app's own); this keeps the system's back swipe, which a hidden
+                // bar turns off. The edge swipe and the swipe from anywhere both: no pushed screen reads sideways drags
+                // (the graph takes taps), and the start page's sideways swipe is on the root, which stays the system's.
+                .backSwipe(backSwipe)
                 .tourSpotlight()
             }
         }
