@@ -150,8 +150,10 @@ struct TransactionDetailSheet: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     if !store.choices.isEmpty {
+                        // Apple's regular size (brief 41; the small one was about 28 pt tall): drawn 32 pt tall, it
+                        // takes taps about 5 pt beyond its edges by itself (measured on iOS 27.0).
                         Button("Change") { store.beginRecategorisation() }.buttonStyle(.bordered)
-                            .controlSize(.small).accessibilityIdentifier("changeCategory")
+                            .accessibilityIdentifier("changeCategory")
                             .tourAnchor(.change)
                     }
                 }
@@ -200,7 +202,7 @@ struct TransactionDetailSheet: View {
                 Button("Edit") { Task { await store.editReceipt() } }
                 Button("Unjoin") { Task { await store.unjoinReceipt() } }
             }
-            .buttonStyle(.bordered).controlSize(.small).disabled(store.isSaving).padding(.top, 6)
+            .buttonStyle(.bordered).disabled(store.isSaving).padding(.top, 6)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.top, 20)

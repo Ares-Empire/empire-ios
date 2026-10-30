@@ -196,7 +196,10 @@ final class TourModel {
 
     /// The tour points at a control and keeps taps off the rest of the screen, the header's back arrow included. The
     /// back swipe is off meanwhile too, since it does only what the arrow does (brief 38); a swipe the tour lets through
-    /// reaches `update` through the dashboard's path, as the arrow does.
+    /// reaches `update` through the dashboard's path, as the arrow does. So is a payment row's long press (brief 41): at
+    /// the payment step the row the ring is on opens the payment's page, and a menu there would skip the page the card
+    /// points at; the switch step points at the page's Change. While the tour points at nothing (the first and last
+    /// step), the menu works as everywhere, on the made-up store.
     var holdsTheScreen: Bool { target != nil && step.holdsTheRest }
 
     /// The category row the category step points at: the tour's first category when the page shows it, else the

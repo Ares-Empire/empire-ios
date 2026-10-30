@@ -14,7 +14,32 @@ struct IconButton: View {
                 .foregroundStyle(active ? palette.ink : palette.secondary)
                 .background(active ? palette.card2 : palette.card, in: RoundedRectangle(cornerRadius: 12))
                 .overlay(RoundedRectangle(cornerRadius: 12).stroke(active ? palette.muted : palette.line))
+                .minimumTapArea()
         }.buttonStyle(.plain).accessibilityLabel(label).accessibilityAddTraits(active ? .isSelected : [])
+    }
+}
+
+extension View {
+    /// Apple's smallest tap area, 44 × 44 pt, around a control drawn smaller (brief 41: the import result's words, the
+    /// header's 42 pt buttons): the area that takes the tap grows evenly around it, while the control keeps its drawn
+    /// size and its place in the layout. Put it inside a button's label. Next to another control, the area stops where
+    /// the screen's layout leaves room; where two would overlap, the later one takes the overlap.
+    func minimumTapArea() -> some View { modifier(MinimumTapArea()) }
+}
+
+private struct MinimumTapArea: ViewModifier {
+    static let side: CGFloat = 44
+    /// The control's drawn size, measured: the area grows by what it lacks.
+    @State private var size = CGSize(width: side, height: side)
+
+    func body(content: Content) -> some View {
+        let horizontal = max(0, (Self.side - size.width) / 2)
+        let vertical = max(0, (Self.side - size.height) / 2)
+        content
+            .onGeometryChange(for: CGSize.self) { $0.size } action: { size = $0 }
+            .padding(.horizontal, horizontal).padding(.vertical, vertical)
+            .contentShape(Rectangle())
+            .padding(.horizontal, -horizontal).padding(.vertical, -vertical)
     }
 }
 
@@ -28,6 +53,7 @@ struct ScreenHeader: View {
     let openSettings: () -> Void
     var body: some View {
         HStack(spacing: 10) {
+            // The arrow, sun and gear are drawn at 42 pt and take taps over 44 pt (`IconButton`).
             if let back {
                 IconButton(symbol: "chevron.left", label: String(localized: "Back"), palette: palette, action: back)
             } else {

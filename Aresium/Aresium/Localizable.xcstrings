@@ -1117,6 +1117,16 @@
         }
       }
     },
+    "Change category" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kategorie ändern"
+          }
+        }
+      }
+    },
     "Change code" : {
       "localizations" : {
         "de" : {

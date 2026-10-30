@@ -26,9 +26,10 @@ struct DashboardStack<Top: View, Root: View>: View {
     let palette: Palette
     @Binding var place: DashboardPlace
     let band: AresiumBand
-    /// Whether the back swipe pops a pushed screen (`.backSwipe`). It does what the header's back arrow does, so it is
-    /// on wherever the arrow takes taps; the tour turns it off while it holds the screen (`TourModel.holdsTheScreen`).
-    var backSwipe = true
+    /// The shortcuts: the back swipe on a pushed screen (`.backSwipe`, brief 38), which does what the header's back arrow
+    /// does, and the payment rows' long press (brief 41), which does what a payment's or receipt's page does. They are on
+    /// wherever those take taps; the tour turns them off while it holds the screen (`TourModel.holdsTheScreen`).
+    var shortcuts = true
     /// The header (and any line under it) of the start screen (nil) or a pushed screen.
     @ViewBuilder let top: (DashboardRoute?) -> Top
     /// The start screen.
@@ -52,7 +53,7 @@ struct DashboardStack<Top: View, Root: View>: View {
                         CashMonthsScreen(store: store, palette: palette, band: band) { place.path.append($0) }
                     } else if route.month != nil {
                         TransactionsScreen(route: route, store: store, palette: palette, band: band,
-                                           selection: $place.payment)
+                                           selection: $place.payment, rowMenus: shortcuts)
                     } else {
                         CategoryScreen(route: route, store: store, palette: palette, graph: $place.graph,
                                        band: band) { place.path.append($0) }
@@ -63,7 +64,7 @@ struct DashboardStack<Top: View, Root: View>: View {
                 // The bar is hidden (the header is the app's own); this keeps the system's back swipe, which a hidden
                 // bar turns off. The edge swipe and the swipe from anywhere both: no pushed screen reads sideways drags
                 // (the graph takes taps), and the start page's sideways swipe is on the root, which stays the system's.
-                .backSwipe(backSwipe)
+                .backSwipe(shortcuts)
                 .tourSpotlight()
             }
         }
@@ -109,16 +110,19 @@ struct StartScreen: View {
                             palette: palette, xTitle: current ? String(localized: "Day") : String(localized: "Month"))
                     .frame(height: 235).transition(.opacity.combined(with: .move(edge: .top)))
             }
-            HStack(spacing: 9) {
+            // The page dots: each takes taps over 44 × 44 pt (brief 41; they were 30 × 24) while the row keeps its height
+            // in the layout (24 pt and its padding); the area reaching over the pages below lies above them (`zIndex`).
+            HStack(spacing: 0) {
                 ForEach(DashboardSide.allCases, id: \.self) { page in
                     Button { withAnimation(reduceMotion ? nil : .default) { side = page } } label: {
                         Circle().fill(page == side ? palette.ink : palette.muted.opacity(0.5))
                             .frame(width: page == side ? 8 : 7, height: page == side ? 8 : 7)
-                            .frame(width: 30, height: 24)
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
                     }.buttonStyle(.plain).accessibilityLabel(page.title)
                         .accessibilityAddTraits(page == side ? .isSelected : [])
                 }
-            }.tourAnchor(.pageDots).padding(.vertical, 2)
+            }.padding(.vertical, -10).tourAnchor(.pageDots).padding(.vertical, 2).zIndex(1)
             TabView(selection: $side) {
                 ForEach(DashboardSide.allCases, id: \.self) { page in
                     StartPage(store: store, palette: palette, side: page, current: current, band: band,
@@ -256,6 +260,14 @@ struct TransactionsScreen: View {
     let band: AresiumBand
     /// The payment whose detail is open (the dashboard's place).
     @Binding var selection: Transaction?
+    /// The rows' long press (brief 41); off while the tour holds the screen (`DashboardStack.shortcuts`).
+    var rowMenus = true
+    /// A payment's change sheet opened from its row's long press: the sheet its page's Change opens, on a store of its
+    /// own for that payment.
+    @State private var changing: TransactionDetailStore?
+    /// A receipt's or entry's Edit opened from its row's long press: the window its page's Edit opens.
+    @State private var receiptEdit: ReceiptPageModel?
+
     var body: some View {
         VStack(spacing: 0) {
             DashboardStatus(store: store, palette: palette)
@@ -290,7 +302,10 @@ struct TransactionsScreen: View {
                                 Text(Money.transaction(transaction.amount)).font(AppFont.number(14))
                                     .foregroundStyle(transaction.amount < 0 ? palette.expenseText : palette.income).fixedSize()
                             }.padding(.horizontal, 12).padding(.vertical, 11).contentShape(Rectangle())
+                            // The lifted row in Apple's context menu: the row with rounded corners.
+                            .contentShape(.contextMenuPreview, RoundedRectangle(cornerRadius: 12, style: .continuous))
                         }.buttonStyle(.plain)
+                            .contextMenu { if rowMenus { menu(for: transaction) } }
                             .tourAnchor(.payment(transaction.id))
                     }
                     if rows.isEmpty { EmptyMessage(text: String(localized: "No transactions this month."), palette: palette) }
@@ -298,18 +313,34 @@ struct TransactionsScreen: View {
             } band: { _ in band }
             .refreshable { await store.reload() }.scrollBounceBehavior(.always)
             .tourScrollsToTarget()
+            .sheet(isPresented: Binding(get: { changing?.showsRecategorisation == true },
+                                        set: { if !$0 { changing?.showsRecategorisation = false } }),
+                   onDismiss: { changing = nil }) {
+                if let changing { RecategoriseSheet(store: changing, palette: palette) }
+            }
+            .sheet(isPresented: Binding(get: { receiptEdit?.editing != nil },
+                                        set: { if !$0 { receiptEdit?.endEdit() } }),
+                   onDismiss: { receiptEdit = nil }) {
+                if let receiptEdit { ReceiptEditSheet(page: receiptEdit, palette: palette) }
+            }
         }
         .sheet(item: $selection) { transaction in
-            // Phone mode's receipt rows open the receipt, a withdrawal's covered row the receipts that took its cash.
-            if let phone = store.phone, let receiptID = transaction.receiptId {
-                ReceiptPageSheet(model: ReceiptPageModel(id: receiptID, phone: phone) {
-                    await store.reloadAfterTransactionChange()
-                }, palette: palette)
-            } else if let phone = store.phone, let receiptIDs = transaction.coveredBy {
-                CoveredReceiptsSheet(phone: phone, receiptIDs: receiptIDs, palette: palette) {
-                    await store.reloadAfterTransactionChange()
+            switch store.page(for: transaction) {
+            case let .receipt(id):
+                // Phone mode's receipt and cash entry rows open the receipt's page.
+                if let phone = store.phone {
+                    ReceiptPageSheet(model: ReceiptPageModel(id: id, phone: phone) {
+                        await store.reloadAfterTransactionChange()
+                    }, palette: palette)
                 }
-            } else {
+            case let .covered(receiptIDs):
+                // A withdrawal's covered row: the receipts that took its cash.
+                if let phone = store.phone {
+                    CoveredReceiptsSheet(phone: phone, receiptIDs: receiptIDs, palette: palette) {
+                        await store.reloadAfterTransactionChange()
+                    }
+                }
+            case .payment:
                 TransactionDetailSheet(store: store.transactionDetailStore(for: transaction), palette: palette)
             }
         }
@@ -328,6 +359,42 @@ struct TransactionsScreen: View {
                     .first { $0.transaction.place.localizedCaseInsensitiveContains(arguments[index + 1]) }?.transaction
             }
             #endif
+        }
+    }
+
+    /// The row's long press: what its page offers (`DashboardStore.rowActions`), each opening the window that page's
+    /// button opens. None (a covered row) shows no menu.
+    @ViewBuilder private func menu(for transaction: Transaction) -> some View {
+        ForEach(store.rowActions(for: transaction), id: \.self) { action in
+            switch action {
+            case .changeCategory:
+                Button("Change category", systemImage: "tag") { change(transaction) }
+            case .edit:
+                Button("Edit", systemImage: "pencil") { edit(transaction) }
+            }
+        }
+    }
+
+    /// Change category: the change sheet at once; it fills as the payment loads, and its Save and the shop question work
+    /// as from the page (the tour's switch step, the learned shop, the dashboard built again).
+    private func change(_ transaction: Transaction) {
+        let detail = store.transactionDetailStore(for: transaction)
+        changing = detail
+        Task { await detail.beginRecategorisationFromRow() }
+    }
+
+    /// Edit: the receipt's or entry's window, filled from what is stored. If it cannot open (the receipt is gone), the
+    /// row's page opens instead and says why.
+    private func edit(_ transaction: Transaction) {
+        guard let phone = store.phone, case let .receipt(id) = store.page(for: transaction) else { return }
+        let page = ReceiptPageModel(id: id, phone: phone) { await store.reloadAfterTransactionChange() }
+        receiptEdit = page
+        Task {
+            await page.beginEdit()
+            if page.editing == nil {
+                receiptEdit = nil
+                selection = transaction
+            }
         }
     }
 }

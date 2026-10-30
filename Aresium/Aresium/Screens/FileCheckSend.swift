@@ -81,14 +81,16 @@ struct BankFormatCardView: View {
         }
     }
 
+    /// "What is sent?" and Not now stay quiet words, each taking taps over 44 pt (brief 41).
     private var detailsLink: some View {
-        Button("What is sent?") { typing = false; showsDetails = true }
+        Button { typing = false; showsDetails = true } label: { Text("What is sent?").minimumTapArea() }
             .font(AppFont.text(13, weight: .semibold)).foregroundStyle(palette.secondary)
             .fixedSize(horizontal: false, vertical: true)
     }
 
     private var notNowButton: some View {
-        Button("Not now", action: notNow).font(AppFont.text(13, weight: .bold)).foregroundStyle(palette.ink)
+        Button(action: notNow) { Text("Not now").minimumTapArea() }
+            .font(AppFont.text(13, weight: .bold)).foregroundStyle(palette.ink)
             .fixedSize(horizontal: false, vertical: true)
             .disabled(card.shown == .sending)
     }

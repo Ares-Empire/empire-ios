@@ -294,10 +294,12 @@ struct NoAccessPanel: View {
 }
 
 /// A login screen's scrolling content with the quiet legal footer ("Privacy · Imprint", in the app's language) at the
-/// bottom of the screen, or below the content when that is taller. Used by every app's login.
+/// bottom of the screen, or below the content when that is taller; its links open inside the app. Used by every app's
+/// login.
 struct LoginScroll<Content: View>: View {
     var footerColor = LoginStyle.placeholder
     @ViewBuilder var content: Content
+    @State private var browser = InAppBrowser()
 
     var body: some View {
         GeometryReader { geometry in
@@ -311,12 +313,15 @@ struct LoginScroll<Content: View>: View {
                         Link(destination: LegalPage.imprint.url()) { Text("Imprint", tableName: "Shared") }
                     }
                     .font(AppFont.text(11.5)).foregroundStyle(footerColor).tint(footerColor)
+                    // Inside the app, in Apple's in-app browser with its own close button (brief 41), as Settings → About.
+                    .environment(\.openURL, browser.openURLAction)
                     .padding(.bottom, 14)
                 }
                 .frame(minHeight: geometry.size.height)
             }
             .scrollDismissesKeyboard(.interactively)
         }
+        .inAppBrowser(browser)
     }
 }
 

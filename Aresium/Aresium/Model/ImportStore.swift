@@ -79,6 +79,13 @@ final class ImportStore {
     var isBusy: Bool { readingCount > 0 || isImporting || batchScheduled }
     var waitingCount: Int { pending.count + attempted.count }
     var canRetry: Bool { !attempted.isEmpty && !isImporting && (isReady || dashboard.isSample) }
+    /// A swipe down on the result does what its Dismiss does, or the send card's Not now (both `close()`), brief 41.
+    /// Not while Retry and Discard are offered: a swipe would put the files aside without a choice. Not while the
+    /// format is being sent, when Not now waits too.
+    var closesBySwipe: Bool {
+        guard let banner, !canRetry else { return false }
+        return banner.share?.shown != .sending
+    }
     var layoutRequest: LayoutRequest? { layoutQueue.first }
 
     /// Imports go where the dashboard's data comes from (`DashboardStore.backend`).
