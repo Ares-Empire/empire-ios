@@ -43,7 +43,17 @@ struct ChartPoint: Identifiable {
 
 @MainActor @Observable
 final class DashboardStore {
-    private(set) var dashboard: Dashboard?
+    private(set) var dashboard: Dashboard? {
+        didSet { revision &+= 1 }
+    }
+    /// Counts every change of `dashboard`, so what is built from it (a category's payment list with its sums, brief 53)
+    /// is kept until it changes.
+    private(set) var revision = 0
+    /// Which names add up in a category's payment list (brief 53): the person's, kept in the app's defaults; the tour,
+    /// tests and the samples have their own in memory.
+    let sums: PaymentSums
+    /// The payment lists built since the dashboard or the choices last changed (`paymentList(category:month:side:)`).
+    @ObservationIgnored var builtLists = PaymentListCache()
     /// Installed by the live app (`installMessages`); in DEBUG the phone sample gets a pretend one
     /// (`installSampleMessages`, brief 46); never a test store.
     var messages: AresiumMessages?
@@ -70,15 +80,19 @@ final class DashboardStore {
 
     /// Server mode from the start (tests, the server sample).
     convenience init(session: EmpireSession, client: APIClient = APIClient(), sample: Bool = false,
-                     widgetPublisher: WidgetSnapshotPublisher = .temporary()) {
-        self.init(session: session, backend: ServerBackend(client: client), sample: sample, widgetPublisher: widgetPublisher)
+                     widgetPublisher: WidgetSnapshotPublisher = .temporary(), sums: PaymentSums = PaymentSums()) {
+        self.init(session: session, backend: ServerBackend(client: client), sample: sample, widgetPublisher: widgetPublisher,
+                  sums: sums)
     }
 
+    /// `sums`: the person's choices (`PaymentSums(defaults:)`) only for the app's own dashboard; by default an empty set in
+    /// memory (the tour, tests).
     init(session: EmpireSession, backend: (any AresiumBackend)?, sample: Bool = false,
-         widgetPublisher: WidgetSnapshotPublisher = .temporary()) {
+         widgetPublisher: WidgetSnapshotPublisher = .temporary(), sums: PaymentSums = PaymentSums()) {
         self.session = session
         self.backend = backend
         self.widgetPublisher = widgetPublisher
+        self.sums = sums
         isSample = sample
         // The login ended (here or in another app), or the server refused it: server mode's dashboard and its widget
         // numbers go with it (`ModeStore` then shows the phone's store). Phone mode's belong to the iPhone and stay.

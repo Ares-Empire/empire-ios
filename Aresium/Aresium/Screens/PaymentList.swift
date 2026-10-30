@@ -3,7 +3,8 @@ import SwiftUI
 // A payment list's rows and what they open (a month's payments, brief 41; a name's page, brief 44; the Cash page's
 // movements, brief 47): the row (the website's `.txn`, or the Cash page's movement), its tap (its page), its long press
 // (what its page offers, `DashboardStore.rowActions`) and its swipe left ("All from <name>"), and the windows these
-// open. One place, so every list behaves alike.
+// open. One place, so every list behaves alike. A category's list also adds up names (brief 53): the summed row
+// (`SummedPaymentRow`), and Add up on the rows of a name with more payments there.
 
 /// What a list's rows have open: the windows their long press opens, the row swiped open, the name's page to show once
 /// a payment's page has closed.
@@ -21,6 +22,8 @@ final class PaymentRowMenu {
     var pendingName: DashboardRoute?
     /// The payment whose page is open (or was, until it closed).
     var lastOpened: String?
+    /// The summed rows shown open, their payments below them (brief 53), by name key. While the list is shown only.
+    var openSums: Set<String> = []
 
     /// Change category: the change sheet at once; it fills as the payment loads, and its Save and the shop question work
     /// as from the page (the tour's switch step, the learned shop, the dashboard built again).
@@ -65,6 +68,8 @@ struct PaymentRow<Label: View>: View {
     /// The name's page this row is on (its rows offer no "All from" of it).
     var namePage: String? = nil
     var allFrom: ((DashboardRoute) -> Void)? = nil
+    /// A category's list (brief 53): this row's name has more payments there and is not added up; Add up does it.
+    var addUp: (() -> Void)? = nil
     /// Screenshots only: the row shown so far left, as halfway through a swipe.
     var shownAt: CGFloat? = nil
     let open: (Transaction) -> Void
@@ -79,26 +84,30 @@ struct PaymentRow<Label: View>: View {
         .buttonStyle(.plain)
         .contextMenu { if shortcuts { items } }
         .tourAnchor(.payment(transaction.id))
-        .rowSwipe(swipe, id: transaction.id, open: $menu.openRow, shownAt: shownAt)
+        .rowSwipe(swipes, id: transaction.id, open: $menu.openRow, shownAt: shownAt)
     }
 
     private var nameRoute: DashboardRoute? {
         allFrom == nil ? nil : store.nameRoute(for: transaction, namePage: namePage)
     }
 
-    /// "All from <name>": an icon and a short word on the swipe, the whole name for VoiceOver.
-    private var swipe: RowSwipeAction? {
-        guard shortcuts, let allFrom, let route = nameRoute else { return nil }
-        return RowSwipeAction(label: String(localized: "All"), systemImage: "rectangle.stack",
-                              accessibilityName: NameWording.allFrom(route.name?.title ?? transaction.place)) {
-            allFrom(route)
-        }
+    /// The swipe: Add up (in a category's list, when the name has more payments there), then "All from <name>" at the
+    /// edge, which a full swipe does; each an icon and a short word, the whole name for VoiceOver.
+    private var swipes: [RowSwipeAction] {
+        guard shortcuts else { return [] }
+        var actions: [RowSwipeAction] = []
+        if let addUp { actions.append(.addUp(addUp)) }
+        if let allFrom, let route = nameRoute { actions.append(.all(route, name: transaction.place, open: allFrom)) }
+        return actions
     }
 
     /// The long press: what the row's page offers, each opening the window that page's button opens, each entry a short
-    /// verb or phrase (the row itself, lifted above the menu, shows the name). None (a covered row) shows no menu.
+    /// verb or phrase (the row itself, lifted above the menu, shows the name), with Add up as the swipe has it. None (a
+    /// covered row) shows no menu.
     @ViewBuilder private var items: some View {
-        let actions = store.rowActions(for: transaction, namePage: namePage)
+        let actions = (addUp == nil ? store.rowActions(for: transaction, namePage: namePage)
+                                    : store.rowActions(for: .payment(TransactionRow(transaction: transaction, tagged: false),
+                                                                     addsUp: true)))
             .filter { $0 != .allFromName || allFrom != nil }
         ForEach(actions, id: \.self) { action in
             switch action {
@@ -114,33 +123,57 @@ struct PaymentRow<Label: View>: View {
                 }
             case .edit:
                 Button("Edit", systemImage: "pencil") { menu.edit(transaction, in: store) { open(transaction) } }
+            case .addUp:
+                Button(SumWording.addUp(), systemImage: SumSymbol.addUp) { addUp?() }
+            case .separate:
+                EmptyView()                   // a summed row's (`SummedPaymentRow`)
             }
         }
+    }
+}
+
+extension RowSwipeAction {
+    /// "All": the name's page ("All from <name>" for VoiceOver), quiet grey at the row's edge (brief 44).
+    static func all(_ route: DashboardRoute, name: String, open: @escaping (DashboardRoute) -> Void) -> RowSwipeAction {
+        RowSwipeAction(label: String(localized: "All"), systemImage: "rectangle.stack",
+                       accessibilityName: NameWording.allFrom(route.name?.title ?? name)) { open(route) }
+    }
+
+    /// Add up (brief 53): the name's payments in this category as one row.
+    static func addUp(_ perform: @escaping () -> Void) -> RowSwipeAction {
+        RowSwipeAction(label: SumWording.addUp(), systemImage: SumSymbol.addUp, accessibilityName: SumWording.addUp(),
+                       quiet: true, perform: perform)
+    }
+
+    /// Separate (brief 53): a summed row's payments as single rows again.
+    static func separate(_ perform: @escaping () -> Void) -> RowSwipeAction {
+        RowSwipeAction(label: SumWording.separate(), systemImage: SumSymbol.separate,
+                       accessibilityName: SumWording.separate(), quiet: true, perform: perform)
     }
 }
 
 extension PaymentRow where Label == PaymentRowLabel {
     /// A month's or a name's page's row.
     init(row: TransactionRow, store: DashboardStore, palette: Palette, menu: PaymentRowMenu, shortcuts: Bool = true,
-         namePage: String? = nil, allFrom: ((DashboardRoute) -> Void)? = nil, shownAt: CGFloat? = nil,
-         open: @escaping (Transaction) -> Void) {
+         namePage: String? = nil, allFrom: ((DashboardRoute) -> Void)? = nil, addUp: (() -> Void)? = nil,
+         shownAt: CGFloat? = nil, open: @escaping (Transaction) -> Void) {
         self.init(transaction: row.transaction, store: store, menu: menu, shortcuts: shortcuts, namePage: namePage,
-                  allFrom: allFrom, shownAt: shownAt, open: open) {
+                  allFrom: allFrom, addUp: addUp, shownAt: shownAt, open: open) {
             PaymentRowLabel(transaction: row.transaction, tagged: row.tagged, store: store, palette: palette)
         }
     }
 }
 
 #if DEBUG
-extension Array where Element == TransactionRow {
-    /// Screenshots: `-sampleSwipe <points> -swipeRow <text>`: the first of these rows whose name contains the text
-    /// (any row with `-swipeRow` left out), and how far left it shows.
+extension PaymentList {
+    /// Screenshots: `-sampleSwipe <points> -swipeRow <text>` on a category's list: the first row whose name contains the
+    /// text, a summed row too (any row with `-swipeRow` left out), and how far left it shows.
     func debugSwipe() -> (id: String, points: CGFloat)? {
         guard let points = LaunchArguments.value("-sampleSwipe").flatMap(Double.init) else { return nil }
         let text = LaunchArguments.value("-swipeRow") ?? ""
-        guard let row = first(where: { text.isEmpty || $0.transaction.place.localizedCaseInsensitiveContains(text) })
+        guard let entry = entries.first(where: { text.isEmpty || $0.title.localizedCaseInsensitiveContains(text) })
         else { return nil }
-        return (row.id, CGFloat(points))
+        return (entry.id, CGFloat(points))
     }
 }
 #endif
@@ -155,7 +188,9 @@ struct PaymentRowLabel: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            DayTile(palette: palette) { Text(String(transaction.day)) }
+            // At the largest text sizes the day shrinks into its tile rather than turning into "…" (brief 53: the summed
+            // row's payments).
+            DayTile(palette: palette) { Text(String(transaction.day)).lineLimit(1).minimumScaleFactor(0.5) }
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 5) {
                     Text(verbatim: ReceiptRowWording.title(transaction, movement: store.cashMovement(transaction.receiptId)))

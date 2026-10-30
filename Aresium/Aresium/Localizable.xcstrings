@@ -594,6 +594,36 @@
         }
       }
     },
+    "Add up" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Summieren"
+          }
+        }
+      }
+    },
+    "Add up in every category" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In jeder Kategorie summieren"
+          }
+        }
+      }
+    },
+    "Add up same names" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gleiche Namen summieren"
+          }
+        }
+      }
+    },
     "Added here by tag; primary category %@" : {
       "localizations" : {
         "de" : {
@@ -2206,6 +2236,16 @@
         }
       }
     },
+    "Hides its payments" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Blendet die Buchungen aus"
+          }
+        }
+      }
+    },
     "Home" : {
       "localizations" : {
         "de" : {
@@ -3216,6 +3256,26 @@
         }
       }
     },
+    "One row with the sum per month" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eine Zeile mit Summe je Monat"
+          }
+        }
+      }
+    },
+    "One row with the sum per name and month" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eine Zeile mit Summe je Name und Monat"
+          }
+        }
+      }
+    },
     "Only for an Aresium server of your own. Your data here stays on this iPhone." : {
       "localizations" : {
         "de" : {
@@ -3936,6 +3996,16 @@
         }
       }
     },
+    "Separate" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auflösen"
+          }
+        }
+      }
+    },
     "Separator" : {
       "localizations" : {
         "de" : {
@@ -4002,6 +4072,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ältere anzeigen"
+          }
+        }
+      }
+    },
+    "Shows its payments" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zeigt die Buchungen"
           }
         }
       }
