@@ -5,7 +5,7 @@ nonisolated struct Dashboard: Codable {
     let months: [Month]
     let categories: [Category]
     let incomeBuckets: [Category]
-    let transactions: [Transaction]
+    var transactions: [Transaction]
     let overview: Overview
     let total: Totals
     let byMonth: [String: MonthData]
@@ -15,6 +15,9 @@ nonisolated struct Dashboard: Codable {
     /// Phone mode (brief 32; absent from the server's JSON): every cash movement, for the Cash page. A view, counted in
     /// no total.
     var cash: CashView? = nil
+
+    /// Phone mode: built once with the dashboard, over all its months.
+    var nameGroups: [String: PaymentNameGroup]? = nil
 
     static func decode(_ data: Data) throws -> Dashboard {
         let dashboard = try JSONDecoder().decode(Dashboard.self, from: data)
@@ -89,7 +92,7 @@ nonisolated struct Transaction: Codable, Identifiable {
     let amount: Double
     let categoryName: String
     let tags: [String]
-    let place: String
+    var place: String
     let city: String
     let categoriesIn: [String]
     let incomeBuckets: [String]
@@ -102,6 +105,13 @@ nonisolated struct Transaction: Codable, Identifiable {
     /// Phone mode (brief 32): a cash withdrawal (the shop list's cash rule), a source of the wallet.
     var cashWithdrawal: Bool? = nil
 
+    /// Phone mode only: the bank name when different, and where the shown own name came from.
+    var bankName: String? = nil
+    var isOwnName: Bool? = nil
+    var ownNameSource: PaymentNameSource? = nil
+    /// Opaque group identity; use as a dictionary key, never display it.
+    var nameKey: String? = nil
+
     /// A card receipt counted on its own until its bank payment comes.
     var isWaitingReceipt: Bool { provisional == true }
 }
@@ -112,7 +122,7 @@ nonisolated struct CashView: Codable, Equatable {
     /// By `YYYY-MM`: only months with a movement.
     let months: [String: CashMonth]
     /// By date, oldest first (on one day, money in first).
-    let movements: [CashMovement]
+    var movements: [CashMovement]
 }
 
 /// One month of cash, in positive euros. `unaccounted`: what the month's withdrawals still hold after everything that
@@ -144,7 +154,7 @@ nonisolated struct CashMovement: Codable, Equatable, Identifiable {
     /// From the wallet's side: + in, − out.
     let amount: Double
     let kind: Kind
-    let place: String
+    var place: String
     /// The category's name on the dashboard ("Uncategorised" for none).
     let category: String
     /// Money out: the sources it took from ([]: all from elsewhere); nil for money in.
@@ -210,4 +220,24 @@ nonisolated enum DashboardError: LocalizedError {
                                                                        locale: .appLanguage))
         }
     }
+}
+
+/// Where a bank payment's own name was saved (phone mode only).
+nonisolated enum PaymentNameSource: String, Codable, Sendable { case shop, payment }
+
+/// Separate positive money out and in, in euros.
+nonisolated struct PaymentNameAmounts: Codable, Equatable, Sendable {
+    var moneyOut: Double = 0
+    var moneyIn: Double = 0
+}
+
+/// All counted payments of one name, over every dashboard month; rows newest first.
+nonisolated struct PaymentNameGroup: Codable {
+    let rows: [Transaction]
+    let amounts: PaymentNameAmounts
+    /// Every dashboard month, including months without a payment of this name.
+    let months: [String: PaymentNameAmounts]
+    var count: Int { rows.count }
+    var moneyOut: Double { amounts.moneyOut }
+    var moneyIn: Double { amounts.moneyIn }
 }

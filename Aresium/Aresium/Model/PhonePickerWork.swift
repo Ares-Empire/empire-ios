@@ -28,13 +28,24 @@ extension PhoneLedger {
         return counts.filter { $0.value > 0 }
     }
 
-    func dashboard(engine: AresiumEngine, catalog: CategoryCatalog, language: AppLanguage, today: String) async throws -> Dashboard {
+    func dashboard(engine: AresiumEngine, catalog: CategoryCatalog, language: AppLanguage, today: String, ownNames: Bool = true) async throws -> Dashboard {
         let list = PhoneCategoryList(catalog: catalog, chosen: try chosen(), language: language)
         let payments = try payments()
         let receipts = try receipts()
         let input = PickerTiming.measure("dashboard.input") {
             PhoneDashboard.input(payments: payments, list: list, today: today, receipts: receipts)
         }
-        return try await engine.dashboard(input)
+        var dashboard = try await engine.dashboard(input)
+        let paymentKeys = try await engine.merchantKeys(payments.map { $0.sorting(raw: false) })
+        let receiptKeys = try await engine.merchantKeys(receipts.map {
+            SortingPayment(counterparty: $0.shop, description: $0.shop ?? "", source: "bank", account: "receipt",
+                           amount: -$0.totalValue, currency: $0.currency, date: $0.date)
+        })
+        let rules = Dictionary(uniqueKeysWithValues: try paymentNames().map { ($0.merchant, $0.name) })
+        PickerTiming.measure("names.groups") {
+            PaymentNames.apply(to: &dashboard, payments: payments, paymentKeys: paymentKeys, receipts: receipts,
+                               receiptKeys: receiptKeys, rules: rules, enabled: ownNames)
+        }
+        return dashboard
     }
 }

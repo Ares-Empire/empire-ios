@@ -498,7 +498,8 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   (unique by account, source and `externalId`; who set the category), chosen categories, learned merchants, the CSV
   layouts the person confirmed, receipts (schema version 2, brief 31), the receipts' direction, kind, `paidFrom` and the
   shop as read plus the corrected shop names (schema version 3, brief 33), one's own categories' icon and colour (schema
-  version 4, brief 36; `LedgerSchemaCurrent` names the version the app opens, tests use it too); older stores move on by lightweight stages,
+  version 4, brief 36), bank payments’ own names and merchant name rules (schema
+  version 5, brief 43; `LedgerSchemaCurrent` names the version the app opens, tests use it too); older stores move on by lightweight stages,
   one after the other (`LedgerMigrationPlan`; a model change always adds the next version, never edits one in place;
   `ReceiptBookTests` opens a version 1 store, `ReceiptCorrectionTests` a version 2 one, `OwnCategoryLookTests` a version 3
   one). **Own categories' looks** (brief 36, `Model/OwnCategoryLook.swift`): an icon from a word of the name (English and
@@ -522,9 +523,39 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   `storage`). **Lifecycle:** the data belongs to the iPhone, not to a login: logging in or out, leaving Aresium and
   deleting the Ares account never touch it; it goes only with Settings → Delete Aresium data on this iPhone or the
   lock's "Forgot the code?". Settings → Your data on this iPhone (phone mode): Categories, Receipts, Export (one JSON file,
-  schema 3 with the receipts, cash entries and the corrected shop names, `Aresium-<date>.json`, through the share sheet), Restore
+  schema 4 with the receipts, cash entries, corrected shop names and payment names, `Aresium-<date>.json`, through the share sheet), Restore
   from an export (only into an empty store, all or nothing; chosen categories and corrected shop names are replaced;
-  schema 2 and 1 files still restore).
+  schema 1–3 files still restore).
+  **Payment names and groups** (brief 43, data only; `Model/PaymentNames.swift`, screens in brief 44):
+  `LedgerPayment.place` always stays the bank name; sorting, learning and receipt matching use only those original
+  fields. Schema 5 adds `LedgerPayment.ownName` and merchant → name rules (`PhoneLedger.paymentNames()`); export schema
+  4 carries both, older stores migrate through every frozen version and exports 1–3 still restore. Delete data deletes
+  names with the store. Names trim whitespace and keep at most 60 characters (Swift grapheme clusters); empty removes
+  only the selected scope. Removing a payment override reveals a remaining shop rule; changing/removing a shop rule
+  leaves payment overrides intact. An empty merchant key allows only the payment scope.
+  **Brief 44 API:** get a `TransactionDetailStore` with `DashboardStore.transactionDetailStore(for:)` as for category
+  changes. `await prepareRename()` loads the detail and `renameInfo` (`PaymentRenameInfo`, nil in server mode);
+  `canRename` is false there. The info has `bankName`, effective `ownName`/`source` (`.shop` or `.payment`), both
+  `paymentOwnName` and `shopOwnName` for scope-specific editing/removal, `canRenameShop`, and `otherPaymentCount` (N,
+  all other bank payments with that merchant key, 0 for an empty key). Call `await rename(to:scope:)` with `.shop` or
+  `.payment`: saves, refreshes the detail/info and rebuilds the dashboard/widget; use the existing `isSaving` and
+  `saveError`. Row and page use the same store. Phone samples use their real temporary ledger, as category changes do.
+  The lower-level `PhoneBackend.renameInfo(id:)` returns that info; `rename(id:name:scope:)` saves and returns the new
+  `TransactionDetail` (callers outside the detail store must reload their dashboard).
+  **Setting:** `DashboardStore.ownNames` (or `PhoneBackend.ownNames`) reads `aresium.ownNames`, default true.
+  Settings calls `await DashboardStore.setOwnNames(_:)` to persist and rebuild, rather than writing defaults directly.
+  Off hides names without deleting them. `Transaction.place` and `TransactionDetail.place` carry the shown name;
+  optional `bankName` is set only when different, `isOwnName` says whether the shown name is own, `ownNameSource` says
+  which scope, and `nameKey` is an opaque grouping key. These fields are absent in server data.
+  **All payments of this name:** `DashboardStore.nameGroup(for:)` looks up the prebuilt `Dashboard.nameGroups` dictionary
+  by a row’s `nameKey` (nil for excluded/covered rows or server mode). `PaymentNameGroup` has `rows` newest first,
+  `count`, separate positive `moneyOut`/`moneyIn`, and `months[YYYY-MM]` (`PaymentNameAmounts`, the same two numbers),
+  including zeroes for every dashboard month. Built once per dashboard on the ledger worker, after the engine counted
+  it: own names fold case and diacritics; otherwise merchant keys, or exact bank lines for empty merchant keys.
+  Receipts/entries keep their Shop on screen but join that shop’s key/rule (waiting card receipts count until joined,
+  as on the dashboard). Covered rows and payments counting in neither overall total are excluded; tags cannot add
+  them back. The ledger executor also does name saving, merchant-key input and the question’s count off main;
+  `PaymentNamesTests` checks the worker spans (`names.*`) and opens an actual schema 3 store with all record types.
   **The widget snapshot** belongs to the store it shows: phone mode's carries `phone: true` and is shown whoever is
   logged in; server mode's carries its account and follows the marker as before (`WidgetSnapshotStore.readShown`).
   **The lock** (brief 22, `Model/AppLock.swift`, `Screens/LockScreen.swift`, `Screens/LockSettings.swift`): optional,

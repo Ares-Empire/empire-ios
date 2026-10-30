@@ -3,6 +3,10 @@ import Foundation
 struct TransactionDetail: Codable {
     var id: String
     var place: String
+    var bankName: String? = nil
+    var isOwnName: Bool? = nil
+    var ownNameSource: PaymentNameSource? = nil
+    var nameKey: String? = nil
     var amount: Double
     let currency: String
     var bookingDate: String

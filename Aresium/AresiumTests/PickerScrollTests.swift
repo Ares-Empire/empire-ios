@@ -76,7 +76,16 @@ struct PickerScrollTests {
                 let receipts = try await phone.ledger.receipts()
                 let input = PhoneDashboard.input(payments: payments, list: list, today: phone.today(), receipts: receipts)
                 let reference = try await phone.engine.dashboard(input)
-                let worker = try await phone.dashboard(auth: BackendAuth(token: nil))
+                var worker = try await phone.dashboard(auth: BackendAuth(token: nil))
+                // Brief 43 adds phone-only presentation metadata after the engine. Compare the original engine
+                // payload here; PaymentNamesTests checks the added fields and groups independently.
+                worker.nameGroups = nil
+                for index in worker.transactions.indices {
+                    worker.transactions[index].bankName = nil
+                    worker.transactions[index].isOwnName = nil
+                    worker.transactions[index].ownNameSource = nil
+                    worker.transactions[index].nameKey = nil
+                }
                 #expect(try encoder.encode(reference) == encoder.encode(worker))
             }
         }

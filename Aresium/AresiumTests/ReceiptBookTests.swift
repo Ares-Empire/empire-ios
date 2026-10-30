@@ -63,7 +63,7 @@ struct ReceiptBookTests {
         _ = try await phone.saveReceipt(draft())                                     // joins
         _ = try await phone.saveReceipt(draft("Café Fiktiva", total: 8.40, method: .cash, category: "eating-out"))
         let export = try await phone.export()
-        #expect(export.schema == 3 && export.receipts.count == 2)
+        #expect(export.schema == 4 && export.receipts.count == 2)
         let file = try export.encoded()
         #expect(String(decoding: file, as: UTF8.self).contains("\"receipts\""))
 
