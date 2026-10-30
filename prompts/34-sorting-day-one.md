@@ -1,6 +1,6 @@
 # 34: Sorting on day one: card lines, branch towns, Vinted, PayPal conversions
 
-Status: running
+Status: merged 2026-10-30 (aresium e76fadd; engine tests 364; server /api/data identical on real data, deployed; Not sorted on Patrik's files 400 → 280)
 Repo: **aresium** · Worktree: `../aresium-34-sorting` (branch `codex/34-sorting`) · Built by: Codex (`gpt-6.1-sol`,
 effort `high`) · Rules: `~/aresium/AGENTS.md`
 

@@ -65,7 +65,7 @@ nonisolated struct LedgerPayment: Codable, Equatable, Sendable {
     func sorting(accountIban: String? = nil, raw: Bool = true) -> SortingPayment {
         SortingPayment(counterparty: counterparty, description: text, source: source, account: account,
                        accountIban: accountIban, counterpartyIban: counterpartyIban, amount: amountValue,
-                       currency: currency, date: bookingDate, raw: raw ? self.raw : nil)
+                       currency: currency, date: bookingDate, raw: raw ? self.raw : nil, externalId: externalId)
     }
 }
 
@@ -385,7 +385,8 @@ actor PhoneLedger {
     func move(_ ids: [String], to category: String, source: CategorySource) throws {
         let wanted = Set(ids)
         for payment in try modelContext.fetch(FetchDescriptor<StoredPayment>()) where wanted.contains(payment.id) {
-            guard !CategorySource.keeps(payment.categorySource) else { continue }
+            guard !CategorySource.keeps(payment.categorySource),
+                  payment.categorySource != CategorySource.structural.rawValue else { continue }
             payment.category = category
             payment.categorySource = source.rawValue
             payment.extraCategories.removeAll { $0 == category }

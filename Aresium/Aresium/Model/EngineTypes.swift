@@ -239,6 +239,9 @@ nonisolated struct SortingPayment: Codable, Equatable, Sendable {
     /// `YYYY-MM-DD`.
     var date: String
     var raw: JSONValue?
+    /// The export's own id (PayPal's transaction code): links a PayPal purchase with its currency-conversion rows,
+    /// which the own-transfer rules then leave out as the dashboard does.
+    var externalId: String? = nil
 }
 
 /// One payment's category from `sortPayments`, and the layer that chose it ("structural", "learned", "starter"), or
