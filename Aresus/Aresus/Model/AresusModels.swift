@@ -47,6 +47,8 @@ nonisolated struct ProvinceDetail: Codable, Equatable, Sendable {
     let line: String
     let since: Date?
     let about: String?
+    let url: String?
+    let app: String?
     let checks: [Check]
     let deploy: Deploy?
     let incidents: [Incident]      // last 30 days, newest first

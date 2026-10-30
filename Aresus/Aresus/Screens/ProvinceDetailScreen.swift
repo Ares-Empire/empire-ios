@@ -9,6 +9,8 @@ struct ProvinceDetailScreen: View {
     let store: AresusStore
     let mark: UIImage?
     @State private var showsTitle = false
+    @State private var nothingOpened = false
+    @State private var opening = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var detail: ProvinceDetail? { store.provinces[slug] }
@@ -20,6 +22,7 @@ struct ProvinceDetailScreen: View {
             VStack(alignment: .leading, spacing: 0) {
                 if let province { hero(province) }
                 if let detail {
+                    if detail.canOpen { openRow(detail) }
                     DetailSections(detail: detail, clock: store.clock, refreshError: store.error(.province(slug)))
                         .animation(reduceMotion ? nil : .smooth, value: detail)
                 } else if let error = store.error(.province(slug)) {
@@ -57,6 +60,38 @@ struct ProvinceDetailScreen: View {
                     .opacity(showsTitle ? 1 : 0).accessibilityHidden(!showsTitle)
             }
         }
+    }
+
+    private func openRow(_ detail: ProvinceDetail) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Button {
+                opening = true
+                nothingOpened = false
+                Task {
+                    let outcome = await ProvinceLinkOpener(application: SystemProvinceURLOpener())
+                        .open(app: detail.app, website: detail.url)
+                    nothingOpened = outcome == .notOpened
+                    opening = false
+                }
+            } label: {
+                HStack(spacing: 10) {
+                    Text("Open \(detail.name)").font(AppFont.text(14, weight: .medium))
+                    Spacer(minLength: 12)
+                    Image(systemName: "arrow.up.right").font(.system(size: 12, weight: .semibold))
+                }
+                .foregroundStyle(Ink.primary)
+                .padding(.horizontal, 16).padding(.vertical, 13)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(PressedBox())
+            .glassCard()
+            .disabled(opening)
+            if nothingOpened {
+                Text("\(detail.name) isn't on this iPhone.")
+                    .font(AppFont.text(12)).foregroundStyle(Ink.muted)
+            }
+        }
+        .padding(.top, 30)
     }
 
     private func hero(_ province: Province) -> some View {

@@ -13,15 +13,20 @@ struct AresusTabs: View {
     var body: some View {
         TabView(selection: $navigation.tab) {
             Tab("Aresus", systemImage: "binoculars", value: AresusNavigation.Tab.aresus) {
-                WatchtowerTab(store: store, navigation: navigation, marks: marks, logOut: logOut)
+                WatchtowerTab(store: store, navigation: navigation, marks: marks)
                     .tint(Ink.primary)
             }
             Tab("Aresync", systemImage: "arrow.triangle.2.circlepath", value: AresusNavigation.Tab.aresync) {
-                SyncScreen(store: store) { navigation.openRun = RunRef(id: $0) }
+                SyncScreen(store: store, open: { navigation.openRun = RunRef(id: $0) },
+                           openSettings: { navigation.showsSettings = true })
                     .tint(Ink.primary)
             }
         }
         .tint(AppAccent.aresus.color)
+        .sheet(isPresented: $navigation.showsSettings) {
+            SettingsScreen(app: SettingsApp(name: "Aresus", accent: .aresus, sendsNotifications: true),
+                           session: store.session, sample: store.isSample, logOut: logOut)
+        }
         .sheet(item: $navigation.openRun) { run in
             RunSheet(id: run.id, store: store)
                 .presentationDetents([.medium, .large])
