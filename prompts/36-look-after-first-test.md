@@ -1,6 +1,6 @@
 # 36: The look after the first phone test: own categories' icons, Save at the top, a readable bank-guide line
 
-Status: running
+Status: merged 2026-10-30 (Aresium 361 tests, Empire tests pass, the other apps build; store schema 4; the light-mode bug found and fixed in AppRoot)
 Branch: `claude/36-look` · Worktree: `../empire-ios-36-look` · Built by: a Claude agent (flow and the look)
 
 ## Goal
