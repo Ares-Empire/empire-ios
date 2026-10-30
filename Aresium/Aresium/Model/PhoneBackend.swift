@@ -10,6 +10,9 @@ nonisolated struct PhoneImportResult: Equatable, Sendable {
     var sorted = 0
     var waiting = 0
     var account: String?
+    /// The stored account's id (`AccountKey`), also when the file added nothing new: an import of it happened
+    /// (Aresium's messages count a month as complete once each of its accounts was imported after it ended).
+    var accountID: String?
     var error: String?
     /// An unknown CSV: the guessed layout, which the person confirms before the file is read.
     var layout: LayoutGuess?
@@ -217,7 +220,9 @@ final class PhoneBackend: AresiumBackend {
                     result.layout = guess
                     result.readings = await readings(of: file, layouts: layouts)
                 } else {
-                    let added = try await ledger.add(read, account: AccountKey.account(for: read))
+                    let account = AccountKey.account(for: read)
+                    let added = try await ledger.add(read, account: account)
+                    result.accountID = account.id
                     result.added = added.newIDs.count
                     result.newIDs = added.newIDs
                     result.already = added.already

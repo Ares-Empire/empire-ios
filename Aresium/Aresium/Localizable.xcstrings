@@ -87,6 +87,8 @@
         }
       }
     },
+    "%@: %@ spent, %@ in." : {},
+    "%@: %@ spent, %@ in. Most on %@: %@." : {},
     "%@: %lld added" : {
       "localizations" : {
         "de" : {
@@ -2089,6 +2091,8 @@
         }
       }
     },
+    "Import your statements to complete %@." : {},
+    "Import your statements to keep your dashboard up to date." : {},
     "Importing statements" : {
       "localizations" : {
         "de" : {
@@ -2439,6 +2443,7 @@
         }
       }
     },
+    "Month review" : {},
     "Monthly income" : {
       "localizations" : {
         "de" : {
@@ -4155,6 +4160,7 @@
         }
       }
     },
+    "Time for new statements" : {},
     "To" : {
       "localizations" : {
         "de" : {
@@ -4771,6 +4777,7 @@
         }
       }
     },
+    "Your %@ review is ready." : {},
     "Your IBAN" : {
       "localizations" : {
         "de" : {
@@ -4821,6 +4828,7 @@
         }
       }
     },
+    "Your last import was %lld days ago." : {},
     "Your own" : {
       "localizations" : {
         "de" : {

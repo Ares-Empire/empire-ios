@@ -23,6 +23,7 @@ struct ContentView: View {
     @State private var theme: ThemeState
     private let pausedIntroProgress: Double?
     private let restoresOnLaunch: Bool
+    private let messagesActive: Bool
     /// Where the person's dashboard is (pushed screens, Current/Overview, the page, the graph, the open payment).
     @State private var place = DashboardPlace()
     /// The tour, while it runs in place of the dashboard (on a made-up store of its own, `TourModel`).
@@ -36,6 +37,7 @@ struct ContentView: View {
     @State private var samplePhone: Bool
     /// Files shared into Aresium while it was locked: imported once it is unlocked.
     @State private var heldFiles: [URL] = []
+    @State private var heldLink: URL?
     @State private var showsSettings = false
     /// Import data's file picker (the first screen). The category picker follows an import that added payments while
     /// none is chosen (`ImportStore.asksForCategories`).
@@ -110,6 +112,11 @@ struct ContentView: View {
         let store = sample && !phoneSample
             ? DashboardStore(session: session, sample: true, widgetPublisher: publisher)
             : DashboardStore(session: session, backend: nil, widgetPublisher: publisher)
+        #if DEBUG
+        messagesActive = !debugLaunch
+        #else
+        messagesActive = true
+        #endif
         // Samples (and the app while tests run) only pretend to send a bank's format or name.
         #if DEBUG
         let outbox = sample || DebugLaunch.isTesting ? BankOutbox.sample()
@@ -258,6 +265,9 @@ struct ContentView: View {
             .onChange(of: scenePhase) { _, phase in
                 // Before anything async: server mode on a login not renewed yet ends when the saved login changed.
                 if phase == .active { modes.followMarker() }
+                // A month review opened from its message stays on screen while the person reads it; leaving the app
+                // brings Current back to this month, so it never quietly shows an old month later.
+                if phase == .background { store.showReview(month: nil) }
             }
             .onEmpireForeground(session: session) {
                 await session.followSharedLogin()    // another Empire app may have logged in or out
@@ -289,24 +299,7 @@ struct ContentView: View {
                 heldFiles = []
                 Task { await imports.receive(files, source: .shared) }
             }
-            .onOpenURL { url in
-                // A file shared to Aresium or a widget's link ends a tour first (its made-up store goes): the file goes
-                // to the person's own store, the link opens their own dashboard.
-                tour?.end()
-                if url.isFileURL {
-                    // Shared into Aresium while locked: it waits until Aresium is unlocked.
-                    if lock.isLocked { heldFiles.append(url) }
-                    else { Task { await imports.receive([url], source: .shared) } }
-                } else if let destination = AresiumURL(url: url) {
-                    place.current = true
-                    place.side = .expenses
-                    place.graph = false
-                    switch destination {
-                    case .start: place.path = []
-                    case .category(let name): place.path = [store.route(category: name, side: .expenses, current: true)]
-                    }
-                }
-            }
+            .onOpenURL(perform: route)
             .overlay(alignment: .bottom) {
                 ImportFeedback(store: imports, palette: palette)
             }
@@ -389,8 +382,15 @@ struct ContentView: View {
             }
         }
         // While locked, the lock window is all there is: the app below is not read out either.
+        .onChange(of: MessageTapRouter.shared.openedURL, initial: true) { _, _ in
+            if let url = MessageTapRouter.shared.take() { route(url) }
+        }
+        .onChange(of: tour != nil) { _, touring in store.messages?.setTour(touring) }
+        .onChange(of: modes.state) { _, _ in routeHeldLink() }
+        .onChange(of: lock.isLocked) { _, _ in routeHeldLink() }
         .accessibilityHidden(lock.isLocked)
         .background { LockWindowReader(lockWindow: lockWindow) }
+        .task { store.installMessages(lock: lock, active: messagesActive) }
         .task { handOverForgotCode() }
         // A tour the app was closed in left its made-up store behind: it goes now (no tour runs yet).
         .task { if tour == nil { TourWorld.removeLeftovers() } }
@@ -424,8 +424,39 @@ struct ContentView: View {
         Task { await imports.receive(urls) }
     }
 
-    /// The tour, from the first screen or Settings → Help: it fills its made-up store and shows in place of the
-    /// dashboard. When it ends, the first screen comes back while there is no data (`MainScreen`).
+    /// Widget links, notification taps and shared files all end the tour before opening the person's own store.
+    private func route(_ url: URL) {
+        tour?.end()
+        if url.isFileURL {
+            if lock.isLocked { heldFiles.append(url) }
+            else { Task { await imports.receive([url], source: .shared) } }
+        } else if let destination = AresiumURL(url: url) {
+            // A cold-launch tap waits for the phone's store; a picker waits for the lock window to open too.
+            if modes.state == .opening || (destination == .importData && lock.isLocked) {
+                heldLink = url
+                return
+            }
+            place.current = true
+            place.side = .expenses
+            place.graph = false
+            switch destination {
+            case .start: store.showReview(month: nil); place.path = []
+            case .importData: picksFiles = modes.phone != nil
+            case .review(let month): store.showReview(month: month); place.path = []
+            case .category(let name):
+                store.showReview(month: nil)
+                place.path = [store.route(category: name, side: .expenses, current: true)]
+            }
+        }
+    }
+
+    private func routeHeldLink() {
+        guard let url = heldLink else { return }
+        heldLink = nil
+        route(url)
+    }
+
+    /// The tour, from the first screen or Settings → Help: fills its made-up store in place of the dashboard.
     private func startTour() {
         guard tour == nil else { return }
         let model = TourModel()
