@@ -296,15 +296,13 @@ struct PaidFromList: View {
 
 // MARK: - the Cash page
 
-/// What the Cash page opens: a withdrawal's payment page, a receipt's or entry's page, or Add cash.
+/// What the Cash page opens besides its rows' pages: Add cash, or the page of a movement the dashboard lists nowhere.
 private enum CashSheet: Identifiable {
-    case payment(Transaction)
     case receipt(String)
     case add(ReceiptDirection)
 
     var id: String {
         switch self {
-        case .payment(let transaction): "payment:" + transaction.id
         case .receipt(let id): "receipt:" + id
         case .add(let direction): "add:" + direction.rawValue
         }
@@ -312,17 +310,23 @@ private enum CashSheet: Identifiable {
 }
 
 /// The Cash page for one month: what was withdrawn, received and spent, what is not accounted for, Add spending and
-/// Add received cash, then every movement of the wallet, newest first. A view: it counts in no total.
+/// Add received cash, then every movement of the wallet, newest first. A view: it counts in no total. Its rows are a
+/// month's list's (brief 47, `PaymentRow`): a tap opens the withdrawal's payment page or the receipt's or entry's page,
+/// the long press offers what that page offers, the swipe left "All" where the name has more payments.
 struct CashScreen: View {
     let month: String
     let store: DashboardStore
     let palette: Palette
     let band: AresiumBand
-    /// Shows a name's page on the dashboard's stack: a withdrawal's page's "All from <name>" (brief 44), once the page
-    /// has closed.
-    var pick: ((DashboardRoute) -> Void)? = nil
+    /// The rows' long press and swipe (`DashboardStack.shortcuts`): off while the tour holds the screen.
+    var shortcuts = true
+    /// Shows a name's page on the dashboard's stack: a row's swipe or long press, a page's "All from <name>" (once the
+    /// page has closed).
+    var pick: (DashboardRoute) -> Void = { _ in }
     @State private var sheet: CashSheet?
-    @State private var pendingName: DashboardRoute?
+    /// The row whose page is open (`paymentListSheets`).
+    @State private var opened: Transaction?
+    @State private var menu = PaymentRowMenu()
     @Environment(\.dynamicTypeSize) private var typeSize
 
     private var page: CashPage? { store.dashboard?.cash.map(CashPage.init) }
@@ -343,12 +347,26 @@ struct CashScreen: View {
                     } else {
                         numbers(page?.month(month) ?? .none)
                         buttons.padding(.top, 18)
+                        let lines = store.cashRows(movements)
+                        #if DEBUG
+                        let swiped = lines.debugSwipe()
+                        #else
+                        let swiped: (id: String, points: CGFloat)? = nil
+                        #endif
                         LazyVStack(spacing: 0) {
-                            ForEach(movements) { movement in
-                                Button { open(movement) } label: {
-                                    CashMovementRow(movement: movement, page: page, palette: palette)
+                            ForEach(lines) { line in
+                                if let transaction = line.transaction {
+                                    PaymentRow(transaction: transaction, store: store, menu: menu, shortcuts: shortcuts,
+                                               allFrom: pick, shownAt: swiped?.id == line.id ? swiped?.points : nil,
+                                               open: { opened = $0 }) {
+                                        CashMovementRow(movement: line.movement, page: page, palette: palette)
+                                    }
+                                } else {
+                                    Button { open(line) } label: {
+                                        CashMovementRow(movement: line.movement, page: page, palette: palette)
+                                    }
+                                    .buttonStyle(.plain)
                                 }
-                                .buttonStyle(.plain)
                             }
                         }
                         .padding(.top, 14)
@@ -357,21 +375,12 @@ struct CashScreen: View {
                 .padding(.horizontal, 12).padding(.top, 6)
             } band: { _ in band }
             .refreshable { await store.reload() }.scrollBounceBehavior(.always)
+            .closesRowSwipe($menu.openRow)
         }
-        .sheet(item: $sheet, onDismiss: {
-            if let route = pendingName, let pick {
-                pendingName = nil
-                pick(route)
-            }
-        }) { sheet in
+        .paymentListSheets(menu, store: store, palette: palette, selection: $opened, pick: pick)
+        .sheet(item: $sheet) { sheet in
             if let phone = store.phone {
                 switch sheet {
-                case .payment(let transaction):
-                    TransactionDetailSheet(store: store.transactionDetailStore(for: transaction), palette: palette,
-                                           openName: pick == nil ? nil : { route in
-                                               pendingName = route
-                                               self.sheet = nil
-                                           })
                 case .receipt(let id):
                     ReceiptPageSheet(model: ReceiptPageModel(id: id, phone: phone) {
                         await store.reloadAfterTransactionChange()
@@ -395,8 +404,9 @@ struct CashScreen: View {
             }
             if let text = LaunchArguments.value("-cashOpen") {
                 for _ in 0..<40 where store.dashboard == nil { try? await Task.sleep(for: .milliseconds(100)) }
-                if let movement = page?.movements(in: month).first(where: { $0.place.localizedCaseInsensitiveContains(text) }) {
-                    open(movement)
+                if let line = store.cashRows(page?.movements(in: month) ?? [])
+                    .first(where: { $0.movement.place.localizedCaseInsensitiveContains(text) }) {
+                    open(line)
                 }
             }
         }
@@ -456,12 +466,10 @@ struct CashScreen: View {
         .disabled(store.phone == nil)
     }
 
-    private func open(_ movement: CashMovement) {
-        if movement.kind == .withdrawal {
-            if let payment = store.dashboard?.transactions.first(where: { $0.id == movement.id }) { sheet = .payment(payment) }
-        } else {
-            sheet = .receipt(movement.id)
-        }
+    /// A row's page: the dashboard row's (a withdrawal's payment page, a receipt's or entry's page), else the receipt's.
+    private func open(_ line: CashMovementLine) {
+        if let transaction = line.transaction { opened = transaction }
+        else if line.movement.kind != .withdrawal { sheet = .receipt(line.movement.id) }
     }
 
     /// A new entry from a month's page starts on that month's last day up to today.
@@ -472,6 +480,21 @@ struct CashScreen: View {
         return min(last, today)
     }
 }
+
+#if DEBUG
+extension Array where Element == CashMovementLine {
+    /// Screenshots: `-sampleSwipe <points> -swipeRow <text>` on the Cash page: the first movement with a dashboard row
+    /// whose place contains the text, and how far left it shows.
+    func debugSwipe() -> (id: String, points: CGFloat)? {
+        guard let points = LaunchArguments.value("-sampleSwipe").flatMap(Double.init) else { return nil }
+        let text = LaunchArguments.value("-swipeRow") ?? ""
+        guard let line = first(where: {
+            $0.transaction != nil && (text.isEmpty || $0.movement.place.localizedCaseInsensitiveContains(text))
+        }) else { return nil }
+        return (line.id, CGFloat(points))
+    }
+}
+#endif
 
 /// One movement of the wallet as the dashboard's payment rows: the day, where (or what), its kind and category, what a
 /// source still holds or where a payment came from, and the amount from the wallet's side.

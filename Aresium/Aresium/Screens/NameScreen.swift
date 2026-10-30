@@ -34,6 +34,7 @@ struct NameScreen: View {
                     }
                 } band: { _ in band }
                 .refreshable { await store.reload() }.scrollBounceBehavior(.always)
+                .closesRowSwipe($menu.openRow)          // as the month's list: a scroll closes an open row
             }
         }
         .paymentListSheets(menu, store: store, palette: palette, selection: $opened, namePage: shown.key, pick: pick,

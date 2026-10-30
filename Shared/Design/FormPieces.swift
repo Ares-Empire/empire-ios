@@ -104,6 +104,23 @@ struct FormField: View {
     private var prompt: Text { Text(placeholder).foregroundStyle(Ink.muted) }
 }
 
+/// Every switch in an app's Settings (brief 47): Apple's own switch with an on colour that stands apart from its white
+/// knob and from the grey off track, in light, dark and Aresium's red mode (which holds dark). Patrik's phone, build 4:
+/// the ink tint drew "on" as a pale track under the white knob in dark mode, so on and off could not be told apart. The
+/// colour is the app's accent where it has one, else the Empire's green for on and running (`StatusTone.activeColor`,
+/// the hub's CONQUERED, and the colour iOS gives a switch that is on), a shared pair, not a new colour. `SettingsScreen`
+/// sets it for everything inside it; a switch elsewhere takes it with `.toggleStyle(EmpireSwitchStyle(accent:))`.
+struct EmpireSwitchStyle: ToggleStyle {
+    var accent: AppAccent? = nil
+
+    /// The track's colour while the switch is on.
+    static func onColor(_ accent: AppAccent?) -> Color { accent?.color ?? StatusTone.activeColor }
+
+    func makeBody(configuration: Configuration) -> some View {
+        Toggle(configuration).toggleStyle(.switch).tint(Self.onColor(accent))
+    }
+}
+
 /// A short line under a form: what it does, what it needs.
 struct FormNote: View {
     let text: String

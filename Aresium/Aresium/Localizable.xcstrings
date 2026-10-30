@@ -644,6 +644,16 @@
         }
       }
     },
+    "All with this name" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alle mit dem Namen"
+          }
+        }
+      }
+    },
     "All your Aresium data as one file" : {
       "localizations" : {
         "de" : {
@@ -4302,16 +4312,6 @@
         }
       }
     },
-    "The name your bank gives it." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Der Name, den deine Bank angibt."
-          }
-        }
-      }
-    },
     "The number by a category is how many of your payments it has, or would get once ticked." : {
       "localizations" : {
         "de" : {
@@ -5334,26 +5334,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dein letzter Import ist %lld Tage her."
-          }
-        }
-      }
-    },
-    "Your name for all payments from %@." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dein Name für alle Buchungen von %@."
-          }
-        }
-      }
-    },
-    "Your name for this payment." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dein Name für diese Buchung."
           }
         }
       }

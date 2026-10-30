@@ -1,8 +1,9 @@
 import SwiftUI
 
-// A payment list's rows and what they open (a month's payments, brief 41; a name's page, brief 44): the row as the
-// website's `.txn`, its tap (its page), its long press (what its page offers, `DashboardStore.rowActions`) and its swipe
-// left ("All from <name>"), and the windows these open. One place, so both lists behave alike.
+// A payment list's rows and what they open (a month's payments, brief 41; a name's page, brief 44; the Cash page's
+// movements, brief 47): the row (the website's `.txn`, or the Cash page's movement), its tap (its page), its long press
+// (what its page offers, `DashboardStore.rowActions`) and its swipe left ("All from <name>"), and the windows these
+// open. One place, so every list behaves alike.
 
 /// What a list's rows have open: the windows their long press opens, the row swiped open, the name's page to show once
 /// a payment's page has closed.
@@ -10,8 +11,8 @@ import SwiftUI
 final class PaymentRowMenu {
     /// A payment's change sheet from its row's long press: the sheet its page's Change opens, on a store of its own.
     var changing: TransactionDetailStore?
-    /// A payment's rename window from its row's long press (brief 44).
-    var renaming: TransactionDetailStore?
+    /// The payment whose page opens with its name's field ready (the row's long press → Rename, brief 47).
+    var renamesPage: String?
     /// A receipt's or entry's Edit from its row's long press: the window its page's Edit opens.
     var receiptEdit: ReceiptPageModel?
     /// The row swiped open (one at a time).
@@ -29,12 +30,11 @@ final class PaymentRowMenu {
         Task { await detail.beginRecategorisationFromRow() }
     }
 
-    /// Rename: the rename window at once, filled as the payment loads.
-    func rename(_ transaction: Transaction, in store: DashboardStore) {
-        let detail = store.transactionDetailStore(for: transaction)
-        renaming = detail
-        lastOpened = transaction.id
-        Task { await detail.beginRenameFromRow() }
+    /// Rename: the payment's page, with the name's field ready once it has loaded (brief 47: the name is edited where
+    /// it stands; there is no rename window any more).
+    func rename(_ transaction: Transaction, open: (Transaction) -> Void) {
+        renamesPage = transaction.id
+        open(transaction)
     }
 
     /// Edit: the receipt's or entry's window, filled from what is stored. If it cannot open (the receipt is gone), the
@@ -54,11 +54,11 @@ final class PaymentRowMenu {
 }
 
 /// One row of a payment list: the tap opens its page, the long press what its page offers, the swipe left the name's
-/// page (`allFrom`; nil on a name's own page, whose rows all have that name).
-struct PaymentRow: View {
-    let row: TransactionRow
+/// page (`allFrom`; nil on a name's own page, whose rows all have that name). The label is a month's row
+/// (`PaymentRowLabel`) or, on the Cash page, a movement's (`CashMovementRow`).
+struct PaymentRow<Label: View>: View {
+    let transaction: Transaction
     let store: DashboardStore
-    let palette: Palette
     @Bindable var menu: PaymentRowMenu
     /// The long press and the swipe (brief 41's shortcuts): off while the tour holds the screen.
     var shortcuts = true
@@ -68,34 +68,36 @@ struct PaymentRow: View {
     /// Screenshots only: the row shown so far left, as halfway through a swipe.
     var shownAt: CGFloat? = nil
     let open: (Transaction) -> Void
+    @ViewBuilder let label: () -> Label
 
     var body: some View {
-        let transaction = row.transaction
         Button { open(transaction) } label: {
-            PaymentRowLabel(transaction: transaction, tagged: row.tagged, store: store, palette: palette)
+            label()
                 // The lifted row in Apple's context menu: the row with rounded corners.
                 .contentShape(.contextMenuPreview, RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
         .buttonStyle(.plain)
-        .contextMenu { if shortcuts { items(for: transaction) } }
+        .contextMenu { if shortcuts { items } }
         .tourAnchor(.payment(transaction.id))
-        .rowSwipe(swipe(for: transaction), id: transaction.id, open: $menu.openRow, shownAt: shownAt)
+        .rowSwipe(swipe, id: transaction.id, open: $menu.openRow, shownAt: shownAt)
     }
 
-    private func nameRoute(for transaction: Transaction) -> DashboardRoute? {
+    private var nameRoute: DashboardRoute? {
         allFrom == nil ? nil : store.nameRoute(for: transaction, namePage: namePage)
     }
 
     /// "All from <name>": an icon and a short word on the swipe, the whole name for VoiceOver.
-    private func swipe(for transaction: Transaction) -> RowSwipeAction? {
-        guard shortcuts, let allFrom, let route = nameRoute(for: transaction) else { return nil }
+    private var swipe: RowSwipeAction? {
+        guard shortcuts, let allFrom, let route = nameRoute else { return nil }
         return RowSwipeAction(label: String(localized: "All"), systemImage: "rectangle.stack",
-                              accessibilityName: NameWording.allFrom(transaction.place)) { allFrom(route) }
+                              accessibilityName: NameWording.allFrom(route.name?.title ?? transaction.place)) {
+            allFrom(route)
+        }
     }
 
-    /// The long press: what the row's page offers, each opening the window that page's button opens. None (a covered
-    /// row) shows no menu.
-    @ViewBuilder private func items(for transaction: Transaction) -> some View {
+    /// The long press: what the row's page offers, each opening the window that page's button opens, each entry a short
+    /// verb or phrase (the row itself, lifted above the menu, shows the name). None (a covered row) shows no menu.
+    @ViewBuilder private var items: some View {
         let actions = store.rowActions(for: transaction, namePage: namePage)
             .filter { $0 != .allFromName || allFrom != nil }
         ForEach(actions, id: \.self) { action in
@@ -103,14 +105,28 @@ struct PaymentRow: View {
             case .changeCategory:
                 Button("Change category", systemImage: "tag") { menu.change(transaction, in: store) }
             case .rename:
-                Button("Rename", systemImage: "pencil") { menu.rename(transaction, in: store) }
+                Button("Rename", systemImage: "pencil") { menu.rename(transaction, open: open) }
             case .allFromName:
-                Button { if let route = nameRoute(for: transaction) { allFrom?(route) } } label: {
-                    Label(NameWording.allFrom(transaction.place), systemImage: "rectangle.stack")
+                // Short whatever the name (brief 47, Patrik: "Alle von MGP Vinted - Kleiderkreisel …" could not be read):
+                // the lifted row above the menu already shows the name.
+                Button("All with this name", systemImage: "rectangle.stack") {
+                    if let route = nameRoute { allFrom?(route) }
                 }
             case .edit:
                 Button("Edit", systemImage: "pencil") { menu.edit(transaction, in: store) { open(transaction) } }
             }
+        }
+    }
+}
+
+extension PaymentRow where Label == PaymentRowLabel {
+    /// A month's or a name's page's row.
+    init(row: TransactionRow, store: DashboardStore, palette: Palette, menu: PaymentRowMenu, shortcuts: Bool = true,
+         namePage: String? = nil, allFrom: ((DashboardRoute) -> Void)? = nil, shownAt: CGFloat? = nil,
+         open: @escaping (Transaction) -> Void) {
+        self.init(transaction: row.transaction, store: store, menu: menu, shortcuts: shortcuts, namePage: namePage,
+                  allFrom: allFrom, shownAt: shownAt, open: open) {
+            PaymentRowLabel(transaction: row.transaction, tagged: row.tagged, store: store, palette: palette)
         }
     }
 }
@@ -173,16 +189,19 @@ struct PaymentPageSheet: View {
     let store: DashboardStore
     let palette: Palette
     var namePage: String? = nil
+    /// A bank payment's page opens with its name's field ready (the row's long press → Rename).
+    var renames = false
     var openName: ((DashboardRoute) -> Void)? = nil
 
     var body: some View {
         switch store.page(for: transaction) {
         case let .receipt(id):
-            // Phone mode's receipt and cash entry rows open the receipt's page.
+            // Phone mode's receipt and cash entry rows open the receipt's page, with its "All from" card (brief 47).
             if let phone = store.phone {
                 ReceiptPageSheet(model: ReceiptPageModel(id: id, phone: phone) {
                     await store.reloadAfterTransactionChange()
-                }, palette: palette)
+                }, palette: palette, nameLine: openName == nil ? nil : { store.receiptNameLine(receiptID: id, namePage: namePage) },
+                openName: openName)
             }
         case let .covered(receiptIDs):
             // A withdrawal's covered row: the receipts that took its cash.
@@ -193,16 +212,17 @@ struct PaymentPageSheet: View {
             }
         case .payment:
             TransactionDetailSheet(store: store.transactionDetailStore(for: transaction), palette: palette,
-                                   namePage: namePage, openName: openName)
+                                   namePage: namePage, startsRenaming: renames, openName: openName)
         }
     }
 }
 
 extension View {
-    /// A payment list's windows: the open row's page (`selection`), and the change, rename and Edit windows of its
-    /// rows' long press. "All from <name>" on a payment's page closes the page, then shows the name's page (`pick`), so
-    /// the name's page is always one on the dashboard's stack, with the header's arrow and the back swipe. `closed` is
-    /// told which payment's page or rename window closed (the name's page follows a rename).
+    /// A payment list's windows: the open row's page (`selection`; with the name's field ready after the long press's
+    /// Rename), and the change and Edit windows of its rows' long press. "All from <name>" on a payment's, receipt's or
+    /// entry's page closes the page, then shows the name's page (`pick`), so the name's page is always one on the
+    /// dashboard's stack, with the header's arrow and the back swipe. `closed` is told which payment's page closed (the
+    /// name's page follows a rename).
     func paymentListSheets(_ menu: PaymentRowMenu, store: DashboardStore, palette: Palette,
                            selection: Binding<Transaction?>, namePage: String? = nil,
                            pick: @escaping (DashboardRoute) -> Void,
@@ -228,21 +248,14 @@ private struct PaymentListSheets: ViewModifier {
                    onDismiss: { menu.changing = nil }) {
                 if let changing = menu.changing { RecategoriseSheet(store: changing, palette: palette) }
             }
-            .sheet(isPresented: Binding(get: { menu.renaming?.showsRename == true },
-                                        set: { if !$0 { menu.renaming?.showsRename = false } }),
-                   onDismiss: {
-                       if let id = menu.renaming?.paymentID { closed(id) }
-                       menu.renaming = nil
-                   }) {
-                if let renaming = menu.renaming { RenameSheet(store: renaming, palette: palette) }
-            }
             .sheet(isPresented: Binding(get: { menu.receiptEdit?.editing != nil },
                                         set: { if !$0 { menu.receiptEdit?.endEdit() } }),
                    onDismiss: { menu.receiptEdit = nil }) {
                 if let receiptEdit = menu.receiptEdit { ReceiptEditSheet(page: receiptEdit, palette: palette) }
             }
             .sheet(item: $selection, onDismiss: pageClosed) { transaction in
-                PaymentPageSheet(transaction: transaction, store: store, palette: palette, namePage: namePage) { route in
+                PaymentPageSheet(transaction: transaction, store: store, palette: palette, namePage: namePage,
+                                 renames: menu.renamesPage == transaction.id) { route in
                     menu.pendingName = route
                     selection = nil
                 }
@@ -253,9 +266,11 @@ private struct PaymentListSheets: ViewModifier {
     }
 
     private func pageClosed() {
+        menu.renamesPage = nil
         if let id = menu.lastOpened { closed(id) }
         guard let route = menu.pendingName else { return }
         menu.pendingName = nil
         pick(route)
     }
 }
+

@@ -3,7 +3,7 @@ import Observation
 
 // Brief 44: renaming a payment and the page of all payments of one name, on brief 43's data (`PaymentNames.swift`).
 // What a rename saves, when it asks first, what the name's page shows and how its words read are decided here, so the
-// screens (`RenameSheet`, `TransactionDetailSheet`, `NameScreen`) only draw them. Phone mode only.
+// screens (`TransactionDetailSheet`'s name field, brief 47; `NameScreen`) only draw them. Phone mode only.
 
 /// One save of brief 43's API: a name (empty removes it) for this payment alone or for its shop.
 nonisolated struct PaymentNameStep: Equatable, Sendable {
@@ -24,16 +24,18 @@ nonisolated enum RenameIntent: Equatable {
     case bankName
 }
 
-/// The rename window's rules for one payment (Claude's choices, brief 44):
-/// - The field starts with the name shown: the payment's own, else its shop's; empty while the bank's name shows.
+/// The rules for renaming one payment (Claude's choices, briefs 44 and 47):
+/// - The field starts with the name the page shows (the payment's own, else its shop's, else the bank's), all selected,
+///   so typing replaces it.
 /// - A new name asks "Also the other payments from <bank name>?" (with "All N+1" and "Only this one", as the category
 ///   change asks) whenever the shop can be named (a merchant key) and has other payments, also when the name shown came
-///   from the payment alone or from the shop: the answer picks the scope each time. All N+1 saves the shop's name and drops this payment's own one (so it follows the shop too); Only this
-///   one saves it for this payment, and a shop's name stays for the others. Without other payments or a merchant key:
-///   this payment only, no question.
-/// - Back to the bank's name removes every name this payment shows (its own, and its shop's under it): brief 43 has no
-///   way to show the bank's name on one payment while its shop keeps a name. Removing a shop's name that other payments
-///   show asks first.
+///   from the payment alone or from the shop: the answer picks the scope each time. All N+1 saves the shop's name and
+///   drops this payment's own one (so it follows the shop too); Only this one saves it for this payment, and a shop's
+///   name stays for the others. Without other payments or a merchant key: this payment only, no question.
+/// - Back to the bank's name removes every name this payment shows (its own, and its shop's under it). When other
+///   payments show the shop's name it asks first, "Use the bank's name for all N+1 payments?": All N+1 removes the
+///   shop's name, Only this one (brief 47) keeps the bank's name on this payment alone (`PaymentNames.keptBankName`),
+///   Cancel leaves everything.
 nonisolated struct RenamePlan: Equatable {
     /// "Also the other payments from <bank name>?" (N on the first answer's button), with what each answer saves.
     struct Question: Equatable, Identifiable {
@@ -48,12 +50,14 @@ nonisolated struct RenamePlan: Equatable {
         var allCount: Int { others + 1 }
     }
 
-    /// "Use the bank's name for all N+1 payments?": a shop's name that other payments show goes.
+    /// "Use the bank's name for all N+1 payments?": a shop's name that other payments show goes (All), or stays for
+    /// them while this payment shows the bank's name (Only this one; nil where the bank's name cannot be kept).
     struct BankNameQuestion: Equatable, Identifiable {
         let shopName: String
         let bankName: String
         let count: Int
         let steps: [PaymentNameStep]
+        let onlyThis: [PaymentNameStep]?
         var id: String { shopName }
     }
 
@@ -65,15 +69,17 @@ nonisolated struct RenamePlan: Equatable {
 
     let info: PaymentRenameInfo
 
-    /// What the field shows when the window opens.
-    var start: String { info.ownName ?? "" }
+    /// What the field shows when it opens: the name the page shows.
+    var start: String { info.ownName ?? info.bankName }
 
     /// Whether a new name asks about the shop's other payments (a merchant key and N > 0).
     var asksAboutOthers: Bool { info.canRenameShop && info.otherPaymentCount > 0 }
 
     func intent(_ typed: String) -> RenameIntent {
         let name = PaymentNames.normalized(typed)
-        if name.isEmpty || name == info.bankName { return info.ownName == nil ? .nothing : .bankName }
+        if name.isEmpty || name == PaymentNames.keptBankName(info.bankName) {
+            return info.ownName == nil ? .nothing : .bankName
+        }
         return name == info.ownName ? .nothing : .name(name)
     }
 
@@ -94,19 +100,25 @@ nonisolated struct RenamePlan: Equatable {
             let steps = (info.paymentOwnName == nil ? [] : [PaymentNameStep.payment("")])
                 + (shopName == nil ? [] : [.shop("")])
             if let shopName, info.otherPaymentCount > 0 {
+                let kept = PaymentNames.keptBankName(info.bankName)
                 return .confirmBankName(BankNameQuestion(shopName: shopName, bankName: info.bankName,
-                                                         count: info.otherPaymentCount + 1, steps: steps))
+                                                         count: info.otherPaymentCount + 1, steps: steps,
+                                                         onlyThis: kept.isEmpty ? nil : [.payment(kept)]))
             }
             return .save(steps)
         }
     }
 }
 
-/// The rename window's state for one payment, on the payment's `TransactionDetailStore` (its load, its busy state and
-/// errors, its save). The window closes when a save went through.
+/// The name being edited on the payment's page (brief 47; brief 44's window before), on the payment's
+/// `TransactionDetailStore` (its load, its busy state and errors, its save). `isDone` once a save went through: the page
+/// shows the name again.
 @MainActor @Observable
 final class PaymentRenameModel {
     enum Work: Equatable { case save, bankName }
+
+    /// The answers to "Use the bank's name for all N+1 payments?".
+    enum BankNameAnswer: Equatable { case all, onlyThis, cancel }
 
     let store: TransactionDetailStore
     var text: String
@@ -114,6 +126,8 @@ final class PaymentRenameModel {
     private(set) var bankNameQuestion: RenamePlan.BankNameQuestion?
     /// The button whose work runs (it shows the spinner, the others are greyed).
     private(set) var working: Work?
+    /// A save went through: the field closes.
+    private(set) var isDone = false
 
     init(store: TransactionDetailStore) {
         self.store = store
@@ -124,7 +138,7 @@ final class PaymentRenameModel {
     var intent: RenameIntent { plan?.intent(text) ?? .nothing }
     var canSave: Bool { !store.isSaving && intent != .nothing }
     /// Something typed would be lost (Cancel asks first).
-    var hasChanges: Bool { PaymentNames.normalized(text) != (plan?.start ?? "") }
+    var hasChanges: Bool { PaymentNames.normalized(text) != PaymentNames.normalized(plan?.start ?? "") }
     var asks: Bool { question != nil || bankNameQuestion != nil }
 
     /// The field keeps at most what a name can hold (60 characters, `PaymentNames.maximumLength`).
@@ -132,8 +146,13 @@ final class PaymentRenameModel {
         if text.count > PaymentNames.maximumLength { text = String(text.prefix(PaymentNames.maximumLength)) }
     }
 
+    /// Save (Return, Done or the bar's Save). Nothing changed: the field just closes, as Return in a name field does.
     func save() async {
-        guard canSave, let outcome = plan?.outcome(intent) else { return }
+        guard !store.isSaving else { return }
+        guard let outcome = plan?.outcome(intent) else {
+            if intent == .nothing { isDone = true }
+            return
+        }
         await carry(outcome, work: intent == .bankName ? .bankName : .save)
     }
 
@@ -150,10 +169,14 @@ final class PaymentRenameModel {
         await run(all ? question.all : question.onlyThis, work: .save)
     }
 
-    func answerBankName(confirmed: Bool) async {
+    func answerBankName(_ answer: BankNameAnswer) async {
         guard let bankNameQuestion else { return }
         self.bankNameQuestion = nil
-        if confirmed { await run(bankNameQuestion.steps, work: .bankName) }
+        switch answer {
+        case .all: await run(bankNameQuestion.steps, work: .bankName)
+        case .onlyThis: if let steps = bankNameQuestion.onlyThis { await run(steps, work: .bankName) }
+        case .cancel: break
+        }
     }
 
     private func carry(_ outcome: RenamePlan.Outcome, work: Work) async {
@@ -168,7 +191,7 @@ final class PaymentRenameModel {
         working = work
         defer { working = nil }
         await store.rename(steps)
-        if store.saveError == nil { store.showsRename = false }
+        if store.saveError == nil { isDone = true }
     }
 }
 
@@ -269,7 +292,7 @@ nonisolated struct NamePage {
     }
 }
 
-/// The words of the rename window, the payment page's Name row and "All from" line, in the app's language.
+/// The words of the name's page and the "All from" line, in the app's language.
 nonisolated enum NameWording {
     /// "All from Penny" (the swipe's and the long press's VoiceOver name, the page's line, the menu item).
     static func allFrom(_ name: String, language: AppLanguage = .current) -> String {
@@ -293,15 +316,6 @@ nonisolated enum NameWording {
     /// The name's page's heading line: "23 payments · Feb 2026 – Oct 2026".
     static func pageLine(count: Int, range: String, language: AppLanguage = .current) -> String {
         [language.string("\(count) payments"), range].filter { !$0.isEmpty }.joined(separator: " · ")
-    }
-
-    /// The payment page's Name row: where the shown name comes from.
-    static func source(_ source: PaymentNameSource?, bankName: String, language: AppLanguage = .current) -> String {
-        switch source {
-        case .payment: language.string("Your name for this payment.")
-        case .shop: language.string("Your name for all payments from \(bankName).")
-        case nil: language.string("The name your bank gives it.")
-        }
     }
 }
 

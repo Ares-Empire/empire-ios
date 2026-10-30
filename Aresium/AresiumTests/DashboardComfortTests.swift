@@ -158,6 +158,57 @@ struct PaymentRowMenuTests {
             }
         }
     }
+
+    // MARK: brief 47: receipts' "All from", the Cash page's rows
+
+    @Test func aReceiptOfAShopWithPaymentsOffersAllFromAsItsPageShowsIt() async throws {
+        let (phone, dashboard) = try await phoneDashboard()
+        // A cash receipt from the shop of the three REWE payments joins their name.
+        _ = try await phone.saveReceipt(ReceiptDraft(date: "2026-10-08", shop: "REWE Markt GmbH", total: 9.80,
+                                                     currency: "EUR", euroAmount: nil, method: .cash, category: "groceries",
+                                                     categorySource: .starter, rows: ["REWE", "SUMME 9,80"], from: "text"))
+        await dashboard.reloadAfterTransactionChange()
+        let transactions = try #require(dashboard.dashboard?.transactions)
+        let receipt = try #require(transactions.first { $0.receiptId != nil && $0.place.contains("REWE") })
+        let id = try #require(receipt.receiptId)
+        #expect(dashboard.rowActions(for: receipt) == [.edit, .allFromName])
+        let line = try #require(dashboard.receiptNameLine(receiptID: id), "the page shows the card")
+        #expect(line.group.count == 4 && line.route == dashboard.nameRoute(for: receipt))
+        // On its name's own page neither offers it.
+        let key = try #require(receipt.nameKey)
+        #expect(dashboard.rowActions(for: receipt, namePage: key) == [.edit])
+        #expect(dashboard.receiptNameLine(receiptID: id, namePage: key) == nil)
+        // A receipt alone under its name: Edit only, and no card.
+        for alone in transactions where alone.receiptId != nil && !alone.place.contains("REWE") {
+            #expect(dashboard.rowActions(for: alone) == [.edit], "\(alone.place)")
+            #expect(dashboard.receiptNameLine(receiptID: alone.receiptId!) == nil)
+        }
+    }
+
+    @Test func theCashPagesRowsAreTheDashboardsRowsAndOfferWhatTheirPagesOffer() async throws {
+        let (_, dashboard) = try await phoneDashboard()
+        let cash = try #require(dashboard.dashboard?.cash)
+        let october = cash.movements.filter { $0.month == "2026-10" }
+        #expect(october.count >= 3, "the withdrawal, the cash receipt and the entry")
+        let lines = dashboard.cashRows(october)
+        #expect(lines.map(\.id) == october.map(\.id), "in the page's order")
+        for line in lines {
+            let row = try #require(line.transaction, "\(line.movement.place): a row on the dashboard")
+            #expect(row.coveredBy == nil)
+            switch line.movement.kind {
+            case .withdrawal:
+                #expect(row.id == line.movement.id && dashboard.page(for: row) == .payment)
+                // Its page is a payment's page: the same menu as in a month's list.
+                let page = dashboard.transactionDetailStore(for: row)
+                await page.load()
+                #expect(dashboard.rowActions(for: row).contains(.changeCategory) == !page.choices.isEmpty)
+                #expect(dashboard.rowActions(for: row).contains(.rename) == page.offersRename)
+            case .receipt, .manual, .received:
+                #expect(dashboard.page(for: row) == .receipt(id: line.movement.id))
+                #expect(dashboard.rowActions(for: row).first == .edit)
+            }
+        }
+    }
 }
 
 /// The import result's swipe down (brief 41): it does what Dismiss does, only where Dismiss (or the send card's Not now)

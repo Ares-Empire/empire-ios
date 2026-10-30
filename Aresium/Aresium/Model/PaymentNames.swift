@@ -12,11 +12,18 @@ nonisolated struct PaymentNameRule: Codable, Equatable, Sendable {
 nonisolated struct PaymentRenameInfo: Equatable, Sendable {
     let bankName: String
     let merchantKey: String
+    /// The payment's own stored name, as stored: also the bank's name kept for this payment (`keepsBankName`).
     let paymentOwnName: String?
     let shopOwnName: String?
     let otherPaymentCount: Int
-    var ownName: String? { paymentOwnName ?? shopOwnName }
-    var source: PaymentNameSource? { paymentOwnName != nil ? .payment : shopOwnName != nil ? .shop : nil }
+    /// The own name the payment shows (`PaymentNames.shown`); nil while it shows the bank's name.
+    var ownName: String? { PaymentNames.shown(payment: paymentOwnName, shop: shopOwnName, bankName: bankName) }
+    var source: PaymentNameSource? {
+        guard ownName != nil else { return nil }
+        return paymentOwnName != nil ? .payment : .shop
+    }
+    /// "Use the bank's name" → Only this one (brief 47): this payment shows the bank's name while its shop keeps its name.
+    var keepsBankName: Bool { paymentOwnName != nil && ownName == nil }
     var canRename: Bool { true } // Only produced for a stored bank/PayPal payment.
     var canRenameShop: Bool { !merchantKey.isEmpty }
 }
@@ -29,6 +36,19 @@ nonisolated enum PaymentNames {
         String(typed.trimmingCharacters(in: .whitespacesAndNewlines).prefix(maximumLength))
             .trimmingCharacters(in: .whitespacesAndNewlines)
     }
+
+    /// The own name a payment shows: its own, else its shop's. A payment's own name equal to its bank's name (as names
+    /// are kept, `keptBankName`) is "Use the bank's name" → Only this one (brief 47): the payment shows the bank's name
+    /// and counts with it (its key is the bank's), while the shop's name stays on its other payments. Export and restore
+    /// carry it as any own name.
+    static func shown(payment: String?, shop: String?, bankName: String) -> String? {
+        guard let payment else { return shop }
+        return payment == keptBankName(bankName) ? nil : payment
+    }
+
+    /// What Only this one stores as the payment's own name: the bank's name as a name is kept (trimmed, at most 60
+    /// characters). Empty for a bank line without words, where it cannot be kept.
+    static func keptBankName(_ bankName: String) -> String { normalized(bankName) }
 
     /// Prefixes keep a person's name, an engine key and an exact bank line in separate namespaces.
     static func key(ownName: String?, merchant: String, bankName: String) -> String {
@@ -53,11 +73,11 @@ nonisolated enum PaymentNames {
                 let own = enabled && !merchant.isEmpty ? rules[merchant] : nil
                 row.nameKey = key(ownName: own, merchant: merchant, bankName: receipt.shop ?? row.place)
             } else if let (payment, merchant) = bank[row.id] {
-                let own = enabled ? payment.ownName ?? rules[merchant] : nil
+                let own = enabled ? shown(payment: payment.ownName, shop: rules[merchant], bankName: payment.place) : nil
                 row.place = own ?? payment.place
                 row.bankName = row.place == payment.place ? nil : payment.place
                 row.isOwnName = own != nil
-                row.ownNameSource = own == nil ? nil : payment.ownName != nil ? .payment : .shop
+                row.ownNameSource = own == nil ? nil : payment.ownName == own ? .payment : .shop
                 row.nameKey = key(ownName: own, merchant: merchant, bankName: payment.place)
             }
             dashboard.transactions[index] = row
@@ -66,7 +86,8 @@ nonisolated enum PaymentNames {
             for index in cash.movements.indices {
                 let movement = cash.movements[index]
                 guard movement.kind == .withdrawal, let (payment, merchant) = bank[movement.id] else { continue }
-                cash.movements[index].place = enabled ? payment.ownName ?? rules[merchant] ?? payment.place : payment.place
+                let own = enabled ? shown(payment: payment.ownName, shop: rules[merchant], bankName: payment.place) : nil
+                cash.movements[index].place = own ?? payment.place
             }
             dashboard.cash = cash
         }

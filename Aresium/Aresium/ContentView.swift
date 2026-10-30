@@ -606,6 +606,7 @@ struct ContentView: View {
             // Kept receipts before the store shows, so the first dashboard (and a page opened at launch) has them.
             if arguments.contains("-sampleReceipts") { try await PhoneSample.addReceipts(phone) }
             if arguments.contains("-sampleCash") { try await PhoneSample.addCash(phone) }
+            if arguments.contains("-sampleShopReceipt") { try await PhoneSample.addShopReceipt(phone) }
             if arguments.contains("-sampleImportQuestion") { try await PhoneSample.addImportQuestions(phone) }
             await modes.showFixed(phone, storage: storage)
             // Settings → Messages and the offer on the sample (brief 46): a pretend model; nothing reaches iOS.

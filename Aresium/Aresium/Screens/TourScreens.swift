@@ -417,7 +417,7 @@ private struct TourSettingsSheet: View {
                             Text("Or the iPhone's code").font(AppFont.text(12)).foregroundStyle(Ink.muted)
                         }
                     }
-                    .tint(Ink.secondary)
+                    .toggleStyle(EmpireSwitchStyle())
                     .allowsHitTesting(false)
                     .padding(.horizontal, 16).frame(minHeight: 58)
                     SettingsDivider()

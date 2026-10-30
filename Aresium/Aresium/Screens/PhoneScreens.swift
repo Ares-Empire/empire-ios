@@ -546,7 +546,6 @@ struct OwnNamesSetting: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .tint(Ink.secondary)                    // as the Lock's switch: ink, a step down, the white knob visible
         .padding(.horizontal, 16).padding(.vertical, 8).frame(minHeight: 58)
         .accessibilityIdentifier("ownNames")
     }
