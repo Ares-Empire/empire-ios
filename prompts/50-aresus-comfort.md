@@ -41,7 +41,8 @@ Three other briefs run at the same time: 49 (Arestemis), 51 (Arestoteles), 52 (E
      `hub.py` reads `state.json` (re-read when it changes; a missing or broken file means null, logged once), with
      its path in `config.py` (`HUB_APPS`, default `/root/ares-empire/webauth/apps.json`). Tests for both fields,
      including the missing and broken files. Update `docs/API.md` and `docs/samples/` (the province detail samples).
-     Run its tests (`.venv/bin/python -m pytest -q`, `CLAUDE.md` there → Test and run; `ARESUS_FAKE=1` on the Mac).
+     Run its tests from that worktree with the main checkout's environment (no new venv, no installs):
+     `PYTHONPATH=src ARESUS_FAKE=1 ~/aresus/.venv/bin/python -m pytest -q` (225 pass before your change).
    - **The app:** decode both as optional (an older server without them keeps working), copy the updated samples into
      `Aresus/Aresus/Samples/`. The Empire app already has the opening rule (`ProvinceOpener`: the app's URL when iOS
      takes it, else the https website, else nothing). Move that rule into `Shared/` (for example
