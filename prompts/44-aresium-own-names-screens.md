@@ -1,6 +1,6 @@
 # 44: Renaming a payment, and all payments of one name (the screens)
 
-Status: draft
+Status: merged 2026-10-30 (all Aresium tests pass with briefs 42, 43, 45, 46; swipe left only; the name page follows the Graph setting)
 Branch: `claude/44-names-screens` · Worktree: `../empire-ios-44-names-screens` · Built by: a Claude agent (the look)
 
 ## Goal
