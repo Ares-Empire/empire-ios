@@ -1,6 +1,6 @@
 # 54: One shop under changing names in the app: groups, names and "also the others" per shop
 
-Status: draft
+Status: merged 2026-10-30 (all Aresium tests pass; receipt presets narrowed by Claude; timing alternated old/new at 5,000 payments: dashboard within noise to +10 %, renameInfo unchanged, the identity call 1–6 ms)
 Branch: `codex/54-shop-identity-app` · Worktree: `../empire-ios-54-shop-identity-app` · Model: `gpt-6.1-sol`, effort
 `high` · No screens change (brief 53, a Claude agent, changes the lists in parallel).
 
