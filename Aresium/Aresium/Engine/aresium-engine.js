@@ -2142,7 +2142,7 @@ var __AresiumEngine = (() => {
     merchantKey: () => merchantKey,
     ownTransfers: () => ownTransfers,
     parseCamt: () => parseCamt2,
-    parsePaypalCsv: () => parsePaypalCsv2,
+    parsePaypalCsv: () => parsePaypalCsv3,
     parseVrBankCsv: () => parseVrBankCsv2,
     readBankFile: () => readBankFile,
     readBankText: () => readBankText,
@@ -5453,6 +5453,19 @@ var __AresiumEngine = (() => {
     return { source: "paypal", account: { name: "PayPal", currency }, transactions };
   }
 
+  // src/engine/readers/paypal.ts
+  function parsePaypalCsv2(text2) {
+    const file = parsePaypalCsv(text2);
+    return {
+      ...file,
+      transactions: file.transactions.map((payment) => {
+        const raw = payment.raw;
+        if (pick(raw, ["Name"])) return payment;
+        return { ...payment, counterparty: null, description: pick(raw, ["Type", "Typ", "Beschreibung"]) ?? payment.description };
+      })
+    };
+  }
+
   // src/data/dashboard.ts
   var money = (n) => Math.round(n * 100) / 100;
   var isUnsorted = (categoryName) => !categoryName || categoryName === "Uncategorised";
@@ -5735,9 +5748,18 @@ var __AresiumEngine = (() => {
   function payeeText(payment) {
     return (payment.counterparty?.trim() || payment.description || payment.bookingText || "").toLowerCase().normalize("NFC");
   }
+  function cardMerchant(text2) {
+    const head = text2.toLowerCase().normalize("NFC").trim().match(
+      /^(.+?)\s+[a-z]{3}\s+(?:\d{1,3}(?:\.\d{3})+|\d+),\d{2}\s+umsatz vom\s+\d{2}\.\d{2}\.\d{4}(?:\s+.*)?$/u
+    )?.[1];
+    if (!head) return null;
+    const parts = head.match(/^(.+?)\s{2,}[a-z]{3}\s+(.+)$/u) ?? head.match(/^(.+)\s+[a-z]{3}\s+(\S+)$/u);
+    return parts ? { merchant: parts[1].trim(), town: parts[2].trim() } : null;
+  }
   var BOOKING_TYPE = /^(?:(?:sepa[ -])?(?:basis[ -]?)?lastschrift|kartenzahlung|debitkartenzahlung|kaufumsatz|sepa überweisung)\s*[:/-]?\s*/u;
   function merchantKey(payment) {
     let text2 = payeeText(payment);
+    text2 = cardMerchant(text2)?.merchant ?? text2;
     const processor = /^paypal(?:\s|$|\()/u;
     if (processor.test(text2)) {
       const details = (payment.description ?? payment.bookingText ?? "").toLowerCase().normalize("NFC");
@@ -5844,18 +5866,32 @@ var __AresiumEngine = (() => {
       return { categoryId, name: words2.join(" "), source, direction, at: [winner.start, winner.end] };
     }
     function branchMerchant(payment) {
-      const head = payeeText(payment).replace(BOOKING_TYPE, "").match(branchNumber)?.[1];
+      const payee = payeeText(payment);
+      const head = (cardMerchant(payee)?.merchant ?? payee).replace(BOOKING_TYPE, "").match(branchNumber)?.[1];
       const name = head === void 0 ? "" : shopWords(head).join(" ");
       return name && !noBranches.has(name) ? merchants.get(name) ?? null : null;
     }
-    function decide(payment) {
+    function townMerchant(payment, towns) {
+      const card = cardMerchant(payeeText(payment)) ?? cardMerchant(payment.description ?? payment.bookingText ?? "");
+      const name = shopWords(merchantKey(payment));
+      if (name.length < 2) return null;
+      const town = card ? shopWords(card.town) : [];
+      const proven2 = town.length === 1 && name.at(-1) === town[0] || towns.some((text2) => {
+        const words2 = shopWords(text2);
+        return words2.length === 1 && name.at(-1) === words2[0];
+      });
+      if (!proven2) return null;
+      return merchants.get(name.slice(0, -1).join(" ")) ?? null;
+    }
+    function decide(payment, towns = []) {
       const money2 = moneyOf(payment.amount);
-      const text2 = `${payment.counterparty ?? ""} ${payment.description ?? payment.bookingText ?? ""}`;
+      const details = payment.description ?? payment.bookingText ?? "";
+      const text2 = `${cardMerchant(payment.counterparty ?? "")?.merchant ?? payment.counterparty ?? ""} ${cardMerchant(details)?.merchant ?? details}`;
       const words2 = shopWords(text2.replace(references, " "));
       const written = find(handWritten, words2);
       const rule = best(written, written, money2);
       if (rule) return rule;
-      const merchant = merchants.get(shopWords(merchantKey(payment)).join(" ")) ?? branchMerchant(payment);
+      const merchant = merchants.get(shopWords(merchantKey(payment)).join(" ")) ?? branchMerchant(payment) ?? townMerchant(payment, towns);
       if (merchant) {
         const { categoryId, direction, name } = merchant;
         return applies(direction, money2) ? { categoryId, name, source: "merchant", direction, at: null } : null;
@@ -5865,7 +5901,7 @@ var __AresiumEngine = (() => {
     }
     return {
       rules,
-      match: (payment) => decide(payment)?.categoryId ?? null,
+      match: (payment, towns) => decide(payment, towns)?.categoryId ?? null,
       find: decide
     };
   }
@@ -7447,6 +7483,14 @@ var __AresiumEngine = (() => {
         "clothes",
         [
           "momox fashion"
+        ],
+        "out"
+      ],
+      [
+        "clothes",
+        [
+          "vinted",
+          "kleiderkreisel"
         ],
         "out"
       ],
@@ -9388,11 +9432,11 @@ var __AresiumEngine = (() => {
   // src/engine/sorting/starter-rules.ts
   var matcher = compileShopList(shops_de_default);
   var STARTER_RULES = matcher.rules;
-  function starterCategory(payment, categories) {
-    const categoryId = matcher.match(payment);
+  function starterCategory(payment, categories, towns) {
+    const categoryId = matcher.match(payment, towns);
     return categoryId !== null && categories.some((c) => c.id === categoryId) ? categoryId : null;
   }
-  var findShop = (payment) => matcher.find(payment);
+  var findShop = (payment, towns) => matcher.find(payment, towns);
 
   // src/engine/dates.ts
   var daysInMonth = (y, m) => new Date(Date.UTC(y, m, 0)).getUTCDate();
@@ -9422,6 +9466,15 @@ var __AresiumEngine = (() => {
     const values = t.raw && typeof t.raw === "object" ? Object.values(t.raw) : [];
     return [t.description, ...values].some((value) => ENGLISH_FUNDING.has(plain(value)));
   }
+  var BANK_WITHDRAWALS = /* @__PURE__ */ new Set([
+    "von nutzer eingeleitete abbuchung",
+    "user initiated withdrawal",
+    "manual withdrawal",
+    "general withdrawal bank account"
+  ]);
+  function isPaypalBankWithdrawal(t) {
+    return [t.description, field(t.raw, ["Typ", "Type", "Beschreibung"])].some((value) => BANK_WITHDRAWALS.has(plain(value).replace(/[–—]/gu, "-").replace(/\s*-\s*/gu, " ")));
+  }
   var CONVERSION_TYPES = /* @__PURE__ */ new Set(["Allgemeine W\xE4hrungsumrechnung", "General Currency Conversion"]);
   var TYPE_KEYS = ["Typ", "Type"];
   var RELATED_KEYS = ["Zugeh\xF6riger Transaktionscode", "Reference Txn ID"];
@@ -9435,7 +9488,7 @@ var __AresiumEngine = (() => {
     return void 0;
   }
   var isConversion = (row) => CONVERSION_TYPES.has(field(row.raw, TYPE_KEYS) ?? "");
-  function foldPaypalConversions(rows) {
+  function conversionPlan(rows) {
     const eurLegByPurchase = /* @__PURE__ */ new Map();
     const conversionsByPurchase = /* @__PURE__ */ new Map();
     for (const row of rows) {
@@ -9458,6 +9511,13 @@ var __AresiumEngine = (() => {
       replaced.set(row, { ...row, amount: eurLeg.amount, currency: EUR });
       for (const conversion of conversionsByPurchase.get(row.externalId) ?? []) dropped.add(conversion);
     }
+    return { dropped, replaced, unmatched };
+  }
+  function paypalConversionRows(rows) {
+    return conversionPlan(rows).dropped;
+  }
+  function foldPaypalConversions(rows) {
+    const { dropped, replaced, unmatched } = conversionPlan(rows);
     return {
       rows: rows.filter((row) => !dropped.has(row)).map((row) => replaced.get(row) ?? row),
       unmatched
@@ -9478,6 +9538,9 @@ var __AresiumEngine = (() => {
   function isPaypalFundingRow(payment) {
     return payment.source === "paypal" && isPaypalBankFunding({ description: payment.description ?? "", raw: payment.raw });
   }
+  function isPaypalWithdrawalRow(payment) {
+    return payment.source === "paypal" && isPaypalBankWithdrawal({ description: payment.description ?? "", raw: payment.raw });
+  }
   var OWN_TRANSFER_WORDS = /(?<![\p{L}\p{N}])(?:umbuchung|(?:eigen|konto)?(?:übertrag|uebertrag)|eigene[ns]?\s+konto|own\s+account)(?![\p{L}\p{N}])/iu;
   function saysOwnTransfer(payment) {
     return [payment.counterparty, payment.description, payment.bookingText].some((text2) => typeof text2 === "string" && OWN_TRANSFER_WORDS.test(text2.normalize("NFC")));
@@ -9494,11 +9557,14 @@ var __AresiumEngine = (() => {
   function ownTransfers(payments) {
     const result = payments.map(() => null);
     const hasPaypalExport = payments.some((p) => p.source === "paypal");
+    const conversions = paypalConversionRows(payments.filter((p) => !isPaypalBankFunding({ description: p.description ?? "", raw: p.raw })));
     payments.forEach((p, i) => {
-      if (isPaypalFundingRow(p) || hasPaypalExport && isPaypalBankLine(p)) result[i] = { rule: "paypal" };
+      if (isPaypalFundingRow(p) || isPaypalWithdrawalRow(p) || hasPaypalExport && isPaypalBankLine(p)) result[i] = { rule: "paypal" };
+      if (conversions.has(p)) result[i] = { rule: "paypal-conversion" };
     });
     const groups2 = /* @__PURE__ */ new Map();
     payments.forEach((p, index) => {
+      if (result[index]?.rule === "paypal-conversion" || isPaypalWithdrawalRow(p)) return;
       const date = parseDay(p.date);
       const amount2 = p.amount;
       if (!p.account || !date || typeof amount2 !== "number" || !Number.isFinite(amount2)) return;
@@ -9543,12 +9609,19 @@ var __AresiumEngine = (() => {
   function sortPayments(payments, options) {
     const allowed = new Set(options.categories.map((c) => c.id));
     const transfers = ownTransfers(payments);
+    const provenTowns = /* @__PURE__ */ new Set();
+    for (const payment of payments) for (const text2 of [payment.counterparty, payment.description, payment.bookingText]) {
+      const card = text2 ? cardMerchant(text2) : null;
+      const words2 = card ? shopWords(card.town) : [];
+      if (words2.length === 1) provenTowns.add(words2[0]);
+    }
+    const towns = [...provenTowns];
     return payments.map((payment, index) => {
       if (transfers[index]) return { categoryId: OWN_TRANSFERS, source: "structural" };
       const key = merchantKey(payment);
       const remembered = key && options.learned && Object.hasOwn(options.learned, key) ? options.learned[key] : null;
       if (remembered && allowed.has(remembered)) return { categoryId: remembered, source: "learned" };
-      const categoryId = starterCategory(payment, options.categories);
+      const categoryId = starterCategory(payment, options.categories, towns);
       return { categoryId, source: categoryId ? "starter" : null };
     });
   }
@@ -11867,7 +11940,7 @@ ${line}`;
         return readMt940(text2);
       case "paypal": {
         const table = detected.headerRow === 0 ? text2 : text2.replace(/^\uFEFF/, "").split(/\r?\n/).slice(detected.headerRow).join("\n");
-        const parsed = parsePaypalCsv(table);
+        const parsed = parsePaypalCsv2(table);
         return {
           format: "paypal",
           bank: { id: "paypal", name: "PayPal" },
@@ -13033,7 +13106,7 @@ ${line}`;
   }
   var parseVrBankCsv2 = (text2) => isoDates(parseVrBankCsv(text2));
   var parseCamt2 = (text2) => isoDates(parseCamt(text2));
-  var parsePaypalCsv2 = (text2) => isoDates(parsePaypalCsv(text2));
+  var parsePaypalCsv3 = (text2) => isoDates(parsePaypalCsv2(text2));
   return __toCommonJS(index_exports);
 })();
 globalThis.AresiumEngine = __AresiumEngine;
