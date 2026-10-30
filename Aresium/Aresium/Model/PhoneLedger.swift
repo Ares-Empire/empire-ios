@@ -65,7 +65,7 @@ nonisolated struct LedgerPayment: Codable, Equatable, Sendable {
     func sorting(accountIban: String? = nil, raw: Bool = true) -> SortingPayment {
         SortingPayment(counterparty: counterparty, description: text, source: source, account: account,
                        accountIban: accountIban, counterpartyIban: counterpartyIban, amount: amountValue,
-                       currency: currency, date: bookingDate, raw: raw ? self.raw : nil)
+                       currency: currency, date: bookingDate, raw: raw ? self.raw : nil, externalId: externalId)
     }
 }
 
