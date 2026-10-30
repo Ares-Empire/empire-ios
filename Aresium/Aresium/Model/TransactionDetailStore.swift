@@ -32,6 +32,8 @@ final class TransactionDetailStore {
     /// Nil for server mode; remains available when own names are hidden.
     private(set) var renameInfo: PaymentRenameInfo?
     var canRename: Bool { renameInfo?.canRename == true }
+    /// The rename window (brief 44), from the page's Rename or the row's long press.
+    var showsRename = false
     /// The Receipt section's Edit (brief 33): the receipt's page model, whose edit sheet is open.
     private(set) var receiptEditor: ReceiptPageModel?
     private let transaction: Transaction
@@ -98,14 +100,58 @@ final class TransactionDetailStore {
         if detail == nil { await load() }
     }
 
+    /// The payment this page is for (the row it was opened from).
+    var paymentID: String { transaction.id }
+
+    /// The page shows Rename (its Name row): phone mode, a stored bank payment, own names on (`offersRename`, which the
+    /// row's long press follows).
+    var offersRename: Bool { canRename && dashboardStore.offersRename(for: transaction) }
+
+    /// The page's "All from <name>" line: the payments of the name shown now (a rename on this page moves it), when
+    /// there are others (`DashboardStore.shownNameGroup`, as the row's long press and swipe).
+    func nameRoute(namePage: String? = nil) -> (route: DashboardRoute, group: PaymentNameGroup)? {
+        guard let detail, let key = detail.nameKey ?? transaction.nameKey, key != namePage,
+              let group = dashboardStore.shownNameGroup(id: transaction.id, key: key) else { return nil }
+        return (DashboardRoute(name: PaymentNameRoute(key: key, title: detail.place)), group)
+    }
+
+    /// The page's Rename: the rename window.
+    func beginRename() {
+        guard offersRename, !isSaving else { return }
+        saveError = nil
+        showsRename = true
+    }
+
+    /// A payment row's long press → Rename (brief 44): the window at once, filled as the payment loads (or saying why it
+    /// could not, with Retry), as Change category from the row.
+    func beginRenameFromRow() async {
+        showsRename = true
+        await prepareRename()
+        guard detail != nil else { return }                      // the window shows the load error
+        guard offersRename else {                                // the page would show no Rename either
+            showsRename = false
+            return
+        }
+        saveError = nil
+    }
+
     /// Saves the chosen scope and rebuilds the dashboard/widget. Errors and busy state mirror category changes.
     func rename(to name: String, scope: PaymentNameScope) async {
-        guard canRename, !isSaving, let phone = backend as? PhoneBackend else { return }
+        await rename([PaymentNameStep(name: name, scope: scope)])
+    }
+
+    /// Saves each step in turn (All N+1 also drops this payment's own name; back to the bank's name may drop two), then
+    /// rebuilds the dashboard and the widget once.
+    func rename(_ steps: [PaymentNameStep]) async {
+        guard canRename, !isSaving, !steps.isEmpty, let phone = backend as? PhoneBackend else { return }
         isSaving = true
         saveError = nil
         defer { isSaving = false }
         do {
-            detail = try await phone.rename(id: transaction.id, name: name, scope: scope)
+            #if DEBUG
+            await DebugLaunch.holdWork()
+            #endif
+            for step in steps { detail = try await phone.rename(id: transaction.id, name: step.name, scope: step.scope) }
             renameInfo = try await phone.renameInfo(id: transaction.id)
             await dashboardStore.reloadAfterTransactionChange()
         } catch { saveError = error.localizedDescription }

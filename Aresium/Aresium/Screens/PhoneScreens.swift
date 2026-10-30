@@ -465,6 +465,8 @@ struct PhoneSettingsSection: View {
                     }
                     .buttonStyle(SettingsRowStyle())
                     SettingsDivider()
+                    OwnNamesSetting(dashboard: modes.dashboard)
+                    SettingsDivider()
                 }
                 Button { Task { await data.export() } } label: {
                     SettingsRow(title: String(localized: "Export"),
@@ -526,6 +528,27 @@ struct PhoneSettingsSection: View {
         .fileImporter(isPresented: $pickingExport, allowedContentTypes: [.json]) { result in
             if case let .success(url) = result { Task { await data.restore(from: url) } }
         }
+    }
+}
+
+/// Settings → Your data on this iPhone → Own names (brief 44, phone mode): on, payments show the names given them; off,
+/// the banks' names, and the names given are kept. A switch in the Lock's look. It goes through
+/// `DashboardStore.setOwnNames`, which keeps the setting and builds the dashboard and the widget again.
+struct OwnNamesSetting: View {
+    let dashboard: DashboardStore
+
+    var body: some View {
+        Toggle(isOn: Binding(get: { dashboard.ownNames },
+                             set: { on in Task { await dashboard.setOwnNames(on) } })) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Own names").font(AppFont.text(15, weight: .medium)).foregroundStyle(Ink.primary)
+                Text("Off shows the banks' names and keeps yours.").font(AppFont.text(12)).foregroundStyle(Ink.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .tint(Ink.secondary)                    // as the Lock's switch: ink, a step down, the white knob visible
+        .padding(.horizontal, 16).padding(.vertical, 8).frame(minHeight: 58)
+        .accessibilityIdentifier("ownNames")
     }
 }
 

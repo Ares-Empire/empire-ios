@@ -678,6 +678,7 @@ struct ContentView: View {
         let store = dashboard ?? store
         let category = route.flatMap { $0.cash ? nil : store.category($0.category, side: $0.side) }
         let subtitle: String? = route.map { route in
+            if route.name != nil { return String(localized: "All payments") }        // a name's page (brief 44)
             // The Cash page: its month, or its months (Overview).
             if route.cash { return route.month.map { store.monthTitle($0) } ?? String(localized: "By month") }
             if let key = route.month {
@@ -686,7 +687,8 @@ struct ContentView: View {
             }
             return route.side == .income ? String(localized: "Monthly income") : String(localized: "Monthly spend")
         }
-        let title = route.map { $0.cash ? String(localized: "Cash") : CategoryName.shown($0.category) } ?? "Aresium"
+        let title = route.map { $0.name?.title ?? ($0.cash ? String(localized: "Cash") : CategoryName.shown($0.category)) }
+            ?? "Aresium"
         return ScreenHeader(title: title, subtitle: subtitle,
                             category: category, palette: palette,
                             back: route == nil ? nil : { back(route) },

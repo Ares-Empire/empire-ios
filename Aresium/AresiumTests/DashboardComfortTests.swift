@@ -47,9 +47,10 @@ struct PaymentRowMenuTests {
         #expect(receipts.count == 3, "the cash receipt, the waiting card receipt and the hand entry")
 
         #expect(dashboard.page(for: rewe) == .payment)
-        #expect(dashboard.rowActions(for: rewe) == [.changeCategory])
+        // Brief 44: Rename (phone mode, own names on) and "All from" while the name has other payments (REWE has two).
+        #expect(dashboard.rowActions(for: rewe) == [.changeCategory, .rename, .allFromName])
         #expect(dashboard.page(for: withdrawal) == .payment)
-        #expect(dashboard.rowActions(for: withdrawal) == [.changeCategory])
+        #expect(dashboard.rowActions(for: withdrawal) == [.changeCategory, .rename], "its only payment: no line")
         #expect(dashboard.page(for: covered) == .covered(receiptIDs: covered.coveredBy ?? []))
         #expect(dashboard.rowActions(for: covered).isEmpty, "the covered row's list has nothing to change")
         for receipt in receipts {
