@@ -1,5 +1,9 @@
 import SwiftUI
 
+/// Switch or Add for one payment. Like every iOS edit sheet, Cancel is top left and Save top right (brief 36, Patrik's
+/// phone test: Save at the bottom was far from a category at the top), in ink like the app's other sheets; in Add mode
+/// "Save & remove from current" follows the choices as the quiet second answer. After a Switch in phone mode the
+/// merchant's other payments are asked about before the sheet closes.
 struct RecategoriseSheet: View {
     @Bindable var store: TransactionDetailStore
     let palette: Palette
@@ -32,30 +36,38 @@ struct RecategoriseSheet: View {
                             Text(error).foregroundStyle(palette.expenseText).accessibilityIdentifier("recategorisationError")
                             Button("Retry") { Task { await store.retrySave() } }.disabled(!store.canSave)
                         }
-                        HStack {
-                            Spacer()
-                            Button(store.isSaving ? "Saving…" : "Save") { Task { await store.save() } }
-                                .buttonStyle(.borderedProminent).foregroundStyle(.white).disabled(!store.canSave)
-                        }
                         if store.mode == .add {
-                            Button("Save & remove from current", role: .destructive) {
-                                Task { await store.save(dropCurrent: true) }
-                            }.buttonStyle(.bordered).tint(palette.expenseText).foregroundStyle(palette.expenseText)
+                            Button("Save & remove from current") { Task { await store.save(dropCurrent: true) } }
+                                .buttonStyle(QuietButtonStyle())
                                 .disabled(!store.canRemoveCurrent)
                         }
-                        if store.isSaving { ProgressView("Saving…").frame(maxWidth: .infinity) }
-                    }.padding(20)
+                    }
+                    .padding(20)
+                    .font(AppFont.text(14)).foregroundStyle(palette.ink)
                 }
             }
             .background { Wall(palette: palette) }
             .navigationTitle("Recategorise").navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    // Muted while it cannot save (nothing chosen yet, or saving), as the app's own buttons: the bar's
+                    // glass button shows no difference by itself.
+                    Button { Task { await store.save() } } label: {
+                        (store.isSaving ? Text("Saving…") : Text("Save"))
+                            .foregroundStyle(store.canSave ? palette.ink : palette.muted)
+                    }
+                    .disabled(!store.canSave)
+                }
             }
             .disabled(store.isSaving)
         }
+        // The payment page's font reaches this sheet; the bar keeps the system's, as the app's other sheets (Save then
+        // reads as the bold confirming button, greyed while it cannot save). The content above sets the app's font and
+        // ink itself.
+        .environment(\.font, nil)
         .tourCard()
-        .font(AppFont.text(14)).foregroundStyle(palette.ink).tint(palette.balance)
+        .tint(palette.ink)
         .interactiveDismissDisabled(store.isSaving || store.followUp != nil)
         // Phone mode, after a Switch: the merchant's other payments, as a short centred question. The count is on the
         // button, so every sentence reads right for one payment or many.
@@ -65,7 +77,7 @@ struct RecategoriseSheet: View {
         } message: { followUp in
             Text("From now on, payments from \(followUp.shop) go to \(followUp.category).")
         }
-        .tint(palette.ink)      // the question's buttons in ink; the sheet inside keeps its own tint
+        .tint(palette.ink)      // the question's buttons in ink, as the sheet's
     }
 
     private var followUpTitle: Text {

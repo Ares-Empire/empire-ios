@@ -49,10 +49,12 @@ struct TransactionDetailSheet: View {
             // existing -sampleCategory / -sampleMonth launch arguments.
             #if DEBUG
             let arguments = LaunchArguments.current
-            if store.isSample, let index = arguments.firstIndex(of: "-sampleRecategorise"),
-               arguments.indices.contains(index + 1) {
+            // The change sheet open (server or phone sample): `-sampleRecategorise switch|add`, `-samplePick <category>`
+            // chooses one in it.
+            if let index = arguments.firstIndex(of: "-sampleRecategorise"), arguments.indices.contains(index + 1) {
                 store.beginRecategorisation()
                 store.mode = arguments[index + 1] == "add" ? .add : .switchCategory
+                if let pick = LaunchArguments.value("-samplePick") { store.select(pick) }
             }
             // Phone sample: a Switch to this category at once (the "also the N others" question follows).
             if !store.isSample, let index = arguments.firstIndex(of: "-samplePhoneSwitch"),

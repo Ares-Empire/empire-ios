@@ -69,12 +69,15 @@ nonisolated struct LedgerPayment: Codable, Equatable, Sendable {
     }
 }
 
-/// A category on the person's list: a default one (by id), or their own (`custom-…`, with its name).
+/// A category on the person's list: a default one (by id), or their own (`custom-…`, with its name and look).
 nonisolated struct ChosenCategory: Codable, Equatable, Sendable {
     let id: String
     /// Only for one's own categories: the name as typed.
     var name: String?
     var order: Int
+    /// Only for one's own categories: the icon and colour chosen when it was made (`OwnCategoryLook`, brief 36), kept so
+    /// it never changes. An export carries it; one without it (made before) gets a look when restored.
+    var look: CategoryLook? = nil
 
     static func isCustom(_ id: String) -> Bool { id.hasPrefix("custom-") }
 }
@@ -156,15 +159,42 @@ actor PhoneLedger {
 
     func chosen() throws -> [ChosenCategory] {
         try modelContext.fetch(FetchDescriptor<StoredChosen>(sortBy: [SortDescriptor(\.order), SortDescriptor(\.id)]))
-            .map { ChosenCategory(id: $0.id, name: $0.customName, order: $0.order) }
+            .map { ChosenCategory(id: $0.id, name: $0.customName, order: $0.order, look: Self.look(of: $0)) }
     }
 
-    /// Ticks a default category (or adds one's own, with `name`). Ticking one that is on the list changes nothing.
+    /// Ticks a default category (or adds one's own, with `name`, and gives it its look beside the other own ones,
+    /// `OwnCategoryLook`). Ticking one that is on the list changes nothing.
     func choose(_ id: String, name: String? = nil) throws {
         let all = try modelContext.fetch(FetchDescriptor<StoredChosen>())
         guard !all.contains(where: { $0.id == id }) else { return }
-        modelContext.insert(StoredChosen(id: id, customName: name, order: (all.map(\.order).max() ?? -1) + 1))
+        var look: CategoryLook?
+        if ChosenCategory.isCustom(id) {
+            let others = all.filter { ChosenCategory.isCustom($0.id) }.compactMap(Self.look)
+            look = OwnCategoryLook.look(for: name ?? "", besides: others)
+        }
+        modelContext.insert(StoredChosen(id: id, customName: name, order: (all.map(\.order).max() ?? -1) + 1, look: look))
         try modelContext.save()
+    }
+
+    /// One's own categories without a look (made before brief 36, or restored from an older export) get theirs, in the
+    /// order they were made, as if added one after the other (`OwnCategoryLook.fill`), and the context is saved. Run
+    /// when the store is opened (`PhoneStorage.open`) and in a restore; nothing happens when every one has its look.
+    nonisolated static func giveOwnCategoriesLooks(in context: ModelContext) throws {
+        let own = try context.fetch(FetchDescriptor<StoredChosen>(sortBy: [SortDescriptor(\.order), SortDescriptor(\.id)]))
+            .filter { ChosenCategory.isCustom($0.id) }
+        guard own.contains(where: { look(of: $0) == nil }) else { return }
+        let looks = OwnCategoryLook.fill(own.map { (name: $0.customName ?? "", look: look(of: $0)) })
+        for (category, look) in zip(own, looks) where Self.look(of: category) == nil {
+            category.icon = look.icon
+            category.color = look.color
+        }
+        try context.save()
+    }
+
+    /// A stored category's own look: both parts, or none.
+    private nonisolated static func look(of category: StoredChosen) -> CategoryLook? {
+        guard let icon = category.icon, let color = category.color else { return nil }
+        return CategoryLook(icon: icon, color: color)
     }
 
     /// How many payments are in a category (as their category; extra "Add" categories not counted).
@@ -603,7 +633,12 @@ actor PhoneLedger {
             }
             for payment in export.payments { modelContext.insert(StoredPayment(payment)) }
             for category in export.categories {
-                modelContext.insert(StoredChosen(id: category.id, customName: category.name, order: category.order))
+                // Only one's own keep a look, and only one the app can draw; the others get theirs below.
+                let look = category.look.flatMap {
+                    ChosenCategory.isCustom(category.id) && OwnCategoryLook.isUsable($0) ? $0 : nil
+                }
+                modelContext.insert(StoredChosen(id: category.id, customName: category.name, order: category.order,
+                                                 look: look))
             }
             for rule in export.learned { modelContext.insert(StoredRule(merchant: rule.merchant, category: rule.category)) }
             for (index, layout) in export.layouts.enumerated() {
@@ -615,6 +650,7 @@ actor PhoneLedger {
                 modelContext.insert(StoredShopName(read: correction.read, name: correction.name,
                                                    saved: Date(timeIntervalSince1970: TimeInterval(index))))
             }
+            try Self.giveOwnCategoriesLooks(in: modelContext)
             try modelContext.save()
         } catch {
             modelContext.rollback()
