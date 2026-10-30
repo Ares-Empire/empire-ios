@@ -178,6 +178,35 @@ struct EmpireStoreTests {
         #expect(body["requested"] as? [String] == ["empire"])
     }
 
+    @Test func approvalsRetryClearsTheErrorWhileLoadingAndRefreshesTheList() async throws {
+        let session = await empireSession()
+        let transport = EmpireFakeTransport()
+        transport.failure = URLError(.notConnectedToInternet)
+        let store = EmpireStore(session: session, client: EmpireAPI(transport: transport))
+        await store.loadApprovals()
+        #expect(store.approvals.isEmpty && store.approvalsError != nil && !store.isLoadingApprovals)
+
+        transport.failure = nil
+        transport.data = try JSONEncoder().encode(EmpireSamples.approvals)
+        let gate = EmpireRequestGate()
+        transport.nextGate = gate
+        let retry = Task { await store.loadApprovals() }
+        await gate.waitUntilPaused()
+        #expect(store.isLoadingApprovals && store.approvalsError == nil && store.approvals.isEmpty)
+        await store.loadApprovals()
+        #expect(transport.requests.count == 2)
+        gate.resume()
+        await retry.value
+        #expect(!store.isLoadingApprovals && store.approvalsError == nil)
+        #expect(store.approvals == EmpireSamples.approvals)
+
+        let remaining = Array(EmpireSamples.approvals.dropFirst())
+        transport.data = try JSONEncoder().encode(remaining)
+        await store.loadApprovals()
+        #expect(store.approvals == remaining && transport.requests.count == 3)
+        #expect(transport.requests.allSatisfy { $0.url?.path == "/api/empire/approvals" })
+    }
+
     static let ok = Data(#"{"ok": true}"#.utf8)
 
     static func decisionAnswer(_ approvals: [PendingAccount], pending: Int?) throws -> Data {

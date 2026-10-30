@@ -6,6 +6,8 @@
   "word": "Issue",
   "line": "Website down since 14:02 (502)",
   "since": "2026-10-24T12:02:00Z",
+  "url": "https://aresium.de",
+  "app": "aresium://",
   "about": "Personal finance command — VR Bank + PayPal, imported and understood.",
   "checks": [
     {

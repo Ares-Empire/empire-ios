@@ -4,6 +4,7 @@ import SwiftUI
 struct RunSheet: View {
     let id: Int
     let store: AresusStore
+    @Environment(\.dismiss) private var dismiss
 
     private var run: RunDetail? { store.runs[id] }
     /// The list's line for this run, so the header shows while the report loads.
@@ -12,29 +13,37 @@ struct RunSheet: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                if let run {
-                    header(machine: run.machine, finished: run.finished, result: run.result, summary: run.summary,
-                           took: run.finished.timeIntervalSince(run.started))
-                    report(run)
-                } else {
-                    if let summary {
-                        header(machine: summary.machine, finished: summary.finished, result: summary.result,
-                               summary: summary.summary, took: nil)
-                    }
-                    if let error = store.error(.run(id)) {
-                        CalmMessage(text: error, actionTitle: String(localized: "Try again")) { Task { await store.load(.run(id)) } }
-                            .padding(.top, 40)
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    if let run {
+                        header(machine: run.machine, finished: run.finished, result: run.result, summary: run.summary,
+                               took: run.finished.timeIntervalSince(run.started))
+                        report(run)
                     } else {
-                        CalmLoading().padding(.top, 50)
+                        if let summary {
+                            header(machine: summary.machine, finished: summary.finished, result: summary.result,
+                                   summary: summary.summary, took: nil)
+                        }
+                        if let error = store.error(.run(id)) {
+                            CalmMessage(text: error, actionTitle: String(localized: "Try again")) { Task { await store.load(.run(id)) } }
+                                .padding(.top, 40)
+                        } else {
+                            CalmLoading().padding(.top, 50)
+                        }
                     }
                 }
+                .padding(.horizontal, 22).padding(.top, 30).padding(.bottom, 36)
             }
-            .padding(.horizontal, 22).padding(.top, 30).padding(.bottom, 36)
+            .scrollIndicators(.hidden)
+            .task { if run == nil { await store.load(.run(id)) } }
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(role: .close) { dismiss() }
+                }
+            }
+            .background { ProvinceWall(accent: .aresus) }
         }
-        .scrollIndicators(.hidden)
-        .task { if run == nil { await store.load(.run(id)) } }
     }
 
     private func header(machine: String, finished: Date, result: RunResult, summary: String,

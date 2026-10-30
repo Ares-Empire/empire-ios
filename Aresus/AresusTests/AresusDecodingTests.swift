@@ -22,6 +22,7 @@ struct AresusDecodingTests {
     @Test func provinceSample() throws {
         let detail: ProvinceDetail = try sample("province")
         #expect(detail.slug == "aresium" && detail.state == .issue)
+        #expect(detail.url == "https://aresium.de" && detail.app == "aresium://")
         #expect(detail.about?.hasPrefix("Personal finance command") == true)
         #expect(detail.checks.count == 5)
         #expect(detail.checks.filter { !$0.ok }.map(\.name) == ["Website", "aresium.service"])
@@ -34,6 +35,31 @@ struct AresusDecodingTests {
         #expect(detail.uptime.first == UptimeDay(day: "2026-10-11", ratio: nil))
         #expect(detail.uptime.last == UptimeDay(day: "2026-10-24", ratio: 0.97))
         #expect(detail.province.line == "Website down since 14:02 (502)")
+    }
+
+    @Test(arguments: [false, true])
+    func provinceLinksAreOptional(nullFields: Bool) throws {
+        var json = try #require(JSONSerialization.jsonObject(with: sampleData("province")) as? [String: Any])
+        for key in ["url", "app"] {
+            if nullFields { json[key] = NSNull() }
+            else { json.removeValue(forKey: key) }
+        }
+        let detail = try AresusJSON.decoder().decode(ProvinceDetail.self, from: JSONSerialization.data(withJSONObject: json))
+        #expect(detail.url == nil && detail.app == nil)
+        #expect(!detail.canOpen)
+    }
+
+    @Test(arguments: ["aresium", "aresus"])
+    func ownPageNeverOffersOpen(slug: String) throws {
+        var json = try #require(JSONSerialization.jsonObject(with: sampleData("province")) as? [String: Any])
+        json["slug"] = slug
+        let detail = try AresusJSON.decoder().decode(ProvinceDetail.self, from: JSONSerialization.data(withJSONObject: json))
+        #expect(detail.canOpen == (slug != "aresus"))
+    }
+
+    @Test func allGoodSamplesKeepProvinceLinks() throws {
+        let detail = try AresusSamples(allGood: true).province("aresium")
+        #expect(detail.canOpen && detail.url == "https://aresium.de" && detail.app == "aresium://")
     }
 
     @Test func syncSample() throws {

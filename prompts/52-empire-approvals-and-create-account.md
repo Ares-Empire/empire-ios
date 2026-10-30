@@ -1,6 +1,6 @@
 # 52: Empire's approvals can be refreshed (Patrik's list no. 12); Create account keeps what was typed (Shared 2, no. 11)
 
-Status: draft
+Status: merged 2026-10-30 (Empire 207 tests; Aresium and Aresus build; approvals, the discard question and the email hand-off checked on the simulator)
 Branch: `codex/52-empire-comfort` · Worktree: `../empire-ios-52-empire-comfort` · Model: `gpt-6.1-sol`, effort `high`
 
 ## Goal
