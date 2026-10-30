@@ -191,7 +191,8 @@ it, no restart.
   when the iPhone switched while an app was open, brief 36).
 - **Widgets follow the home screen** (light or dark like the widgets around them), not the app's choice; Aresium's
   also shows its red mode (`WidgetSnapshotStore.redMode`, `AresiumWidgetLook`).
-- **Aresium:** light or dark is the shared appearance; the sun button in its header switches it (writes the choice);
+- **Aresium:** light or dark is the shared appearance, chosen only in Settings → General → Appearance (the header's sun
+  button is gone since brief 42);
   red is Aresium's own mode over either (`ThemeState.red`, remembered), entered and left with the band.
 - **Empire app: the marble hall** (light): ivory wall, antique gold (`EmpireStyle.goldText`/`goldName` as pairs), the
   bust laid in with multiply, parchment coins, a plain gold chronicle line with amber dust. The phone hub's greys keep
@@ -499,7 +500,8 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   (unique by account, source and `externalId`; who set the category), chosen categories, learned merchants, the CSV
   layouts the person confirmed, receipts (schema version 2, brief 31), the receipts' direction, kind, `paidFrom` and the
   shop as read plus the corrected shop names (schema version 3, brief 33), one's own categories' icon and colour (schema
-  version 4, brief 36; `LedgerSchemaCurrent` names the version the app opens, tests use it too); older stores move on by lightweight stages,
+  version 4, brief 36), bank payments’ own names and merchant name rules (schema
+  version 5, brief 43; `LedgerSchemaCurrent` names the version the app opens, tests use it too); older stores move on by lightweight stages,
   one after the other (`LedgerMigrationPlan`; a model change always adds the next version, never edits one in place;
   `ReceiptBookTests` opens a version 1 store, `ReceiptCorrectionTests` a version 2 one, `OwnCategoryLookTests` a version 3
   one). **Own categories' looks** (brief 36, `Model/OwnCategoryLook.swift`): an icon from a word of the name (English and
@@ -523,9 +525,39 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   `storage`). **Lifecycle:** the data belongs to the iPhone, not to a login: logging in or out, leaving Aresium and
   deleting the Ares account never touch it; it goes only with Settings → Delete Aresium data on this iPhone or the
   lock's "Forgot the code?". Settings → Your data on this iPhone (phone mode): Categories, Receipts, Export (one JSON file,
-  schema 3 with the receipts, cash entries and the corrected shop names, `Aresium-<date>.json`, through the share sheet), Restore
+  schema 4 with the receipts, cash entries, corrected shop names and payment names, `Aresium-<date>.json`, through the share sheet), Restore
   from an export (only into an empty store, all or nothing; chosen categories and corrected shop names are replaced;
-  schema 2 and 1 files still restore).
+  schema 1–3 files still restore).
+  **Payment names and groups** (brief 43, data only; `Model/PaymentNames.swift`, screens in brief 44):
+  `LedgerPayment.place` always stays the bank name; sorting, learning and receipt matching use only those original
+  fields. Schema 5 adds `LedgerPayment.ownName` and merchant → name rules (`PhoneLedger.paymentNames()`); export schema
+  4 carries both, older stores migrate through every frozen version and exports 1–3 still restore. Delete data deletes
+  names with the store. Names trim whitespace and keep at most 60 characters (Swift grapheme clusters); empty removes
+  only the selected scope. Removing a payment override reveals a remaining shop rule; changing/removing a shop rule
+  leaves payment overrides intact. An empty merchant key allows only the payment scope.
+  **Brief 44 API:** get a `TransactionDetailStore` with `DashboardStore.transactionDetailStore(for:)` as for category
+  changes. `await prepareRename()` loads the detail and `renameInfo` (`PaymentRenameInfo`, nil in server mode);
+  `canRename` is false there. The info has `bankName`, effective `ownName`/`source` (`.shop` or `.payment`), both
+  `paymentOwnName` and `shopOwnName` for scope-specific editing/removal, `canRenameShop`, and `otherPaymentCount` (N,
+  all other bank payments with that merchant key, 0 for an empty key). Call `await rename(to:scope:)` with `.shop` or
+  `.payment`: saves, refreshes the detail/info and rebuilds the dashboard/widget; use the existing `isSaving` and
+  `saveError`. Row and page use the same store. Phone samples use their real temporary ledger, as category changes do.
+  The lower-level `PhoneBackend.renameInfo(id:)` returns that info; `rename(id:name:scope:)` saves and returns the new
+  `TransactionDetail` (callers outside the detail store must reload their dashboard).
+  **Setting:** `DashboardStore.ownNames` (or `PhoneBackend.ownNames`) reads `aresium.ownNames`, default true.
+  Settings calls `await DashboardStore.setOwnNames(_:)` to persist and rebuild, rather than writing defaults directly.
+  Off hides names without deleting them. `Transaction.place` and `TransactionDetail.place` carry the shown name;
+  optional `bankName` is set only when different, `isOwnName` says whether the shown name is own, `ownNameSource` says
+  which scope, and `nameKey` is an opaque grouping key. These fields are absent in server data.
+  **All payments of this name:** `DashboardStore.nameGroup(for:)` looks up the prebuilt `Dashboard.nameGroups` dictionary
+  by a row’s `nameKey` (nil for excluded/covered rows or server mode). `PaymentNameGroup` has `rows` newest first,
+  `count`, separate positive `moneyOut`/`moneyIn`, and `months[YYYY-MM]` (`PaymentNameAmounts`, the same two numbers),
+  including zeroes for every dashboard month. Built once per dashboard on the ledger worker, after the engine counted
+  it: own names fold case and diacritics; otherwise merchant keys, or exact bank lines for empty merchant keys.
+  Receipts/entries keep their Shop on screen but join that shop’s key/rule (waiting card receipts count until joined,
+  as on the dashboard). Covered rows and payments counting in neither overall total are excluded; tags cannot add
+  them back. The ledger executor also does name saving, merchant-key input and the question’s count off main;
+  `PaymentNamesTests` checks the worker spans (`names.*`) and opens an actual schema 3 store with all record types.
   **The widget snapshot** belongs to the store it shows: phone mode's carries `phone: true` and is shown whoever is
   logged in; server mode's carries its account and follows the marker as before (`WidgetSnapshotStore.readShown`).
   **The lock** (brief 22, `Model/AppLock.swift`, `Screens/LockScreen.swift`, `Screens/LockSettings.swift`): optional,
@@ -719,7 +751,8 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   first screen; `-importData` taps Import data at launch: the file picker; `-sampleImport` imports the tour's made-up
   bank file as if picked, so on the empty store the category picker opens after it as after a real import),
   `-sampleSignedIn` (signed in on the made-up account server), `-sampleOverview` (Overview, not Current) and
-  `-sampleGraph` (the graph shown; with only one month of data each graph is one point, drawn as a stem with a dot,
+  the graph (Settings → Dashboard → Graph, `aresium.graph`, on by default since brief 42, `Model/GraphSetting.swift`; on
+  a category's page above its months; `-toggleGraph` flips the saved setting once; with only one month of data each graph is one point, drawn as a stem with a dot,
   `ChartAxis.singlePointDomain`, `OneMonthTests`), `-openSheet settings`, in the picker
   `-sampleTick <id,id,…>` (ticks those), `-sampleUntick <category id>`, `-scrollToCategory <id>` and
   `-samplePickerDone` (then Done: the dashboard with the result line counted again), `-sampleLayout` (an unknown bank's
@@ -765,7 +798,7 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   file, this month always full), its own session (never logged in) and widget numbers inside that folder; the person's
   store, categories and learned shops are never opened. The folder is deleted on End tour (always on the card), at the
   end, when a widget's link or a shared file opens the app, and at the next launch if the app was closed during a tour
-  (`removeLeftovers`). Twelve steps (`TourStep`, brief 25): welcome, income, overview, graph, category, payment, switch,
+  (`removeLeftovers`). Twelve steps, eleven while the graph is hidden (`TourStep`, brief 25; brief 42: the graph step points at the graph and goes on with Next): welcome, income, overview, graph, category, payment, switch,
   categories, lock, contact, import, done; each points at a real control (`.tourAnchor`, anchor preferences;
   `.tourSpotlight` on each screen and sheet draws a light veil in the wall's colour, `TourVeil.veil` 0.3 (brief 24 had
   0.74, far too dark: the app under it must read easily, Patrik 2026-10-27), and the full-ink ring, and keeps taps off

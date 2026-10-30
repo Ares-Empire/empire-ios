@@ -2,19 +2,23 @@ import Foundation
 import Observation
 import os
 
-// The tour (briefs 24 and 25): the real dashboard on a made-up store of its own, twelve steps, each pointing at one real
-// control with one short sentence; it goes on when the person does the thing or taps Next. Everything the tour shows and
-// changes is in `TourWorld`, a store in a temporary folder that is deleted when the tour ends: the person's own store,
-// categories and learned shops are never opened by it. Its Settings also point at the lock and at Contact & support,
-// which in the tour only go on: no lock is set and nothing is sent. The look is `Screens/TourScreens.swift`.
+// The tour (briefs 24, 25 and 42): the real dashboard on a made-up store of its own, twelve steps (eleven while the
+// graph is hidden in Settings), each pointing at one real control with one short sentence; it goes on when the person
+// does the thing or taps Next. Everything the tour shows and changes is in `TourWorld`, a store in a temporary folder
+// that is deleted when the tour ends: the person's own store, categories and learned shops are never opened by it. Its
+// Settings also point at the lock and at Contact & support, which in the tour only go on: no lock is set and nothing is
+// sent. The look is `Screens/TourScreens.swift`.
 
-/// The tour's steps, in order.
+/// The tour's steps, in order. The raw value names a step (DEBUG `-tour <n>`); the card counts the steps a tour shows.
 nonisolated enum TourStep: Int, CaseIterable, Sendable {
     case welcome = 1, income, overview, graph, category, payment, switchCategory, categories, lock, contact, importFiles,
          done
 
-    /// The step after this one; nil after the last.
-    var next: TourStep? { TourStep(rawValue: rawValue + 1) }
+    /// The steps a tour shows: all of them, but the graph's only while the dashboard shows the graph (Settings →
+    /// Dashboard → Graph, `GraphSetting`); without the graph that step would point at nothing.
+    static func steps(showingGraph: Bool) -> [TourStep] {
+        showingGraph ? allCases : allCases.filter { $0 != .graph }
+    }
 
     /// The card's sentence.
     func text(_ language: AppLanguage = .current) -> String {
@@ -22,7 +26,7 @@ nonisolated enum TourStep: Int, CaseIterable, Sendable {
         case .welcome: language.string("This is Aresium with made-up sample data.")
         case .income: language.string("Swipe sideways: your income.")
         case .overview: language.string("Overview shows all months.")
-        case .graph: language.string("The trend as a graph.")
+        case .graph: language.string("The trend by day or by month. You can hide the graph in Settings.")
         case .category: language.string("Tap a category: its payments this month.")
         case .payment: language.string("Every payment in detail.")
         case .switchCategory: language.string("Sorted wrong? Pick the right category. Aresium remembers the shop.")
@@ -67,7 +71,12 @@ final class TourModel {
 
     private(set) var phase = Phase.preparing
     private(set) var step = TourStep.welcome
-    /// Where the tour's dashboard is: its pushed screens, Current or Overview, the page, the graph, the open payment.
+    /// Whether the tour's dashboard shows the graph: the person's setting when the tour starts (their Settings cannot
+    /// be opened during it), so the screens and the steps agree.
+    let showsGraph: Bool
+    /// The steps this tour shows, in order (`TourStep.steps`).
+    let steps: [TourStep]
+    /// Where the tour's dashboard is: its pushed screens, Current or Overview, the page, the open payment.
     private(set) var place = DashboardPlace()
     /// The tour's Settings (its categories, and the lock and Contact & support to point at), and its category picker
     /// pushed there.
@@ -79,13 +88,25 @@ final class TourModel {
     @ObservationIgnored private let makeWorld: () async throws -> TourWorld
     private static let log = Logger(subsystem: "de.ares-empire.aresium", category: "tour")
 
-    init(makeWorld: @escaping () async throws -> TourWorld = { try await TourWorld.make() }) {
+    init(showsGraph: Bool = GraphSetting.isShown(),
+         makeWorld: @escaping () async throws -> TourWorld = { try await TourWorld.make() }) {
+        self.showsGraph = showsGraph
+        self.steps = TourStep.steps(showingGraph: showsGraph)
         self.makeWorld = makeWorld
     }
 
-    var count: Int { TourStep.allCases.count }
+    /// How many steps this tour shows, and the current one's place among them (the card's "Tour · 3 of 12").
+    var count: Int { steps.count }
+    var number: Int { (steps.firstIndex(of: step) ?? 0) + 1 }
 
-    /// Fills the made-up store, then shows `first` (the welcome; DEBUG screenshots start at any step).
+    /// The step after the current one; nil at the last.
+    var nextStep: TourStep? {
+        guard let index = steps.firstIndex(of: step), steps.indices.contains(index + 1) else { return nil }
+        return steps[index + 1]
+    }
+
+    /// Fills the made-up store, then shows `first` (the welcome; DEBUG screenshots start at any step; a step this tour
+    /// leaves out starts at the one after it).
     func start(at first: TourStep = .welcome) async {
         guard phase == .preparing, world == nil else { return }
         do {
@@ -97,7 +118,7 @@ final class TourModel {
             self.world = world
             world.dashboard.onRecategorised = { [weak self] in self?.paymentRecategorised() }
             phase = .running
-            go(to: first)
+            go(to: steps.first { $0.rawValue >= first.rawValue } ?? .welcome)
         } catch {
             Self.log.error("the tour's store was not made: \(String(describing: error), privacy: .public)")
             phase = .failed(error.localizedDescription)
@@ -119,13 +140,14 @@ final class TourModel {
     /// "Next": the following step (the last ends the tour).
     func next() {
         guard phase == .running else { return }
-        if let next = step.next { go(to: next) } else { end() }
+        if let next = nextStep { go(to: next) } else { end() }
     }
 
     // MARK: what the person does
 
-    /// The tour's dashboard moved (a swipe, Current/Overview, the graph, a category or payment opened, Back). Doing what
-    /// the step asks moves on.
+    /// The tour's dashboard moved (a swipe, Current/Overview, a category or payment opened, Back). Doing what the step
+    /// asks moves on. The graph's step asks nothing (there is no button now, brief 42): it shows the graph, and Next
+    /// goes on.
     func update(_ new: DashboardPlace) {
         let old = place
         place = new
@@ -134,7 +156,6 @@ final class TourModel {
         switch step {
         case .income: done = new.side == .income && old.side != .income
         case .overview: done = !new.current && old.current
-        case .graph: done = new.graph && !old.graph
         case .category: done = new.path.count > old.path.count && new.path.last?.month != nil
         case .payment: done = new.payment != nil && old.payment == nil
         default: done = false
@@ -225,19 +246,16 @@ final class TourModel {
     }
 
     /// What a step needs on screen, without undoing what the person just did: the step before's action stays (the
-    /// income page stays after the swipe, the graph after it was opened).
+    /// income page stays after the swipe, Overview for the graph after it was tapped).
     private func prepare(_ step: TourStep) {
         switch step {
-        case .welcome, .done, .importFiles: toStart()
+        case .welcome, .done, .importFiles, .graph: toStart()
         case .income:
             toStart()
             place.side = .expenses
         case .overview:
             toStart()
             place.current = true
-        case .graph:
-            toStart()
-            place.graph = false
         case .category:
             toStart()
             place.current = true

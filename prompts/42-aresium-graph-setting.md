@@ -1,6 +1,6 @@
 # 42: Aresium's graph stays on (a setting), and the header loses the sun and graph buttons
 
-Status: draft
+Status: merged 2026-10-30 (Aresium tests pass with brief 43, 0 failed; "Diagramm" in Settings → Dashboard, graph 235 pt above a category's months)
 Branch: `claude/42-graph-setting` · Worktree: `../empire-ios-42-graph-setting` · Built by: a Claude agent (the look)
 
 ## Goal

@@ -3,13 +3,14 @@ import Foundation
 /// Settings → Export: everything Aresium keeps on this iPhone, as one JSON file the person keeps themselves
 /// (`Aresium-<date>.json`, through the share sheet). Restoring reads it back into an empty store, checked first, all or
 /// nothing. Schema version 2 (brief 31) adds the receipts; version 3 (brief 33) the receipts' direction, kind, where
-/// cash was paid from and the shop as read, and the corrected shop names; versions 1 and 2 still restore. A change to
+/// cash was paid from and the shop as read, and the corrected shop names; version 4 adds payment names and name rules.
+/// Versions 1–3 still restore. A change to
 /// these fields (or to `LedgerPayment`, `LedgerAccount`, `ChosenCategory`, `LearnedRule`, `CsvLayout`, `LedgerReceipt`,
-/// `ShopNameCorrection`) is a new version, and `restore` keeps reading the older ones.
+/// `ShopNameCorrection`, `PaymentNameRule`) is a new version, and `restore` keeps reading the older ones.
 nonisolated struct LedgerExport: Codable, Equatable, Sendable {
-    static let currentSchema = 3
+    static let currentSchema = 4
     /// The versions `decode` reads.
-    static let readableSchemas = 1...3
+    static let readableSchemas = 1...4
     static let appName = "Aresium"
 
     var app = Self.appName
@@ -26,9 +27,12 @@ nonisolated struct LedgerExport: Codable, Equatable, Sendable {
     /// Schema 3: the shop names the person corrected (none in older files).
     var shopNames: [ShopNameCorrection] = []
 
+    /// Schema 4: names for bank merchants.
+    var nameRules: [PaymentNameRule] = []
+
     init(exported: String, accounts: [LedgerAccount], payments: [LedgerPayment], categories: [ChosenCategory],
          learned: [LearnedRule], layouts: [CsvLayout], receipts: [LedgerReceipt] = [],
-         shopNames: [ShopNameCorrection] = []) {
+         shopNames: [ShopNameCorrection] = [], nameRules: [PaymentNameRule] = []) {
         self.exported = exported
         self.accounts = accounts
         self.payments = payments
@@ -37,6 +41,7 @@ nonisolated struct LedgerExport: Codable, Equatable, Sendable {
         self.layouts = layouts
         self.receipts = receipts
         self.shopNames = shopNames
+        self.nameRules = nameRules
     }
 
     init(from decoder: Decoder) throws {
@@ -51,6 +56,7 @@ nonisolated struct LedgerExport: Codable, Equatable, Sendable {
         layouts = try container.decode([CsvLayout].self, forKey: .layouts)
         receipts = try container.decodeIfPresent([LedgerReceipt].self, forKey: .receipts) ?? []
         shopNames = try container.decodeIfPresent([ShopNameCorrection].self, forKey: .shopNames) ?? []
+        nameRules = try container.decodeIfPresent([PaymentNameRule].self, forKey: .nameRules) ?? []
     }
 
     /// The file's name: `Aresium-2026-10-27.json`.
@@ -75,6 +81,8 @@ nonisolated struct LedgerExport: Codable, Equatable, Sendable {
         guard export.schema >= 2 || export.receipts.isEmpty else { throw LedgerError.invalidExport("receipts in schema 1") }
         guard export.schema >= 3 || (export.shopNames.isEmpty && !export.receipts.contains(where: \.usesSchema3))
         else { throw LedgerError.invalidExport("schema 3 fields in schema \(export.schema)") }
+        guard export.schema >= 4 || (export.nameRules.isEmpty && !export.payments.contains { $0.ownName != nil })
+        else { throw LedgerError.invalidExport("schema 4 fields in schema \(export.schema)") }
         return export
     }
 
@@ -118,6 +126,19 @@ nonisolated struct LedgerExport: Codable, Equatable, Sendable {
             }
             guard payment.extraCategories.allSatisfy(chosenIDs.contains) else { throw fail("payment extra category") }
             guard (payment.category == nil) == (payment.categorySource == .none) else { throw fail("category source") }
+        }
+        guard schema >= 4 || (nameRules.isEmpty && !payments.contains { $0.ownName != nil })
+        else { throw fail("names before schema 4") }
+        for payment in payments {
+            if let name = payment.ownName {
+                guard PaymentNames.normalized(name) == name, !name.isEmpty else { throw fail("payment name") }
+            }
+        }
+        var nameMerchants = Set<String>()
+        for rule in nameRules {
+            guard !rule.merchant.isEmpty, nameMerchants.insert(rule.merchant).inserted,
+                  !rule.name.isEmpty, PaymentNames.normalized(rule.name) == rule.name
+            else { throw fail("payment name rule") }
         }
         var merchants = Set<String>()
         for rule in learned {

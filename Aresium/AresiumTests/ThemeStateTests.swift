@@ -31,14 +31,12 @@ struct ThemeStateTests {
         #expect(!state.red)
     }
 
-    /// Outside red the header is the sun button: it switches the app's appearance, not this state.
+    /// Outside red the header has no X (light and dark are Settings → Appearance, brief 42): `.header` changes nothing.
     @Test func headerOutsideRedLeavesTheStateAlone() {
         var state = ThemeState()
         state.send(.header, reduceMotion: false)
         #expect(!state.red)
         #expect(!state.isAnimating)
-        #expect(Appearance.toggled(from: .dark) == .light)
-        #expect(Appearance.toggled(from: .light) == .dark)
     }
 
     /// Red stays on across launches, over whichever look the appearance gives then.

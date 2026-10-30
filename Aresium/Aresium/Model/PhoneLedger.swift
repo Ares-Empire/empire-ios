@@ -48,6 +48,8 @@ nonisolated struct LedgerPayment: Codable, Equatable, Sendable {
     var categorySource: CategorySource
     var extraCategories: [String]
     var sequence: Int
+    /// Schema 4 export: this payment alone, before any shop rule. Never used for sorting.
+    var ownName: String? = nil
 
     /// What makes a payment unique: the same booking imported again (from the same export or an overlapping one) has
     /// the same key.
@@ -95,10 +97,11 @@ nonisolated struct LedgerSummary: Equatable, Sendable {
     var learned = 0
     var layouts = 0
     var receipts = 0
+    var nameRules = 0
     var chosen: [ChosenCategory] = []
 
     /// Nothing imported, kept or learned yet (chosen categories may exist): an export can be restored into it.
-    var isEmpty: Bool { payments == 0 && accounts == 0 && learned == 0 && layouts == 0 && receipts == 0 }
+    var isEmpty: Bool { payments == 0 && accounts == 0 && learned == 0 && layouts == 0 && receipts == 0 && nameRules == 0 }
 }
 
 /// The payments added from one file.
@@ -161,6 +164,7 @@ actor PhoneLedger: ModelActor {
                           learned: try modelContext.fetchCount(FetchDescriptor<StoredRule>()),
                           layouts: try modelContext.fetchCount(FetchDescriptor<StoredLayout>()),
                           receipts: try modelContext.fetchCount(FetchDescriptor<StoredReceipt>()),
+                          nameRules: try modelContext.fetchCount(FetchDescriptor<StoredPaymentName>()),
                           chosen: try chosen())
         }
     }
@@ -638,7 +642,7 @@ actor PhoneLedger: ModelActor {
                         .map { LearnedRule(merchant: $0.merchant, category: $0.category) },
                      layouts: try modelContext.fetch(FetchDescriptor<StoredLayout>(sortBy: [SortDescriptor(\.savedAt)]))
                         .compactMap { try? JSONDecoder().decode(CsvLayout.self, from: $0.layout) },
-                     receipts: try receipts().reversed(), shopNames: try shopNames())
+                     receipts: try receipts().reversed(), shopNames: try shopNames(), nameRules: try paymentNames())
     }
 
     /// Restores an export: only into a store without data (chosen categories and corrected shop names are replaced:
@@ -668,6 +672,7 @@ actor PhoneLedger: ModelActor {
                                                  savedAt: Date(timeIntervalSince1970: TimeInterval(index))))
             }
             for receipt in export.receipts { modelContext.insert(StoredReceipt(receipt)) }
+            for rule in export.nameRules { modelContext.insert(StoredPaymentName(merchant: rule.merchant, name: rule.name)) }
             for (index, correction) in export.shopNames.enumerated() {
                 modelContext.insert(StoredShopName(read: correction.read, name: correction.name,
                                                    saved: Date(timeIntervalSince1970: TimeInterval(index))))
@@ -694,7 +699,7 @@ actor PhoneLedger: ModelActor {
                       raw: try? JSONDecoder().decode(JSONValue.self, from: payment.raw),
                       category: payment.category,
                       categorySource: CategorySource(rawValue: payment.categorySource) ?? .none,
-                      extraCategories: payment.extraCategories, sequence: payment.sequence)
+                      extraCategories: payment.extraCategories, sequence: payment.sequence, ownName: payment.ownName)
     }
 
     private static func value(_ receipt: StoredReceipt) -> LedgerReceipt {

@@ -29,6 +29,9 @@ final class TransactionDetailStore {
     private(set) var followUp: MerchantFollowUp?
     /// Phone mode: the receipt joined to this payment (its page's Receipt section).
     private(set) var receipt: LedgerReceipt?
+    /// Nil for server mode; remains available when own names are hidden.
+    private(set) var renameInfo: PaymentRenameInfo?
+    var canRename: Bool { renameInfo?.canRename == true }
     /// The Receipt section's Edit (brief 33): the receipt's page model, whose edit sheet is open.
     private(set) var receiptEditor: ReceiptPageModel?
     private let transaction: Transaction
@@ -79,12 +82,33 @@ final class TransactionDetailStore {
                 guard isCurrent(generation, token: token) else { return }
             }
             detail = loaded
-            if let phone = backend as? PhoneBackend { receipt = try? await phone.receipt(joinedTo: loaded.id) }
+            if let phone = backend as? PhoneBackend {
+                receipt = try? await phone.receipt(joinedTo: loaded.id)
+                renameInfo = try await phone.renameInfo(id: loaded.id)
+            }
         } catch {
             guard isCurrent(generation, token: token) else { return }
             dashboardStore.session.handleAuthFailure(error, generation: generation, token: token)
             loadError = error.localizedDescription
         }
+    }
+
+    /// The row and page share this load, as with category changes. Phone samples use their real temporary ledger.
+    func prepareRename() async {
+        if detail == nil { await load() }
+    }
+
+    /// Saves the chosen scope and rebuilds the dashboard/widget. Errors and busy state mirror category changes.
+    func rename(to name: String, scope: PaymentNameScope) async {
+        guard canRename, !isSaving, let phone = backend as? PhoneBackend else { return }
+        isSaving = true
+        saveError = nil
+        defer { isSaving = false }
+        do {
+            detail = try await phone.rename(id: transaction.id, name: name, scope: scope)
+            renameInfo = try await phone.renameInfo(id: transaction.id)
+            await dashboardStore.reloadAfterTransactionChange()
+        } catch { saveError = error.localizedDescription }
     }
 
     func beginRecategorisation() {

@@ -73,6 +73,13 @@ final class PhoneBackend: AresiumBackend {
     /// What the store holds, for the first screen and Settings; refreshed after every change.
     private(set) var summary = LedgerSummary()
     private(set) var catalog: CategoryCatalog?
+    /// Published preference; all stored names survive switching it off.
+    private(set) var ownNames: Bool
+
+    func setOwnNames(_ enabled: Bool) {
+        defaults.set(enabled, forKey: Self.ownNamesKey)
+        ownNames = enabled
+    }
     /// Today as `YYYY-MM-DD` for the dashboard (tests pin it).
     @ObservationIgnored var today: () -> String = { LedgerExport.day(.now) }
     /// "Is this the same payment?" for waiting card receipts, found after a bank import (`matchWaitingReceipts`): asked
@@ -88,6 +95,7 @@ final class PhoneBackend: AresiumBackend {
         self.ledger = ledger
         self.engine = engine
         self.defaults = defaults
+        self.ownNames = defaults.object(forKey: Self.ownNamesKey) as? Bool ?? true
         self.engineVersion = engineVersion
     }
 
@@ -142,12 +150,11 @@ final class PhoneBackend: AresiumBackend {
     func isReady(_ session: EmpireSession) -> Bool { true }
 
     func dashboard(auth: BackendAuth) async throws -> Dashboard {
-        try await ledger.dashboard(engine: engine, catalog: catalogValue(), language: .current, today: today())
+        try await ledger.dashboard(engine: engine, catalog: catalogValue(), language: .current, today: today(), ownNames: ownNames)
     }
 
     func transactionDetail(id: String, auth: BackendAuth) async throws -> TransactionDetail {
-        guard let payment = try await ledger.payment(id) else { throw LedgerError.notFound }
-        return PhoneDashboard.detail(payment, account: try await ledger.account(payment.account), list: try await categories())
+        try await ledger.namedDetail(id: id, engine: engine, catalog: catalogValue(), language: .current, enabled: ownNames)
     }
 
     /// Moves the payment by hand, learns its merchant, and finds the merchant's other payments not set by hand.
