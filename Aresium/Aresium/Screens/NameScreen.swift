@@ -3,9 +3,10 @@ import SwiftUI
 /// A name's page (brief 44): every payment of one name over all months, from a payment's "All from <name>" line, its
 /// row's swipe left or its long press. Pushed on the dashboard's stack (`DashboardRoute.name`), under the header with the
 /// name as its title, so the header's arrow and the back swipe go back. The totals (money out; in only when there is
-/// any) and the count, the graph above the months as on a category's page, the months with payments as the category
-/// page's bars (a tap shows that month's payments below), then the payments newest first under their months, each
-/// opening its page as on a month's list. The numbers come from `NamePage`.
+/// any) and the count, the switch that adds the name up in every category (brief 53), the graph above the months as on a
+/// category's page, the months with payments as the category page's bars (a tap shows that month's payments below), then
+/// the payments newest first under their months, each opening its page as on a month's list. The numbers come from
+/// `NamePage`.
 struct NameScreen: View {
     let route: PaymentNameRoute
     let store: DashboardStore
@@ -59,6 +60,11 @@ struct NameScreen: View {
     private func content(_ page: NamePage, key: String, proxy: ScrollViewProxy) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             totals(page).padding(.horizontal, 18).padding(.top, 6).padding(.bottom, 8)
+            // Brief 53: this name added up in every category's payments (phone mode, where names are).
+            if store.offersSums {
+                NameSumSwitch(key: key, sums: store.sums, palette: palette)
+                    .padding(.horizontal, 12).padding(.top, 2).padding(.bottom, 6)
+            }
             if showsGraph {
                 SeriesChart(points: page.chart, color: Color(hex: page.category.color), palette: palette,
                             xTitle: String(localized: "Month")) { index in

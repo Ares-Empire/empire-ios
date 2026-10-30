@@ -620,6 +620,48 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   (brief 47: every entry short; "All from <long bank name>" could not be read; the lifted row shows the name; "dem",
   not "diesem", which wrapped the entry) where the page offers them (`PaymentRowAction`); receipts' and entries' rows
   add it too now that their page has the card.
+  **Adding up names in a category's list** (brief 53, Patrik's D after build 4: "10 Vinted purchases in Clothes in
+  October" as one row; `Model/PaymentSums.swift`, `Screens/SummedRows.swift`; phone mode only, server rows have no
+  names): only how a month's list of a category shows (Current and Overview); totals, the category's numbers, the export
+  and the engine never change. **Choices** (`SumChoices`, the more specific wins): everywhere (Settings → Dashboard →
+  "Add up same names" / "Gleiche Namen summieren", off by default), a category (the icon), a name (the name's page's
+  switch "Add up in every category" / "In jeder Kategorie summieren", on a card under the totals), a name in a category
+  (the swipe and the long press); every level but everywhere on, off or not set. The icon's tap sets the category to the
+  opposite of what it shows and clears the name-in-this-category choices there; the name page's switch sets the name and
+  clears its per-category choices. Keyed by the category's stable id (`DashboardStore.sumCategoryKey`: "id:groceries"
+  for Groceries and Lebensmittel, "id:custom-…" for one's own; the dashboard's own entries such as Refunds by name) and
+  the opaque `nameKey`. Kept in Aresium's defaults (`aresium.sums`, JSON, `PaymentSums(defaults:)`), not in the export,
+  deleted with Delete data and "Forgot the code?" (`ModeStore.deleteLocalData`); tests and samples have an empty set in
+  memory (`DashboardStore(sums:)` defaults to it), the tour too, and its lists offer no adding up at all
+  (`PaymentSums(offered: false)`: no icon, no Add up, no name page switch), so the rows its steps point at stay single.
+  A choice keyed by a name key that later changes (a shop renamed gets an `own:` key) no longer applies. **The list** (`PaymentList`, built once per change of the dashboard or
+  the choices: `DashboardStore.paymentList(category:month:side:)` caches by `DashboardStore.revision`, which counts every
+  new dashboard, and `PaymentSums.revision`; the header's icon and the list read the same one): a name with two or more
+  payments there that adds up is one row where its newest payment would be (covered rows and rows without a name key
+  stay single). **The summed row:** the day's tile with a second tile peeking above it (`StackTile`, a stack, as SF
+  `square.stack`) and the count ("5×"), the name as the newest payment shows it, the days ("4–28 Oct" / "4.–28. Okt.",
+  Foundation's interval style), the net sum in cents with the list's sign and colour. A tap opens it in place: a card
+  (`palette.card`, the line, radius 12) holds the summed row, a hairline and its payments, each the usual `PaymentRow`
+  (tap, long press, swipe All); a tap closes it. Opening, closing, Add up, Separate and the icon animate with a spring
+  without bounce (0.38 s, `SumMotion`; Reduce Motion none): the card grows and clips its payments to its height, the rows
+  below glide. **The swipe** (`RowSwipeRule` with `count`): a single row whose name has more payments in the list shows
+  **Add up** / **Summieren** (`rectangle.compress.vertical`) and All; a summed row **Separate** / **Auflösen**
+  (`rectangle.expand.vertical`) and All; members of an open sum All only. The inner action is a raised tile (`Ink.card2`,
+  the edge, the first ink), All keeps its grey fill. Each action 84 pt (drawn 78, 6 pt gaps): one opens at 84, two at
+  168; the full swipe (the last, All) at max(open + 84, 55 % of the row): 168 for one (as before), 252 for two on an
+  iPhone 17's 378 pt row; past it All takes the whole room (`RowSwipeRule.widths`). VoiceOver actions by the same names.
+  The actions' words grow only up to the largest standard text size (fixed tiles; "Summieren" was cut at the largest
+  accessibility size), and a row's day shrinks into its tile there instead of turning into "…".
+  **The long press** (`DashboardStore.rowActions(for: PaymentListEntry)`): a single row with a group in the list adds Add
+  up before "All with this name"; a summed row offers Separate and "All with this name". **The icon** (`SumCategoryButton`
+  in `ScreenHeader`, before red mode's X and the gear): the header's 42 pt button with `square.stack`, off as the others,
+  on filled with the second ink and the symbol in the wall's colour; only on a category's month list while some name has
+  two or more payments there (not the Cash page, a name's page or a covered list); VoiceOver "Add up same names", a
+  toggle, On/Off. DEBUG (with `-samplePhone`): `-sampleSums on` (everywhere on, in memory), `-sampleSumOpen <text>` (opens
+  that summed row; `-sumsDelay <s>` first), `-sumsSlow <s>` (the motion stretched, for screenshots halfway),
+  `-sampleSwipe <pt> -swipeRow <text>` also on a summed row. Tests: `PaymentSumsTests` (`SumChoicesTests`,
+  `PaymentSumsStoreTests`, `PaymentListTests`, `RowSwipeTwoActionsTests`, `PaymentSumsStoreFlowTests`: the levels, the
+  clearing, a language switch, Delete data, the tour, the grouping, the menus). Screenshots: `build/53-*.png`.
   **Own names** ("Eigene Namen") is a toggle in Settings → Your data on this iPhone (`DashboardStore.setOwnNames`).
   Launch arguments (DEBUG, with `-samplePhone`): `-sampleNames` (made-up own names), `-ownNames off`, `-openRename` (the
   name's field open), `-renameText <text>`, `-renameSave`, `-renameBankName`, `-openAllFrom`, `-openName <text>`,

@@ -347,7 +347,10 @@ final class TourWorld {
             let widgetFolder = root.appending(path: "widget", directoryHint: .isDirectory)
             try FileManager.default.createDirectory(at: widgetFolder, withIntermediateDirectories: true)
             let widget = WidgetSnapshotPublisher(store: WidgetSnapshotStore(directory: widgetFolder), reloadTimelines: {})
-            let dashboard = DashboardStore(session: session, backend: phone, widgetPublisher: widget)
+            // Its own choices of adding up (brief 53), empty and in memory; its lists offer none, so its steps' rows
+            // are always single.
+            let dashboard = DashboardStore(session: session, backend: phone, widgetPublisher: widget,
+                                           sums: PaymentSums(offered: false))
             await dashboard.reload()
             if let error = dashboard.error { throw TourError.dashboard(error) }
             let first = try await phone.categories().name(of: TourData.firstCategory)

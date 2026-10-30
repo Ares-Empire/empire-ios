@@ -109,10 +109,18 @@ struct ContentView: View {
         PushCenter.removeDevicesOnLogout(of: session, sharedDefaults: EmpireShared.defaults)
         let markerDefaults = EmpireShared.defaults
         #endif
+        // Which names add up in a category's payments (brief 53): the person's, kept in the app's defaults; the samples
+        // and the app while tests run keep theirs in memory (`-sampleSums on`: every name, as Settings' switch).
+        #if DEBUG
+        let sums = debugLaunch ? PaymentSums(choices: SumChoices(everywhere: LaunchArguments.value("-sampleSums") == "on"))
+                               : PaymentSums(defaults: .standard)
+        #else
+        let sums = PaymentSums(defaults: .standard)
+        #endif
         // The server sample shows the bundled dashboard; otherwise the backend comes with the mode (`ModeStore`).
         let store = sample && !phoneSample
-            ? DashboardStore(session: session, sample: true, widgetPublisher: publisher)
-            : DashboardStore(session: session, backend: nil, widgetPublisher: publisher)
+            ? DashboardStore(session: session, sample: true, widgetPublisher: publisher, sums: sums)
+            : DashboardStore(session: session, backend: nil, widgetPublisher: publisher, sums: sums)
         #if DEBUG
         messagesActive = !debugLaunch
         #else
@@ -314,8 +322,9 @@ struct ContentView: View {
                         MessagesSettingsSection(messages: messages, lock: lock)
                     }
                     LockSettingsSection(lock: lock)
-                    // Last of Aresium's own, so it sits just above General → Appearance: how the app looks.
-                    DashboardSettingsSection()
+                    // Last of Aresium's own, so it sits just above General → Appearance: how the app looks. Adding up
+                    // names (brief 53) only in phone mode, where payments have names.
+                    DashboardSettingsSection(sums: modes.phone != nil ? store.sums : nil)
                 } help: {
                     NavigationLink {
                         BankGuideList(importing: guideImport { showsSettings = false }, outbox: outbox)
@@ -761,11 +770,23 @@ struct ContentView: View {
         return ScreenHeader(title: title, subtitle: subtitle,
                             category: category, palette: palette,
                             back: route == nil ? nil : { back(route) },
+                            sums: route.flatMap { sumsIcon($0, in: store) },
                             leaveRed: {
             guard !theme.isAnimating, theme.red else { return }
             bandLanding = nil
             theme.send(.header, reduceMotion: reduceMotion)           // the X: back to light or dark
         }, openSettings: openSettings ?? { showsSettings = true })
+    }
+
+    /// A category's payments in a month (brief 53): the icon of adding up, while some name has more payments there
+    /// (phone mode; not the Cash page or a name's page). A tap adds up every name in the category, or none.
+    private func sumsIcon(_ route: DashboardRoute, in store: DashboardStore) -> ScreenHeader.Sums? {
+        guard store.offersSums, let month = route.month, !route.cash, route.name == nil,
+              store.paymentList(category: route.category, month: month, side: route.side).canSum else { return nil }
+        let category = store.sumCategoryKey(route.category)
+        return ScreenHeader.Sums(on: store.sums.choices.sumsCategory(category)) {
+            withAnimation(SumMotion.animation(reduceMotion: reduceMotion)) { store.sums.toggleCategory(category) }
+        }
     }
 
     /// The header's back button: the tour's dashboard or the person's, whichever shows.

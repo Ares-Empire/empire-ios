@@ -24,6 +24,11 @@ enum PaymentRowAction: Hashable {
     case allFromName
     /// The receipt's or entry's page's Edit: the check window, or Add cash's window, filled from it.
     case edit
+    /// A category's list only (brief 53), as the row's swipe: this name's payments in this category as one row with
+    /// their sum, every month (`PaymentSums`).
+    case addUp
+    /// A summed row's: its payments as single rows again, in this category, every month.
+    case separate
 }
 
 extension DashboardStore {

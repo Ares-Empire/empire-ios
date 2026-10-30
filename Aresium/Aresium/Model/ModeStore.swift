@@ -273,6 +273,7 @@ final class ModeStore {
     /// Settings → "Delete Aresium data on this iPhone" and the lock's "Forgot the code?" run it; nothing else does.
     func deleteLocalData() async throws {
         await dashboard.messages?.deleteAll()
+        dashboard.sums.deleteAll()                // which names add up in the lists (brief 53)
         let shown = state != .server
         switchID += 1
         storeGeneration += 1

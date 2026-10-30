@@ -279,8 +279,9 @@ struct TransactionsScreen: View {
     var rowMenus = true
     /// Shows a name's page on the dashboard's stack (the rows' swipe and long press, a payment page's line).
     var pick: (DashboardRoute) -> Void = { _ in }
-    /// The rows' windows and the row swiped open (`PaymentList.swift`).
+    /// The rows' windows, the row swiped open and the summed rows shown open (`PaymentList.swift`).
     @State private var menu = PaymentRowMenu()
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     #if DEBUG
     /// The launch arguments below act once: `.task` runs again whenever the list shows again (back from a pushed name's
     /// page), which reopened the page each time (brief 47 measured the back swipe against it).
@@ -291,20 +292,35 @@ struct TransactionsScreen: View {
         VStack(spacing: 0) {
             DashboardStatus(store: store, palette: palette)
             WordmarkScrollView {
-                let rows = store.transactions(category: route.category, month: route.month ?? "", side: route.side)
+                // Built once per change of the dashboard or the choices (brief 53), not here.
+                let list = store.paymentList(category: route.category, month: route.month ?? "", side: route.side)
                 #if DEBUG
-                let swiped = rows.debugSwipe()
+                let swiped = list.debugSwipe()
                 #else
                 let swiped: (id: String, points: CGFloat)? = nil
                 #endif
                 LazyVStack(spacing: 0) {
-                    ForEach(rows) { row in
-                        PaymentRow(row: row, store: store, palette: palette, menu: menu, shortcuts: rowMenus,
-                                   allFrom: pick, shownAt: swiped?.id == row.id ? swiped?.points : nil) {
-                            selection = $0
+                    ForEach(list.entries) { entry in
+                        switch entry {
+                        case let .payment(row, addsUp):
+                            PaymentRow(row: row, store: store, palette: palette, menu: menu, shortcuts: rowMenus,
+                                       allFrom: pick, addUp: addsUp && store.offersSums ? { addUp(row) } : nil,
+                                       shownAt: swiped?.id == row.id ? swiped?.points : nil) {
+                                selection = $0
+                            }
+                            .transition(.opacity)
+                        case let .summed(sum):
+                            SummedPaymentGroup(sum: sum, store: store, palette: palette, menu: menu, shortcuts: rowMenus,
+                                               separate: { separate(sum) }, allFrom: pick,
+                                               shownAt: swiped?.id == sum.id ? swiped?.points : nil) {
+                                selection = $0
+                            }
+                            .transition(.opacity)
                         }
                     }
-                    if rows.isEmpty { EmptyMessage(text: String(localized: "No transactions this month."), palette: palette) }
+                    if list.rows.isEmpty {
+                        EmptyMessage(text: String(localized: "No transactions this month."), palette: palette)
+                    }
                 }.padding(.horizontal, 12).padding(.top, 8)
             } band: { _ in band }
             .refreshable { await store.reload() }.scrollBounceBehavior(.always)
@@ -337,7 +353,38 @@ struct TransactionsScreen: View {
                     pick(name)
                 }
             }
+            // Phone sample: `-sampleSumOpen <text>` opens the summed row whose name contains the text (brief 53), after
+            // `-sumsDelay <seconds>` (default at once; a delay shows the motion).
+            if !store.isSample, let text = LaunchArguments.value("-sampleSumOpen") {
+                for _ in 0..<40 where store.dashboard == nil { try? await Task.sleep(for: .milliseconds(100)) }
+                if let delay = LaunchArguments.value("-sumsDelay").flatMap(Double.init) {
+                    try? await Task.sleep(for: .seconds(delay))
+                }
+                let list = store.paymentList(category: route.category, month: route.month ?? "", side: route.side)
+                for case let .summed(sum) in list.entries where sum.title.localizedCaseInsensitiveContains(text) {
+                    withAnimation(SumMotion.animation(reduceMotion: reduceMotion)) { _ = menu.openSums.insert(sum.key) }
+                    break
+                }
+            }
             #endif
+        }
+    }
+
+    /// Add up (the swipe, the long press): this name's payments in this category as one row, every month.
+    private func addUp(_ row: TransactionRow) {
+        guard let name = PaymentList.nameKey(row.transaction) else { return }
+        let category = store.sumCategoryKey(route.category)
+        withAnimation(SumMotion.animation(reduceMotion: reduceMotion)) {
+            store.sums.setName(name, in: category, sums: true)
+        }
+    }
+
+    /// Separate: the summed row's payments single again in this category, every month.
+    private func separate(_ sum: SummedPayments) {
+        let category = store.sumCategoryKey(route.category)
+        withAnimation(SumMotion.animation(reduceMotion: reduceMotion)) {
+            menu.openSums.remove(sum.key)
+            store.sums.setName(sum.key, in: category, sums: false)
         }
     }
 }
@@ -346,7 +393,11 @@ struct TransactionsScreen: View {
 
 /// Aresium's own Settings, in both modes: the dashboard's graph (brief 42; `GraphSetting`), a switch in the Lock
 /// section's look (Settings pieces; its on colour is Settings' own, `EmpireSwitchStyle`). It changes the dashboard under the sheet at once.
+/// In phone mode also Add up same names (brief 53, `sums`): every name with several payments in a month's list of a
+/// category as one row, unless a category, a name or a name in a category is chosen otherwise.
 struct DashboardSettingsSection: View {
+    /// The person's choices of adding up; nil in server mode (its payments have no names to add up).
+    var sums: PaymentSums? = nil
     @AppStorage(GraphSetting.key) private var showsGraph = GraphSetting.shownByDefault
 
     var body: some View {
@@ -358,6 +409,18 @@ struct DashboardSettingsSection: View {
                 }
             }
             .padding(.horizontal, 16).frame(minHeight: 58)
+            if let sums {
+                SettingsDivider()
+                Toggle(isOn: Binding(get: { sums.choices.everywhere }, set: { sums.setEverywhere($0) })) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Add up same names").font(AppFont.text(15, weight: .medium)).foregroundStyle(Ink.primary)
+                        Text("One row with the sum per name and month").font(AppFont.text(12))
+                            .foregroundStyle(Ink.muted).fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .padding(.horizontal, 16).padding(.vertical, 8).frame(minHeight: 58)
+                .accessibilityIdentifier("sumEverywhere")
+            }
         }
         #if DEBUG
         .task {

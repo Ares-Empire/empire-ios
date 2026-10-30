@@ -1,0 +1,350 @@
+import Foundation
+import Testing
+@testable import Aresium
+
+/// Brief 53: adding up the payments of one name in a category's list. The choices (four levels, the more specific wins,
+/// the icon's and the name page's clearing, kept in the app's defaults, the tour's own), the grouping (where the summed
+/// row stands, its net sum, what stays single), the swipe's rule with two actions, and the menus.
+struct SumChoicesTests {
+    @Test func offByDefault() {
+        let choices = SumChoices()
+        #expect(!choices.sums(name: "n", category: "c"))
+        #expect(!choices.sumsCategory("c") && !choices.sumsName("n"))
+    }
+
+    @Test func eachLevelAndTheMoreSpecificWins() {
+        var choices = SumChoices()
+        choices.everywhere = true
+        #expect(choices.sums(name: "vinted", category: "clothes"), "everywhere")
+        choices.categories["clothes"] = false
+        #expect(!choices.sums(name: "vinted", category: "clothes"), "a category over everywhere")
+        #expect(choices.sums(name: "vinted", category: "groceries"), "other categories keep everywhere's")
+        choices.names["vinted"] = true
+        #expect(choices.sums(name: "vinted", category: "clothes"), "a name over its category")
+        #expect(!choices.sums(name: "zalando", category: "clothes"))
+        choices.setName("vinted", in: "clothes", sums: false)
+        #expect(!choices.sums(name: "vinted", category: "clothes"), "a name in a category over everything")
+        #expect(choices.sums(name: "vinted", category: "groceries"), "only in that category")
+        choices.everywhere = false
+        choices.categories = [:]
+        choices.names = [:]
+        #expect(!choices.sums(name: "vinted", category: "clothes"))
+        choices.setName("vinted", in: "clothes", sums: true)
+        #expect(choices.sums(name: "vinted", category: "clothes") && !choices.sums(name: "vinted", category: "groceries"))
+    }
+
+    @Test func theIconsTapMeansAllOrNoneThere() {
+        var choices = SumChoices()
+        choices.everywhere = true
+        choices.setName("vinted", in: "clothes", sums: false)
+        choices.setName("zalando", in: "clothes", sums: false)
+        choices.setName("vinted", in: "groceries", sums: false)
+        #expect(choices.sumsCategory("clothes"), "the icon shows everywhere's choice")
+        choices.toggleCategory("clothes")                 // the opposite of what it showed: none
+        #expect(choices.categories["clothes"] == false && choices.pairs["clothes"] == nil)
+        #expect(!choices.sums(name: "vinted", category: "clothes") && !choices.sums(name: "other", category: "clothes"))
+        #expect(choices.pairs["groceries"]?["vinted"] == false, "other categories' choices stay")
+        choices.setName("vinted", in: "clothes", sums: true)
+        choices.toggleCategory("clothes")                 // all
+        #expect(choices.sumsCategory("clothes") && choices.pairs["clothes"] == nil)
+        #expect(choices.sums(name: "vinted", category: "clothes") && choices.sums(name: "zalando", category: "clothes"))
+        // A name's own choice from its page still wins over the icon.
+        choices.names["dm"] = false
+        #expect(!choices.sums(name: "dm", category: "clothes"))
+    }
+
+    @Test func theNamePagesSwitchClearsTheNamesChoicesInCategories() {
+        var choices = SumChoices()
+        choices.setName("vinted", in: "clothes", sums: false)
+        choices.setName("vinted", in: "gifts", sums: true)
+        choices.setName("zalando", in: "clothes", sums: false)
+        choices.setName("vinted", sums: true)
+        #expect(choices.names["vinted"] == true && choices.sumsName("vinted"))
+        #expect(choices.sums(name: "vinted", category: "clothes") && choices.sums(name: "vinted", category: "gifts"))
+        #expect(choices.pairs["gifts"] == nil, "an empty category's entry goes")
+        #expect(choices.pairs["clothes"] == ["zalando": false], "other names keep theirs")
+        choices.setName("vinted", sums: false)
+        #expect(!choices.sums(name: "vinted", category: "clothes") && !choices.sumsName("vinted"))
+    }
+}
+
+@MainActor
+struct PaymentSumsStoreTests {
+    @Test func keptInTheAppsDefaultsNotInMemoryOnes() throws {
+        let defaults = PhoneTest.defaults()
+        let sums = PaymentSums(defaults: defaults)
+        #expect(sums.isKept && sums.choices == SumChoices())
+        sums.setEverywhere(true)
+        sums.toggleCategory("id:clothes")
+        sums.setName("merchant:vinted", in: "id:groceries", sums: true)
+        let again = PaymentSums(defaults: defaults)
+        #expect(again.choices == sums.choices, "a new launch (or a language restart) reads them back")
+        #expect(defaults.data(forKey: PaymentSums.key) != nil)
+
+        let memory = PaymentSums()
+        let revision = memory.revision
+        memory.setEverywhere(true)
+        #expect(!memory.isKept && memory.choices.everywhere && memory.revision != revision)
+        memory.setEverywhere(true)
+        #expect(memory.revision == revision + 1, "no change, no new revision")
+    }
+
+    @Test func deleteAllForgetsThem() {
+        let defaults = PhoneTest.defaults()
+        let sums = PaymentSums(defaults: defaults)
+        sums.setName("merchant:vinted", sums: true)
+        sums.deleteAll()
+        #expect(sums.choices == SumChoices() && defaults.data(forKey: PaymentSums.key) == nil)
+        #expect(PaymentSums(defaults: defaults).choices == SumChoices())
+    }
+}
+
+@MainActor
+struct PaymentListTests {
+    private func row(_ id: String, day: Int, amount: Double, key: String?, covered: Bool = false) -> TransactionRow {
+        let date = String(format: "2026-10-%02d", day)
+        var transaction = Transaction(id: id, date: date, day: day, month: "2026-10", amount: amount,
+                                      categoryName: "Clothes", tags: [], place: "Shop " + (key ?? id), city: "",
+                                      categoriesIn: ["Clothes"], incomeBuckets: [])
+        transaction.nameKey = key
+        if covered { transaction.coveredBy = ["receipt-1"] }
+        return TransactionRow(transaction: transaction, tagged: false)
+    }
+
+    @Test func aSummedNameStandsWhereItsNewestPaymentWouldBe() throws {
+        let rows = [row("a1", day: 1, amount: -10, key: "a"), row("b", day: 2, amount: -5, key: "b"),
+                    row("a2", day: 3, amount: -20, key: "a"), row("c", day: 4, amount: -7, key: "c"),
+                    row("a3", day: 5, amount: -30, key: "a"), row("d", day: 6, amount: -1, key: "d")]
+        let list = PaymentList(rows: rows) { $0 == "a" }
+        #expect(list.entries.map(\.id) == ["b", "c", "sum:a", "d"])
+        let sum = try #require(list.summed("a"))
+        #expect(sum.rows.map(\.id) == ["a1", "a2", "a3"], "its payments in the list's order")
+        #expect(sum.count == 3 && sum.newest.id == "a3" && sum.firstDay == "2026-10-01" && sum.lastDay == "2026-10-05")
+        #expect(list.canSum)
+        #expect(list.rows.count == 6, "the list's own rows stay as they are")
+    }
+
+    @Test func theNetSumInCents() throws {
+        let rows = [row("p1", day: 2, amount: -20.10, key: "p"), row("p2", day: 3, amount: -30.20, key: "p"),
+                    row("p3", day: 5, amount: 5.00, key: "p")]
+        let sum = try #require(PaymentList(rows: rows) { _ in true }.summed("p"))
+        #expect(sum.cents == -4530 && sum.total == -45.30, "a refund among the purchases lowers it")
+        let tiny = [row("t1", day: 1, amount: -0.1, key: "t"), row("t2", day: 2, amount: -0.2, key: "t")]
+        #expect(PaymentList(rows: tiny) { _ in true }.summed("t")?.total == -0.3)
+    }
+
+    @Test func oneOrNoPaymentOfANameStaysSingle() {
+        let rows = [row("a", day: 1, amount: -10, key: "alone"), row("x", day: 2, amount: -10, key: nil),
+                    row("y", day: 3, amount: -10, key: nil)]
+        let list = PaymentList(rows: rows) { _ in true }
+        #expect(list.entries.map(\.id) == ["a", "x", "y"], "rows without a name never add up together")
+        #expect(!list.canSum)
+        for entry in list.entries {
+            guard case let .payment(_, addsUp) = entry else { Issue.record("summed"); continue }
+            #expect(!addsUp)
+        }
+    }
+
+    @Test func notChosenRowsOfferAddUp() {
+        let rows = [row("a1", day: 1, amount: -10, key: "a"), row("a2", day: 2, amount: -10, key: "a"),
+                    row("b", day: 3, amount: -10, key: "b")]
+        let list = PaymentList(rows: rows) { _ in false }
+        let offers = list.entries.map { entry -> Bool in
+            if case let .payment(_, addsUp) = entry { return addsUp }
+            return false
+        }
+        #expect(offers == [true, true, false] && list.canSum)
+    }
+
+    @Test func notOfferedEveryRowStaysSingle() {
+        let rows = [row("a1", day: 1, amount: -10, key: "a"), row("a2", day: 2, amount: -10, key: "a")]
+        let list = PaymentList(rows: rows, offered: false) { _ in true }
+        #expect(list.entries.map(\.id) == ["a1", "a2"] && !list.canSum)
+    }
+
+    @Test func coveredRowsAreUntouched() {
+        // A withdrawal's covered row is the receipts', not a payment: it never adds up, even under a name's key.
+        let rows = [row("w1", day: 1, amount: -50, key: "atm"), row("cov", day: 1, amount: 20, key: "atm", covered: true),
+                    row("w2", day: 9, amount: -50, key: "atm")]
+        let list = PaymentList(rows: rows) { _ in true }
+        #expect(list.entries.map(\.id) == ["cov", "sum:atm"])
+        #expect(list.summed("atm")?.count == 2 && list.summed("atm")?.total == -100)
+    }
+
+    @Test func theRowsWords() {
+        #expect(SumWording.count(10) == "10×")
+        let english = SumWording.days(from: "2026-10-04", to: "2026-10-28", language: .english)
+        let german = SumWording.days(from: "2026-10-04", to: "2026-10-28", language: .german)
+        #expect(english.contains("4") && english.contains("28") && english.contains("Oct"), "\(english)")
+        #expect(german.contains("4.") && german.contains("28.") && german.contains("Okt"), "\(german)")
+        #expect(SumWording.days(from: "2026-10-04", to: "2026-10-04", language: .english).contains("4 Oct"))
+        #expect(SumWording.addUp(language: .german) == "Summieren" && SumWording.separate(language: .german) == "Auflösen")
+        #expect(SumWording.addUp(language: .english) == "Add up" && SumWording.separate(language: .english) == "Separate")
+    }
+}
+
+/// The swipe's numbers with two actions (Add up or Separate, then All): the row opens at 168 pt, a full swipe (All) needs
+/// 252 pt on an iPhone 17's row (378 pt), the actions share the room until then.
+struct RowSwipeTwoActionsTests {
+    private let width: CGFloat = 378
+
+    @Test func opensAtTwoActionsAndFullSwipesBeyondThem() {
+        #expect(RowSwipeRule.openWidth(count: 1) == 84 && RowSwipeRule.openWidth(count: 2) == 168)
+        #expect(RowSwipeRule.fullSwipe(width: width, count: 1) == width * 0.55, "one action as before")
+        #expect(RowSwipeRule.fullSwipe(width: width, count: 2) == 252)
+        #expect(RowSwipeRule.fullSwipe(width: 600, count: 2) == 330, "half the row on a wider one")
+        #expect(!RowSwipeRule.isArmed(offset: -251, width: width, count: 2))
+        #expect(RowSwipeRule.isArmed(offset: -252, width: width, count: 2))
+        #expect(RowSwipeRule.offset(translation: 30, wasOpen: true, width: width, count: 2) == -138)
+        #expect(RowSwipeRule.offset(translation: -900, wasOpen: true, width: width, count: 2) == -width)
+    }
+
+    @Test func lettingGo() {
+        #expect(RowSwipeRule.end(offset: -260, velocity: 0, width: width, count: 2) == .perform)
+        #expect(RowSwipeRule.end(offset: -200, velocity: 0, width: width, count: 2) == .open, "between open and full")
+        #expect(RowSwipeRule.end(offset: -90, velocity: 0, width: width, count: 2) == .open, "past half the two")
+        #expect(RowSwipeRule.end(offset: -80, velocity: 0, width: width, count: 2) == .closed)
+        #expect(RowSwipeRule.end(offset: -30, velocity: -600, width: width, count: 2) == .open, "a fling left")
+        #expect(RowSwipeRule.end(offset: -160, velocity: 600, width: width, count: 2) == .closed, "a fling right")
+    }
+
+    @Test func theActionsShareTheRoomUntilTheFullSwipe() {
+        #expect(RowSwipeRule.widths(revealed: 162, count: 2, armed: false) == [78, 78], "open: each drawn 78 pt")
+        #expect(RowSwipeRule.widths(revealed: 78, count: 1, armed: false) == [78])
+        #expect(RowSwipeRule.widths(revealed: 4, count: 2, armed: false) == [0, 0])
+        #expect(RowSwipeRule.widths(revealed: 250, count: 2, armed: true) == [0, 250], "the last takes it all")
+        #expect(RowSwipeRule.widths(revealed: 10, count: 0, armed: false).isEmpty)
+    }
+}
+
+/// The model on a real phone store: Penny three times in October's Groceries (one a refund), REWE once, the category's
+/// key in both languages, the menus, Delete data and the tour.
+@MainActor
+struct PaymentSumsStoreFlowTests {
+    private let auth = BackendAuth(token: nil)
+
+    private func phone(defaults: UserDefaults = PhoneTest.defaults()) async throws -> PhoneBackend {
+        let phone = try await PhoneCountingTests.backend(chosen: ["groceries", "eating-out"], defaults: defaults)
+        _ = try await phone.importFiles([PhoneTest.vrBank([
+            ("01.09.2026", "PENNY Markt GmbH München", "Purchase", -1000),
+            ("02.10.2026", "PENNY Markt Berlin", "Purchase", -2000),
+            ("03.10.2026", "PENNY Markt Berlin", "Purchase", -3000),
+            ("05.10.2026", "PENNY Markt Berlin", "Refund", 500),
+            ("04.10.2026", "Fiktiv Einzelladen", "Purchase", -1500),
+            ("06.10.2026", "REWE Markt GmbH", "Purchase", -1200)])], auth: auth)
+        return phone
+    }
+
+    private func store(_ phone: PhoneBackend, sums: PaymentSums = PaymentSums()) async -> DashboardStore {
+        let session = await PhoneTest.session(nil, transport: RoutedTransport())
+        let dashboard = DashboardStore(session: session, backend: phone, sums: sums)
+        await dashboard.reload()
+        return dashboard
+    }
+
+    private func groceries(_ dashboard: DashboardStore, name: String = "Groceries") -> PaymentList {
+        dashboard.paymentList(category: name, month: "2026-10", side: .expenses)
+    }
+
+    @Test func theCategorysKeyIsItsIdInBothLanguages() async throws {
+        let phone = try await phone()
+        try await phone.addCustom(named: "Climbing")
+        let dashboard = await store(phone)
+        #expect(dashboard.sumCategoryKey("Groceries") == "id:groceries")
+        let german = AppLanguage.$scoped.withValue(.german) { dashboard.sumCategoryKey("Lebensmittel") }
+        #expect(german == "id:groceries")
+        #expect(dashboard.sumCategoryKey("Climbing").hasPrefix("id:custom-"))
+        #expect(dashboard.sumCategoryKey("Refunds") == "name:Refunds", "the dashboard's own entries keep their name")
+    }
+
+    @Test func aLanguageSwitchKeepsThem() async throws {
+        let defaults = PhoneTest.defaults()
+        let phone = try await phone()
+        // Chosen while the app showed German: Lebensmittel's icon.
+        let german = await AppLanguage.$scoped.withValue(.german) { () async -> Bool in
+            let dashboard = await store(phone, sums: PaymentSums(defaults: defaults))
+            #expect(dashboard.category("Lebensmittel", side: .expenses) != nil)
+            dashboard.sums.toggleCategory(dashboard.sumCategoryKey("Lebensmittel"))
+            return groceries(dashboard, name: "Lebensmittel").entries.contains { if case .summed = $0 { true } else { false } }
+        }
+        #expect(german)
+        // The restart in English builds new stores; the choices come from the app's defaults.
+        let english = await store(phone, sums: PaymentSums(defaults: defaults))
+        let list = groceries(english)
+        let penny = try #require(list.entries.compactMap { if case let .summed(sum) = $0 { sum } else { nil } }.first)
+        #expect(penny.count == 3 && penny.total == -45, "−20 −30 +5")
+        #expect(english.sums.choices.sumsCategory(english.sumCategoryKey("Groceries")))
+    }
+
+    @Test func summingChangesNoTotalAndBuildsOncePerChange() async throws {
+        let dashboard = await store(try await phone())
+        let before = try #require(dashboard.dashboard)
+        let monthsBefore = dashboard.months(category: "Groceries", side: .expenses).map(\.total)
+        let single = groceries(dashboard)
+        #expect(single.canSum && single.entries.count == single.rows.count, "nothing summed by default")
+        #expect(dashboard.builtLists.lists.count == 1)
+        _ = groceries(dashboard)
+        #expect(dashboard.builtLists.revision == dashboard.revision && dashboard.builtLists.lists.count == 1)
+
+        dashboard.sums.setEverywhere(true)
+        let summed = groceries(dashboard)
+        #expect(summed.entries.count == single.rows.count - 2 && summed.rows.count == single.rows.count)
+        #expect(dashboard.builtLists.sums == dashboard.sums.revision, "built again after the change")
+        let after = try #require(dashboard.dashboard)
+        #expect(after.total.expense == before.total.expense && after.byMonth["2026-10"]?.expense == before.byMonth["2026-10"]?.expense)
+        #expect(dashboard.months(category: "Groceries", side: .expenses).map(\.total) == monthsBefore)
+    }
+
+    @Test func theMenusOfferWhatTheSwipeOffers() async throws {
+        let dashboard = await store(try await phone())
+        let list = groceries(dashboard)
+        let penny = try #require(list.entries.first { $0.title.contains("PENNY") })
+        #expect(dashboard.rowActions(for: penny) == [.changeCategory, .rename, .addUp, .allFromName])
+        let lone = try #require(list.entries.first { $0.title.contains("REWE") })
+        #expect(dashboard.rowActions(for: lone) == [.changeCategory, .rename], "a name alone here: no Add up")
+
+        let pennyRow = try #require(list.rows.first { $0.transaction.place.contains("PENNY") })
+        let pennyKey = try #require(PaymentList.nameKey(pennyRow.transaction))
+        dashboard.sums.setName(pennyKey, in: dashboard.sumCategoryKey("Groceries"), sums: true)
+        let summed = try #require(groceries(dashboard).entries.first { if case .summed = $0 { true } else { false } })
+        #expect(dashboard.rowActions(for: summed) == [.separate, .allFromName])
+        // A row outside a category's list keeps its menu (brief 47).
+        #expect(dashboard.rowActions(for: pennyRow.transaction) == [.changeCategory, .rename, .allFromName])
+    }
+
+    @Test func deleteDataClearsThem() async throws {
+        let defaults = PhoneTest.defaults()
+        let transport = RoutedTransport()
+        let session = await PhoneTest.session(nil, transport: transport)
+        let dashboard = DashboardStore(session: session, backend: nil, sums: PaymentSums(defaults: defaults))
+        let modes = ModeStore(session: session, dashboard: dashboard, client: APIClient(transport: transport),
+                              defaults: PhoneTest.defaults(), markerDefaults: PhoneTest.defaults(),
+                              storage: PhoneTest.storage(), makeEngine: { try PhoneTest.engine() })
+        await modes.start()
+        dashboard.sums.setEverywhere(true)
+        dashboard.sums.setName("merchant:penny", sums: false)
+        #expect(defaults.data(forKey: PaymentSums.key) != nil)
+        try await modes.deleteLocalData()
+        #expect(dashboard.sums.choices == SumChoices() && defaults.data(forKey: PaymentSums.key) == nil)
+    }
+
+    @Test func theTourHasItsOwnInMemory() async throws {
+        let defaults = PhoneTest.defaults()
+        let person = PaymentSums(defaults: defaults)
+        person.setName("merchant:vinted", in: "id:clothes", sums: true)
+        let kept = defaults.data(forKey: PaymentSums.key)
+        let standard = UserDefaults.standard.data(forKey: PaymentSums.key)
+
+        let parent = FileManager.default.temporaryDirectory.appending(path: "sums-tour-" + UUID().uuidString)
+        let world = try await TourWorld.make(in: parent, makeEngine: { try PhoneTest.engine() })
+        defer { world.delete() }
+        let tour = world.dashboard.sums
+        #expect(tour !== person && !tour.isKept && tour.choices == SumChoices(), "empty, in memory")
+        #expect(!world.dashboard.offersSums, "its steps point at single rows: no adding up in the tour")
+        tour.setEverywhere(true)
+        tour.toggleCategory("id:groceries")
+        #expect(person.choices.pairs["id:clothes"]?["merchant:vinted"] == true && !person.choices.everywhere)
+        #expect(defaults.data(forKey: PaymentSums.key) == kept)
+        #expect(UserDefaults.standard.data(forKey: PaymentSums.key) == standard, "the app's own defaults untouched")
+    }
+}

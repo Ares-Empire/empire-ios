@@ -44,12 +44,20 @@ private struct MinimumTapArea: ViewModifier {
 
 /// A screen's header: Aresium's mark or the back arrow, the title, and the gear; in red mode the X before the gear.
 /// Light and dark are chosen in Settings → General → Appearance (brief 42: the sun button that switched them is gone).
+/// A category's payments put the icon of adding up first on the right (brief 53, `SumCategoryButton`).
 struct ScreenHeader: View {
+    /// The category's icon of adding up: what it shows, and its tap.
+    struct Sums {
+        let on: Bool
+        let toggle: () -> Void
+    }
+
     let title: String
     var subtitle: String? = nil
     var category: Category? = nil
     let palette: Palette
     var back: (() -> Void)? = nil
+    var sums: Sums? = nil
     /// Red mode's X, the way out of it (red is entered through the band).
     let leaveRed: () -> Void
     let openSettings: () -> Void
@@ -75,6 +83,10 @@ struct ScreenHeader: View {
             // Outside red mode the gear stands alone, as wide as the mark or arrow on the left, so the title sits in the
             // middle; in red mode the X keeps its place before the gear.
             HStack(spacing: 8) {
+                if let sums {
+                    SumCategoryButton(on: sums.on, palette: palette, action: sums.toggle)
+                        .transition(.opacity)
+                }
                 if palette.red {
                     IconButton(symbol: "xmark", label: String(localized: "Exit Aresium mode"), palette: palette,
                                action: leaveRed)
