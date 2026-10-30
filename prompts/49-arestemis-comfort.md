@@ -1,6 +1,6 @@
 # 49: Arestemis comfort before its first TestFlight build (Patrik's list nos. 13–19)
 
-Status: draft
+Status: merged 2026-10-30 (91 tests; every changed screen checked in both languages and looks; Claude: undo bar before the counts reload, the header Save in the accent)
 Branch: `codex/49-arestemis-comfort` · Worktree: `../empire-ios-49-arestemis-comfort` · Model: `gpt-6.1-sol`, effort `high`
 
 ## Goal
