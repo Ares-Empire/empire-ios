@@ -25,6 +25,9 @@ a personal finance dashboard). Claude plans the work, writes your brief and chec
   in its `build/`); never commit, push, or touch git config (Claude commits); install nothing (no Homebrew,
   no runtimes, no global packages); no network except what the brief allows; never touch `~/empire-ios`
   itself, other repos, the Keychain of the Mac, or the Apple account settings in Xcode.
+- **Waiting for a long command:** run it in the foreground with a long timeout, or wait on its process id
+  (`wait $pid`, `while kill -0 $pid; do sleep 3; done`). Never `until ! pgrep -f "<text>"`: `pgrep -f` matches the
+  waiting loop's own command line, so it never ends (2026-10-30: nine such loops were left running after a brief).
 - Do not edit `*.xcodeproj/project.pbxproj` unless the brief says so. The project uses folder-synchronized
   groups: a new Swift file in the right folder is picked up without it.
 - Keep logic (models, API client, decoding, formatting) out of the views and give it unit tests.
