@@ -282,7 +282,8 @@ struct TourScreen<Header: View>: View {
     var body: some View {
         Group {
             if tour.phase == .running, let world = tour.world {
-                DashboardStack(store: world.dashboard, palette: palette, place: place, band: band) { route in
+                DashboardStack(store: world.dashboard, palette: palette, place: place, band: band,
+                               backSwipe: !tour.holdsTheScreen) { route in
                     header(route) { tour.openSettings() }
                 } root: {
                     StartScreen(store: world.dashboard, imports: world.imports, palette: palette,
