@@ -8,12 +8,14 @@ import SwiftUI
 // MARK: - Add cash
 
 /// Add cash (and Edit on an entry's page): Spent / Received, the amount, the day, what, the category and, for Spent,
-/// Paid from; Save at the bottom.
+/// Paid from; Save at the bottom. The amount's number pad has Done above it; What's Return closes the keyboard (brief 40).
 struct CashEntryView: View {
     @Bindable var model: CashEntryModel
     let save: () async -> Void
     @FocusState private var typing: Box?
-    private enum Box: Hashable { case amount, what }
+    private enum Box: String, Hashable { case amount, what }
+    /// Where Done above the number pad is, so Save stays clear of it.
+    @State private var doneTop: CGFloat?
     #if DEBUG
     /// Screenshots: `-openPaidFrom` opens Paid from at once.
     @State private var choosingSource = LaunchArguments.current.contains("-openPaidFrom")
@@ -61,6 +63,7 @@ struct CashEntryView: View {
                                                                                                    : "From whom or what for")
                                         .foregroundStyle(Ink.muted))
                                 .textInputAutocapitalization(.sentences)
+                                .submitLabel(.done)
                                 .accessibilityLabel(Text("What"))
                                 .focused($typing, equals: .what)
                                 .fieldBox { typing = .what }
@@ -97,8 +100,21 @@ struct CashEntryView: View {
             .scrollIndicators(.hidden)
             .scrollDismissesKeyboard(.interactively)
             bottom.overlay(alignment: .top) { Rectangle().fill(Ink.line).frame(height: 1) }
+                .clearOfKeyboardDone(doneTop)
         }
+        .numberPadDone(typing == .amount, top: $doneTop) { typing = nil }
         .task(id: model.day) { await model.loadSources() }
+        #if DEBUG
+        .task {
+            // Screenshots: `-typeIn amount|what` puts the cursor in that field once the window shows.
+            // Several, comma-separated, move on every 2 s (as Return does).
+            let fields = (LaunchArguments.value("-typeIn") ?? "").split(separator: ",").compactMap { Box(rawValue: String($0)) }
+            for (index, field) in fields.enumerated() {
+                try? await Task.sleep(for: .seconds(index == 0 ? 1 : 2))
+                typing = field
+            }
+        }
+        #endif
         .navigationDestination(isPresented: $choosingSource) {
             PaidFromList(sources: { model.sources }, day: model.day, selected: model.paidFrom) { model.paidFrom = $0 }
         }
@@ -124,8 +140,9 @@ struct CashEntryView: View {
     }
 }
 
-/// Add cash in a sheet of its own (the import menu, the Cash page), with Cancel. It closes only with Cancel or Save, so
-/// typed values are not lost by a swipe.
+/// Add cash in a sheet of its own (the import menu, the Cash page), with Cancel. While something is typed or changed it
+/// closes only with Save or with Cancel, which then asks first ("Discard this entry?", brief 40), so nothing typed is
+/// lost by a swipe or a tap.
 struct CashEntrySheet: View {
     let model: CashEntryModel
     /// After Save: the entry kept (the owner builds the dashboard again).
@@ -143,13 +160,25 @@ struct CashEntrySheet: View {
             .navigationTitle(model.editing == nil ? Text("Add cash") : Text("Edit entry"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .cancellationAction) {
+                    DiscardingCancel(asks: model.hasChanges,
+                                     question: model.editing == nil ? Text("Discard this entry?") : Text("Discard your changes?")) {
+                        dismiss()
+                    }
+                    .disabled(model.isSaving)
+                }
             }
         }
         .tint(Ink.primary)
         .presentationBackground(Ink.background)
-        .interactiveDismissDisabled(!model.amountText.isEmpty || !model.what.isEmpty)
-        .task { await model.load() }
+        .interactiveDismissDisabled(model.hasChanges)
+        .task {
+            await model.load()
+            #if DEBUG
+            // Screenshots: `-cashAmount <text>` types an amount, as if typed (Cancel then asks).
+            if let amount = LaunchArguments.value("-cashAmount"), model.amountText.isEmpty { model.amountText = amount }
+            #endif
+        }
     }
 }
 

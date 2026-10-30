@@ -1,6 +1,6 @@
 # 40: Aresium's windows: a way to answer later, a way back, Done on the number pad, no silent discards, a sign while it works
 
-Status: running
+Status: merged 2026-10-30 (Aresium 391 tests + 2 opt-in timing; Later, Back, Done on the number pad, Cancel that asks, the busy sign)
 Branch: `claude/40-sheets` · Worktree: `../empire-ios-40-sheets` · Built by: a Claude agent (flow and the feel)
 
 ## Goal

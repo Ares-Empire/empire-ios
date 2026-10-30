@@ -5,7 +5,9 @@ import Observation
 /// what a CSV is, so they are never asked about columns first). The window shows the first payments as the app would
 /// show them, read the engine's best way (`FileReading`). Yes saves that reading's layout and imports the file; No shows
 /// the next reading, with a short line on what changed; after the last one, No opens the column check
-/// (`ColumnCheckModel`). Cancel, at every step, leaves the file out. Only a layout the person confirmed is saved.
+/// (`ColumnCheckModel`). Back (brief 40) undoes a No: the reading before, or from the column check the last reading (the
+/// column check keeps its answers). Cancel, at every step, leaves the file out. Only a layout the person confirmed is
+/// saved.
 @MainActor @Observable
 final class FileCheckModel {
     enum Step: Equatable {
@@ -77,6 +79,26 @@ final class FileCheckModel {
         guard case let .reading(index) = step, !isSaving else { return }
         saveProblem = nil
         if readings.indices.contains(index + 1) { step = .reading(index + 1) } else { showColumns() }
+    }
+
+    /// There is a step to go back to: a reading after the first, or the column check after the readings (not when it
+    /// came at once because there were none).
+    var canGoBack: Bool {
+        switch step {
+        case .reading(let index): index > 0
+        case .columns: !readings.isEmpty
+        }
+    }
+
+    /// Back: the reading before this one, with its line; from the column check the last reading. The column check keeps
+    /// its answers for when No leads there again.
+    func back() {
+        guard canGoBack, !isSaving, columns?.isSaving != true else { return }
+        saveProblem = nil
+        switch step {
+        case .reading(let index): step = .reading(index - 1)
+        case .columns: step = .reading(readings.count - 1)
+        }
     }
 
     /// Cancel: the file is not imported.
