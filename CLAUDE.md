@@ -181,7 +181,8 @@ it, no restart.
   `preferredColorScheme`: SwiftUI fixes a sheet's look when the sheet opens, so a sheet open during a switch stayed in
   the old look (seen 2026-10-25). A mode with its own colours holds the window in one look with `holdsColorScheme(_:)`
   (Aresium's red mode: dark); `\.appearanceScheme` is the look to return to (the choice, or the iPhone's own, read
-  from the screen, which the window's look does not change).
+  from the window's scene, which the window's look does not change; not from the screen, which still held the old look
+  when the iPhone switched while an app was open, brief 36).
 - **Widgets follow the home screen** (light or dark like the widgets around them), not the app's choice; Aresium's
   also shows its red mode (`WidgetSnapshotStore.redMode`, `AresiumWidgetLook`).
 - **Aresium:** light or dark is the shared appearance; the sun button in its header switches it (writes the choice);
@@ -206,7 +207,7 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
 
 1. **TestFlight** (Apple approved 2026-10-29): **Aresium done**: 0.1 (1) uploaded with `scripts/testflight.sh` and installed
    on Patrik's iPhone through internal TestFlight (group in App Store Connect → Aresium → TestFlight → Internal
-   Testing). Next Aresium upload: build 2. The other four: an App Store Connect record each, then the script. Original
+   Testing). Build 2 (2026-10-30): the fixes of Patrik's first test (briefs 34–37). The other four: an App Store Connect record each, then the script. Original
    list: set the paid team (project level, all five projects; done); the App Groups
    `group.de.ares-empire.aresium` + `group.de.ares-empire.shared` registered for the bundle ids, the widgets' too
    (`de.ares-empire.aresium.widget`, `de.ares-empire.aresus.widget`) (Xcode's automatic
@@ -479,9 +480,18 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   Support/Aresium/local/ledger.store`, file protection complete (`PhoneLedger`, `PhoneStorage`): accounts, payments
   (unique by account, source and `externalId`; who set the category), chosen categories, learned merchants, the CSV
   layouts the person confirmed, receipts (schema version 2, brief 31), the receipts' direction, kind, `paidFrom` and the
-  shop as read plus the corrected shop names (schema version 3, brief 33); older stores move on by lightweight stages,
+  shop as read plus the corrected shop names (schema version 3, brief 33), one's own categories' icon and colour (schema
+  version 4, brief 36; `LedgerSchemaCurrent` names the version the app opens, tests use it too); older stores move on by lightweight stages,
   one after the other (`LedgerMigrationPlan`; a model change always adds the next version, never edits one in place;
-  `ReceiptBookTests` opens a version 1 store, `ReceiptCorrectionTests` a version 2 one). **Moving over** (builds before 22 kept one store per account in `Aresium/<account
+  `ReceiptBookTests` opens a version 1 store, `ReceiptCorrectionTests` a version 2 one, `OwnCategoryLookTests` a version 3
+  one). **Own categories' looks** (brief 36, `Model/OwnCategoryLook.swift`): an icon from a word of the name (English and
+  German, matched on word beginnings), else the next unused of a spare set, and a colour no default category has; stored
+  with the category when it is made, never two alike while icons are left. **Counting** (briefs 35, 37): own transfers
+  never move with a shop's other payments; the same bank payment from two file formats is matched by account, day,
+  amount and currency, one to one (`PhoneLedger.add`); every way a payment could count twice has a test
+  (`PhoneCountingTests`, `PhoneConversionTests`). **The picker** sorts once the taps stop (`CategoryPickerModel.settle`,
+  half a second) or when it closes; learned merchants are rebuilt from corrections when the bundled engine changes
+  (`PhoneBackend.rebuildLearnedKeys`). **Moving over** (builds before 22 kept one store per account in `Aresium/<account
   id>/`): when there is no `local/` store, the most recently changed older store (its newest file) is moved (never
   copied) to `local/` at the first open; with several, the others stay untouched where they are (logged, category
   `storage`). **Lifecycle:** the data belongs to the iPhone, not to a login: logging in or out, leaving Aresium and
@@ -624,7 +634,8 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   question; `-openOriginal` opens the bank's own row and shows the page's end; an own transfer: `-sampleCategory "Own
   transfers" -sampleMonth 2026-02 -samplePhoneTransaction PayPal`, the sample's made-up PayPal bank line),
   `-sampleImportResult` (the result
-  line); the lock in memory: `-sampleLock faceID|code|both` (the code is 123456), `-sampleUnlocked` (open at launch),
+  line); `-sampleOwn <names>` (own categories in the sample), `-openCategories` (Settings → Categories),
+  `-sampleRecategorise` (the change sheet, also in phone mode; `-samplePick <category>` picks one); the lock in memory: `-sampleLock faceID|code|both` (the code is 123456), `-sampleUnlocked` (open at launch),
   `-sampleWrongCodes <n>`, `-openCode` (Settings → Lock → Own code), `-openCodeEntry set|change|remove`. Tests:
   `PhoneModeTests`, `PhoneBackendTests`, `PhoneStoreTests` (with the moving over), `PhoneEngineTests`,
   `PhoneLookTests`, `LockTests`, `SupportContactTests`, `CategoryRouteTests`, `FileCheckTests`, `BankFormatTests`,

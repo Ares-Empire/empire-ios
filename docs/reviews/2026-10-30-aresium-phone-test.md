@@ -47,3 +47,14 @@ on his files with the engine (numbers below are from that run, every default cat
    Einstellungen → Darstellung says "Wie das iPhone", and the app is light while the iPhone is.
 
 **Order:** 1, then 2 (engine), then 3; 4–6 together (the look); then build 2 to TestFlight.
+
+## Fixed in build 2 (2026-10-30)
+
+- 1 and every other way of counting twice: brief 35 (the follow-up never moves own transfers; a test per path), brief 37
+  (the same bank payment from two file formats), brief 34 (PayPal's withdrawals to the bank were counted as spending:
+  found in Patrik's data, now own transfers; currency conversions too).
+- 2: brief 34 (aresium e76fadd): on Patrik's files Not sorted 400 → 280; Vinted 91 → 3 (the 3 are sales); every Penny
+  (card and PayPal) Groceries under one key; PayPal's own entries no longer keyed by the person's email. What stays
+  is mostly people and services only the person can name: one correction each now.
+- 3: brief 35. 4–6: brief 36. 7: brief 36 found a real bug (an open app stayed one light/dark switch behind) and fixed
+  it in `AppRoot`, for every app.
