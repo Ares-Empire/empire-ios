@@ -128,7 +128,7 @@ private struct TimingViews: View {
     var body: some View {
         ZStack {
             StartScreen(store: dashboard, imports: imports, palette: palette,
-                        current: .constant(true), side: .constant(.expenses), graph: .constant(false),
+                        current: .constant(true), side: .constant(.expenses), graph: false,
                         band: AresiumBand(palette: palette, width: 402, hidden: false) { _ in }) { _ in }
             NavigationStack { CategoryPickerScreen(model: picker) }
         }

@@ -2,9 +2,9 @@ import Foundation
 import Testing
 @testable import Aresium
 
-/// The tour (briefs 24 and 25): its twelve steps go on when the person does the thing or taps Next, the lock and contact
-/// steps only point and go on, and it runs on a made-up store of its own that is deleted when it ends, at any step,
-/// without touching the person's store.
+/// The tour (briefs 24, 25 and 42): its twelve steps go on when the person does the thing or taps Next, the graph, lock
+/// and contact steps only point and go on, the graph's step is left out while the graph is hidden, and it runs on a
+/// made-up store of its own that is deleted when it ends, at any step, without touching the person's store.
 @MainActor
 struct TourTests {
     /// 27 Oct 2026, noon: the made-up months end in October.
@@ -18,8 +18,11 @@ struct TourTests {
         return url
     }
 
-    private static func model(in parent: URL) -> TourModel {
-        TourModel { try await TourWorld.make(in: parent, now: now, makeEngine: { try PhoneTest.engine() }) }
+    /// The graph shown (the default), unless a test says otherwise; never the simulator's own setting.
+    private static func model(in parent: URL, showsGraph: Bool = true) -> TourModel {
+        TourModel(showsGraph: showsGraph) {
+            try await TourWorld.make(in: parent, now: now, makeEngine: { try PhoneTest.engine() })
+        }
     }
 
     /// The tour's folders in `parent`.
@@ -58,14 +61,17 @@ struct TourTests {
         place.current = false                                  // Overview
         tour.update(place)
         #expect(tour.step == .graph)
-        #expect(tour.target == .graph)
+        #expect(tour.target == .graph, "the graph itself, on the start screen")
+        #expect(tour.holdsTheScreen)
         #expect(!tour.place.current, "Overview stays for the graph")
+        #expect(tour.number == 4 && tour.count == 12)
 
         place = tour.place
-        place.graph = true
+        place.side = .expenses                                  // the person moves the page: the step asks nothing
         tour.update(place)
+        #expect(tour.step == .graph, "only Next goes on from the graph")
+        tour.next()
         #expect(tour.step == .category)
-        #expect(tour.place.graph, "the graph stays open")
         #expect(tour.place.current && tour.place.side == .expenses, "back on this month's expenses")
         let groceries = try #require(world.firstCategory)
         #expect(tour.target == .category(groceries))
@@ -164,6 +170,40 @@ struct TourTests {
         #expect(seen == TourStep.allCases)
         #expect(seen.count == 12)
         #expect(Self.tourFolders(in: parent).isEmpty)
+    }
+
+    /// With the graph hidden in Settings (brief 42), the tour has no graph step: eleven steps, counted 1 to 11 on the
+    /// card, Overview followed by the category; a DEBUG start at the graph's step starts at the category.
+    @Test func withTheGraphHiddenTheGraphStepIsLeftOut() async throws {
+        #expect(TourStep.steps(showingGraph: true) == TourStep.allCases)
+        #expect(TourStep.steps(showingGraph: false) == TourStep.allCases.filter { $0 != .graph })
+
+        let tour = Self.model(in: Self.parent(), showsGraph: false)
+        await tour.start()
+        #expect(tour.count == 11)
+        var numbers: [Int] = []
+        var seen: [TourStep] = []
+        while tour.phase == .running {
+            numbers.append(tour.number)
+            seen.append(tour.step)
+            #expect(tour.target != .graph)
+            if tour.step == .overview { #expect(tour.nextStep == .category) }
+            if tour.step == .done { #expect(tour.nextStep == nil) }
+            tour.next()
+        }
+        #expect(numbers == Array(1...11))
+        #expect(!seen.contains(.graph) && seen.first == .welcome && seen.last == .done)
+
+        let started = Self.model(in: Self.parent(), showsGraph: false)
+        await started.start(at: .graph)
+        #expect(started.step == .category && started.number == 4)
+        started.end()
+    }
+
+    /// The graph's card says what the graph shows and where to hide it, in both languages.
+    @Test func theGraphStepSaysWhatTheGraphShows() {
+        #expect(TourStep.graph.text(.english) == "The trend by day or by month. You can hide the graph in Settings.")
+        #expect(TourStep.graph.text(.german) == "Der Verlauf nach Tagen oder Monaten. In den Einstellungen kannst du das Diagramm ausblenden.")
     }
 
     /// Ending at any step: the person's store is as it was, the tour's folder is gone.
