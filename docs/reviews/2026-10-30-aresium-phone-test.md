@@ -113,3 +113,26 @@ Patrik, after testing build 3 ("fantastic work"), asked for:
     reminder that names no bank or service, and a month review. *Built:* briefs 45 (local notifications, Codex) and 46
     (Settings → Messages, a one-time offer after the first import). Also: red mode's expense graph line was nearly
     black on the red; now light.
+
+## Fourth round: after build 4 (2026-10-30 night)
+
+Patrik: "very nice work"; new findings. **A** Settings' switches unreadable in dark (white track under a white knob)
+→ brief 47. **B** the "Aresium" cover flashes when changing settings → brief 47. **C** renaming hard to find → brief 47:
+tap the page's name or a pen (Patrik asked for a double tap; Claude chose a single tap on the page and no double tap on
+rows, which would delay every tap: Patrik agreed), the category's chip or pen opens the change window, the Name row,
+the big Change button and the reason sentence go (the sentence moves into the change window). The long press's last
+entry ("All from <long bank name>") is too long to read → brief 47. **E** the back swipe needs half the screen on lists
+with the row swipe → brief 47 measures against Apple's Settings. **È** one shop under changing names (Vinted MGP →
+Vinted UAB, dm, Apple, cut-off names, names in another order, card fee text) → brief 48 (engine), then the app's wiring.
+**Gaps after build 4** (Patrik: fix) → brief 47.
+
+**D, summing payments of one name inside a list** (Claude's design with Patrik's additions, agreed 2026-10-30):
+- Swipe left on a payment: **Zusammenfassen** (this name in this category, every month, remembered) and **Alle** (the
+  name's page). A summed row: the name, a small stack mark with the count ("10×"), the total; a tap opens it in place
+  (the payments below), a tap closes it; its swipe offers **Auflösen** (back to single payments) instead.
+- **All names of one category at once:** a small stack icon at the top of the category's payment list, showing whether
+  it is on; a tap sums or unsums every name there.
+- **Every category:** Settings → Dashboard → a switch to sum every name in every category automatically (the icons then
+  show on; tapping one turns it off for that category only).
+- **One name in every category:** a switch on the name's page.
+- The more specific choice wins (a name unsummed in one category stays single even when everything is summed).

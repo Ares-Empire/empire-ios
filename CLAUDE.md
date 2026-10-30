@@ -222,8 +222,9 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
    on Patrik's iPhone through internal TestFlight (group in App Store Connect → Aresium → TestFlight → Internal
    Testing). Build 2 (2026-10-30): the fixes of Patrik's first test (briefs 34–37). Build 3: the picker's scroll, the
    back swipe and the comfort items (briefs 38–41). Build 4 (2026-10-30 evening): own names and the name's page with the
-   left swipe, the graph as a setting, Aresium's own messages (briefs 42–46). The other four: first their approved comfort items (15 below), then
-   an App Store Connect record each, then the script. Original
+   left swipe, the graph as a setting, Aresium's own messages (briefs 42–46). The other four: first their approved comfort items (15 below, briefs 49–52), then
+   the script. Their App Store Connect records exist (Patrik, 2026-10-30: Arestemis, Aresus, Arestoteles, Ares Empire),
+   each with an internal group that gets every build automatically (Arestemis's checked: Patrik as tester). Original
    list: set the paid team (project level, all five projects; done); the App Groups
    `group.de.ares-empire.aresium` + `group.de.ares-empire.shared` registered for the bundle ids, the widgets' too
    (`de.ares-empire.aresium.widget`, `de.ares-empire.aresus.widget`) (Xcode's automatic
@@ -248,8 +249,11 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
    data. **No account needed** (brief 22, 2026-10-27): it opens without a login on the phone's one store, with an
    optional lock (Face ID and/or an own code); the login is only for Patrik's server mode. Before it opens (plan part 7): the privacy policy's Aresium section, the App Store information, external
    TestFlight, then `open` in the hub catalog.
-6. **Push, once Apple approves** (`ares-empire/docs/PUSH.md` → Operating): create the APNs key (.p8) in the developer
-   portal, put it on the server, set `APNS_KEY_ID`/`APNS_TEAM_ID`, restart `empire-push`; enable the Push Notifications
+6. **Push** (`ares-empire/docs/PUSH.md` → Operating): **the APNs key is live since 2026-10-30**: key `22BDWZ79KS` (made by
+   Patrik, one key for all apps), on the server as `/etc/empire-push/AuthKey_22BDWZ79KS.p8` (empire-push, 600), settings
+   in `/root/ares-empire/push/.env` (600); `/health` says `"dry_run": false`. A copy is in the Mac's Keychain (generic
+   password "Ares Empire APNs key (base64 of AuthKey_22BDWZ79KS.p8)", restore with `security find-generic-password -s
+   '<that name>' -w | base64 -d`); Apple never offers the file again. Left: enable the Push Notifications
    capability for Arestemis, Aresus and the Empire app, Time Sensitive for Arestemis and Aresus (entitlements are
    already in the projects). Then check on the phone (the Empire app: "<App> is ready" for a member's account, its tap
    showing the ring) and retire Telegram: Arestemis (`TELEGRAM_*` in /root/Arestemis/.env) and Aresync (`TG_*` in each
@@ -301,9 +305,10 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   Signing is automatic: Xcode made the Apple Development certificate on this Mac, and the App Store builds use Apple's
   cloud-managed distribution certificate (nothing to keep on the Mac). Patrik's iPhone 17 (Developer Mode on) is
   registered: Apple issues no profile while a team has no device,
-  so `xcodebuild archive` failed until it was. Aresium (app, widget, both App Groups, the shared Keychain group) is
-  registered with Apple; the other four register the same way on their first device build or archive
-  (`-allowProvisioningUpdates`). Uploads: `scripts/testflight.sh <App>` (README → Releasing).
+  so `xcodebuild archive` failed until it was. All five apps (and both widgets) are registered with Apple: the other four by
+  a signing-only archive on 2026-10-30 (`scripts/testflight.sh <App> --export-only`, `-allowProvisioningUpdates`), so
+  App Store Connect's New App could offer their bundle ids; the signed Arestemis carries `aps-environment` production
+  and the time-sensitive entitlement. Uploads: `scripts/testflight.sh <App>` (README → Releasing).
 - Xcode project `Aresium/Aresium.xcodeproj` (2026-10-23): app + tests, folder-synchronized groups (new Swift
   files need no `project.pbxproj` edits), bundle id `de.ares-empire.aresium`, iOS 26+. Signing team: `WQN8SHAH9B`
   (project level). Launch argument `-sampleData` shows the server's bundled sample (`-scrollToEnd`: the start

@@ -7,6 +7,16 @@
     "%@ %lld" : {
       "shouldTranslate" : false
     },
+    "%@ isn't on this iPhone." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ist nicht auf diesem iPhone."
+          }
+        }
+      }
+    },
     "%@, %@" : {
       "shouldTranslate" : false
     },
@@ -488,6 +498,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "OK"
+          }
+        }
+      }
+    },
+    "Open %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ öffnen"
           }
         }
       }

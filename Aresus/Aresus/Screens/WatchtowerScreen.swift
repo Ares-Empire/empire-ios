@@ -8,7 +8,6 @@ struct WatchtowerTab: View {
     let store: AresusStore
     @Bindable var navigation: AresusNavigation
     let marks: [String: UIImage]
-    let logOut: () -> Void
 
     var body: some View {
         NavigationStack(path: $navigation.provincePath) {
@@ -18,10 +17,6 @@ struct WatchtowerTab: View {
             .navigationDestination(for: String.self) { slug in
                 ProvinceDetailScreen(slug: slug, store: store, mark: marks[slug])
             }
-        }
-        .sheet(isPresented: $navigation.showsSettings) {
-            SettingsScreen(app: SettingsApp(name: "Aresus", accent: .aresus, sendsNotifications: true),
-                           session: store.session, sample: store.isSample, logOut: logOut)
         }
     }
 }

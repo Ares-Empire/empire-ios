@@ -1149,6 +1149,16 @@
         }
       }
     },
+    "Undo" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Widerrufen"
+          }
+        }
+      }
+    },
     "Version" : {
       "localizations" : {
         "de" : {
