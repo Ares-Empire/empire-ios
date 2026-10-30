@@ -16,7 +16,10 @@ struct SystemPushPermissions: PushPermissions {
     }
 
     func requestAuthorization(options: UNAuthorizationOptions) async throws -> Bool {
-        try await UNUserNotificationCenter.current().requestAuthorization(options: options)
+        // iOS's question over the app: no app switcher cover behind it (brief 47).
+        SystemPrompt.begin()
+        defer { SystemPrompt.end() }
+        return try await UNUserNotificationCenter.current().requestAuthorization(options: options)
     }
 
     func setCategories(_ categories: Set<UNNotificationCategory>) {

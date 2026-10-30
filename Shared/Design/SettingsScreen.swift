@@ -129,6 +129,8 @@ struct SettingsScreen<AppSection: View, AppHelp: View>: View {
         }
         .inAppBrowser(browser)
         .tint(Ink.primary)
+        // Every switch inside, the app's own sections and pages too: on in a colour, never ink (brief 47).
+        .toggleStyle(EmpireSwitchStyle(accent: app.accent))
         .presentationDetents([.large])
         .presentationBackground(Ink.background)
         .sheet(isPresented: $showsSupport) {

@@ -1,15 +1,29 @@
 import SwiftUI
 
+/// A payment's page (brief 28; briefs 44 and 47 for its name). The name is its title and, in phone mode with own names
+/// on, edited where it stands: a tap on it or on the pen beside it turns it into a field with the name selected and the
+/// keyboard up (`PaymentRenameModel`, `RenamePlan`); Return, Done or the bar's Save saves, with "Also the other payments
+/// from <bank name>?" when the shop has more; the bar's Cancel leaves the name as it was (asking first once something
+/// was typed); "Use the bank's name" under the field while an own name shows. The category's chip (and the pen beside
+/// it, and an extra category's chip) opens the change window, which says why the payment is in its category.
 struct TransactionDetailSheet: View {
     @State var store: TransactionDetailStore
     let palette: Palette
     /// The name's page this page was opened from (its "All from" line would lead back there, so it shows none).
     var namePage: String? = nil
+    /// The row's long press chose Rename: the page opens with the name's field ready (brief 47).
+    var startsRenaming = false
     /// "All from <name>" (brief 44): the list this page was opened from closes it and shows the name's page on the
     /// dashboard's stack. Nil: no line (a page opened where no name's page can be shown).
     var openName: ((DashboardRoute) -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dynamicTypeSize) private var typeSize
+    /// The name's field while it is open (brief 47).
+    @State private var nameEditor: PaymentRenameModel?
+    @State private var nameSelection: TextSelection?
+    /// The field selects all of the name once it has the keyboard (a selection set before that is dropped).
+    @State private var selectsName = false
+    @FocusState private var nameFocused: Bool
     #if DEBUG
     /// Screenshots: `-openOriginal` opens the bank's own row at once and shows the page's end.
     @State private var originalExpanded = LaunchArguments.current.contains("-openOriginal")
@@ -39,20 +53,35 @@ struct TransactionDetailSheet: View {
             .background { Wall(palette: palette) }
             .tourSpotlight()
             .navigationTitle("Payment").navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() } }
-            }
+            .toolbar { toolbar }
             .sheet(isPresented: $store.showsRecategorisation) {
                 RecategoriseSheet(store: store, palette: palette)
-            }
-            .sheet(isPresented: $store.showsRename) {
-                RenameSheet(store: store, palette: palette)
             }
         }
         .tourCard()
         .font(AppFont.text(14)).foregroundStyle(palette.ink).tint(palette.balance)
+        // While the name is edited the page closes only with Save or Cancel, so nothing typed is lost by a swipe.
+        .interactiveDismissDisabled(nameEditor != nil && (nameEditor?.hasChanges == true || store.isSaving
+                                                          || nameEditor?.asks == true))
+        .alert(renameQuestionTitle, isPresented: renameQuestionShown, presenting: nameEditor?.question) { question in
+            Button("All \(question.allCount)") { Task { await nameEditor?.answer(all: true) } }
+            Button("Only this one", role: .cancel) { Task { await nameEditor?.answer(all: false) } }
+        } message: { question in
+            Text("With All, new payments from \(question.bankName) get the name too.")
+        }
+        .alert(bankNameTitle, isPresented: bankNameShown, presenting: nameEditor?.bankNameQuestion) { question in
+            Button("All \(question.count)") { Task { await nameEditor?.answerBankName(.all) } }
+            if question.onlyThis != nil {
+                Button("Only this one") { Task { await nameEditor?.answerBankName(.onlyThis) } }
+            }
+            Button("Cancel", role: .cancel) { Task { await nameEditor?.answerBankName(.cancel) } }
+        } message: { question in
+            Text("“\(question.shopName)” is your name for every payment from \(question.bankName).")
+        }
+        .onChange(of: nameEditor?.isDone == true) { _, done in if done { endRename() } }
         .task {
             if store.detail == nil { await store.load() }
+            if startsRenaming { beginRename() }
             // Sample-only routing for repeatable simulator screenshots, like the
             // existing -sampleCategory / -sampleMonth launch arguments.
             #if DEBUG
@@ -78,9 +107,12 @@ struct TransactionDetailSheet: View {
                 await store.editReceipt()
                 store.receiptEditor?.debugType(total: LaunchArguments.value("-editReceiptTotal"))
             }
-            // Phone sample: Rename at once (`-openRename`; `-renameText`, `-renameSave` in the window), or the
-            // "All from" line tapped (`-openAllFrom`).
-            if arguments.contains("-openRename") { store.beginRename() }
+            // Phone sample: the name's field open at once (`-openRename`; `-renameText`, `-renameSave`,
+            // `-renameBankName` in it), or the "All from" line tapped (`-openAllFrom`).
+            if arguments.contains("-openRename") {
+                beginRename()
+                await debugFillName()
+            }
             if arguments.contains("-openAllFrom"), let openName, let line = store.nameRoute(namePage: namePage) {
                 try? await Task.sleep(for: .milliseconds(600))
                 openName(line.route)
@@ -98,17 +130,197 @@ struct TransactionDetailSheet: View {
         #endif
     }
 
-    @ViewBuilder private func record(_ detail: TransactionDetail) -> some View {
-        let page = PaymentPage(detail)
-        VStack(alignment: .leading, spacing: 7) {
+    // MARK: the bar
+
+    @ToolbarContentBuilder private var toolbar: some ToolbarContent {
+        if let editor = nameEditor {
+            // While the name is edited: Cancel and Save, as in every iOS edit (the page's Done would leave the edit).
+            ToolbarItem(placement: .cancellationAction) {
+                DiscardingCancel(asks: editor.hasChanges, question: Text("Discard your changes?")) { endRename() }
+                    .disabled(store.isSaving)
+            }
+            ToolbarItem(placement: .confirmationAction) {
+                // The spinner in the word's place while it saves; the word muted by hand while it cannot save (the
+                // bar's glass button shows no difference by itself).
+                Button { Task { await editor.save() } } label: {
+                    if editor.working == .save {
+                        ProgressView().tint(palette.ink)
+                    } else {
+                        Text("Save").foregroundStyle(editor.canSave ? palette.ink : palette.muted)
+                    }
+                }
+                .disabled(!editor.canSave)
+                .whileWorking(store.isSaving, tapped: editor.working == .save)
+                .accessibilityIdentifier("saveName")
+            }
+        } else {
+            ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() } }
+        }
+    }
+
+    // MARK: the name (brief 47)
+
+    /// The name's field opens with the name selected and the keyboard up.
+    private func beginRename() {
+        guard store.offersRename, !store.isSaving, nameEditor == nil else { return }
+        nameEditor = PaymentRenameModel(store: store)
+        selectsName = true
+        nameFocused = true
+    }
+
+    /// Once the field has the keyboard: all of the name selected, so typing replaces it.
+    private func selectName() async {
+        guard selectsName, nameFocused, let editor = nameEditor else { return }
+        selectsName = false
+        await Task.yield()
+        nameSelection = TextSelection(range: editor.text.startIndex..<editor.text.endIndex)
+    }
+
+    private func endRename() {
+        nameFocused = false
+        nameEditor = nil
+        nameSelection = nil
+        selectsName = false
+    }
+
+    /// The title: the name, with its pen while it can be edited where it stands; the bank's name small under an own name.
+    @ViewBuilder private func title(_ detail: TransactionDetail) -> some View {
+        if let editor = nameEditor, let info = store.renameInfo {
+            nameField(editor, info: info)
+        } else {
             VStack(alignment: .leading, spacing: 3) {
-                Text(detail.place).font(AppFont.text(22, weight: .bold))
+                if store.offersRename {
+                    // A tap on the name or on its pen: nothing else on the title takes taps.
+                    HStack(alignment: .firstTextBaseline, spacing: 4) {
+                        Button { beginRename() } label: {
+                            Text(detail.place).font(AppFont.text(22, weight: .bold)).foregroundStyle(palette.ink)
+                                .multilineTextAlignment(.leading).fixedSize(horizontal: false, vertical: true)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityAddTraits(.isHeader)
+                        .accessibilityHint(Text("Rename"))
+                        .accessibilityIdentifier("paymentName")
+                        PenButton(label: Text("Rename"), palette: palette) { beginRename() }
+                            .accessibilityIdentifier("renamePayment")
+                    }
+                } else {
+                    Text(detail.place).font(AppFont.text(22, weight: .bold)).accessibilityAddTraits(.isHeader)
+                }
                 // An own name (brief 44): the bank's name stays, small, under it.
                 if let bankName = detail.bankName {
                     Text(bankName).font(AppFont.text(13.5)).foregroundStyle(palette.secondary)
                         .accessibilityLabel(Text("Bank's name: \(bankName)"))
                 }
             }
+        }
+    }
+
+    /// The name as a field where the title stands (its text in the title's place, a field's box around it), what renaming
+    /// changes, and "Use the bank's name" while an own name shows.
+    private func nameField(_ editor: PaymentRenameModel, info: PaymentRenameInfo) -> some View {
+        @Bindable var editor = editor
+        let shape = RoundedRectangle(cornerRadius: 10, style: .continuous)
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                TextField(text: $editor.text, selection: $nameSelection,
+                          prompt: Text(verbatim: info.bankName).foregroundStyle(palette.muted)) {
+                    Text("Name")
+                }
+                .font(AppFont.text(22, weight: .bold)).foregroundStyle(palette.ink)
+                .focused($nameFocused)
+                .autocorrectionDisabled()
+                .submitLabel(.done)
+                .onSubmit { Task { await editor.save() } }
+                .onChange(of: editor.text) { _, _ in editor.limitText() }
+                .onChange(of: nameFocused) { _, _ in Task { await selectName() } }
+                .accessibilityIdentifier("nameField")
+                if !editor.text.isEmpty {
+                    // The field's clear button, as UIKit's: back to the bank's name as the placeholder.
+                    Button { editor.text = "" } label: {
+                        Image(systemName: "xmark.circle.fill").font(.system(size: 17)).foregroundStyle(palette.muted)
+                            .minimumTapArea()
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(Text("Clear"))
+                }
+            }
+            .padding(.horizontal, 10).padding(.vertical, 7)
+            .background(palette.card2, in: shape)
+            .overlay(shape.strokeBorder(palette.line))
+            .contentShape(shape)
+            .onTapGesture { nameFocused = true }
+            .padding(.horizontal, -10)          // the name stays where it stood; the box reaches into the margin
+            .disabled(store.isSaving)
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Your bank's name: \(info.bankName)").foregroundStyle(palette.secondary)
+                Text("Only the name you see changes. Categories and sorting stay as they are.")
+                    .foregroundStyle(palette.muted)
+            }
+            .font(AppFont.text(12.5))
+            .fixedSize(horizontal: false, vertical: true)
+            if let error = store.saveError, !store.showsRecategorisation {
+                Text(error).font(AppFont.text(13)).foregroundStyle(palette.expenseText)
+                    .accessibilityIdentifier("renameError")
+            }
+            if info.ownName != nil {
+                Button { Task { await editor.useBankName() } } label: {
+                    BusyLabel(text: Text("Use the bank's name"), busy: editor.working == .bankName, tint: palette.ink)
+                }
+                .buttonStyle(.bordered).tint(palette.ink)
+                .whileWorking(store.isSaving, tapped: editor.working == .bankName)
+                .padding(.top, 2)
+                .accessibilityIdentifier("useBankName")
+            }
+        }
+        .padding(.bottom, 10)
+    }
+
+    /// As the category change asks: the count is on the button, so the sentence reads right for one payment or many.
+    private var renameQuestionTitle: Text {
+        guard let question = nameEditor?.question else { return Text(verbatim: "") }
+        return Text("Also the other payments from \(question.bankName)?")
+    }
+
+    private var renameQuestionShown: Binding<Bool> {
+        // A button answers first, so the dismissal that follows finds nothing left to answer.
+        Binding(get: { nameEditor?.question != nil }, set: { shown in
+            if !shown, nameEditor?.question != nil { Task { await nameEditor?.answer(all: false) } }
+        })
+    }
+
+    private var bankNameTitle: Text {
+        guard let question = nameEditor?.bankNameQuestion else { return Text(verbatim: "") }
+        return Text("Use the bank's name for all \(question.count) payments?")
+    }
+
+    private var bankNameShown: Binding<Bool> {
+        Binding(get: { nameEditor?.bankNameQuestion != nil }, set: { shown in
+            if !shown, nameEditor?.bankNameQuestion != nil { Task { await nameEditor?.answerBankName(.cancel) } }
+        })
+    }
+
+    #if DEBUG
+    /// Screenshots: `-renameText <text>` types a name, `-renameSave` then saves (the question, when it asks),
+    /// `-renameBankName` taps "Use the bank's name".
+    private func debugFillName() async {
+        guard let editor = nameEditor else { return }
+        try? await Task.sleep(for: .milliseconds(700))
+        if let text = LaunchArguments.value("-renameText") {
+            editor.text = text
+            nameSelection = nil
+        }
+        try? await Task.sleep(for: .milliseconds(900))
+        if LaunchArguments.current.contains("-renameSave") { await editor.save() }
+        if LaunchArguments.current.contains("-renameBankName") { await editor.useBankName() }
+    }
+    #endif
+
+    // MARK: the page
+
+    @ViewBuilder private func record(_ detail: TransactionDetail) -> some View {
+        let page = PaymentPage(detail)
+        VStack(alignment: .leading, spacing: 7) {
+            title(detail)
             Text(detail.signedAmount).font(AppFont.number(28, weight: .bold))
                 .foregroundStyle(detail.amount < 0 ? palette.expenseText : palette.balance)
             Text(page.date).font(AppFont.text(13.5)).foregroundStyle(palette.secondary)
@@ -138,7 +350,7 @@ struct TransactionDetailSheet: View {
     /// The page's rows: the label beside its value, the labels in one column as wide as the longest (German's
     /// "Verwendungszweck" too); at the accessibility text sizes each label above its value.
     @ViewBuilder private func lines(of detail: TransactionDetail, page: PaymentPage) -> some View {
-        let lines = Line.all(detail: detail, page: page, rename: store.offersRename)
+        let lines = Line.all(detail: detail, page: page)
         if typeSize.isAccessibilitySize {
             VStack(alignment: .leading, spacing: 0) {
                 ForEach(lines) { line in
@@ -170,36 +382,36 @@ struct TransactionDetailSheet: View {
     @ViewBuilder private func value(_ line: Line, detail: TransactionDetail, page: PaymentPage) -> some View {
         Group {
             switch line {
-            case .name:
-                // Where the shown name comes from, and Rename (brief 44), as the category's reason and Change below.
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(NameWording.source(detail.ownNameSource,
-                                            bankName: store.renameInfo?.bankName ?? detail.bankName ?? detail.place))
-                        .font(AppFont.text(12.5)).foregroundStyle(palette.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Button("Rename") { store.beginRename() }.buttonStyle(.bordered)
-                        .disabled(store.isSaving)
-                        .accessibilityIdentifier("renamePayment")
-                }
             case .category:
-                VStack(alignment: .leading, spacing: 8) {
+                // The chip and its pen open the change window (brief 47: the Change button and the reason sentence went;
+                // the reason is the window's first line). Without categories to change to, the chip alone.
+                if store.choices.isEmpty {
                     CategoryChip(name: detail.category, color: detail.categoryColor)
-                    if let reason = page.categoryReason {
-                        Text(reason).font(AppFont.text(12.5)).foregroundStyle(palette.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    if !store.choices.isEmpty {
-                        // Apple's regular size (brief 41; the small one was about 28 pt tall): drawn 32 pt tall, it
-                        // takes taps about 5 pt beyond its edges by itself (measured on iOS 27.0).
-                        Button("Change") { store.beginRecategorisation() }.buttonStyle(.bordered)
+                } else {
+                    HStack(alignment: .center, spacing: 4) {
+                        Button { store.beginRecategorisation() } label: {
+                            CategoryChip(name: detail.category, color: detail.categoryColor).minimumTapArea()
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityHint(Text("Change category"))
+                        .accessibilityIdentifier("categoryChip")
+                        PenButton(label: Text("Change category"), palette: palette) { store.beginRecategorisation() }
                             .accessibilityIdentifier("changeCategory")
-                            .tourAnchor(.change)
                     }
+                    .tourAnchor(.change)
                 }
             case .tags:
+                // The extra categories: a tap opens the change window at Add, where they are chosen.
                 VStack(alignment: .leading, spacing: 6) {
                     ForEach(detail.tags, id: \.self) { name in
-                        CategoryChip(name: name, color: store.categoryColor(for: name))
+                        let chip = CategoryChip(name: name, color: store.categoryColor(for: name))
+                        if store.choices.isEmpty {
+                            chip
+                        } else {
+                            Button { store.beginRecategorisation(mode: .add) } label: { chip.minimumTapArea() }
+                                .buttonStyle(.plain)
+                                .accessibilityHint(Text("Change category"))
+                        }
                     }
                 }
             case .account:
@@ -251,15 +463,14 @@ struct TransactionDetailSheet: View {
         }
     }
 
-    /// One row of the page, in order: the name (phone mode, own names on), the category, the other categories it is also
-    /// in, the account, then the plain rows.
+    /// One row of the page, in order: the category, the other categories it is also in, the account, then the plain rows.
+    /// (Brief 44's Name row went with brief 47: the name is edited where it stands.)
     private enum Line: Identifiable {
-        case name, category, tags, account
+        case category, tags, account
         case row(DetailRow)
 
         var id: String {
             switch self {
-            case .name: "name"
             case .category: "category"
             case .tags: "tags"
             case .account: "account"
@@ -269,7 +480,6 @@ struct TransactionDetailSheet: View {
 
         var label: String {
             switch self {
-            case .name: String(localized: "Name")
             case .category: String(localized: "Category")
             case .tags: String(localized: "Also in")
             case .account: String(localized: "Account")
@@ -277,8 +487,8 @@ struct TransactionDetailSheet: View {
             }
         }
 
-        static func all(detail: TransactionDetail, page: PaymentPage, rename: Bool) -> [Line] {
-            (rename ? [.name] : []) + [.category] + (detail.tags.isEmpty ? [] : [.tags])
+        static func all(detail: TransactionDetail, page: PaymentPage) -> [Line] {
+            [.category] + (detail.tags.isEmpty ? [] : [.tags])
                 + (page.account == nil ? [] : [.account]) + page.rows.map(Line.row)
         }
     }
@@ -313,6 +523,25 @@ struct AllFromLine: View {
         .contentShape(shape)
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isButton)
+    }
+}
+
+/// The small pen beside what a tap changes (brief 47: the payment's name, its category): muted ink, drawn small (15 pt
+/// at the default text size), a real button that takes taps over 44 × 44 pt, named for VoiceOver.
+struct PenButton: View {
+    let label: Text
+    let palette: Palette
+    let action: () -> Void
+    /// Small beside the text it changes, and growing with it at the larger text sizes.
+    @ScaledMetric(relativeTo: .body) private var size: CGFloat = 15
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "pencil").font(.system(size: size, weight: .medium)).foregroundStyle(palette.muted)
+                .minimumTapArea()
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
     }
 }
 

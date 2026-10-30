@@ -161,7 +161,13 @@ whose server keeps data per account passes its `DELETE …/me` as `SettingsApp(s
 (`EmpireAppIdentity.accountOptional`, only Aresium, brief 22) shows, while no Ares app is logged in, a quiet "Ares
 account" section last instead: Sign in (`Shared/Design/SignInSheet.swift`, the login without Create account) and the
 app's line `SettingsApp(signInNote:)`; signed in, the account section as everywhere (Leave <app> only while the account
-has the app). Screenshots: `-openSignIn`, `-openSupport`. Links: `Shared/Settings/SettingsInfo.swift`. Every
+has the app). **Switches** (brief 47, Patrik's phone: in dark mode "on" was a pale ink track under the white knob, so on
+and off could not be told apart): `SettingsScreen` gives every switch inside it `EmpireSwitchStyle`
+(`Shared/Design/FormPieces.swift`): Apple's switch, on in the app's accent, or for the ink-only apps (Aresium, Empire)
+in the Empire's green for on and running (`StatusTone.activeColor`, the colour iOS gives a switch that is on); never
+ink. A switch outside Settings takes it with `.toggleStyle(EmpireSwitchStyle(accent:))` (the tour's picture of the Lock).
+`AppearanceTests` pins it (a colour, not a grey; the knob shows on it as on iOS's own green). Screenshots: `-openSignIn`,
+`-openSupport`. Links: `Shared/Settings/SettingsInfo.swift`. Every
 login screen ends with "Privacy · Imprint" (`LoginScroll`), opening inside the app too (`InAppBrowser` as the links'
 `openURL`; the Aresium widget compiles it with the rest of `Shared/`). Aresium's Sign in sheet has no such footer. Screenshots: `-sampleData -openSheet settings` in every app
 (`-scrollToAccount` shows the Account section; `-openFonts` the Fonts & licences page, `-openLicence <name>` one of the
@@ -341,11 +347,18 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   <udid> log show …`). Verified across the two apps on the simulator with
   `scripts/check-shared-login.sh <udid>` (2026-10-24).
 - **App switcher cover** (2026-10-26, `Shared/Design/PrivacyCover.swift`): while an app is not active (app switcher,
-  Control Center, Notification Center, a system alert) a window of its own above everything, sheets included, shows
+  Control Center, Notification Center, a system alert iOS shows by itself) a window of its own above everything, sheets
+  included, shows
   the app's `LaunchBackground` wall with the band that ends its main screen (the app's display name; the Empire app
   passes "THE EMPIRE" in gold, `AppRoot(cover:)`), in the look the app shows. Shown on the scene's `willDeactivate`
-  and `didEnterBackground`, faded out (0.18 s) on `didActivate`; it never takes touches. `AppRoot` attaches it to the
-  app's window. DEBUG `-privacyCover` keeps it shown for screenshots; the log category `cover` says when it shows and
+  and `didEnterBackground`, faded out (0.18 s) on `didActivate`; it never takes touches. **Not behind the app's own
+  prompts** (brief 47, Patrik's phone: "Aresium" flashed when turning a setting on): every place that asks iOS for
+  something shown over the app calls `SystemPrompt.begin()`/`end()` around it (the notification permission: Aresium's
+  `LocalMessageCenter`, the shared `PushCenter`; Face ID or the iPhone's code: Aresium's `AppLock`), and
+  `PrivacyCoverRule` holds the cover back on `willDeactivate` while one is up (the background still covers; the app
+  switcher opened during such a prompt finds the app already inactive and shows it as it is, the one gap). A new place
+  that asks iOS (camera, location, …) adds the same two calls. Tests: `EmpireTests/PrivacyCoverTests`. `AppRoot`
+  attaches it to the app's window. DEBUG `-privacyCover` keeps it shown for screenshots; the log category `cover` says when it shows and
   hides (debug level: `xcrun simctl spawn <udid> log config --subsystem de.ares-empire.shared --mode
   "level:debug,persist:debug"`). Checked on the simulator 2026-10-26: all five apps in light and dark, and a round trip
   through Safari.
@@ -559,35 +572,68 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   as on the dashboard). Covered rows and payments counting in neither overall total are excluded; tags cannot add
   them back. The ledger executor also does name saving, merchant-key input and the question’s count off main;
   `PaymentNamesTests` checks the worker spans (`names.*`) and opens an actual schema 3 store with all record types.
-  **Renaming and the name's page** (brief 44, the screens; Patrik 2026-10-30: swipe left only, no direction setting):
-  the payment's page shows the shown name as its title and, when it is an own name, the bank's name small under it; a
-  **Name** row (as Category/Change: where the name comes from, "Your name for this payment." / "Your name for all
-  payments from <bank>." / "The name your bank gives it.", and a bordered **Rename**; hidden while Own names is off)
-  opens `RenameSheet` (`Model/PaymentRename.swift`: `RenamePlan`, `PaymentRenameModel`): one field starting with the
-  shown name, Cancel and Save at the top (Save off while unchanged; Cancel after typing asks, `DiscardingCancel`), "Use
-  the bank's name" while an own name shows. A new name asks whenever there is a merchant key and N > 0: "Also the other
-  payments from <bank>?" with "With All, new payments … get the name too.", **All N+1** (the shop's rule; this payment's
-  own name is dropped) or **Only this one**. Removing a name that other payments share through the shop's rule asks
-  first (brief 43's API cannot leave one payment on the bank's name while its shop keeps a name). **"All from <name>"**
-  (a card under the date on the payment's page, a withdrawal's too, only when the group has more than this payment; the
-  long press; the swipe) opens the **name's page** (`Screens/NameScreen.swift`, `DashboardRoute.name`, pushed on the
-  dashboard's stack, so the arrow and the back swipe work; from the payment's sheet it closes the sheet first): the count
-  and range, Spent (and Received when any), the graph above the months (`showsGraph` = the Graph setting), the months
-  oldest first as a category's (a tap or a graph point scrolls to that month's payments, so the rows end in
-  `chevron.down`), then the payments newest first under month headers; after a whole-shop rename it follows the new
-  name. **The swipe** (`Screens/RowSwipe.swift`: `RowSwipeRule`, tested, inside a `UIPanGestureRecognizer` subclass,
-  since a plain recognizer got no moves inside the scroll view): only a drag at least twice as sideways as vertical and
-  leftward (rightward on an open row closes it); it opens at 84 pt and fires at 55 % of the row (at least 168 pt) with a
-  haptic at the threshold; one row open at a time, closed by a scroll or a tap elsewhere; the action is a quiet grey
-  "All" with a stack icon, VoiceOver's action "All from <name>", Reduce Motion fades it in. The month's list and the
-  name's page share one row (`Screens/PaymentList.swift`: tap, long press, swipe, and the windows they open). The long
-  press adds Rename and All from where the page offers them (`PaymentRowAction`). Receipt rows swipe too but have no
-  "All from" in their menu (the receipt page has no line); the Cash page's movement rows have no swipe. **Own names**
-  ("Eigene Namen") is a toggle in Settings → Your data on this iPhone (`DashboardStore.setOwnNames`). Launch arguments
-  (DEBUG, with `-samplePhone`): `-sampleNames` (made-up own names), `-ownNames off`, `-openRename`, `-renameText
-  <text>`, `-renameSave`, `-renameBankName`, `-openAllFrom`, `-openName <text>`, `-sampleSwipe <pt> -swipeRow <text>`.
-  Tests: `PaymentNameScreensTests`. Screenshots: `build/44-*.png`. Real-touch checks (a temporary UI test, deleted):
-  a slanted vertical drag scrolls and opens nothing; the back swipe from the middle still works 6 of 6.
+  **Renaming and the name's page** (brief 44, the screens; Patrik 2026-10-30: swipe left only, no direction setting;
+  **brief 47**, Patrik's test of build 4: renaming was hard to find): the payment's page shows the shown name as its
+  title and, when it is an own name, the bank's name small under it. **The name is edited where it stands** (brief 47;
+  brief 44's Name row, its Rename button and `RenameSheet` are gone): in phone mode with Own names on, a small pen
+  (`PenButton`: SF `pencil`, muted ink, 44 pt tap area, VoiceOver "Rename") follows the title, and a single tap on the
+  name or the pen (Patrik asked for a double tap; a single tap is found without being told and a double tap still
+  works, its first tap opens the field; Patrik agreed 2026-10-30) turns the title into a field in the title's own font
+  and place (a field's box reaching into the margin), the name all selected and the keyboard up
+  (`TransactionDetailSheet`: `nameEditor`, `PaymentRenameModel`; the selection is set once the field has the keyboard).
+  Under it "Your bank's name: …", "Only the name you see changes. …" and, while an own name shows, "Use the bank's
+  name" (bordered). The bar shows Cancel and Save instead of Done while the field is open (Save off while unchanged;
+  Cancel after typing asks, `DiscardingCancel`; the page's swipe down is held back while something is typed); Return
+  (the keyboard's Done) saves, and closes the field when nothing changed. `RenamePlan` (`Model/PaymentRename.swift`):
+  the field starts with the shown name, the bank's too. A new name asks whenever there is a merchant key and N > 0:
+  "Also the other payments from <bank>?" with "With All, new payments … get the name too.", **All N+1** (the shop's
+  rule; this payment's own name is dropped) or **Only this one**. "Use the bank's name" on a name other payments share
+  through the shop's rule asks "Use the bank's name for all N+1 payments?": **All N+1** (the rule goes), **Only this
+  one** (brief 47: this payment shows the bank's name while the shop keeps its name; stored as the payment's own name
+  equal to the bank's name as names are kept, `PaymentNames.keptBankName`, read by `PaymentNames.shown` as no own name,
+  so the payment shows and counts with the bank's name; export and restore carry it as any own name), Cancel. Server
+  mode and Own names off: no pen, no field. **The category** (brief 47): the chip and a pen beside it ("Change
+  category") open the change window, an extra category's chip opens it at Add; the Change button and the reason sentence
+  went, the reason (`PaymentWording.categoryReason`) is one quiet line under "Currently in" at the window's top. Server
+  mode the same wherever the page has categories to change to. **"All from <name>"** (a card under the date on the
+  payment's page, a withdrawal's too, and since brief 47 a receipt's and a cash entry's page opened from a list,
+  `ReceiptPageView(nameLine:openName:)`, `DashboardStore.receiptNameLine`; only when the group has more than this
+  payment; the long press; the swipe) opens the **name's page** (`Screens/NameScreen.swift`, `DashboardRoute.name`,
+  pushed on the dashboard's stack, so the arrow and the back swipe work; from the payment's sheet it closes the sheet
+  first): the count and range, Spent (and Received when any), the graph above the months (`showsGraph` = the Graph
+  setting), the months oldest first as a category's (a tap or a graph point scrolls to that month's payments, so the
+  rows end in `chevron.down`), then the payments newest first under month headers; after a whole-shop rename it follows
+  the new name. **The swipe** (`Screens/RowSwipe.swift`: `RowSwipeRule`, tested, inside a `UIPanGestureRecognizer`
+  subclass, since a plain recognizer got no moves inside the scroll view): only a drag at least twice as sideways as
+  vertical and leftward (rightward on an open row closes it); it opens at 84 pt and fires at 55 % of the row (at least
+  168 pt) with a haptic at the threshold; one row open at a time, closed by a scroll or a tap elsewhere; the action is a
+  quiet grey "All" with a stack icon, VoiceOver's action "All from <name>", Reduce Motion fades it in. The month's list,
+  the name's page and the Cash page (brief 47) share one row (`Screens/PaymentList.swift`: `PaymentRow`, generic over
+  its label: `PaymentRowLabel`, or the Cash page's `CashMovementRow`; tap, long press, swipe, and the windows they
+  open). The long press adds Rename (it opens the payment's page with the name's field ready, `PaymentRowMenu.rename`;
+  no double tap on rows, which would delay every row's tap) and **"All with this name"** / "Alle mit dem Namen"
+  (brief 47: every entry short; "All from <long bank name>" could not be read; the lifted row shows the name; "dem",
+  not "diesem", which wrapped the entry) where the page offers them (`PaymentRowAction`); receipts' and entries' rows
+  add it too now that their page has the card.
+  **Own names** ("Eigene Namen") is a toggle in Settings → Your data on this iPhone (`DashboardStore.setOwnNames`).
+  Launch arguments (DEBUG, with `-samplePhone`): `-sampleNames` (made-up own names), `-ownNames off`, `-openRename` (the
+  name's field open), `-renameText <text>`, `-renameSave`, `-renameBankName`, `-openAllFrom`, `-openName <text>`,
+  `-sampleSwipe <pt> -swipeRow <text>` (on the Cash page too), `-sampleLongName` (three payments under a long made-up
+  bank name this month; the engine sorts them into Clothes), `-sampleShopReceipt` (a cash receipt from the sample's
+  LIDL, so a receipt's page shows the "All from" card).
+  Tests: `PaymentNameScreensTests` (brief 47: `RenamePlanTests` for the field's start and the bank's name kept for one
+  payment, with export and restore; `PaymentRowMenuTests` for receipts' "All from" and the Cash page's rows).
+  Screenshots: `build/44-*.png`, `build/47-*.png`. Real-touch checks (a temporary UI test, deleted): a slanted vertical
+  drag scrolls and opens nothing; the back swipe from the middle still works 6 of 6. **The back swipe's distance**
+  (brief 47, Patrik: "about half the screen" on a month's payments and the name's page; measured with real touches on
+  the iOS 27.0 simulator, iPhone 17, 402 pt wide, a binary search to 8 pt; slow = 150 pt/s held still before letting go,
+  flick = 3000 pt/s): a month's payments, the name's page, a category's months and Apple's own Settings → General all
+  go back after the same distance: a slow drag from the edge 189 pt (47 % of the width), from the content (x 100) 215 pt;
+  a flick from the edge 99–105 pt, from the content 53 pt; a thumb resting 0.3 s before it drags the same. That is
+  iOS's own rule (a slow drag goes back past about half the width, a flick at once), so the row swipe and the long press
+  take nothing from it and the gesture stays the system's. Measuring on a DEBUG launch that pushes screens (`-sampleMonth`,
+  `-openName`) misleads: count the pushes, and the month list's launch actions now act once (`launchActionsDone`), as
+  they reopened the name's page each time the list showed again.
   **The widget snapshot** belongs to the store it shows: phone mode's carries `phone: true` and is shown whoever is
   logged in; server mode's carries its account and follows the marker as before (`WidgetSnapshotStore.readShown`).
   **The lock** (brief 22, `Model/AppLock.swift`, `Screens/LockScreen.swift`, `Screens/LockSettings.swift`): optional,
@@ -771,16 +817,17 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   (AresiumShared); Switch, Add, routes and links keep the real name. **The payment page** (brief 28, Patrik 2026-10-27;
   `Screens/TransactionDetailSheet.swift`, its words in `Model/PaymentPage.swift`, one place for both modes): "Payment" /
   "Buchung"; the shop, the amount, the booking date written out ("Sunday, 4 October 2026" / "Sonntag, 4. Oktober 2026");
-  the category's chip, one sentence on why it is there (`PaymentWording.categoryReason`; phone `structural` "A transfer
+  the category's chip with a pen (brief 47: both open the change window), the sentence on why it is there moved into that
+  window's top (`PaymentWording.categoryReason`; phone `structural` "A transfer
   between your own accounts.", `learned` "Aresium learned this from a change you made.", `starter` "Sorted by Aresium's
   built-in list.", `manual` "You chose this category."; server `rule` "Sorted by a rule.", `llm` "Sorted
-  automatically."; nothing for `none`, a payment not sorted, or a value it does not know) and Change; then Account (name,
+  automatically."; nothing for `none`, a payment not sorted, or a value it does not know); then Account (name,
   IBAN in groups of four, "From your PayPal file" only when a PayPal payment's account is not called PayPal), To / From
   (An / Von) by the direction, Payment text (Verwendungszweck; not when it repeats the title), Balance after, Value date
   only when it is another day, and the server's Location, Trip, Kind of place (only the place types it knows) and
   Recurring. No Source, Booking date or External ID rows. The bank's own row comes last, closed ("As in your bank's
   file", or PayPal's). The labels form one column as wide as the longest (a `Grid`), above their values at the
-  accessibility text sizes. Its Change, Edit and Unjoin are Apple's regular-size bordered buttons (brief 41; drawn 32 pt
+  accessibility text sizes. Its Edit and Unjoin are Apple's regular-size bordered buttons (brief 41; drawn 32 pt
   tall, they take taps about 5 pt beyond their edges by themselves, measured on iOS 27.0; neither a tap area in the label
   nor a content shape on the button widens that).
   **Comfort on the dashboard** (brief 41, Patrik's approved list of 2026-10-30,
@@ -791,7 +838,8 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   it fills as the payment loads, or says why it could not, with Retry) with the same flow after it (the shop question,
   learning, the tour's `paymentRecategorised`); a receipt or cash entry row Edit (the window its page's Edit opens,
   `ReceiptEditSheet`; if it cannot open, the row's page opens); a withdrawal's covered row nothing (its long hold
-  opens its list, as a tap). The Cash page's movement rows have no menu yet (`CashScreens.swift` was brief 40's). The back swipe and
+  opens its list, as a tap). The Cash page's movement rows have the same tap, long press and swipe since brief 47
+  (`DashboardStore.cashRows`: each movement's dashboard row; one the dashboard lists nowhere only opens its page). The back swipe and
   this menu are the dashboard's shortcuts (`DashboardStack.shortcuts`): the tour turns both off while it holds the
   screen (at the payment step the ringed row must open the page the card speaks of). **The import result goes with a
   swipe down** (`ImportStore.closesBySwipe`: where Dismiss or the send card's Not now would, never while Retry and

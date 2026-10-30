@@ -55,7 +55,31 @@ struct AppearanceTests {
         #expect(contrast(Ink.muted, wall, .light) >= 3.8)        // small grey captions, as the dark wall's 4.2
     }
 
+    /// Brief 47 (Patrik's phone: "on" was a pale grey track under the white knob, read as off): a switch that is on is
+    /// a colour, where the off track is grey, and its white knob shows on it at least as on iOS's own green (#30D158,
+    /// 1.97:1); in light it is deep. Every app: the ink-only ones (Aresium, Empire) and the accents.
+    @Test func switchesThatAreOnStandApartFromTheKnobAndTheOffTrack() {
+        let accents: [AppAccent?] = [nil, .arestemis, .aresus, .arestoteles]
+        for accent in accents {
+            let on = EmpireSwitchStyle.onColor(accent)
+            for style in [UIUserInterfaceStyle.light, .dark] {
+                #expect(chroma(on, style) >= 0.3, "a colour, not a grey like the off track")
+                #expect(contrast(on, .white, style) >= 1.85, "the white knob shows on it")
+            }
+            #expect(contrast(on, .white, .light) >= 4.5)
+        }
+        #expect(hex(EmpireSwitchStyle.onColor(nil), .dark) == 0x6FCF9B, "the Empire's green for on and running")
+        // What it replaces: Aresium's ink tint was a grey in dark mode.
+        #expect(chroma(Ink.secondary, .dark) < 0.1)
+    }
+
     // MARK: helpers
+
+    /// How far a colour is from a grey: its strongest channel minus its weakest (0 for a grey).
+    private func chroma(_ color: Color, _ style: UIUserInterfaceStyle) -> Double {
+        let (r, g, b) = resolved(color, style)
+        return max(r, g, b) - min(r, g, b)
+    }
 
     private func resolved(_ color: Color, _ style: UIUserInterfaceStyle) -> (Double, Double, Double) {
         let ui = UIColor(color).resolvedColor(with: UITraitCollection(userInterfaceStyle: style))

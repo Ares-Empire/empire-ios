@@ -2,9 +2,11 @@ import Foundation
 import Testing
 @testable import Aresium
 
-/// Brief 44's logic behind the screens: the row swipe's direction and threshold, what the rename window saves and when
-/// it asks, the long press following the payment's page, the "All from" line only for a name with other payments, the
-/// name's page and how it follows a rename, and the words in both languages. Everything is made up.
+/// Brief 44's logic behind the screens: the row swipe's direction and threshold, what renaming saves and when it asks,
+/// the long press following the payment's page, the "All from" line only for a name with other payments, the name's
+/// page and how it follows a rename, and the words in both languages. Brief 47: the name edited where it stands (the
+/// field starts with the name shown), "Use the bank's name" for this payment alone, the receipts' and the Cash page's
+/// rows following their pages. Everything is made up.
 struct RowSwipeRuleTests {
     @Test func startsOnlyForAClearlySidewaysDragToTheLeft() {
         #expect(RowSwipeRule.begins(dx: -20, dy: 3, isOpen: false))
@@ -58,7 +60,10 @@ struct RenamePlanTests {
         #expect(RenamePlan(info: info(shop: "Weekly shop")).intent("weekly shop") == .name("weekly shop"))
         #expect(RenamePlan(info: info(shop: "Weekly shop")).intent("") == .bankName, "emptied: the bank's name")
         #expect(RenamePlan(info: info(payment: "Party")).intent("PENNY Markt Berlin") == .bankName)
-        #expect(RenamePlan(info: info()).start.isEmpty && RenamePlan(info: info(payment: "Party", shop: "Shop")).start == "Party")
+        // Brief 47: the field starts with the name the page shows, the bank's too (all of it selected).
+        #expect(RenamePlan(info: info()).start == "PENNY Markt Berlin")
+        #expect(RenamePlan(info: info(payment: "Party", shop: "Shop")).start == "Party")
+        #expect(RenamePlan(info: info(shop: "Shop")).start == "Shop")
     }
 
     @Test func theQuestionOnlyWithOtherPaymentsAndAMerchantKey() {
@@ -86,7 +91,35 @@ struct RenamePlanTests {
         guard case let .confirmBankName(question)? = RenamePlan(info: info(payment: "Party", shop: "Shop"))
             .outcome(.bankName) else { Issue.record("asks first"); return }
         #expect(question.count == 3 && question.shopName == "Shop" && question.steps == [.payment(""), .shop("")])
+        #expect(question.onlyThis == [.payment("PENNY Markt Berlin")], "brief 47: the bank's name kept for this one")
         #expect(RenamePlan(info: info()).outcome(.bankName) == nil, "no own name to remove")
+    }
+
+    @Test func theBanksNameKeptForOnePaymentReadsAsTheBanksName() {
+        // Brief 47: "Only this one" stores the bank's name as the payment's own name.
+        let kept = info(payment: "PENNY Markt Berlin", shop: "Weekly shop")
+        #expect(kept.keepsBankName && kept.ownName == nil && kept.source == nil)
+        let plan = RenamePlan(info: kept)
+        #expect(plan.start == "PENNY Markt Berlin")
+        #expect(plan.intent("PENNY Markt Berlin") == .nothing && plan.intent("") == .nothing)
+        #expect(plan.outcome(.bankName) == nil, "it shows the bank's name already")
+        guard case let .ask(question)? = plan.outcome(.name("Party")) else { Issue.record("asks"); return }
+        #expect(question.all == [.shop("Party"), .payment("")], "All drops the kept bank's name, so it follows the shop")
+        #expect(question.onlyThis == [.payment("Party")])
+        // Kept as names are: a long bank line is cut to 60 characters, and still reads as the bank's name.
+        let long = String(repeating: "Kartenzahlung PENNY ", count: 4)
+        let longInfo = PaymentRenameInfo(bankName: long, merchantKey: "penny", paymentOwnName: PaymentNames.keptBankName(long),
+                                         shopOwnName: "Shop", otherPaymentCount: 2)
+        #expect(longInfo.keepsBankName && longInfo.ownName == nil)
+        #expect(PaymentNames.shown(payment: nil, shop: "Shop", bankName: long) == "Shop")
+        #expect(PaymentNames.shown(payment: "Mine", shop: "Shop", bankName: long) == "Mine")
+        // A bank line without words cannot be kept: no Only this one.
+        let blank = PaymentRenameInfo(bankName: "  ", merchantKey: "x", paymentOwnName: nil, shopOwnName: "Shop",
+                                      otherPaymentCount: 2)
+        guard case let .confirmBankName(none)? = RenamePlan(info: blank).outcome(.bankName) else {
+            Issue.record("asks"); return
+        }
+        #expect(none.onlyThis == nil)
     }
 }
 
@@ -169,17 +202,17 @@ struct PaymentNameScreensTests {
         let (phone, dashboard) = try await store()
         let penny = try row("PENNY Markt Berlin", amount: -30, in: dashboard)
         let page = dashboard.transactionDetailStore(for: penny)
-        await page.beginRenameFromRow()
-        #expect(page.showsRename && page.renameInfo?.otherPaymentCount == 3)
+        await page.prepareRename()
+        #expect(page.offersRename && page.renameInfo?.otherPaymentCount == 3)
         let model = PaymentRenameModel(store: page)
-        #expect(!model.canSave && !model.hasChanges && model.text.isEmpty)
+        #expect(!model.canSave && !model.hasChanges && model.text == "PENNY Markt Berlin", "the name shown, selected")
         model.text = "Weekly shop"
         #expect(model.canSave && model.hasChanges)
         await model.save()
         let question = try #require(model.question)
-        #expect(question.others == 3 && page.showsRename, "asked in the open window")
+        #expect(question.others == 3 && !model.isDone, "asked while the field is open")
         await model.answer(all: true)
-        #expect(!page.showsRename && model.question == nil)
+        #expect(model.isDone && model.question == nil, "the field closes")
         let names = try #require(dashboard.dashboard?.transactions).filter { $0.bankName != nil }.map(\.place)
         #expect(names == Array(repeating: "Weekly shop", count: 4))
         #expect(try await phone.renameInfo(id: penny.id).shopOwnName == "Weekly shop")
@@ -198,6 +231,17 @@ struct PaymentNameScreensTests {
         let info = try await phone.renameInfo(id: penny.id)
         #expect(info.paymentOwnName == "Party" && info.shopOwnName == nil)
         #expect(try #require(dashboard.dashboard?.transactions).filter { $0.isOwnName == true }.count == 1)
+    }
+
+    @Test func returnWithoutAChangeOnlyClosesTheField() async throws {
+        let (phone, dashboard) = try await store()
+        let penny = try row("PENNY Markt Berlin", amount: -30, in: dashboard)
+        let page = dashboard.transactionDetailStore(for: penny)
+        await page.prepareRename()
+        let model = PaymentRenameModel(store: page)
+        await model.save()
+        #expect(model.isDone && model.question == nil)
+        #expect(try await phone.renameInfo(id: penny.id).paymentOwnName == nil, "nothing saved")
     }
 
     @Test func aLoneShopIsRenamedWithoutAQuestion() async throws {
@@ -223,12 +267,65 @@ struct PaymentNameScreensTests {
         #expect(model.text == "Weekly shop")
         await model.useBankName()
         #expect(model.bankNameQuestion?.count == 4)
-        await model.answerBankName(confirmed: false)
+        await model.answerBankName(.cancel)
         #expect(try await phone.renameInfo(id: penny.id).shopOwnName == "Weekly shop", "Cancel keeps it")
         await model.useBankName()
-        await model.answerBankName(confirmed: true)
+        await model.answerBankName(.all)
         #expect(try await phone.renameInfo(id: penny.id).ownName == nil)
         #expect(try #require(dashboard.dashboard?.transactions).allSatisfy { $0.isOwnName != true })
+    }
+
+    @Test func theBanksNameForThisOneKeepsTheShopsNameForTheOthers() async throws {
+        // Brief 47: "Use the bank's name" on a payment named through its shop → Only this one.
+        let (phone, dashboard) = try await store()
+        let penny = try row("PENNY Markt Berlin", amount: -30, in: dashboard)
+        _ = try await phone.rename(id: penny.id, name: "Weekly shop", scope: .shop)
+        await dashboard.reloadAfterTransactionChange()
+        let page = dashboard.transactionDetailStore(for: penny)
+        await page.prepareRename()
+        let model = PaymentRenameModel(store: page)
+        await model.useBankName()
+        #expect(model.bankNameQuestion?.onlyThis != nil)
+        await model.answerBankName(.onlyThis)
+        #expect(model.isDone)
+
+        let info = try await phone.renameInfo(id: penny.id)
+        #expect(info.shopOwnName == "Weekly shop" && info.keepsBankName && info.ownName == nil && info.source == nil)
+        let rows = try #require(dashboard.dashboard?.transactions)
+        let alone = try #require(rows.first { $0.id == penny.id })
+        #expect(alone.place == "PENNY Markt Berlin" && alone.bankName == nil && alone.isOwnName == false
+                && alone.ownNameSource == nil, "this payment shows the bank's name")
+        let others = rows.filter { $0.id != penny.id && $0.place == "Weekly shop" }
+        #expect(others.count == 3 && others.allSatisfy { $0.ownNameSource == .shop }, "the others keep the shop's name")
+        let shopKey = try #require(others.first?.nameKey)
+        #expect(alone.nameKey != shopKey, "it counts with the bank's name, not the shop's")
+        #expect(dashboard.dashboard?.nameGroups?[shopKey]?.count == 3)
+        #expect(page.detail?.place == "PENNY Markt Berlin" && page.detail?.bankName == nil)
+        #expect(!dashboard.rowActions(for: alone).contains(.allFromName), "its name has no other payment")
+
+        // A later name for the whole shop takes it along again; one for this payment alone replaces the kept name.
+        let again = PaymentRenameModel(store: page)
+        #expect(again.text == "PENNY Markt Berlin")
+        again.text = "Groceries run"
+        await again.save()
+        await again.answer(all: true)
+        #expect(try await phone.renameInfo(id: penny.id).paymentOwnName == nil)
+        #expect(try #require(dashboard.dashboard?.transactions).filter { $0.place == "Groceries run" }.count == 4)
+    }
+
+    @Test func theBanksNameForThisOneSurvivesExportAndRestore() async throws {
+        let (phone, dashboard) = try await store()
+        let penny = try row("PENNY Markt Berlin", amount: -30, in: dashboard)
+        _ = try await phone.rename(id: penny.id, name: "Weekly shop", scope: .shop)
+        _ = try await phone.rename(id: penny.id, name: PaymentNames.keptBankName(penny.place), scope: .payment)
+        let export = try await phone.export()
+        let restored = try await PhoneCountingTests.backend(chosen: ["groceries", "eating-out"])
+        try await restored.restore(LedgerExport.decode(export.encoded()).encoded())
+        let info = try await restored.renameInfo(id: penny.id)
+        #expect(info.keepsBankName && info.shopOwnName == "Weekly shop")
+        let rows = try await restored.dashboard(auth: auth).transactions
+        #expect(rows.first { $0.id == penny.id }?.place == "PENNY Markt Berlin")
+        #expect(rows.filter { $0.place == "Weekly shop" }.count == 3)
     }
 
     // MARK: the name's page
@@ -288,8 +385,5 @@ struct PaymentNameScreensTests {
                 == "23 Buchungen · 412,30\u{a0}€ ausgegeben · 12,00\u{a0}€ erhalten")
         #expect(NameWording.pageLine(count: 2, range: "Sep 2026 – Oct 2026", language: .german)
                 == "2 Buchungen · Sep 2026 – Oct 2026")
-        #expect(NameWording.source(.shop, bankName: "PENNY", language: .german) == "Dein Name für alle Buchungen von PENNY.")
-        #expect(NameWording.source(.payment, bankName: "PENNY", language: .english) == "Your name for this payment.")
-        #expect(NameWording.source(nil, bankName: "PENNY", language: .german) == "Der Name, den deine Bank angibt.")
     }
 }
