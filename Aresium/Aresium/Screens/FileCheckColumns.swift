@@ -3,11 +3,14 @@ import SwiftUI
 // The column check (brief 23): the last resort when none of the engine's readings of an unknown file looked right. Plain
 // questions ("Which column is the date?") instead of a meaning for every column; each answer is a menu of the file's
 // columns by name and first value, the chosen column's first values under the question. Then how dates and amounts are
-// written, the first payments read that way (as the window shows them), and Import. Logic: `ColumnCheckModel`.
+// written, the first payments read that way (as the window shows them), and Import; Back beside it returns to the last
+// reading when there were readings. Logic: `ColumnCheckModel`.
 
 struct ColumnCheckPage: View {
     @State var model: ColumnCheckModel
     let palette: Palette
+    /// Back to the last reading (nil: the column check came at once, there is none).
+    var back: (() -> Void)?
     /// After Import: the window closes.
     let close: () -> Void
 
@@ -75,18 +78,42 @@ struct ColumnCheckPage: View {
         }
     }
 
+    /// Import, with Back before it as No sits before Yes in the readings: side by side when they fit, else Import first.
     private var actions: some View {
         VStack(spacing: 10) {
             if let problem = model.saveProblem { FormProblem(text: problem) }
-            Button { Task { if await model.confirm() { close() } } } label: {
-                BusyLabel(text: Text("Import"), busy: model.isSaving)
+            if let back {
+                ViewThatFits(in: .horizontal) {
+                    EqualWidthRow {
+                        backButton(back)
+                        importButton
+                    }
+                    VStack(spacing: 10) {
+                        importButton
+                        backButton(back)
+                    }
+                }
+            } else {
+                importButton
             }
-            .buttonStyle(FormButtonStyle(accent: nil, busy: model.isSaving))
-            .disabled(model.draft.layout == nil)
-            .allowsHitTesting(!model.isSaving)
         }
         .padding(.horizontal, 18).padding(.top, 12).padding(.bottom, 10)
         .overlay(alignment: .top) { Rectangle().fill(Ink.line).frame(height: 1) }
+    }
+
+    private var importButton: some View {
+        Button { Task { if await model.confirm() { close() } } } label: {
+            BusyLabel(text: Text("Import"), busy: model.isSaving)
+        }
+        .buttonStyle(FormButtonStyle(accent: nil, busy: model.isSaving))
+        .disabled(model.draft.layout == nil)
+        .allowsHitTesting(!model.isSaving)
+    }
+
+    private func backButton(_ back: @escaping () -> Void) -> some View {
+        Button(action: back) { Text("Back") }
+            .buttonStyle(QuietButtonStyle())
+            .disabled(model.isSaving)
     }
 
     // MARK: questions

@@ -32,7 +32,8 @@ private struct ReceiptCapturePresenter: ViewModifier {
                 photo = nil
                 model.read(picked)
             }
-            .sheet(isPresented: Binding(get: { model.reading != nil }, set: { if !$0 { model.close() } })) {
+            // A swipe down (only possible while it reads, after a failure, or on the question): as Cancel, Done or Later.
+            .sheet(isPresented: Binding(get: { model.reading != nil }, set: { if !$0 { model.swipedAway() } })) {
                 ReceiptSheet(model: model, palette: palette)
             }
     }
@@ -73,7 +74,8 @@ struct DocumentScanner: UIViewControllerRepresentable {
 
 /// The receipt's sheet: "Reading the receipt…" while Vision and the engine read it, then the check window, then (with
 /// payments to ask about) the question. Cancel or a swipe while it reads stops the reading; the check window closes only
-/// with Cancel (typed values are not lost by accident).
+/// with Cancel, which asks first (the photo is not kept, so the reading would be lost: brief 40); the question has
+/// Later (as a swipe down: the receipt is kept and waits).
 struct ReceiptSheet: View {
     let model: ReceiptCaptureModel
     let palette: Palette
@@ -85,9 +87,9 @@ struct ReceiptSheet: View {
                 case .checking(let check)?:
                     ReceiptCheckView(model: check, palette: palette) { await model.save(check) }
                 case .asking(let question)?:
-                    ReceiptQuestionView(question: question, palette: palette, problem: model.problem) { paymentID in
-                        await model.answer(question, with: paymentID)
-                    }
+                    ReceiptQuestionView(question: question, palette: palette, problem: model.problem,
+                                        answer: { paymentID in await model.answer(question, with: paymentID) },
+                                        later: { model.later() })
                 case .failed(let message)?:
                     CalmReceiptState(symbol: "exclamationmark", text: Text(verbatim: message), busy: false)
                 default:
@@ -103,7 +105,14 @@ struct ReceiptSheet: View {
                     ToolbarItem(placement: .confirmationAction) {
                         Button { model.close() } label: { Text("Done", tableName: "Shared") }
                     }
-                } else if !isAsking {               // the question is answered in the window; a swipe lets it wait
+                } else if case .checking(let check)? = model.reading?.phase {
+                    ToolbarItem(placement: .cancellationAction) {
+                        DiscardingCancel(asks: check.hasSomethingToDiscard, question: Text("Discard this receipt?")) {
+                            model.close()
+                        }
+                        .disabled(check.isSaving)
+                    }
+                } else if !isAsking {               // the question has Later (ReceiptQuestionView)
                     ToolbarItem(placement: .cancellationAction) {
                         Button("Cancel") { model.close() }
                     }

@@ -1467,6 +1467,36 @@
         }
       }
     },
+    "Discard this entry?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diesen Eintrag verwerfen?"
+          }
+        }
+      }
+    },
+    "Discard this receipt?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diesen Beleg verwerfen?"
+          }
+        }
+      }
+    },
+    "Discard your changes?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Änderungen verwerfen?"
+          }
+        }
+      }
+    },
     "Dismiss" : {
       "localizations" : {
         "de" : {
@@ -2189,6 +2219,16 @@
         }
       }
     },
+    "Keep editing" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Weiter bearbeiten"
+          }
+        }
+      }
+    },
     "Kind of place" : {
       "localizations" : {
         "de" : {
@@ -2215,6 +2255,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sprache"
+          }
+        }
+      }
+    },
+    "Later" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Später"
           }
         }
       }

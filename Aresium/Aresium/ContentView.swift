@@ -540,6 +540,7 @@ struct ContentView: View {
             // Kept receipts before the store shows, so the first dashboard (and a page opened at launch) has them.
             if arguments.contains("-sampleReceipts") { try await PhoneSample.addReceipts(phone) }
             if arguments.contains("-sampleCash") { try await PhoneSample.addCash(phone) }
+            if arguments.contains("-sampleImportQuestion") { try await PhoneSample.addImportQuestions(phone) }
             await modes.showFixed(phone, storage: storage)
             // `-importData`: the first screen's Import data at launch (the file picker).
             if arguments.contains("-importData") { importData() }

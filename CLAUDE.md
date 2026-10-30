@@ -213,7 +213,9 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
 
 1. **TestFlight** (Apple approved 2026-10-29): **Aresium done**: 0.1 (1) uploaded with `scripts/testflight.sh` and installed
    on Patrik's iPhone through internal TestFlight (group in App Store Connect → Aresium → TestFlight → Internal
-   Testing). Build 2 (2026-10-30): the fixes of Patrik's first test (briefs 34–37). The other four: an App Store Connect record each, then the script. Original
+   Testing). Build 2 (2026-10-30): the fixes of Patrik's first test (briefs 34–37). Build 3: the picker's scroll, the
+   back swipe and the comfort items (briefs 38–41). The other four: first their approved comfort items (15 below), then
+   an App Store Connect record each, then the script. Original
    list: set the paid team (project level, all five projects; done); the App Groups
    `group.de.ares-empire.aresium` + `group.de.ares-empire.shared` registered for the bundle ids, the widgets' too
    (`de.ares-empire.aresium.widget`, `de.ares-empire.aresus.widget`) (Xcode's automatic
@@ -269,6 +271,15 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
 14. **Arestemis sample with real details:** `Arestemis/Arestemis/Samples/settings.json` (and Arestemis's `docs/samples/`)
    holds Patrik's real application text (name, TUM, Garching, age), so the showcase leaves that screen out. Replace it
    with a made-up text if Patrik wants that screen shown (offered 2026-10-26).
+15. **Comfort items for Empire, Arestemis, Aresus, Arestoteles** (Patrik approved all, 2026-10-30): build each app's
+   before its first TestFlight upload, from `docs/reviews/2026-10-30-swipe-and-comfort.md` → "The other four apps":
+   Empire 1 (approvals: pull to refresh, Try again); Arestemis 1–7 (undo for Dismiss, actions on Hunt → Latest, Search's
+   Save at the top and a kept draft, 44 pt chip buttons, Listings loading on, Add place's keyboard key, a regular "More");
+   Aresus 1–3 (Done on the run report, Open on a province's page, the gear on the Aresync tab); Arestoteles 1–4 (ask
+   before discarding text in its sheets, the tab bar on note pages, a + for Add a position, undo for To discuss → Done);
+   Shared 2 (Create account keeps what was typed) with the first of them. **Arestemis 6 (Patrik's list no. 18, Add
+   place's keyboard key): Patrik did not follow it, so explain it to him first and let him choose** (the item has both
+   options). Briefs for these say "Patrik's list no. N" so he recognises them.
 
 ## Setup state (update as it changes)
 
@@ -839,6 +850,28 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   payment to the engine, the window's categories and Edit, Paid from saved and passed, deleting a gift, the page over
   two months, the words in both languages, the name check, only cash shows the dashboard). Screenshots:
   `build/33b-*.png`.
+  **Comfort in the windows** (brief 40, Patrik 2026-10-30; `docs/reviews/2026-10-30-swipe-and-comfort.md`; the pieces
+  in `Screens/WindowComfort.swift`). "Is this the same payment?" has **Later** top left (in the receipt window after
+  Save, in Edit receipt, after an import): what a swipe down does, the receipt waits and nothing is declined; after Save
+  it (and the swipe) shows "Receipt saved. It waits for the bank statement." and builds the dashboard again
+  (`ReceiptCaptureModel.later`); after an import the next queued question opens after it, and the next import asks
+  again. The file check has **Back** beside No from the second reading (Back and No share No's half, Yes keeps its own,
+  `EqualWidthRow`) and beside Import in the column check when there were readings (to the last reading; the column
+  check keeps its answers; `FileCheckModel.back`). **Number pads** (Total, Amount in euros, Add cash's Amount) have
+  Done above them (`numberPadDone`; iOS 26 floats it outside the keyboard's safe area, so the bottom bar rises clear of
+  it, `clearOfKeyboardDone`); Shop's Return moves to Total, What's Return closes the keyboard. **Cancel asks first**
+  (`DiscardingCancel`, as Contact & support's X: "Discard this receipt?" / "Discard this entry?" / "Discard your
+  changes?", Discard, Keep editing) when something would be lost: a new reading always (unless nothing was read or
+  typed), Edit receipt, Add cash and Edit entry once a value changed (`hasSomethingToDiscard`, `hasChanges`: amounts by
+  their number, the date by its day); Add cash's swipe down is held back on the same rule. **The busy sign:** the
+  tapped button shows the spinner (`BusyLabel`; a payment row in its amount's place; Edit in the bar in its word's
+  place), the others are greyed (`whileWorking`): a receipt's page (Edit, both Change, Unjoin, Delete;
+  `ReceiptPageModel.working`), Join with a payment, the question's rows and None of these. Launch arguments (DEBUG):
+  `-sampleImportQuestion` (two waiting receipts asked after a made-up import; `-tapLater` taps Later on the first),
+  `-typeIn shop|total|euros|amount|what` (the cursor there; several comma-separated, one every 2 s), `-askDiscard`
+  (Cancel tapped once there is something to discard; `-cashAmount <text>` types Add cash's amount), `-holdWork` (a
+  tapped button's work waits a minute) with `-tapWork category|unjoin|delete` on a receipt's page or `-tapAnswer
+  first|none` on the question. Tests: `WindowComfortTests`. Screenshots: `build/40-*.png`.
 - Targets: `Aresium` (app), `AresiumWidgetExtension` (widgets, folder `Aresium/AresiumWidget/`, embedded in the
   app), `AresiumTests`. `Aresium/AresiumShared/` is compiled into both app and widget (theme, `AppTheme`, `AppGroup`,
   widget snapshot); everything else belongs to one target. App Group `group.de.ares-empire.aresium` in both

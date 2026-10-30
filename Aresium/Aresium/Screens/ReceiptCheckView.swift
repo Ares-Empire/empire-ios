@@ -14,9 +14,12 @@ struct ReceiptCheckView: View {
     let palette: Palette
     let save: () async -> Void
     @Environment(\.dynamicTypeSize) private var typeSize
-    /// The text field being typed in: a tap anywhere on a field's box puts the cursor there.
+    /// The text field being typed in: a tap anywhere on a field's box puts the cursor there. Shop's Return goes on to
+    /// Total; the number pads (Total, Amount in euros) have Done above them (brief 40).
     @FocusState private var typing: TextBox?
-    private enum TextBox: Hashable { case shop, total, euros }
+    private enum TextBox: String, Hashable { case shop, total, euros }
+    /// Where Done above the number pad is, so Save stays clear of it.
+    @State private var doneTop: CGFloat?
     #if DEBUG
     /// Screenshots: `-openReceiptText` opens "As on the receipt".
     @State private var rowsOpen = LaunchArguments.current.contains("-openReceiptText")
@@ -54,8 +57,21 @@ struct ReceiptCheckView: View {
             .scrollDismissesKeyboard(.interactively)
             if !typeSize.isAccessibilitySize {
                 question.overlay(alignment: .top) { Rectangle().fill(Ink.line).frame(height: 1) }
+                    .clearOfKeyboardDone(doneTop)
             }
         }
+        .numberPadDone(typing == .total || typing == .euros, top: $doneTop) { typing = nil }
+        #if DEBUG
+        .task {
+            // Screenshots: `-typeIn shop|total|euros` puts the cursor in that field once the window shows.
+            // Several, comma-separated, move on every 2 s (as Return does).
+            let fields = (LaunchArguments.value("-typeIn") ?? "").split(separator: ",").compactMap { TextBox(rawValue: String($0)) }
+            for (index, field) in fields.enumerated() {
+                try? await Task.sleep(for: .seconds(index == 0 ? 1 : 2))
+                typing = field
+            }
+        }
+        #endif
     }
 
     /// What the window shows, and the quiet line that says every value can be changed.
@@ -115,6 +131,8 @@ struct ReceiptCheckView: View {
             FieldRow(label: String(localized: "Shop")) {
                 TextField("", text: $model.shop, prompt: Text("Name on the receipt").foregroundStyle(Ink.muted))
                     .textInputAutocapitalization(.words).autocorrectionDisabled()
+                    .submitLabel(.next)
+                    .onSubmit { typing = .total }
                     .accessibilityLabel(Text("Shop"))
                     .focused($typing, equals: .shop)
                     .fieldBox { typing = .shop }
@@ -287,13 +305,18 @@ struct ReceiptTextDisclosure: View {
 // MARK: - the question
 
 /// "Is this the same payment?": the receipt on top, the bank payments it may belong to as the dashboard's rows with
-/// what differs, and "None of these" (it waits for the bank statement).
+/// what differs, and "None of these" (it declines them and waits for the bank statement). Later, in the top-left
+/// corner (brief 40), puts the question off as a swipe down does: the receipt waits and nothing is declined. While an
+/// answer is kept, the tapped row or button shows the spinner and the others are greyed.
 struct ReceiptQuestionView: View {
     let question: ReceiptQuestion
     let palette: Palette
     var problem: String?
     let answer: (String?) async -> Void
-    @State private var answering = false
+    /// Later: closes the question without an answer (what a swipe down does where the question is shown).
+    let later: () -> Void
+    /// The answer being kept: a payment's id, or `.some(nil)` for None of these.
+    @State private var answering: String??
 
     var body: some View {
         ScrollView {
@@ -311,11 +334,12 @@ struct ReceiptQuestionView: View {
                 SettingsSection(String(localized: "Bank payments")) {
                     ForEach(Array(question.options.enumerated()), id: \.element.id) { index, option in
                         if index > 0 { TileRowDivider() }
+                        let tapped = answering == .some(option.payment.id)
                         Button {
                             Task { await choose(option.payment.id) }
                         } label: {
                             VStack(alignment: .leading, spacing: 0) {
-                                FileCheckPaymentRow(payment: PreviewPayment(option.payment), palette: palette)
+                                FileCheckPaymentRow(payment: PreviewPayment(option.payment), palette: palette, busy: tapped)
                                 if let difference = ReceiptWording.difference(option.candidate, sameAmount: sameAmount) {
                                     Text(verbatim: difference).font(AppFont.text(12.5)).foregroundStyle(Ink.secondary)
                                         .fixedSize(horizontal: false, vertical: true)
@@ -325,7 +349,7 @@ struct ReceiptQuestionView: View {
                             .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
-                        .disabled(answering)
+                        .whileWorking(answering != nil, tapped: tapped)
                     }
                 }
                 .padding(.top, 22)
@@ -333,10 +357,10 @@ struct ReceiptQuestionView: View {
                 Button {
                     Task { await choose(nil) }
                 } label: {
-                    Text("None of these")
+                    BusyLabel(text: Text("None of these"), busy: answering == .some(nil), tint: Ink.primary)
                 }
                 .buttonStyle(QuietButtonStyle())
-                .disabled(answering)
+                .whileWorking(answering != nil, tapped: answering == .some(nil))
                 .padding(.top, 18)
                 FormNote(text: String(localized: "Then the receipt waits for the bank statement and counts on its own until then."))
                     .padding(.top, 10)
@@ -344,16 +368,42 @@ struct ReceiptQuestionView: View {
             .padding(.horizontal, 18).padding(.bottom, 24)
         }
         .scrollIndicators(.hidden)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Later", action: later).disabled(answering != nil)
+            }
+        }
+        #if DEBUG
+        .task {
+            // Screenshots: `-tapLater` taps Later on the first question shown (the next queued one then shows);
+            // `-tapAnswer first|none` answers once the question shows (with `-holdWork` the spinner stays).
+            if LaunchArguments.current.contains("-tapLater"), !Self.tappedLater {
+                Self.tappedLater = true
+                try? await Task.sleep(for: .seconds(2))
+                later()
+            }
+            guard let tap = LaunchArguments.value("-tapAnswer") else { return }
+            try? await Task.sleep(for: .seconds(1))
+            await choose(tap == "none" ? nil : question.options.first?.payment.id)
+        }
+        #endif
     }
+
+    #if DEBUG
+    private static var tappedLater = false
+    #endif
 
     /// How many of the payments have the receipt's exact amount.
     private var sameAmount: Int { question.options.filter { $0.candidate?.why == .severalSame }.count }
 
     private func choose(_ paymentID: String?) async {
-        guard !answering else { return }
-        answering = true
+        guard answering == nil else { return }
+        answering = .some(paymentID)
+        #if DEBUG
+        await DebugLaunch.holdWork()
+        #endif
         await answer(paymentID)
-        answering = false
+        answering = nil
     }
 }
 
@@ -390,8 +440,9 @@ struct ReceiptSummaryRow: View {
     }
 }
 
-/// After a bank import: "Is this the same payment?" for a waiting card receipt, in a sheet of its own. Closing it
-/// without an answer lets the receipt wait (asked again only after the next import).
+/// After a bank import: "Is this the same payment?" for a waiting card receipt, in a sheet of its own. Later or a swipe
+/// down closes it without an answer: the receipt waits (asked again only after the next import), and the next queued
+/// question, if any, opens after it (ContentView).
 struct ReceiptQuestionSheet: View {
     let question: ReceiptQuestion
     let phone: PhoneBackend
@@ -399,17 +450,18 @@ struct ReceiptQuestionSheet: View {
     /// After an answer: the dashboard is built again.
     let changed: () async -> Void
     @State private var problem: String?
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationStack {
-            ReceiptQuestionView(question: question, palette: palette, problem: problem) { paymentID in
+            ReceiptQuestionView(question: question, palette: palette, problem: problem, answer: { paymentID in
                 do {
                     try await phone.answer(question, with: paymentID)
                     await changed()
                 } catch {
                     problem = error.localizedDescription
                 }
-            }
+            }, later: { dismiss() })
             .background { Ink.background.ignoresSafeArea() }
             .navigationTitle(Text("Receipt")).navigationBarTitleDisplayMode(.inline)
         }
