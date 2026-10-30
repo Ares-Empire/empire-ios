@@ -153,11 +153,10 @@ extension PhoneBackend {
     /// payments), when that category is on the person's list.
     func learnedCategory(forShop shop: String?) async throws -> String? {
         guard let shop = shop?.trimmingCharacters(in: .whitespacesAndNewlines), !shop.isEmpty else { return nil }
-        guard let key = try await engine.merchantKeys([Self.shopPayment(shop, total: 0, currency: ReceiptAmount.euro,
-                                                                         date: ReceiptDay.day(.now))]).first,
-              !key.isEmpty,
-              let category = try await ledger.learned()[key] else { return nil }
-        return try await categories().isChosen(category) ? category : nil
+        let list = try await categories()
+        return try await ledger.learnedCategory(for: Self.shopPayment(shop, total: 0, currency: ReceiptAmount.euro,
+                                                                     date: ReceiptDay.day(.now)),
+                                                engine: engine, catalog: list.catalog)
     }
 
     private func matchSaved(_ receipt: LedgerReceipt) async throws -> ReceiptSaved {

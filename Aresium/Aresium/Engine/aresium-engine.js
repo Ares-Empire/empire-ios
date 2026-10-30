@@ -563,12 +563,12 @@ var __AresiumEngine = (() => {
           if (key === "__proto__") key = "#__proto__";
           this.child.push({ [key]: val });
         }
-        addChild(node) {
-          if (node.tagname === "__proto__") node.tagname = "#__proto__";
-          if (node[":@"] && Object.keys(node[":@"]).length > 0) {
-            this.child.push({ [node.tagname]: node.child, [":@"]: node[":@"] });
+        addChild(node2) {
+          if (node2.tagname === "__proto__") node2.tagname = "#__proto__";
+          if (node2[":@"] && Object.keys(node2[":@"]).length > 0) {
+            this.child.push({ [node2.tagname]: node2.child, [":@"]: node2[":@"] });
           } else {
-            this.child.push({ [node.tagname]: node.child });
+            this.child.push({ [node2.tagname]: node2.child });
           }
         }
       };
@@ -1586,8 +1586,8 @@ var __AresiumEngine = (() => {
   var require_node2json = __commonJS({
     "node_modules/fast-xml-parser/src/xmlparser/node2json.js"(exports) {
       "use strict";
-      function prettify(node, options) {
-        return compress(node, options);
+      function prettify(node2, options) {
+        return compress(node2, options);
       }
       function compress(arr3, options, jPath) {
         let text2;
@@ -2152,6 +2152,7 @@ var __AresiumEngine = (() => {
     readReceipt: () => readReceipt,
     readingsOfUnknownFile: () => readingsOfUnknownFile,
     shareableLayout: () => shareableLayout,
+    shopIdentities: () => shopIdentities,
     sortPayments: () => sortPayments,
     starterCategory: () => starterCategory,
     version: () => version
@@ -2534,24 +2535,24 @@ var __AresiumEngine = (() => {
         return false;
     }
   };
-  Buffer2.concat = function concat(list, length) {
-    if (!isArray(list)) {
+  Buffer2.concat = function concat(list2, length) {
+    if (!isArray(list2)) {
       throw new TypeError('"list" argument must be an Array of Buffers');
     }
-    if (list.length === 0) {
+    if (list2.length === 0) {
       return Buffer2.alloc(0);
     }
     var i;
     if (length === void 0) {
       length = 0;
-      for (i = 0; i < list.length; ++i) {
-        length += list[i].length;
+      for (i = 0; i < list2.length; ++i) {
+        length += list2[i].length;
       }
     }
     var buffer = Buffer2.allocUnsafe(length);
     var pos = 0;
-    for (i = 0; i < list.length; ++i) {
-      var buf = list[i];
+    for (i = 0; i < list2.length; ++i) {
+      var buf = list2[i];
       if (!internalIsBuffer(buf)) {
         throw new TypeError('"list" argument must be an Array of Buffers');
       }
@@ -5337,11 +5338,11 @@ var __AresiumEngine = (() => {
     if (x === void 0 || x === null) return [];
     return Array.isArray(x) ? x : [x];
   }
-  function textOf(node) {
-    if (node && typeof node === "object" && "#text" in node) {
-      return String(node["#text"]);
+  function textOf(node2) {
+    if (node2 && typeof node2 === "object" && "#text" in node2) {
+      return String(node2["#text"]);
     }
-    return node == null ? "" : String(node);
+    return node2 == null ? "" : String(node2);
   }
   function parseCamt(xml) {
     const doc = parser.parse(xml);
@@ -5750,7 +5751,7 @@ var __AresiumEngine = (() => {
   }
   function cardMerchant(text2) {
     const head = text2.toLowerCase().normalize("NFC").trim().match(
-      /^(.+?)\s+[a-z]{3}\s+(?:\d{1,3}(?:\.\d{3})+|\d+),\d{2}\s+umsatz vom\s+\d{2}\.\d{2}\.\d{4}(?:\s+.*)?$/u
+      /^(.+?)\s+[a-z]{3}\s+(?:\d{1,3}(?:\.\d{3})+|\d+),\d{2}\s+(?:(?:kurs\s*:?\s*\d|\d{1,3},\d{2}\s*%\s*auslandsums)[^\r\n]*?)?umsatz vom\s+\d{2}\.\d{2}\.\d{4}(?:\s+.*)?$/u
     )?.[1];
     if (!head) return null;
     const parts = head.match(/^(.+?)\s{2,}[a-z]{3}\s+(.+)$/u) ?? head.match(/^(.+)\s+[a-z]{3}\s+(\S+)$/u);
@@ -5808,13 +5809,13 @@ var __AresiumEngine = (() => {
   var applies = (direction, money2) => money2 === null || direction === "both" || direction === money2;
   var references = /\b(?:eref|mref|cred|kref|iban|bic|mandatsreferenz|mandatsref|gläubiger-id|glaeubiger-id|kundenreferenz)\s*[:+]\s*\S+/giu;
   var branchNumber = /^((?:\D*[^\p{L}\p{N}])?)\d{2,6}(?![\p{L}\p{N}]|[.,:]\d)/u;
-  function compileShopList(list) {
+  function compileShopList(list2) {
     const rules = [];
     const handWritten = /* @__PURE__ */ new Map(), brands = /* @__PURE__ */ new Map();
     const merchants = /* @__PURE__ */ new Map();
     const seen = /* @__PURE__ */ new Set();
-    const otherWords = new Set(list.plainVowelWords ?? []);
-    const noBranches = new Set((list.noBranches ?? []).flatMap((name) => shopSpellings(name, otherWords)));
+    const otherWords = new Set(list2.plainVowelWords ?? []);
+    const noBranches = new Set((list2.noBranches ?? []).flatMap((name) => shopSpellings(name, otherWords)));
     const add = (index, name, categoryId, rank, direction, source) => {
       for (const spelling of shopSpellings(name, otherWords)) {
         if (seen.has(spelling)) continue;
@@ -5825,18 +5826,18 @@ var __AresiumEngine = (() => {
         index.set(words2[0], bucket);
       }
     };
-    for (const [categoryId, names2, direction = "both"] of list.rules) for (const name of names2) {
+    for (const [categoryId, names2, direction = "both"] of list2.rules) for (const name of names2) {
       add(handWritten, name, categoryId, rules.length, direction, "rule");
       rules.push({ pattern: name, categoryId, source: "rule", direction });
     }
-    for (const [categoryId, names2, direction = "both"] of list.merchants) for (const name of names2) {
+    for (const [categoryId, names2, direction = "both"] of list2.merchants) for (const name of names2) {
       for (const spelling of shopSpellings(name, otherWords)) {
         if (!merchants.has(spelling)) merchants.set(spelling, { categoryId, direction, name: spelling });
       }
       rules.push({ pattern: name, categoryId, source: "merchant", direction });
     }
     const specificity = (name) => [shopWords(name).length, shopWords(name).join("").length];
-    const ranked = list.brands.flatMap(([categoryId, names2]) => names2.map((name) => ({ name, categoryId, size: specificity(name) }))).sort((a, b) => b.size[0] - a.size[0] || b.size[1] - a.size[1] || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+    const ranked = list2.brands.flatMap(([categoryId, names2]) => names2.map((name) => ({ name, categoryId, size: specificity(name) }))).sort((a, b) => b.size[0] - a.size[0] || b.size[1] - a.size[1] || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
     for (const { name, categoryId } of ranked) {
       add(brands, name, categoryId, rules.length, "both", "brand");
       rules.push({ pattern: name, categoryId, source: "brand", direction: "both" });
@@ -9429,14 +9430,190 @@ var __AresiumEngine = (() => {
     ]
   };
 
+  // src/engine/sorting/shop-identity.ts
+  var directionalProviders = /* @__PURE__ */ new Set([
+    "momox",
+    "uber eats",
+    "uber trip",
+    "goflink",
+    "booking.com",
+    "fansale",
+    "momox fashion",
+    "vinted",
+    "gofundme"
+  ]);
+  var genericSavings = /* @__PURE__ */ new Set([
+    "sparplan",
+    "tagesgeld",
+    "festgeld",
+    "sparkonto",
+    "sparbuch",
+    "wertpapierkauf",
+    "wertpapierabrechnung",
+    "etf",
+    "verm\xF6genswirksame leistungen",
+    "bausparkasse",
+    "bausparvertrag",
+    "bausparen"
+  ]);
+  var list = shops_de_default;
+  var matcher = compileShopList({
+    ...list,
+    rules: list.rules.filter(([category, names2, direction]) => direction === "both" && category !== "own-transfers" || directionalProviders.has(names2[0])).map(([category, names2, direction]) => [
+      category,
+      category === "savings-investing" ? names2.filter((name) => !genericSavings.has(name)) : names2,
+      direction
+    ])
+  });
+  var aliases = /* @__PURE__ */ new Map([
+    ["kleiderkreisel", "vinted"],
+    ["apple", "apple"],
+    ["apple services", "apple"],
+    ["apple com bill", "apple"],
+    ["apple store", "apple"],
+    ["apple distribution international", "apple"],
+    ["apple music", "apple"],
+    ["apple tv", "apple"]
+  ]);
+  var legalSuffix = /(?:^| )(?:ug haftungsbeschraenkt|gmbh (?:und )?co kg|pte ltd|sp z o o|s a r l|s r l|s p a|s l|s a|b v|n v|e v|e k|uab|aps|ltd|limited|sas|sarl|ab|as|oy|inc|llc|corp|plc|pty|ohg|mbh|ug|ggmbh|kgaa|aktiengesellschaft|gmbh|ag|se|kg)$/u;
+  function cleaned(key) {
+    let text2 = shopWords(key.replace(/['’‘`´]/gu, " ")).filter((word) => word !== "&" && word !== "+").join(" ").replace(/\bsagt danke\b|\bdankt\b/gu, " ").replace(/\s+/gu, " ").trim();
+    let previous;
+    do {
+      previous = text2;
+      text2 = text2.replace(legalSuffix, "").trim();
+    } while (text2 !== previous);
+    return text2;
+  }
+  function knownShop(key, text2) {
+    const alias = aliases.get(text2);
+    if (alias) return alias;
+    const found = matcher.find({ counterparty: key }) ?? matcher.find({ counterparty: text2 });
+    return found ? aliases.get(found.name) ?? found.name : null;
+  }
+  function longer(a, b) {
+    return a.length > b.length || a.length === b.length && a < b ? a : b;
+  }
+  var node = () => ({ children: /* @__PURE__ */ new Map(), best: "", lastWord: "" });
+  function shopIdentities(keys) {
+    const forms = /* @__PURE__ */ new Map();
+    const known = /* @__PURE__ */ new Map();
+    for (const key of new Set(keys)) {
+      const text2 = cleaned(key);
+      forms.set(key, text2);
+      if (!text2) continue;
+      const shop = knownShop(key, text2);
+      if (shop && (!known.has(text2) || shop < known.get(text2))) known.set(text2, shop);
+    }
+    const names2 = [...new Set(forms.values())].filter(Boolean).sort();
+    const parent = new Map(names2.map((name) => [name, name]));
+    const anchors = new Map(known);
+    const root = (name) => {
+      let current = name;
+      while (parent.get(current) !== current) current = parent.get(current);
+      while (name !== current) {
+        const next = parent.get(name);
+        parent.set(name, current);
+        name = next;
+      }
+      return current;
+    };
+    const join = (a, b) => {
+      const left = root(a), right = root(b);
+      if (left === right) return;
+      const leftShop = anchors.get(left), rightShop = anchors.get(right);
+      if (leftShop && rightShop && leftShop !== rightShop) return;
+      parent.set(right, left);
+      anchors.delete(right);
+      if (rightShop) anchors.set(left, rightShop);
+    };
+    const permutations = /* @__PURE__ */ new Map(), endpoints = /* @__PURE__ */ new Map();
+    for (const name of names2) {
+      const words2 = name.split(" ");
+      if (words2.length < 2 || words2.length > 4 || /\p{N}/u.test(name)) continue;
+      for (const [index, signature] of [
+        [permutations, [...words2].sort().join(" ")],
+        [endpoints, `${words2[0]} ${words2.at(-1)}`]
+      ]) {
+        const previous = index.get(signature);
+        if (previous) join(name, previous);
+        else index.set(signature, name);
+      }
+    }
+    const trie = node(), ends = /* @__PURE__ */ new Map();
+    for (const name of names2) {
+      let current = trie, position = 0;
+      const lastSpace = name.lastIndexOf(" ");
+      for (const letter of name) {
+        let child = current.children.get(letter);
+        if (!child) {
+          child = node();
+          current.children.set(letter, child);
+        }
+        current = child;
+        position += letter.length;
+        current.best = longer(current.best, name);
+        if (position > lastSpace) current.lastWord = longer(current.lastWord, name);
+      }
+      ends.set(name, current);
+    }
+    const representatives = /* @__PURE__ */ new Map(), extensions = /* @__PURE__ */ new Map();
+    for (const name of names2) {
+      const group = root(name), previous = representatives.get(group);
+      if (!previous || name.split(" ").length < previous.split(" ").length || name.split(" ").length === previous.split(" ").length && name < previous) representatives.set(group, name);
+      if (anchors.has(group) || name.length < 12) continue;
+      const end = ends.get(name);
+      const target = longer(end.children.get(" ")?.best ?? "", end.lastWord);
+      if (target.length <= name.length || root(target) === group) continue;
+      extensions.set(group, longer(extensions.get(group) ?? "", target));
+    }
+    const identities = /* @__PURE__ */ new Map();
+    for (const name of names2) {
+      let group = root(name);
+      const path = [], positions = /* @__PURE__ */ new Map();
+      let identity;
+      while (true) {
+        const saved = identities.get(group);
+        if (saved !== void 0) {
+          identity = saved;
+          break;
+        }
+        const repeated = positions.get(group);
+        if (repeated !== void 0) {
+          identity = path.slice(repeated).map((item) => representatives.get(item)).sort()[0];
+          break;
+        }
+        positions.set(group, path.length);
+        path.push(group);
+        const representative = representatives.get(group);
+        const shop = anchors.get(group);
+        if (shop) {
+          identity = shop;
+          break;
+        }
+        const target = extensions.get(group);
+        if (!target) {
+          identity = representative;
+          break;
+        }
+        group = root(target);
+      }
+      for (const item of path) identities.set(item, identity);
+    }
+    return keys.map((key) => {
+      const text2 = forms.get(key);
+      return text2 ? identities.get(root(text2)) : "";
+    });
+  }
+
   // src/engine/sorting/starter-rules.ts
-  var matcher = compileShopList(shops_de_default);
-  var STARTER_RULES = matcher.rules;
+  var matcher2 = compileShopList(shops_de_default);
+  var STARTER_RULES = matcher2.rules;
   function starterCategory(payment, categories, towns) {
-    const categoryId = matcher.match(payment, towns);
+    const categoryId = matcher2.match(payment, towns);
     return categoryId !== null && categories.some((c) => c.id === categoryId) ? categoryId : null;
   }
-  var findShop = (payment, towns) => matcher.find(payment, towns);
+  var findShop = (payment, towns) => matcher2.find(payment, towns);
 
   // src/engine/dates.ts
   var daysInMonth = (y, m) => new Date(Date.UTC(y, m, 0)).getUTCDate();
@@ -9616,10 +9793,21 @@ var __AresiumEngine = (() => {
       if (words2.length === 1) provenTowns.add(words2[0]);
     }
     const towns = [...provenTowns];
+    const keys = payments.map(merchantKey);
+    const learned = options.learned ?? {};
+    const learnedKeys = Object.keys(learned).sort();
+    const distinct = [.../* @__PURE__ */ new Set([...keys, ...learnedKeys])];
+    const shops = shopIdentities(distinct);
+    const identities = new Map(distinct.map((key, index) => [key, shops[index]]));
+    const rememberedShops = /* @__PURE__ */ new Map();
+    for (const key of learnedKeys) {
+      const identity = identities.get(key);
+      if (identity && allowed.has(learned[key]) && !rememberedShops.has(identity)) rememberedShops.set(identity, learned[key]);
+    }
     return payments.map((payment, index) => {
       if (transfers[index]) return { categoryId: OWN_TRANSFERS, source: "structural" };
-      const key = merchantKey(payment);
-      const remembered = key && options.learned && Object.hasOwn(options.learned, key) ? options.learned[key] : null;
+      const key = keys[index];
+      const remembered = !key ? null : Object.hasOwn(learned, key) ? learned[key] : rememberedShops.get(identities.get(key));
       if (remembered && allowed.has(remembered)) return { categoryId: remembered, source: "learned" };
       const categoryId = starterCategory(payment, options.categories, towns);
       return { categoryId, source: categoryId ? "starter" : null };
@@ -10398,9 +10586,9 @@ var __AresiumEngine = (() => {
     if (x === void 0 || x === null) return [];
     return Array.isArray(x) ? x : [x];
   }
-  function textOf2(node) {
-    if (node && typeof node === "object" && "#text" in node) return String(node["#text"]);
-    return node == null || typeof node === "object" ? "" : String(node);
+  function textOf2(node2) {
+    if (node2 && typeof node2 === "object" && "#text" in node2) return String(node2["#text"]);
+    return node2 == null || typeof node2 === "object" ? "" : String(node2);
   }
   var dateOnly = (value) => {
     const v = textOf2(value).trim();
@@ -10410,20 +10598,20 @@ var __AresiumEngine = (() => {
   var ibanOf = (account) => textOf2(account?.Id?.IBAN).replace(/\s/g, "");
   function entryCounterpartyIban(ntry) {
     if (!ntry || typeof ntry !== "object") return void 0;
-    const node = ntry;
-    const tx = arr2(node.NtryDtls).flatMap((d) => arr2(d?.TxDtls))[0];
+    const node2 = ntry;
+    const tx = arr2(node2.NtryDtls).flatMap((d) => arr2(d?.TxDtls))[0];
     const parties = tx?.RltdPties ?? {};
-    return normalizeIban(ibanOf(node.CdtDbtInd === "DBIT" ? parties.CdtrAcct : parties.DbtrAcct)) ?? void 0;
+    return normalizeIban(ibanOf(node2.CdtDbtInd === "DBIT" ? parties.CdtrAcct : parties.DbtrAcct)) ?? void 0;
   }
   var remittance = (tx) => cleanText(...arr2(tx?.RmtInf?.Ustrd).map(textOf2)) || cleanText(...arr2(tx?.RmtInf?.Strd).map((s) => textOf2(s?.CdtrRefInf?.Ref))) || cleanText(textOf2(tx?.AddtlTxInf));
   function batchText(texts2) {
     const distinct = [...new Set(texts2.filter(Boolean))];
     return distinct.length > 3 ? `${distinct.slice(0, 3).join(" / ")} / \u2026` : distinct.join(" / ");
   }
-  function signedAmount(node) {
-    const amount2 = parseAmountStrict(textOf2(node.Amt), "en");
+  function signedAmount(node2) {
+    const amount2 = parseAmountStrict(textOf2(node2.Amt), "en");
     if (!amount2) return null;
-    return node.CdtDbtInd === "DBIT" ? negate(amount2) : amount2;
+    return node2.CdtDbtInd === "DBIT" ? negate(amount2) : amount2;
   }
   function vrCamtId(ntry) {
     const isDebit = ntry.CdtDbtInd === "DBIT";
@@ -10960,8 +11148,8 @@ ${line}`;
     };
   }
   function readMt940(text2) {
-    const list = fields(text2);
-    if (!list.some((f) => f.tag === "61") && !list.some((f) => f.tag === "20")) {
+    const list2 = fields(text2);
+    if (!list2.some((f) => f.tag === "61") && !list2.some((f) => f.tag === "20")) {
       throw new BankFileError("mt940", "This file is not an MT940 statement.");
     }
     const transactions = [];
@@ -10970,7 +11158,7 @@ ${line}`;
     const openings = /* @__PURE__ */ new Map(), closings = /* @__PURE__ */ new Map();
     const intradayStatements = /* @__PURE__ */ new Set();
     let last2 = null;
-    for (const field2 of list) {
+    for (const field2 of list2) {
       if (field2.tag === "20") {
         statement++;
         intraday = false;
@@ -11806,8 +11994,8 @@ ${line}`;
       if (i !== void 0) columns[role] = i;
     }
     for (const role of ["counterparty", "text", "fees", "addAmounts"]) {
-      const list = (p[role] ?? []).map(at).filter((i) => i !== void 0);
-      if (list.length > 0) columns[role] = list;
+      const list2 = (p[role] ?? []).map(at).filter((i) => i !== void 0);
+      if (list2.length > 0) columns[role] = list2;
     }
     if (columns.date < 0) return null;
     if (columns.amount === void 0 && (columns.debit === void 0 || columns.credit === void 0)) return null;
@@ -12171,7 +12359,7 @@ ${line}`;
       copy2[role] = [...given[role]];
     }
     if (copy2.amount === void 0 && (copy2.debit === void 0 || copy2.credit === void 0)) return no("invalid");
-    for (const list of [skipStatus, keepStatus]) if (list !== void 0 && !isWordList(list)) return no("invalid");
+    for (const list2 of [skipStatus, keepStatus]) if (list2 !== void 0 && !isWordList(list2)) return no("invalid");
     let labels;
     if (labelledText !== void 0) {
       const l = labelledText;
@@ -12595,7 +12783,7 @@ ${line}`;
   var KRONE_BY_PHONE = { "+45": "DKK", "+46": "SEK", "+47": "NOK", "+354": "ISK" };
 
   // src/engine/receipts/read.ts
-  var phrasesOf = (table, language) => Object.entries(table).flatMap(([kind, list]) => (list ?? []).map((text2) => ({ words: shopWords(text2), kind, language })));
+  var phrasesOf = (table, language) => Object.entries(table).flatMap(([kind, list2]) => (list2 ?? []).map((text2) => ({ words: shopWords(text2), kind, language })));
   var PHRASES = [
     ...Object.entries(RECEIPT_WORDS).flatMap(([language, table]) => phrasesOf(table, language)),
     ...phrasesOf(SHARED_WORDS, null)
