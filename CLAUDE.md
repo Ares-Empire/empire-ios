@@ -375,7 +375,7 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
 - **Accounts in every app** (2026-10-25, brief F2; contract `docs/build-2026-10-25/briefs/F-accounts-contract.md`,
   server side `ares-empire/docs/ACCOUNTS.md` → Accounts in every app): one Ares account, made and run from any app.
   The login (`AresLogin` in `Shared/Design/ProvinceLogin.swift`, used by the provinces and the Empire app; Aresium has
-  no login screen since brief 22, only Settings' `SignInSheet` from the same pieces) says "One Ares account for all Ares apps" and offers Create account (email,
+  no login screen since brief 22, only Settings' `SignInSheet` from the same pieces) shows the app's mark, the fields and Log in (the line "One Ares account for all Ares apps" under the name went 2026-10-31, Patrik) and offers Create account (email,
   password twice, optional name; asks for this app's service, sends the app's language; then "confirm your email,
   Patrik approves, an email follows") and Forgot password? (sheets, `Shared/Design/AccountSheets.swift`). Its error
   names an account not confirmed or approved yet too. An account without this app sees the no-access panel

@@ -171,7 +171,7 @@ struct RejectedSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: Look.rowGap) {
-                    Text("Listings that passed the fields but not the AI's check, from the last 7 days. If good ones end up here, the search may be too strict.")
+                    Text("Listings that passed the fields but not the check, from the last 7 days. If good ones end up here, the search may be too strict.")
                         .font(AppFont.text(13)).foregroundStyle(Ink.muted).lineSpacing(3)
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.horizontal, 4).padding(.bottom, 6)

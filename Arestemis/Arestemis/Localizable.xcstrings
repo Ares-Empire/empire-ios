@@ -166,6 +166,16 @@
         }
       }
     },
+    "AI fills in the fields. Check them, then save." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "KI füllt die Felder aus. Prüf sie, dann speichern."
+          }
+        }
+      }
+    },
     "AI per listing" : {
       "localizations" : {
         "de" : {
@@ -588,22 +598,22 @@
         }
       }
     },
+    "Each listing gets its own German text, from your text and the facts about you." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jedes Angebot bekommt einen eigenen deutschen Text, aus deinem Text und den Angaben über dich."
+          }
+        }
+      }
+    },
     "Extras" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Extras"
-          }
-        }
-      }
-    },
-    "Facts the AI may use; it never invents others. Give your gender and age: many listings are only for women, men or an age range, and the check needs them." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Angaben, die die KI verwenden darf; andere erfindet sie nie. Gib Geschlecht und Alter an: Viele Angebote gelten nur für Frauen, Männer oder ein bestimmtes Alter, und die Prüfung braucht das."
           }
         }
       }
@@ -848,12 +858,12 @@
         }
       }
     },
-    "Listings that passed the fields but not the AI's check, from the last 7 days. If good ones end up here, the search may be too strict." : {
+    "Listings that passed the fields but not the check, from the last 7 days. If good ones end up here, the search may be too strict." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Angebote der letzten 7 Tage, die zu den Feldern passten, aber nicht durch die Prüfung der KI kamen. Landen gute hier, ist die Suche vielleicht zu streng."
+            "value" : "Angebote der letzten 7 Tage, die zu den Feldern passten, aber nicht durch die Prüfung kamen. Landen gute hier, ist die Suche vielleicht zu streng."
           }
         }
       }
@@ -1098,6 +1108,16 @@
         }
       }
     },
+    "Only these facts are used, nothing is made up. Give your gender and age: many listings are only for women, men or an age range, and the check needs them." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nur diese Angaben werden verwendet, erfunden wird nichts. Gib Geschlecht und Alter an: Viele Angebote gelten nur für Frauen, Männer oder ein bestimmtes Alter, und die Prüfung braucht das."
+          }
+        }
+      }
+    },
     "Open listing" : {
       "localizations" : {
         "de" : {
@@ -1138,12 +1158,12 @@
         }
       }
     },
-    "Optional. The AI checks every listing against it." : {
+    "Optional. Every listing is checked against it." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Optional. Die KI prüft jedes Angebot darauf."
+            "value" : "Optional. Jedes Angebot wird darauf geprüft."
           }
         }
       }
@@ -1393,7 +1413,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Jagd starten"
+            "value" : "Suche starten"
           }
         }
       }
@@ -1404,26 +1424,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Zwischenmiete"
-          }
-        }
-      }
-    },
-    "The AI fills in the fields from it. Check them, then save." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Die KI füllt daraus die Felder. Prüf sie, dann speichern."
-          }
-        }
-      }
-    },
-    "The AI writes a German text for each listing, from your text and the facts about you." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Die KI schreibt für jedes Angebot einen deutschen Text, aus deinem Text und den Angaben über dich."
           }
         }
       }
@@ -1663,7 +1663,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Von der KI geschrieben"
+            "value" : "Mit KI geschrieben"
           }
         }
       }

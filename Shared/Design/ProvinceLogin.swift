@@ -21,7 +21,7 @@ struct ProvinceLogin: View {
 }
 
 /// The login of every Ares app but Aresium (which keeps its own layout, built from the same pieces): the app's mark and
-/// name, "One Ares account for all Ares apps", the fields and Log in, then Create account and Forgot password? (sheets,
+/// name, the fields and Log in, then Create account and Forgot password? (sheets,
 /// `AccountSheets.swift`). An account without this app sees the no-access panel in place of the fields. One account
 /// for all apps, so this shows only while no Ares app on the iPhone is logged in, or when this one may not be used with
 /// that login. The Empire app's register (crest, gold wordmark) came first; the provinces put their bust in its place.
@@ -55,15 +55,13 @@ struct AresLogin<Mark: View, Wall: View>: View {
     private var form: some View {
         VStack(spacing: 0) {
             mark
-            (session.isDenied ? Text("This account has no access to \(session.app.name).", tableName: "Shared")
-                              : Text("One Ares account for all Ares apps", tableName: "Shared"))
-                .font(AppFont.number(12, weight: .regular)).foregroundStyle(LoginStyle.standard.quiet)
-                .multilineTextAlignment(.center).padding(.top, 8).padding(.bottom, 28)
-
             if session.isDenied {
+                Text("This account has no access to \(session.app.name).", tableName: "Shared")
+                    .font(AppFont.number(12, weight: .regular)).foregroundStyle(LoginStyle.standard.quiet)
+                    .multilineTextAlignment(.center).padding(.top, 8).padding(.bottom, 28)
                 NoAccessPanel(session: session)
             } else {
-                loginForm
+                loginForm.padding(.top, 36)
             }
         }
         .padding(.horizontal, 30).padding(.top, 96)

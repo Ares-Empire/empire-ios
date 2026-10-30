@@ -334,7 +334,7 @@ struct SearchScreen: View {
             TextArea(placeholder: String(localized: "e.g. furnished, balcony, not on the ground floor"), text: $draft.extra, minHeight: 84,
                      inWell: false)
                 .glassCard()
-            Caption(text: String(localized: "Optional. The AI checks every listing against it.")).padding(.leading, 4)
+            Caption(text: String(localized: "Optional. Every listing is checked against it.")).padding(.leading, 4)
         }
     }
 
@@ -409,7 +409,7 @@ struct DescribeSheet: View {
                              text: $text, minHeight: 130, inWell: false)
                         .focused($focused)
                         .glassCard()
-                    Caption(text: store.parseError ?? String(localized: "The AI fills in the fields from it. Check them, then save."))
+                    Caption(text: store.parseError ?? String(localized: "AI fills in the fields. Check them, then save."))
                         .padding(.horizontal, 4)
                     if !unclear.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {

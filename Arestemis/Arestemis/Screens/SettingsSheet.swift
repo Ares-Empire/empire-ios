@@ -61,7 +61,7 @@ struct SettingsSheet: View {
                 .pickerStyle(.segmented)
                 Caption(text: settings.wrappedValue.applicationMode == .own
                         ? String(localized: "Your text as it is, with the greeting adapted when the contact's name is known.")
-                        : String(localized: "The AI writes a German text for each listing, from your text and the facts about you."))
+                        : String(localized: "Each listing gets its own German text, from your text and the facts about you."))
                     .padding(.horizontal, 4)
             }
             .padding(.bottom, 8)
@@ -72,7 +72,7 @@ struct SettingsSheet: View {
             TextArea(placeholder: String(localized: "Age, studies or job, non-smoker, …"), text: settings.aboutMe, minHeight: 96,
                      font: AppFont.text(14), inWell: false)
                 .glassCard()
-            Caption(text: String(localized: "Facts the AI may use; it never invents others. Give your gender and age: many listings are only for women, men or an age range, and the check needs them.")).padding(.leading, 4)
+            Caption(text: String(localized: "Only these facts are used, nothing is made up. Give your gender and age: many listings are only for women, men or an age range, and the check needs them.")).padding(.leading, 4)
         }
     }
 
