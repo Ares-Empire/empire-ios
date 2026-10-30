@@ -44,7 +44,8 @@ struct ChartPoint: Identifiable {
 @MainActor @Observable
 final class DashboardStore {
     private(set) var dashboard: Dashboard?
-    /// Installed only by the live app, never by a sample or test store.
+    /// Installed by the live app (`installMessages`); in DEBUG the phone sample gets a pretend one
+    /// (`installSampleMessages`, brief 46); never a test store.
     var messages: AresiumMessages?
     private(set) var reviewMonth: String?
     private(set) var isLoading = false

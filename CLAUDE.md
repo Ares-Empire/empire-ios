@@ -583,7 +583,8 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   registers a device (only the cleanup-only center that removes the other apps' devices when someone logs out here).
   **Local messages** (brief 45, logic only; Settings and the offer are brief 46): phone mode uses
   `UNUserNotificationCenter`, never remote push. `DashboardStore.messages: AresiumMessages?` is the page's model;
-  only the live `ContentView` installs it (`installMessages(lock:active:)`). Samples/tests have none; the tour
+  only the live `ContentView` installs it (`installMessages(lock:active:)`). Tests and the server sample have none (the
+  phone sample a pretend one since brief 46, below); the tour
   suspends scheduling and removes Aresium's pending/delivered messages until it ends. The model and its serial queue
   survive a language restart (`AresiumMessages.live`); the rebuilt store supplies the new language and dashboard.
   All notification-center calls and review planning run on `MessageScheduler`, a worker actor. Account reductions
@@ -626,13 +627,41 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   dashboard totals/categories/graph (`DashboardStore.showReview(month:)`). This month stays focused until the app goes to the background, a widget/start
   link, backend switch or a rebuilt root; `showReview(month: nil)` restores the latest month. No new screen.
   **DEBUG verification:** `-enableMessages -logMessages` enables live local messages and logs owned pending IDs;
-  never combine it with sample/test arguments (those install no model). It uses the normal interval, with no
+  never combine it with sample/test arguments (those install no live model). It uses the normal interval, with no
   accelerated delivery argument. Verified on `codex-45` (2026-10-30): Allow, three pending reminders
   (`build/45-pending.log`), and the import route opening the file picker (`build/45-import-route.png`).
   `MessageTests` injects clock, calendar and center; no system scheduling in tests.
   **English catalog keys added, German left to Claude:** "Time for new statements", "Your last import was %lld days
   ago.", "Import your statements to keep your dashboard up to date.", "Month review", "Your %@ review is ready.", "Import
   your statements to complete %@.", "%@: %@ spent, %@ in. Most on %@: %@.", "%@: %@ spent, %@ in.".
+  **Settings → Messages and the offer** (brief 46, the screens; `Screens/MessagesSettings.swift`, words and choices in
+  `Model/MessageSettings.swift`): phone mode only, a section "Messages" / "Mitteilungen" of its own after "Your data on
+  this iPhone" and before Lock (the messages are about the data; Dashboard stays last, above Appearance), one row
+  "Reminder and review" / "Erinnerung & Rückblick" (the ampersand keeps it on one line beside "Nur Erinnerung") with its
+  state on the right (`MessageWording.state`: Off, On, Reminder only, Review only, None
+  chosen, Off in iOS). The page: the Messages switch (iOS asks the first time, brief 45); while on, Import reminder with
+  its line and How often (Apple's menu from the column check's `MenuChip`: every week, every 2 weeks, every month), Month
+  review with its line, Time (Apple's compact time picker, `MessageTime`); while iOS has the notifications off, a line
+  and Allow in iOS Settings (`openNotificationSettingsURLString`), the switches keep what was chosen; `error` as a
+  `FormProblem`; the note "made on this iPhone, nothing sent", plus "no numbers" while the lock is on. **The offer**
+  (`ReminderOffer`): in the import result's place and card (`BottomToast` in `Screens/ImportControls.swift`, the
+  result's chrome and swipe, shared since brief 46), only once the result (with its send card), the category picker
+  after an import, the import's work and every other window are gone, never in the tour or behind the lock
+  (`ReminderOffer.shows`, built from the stores by `ReminderOffer.Moment(messages:imports:…)`): "Remind you to import
+  new statements?", the line names the reminder's interval and the review, Turn on (both messages, interval and time
+  kept; then, once iOS allowed, "Messages are on. You can change them in Settings." in the result's place) and Not now
+  (also a swipe down); both answer it for good. The start screen's expense graph in red mode draws the light ink
+  (`Palette.expense`; the website's black read at about 1.3:1 on the app's darker red), as the widget's line; income
+  keeps its green (about 10:1). **DEBUG** (with `-samplePhone`/`-samplePhoneEmpty`; the sample gets a pretend model,
+  `Model/MessageSample.swift`: its own defaults emptied at launch, a center that reaches nothing in iOS):
+  `-openMessages` (with `-openSheet settings`: the page), `-sampleMessages on|reminder|review|none` (Messages on with
+  both, one or none), `-sampleNotifications allowed|denied|notAsked` (the pretend iOS's answer; allowed by default),
+  `-sampleReminderOffer` (the sample may offer: a made-up import at launch, so the offer shows on the dashboard; with
+  `-samplePhoneEmpty -sampleImport -samplePickerDone` after the picker and the result, as live), `-sampleMessagesFail`
+  (planning fails: the page's failure line). Without these the sample neither offers nor plans anything. Tests:
+  `MessageScreensTests` (the row's words, the page's words and time, the offer after the picker and the result and never
+  with the send card, once; Turn on; the red graph's contrast). Screenshots: `build/46-*.png`, contact sheet
+  `build/46-sheet.png`.
   **Current view:** a category opens this month's payments directly (`CategoryRoute`; the widget's category links too);
   Overview keeps the month list first. **Screens** (`Screens/PhoneScreens.swift` and `Screens/FileCheck*.swift`,
   Claude's look from the dashboard's rows, `CategoryTile`/`DayTile`, and the Settings pieces; ink only): **the first

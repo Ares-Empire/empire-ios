@@ -454,6 +454,46 @@
         }
       }
     },
+    "A reminder every 2 weeks after your last import, and a review of last month on the 3rd." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alle 2 Wochen nach deinem letzten Import eine Erinnerung und am 3. ein Rückblick auf den Vormonat."
+          }
+        }
+      }
+    },
+    "A reminder every month after your last import, and a review of last month on the 3rd." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jeden Monat nach deinem letzten Import eine Erinnerung und am 3. ein Rückblick auf den Vormonat."
+          }
+        }
+      }
+    },
+    "A reminder every week after your last import, and a review of last month on the 3rd." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jede Woche nach deinem letzten Import eine Erinnerung und am 3. ein Rückblick auf den Vormonat."
+          }
+        }
+      }
+    },
+    "A reminder to import new statements, counted from your last import." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eine Erinnerung an neue Kontoauszüge, gezählt ab deinem letzten Import."
+          }
+        }
+      }
+    },
     "A transfer between your own accounts." : {
       "localizations" : {
         "de" : {
@@ -550,6 +590,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Alle deine Aresium-Daten in einer Datei"
+          }
+        }
+      }
+    },
+    "Allow in iOS Settings" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In den iOS-Einstellungen erlauben"
           }
         }
       }
@@ -680,6 +730,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Aresium"
+          }
+        }
+      }
+    },
+    "Aresium can remind you to import new statements and sum up each month." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aresium kann dich an neue Kontoauszüge erinnern und jeden Monat kurz zusammenfassen."
           }
         }
       }
@@ -1704,12 +1764,42 @@
         }
       }
     },
+    "Every 2 weeks" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alle 2 Wochen"
+          }
+        }
+      }
+    },
+    "Every month" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jeden Monat"
+          }
+        }
+      }
+    },
     "Every payment in detail." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Jede Buchung im Detail."
+          }
+        }
+      }
+    },
+    "Every week" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jede Woche"
           }
         }
       }
@@ -1800,6 +1890,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Lebensmittelladen"
+          }
+        }
+      }
+    },
+    "For both messages" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Für beide Mitteilungen"
           }
         }
       }
@@ -2076,6 +2176,16 @@
         }
       }
     },
+    "How often" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wie oft"
+          }
+        }
+      }
+    },
     "How the file gets to Aresium" : {
       "localizations" : {
         "de" : {
@@ -2112,6 +2222,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Import unterbrochen. Versuch es erneut, wenn du zu Aresium zurückkehrst."
+          }
+        }
+      }
+    },
+    "Import reminder" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Import-Erinnerung"
           }
         }
       }
@@ -2422,6 +2542,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Beispieldaten werden angelegt …"
+          }
+        }
+      }
+    },
+    "Messages" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mitteilungen"
+          }
+        }
+      }
+    },
+    "Messages are on. You can change them in Settings." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mitteilungen sind an. Du kannst sie in den Einstellungen ändern."
           }
         }
       }
@@ -2796,6 +2936,16 @@
         }
       }
     },
+    "None chosen" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keine gewählt"
+          }
+        }
+      }
+    },
     "None of these" : {
       "localizations" : {
         "de" : {
@@ -2916,12 +3066,32 @@
         }
       }
     },
+    "Off in iOS" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In iOS aus"
+          }
+        }
+      }
+    },
     "On" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "An"
+          }
+        }
+      }
+    },
+    "On the 3rd: last month's spending and income." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Am 3.: Ausgaben und Einnahmen des Vormonats."
           }
         }
       }
@@ -3416,6 +3586,36 @@
         }
       }
     },
+    "Remind you to import new statements?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Soll Aresium dich an neue Kontoauszüge erinnern?"
+          }
+        }
+      }
+    },
+    "Reminder and review" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erinnerung & Rückblick"
+          }
+        }
+      }
+    },
+    "Reminder only" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nur Erinnerung"
+          }
+        }
+      }
+    },
     "Remove code" : {
       "localizations" : {
         "de" : {
@@ -3492,6 +3692,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Erneut versuchen"
+          }
+        }
+      }
+    },
+    "Review only" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nur Rückblick"
           }
         }
       }
@@ -4072,6 +4282,16 @@
         }
       }
     },
+    "These messages are made on this iPhone. Nothing is sent anywhere." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Mitteilungen entstehen auf diesem iPhone. Nichts wird irgendwohin gesendet."
+          }
+        }
+      }
+    },
     "This MT940 file could not be read." : {
       "localizations" : {
         "de" : {
@@ -4232,6 +4452,16 @@
         }
       }
     },
+    "Time" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uhrzeit"
+          }
+        }
+      }
+    },
     "Time for new statements" : {
       "localizations" : {
         "de" : {
@@ -4344,6 +4574,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sperre ausschalten"
+          }
+        }
+      }
+    },
+    "Turn on" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einschalten"
           }
         }
       }
@@ -4708,6 +4948,16 @@
         }
       }
     },
+    "While the lock is on, they show no numbers." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Solange die Sperre an ist, zeigen sie keine Zahlen."
+          }
+        }
+      }
+    },
     "With it, Aresium opens with Face ID or this code, not with the iPhone's code." : {
       "localizations" : {
         "de" : {
@@ -4954,6 +5204,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "aktuell"
+          }
+        }
+      }
+    },
+    "iOS has notifications off for Aresium, so no messages come." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In iOS sind Mitteilungen für Aresium aus, deshalb kommen keine."
           }
         }
       }
