@@ -98,12 +98,27 @@ struct ImportButton: View {
 struct ImportFeedback: View {
     let store: ImportStore
     let palette: Palette
+    /// The messages' offer after the first import (brief 46), in the result's place once the result has gone; nil while
+    /// it does not show (`ReminderOffer.shows`).
+    var offer: ReminderOfferChoice? = nil
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         Group {
-            // One toast per result: a new result starts unmoved (`ImportToast`'s swipe).
-            if let banner = store.banner { ImportToast(banner: banner, store: store, palette: palette).id(banner.id) }
+            // One toast per result: a new result starts unmoved (`BottomToast`'s swipe).
+            if let banner = store.banner {
+                ImportToast(banner: banner, store: store, palette: palette).id(banner.id)
+            } else if let offer {
+                // Not now, also as a swipe down, as the send card's.
+                BottomToast(palette: palette, closesBySwipe: { true }, close: offer.notNow) {
+                    ReminderOfferCard(offer: offer, palette: palette)
+                }
+                .id("reminder-offer")
+                .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
+            }
         }
+        // The offer comes by itself after the result: it rises into place rather than appearing at once.
+        .animation(reduceMotion ? .easeOut(duration: 0.2) : .spring(duration: 0.35), value: offer != nil)
     }
 }
 
@@ -111,20 +126,6 @@ private struct ImportToast: View {
     let banner: ImportBanner
     let store: ImportStore
     let palette: Palette
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    /// The content's own height: the result is never taller, and scrolls when the screen is shorter.
-    @State private var height: CGFloat = 0
-    /// The height it is shown at (less than `height` when it scrolls).
-    @State private var shownHeight: CGFloat = 0
-    /// How far the finger has moved it; back to 0 by itself when the drag ends or is cancelled.
-    @GestureState private var dragging: CGFloat = 0
-    /// Where it is after the finger let go: sliding off, or back into place.
-    #if DEBUG
-    /// Screenshots: `-sampleBannerDrag <points>` shows it moved down as a swipe moves it.
-    @State private var released = CGFloat(Double(LaunchArguments.value("-sampleBannerDrag") ?? "") ?? 0)
-    #else
-    @State private var released: CGFloat = 0
-    #endif
 
     private var asking: Bool {
         guard let share = banner.share else { return false }
@@ -132,66 +133,14 @@ private struct ImportToast: View {
     }
 
     var body: some View {
-        ScrollView {
+        // Swipe down to put it away, as a notification (brief 41); only where Dismiss (or Not now) would. A newer result
+        // is never closed by this one's swipe.
+        BottomToast(palette: palette, closesBySwipe: { store.closesBySwipe }, close: { [id = banner.id] in
+            if store.banner?.id == id { store.close() }
+        }) {
             content
-                .padding(14)
-                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height = $0 }
         }
-        .scrollBounceBehavior(.basedOnSize)
-        .scrollIndicators(.hidden)
-        .frame(maxHeight: height)
-        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { shownHeight = $0 }
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .background {
-            // The website's toast (`.import-toast`): the second card colour over a blur, so the list under it never
-            // shows through the words, and a soft shadow.
-            ZStack {
-                RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial)
-                RoundedRectangle(cornerRadius: 14).fill(palette.card2)
-            }
-            .shadow(color: Ink.shadow, radius: 20, y: 12)
-        }
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(palette.line))
-        .padding(.horizontal, 18).padding(.bottom, 14)
-        .offset(y: dragging + released)
-        // Swipe down to put it away, as a notification (brief 41); only where Dismiss (or Not now) would, and not
-        // while it scrolls, where the drag belongs to the scrolling.
-        .gesture(swipeAway, isEnabled: store.closesBySwipe && height <= shownHeight + 1)
-        .accessibilityElement(children: .contain)
-        .accessibilityAddTraits(.updatesFrequently)
-        // VoiceOver's escape (the two-finger scrub) does what the swipe does.
-        .accessibilityAction(.escape) { if store.closesBySwipe { store.close() } }
     }
-
-    /// The swipe: the result follows the finger down (upwards only a little, as a sheet does); let go far or fast
-    /// enough it slides off and closes, else it goes back. With Reduce Motion it closes without sliding off.
-    private var swipeAway: some Gesture {
-        DragGesture(minimumDistance: 8)
-            .updating($dragging) { value, state, _ in state = Self.follow(value.translation.height) }
-            .onEnded { value in
-                // The finger's offset ends here (`dragging` is 0 again); `released` takes over from where it is.
-                released = Self.follow(value.translation.height)
-                let closes = value.translation.height > 44 || value.predictedEndTranslation.height > 140
-                guard closes, store.closesBySwipe else {
-                    withAnimation(reduceMotion ? nil : .spring(duration: 0.3)) { released = 0 }
-                    return
-                }
-                let shown = banner.id
-                let close = { if store.banner?.id == shown { store.close() } }     // not a newer result
-                if reduceMotion {
-                    close()
-                    return
-                }
-                withAnimation(.easeOut(duration: 0.2)) {
-                    released = shownHeight + 60          // below the screen's edge, shadow and all
-                } completion: {
-                    close()
-                }
-            }
-    }
-
-    /// Down follows the finger; up gives only a little.
-    private static func follow(_ translation: CGFloat) -> CGFloat { translation > 0 ? translation : translation / 6 }
 
     private var content: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -223,5 +172,143 @@ private struct ImportToast: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// The card at the bottom of the app (the website's `.import-toast`): the import's result, and the messages' offer in
+/// its place (brief 46). The second card colour over a blur, so the list under it never shows through the words, and a
+/// soft shadow; never taller than its content, and it scrolls when the screen is shorter. A swipe down puts it away as
+/// a notification (brief 41) while `closesBySwipe` allows it and it does not scroll (there the drag belongs to the
+/// scrolling); VoiceOver's escape does the same.
+struct BottomToast<Content: View>: View {
+    let palette: Palette
+    /// Whether a swipe may close it now (read as the swipe ends, so a state that changed meanwhile counts).
+    let closesBySwipe: () -> Bool
+    let close: () -> Void
+    @ViewBuilder let content: () -> Content
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// The content's own height: the card is never taller, and scrolls when the screen is shorter.
+    @State private var height: CGFloat = 0
+    /// The height it is shown at (less than `height` when it scrolls).
+    @State private var shownHeight: CGFloat = 0
+    /// How far the finger has moved it; back to 0 by itself when the drag ends or is cancelled.
+    @GestureState private var dragging: CGFloat = 0
+    /// Where it is after the finger let go: sliding off, or back into place.
+    #if DEBUG
+    /// Screenshots: `-sampleBannerDrag <points>` shows it moved down as a swipe moves it.
+    @State private var released = CGFloat(Double(LaunchArguments.value("-sampleBannerDrag") ?? "") ?? 0)
+    #else
+    @State private var released: CGFloat = 0
+    #endif
+
+    var body: some View {
+        ScrollView {
+            content()
+                .padding(14)
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height = $0 }
+        }
+        .scrollBounceBehavior(.basedOnSize)
+        .scrollIndicators(.hidden)
+        .frame(maxHeight: height)
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { shownHeight = $0 }
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .background {
+            ZStack {
+                RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial)
+                RoundedRectangle(cornerRadius: 14).fill(palette.card2)
+            }
+            .shadow(color: Ink.shadow, radius: 20, y: 12)
+        }
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(palette.line))
+        .padding(.horizontal, 18).padding(.bottom, 14)
+        .offset(y: dragging + released)
+        .gesture(swipeAway, isEnabled: closesBySwipe() && height <= shownHeight + 1)
+        .accessibilityElement(children: .contain)
+        .accessibilityAddTraits(.updatesFrequently)
+        .accessibilityAction(.escape) { if closesBySwipe() { close() } }
+    }
+
+    /// The swipe: the card follows the finger down (upwards only a little, as a sheet does); let go far or fast enough
+    /// it slides off and closes, else it goes back. With Reduce Motion it closes without sliding off.
+    private var swipeAway: some Gesture {
+        DragGesture(minimumDistance: 8)
+            .updating($dragging) { value, state, _ in state = Self.follow(value.translation.height) }
+            .onEnded { value in
+                // The finger's offset ends here (`dragging` is 0 again); `released` takes over from where it is.
+                released = Self.follow(value.translation.height)
+                let closes = value.translation.height > 44 || value.predictedEndTranslation.height > 140
+                guard closes, closesBySwipe() else {
+                    withAnimation(reduceMotion ? nil : .spring(duration: 0.3)) { released = 0 }
+                    return
+                }
+                if reduceMotion {
+                    close()
+                    return
+                }
+                withAnimation(.easeOut(duration: 0.2)) {
+                    released = shownHeight + 60          // below the screen's edge, shadow and all
+                } completion: {
+                    close()
+                }
+            }
+    }
+
+    /// Down follows the finger; up gives only a little.
+    private static func follow(_ translation: CGFloat) -> CGFloat { translation > 0 ? translation : translation / 6 }
+}
+
+/// The offer's state and answers, from the owner of the messages (ContentView).
+struct ReminderOfferChoice {
+    /// How often the reminder would come (the line names it).
+    let interval: MessageInterval
+    let turnOn: () -> Void
+    let notNow: () -> Void
+}
+
+/// The one-time offer after the first import (brief 46), in the result's card and place: the question, the line on the
+/// reminder and the month review, Turn on and Not now, laid out as the send card's ("Help Aresium learn your bank").
+struct ReminderOfferCard: View {
+    let offer: ReminderOfferChoice
+    let palette: Palette
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .firstTextBaseline, spacing: 9) {
+                Image(systemName: "bell").foregroundStyle(palette.secondary).accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Remind you to import new statements?").font(AppFont.text(14.5, weight: .semibold))
+                        .foregroundStyle(palette.ink).fixedSize(horizontal: false, vertical: true)
+                        .accessibilityAddTraits(.isHeader)
+                    Text(verbatim: MessageWording.offerLine(offer.interval)).font(AppFont.text(12.5))
+                        .foregroundStyle(palette.secondary).lineSpacing(2).fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 24) {
+                    turnOn.fixedSize(horizontal: true, vertical: false)
+                    Spacer(minLength: 0)
+                    notNow
+                }
+                VStack(alignment: .leading, spacing: 10) {
+                    turnOn
+                    notNow
+                }
+            }
+            .padding(.top, 12)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var turnOn: some View {
+        Button(action: offer.turnOn) { Text("Turn on") }
+            .buttonStyle(FormButtonStyle(accent: nil))
+    }
+
+    /// A quiet word, taking taps over 44 pt (brief 41), as the send card's Not now.
+    private var notNow: some View {
+        Button(action: offer.notNow) { Text("Not now").minimumTapArea() }
+            .buttonStyle(.plain)
+            .font(AppFont.text(13, weight: .bold)).foregroundStyle(palette.ink)
+            .fixedSize(horizontal: false, vertical: true)
     }
 }

@@ -301,7 +301,7 @@ struct ContentView: View {
             }
             .onOpenURL(perform: route)
             .overlay(alignment: .bottom) {
-                ImportFeedback(store: imports, palette: palette)
+                ImportFeedback(store: imports, palette: palette, offer: reminderOffer)
             }
             .sheet(isPresented: $showsSettings, onDismiss: importPickedInGuide) {
                 SettingsScreen(app: SettingsApp(name: "Aresium",
@@ -309,6 +309,10 @@ struct ContentView: View {
                                                 licences: [.shopList()]),
                                session: session, sample: sampleActive, logOut: logOut) {
                     if modes.phone != nil { PhoneSettingsSection(modes: modes, data: phoneData, palette: palette) }
+                    // Brief 46: Aresium's own messages (phone mode), after the data they are about, before the Lock.
+                    if modes.phone != nil, let messages = store.messages {
+                        MessagesSettingsSection(messages: messages, lock: lock)
+                    }
                     LockSettingsSection(lock: lock)
                     // Last of Aresium's own, so it sits just above General → Appearance: how the app looks.
                     DashboardSettingsSection()
@@ -528,6 +532,36 @@ struct ContentView: View {
         return phone.receiptQuestions.first
     }
 
+    /// The one-time offer of the messages (brief 46), in the import result's place: after the first import that added
+    /// payments, once its result (with the send card), the category picker and any other window are done. Never in the
+    /// tour, nor in the samples (their messages are none, or a pretend model that offers only with
+    /// `-sampleReminderOffer`).
+    private var reminderOffer: ReminderOfferChoice? {
+        guard let messages = store.messages else { return nil }
+        let windowOpen = showsSettings || showsGuide || picksFiles || restoringExport || imports.layoutRequest != nil
+            || pendingReceiptQuestion != nil || receipts.reading != nil || receipts.scanning || receipts.pickingPhoto
+            || cashEntry != nil
+        let moment = ReminderOffer.Moment(messages: messages, imports: imports, tour: tour != nil, locked: lock.isLocked,
+                                          window: windowOpen)
+        guard ReminderOffer.shows(moment) else { return nil }
+        return ReminderOfferChoice(interval: messages.preferences.interval,
+                                   turnOn: { acceptReminderOffer(messages) },
+                                   notNow: { messages.declineReminderOffer() })
+    }
+
+    /// The offer's Turn on: both messages on (iOS asks now, the first time); once iOS allowed them, a line in the
+    /// result's place says where they are changed. Waiting for iOS's answer happens off the tap (`idle`).
+    private func acceptReminderOffer(_ messages: AresiumMessages) {
+        messages.acceptReminderOffer()
+        Task {
+            await messages.idle()
+            // Never in place of a result that came meanwhile.
+            if messages.authorization == .allowed, messages.preferences.enabled, imports.banner == nil, !imports.isBusy {
+                imports.show(String(localized: "Messages are on. You can change them in Settings."), success: true)
+            }
+        }
+    }
+
     /// The question was closed without an answer: that receipt waits (asked again only after the next import).
     private func receiptQuestionClosed() {
         guard let phone = modes.phone, let id = askedReceipt,
@@ -574,6 +608,8 @@ struct ContentView: View {
             if arguments.contains("-sampleCash") { try await PhoneSample.addCash(phone) }
             if arguments.contains("-sampleImportQuestion") { try await PhoneSample.addImportQuestions(phone) }
             await modes.showFixed(phone, storage: storage)
+            // Settings → Messages and the offer on the sample (brief 46): a pretend model; nothing reaches iOS.
+            store.installSampleMessages()
             // `-importData`: the first screen's Import data at launch (the file picker).
             if arguments.contains("-importData") { importData() }
             // `-choosePhoto`: Import → Choose photo at launch (the photo picker). Receipts (the simulator has no camera):
