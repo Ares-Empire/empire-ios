@@ -12,7 +12,8 @@ struct PositionsScreen: View {
         @Bindable var navigation = navigation
         WordmarkScrollView(word: "ARESTOTELES") {
             VStack(alignment: .leading, spacing: 0) {
-                ScreenHeader(title: String(localized: "Positions"))
+                ScreenHeader(title: String(localized: "Positions"), addPositionTo: store.index.positionTargets.first?.id,
+                             isSending: store.isSending)
                 StatusLine()
                 TabSearchField(text: $navigation.positionsQuery, prompt: Text("Search positions"))
                     .padding(.horizontal, Look.side).padding(.top, 2)

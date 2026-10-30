@@ -280,6 +280,9 @@ struct DeviceAuthenticator: LockAuthenticator {
         let context = LAContext()
         // With an own code the keypad is the fallback, right under the prompt: no "Enter Password" button.
         if policy == .biometrics { context.localizedFallbackTitle = "" }
+        // Face ID (or the iPhone's code) over the app: no app switcher cover behind it (brief 47).
+        SystemPrompt.begin()
+        defer { SystemPrompt.end() }
         do {
             return try await context.evaluatePolicy(Self.policy(policy), localizedReason: reason) ? .success : .failed
         } catch let error as LAError {

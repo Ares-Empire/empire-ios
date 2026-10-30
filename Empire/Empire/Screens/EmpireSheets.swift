@@ -26,16 +26,24 @@ struct EmpireSheetView: View {
             .padding(.leading, 26).padding(.trailing, 14).padding(.top, sheet.isSmall ? 10 : 8).padding(.bottom, 4)
             .overlay(alignment: .bottom) { Rectangle().fill(EmpireStyle.hairline(dark: 0.05)).frame(height: 1) }
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    if let error { ErrorNote(text: error).padding(.bottom, 20) }
-                    page
-                }
-                .padding(.horizontal, 26).padding(.top, sheet.isSmall ? 22 : 26).padding(.bottom, 30)
+            if case .approvals = sheet {
+                page
+            } else {
+                scrollContent
             }
-            .scrollIndicators(.hidden)
         }
         .interactiveDismissDisabled(status.requesting != nil || status.deciding)
+    }
+
+    private var scrollContent: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                if let error { ErrorNote(text: error).padding(.bottom, 20) }
+                page
+            }
+            .padding(.horizontal, 26).padding(.top, sheet.isSmall ? 22 : 26).padding(.bottom, 30)
+        }
+        .scrollIndicators(.hidden)
     }
 
     private var title: String {
@@ -50,7 +58,7 @@ struct EmpireSheetView: View {
     private var error: String? {
         switch sheet {
         case .moreApps: status.requestError
-        case .approvals: status.approvalsError
+        case .approvals: nil       // the approvals page owns its scroll view and error
         case .province, .idea: nil
         }
     }
@@ -446,11 +454,33 @@ private struct ApprovalsPage: View {
     @State private var declining: String?
 
     var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                if let error = status.approvalsError { ErrorNote(text: error).padding(.bottom, 20) }
+                accounts
+            }
+            .padding(.horizontal, 26).padding(.top, 26).padding(.bottom, 30)
+        }
+        .scrollIndicators(.hidden)
+        .refreshable {
+            // Updating the sheet's status can cancel SwiftUI's refresh task. Keep the load alive and await it;
+            // the store still guards against a changed session or a closed account.
+            await Task { await actions.loadApprovals() }.value
+        }
+        // A card that went (decided here or elsewhere) takes its open confirmation with it.
+        .onChange(of: status.approvals.map(\.id)) { _, ids in
+            if let declining, !ids.contains(declining) { self.declining = nil }
+        }
+    }
+
+    private var accounts: some View {
         VStack(alignment: .leading, spacing: 0) {
             if status.approvalsLoading && status.approvals.isEmpty {
                 Text("Loading pending accounts…").font(AppFont.text(12)).foregroundStyle(EmpireStyle.quiet(dark: 0x9B9F9D)).padding(.vertical, 12)
             } else if status.approvals.isEmpty && status.approvalsError != nil {
                 Text("Pending accounts could not be loaded.").font(AppFont.text(12)).foregroundStyle(EmpireStyle.quiet(dark: 0x9B9F9D))
+                Button("Try again") { Task { await actions.loadApprovals() } }
+                    .buttonStyle(AskButtonStyle()).padding(.top, 12)
             } else if status.approvals.isEmpty {
                 EmptyState(symbol: "checkmark", title: String(localized: "No pending accounts."), note: nil)
             } else {
@@ -466,10 +496,6 @@ private struct ApprovalsPage: View {
             if status.deciding {
                 Text("Updating account…").font(AppFont.text(12)).foregroundStyle(EmpireStyle.quiet(dark: 0x9B9F9D)).padding(.top, 14)
             }
-        }
-        // A card that went (decided here or elsewhere) takes its open confirmation with it.
-        .onChange(of: status.approvals.map(\.id)) { _, ids in
-            if let declining, !ids.contains(declining) { self.declining = nil }
         }
     }
 

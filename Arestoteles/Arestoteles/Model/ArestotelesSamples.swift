@@ -17,8 +17,9 @@ enum ArestotelesSamples {
 }
 
 #if DEBUG
-/// `-sampleData`: the samples as a server in memory. `GET /vault` answers the sample (304 with its ETag); every edit is
-/// answered with `edit-result.json` (whose vault then stays), or with a 409 / 422 when asked; the source of any note is
+/// `-sampleData`: the samples as a server in memory. `GET /vault` answers the sample (304 with its ETag); most edits
+/// answer with `edit-result.json` (whose vault then stays), while Inbox statuses change in place so Undo works.
+/// Edits answer 409 / 422 when asked; the source of any note is
 /// `note-source.json` for its note and a short made-up body for the others; every search is answered with
 /// `search.json` (written for the query "printers sold"). Nothing leaves the device.
 final class SampleBackend: VaultBackend {
@@ -87,8 +88,21 @@ final class SampleBackend: VaultBackend {
         if options.invalid {
             throw VaultAPIError.invalid(message: "A position must be one sentence.")
         }
-        current = result.vault
-        return EditResult(vault: result.vault, changed: result.changed, pushed: result.pushed && !options.pushLater,
+        if case let .setInboxStatus(note, status) = edit {
+            // Keep this sample edit reversible, instead of always returning the fixture's original Inbox status.
+            var json = try JSONSerialization.jsonObject(with: JSONEncoder().encode(current)) as! [String: Any]
+            var notes = json["notes"] as! [[String: Any]]
+            if let index = notes.firstIndex(where: { $0["id"] as? String == note }),
+               var inbox = notes[index]["inbox"] as? [String: Any] {
+                inbox["status"] = status
+                notes[index]["inbox"] = inbox
+            }
+            json["notes"] = notes
+            current = try JSONDecoder().decode(Vault.self, from: JSONSerialization.data(withJSONObject: json))
+        } else {
+            current = result.vault
+        }
+        return EditResult(vault: current, changed: result.changed, pushed: result.pushed && !options.pushLater,
                           warnings: result.warnings)
     }
 

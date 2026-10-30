@@ -56,7 +56,9 @@ struct DashboardStack<Top: View, Root: View>: View {
                                    shortcuts: shortcuts,
                                    pick: { place.path.append($0) }, replace: replaceTop)
                     } else if route.cash, let month = route.month {
-                        CashScreen(month: month, store: store, palette: palette, band: band) { place.path.append($0) }
+                        CashScreen(month: month, store: store, palette: palette, band: band, shortcuts: shortcuts) {
+                            place.path.append($0)
+                        }
                     } else if route.cash {
                         CashMonthsScreen(store: store, palette: palette, band: band) { place.path.append($0) }
                     } else if route.month != nil {
@@ -279,6 +281,11 @@ struct TransactionsScreen: View {
     var pick: (DashboardRoute) -> Void = { _ in }
     /// The rows' windows and the row swiped open (`PaymentList.swift`).
     @State private var menu = PaymentRowMenu()
+    #if DEBUG
+    /// The launch arguments below act once: `.task` runs again whenever the list shows again (back from a pushed name's
+    /// page), which reopened the page each time (brief 47 measured the back swipe against it).
+    @State private var launchActionsDone = false
+    #endif
 
     var body: some View {
         VStack(spacing: 0) {
@@ -307,6 +314,8 @@ struct TransactionsScreen: View {
         .paymentListSheets(menu, store: store, palette: palette, selection: $selection, pick: pick)
         .task {
             #if DEBUG
+            guard !launchActionsDone else { return }
+            launchActionsDone = true
             let arguments = LaunchArguments.current
             if store.isSample, let index = arguments.firstIndex(of: "-sampleTransaction"),
                arguments.indices.contains(index + 1) {
@@ -336,7 +345,7 @@ struct TransactionsScreen: View {
 // MARK: - Settings → Dashboard
 
 /// Aresium's own Settings, in both modes: the dashboard's graph (brief 42; `GraphSetting`), a switch in the Lock
-/// section's look (Settings pieces, ink only). It changes the dashboard under the sheet at once.
+/// section's look (Settings pieces; its on colour is Settings' own, `EmpireSwitchStyle`). It changes the dashboard under the sheet at once.
 struct DashboardSettingsSection: View {
     @AppStorage(GraphSetting.key) private var showsGraph = GraphSetting.shownByDefault
 
@@ -348,7 +357,6 @@ struct DashboardSettingsSection: View {
                     Text("Above the categories and months").font(AppFont.text(12)).foregroundStyle(Ink.muted)
                 }
             }
-            .tint(Ink.secondary)                    // as the Lock's switch: ink, a step down, the white knob visible
             .padding(.horizontal, 16).frame(minHeight: 58)
         }
         #if DEBUG

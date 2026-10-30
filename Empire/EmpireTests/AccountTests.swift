@@ -56,6 +56,49 @@ struct AccountTests {
 
     // MARK: creating an account
 
+    @Test(arguments: ["email", "password", "passwordAgain", "name"])
+    func signUpHoldsEachTypedFieldUntilCleared(_ fieldName: String) {
+        let field: ReferenceWritableKeyPath<SignUpForm, String> = switch fieldName {
+        case "email": \SignUpForm.email
+        case "password": \SignUpForm.password
+        case "passwordAgain": \SignUpForm.passwordAgain
+        default: \SignUpForm.name
+        }
+        let form = SignUpForm(session: loggedOut(server: EmpireFakeTransport()))
+        #expect(!form.hasSomethingToDiscard)
+        form[keyPath: field] = "fictional-text"
+        #expect(form.hasSomethingToDiscard)
+        form[keyPath: field] = ""
+        #expect(!form.hasSomethingToDiscard)
+        form[keyPath: field] = " \n\t "
+        #expect(!form.hasSomethingToDiscard)
+    }
+
+    @Test func signUpHasNothingToDiscardAfterCreationEvenIfTheEmailFails() async {
+        let server = EmpireFakeTransport()
+        server.responses = [(200, Self.json(["id": "newaccount00001"])), (503, Data())]
+        let form = SignUpForm(session: loggedOut(server: server))
+        form.email = "new@example.invalid"
+        form.password = "fictional-pass"
+        form.passwordAgain = "fictional-pass"
+        form.name = "Kim Sample"
+        #expect(form.hasSomethingToDiscard)
+        await form.send()
+        #expect(form.accountCreated && form.failure != nil && !form.hasSomethingToDiscard)
+        server.responses = [(204, Data())]
+        await form.send()
+        #expect(form.phase == .done && !form.hasSomethingToDiscard)
+    }
+
+    @Test func sampleSignUpHasNothingToDiscardAfterCreation() async {
+        let form = SignUpForm(session: loggedOut(server: EmpireFakeTransport()), sample: true, sampleDelay: .zero)
+        form.email = "new@example.invalid"
+        form.password = "fictional-pass"
+        form.passwordAgain = "fictional-pass"
+        await form.send()
+        #expect(form.phase == .done && form.accountCreated && !form.hasSomethingToDiscard)
+    }
+
     @Test func signUpSendsTheAccountThenTheConfirmationEmail() async {
         let server = EmpireFakeTransport()
         server.responses = [(200, Self.json(["id": "newaccount00001"])), (204, Data())]

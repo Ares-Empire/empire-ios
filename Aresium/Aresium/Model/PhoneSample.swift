@@ -29,6 +29,9 @@ enum PhoneSample {
         }
         var files = [ImportFile(name: "Umsaetze-Girokonto.csv", data: Data(TourData.vrBankCSV(now: .now).utf8)),
                      ImportFile(name: "Umsaetze-Girokonto-Februar.csv", data: Data(paypalBankLine.utf8))]
+        if LaunchArguments.current.contains("-sampleLongName") {
+            files.append(ImportFile(name: "Umsaetze-Lange-Namen.csv", data: Data(longNameLines(now: .now).utf8)))
+        }
         for name in ["sample-paypal.csv", "sample-camt.xml"] {
             let parts = name.split(separator: ".")
             if let url = Bundle.main.url(forResource: String(parts[0]), withExtension: String(parts[1])) {
@@ -41,6 +44,27 @@ enum PhoneSample {
         backend.setOwnNames(LaunchArguments.value("-ownNames") != "off")
         if LaunchArguments.current.contains("-sampleNames") { try await addNames(backend) }
         return (backend, storage)
+    }
+
+    /// `-sampleLongName` (brief 47, the long press's menu with a long bank name): three made-up purchases this month
+    /// under one long marketplace-style bank name, as PayPal writes some.
+    private static func longNameLines(now: Date) -> String {
+        let calendar = ReceiptDay.calendar
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "de_DE")
+        formatter.calendar = calendar
+        formatter.timeZone = calendar.timeZone
+        formatter.dateFormat = "dd.MM.yyyy"
+        let start = calendar.date(from: calendar.dateComponents([.year, .month], from: now)) ?? now
+        let days = [1, 3, 5].map { formatter.string(from: calendar.date(byAdding: .day, value: $0, to: start) ?? start) }
+        let name = "FKV Fiktiv Secondhand-Marktplatz - Kleiderkreisel Europe"
+        return """
+            IBAN Auftragskonto;Buchungstag;Valutadatum;Name Zahlungsbeteiligter;Buchungstext;Verwendungszweck;Betrag;Währung;Soll/Haben;Saldo nach Buchung
+            ;\(days[0]);\(days[0]);\(name);Lastschrift;Bestellung 1001;14,50;EUR;S;
+            ;\(days[1]);\(days[1]);\(name);Lastschrift;Bestellung 1002;22,00;EUR;S;
+            ;\(days[2]);\(days[2]);\(name);Lastschrift;Bestellung 1003;9,90;EUR;S;
+
+            """
     }
 
     /// The bank's side of the sample PayPal export's purchase at Märchenladen (made up, in the VR Bank layout): with the
@@ -92,6 +116,18 @@ enum PhoneSample {
     /// this month a gift from grandma (€50, Parents & family), a flea market paid from it (€12, Clothes), an ice cream
     /// after the withdrawal (€6.50, Eating out, automatic); last month a bike sold (€80, not sorted) and a cinema ticket
     /// paid from it (€11, automatic).
+    /// `-sampleShopReceipt` (brief 47, the receipt page's "All from" card): a cash receipt this month from the shop of
+    /// the sample's weekly LIDL payments, so its name has more payments. Made up.
+    static func addShopReceipt(_ phone: PhoneBackend, now: Date = .now) async throws {
+        let calendar = ReceiptDay.calendar
+        let start = calendar.date(from: calendar.dateComponents([.year, .month], from: now)) ?? now
+        let date = min(ReceiptDay.day(calendar.date(byAdding: .day, value: 1, to: start) ?? start), ReceiptDay.day(now))
+        _ = try await phone.saveReceipt(ReceiptDraft(date: date, shop: "LIDL DIENSTLEISTUNG", total: 7.85, currency: "EUR",
+                                                     method: .cash, category: "groceries", categorySource: .starter,
+                                                     rows: ["LIDL", "Brot 2,49", "Milch 1,19", "Äpfel 4,17", "SUMME 7,85"],
+                                                     from: "text"))
+    }
+
     static func addCash(_ phone: PhoneBackend, now: Date = .now) async throws {
         let calendar = ReceiptDay.calendar
         let today = ReceiptDay.day(now)

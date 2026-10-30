@@ -161,8 +161,8 @@ struct MessagesSettingsScreen: View {
     }
 }
 
-/// A switch in the Lock section's look: the title, an optional quiet line under it, ink tint (a step down, so the white
-/// knob stays visible on it).
+/// A switch in the Lock section's look: the title, an optional quiet line under it; its on colour is Settings' own
+/// (`EmpireSwitchStyle`, brief 47).
 private struct SwitchRow: View {
     let title: Text
     var line: Text? = nil
@@ -178,7 +178,6 @@ private struct SwitchRow: View {
                 }
             }
         }
-        .tint(Ink.secondary)
         .padding(.horizontal, 16).padding(.vertical, line == nil ? 0 : 9)
         .frame(minHeight: line == nil ? 50 : 58)
     }

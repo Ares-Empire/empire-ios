@@ -1,6 +1,6 @@
 # 48: One shop under changing names: the engine's shop identity
 
-Status: built 2026-10-30 on branch codex/48-shop-identity (aresium d6cfe0e; 380 engine tests; on Patrik's real files 190 keys → 168 shops). Not merged to aresium main or deployed: compare the server's sorting on real data first; the app gets it with the wiring brief
+Status: merged to aresium main 2026-10-30 (01ebd85; on Patrik's files on the Mac: 1,246 payments, sorting unchanged, 3 card keys cleaned, 19 follow a same-shop rule, 0 lost; the server does not use sortPayments, so nothing to deploy). The app gets it with brief 54
 Repo: **aresium** · Worktree: `../aresium-48-shop-identity` (branch `codex/48-shop-identity`) · Model: `gpt-6.1-sol`,
 effort `high` · The app's side follows in a later brief (Claude wires it into empire-ios).
 

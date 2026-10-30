@@ -8,10 +8,16 @@ import SwiftUI
 /// it is joined to (Unjoin) or Join with a payment…, "As on the receipt", Delete receipt; Edit in the bar opens the check
 /// window filled from it (brief 33). A cash receipt or spent entry has Paid from (Automatic or a source, with where the
 /// cash came from); a hand entry's page is the same page with Edit opening Add cash's window and Delete entry. A tapped
-/// button shows the spinner while its work runs, the others are greyed (brief 40).
+/// button shows the spinner while its work runs, the others are greyed (brief 40). Opened from a dashboard list, it has
+/// a payment page's "All from <name>" card under the day while its name has more payments (brief 47).
 struct ReceiptPageView: View {
     @State var model: ReceiptPageModel
     let palette: Palette
+    /// The "All from <name>" card's name and payments, read as the page draws (an Edit may change the shop); nil: no
+    /// card (a page opened where no name's page can be shown, as Settings → Receipts).
+    var nameLine: (() -> NameLine?)? = nil
+    /// The card's tap: the list this page was opened from closes it and shows the name's page.
+    var openName: ((DashboardRoute) -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dynamicTypeSize) private var typeSize
     @State private var confirmsDelete = false
@@ -109,6 +115,12 @@ struct ReceiptPageView: View {
                 .foregroundStyle(Ink.secondary)
         }
         .padding(.bottom, 20)
+        if let openName, let line = nameLine?() {
+            Button { openName(line.route) } label: { AllFromLine(name: line.name, group: line.group, palette: palette) }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("allFromName")
+                .padding(.bottom, 12)
+        }
         Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 12, verticalSpacing: 0) {
             if receipt.direction == .in {
                 // Cash received: what it still holds, after what was paid from it.
@@ -300,11 +312,13 @@ struct ReceiptEditSheet: View {
 struct ReceiptPageSheet: View {
     let model: ReceiptPageModel
     let palette: Palette
+    var nameLine: (() -> NameLine?)? = nil
+    var openName: ((DashboardRoute) -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationStack {
-            ReceiptPageView(model: model, palette: palette)
+            ReceiptPageView(model: model, palette: palette, nameLine: nameLine, openName: openName)
                 .toolbar {
                     ToolbarItem(placement: .confirmationAction) {
                         Button { dismiss() } label: { Text("Done", tableName: "Shared") }

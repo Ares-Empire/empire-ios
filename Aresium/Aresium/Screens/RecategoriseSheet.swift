@@ -3,8 +3,9 @@ import SwiftUI
 /// Switch or Add for one payment. Like every iOS edit sheet, Cancel is top left and Save top right (brief 36, Patrik's
 /// phone test: Save at the bottom was far from a category at the top), in ink like the app's other sheets; in Add mode
 /// "Save & remove from current" follows the choices as the quiet second answer. After a Switch in phone mode the
-/// merchant's other payments are asked about before the sheet closes. Opened from the payment's page (Change) or from its
-/// row's long press (brief 41), which opens it before the payment has loaded.
+/// merchant's other payments are asked about before the sheet closes. Under "Currently in" one quiet line says why the
+/// payment is there (brief 47, from the payment's page). Opened from the payment's page (its category's chip or pen, an
+/// extra category's chip at Add) or from its row's long press (brief 41), which opens it before the payment has loaded.
 struct RecategoriseSheet: View {
     @Bindable var store: TransactionDetailStore
     let palette: Palette
@@ -16,9 +17,17 @@ struct RecategoriseSheet: View {
                 if let detail = store.detail {
                     VStack(alignment: .leading, spacing: 18) {
                         Text(detail.place).font(AppFont.text(22, weight: .bold))
-                        HStack(spacing: 8) {
-                            Text("Currently in").foregroundStyle(palette.muted)
-                            CategoryChip(name: detail.category, color: detail.categoryColor)
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack(spacing: 8) {
+                                Text("Currently in").foregroundStyle(palette.muted)
+                                CategoryChip(name: detail.category, color: detail.categoryColor)
+                            }
+                            // Why it is there (brief 47: moved here from the payment's page), one quiet line.
+                            if let reason = PaymentPage(detail).categoryReason {
+                                Text(reason).font(AppFont.text(12.5)).foregroundStyle(palette.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .accessibilityIdentifier("categoryReason")
+                            }
                         }
                         Picker("Mode", selection: $store.mode) {
                             ForEach(RecategorisationMode.allCases, id: \.self) { mode in Text(mode.title).tag(mode) }

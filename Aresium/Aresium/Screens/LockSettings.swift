@@ -26,7 +26,6 @@ struct LockSettingsSection: View {
                         }
                     }
                 }
-                .tint(Ink.secondary)                    // ink, a step down, so the white knob stays visible on it
                 .disabled(lock.isAuthenticating || (!lock.faceID && !lock.canUseFaceID))
                 .padding(.horizontal, 16).frame(minHeight: faceIDLine == nil ? 50 : 58)
                 SettingsDivider()

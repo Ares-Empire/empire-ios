@@ -21,7 +21,6 @@ struct NoteScreen: View {
         .frame(maxWidth: .infinity)
         .provinceWall()
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar(.hidden, for: .tabBar)
         .toolbar {
             if let note = store.index.note(link.note) { NoteMenu(note: note, expandsAll: $expandsAll) }
         }

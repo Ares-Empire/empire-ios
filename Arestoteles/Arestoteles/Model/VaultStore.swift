@@ -272,6 +272,14 @@ final class VaultStore {
         await perform(.setInboxStatus(note: note, status: processed ? "processed" : "new"), reportsFailure: reportsFailure)
     }
 
+    /// Offer the reverse edit only once the server has marked this very note as discussed.
+    func markDiscussed(of note: String) async -> UndoOffer? {
+        guard await setInboxStatus(of: note, processed: true) == .applied else { return nil }
+        return UndoOffer(message: String(localized: "Marked as discussed.")) { [self] in
+            await setInboxStatus(of: note, processed: false)
+        }
+    }
+
     /// One passage of a note (a paragraph, a list item, a quote) as Markdown, for editing it on its own. Loaded fresh;
     /// when the note changed since it was shown, its lines may have moved, so that counts as "changed elsewhere".
     func passage(of note: String, lines: LineRange) async -> Result<(text: String, source: NoteSource), Failure> {

@@ -40,6 +40,14 @@ final class SignUpForm {
 
     var failure: AccountFailure? { if case .failed(let failure) = phase { failure } else { nil } }
 
+    /// Only text that would be lost before the account exists needs a discard question.
+    var hasSomethingToDiscard: Bool {
+        !accountCreated && phase != .done
+            && [email, password, passwordAgain, name].contains {
+                !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            }
+    }
+
     var canSend: Bool {
         guard phase != .sending, phase != .done else { return false }
         return accountCreated
@@ -59,6 +67,7 @@ final class SignUpForm {
         phase = .sending
         if sample {
             try? await Task.sleep(for: sampleDelay)
+            accountCreated = true
             forgetPasswords()
             phase = .done
             return
@@ -544,7 +553,10 @@ extension SignUpForm {
         if let email = AccountDebug.value("-accountEmail", in: arguments) { self.email = email }
         switch AccountDebug.phase(arguments) {
         case "sending": phase = .sending
-        case "done": phase = .done
+        case "done":
+            accountCreated = true
+            forgetPasswords()
+            phase = .done
         case "notSent":
             accountCreated = true
             phase = .failed(.offline)
