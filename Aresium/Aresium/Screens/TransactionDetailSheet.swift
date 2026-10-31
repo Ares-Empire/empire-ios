@@ -94,6 +94,7 @@ struct TransactionDetailSheet: View {
                 store.beginRecategorisation()
                 store.mode = arguments[index + 1] == "add" ? .add : .switchCategory
                 if let pick = LaunchArguments.value("-samplePick") { store.select(pick) }
+                await debugNewCategory()
             }
             // Phone sample: a Switch to this category at once (the "also the N others" question follows).
             if !store.isSample, let index = arguments.firstIndex(of: "-samplePhoneSwitch"),
@@ -122,6 +123,22 @@ struct TransactionDetailSheet: View {
             #endif
         }
     }
+
+    #if DEBUG
+    /// Screenshots of a new category from the change window (brief 60), with `-sampleRecategorise switch|add` on a
+    /// phone sample's payment of money out: `-newCategory`, `-newCategoryName <text>`, `-newCategoryCreate`
+    /// (`NewCategoryModel.debugLaunch`), then `-newCategorySave` taps Save (the shop question follows when the shop has
+    /// more payments) and `-newCategoryAnswer only|all` answers it.
+    private func debugNewCategory() async {
+        let created = await store.newCategory.debugLaunch(begin: store.beginNewCategory) { await store.createCategory() }
+        guard created, LaunchArguments.current.contains("-newCategorySave") else { return }
+        try? await Task.sleep(for: .milliseconds(600))
+        await store.save()
+        guard let answer = LaunchArguments.value("-newCategoryAnswer"), store.followUp != nil else { return }
+        try? await Task.sleep(for: .milliseconds(900))
+        store.answer(moveOthers: answer == "all")
+    }
+    #endif
 
     /// DEBUG `-openOriginal`: the page opens at its end, where the bank's own row is.
     private var showsEnd: Bool {

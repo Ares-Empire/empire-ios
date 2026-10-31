@@ -47,19 +47,61 @@ final class TransactionDetailStore {
     private var backend: (any AresiumBackend)? { dashboardStore.backend }
 
     var isSample: Bool { dashboardStore.isSample }
+    /// The change window's categories, from the dashboard. One made in this opening of the window comes last, just
+    /// before the New category tile where it was asked for (brief 60), so it shows picked where the person looks.
     var choices: [Category] {
         guard let detail else { return [] }
-        return dashboardStore.dashboard?.recategorisationChoices(amount: detail.amount) ?? []
+        let all = dashboardStore.dashboard?.recategorisationChoices(amount: detail.amount) ?? []
+        guard !madeHere.isEmpty else { return all }
+        let made = madeHere.compactMap { name in all.first { $0.name == name } }
+        return all.filter { !madeHere.contains($0.name) } + made
     }
     func categoryColor(for name: String) -> String {
         dashboardStore.dashboard?.categories.first { $0.name == name }?.color ?? detail?.categoryColor ?? "#9ca3af"
     }
     var canSave: Bool {
-        guard !isSaving, let detail else { return false }
+        guard !isSaving, !newCategory.isMaking, let detail else { return false }
         return mode == .add || (target != nil && target != detail.category)
     }
     var canRemoveCurrent: Bool {
-        !isSaving && extras.contains { $0 != detail?.category }
+        !isSaving && !newCategory.isMaking && extras.contains { $0 != detail?.category }
+    }
+
+    // MARK: a new category from the change window (brief 60)
+
+    /// The New category alert, its busy state and its name problem (`NewCategoryModel`, shared with the receipt window
+    /// and Add cash).
+    let newCategory = NewCategoryModel()
+    /// The names of the categories made in this opening of the window, in the order made (`choices`).
+    private var madeHere: [String] = []
+
+    /// The New category tile: phone mode (one's own categories are phone mode's), for a payment whose choices take a
+    /// category made just now: money out (`Dashboard.takesNewCategory(amount:)`). In Switch and in Add.
+    var offersNewCategory: Bool {
+        guard let detail, dashboardStore.phone != nil else { return false }
+        return Dashboard.takesNewCategory(amount: detail.amount)
+    }
+
+    /// The tile: the alert with the name's field (empty, or the name a problem was found in).
+    func beginNewCategory() {
+        guard offersNewCategory, !isSaving else { return }
+        newCategory.begin()
+    }
+
+    /// The alert's Create (or the keyboard's Return): the category is made (`NewCategoryModel`), the dashboard is built
+    /// again so the window's choices have it, and it is picked: the target in Switch, one of the extras in Add. Nothing
+    /// about the payment is saved before Save.
+    func createCategory() async {
+        guard offersNewCategory, let phone = dashboardStore.phone, !isSaving else { return }
+        await newCategory.create(in: phone) { _, name in
+            madeHere.append(name)
+            await dashboardStore.reloadAfterTransactionChange()
+            // Not offered only when the dashboard could not be built again: the category is made (Settings →
+            // Categories shows it), but the window cannot offer it yet.
+            guard choices.contains(where: { $0.name == name }) else { return dashboardStore.error }
+            select(name)
+            return nil
+        }
     }
 
     func load() async {
@@ -85,6 +127,8 @@ final class TransactionDetailStore {
             if let phone = backend as? PhoneBackend {
                 receipt = try? await phone.receipt(joinedTo: loaded.id)
                 renameInfo = try await phone.renameInfo(id: loaded.id)
+                // The change window's choices come from the dashboard: one made since it was built is offered too.
+                await dashboardStore.reloadIfCategoriesChanged()
             }
         } catch {
             guard isCurrent(generation, token: token) else { return }
@@ -144,6 +188,8 @@ final class TransactionDetailStore {
         target = nil
         extras = detail.tags
         saveError = nil
+        madeHere = []
+        newCategory.reset()
         showsRecategorisation = true
     }
 

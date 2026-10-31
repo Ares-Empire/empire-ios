@@ -65,6 +65,8 @@ final class ReceiptCheckModel {
     private(set) var cardBecauseOfMatch = false
     private(set) var isSaving = false
     private(set) var problem: String?
+    /// The category menu's New category… (brief 60): the alert, its busy state and its name problem.
+    let newCategory = NewCategoryModel()
     private let readDay: String?
     private let language: AppLanguage
     /// The values as the window opened (after `load`'s presets), to tell what the person changed.
@@ -211,12 +213,7 @@ final class ReceiptCheckModel {
     func load() async {
         // What `load` presets is no change of the person's (it runs before the window shows).
         defer { start = values }
-        let list = try? await phone.categories(language: language)
-        if let list {
-            choices = list.chosen.compactMap { chosen in
-                list.name(of: chosen.id).map { Choice(id: chosen.id, name: $0, look: list.look(of: chosen.id)) }
-            } + [Choice(id: nil, name: list.notSortedName, look: nil)]
-        }
+        let list = await loadChoices()
         guard editing == nil else { return }
         if let corrected = try? await phone.correctedShopName(read: reading.shop), corrected != reading.shop,
            shop == (reading.shop ?? "") {
@@ -238,6 +235,27 @@ final class ReceiptCheckModel {
         if matches, method == nil {
             method = .card
             cardBecauseOfMatch = true
+        }
+    }
+
+    /// The person's categories, then Not sorted.
+    @discardableResult
+    private func loadChoices() async -> PhoneCategoryList? {
+        guard let list = try? await phone.categories(language: language) else { return nil }
+        choices = list.chosen.compactMap { chosen in
+            list.name(of: chosen.id).map { Choice(id: chosen.id, name: $0, look: list.look(of: chosen.id)) }
+        } + [Choice(id: nil, name: list.notSortedName, look: nil)]
+        return list
+    }
+
+    /// The menu's New category… (brief 60): the category is made (`NewCategoryModel`), offered and picked here. It is a
+    /// change of the person's, so Cancel asks first; the category stays after Cancel.
+    func createCategory() async {
+        await newCategory.create(in: phone) { id, _ in
+            await loadChoices()
+            guard choices.contains(where: { $0.id == id }) else { return nil }
+            category = id
+            return nil
         }
     }
 

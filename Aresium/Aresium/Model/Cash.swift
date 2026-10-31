@@ -243,6 +243,8 @@ final class CashEntryModel: Identifiable {
     private(set) var sources: [CashSource]?
     private(set) var isSaving = false
     private(set) var problem: String?
+    /// The category menu's New category… (brief 60): the alert, its busy state and its name problem.
+    let newCategory = NewCategoryModel()
     private let language: AppLanguage
     /// The values as the window opened, to tell what the person changed.
     @ObservationIgnored private var start: Values?
@@ -288,15 +290,32 @@ final class CashEntryModel: Identifiable {
 
     /// The person's categories, split by how they count; one's own may be either, so they are in both.
     func load() async {
-        guard let list = try? await phone.categories(language: language) else { return }
-        spendChoices = CashCategories.choices(list, for: .out)
-        incomeChoices = CashCategories.choices(list, for: .in)
+        guard await loadChoices() else { return }
         if !self.choices.contains(where: { $0.id == category }) {
             // A saved category no longer offered is dropped by the window, not by the person.
             if start?.category == category { start?.category = nil }
             category = nil
         }
         await loadSources()
+    }
+
+    /// Both lists from the person's categories; false when they could not be read.
+    private func loadChoices() async -> Bool {
+        guard let list = try? await phone.categories(language: language) else { return false }
+        spendChoices = CashCategories.choices(list, for: .out)
+        incomeChoices = CashCategories.choices(list, for: .in)
+        return true
+    }
+
+    /// The menu's New category… (brief 60), for spent and received alike (one's own category is in both lists): the
+    /// category is made (`NewCategoryModel`), offered and picked here. Cancel asks first; the category stays after it.
+    func createCategory() async {
+        await newCategory.create(in: phone) { id, _ in
+            _ = await loadChoices()
+            guard choices.contains(where: { $0.id == id }) else { return nil }
+            category = id
+            return nil
+        }
     }
 
     // MARK: Cancel

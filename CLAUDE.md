@@ -633,7 +633,44 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   mode and Own names off: no pen, no field. **The category** (brief 47): the chip and a pen beside it ("Change
   category") open the change window, an extra category's chip opens it at Add; the Change button and the reason sentence
   went, the reason (`PaymentWording.categoryReason`) is one quiet line under "Currently in" at the window's top. Server
-  mode the same wherever the page has categories to change to. **"All from <name>"** (a card under the date on the
+  mode the same wherever the page has categories to change to. **New category where a category is chosen** (brief 60,
+  Patrik after build 7: "otherwise you have to leave, create it, come back"): one piece for three places,
+  `NewCategoryModel` (`Model/NewCategory.swift`: the alert's name, kept after a name problem; whether the alert shows;
+  the busy state; the problem's line; `create(in:offer:)` makes the category with `PhoneBackend.addCustom(named:)`,
+  Settings → Categories' path with its name check and brief 36's icon and colour, then the window's `offer` puts it
+  among its choices and picks it) and `Screens/NewCategoryPieces.swift` (`newCategoryAlert`: Apple's alert "New
+  category" / "Neue Kategorie" with the field "Name", Cancel and Create / Anlegen; `CategoryMenuRow`). **The change
+  window** (`RecategoriseSheet`, `TransactionDetailStore.newCategory`, `createCategory`): the grid's last tile, "New
+  category" with `plus`, the category tiles' size, the second ink and the line's thin outline, no category colour; in
+  Switch and Add, phone mode only, and only for money out: `pick.income` takes a category only once its payments add up
+  to money in (the engine's `buildDashboardSource` kinds: `excludeFromTotals` → transfer, net > 0 → income, else
+  spend), so a category made just now is never a choice for money in (`Dashboard.takesNewCategory(amount:)`, beside
+  `recategorisationChoices`). Create rebuilds the dashboard and picks it (the target in Switch, an extra in Add); one
+  made in this opening of the window comes last, just before the tile (`madeHere`), the next opening has the
+  dashboard's order. While it is made the tile shows `BusyLabel` and the other tiles are greyed (0.4, `whileWorking`),
+  the segmented control and Save are off and the swipe down is held. Nothing about the payment is saved before Save;
+  after a Switch the shop question follows as for any category, and the shop learns it. Cancel after making one keeps
+  the category. **The receipt window and Add cash** (`ReceiptCheckView`, `CashEntryView`, both `CategoryMenuRow`): the
+  category menu ends with "New category…" / "Neue Kategorie …" (`plus`, after a divider); the same alert; the category
+  is made, offered and picked there (`ReceiptCheckModel.createCategory`, `CashEntryModel.createCategory`; in Add cash for
+  spent and received alike, one's own being in both lists); while it is made the chip shows a spinner and the menu is
+  off. A name problem (taken in either language, reserved) makes nothing and keeps the typed name for the next tap: one
+  line in the window's error style (the change window's under the grid, `FormProblem` under the menus' row) with
+  Settings → Categories' words (`LedgerError`). Create is off while the name is empty or spaces; the keyboard's Return
+  creates, and on an empty or spaces-only field iOS's Return closes the alert like Cancel (nothing made, no line).
+  Create is a plain button in the window's ink, not Apple's filled default button, which iOS draws in the system blue
+  whatever the tint (checked 2026-10-31). The windows' Cancel still asks first (a category picked is a change) and the
+  category stays after it. **The dashboard catches up:** a category made in the receipt window or Add cash whose window
+  was then cancelled changes no payment, so `DashboardStore.reloadIfCategoriesChanged()` (called by
+  `TransactionDetailStore.load` in phone mode) builds the dashboard again when the store's chosen categories differ from
+  the ones it was built with (`builtChosen`), so the change window offers it. The tour's switch step keeps the tile; a
+  category made there goes with the tour's store. DEBUG (with `-samplePhone`): on a payment's page with
+  `-sampleRecategorise switch|add` (and in `-sampleReceipt`'s or `-addCash spent|received`'s window): `-newCategory` (the
+  alert), `-newCategoryName <text>` (typed in it), `-newCategoryCreate` (Create: picked, or the problem's line;
+  `-holdWork` keeps it busy; `NewCategoryModel.debugLaunch`); on the page also `-newCategorySave` (then Save) and
+  `-newCategoryAnswer only|all` (the shop question answered). Tests: `NewCategoryInChangeTests`,
+  `NewCategoryInWindowsTests`. Screenshots: `build/60-*.png` (the menus open: a temporary UI test with real taps,
+  deleted). **"All from <name>"** (a card under the date on the
   payment's page, a withdrawal's too, and since brief 47 a receipt's and a cash entry's page opened from a list,
   `ReceiptPageView(nameLine:openName:)`, `DashboardStore.receiptNameLine`; only when the group has more than this
   payment; the long press; the swipe) opens the **name's page** (`Screens/NameScreen.swift`, `DashboardRoute.name`,

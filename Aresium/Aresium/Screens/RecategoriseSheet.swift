@@ -6,6 +6,8 @@ import SwiftUI
 /// merchant's other payments are asked about before the sheet closes. Under "Currently in" one quiet line says why the
 /// payment is there (brief 47, from the payment's page). Opened from the payment's page (its category's chip or pen, an
 /// extra category's chip at Add) or from its row's long press (brief 41), which opens it before the payment has loaded.
+/// In phone mode, for money out, the grid ends with New category (brief 60): Apple's alert with a name's field makes one
+/// of one's own categories as Settings → Categories does, and it shows before the tile, picked.
 struct RecategoriseSheet: View {
     @Bindable var store: TransactionDetailStore
     let palette: Palette
@@ -32,12 +34,20 @@ struct RecategoriseSheet: View {
                         Picker("Mode", selection: $store.mode) {
                             ForEach(RecategorisationMode.allCases, id: \.self) { mode in Text(mode.title).tag(mode) }
                         }.pickerStyle(.segmented)
+                            .disabled(store.newCategory.isMaking)   // the new category is picked in the mode it was asked in
                         Text(store.mode == .switchCategory
                              ? "Wrong category? Pick the one it belongs in — it moves there."
                              : "Also show this under other categories. It stays counted once (in \(CategoryName.shown(detail.category))), so nothing is double-counted.")
                             .font(AppFont.text(13)).foregroundStyle(palette.secondary)
                         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 9) {
                             ForEach(store.choices) { category in choice(category, current: detail.category) }
+                            if store.offersNewCategory { newCategoryTile }
+                        }
+                        // A name that made no category: why, in Settings → Categories' words (brief 60).
+                        if let problem = store.newCategory.problem {
+                            Text(problem).foregroundStyle(palette.expenseText)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .accessibilityIdentifier("newCategoryProblem")
                         }
                         if store.isSample {
                             Text("Not available with sample data").foregroundStyle(palette.muted)
@@ -69,6 +79,8 @@ struct RecategoriseSheet: View {
             }
             .background { Wall(palette: palette) }
             .navigationTitle("Recategorise").navigationBarTitleDisplayMode(.inline)
+            // New category (brief 60): the shared alert (`newCategoryAlert`), the name kept after a name problem.
+            .newCategoryAlert(store.newCategory, tint: palette.ink) { await store.createCategory() }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
@@ -89,7 +101,7 @@ struct RecategoriseSheet: View {
         .environment(\.font, nil)
         .tourCard()
         .tint(palette.ink)
-        .interactiveDismissDisabled(store.isSaving || store.followUp != nil)
+        .interactiveDismissDisabled(store.isSaving || store.followUp != nil || store.newCategory.isMaking)
         // Phone mode, after a Switch: the merchant's other payments, as a short centred question. The count is on the
         // button, so every sentence reads right for one payment or many.
         .alert(followUpTitle, isPresented: followUpShown, presenting: store.followUp) { followUp in
@@ -111,6 +123,27 @@ struct RecategoriseSheet: View {
         Binding(get: { store.followUp != nil }, set: { shown in if !shown { store.answer(moveOthers: false) } })
     }
 
+    /// The grid's last tile (brief 60): the category tiles' size, quiet ink and the line's thin outline, no category
+    /// colour, so it reads as an action. While the category is made it shows the busy sign; the others are greyed.
+    private var newCategoryTile: some View {
+        let making = store.newCategory.isMaking
+        let shape = RoundedRectangle(cornerRadius: 10)
+        return Button { store.beginNewCategory() } label: {
+            HStack(spacing: 7) {
+                if !making { Image(systemName: "plus").frame(width: 20) }
+                BusyLabel(text: Text("New category").font(AppFont.text(13, weight: .semibold)), busy: making,
+                          tint: palette.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .foregroundStyle(palette.secondary).padding(10).frame(maxWidth: .infinity, minHeight: 48)
+            .overlay(shape.stroke(palette.line, lineWidth: 1))
+            .contentShape(shape)
+        }
+        .buttonStyle(.plain)
+        .whileWorking(making, tapped: true)
+        .accessibilityIdentifier("newCategory")
+    }
+
     private func choice(_ category: Category, current: String) -> some View {
         let selected = store.mode == .switchCategory ? store.target == category.name : store.extras.contains(category.name)
         let color = Color(hex: category.color)
@@ -127,6 +160,9 @@ struct RecategoriseSheet: View {
                 .overlay(RoundedRectangle(cornerRadius: 10).stroke(color.opacity(selected ? 1 : 0.33), lineWidth: selected ? 2 : 1))
         }.buttonStyle(.plain)
             .disabled(store.mode == .add && category.name == current)
+            // A category being made (brief 60): the others greyed and still, as the app's other busy buttons.
+            .opacity(store.newCategory.isMaking ? 0.4 : 1)
+            .whileWorking(store.newCategory.isMaking, tapped: false)
             .accessibilityLabel(category.name == current ? String(localized: "\(category.shownName), current") : category.shownName)
             .accessibilityAddTraits(selected ? .isSelected : [])
     }

@@ -1504,6 +1504,16 @@
         }
       }
     },
+    "Create" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anlegen"
+          }
+        }
+      }
+    },
     "Currency" : {
       "localizations" : {
         "de" : {
@@ -2942,6 +2952,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Braucht einen Code auf diesem iPhone"
+          }
+        }
+      }
+    },
+    "New category" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neue Kategorie"
+          }
+        }
+      }
+    },
+    "New category…" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neue Kategorie …"
           }
         }
       }

@@ -71,16 +71,9 @@ struct CashEntryView: View {
                     }
                     .glassCard().padding(.top, 20)
                     VStack(spacing: 0) {
-                        FieldRow(label: String(localized: "Category")) {
-                            Menu {
-                                Picker(selection: $model.category) {
-                                    ForEach(model.choices) { choice in Text(verbatim: choice.name).tag(choice.id) }
-                                } label: { EmptyView() }
-                            } label: {
-                                MenuChip(text: model.choices.first { $0.id == model.category }?.name ?? "")
-                            }
-                            .accessibilityLabel(Text("Category"))
-                        }
+                        // Ends with New category… (brief 60), for spent and received alike.
+                        CategoryMenuRow(selection: $model.category, choices: model.choices,
+                                        newCategory: model.newCategory) { await model.createCategory() }
                     }
                     .glassCard().padding(.top, 20)
                     if model.direction == .out {
