@@ -56,3 +56,12 @@ rounds. Patrik's further notes go into build 3.
    instead of only München (`garching-b-muenchen` resolves; some towns, e.g. Freising, Immowelt does not know by
    name). No proxies needed. The server with ImmoScout24 goes live only after build 3 is on the phone, since build 2
    does not know the new portal.
+
+**Build 0.1 (3)** (uploaded 2026-10-31 21:40, commit cd602f5) carries round 3's app side: "Suche läuft", Settings →
+Application as rows (briefs 61, 62 live on the server since 20:51), settings loaded with the home screen so the sheet
+opens complete (the brief-61 agent could not reproduce the black corner on iOS 27.0; the "Loading settings…" swap was the
+visible jump it found), and ImmoScout24 known to the app. **Kleinanzeigen** changed its list layout on 2026-10-31 (no
+`aditem` classes): scans found none from about 20:50; brief 66 fixed it, live 21:32 (23 listed per scan again).
+**Brief 63** (ImmoScout24 in every town, Immowelt everywhere) waits on branch `codex/63-more-portals` until build 3 is on
+the phone; then merge, deploy, tell the Aresus session (it adds an ImmoScout24 check), and Patrik turns ImmoScout24 on in
+Suche → Portale.
