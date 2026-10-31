@@ -593,7 +593,8 @@ struct CashMonthsScreen: View {
 struct CashRow: View {
     let store: DashboardStore
     let palette: Palette
-    let current: Bool
+    /// The page's months: a month's (Current, a month's page) or every month's (Overview).
+    let scope: DashboardScope
 
     var body: some View {
         HStack(spacing: 12) {
@@ -604,7 +605,7 @@ struct CashRow: View {
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 3) {
                 Text("Cash").font(AppFont.text(14.5, weight: .semibold))
-                Text(verbatim: CashRowWording.line(unaccounted: store.cashUnaccounted(current: current)))
+                Text(verbatim: CashRowWording.line(unaccounted: store.cashUnaccounted(scope)))
                     .font(AppFont.text(12.5)).foregroundStyle(palette.muted).fixedSize(horizontal: false, vertical: true)
             }
             .frame(maxWidth: .infinity, alignment: .leading)

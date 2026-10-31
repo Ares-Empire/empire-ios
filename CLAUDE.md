@@ -674,8 +674,9 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   accessibility size), and a row's day shrinks into its tile there instead of turning into "…".
   **The long press** (`DashboardStore.rowActions(for: PaymentListEntry)`): a single row with a group in the list adds Add
   up before "All with this name"; a summed row offers Separate and "All with this name". **The icon** (`SumCategoryButton`
-  in `ScreenHeader`, before red mode's X and the gear): the header's 42 pt button with `square.stack`, off as the others,
-  on filled with the second ink and the symbol in the wall's colour; only on a category's month list while some name has
+  in `ScreenHeader`, after red mode's X and before the gear): `square.stack` on the wall (brief 56: no box; on in full ink
+  with `square.stack.fill` at 24 % under it, its front tile lit, off the outline in muted ink; the filled symbol alone
+  reads as a jar); only on a category's month list while some name has
   two or more payments there (not the Cash page, a name's page or a covered list); VoiceOver "Add up same names", a
   toggle, On/Off. DEBUG (with `-samplePhone`): `-sampleSums on` (everywhere on, in memory), `-sampleSumOpen <text>` (opens
   that summed row; `-sumsDelay <s>` first), `-sumsSlow <s>` (the motion stretched, for screenshots halfway),
@@ -914,9 +915,57 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   success still goes by itself after 4.5 s. DEBUG `-sampleBannerDrag <points>` shows it moved as halfway through the
   swipe (with `-sampleImportResult` or `-sampleFormat`). **Tap areas of 44 pt** (`minimumTapArea()` in `Screens/Components.swift`:
   the area grows around a control drawn smaller, layout unchanged): the result's Dismiss, Retry, Discard, "What is
-  sent?" and Not now, the header's 42 pt buttons (`IconButton`) and the import button; the Expenses/Income dots are 44 ×
-  44 pt each. Tests: `DashboardComfortTests` (`PaymentRowMenuTests`, `ImportBannerSwipeTests`, `LogOutQuestionTests`).
-  Screenshots: `build/41-*.png`. Settings →
+  sent?" and Not now, the header's 42 pt buttons (`IconButton`, `headerButtonFace`) and the import button; the
+  Expenses/Income dots are 44 × 44 pt each. Tests: `DashboardComfortTests` (`PaymentRowMenuTests`,
+  `ImportBannerSwipeTests`, `LogOutQuestionTests`). Screenshots: `build/41-*.png`.
+  **The graph and the header** (brief 56, Patrik's fifth round of 2026-10-31, items 5–7 in
+  `docs/reviews/2026-10-30-aresium-phone-test.md`). **Reading a graph** (every `SeriesChart`: the start screen's day and
+  month graphs, a month's page, a category's months, a name's months): a finger held still for 0.25 s on the graph
+  (`ChartHold`, UIKit's long press, `ChartReading.holdDuration`, 10 pt of wander) and then followed shows a dashed guide
+  line (`Palette.guide`, the website's `--guide`), a dot on the line ringed in the wall's colour and a one-line chip just
+  above the plot, over the axis's "EUR" (the website's `.chart-tip`: the day written out "Wed 14 Oct" / "Mi. 14. Okt."
+  or the month "Sep 2026", a dot in the line's colour, the amount to the cent; `ChartReading.chip`, `ChartPoint.title`,
+  the nearest point `ChartReading.nearest`), a selection haptic per point; letting go hides it. A drag that moves before
+  the hold is up stays the scroll's, the pages' or the back swipe's; once the hold has begun they give way until the
+  finger lifts. A short tap opens a month where one opens (`onPick`): Overview's graph that month's page, a category's
+  that month's payments, a name's its month (brief 55); the day graphs open nothing. VoiceOver reads the points as
+  before (the finger's layer is hidden). DEBUG `-readGraph <index>` shows the chip on that point (every graph shown);
+  the debug log category `graph` records each point read (the real-touch check reads it). **A month's page**
+  (`DashboardRoute(monthPage:side:)`, `MonthScreen`, pushed on the dashboard's stack; the header shows the month and
+  "Expenses and income" / "Ausgaben und Einnahmen"): that month as Current shows this month, the start screen's pages
+  (`DashboardPages`) over `DashboardScope.month(key)`. `DashboardStore` serves every scope (`.current`, which is the review
+  month while one is shown, `.overview`, `.month`): `totals(_:)`, `rows(side:scope:)`, `startChart(side:scope:)`,
+  `rangeLabel(_:)`, `route(category:side:scope:)`, `cashRoute(_:)`, `cashUnaccounted(_:)`, `monthPage(atChartIndex:side:)`;
+  the older `current:` forms call them. Its categories open that month's payments, its Cash row that month's Cash page.
+  Its Expenses and Income turn only with the dots (they slide; `DashboardPages(swipesPages: false)`): it is a pushed
+  page, so a swipe right goes back from either side, as on every pushed page (with the pager there, a swipe right on
+  Expenses only bounced; real touches, brief 56: middle swipe back 4 of 4, edge swipe at 400 pt/s 5 of 5; a synthetic
+  1500 pt/s flick from x = 2 right after a push was lost 3 to 4 of 5 there, on a category's page and on main alike). A
+  sideways swipe to the left that starts on a category row there opens that row (seen once; the row's button takes it).
+  DEBUG `-openMonthPage <YYYY-MM>` (with `-samplePhone`) opens it at launch.
+  **The graph moves away** (Settings → Dashboard, under Graph and only while the graph shows: "Graph moves away when
+  scrolling" / "Diagramm weicht beim Scrollen aus" (the Graph row is "Diagramm"), one line; `aresium.graphMoves`,
+  `GraphMotionSetting` beside `GraphSetting` in `Model/GraphSetting.swift`, on by default, not in the export; the tour
+  takes it when it starts, `TourModel.graphMoves`): the graph is the first part of its list (each start page and
+  month's page, a category's months; the name's page always had it so), so it scrolls up with the rows and nothing of
+  its own runs per frame (no view body, no state; the pages line up only when a scroll rests); off, it stays above the
+  list as before. Measured on the simulator (Time Profiler, the same eight finger-held 400 pt drags each way): no hang
+  either way; 2.8 s of main-thread time with it on against 2.0 s off over the run, mostly SwiftUI's own updates of the
+  larger moving content (the graph and the rows it uncovers); Aresium's code under 4 % of it (the graph's axis labels,
+  which Swift Charts asks for again while the graph moves, and the pages lining up at rest). Instruments' Hitches do not
+  run on the simulator, so frame drops are for the phone to judge. The range picker has its own row under the header; the Expenses/Income dots stand under it,
+  above the pages, so they are always in reach; a sideways swipe moves a whole page with its graph and heading. When a
+  page's list comes to rest, the page beside it lines up (`GraphMotion.follow`: the same place while the graph is partly
+  there, at least the graph's height while it is wholly away), and again as its first sliver comes into view (a page
+  out of sight may not take a scroll); while the graph moves, a page's content is at least the screen plus the graph,
+  so two rows can take it away as well. DEBUG `-scrollGraph <points>` scrolls the shown page that far. **The header**
+  (`ScreenHeader`, every screen alike): each button on the wall without card or outline (`HeaderButtonLook`: a 19 pt
+  symbol in the second ink, drawn 42 pt, taps over 44 pt, 44 pt apart): red mode's X first (the others keep their
+  places when it comes), then the page's own (the start screen's import button, beside the gear since brief 56, with its
+  menu and spinner; a category's icon of adding up), then the gear; the title stays in the middle of the screen while it
+  fits (`HeaderLayout`). The tour's `.importButton` and `.settings` rings follow them there. Tests:
+  `GraphAndHeaderTests` (`ChartReadingTests`, `MonthPageTests`, `MonthRouteTests`, `GraphMotionSettingTests`).
+  Screenshots: `build/56-*.png`. Settings →
   About → Fonts & licences also lists the shop list's name-suggestion-index notice (BSD-3-Clause,
   `BundledLicence.shopList`, Aresium only). **Engine:** `bash scripts/aresium-engine.sh` runs `npm run engine` in
   aresium and copies the bundle (its commit in `Engine/engine-version.txt`), the engine's test files and the licence
@@ -926,7 +975,8 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   bank file as if picked, so on the empty store the category picker opens after it as after a real import),
   `-sampleSignedIn` (signed in on the made-up account server), `-sampleOverview` (Overview, not Current) and
   the graph (Settings → Dashboard → Graph, `aresium.graph`, on by default since brief 42, `Model/GraphSetting.swift`; on
-  a category's page above its months; `-toggleGraph` flips the saved setting once; with only one month of data each graph is one point, drawn as a stem with a dot,
+  a category's page above its months; whether it moves away while its list scrolls, `aresium.graphMoves`, brief 56,
+  above; `-toggleGraph` flips the saved setting once; with only one month of data each graph is one point, drawn as a stem with a dot,
   `ChartAxis.singlePointDomain`, `OneMonthTests`), `-openSheet settings`, in the picker
   `-sampleTick <id,id,…>` (ticks those), `-sampleUntick <category id>`, `-scrollToCategory <id>` and
   `-samplePickerDone` (then Done: the dashboard with the result line counted again), `-sampleLayout` (an unknown bank's

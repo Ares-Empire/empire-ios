@@ -82,16 +82,14 @@ struct ImportButton: View {
         .disabled(store.isBusy)
     }
 
+    /// The header's look (brief 56: on the wall beside the gear, no box): the symbol, or the spinner while it imports.
     private var icon: some View {
         Group {
             if store.isBusy { ProgressView().tint(palette.secondary) }
-            else { Image(systemName: "tray.and.arrow.up").font(.system(size: 17, weight: .medium)) }
+            else { Image(systemName: "tray.and.arrow.up") }
         }
-        .frame(width: 42, height: 42)
+        .headerButtonFace()
         .foregroundStyle(palette.secondary)
-        .background(palette.card, in: RoundedRectangle(cornerRadius: 12))
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(palette.line))
-        .minimumTapArea()                   // drawn at 42 pt like the header's buttons, taps over 44 pt
     }
 }
 

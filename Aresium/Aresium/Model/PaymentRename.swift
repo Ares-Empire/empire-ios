@@ -260,7 +260,8 @@ nonisolated struct NamePage {
             return total > 0 ? MonthAmount(month: month, total: total) : nil
         }
         chart = dashboard.months.enumerated().map { index, month in
-            ChartPoint(index: index, label: month.shortTitle(language), value: amount(group.months[month.key]))
+            ChartPoint(index: index, label: month.shortTitle(language), value: amount(group.months[month.key]),
+                       title: month.title(language))
         }
         let titles = Dictionary(dashboard.months.map { ($0.key, $0.title(language)) }, uniquingKeysWith: { first, _ in first })
         var sections: [Section] = []

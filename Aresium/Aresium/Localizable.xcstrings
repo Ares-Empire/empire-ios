@@ -1944,6 +1944,16 @@
         }
       }
     },
+    "Expenses and income" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ausgaben und Einnahmen"
+          }
+        }
+      }
+    },
     "Export" : {
       "localizations" : {
         "de" : {
@@ -2182,6 +2192,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Diagramm"
+          }
+        }
+      }
+    },
+    "Graph moves away when scrolling" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diagramm weicht beim Scrollen aus"
           }
         }
       }
