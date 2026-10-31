@@ -756,7 +756,8 @@ struct ContentView: View {
         let store = dashboard ?? store
         let category = route.flatMap { $0.cash ? nil : store.category($0.category, side: $0.side) }
         let subtitle: String? = route.map { route in
-            if route.name != nil { return String(localized: "All payments") }        // a name's page (brief 44)
+            // A name's page (brief 44); its months' pages (brief 55) read as a category's month list, below.
+            if route.name != nil && route.month == nil { return String(localized: "All payments") }
             // The Cash page: its month, or its months (Overview).
             if route.cash { return route.month.map { store.monthTitle($0) } ?? String(localized: "By month") }
             if let key = route.month {
