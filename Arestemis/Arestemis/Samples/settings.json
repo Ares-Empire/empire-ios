@@ -1,7 +1,8 @@
 {
   "application_mode": "ai",
-  "own_text": "Hallo,\n\nmein Name ist Patrik, ich studiere Informatik an der TUM in Garching. Ich lebe ordentlich, bin Nichtraucher und die Miete ist gesichert. Über eine Besichtigung würde ich mich sehr freuen.\n\nViele Grüße\nPatrik",
-  "about_me": "22, Informatik-Student an der TUM, Nichtraucher, ruhig, Miete über Werkstudentenjob und Eltern gesichert.",
+  "own_text": "Hallo,\n\nmein Name ist Leon, ich studiere Architektur in Regensburg. Ich lebe ordentlich und bin Nichtraucher. Über eine Besichtigung würde ich mich sehr freuen.\n\nViele Grüße\nLeon",
+  "application_notes": "Ich kann jeden Abend zur Besichtigung kommen und bringe eine Bürgschaft mit.",
+  "about_me": "24, Architektur-Student in Regensburg, Nichtraucher, ruhig.",
   "notify": {
     "push": true,
     "time_sensitive": true

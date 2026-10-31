@@ -123,6 +123,8 @@ final class ArestemisStore {
             overviewError = nil
             lastOverviewLoad = .now
             for match in loaded.latest { remember(match) }
+            // Settings are fetched once, right after the first home screen, so the Settings sheet opens complete.
+            if settings == nil { Task { await self.loadSettings() } }
         } catch {
             guard isCurrent(context) else { return }
             if !quiet || overview == nil { handle(error, context: context) { self.overviewError = $0 } }

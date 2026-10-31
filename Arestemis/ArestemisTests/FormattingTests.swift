@@ -125,7 +125,7 @@ struct FormattingTests {
         #expect(page.items[2].listing.facts == "19 m² · WG room · Hochbrück")
         #expect(page.items[0].listing.shownRent?.amount == "€980" && page.items[0].listing.shownRent?.label == "warm")
         #expect(page.items[1].listing.shownRent?.amount == "€1,150")
-        #expect(page.items[0].sourceLine(now: now, calendar: calendar) == "WG-Gesucht · 3 min ago")
+        #expect(page.items[0].sourceLine(now: now, calendar: calendar) == "ImmoScout24 · 3 min ago")
         let rejected = try sample(RejectedPage.self, "rejected").items[0].listing
         #expect(rejected.factsWithRent == "€950 warm · 30 m² · 1 room · Maxvorstadt")
     }
@@ -144,7 +144,7 @@ struct FormattingTests {
 
     @Test func portalLinksAreOnlyWebAddresses() throws {
         let listing = try sample(Match.self, "match").listing
-        #expect(listing.portalURL?.host() == "www.wg-gesucht.de")
+        #expect(listing.portalURL?.host() == "www.immobilienscout24.de")
         for url in ["javascript:alert(1)", "arestemis://match/1", "file:///etc/hosts", "not a url", "https://"] {
             let other = try JSONDecoder().decode(Listing.self, from: JSONSerialization.data(withJSONObject: [
                 "source": "wg_gesucht", "source_name": "WG-Gesucht", "url": url, "title": "T", "description": ""]))

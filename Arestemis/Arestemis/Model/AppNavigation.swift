@@ -112,7 +112,9 @@ final class AppNavigation {
 /// `-tab hunt|listings|search`, `-filter new|saved|applied|all`, `-openMatch <id>`,
 /// `-openSheet settings|application|rejected|place|describe`, `-scrollBottom` (Hunt and Search),
 /// `-scrollTo size|rent|movein` (Search), `-sampleUndo`, `-sampleSearchDraft`,
-/// `-sampleMoreLoading`, `-sampleMoreFailure`, `-sampleLongDescription`. In a release build all are ignored.
+/// `-sampleMoreLoading`, `-sampleMoreFailure`, `-sampleLongDescription`; Settings → Application: `-sampleOwnMode` (the
+/// switch off), `-sampleNoTexts` (nothing written yet), `-openSettingsPage ownText|notes|aboutMe` (with
+/// `-openSheet settings`, read by `SettingsSheet`). In a release build all are ignored.
 struct LaunchOptions {
     var sample = false
     var noHunt = false
@@ -122,6 +124,8 @@ struct LaunchOptions {
     var moreLoading = false
     var moreFailure = false
     var longDescription = false
+    var ownMode = false
+    var noTexts = false
     var tab: AppTab?
     var filter: MatchFilter?
     var openMatch: Int?
@@ -142,6 +146,8 @@ struct LaunchOptions {
         moreLoading = arguments.contains("-sampleMoreLoading")
         moreFailure = arguments.contains("-sampleMoreFailure")
         longDescription = arguments.contains("-sampleLongDescription")
+        ownMode = arguments.contains("-sampleOwnMode")
+        noTexts = arguments.contains("-sampleNoTexts")
         tab = value("-tab").flatMap(AppTab.init(rawValue:))
         filter = value("-filter").flatMap(MatchFilter.init(rawValue:))
         openMatch = value("-openMatch").flatMap(Int.init)

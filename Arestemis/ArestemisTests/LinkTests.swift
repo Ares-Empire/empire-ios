@@ -115,6 +115,9 @@ struct LinkTests {
         LaunchOptions(arguments: ["-sampleData", "-openSheet", "place"]).apply(to: place, firstMatch: nil)
         #expect(place.tab == .search && place.showsPlaceSearch && place.placeQuery == "Garch")
 
+        let texts = LaunchOptions(arguments: ["-sampleData", "-sampleOwnMode", "-sampleNoTexts", "-openSheet", "settings"])
+        #expect(texts.ownMode && texts.noTexts && !options.ownMode && !options.noTexts)
+
         let real = AppNavigation()
         LaunchOptions(arguments: ["-tab", "search"]).apply(to: real, firstMatch: nil)     // only with the samples
         #expect(real.tab == .hunt)

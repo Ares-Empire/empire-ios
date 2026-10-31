@@ -5,7 +5,9 @@
     "region": "Bayern",
     "sources": [
       "wg_gesucht",
-      "kleinanzeigen"
+      "kleinanzeigen",
+      "immowelt",
+      "immoscout24"
     ]
   },
   {
@@ -14,7 +16,9 @@
     "region": "Bayern",
     "sources": [
       "wg_gesucht",
-      "kleinanzeigen"
+      "kleinanzeigen",
+      "immowelt",
+      "immoscout24"
     ]
   }
 ]

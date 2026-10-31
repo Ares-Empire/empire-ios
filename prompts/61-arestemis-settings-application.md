@@ -1,6 +1,6 @@
 # 61: Arestemis Settings: a compact Application section, the flicker, and ImmoScout24 in the app
 
-Status: draft
+Status: merged 2026-10-31 (tests pass; every changed screen in both languages and looks; Claude: settings load with the home screen so the sheet opens complete, samples from brief 63; the flicker not reproduced on iOS 27.0)
 Branch: `claude/61-arestemis-settings` · Worktree: `../empire-ios-61-arestemis-settings` · Agent: Claude (design)
 
 ## Goal

@@ -41,7 +41,8 @@ struct ContentView: View {
         if options.sample, let sample = try? SampleBackend(options: .init(noHunt: options.noHunt, paused: options.paused,
                                                                              hangs: options.loading, moreLoading: options.moreLoading,
                                                                              moreFailure: options.moreFailure,
-                                                                             longDescription: options.longDescription)) {
+                                                                             longDescription: options.longDescription,
+                                                                             ownMode: options.ownMode, noTexts: options.noTexts)) {
             return ArestemisStore(session: session, backend: sample, sample: true)
         }
         #endif
