@@ -1,6 +1,6 @@
 # 56: Read the graph by sliding over it, the graph moves away while scrolling, the header's buttons without boxes
 
-Status: draft
+Status: merged 2026-10-31 (all Aresium tests pass with briefs 55, 57 and fix 58; hold 0.25 s then slide; the dots moved under the range picker; "Diagramm weicht beim Scrollen aus"; the category page's graph moves too)
 Branch: `claude/56-graph-header` · Worktree: `../empire-ios-56-graph-header` · Built by: a Claude agent (the look and
 the feel) · Simulator: `claude-56`
 
