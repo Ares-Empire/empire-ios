@@ -206,16 +206,10 @@ struct ReceiptCheckView: View {
         return read.filter { !ReceiptCheckModel.currencies.contains($0) } + ReceiptCheckModel.currencies
     }
 
+    /// The person's categories and Not sorted, ending with New category… (brief 60, `CategoryMenuRow`).
     private var categoryRow: some View {
-        FieldRow(label: String(localized: "Category")) {
-            Menu {
-                Picker(selection: $model.category) {
-                    ForEach(model.choices) { choice in Text(verbatim: choice.name).tag(choice.id) }
-                } label: { EmptyView() }
-            } label: {
-                MenuChip(text: model.choices.first { $0.id == model.category }?.name ?? "")
-            }
-            .accessibilityLabel(Text("Category"))
+        CategoryMenuRow(selection: $model.category, choices: model.choices, newCategory: model.newCategory) {
+            await model.createCategory()
         }
     }
 

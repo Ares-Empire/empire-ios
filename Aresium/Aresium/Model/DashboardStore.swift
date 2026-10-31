@@ -108,6 +108,8 @@ final class DashboardStore {
     var generation: Int { session.generation }
     private var fetchGeneration = 0
     private(set) var lastSuccessfulLoad: Date?
+    /// Phone mode: the person's categories the shown dashboard was built with (`reloadIfCategoriesChanged`).
+    @ObservationIgnored private var builtChosen: [ChosenCategory]?
     private var foregroundRefreshing = false
     /// Told when a payment's category change is finished: its sheet closed after Switch or Add, the shop question
     /// answered (the tour moves on with it).
@@ -165,6 +167,8 @@ final class DashboardStore {
         // The server's answer belongs to the login it was asked with; the phone's store does not depend on a login.
         let current = { fetch == self.fetchGeneration && (backend?.mode == .phone || generation == self.generation) }
         defer { if fetch == self.fetchGeneration { isLoading = false } }
+        // Read before building: a category made meanwhile leaves this older, so the next check builds again.
+        let chosen = (backend as? PhoneBackend)?.summary.chosen
         do {
             let loaded: Dashboard
             if isSample { loaded = try Dashboard.sample() }
@@ -179,6 +183,7 @@ final class DashboardStore {
             guard current() else { return }
             try PickerTiming.measure("dashboard.publish") {
                 dashboard = loaded
+                builtChosen = chosen
                 lastSuccessfulLoad = .now
                 try publishWidget(loaded)
             }
@@ -237,6 +242,14 @@ final class DashboardStore {
         fetchGeneration += 1
         isLoading = false
         await reload()
+    }
+
+    /// Phone mode: the dashboard is built again when the person's categories changed since it was built. A category made
+    /// in the receipt window or Add cash whose window was then cancelled (brief 60) changes no payment, so nothing else
+    /// builds it again; the change window's choices come from the dashboard and would miss it.
+    func reloadIfCategoriesChanged() async {
+        guard let phone, dashboard != nil, builtChosen != phone.summary.chosen else { return }
+        await reloadAfterTransactionChange()
     }
 
     /// Coming to the foreground: the dashboard is built again when it is older than 5 minutes (a new day, a new month).

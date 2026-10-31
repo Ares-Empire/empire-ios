@@ -40,10 +40,18 @@ nonisolated struct CategoryChoices: Codable {
 
 extension Dashboard {
     func recategorisationChoices(amount: Double) -> [Category] {
-        (amount > 0 ? pick.income : pick.spend).compactMap { name in
+        (Self.picksIncome(amount: amount) ? pick.income : pick.spend).compactMap { name in
             categories.first { $0.name == name }
         }
     }
+
+    /// Money in moves among the income list (`pick.income`), everything else among spending (`pick.spend`).
+    static func picksIncome(amount: Double) -> Bool { amount > 0 }
+
+    /// Whether a category made just now is among `recategorisationChoices(amount:)` (brief 60). It has no payments yet,
+    /// and the engine counts a category as income only once its payments add up to money in (`buildDashboardSource`),
+    /// so a new one is a spending category: a choice for money out, never for money in.
+    static func takesNewCategory(amount: Double) -> Bool { !picksIncome(amount: amount) }
 }
 
 nonisolated struct Month: Codable, Identifiable {
