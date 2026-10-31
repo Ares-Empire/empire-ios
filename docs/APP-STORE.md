@@ -113,9 +113,9 @@ builds (`PhoneSample.vrBankCSV` in `Aresium/Aresium/Model/PhoneSample.swift`, ma
 as `Aresium-Sample.csv`; the engine's small made-up fixtures in `Aresium/AresiumTests/Engine/` (`vrbank.csv`,
 `dkb.csv`) work too. Never a real export.
 - **Arestemis:** "Flat hunting: set a search, start the hunt, and get every new listing from WG-Gesucht,
-  Kleinanzeigen and Immowelt that an AI checked against your whole search, with an application text ready to copy."
-  (*Wohnungssuche: Suche festlegen, Jagd starten und jedes neue Angebot von WG-Gesucht, Kleinanzeigen und Immowelt
-  bekommen, das eine KI gegen deine ganze Suche geprüft hat, mit einem Bewerbungstext zum Kopieren.*)
+  Kleinanzeigen, Immowelt and ImmoScout24 that an AI checked against your whole search, with an application text ready to copy."
+  (*Wohnungssuche: Filter festlegen, Suche starten und jedes neue Angebot von WG-Gesucht, Kleinanzeigen, Immowelt
+  und ImmoScout24 bekommen, das eine KI gegen deine ganze Suche geprüft hat, mit einem Bewerbungstext zum Kopieren.*)
 - **Aresus:** "The status of the Ares Empire's services and the sync runs of its computers, with widgets and a
   notification when something breaks." (*Der Zustand der Dienste von Ares Empire und die Sync-Läufe seiner Rechner,
   mit Widgets und einer Mitteilung, wenn etwas ausfällt.*)

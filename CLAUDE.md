@@ -138,7 +138,7 @@ German or English. The Mac and the simulators are set to German, so the apps ope
   theirs). The switch tests (`LanguageLookupTests`, `LanguageSwitchTests` in each suite) ask in both languages; to
   prove the other direction run them again with `-testLanguage de -testRegion DE`.
 - Sample mode shows the servers' English sample files, so their lines stay English there; live they come in German.
-- German style: "du", plain and short; the app's terms: Jagd/Angebote/Suche (Arestemis), Problem/Aktiv/Inaktiv
+- German style: "du", plain and short; the app's terms: Suche/Angebote/Filter (Arestemis; the tabs, since 2026-11-01), Problem/Aktiv/Inaktiv
   (Aresus), Buchung/Ausgaben/Einnahmen (Aresium), EROBERT/BELAGERT/… (Empire status words). "THE EMPIRE" stays a name.
 
 ## Settings (every app, 2026-10-24)
