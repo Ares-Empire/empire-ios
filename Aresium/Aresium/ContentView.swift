@@ -782,11 +782,15 @@ struct ContentView: View {
     /// A category's payments in a month (brief 53): the icon of adding up, while some name has more payments there
     /// (phone mode; not the Cash page or a name's page). A tap adds up every name in the category, or none.
     private func sumsIcon(_ route: DashboardRoute, in store: DashboardStore) -> ScreenHeader.Sums? {
-        guard store.offersSums, let month = route.month, !route.cash, route.name == nil,
-              store.paymentList(category: route.category, month: month, side: route.side).canSum else { return nil }
+        guard store.offersSums, let month = route.month, !route.cash, route.name == nil else { return nil }
+        let list = store.paymentList(category: route.category, month: month, side: route.side)
+        guard list.canSum else { return nil }
         let category = store.sumCategoryKey(route.category)
-        return ScreenHeader.Sums(on: store.sums.choices.sumsCategory(category)) {
-            withAnimation(SumMotion.animation(reduceMotion: reduceMotion)) { store.sums.toggleCategory(category) }
+        // On while the list shows every name with two or more payments as one row (fix 58); the tap reads the list
+        // again, in case the dashboard changed since the header was drawn.
+        return ScreenHeader.Sums(on: list.allSummed) {
+            let names = store.paymentList(category: route.category, month: month, side: route.side).sumKeys
+            withAnimation(SumMotion.animation(reduceMotion: reduceMotion)) { store.sums.toggleCategory(category, names: names) }
         }
     }
 

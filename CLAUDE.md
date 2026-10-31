@@ -666,9 +666,14 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   and the engine never change. **Choices** (`SumChoices`, the more specific wins): everywhere (Settings → Dashboard →
   "Add up same names" / "Gleiche Namen summieren", off by default), a category (the icon), a name (the name's page's
   switch "Add up in every category" / "In jeder Kategorie summieren", on a card under the totals), a name in a category
-  (the swipe and the long press); every level but everywhere on, off or not set. The icon's tap sets the category to the
-  opposite of what it shows and clears the name-in-this-category choices there; the name page's switch sets the name and
-  clears its per-category choices. Keyed by the category's stable id (`DashboardStore.sumCategoryKey`: "id:groceries"
+  (the swipe and the long press); every level but everywhere on, off or not set, and **a choice equal to what the levels
+  above give is not set** (fix 58, Patrik 2026-10-31: in Oct 2026 Kleidung the icon did nothing after Vinted was added up
+  and separated by hand), so Separate after Add up, or a switch turned back, leaves nothing that outvotes a later choice.
+  **The icon shows what the list shows** (on while every name with two or more payments there is one row,
+  `PaymentList.allSummed`), not the category's own choice; its tap (`toggleCategory(_:names:)` with the list's
+  `sumKeys`) gives the category the opposite, clears the name-in-this-category choices there and gives the tap's choice
+  to any name there whose own (name page) choice says otherwise, so it always means all or none in that list; the name
+  page's switch sets the name and clears its per-category choices. Keyed by the category's stable id (`DashboardStore.sumCategoryKey`: "id:groceries"
   for Groceries and Lebensmittel, "id:custom-…" for one's own; the dashboard's own entries such as Refunds by name) and
   the opaque `nameKey`. Kept in Aresium's defaults (`aresium.sums`, JSON, `PaymentSums(defaults:)`), not in the export,
   deleted with Delete data and "Forgot the code?" (`ModeStore.deleteLocalData`); tests and samples have an empty set in
