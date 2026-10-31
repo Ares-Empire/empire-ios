@@ -114,6 +114,7 @@ struct ScreenHeader: View {
                 }
                 if let sums {
                     SumCategoryButton(on: sums.on, palette: palette, action: sums.toggle)
+                        .tourAnchor(.sumIcon)
                         .transition(.opacity)
                 }
                 if let imports {

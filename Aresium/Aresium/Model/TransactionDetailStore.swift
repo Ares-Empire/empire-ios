@@ -133,6 +133,7 @@ final class TransactionDetailStore {
             for step in steps { detail = try await phone.rename(id: transaction.id, name: step.name, scope: step.scope) }
             renameInfo = try await phone.renameInfo(id: transaction.id)
             await dashboardStore.reloadAfterTransactionChange()
+            dashboardStore.onRenamed?()
         } catch { saveError = error.localizedDescription }
     }
 

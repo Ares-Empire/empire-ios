@@ -546,8 +546,18 @@ struct OwnNamesSetting: View {
     let dashboard: DashboardStore
 
     var body: some View {
-        Toggle(isOn: Binding(get: { dashboard.ownNames },
-                             set: { on in Task { await dashboard.setOwnNames(on) } })) {
+        OwnNamesRow(isOn: Binding(get: { dashboard.ownNames },
+                                  set: { on in Task { await dashboard.setOwnNames(on) } }))
+    }
+}
+
+/// The Own names switch as Settings draws it (one place for its words and look): the person's Settings binds it to the
+/// setting, the tour's Settings shows it as a picture of the tour's own (brief 59).
+struct OwnNamesRow: View {
+    @Binding var isOn: Bool
+
+    var body: some View {
+        Toggle(isOn: $isOn) {
             VStack(alignment: .leading, spacing: 2) {
                 Text("Own names").font(AppFont.text(15, weight: .medium)).foregroundStyle(Ink.primary)
                 Text("Off shows the banks' names and keeps yours.").font(AppFont.text(12)).foregroundStyle(Ink.muted)

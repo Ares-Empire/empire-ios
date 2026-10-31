@@ -1,10 +1,12 @@
 import Foundation
+import SwiftUI
 import Testing
 @testable import Aresium
 
-/// The tour (briefs 24, 25 and 42): its twelve steps go on when the person does the thing or taps Next, the graph, lock
-/// and contact steps only point and go on, the graph's step is left out while the graph is hidden, and it runs on a
-/// made-up store of its own that is deleted when it ends, at any step, without touching the person's store.
+/// The tour (briefs 24, 25, 42 and 59): its eighteen steps go on when the person does the thing or taps Next, the
+/// graph's and the Settings rows' steps only point and go on, the graph's step is left out (and no card mentions the
+/// graph) while the graph is hidden, adding up works on the tour's own choices in memory, and it runs on a made-up store
+/// of its own that is deleted when it ends, at any step, without touching the person's store or settings.
 @MainActor
 struct TourTests {
     /// 27 Oct 2026, noon: the made-up months end in October.
@@ -20,7 +22,7 @@ struct TourTests {
 
     /// The graph shown (the default), unless a test says otherwise; never the simulator's own setting.
     private static func model(in parent: URL, showsGraph: Bool = true) -> TourModel {
-        TourModel(showsGraph: showsGraph) {
+        TourModel(showsGraph: showsGraph, graphMoves: true) {
             try await TourWorld.make(in: parent, now: now, makeEngine: { try PhoneTest.engine() })
         }
     }
@@ -31,18 +33,44 @@ struct TourTests {
             .filter { $0.lastPathComponent.hasPrefix(TourWorld.folderPrefix) }
     }
 
+    /// The person's settings and choices the tour must never write, as the app's own defaults hold them.
+    private static let personsKeys = [PaymentSums.key, GraphSetting.key, GraphMotionSetting.key, PhoneBackend.ownNamesKey,
+                                      AresiumMessages.preferencesKey, AresiumMessages.historyKey,
+                                      AresiumMessages.progressKey]
+
+    private static func personsDefaults() -> [String: Data] {
+        var values: [String: Data] = [:]
+        for key in personsKeys {
+            if let value = UserDefaults.standard.object(forKey: key) {
+                values[key] = (try? NSKeyedArchiver.archivedData(withRootObject: value, requiringSecureCoding: false))
+                    ?? Data()
+            }
+        }
+        return values
+    }
+
     /// Waits (up to 10 s) until `condition` holds; the follow-up question's answer finishes in a task of its own.
     private func eventually(_ condition: () -> Bool) async {
         for _ in 0..<200 where !condition() { try? await Task.sleep(for: .milliseconds(50)) }
     }
 
+    /// The category list on top of the tour's dashboard, as its rows show.
+    private func shownList(_ tour: TourModel) throws -> PaymentList {
+        let world = try #require(tour.world)
+        let route = try #require(tour.place.path.last)
+        #expect(route.isCategoryList)
+        return world.dashboard.paymentList(category: route.category, month: try #require(route.month), side: route.side)
+    }
+
     @Test func eachStepGoesOnWhenThePersonDoesTheThing() async throws {
+        let before = Self.personsDefaults()
         let parent = Self.parent()
         let tour = Self.model(in: parent)
         await tour.start()
         #expect(tour.phase == .running)
         #expect(tour.step == .welcome)
         #expect(tour.target == nil)
+        #expect(tour.count == 18)
         let world = try #require(tour.world)
         #expect(world.root.deletingLastPathComponent().standardizedFileURL == parent.standardizedFileURL)
         #expect(world.phone.summary.payments > 100)
@@ -64,14 +92,19 @@ struct TourTests {
         #expect(tour.target == .graph, "the graph itself, on the start screen")
         #expect(tour.holdsTheScreen)
         #expect(!tour.place.current, "Overview stays for the graph")
-        #expect(tour.number == 4 && tour.count == 12)
+        #expect(tour.number == 4 && tour.count == 18)
 
         place = tour.place
         place.side = .expenses                                  // the person moves the page: the step asks nothing
         tour.update(place)
+        place = tour.place
+        place.open(DashboardRoute(monthPage: "2026-09", side: .expenses))   // a tap on a month opens its page
+        tour.update(place)
         #expect(tour.step == .graph, "only Next goes on from the graph")
+        #expect(tour.target == .graph, "the month's page has its own graph")
         tour.next()
         #expect(tour.step == .category)
+        #expect(tour.place.path.isEmpty, "back on the start screen")
         #expect(tour.place.current && tour.place.side == .expenses, "back on this month's expenses")
         let groceries = try #require(world.firstCategory)
         #expect(tour.target == .category(groceries))
@@ -82,16 +115,26 @@ struct TourTests {
         #expect(tour.step == .payment)
         let first = try #require(world.dashboard.transactions(category: groceries, month: "2026-10", side: .expenses).first)
         #expect(tour.target == .payment(first.transaction.id))
+        #expect(!tour.rowShortcuts, "the ringed row opens its page: no swipe or menu here")
 
         place = tour.place
-        place.payment = first.transaction                       // the payment's detail
+        place.payment = first.transaction                       // the payment's page
         tour.update(place)
+        #expect(tour.step == .rename)
+        #expect(tour.target == .paymentName)
+
+        // The name, renamed for the whole shop: saved in the tour's store, which moves on.
+        let detail = world.dashboard.transactionDetailStore(for: first.transaction)
+        await detail.prepareRename()
+        #expect(detail.offersRename)
+        tour.paymentRecategorised()
+        #expect(tour.step == .rename, "only a saved name moves on")
+        await detail.rename(to: "Fiktiv Supermarkt", scope: .shop)
+        #expect(detail.detail?.place == "Fiktiv Supermarkt")
         #expect(tour.step == .switchCategory)
         #expect(tour.target == .change)
 
-        // Change → another category → Save: the shop question comes, as in real use; the answer moves on.
-        let detail = world.dashboard.transactionDetailStore(for: first.transaction)
-        await detail.load()
+        // The category's chip → another category → Save: the shop question comes, as in real use; the answer moves on.
         detail.beginRecategorisation()
         let eatingOut = try #require(try await world.phone.categories().name(of: "eating-out"))
         detail.select(eatingOut)
@@ -100,32 +143,72 @@ struct TourTests {
         #expect(question.count > 3)
         #expect(tour.step == .switchCategory, "still waiting for the answer")
         detail.answer(moveOthers: true)
-        await eventually { tour.step == .categories }
+        await eventually { tour.step == .addUp }
+        #expect(tour.step == .addUp)
+        #expect(tour.place.payment == nil, "the payment closes: the list under it")
+
+        // The swipe's Add up on the ringed single row: the name as one row, in the tour's choices.
+        var list = try shownList(tour)
+        guard case let .payment(row, true)? = list.entries.first(where: {
+            if case .payment(_, true) = $0 { true } else { false }
+        }) else { Issue.record("no single row with a name to add up"); return }
+        #expect(tour.target == .payment(row.transaction.id))
+        #expect(tour.holdsTheScreen && tour.rowShortcuts, "the ringed row swipes; the back swipe stays off")
+        let name = try #require(PaymentList.nameKey(row.transaction))
+        let category = world.dashboard.sumCategoryKey(groceries)
+        world.dashboard.sums.setName(name, in: category, sums: true)
+        #expect(tour.step == .sumIcon)
+        #expect(tour.addedUpName == name)
+        #expect(try shownList(tour).summed(name) != nil, "the name is one row now")
+        #expect(tour.target == .sumIcon)
+        #expect(!tour.rowShortcuts)
+
+        // The icon: every name in the list added up (another grocer has several payments too, so it was off).
+        list = try shownList(tour)
+        #expect(list.sumKeys.count >= 2 && !list.allSummed)
+        world.dashboard.sums.toggleCategory(category, names: list.sumKeys)
+        #expect(tour.step == .allFrom)
+        #expect(try shownList(tour).allSummed)
+        #expect(tour.target == .summed(name), "the same row as at Add up")
+        #expect(tour.rowShortcuts)
+
+        // Separate meanwhile: the ring follows the name to its first row; All opens the name's page and moves on.
+        world.dashboard.sums.setName(name, in: category, sums: false)
+        #expect(tour.step == .allFrom)
+        let firstOfName = try #require(try shownList(tour).rows.first { PaymentList.nameKey($0.transaction) == name })
+        #expect(tour.target == .payment(firstOfName.transaction.id))
+        let nameRoute = try #require(world.dashboard.nameRoute(for: firstOfName.transaction))
+        place = tour.place
+        place.open(nameRoute)
+        tour.update(place)
         #expect(tour.step == .categories)
-        #expect(tour.place.payment == nil, "the payment closes")
+        #expect(tour.place.path.last?.isNamePage == true, "the name's page stays under the gear")
         #expect(tour.target == .settings)
 
         tour.openSettings()
-        #expect(tour.target == .categoriesRow)
-        tour.lockTapped()
-        tour.contactTapped()
-        #expect(tour.step == .categories, "the lock and contact rows answer only their own steps")
+        #expect(tour.target == .dataRows)
+        tour.settingsRowTapped(.lockRow)
+        tour.settingsRowTapped(.messagesRow)
+        #expect(tour.step == .categories, "a row answers only its own step")
         tour.setCategoriesShown(true)
         #expect(tour.target == nil, "free to choose and add categories")
         try await world.phone.addCustom(named: "Fiktiv-Kategorie")
         tour.next()
-        #expect(tour.step == .lock)
-        #expect(tour.showsSettings && !tour.showsCategories, "back in the tour's Settings, at its Lock section")
-        #expect(tour.target == .lockRow)
+        #expect(tour.step == .messages)
+        #expect(tour.showsSettings && !tour.showsCategories, "back in the tour's Settings, at Messages")
+        #expect(tour.target == .messagesRow)
         tour.closeSettings()
         #expect(tour.target == .settings, "closed: the gear again")
         tour.openSettings()
-        tour.lockTapped()
-        #expect(tour.step == .contact && tour.showsSettings)
-        #expect(tour.target == .contactRow)
-        tour.lockTapped()
-        #expect(tour.step == .contact)
-        tour.contactTapped()
+        tour.settingsRowTapped(.messagesRow)
+        #expect(tour.step == .lock && tour.target == .lockRow)
+        tour.settingsRowTapped(.contactRow)
+        #expect(tour.step == .lock)
+        tour.settingsRowTapped(.lockRow)
+        #expect(tour.step == .dashboardSettings && tour.target == .dashboardRows)
+        tour.settingsRowTapped(.dashboardRows)
+        #expect(tour.step == .contact && tour.target == .contactRow)
+        tour.settingsRowTapped(.contactRow)
         #expect(tour.step == .importFiles)
         #expect(!tour.showsSettings && tour.place.path.isEmpty)
         #expect(tour.target == .importButton)
@@ -136,6 +219,7 @@ struct TourTests {
         tour.next()
         #expect(tour.phase == .ended)
         #expect(Self.tourFolders(in: parent).isEmpty, "the made-up store is deleted")
+        #expect(Self.personsDefaults() == before, "the person's choices, settings, names and messages untouched")
     }
 
     @Test func nextGetsEachStepsScreenReady() async throws {
@@ -145,17 +229,34 @@ struct TourTests {
         var seen: [TourStep] = [tour.step]
         while tour.phase == .running {
             switch tour.step {
+            case .graph:
+                #expect(!tour.place.current, "Overview's months")
+                #expect(tour.target == .graph)
             case .payment:
                 #expect(tour.place.path.last?.month == "2026-10", "this month's payments of a category")
                 #expect(tour.target != nil)
+            case .rename:
+                #expect(tour.place.payment != nil, "a payment's page")
+                #expect(tour.target == .paymentName)
             case .switchCategory:
-                #expect(tour.place.payment != nil, "a payment's detail")
+                #expect(tour.place.payment != nil, "a payment's page")
                 #expect(tour.target == .change)
+            case .addUp, .allFrom:
+                #expect(tour.place.payment == nil && tour.place.path.last?.isCategoryList == true)
+                if case .payment? = tour.target {} else { Issue.record("a single row at \(tour.step)") }
+                #expect(tour.rowShortcuts && tour.holdsTheScreen)
+            case .sumIcon:
+                #expect(tour.place.path.last?.isCategoryList == true)
+                #expect(tour.target == .sumIcon)
             case .categories:
                 #expect(tour.place.payment == nil)
                 #expect(tour.target == .settings)
+            case .messages:
+                #expect(tour.showsSettings && tour.target == .messagesRow)
             case .lock:
                 #expect(tour.showsSettings && tour.target == .lockRow)
+            case .dashboardSettings:
+                #expect(tour.showsSettings && tour.target == .dashboardRows)
             case .contact:
                 #expect(tour.showsSettings && tour.target == .contactRow)
             case .importFiles, .welcome, .done:
@@ -164,35 +265,42 @@ struct TourTests {
                 #expect(tour.place.path.isEmpty)
                 #expect(tour.target != nil)
             }
+            if tour.holdsTheScreen && !tour.step.swipesRows { #expect(!tour.rowShortcuts, "\(tour.step)") }
             tour.next()
             if tour.phase == .running { seen.append(tour.step) }
         }
         #expect(seen == TourStep.allCases)
-        #expect(seen.count == 12)
+        #expect(seen.count == 18)
         #expect(Self.tourFolders(in: parent).isEmpty)
     }
 
-    /// With the graph hidden in Settings (brief 42), the tour has no graph step: eleven steps, counted 1 to 11 on the
-    /// card, Overview followed by the category; a DEBUG start at the graph's step starts at the category.
+    /// With the graph hidden in Settings (brief 42), the tour has no graph step: seventeen steps, counted 1 to 17 on the
+    /// card, Overview followed by the category; a DEBUG start at the graph's step starts at the category; no card
+    /// mentions the graph (brief 59).
     @Test func withTheGraphHiddenTheGraphStepIsLeftOut() async throws {
         #expect(TourStep.steps(showingGraph: true) == TourStep.allCases)
         #expect(TourStep.steps(showingGraph: false) == TourStep.allCases.filter { $0 != .graph })
 
         let tour = Self.model(in: Self.parent(), showsGraph: false)
         await tour.start()
-        #expect(tour.count == 11)
+        #expect(tour.count == 17)
         var numbers: [Int] = []
         var seen: [TourStep] = []
         while tour.phase == .running {
             numbers.append(tour.number)
             seen.append(tour.step)
             #expect(tour.target != .graph)
+            #expect(!tour.text.localizedCaseInsensitiveContains("graph"), "\(tour.step)")
             if tour.step == .overview { #expect(tour.nextStep == .category) }
             if tour.step == .done { #expect(tour.nextStep == nil) }
             tour.next()
         }
-        #expect(numbers == Array(1...11))
+        #expect(numbers == Array(1...17))
         #expect(!seen.contains(.graph) && seen.first == .welcome && seen.last == .done)
+        for step in TourStep.steps(showingGraph: false) {
+            #expect(!step.text(.english, showingGraph: false).localizedCaseInsensitiveContains("graph"))
+            #expect(!step.text(.german, showingGraph: false).localizedCaseInsensitiveContains("diagramm"))
+        }
 
         let started = Self.model(in: Self.parent(), showsGraph: false)
         await started.start(at: .graph)
@@ -200,10 +308,56 @@ struct TourTests {
         started.end()
     }
 
-    /// The graph's card says what the graph shows and where to hide it, in both languages.
-    @Test func theGraphStepSaysWhatTheGraphShows() {
-        #expect(TourStep.graph.text(.english) == "The trend by day or by month. You can hide the graph in Settings.")
-        #expect(TourStep.graph.text(.german) == "Der Verlauf nach Tagen oder Monaten. In den Einstellungen kannst du das Diagramm ausblenden.")
+    /// Every card has its German, and the cards about the new features say what they show, in both languages.
+    @Test func theCardsSayWhatTheyShowInBothLanguages() {
+        for step in TourStep.allCases {
+            for graph in [true, false] {
+                let english = step.text(.english, showingGraph: graph), german = step.text(.german, showingGraph: graph)
+                #expect(!german.isEmpty && german != english, "\(step) has its German")
+                #expect(!english.contains("!") && !german.contains("!"), "no exclamation marks")
+            }
+        }
+        #expect(TourStep.graph.text(.english) == "Hold the graph and slide to read each month. A tap opens it.")
+        #expect(TourStep.graph.text(.german) == "Halte den Finger auf dem Diagramm und zieh: jeder Monat mit seiner Zahl. Antippen öffnet ihn.")
+        #expect(TourStep.addUp.text(.german).contains("Summieren"))
+        #expect(TourStep.allFrom.text(.german).contains("Alle"))
+        #expect(TourStep.importFiles.text(.english) == "Files from your bank, receipts and cash come in here.")
+        #expect(TourStep.dashboardSettings.text(.german, showingGraph: true).contains("Diagramm"))
+        #expect(TourStep.dashboardSettings.text(.german, showingGraph: false) == "Hier summierst du gleiche Namen in jeder Liste.")
+    }
+
+    /// The tour scrolls to a control only as far as it takes to show it above the card, and not at all when it shows
+    /// (brief 59: a start page's moving graph went half away for a category row that nearly showed).
+    @Test func theTourScrollsOnlyAsFarAsItTakes() throws {
+        // Shown already, wholly in the upper 60 %: no scroll.
+        #expect(TourScrollPlace(frame: CGRect(x: 0, y: 100, width: 300, height: 60), height: 600).scrollAnchor == nil)
+        // Its lower edge just past it: brought to the end of the shown part.
+        let near = TourScrollPlace(frame: CGRect(x: 0, y: 340, width: 300, height: 60), height: 600)
+        let anchor = try #require(near.scrollAnchor)
+        let top = anchor.y * (600 - 60)                     // where its top lands with that anchor
+        #expect(abs(top + 60 - 360) < 0.001, "its lower edge at 60 % of the height")
+        // Above the top (scrolled past), or taller than the shown part: its top at the top.
+        #expect(TourScrollPlace(frame: CGRect(x: 0, y: -40, width: 300, height: 60), height: 600).scrollAnchor != nil)
+        #expect(TourScrollPlace(frame: CGRect(x: 0, y: 500, width: 300, height: 500), height: 600).scrollAnchor?.y == 0)
+    }
+
+    /// Adding up in the tour (brief 59): its lists offer it, on choices of its own in memory; the person's are never
+    /// read or written, the app's defaults never touched.
+    @Test func addingUpInTheTourIsInMemoryOnly() async throws {
+        let before = Self.personsDefaults()
+        let tour = Self.model(in: Self.parent())
+        await tour.start(at: .addUp)
+        let world = try #require(tour.world)
+        #expect(world.dashboard.offersSums)
+        #expect(!world.dashboard.sums.isKept && world.dashboard.sums.choices == SumChoices(), "empty, in memory")
+        world.dashboard.sums.setEverywhere(true)
+        #expect(tour.step == .sumIcon, "a name added up moves on")
+        world.dashboard.sums.toggleCategory("id:groceries", names: ["merchant:fiktiv"])
+        #expect(tour.step == .allFrom)
+        world.dashboard.sums.setName("merchant:fiktiv", sums: false)
+        #expect(tour.step == .allFrom, "only All moves on from here")
+        tour.end()
+        #expect(Self.personsDefaults() == before)
     }
 
     /// Ending at any step: the person's store is as it was, the tour's folder is gone.

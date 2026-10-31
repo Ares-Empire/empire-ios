@@ -1984,6 +1984,16 @@
         }
       }
     },
+    "Files from your bank, receipts and cash come in here." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hier kommen Dateien von deiner Bank, Belege und Bargeld rein."
+          }
+        }
+      }
+    },
     "Find your bank: step by step, how to get a file of your payments out of it." : {
       "localizations" : {
         "de" : {
@@ -2246,12 +2256,42 @@
         }
       }
     },
-    "Here you choose categories and add your own." : {
+    "Here you add up every name in this list." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hier wählst du Kategorien und legst eigene an."
+            "value" : "Hier summierst du alle Namen dieser Liste."
+          }
+        }
+      }
+    },
+    "Here you add up same names in every list." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hier summierst du gleiche Namen in jeder Liste."
+          }
+        }
+      }
+    },
+    "Here you choose categories and add your own. Own names can be turned off." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hier wählst du Kategorien und legst eigene an. Eigene Namen lassen sich abschalten."
+          }
+        }
+      }
+    },
+    "Here you switch the graph, its moving away as you scroll, and adding up in every list." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hier schaltest du das Diagramm, sein Ausweichen beim Scrollen und das Summieren in jeder Liste."
           }
         }
       }
@@ -2262,6 +2302,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Blendet die Buchungen aus"
+          }
+        }
+      }
+    },
+    "Hold the graph and slide to read each month. A tap opens it." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Halte den Finger auf dem Diagramm und zieh: jeder Monat mit seiner Zahl. Antippen öffnet ihn."
           }
         }
       }
@@ -2892,16 +2942,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Braucht einen Code auf diesem iPhone"
-          }
-        }
-      }
-    },
-    "New files from your bank and your receipts come in here." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hier kommen neue Dateien von deiner Bank und deine Belege rein."
           }
         }
       }
@@ -3816,6 +3856,16 @@
         }
       }
     },
+    "Reminders to import and a review of each month, made on this iPhone." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erinnerungen zum Importieren und ein Monatsrückblick, die auf diesem iPhone entstehen."
+          }
+        }
+      }
+    },
     "Remove code" : {
       "localizations" : {
         "de" : {
@@ -4166,12 +4216,12 @@
         }
       }
     },
-    "Sorted wrong? Pick the right category. Aresium remembers the shop." : {
+    "Sorted wrong? Tap the category. Aresium remembers the shop." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Falsch einsortiert? Wähl die richtige Kategorie. Aresium merkt sich den Laden."
+            "value" : "Falsch einsortiert? Tippe auf die Kategorie. Aresium merkt sich den Laden."
           }
         }
       }
@@ -4262,12 +4312,32 @@
         }
       }
     },
+    "Swipe a payment left: Add up makes one row of its name." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wisch eine Buchung nach links: Summieren macht aus ihrem Namen eine Zeile."
+          }
+        }
+      }
+    },
     "Swipe sideways: your income." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Wisch zur Seite: deine Einnahmen."
+          }
+        }
+      }
+    },
+    "Swipe the row again: All shows every payment of the name. Hold a row for more." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wisch die Zeile noch einmal: Alle zeigt jede Buchung des Namens. Halte eine Zeile gedrückt für mehr."
           }
         }
       }
@@ -4298,6 +4368,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tippe auf eine Kategorie: ihre Buchungen in diesem Monat."
+          }
+        }
+      }
+    },
+    "Tap the name to rename it, for this payment or all from this shop." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tippe auf den Namen, um ihn umzubenennen, für diese Buchung oder alle von diesem Laden."
           }
         }
       }
@@ -4448,16 +4528,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Die Tour konnte nicht starten."
-          }
-        }
-      }
-    },
-    "The trend by day or by month. You can hide the graph in Settings." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Der Verlauf nach Tagen oder Monaten. In den Einstellungen kannst du das Diagramm ausblenden."
           }
         }
       }

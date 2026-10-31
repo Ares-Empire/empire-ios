@@ -2,17 +2,20 @@ import Foundation
 import Observation
 import os
 
-// The tour (briefs 24, 25 and 42): the real dashboard on a made-up store of its own, twelve steps (eleven while the
-// graph is hidden in Settings), each pointing at one real control with one short sentence; it goes on when the person
-// does the thing or taps Next. Everything the tour shows and changes is in `TourWorld`, a store in a temporary folder
-// that is deleted when the tour ends: the person's own store, categories and learned shops are never opened by it. Its
-// Settings also point at the lock and at Contact & support, which in the tour only go on: no lock is set and nothing is
-// sent. The look is `Screens/TourScreens.swift`.
+// The tour (briefs 24, 25, 42 and 59): the real dashboard on a made-up store of its own, eighteen steps (seventeen while
+// the graph is hidden in Settings), each pointing at one real control with one short sentence; it goes on when the
+// person does the thing or taps Next. One walk through what Aresium does (brief 59, Patrik 2026-10-31: "explains
+// everything and is coherent"): the start screen and its graph, a category, a payment and what can be done with it, a
+// list's swipe and adding up, then Settings' places in their real order, the import button, done. Everything the tour
+// shows and changes is in `TourWorld`, a store in a temporary folder that is deleted when the tour ends: the person's
+// own store, categories, learned shops, names and choices of adding up are never opened by it. Its Settings also point
+// at Own names, Messages, the Lock, the Dashboard's switches and Contact & support, which in the tour only go on: no lock
+// is set, no message planned and nothing is sent. The look is `Screens/TourScreens.swift`.
 
 /// The tour's steps, in order. The raw value names a step (DEBUG `-tour <n>`); the card counts the steps a tour shows.
 nonisolated enum TourStep: Int, CaseIterable, Sendable {
-    case welcome = 1, income, overview, graph, category, payment, switchCategory, categories, lock, contact, importFiles,
-         done
+    case welcome = 1, income, overview, graph, category, payment, rename, switchCategory, addUp, sumIcon, allFrom,
+         categories, messages, lock, dashboardSettings, contact, importFiles, done
 
     /// The steps a tour shows: all of them, but the graph's only while the dashboard shows the graph (Settings →
     /// Dashboard → Graph, `GraphSetting`); without the graph that step would point at nothing.
@@ -20,26 +23,38 @@ nonisolated enum TourStep: Int, CaseIterable, Sendable {
         showingGraph ? allCases : allCases.filter { $0 != .graph }
     }
 
-    /// The card's sentence.
-    func text(_ language: AppLanguage = .current) -> String {
+    /// The card's sentence. `showingGraph`: whether the tour shows the graph; without it no card mentions it.
+    func text(_ language: AppLanguage = .current, showingGraph: Bool = true) -> String {
         switch self {
         case .welcome: language.string("This is Aresium with made-up sample data.")
         case .income: language.string("Swipe sideways: your income.")
         case .overview: language.string("Overview shows all months.")
-        case .graph: language.string("The trend by day or by month. You can hide the graph in Settings.")
+        case .graph: language.string("Hold the graph and slide to read each month. A tap opens it.")
         case .category: language.string("Tap a category: its payments this month.")
         case .payment: language.string("Every payment in detail.")
-        case .switchCategory: language.string("Sorted wrong? Pick the right category. Aresium remembers the shop.")
-        case .categories: language.string("Here you choose categories and add your own.")
+        case .rename: language.string("Tap the name to rename it, for this payment or all from this shop.")
+        case .switchCategory: language.string("Sorted wrong? Tap the category. Aresium remembers the shop.")
+        case .addUp: language.string("Swipe a payment left: Add up makes one row of its name.")
+        case .sumIcon: language.string("Here you add up every name in this list.")
+        case .allFrom: language.string("Swipe the row again: All shows every payment of the name. Hold a row for more.")
+        case .categories: language.string("Here you choose categories and add your own. Own names can be turned off.")
+        case .messages: language.string("Reminders to import and a review of each month, made on this iPhone.")
         case .lock: language.string("Protect Aresium with Face ID or a code of your own.")
+        case .dashboardSettings:
+            showingGraph ? language.string("Here you switch the graph, its moving away as you scroll, and adding up in every list.")
+                         : language.string("Here you add up same names in every list.")
         case .contact: language.string("Questions, ideas, problems? Write to us here.")
-        case .importFiles: language.string("New files from your bank and your receipts come in here.")
+        case .importFiles: language.string("Files from your bank, receipts and cash come in here.")
         case .done: language.string("Done. Now with your own data.")
         }
     }
 
     /// While a control is pointed at, the rest takes no taps; the swipe to income needs the whole page.
     var holdsTheRest: Bool { self != .income }
+
+    /// The steps that show a row's swipe: its swipe and long press work on the row the ring is on (the back swipe stays
+    /// off, as the header's arrow takes no taps).
+    var swipesRows: Bool { self == .addUp || self == .allFrom }
 }
 
 /// The real controls the tour points at; each marks itself with `.tourAnchor(_:)`.
@@ -49,10 +64,17 @@ nonisolated enum TourTarget: Hashable, Sendable {
     case category(String)
     /// A payment's row in a month's list, by its id.
     case payment(String)
-    /// "Change" in a payment's detail.
+    /// A name's payments added up in a category's list (brief 53), by the name's key.
+    case summed(String)
+    /// The name on a payment's page and its pen (brief 47).
+    case paymentName
+    /// The category's chip and its pen on a payment's page.
     case change
-    /// Settings → Categories, the Lock section and Contact & support (the tour's Settings).
-    case categoriesRow, lockRow, contactRow
+    /// The icon of adding up in a category's list's header (brief 53).
+    case sumIcon
+    /// The tour's Settings: Your data on this iPhone (Categories and Own names), Messages, the Lock section, the
+    /// Dashboard's switches and Contact & support.
+    case dataRows, messagesRow, lockRow, dashboardRows, contactRow
 }
 
 /// The tour's state, one model that tests drive step by step: the step, where its dashboard is (`DashboardPlace`), which
@@ -81,12 +103,13 @@ final class TourModel {
     let steps: [TourStep]
     /// Where the tour's dashboard is: its pushed screens, Current or Overview, the page, the open payment.
     private(set) var place = DashboardPlace()
-    /// The tour's Settings (its categories, and the lock and Contact & support to point at), and its category picker
-    /// pushed there.
+    /// The tour's Settings (its categories, and the rows to point at), and its category picker pushed there.
     private(set) var showsSettings = false
     private(set) var showsCategories = false
     /// "How do I get my file?" from the import step.
     var showsGuide = false
+    /// The name the person added up at the Add up step (its key), so the next swipe step points at the same row.
+    private(set) var addedUpName: String?
     private(set) var world: TourWorld?
     @ObservationIgnored private let makeWorld: () async throws -> TourWorld
     private static let log = Logger(subsystem: "de.ares-empire.aresium", category: "tour")
@@ -99,9 +122,12 @@ final class TourModel {
         self.makeWorld = makeWorld
     }
 
-    /// How many steps this tour shows, and the current one's place among them (the card's "Tour · 3 of 12").
+    /// How many steps this tour shows, and the current one's place among them (the card's "Tour · 3 of 18").
     var count: Int { steps.count }
     var number: Int { (steps.firstIndex(of: step) ?? 0) + 1 }
+
+    /// The current card's sentence.
+    var text: String { step.text(showingGraph: showsGraph) }
 
     /// The step after the current one; nil at the last.
     var nextStep: TourStep? {
@@ -121,6 +147,8 @@ final class TourModel {
             }
             self.world = world
             world.dashboard.onRecategorised = { [weak self] in self?.paymentRecategorised() }
+            world.dashboard.onRenamed = { [weak self] in self?.paymentRenamed() }
+            world.dashboard.sums.onChange = { [weak self] in self?.sumsChanged() }
             phase = .running
             go(to: steps.first { $0.rawValue >= first.rawValue } ?? .welcome)
         } catch {
@@ -149,8 +177,8 @@ final class TourModel {
 
     // MARK: what the person does
 
-    /// The tour's dashboard moved (a swipe, Current/Overview, a category or payment opened, Back). Doing what the step
-    /// asks moves on. The graph's step asks nothing (there is no button now, brief 42): it shows the graph, and Next
+    /// The tour's dashboard moved (a swipe, Current/Overview, a category, a payment or a name's page opened, Back).
+    /// Doing what the step asks moves on. The graph's step asks nothing (a tap on a month may open its page there): Next
     /// goes on.
     func update(_ new: DashboardPlace) {
         let old = place
@@ -162,6 +190,7 @@ final class TourModel {
         case .overview: done = !new.current && old.current
         case .category: done = new.path.count > old.path.count && new.path.last?.month != nil
         case .payment: done = new.payment != nil && old.payment == nil
+        case .allFrom: done = new.path.count > old.path.count && new.path.last?.isNamePage == true
         default: done = false
         }
         if done { next() }
@@ -183,14 +212,11 @@ final class TourModel {
         if phase == .running && step == .importFiles { next() }
     }
 
-    /// The Lock rows in the tour's Settings: in the tour they only answer their step (no lock is set).
-    func lockTapped() {
-        if phase == .running && step == .lock { next() }
-    }
-
-    /// Contact & support in the tour's Settings: it only answers its step (no form opens, nothing is sent).
-    func contactTapped() {
-        if phase == .running && step == .contact { next() }
+    /// A row of the tour's Settings (Own names, Messages, the Lock, the Dashboard's switches, Contact & support): in the
+    /// tour it only answers the step that points at it. No lock is set, no message planned, no form opens, nothing is
+    /// sent, no setting changes.
+    func settingsRowTapped(_ row: TourTarget) {
+        if phase == .running && target == row { next() }
     }
 
     /// A payment's category change finished (its sheet closed, the shop question answered).
@@ -198,10 +224,31 @@ final class TourModel {
         if phase == .running && step == .switchCategory { next() }
     }
 
+    /// A payment's name was saved (on its page, the shop's other payments asked about).
+    func paymentRenamed() {
+        if phase == .running && step == .rename { next() }
+    }
+
+    /// The tour's choices of adding up changed (in memory, its own): the Add up step goes on once a name is added up
+    /// in the list (the swipe's or the long press's Add up), the icon's step with its tap.
+    func sumsChanged() {
+        guard phase == .running else { return }
+        switch step {
+        case .addUp:
+            guard let list = shownList?.list, let sum = list.firstSummed else { return }
+            addedUpName = sum.key
+            next()
+        case .sumIcon:
+            next()
+        default:
+            break
+        }
+    }
+
     // MARK: where the tour points
 
     /// The control the current step points at, nil when none (the first and last step; while the person works in a
-    /// sheet the step leads to).
+    /// sheet the step leads to, or looks at a page the step does not point into).
     var target: TourTarget? {
         guard phase == .running else { return nil }
         switch step {
@@ -211,9 +258,15 @@ final class TourModel {
         case .graph: return .graph
         case .category: return firstCategory.map { .category($0) }
         case .payment: return firstPayment.map { .payment($0.id) }
+        case .rename: return place.payment != nil ? .paymentName : firstPayment.map { .payment($0.id) }
         case .switchCategory: return place.payment != nil ? .change : firstPayment.map { .payment($0.id) }
-        case .categories: return showsCategories ? nil : showsSettings ? .categoriesRow : .settings
+        case .addUp: return place.payment == nil ? addUpRow.map { .payment($0.id) } : nil
+        case .sumIcon: return place.payment == nil && shownList?.list.canSum == true ? .sumIcon : nil
+        case .allFrom: return place.payment == nil ? allFromRow : nil
+        case .categories: return showsCategories ? nil : showsSettings ? .dataRows : .settings
+        case .messages: return showsSettings ? .messagesRow : .settings
         case .lock: return showsSettings ? .lockRow : .settings
+        case .dashboardSettings: return showsSettings ? .dashboardRows : .settings
         case .contact: return showsSettings ? .contactRow : .settings
         case .importFiles: return .importButton
         }
@@ -221,11 +274,15 @@ final class TourModel {
 
     /// The tour points at a control and keeps taps off the rest of the screen, the header's back arrow included. The
     /// back swipe is off meanwhile too, since it does only what the arrow does (brief 38); a swipe the tour lets through
-    /// reaches `update` through the dashboard's path, as the arrow does. So is a payment row's long press (brief 41): at
-    /// the payment step the row the ring is on opens the payment's page, and a menu there would skip the page the card
-    /// points at; the switch step points at the page's Change. While the tour points at nothing (the first and last
-    /// step), the menu works as everywhere, on the made-up store.
+    /// reaches `update` through the dashboard's path, as the arrow does. So are a payment row's long press and swipe
+    /// (brief 41) except at the swipe steps (`rowShortcuts`): at the payment step the row the ring is on opens the
+    /// payment's page, and a menu there would skip the page the card points at. While the tour points at nothing (the
+    /// first and last step), they work as everywhere, on the made-up store.
     var holdsTheScreen: Bool { target != nil && step.holdsTheRest }
+
+    /// The rows' swipe and long press: wherever the tour does not hold the screen, and at the steps that show the swipe
+    /// (`TourStep.swipesRows`) on the row the ring is on (the veil keeps the other rows' touches off).
+    var rowShortcuts: Bool { !holdsTheScreen || step.swipesRows }
 
     /// The category row the category step points at: the tour's first category when the page shows it, else the
     /// page's first row.
@@ -236,10 +293,46 @@ final class TourModel {
         return rows.first?.category.name
     }
 
-    /// The first payment of the month list on screen, if one is.
+    /// The category's month list on top of the tour's dashboard, as its rows show (names added up as chosen), if one is.
+    private var shownList: (route: DashboardRoute, list: PaymentList)? {
+        guard let dashboard = world?.dashboard, let route = place.path.last, route.isCategoryList,
+              let month = route.month else { return nil }
+        return (route, dashboard.paymentList(category: route.category, month: month, side: route.side))
+    }
+
+    /// The first payment of the month list on screen, if one is (a single row: nothing is added up before the Add up
+    /// step).
     private var firstPayment: Transaction? {
-        guard let dashboard = world?.dashboard, let route = place.path.last, let month = route.month else { return nil }
+        guard let dashboard = world?.dashboard, let route = place.path.last, route.isCategoryList,
+              let month = route.month else { return nil }
         return dashboard.transactions(category: route.category, month: month, side: route.side).first?.transaction
+    }
+
+    /// The Add up step's row: the list's first single row whose name has more payments there (its swipe offers Add up).
+    private var addUpRow: Transaction? {
+        guard let list = shownList?.list else { return nil }
+        for case let .payment(row, addsUp) in list.entries where addsUp { return row.transaction }
+        return nil
+    }
+
+    /// The All step's row: the name added up at the Add up step (its summed row, or its first row when separated
+    /// again), else the list's first name with more payments there.
+    private var allFromRow: TourTarget? {
+        guard let list = shownList?.list else { return nil }
+        if let key = addedUpName, list.sumKeys.contains(key) {
+            if list.summed(key) != nil { return .summed(key) }
+            if let row = list.rows.first(where: { PaymentList.nameKey($0.transaction) == key }) {
+                return .payment(row.transaction.id)
+            }
+        }
+        for entry in list.entries {
+            switch entry {
+            case let .summed(sum): return .summed(sum.key)
+            case let .payment(row, addsUp) where addsUp: return .payment(row.transaction.id)
+            default: continue
+            }
+        }
+        return nil
     }
 
     // MARK: getting each step's screen ready
@@ -250,32 +343,42 @@ final class TourModel {
     }
 
     /// What a step needs on screen, without undoing what the person just did: the step before's action stays (the
-    /// income page stays after the swipe, Overview for the graph after it was tapped).
+    /// income page stays after the swipe, Overview for the graph after it was tapped, the name's page the swipe's All
+    /// opened while the gear is pointed at).
     private func prepare(_ step: TourStep) {
         switch step {
-        case .welcome, .done, .importFiles, .graph: toStart()
+        case .welcome, .done, .importFiles: toStart()
         case .income:
             toStart()
             place.side = .expenses
         case .overview:
             toStart()
             place.current = true
+        case .graph:
+            // Overview's months: the ones a hold reads and a tap opens.
+            toStart()
+            place.current = false
         case .category:
             toStart()
             place.current = true
             place.side = .expenses
         case .payment:
             closeSheets()
-            openMonthList()
-        case .switchCategory:
+            showList()
+        case .rename, .switchCategory:
             closeSheets()
-            openMonthList()
+            showList()
             if place.payment == nil { place.payment = firstPayment }
-        case .categories:
-            // The gear is in every screen's header: the list stays, the payment closes.
+        case .addUp, .sumIcon, .allFrom:
+            // The list under the payment's page, which closes.
             closeSheets()
             place.payment = nil
-        case .lock, .contact:
+            showList()
+        case .categories:
+            // The gear is in every screen's header: the page stays, the payment closes.
+            closeSheets()
+            place.payment = nil
+        case .messages, .lock, .dashboardSettings, .contact:
             // The tour's Settings, open on its rows (the category picker closes).
             showsGuide = false
             showsCategories = false
@@ -296,14 +399,34 @@ final class TourModel {
         showsGuide = false
     }
 
-    /// A month's payments on screen: kept when one is shown, else this month's of the tour's first category.
-    private func openMonthList() {
-        guard place.path.last?.month == nil, let dashboard = world?.dashboard else { return }
+    /// A category's month list on top of the stack: the one shown, or the one a page shown was opened from (back to
+    /// it), else this month's of the tour's first category.
+    private func showList() {
+        if let index = place.path.lastIndex(where: \.isCategoryList) {
+            if index < place.path.count - 1 { place.path.removeSubrange((index + 1)...) }
+            return
+        }
+        guard let dashboard = world?.dashboard else { return }
         place.payment = nil
         place.current = true
         place.side = .expenses
         guard let category = firstCategory, let month = dashboard.currentMonth?.key else { return }
         place.path = [DashboardRoute(category: category, side: .expenses, month: month)]
+    }
+}
+
+extension DashboardRoute {
+    /// A category's payments in one month (not a name's, the Cash page's or a month's page).
+    var isCategoryList: Bool { month != nil && !cash && name == nil && monthPage == nil }
+    /// A name's page with its months (not one of its month's pages).
+    var isNamePage: Bool { name != nil && month == nil }
+}
+
+extension PaymentList {
+    /// The first name added up in the list, if any.
+    var firstSummed: SummedPayments? {
+        for case let .summed(sum) in entries { return sum }
+        return nil
     }
 }
 
@@ -351,10 +474,11 @@ final class TourWorld {
             let widgetFolder = root.appending(path: "widget", directoryHint: .isDirectory)
             try FileManager.default.createDirectory(at: widgetFolder, withIntermediateDirectories: true)
             let widget = WidgetSnapshotPublisher(store: WidgetSnapshotStore(directory: widgetFolder), reloadTimelines: {})
-            // Its own choices of adding up (brief 53), empty and in memory; its lists offer none, so its steps' rows
-            // are always single.
+            // Its own choices of adding up (brief 53), empty and in memory (never the person's `aresium.sums`): the
+            // swipe's Add up, the list's icon and the name's page's switch work on them (brief 59). Nothing is added
+            // up before the tour's Add up step, so the rows the earlier steps point at are single.
             let dashboard = DashboardStore(session: session, backend: phone, widgetPublisher: widget,
-                                           sums: PaymentSums(offered: false))
+                                           sums: PaymentSums())
             await dashboard.reload()
             if let error = dashboard.error { throw TourError.dashboard(error) }
             let first = try await phone.categories().name(of: TourData.firstCategory)

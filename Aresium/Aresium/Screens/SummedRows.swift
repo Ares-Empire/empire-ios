@@ -107,6 +107,7 @@ struct SummedPaymentRow: View {
         .accessibilityAddTraits(.isButton)
         .contextMenu { if shortcuts { items } }
         .rowSwipe(swipes, id: sum.id, open: $menu.openRow, shownAt: shownAt)
+        .tourAnchor(.summed(sum.key))                // the tour's All step (brief 59), as a payment's row
     }
 
     private var route: DashboardRoute? { store.nameRoute(for: sum.newest) }

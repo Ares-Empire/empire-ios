@@ -410,7 +410,7 @@ struct PaymentSumsStoreFlowTests {
         defer { world.delete() }
         let tour = world.dashboard.sums
         #expect(tour !== person && !tour.isKept && tour.choices == SumChoices(), "empty, in memory")
-        #expect(!world.dashboard.offersSums, "its steps point at single rows: no adding up in the tour")
+        #expect(world.dashboard.offersSums, "the tour's lists add up, on its own choices (brief 59)")
         tour.setEverywhere(true)
         tour.toggleCategory("id:groceries", names: ["merchant:penny"])
         #expect(person.choices.pairs["id:clothes"]?["merchant:vinted"] == true && !person.choices.everywhere)

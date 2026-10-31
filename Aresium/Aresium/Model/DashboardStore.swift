@@ -112,6 +112,8 @@ final class DashboardStore {
     /// Told when a payment's category change is finished: its sheet closed after Switch or Add, the shop question
     /// answered (the tour moves on with it).
     @ObservationIgnored var onRecategorised: (() -> Void)?
+    /// Told when a payment's name was saved on its page (brief 59: the tour moves on with it). Nil outside the tour.
+    @ObservationIgnored var onRenamed: (() -> Void)?
 
     /// Server mode from the start (tests, the server sample).
     convenience init(session: EmpireSession, client: APIClient = APIClient(), sample: Bool = false,

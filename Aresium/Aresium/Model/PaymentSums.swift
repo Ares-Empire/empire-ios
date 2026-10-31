@@ -85,17 +85,20 @@ final class PaymentSums {
             ?? SumChoices()
     }
 
-    /// Choices in memory only (empty unless given: the samples' launch arguments). `offered: false` (the tour): its lists
-    /// offer no adding up at all, so the payment rows its steps point at are always single rows.
+    /// Choices in memory only (empty unless given: the samples' launch arguments, the tour's own). `offered: false`: the
+    /// lists offer no adding up at all.
     init(choices: SumChoices = SumChoices(), offered: Bool = true) {
         defaults = nil
         self.choices = choices
         isOffered = offered
     }
 
+    /// Told after every change (the tour moves on when a name is added up, brief 59). Nil outside the tour.
+    @ObservationIgnored var onChange: (() -> Void)?
+
     /// Whether the choices are kept beyond this launch.
     var isKept: Bool { defaults != nil }
-    /// Whether the lists offer adding up (not in the tour).
+    /// Whether the lists offer adding up.
     let isOffered: Bool
 
     func setEverywhere(_ on: Bool) { change { $0.everywhere = on } }
@@ -117,6 +120,7 @@ final class PaymentSums {
         choices = next
         revision &+= 1
         if let defaults, let data = try? JSONEncoder().encode(next) { defaults.set(data, forKey: Self.key) }
+        onChange?()
     }
 }
 
@@ -274,7 +278,7 @@ extension DashboardStore {
         return "name:" + name
     }
 
-    /// Names add up only where they exist, phone mode (server rows carry no name key), and never in the tour.
+    /// Names add up only where they exist: phone mode (server rows carry no name key); in the tour on its own choices.
     var offersSums: Bool { phone != nil && sums.isOffered }
 
     /// The long press of a row in a category's list: what its page offers, with Add up before "All with this name" when

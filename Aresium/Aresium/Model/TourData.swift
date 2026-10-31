@@ -60,6 +60,11 @@ nonisolated enum TourData {
                 add(6 + week * 6, "LIDL DIENSTLEISTUNG", "Kartenzahlung", "Lidl sagt Danke", -(900 + next(2_500)))
                 add(5 + week * 6, "Baeckerei Fiktivmeister", "Kartenzahlung", "Bäckerei", -(250 + next(600)))
             }
+            // A third grocer, twice a month (brief 59): the tour's list keeps two names with several payments after
+            // its switch step moved the first shop out, so its icon of adding up has something to add. Fixed amounts,
+            // so the seeded amounts of the other rows stay as they were.
+            add(8, "ALDI SUED", "Kartenzahlung", "ALDI SUED Fiktivstadt", -(1_640 + back * 37))
+            add(20, "ALDI SUED", "Kartenzahlung", "ALDI SUED Fiktivstadt", -(2_180 - back * 23))
             add(12, "dm-drogerie markt", "Kartenzahlung", "dm Fiktivstadt", -(800 + next(2_200)))
             add(15, "Restaurant Fiktiva", "Kartenzahlung", "Restaurant Fiktiva", -(1_800 + next(3_000)))
             add(18, "Geldautomat Fiktivbank", "Auszahlung", "Bargeldauszahlung", -10_000)

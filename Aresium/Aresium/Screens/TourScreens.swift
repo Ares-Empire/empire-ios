@@ -72,25 +72,66 @@ private struct TourScrollToTarget: ViewModifier {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// The tour's controls inside this scroll view now (a payment's Change appears once its detail has loaded).
     @State private var present: Set<TourTarget> = []
+    /// Where the control pointed at is in the scroll view now, and the scroll view's height.
+    @State private var place: TourScrollPlace?
 
     func body(content: Content) -> some View {
         if let tour {
             ScrollViewReader { proxy in
                 content
                     .onPreferenceChange(TourPresentKey.self) { present = $0 }
+                    .overlayPreferenceValue(TourAnchorKey.self) { anchors in
+                        GeometryReader { geometry in
+                            let frame = tour.target.flatMap { anchors[$0] }.map { geometry[$0] }
+                            Color.clear
+                                .onChange(of: frame.map { TourScrollPlace(frame: $0, height: geometry.size.height) },
+                                          initial: true) { _, value in place = value }
+                                .allowsHitTesting(false)
+                        }
+                        .accessibilityHidden(true)
+                    }
                     .task(id: tour.target.map { present.contains($0) ? $0 : nil }) {
                         guard let target = tour.target, present.contains(target) else { return }
-                        // After the screen is laid out: the control a third of the way down, above the card. One that
-                        // shows already moves only a little.
+                        // After the screen is laid out: as far as it takes to show the control above the card, and not
+                        // at all when it shows there already.
                         try? await Task.sleep(for: .milliseconds(200))
+                        let anchor: UnitPoint
+                        if let place {
+                            guard let needed = place.scrollAnchor else { return }
+                            anchor = needed
+                        } else {
+                            anchor = TourScrollPlace.unknown
+                        }
                         withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.3)) {
-                            proxy.scrollTo(target, anchor: UnitPoint(x: 0.5, y: 0.3))
+                            proxy.scrollTo(target, anchor: anchor)
                         }
                     }
             }
         } else {
             content
         }
+    }
+}
+
+/// Where a control the tour points at is in its scroll view, and how far to scroll to show it (brief 59: only as far
+/// as it takes, so a start page's moving graph does not go half away for a category row that nearly showed).
+nonisolated struct TourScrollPlace: Equatable {
+    let frame: CGRect
+    let height: CGFloat
+
+    /// The upper part of the scroll view, above where the tour's card lies: a control wholly inside it shows.
+    static let shownPart: CGFloat = 0.6
+    /// A control not laid out yet (far down a lazy list): a third of the way down, as before.
+    static let unknown = UnitPoint(x: 0.5, y: 0.3)
+
+    /// nil when the control shows already; else the anchor that brings its lower edge to the shown part's end (its top
+    /// edge to the top when it is taller than that).
+    var scrollAnchor: UnitPoint? {
+        let limit = height * Self.shownPart
+        if frame.minY >= 0 && frame.maxY <= limit { return nil }
+        guard height > frame.height else { return UnitPoint(x: 0.5, y: 0) }
+        let y = (limit - frame.height) / (height - frame.height)
+        return UnitPoint(x: 0.5, y: min(1, max(0, y)))
     }
 }
 
@@ -185,7 +226,7 @@ private struct TourCardInset: ViewModifier {
 
 // MARK: - the card
 
-/// The step's card: "Tour · 3 of 12" (of the steps this tour shows), the sentence, Next (ink, the main button's look) and End tour; at the
+/// The step's card: "Tour · 3 of 18" (of the steps this tour shows), the sentence, Next (ink, the main button's look) and End tour; at the
 /// import step a link to the bank guide, at the last step one button that ends the tour.
 private struct TourCard: View {
     let tour: TourModel
@@ -208,7 +249,7 @@ private struct TourCard: View {
                     .buttonStyle(.plain)
                 }
             }
-            Text(step.text())
+            Text(tour.text)
                 .font(AppFont.text(16, weight: .semibold)).foregroundStyle(Ink.primary)
                 .lineSpacing(2).fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -284,8 +325,11 @@ struct TourScreen<Header: View>: View {
         Group {
             if tour.phase == .running, let world = tour.world {
                 // The graph as the person's settings were when the tour started (`TourModel.showsGraph`, `graphMoves`).
+                // The back swipe and the rows' shortcuts are off while the tour holds the screen; at its swipe steps
+                // the rows' swipe and long press work on the ringed row (`TourModel.rowShortcuts`).
                 DashboardStack(store: world.dashboard, palette: palette, place: place, graph: tour.showsGraph,
-                               graphMoves: tour.graphMoves, band: band, shortcuts: !tour.holdsTheScreen) { route in
+                               graphMoves: tour.graphMoves, band: band, shortcuts: !tour.holdsTheScreen,
+                               rowShortcuts: tour.rowShortcuts) { route in
                     header(route) { tour.openSettings() }
                 } root: {
                     StartScreen(store: world.dashboard, palette: palette, current: place.current, side: place.side,
@@ -344,10 +388,12 @@ struct TourScreen<Header: View>: View {
     }
 }
 
-/// The tour's Settings: "Your data on this iPhone → Categories" on the made-up store, and the Lock section and Contact &
-/// support as the person's own Settings show them. Those two only point and go on (`TourModel.lockTapped`,
-/// `contactTapped`): no lock is set, no form opens, nothing is sent. The rest of Settings belongs to the person's own
-/// app and is not part of the tour.
+/// The tour's Settings: the person's Settings sections the tour points at, in the order the real Settings has them
+/// (`ContentView`'s sheet: Your data on this iPhone, Messages, Lock, Dashboard, then Help), so what the tour shows is
+/// where things are. Categories opens the picker on the made-up store; every other row is a picture of the tour's own
+/// state that only points and goes on (`TourModel.settingsRowTapped`): no setting changes, no lock is set, no message is
+/// planned and iOS is never asked, no form opens, nothing is sent. The rest of Settings belongs to the person's own app
+/// and is not part of the tour.
 private struct TourSettingsSheet: View {
     let tour: TourModel
     let world: TourWorld
@@ -357,18 +403,13 @@ private struct TourSettingsSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    SettingsSection(String(localized: "Your data on this iPhone")) {
-                        Button { tour.setCategoriesShown(true) } label: {
-                            SettingsRow(title: String(localized: "Categories"),
-                                        value: String(world.phone.summary.chosen.count))
-                        }
-                        .buttonStyle(SettingsRowStyle())
-                        .tourAnchor(.categoriesRow)
-                    }
+                    data
+                    messages
                     lock
+                    dashboard
                     SettingsSection(String(localized: LocalizedStringResource("Help", table: "Shared",
                                                                               locale: .appLanguage))) {
-                        Button { tour.contactTapped() } label: {
+                        Button { tour.settingsRowTapped(.contactRow) } label: {
                             SettingsRow(title: String(localized: LocalizedStringResource("Contact & support",
                                                                                          table: "Shared",
                                                                                          locale: .appLanguage)))
@@ -385,6 +426,10 @@ private struct TourSettingsSheet: View {
             .tourScrollsToTarget()
             .background { Ink.background.ignoresSafeArea() }
             .tourSpotlight()
+            // The card on the list itself (and on the picker pushed from it), above the veil: there its inset is room to
+            // scroll, so the last sections rise above it (on the NavigationStack the list ran on under the card, and
+            // Contact & support could not be reached).
+            .tourCard()
             .navigationTitle(Text("Settings", tableName: "Shared"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -397,11 +442,47 @@ private struct TourSettingsSheet: View {
                 CategoryPickerScreen(model: CategoryPickerModel(phone: world.phone) {
                     await world.dashboard.reloadAfterTransactionChange()
                 })
+                .tourCard()
             }
         }
         .tint(Ink.primary)
+        // The pictures' switches as Settings draws them (`SettingsScreen` gives its own the same style).
+        .toggleStyle(EmpireSwitchStyle())
         .presentationBackground(Ink.background)
-        .tourCard()
+    }
+
+    /// Your data on this iPhone: Categories (the picker, on the made-up store) and Own names, a picture of the tour's
+    /// own setting (`OwnNamesRow`, the person's Settings' row). One ring around both.
+    private var data: some View {
+        SettingsSection(String(localized: "Your data on this iPhone")) {
+            VStack(spacing: 0) {
+                Button { tour.setCategoriesShown(true) } label: {
+                    SettingsRow(title: String(localized: "Categories"),
+                                value: String(world.phone.summary.chosen.count))
+                }
+                .buttonStyle(SettingsRowStyle())
+                SettingsDivider()
+                Button { tour.settingsRowTapped(.dataRows) } label: {
+                    OwnNamesRow(isOn: .constant(world.dashboard.ownNames)).allowsHitTesting(false)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(SettingsRowStyle())
+            }
+            .tourAnchor(.dataRows)
+        }
+    }
+
+    /// Messages (brief 46) as the person's Settings shows it while they are off: its one row, "Off". It opens no page and
+    /// never asks iOS.
+    private var messages: some View {
+        SettingsSection(String(localized: "Messages")) {
+            Button { tour.settingsRowTapped(.messagesRow) } label: {
+                SettingsRow(title: String(localized: "Reminder and review"),
+                            value: MessageWording.state(MessagePreferences(), authorization: .notAsked))
+            }
+            .buttonStyle(SettingsRowStyle())
+            .tourAnchor(.messagesRow)
+        }
     }
 
     /// The Lock section as the person's Settings shows it with no lock set (`LockSettingsSection`): the Face ID switch
@@ -409,7 +490,7 @@ private struct TourSettingsSheet: View {
     /// (it takes no taps) and never asks for Face ID.
     private var lock: some View {
         SettingsSection(String(localized: "Lock")) {
-            Button { tour.lockTapped() } label: {
+            Button { tour.settingsRowTapped(.lockRow) } label: {
                 VStack(spacing: 0) {
                     Toggle(isOn: .constant(false)) {
                         VStack(alignment: .leading, spacing: 2) {
@@ -417,7 +498,6 @@ private struct TourSettingsSheet: View {
                             Text("Or the iPhone's code").font(AppFont.text(12)).foregroundStyle(Ink.muted)
                         }
                     }
-                    .toggleStyle(EmpireSwitchStyle())
                     .allowsHitTesting(false)
                     .padding(.horizontal, 16).frame(minHeight: 58)
                     SettingsDivider()
@@ -427,6 +507,24 @@ private struct TourSettingsSheet: View {
             }
             .buttonStyle(SettingsRowStyle())
             .tourAnchor(.lockRow)
+        }
+    }
+
+    /// Settings → Dashboard (`DashboardSettingsRows`, the person's Settings' rows) as a picture of the tour's own state:
+    /// the graph and its moving away as they were when the tour started (`TourModel.showsGraph`, `graphMoves`), Add up
+    /// same names as the tour's own choices have it. One button over all: it only answers its step.
+    private var dashboard: some View {
+        SettingsSection(String(localized: "Dashboard")) {
+            Button { tour.settingsRowTapped(.dashboardRows) } label: {
+                VStack(spacing: 0) {
+                    DashboardSettingsRows(showsGraph: .constant(tour.showsGraph), graphMoves: .constant(tour.graphMoves),
+                                          sumsEverywhere: .constant(world.dashboard.sums.choices.everywhere))
+                        .allowsHitTesting(false)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(SettingsRowStyle())
+            .tourAnchor(.dashboardRows)
         }
     }
 }

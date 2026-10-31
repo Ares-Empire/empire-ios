@@ -177,7 +177,7 @@ struct ContentView: View {
             }
             _place = State(initialValue: place)
         }
-        // Screenshots: `-openGuide list|<bank id>` (the guide), `-tour <step>` (the tour at that step, 1–12).
+        // Screenshots: `-openGuide list|<bank id>` (the guide), `-tour <step>` (the tour at that step, 1–18).
         if sample, LaunchArguments.value("-openGuide") != nil { _showsGuide = State(initialValue: true) }
         if sample { modes.holdForSample(server: !phoneSample) }
         if sample && !phoneSample {
@@ -493,7 +493,7 @@ struct ContentView: View {
     }
 
     #if DEBUG
-    /// Screenshots: `-tour <step>` starts the tour at that step (1–12); `-tourSettings` opens its Settings.
+    /// Screenshots: `-tour <step>` starts the tour at that step (1–18); `-tourSettings` opens its Settings.
     private func startDebugTour() async {
         guard sampleActive, tour == nil, let value = LaunchArguments.value("-tour"),
               let step = Int(value).flatMap(TourStep.init(rawValue:)) else { return }

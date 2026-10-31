@@ -52,13 +52,15 @@ struct TransactionDetailSheet: View {
             .tourScrollsToTarget()
             .background { Wall(palette: palette) }
             .tourSpotlight()
+            // The tour's card on the page itself, above the veil, where its inset is room to scroll (brief 59: on the
+            // NavigationStack a ringed control low on the page could stay under the card at large text sizes).
+            .tourCard()
             .navigationTitle("Payment").navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbar }
             .sheet(isPresented: $store.showsRecategorisation) {
                 RecategoriseSheet(store: store, palette: palette)
             }
         }
-        .tourCard()
         .font(AppFont.text(14)).foregroundStyle(palette.ink).tint(palette.balance)
         // While the name is edited the page closes only with Save or Cancel, so nothing typed is lost by a swipe.
         .interactiveDismissDisabled(nameEditor != nil && (nameEditor?.hasChanges == true || store.isSaving
@@ -320,7 +322,8 @@ struct TransactionDetailSheet: View {
     @ViewBuilder private func record(_ detail: TransactionDetail) -> some View {
         let page = PaymentPage(detail)
         VStack(alignment: .leading, spacing: 7) {
-            title(detail)
+            // The tour's rename step (brief 59) rings the name and its pen, and the field while it is open.
+            title(detail).tourAnchor(.paymentName)
             Text(detail.signedAmount).font(AppFont.number(28, weight: .bold))
                 .foregroundStyle(detail.amount < 0 ? palette.expenseText : palette.balance)
             Text(page.date).font(AppFont.text(13.5)).foregroundStyle(palette.secondary)

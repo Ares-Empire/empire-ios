@@ -71,6 +71,10 @@ struct DashboardStack<Top: View, Root: View>: View {
     /// does, and the payment rows' long press (brief 41), which does what a payment's or receipt's page does. They are on
     /// wherever those take taps; the tour turns them off while it holds the screen (`TourModel.holdsTheScreen`).
     var shortcuts = true
+    /// The rows' long press and swipe on their own (nil: as `shortcuts`): the tour lets them work at its swipe steps,
+    /// on the row its ring is on, while the back swipe stays off (`TourModel.rowShortcuts`, brief 59).
+    var rowShortcuts: Bool? = nil
+    private var rows: Bool { rowShortcuts ?? shortcuts }
     /// The header (and any line under it) of the start screen (nil) or a pushed screen.
     @ViewBuilder let top: (DashboardRoute?) -> Top
     /// The start screen.
@@ -93,17 +97,17 @@ struct DashboardStack<Top: View, Root: View>: View {
                                     graphMoves: graphMoves, band: band, pick: open)
                     } else if let name = route.name, let month = route.month {
                         NameMonthScreen(route: name, month: month, store: store, palette: palette, band: band,
-                                        shortcuts: shortcuts, pick: open, follow: follow, back: back)
+                                        shortcuts: rows, pick: open, follow: follow, back: back)
                     } else if let name = route.name {
                         NameScreen(route: name, store: store, palette: palette, band: band, showsGraph: graph, pick: open)
                     } else if route.cash, let month = route.month {
-                        CashScreen(month: month, store: store, palette: palette, band: band, shortcuts: shortcuts,
+                        CashScreen(month: month, store: store, palette: palette, band: band, shortcuts: rows,
                                    pick: open)
                     } else if route.cash {
                         CashMonthsScreen(store: store, palette: palette, band: band, pick: open)
                     } else if route.month != nil {
                         TransactionsScreen(route: route, store: store, palette: palette, band: band,
-                                           selection: $place.payment, rowMenus: shortcuts, pick: open)
+                                           selection: $place.payment, rowMenus: rows, pick: open)
                     } else {
                         CategoryScreen(route: route, store: store, palette: palette, graph: graph,
                                        graphMoves: graphMoves, band: band, pick: open)
@@ -645,36 +649,10 @@ struct DashboardSettingsSection: View {
 
     var body: some View {
         SettingsSection(String(localized: "Dashboard")) {
-            Toggle(isOn: $showsGraph) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Graph").font(AppFont.text(15, weight: .medium)).foregroundStyle(Ink.primary)
-                    Text("Above the categories and months").font(AppFont.text(12)).foregroundStyle(Ink.muted)
-                }
-            }
-            .padding(.horizontal, 16).frame(minHeight: 58)
-            // Brief 56: under the Graph it belongs to, and only while there is a graph to move.
-            if showsGraph {
-                SettingsDivider()
-                Toggle(isOn: $graphMoves) {
-                    // One line that says what it does (the brief's words).
-                    Text("Graph moves away when scrolling").font(AppFont.text(15, weight: .medium))
-                        .foregroundStyle(Ink.primary).fixedSize(horizontal: false, vertical: true)
-                }
-                .padding(.horizontal, 16).padding(.vertical, 8).frame(minHeight: 58)
-                .accessibilityIdentifier("graphMoves")
-            }
-            if let sums {
-                SettingsDivider()
-                Toggle(isOn: Binding(get: { sums.choices.everywhere }, set: { sums.setEverywhere($0) })) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Add up same names").font(AppFont.text(15, weight: .medium)).foregroundStyle(Ink.primary)
-                        Text("One row with the sum per name and month").font(AppFont.text(12))
-                            .foregroundStyle(Ink.muted).fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-                .padding(.horizontal, 16).padding(.vertical, 8).frame(minHeight: 58)
-                .accessibilityIdentifier("sumEverywhere")
-            }
+            DashboardSettingsRows(showsGraph: $showsGraph, graphMoves: $graphMoves,
+                                  sumsEverywhere: sums.map { sums in
+                                      Binding(get: { sums.choices.everywhere }, set: { sums.setEverywhere($0) })
+                                  })
         }
         #if DEBUG
         .task {
@@ -682,5 +660,48 @@ struct DashboardSettingsSection: View {
             if LaunchArguments.current.contains("-toggleGraph") { showsGraph.toggle() }
         }
         #endif
+    }
+}
+
+/// Settings → Dashboard's switches (one place for their words and look): Graph, Graph moves away (under it, while the
+/// graph shows) and Add up same names (phone mode). The person's Settings binds them to the saved settings; the tour's
+/// Settings shows them as a picture of its own state (constant values, `TourSettingsSheet`).
+struct DashboardSettingsRows: View {
+    @Binding var showsGraph: Bool
+    @Binding var graphMoves: Bool
+    /// Add up same names everywhere; nil: not offered (server mode).
+    var sumsEverywhere: Binding<Bool>? = nil
+
+    var body: some View {
+        Toggle(isOn: $showsGraph) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Graph").font(AppFont.text(15, weight: .medium)).foregroundStyle(Ink.primary)
+                Text("Above the categories and months").font(AppFont.text(12)).foregroundStyle(Ink.muted)
+            }
+        }
+        .padding(.horizontal, 16).frame(minHeight: 58)
+        // Brief 56: under the Graph it belongs to, and only while there is a graph to move.
+        if showsGraph {
+            SettingsDivider()
+            Toggle(isOn: $graphMoves) {
+                // One line that says what it does (the brief's words).
+                Text("Graph moves away when scrolling").font(AppFont.text(15, weight: .medium))
+                    .foregroundStyle(Ink.primary).fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(.horizontal, 16).padding(.vertical, 8).frame(minHeight: 58)
+            .accessibilityIdentifier("graphMoves")
+        }
+        if let sumsEverywhere {
+            SettingsDivider()
+            Toggle(isOn: sumsEverywhere) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Add up same names").font(AppFont.text(15, weight: .medium)).foregroundStyle(Ink.primary)
+                    Text("One row with the sum per name and month").font(AppFont.text(12))
+                        .foregroundStyle(Ink.muted).fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .padding(.horizontal, 16).padding(.vertical, 8).frame(minHeight: 58)
+            .accessibilityIdentifier("sumEverywhere")
+        }
     }
 }

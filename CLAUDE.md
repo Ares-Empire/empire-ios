@@ -689,8 +689,9 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   for Groceries and Lebensmittel, "id:custom-…" for one's own; the dashboard's own entries such as Refunds by name) and
   the opaque `nameKey`. Kept in Aresium's defaults (`aresium.sums`, JSON, `PaymentSums(defaults:)`), not in the export,
   deleted with Delete data and "Forgot the code?" (`ModeStore.deleteLocalData`); tests and samples have an empty set in
-  memory (`DashboardStore(sums:)` defaults to it), the tour too, and its lists offer no adding up at all
-  (`PaymentSums(offered: false)`: no icon, no Add up, no name page switch), so the rows its steps point at stay single.
+  memory (`DashboardStore(sums:)` defaults to it), the tour too, whose lists offer adding up on its own choices since
+  brief 59 (its addUp, sumIcon and allFrom steps; nothing is added up before them, so the rows earlier steps point at
+  stay single).
   A choice keyed by a name key that later changes (a shop renamed gets an `own:` key) no longer applies. **The list** (`PaymentList`, built once per change of the dashboard or
   the choices: `DashboardStore.paymentList(category:month:side:)` caches by `DashboardStore.revision`, which counts every
   new dashboard, and `PaymentSums.revision`; the header's icon and the list read the same one): a name with two or more
@@ -947,7 +948,8 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   opens its list, as a tap). The Cash page's movement rows have the same tap, long press and swipe since brief 47
   (`DashboardStore.cashRows`: each movement's dashboard row; one the dashboard lists nowhere only opens its page). The back swipe and
   this menu are the dashboard's shortcuts (`DashboardStack.shortcuts`): the tour turns both off while it holds the
-  screen (at the payment step the ringed row must open the page the card speaks of). **The import result goes with a
+  screen (at the payment step the ringed row must open the page the card speaks of), except the rows' swipe and long
+  press at its swipe steps (`rowShortcuts`, brief 59). **The import result goes with a
   swipe down** (`ImportStore.closesBySwipe`: where Dismiss or the send card's Not now would, never while Retry and
   Discard are offered or the format is sending, nor while the result scrolls; VoiceOver's escape does the same); a
   success still goes by itself after 4.5 s. DEBUG `-sampleBannerDrag <points>` shows it moved as halfway through the
@@ -1060,21 +1062,55 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   file, this month always full), its own session (never logged in) and widget numbers inside that folder; the person's
   store, categories and learned shops are never opened. The folder is deleted on End tour (always on the card), at the
   end, when a widget's link or a shared file opens the app, and at the next launch if the app was closed during a tour
-  (`removeLeftovers`). Twelve steps, eleven while the graph is hidden (`TourStep`, brief 25; brief 42: the graph step points at the graph and goes on with Next): welcome, income, overview, graph, category, payment, switch,
-  categories, lock, contact, import, done; each points at a real control (`.tourAnchor`, anchor preferences;
+  (`removeLeftovers`). **Eighteen steps, seventeen while the graph is hidden** (brief 59, Patrik 2026-10-31: "update the
+  tour so it explains everything and is coherent"; `TourStep`, one walk: the start screen, a category, a payment and what
+  can be done with it, the list's swipe and adding up, Settings' places in their real order, import, done): welcome;
+  income (the page dots, the swipe); overview (the range); graph (Overview's graph: hold and slide reads each month, a
+  tap opens its month's page, which the ring follows; Next); category (a row); payment (its row opens the page); rename
+  (`.paymentName`: the page's name and pen, the field while open; goes on when a name is saved, `onRenamed`); switch
+  (the category's chip and pen, `.change`; the shop question answered); addUp (the list's first single row whose name
+  has more payments there: the swipe's or the long press's Add up); sumIcon (the header's icon of adding up, `.sumIcon`;
+  its tap); allFrom (the name added up at addUp, `.summed(key)`, or its first row: All opens the name's page, which
+  stays under the next step's gear); categories (the gear, then Categories with Own names, `.dataRows`; the picker free);
+  messages (`.messagesRow`); lock; dashboardSettings (`.dashboardRows`: Graph, Graph moves away, Add up same names);
+  contact; import (files, receipts and cash); done. Without the graph the graph step drops out and the Dashboard card
+  says only "Here you add up same names in every list." (`TourStep.text(showingGraph:)`): no card mentions the graph.
+  The cards' words are `TourStep.text` (German in the catalog). Each step points at a real control (`.tourAnchor`, anchor preferences; a payment row's and a summed
+  row's anchor sit outside their swipe, so the ring stays still and the swipe's actions lie inside it);
   `.tourSpotlight` on each screen and sheet draws a light veil in the wall's colour, `TourVeil.veil` 0.3 (brief 24 had
   0.74, far too dark: the app under it must read easily, Patrik 2026-10-27), and the full-ink ring, and keeps taps off
-  the rest except at the swipe step; `.tourCard` the glass card with Next and End tour); a step goes on when the person
-  does the thing (`TourModel.update`, `importTapped`, `lockTapped`, `contactTapped`, `paymentRecategorised` through
-  `DashboardStore.onRecategorised`) or taps Next, and Next gets the step's screen ready (`prepare`; the lock and contact
-  steps open the tour's Settings). In the tour the gear opens the tour's own Settings: Categories on the made-up store,
-  and the Lock section and Contact & support as the person's Settings show them, which only point and go on (the switch
-  is a picture, no lock is set, no form opens, nothing is sent; the tour never sees `AppLock` or the support form); the
-  import button only answers its step, the band does not enter red mode. VoiceOver: the card takes the
-  focus at each step, the highlighted control stays reachable; Reduce Motion: the ring jumps, nothing slides. Launch
-  arguments (DEBUG, with `-samplePhone` or `-samplePhoneEmpty`): `-openGuide list|<bank id>` (`-guidePlace
-  app|website`, `-guideSearch <text>`, `-scrollToEnd` the page's end), `-tour <1–12>` (`-tourSettings`: its Settings open). Tests: `BankGuideTests`,
-  `TourTests`. Screenshots: `build/24-*.png`, contact sheet `build/24-sheet.png`.
+  the rest except at the swipe to income; `.tourCard` the glass card with Next and End tour, on a sheet's scroll view
+  after its spotlight (the payment's page, the tour's Settings and the picker pushed there: on the sheet's
+  NavigationStack the list ran on under the card and Contact & support could not be reached, brief 59);
+  `.tourScrollsToTarget` scrolls only as far as it takes, the control's lower edge to 60 % of the view, and not at all
+  when it shows there (`TourScrollPlace`; a start page's moving graph went half away for a category row that nearly
+  showed). `TourData` has a third grocer (ALDI SUED, twice a month, fixed made-up amounts) so Groceries keeps two names
+  with several payments after the switch step moved REWE out, and the icon step has something to add. A step goes on when the
+  person does the thing (`TourModel.update`: the swipe, Overview, a category, a payment, a name's page; `importTapped`;
+  `settingsRowTapped(_:)` for the Settings rows; `paymentRenamed` through `DashboardStore.onRenamed`;
+  `paymentRecategorised` through `DashboardStore.onRecategorised`; `sumsChanged` through `PaymentSums.onChange`, all
+  nil outside the tour) or taps Next, and Next gets the step's screen ready (`prepare`: Overview for the graph, the
+  payment's page, the list under it, the tour's Settings). While the tour holds the screen the back swipe and the rows'
+  long press and swipe are off (`DashboardStack(shortcuts:)`), except at addUp and allFrom, where the ringed row's swipe
+  and long press work (`DashboardStack(rowShortcuts:)`, `TourModel.rowShortcuts`) and the back swipe stays off. A step
+  whose control is not on screen (the person tapped the row's page open, or All at addUp) points at nothing, so the
+  screen is free until they come back; Next always gets the screen ready again. **Adding up in the tour**: its
+  `DashboardStore` has an empty `PaymentSums()` in memory, never the person's `aresium.sums`; the swipe's Add up, the
+  icon and the name's page's switch work on it; nothing is added up before addUp, so the rows the earlier steps point at
+  are single. In the tour the gear opens the tour's own Settings: the person's sections it points at in the real order
+  (Your data on this iPhone with Categories on the made-up store and Own names; Messages; Lock; Dashboard; Help →
+  Contact & support), each but Categories a picture of the tour's own state built from the real rows
+  (`OwnNamesRow`, `DashboardSettingsRows`, `MessageWording.state`) that only points and goes on: no setting changes, no
+  lock is set, no message planned and iOS never asked, no form opens, nothing is sent; the tour never sees `AppLock`,
+  `AresiumMessages` or the support form, nor writes the graph, own names or messages settings (`TourTests` compares the
+  app's defaults before and after a walk). The import button only answers its step, the band does not enter red mode.
+  VoiceOver: the card takes the focus at each step, the highlighted control stays reachable; Reduce Motion: the ring
+  jumps, nothing slides. Launch arguments (DEBUG, with `-samplePhone` or `-samplePhoneEmpty`): `-openGuide list|<bank
+  id>` (`-guidePlace app|website`, `-guideSearch <text>`, `-scrollToEnd` the page's end), `-tour <1–18>` (`-tourSettings`:
+  its Settings open). Tests: `BankGuideTests`, `TourTests` (every step's target and what moves it on, Next's screens,
+  the hidden graph's 17 and its words, every card's German, adding up in memory only, the person's store and defaults
+  untouched, ending at any step). Screenshots: `build/24-*.png`, contact sheet `build/24-sheet.png`; brief 59's walk
+  `build/59-*.png`.
   **Receipts** (brief 31, Patrik 2026-10-27; D8 in `ares-empire/docs/ARESIUM-FOR-OTHERS.md` → part 6; phone mode
   only). **Capture:** in phone mode Import (the first screen's Import data, the dashboard's import button) is Apple's
   menu: Choose file, Scan receipt (only where `VNDocumentCameraViewController.isSupported`; the iOS 27 simulator says
@@ -1115,7 +1151,7 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   payment… (the engine's candidates, else money out from the receipt's day to a week later), "As on the receipt",
   Delete receipt: unjoins, a category its payment took from it goes, the cash is uncovered). A joined payment's page has
   a Receipt section (shop, day, the rows folded, Unjoin). Settings → Your data → Receipts lists them newest first with
-  where each stands. The tour's import step: "New files from your bank and your receipts come in here."; the tour never
+  where each stands. The tour's import step: "Files from your bank, receipts and cash come in here." (brief 59); the tour never
   opens the camera or reads anything. Launch arguments (DEBUG, with `-samplePhone`/`-samplePhoneEmpty`):
   `-sampleReceipt` (the made-up receipt, `ReceiptSample`, read through Vision and the engine: the check window, all
   read but the shop; `-sampleReceiptShop REWE` prints a chain the shop list knows: all sure), `-sampleReceiptUnsure` (a café receipt without code, payment line or total word),

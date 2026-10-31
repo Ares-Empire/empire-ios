@@ -85,8 +85,10 @@ struct PaymentRow<Label: View>: View {
         }
         .buttonStyle(.plain)
         .contextMenu { if shortcuts { items } }
-        .tourAnchor(.payment(transaction.id))
         .rowSwipe(swipes, id: transaction.id, open: $menu.openRow, shownAt: shownAt)
+        // Around the row's place, not its sliding content: at the tour's swipe steps the ring stays still and the
+        // actions the swipe shows lie inside it, where they take taps.
+        .tourAnchor(.payment(transaction.id))
     }
 
     private var nameRoute: DashboardRoute? {
