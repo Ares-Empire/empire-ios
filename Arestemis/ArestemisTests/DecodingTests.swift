@@ -30,14 +30,15 @@ struct DecodingTests {
         #expect(hunt.id == 1 && hunt.kind == "flat" && hunt.active)
         #expect(hunt.search.kinds == [.flat, .wg] && hunt.search.people == 1)
         #expect(hunt.search.places.map(\.id) == ["wg:90", "wg:400"])
-        #expect(hunt.search.places[1].sources == [.wgGesucht, .kleinanzeigen])
+        #expect(hunt.search.places[1].sources == [.wgGesucht, .kleinanzeigen, .immowelt, .immoscout24])
         #expect(hunt.search.rentWarmMin == 400 && hunt.search.rentWarmMax == 1000 && hunt.search.rentColdMax == nil)
         #expect(hunt.search.sqmMin == 28 && hunt.search.sqmMax == nil && hunt.search.roomsMin == nil)
         #expect(hunt.search.roomSqmMin == 14 && hunt.search.roomSqmMax == nil)
         #expect(hunt.search.flatmatesMax == 2 && hunt.search.sublet == .exclude)
         #expect(hunt.search.moveInFrom == "2026-12-01" && hunt.search.moveInUntil == "2027-02-01")
-        #expect(overview.sources.map(\.state) == [.ok, .ok, .ok])
-        #expect(overview.sources.last?.note == "Only München")
+        #expect(overview.sources.map(\.source) == [.wgGesucht, .kleinanzeigen, .immowelt, .immoscout24])
+        #expect(overview.sources.map(\.state) == [.ok, .ok, .ok, .ok])
+        #expect(overview.sources.allSatisfy { $0.note == nil })
         #expect(overview.counts == .init(new: 1, today: 2, saved: 1, applied: 1))
         #expect(overview.latest.map(\.id) == [41, 40, 38])
         #expect(overview.lastScan == "2026-10-24T10:02:00Z")
@@ -46,7 +47,7 @@ struct DecodingTests {
     @Test func matchSamples() throws {
         let match = try sample(Match.self, "match")
         #expect(match.state == .new && match.huntID == 1 && match.application == nil && match.warnings.isEmpty)
-        #expect(match.listing.source == .wgGesucht && match.listing.sourceName == "WG-Gesucht")
+        #expect(match.listing.source == .immoscout24 && match.listing.sourceName == "ImmoScout24")
         #expect(match.listing.rentWarm == 980 && match.listing.rentCold == 820 && match.listing.sqm == 42)
         #expect(match.listing.kind == .flat && match.listing.furnished == false && match.listing.imageURL == nil)
         #expect(match.listing.availableFrom == "2026-12-01" && match.listing.availableUntil == nil)
@@ -63,7 +64,7 @@ struct DecodingTests {
         #expect(rejected[0].listing.availableUntil == "2027-03-31" && rejected[0].reason == "Sublet: limited until 31 Mar 2027.")
         let settings = try sample(Settings.self, "settings")
         #expect(settings.applicationMode == .ai && settings.notify == .init(push: true, timeSensitive: true))
-        #expect(settings.ownText.hasPrefix("Hallo,"))
+        #expect(settings.ownText.hasPrefix("Hallo,") && settings.applicationNotes.hasPrefix("Ich kann jeden Abend"))
         let places = try sample([Place].self, "places")
         #expect(places.map(\.name) == ["Garching bei München", "Garching an der Alz"])
     }
@@ -88,9 +89,90 @@ struct DecodingTests {
     @Test func settingsEncodeTheContractsNames() throws {
         let json = try #require(try JSONSerialization.jsonObject(with: JSONEncoder().encode(sample(Settings.self, "settings")))
             as? [String: Any])
-        #expect(Set(json.keys) == ["application_mode", "own_text", "about_me", "notify"])
+        #expect(Set(json.keys) == ["application_mode", "own_text", "application_notes", "about_me", "notify"])
         let notify = try #require(json["notify"] as? [String: Any])
         #expect(Set(notify.keys) == ["push", "time_sensitive"])
+    }
+
+    /// A server from before brief 62 sends no `application_notes`: none, and they are sent from then on.
+    @Test func settingsWithoutNotesDecode() throws {
+        let settings = try JSONDecoder().decode(Settings.self, from: Data("""
+            {"application_mode": "own", "own_text": "Hallo", "about_me": "Made-up facts",
+             "notify": {"push": true, "time_sensitive": false}}
+            """.utf8))
+        #expect(settings.applicationMode == .own && settings.ownText == "Hallo" && settings.aboutMe == "Made-up facts")
+        #expect(settings.applicationNotes == "")
+        let json = try #require(try JSONSerialization.jsonObject(with: JSONEncoder().encode(settings)) as? [String: Any])
+        #expect(json["application_notes"] as? String == "")
+    }
+
+    // MARK: portals the app does not know yet (brief 61)
+
+    @Test func immoScout24IsKnown() throws {
+        let place = try JSONDecoder().decode(Place.self, from: Data("""
+            {"id": "wg:90", "name": "München", "region": "Bayern", "sources": ["wg_gesucht", "immoscout24"]}
+            """.utf8))
+        #expect(place.sources == [.wgGesucht, .immoscout24] && Source.immoscout24.name == "ImmoScout24")
+    }
+
+    @Test func placesLeaveOutUnknownPortals() throws {
+        let places = try JSONDecoder().decode([Place].self, from: Data("""
+            [{"id": "wg:90", "name": "München", "region": null, "sources": ["wg_gesucht", "newportal", "immowelt"]},
+             {"id": "wg:91", "name": "Nowhere", "region": null, "sources": ["newportal"]}]
+            """.utf8))
+        #expect(places.map(\.sources) == [[.wgGesucht, .immowelt], []])
+    }
+
+    /// The hunt's search (in the overview), its portals and its places' portals; the overview's portal states.
+    @Test func theOverviewLeavesOutUnknownPortals() throws {
+        var object = try #require(try JSONSerialization.jsonObject(with: ArestemisSamples.data("overview")) as? [String: Any])
+        var hunt = try #require(object["hunt"] as? [String: Any])
+        var search = try #require(hunt["search"] as? [String: Any])
+        search["sources"] = ["newportal", "kleinanzeigen"]
+        var places = try #require(search["places"] as? [[String: Any]])
+        places[0]["sources"] = ["wg_gesucht", "newportal"]
+        search["places"] = places
+        hunt["search"] = search
+        object["hunt"] = hunt
+        var sources = try #require(object["sources"] as? [[String: Any]])
+        sources.append(["source": "newportal", "name": "New Portal", "state": "ok", "checked": NSNull(), "note": NSNull()])
+        object["sources"] = sources
+        let overview = try JSONDecoder().decode(Overview.self, from: JSONSerialization.data(withJSONObject: object))
+        #expect(overview.hunt?.search.sources == [.kleinanzeigen])
+        #expect(overview.hunt?.search.places.first?.sources == [.wgGesucht])
+        #expect(overview.sources.map(\.source) == [.wgGesucht, .kleinanzeigen, .immowelt, .immoscout24])
+    }
+
+    /// Only the portal decides: a known portal's state the app does not know still fails, as before.
+    @Test func aBrokenPortalStateStillFails() throws {
+        var object = try #require(try JSONSerialization.jsonObject(with: ArestemisSamples.data("overview")) as? [String: Any])
+        var sources = try #require(object["sources"] as? [[String: Any]])
+        sources[0]["state"] = "melting"
+        object["sources"] = sources
+        #expect(throws: DecodingError.self) {
+            try JSONDecoder().decode(Overview.self, from: JSONSerialization.data(withJSONObject: object))
+        }
+    }
+
+    @Test func describeItLeavesOutUnknownPortals() throws {
+        let parsed = try JSONDecoder().decode(ParsedSearch.self, from: Data("""
+            {"search": {"sources": ["newportal", "immoscout24"]}, "unclear": []}
+            """.utf8))
+        #expect(parsed.search.sources == [.immoscout24])
+        let none = try JSONDecoder().decode(ParsedSearch.self, from: Data(#"{"search": {}, "unclear": []}"#.utf8))
+        #expect(none.search.sources == nil)
+    }
+
+    /// A listing from a portal the app does not know still shows, named by the server.
+    @Test func aListingFromAnUnknownPortalDecodes() throws {
+        var object = try #require(try JSONSerialization.jsonObject(with: ArestemisSamples.data("match")) as? [String: Any])
+        var listing = try #require(object["listing"] as? [String: Any])
+        listing["source"] = "newportal"
+        listing["source_name"] = "New Portal"
+        object["listing"] = listing
+        let match = try JSONDecoder().decode(Match.self, from: JSONSerialization.data(withJSONObject: object))
+        #expect(match.listing.source == nil && match.listing.sourceName == "New Portal")
+        #expect(match.sourceLine(now: .now).hasPrefix("New Portal"))
     }
 
     /// `Partial<Search>`: only what the sentence said; a null counts as not said.

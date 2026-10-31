@@ -52,6 +52,8 @@ final class SampleBackend: ArestemisBackend {
         var moreLoading = false     // -sampleMoreLoading: pause the next listings page
         var moreFailure = false     // -sampleMoreFailure: fail the next listings page
         var longDescription = false // -sampleLongDescription: a description with More
+        var ownMode = false         // -sampleOwnMode: the own text instead of automatic texts
+        var noTexts = false         // -sampleNoTexts: no own text, notes or facts about you yet
     }
 
     private var base: Overview
@@ -84,6 +86,12 @@ final class SampleBackend: ArestemisBackend {
         }
         rejectedItems = try ArestemisSamples.decode(RejectedPage.self, from: "rejected", shift: shift).items
         settingsValue = try ArestemisSamples.decode(Settings.self, from: "settings")
+        if options.ownMode { settingsValue.applicationMode = .own }
+        if options.noTexts {
+            settingsValue.ownText = ""
+            settingsValue.applicationNotes = ""
+            settingsValue.aboutMe = ""
+        }
         let suggestions = try ArestemisSamples.decode([Place].self, from: "places")
         let searched = base.hunt?.search.places ?? []
         knownPlaces = searched + suggestions.filter { place in !searched.contains { $0.id == place.id } }
@@ -191,7 +199,8 @@ final class SampleBackend: ArestemisBackend {
         if let cached = matches[index].application, !regenerate { return cached }
         try await Task.sleep(for: .milliseconds(900))
         let mode = settingsValue.applicationMode
-        let text = mode == .own ? settingsValue.ownText : Self.writtenText(for: matches[index].listing, name: base.me.name)
+        let text = mode == .own ? settingsValue.ownText
+            : Self.writtenText(for: matches[index].listing, notes: settingsValue.applicationNotes, name: base.me.name)
         let written = Application(text: text, mode: mode, created: ArestemisSamples.iso(.now))
         matches[index].application = written
         return written
@@ -211,19 +220,21 @@ final class SampleBackend: ArestemisBackend {
         return hunt
     }
 
-    /// A made-up "AI" text for the sample (German, like the real ones).
-    private static func writtenText(for listing: Listing, name: String) -> String {
+    /// A made-up automatic text for the sample (German, like the real ones), with the notes as their own paragraph.
+    private static func writtenText(for listing: Listing, notes: String, name: String) -> String {
         let moveIn = listing.availableFrom.flatMap { DateOnly.parse($0) }.map {
             let formatter = DateFormatter()
             formatter.locale = Locale(identifier: "de_DE")
             formatter.dateFormat = "d. MMMM"
             return " Der Einzug ab \(formatter.string(from: $0)) passt mir sehr gut."
         } ?? ""
+        let trimmed = notes.trimmingCharacters(in: .whitespacesAndNewlines)
+        let notesParagraph = trimmed.isEmpty ? "" : "\n\n" + trimmed
         return """
         Hallo,
 
         mit großem Interesse habe ich Ihre Anzeige „\(listing.title)“ gelesen.\(moveIn) Ich lebe ruhig und ordentlich, \
-        bin Nichtraucher, und die Miete ist gesichert.
+        bin Nichtraucher, und die Miete ist gesichert.\(notesParagraph)
 
         Über einen Besichtigungstermin würde ich mich sehr freuen; ich bin zeitlich flexibel.
 

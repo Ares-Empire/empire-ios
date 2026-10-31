@@ -141,6 +141,7 @@ extension Source {
         case .wgGesucht: "WG-Gesucht"
         case .kleinanzeigen: "Kleinanzeigen"
         case .immowelt: "Immowelt"
+        case .immoscout24: "ImmoScout24"
         }
     }
 }

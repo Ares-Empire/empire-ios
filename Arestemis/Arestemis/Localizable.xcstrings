@@ -266,16 +266,6 @@
         }
       }
     },
-    "Application text" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bewerbungstext"
-          }
-        }
-      }
-    },
     "Applied" : {
       "localizations" : {
         "de" : {
@@ -578,12 +568,12 @@
         }
       }
     },
-    "Each listing gets its own German text, from your text and the facts about you." : {
+    "Every text written automatically includes these points. Only your notes and the facts about you are used, nothing is made up." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Jedes Angebot bekommt einen eigenen deutschen Text, aus deinem Text und den Angaben über dich."
+            "value" : "Jeder automatisch geschriebene Text enthält diese Punkte. Verwendet werden nur deine Hinweise und die Angaben über dich, erfunden wird nichts."
           }
         }
       }
@@ -1038,6 +1028,36 @@
         }
       }
     },
+    "None" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keine"
+          }
+        }
+      }
+    },
+    "Not written yet" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch nicht geschrieben"
+          }
+        }
+      }
+    },
+    "Notes" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hinweise"
+          }
+        }
+      }
+    },
     "Nothing new. New listings appear here the moment they're found." : {
       "localizations" : {
         "de" : {
@@ -1074,6 +1094,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Mitteilungen"
+          }
+        }
+      }
+    },
+    "One text per listing" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein Text pro Angebot"
           }
         }
       }
@@ -1164,16 +1194,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pausiert"
-          }
-        }
-      }
-    },
-    "Per listing" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pro Angebot"
           }
         }
       }
@@ -1638,6 +1658,16 @@
         }
       }
     },
+    "Write automatically" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatisch schreiben"
+          }
+        }
+      }
+    },
     "Writing the application…" : {
       "localizations" : {
         "de" : {
@@ -1714,6 +1744,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "kalt"
+          }
+        }
+      }
+    },
+    "e.g. I can come to a viewing any evening, my parents act as guarantors" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "z. B. Ich kann jeden Abend zur Besichtigung kommen, meine Eltern bürgen für mich"
           }
         }
       }

@@ -306,6 +306,21 @@ struct StoreTests {
         #expect(store.settings == changed && store.notice?.text == "Settings not saved. Made-up failure")
     }
 
+    /// The notes go with the settings (brief 62's `application_notes`), the other texts as they were.
+    @Test func notesAreSaved() async throws {
+        let (store, transport, _) = try await makeStore()
+        let original = try sample(Settings.self, "settings")
+        try transport.answer("GET /settings", encoding: original)
+        await store.loadSettings()
+        var changed = original
+        changed.applicationNotes = "Made-up notes"
+        try transport.answer("PUT /settings", encoding: changed)
+        await store.saveSettings(changed)
+        let sent = try #require(try body(transport.requests("PUT /settings").last))
+        #expect(sent["application_notes"] as? String == "Made-up notes" && sent["own_text"] as? String == original.ownText)
+        #expect(store.settings?.applicationNotes == "Made-up notes")
+    }
+
     // MARK: places
 
     @Test func placesAreAskedOnceTypingPauses() async throws {

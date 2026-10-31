@@ -478,11 +478,16 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   Data in `API/` + `Model/` (one `ArestemisStore`, optimistic changes with rollback), screens in `Screens/` on
   `Shared/Design`. Launch arguments (DEBUG): `-sampleData` (+ `-sampleNoHunt`, `-samplePaused`, `-sampleLoading`),
   `-tab hunt|listings|search`, `-filter new|saved|applied|all`, `-openMatch <id>`,
-  `-openSheet settings|application|rejected|place|describe`, `-scrollBottom`, `-scrollTo size|rent|movein`. Push: the category and
+  `-openSheet settings|application|rejected|place|describe`, `-scrollBottom`, `-scrollTo size|rent|movein`; Settings →
+  Application (brief 61): `-openSettingsPage ownText|notes|aboutMe`, `-sampleOwnMode`, `-sampleNoTexts`. Push: the category and
   the link routing are in `Model/Notifications.swift`; `Shared/Push` is wired in ContentView.
   **Search (API version 2, 2026-10-24, Patrik):** Flat or WG / Flat / WG, people moving in, max flatmates, size ranges
   (flat, WG room), areas, cold and warm rent ranges, move-in and temporary offers, portals, extras; every field optional
   except a place and a portal. "Describe it" is a line at the top that opens a sheet (`SearchDraft`, `SearchScreen`).
+  **Settings → Application** (brief 61, Patrik 2026-10-31): after Notifications, one card of rows like General's: the
+  switch Write automatically (on = `ai`), the row it leads to (Your text, or Notes = `application_notes`, brief 62) and
+  About you, each opening a page with one text field (`ApplicationPage`); one draft, saved when the sheet closes. A portal
+  the app does not know yet is left out of every list and a listing from one still shows (`DecodingTests`).
 - **Arestoteles app** (2026-10-24, build R2): `Arestoteles/` (bundle id `de.ares-empire.arestoteles`, URL scheme
   `arestoteles`), Patrik's Weltbild vault on the Arestoteles API (`Arestoteles/docs/API.md`, decisions
   `ares-empire/docs/ARESTOTELES-APP.md`; samples in `Arestoteles/Arestoteles/Samples/`, copies of its `docs/samples/`).

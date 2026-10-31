@@ -55,12 +55,24 @@ struct SampleBackendTests {
         await store.loadApplication(for: 41)
         let written = try #require(store.application(41).application)
         #expect(written.mode == .ai && written.text.contains("Helle 2-Zimmer-Wohnung mit Balkon in Schwabing"))
+        #expect(written.text.contains(try #require(store.settings?.applicationNotes)))     // the notes are in it
         var settings = try #require(store.settings)
         settings.applicationMode = .own
         await store.saveSettings(settings)
         await store.loadApplication(for: 41)
         #expect(store.application(41).application?.mode == .own)
         #expect(store.application(41).application?.text == settings.ownText)
+    }
+
+    /// Settings → Application's screenshots: the switch off, and nothing written yet.
+    @Test func applicationSettingsForScreenshots() async throws {
+        let own = try await store(.init(ownMode: true))
+        await own.loadSettings()
+        #expect(own.settings?.applicationMode == .own && own.settings?.ownText.isEmpty == false)
+        let empty = try await store(.init(noTexts: true))
+        await empty.loadSettings()
+        let settings = try #require(empty.settings)
+        #expect(settings.ownText.isEmpty && settings.applicationNotes.isEmpty && settings.aboutMe.isEmpty)
     }
 
     @Test func placesAndDescribeIt() async throws {

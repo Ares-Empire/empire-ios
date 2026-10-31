@@ -5,9 +5,9 @@
       "hunt_id": 1,
       "found": "2026-10-24T08:45:00Z",
       "listing": {
-        "source": "immowelt",
-        "source_name": "Immowelt",
-        "url": "https://www.immowelt.de/expose/sample4",
+        "source": "immoscout24",
+        "source_name": "ImmoScout24",
+        "url": "https://www.immobilienscout24.de/expose/90000003",
         "title": "Möblierte 1-Zimmer-Wohnung, Maxvorstadt",
         "kind": "flat",
         "rent_warm": 950,
