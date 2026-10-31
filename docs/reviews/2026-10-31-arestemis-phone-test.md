@@ -41,3 +41,18 @@ registered a production device on 2026-10-30 23:34, and Claude's test notificati
 
 **Build 0.1 (2)** (uploaded 2026-10-31 19:46 with `scripts/testflight.sh Arestemis`, commit e7cccc7) carries both
 rounds. Patrik's further notes go into build 3.
+
+## Round 3 (build 2, 2026-10-31 evening)
+
+1. **"Jagd läuft" → "Suche läuft"**, and the hunt's other sentences say "Suche" like its start button ("Die Suche konnte
+   nicht gestartet werden", "Die Suche beginnt pausiert …", "Die Suche endet …"). The tab keeps the name "Jagd" (the
+   tab next to it is "Suche"). Done by Claude (fc7807a).
+2. **Settings → Application, compact** (brief 61, Claude agent): Notifications first, then Application as rows like
+   General's: a switch "Automatisch schreiben", a row that opens either "Dein Text" or "Hinweise" (notes every
+   automatic text includes), and "Über dich". The automatic text then uses the facts about you and the notes, not the
+   own text (brief 62, Codex, server field `application_notes`).
+3. **The flicker** with a small black corner when Settings opens or closes (brief 61).
+4. **More portals** (brief 63, Codex, server): ImmoScout24, and Immowelt in every town it knows
+   instead of only München (`garching-b-muenchen` resolves; some towns, e.g. Freising, Immowelt does not know by
+   name). No proxies needed. The server with ImmoScout24 goes live only after build 3 is on the phone, since build 2
+   does not know the new portal.
