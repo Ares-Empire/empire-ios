@@ -39,4 +39,5 @@ registered a production device on 2026-10-30 23:34, and Claude's test notificati
    Angebot" · "Your text | Per listing", and above an application "Automatisch geschrieben" · "Written automatically".
    Arestemis now shows no "KI"/"AI" anywhere.
 
-Both rounds go to the phone with the next Arestemis build, together with the rest of Patrik's notes.
+**Build 0.1 (2)** (uploaded 2026-10-31 19:46 with `scripts/testflight.sh Arestemis`, commit e7cccc7) carries both
+rounds. Patrik's further notes go into build 3.
