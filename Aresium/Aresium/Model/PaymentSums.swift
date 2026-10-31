@@ -8,8 +8,10 @@ import Observation
 
 /// Who adds up what: four levels, the more specific wins. Everywhere (Settings → Dashboard), a category (the icon at the
 /// top of its payments), a name (the switch on the name's page), a name in a category (the swipe and the long press).
-/// Every level but everywhere is on, off or not set. Categories are keyed by `DashboardStore.sumCategoryKey` (their
-/// stable id), names by the rows' opaque `nameKey`, never parsed.
+/// Every level but everywhere is on, off or not set; a choice equal to what the levels above give is not set, so making
+/// a name "normal again" (Separate after Add up, a switch back) leaves nothing behind that would outvote a later choice
+/// (fix 58, Patrik 2026-10-31: the icon did nothing after Vinted was added up and separated by hand). Categories are keyed
+/// by `DashboardStore.sumCategoryKey` (their stable id), names by the rows' opaque `nameKey`, never parsed.
 nonisolated struct SumChoices: Codable, Equatable, Sendable {
     var everywhere = false
     var categories: [String: Bool] = [:]
@@ -22,29 +24,44 @@ nonisolated struct SumChoices: Codable, Equatable, Sendable {
         pairs[category]?[name] ?? names[name] ?? categories[category] ?? everywhere
     }
 
-    /// What the category's icon shows: the category's own choice, else everywhere's.
-    func sumsCategory(_ category: String) -> Bool { categories[category] ?? everywhere }
+    /// What the category's icon shows for a list: on when every name with two or more payments there adds up, which is
+    /// what the list shows (not the category's own choice, which a name's choice can outvote).
+    func sumsAll(_ names: [String], in category: String) -> Bool {
+        !names.isEmpty && names.allSatisfy { sums(name: $0, category: category) }
+    }
 
     /// What the name's page's switch shows: the name's own choice, else everywhere's.
     func sumsName(_ name: String) -> Bool { names[name] ?? everywhere }
 
-    /// The category's icon: the category set to the opposite of what the icon shows, and the choices of single names
-    /// in it cleared, so the tap means all or none there (a name's own choice from its page still wins).
-    mutating func toggleCategory(_ category: String) {
-        categories[category] = !sumsCategory(category)
+    /// The category's icon over a list whose names with two or more payments are `names`: the opposite of what it shows,
+    /// for every name there and the names to come. The category takes it, the choices of single names in it are cleared,
+    /// and a name whose own choice (its page's switch) says otherwise gets the tap's choice in this category, so the tap
+    /// always means all or none here.
+    mutating func toggleCategory(_ category: String, names: [String]) {
+        let target = !sumsAll(names, in: category)
+        categories[category] = target == everywhere ? nil : target
         pairs[category] = nil
+        for name in names where (self.names[name] ?? target) != target {
+            pairs[category, default: [:]][name] = target
+        }
     }
 
     /// The name's page's switch: the name in every category, its choices in single categories cleared.
     mutating func setName(_ name: String, sums: Bool) {
-        names[name] = sums
+        names[name] = sums == everywhere ? nil : sums
         for category in pairs.keys { pairs[category]?[name] = nil }
         pairs = pairs.filter { !$0.value.isEmpty }
     }
 
-    /// The swipe's and the long press's Add up and Separate: this name in this category, every month.
+    /// The swipe's and the long press's Add up and Separate: this name in this category, every month. Separate after
+    /// Add up (or the other way round) leaves the name as the levels above have it.
     mutating func setName(_ name: String, in category: String, sums: Bool) {
-        pairs[category, default: [:]][name] = sums
+        if sums == (names[name] ?? categories[category] ?? everywhere) {
+            pairs[category]?[name] = nil
+            if pairs[category]?.isEmpty == true { pairs[category] = nil }
+        } else {
+            pairs[category, default: [:]][name] = sums
+        }
     }
 }
 
@@ -82,7 +99,7 @@ final class PaymentSums {
     let isOffered: Bool
 
     func setEverywhere(_ on: Bool) { change { $0.everywhere = on } }
-    func toggleCategory(_ category: String) { change { $0.toggleCategory(category) } }
+    func toggleCategory(_ category: String, names: [String]) { change { $0.toggleCategory(category, names: names) } }
     func setName(_ name: String, sums: Bool) { change { $0.setName(name, sums: sums) } }
     func setName(_ name: String, in category: String, sums: Bool) { change { $0.setName(name, in: category, sums: sums) } }
 
@@ -160,8 +177,12 @@ enum PaymentListEntry: Identifiable {
 struct PaymentList {
     let rows: [TransactionRow]
     let entries: [PaymentListEntry]
+    /// The names with two or more payments here, in the list's order: what the category's icon adds up or separates.
+    let sumKeys: [String]
     /// Some name has two or more payments here: the category's icon shows.
-    let canSum: Bool
+    var canSum: Bool { !sumKeys.isEmpty }
+    /// Every such name shows as one row: the category's icon shows on.
+    let allSummed: Bool
 
     /// `offered: false` (server mode, the tour): every row single, no Add up.
     init(rows: [TransactionRow], offered: Bool = true, sums: (String) -> Bool) {
@@ -185,7 +206,12 @@ struct PaymentList {
             if index == members.last { entries.append(.summed(SummedPayments(key: key, rows: members.map { rows[$0] }))) }
         }
         self.entries = entries
-        canSum = !several.isEmpty
+        var seen = Set<String>()
+        sumKeys = rows.compactMap { row in
+            guard let key = Self.nameKey(row.transaction), several[key] != nil, seen.insert(key).inserted else { return nil }
+            return key
+        }
+        allSummed = !several.isEmpty && summed.count == several.count
     }
 
     static let empty = PaymentList(rows: [], sums: { _ in false })
