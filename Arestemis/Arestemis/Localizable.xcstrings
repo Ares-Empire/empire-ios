@@ -463,7 +463,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Die Jagd konnte nicht pausiert werden. %@"
+            "value" : "Die Suche konnte nicht pausiert werden. %@"
           }
         }
       }
@@ -493,7 +493,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Die Jagd konnte nicht gestartet werden. %@"
+            "value" : "Die Suche konnte nicht gestartet werden. %@"
           }
         }
       }
@@ -753,7 +753,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Jagd läuft"
+            "value" : "Suche läuft"
           }
         }
       }
@@ -1443,7 +1443,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Die Jagd beginnt pausiert. Starte sie im Tab „Jagd“."
+            "value" : "Die Suche beginnt pausiert. Starte sie im Tab „Jagd“."
           }
         }
       }
@@ -1453,7 +1453,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Die Jagd endet und ihre Angebote werden gelöscht."
+            "value" : "Die Suche endet und ihre Angebote werden gelöscht."
           }
         }
       }
