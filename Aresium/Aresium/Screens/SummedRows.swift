@@ -4,11 +4,14 @@ import SwiftUI
 // row with its payments below it while open, the category's icon in the header, and the switches on the name's page and
 // in Settings. The rows' own swipe and long press are in `PaymentList.swift`.
 
-/// The symbols of adding up: the category's icon is a stack of tiles, as the summed row's mark (on and off differ by the
-/// button's fill: the filled symbol reads as a jar); the swipe's and the long press's actions show what they do to the
-/// rows (fold them into one, unfold them), so they never look like "All"'s stack beside them.
+/// The symbols of adding up: the category's icon is a stack of tiles, as the summed row's mark (on: its front tile lit
+/// under the outline, `SumCategoryButton`; the filled symbol alone reads as a jar); the swipe's and the long press's
+/// actions show what they do to the rows (fold them into one, unfold them), so they never look like "All"'s stack beside
+/// them.
 enum SumSymbol {
     static let category = "square.stack"
+    /// Under the category's outline while on: its front tile lit (brief 56).
+    static let categoryOn = "square.stack.fill"
     static let addUp = "rectangle.compress.vertical"
     static let separate = "rectangle.expand.vertical"
 }
@@ -183,14 +186,15 @@ struct SumCategoryButton: View {
     let action: () -> Void
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: 12)
         Button(action: action) {
-            Image(systemName: SumSymbol.category).font(.system(size: 17, weight: .medium))
-                .frame(width: 42, height: 42)
-                .foregroundStyle(on ? palette.background : palette.secondary)
-                .background(on ? palette.secondary : palette.card, in: shape)
-                .overlay(shape.stroke(on ? Color.clear : palette.line))
-                .minimumTapArea()
+            // On the wall as the header's other buttons (brief 56), so on and off differ by the symbol itself: on is the
+            // stack in full ink with its front tile lit (the filled symbol under the outline, faintly; the filled symbol
+            // alone reads as a jar), off the bare outline in muted ink, fainter than the buttons beside it.
+            ZStack {
+                if on { Image(systemName: SumSymbol.categoryOn).foregroundStyle(palette.ink.opacity(0.24)) }
+                Image(systemName: SumSymbol.category).foregroundStyle(on ? palette.ink : palette.muted)
+            }
+            .headerButtonFace()
         }
         .buttonStyle(.plain)
         .accessibilityLabel(Text("Add up same names"))

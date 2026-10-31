@@ -18,6 +18,8 @@ struct ContentView: View {
     @AppStorage(ThemeState.preferenceKey) private var rememberedRed = false
     /// Settings → Dashboard → Graph (brief 42): the dashboard's graph, on by default and kept across launches.
     @AppStorage(GraphSetting.key) private var showsGraph = GraphSetting.shownByDefault
+    /// Settings → Dashboard → the graph moving away while its list scrolls (brief 56), on by default.
+    @AppStorage(GraphMotionSetting.key) private var graphMoves = GraphMotionSetting.movesByDefault
     /// Light or dark as Settings → Appearance (or the iPhone) says; red mode shows over it.
     @Environment(\.appearanceScheme) private var appearanceScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -163,6 +165,11 @@ struct ContentView: View {
                                                      month: arguments[month + 1]))
                 }
             }
+            // `-openMonthPage <YYYY-MM>`: that month's page, as a tap on Overview's graph opens it (brief 56).
+            if let month = LaunchArguments.value("-openMonthPage") {
+                place.current = false
+                place.path = [DashboardRoute(monthPage: month, side: .expenses)]
+            }
             // `-openCash`: the Cash page (this month's; `-cashMonth <YYYY-MM>` another; with `-sampleOverview` its months).
             if arguments.contains("-openCash") {
                 let month = LaunchArguments.value("-cashMonth") ?? String(LedgerExport.day(.now).prefix(7))
@@ -204,7 +211,8 @@ struct ContentView: View {
                     // The tour in place of the dashboard; the person's own stays as it was, untouched.
                     if let tour {
                         TourScreen(tour: tour, palette: palette, band: tourBand(in: geometry)) { route, openSettings in
-                            header(route, in: tour.world?.dashboard, openSettings: openSettings)
+                            header(route, in: tour.world?.dashboard, imports: route == nil ? tourImport(tour) : nil,
+                                   openSettings: openSettings)
                         }
                         .transition(.opacity)
                     }
@@ -216,8 +224,10 @@ struct ContentView: View {
                     }
                 case .waitingForLogin, .firstScreen, .dashboard:
                     DashboardStack(store: store, palette: palette, place: $place, graph: showsGraph,
-                                   band: band(in: geometry)) { route in
-                        header(route)
+                                   graphMoves: graphMoves, band: band(in: geometry)) { route in
+                        // The import button beside the gear on the start screen's title row (brief 56), only where the
+                        // dashboard shows (the first screen has its own Import data).
+                        header(route, imports: route == nil && mainScreen == .dashboard ? dashboardImport : nil)
                         restoreFeedback
                     } root: {
                         switch mainScreen {
@@ -230,10 +240,9 @@ struct ContentView: View {
                                              startTour: startTour, openGuide: { showsGuide = true },
                                              restore: { restoringExport = true })
                         default:
-                            StartScreen(store: store, imports: imports, palette: palette, current: $place.current,
-                                        side: $place.side, graph: showsGraph, band: band(in: geometry),
-                                        importChoices: modes.phone == nil ? nil : phoneImportChoices,
-                                        openGuide: { showsGuide = true }) {
+                            StartScreen(store: store, palette: palette, current: $place.current,
+                                        side: $place.side, graph: showsGraph, graphMoves: graphMoves,
+                                        band: band(in: geometry), openGuide: { showsGuide = true }) {
                                 place.path.append($0)
                             }
                         }
@@ -751,12 +760,26 @@ struct ContentView: View {
         }
     }
 
-    /// A screen's header; the tour's screens name its store (`in`) and open its own Settings.
+    /// The start screen's import button: phone mode's menu, or server mode's file picker.
+    private var dashboardImport: ScreenHeader.Import {
+        ScreenHeader.Import(store: imports, sample: store.isSample, choices: modes.phone == nil ? nil : phoneImportChoices)
+    }
+
+    /// The tour's import button: every item only answers its step (`ImportChoices.tour`).
+    private func tourImport(_ tour: TourModel) -> ScreenHeader.Import? {
+        guard let world = tour.world else { return nil }
+        return ScreenHeader.Import(store: world.imports, sample: world.dashboard.isSample,
+                                   choices: .tour { tour.importTapped() })
+    }
+
+    /// A screen's header; the tour's screens name its store (`in`) and open its own Settings. `imports`: the start
+    /// screen's import button.
     private func header(_ route: DashboardRoute? = nil, in dashboard: DashboardStore? = nil,
-                        openSettings: (() -> Void)? = nil) -> some View {
+                        imports: ScreenHeader.Import? = nil, openSettings: (() -> Void)? = nil) -> some View {
         let store = dashboard ?? store
-        let category = route.flatMap { $0.cash ? nil : store.category($0.category, side: $0.side) }
+        let category = route.flatMap { $0.cash || $0.monthPage != nil ? nil : store.category($0.category, side: $0.side) }
         let subtitle: String? = route.map { route in
+            if route.monthPage != nil { return String(localized: "Expenses and income") }  // a month's page (brief 56)
             // A name's page (brief 44); its months' pages (brief 55) read as a category's month list, below.
             if route.name != nil && route.month == nil { return String(localized: "All payments") }
             // The Cash page: its month, or its months (Overview).
@@ -767,12 +790,15 @@ struct ContentView: View {
             }
             return route.side == .income ? String(localized: "Monthly income") : String(localized: "Monthly spend")
         }
-        let title = route.map { $0.name?.title ?? ($0.cash ? String(localized: "Cash") : CategoryName.shown($0.category)) }
-            ?? "Aresium"
+        let title = route.map { route in
+            if let month = route.monthPage { return store.monthTitle(month) }
+            return route.name?.title ?? (route.cash ? String(localized: "Cash") : CategoryName.shown(route.category))
+        } ?? "Aresium"
         return ScreenHeader(title: title, subtitle: subtitle,
                             category: category, palette: palette,
                             back: route == nil ? nil : { back(route) },
                             sums: route.flatMap { sumsIcon($0, in: store) },
+                            imports: imports,
                             leaveRed: {
             guard !theme.isAnimating, theme.red else { return }
             bandLanding = nil

@@ -25,6 +25,20 @@ struct TransactionRow: Identifiable {
     var id: String { transaction.id }
 }
 
+/// What a page of the dashboard counts (brief 56): Current's month (this month, or the month a review message opened),
+/// every month (Overview), or one month opened from Overview's graph (that month's own page, `DashboardRoute.monthPage`).
+/// The start screen and a month's page are the same pieces over a scope.
+enum DashboardScope: Hashable {
+    case current, overview
+    case month(String)
+
+    /// The start screen's range picker: Current (true) or Overview (false).
+    init(current: Bool) { self = current ? .current : .overview }
+
+    /// A scope of one month (Current or a month's page): its graph is the days', a category opens that month's payments.
+    var isMonth: Bool { self != .overview }
+}
+
 /// Where a tap on a category leads (Patrik, 2026-10-27): in the Current view straight to this month's payments of it,
 /// since the row showed this month; in Overview to its months first. Without a known month, to its months.
 enum CategoryRoute {
@@ -44,9 +58,20 @@ extension Transaction {
 
 struct ChartPoint: Identifiable {
     let index: Int
+    /// The axis's label: the day ("14") or the month ("Sep").
     let label: String
     let value: Double
+    /// What the chip names while a finger reads the graph (brief 56): the day written out ("Mon 14 Sep") or the month
+    /// with its year ("Sep 2026"); the label when not given.
+    let title: String
     var id: Int { index }
+
+    nonisolated init(index: Int, label: String, value: Double, title: String? = nil) {
+        self.index = index
+        self.label = label
+        self.value = value
+        self.title = title ?? label
+    }
 }
 
 @MainActor @Observable
@@ -233,7 +258,32 @@ final class DashboardStore {
 
     /// Where a tap on a category in the start screen leads (`CategoryRoute`).
     func route(category: String, side: DashboardSide, current: Bool) -> DashboardRoute {
-        CategoryRoute.route(category: category, side: side, current: current, currentMonth: currentMonth?.key)
+        route(category: category, side: side, scope: DashboardScope(current: current))
+    }
+
+    /// Where a tap on a category of a page leads: that month's payments for a month's scope, its months in Overview.
+    func route(category: String, side: DashboardSide, scope: DashboardScope) -> DashboardRoute {
+        CategoryRoute.route(category: category, side: side, current: scope.isMonth, currentMonth: monthKey(scope))
+    }
+
+    /// The month a scope counts (`YYYY-MM`): Current's (`currentMonth`) or a month page's own; nil for Overview.
+    func monthKey(_ scope: DashboardScope) -> String? {
+        switch scope {
+        case .current: currentMonth?.key
+        case .overview: nil
+        case let .month(key): key
+        }
+    }
+
+    /// The month a graph's point stands for, on a graph over every month (Overview's, a category's, a name's): its key.
+    func monthKey(atChartIndex index: Int) -> String? {
+        guard let months = dashboard?.months, months.indices.contains(index) else { return nil }
+        return months[index].key
+    }
+
+    /// A tap on a month of Overview's graph (brief 56, as the website): that month's page, on the side shown.
+    func monthPage(atChartIndex index: Int, side: DashboardSide) -> DashboardRoute? {
+        monthKey(atChartIndex: index).map { DashboardRoute(monthPage: $0, side: side) }
     }
 
     var currentMonth: Month? {
@@ -250,15 +300,21 @@ final class DashboardStore {
     var hasCash: Bool { dashboard?.cash?.movements.isEmpty == false }
 
     /// Where the Cash row leads: as a category, this month's page in Current, its months in Overview.
-    func cashRoute(current: Bool) -> DashboardRoute {
-        DashboardRoute(category: "", side: .expenses, month: current ? currentMonth?.key : nil, cash: true)
+    func cashRoute(current: Bool) -> DashboardRoute { cashRoute(DashboardScope(current: current)) }
+
+    /// Where a page's Cash row leads: that month's Cash page for a month's scope, its months in Overview.
+    func cashRoute(_ scope: DashboardScope) -> DashboardRoute {
+        DashboardRoute(category: "", side: .expenses, month: monthKey(scope), cash: true)
     }
 
     /// What the Cash row's line counts: this month's cash not accounted for (Current), or every month's (Overview).
-    func cashUnaccounted(current: Bool) -> Double {
+    func cashUnaccounted(current: Bool) -> Double { cashUnaccounted(DashboardScope(current: current)) }
+
+    /// The cash not accounted for in a scope's month, or in every month (Overview).
+    func cashUnaccounted(_ scope: DashboardScope) -> Double {
         guard let cash = dashboard?.cash else { return 0 }
-        if current { return currentMonth.flatMap { cash.months[$0.key]?.unaccounted } ?? 0 }
-        return cash.months.values.reduce(0) { $0 + $1.unaccounted }
+        guard scope.isMonth else { return cash.months.values.reduce(0) { $0 + $1.unaccounted } }
+        return monthKey(scope).flatMap { cash.months[$0]?.unaccounted } ?? 0
     }
 
     /// A receipt row's cash movement (which tells a hand entry from a cash receipt).
@@ -276,23 +332,35 @@ final class DashboardStore {
                                                calendar: calendar, timeZone: calendar.timeZone).month(.abbreviated).year())
     }
 
-    func rangeLabel(current: Bool) -> String {
-        guard let first = dashboard?.months.first, let last = (current ? currentMonth : dashboard?.months.last) else {
+    func rangeLabel(current: Bool) -> String { rangeLabel(DashboardScope(current: current)) }
+
+    /// The line above a page's heading: the scope's month, or Overview's first to last month.
+    func rangeLabel(_ scope: DashboardScope) -> String {
+        guard let first = dashboard?.months.first, let last = dashboard?.months.last else {
             return String(localized: "No activity")
         }
-        // One month of data: "February 2026", not "February 2026 – February 2026".
-        return current || first.key == last.key ? last.title() : "\(first.title()) – \(last.title())"
+        guard scope.isMonth else {
+            // One month of data: "February 2026", not "February 2026 – February 2026".
+            return first.key == last.key ? last.title() : "\(first.title()) – \(last.title())"
+        }
+        return monthKey(scope).map { monthTitle($0) } ?? String(localized: "No activity")
     }
 
-    func totals(current: Bool) -> Totals? {
+    func totals(current: Bool) -> Totals? { totals(DashboardScope(current: current)) }
+
+    /// A scope's totals: its month's, or every month's (Overview).
+    func totals(_ scope: DashboardScope) -> Totals? {
         guard let dashboard else { return nil }
-        if !current { return dashboard.total }
-        guard let key = currentMonth?.key else { return nil }
+        guard scope.isMonth else { return dashboard.total }
+        guard let key = monthKey(scope) else { return nil }
         return dashboard.byMonth[key]?.totals
     }
 
-    func rows(side: DashboardSide, current: Bool) -> [DisplayRow] {
-        guard let dashboard, let totals = totals(current: current) else { return [] }
+    func rows(side: DashboardSide, current: Bool) -> [DisplayRow] { rows(side: side, scope: DashboardScope(current: current)) }
+
+    /// A page's categories (expenses) or income buckets, with the scope's totals, largest first as the engine counted.
+    func rows(side: DashboardSide, scope: DashboardScope) -> [DisplayRow] {
+        guard let dashboard, let totals = totals(scope) else { return [] }
         let meta = side == .income ? dashboard.incomeBuckets : dashboard.categories
         let rows = side == .income ? totals.incomeBuckets : totals.categories
         return rows.compactMap { row in
@@ -327,14 +395,21 @@ final class DashboardStore {
     }
 
     func startChart(side: DashboardSide, current: Bool) -> [ChartPoint] {
+        startChart(side: side, scope: DashboardScope(current: current))
+    }
+
+    /// A page's graph: its month's days (Current, a month's page), or every month (Overview).
+    func startChart(side: DashboardSide, scope: DashboardScope) -> [ChartPoint] {
         guard let dashboard else { return [] }
-        if current {
-            guard let key = currentMonth?.key, let month = dashboard.byMonth[key] else { return [] }
-            return (side == .income ? month.dayIncome : month.dayExpense).enumerated().map {
-                ChartPoint(index: $0.offset, label: String($0.offset + 1), value: $0.element)
-            }
+        guard scope.isMonth else {
+            return monthPoints(side == .income ? dashboard.overview.income : dashboard.overview.expense)
         }
-        return monthPoints(side == .income ? dashboard.overview.income : dashboard.overview.expense)
+        guard let key = monthKey(scope), let month = dashboard.byMonth[key] else { return [] }
+        let values = side == .income ? month.dayIncome : month.dayExpense
+        let titles = ChartReading.dayTitles(month: key, count: values.count)
+        return values.enumerated().map {
+            ChartPoint(index: $0.offset, label: String($0.offset + 1), value: $0.element, title: titles[$0.offset])
+        }
     }
 
     func categoryChart(_ name: String, side: DashboardSide) -> [ChartPoint] {
@@ -344,7 +419,7 @@ final class DashboardStore {
     private func monthPoints(_ values: [Double]) -> [ChartPoint] {
         (dashboard?.months ?? []).enumerated().compactMap { index, month in
             guard values.indices.contains(index) else { return nil }
-            return ChartPoint(index: index, label: month.shortTitle(), value: values[index])
+            return ChartPoint(index: index, label: month.shortTitle(), value: values[index], title: month.title())
         }
     }
 }

@@ -36,8 +36,9 @@ private struct TourPresentKey: PreferenceKey {
 }
 
 extension View {
-    /// Marks a real control the tour may point at (nothing outside the tour).
-    func tourAnchor(_ target: TourTarget) -> some View { modifier(TourAnchorMark(target: target)) }
+    /// Marks a real control the tour may point at (nothing outside the tour). nil marks nothing: a control on a page
+    /// out of sight (the start screen's other page, brief 56), so the ring finds the one in view.
+    func tourAnchor(_ target: TourTarget?) -> some View { modifier(TourAnchorMark(target: target)) }
 
     /// The veil and ring over a screen, around the control the tour points at when it is on this screen. Put it on each
     /// screen's root (pushed screens and sheets have their own).
@@ -51,11 +52,11 @@ extension View {
 }
 
 private struct TourAnchorMark: ViewModifier {
-    let target: TourTarget
+    let target: TourTarget?
     @Environment(\.tour) private var tour
 
     func body(content: Content) -> some View {
-        if tour != nil {
+        if tour != nil, let target {
             // The id lets a scroll view bring it into view (`tourScrollsToTarget`).
             content.anchorPreference(key: TourAnchorKey.self, value: .bounds) { [target: $0] }
                 .preference(key: TourPresentKey.self, value: [target])
@@ -282,14 +283,13 @@ struct TourScreen<Header: View>: View {
     var body: some View {
         Group {
             if tour.phase == .running, let world = tour.world {
-                // The graph as the person's setting was when the tour started (`TourModel.showsGraph`).
+                // The graph as the person's settings were when the tour started (`TourModel.showsGraph`, `graphMoves`).
                 DashboardStack(store: world.dashboard, palette: palette, place: place, graph: tour.showsGraph,
-                               band: band, shortcuts: !tour.holdsTheScreen) { route in
+                               graphMoves: tour.graphMoves, band: band, shortcuts: !tour.holdsTheScreen) { route in
                     header(route) { tour.openSettings() }
                 } root: {
-                    StartScreen(store: world.dashboard, imports: world.imports, palette: palette,
-                                current: place.current, side: place.side, graph: tour.showsGraph, band: band,
-                                importChoices: .tour { tour.importTapped() }) {
+                    StartScreen(store: world.dashboard, palette: palette, current: place.current, side: place.side,
+                                graph: tour.showsGraph, graphMoves: tour.graphMoves, band: band) {
                         place.wrappedValue.path.append($0)
                     }
                 }

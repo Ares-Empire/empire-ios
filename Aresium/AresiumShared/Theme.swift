@@ -11,6 +11,8 @@ struct Palette {
     var muted: Color { red ? Color(hex: "FFD6DA").opacity(0.6) : Color(hex: dark ? "6B7280" : "88919F") }
     var line: Color { red ? Color(hex: "FFD2D8").opacity(0.16) : (dark ? Color.white : Color(hex: "0F1428")).opacity(dark ? 0.08 : 0.10) }
     var grid: Color { red ? Color(hex: "FFD2D8").opacity(0.10) : (dark ? Color.white : Color(hex: "0F1428")).opacity(dark ? 0.05 : 0.07) }
+    /// The guide line under a finger reading a graph (the website's `--guide`, brief 56).
+    var guide: Color { red ? Color(hex: "FFDCE1").opacity(0.45) : (dark ? Color.white : Color(hex: "0F1428")).opacity(dark ? 0.22 : 0.28) }
     var card: Color { red ? Color(hex: "2C050F").opacity(0.52) : dark ? Color(hex: "0F1015").opacity(0.55) : Color.white.opacity(0.74) }
     var card2: Color { red ? Color(hex: "400915").opacity(0.56) : Color(hex: dark ? "1A1C23" : "F7F8FB").opacity(dark ? 0.62 : 0.82) }
     /// The expense series in charts. On the red wall the light ink, as the widget's line and the expense text: the

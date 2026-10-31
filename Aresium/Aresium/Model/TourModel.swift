@@ -74,6 +74,9 @@ final class TourModel {
     /// Whether the tour's dashboard shows the graph: the person's setting when the tour starts (their Settings cannot
     /// be opened during it), so the screens and the steps agree.
     let showsGraph: Bool
+    /// Whether that graph moves away while its list scrolls (Settings → Dashboard, `GraphMotionSetting`, brief 56): the
+    /// person's setting when the tour starts, as the graph's.
+    let graphMoves: Bool
     /// The steps this tour shows, in order (`TourStep.steps`).
     let steps: [TourStep]
     /// Where the tour's dashboard is: its pushed screens, Current or Overview, the page, the open payment.
@@ -88,9 +91,10 @@ final class TourModel {
     @ObservationIgnored private let makeWorld: () async throws -> TourWorld
     private static let log = Logger(subsystem: "de.ares-empire.aresium", category: "tour")
 
-    init(showsGraph: Bool = GraphSetting.isShown(),
+    init(showsGraph: Bool = GraphSetting.isShown(), graphMoves: Bool = GraphMotionSetting.moves(),
          makeWorld: @escaping () async throws -> TourWorld = { try await TourWorld.make() }) {
         self.showsGraph = showsGraph
+        self.graphMoves = graphMoves
         self.steps = TourStep.steps(showingGraph: showsGraph)
         self.makeWorld = makeWorld
     }
