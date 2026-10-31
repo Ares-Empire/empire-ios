@@ -65,3 +65,16 @@ visible jump it found), and ImmoScout24 known to the app. **Kleinanzeigen** chan
 **Brief 63** (ImmoScout24 in every town, Immowelt everywhere) waits on branch `codex/63-more-portals` until build 3 is on
 the phone; then merge, deploy, tell the Aresus session (it adds an ImmoScout24 check), and Patrik turns ImmoScout24 on in
 Suche → Portale.
+
+## Round 4 (build 3, 2026-11-01 night)
+
+Build 3 installed. **Brief 63 live** (Arestemis 3c20edd, 00:36): Garching got its Immowelt page (the first scan seeded 8
+Immowelt listings) and its ImmoScout24 place `/de/bayern/muenchen-kreis/garching-bei-muenchen`; the Aresus session was
+told. ImmoScout24 scans once Patrik turns it on in the search's portals.
+
+1. **The black corner is still there**, now "very frequently", in the "Suche läuft" card on the Hunt tab (Patrik: "The
+   black field goes black in the corner. It needs fixing."). His hunt is active all the time since build 3, so the
+   card's status dot pulses all the time; the card is a glass card (material, shadow) inside a scroll view faded by a
+   mask. Brief 67 (Claude agent) finds the cause and fixes it without changing the look; build 4 carries it.
+2. **Tabs renamed in German**: "Jagd" → "Suche", and the search's own tab "Suche" → "Filter" (its slider icon; places,
+   portals, rent). English stays Hunt / Search. Done by Claude (0e89d13).
