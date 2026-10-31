@@ -509,7 +509,9 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
 - **Aresium phone mode** (2026-10-27, briefs 15, 18 and 22; plan `ares-empire/docs/ARESIUM-FOR-OTHERS.md`): everyone
   but Patrik keeps their Aresium data on their iPhone. **No account** (Patrik, 2026-10-27, brief 22): Aresium opens in
   phone mode on the phone's one store at once, without a login and without waiting for any server (`ModeStore.start`);
-  the first screen or the dashboard. **Server mode** stays for the owner through the shared Ares login: while a login
+  the first screen or the dashboard. **Server mode** stays in the app, unused since 2026-10-31: the server answers
+  `server` only for ids in its `APP_SERVER_MODE_USERS` (empty), so Patrik's Aresium shows the phone's data as
+  everyone's (logging in to another Ares app had switched it to his old server data). While a login
   whose account has the `aresium` service exists, the app asks `GET /api/mode` once per session and remembers the answer
   per account id (`aresium.mode.<id>` in the app's defaults): `server` → today's server dashboard (`ServerBackend` on
   `APIClient`); `phone`, 401 (logs out everywhere), 403 (remembered as phone), an error or offline without a

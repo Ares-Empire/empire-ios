@@ -21,7 +21,8 @@ private nonisolated struct ModeAnswer: Decodable { let mode: AresiumMode }
 ///
 /// - **Phone mode** is Aresium: the phone's one store (`PhoneStorage`), opened at launch without asking anyone. No login
 ///   is needed, and none changes it: logging in or out, here or in another Ares app, never closes or deletes it.
-/// - **Server mode** is for the owner list only, through the shared Ares login: while a login whose account has the
+/// - **Server mode** is for the server's `APP_SERVER_MODE_USERS` only (empty since 2026-10-31, so nobody, Patrik
+///   neither), through the shared Ares login: while a login whose account has the
 ///   Aresium service exists, the app asks `GET /api/mode` once per session and remembers the answer per account id in
 ///   the app's defaults. `server` → today's server dashboard; anything else (`phone`, 401, 403, an error, offline without
 ///   a remembered answer) → phone mode. A remembered `server` works offline, also at launch before the login is renewed.
