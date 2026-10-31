@@ -166,16 +166,6 @@
         }
       }
     },
-    "AI per listing" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "KI pro Angebot"
-          }
-        }
-      }
-    },
     "About you" : {
       "localizations" : {
         "de" : {
@@ -1178,6 +1168,16 @@
         }
       }
     },
+    "Per listing" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pro Angebot"
+          }
+        }
+      }
+    },
     "Per month, as listed. Warm includes the utilities." : {
       "localizations" : {
         "de" : {
@@ -1658,12 +1658,12 @@
         }
       }
     },
-    "Written by AI" : {
+    "Written automatically" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mit KI geschrieben"
+            "value" : "Automatisch geschrieben"
           }
         }
       }

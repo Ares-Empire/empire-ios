@@ -20,7 +20,7 @@ struct ApplicationSheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     if let application = state.application {
-                        CapsLabel(text: application.mode == .ai ? String(localized: "Written by AI") : String(localized: "Your text"), size: 11)
+                        CapsLabel(text: application.mode == .ai ? String(localized: "Written automatically") : String(localized: "Your text"), size: 11)
                             .padding(.leading, 4)
                         Text(application.text).font(AppFont.text(15)).foregroundStyle(Ink.primary).lineSpacing(5)
                             .textSelection(.enabled)

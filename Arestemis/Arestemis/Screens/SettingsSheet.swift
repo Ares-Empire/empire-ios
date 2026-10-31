@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Arestemis's Settings: the shared screen (Shared/Design/SettingsScreen) with the app's own section on top:
-/// application (own text or AI per listing, the own text, facts about you) and the hunt's notifications. Changes to
+/// application (own text or one per listing, the own text, facts about you) and the hunt's notifications. Changes to
 /// those are saved when the sheet closes (Done or swiping it away).
 struct SettingsSheet: View {
     let store: ArestemisStore
@@ -56,7 +56,7 @@ struct SettingsSheet: View {
             VStack(alignment: .leading, spacing: 10) {
                 Picker("Application text", selection: settings.applicationMode) {
                     Text("Your text").tag(ApplicationMode.own)
-                    Text("AI per listing").tag(ApplicationMode.ai)
+                    Text("Per listing").tag(ApplicationMode.ai)
                 }
                 .pickerStyle(.segmented)
                 Caption(text: settings.wrappedValue.applicationMode == .own

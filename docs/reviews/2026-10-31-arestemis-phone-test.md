@@ -34,8 +34,9 @@ registered a production device on 2026-10-30 23:34, and Claude's test notificati
 2. **No sentence names the AI** (Patrik: "Let's cut KI from all sentences, I think it sounds better. Like automatic fill
    in"). Describe it: "Die Felder werden automatisch ausgefüllt. Prüf sie, dann speichern." · "The fields are filled in
    automatically. Check them, then save." Server: "Only checked against the fields" (German unchanged) and "Not available
-   right now, try again in a minute." · "Gerade nicht verfügbar, versuch es in einer Minute noch einmal." Two short
-   labels still say KI, as they are not sentences: the switch "KI pro Angebot" (Settings → Application) and "Mit KI
-   geschrieben" above an application.
+   right now, try again in a minute." · "Gerade nicht verfügbar, versuch es in einer Minute noch einmal." The two short
+   labels went too (Patrik: "Yes let's remove them too"): the switch in Settings → Application is "Dein Text | Pro
+   Angebot" · "Your text | Per listing", and above an application "Automatisch geschrieben" · "Written automatically".
+   Arestemis now shows no "KI"/"AI" anywhere.
 
 Both rounds go to the phone with the next Arestemis build, together with the rest of Patrik's notes.
