@@ -142,3 +142,28 @@ goes back past about half the width, a flick of about 53 pt at once, so nothing 
 aresium 01ebd85, brief 54 in the app: groups, names, "also the others" and receipt presets per shop); D as agreed
 (brief 53: "Add up" / "Summieren", "Separate" / "Auflösen", the full swipe stays All). F (silky smooth) is no item of
 its own: each brief kept work off the main thread and measured where it could.
+
+## Fifth round: build 5 on the phone (2026-10-31)
+
+First, build 5 looked like an old app (no Mitteilungen in Settings, English categories, no swipe, no new features):
+logging in to Arestemis had switched Aresium to server mode, Patrik's old website data. The server now answers `phone`
+for him too (aresium 7c87e02, `APP_SERVER_MODE_USERS` empty); after reopening the app, all was there. Then:
+
+1. **A date's tile reads like a count:** a summed row says "44×", a single row "44". Patrik: write the day "44." so it
+   reads as a date. → brief 55 (the day's number as the language writes a day alone: "4." in German, "4" in English,
+   where the summed tile keeps its stack and ×).
+2. **The name's page lists the payments under its months,** "very weird". Each month should be a row like a category's
+   months that opens a page with that month's payments, with the back swipe. → brief 55.
+3. **Settings felt laggy at times.** → brief 57 (Codex measures opening, scrolling and every switch, then fixes what
+   holds the main thread).
+4. **The category's add-up icon did nothing** in Oct 2026 Kleidung after Vinted was added up and separated by hand (it
+   worked in Groceries). Cause: the icon showed the category's own choice, not what the list showed; after Separate it
+   still said on, so the tap turned it off and nothing changed. → fix 58 (Claude): the icon shows what the list shows,
+   its tap means all or none there, and a choice equal to what it would be anyway is not stored.
+5. **New: the graph shows each month's number while sliding over it** (as on the website), and a tap on a month opens
+   it. → brief 56 (every graph; Overview's month opens that month's page, as the website's).
+6. **New: the graph moves away while scrolling the categories,** so they get more room; a Settings switch turns it off.
+   → brief 56.
+7. **Settings and Import on one level, without their boxes** ("unless you disagree"). → brief 56: agreed, and the other
+   header buttons (back, the add-up icon, red mode's X) lose their boxes too, so every header looks alike.
+8. **The tour explains the new features and switches** and stays coherent. → brief 59, after 55–58 are merged.
