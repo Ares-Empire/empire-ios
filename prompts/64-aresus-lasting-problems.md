@@ -1,6 +1,6 @@
 # 64: Aresus server: Arestemis's portals watched, alerts only for problems that last
 
-Status: draft
+Status: running (2026-10-31)
 Branch: `codex/64-lasting-problems` · Worktree: `../aresus-64-lasting-problems` (a worktree of **`~/aresus`**, the
 server repo, not of empire-ios) · Model: `gpt-6.1-sol`, effort `high`
 
