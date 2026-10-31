@@ -52,6 +52,17 @@ made, shows among the choices and is picked. Save then moves (or adds) the payme
 8. **The tour:** its switch step uses this window on the tour's own store. The tile may stay there; a category made in
    the tour goes with the tour's store and never reaches the person's. The step still goes on when the payment is moved.
 9. **German** for every new text (`scripts/strings.py`).
+10. **The receipt window and Add cash too** (Patrik, 2026-10-31, added while the build ran: "yes lets do that too, seems
+    sensible"). The receipt check window (new reading and Edit receipt, `ReceiptCheckView`) and the cash entry window
+    (Add cash and Edit entry, `CashEntryView`) pick their category from a `MenuChip` menu. That menu ends with **New
+    category…** / **Neue Kategorie …** (a `plus` symbol, after a divider). It opens the same alert, makes the category
+    the same way and picks it in that window. A name problem shows as one line under the category field in the window's
+    own problem style. Nothing else in those windows changes: their Cancel still asks before throwing away typed values,
+    and a category made there stays after Cancel, as in item 6. In Add cash an own category shows for spent and for
+    received alike (`CashCategories`: one's own may be either), so the item is in both.
+11. **One piece for all three places.** The alert, the busy state, the name check's line and keeping the typed name
+    live in one shared piece (for example a small model plus a view modifier), used by the change window, the receipt
+    window and the cash window. No copy of the flow in a second or third place.
 
 ## Settled: do not re-open
 
@@ -63,7 +74,6 @@ made, shows among the choices and is picked. Save then moves (or adds) the payme
 
 ## Out of scope
 
-- The receipt check window's and Add cash's category menus (Patrik has not asked; they may follow later).
 - Server mode (no own categories there) and the server sample.
 - Editing or deleting categories from this window.
 
@@ -74,10 +84,11 @@ made, shows among the choices and is picked. Save then moves (or adds) the payme
   Switch and in Add, Save moves the payment there and the shop question follows; a taken or reserved name makes nothing
   and keeps the typed name; Cancel after making keeps the category and leaves the payment where it was; no tile in
   server mode; on the side without own categories (if there is one) no tile; in the tour the person's store is untouched.
+  The receipt and cash windows: New category… in the menu makes the category and picks it; their Cancel keeps it.
 - `scripts/strings.py check`: 0 problems.
 - Screenshots `build/60-*.png` in German and English, light and dark: the window with the tile (Switch and Add), the
   alert with a typed name, the new category picked, the name problem line, the payment's page after Save with the new
-  chip. Add DEBUG launch arguments for these states as other briefs did, and list them in `CLAUDE.md`.
+  chip; the receipt window's and Add cash's menu with New category… and a category made there picked. Add DEBUG launch arguments for these states as other briefs did, and list them in `CLAUDE.md`.
 - `CLAUDE.md` updated (the change window's part of "Aresium phone mode").
 
 ## Final message
