@@ -23,6 +23,11 @@ enum PhoneSample {
         guard !empty else { return (backend, storage) }
         for id in chosen { try await ledger.choose(id) }
         try await backend.addCustom(named: customName)
+        if let size = LaunchArguments.value("-sampleSize").flatMap(Int.init), size > 0 {
+            _ = try await backend.importFiles([sizedFile(size: size)], auth: BackendAuth(token: nil))
+            backend.setOwnNames(true)
+            return (backend, storage)
+        }
         // `-sampleOwn <name,name,…>`: more own categories after Climbing, each with the look its name gives it.
         for name in (LaunchArguments.value("-sampleOwn") ?? "").split(separator: ",") {
             try await backend.addCustom(named: String(name))
@@ -44,6 +49,20 @@ enum PhoneSample {
         backend.setOwnNames(LaunchArguments.value("-ownNames") != "off")
         if LaunchArguments.current.contains("-sampleNames") { try await addNames(backend) }
         return (backend, storage)
+    }
+
+    /// Exact payment count over the preceding year, made-up bank lines only. Uses the real reader and ledger.
+    static func sizedFile(size: Int, now: Date = .now) -> ImportFile {
+        let calendar = ReceiptDay.calendar
+        var lines = ["IBAN Auftragskonto;Buchungstag;Valutadatum;Name Zahlungsbeteiligter;Buchungstext;Verwendungszweck;Betrag;Währung;Soll/Haben;Saldo nach Buchung"]
+        let shops = ["REWE Markt GmbH", "LIDL DIENSTLEISTUNG", "Fiktiva Cafe", "Fictional Employer", "Fiktiv Shop"]
+        for index in 0..<size {
+            let day = ReceiptDay.day(calendar.date(byAdding: .day, value: -(index % 365), to: now) ?? now)
+            let parts = day.split(separator: "-")
+            let date = "\(parts[2]).\(parts[1]).\(parts[0])"
+            lines.append(";\(date);\(date);\(shops[index % shops.count]);Lastschrift;Fictional payment \(index);\(10 + index % 80),50;EUR;\(index % 5 == 3 ? "H" : "S");")
+        }
+        return ImportFile(name: "Umsaetze-Fiktiv.csv", data: Data((lines.joined(separator: "\n") + "\n").utf8))
     }
 
     /// `-sampleLongName` (brief 47, the long press's menu with a long bank name): three made-up purchases this month

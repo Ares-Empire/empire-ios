@@ -39,6 +39,7 @@ struct LockSettingsSection: View {
             FormNote(text: String(localized: "Aresium locks when it opens and after more than 10 seconds away. While the lock is on, the widgets show no numbers."))
                 .padding(.top, 10)
         }
+        .task { await lock.refreshAvailability() }
     }
 
     private func setFaceID(_ on: Bool) {

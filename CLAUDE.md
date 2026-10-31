@@ -545,7 +545,19 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   off the main thread (`AresiumEngine.bundledForPhone`), since JavaScriptCore runs its clean-up timers on the run loop it
   was made on; values are set only when they changed, and the picker's rows are equatable. Signposts: subsystem
   `de.ares-empire.aresium`, category `picker` (`PickerTiming`; Instruments on the phone shows them); the timing run:
-  `TEST_RUNNER_PICKER_TIMINGS=1` with `-only-testing:AresiumTests/PickerTimingTests`. Learned merchants are rebuilt from corrections when the bundled engine changes
+  `TEST_RUNNER_PICKER_TIMINGS=1` with `-only-testing:AresiumTests/PickerTimingTests`.
+  **Settings (brief 57):** `AppLock` caches biometric availability; its `LAContext` checks run off main on launch,
+  foreground and opening Settings. The dashboard observes only cached reminder eligibility, so refreshing Messages
+  or changing its other choices does not invalidate it. A category picker model lives for one opening (it was made anew on every
+  redraw). The app's own work in Settings measured at most 1.4 ms (1,250 payments) and 4.6 ms (5,000) per step on the
+  simulator; the longer main-thread turns that remain are iOS drawing the sheet and its pages (and the test driver).
+  Measure on `codex-57`: build Aresium, then `python3 scripts/57-settings-timing.py after 1250 --prepare` (also 5000;
+  use a fresh phase name for each run, `--app <saved app>` for a baseline). DEBUG `-sampleSize` fills an exact-size fictional store over a year;
+  `-settingsTimings` uses real authentication availability and the fake notification center with live scheduling paths.
+  Signposts: `settings.mainTurn` in category `settings`, plus `PickerTiming`'s work spans. Raw wall/CPU main-run-loop
+  turns, work spans, UI logs and summaries go to `build/57-*`. The driver resolves coordinates and checks state outside
+  measured windows, since accessibility snapshots add overhead; whole busy turns still include UIKit/SwiftUI rendering.
+  Learned merchants are rebuilt from corrections when the bundled engine changes
   (`PhoneBackend.rebuildLearnedKeys`). **Moving over** (builds before 22 kept one store per account in `Aresium/<account
   id>/`): when there is no `local/` store, the most recently changed older store (its newest file) is moved (never
   copied) to `local/` at the first open; with several, the others stay untouched where they are (logged, category
