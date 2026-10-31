@@ -1,6 +1,6 @@
 # 57: Aresium's Settings without lag: measure, then take the work off the main thread
 
-Status: draft
+Status: merged 2026-10-31 (all Aresium tests pass; Claude dropped the lazy shared Settings change: little gain, all five apps; the app's own work per step ≤ 1.4 ms at 1,250 payments, the rest is iOS drawing the sheet)
 Branch: `codex/57-settings-smooth` · Worktree: `../empire-ios-57-settings-smooth` · Model: `gpt-6.1-sol`, effort `high`
 · Simulator: `codex-57` · No look changes.
 
