@@ -167,3 +167,10 @@ for him too (aresium 7c87e02, `APP_SERVER_MODE_USERS` empty); after reopening th
 7. **Settings and Import on one level, without their boxes** ("unless you disagree"). → brief 56: agreed, and the other
    header buttons (back, the add-up icon, red mode's X) lose their boxes too, so every header looks alike.
 8. **The tour explains the new features and switches** and stays coherent. → brief 59, after 55–58 are merged.
+
+**In build 6** (2026-10-31 morning): 1 and 2 (brief 55: "4." in German, the name's months open their own page; a month
+with only a refund keeps its row), 3 (brief 57: the Face ID check, Messages' choices and the category picker no longer
+work on the main thread or redraw the dashboard; what remains on the simulator is iOS drawing the sheet), 4 (fix 58),
+5–7 (brief 56: hold 0.25 s, then slide; a tap opens the month, Overview's month as its own page; the graph scrolls away
+with the list, "Diagramm weicht beim Scrollen aus" in Settings → Dashboard; the Expenses/Income dots moved under the
+range picker; every header button without its box). 8 (the tour) follows in build 7.
