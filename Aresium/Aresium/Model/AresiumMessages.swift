@@ -13,14 +13,13 @@ final class AresiumMessages {
     private(set) var preferences: MessagePreferences
     private(set) var authorization = MessageAuthorization.notAsked
     private(set) var error: String?
-    var shouldOfferReminder: Bool {
-        context.permitsMessages && !preferences.enabled && history.offerReady && !history.offered
-    }
+    /// The dashboard observes only eligibility, not the page's individual preferences or scheduling context.
+    private(set) var shouldOfferReminder = false
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let scheduler: MessageScheduler
     @ObservationIgnored private let now: @Sendable () -> Date
-    private var history: MessageHistory
-    private var context = MessageContext()
+    @ObservationIgnored private var history: MessageHistory
+    @ObservationIgnored private var context = MessageContext()
     @ObservationIgnored private var dashboard: Dashboard?
     @ObservationIgnored private var ledger: PhoneLedger?
     @ObservationIgnored private var queue: Task<Void, Never>?
@@ -50,6 +49,7 @@ final class AresiumMessages {
             history.reminderStarted = now()
         }
         preferences = value
+        updateOffer()
         save()
         enqueue(askPermission: asks)
     }
@@ -70,6 +70,7 @@ final class AresiumMessages {
             history.lastImport = date
             if !history.offered && !preferences.enabled { history.offerReady = true }
         }
+        updateOffer()
         save()
         enqueue()
     }
@@ -78,23 +79,26 @@ final class AresiumMessages {
     func finishReminderOffer() {
         history.offered = true
         history.offerReady = false
+        updateOffer()
         save()
     }
 
     func setContext(_ value: MessageContext) {
         let hidesDelivered = value.locked && !context.locked
         context = value
+        updateOffer()
         enqueue(clearDelivered: hidesDelivered)
     }
 
     func setPhoneMode(_ phone: Bool, ledger: PhoneLedger?) {
         context.phone = phone
+        updateOffer()
         self.ledger = ledger
         dashboard = nil
         enqueue(askPermission: preferences.enabled)
     }
 
-    func setTour(_ tour: Bool) { context.tour = tour; enqueue() }
+    func setTour(_ tour: Bool) { context.tour = tour; updateOffer(); enqueue() }
     func setLocked(_ locked: Bool) {
         let changed = locked != context.locked
         context.locked = locked
@@ -114,6 +118,7 @@ final class AresiumMessages {
         dataGeneration += 1
         preferences = MessagePreferences()
         history = MessageHistory()
+        updateOffer()
         dashboard = nil
         for key in defaults.dictionaryRepresentation().keys where key.hasPrefix("aresium.messages.") {
             defaults.removeObject(forKey: key)
@@ -144,6 +149,11 @@ final class AresiumMessages {
         defaults.set(try? JSONEncoder().encode(history), forKey: Self.historyKey)
     }
 
+    private func updateOffer() {
+        let value = context.permitsMessages && !preferences.enabled && history.offerReady && !history.offered
+        if shouldOfferReminder != value { shouldOfferReminder = value }
+    }
+
     private func enqueue(askPermission: Bool = false, clearDelivered: Bool = false, resetProgress: Bool = false) {
         let previous = queue
         let preferences = preferences, history = history, context = context, dashboard = dashboard, ledger = ledger
@@ -154,10 +164,10 @@ final class AresiumMessages {
                                                             dashboard: dashboard, ledger: ledger,
                                                             askPermission: askPermission, clearDelivered: clearDelivered,
                                                             resetProgress: resetProgress)
-                authorization = result.authorization
+                if authorization != result.authorization { authorization = result.authorization }
                 if resetProgress { defaults.removeObject(forKey: Self.progressKey) }
                 else { defaults.set(try? JSONEncoder().encode(result.progress), forKey: Self.progressKey) }
-                error = nil
+                if error != nil { error = nil }
             } catch { self.error = error.localizedDescription }
             #if DEBUG
             if LaunchArguments.current.contains("-logMessages") { await scheduler.logPending() }

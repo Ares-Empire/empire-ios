@@ -53,8 +53,9 @@ extension AresiumMessages {
         let fails = arguments.contains("-sampleMessagesFail")
         let offers = arguments.contains("-sampleReminderOffer")
         let model = AresiumMessages(defaults: defaults, center: SampleMessageCenter(status: status, fails: fails))
-        // A sample neither offers nor plans anything, unless an argument asks for the offer or the failure.
-        model.setContext(MessageContext(phone: true, sample: !(offers || fails)))
+        // Timing uses the live observation and scheduling paths too, with the pretend center above.
+        // Other samples neither offer nor plan anything unless requested.
+        model.setContext(MessageContext(phone: true, sample: !(offers || fails || arguments.contains("-settingsTimings"))))
         if let start = LaunchArguments.value("-sampleMessages") {
             var preferences = model.preferences
             preferences.enabled = true

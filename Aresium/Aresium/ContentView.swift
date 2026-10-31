@@ -620,6 +620,7 @@ struct ContentView: View {
             await modes.showFixed(phone, storage: storage)
             // Settings → Messages and the offer on the sample (brief 46): a pretend model; nothing reaches iOS.
             store.installSampleMessages()
+            SettingsTiming.startIfRequested()
             // `-importData`: the first screen's Import data at launch (the file picker).
             if arguments.contains("-importData") { importData() }
             // `-choosePhoto`: Import → Choose photo at launch (the photo picker). Receipts (the simulator has no camera):
