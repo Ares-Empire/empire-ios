@@ -174,3 +174,9 @@ work on the main thread or redraw the dashboard; what remains on the simulator i
 5–7 (brief 56: hold 0.25 s, then slide; a tap opens the month, Overview's month as its own page; the graph scrolls away
 with the list, "Diagramm weicht beim Scrollen aus" in Settings → Dashboard; the Expenses/Income dots moved under the
 range picker; every header button without its box). 8 (the tour) follows in build 7.
+
+**In build 7** (2026-10-31 evening): 8 (brief 59). The tour is one walk of 18 steps: the start screen, the graph (hold
+and slide, a tap opens the month), a category, a payment (rename it, change its category), the swipe to the left and
+adding up (Summieren, the icon, Alle and the name's page), then Settings in its real order (Kategorien and Eigene
+Namen, Mitteilungen, Sperre, Dashboard's switches, Kontakt & Support), import (files, receipts and cash), done. With
+the graph off it has 17 steps and no card mentions the graph. Adding up in the tour never touches the real choices.

@@ -1,6 +1,6 @@
 # 59: The tour shows what Aresium can do now, in one coherent walk
 
-Status: draft
+Status: merged 2026-10-31 (all 609 Aresium tests pass; 18 steps, 17 without the graph; a real-touch walk from Start tour to Done in German passed; adding up in the tour on its own choices)
 Branch: `claude/59-tour` · Worktree: `../empire-ios-59-tour` · Built by: a Claude agent (the look, the words and the
 feel) · Simulator: `claude-59`
 
