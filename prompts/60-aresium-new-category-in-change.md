@@ -1,6 +1,6 @@
 # 60: A new category straight from the change window
 
-Status: draft
+Status: merged 2026-10-31 (all 632 Aresium tests pass; the change window's tile for money out only, a new category being a spending one until money in lands in it; the receipt and cash menus too; one shared NewCategoryModel; Create a plain button, so Return on an empty field closes the alert)
 Branch: `claude/60-new-category` · Worktree: `../empire-ios-60-new-category` · Built by: a Claude agent (a screen's
 look and flow) · Simulator: `claude-60`
 

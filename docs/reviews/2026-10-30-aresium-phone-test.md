@@ -180,3 +180,13 @@ and slide, a tap opens the month), a category, a payment (rename it, change its 
 adding up (Summieren, the icon, Alle and the name's page), then Settings in its real order (Kategorien and Eigene
 Namen, Mitteilungen, Sperre, Dashboard's switches, Kontakt & Support), import (files, receipts and cash), done. With
 the graph off it has 17 steps and no card mentions the graph. Adding up in the tour never touches the real choices.
+
+**After build 7** (2026-10-31 evening), Patrik: "its very clean. Ive only noticed one more thing we should add: In the
+category change screen there should be a way to add a new category because otherwise you have to leave, create it,
+come back." Then, for the receipt window and Add cash: "yes lets do that too, seems sensible".
+
+**In build 8** (2026-10-31 night): brief 60. The change window's grid ends with "Neue Kategorie"; the receipt window's
+and Bargeld eintragen's category menus end with "Neue Kategorie …". A name, Anlegen, and the new category is made (its
+own icon and colour) and already picked; a taken or reserved name makes nothing and says why. On a payment of money in
+the tile is not offered: a new category counts as spending until money in lands in it, so it could not take one (an
+older limit, also in Settings; open for Patrik to decide).
