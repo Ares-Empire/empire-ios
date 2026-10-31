@@ -409,7 +409,7 @@ struct DescribeSheet: View {
                              text: $text, minHeight: 130, inWell: false)
                         .focused($focused)
                         .glassCard()
-                    Caption(text: store.parseError ?? String(localized: "AI fills in the fields. Check them, then save."))
+                    Caption(text: store.parseError ?? String(localized: "The fields are filled in automatically. Check them, then save."))
                         .padding(.horizontal, 4)
                     if !unclear.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {

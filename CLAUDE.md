@@ -257,8 +257,9 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
    password "Ares Empire APNs key (base64 of AuthKey_22BDWZ79KS.p8)", restore with `security find-generic-password -s
    '<that name>' -w | base64 -d`); Apple never offers the file again. Left: enable the Push Notifications
    capability for Arestemis, Aresus and the Empire app, Time Sensitive for Arestemis and Aresus (entitlements are
-   already in the projects). Then check on the phone (the Empire app: "<App> is ready" for a member's account, its tap
-   showing the ring) and retire Telegram: Arestemis (`TELEGRAM_*` in /root/Arestemis/.env) and Aresync (`TG_*` in each
+   already in the projects). **Arestemis's push works on Patrik's iPhone** (test notification 2026-10-31), so its Telegram copy is off since
+   2026-10-31 (`TELEGRAM_*` in /root/Arestemis/.env commented out). Left: check on the phone the Empire app ("<App> is
+   ready" for a member's account, its tap showing the ring) and Aresus, then retire Aresync's Telegram (`TG_*` in each
    config). Aresium's own bot (`aresium-bot.service`, its `current` command) was stopped and disabled 2026-10-30
    (Patrik); Aresium's messages are the app's own (planned, see the review of 2026-10-30).
 7. ~~**Windows laptop:** an Aresus machine token for `Notebook-Patrik`~~: done; its token is on the server and its

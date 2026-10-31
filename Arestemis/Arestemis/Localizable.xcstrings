@@ -166,16 +166,6 @@
         }
       }
     },
-    "AI fills in the fields. Check them, then save." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "KI füllt die Felder aus. Prüf sie, dann speichern."
-          }
-        }
-      }
-    },
     "AI per listing" : {
       "localizations" : {
         "de" : {
@@ -1424,6 +1414,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Zwischenmiete"
+          }
+        }
+      }
+    },
+    "The fields are filled in automatically. Check them, then save." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Felder werden automatisch ausgefüllt. Prüf sie, dann speichern."
           }
         }
       }
