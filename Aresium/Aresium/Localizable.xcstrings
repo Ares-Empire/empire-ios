@@ -4086,16 +4086,6 @@
         }
       }
     },
-    "Shows this month's payments below" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zeigt die Buchungen dieses Monats weiter unten"
-          }
-        }
-      }
-    },
     "Sight" : {
       "localizations" : {
         "de" : {

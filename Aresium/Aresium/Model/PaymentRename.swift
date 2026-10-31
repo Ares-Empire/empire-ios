@@ -217,22 +217,46 @@ nonisolated struct PaymentNameRoute: Hashable, Sendable {
     }
 }
 
+/// What a page of a name does once a window of one of its rows has closed (brief 55): the payment may have taken the
+/// name along (its whole shop renamed, or the name spelt differently), and a month's page may have lost the month's
+/// last payment of the name (renamed alone, moved out of the counted payments).
+nonisolated struct NamePageStep: Equatable {
+    /// The name the page and the pages of it below follow; nil: it stays.
+    var follow: PaymentNameRoute?
+    /// A month's page goes back one page: the month has no payments of the name left.
+    var back = false
+
+    /// `month`: a name's month page (nil: the name's page, which never goes back by itself; it says when the name has
+    /// no payments left). Without a dashboard (it is loading) nothing moves.
+    init(after payment: Transaction?, route: PaymentNameRoute, month: String?, groups: [String: PaymentNameGroup]?) {
+        guard let groups else { return }
+        follow = route.following(payment, groups: groups)
+        guard let month else { return }
+        let shown = follow ?? route
+        back = groups[shown.key]?.rows.contains { $0.month == month } != true
+    }
+
+    init(follow: PaymentNameRoute? = nil, back: Bool = false) {
+        self.follow = follow
+        self.back = back
+    }
+}
+
 /// What a name's page shows (`NameScreen`): the totals over every month, the months with payments as the category page
-/// lists them (oldest first, its `ValueRow` bars), the graph over all the dashboard's months, and the payments newest
-/// first under their months. The bars and the graph count the name's main side: money out, or money in for a name that
-/// brought more in than it took (a salary).
+/// lists them (oldest first, its `ValueRow` bars), and the graph over all the dashboard's months. Each month opens its
+/// own page (brief 55, `NameMonthScreen`) with its payments as a category's month list orders them. The bars and the
+/// graph count the name's main side: money out, or money in for a name that brought more in than it took (a salary).
+/// Built once per dashboard (`DashboardStore.namePage`), never in a view's `body`.
 nonisolated struct NamePage {
     struct MonthAmount: Identifiable {
         let month: Month
+        /// The name's main side this month: the bar, and the graph's point.
         let total: Double
+        /// Money the other way this month (a refund among purchases); the row writes it only when `total` is 0.
+        let other: Double
+        /// The month's payments of the name, by day as a category's month list has them (`Transaction.listOrder`).
+        let rows: [TransactionRow]
         var id: String { month.key }
-    }
-
-    struct Section: Identifiable {
-        let month: String
-        let title: String
-        let rows: [Transaction]
-        var id: String { month }
     }
 
     let count: Int
@@ -240,9 +264,9 @@ nonisolated struct NamePage {
     let moneyIn: Double
     /// The bars and the graph show money out (else money in).
     let spends: Bool
+    /// The months with a payment of the name, oldest first; a month without any has no row.
     let months: [MonthAmount]
     let chart: [ChartPoint]
-    let sections: [Section]
     /// The category most of the payments are in: the bars' and the graph's colour and icon.
     let category: Category
     /// "Feb 2026 – Oct 2026", or one month.
@@ -255,30 +279,29 @@ nonisolated struct NamePage {
         let spends = group.moneyOut >= group.moneyIn
         self.spends = spends
         let amount = { (amounts: PaymentNameAmounts?) in (spends ? amounts?.moneyOut : amounts?.moneyIn) ?? 0 }
+        let other = { (amounts: PaymentNameAmounts?) in (spends ? amounts?.moneyIn : amounts?.moneyOut) ?? 0 }
+        // The rows are newest first (on one day in the dashboard's order); the stable sort gives each month the order
+        // of a category's month list, which sorts the dashboard's rows the same way.
+        var byMonth: [String: [Transaction]] = [:]
+        for row in group.rows { byMonth[row.month, default: []].append(row) }
         months = dashboard.months.compactMap { month in
-            let total = amount(group.months[month.key])
-            return total > 0 ? MonthAmount(month: month, total: total) : nil
+            guard let rows = byMonth[month.key] else { return nil }
+            return MonthAmount(month: month, total: amount(group.months[month.key]), other: other(group.months[month.key]),
+                               rows: rows.sorted(by: Transaction.listOrder).map { TransactionRow(transaction: $0, tagged: false) })
         }
         chart = dashboard.months.enumerated().map { index, month in
             ChartPoint(index: index, label: month.shortTitle(language), value: amount(group.months[month.key]))
         }
         let titles = Dictionary(dashboard.months.map { ($0.key, $0.title(language)) }, uniquingKeysWith: { first, _ in first })
-        var sections: [Section] = []
-        for row in group.rows {           // newest first already
-            if sections.last?.month == row.month {
-                let last = sections.removeLast()
-                sections.append(Section(month: last.month, title: last.title, rows: last.rows + [row]))
-            } else {
-                sections.append(Section(month: row.month, title: titles[row.month] ?? row.month, rows: [row]))
-            }
-        }
-        self.sections = sections
         category = Self.mostCommonCategory(group.rows, spends: spends, dashboard: dashboard)
         let first = group.rows.last.map(\.month), last = group.rows.first.map(\.month)
         range = [first, last].compactMap { $0 }.map { titles[$0] ?? $0 }.reduce(into: [String]()) {
             if !$0.contains($1) { $0.append($1) }
         }.joined(separator: " – ")
     }
+
+    /// A month of the name (`YYYY-MM`), nil when it has no payment of the name.
+    func month(_ key: String) -> MonthAmount? { months.first { $0.month.key == key } }
 
     /// The category most of the rows are in (ties: the newest row's), as the dashboard knows it.
     private static func mostCommonCategory(_ rows: [Transaction], spends: Bool, dashboard: Dashboard) -> Category {
@@ -313,6 +336,12 @@ nonisolated enum NameWording {
         summary(count: group.count, moneyOut: group.moneyOut, moneyIn: group.moneyIn, language: language)
     }
 
+    /// A name's month with only money the other way (brief 55): what its row writes in place of the total, signed as
+    /// a payment row: "+€80" for a refund of a name that spends, "−€50" for money out of a name that brings money in.
+    static func otherSide(_ amount: Double, spends: Bool, language: AppLanguage = .current) -> String {
+        (spends ? "+" : "−") + Money.total(amount, language: language)
+    }
+
     /// The name's page's heading line: "23 payments · Feb 2026 – Oct 2026".
     static func pageLine(count: Int, range: String, language: AppLanguage = .current) -> String {
         [language.string("\(count) payments"), range].filter { !$0.isEmpty }.joined(separator: " · ")
@@ -339,5 +368,30 @@ extension DashboardRoute {
     /// A name's page (brief 44); `category` and `side` are not used.
     init(name: PaymentNameRoute) {
         self.init(category: "", side: .expenses, name: name)
+    }
+
+    /// A name's payments in one month (`YYYY-MM`, brief 55), opened from a month's row or the graph on the name's page.
+    init(name: PaymentNameRoute, month: String) {
+        self.init(category: "", side: .expenses, month: month, name: name)
+    }
+}
+
+/// The name's pages built since the dashboard last changed (`DashboardStore.namePage`).
+struct NamePageCache {
+    var revision = -1
+    var pages: [String: NamePage] = [:]
+}
+
+extension DashboardStore {
+    /// A name's page (and its months' rows) for the dashboard shown, by the name's key; nil when the name has no
+    /// payments. Built the first time it is asked for after the dashboard changed, then kept (brief 55: no work in a
+    /// view's `body` that grows with the payments). Reading it makes a view follow the dashboard.
+    func namePage(_ key: String) -> NamePage? {
+        guard let dashboard, let group = dashboard.nameGroups?[key] else { return nil }
+        if builtNamePages.revision != revision { builtNamePages = NamePageCache(revision: revision) }
+        if let page = builtNamePages.pages[key] { return page }
+        let page = NamePage(group: group, dashboard: dashboard)
+        builtNamePages.pages[key] = page
+        return page
     }
 }

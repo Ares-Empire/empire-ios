@@ -417,7 +417,7 @@ struct ReceiptSummaryRow: View {
     var body: some View {
         let large = typeSize.isAccessibilitySize
         HStack(alignment: large ? .top : .center, spacing: 12) {
-            DayTile(palette: palette) { Text(verbatim: ReceiptPageWording.dayNumber(receipt.date)) }
+            DayTile(palette: palette) { Text(verbatim: DayWording.alone(date: receipt.date)) }
             VStack(alignment: .leading, spacing: 2) {
                 Text(verbatim: ReceiptPageWording.title(receipt)).font(AppFont.text(14.5, weight: .semibold))
                     .foregroundStyle(Ink.primary).lineLimit(large ? 3 : 1)

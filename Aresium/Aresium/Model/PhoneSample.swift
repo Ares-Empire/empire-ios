@@ -32,6 +32,12 @@ enum PhoneSample {
         if LaunchArguments.current.contains("-sampleLongName") {
             files.append(ImportFile(name: "Umsaetze-Lange-Namen.csv", data: Data(longNameLines(now: .now).utf8)))
         }
+        if LaunchArguments.current.contains("-sampleDay31") {
+            files.append(ImportFile(name: "Umsaetze-Monatsende.csv", data: Data(day31Line(now: .now).utf8)))
+        }
+        if LaunchArguments.current.contains("-sampleRefund") {
+            files.append(ImportFile(name: "Umsaetze-Retoure.csv", data: Data(refundLine(now: .now).utf8)))
+        }
         for name in ["sample-paypal.csv", "sample-camt.xml"] {
             let parts = name.split(separator: ".")
             if let url = Bundle.main.url(forResource: String(parts[0]), withExtension: String(parts[1])) {
@@ -63,6 +69,48 @@ enum PhoneSample {
             ;\(days[0]);\(days[0]);\(name);Lastschrift;Bestellung 1001;14,50;EUR;S;
             ;\(days[1]);\(days[1]);\(name);Lastschrift;Bestellung 1002;22,00;EUR;S;
             ;\(days[2]);\(days[2]);\(name);Lastschrift;Bestellung 1003;9,90;EUR;S;
+
+            """
+    }
+
+    /// `-sampleDay31` (brief 55, the day's tile at its widest, "31."): one made-up REWE purchase on the newest 31st up to
+    /// today, so Groceries and REWE's month show it.
+    private static func day31Line(now: Date) -> String {
+        let calendar = ReceiptDay.calendar
+        let thisMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: now)) ?? now
+        let last = (0..<12).lazy.compactMap { back -> Date? in
+            guard let month = calendar.date(byAdding: .month, value: -back, to: thisMonth),
+                  let day = calendar.date(byAdding: .day, value: 30, to: month),
+                  calendar.component(.day, from: day) == 31, day <= now else { return nil }
+            return day
+        }.first ?? now
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "de_DE")
+        formatter.calendar = calendar
+        formatter.timeZone = calendar.timeZone
+        formatter.dateFormat = "dd.MM.yyyy"
+        let day = formatter.string(from: last)
+        return """
+            IBAN Auftragskonto;Buchungstag;Valutadatum;Name Zahlungsbeteiligter;Buchungstext;Verwendungszweck;Betrag;Währung;Soll/Haben;Saldo nach Buchung
+            ;\(day);\(day);REWE Markt GmbH;Kartenzahlung;REWE SAGT DANKE;31,40;EUR;S;
+
+            """
+    }
+
+    /// `-sampleRefund` (brief 55, a name's month with only a refund): a made-up Zalando refund on the 1st of this month,
+    /// a month without a Zalando purchase (the sample orders from it every third month).
+    private static func refundLine(now: Date) -> String {
+        let calendar = ReceiptDay.calendar
+        let first = calendar.date(from: calendar.dateComponents([.year, .month], from: now)) ?? now
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "de_DE")
+        formatter.calendar = calendar
+        formatter.timeZone = calendar.timeZone
+        formatter.dateFormat = "dd.MM.yyyy"
+        let day = formatter.string(from: first)
+        return """
+            IBAN Auftragskonto;Buchungstag;Valutadatum;Name Zahlungsbeteiligter;Buchungstext;Verwendungszweck;Betrag;Währung;Soll/Haben;Saldo nach Buchung
+            ;\(day);\(day);Zalando SE;Gutschrift;Retoure;40,00;EUR;H;
 
             """
     }
