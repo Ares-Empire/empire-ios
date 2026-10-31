@@ -221,7 +221,7 @@ struct FileCheckPaymentRow: View {
     var body: some View {
         let large = typeSize.isAccessibilitySize
         HStack(alignment: large ? .top : .center, spacing: 12) {
-            DayTile(palette: palette) { Text(verbatim: payment.day.map(String.init) ?? "–") }
+            DayTile(palette: palette) { Text(verbatim: payment.day.map { DayWording.alone($0) } ?? "–") }
             VStack(alignment: .leading, spacing: 2) {
                 Text(verbatim: payment.title).font(AppFont.text(14.5, weight: .semibold)).foregroundStyle(Ink.primary)
                     .lineLimit(large ? 3 : 1)

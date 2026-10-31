@@ -330,7 +330,7 @@ struct PaymentNameScreensTests {
 
     // MARK: the name's page
 
-    @Test func theNamesPageCountsItsMonthsAndListsNewestFirst() async throws {
+    @Test func theNamesPageCountsItsMonthsOldestFirst() async throws {
         let (_, dashboard) = try await store()
         let penny = try row("PENNY Markt Berlin", amount: -30, in: dashboard)
         let board = try #require(dashboard.dashboard)
@@ -340,8 +340,8 @@ struct PaymentNameScreensTests {
         #expect(page.months.map(\.month.key) == ["2026-09", "2026-10"], "as the category page: oldest first")
         #expect(page.months.map(\.total) == [10, 50])
         #expect(page.chart.count == board.months.count && page.chart.map(\.value).reduce(0, +) == 60)
-        #expect(page.sections.map(\.month) == ["2026-10", "2026-09"], "the payments newest first")
-        #expect(page.sections.first?.rows.map(\.amount) == [5, -30, -20])
+        #expect(page.months.map(\.other) == [0, 5], "the refund")
+        #expect(page.month("2026-10")?.rows.map(\.transaction.amount) == [-20, -30, 5], "a month's list: by day")
         #expect(page.range == "Sep 2026 – Oct 2026")
         #expect(page.category.name == "Groceries")
     }

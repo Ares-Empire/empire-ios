@@ -442,6 +442,7 @@ struct PhoneSettingsSection: View {
     let palette: Palette
     @State private var confirmsDelete = false
     @State private var pickingExport = false
+    @State private var picker: CategoryPickerModel?
     #if DEBUG
     /// Screenshots: `-openReceipts` opens Receipts at once, `-openCategories` Categories.
     @State private var showsReceipts = LaunchArguments.current.contains("-openReceipts")
@@ -455,7 +456,7 @@ struct PhoneSettingsSection: View {
         VStack(alignment: .leading, spacing: 0) {
             SettingsSection(String(localized: "Your data on this iPhone")) {
                 if let phone = modes.phone {
-                    Button { showsCategories = true } label: {
+                    Button { openCategories() } label: {
                         SettingsRow(title: String(localized: "Categories"), value: String(phone.summary.chosen.count))
                     }
                     .buttonStyle(SettingsRowStyle())
@@ -504,12 +505,13 @@ struct PhoneSettingsSection: View {
             if let problem = data.problem { FormProblem(text: problem).padding(.top, 10) }
         }
         .navigationDestination(isPresented: $showsCategories) {
-            if let phone = modes.phone {
-                CategoryPickerScreen(model: CategoryPickerModel(phone: phone) {
-                    await modes.dashboard.reloadAfterTransactionChange()
-                })
+            if let picker {
+                CategoryPickerScreen(model: picker)
             }
         }
+        #if DEBUG
+        .task { if showsCategories && picker == nil { openCategories() } }
+        #endif
         .navigationDestination(isPresented: $showsReceipts) {
             if let phone = modes.phone {
                 ReceiptListView(phone: phone, palette: palette) { await modes.dashboard.reloadAfterTransactionChange() }
@@ -528,6 +530,12 @@ struct PhoneSettingsSection: View {
         .fileImporter(isPresented: $pickingExport, allowedContentTypes: [.json]) { result in
             if case let .success(url) = result { Task { await data.restore(from: url) } }
         }
+    }
+
+    private func openCategories() {
+        guard let phone = modes.phone else { return }
+        picker = CategoryPickerModel(phone: phone) { await modes.dashboard.reloadAfterTransactionChange() }
+        showsCategories = true
     }
 }
 

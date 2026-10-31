@@ -176,8 +176,9 @@ struct ValueRow: View {
     let total: Double
     let maximum: Double
     let palette: Palette
-    /// The mark at the end: the chevron of a row that opens a page; a name's page's months point down (brief 44).
-    var accessory = "chevron.right"
+    /// The amount written in place of the total, where the bar does not count it: a name's month with only money the
+    /// other way, such as a refund ("+€80", brief 55).
+    var amount: Text? = nil
     var body: some View {
         HStack(spacing: 12) {
             CategoryTile(icon: category.icon, color: category.color)
@@ -190,8 +191,8 @@ struct ValueRow: View {
                     }
                 }.frame(height: 3).accessibilityHidden(true)
             }
-            Text(Money.total(total)).font(AppFont.number(13.5)).fixedSize()
-            Image(systemName: accessory).font(.system(size: 11, weight: .medium)).foregroundStyle(palette.muted)
+            (amount ?? Text(Money.total(total))).font(AppFont.number(13.5)).fixedSize()
+            Image(systemName: "chevron.right").font(.system(size: 11, weight: .medium)).foregroundStyle(palette.muted)
         }.foregroundStyle(palette.ink).padding(.horizontal, 12).padding(.vertical, 11)
             .contentShape(Rectangle())
     }
@@ -214,13 +215,16 @@ struct CategoryTile: View {
 }
 
 /// The square that starts a payment row (the website's `.txn-day`): the day of the month in mono on the second card
-/// colour. The column check's first payments and the guide's numbered steps use it too.
+/// colour (`DayWording`: "4." in German), or a summed row's count. The column check's first payments and the guide's
+/// numbered steps use it too. The tile keeps its size at every text size: at the largest ones its words shrink into it
+/// ("31." too) rather than turning into "…", clear of its edges (briefs 53 and 55).
 struct DayTile<Label: View>: View {
     let palette: Palette
     @ViewBuilder let label: Label
 
     var body: some View {
         label.font(AppFont.number(15)).foregroundStyle(palette.secondary)
+            .lineLimit(1).minimumScaleFactor(0.4).padding(.horizontal, 3)
             .frame(width: 38, height: 38)
             .background(palette.card2, in: RoundedRectangle(cornerRadius: 9))
             .overlay(RoundedRectangle(cornerRadius: 9).stroke(palette.line))

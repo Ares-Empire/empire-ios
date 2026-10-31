@@ -6,7 +6,8 @@ struct DashboardRoute: Hashable {
     var month: String? = nil
     /// The Cash page (brief 33): a month's (with `month`) or its months (Overview); `category` is unused.
     var cash = false
-    /// A name's page (brief 44): every payment of one name; `category` is unused (`init(name:)`).
+    /// A name's page (brief 44): every payment of one name; `category` is unused (`init(name:)`). With `month`, that
+    /// month's payments of the name (brief 55, `init(name:month:)`).
     var name: PaymentNameRoute? = nil
     /// A month's page (brief 56): that month (`YYYY-MM`) as Current shows this month, opened from Overview's graph;
     /// `side` is the page it opens on, `category` is unused (`init(monthPage:side:)`).
@@ -29,6 +30,30 @@ struct DashboardPlace {
     var side = DashboardSide.expenses
     /// The payment whose detail is open.
     var payment: Transaction?
+
+    /// Shows a page: pushed on the stack, or, for a name's page already on it, back to that page (brief 55: All on a
+    /// name's month's rows goes back to the name's page below rather than stacking a second copy of it).
+    mutating func open(_ route: DashboardRoute) {
+        if let name = route.name, route.month == nil,
+           let index = path.lastIndex(where: { $0.name?.key == name.key && $0.month == nil }) {
+            path.removeSubrange((index + 1)...)
+        } else {
+            path.append(route)
+        }
+    }
+
+    /// A name renamed from one of its pages (`NamePageStep.follow`): every page of the name on the stack (the name's
+    /// page and its month's) shows the new name in its place.
+    mutating func follow(_ old: PaymentNameRoute, to new: PaymentNameRoute) {
+        for index in path.indices where path[index].name?.key == old.key {
+            path[index] = path[index].month.map { DashboardRoute(name: new, month: $0) } ?? DashboardRoute(name: new)
+        }
+    }
+
+    /// One page back, as the header's arrow.
+    mutating func back() {
+        if !path.isEmpty { path.removeLast() }
+    }
 }
 
 /// The dashboard's navigation: the start screen (or what the owner shows in its place), a category's months and a month's
@@ -65,23 +90,23 @@ struct DashboardStack<Top: View, Root: View>: View {
                     top(route)
                     if let month = route.monthPage {
                         MonthScreen(month: month, opensOn: route.side, store: store, palette: palette, graph: graph,
-                                    graphMoves: graphMoves, band: band) { place.path.append($0) }
+                                    graphMoves: graphMoves, band: band, pick: open)
+                    } else if let name = route.name, let month = route.month {
+                        NameMonthScreen(route: name, month: month, store: store, palette: palette, band: band,
+                                        shortcuts: shortcuts, pick: open, follow: follow, back: back)
                     } else if let name = route.name {
-                        NameScreen(route: name, store: store, palette: palette, band: band, showsGraph: graph,
-                                   shortcuts: shortcuts,
-                                   pick: { place.path.append($0) }, replace: replaceTop)
+                        NameScreen(route: name, store: store, palette: palette, band: band, showsGraph: graph, pick: open)
                     } else if route.cash, let month = route.month {
-                        CashScreen(month: month, store: store, palette: palette, band: band, shortcuts: shortcuts) {
-                            place.path.append($0)
-                        }
+                        CashScreen(month: month, store: store, palette: palette, band: band, shortcuts: shortcuts,
+                                   pick: open)
                     } else if route.cash {
-                        CashMonthsScreen(store: store, palette: palette, band: band) { place.path.append($0) }
+                        CashMonthsScreen(store: store, palette: palette, band: band, pick: open)
                     } else if route.month != nil {
                         TransactionsScreen(route: route, store: store, palette: palette, band: band,
-                                           selection: $place.payment, rowMenus: shortcuts) { place.path.append($0) }
+                                           selection: $place.payment, rowMenus: shortcuts, pick: open)
                     } else {
                         CategoryScreen(route: route, store: store, palette: palette, graph: graph,
-                                       graphMoves: graphMoves, band: band) { place.path.append($0) }
+                                       graphMoves: graphMoves, band: band, pick: open)
                     }
                 }
                 .background { Wall(palette: palette) }
@@ -97,14 +122,18 @@ struct DashboardStack<Top: View, Root: View>: View {
         .task { if store.dashboard == nil { await store.reload() } }
     }
 
-    /// The screen on top shows another page in its place, without the push animation (a name's page following a
-    /// rename, `PaymentNameRoute.following`).
-    private func replaceTop(_ route: DashboardRoute) {
-        guard !place.path.isEmpty else { return }
+    /// A page pushed (`DashboardPlace.open`).
+    private func open(_ route: DashboardRoute) { place.open(route) }
+
+    /// A name's pages following a rename (`DashboardPlace.follow`), in place, without the push animation.
+    private func follow(_ old: PaymentNameRoute, to new: PaymentNameRoute) {
         var quiet = SwiftUI.Transaction()
         quiet.disablesAnimations = true
-        withTransaction(quiet) { place.path[place.path.count - 1] = route }
+        withTransaction(quiet) { place.follow(old, to: new) }
     }
+
+    /// One page back (a name's month page whose month has no payments of the name left).
+    private func back() { place.back() }
 }
 
 /// The start screen (brief 56): the range picker on its own row under the header (the import button moved up beside the
@@ -552,13 +581,17 @@ struct TransactionsScreen: View {
                 selection = store.transactions(category: route.category, month: route.month ?? "", side: route.side)
                     .first { $0.transaction.place.localizedCaseInsensitiveContains(arguments[index + 1]) }?.transaction
             }
-            // Phone sample: `-openName <text>` shows the name's page of the first payment here whose name contains it.
+            // Phone sample: `-openName <text>` shows the name's page of the first payment here whose name contains it;
+            // with `-openNameMonth <YYYY-MM>` that month's page of the name over it (brief 55).
             if !store.isSample, let text = LaunchArguments.value("-openName") {
                 for _ in 0..<40 where store.dashboard == nil { try? await Task.sleep(for: .milliseconds(100)) }
                 if let row = store.transactions(category: route.category, month: route.month ?? "", side: route.side)
                     .first(where: { $0.transaction.place.localizedCaseInsensitiveContains(text) }),
                    let name = store.nameRoute(for: row.transaction) {
                     pick(name)
+                    if let month = LaunchArguments.value("-openNameMonth"), let page = name.name {
+                        pick(DashboardRoute(name: page, month: month))
+                    }
                 }
             }
             // Phone sample: `-sampleSumOpen <text>` opens the summed row whose name contains the text (brief 53), after

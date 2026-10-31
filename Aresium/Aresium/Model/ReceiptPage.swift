@@ -20,11 +20,6 @@ nonisolated enum ReceiptPageWording {
         method == .card ? language.string("Card") : language.string("Cash")
     }
 
-    /// The day of the month for the row's tile.
-    static func dayNumber(_ day: String) -> String {
-        ReceiptDay.date(day).map { String(ReceiptDay.calendar.component(.day, from: $0)) } ?? "–"
-    }
-
     /// "26 Oct 2026" / "26. Okt. 2026".
     static func shortDate(_ day: String, language: AppLanguage = .current) -> String {
         guard let date = ReceiptDay.date(day) else { return day }

@@ -36,6 +36,7 @@ nonisolated enum PickerTiming {
         #if DEBUG
         let sample = Sample(name: String(describing: name), kind: kind,
                             ms: (ProcessInfo.processInfo.systemUptime - start) * 1000)
+        SettingsTiming.record(sample)
         recording?.append(sample)
         samples.withLock { values in
             if values != nil { values?.append(sample) }

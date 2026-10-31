@@ -233,7 +233,7 @@ nonisolated struct LockInstallMarker: Sendable {
 // MARK: - Face ID
 
 /// Which unlock iOS is asked for.
-enum LockPolicy: Equatable {
+nonisolated enum LockPolicy: Equatable, Sendable {
     /// Face ID (Touch ID) only: an own code is set, so the iPhone's code must not open Aresium.
     case biometrics
     /// Face ID, with the iPhone's code as the fallback (no own code).
@@ -249,7 +249,7 @@ enum LockAuthResult: Equatable {
     case unavailable(noIPhoneCode: Bool)
 }
 
-enum Biometry: Equatable {
+nonisolated enum Biometry: Equatable, Sendable {
     case faceID, touchID, opticID, none
 }
 
@@ -258,10 +258,22 @@ protocol LockAuthenticator {
     var biometry: Biometry { get }
     func canEvaluate(_ policy: LockPolicy) -> Bool
     func authenticate(_ policy: LockPolicy, reason: String) async -> LockAuthResult
+    func availability() async -> LockAvailability
+}
+
+nonisolated struct LockAvailability: Equatable, Sendable {
+    var biometry: Biometry = .none
+    var canUseFaceID = false
+}
+
+extension LockAuthenticator {
+    func availability() async -> LockAvailability {
+        LockAvailability(biometry: biometry, canUseFaceID: canEvaluate(.biometricsOrIPhoneCode))
+    }
 }
 
 struct DeviceAuthenticator: LockAuthenticator {
-    var biometry: Biometry {
+    nonisolated var biometry: Biometry {
         let context = LAContext()
         _ = context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: nil)
         switch context.biometryType {
@@ -272,8 +284,15 @@ struct DeviceAuthenticator: LockAuthenticator {
         }
     }
 
-    func canEvaluate(_ policy: LockPolicy) -> Bool {
+    nonisolated func canEvaluate(_ policy: LockPolicy) -> Bool {
         LAContext().canEvaluatePolicy(Self.policy(policy), error: nil)
+    }
+
+    @concurrent
+    nonisolated func availability() async -> LockAvailability {
+        PickerTiming.measure("settings.lockAvailability") {
+            LockAvailability(biometry: biometry, canUseFaceID: canEvaluate(.biometricsOrIPhoneCode))
+        }
     }
 
     func authenticate(_ policy: LockPolicy, reason: String) async -> LockAuthResult {
@@ -297,7 +316,7 @@ struct DeviceAuthenticator: LockAuthenticator {
         }
     }
 
-    private static func policy(_ policy: LockPolicy) -> LAPolicy {
+    nonisolated private static func policy(_ policy: LockPolicy) -> LAPolicy {
         policy == .biometrics ? .deviceOwnerAuthenticationWithBiometrics : .deviceOwnerAuthentication
     }
 }
@@ -324,6 +343,7 @@ final class AppLock {
     private(set) var isAuthenticating = false
     /// The Keychain could not be read (before the iPhone's first unlock): locked until it can be.
     private(set) var unreadable = false
+    private(set) var availability = LockAvailability()
     var isOn: Bool { faceID || hasCode }
 
     /// Told when `isLocked` changes (the lock window shows or hides).
@@ -340,6 +360,7 @@ final class AppLock {
     @ObservationIgnored private var leftAt: Date?
     /// Face ID was offered once for this lock already (it is not asked again by itself).
     @ObservationIgnored private var offeredBiometrics = false
+    @ObservationIgnored private var availabilityTask: Task<Void, Never>?
     private static let log = Logger(subsystem: "de.ares-empire.aresium", category: "lock")
 
     /// - Parameters:
@@ -356,15 +377,29 @@ final class AppLock {
         self.now = now
         load()
         isLocked = isOn || unreadable              // locks at launch
+        Task { [weak self] in await self?.refreshAvailability() }
     }
 
-    var biometry: Biometry { authenticator.biometry }
+    var biometry: Biometry { availability.biometry }
 
     /// Face ID can unlock now (with an own code: Face ID alone; without: Face ID or the iPhone's code).
     var policy: LockPolicy { hasCode ? .biometrics : .biometricsOrIPhoneCode }
 
     /// Whether the Face ID row can be turned on: the iPhone has a code (Face ID needs one, and it is the fallback).
-    var canUseFaceID: Bool { authenticator.canEvaluate(.biometricsOrIPhoneCode) }
+    var canUseFaceID: Bool { availability.canUseFaceID }
+
+    /// Views read only this snapshot. Refresh on opening Settings and foreground, including a change in iOS Settings.
+    /// Coalesce overlapping requests; a render never creates an LAContext or talks to the authentication service.
+    func refreshAvailability() async {
+        if let availabilityTask { await availabilityTask.value; return }
+        let task = Task {
+            let value = await authenticator.availability()
+            if availability != value { availability = value }
+            availabilityTask = nil
+        }
+        availabilityTask = task
+        await task.value
+    }
 
     /// How long until the next code may be typed (0: now).
     func remainingWait() -> TimeInterval { wrong.remaining(now: now()) }
@@ -434,6 +469,7 @@ final class AppLock {
 
     /// The scene is active (shown and taking touches): while locked with Face ID on, Face ID is offered once by itself.
     func becameActive() {
+        Task { [weak self] in await self?.refreshAvailability() }
         readAgainIfNeeded()
         guard isLocked, faceID, !offeredBiometrics, !isAuthenticating else { return }
         offeredBiometrics = true
@@ -612,8 +648,10 @@ extension AppLock {
         if let wrong = value("-sampleWrongCodes").flatMap(Int.init) {
             state.wrong = WrongCodes(count: wrong, last: .now)
         }
+        let authenticator: any LockAuthenticator = arguments.contains("-settingsTimings")
+            ? DeviceAuthenticator() : SampleAuthenticator()
         let lock = AppLock(storage: MemoryLockStorage(state.isOn ? state : nil), marker: nil,
-                           authenticator: SampleAuthenticator(), widget: nil, rounds: 1_000)
+                           authenticator: authenticator, widget: nil, rounds: 1_000)
         if arguments.contains("-sampleUnlocked") { lock.setLocked(false) }
         return lock
     }
