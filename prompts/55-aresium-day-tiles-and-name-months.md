@@ -1,6 +1,6 @@
 # 55: A day's tile reads as a date; the name's page opens its months as pages
 
-Status: draft
+Status: merged 2026-10-31 (all Aresium tests pass with fix 58; "4." in German, "4" in English; a month with only a refund keeps its row)
 Branch: `claude/55-name-months` · Worktree: `../empire-ios-55-name-months` · Built by: a Claude agent (the look and the
 feel) · Simulator: `claude-55`
 

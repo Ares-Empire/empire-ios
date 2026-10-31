@@ -34,6 +34,14 @@ enum CategoryRoute {
     }
 }
 
+extension Transaction {
+    /// A month's payment list's order: by day, oldest first; on one day the dashboard's order stays (a stable sort). A
+    /// name's month page orders its rows the same way (brief 55, `NamePage`).
+    nonisolated static func listOrder(_ first: Transaction, _ second: Transaction) -> Bool {
+        first.day == second.day ? first.date < second.date : first.day < second.day
+    }
+}
+
 struct ChartPoint: Identifiable {
     let index: Int
     let label: String
@@ -54,6 +62,8 @@ final class DashboardStore {
     let sums: PaymentSums
     /// The payment lists built since the dashboard or the choices last changed (`paymentList(category:month:side:)`).
     @ObservationIgnored var builtLists = PaymentListCache()
+    /// The name's pages built since the dashboard last changed (`namePage(_:)`, brief 55).
+    @ObservationIgnored var builtNamePages = NamePageCache()
     /// Installed by the live app (`installMessages`); in DEBUG the phone sample gets a pretend one
     /// (`installSampleMessages`, brief 46); never a test store.
     var messages: AresiumMessages?
@@ -310,9 +320,7 @@ final class DashboardStore {
     func transactions(category: String, month: String, side: DashboardSide) -> [TransactionRow] {
         (dashboard?.transactions ?? []).filter {
             $0.month == month && (side == .income ? $0.incomeBuckets : $0.categoriesIn).contains(category)
-        }.sorted {
-            $0.day == $1.day ? $0.date < $1.date : $0.day < $1.day
-        }.map {
+        }.sorted(by: Transaction.listOrder).map {
             TransactionRow(transaction: $0, tagged: side == .income
                            ? $0.incomeBuckets.first != category : $0.categoryName != category)
         }

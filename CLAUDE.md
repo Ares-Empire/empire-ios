@@ -637,10 +637,30 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   `ReceiptPageView(nameLine:openName:)`, `DashboardStore.receiptNameLine`; only when the group has more than this
   payment; the long press; the swipe) opens the **name's page** (`Screens/NameScreen.swift`, `DashboardRoute.name`,
   pushed on the dashboard's stack, so the arrow and the back swipe work; from the payment's sheet it closes the sheet
-  first): the count and range, Spent (and Received when any), the graph above the months (`showsGraph` = the Graph
-  setting), the months oldest first as a category's (a tap or a graph point scrolls to that month's payments, so the
-  rows end in `chevron.down`), then the payments newest first under month headers; after a whole-shop rename it follows
-  the new name. **The swipe** (`Screens/RowSwipe.swift`: `RowSwipeRule`, tested, inside a `UIPanGestureRecognizer`
+  first): the count and range, Spent (and Received when any), the switch (brief 53), the graph above the months
+  (`showsGraph` = the Graph setting), then the months with a payment of the name oldest first, as a category's months
+  (`ValueRow` with the chevron; a month without the name has no row). **The name's months** (brief 55, Patrik's fifth
+  round: the payments listed below the months were "very weird"; "make each month just as the other months"): a month's
+  row or its graph point (`SeriesChart.onPick`, the one hook) opens that month's payments of the name on a page of its
+  own (`NameMonthScreen`, `DashboardRoute(name:month:)`, pushed like the others): the name as the header's title, "Oct
+  2026 · activities" / "Okt. 2026 · Buchungen" under it (a category's month list's line), the arrow and the back swipe
+  (Apple's, `BackSwipe` unchanged); its rows a category's month list's, in its order (`Transaction.listOrder`, by day):
+  `PaymentRow` with tap, long press and the swipe's All, no Add up (every row is the same name). All, "All with this
+  name" and a payment page's "All from" there go back to the name's page below instead of stacking a second copy
+  (`DashboardPlace.open`). A month with only money the other way (a refund of a shop, no purchase) keeps its row, its
+  payments being nowhere else: an empty bar and the money signed in its colour ("+€80", `NameWording.otherSide`). The
+  page (with every month's rows) is built once per dashboard (`DashboardStore.namePage`, cached by `revision`), never
+  in `body`. After a row's page, change sheet or Edit window closes (each now tells its list, `closed`), the month's page
+  follows a rename that took the name along, together with the name's page below (`NamePageStep.follow`,
+  `DashboardPlace.follow`, in place), and goes back one page when the month has no payments of the name left
+  (`NamePageStep.back`: renamed alone, moved out of the counted payments). The tour never reaches it. DEBUG:
+  `-openNameMonth <YYYY-MM>` with `-openName <text>`; `-sampleDay31` adds a made-up REWE purchase on the newest 31st,
+  `-sampleRefund` a made-up Zalando refund this month (a month with only a refund).
+  Tests: `NameMonthsTests` (`DayWordingTests`, `DashboardPlaceTests`). Screenshots: `build/55-*.png`. **The day's
+  tile** (brief 55, Patrik: "44×" next to "44" was confusing): every tile showing a date (a payment's row, the Cash
+  page's movements, the receipt check's and the file check's payments) writes the day as the language writes it alone,
+  German "4.", English "4" (`DayWording.alone`, one function; Foundation's lone day has no dot in German either); the
+  tile keeps its size and shrinks its words at the largest text sizes (`DayTile`, "31." included). **The swipe** (`Screens/RowSwipe.swift`: `RowSwipeRule`, tested, inside a `UIPanGestureRecognizer`
   subclass, since a plain recognizer got no moves inside the scroll view): only a drag at least twice as sideways as
   vertical and leftward (rightward on an open row closes it); it opens at 84 pt and fires at 55 % of the row (at least
   168 pt) with a haptic at the threshold; one row open at a time, closed by a scroll or a tap elsewhere; the action is a
@@ -658,9 +678,14 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   and the engine never change. **Choices** (`SumChoices`, the more specific wins): everywhere (Settings → Dashboard →
   "Add up same names" / "Gleiche Namen summieren", off by default), a category (the icon), a name (the name's page's
   switch "Add up in every category" / "In jeder Kategorie summieren", on a card under the totals), a name in a category
-  (the swipe and the long press); every level but everywhere on, off or not set. The icon's tap sets the category to the
-  opposite of what it shows and clears the name-in-this-category choices there; the name page's switch sets the name and
-  clears its per-category choices. Keyed by the category's stable id (`DashboardStore.sumCategoryKey`: "id:groceries"
+  (the swipe and the long press); every level but everywhere on, off or not set, and **a choice equal to what the levels
+  above give is not set** (fix 58, Patrik 2026-10-31: in Oct 2026 Kleidung the icon did nothing after Vinted was added up
+  and separated by hand), so Separate after Add up, or a switch turned back, leaves nothing that outvotes a later choice.
+  **The icon shows what the list shows** (on while every name with two or more payments there is one row,
+  `PaymentList.allSummed`), not the category's own choice; its tap (`toggleCategory(_:names:)` with the list's
+  `sumKeys`) gives the category the opposite, clears the name-in-this-category choices there and gives the tap's choice
+  to any name there whose own (name page) choice says otherwise, so it always means all or none in that list; the name
+  page's switch sets the name and clears its per-category choices. Keyed by the category's stable id (`DashboardStore.sumCategoryKey`: "id:groceries"
   for Groceries and Lebensmittel, "id:custom-…" for one's own; the dashboard's own entries such as Refunds by name) and
   the opaque `nameKey`. Kept in Aresium's defaults (`aresium.sums`, JSON, `PaymentSums(defaults:)`), not in the export,
   deleted with Delete data and "Forgot the code?" (`ModeStore.deleteLocalData`); tests and samples have an empty set in
@@ -683,7 +708,8 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   168; the full swipe (the last, All) at max(open + 84, 55 % of the row): 168 for one (as before), 252 for two on an
   iPhone 17's 378 pt row; past it All takes the whole room (`RowSwipeRule.widths`). VoiceOver actions by the same names.
   The actions' words grow only up to the largest standard text size (fixed tiles; "Summieren" was cut at the largest
-  accessibility size), and a row's day shrinks into its tile there instead of turning into "…".
+  accessibility size), and a row's day shrinks into its tile there instead of turning into "…" (`DayTile` for every
+  tile since brief 55).
   **The long press** (`DashboardStore.rowActions(for: PaymentListEntry)`): a single row with a group in the list adds Add
   up before "All with this name"; a summed row offers Separate and "All with this name". **The icon** (`SumCategoryButton`
   in `ScreenHeader`, before red mode's X and the gear): the header's 42 pt button with `square.stack`, off as the others,

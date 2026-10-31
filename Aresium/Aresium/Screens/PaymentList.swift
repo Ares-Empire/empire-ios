@@ -20,7 +20,7 @@ final class PaymentRowMenu {
     var openRow: String?
     /// The name's page asked for on a payment's page: shown once that page has closed.
     var pendingName: DashboardRoute?
-    /// The payment whose page is open (or was, until it closed).
+    /// The row whose page, change sheet or Edit window is open (or was, until it closed).
     var lastOpened: String?
     /// The summed rows shown open, their payments below them (brief 53), by name key. While the list is shown only.
     var openSums: Set<String> = []
@@ -29,6 +29,7 @@ final class PaymentRowMenu {
     /// as from the page (the tour's switch step, the learned shop, the dashboard built again).
     func change(_ transaction: Transaction, in store: DashboardStore) {
         let detail = store.transactionDetailStore(for: transaction)
+        lastOpened = transaction.id
         changing = detail
         Task { await detail.beginRecategorisationFromRow() }
     }
@@ -45,6 +46,7 @@ final class PaymentRowMenu {
     func edit(_ transaction: Transaction, in store: DashboardStore, openPage: @escaping () -> Void) {
         guard let phone = store.phone, case let .receipt(id) = store.page(for: transaction) else { return }
         let page = ReceiptPageModel(id: id, phone: phone) { await store.reloadAfterTransactionChange() }
+        lastOpened = transaction.id
         receiptEdit = page
         Task {
             await page.beginEdit()
@@ -188,9 +190,7 @@ struct PaymentRowLabel: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            // At the largest text sizes the day shrinks into its tile rather than turning into "…" (brief 53: the summed
-            // row's payments).
-            DayTile(palette: palette) { Text(String(transaction.day)).lineLimit(1).minimumScaleFactor(0.5) }
+            DayTile(palette: palette) { Text(verbatim: DayWording.alone(transaction.day)) }
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 5) {
                     Text(verbatim: ReceiptRowWording.title(transaction, movement: store.cashMovement(transaction.receiptId)))
@@ -256,8 +256,9 @@ extension View {
     /// A payment list's windows: the open row's page (`selection`; with the name's field ready after the long press's
     /// Rename), and the change and Edit windows of its rows' long press. "All from <name>" on a payment's, receipt's or
     /// entry's page closes the page, then shows the name's page (`pick`), so the name's page is always one on the
-    /// dashboard's stack, with the header's arrow and the back swipe. `closed` is told which payment's page closed (the
-    /// name's page follows a rename).
+    /// dashboard's stack, with the header's arrow and the back swipe. `closed` is told which row's page, change sheet or
+    /// Edit window closed (a name's pages follow a rename; a name's month page goes back when the month has none of the
+    /// name left, brief 55).
     func paymentListSheets(_ menu: PaymentRowMenu, store: DashboardStore, palette: Palette,
                            selection: Binding<Transaction?>, namePage: String? = nil,
                            pick: @escaping (DashboardRoute) -> Void,
@@ -280,12 +281,12 @@ private struct PaymentListSheets: ViewModifier {
         content
             .sheet(isPresented: Binding(get: { menu.changing?.showsRecategorisation == true },
                                         set: { if !$0 { menu.changing?.showsRecategorisation = false } }),
-                   onDismiss: { menu.changing = nil }) {
+                   onDismiss: { menu.changing = nil; windowClosed() }) {
                 if let changing = menu.changing { RecategoriseSheet(store: changing, palette: palette) }
             }
             .sheet(isPresented: Binding(get: { menu.receiptEdit?.editing != nil },
                                         set: { if !$0 { menu.receiptEdit?.endEdit() } }),
-                   onDismiss: { menu.receiptEdit = nil }) {
+                   onDismiss: { menu.receiptEdit = nil; windowClosed() }) {
                 if let receiptEdit = menu.receiptEdit { ReceiptEditSheet(page: receiptEdit, palette: palette) }
             }
             .sheet(item: $selection, onDismiss: pageClosed) { transaction in
@@ -300,9 +301,13 @@ private struct PaymentListSheets: ViewModifier {
             }
     }
 
+    private func windowClosed() {
+        if let id = menu.lastOpened { closed(id) }
+    }
+
     private func pageClosed() {
         menu.renamesPage = nil
-        if let id = menu.lastOpened { closed(id) }
+        windowClosed()
         guard let route = menu.pendingName else { return }
         menu.pendingName = nil
         pick(route)
