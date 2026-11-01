@@ -261,8 +261,8 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
    capability for Arestemis, Aresus and the Empire app, Time Sensitive for Arestemis and Aresus (entitlements are
    already in the projects). **Arestemis's push works on Patrik's iPhone** (test notification 2026-10-31), so its Telegram copy is off since
    2026-10-31 (`TELEGRAM_*` in /root/Arestemis/.env commented out). Left: check on the phone the Empire app ("<App> is
-   ready" for a member's account, its tap showing the ring) and Aresus, then retire Aresync's Telegram (`TG_*` in each
-   config). Aresium's own bot (`aresium-bot.service`, its `current` command) was stopped and disabled 2026-10-30
+   ready" for a member's account, its tap showing the ring). Aresus works on the phone (test push 2026-11-01), so
+   Aresync's Telegram is retired (aresync e10dc07: the code is gone; `TG_*` commented out on the Mac and the server). Aresium's own bot (`aresium-bot.service`, its `current` command) was stopped and disabled 2026-10-30
    (Patrik); Aresium's messages are the app's own (planned, see the review of 2026-10-30).
 7. ~~**Windows laptop:** an Aresus machine token for `Notebook-Patrik`~~: done; its token is on the server and its
    PowerShell report works (three daily runs 2026-10-24 to 26, all `ok`, checked in the Aresus database 2026-10-26).
