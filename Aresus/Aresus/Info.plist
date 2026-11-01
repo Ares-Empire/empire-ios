@@ -16,6 +16,9 @@
 			<array><string>aresus</string></array>
 		</dict>
 	</array>
+	<!-- Send to MacBook → Camera: a photo to send (Screens/SendSheet.swift). German in InfoPlist.xcstrings. -->
+	<key>NSCameraUsageDescription</key>
+	<string>The camera takes photos to send to your MacBook.</string>
 	<!-- Only standard HTTPS: exempt, so App Store Connect stops asking about encryption on every build. -->
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>

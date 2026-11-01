@@ -1,23 +1,37 @@
 import SwiftUI
 
-/// The Aresync tab: every machine with its last sync, then the runs grouped by day. Quiet runs come folded into one
-/// muted line per machine and day; tap a run for its report.
+/// The Aresync tab: the files sent to the MacBook (when there are any), every machine with its last sync, then the runs
+/// grouped by day. Quiet runs come folded into one muted line per machine and day; tap a run for its report. The
+/// header's arrow opens the send sheet (`SendSheet`).
 struct SyncScreen: View {
     let store: AresusStore
     var drops: DropsStore? = nil
     let open: (Int) -> Void
     let openSettings: () -> Void
+    var openSend: () -> Void = {}
+    var showAllDrops: () -> Void = {}
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 AresusHeader(bust: Image("SyncBust"), title: "Aresync") {
+                    if drops != nil {
+                        GlassIconButton(symbol: "square.and.arrow.up", label: String(localized: "Send to MacBook"),
+                                        action: openSend)
+                    }
                     GlassIconButton(symbol: "gearshape", label: String(localized: "Settings"),
                                     action: openSettings)
                 }
-                content.padding(.horizontal, 18)
-                    .animation(reduceMotion ? nil : .smooth, value: store.sync)
+                VStack(alignment: .leading, spacing: 0) {
+                    if let drops, !drops.items.isEmpty {
+                        DropsSection(drops: drops, showAll: showAllDrops).padding(.top, 18)
+                    }
+                    content
+                }
+                .padding(.horizontal, 18)
+                .animation(reduceMotion ? nil : .smooth, value: store.sync)
+                .animation(reduceMotion ? nil : .smooth, value: drops?.items.map(\.id))
             }
             .padding(.bottom, 36)
         }
@@ -27,19 +41,25 @@ struct SyncScreen: View {
             await drops?.refresh()
         }
         .background { ProvinceWall(accent: .aresus) }
+        .toolbar(.hidden, for: .navigationBar)
     }
+
+    /// With drops above, the sync's own states and sections sit closer to them.
+    private var showsDrops: Bool { !(drops?.items.isEmpty ?? true) }
 
     @ViewBuilder private var content: some View {
         if let sync = store.sync {
             if sync.machines.isEmpty && sync.runs.isEmpty {
-                CalmMessage(text: String(localized: "No sync reports yet. Each machine reports after its next run.")).padding(.top, 170)
+                CalmMessage(text: String(localized: "No sync reports yet. Each machine reports after its next run."))
+                    .padding(.top, showsDrops ? 60 : 170)
             } else {
                 if let error = store.error(.sync) {
                     Text("Not refreshed: \(error)").font(AppFont.text(12)).foregroundStyle(Ink.muted)
                         .lineLimit(2).padding(.top, 14)
                 }
                 if !sync.machines.isEmpty {
-                    SectionTitle(text: String(localized: "Machines"), value: "\(sync.machines.count)").padding(.top, 18).padding(.bottom, 12)
+                    SectionTitle(text: String(localized: "Machines"), value: "\(sync.machines.count)")
+                        .padding(.top, showsDrops ? 30 : 18).padding(.bottom, 12)
                     CardRows(items: sync.machines) { MachineRow(machine: $0, clock: store.clock) }
                 }
                 ForEach(RunDay.group(sync.runs, now: store.clock.now())) { day in
@@ -55,9 +75,10 @@ struct SyncScreen: View {
                 }
             }
         } else if let error = store.error(.sync) {
-            CalmMessage(text: error, actionTitle: String(localized: "Try again")) { Task { await store.load(.sync) } }.padding(.top, 170)
+            CalmMessage(text: error, actionTitle: String(localized: "Try again")) { Task { await store.load(.sync) } }
+                .padding(.top, showsDrops ? 60 : 170)
         } else {
-            CalmLoading().padding(.top, 190)
+            CalmLoading().padding(.top, showsDrops ? 70 : 190)
         }
     }
 }
@@ -130,13 +151,5 @@ private struct QuietRow: View {
         .foregroundStyle(Ink.muted)
         .padding(.horizontal, 16).padding(.vertical, 12)
         .accessibilityElement(children: .combine)
-    }
-}
-
-/// A row pressed inside a card: a faint tint behind it (`Ink.press`).
-private struct PressedRow: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .background(configuration.isPressed ? Ink.press : .clear)
     }
 }

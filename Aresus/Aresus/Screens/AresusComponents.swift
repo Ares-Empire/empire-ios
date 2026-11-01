@@ -9,7 +9,8 @@ enum AresusInk {
     static let warning = Color(light: Color(hex: 0x8F6210), dark: Color(hex: 0xE0B15A))
 }
 
-/// The tab header: the bust on the left (38 pt, like Aresium's Hermes), the title centred, an optional button right.
+/// The tab header: the bust on the left (38 pt, like Aresium's Hermes), the title centred on the screen, optional
+/// buttons right (42 pt each, 8 pt apart: the Aresync tab has Send to MacBook beside the gear).
 struct AresusHeader<Trailing: View>: View {
     let bust: Image
     let title: String
@@ -20,17 +21,21 @@ struct AresusHeader<Trailing: View>: View {
             bust.resizable().scaledToFit().frame(width: 38, height: 38)
                 .shadow(color: Ink.shadow, radius: 6, y: 4)
                 .frame(width: 42, height: 42).accessibilityHidden(true)
+            Spacer(minLength: 0)
+            HStack(spacing: 8) { trailing }.frame(minWidth: 42, minHeight: 42)
+        }
+        // The title stays in the screen's middle however many buttons the right side has; the sides keep it clear.
+        .overlay {
             Text(title).font(AppFont.text(17, weight: .bold)).foregroundStyle(Ink.primary).lineLimit(1)
-                .frame(maxWidth: .infinity).accessibilityAddTraits(.isHeader)
-            trailing.frame(width: 42, height: 42)
+                .padding(.horizontal, 104).accessibilityAddTraits(.isHeader).accessibilitySortPriority(1)
         }
         .padding(.horizontal, 14).padding(.top, 6).padding(.bottom, 8)
     }
 }
 
-extension AresusHeader where Trailing == Color {
+extension AresusHeader where Trailing == EmptyView {
     init(bust: Image, title: String) {
-        self.init(bust: bust, title: title) { Color.clear }
+        self.init(bust: bust, title: title) { EmptyView() }
     }
 }
 
@@ -115,6 +120,14 @@ struct ShareBar: View {
         }
         .frame(height: 3)
         .accessibilityHidden(true)
+    }
+}
+
+/// A row pressed inside a card: a faint tint behind it (`Ink.press`).
+struct PressedRow: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .background(configuration.isPressed ? Ink.press : .clear)
     }
 }
 
