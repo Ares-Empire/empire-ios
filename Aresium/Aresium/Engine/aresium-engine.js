@@ -5517,9 +5517,14 @@ var __AresiumEngine = (() => {
       const covered = t.coveredBy !== void 0;
       const unsortedIn = t.amount > 0 && isUnsorted(t.categoryName) && !covered;
       const categoriesIn = [.../* @__PURE__ */ new Set([t.categoryName, ...tags])].filter((name) => !(unsortedIn && isUnsorted(name)));
-      const isTransfer = catByName.get(t.categoryName)?.kind === "transfer";
+      const primaryKind = catByName.get(t.categoryName)?.kind;
+      const isTransfer = primaryKind === "transfer";
+      const incomeOut = t.amount < 0 && primaryKind === "income" && !isUnsorted(t.categoryName);
       const primaryBucket = isUnsorted(t.categoryName) ? "Other" : incomeBucketKeep.has(t.categoryName) ? t.categoryName : "Refunds";
-      const buckets = t.amount > 0 && !isTransfer && !covered ? [.../* @__PURE__ */ new Set([primaryBucket, ...tags.filter((n) => incomeBucketKeep.has(n))])] : [];
+      const buckets = isTransfer || covered ? [] : t.amount > 0 ? [.../* @__PURE__ */ new Set([primaryBucket, ...tags.filter((n) => incomeBucketKeep.has(n))])] : t.amount < 0 ? [.../* @__PURE__ */ new Set([
+        ...incomeOut ? [t.categoryName] : [],
+        ...tags.filter((n) => catByName.get(n)?.kind === "income" && !isUnsorted(n))
+      ])] : [];
       const txn = {
         id: t.id,
         date: t.date,
@@ -5555,26 +5560,26 @@ var __AresiumEngine = (() => {
           if (validDay) series.days[month][day2 - 1] += -t.amount;
         }
       }
-      if (t.amount > 0 && !isTransfer && !covered) {
+      if ((t.amount > 0 || incomeOut) && !isTransfer && !covered) {
         total.income += t.amount;
         if (mo) {
           mo.income += t.amount;
           if (validDay) mo.dayIncome[day2 - 1] += t.amount;
         }
-        for (const bucket of buckets) {
-          if (!income.has(bucket)) income.set(bucket, makeSeries());
-          add(incomeAll, bucket, t.amount);
-          if (index !== void 0) {
-            add(incomeMonths[index], bucket, t.amount);
-            const series = income.get(bucket);
-            series.months[index] += t.amount;
-            if (validDay) series.days[month][day2 - 1] += t.amount;
-          }
+      }
+      for (const bucket of buckets) {
+        if (!income.has(bucket)) income.set(bucket, makeSeries());
+        add(incomeAll, bucket, t.amount);
+        if (index !== void 0) {
+          add(incomeMonths[index], bucket, t.amount);
+          const series = income.get(bucket);
+          series.months[index] += t.amount;
+          if (validDay) series.days[month][day2 - 1] += t.amount;
         }
       }
     }
     const categoryRows = (totals) => categories.filter((c) => c.kind === "spend").map((c) => ({ name: c.name, total: money(totals.get(c.name) ?? 0) })).filter((c) => c.total > 0).sort((a, b) => b.total - a.total);
-    const incomeRows = (totals) => [...totals].map(([name, n]) => ({ name, total: money(n) })).sort((a, b) => b.total - a.total);
+    const incomeRows = (totals) => [...totals].map(([name, n]) => ({ name, total: money(n) })).filter((c) => c.total > 0).sort((a, b) => b.total - a.total);
     total.expense = money(total.expense);
     total.income = money(total.income);
     total.categories = categoryRows(categoryAll);
@@ -5590,10 +5595,11 @@ var __AresiumEngine = (() => {
       mo.categories = categoryRows(categoryMonths[i]);
       mo.incomeBuckets = incomeRows(incomeMonths[i]);
     });
-    for (const [map, round] of [[spend, (n) => money(Math.max(0, n))], [income, money]]) {
+    const roundSeries = (n) => money(Math.max(0, n));
+    for (const map of [spend, income]) {
       for (const series of map.values()) {
-        series.months = series.months.map(round);
-        for (const m of months) series.days[m.key] = series.days[m.key].map(round);
+        series.months = series.months.map(roundSeries);
+        for (const m of months) series.days[m.key] = series.days[m.key].map(roundSeries);
       }
     }
     const ordered = (names2, order) => names2.slice().sort((a, b) => {
@@ -5605,9 +5611,18 @@ var __AresiumEngine = (() => {
     });
     const databaseNames = new Set(source.databaseCategoryNames);
     const choices = categories.filter((c, i) => databaseNames.has(c.name) && categories.findIndex((other) => other.name === c.name) === i);
+    const spendOrder = total.categories.map((r) => r.name);
+    const incomeOrder = total.incomeBuckets.map((r) => r.name);
     const pick2 = {
-      spend: ordered(choices.filter((c) => c.kind === "spend").map((c) => c.name), total.categories.map((r) => r.name)),
-      income: ordered(choices.filter((c) => incomeKeep.has(c.name)).map((c) => c.name), total.incomeBuckets.map((r) => r.name))
+      spend: [
+        ...ordered(choices.filter((c) => c.kind === "spend").map((c) => c.name), spendOrder),
+        ...ordered(choices.filter((c) => c.kind === "transfer").map((c) => c.name), incomeOrder),
+        ...ordered(choices.filter((c) => c.kind === "income" && c.otherSide).map((c) => c.name), incomeOrder)
+      ],
+      income: [
+        ...ordered(choices.filter((c) => incomeKeep.has(c.name)).map((c) => c.name), incomeOrder),
+        ...ordered(choices.filter((c) => c.kind === "spend" && c.otherSide && !incomeKeep.has(c.name)).map((c) => c.name), spendOrder)
+      ]
     };
     return {
       version: 2,
@@ -10009,7 +10024,8 @@ var __AresiumEngine = (() => {
       name: c.name,
       icon: c.icon,
       color: c.color,
-      kind: c.excludeFromTotals ? "transfer" : (net.get(c.name) ?? 0) > 0 ? "income" : "spend"
+      kind: c.excludeFromTotals ? "transfer" : c.side ?? ((net.get(c.name) ?? 0) > 0 ? "income" : "spend"),
+      ...c.otherSide && !c.excludeFromTotals ? { otherSide: true } : {}
     }));
     if (hasUncategorised) categories.push({ ...UNCATEGORISED });
     const transactions = payments.map((p) => ({
