@@ -11,11 +11,19 @@ Read `README.md` first, then the decision record in the ares-empire repo
   (near-black, polished gold accent, Space Grotesk / JetBrains Mono).
 - Every screen works in light and dark (Settings → Appearance): build it from the shared colours, never fixed ones
   (below, "Light mode").
+- **Nothing that moves sits over or under a pathless shadow** (brief 87): `.shadow` on a view gives every layer under
+  it a shadow of its own without a path, which Core Animation draws from the layer's pixels in an offscreen pass, again
+  in every frame in which anything over that spot changes (a pulse, a spinner, a counting number). On Patrik's iPhone
+  (iOS 27.0.1) such a pass came out as a black rectangle the size of the shadow (the hunt card's pulsing dot, builds
+  2–4; the simulator never shows it). So: put `.shadow` on a surface, never around content; prefer a shape style's
+  shadow (`.fill(color.shadow(.drop(…)))`, no pass, drawn only outside the shape) or a still image (`drawingGroup`,
+  drawn once; keep it within the view's bounds, as a `List` row cuts off what is drawn past the row), as `GlassCard`
+  does. Check a screen that animates with `scripts/offscreens/offscreens.sh` (`CA_PRINT_OFFSCREENS`): a steady frame
+  should list no shadow, mask or group passes.
 - **A blur draws straight onto the screen** (brief 67): never put a material (`.ultraThinMaterial`, `GlassCard`'s
-  blur) under `.shadow`, `.mask`, `.compositingGroup`/`.drawingGroup` or a blend mode. Core Animation then takes the
-  blur inside an offscreen pass, and on Patrik's iPhone the hunt card's corner flashed black while its dot pulsed.
-  `GlassCard` casts its blur's share of the shadow from a plain shape (`MaterialShadow`); Arestemis's `edgeFade` is
-  drawn by the wall (`provinceWall()`) instead of masking the scroll view.
+  blur) under `.shadow`, `.mask`, `.compositingGroup`/`.drawingGroup` or a blend mode; Core Animation then takes the
+  blur inside an offscreen pass. Its shadow is the material's own style (`Material.ultraThinMaterial.shadow(.drop(…))`).
+  Arestemis's `edgeFade` is drawn by the wall (`provinceWall()`) instead of masking the scroll view.
 - Every app's main screen (the first tab's root) ends with the app's name: `WordmarkScrollView`
   (`Shared/Design/EmpireDesign.swift`) in place of its `ScrollView`; the band scrolls with the content and shows only
   when you scroll down (Patrik, 2026-10-24). Its launch argument for screenshots: `-scrollToEnd` (Arestemis `-scrollBottom`).

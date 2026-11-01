@@ -1,6 +1,6 @@
 # 67: Arestemis: the black corner on the Hunt card
 
-Status: merged 2026-11-01 (cause: the card's blur rendered offscreen inside its shadow and the scroll fade's mask, redrawn every frame by the pulse; fixed in GlassCard and edgeFade, look unchanged; not reproducible on the simulator, build 4 is the test)
+Status: merged 2026-11-01, did not fix it (build 4 still showed it). Its cause was wrong: the blur was not the problem; the pulse redrew pathless shadows offscreen every frame, fixed in brief 87. Its changes stay (the blur out of every shadow, the fade without a mask).
 Branch: `claude/67-arestemis-black-corner` · Worktree: `../empire-ios-67-arestemis-black-corner` · Agent: Claude (design)
 
 ## Goal
