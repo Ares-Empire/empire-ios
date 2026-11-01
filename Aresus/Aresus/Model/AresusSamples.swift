@@ -2,17 +2,21 @@ import Foundation
 
 /// The bundled answers of the contract (`Samples/`, copies of aresus/docs/samples) for screenshots and tests, plus a few
 /// made-up details the samples lack (other provinces, other runs), so every screen can be opened in sample mode.
-/// `-sampleAllGood` turns the sample's issue into a running province; `-sampleEmpty` empties the sync overview.
+/// `-sampleAllGood` turns the sample's issue into a running province; `-sampleEmpty` empties the sync overview;
+/// `-sampleNoFolders`: the MacBook has not sent its folders yet.
 nonisolated struct AresusSamples: Sendable {
     let allGood: Bool
     /// `-sampleEmpty`: no machine has reported yet.
     var emptySync = false
+    /// `-sampleNoFolders`: the drops' folder list as the server sends it before the Mac's first list.
+    var noFolders = false
 
     /// The sample source when the app was launched with `-sampleData` (DEBUG only).
     static func launched(arguments: [String] = LaunchArguments.current) -> AresusSamples? {
         #if DEBUG
         guard arguments.contains("-sampleData") else { return nil }
-        return AresusSamples(allGood: arguments.contains("-sampleAllGood"), emptySync: arguments.contains("-sampleEmpty"))
+        return AresusSamples(allGood: arguments.contains("-sampleAllGood"), emptySync: arguments.contains("-sampleEmpty"),
+                             noFolders: arguments.contains("-sampleNoFolders"))
         #else
         return nil
         #endif
@@ -53,7 +57,12 @@ nonisolated struct AresusSamples: Sendable {
     /// The moment the samples were taken: 12 s after the overview's check, so the screens read like a live answer.
     func now() throws -> Date { try overview().checked.addingTimeInterval(12) }
 
-    func folders() throws -> FolderList { try Self.load("drop-folders") }
+    func folders() throws -> FolderList {
+        if noFolders {
+            return FolderList(updated: nil, documents: [], downloads: [], fallback: "", fallbackCount: 0, receipts: nil)
+        }
+        return try Self.load("drop-folders")
+    }
     func drops() throws -> [Drop] {
         if emptySync { return [] }
         let answer: DropsAnswer = try Self.load("drops")

@@ -100,6 +100,46 @@
         }
       }
     },
+    "%lld files waiting" : {
+      "localizations" : {
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Datei wartet"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Dateien warten"
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld file waiting"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld files waiting"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld h" : {
       "localizations" : {
         "de" : {
@@ -212,6 +252,46 @@
         }
       }
     },
+    "%lld photos could not be loaded." : {
+      "localizations" : {
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Foto konnte nicht geladen werden."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Fotos konnten nicht geladen werden."
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld photo could not be loaded."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld photos could not be loaded."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld quiet runs" : {
       "localizations" : {
         "de" : {
@@ -282,6 +362,56 @@
         }
       }
     },
+    "A name cannot be only dots." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein Name darf nicht nur aus Punkten bestehen."
+          }
+        }
+      }
+    },
+    "A name cannot contain a slash, a backslash or a colon." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein Name darf keinen Schrägstrich, Backslash oder Doppelpunkt enthalten."
+          }
+        }
+      }
+    },
+    "A name cannot end with a dot." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein Name darf nicht mit einem Punkt enden."
+          }
+        }
+      }
+    },
+    "A name cannot start with a dot." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein Name darf nicht mit einem Punkt beginnen."
+          }
+        }
+      }
+    },
+    "A photo could not be loaded." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein Foto konnte nicht geladen werden."
+          }
+        }
+      }
+    },
     "Active" : {
       "localizations" : {
         "de" : {
@@ -322,12 +452,52 @@
         }
       }
     },
+    "Aresus may not use the camera. Allow it in Settings → Apps → Aresus." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aresus darf die Kamera nicht nutzen. Erlaube es unter Einstellungen → Apps → Aresus."
+          }
+        }
+      }
+    },
     "Aresync" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Aresync"
+          }
+        }
+      }
+    },
+    "Camera" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kamera"
+          }
+        }
+      }
+    },
+    "Cancelled" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abgebrochen"
+          }
+        }
+      }
+    },
+    "Change" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ändern"
           }
         }
       }
@@ -342,6 +512,36 @@
         }
       }
     },
+    "Choose %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ wählen"
+          }
+        }
+      }
+    },
+    "Chosen" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ausgewählt"
+          }
+        }
+      }
+    },
+    "Clear" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leeren"
+          }
+        }
+      }
+    },
     "Disk" : {
       "localizations" : {
         "de" : {
@@ -352,12 +552,92 @@
         }
       }
     },
+    "Documents" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dokumente"
+          }
+        }
+      }
+    },
+    "Downloads" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Downloads"
+          }
+        }
+      }
+    },
+    "Enter a name." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gib einen Namen ein."
+          }
+        }
+      }
+    },
     "Failed" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Fehler"
+          }
+        }
+      }
+    },
+    "File" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Datei"
+          }
+        }
+      }
+    },
+    "Files" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dateien"
+          }
+        }
+      }
+    },
+    "Folder" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ordner"
+          }
+        }
+      }
+    },
+    "Folders as of %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ordner, Stand %@"
+          }
+        }
+      }
+    },
+    "In %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In %@"
           }
         }
       }
@@ -378,6 +658,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Vorfälle"
+          }
+        }
+      }
+    },
+    "Inside" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unterordner"
           }
         }
       }
@@ -462,12 +752,62 @@
         }
       }
     },
+    "Name" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Name"
+          }
+        }
+      }
+    },
+    "Names" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Namen"
+          }
+        }
+      }
+    },
+    "New folder inside (optional)" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neuer Ordner darin (optional)"
+          }
+        }
+      }
+    },
     "No connection." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Keine Verbindung."
+          }
+        }
+      }
+    },
+    "No folder matches “%@”." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kein Ordner passt zu „%@“."
+          }
+        }
+      }
+    },
+    "No folders inside." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keine Unterordner."
           }
         }
       }
@@ -492,12 +832,52 @@
         }
       }
     },
+    "Not sent: %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nicht gesendet: %@"
+          }
+        }
+      }
+    },
+    "Nothing sent to the MacBook yet." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch nichts an das MacBook gesendet."
+          }
+        }
+      }
+    },
     "OK" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "OK"
+          }
+        }
+      }
+    },
+    "On the MacBook" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auf dem MacBook"
+          }
+        }
+      }
+    },
+    "On the phone · waits for a connection" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auf dem iPhone · wartet auf Verbindung"
           }
         }
       }
@@ -512,12 +892,92 @@
         }
       }
     },
+    "Photo" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Foto"
+          }
+        }
+      }
+    },
+    "Photos" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fotos"
+          }
+        }
+      }
+    },
     "Problems" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Probleme"
+          }
+        }
+      }
+    },
+    "Recent" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zuletzt"
+          }
+        }
+      }
+    },
+    "Remove" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Entfernen"
+          }
+        }
+      }
+    },
+    "Removing …" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wird entfernt …"
+          }
+        }
+      }
+    },
+    "Search folders" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ordner suchen"
+          }
+        }
+      }
+    },
+    "Send to MacBook" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "An MacBook senden"
+          }
+        }
+      }
+    },
+    "Sent to the MacBook" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "An das MacBook gesendet"
           }
         }
       }
@@ -542,6 +1002,16 @@
         }
       }
     },
+    "Show all" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alle anzeigen"
+          }
+        }
+      }
+    },
     "Shows the run's report" : {
       "localizations" : {
         "de" : {
@@ -552,50 +1022,90 @@
         }
       }
     },
-    "The file could not be read." : {
+    "Sort later" : {
       "localizations" : {
-        "en" : {
+        "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The file could not be read."
+            "value" : "Später sortieren"
           }
-        },
+        }
+      }
+    },
+    "The MacBook could not save it." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das MacBook konnte die Datei nicht speichern."
+          }
+        }
+      }
+    },
+    "The MacBook has not sent its folders yet. Files can still go to Sort later." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das MacBook hat seine Ordner noch nicht gesendet. „Später sortieren“ geht trotzdem."
+          }
+        }
+      }
+    },
+    "The file could not be read." : {
+      "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Die Datei konnte nicht gelesen werden."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The file could not be read."
           }
         }
       }
     },
     "The file name is not allowed." : {
       "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The file name is not allowed."
-          }
-        },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dieser Dateiname ist nicht erlaubt."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The file name is not allowed."
           }
         }
       }
     },
     "The folder name is not allowed." : {
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieser Ordnername ist nicht erlaubt."
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "The folder name is not allowed."
           }
-        },
+        }
+      }
+    },
+    "The photo could not be kept." : {
+      "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dieser Ordnername ist nicht erlaubt."
+            "value" : "Das Foto konnte nicht übernommen werden."
           }
         }
       }
@@ -606,6 +1116,36 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Die Antwort des Servers konnte nicht gelesen werden."
+          }
+        }
+      }
+    },
+    "Then choose the folder on the MacBook and the name." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Danach wählst du den Ordner auf dem MacBook und den Namen."
+          }
+        }
+      }
+    },
+    "This folder lies too deep." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieser Ordner liegt zu tief."
+          }
+        }
+      }
+    },
+    "This name is too long." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieser Name ist zu lang."
           }
         }
       }
@@ -660,12 +1200,32 @@
         }
       }
     },
+    "Uploading …" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wird hochgeladen …"
+          }
+        }
+      }
+    },
     "Uptime, last %lld days" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Verfügbarkeit, letzte %lld Tage"
+          }
+        }
+      }
+    },
+    "Waiting for the MacBook" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wartet auf das MacBook"
           }
         }
       }

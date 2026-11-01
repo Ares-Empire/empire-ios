@@ -1,7 +1,8 @@
 import SwiftUI
 import UIKit
 
-/// The signed-in app: two tabs, Aresus (the watchtower) and Aresync (sync runs), and the run sheet over both.
+/// The signed-in app: two tabs, Aresus (the watchtower) and Aresync (drops and sync runs), and the run sheet, Settings
+/// and the send sheet over both.
 /// What is on screen refreshes every minute while the app is open (`AresusStore.interval`).
 struct AresusTabs: View {
     let store: AresusStore
@@ -18,15 +19,28 @@ struct AresusTabs: View {
                     .tint(Ink.primary)
             }
             Tab("Aresync", systemImage: "arrow.triangle.2.circlepath", value: AresusNavigation.Tab.aresync) {
-                SyncScreen(store: store, drops: drops, open: { navigation.openRun = RunRef(id: $0) },
-                           openSettings: { navigation.showsSettings = true })
-                    .tint(Ink.primary)
+                NavigationStack(path: $navigation.syncPath) {
+                    SyncScreen(store: store, drops: drops, open: { navigation.openRun = RunRef(id: $0) },
+                               openSettings: { navigation.showsSettings = true },
+                               openSend: { navigation.showsSend = true },
+                               showAllDrops: { navigation.syncPath.append(.drops) })
+                        .navigationDestination(for: SyncRoute.self) { route in
+                            switch route {
+                            case .drops: DropsListScreen(drops: drops)
+                            }
+                        }
+                }
+                .tint(Ink.primary)
             }
         }
         .tint(AppAccent.aresus.color)
         .sheet(isPresented: $navigation.showsSettings) {
             SettingsScreen(app: SettingsApp(name: "Aresus", accent: .aresus, sendsNotifications: true),
                            session: store.session, sample: store.isSample, logOut: logOut)
+        }
+        // The copies of picked photos go with the sheet; what was sent has its own copy in the outbox.
+        .sheet(isPresented: $navigation.showsSend, onDismiss: { SendTemporaryFiles().clear() }) {
+            SendSheet(drops: drops)
         }
         .sheet(item: $navigation.openRun) { run in
             RunSheet(id: run.id, store: store)

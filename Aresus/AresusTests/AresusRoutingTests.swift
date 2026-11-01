@@ -11,6 +11,7 @@ struct AresusRoutingTests {
         ("aresus://server", .server),
         ("ARESUS://Server", .server),
         ("aresus://sync", .sync),
+        ("aresus://drops", .drops),
         ("aresus://province/aresium", .province("aresium")),
         ("aresus://province/aresium/", .province("aresium")),
         ("aresus://province/ares-empire_2", .province("ares-empire_2")),
@@ -36,6 +37,7 @@ struct AresusRoutingTests {
         "aresus://sync/run/0612",
         "aresus://sync/runs/612",
         "aresus://server/disk",
+        "aresus://drops/5",
         "aresus://overview"
     ])
     func otherLinksAreIgnored(url: String) throws {
@@ -63,6 +65,18 @@ struct AresusRoutingTests {
         #expect(navigation.tab == .aresus && navigation.provincePath.isEmpty && navigation.openRun == nil)
         #expect(navigation.serverRequest == before + 1)
         #expect(navigation.visibleParts == [.overview])
+    }
+
+    /// The drop pushes (`aresus://drops`) open the Aresync tab at its top, where the drops are.
+    @Test func dropPushesOpenTheAresyncTab() throws {
+        let navigation = AresusNavigation(tab: .aresus, provincePath: ["aresium"], openRun: RunRef(id: 3))
+        navigation.syncPath = [.drops]
+        #expect(navigation.open(try #require(URL(string: "aresus://drops"))))
+        #expect(navigation.tab == .aresync && navigation.syncPath.isEmpty && navigation.openRun == nil)
+        #expect(navigation.provincePath == ["aresium"])
+        navigation.showsSend = true
+        navigation.reset()
+        #expect(!navigation.showsSend && navigation.syncPath.isEmpty)
     }
 
     @Test func openingTheAppKeepsItsPlace() throws {
@@ -94,6 +108,8 @@ struct AresusRoutingTests {
         #expect(province.tab == .aresus && province.provincePath == ["aresium"])
         let run = AresusNavigation.launched(arguments: ["Aresus", "-openRun", "612"])
         #expect(run.tab == .aresync && run.openRun == RunRef(id: 612))
+        let send = AresusNavigation.launched(arguments: ["Aresus", "-tab", "aresync", "-openSheet", "send", "-openDrops"])
+        #expect(send.showsSend && !send.showsSettings && send.syncPath == [.drops])
         let invalid = AresusNavigation.launched(arguments: ["Aresus", "-tab", "other", "-openProvince", "../x", "-openRun", "x"])
         #expect(invalid.tab == .aresus && invalid.provincePath.isEmpty && invalid.openRun == nil)
     }
