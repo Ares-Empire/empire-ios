@@ -5471,14 +5471,12 @@ var __AresiumEngine = (() => {
   var money = (n) => Math.round(n * 100) / 100;
   var isUnsorted = (categoryName) => !categoryName || categoryName === "Uncategorised";
   var INCOME_META = {
-    Refunds: { name: "Refunds", icon: "RotateCcw", color: "#34E27A", kind: "income" },
     Other: { name: "Other", icon: "CircleHelp", color: "#9AA6B8", kind: "income" }
   };
   function buildDashboard(source) {
     const { months, categories, balanceByDay } = source;
     const catByName = new Map(categories.map((c) => [c.name, c]));
     const incomeKeep = /* @__PURE__ */ new Set(["Tax", ...categories.filter((c) => c.kind !== "spend").map((c) => c.name)]);
-    const incomeBucketKeep = /* @__PURE__ */ new Set(["Tax", ...categories.filter((c) => c.kind === "income").map((c) => c.name)]);
     const monthIndex = new Map(months.map((m, i) => [m.key, i]));
     const makeSeries = () => ({
       months: months.map(() => 0),
@@ -5515,16 +5513,12 @@ var __AresiumEngine = (() => {
       const validDay = !!mo && day2 >= 1 && day2 <= mo.dayExpense.length;
       const tags = t.tags || [];
       const covered = t.coveredBy !== void 0;
-      const unsortedIn = t.amount > 0 && isUnsorted(t.categoryName) && !covered;
-      const categoriesIn = [.../* @__PURE__ */ new Set([t.categoryName, ...tags])].filter((name) => !(unsortedIn && isUnsorted(name)));
-      const primaryKind = catByName.get(t.categoryName)?.kind;
-      const isTransfer = primaryKind === "transfer";
-      const incomeOut = t.amount < 0 && primaryKind === "income" && !isUnsorted(t.categoryName);
-      const primaryBucket = isUnsorted(t.categoryName) ? "Other" : incomeBucketKeep.has(t.categoryName) ? t.categoryName : "Refunds";
-      const buckets = isTransfer || covered ? [] : t.amount > 0 ? [.../* @__PURE__ */ new Set([primaryBucket, ...tags.filter((n) => incomeBucketKeep.has(n))])] : t.amount < 0 ? [.../* @__PURE__ */ new Set([
-        ...incomeOut ? [t.categoryName] : [],
-        ...tags.filter((n) => catByName.get(n)?.kind === "income" && !isUnsorted(n))
-      ])] : [];
+      const isTransfer = catByName.get(t.categoryName)?.kind === "transfer";
+      const names2 = [.../* @__PURE__ */ new Set([t.categoryName, ...tags])].filter((name) => catByName.get(name)?.kind !== "transfer");
+      const spending = !isTransfer && (t.amount < 0 || covered);
+      const incoming = !isTransfer && t.amount > 0 && !covered;
+      const categoriesIn = spending ? names2 : [];
+      const buckets = incoming ? [...new Set(names2.map((name) => isUnsorted(name) ? "Other" : name))] : [];
       const txn = {
         id: t.id,
         date: t.date,
@@ -5543,7 +5537,7 @@ var __AresiumEngine = (() => {
       if (covered) txn.coveredBy = [...t.coveredBy];
       if (t.cashWithdrawal) txn.cashWithdrawal = true;
       transactions.push(txn);
-      if (catByName.get(t.categoryName)?.kind === "spend" && !unsortedIn) {
+      if (spending) {
         total.expense += -t.amount;
         if (mo) {
           mo.expense += -t.amount;
@@ -5560,7 +5554,7 @@ var __AresiumEngine = (() => {
           if (validDay) series.days[month][day2 - 1] += -t.amount;
         }
       }
-      if ((t.amount > 0 || incomeOut) && !isTransfer && !covered) {
+      if (incoming) {
         total.income += t.amount;
         if (mo) {
           mo.income += t.amount;
@@ -5578,7 +5572,7 @@ var __AresiumEngine = (() => {
         }
       }
     }
-    const categoryRows = (totals) => categories.filter((c) => c.kind === "spend").map((c) => ({ name: c.name, total: money(totals.get(c.name) ?? 0) })).filter((c) => c.total > 0).sort((a, b) => b.total - a.total);
+    const categoryRows = (totals) => categories.filter((c) => c.kind !== "transfer").map((c) => ({ name: c.name, total: money(totals.get(c.name) ?? 0) })).filter((c) => c.total > 0).sort((a, b) => b.total - a.total);
     const incomeRows = (totals) => [...totals].map(([name, n]) => ({ name, total: money(n) })).filter((c) => c.total > 0).sort((a, b) => b.total - a.total);
     total.expense = money(total.expense);
     total.income = money(total.income);

@@ -139,6 +139,21 @@ struct PaymentNamesTests {
         #expect(dashboard.nameGroups?["merchant:fictional green shop"]?.count == 2)
     }
 
+    /// Brief 71: money out counts as spending whatever its category's side, so it belongs to its name's group too.
+    @Test func moneyOutInAnIncomeCategoryJoinsItsNamesGroup() async throws {
+        let phone = try await phone([("01.10.2026", "Fictional Buyer", "Sale", 4000),
+                                     ("03.10.2026", "Fictional Buyer", "Sale given back", -1500)],
+                                    chosen: ["groceries", "selling-things"])
+        for payment in try await phone.ledger.payments() {
+            try await phone.ledger.setCategory(payment.id, category: "selling-things", source: .manual)
+        }
+        let dashboard = try await phone.dashboard(auth: auth)
+        let back = try #require(dashboard.transactions.first { $0.amount < 0 })
+        #expect(!back.categoriesIn.isEmpty && back.incomeBuckets.isEmpty, "spending under Selling things")
+        let group = try #require(dashboard.nameGroups?["merchant:fictional buyer"])
+        #expect(group.count == 2 && group.moneyIn == 40 && group.moneyOut == 15)
+    }
+
     @Test func excludedAndCoveredPaymentsNeverEnterGroupsAndEmptyMonthsArePresent() async throws {
         let phone = try await phone([("01.08.2026", "Fictional Shop", "Purchase", -1000),
                                      ("01.10.2026", "Fictional Shop", "Purchase", -2000),
