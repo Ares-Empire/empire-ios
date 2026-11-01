@@ -310,7 +310,8 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
    with a made-up text if Patrik wants that screen shown (offered 2026-10-26).
 15. ~~**Comfort items for Empire, Arestemis, Aresus, Arestoteles**~~: **built and merged 2026-10-30** (briefs 49 Arestemis,
    50 Aresus with the aresus server's province links, 51 Arestoteles, 52 Empire and Shared 2; the shared undo bar
-   `Shared/Design/UndoBar.swift`; no. 18 = option (b), the key says Done). On the phone: try each once. The original
+   `Shared/Design/UndoBar.swift`, since brief 82 also in Aresium: `accent: nil` draws Undo in ink, and
+   `UndoOffer(message:)` is a line alone without Undo; no. 18 = option (b), the key says Done). On the phone: try each once. The original
    item (Patrik approved all, 2026-10-30): build each app's
    before its first TestFlight upload, from `docs/reviews/2026-10-30-swipe-and-comfort.md` → "The other four apps":
    Empire 1 (approvals: pull to refresh, Try again); Arestemis 1–7 (undo for Dismiss, actions on Hunt → Latest, Search's
@@ -913,7 +914,63 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   follow-up; its original undo also restores an applied answer. Remove switches only selected rows whose primary is
   the list's category; the others get extras. Unsorted selected rows switch automatically. The lower-level
   `addCategory(ids:name:removingCurrent:)` and `addCategories(ids:names:removing:removingCurrent:)` save an already
-  answered choice. The selection screens remain brief 82's work.
+  answered choice. The selection screens are brief 82's (below).
+  **Several payments at once on screen** (brief 82, Patrik 2026-11-01: "make expenses / incomes selectable and then
+  moveable / changable at the same time … like in Mail when selecting mails"; logic `Model/PaymentSelection.swift`, look
+  `Screens/SelectionScreens.swift`). **The icon:** a category's month list (Current and Overview, Not sorted included;
+  phone mode, while `DashboardStore.offersSelection(on:)`) has `checkmark.circle` in the header's buttons
+  (`ScreenHeader.select`, after red mode's X, before the icon of adding up; VoiceOver "Select" / "Auswählen"); nowhere
+  else. **Selecting** (`PaymentSelection`: the list's route and the ticked row ids, kept in `DashboardPlace.selection`, so
+  the header, the rows and the bar read one state; it follows its list through a rename, `isSameList`, and ends when
+  another page is on top, `DashboardPlace.path`'s `didSet`): the rows slide right by a circle and its gap
+  (`SelectionLook.inset` 34 pt) with `SumMotion`'s spring (Reduce Motion: none), an empty circle (muted ink) at each
+  selectable row's left edge; a tap anywhere on a row ticks it (`checkmark.circle.fill`, the app's ink with the tick in
+  the wall's colour; the row on `palette.card2`, radius 12; VoiceOver: selected). The rows' long press and swipe are off,
+  the scroll works. A summed row has one circle for its payments and stays closed (open sums close as selecting
+  starts); a withdrawal's covered row has no circle and is faded (0.45). **The header** (`SelectionHeader`, in
+  `DashboardStack` in place of the screen's header, the same `HeaderLayout`): "All" / "Alle" (then "None" / "Keine") on
+  the left, the count as the title ("3 selected" / "3 ausgewählt", "Select payments" / "Buchungen auswählen" at 0),
+  "Done" / "Fertig" on the right (ends selecting, nothing changed), words in ink on the wall; the back arrow, the gear
+  and the back swipe wait. **The bar** (`SelectionBar`, a bottom `safeAreaInset`, rising with selecting): Category
+  (`square.grid.2x2`) and Name (`pencil`), symbol over word, on the card colour laid over the wall's with the line on top,
+  into the home indicator's area; muted while off (`SelectionBarState`: both off at 0, Name off without a bank payment,
+  not offered while Own names is off, as the page's pen); it stays at the bottom under the keyboard. **Category** opens
+  the one change window: `RecategoriseSheet` is generic over `CategoryWindow` (`Model/CategoryWindow.swift`), which
+  `TransactionDetailStore` (one payment) and `SelectionCategoryChange` (a selection) implement; the picking (Switch's
+  target, Add's extras, a category made here or picked from the other side, taking one back, New category) is one shared
+  piece (`CategoryPicks` and the protocol's extension), so neither window copies the other. The selection's heading:
+  "10 payments" / "10 Buchungen" and their total under it, signed in the side's colour as a payment's amount shows,
+  "Currently in" the list's category; its lines say "they" (`CategoryWindowWording.modeLine`); the grid brief 81's
+  `offeredCategories`; Save switches (`switchCategory`) or for Add asks brief 83's "Also remove them from Groceries?"
+  (`prepareAddCategories`), then the shops' other payments in the merger's words (`CategoryQuestionWording`, e.g. "Also
+  move 92 other payments from 3 shops?", **Move 92 more** / **Only these**), with the single window's alert pieces.
+  **Name** (`SelectionRename`, `selectionRenameAlerts`): Apple's alert "Name for 10 payments" / "Name für 10 Buchungen"
+  (the bank payments that take it), the field with the name they all show or empty, "Receipts and cash entries keep
+  their shop." when any are ticked, Cancel and Rename (a plain button in ink); Rename is on once the name is new. Then,
+  when the shops have other payments (`renameInfo(ids:)`), the single rename's question for all of them
+  (`SelectionRenameQuestion`: "Also the other 14 payments from these 3 shops?", one shop "… from REWE?" with the name they
+  show, else "… from this shop?"; "With All, new payments from … get the name too."; **All 24** (`.shops`) / **Only
+  these** (`.payments`)); without others the payments alone. **After an action** selecting ends, the list shows the store
+  as it is, and the shared undo bar (`UndoBar`, `accent: nil` = Undo in ink; above the selection's bar while one shows)
+  says it in brief 81's words (`result.message`; after All the selection's and the others' count together,
+  `SelectionWording.done`) with Undo (`BatchUndo.perform`); a refused undo shows its line alone ("Cannot undo because
+  the data changed."), as does a failed action (`UndoOffer(message:)` without Undo, Shared). **The tour**: step 10 of 20
+  (`TourStep.select`, after the payment's switch and before Add up): the ring on the icon (`.selectIcon`), "Tap to select
+  several payments and move or rename them at once." / "Tippe hier, um mehrere Buchungen auszuwählen und auf einmal zu
+  verschieben oder umzubenennen.", Next; selecting frees the screen and works on the tour's store; Next ends it.
+  DEBUG (with `-samplePhone -sampleCategory <name> -sampleMonth <YYYY-MM>`): `-selectPayments <n|all>` (selecting, the
+  first n rows ticked; 0 none), `-selectionWindow` (Category; `-selectionMode add`, `-samplePick <name,…>`,
+  `-selectionSave`, `-selectionAnswer remove|keep|all|only`), `-selectionName` (`-selectionNameText <text>`,
+  `-selectionRename`, `-selectionRenameAnswer all|only`), `-sampleUndoRefused` (the refused line). Tests:
+  `SelectionScreensTests` (the icon only where offered, ticking, All/None, a summed row, a covered row, selecting
+  following its list, the bar's states, the window's heading and choices, Switch with the shops' question and one undo,
+  Only these and a refused undo, Add's removal question, one view for one payment and a selection, Name's start, question
+  and both answers, the words in both languages), `TourTests`. Real touches (a temporary UI test in
+  `Aresus/AresusUITests` driving Aresium, deleted): the icon starts selecting, a tap ticks and unticks, All and None,
+  Done ends it, Category → Climbing → Save → Only these moves Not sorted's rows out and Undo puts them back, Add →
+  Clothes → Save → Keep both → the shops' question → Only these, Name → the alert → the question → Only these renames
+  both, the list scrolls while selecting (4 of 4; a test that taps Rename in the very instant the last key is typed
+  loses the tap, a moment later it works). Screenshots: `build/82-*.png`.
   DEBUG (with `-samplePhone -sampleCategory Groceries -sampleMonth 2026-10 -samplePhoneTransaction REWE
   -sampleRecategorise add`): `-samplePick Clothes -sampleAddSave` picks and taps Save after the sheet opens;
   `-sampleRemoveAnswer keep|remove` answers the first alert and shows the shop alert. Tests: `AddQuestionsTests`,
@@ -1326,7 +1383,7 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   (`ScreenHeader`, every screen alike): each button on the wall without card or outline (`HeaderButtonLook`: a 19 pt
   symbol in the second ink, drawn 42 pt, taps over 44 pt, 44 pt apart): red mode's X first (the others keep their
   places when it comes), then the page's own (the start screen's search, brief 77, and import button, beside the gear
-  since brief 56, with its menu and spinner; a category's icon of adding up), then the gear; the title stays in the middle of the screen while it
+  since brief 56, with its menu and spinner; a category's select icon, brief 82, and icon of adding up), then the gear; the title stays in the middle of the screen while it
   fits (`HeaderLayout`). The tour's `.search`, `.importButton` and `.settings` rings follow them there. Tests:
   `GraphAndHeaderTests` (`ChartReadingTests`, `MonthPageTests`, `MonthRouteTests`, `GraphMotionSettingTests`).
   Screenshots: `build/56-*.png`. Settings →
@@ -1386,8 +1443,8 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   file, this month always full), its own session (never logged in) and widget numbers inside that folder; the person's
   store, categories and learned shops are never opened. The folder is deleted on End tour (always on the card), at the
   end, when a widget's link or a shared file opens the app, and at the next launch if the app was closed during a tour
-  (`removeLeftovers`). **Nineteen steps, eighteen while the graph is hidden** (brief 59, Patrik 2026-10-31: "update the
-  tour so it explains everything and is coherent"; brief 77 added the search; `TourStep`, one walk: the start screen, a
+  (`removeLeftovers`). **Twenty steps, nineteen while the graph is hidden** (brief 59, Patrik 2026-10-31: "update the
+  tour so it explains everything and is coherent"; brief 77 added the search, brief 82 selecting; `TourStep`, one walk: the start screen, a
   category, a payment and what can be done with it, the list's swipe and adding up, Settings' places in their real
   order, import, done): welcome; income (the page dots, the swipe); overview (the range); graph (Overview's graph: hold
   and slide reads each month, a tap opens its month's page, which the ring follows, and there a day's; the card says so:
@@ -1397,7 +1454,8 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   own or the bank's. A tap shows all its payments." / "Such nach einem Namen, deinem eigenen oder dem der Bank.
   Antippen zeigt alle seine Buchungen."); category (a row); payment (its row opens the page); rename
   (`.paymentName`: the page's name and pen, the field while open; goes on when a name is saved, `onRenamed`); switch
-  (the category's chip and pen, `.change`; the shop question answered); addUp (the list's first single row whose name
+  (the category's chip and pen, `.change`; the shop question answered); select (brief 82: the list's select icon,
+  `.selectIcon`; selecting frees the screen, Next goes on and ends it); addUp (the list's first single row whose name
   has more payments there: the swipe's or the long press's Add up); sumIcon (the header's icon of adding up, `.sumIcon`;
   its tap); allFrom (the name added up at addUp, `.summed(key)`, or its first row: All opens the name's page, which
   stays under the next step's gear); categories (the gear, then Categories with Own names, `.dataRows`; the picker free);
@@ -1435,7 +1493,7 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   app's defaults before and after a walk). The import button only answers its step, the band does not enter red mode.
   VoiceOver: the card takes the focus at each step, the highlighted control stays reachable; Reduce Motion: the ring
   jumps, nothing slides. Launch arguments (DEBUG, with `-samplePhone` or `-samplePhoneEmpty`): `-openGuide list|<bank
-  id>` (`-guidePlace app|website`, `-guideSearch <text>`, `-scrollToEnd` the page's end), `-tour <1–19>` (`-tourSettings`:
+  id>` (`-guidePlace app|website`, `-guideSearch <text>`, `-scrollToEnd` the page's end), `-tour <1–20>` (`-tourSettings`:
   its Settings open). Tests: `BankGuideTests`, `TourTests` (every step's target and what moves it on, Next's screens,
   the hidden graph's 18 and its words, the search's step, every card's German, adding up in memory only, the person's store and defaults
   untouched, ending at any step). Screenshots: `build/24-*.png`, contact sheet `build/24-sheet.png`; brief 59's walk

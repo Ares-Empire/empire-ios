@@ -58,7 +58,7 @@ struct TransactionDetailSheet: View {
             .navigationTitle("Payment").navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbar }
             .sheet(isPresented: $store.showsRecategorisation) {
-                RecategoriseSheet(store: store, palette: palette)
+                RecategoriseSheet(window: store, palette: palette)
             }
         }
         .font(AppFont.text(14)).foregroundStyle(palette.ink).tint(palette.balance)

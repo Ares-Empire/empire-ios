@@ -2,19 +2,20 @@ import Foundation
 import Observation
 import os
 
-// The tour (briefs 24, 25, 42, 59 and 77): the real dashboard on a made-up store of its own, nineteen steps (eighteen
+// The tour (briefs 24, 25, 42, 59, 77 and 82): the real dashboard on a made-up store of its own, twenty steps (nineteen
 // while the graph is hidden in Settings), each pointing at one real control with one short sentence; it goes on when
 // the person does the thing or taps Next. One walk through what Aresium does (brief 59, Patrik 2026-10-31: "explains
 // everything and is coherent"): the start screen, its graph and its search, a category, a payment and what can be done
-// with it, a list's swipe and adding up, then Settings' places in their real order, the import button, done. Everything
-// the tour shows and changes is in `TourWorld`, a store in a temporary folder that is deleted when the tour ends: the
-// person's own store, categories, learned shops, names and choices of adding up are never opened by it. Its Settings
+// with it, selecting several payments, a list's swipe and adding up, then Settings' places in their real order, the
+// import button, done. Everything the tour shows and changes is in `TourWorld`, a store in a temporary folder that is
+// deleted when the tour ends: the person's own store, categories, learned shops, names and choices of adding up are
+// never opened by it. Its Settings
 // also point at Own names, Messages, the Lock, the Dashboard's switches and Contact & support, which in the tour only
 // go on: no lock is set, no message planned and nothing is sent. The look is `Screens/TourScreens.swift`.
 
 /// The tour's steps, in order. The raw value names a step (DEBUG `-tour <n>`); the card counts the steps a tour shows.
 nonisolated enum TourStep: Int, CaseIterable, Sendable {
-    case welcome = 1, income, overview, graph, search, category, payment, rename, switchCategory, addUp, sumIcon,
+    case welcome = 1, income, overview, graph, search, category, payment, rename, switchCategory, select, addUp, sumIcon,
          allFrom, categories, messages, lock, dashboardSettings, contact, importFiles, done
 
     /// The steps a tour shows: all of them, but the graph's only while the dashboard shows the graph (Settings →
@@ -36,6 +37,7 @@ nonisolated enum TourStep: Int, CaseIterable, Sendable {
         case .payment: language.string("Every payment in detail.")
         case .rename: language.string("Tap the name to rename it, for this payment or all from this shop.")
         case .switchCategory: language.string("Sorted wrong? Tap the category. Aresium remembers the shop.")
+        case .select: language.string("Tap to select several payments and move or rename them at once.")
         case .addUp: language.string("Swipe a payment left: Add up makes one row of its name.")
         case .sumIcon: language.string("Here you add up every name in this list.")
         case .allFrom: language.string("Swipe the row again: All shows every payment of the name. Hold a row for more.")
@@ -76,6 +78,8 @@ nonisolated enum TourTarget: Hashable, Sendable {
     case change
     /// The icon of adding up in a category's list's header (brief 53).
     case sumIcon
+    /// The select icon in a category's list's header (brief 82).
+    case selectIcon
     /// The tour's Settings: Your data on this iPhone (Categories and Own names), Messages, the Lock section, the
     /// Dashboard's switches and Contact & support.
     case dataRows, messagesRow, lockRow, dashboardRows, contactRow
@@ -266,6 +270,8 @@ final class TourModel {
         case .payment: return firstPayment.map { .payment($0.id) }
         case .rename: return place.payment != nil ? .paymentName : firstPayment.map { .payment($0.id) }
         case .switchCategory: return place.payment != nil ? .change : firstPayment.map { .payment($0.id) }
+        // The list's select icon; while the person tries selecting, nothing: the list, its bar and its windows are free.
+        case .select: return place.payment == nil && place.selection == nil && offersSelection ? .selectIcon : nil
         case .addUp: return place.payment == nil ? addUpRow.map { .payment($0.id) } : nil
         case .sumIcon: return place.payment == nil && shownList?.list.canSum == true ? .sumIcon : nil
         case .allFrom: return place.payment == nil ? allFromRow : nil
@@ -304,6 +310,12 @@ final class TourModel {
         guard let dashboard = world?.dashboard, let route = place.path.last, route.isCategoryList,
               let month = route.month else { return nil }
         return (route, dashboard.paymentList(category: route.category, month: month, side: route.side))
+    }
+
+    /// The month list on screen can select (the select step's icon shows).
+    private var offersSelection: Bool {
+        guard let dashboard = world?.dashboard, let route = shownList?.route else { return false }
+        return dashboard.offersSelection(on: route)
     }
 
     /// The first payment of the month list on screen, if one is (a single row: nothing is added up before the Add up
@@ -352,6 +364,8 @@ final class TourModel {
     /// income page stays after the swipe, Overview for the graph after it was tapped, the name's page the swipe's All
     /// opened while the gear is pointed at).
     private func prepare(_ step: TourStep) {
+        // Selecting (brief 82) ends with its step: the next step points at a row, the gear or another page.
+        place.selection = nil
         switch step {
         case .welcome, .done, .importFiles: toStart()
         case .income:
@@ -378,7 +392,7 @@ final class TourModel {
             closeSheets()
             showList()
             if place.payment == nil { place.payment = firstPayment }
-        case .addUp, .sumIcon, .allFrom:
+        case .select, .addUp, .sumIcon, .allFrom:
             // The list under the payment's page, which closes.
             closeSheets()
             place.payment = nil

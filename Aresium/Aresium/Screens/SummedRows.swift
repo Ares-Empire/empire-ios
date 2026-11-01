@@ -45,16 +45,21 @@ struct SummedPaymentGroup: View {
     let allFrom: (DashboardRoute) -> Void
     /// Screenshots only: the summed row shown so far left, as halfway through a swipe.
     var shownAt: CGFloat? = nil
+    /// While its list selects (brief 82): one circle for the name's payments, which stay closed; a tap ticks them all
+    /// (`select`).
+    var selection: SelectionMark? = nil
+    var select: () -> Void = {}
     let open: (Transaction) -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private var isOpen: Bool { menu.openSums.contains(sum.key) }
+    private var isOpen: Bool { selection == nil && menu.openSums.contains(sum.key) }
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: 12, style: .continuous)
         VStack(spacing: 0) {
             SummedPaymentRow(sum: sum, store: store, palette: palette, menu: menu, shortcuts: shortcuts, isOpen: isOpen,
-                             toggle: toggle, separate: separate, allFrom: allFrom, shownAt: shownAt)
+                             toggle: selection == nil ? toggle : select, separate: separate, allFrom: allFrom,
+                             shownAt: shownAt, selection: selection)
             if isOpen {
                 // A hairline between the sum and its payments, as the start screen sets the Cash row apart.
                 Rectangle().fill(palette.line).frame(height: 1).padding(.horizontal, 12)
@@ -94,17 +99,22 @@ struct SummedPaymentRow: View {
     let separate: () -> Void
     let allFrom: (DashboardRoute) -> Void
     var shownAt: CGFloat? = nil
+    /// While its list selects (brief 82): its circle; the tap (`toggle`) then ticks the name's payments.
+    var selection: SelectionMark? = nil
 
     var body: some View {
         Button(action: toggle) {
             SummedRowLabel(sum: sum, palette: palette)
+                .selectionMark(selection)
                 .contentShape(.contextMenuPreview, RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(verbatim: SumWording.spoken(sum)))
-        .accessibilityHint(isOpen ? Text("Hides its payments") : Text("Shows its payments"))
+        .accessibilityHint(selection != nil ? Text(verbatim: "")
+                           : isOpen ? Text("Hides its payments") : Text("Shows its payments"))
         .accessibilityAddTraits(.isButton)
+        .selectionTraits(selection)
         .contextMenu { if shortcuts { items } }
         .rowSwipe(swipes, id: sum.id, open: $menu.openRow, shownAt: shownAt)
         .tourAnchor(.summed(sum.key))                // the tour's All step (brief 59), as a payment's row

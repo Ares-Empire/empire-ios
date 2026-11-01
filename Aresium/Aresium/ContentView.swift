@@ -186,7 +186,7 @@ struct ContentView: View {
             }
             _place = State(initialValue: place)
         }
-        // Screenshots: `-openGuide list|<bank id>` (the guide), `-tour <step>` (the tour at that step, 1–18).
+        // Screenshots: `-openGuide list|<bank id>` (the guide), `-tour <step>` (the tour at that step, 1–20).
         if sample, LaunchArguments.value("-openGuide") != nil { _showsGuide = State(initialValue: true) }
         if sample { modes.holdForSample(server: !phoneSample) }
         if sample && !phoneSample {
@@ -509,7 +509,7 @@ struct ContentView: View {
     }
 
     #if DEBUG
-    /// Screenshots: `-tour <step>` starts the tour at that step (1–18); `-tourSettings` opens its Settings.
+    /// Screenshots: `-tour <step>` starts the tour at that step (1–20); `-tourSettings` opens its Settings.
     private func startDebugTour() async {
         guard sampleActive, tour == nil, let value = LaunchArguments.value("-tour"),
               let step = Int(value).flatMap(TourStep.init(rawValue:)) else { return }
@@ -826,6 +826,7 @@ struct ContentView: View {
         return ScreenHeader(title: title, subtitle: subtitle,
                             category: category, palette: palette,
                             back: route == nil ? nil : { back(route) },
+                            select: route.flatMap { selectIcon($0, in: store) },
                             sums: route.flatMap { sumsIcon($0, in: store) },
                             search: search,
                             imports: imports,
@@ -848,6 +849,23 @@ struct ContentView: View {
         return ScreenHeader.Sums(on: list.allSummed) {
             let names = store.paymentList(category: route.category, month: month, side: route.side).sumKeys
             withAnimation(SumMotion.animation(reduceMotion: reduceMotion)) { store.sums.toggleCategory(category, names: names) }
+        }
+    }
+
+    /// A category's month list (brief 82): the select icon, while selecting is offered there (phone mode, a row to
+    /// select). Its tap turns the list into selection, the rows sliding with the list's own spring.
+    private func selectIcon(_ route: DashboardRoute, in store: DashboardStore) -> (() -> Void)? {
+        guard store.offersSelection(on: route) else { return nil }
+        return {
+            withAnimation(SumMotion.animation(reduceMotion: reduceMotion)) {
+                if let tour {
+                    var place = tour.place
+                    place.selection = PaymentSelection(route: route)
+                    tour.update(place)
+                } else {
+                    place.selection = PaymentSelection(route: route)
+                }
+            }
         }
     }
 

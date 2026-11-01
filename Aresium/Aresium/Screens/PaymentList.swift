@@ -77,16 +77,21 @@ struct PaymentRow<Label: View>: View {
     /// Whether the row swipes (its long press stays). Off on a day's page (brief 77), whose sides turn with a sideways
     /// swipe: a swipe left there turns to Income wherever it starts, rather than opening a row.
     var swipes = true
+    /// While its list selects (brief 82): the row slid right with its circle, ticked or not. Its tap (`open`) then ticks
+    /// it; the long press and the swipe are off (`shortcuts`).
+    var selection: SelectionMark? = nil
     let open: (Transaction) -> Void
     @ViewBuilder let label: () -> Label
 
     var body: some View {
         Button { open(transaction) } label: {
             label()
+                .selectionMark(selection)
                 // The lifted row in Apple's context menu: the row with rounded corners.
                 .contentShape(.contextMenuPreview, RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
         .buttonStyle(.plain)
+        .selectionTraits(selection)
         .contextMenu { if shortcuts { items } }
         .rowSwipe(swipeActions, id: transaction.id, open: $menu.openRow, shownAt: shownAt)
         // Around the row's place, not its sliding content: at the tour's swipe steps the ring stays still and the
@@ -171,12 +176,12 @@ extension PaymentRow where Label == PaymentRowLabel {
         }
     }
 
-    /// A month's or a name's page's row.
+    /// A month's or a name's page's row; while a month's list selects (brief 82) with its circle (`selection`).
     init(row: TransactionRow, store: DashboardStore, palette: Palette, menu: PaymentRowMenu, shortcuts: Bool = true,
          namePage: String? = nil, allFrom: ((DashboardRoute) -> Void)? = nil, addUp: (() -> Void)? = nil,
-         shownAt: CGFloat? = nil, open: @escaping (Transaction) -> Void) {
+         shownAt: CGFloat? = nil, selection: SelectionMark? = nil, open: @escaping (Transaction) -> Void) {
         self.init(transaction: row.transaction, store: store, menu: menu, shortcuts: shortcuts, namePage: namePage,
-                  allFrom: allFrom, addUp: addUp, shownAt: shownAt, open: open) {
+                  allFrom: allFrom, addUp: addUp, shownAt: shownAt, selection: selection, open: open) {
             PaymentRowLabel(transaction: row.transaction, tagged: row.tagged, store: store, palette: palette)
         }
     }
@@ -311,7 +316,7 @@ private struct PaymentListSheets: ViewModifier {
             .sheet(isPresented: Binding(get: { menu.changing?.showsRecategorisation == true },
                                         set: { if !$0 { menu.changing?.showsRecategorisation = false } }),
                    onDismiss: { menu.changing = nil; windowClosed() }) {
-                if let changing = menu.changing { RecategoriseSheet(store: changing, palette: palette) }
+                if let changing = menu.changing { RecategoriseSheet(window: changing, palette: palette) }
             }
             .sheet(isPresented: Binding(get: { menu.receiptEdit?.editing != nil },
                                         set: { if !$0 { menu.receiptEdit?.endEdit() } }),

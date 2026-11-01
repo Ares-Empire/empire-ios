@@ -13,45 +13,45 @@ enum RecategorisationMode: String, CaseIterable {
     }
 }
 
-/// A single alert presenter prevents the first alert's dismissal from answering the next question.
+/// A single alert presenter prevents the first alert's dismissal from answering the next question. The shop's other
+/// payments are asked in the same words for one payment and a selection (`CategoryQuestionWording`).
 enum RecategorisationQuestion: Identifiable {
     case remove(RemoveCurrentQuestion)
-    case merchant(MerchantFollowUp)
+    case merchant(id: UUID, wording: CategoryQuestionWording)
 
     var id: UUID {
         switch self {
         case let .remove(question): question.id
-        case let .merchant(question): question.id
+        case let .merchant(id, _): id
         }
     }
 
     var title: String {
         switch self {
         case let .remove(question): question.title()
-        case let .merchant(question): question.wording.question()
+        case let .merchant(_, wording): wording.question()
         }
     }
 
     var message: String? {
         switch self {
         case let .remove(question): question.message()
-        case let .merchant(question): question.wording.message()
+        case let .merchant(_, wording): wording.message()
         }
     }
 }
 
 @MainActor @Observable
-final class TransactionDetailStore {
+final class TransactionDetailStore: CategoryWindow {
     private(set) var detail: TransactionDetail?
     private(set) var isLoading = false
     private(set) var loadError: String?
     private(set) var isSaving = false
     private(set) var saveError: String?
     var showsRecategorisation = false
-    var mode = RecategorisationMode.switchCategory
-    private(set) var target: String?
-    // Keep insertion order: with dropCurrent, the server promotes categories[0].
-    private(set) var extras: [String] = []
+    /// The change window's picking (Switch's category, Add's extras, categories made or picked here), shared with a
+    /// selection's window (`CategoryWindow`, brief 82).
+    let picks = CategoryPicks()
     /// Phone mode, after saving: the shop's other payments, asked before the sheet closes.
     private(set) var followUp: MerchantFollowUp?
     /// Phone mode: the receipt joined to this payment (its page's Receipt section).
@@ -62,14 +62,12 @@ final class TransactionDetailStore {
     /// The Receipt section's Edit (brief 33): the receipt's page model, whose edit sheet is open.
     private(set) var receiptEditor: ReceiptPageModel?
     private let transaction: Transaction
-    private let dashboardStore: DashboardStore
-    private var categoryList: PhoneCategoryList?
-    private var pickedOtherSide: Set<String> = []
+    let dashboardStore: DashboardStore
     private var retryDropCurrent = false
     private(set) var removeCurrentQuestion: RemoveCurrentQuestion?
     var question: RecategorisationQuestion? {
         if let removeCurrentQuestion { return .remove(removeCurrentQuestion) }
-        return followUp.map(RecategorisationQuestion.merchant)
+        return followUp.map { .merchant(id: $0.id, wording: $0.wording) }
     }
     private var retryAnsweredRemoval = false
 
@@ -82,17 +80,29 @@ final class TransactionDetailStore {
     private var backend: (any AresiumBackend)? { dashboardStore.backend }
 
     var isSample: Bool { dashboardStore.isSample }
-    /// The change window's categories, from the dashboard. One made in this opening of the window comes last, just
-    /// before the New category tile where it was asked for (brief 60), so it shows picked where the person looks.
-    var choices: [Category] {
+
+    // MARK: the change window (`CategoryWindow`; the picking and the grid's tiles are shared, brief 82)
+
+    /// The categories offered for this payment's direction (Add leaves out Own transfers, which is never an extra).
+    var offered: [Category] {
         guard let detail else { return [] }
-        let all = (dashboardStore.dashboard?.recategorisationChoices(amount: detail.amount) ?? []).filter {
-            mode != .add || categoryList?.id(named: $0.name) != CategoryCatalog.ownTransfers
+        return (dashboardStore.dashboard?.recategorisationChoices(amount: detail.amount) ?? []).filter {
+            mode != .add || picks.list?.id(named: $0.name) != CategoryCatalog.ownTransfers
         }
-        guard !madeHere.isEmpty else { return all }
-        let made = madeHere.compactMap { name in dashboardStore.dashboard?.categories.first { $0.name == name } }
-        return all.filter { !madeHere.contains($0.name) } + made
     }
+    var heading: CategoryWindowHeading? {
+        detail.map { CategoryWindowHeading(title: $0.place, current: $0.category, currentColor: $0.categoryColor,
+                                           reason: PaymentPage($0).categoryReason) }
+    }
+    var currentCategory: String? { detail?.category }
+    func retryLoad() async { await beginRecategorisationFromRow() }
+    func working(_ work: () async throws -> Void) async {
+        isSaving = true
+        saveError = nil
+        defer { isSaving = false }
+        do { try await work() } catch { saveError = error.localizedDescription }
+    }
+
     func categoryColor(for name: String) -> String {
         dashboardStore.dashboard?.categories.first { $0.name == name }?.color ?? detail?.categoryColor ?? "#9ca3af"
     }
@@ -105,115 +115,8 @@ final class TransactionDetailStore {
             && extras.contains { $0 != detail?.category && !(detail?.tags.contains($0) ?? false) }
     }
 
-    // MARK: a new category from the change window (brief 60)
-
-    /// The New category alert, its busy state and its name problem (`NewCategoryModel`, shared with the receipt window
-    /// and Add cash).
-    let newCategory = NewCategoryModel()
-    /// The names made or picked from the other side in this opening, in their insertion order (`choices`).
-    private var madeHere: [String] = []
-
-    /// Phone mode offers a new category for either direction, with the payment's home side.
-    var offersNewCategory: Bool { detail != nil && dashboardStore.phone != nil }
-
-    /// Other home categories not offered here yet, in the engine's order for their home direction.
-    var otherSideChoices: [Category] {
-        guard let detail, let list = categoryList, dashboardStore.phone != nil else { return [] }
-        let side = CategorySide(amount: detail.amount)
-        let offered = Set(list.offered(for: side.direction))
-        return (dashboardStore.dashboard?.recategorisationChoices(amount: detail.amount > 0 ? -1 : 1) ?? []).filter {
-            guard let id = list.id(named: $0.name) else { return false }
-            return list.side(of: id) != nil && list.side(of: id) != side && !offered.contains(id)
-                && !pickedOtherSide.contains($0.name)
-        }
-    }
-
     /// The payment's side: money in is income's, money out spending's (where its window's categories come from).
     var paymentSide: CategorySide? { detail.map { CategorySide(amount: $0.amount) } }
-
-    /// Other category… (brief 70): the tile before New category, in Switch and Add, phone mode only, while the other
-    /// side has a category not offered here yet.
-    var offersOtherCategory: Bool { offersNewCategory && !otherSideChoices.isEmpty }
-
-    /// The other side's list's line ("From spending" for money in); nil where there is no list.
-    var otherSideListLine: String? {
-        guard offersOtherCategory, let paymentSide else { return nil }
-        return CategorySideWording.otherSideList(for: paymentSide)
-    }
-
-    /// A tile offered here only from the other side: one stored as offered here (not the payment's current category),
-    /// or one picked from the list in this opening. Its long press takes it back (`stopOffering`).
-    func offeredFromOtherSide(_ name: String) -> Bool {
-        guard let detail, let list = categoryList, dashboardStore.phone != nil, name != detail.category else { return false }
-        if pickedOtherSide.contains(name) { return true }
-        guard let id = list.id(named: name), let side = list.side(of: id) else { return false }
-        return side != CategorySide(amount: detail.amount) && list.hasOtherSide(id)
-    }
-
-    /// The long press's one entry on such a tile: "Not for money in" (or out); nil on every other tile.
-    func stopOfferingEntry(for name: String) -> String? {
-        guard offeredFromOtherSide(name), let paymentSide else { return nil }
-        return CategorySideWording.notFor(paymentSide)
-    }
-
-    /// Picks locally; Save widens the category's menu, and Cancel has no stored effect.
-    func pickFromOtherSide(_ name: String) {
-        guard !isSaving, !newCategory.isMaking, otherSideChoices.contains(where: { $0.name == name }) else { return }
-        pickedOtherSide.insert(name)
-        if !madeHere.contains(name) { madeHere.append(name) }
-        select(name)
-    }
-
-    /// Removes an addition to this direction at once. A home category and the payment's current category stay offered.
-    /// One picked from the other side in this opening was never stored: it only leaves the window (and the list has it
-    /// again).
-    func stopOffering(_ name: String) async {
-        if pickedOtherSide.contains(name), !isSaving, !newCategory.isMaking {
-            pickedOtherSide.remove(name)
-            madeHere.removeAll { $0 == name }
-            if target == name { target = nil }
-            extras.removeAll { $0 == name }
-            return
-        }
-        guard !isSaving, !newCategory.isMaking, let detail, let phone = dashboardStore.phone,
-              let list = categoryList, let id = list.id(named: name), list.hasOtherSide(id),
-              let side = list.side(of: id), side != CategorySide(amount: detail.amount), name != detail.category else { return }
-        isSaving = true
-        saveError = nil
-        defer { isSaving = false }
-        do {
-            try await phone.setOtherSide(false, for: id)
-            categoryList = try await phone.categories()
-            madeHere.removeAll { $0 == name }
-            pickedOtherSide.remove(name)
-            if target == name { target = nil }
-            extras.removeAll { $0 == name }
-            await dashboardStore.reloadIfCategoriesChanged()
-        } catch { saveError = error.localizedDescription }
-    }
-
-    /// The tile: the alert with the name's field (empty, or the name a problem was found in).
-    func beginNewCategory() {
-        guard offersNewCategory, !isSaving else { return }
-        newCategory.begin()
-    }
-
-    /// The alert's Create (or the keyboard's Return): the category is made (`NewCategoryModel`), the dashboard is built
-    /// again so the window's choices have it, and it is picked: the target in Switch, one of the extras in Add. Nothing
-    /// about the payment is saved before Save.
-    func createCategory() async {
-        guard offersNewCategory, let phone = dashboardStore.phone, !isSaving else { return }
-        await newCategory.create(in: phone, side: CategorySide(amount: detail?.amount ?? transaction.amount)) { _, name in
-            if !madeHere.contains(name) { madeHere.append(name) }
-            categoryList = try? await phone.categories()
-            await dashboardStore.reloadAfterTransactionChange()
-            // Not offered only when the dashboard could not be built again: the category is made (Settings →
-            // Categories shows it), but the window cannot offer it yet.
-            guard choices.contains(where: { $0.name == name }) else { return dashboardStore.error }
-            if mode == .switchCategory || !extras.contains(name) { select(name) }
-            return nil
-        }
-    }
 
     func load() async {
         guard !isLoading else { return }
@@ -236,7 +139,7 @@ final class TransactionDetailStore {
             }
             detail = loaded
             if let phone = backend as? PhoneBackend {
-                categoryList = try await phone.categories()
+                picks.list = try await phone.categories()
                 receipt = try? await phone.receipt(joinedTo: loaded.id)
                 renameInfo = try await phone.renameInfo(id: loaded.id)
                 // The change window's choices come from the dashboard: one made since it was built is offered too.
@@ -296,15 +199,10 @@ final class TransactionDetailStore {
     /// The change window, in Switch (the category's chip or pen) or in Add (an extra category's chip, brief 47).
     func beginRecategorisation(mode: RecategorisationMode = .switchCategory) {
         guard !choices.isEmpty, !isSaving, let detail else { return }
-        self.mode = mode
-        target = nil
-        extras = detail.tags
+        picks.begin(mode: mode, extras: detail.tags)
         saveError = nil
         removeCurrentQuestion = nil
         followUp = nil
-        madeHere = []
-        pickedOtherSide = []
-        newCategory.reset()
         showsRecategorisation = true
     }
 
@@ -321,16 +219,10 @@ final class TransactionDetailStore {
         beginRecategorisation()
     }
 
-    func select(_ name: String) {
-        guard !isSaving, choices.contains(where: { $0.name == name }) else { return }
-        if mode == .switchCategory { target = name }
-        else if name != detail?.category {
-            if extras.contains(name) { extras.removeAll { $0 == name } }
-            else { extras.append(name) }
-        }
-    }
+    /// The window's Save.
+    func save() async { await save(dropCurrent: false, answeredRemoval: false) }
 
-    func save(dropCurrent: Bool = false) async {
+    func save(dropCurrent: Bool) async {
         await save(dropCurrent: dropCurrent, answeredRemoval: false)
     }
 
@@ -364,15 +256,7 @@ final class TransactionDetailStore {
                     self.dashboardStore.session.handleAuthFailure(HTTPError.unauthorized, generation: generation, token: token)
                 }
             }
-            if let phone = dashboardStore.phone {
-                let savedNames = mode == .switchCategory ? target.map { [$0] } ?? [] : extras
-                let list = try await phone.categories()
-                for name in savedNames where pickedOtherSide.contains(name) {
-                    guard let id = list.id(named: name) else { throw LedgerError.notFound }
-                    try await phone.setOtherSide(true, for: id)
-                }
-                categoryList = try await phone.categories()
-            }
+            if let phone = dashboardStore.phone { try await picks.storeOtherSides(in: phone) }
             let updated: TransactionDetail
             var followUp: MerchantFollowUp?
             if mode == .switchCategory, let target {
