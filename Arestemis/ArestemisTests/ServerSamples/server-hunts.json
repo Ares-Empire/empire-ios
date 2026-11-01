@@ -1,0 +1,160 @@
+[
+  {
+    "id": 1,
+    "kind": "flat",
+    "active": true,
+    "search": {
+      "kinds": [
+        "flat",
+        "wg"
+      ],
+      "people": 1,
+      "flatmates_max": 2,
+      "places": [
+        {
+          "id": "wg:90",
+          "name": "München",
+          "region": "Bayern",
+          "sources": [
+            "wg_gesucht",
+            "kleinanzeigen",
+            "immowelt",
+            "immoscout24"
+          ]
+        },
+        {
+          "id": "wg:400",
+          "name": "Garching bei München",
+          "region": "Bayern",
+          "sources": [
+            "wg_gesucht",
+            "kleinanzeigen",
+            "immowelt",
+            "immoscout24"
+          ]
+        }
+      ],
+      "districts": [
+        "Schwabing",
+        "Maxvorstadt",
+        "Freimann"
+      ],
+      "sqm_min": 28,
+      "sqm_max": null,
+      "room_sqm_min": 14,
+      "room_sqm_max": null,
+      "rooms_min": null,
+      "rent_cold_min": null,
+      "rent_cold_max": null,
+      "rent_warm_min": 400,
+      "rent_warm_max": 1000,
+      "move_in_from": "2026-12-01",
+      "move_in_until": "2027-02-01",
+      "sublet": "exclude",
+      "extra": "Balkon wäre schön, kein Erdgeschoss",
+      "sources": [
+        "wg_gesucht",
+        "kleinanzeigen",
+        "immowelt",
+        "immoscout24"
+      ]
+    },
+    "created": "2026-10-24T08:12:00Z",
+    "updated": "2026-10-24T08:40:00Z",
+    "activated": "2026-10-24T08:41:00Z",
+    "name": null,
+    "last_scan": "2026-10-24T10:02:00Z"
+  },
+  {
+    "id": 2,
+    "kind": "flat",
+    "active": false,
+    "search": {
+      "kinds": [
+        "flat",
+        "wg"
+      ],
+      "people": 1,
+      "flatmates_max": 2,
+      "places": [
+        {
+          "id": "wg:400",
+          "name": "Garching bei München",
+          "region": "Bayern",
+          "sources": [
+            "wg_gesucht",
+            "kleinanzeigen",
+            "immowelt",
+            "immoscout24"
+          ]
+        }
+      ],
+      "districts": [],
+      "sqm_min": 28,
+      "sqm_max": null,
+      "room_sqm_min": 14,
+      "room_sqm_max": null,
+      "rooms_min": null,
+      "rent_cold_min": null,
+      "rent_cold_max": null,
+      "rent_warm_min": 400,
+      "rent_warm_max": 1000,
+      "move_in_from": "2026-12-01",
+      "move_in_until": "2027-02-01",
+      "sublet": "exclude",
+      "extra": "Balkon wäre schön, kein Erdgeschoss",
+      "sources": [
+        "wg_gesucht",
+        "kleinanzeigen",
+        "immowelt",
+        "immoscout24"
+      ]
+    },
+    "created": "2026-10-24T10:03:00Z",
+    "updated": "2026-10-24T10:03:00Z",
+    "activated": null,
+    "name": "Garching, later",
+    "last_scan": null
+  },
+  {
+    "kind": "item",
+    "search": {
+      "query": "Bürostuhl",
+      "exclude": [
+        "Hülle"
+      ],
+      "price_min": null,
+      "price_max": 100,
+      "vb_over_max": 10,
+      "condition_min": "good",
+      "for_parts": false,
+      "delivery": "either",
+      "places": [
+        {
+          "id": "wg:400",
+          "name": "Garching bei München",
+          "region": "Bayern",
+          "sources": [
+            "wg_gesucht",
+            "kleinanzeigen",
+            "immowelt",
+            "immoscout24"
+          ]
+        }
+      ],
+      "radius_km": 20,
+      "seller": "any",
+      "extra": "Armlehnen wären schön",
+      "sources": [
+        "kleinanzeigen"
+      ]
+    },
+    "id": 3,
+    "name": "Office chair",
+    "active": true,
+    "created": "2026-11-01T08:00:00Z",
+    "updated": "2026-11-01T08:00:00Z",
+    "activated": "2026-11-01T08:01:00Z",
+    "last_scan": "2026-11-01T09:05:00Z"
+  }
+]
