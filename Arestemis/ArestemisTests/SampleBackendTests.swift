@@ -17,23 +17,23 @@ struct SampleBackendTests {
         let store = try await store()
         let lastScan = try #require(store.overview?.lastScan.flatMap(Timestamp.parse))
         #expect(abs(Date.now.timeIntervalSince(lastScan) - 40) < 5)
-        #expect(store.hunt?.active == true && store.latest.map(\.id) == [41, 40, 38])
+        #expect(store.card(1)?.hunt.active == true && store.latest.map(\.id) == [41, 40, 38])
         #expect(store.overview?.sources.allSatisfy { $0.state == .ok } == true)
     }
 
     @Test func pausedAndNoHunt() async throws {
         let paused = try await store(.init(paused: true))
-        #expect(paused.hunt?.active == false && paused.overview?.sources.allSatisfy { $0.state == .idle } == true)
+        #expect(paused.hunts.allSatisfy { !$0.hunt.active } && paused.overview?.sources.allSatisfy { $0.state == .idle } == true)
         let none = try await store(.init(noHunt: true))
-        #expect(none.hunt == nil && none.latest.isEmpty && none.overview?.counts == .init(new: 0, today: 0, saved: 0, applied: 0))
+        #expect(none.hunts.isEmpty && none.latest.isEmpty && none.overview?.counts == .init(new: 0, today: 0, saved: 0, applied: 0))
     }
 
     @Test func actionsWorkInMemory() async throws {
         let store = try await store()
         await store.setState(.saved, for: 41)
         #expect(store.match(41)?.state == .saved && store.overview?.counts.new == 4 && store.overview?.counts.saved == 2)
-        await store.setHuntActive(false)
-        #expect(store.hunt?.active == false && store.overview?.sources.first?.state == .idle)
+        await store.setActive(id: 1, active: false)
+        #expect(store.card(1)?.hunt.active == false && store.overview?.sources.first?.state == .idle)
         await store.loadMatches(.saved)
         #expect(store.matches(.saved).map(\.id) == [41, 40])
         await store.loadRejected()
@@ -43,10 +43,10 @@ struct SampleBackendTests {
     @Test func searchesAreCreatedPausedAndDeleted() async throws {
         let store = try await store(.init(noHunt: true))
         let search = try #require(try sample(Overview.self, "overview").hunt?.search.flat)
-        #expect(await store.saveSearch(search))
-        #expect(store.hunt?.active == false && store.hunt?.search.flat == search)
-        #expect(await store.deleteSearch())
-        #expect(store.hunt == nil)
+        let created = try #require(await store.saveHunt(id: nil, kind: .flat, name: nil, search: .flat(search)))
+        #expect(store.card(created.id)?.hunt.active == false && store.card(created.id)?.hunt.search.flat == search)
+        #expect(await store.deleteHunt(id: created.id))
+        #expect(store.hunts.isEmpty)
     }
 
     @Test func applicationsFollowTheMode() async throws {
@@ -83,7 +83,13 @@ struct SampleBackendTests {
         store.places.update("munch")                                // without the umlaut
         await store.places.settle()
         #expect(store.places.results.map(\.name) == ["München", "Garching bei München"])
-        let parsed = await store.parse("2-room flat in Schwabing")
-        #expect(parsed?.search.kinds == [.flat, .wg] && parsed?.search.people == 2 && parsed?.unclear.isEmpty == false)
+        guard case .flat(let parsed)? = await store.parse(text: "2-room flat in Schwabing", kind: .flat) else {
+            Issue.record("Expected a flat search"); return
+        }
+        #expect(parsed.search.kinds == [.flat, .wg] && parsed.search.people == 2 && !parsed.unclear.isEmpty)
+        guard case .item(let thing)? = await store.parse(text: "An Aeron near Garching", kind: .item) else {
+            Issue.record("Expected a thing search"); return
+        }
+        #expect(thing.search.query == "Herman Miller Aeron" && thing.search.priceMax == 450)
     }
 }

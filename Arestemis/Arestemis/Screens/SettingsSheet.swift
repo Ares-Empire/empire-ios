@@ -1,8 +1,9 @@
 import SwiftUI
 
-/// Arestemis's Settings: the shared screen (Shared/Design/SettingsScreen) with the app's own sections on top: the hunt's
-/// notifications, then the application (brief 61): a switch between automatic texts and the own text, the row that
-/// follows it (the own text, or the notes for automatic texts) and About you, each opening a page with its text field.
+/// Arestemis's Settings: the shared screen (Shared/Design/SettingsScreen) with the app's own sections on top: the hunts'
+/// notifications, then, under "Flat applications" (applications are only written for flats), the application (brief 61): a switch
+/// between automatic texts and the own text, the row that follows it (the own text, or the notes for automatic texts)
+/// and About you, each opening a page with its text field.
 /// Every change edits one draft, saved when the sheet closes (Done or swiping it away), also from a page.
 struct SettingsSheet: View {
     let store: ArestemisStore
@@ -79,10 +80,10 @@ struct SettingsSheet: View {
 
     // MARK: application
 
-    /// One card of rows like General's: the switch, the text it leads to, About you.
+    /// One card of rows like General's, under "Flat applications": the switch, the text it leads to, About you.
     private func application(_ settings: Binding<Settings>) -> some View {
         let written = ApplicationPage.written(for: settings.wrappedValue.applicationMode)
-        return SettingsSection(String(localized: "Application")) {
+        return SettingsSection(String(localized: "Flat applications")) {
             Toggle(isOn: Binding(get: { settings.wrappedValue.applicationMode == .ai },
                                  set: { settings.wrappedValue.applicationMode = $0 ? .ai : .own })) {
                 VStack(alignment: .leading, spacing: 2) {

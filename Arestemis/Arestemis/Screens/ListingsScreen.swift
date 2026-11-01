@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// Every match by state (New · Saved · Applied · All), as glass cards: swipe right to save, left to dismiss, tap for the
-/// match. At the end, the listings the AI filtered out.
+/// match. Over them, with two hunts or more, a chip per hunt (and All) chooses whose matches show; "Applied" is "Asked"
+/// while only things show. At the end, the listings the AI filtered out.
 struct ListingsScreen: View {
     @Bindable var store: ArestemisStore
     @Bindable var navigation: AppNavigation
@@ -32,10 +33,10 @@ struct ListingsScreen: View {
             .navigationDestination(for: Int.self) { id in
                 MatchDetailScreen(id: id, store: store, navigation: navigation)
             }
-            .task(id: filter) {
+            .task(id: Selection(filter: filter, hunt: store.selectedHuntID)) {
                 if !store.list(filter).loaded { await store.loadMatches(filter) }
             }
-            .task { if !store.rejectedLoaded { await store.loadRejected() } }
+            .task(id: store.selectedHuntID) { if !store.rejectedLoaded { await store.loadRejected() } }
         }
         .undoBar(visibleUndo, accent: Look.accent)
     }
@@ -49,16 +50,55 @@ struct ListingsScreen: View {
         })
     }
 
+    /// What the list shows: a filter of a hunt (or all); a change loads it.
+    private struct Selection: Equatable {
+        let filter: MatchFilter
+        let hunt: Int?
+    }
+
     private var header: some View {
-        VStack(spacing: 10) {
+        let asked = HuntChips.showsOnlyThings(store.hunts, selected: store.selectedHuntID)
+        return VStack(spacing: 10) {
             AppHeader(title: String(localized: "Listings"))
+            let chips = HuntChips.chips(store.hunts)
+            if !chips.isEmpty { chipRow(chips) }
             Picker("Show", selection: $navigation.filter) {
-                ForEach(MatchFilter.allCases) { Text($0.title).tag($0) }
+                ForEach(MatchFilter.allCases) { Text($0.title(asked: asked)).tag($0) }
             }
             .pickerStyle(.segmented)
             .padding(.horizontal, Look.side)
         }
         .padding(.bottom, 2)
+    }
+
+    /// All and one chip per hunt, scrolling sideways; the chosen one in the accent.
+    private func chipRow(_ chips: [HuntChip]) -> some View {
+        ScrollViewReader { reader in
+            ScrollView(.horizontal) {
+                HStack(spacing: 8) {
+                    ForEach(chips) { chip in
+                        Button {
+                            withAnimation(.easeOut(duration: 0.2)) { store.selectedHuntID = chip.huntID }
+                        } label: {
+                            Chip(text: chip.title, selected: store.selectedHuntID == chip.huntID, symbol: chip.symbol)
+                                .frame(maxWidth: 240)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityAddTraits(store.selectedHuntID == chip.huntID ? .isSelected : [])
+                        .id(chip.id)
+                    }
+                }
+                .padding(.horizontal, Look.side).padding(.vertical, 1)
+            }
+            .scrollIndicators(.hidden)
+            .onAppear {
+                guard let selected = store.selectedHuntID else { return }
+                DispatchQueue.main.async { reader.scrollTo(String(selected), anchor: .center) }
+            }
+            .onChange(of: store.selectedHuntID) { _, selected in
+                withAnimation { reader.scrollTo(selected.map(String.init) ?? "all", anchor: .center) }
+            }
+        }
     }
 
     @ViewBuilder private var content: some View {
@@ -70,9 +110,9 @@ struct ListingsScreen: View {
                     CalmMessage(text: String(localized: "Loading listings…"), loading: true)
                 } else if let error = list.error {
                     CalmMessage(text: error, action: (String(localized: "Try again"), { Task { await store.loadMatches(filter) } }))
-                } else if store.hunt == nil {
+                } else if store.hunts.isEmpty {
                     CalmMessage(text: String(localized: "No search yet. Set one up and listings appear here the moment they're found."),
-                                action: (String(localized: "Set up your search"), { navigation.tab = .search }))
+                                action: (String(localized: "New search"), { navigation.startNewSearch() }))
                 } else {
                     CalmMessage(text: emptyText)
                 }
@@ -82,7 +122,8 @@ struct ListingsScreen: View {
         } else {
             ForEach(matches) { match in
                 Button { navigation.listingsPath.append(match.id) } label: {
-                    MatchRow(match: match, showsNewDot: store.showsNewDot(match), showsState: filter == .all)
+                    MatchRow(match: match, thing: store.isThing(match), showsNewDot: store.showsNewDot(match),
+                             showsState: filter == .all)
                 }
                 .buttonStyle(.plain)
                 .contextMenu { MatchRowActions(match: match, store: store) }
@@ -145,7 +186,9 @@ struct ListingsScreen: View {
         switch filter {
         case .new: String(localized: "Nothing new. New listings appear here the moment they're found.")
         case .saved: String(localized: "Nothing saved. Swipe right on a listing to keep it here.")
-        case .applied: String(localized: "No applications yet.")
+        case .applied:
+            HuntChips.showsOnlyThings(store.hunts, selected: store.selectedHuntID)
+                ? String(localized: "No sellers asked yet.") : String(localized: "No applications yet.")
         case .all: String(localized: "No listings yet. They appear here the moment they're found.")
         }
     }
@@ -204,8 +247,9 @@ struct RejectedSheet: View {
                 Spacer(minLength: 0)
                 Image(systemName: "arrow.up.right").font(.system(size: 11, weight: .semibold)).foregroundStyle(Ink.muted)
             }
-            if !item.listing.factsWithRent.isEmpty {
-                Text(item.listing.factsWithRent).font(AppFont.text(13)).foregroundStyle(Ink.secondary).lineLimit(1)
+            let facts = item.listing.item == nil ? item.listing.factsWithRent : item.listing.itemFactsWithPrice()
+            if !facts.isEmpty {
+                Text(facts).font(AppFont.text(13)).foregroundStyle(Ink.secondary).lineLimit(1)
             }
             Text(item.reason).font(AppFont.text(13)).foregroundStyle(Ink.muted).lineSpacing(2)
                 .fixedSize(horizontal: false, vertical: true)

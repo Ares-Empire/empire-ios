@@ -1,9 +1,13 @@
 import SwiftUI
 
 /// A match as a glass card: the photo if there is one, the rent big, the facts, where and when it was found, a
-/// chevron; the accent "new" dot in the corner until the match has been opened.
+/// chevron; the accent "new" dot in the corner until the match has been opened. A thing for sale shows its price big
+/// (with "VB" or how far it lies over the maximum beside it), its title, one facts line (condition · shipping or pickup
+/// with the distance · place), and "Online at start" for one found when the hunt started.
 struct MatchRow: View {
     let match: Match
+    /// A thing for sale (`ArestemisStore.isThing`).
+    var thing = false
     var showsNewDot = false
     /// Shows SAVED / APPLIED (the "All" list and the Hunt tab, where states mix).
     var showsState = false
@@ -16,23 +20,24 @@ struct MatchRow: View {
             }
             VStack(alignment: .leading, spacing: 4) {
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    if let rent = match.listing.shownRent {
-                        Text(rent.amount).font(AppFont.number(20, weight: .bold)).foregroundStyle(Ink.primary)
-                        Text(rent.label).font(AppFont.text(11)).foregroundStyle(Ink.muted)
-                    } else {
-                        Text("Rent not given").font(AppFont.text(15, weight: .semibold)).foregroundStyle(Ink.secondary)
-                    }
+                    if thing { price } else { rent }
                     Spacer(minLength: 8)
-                    if showsState, let word = match.state.word {
+                    if showsState, let word = match.state.word(thing: thing) {
                         CapsLabel(text: word, size: 9.5, color: Ink.secondary.opacity(0.8))
                     }
                 }
                 .lineLimit(1)
-                if !match.listing.facts.isEmpty {
-                    Text(match.listing.facts).font(AppFont.text(13)).foregroundStyle(Ink.secondary).lineLimit(1)
+                if thing {
+                    Text(match.listing.title).font(AppFont.text(14, weight: .medium)).foregroundStyle(Ink.primary)
+                        .lineLimit(1)
+                }
+                let facts = thing ? match.listing.itemRowFacts() : match.listing.facts
+                if !facts.isEmpty {
+                    Text(facts).font(AppFont.text(13)).foregroundStyle(Ink.secondary).lineLimit(1)
                 }
                 TimelineView(.periodic(from: .now, by: 30)) { context in
-                    Text(match.sourceLine(now: context.date)).font(AppFont.text(11)).foregroundStyle(Ink.muted).lineLimit(1)
+                    Text(thing ? match.itemSourceLine(now: context.date) : match.sourceLine(now: context.date))
+                        .font(AppFont.text(11)).foregroundStyle(Ink.muted).lineLimit(1)
                 }
             }
             Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold)).foregroundStyle(Ink.muted)
@@ -54,15 +59,27 @@ struct MatchRow: View {
         .accessibilityValue(showsNewDot ? "New" : "")
         .accessibilityAddTraits(.isButton)
     }
-}
 
-extension MatchState {
-    /// The word a row shows for a state that is not obvious from the list it is in.
-    var word: String? {
-        switch self {
-        case .saved: String(localized: "Saved")
-        case .applied: String(localized: "Applied")
-        case .new, .dismissed: nil
+    @ViewBuilder private var rent: some View {
+        if let rent = match.listing.shownRent {
+            Text(rent.amount).font(AppFont.number(20, weight: .bold)).foregroundStyle(Ink.primary)
+            Text(rent.label).font(AppFont.text(11)).foregroundStyle(Ink.muted)
+        } else {
+            Text("Rent not given").font(AppFont.text(15, weight: .semibold)).foregroundStyle(Ink.secondary)
+        }
+    }
+
+    @ViewBuilder private var price: some View {
+        if let price = match.itemPrice() {
+            if let amount = price.amount {
+                Text(amount).font(AppFont.number(20, weight: .bold)).foregroundStyle(Ink.primary)
+                if let label = price.label { Text(label).font(AppFont.text(11)).foregroundStyle(Ink.muted) }
+            } else if let label = price.label {
+                // "Free", "VB", "Price on request": the word is the figure.
+                Text(label).font(AppFont.text(17, weight: .bold)).foregroundStyle(Ink.primary)
+            }
+        } else {
+            Text("Price not given").font(AppFont.text(15, weight: .semibold)).foregroundStyle(Ink.secondary)
         }
     }
 }
@@ -85,7 +102,8 @@ struct ListingPhoto: View {
     }
 }
 
-/// Shared by the Latest stack and the Listings list; the detail page uses these same state icons.
+/// Shared by the Latest stack and the Listings list; the detail page uses these same state icons. A thing's seller is
+/// asked, not applied to.
 struct MatchRowActions: View {
     let match: Match
     let store: ArestemisStore
@@ -95,7 +113,10 @@ struct MatchRowActions: View {
             Button { change(.saved) } label: { Label("Save", systemImage: "bookmark") }
         }
         if match.state != .applied && match.state != .dismissed {
-            Button { change(.applied) } label: { Label("Mark applied", systemImage: "checkmark.circle") }
+            Button { change(.applied) } label: {
+                if store.isThing(match) { Label("Mark asked", systemImage: "checkmark.circle") }
+                else { Label("Mark applied", systemImage: "checkmark.circle") }
+            }
         }
         if match.state != .dismissed {
             Button { change(.dismissed) } label: { Label("Dismiss", systemImage: "xmark.circle") }

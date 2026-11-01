@@ -53,7 +53,7 @@ struct LinkTests {
 
     @Test func aLinkOpensTheMatchOnTheListingsTab() {
         let navigation = AppNavigation()
-        navigation.huntPath = [38]
+        navigation.huntPath = [.match(38)]
         navigation.sheet = .settings
         navigation.open(ArestemisLink(match: 41))
         #expect(navigation.tab == .listings && navigation.listingsPath == [41])
@@ -89,8 +89,8 @@ struct LinkTests {
     @Test func showingAMatchStaysOnTheHuntTab() {
         let navigation = AppNavigation()
         navigation.showMatch(41)
-        #expect(navigation.tab == .hunt && navigation.huntPath == [41])
-        navigation.tab = .search
+        #expect(navigation.tab == .hunt && navigation.huntPath == [.match(41)])
+        navigation.tab = .listings
         navigation.showMatch(40)
         #expect(navigation.tab == .listings && navigation.listingsPath == [40])
     }
@@ -111,9 +111,12 @@ struct LinkTests {
         options.apply(to: navigation, firstMatch: 41)
         #expect(navigation.filter == .all && navigation.pendingLink == ArestemisLink(match: 41, then: .application))
 
+        // A sheet of a form opens over the first hunt's form.
+        let hunts = (try? sample(Overview.self, "overview").hunts) ?? []
         let place = AppNavigation()
-        LaunchOptions(arguments: ["-sampleData", "-openSheet", "place"]).apply(to: place, firstMatch: nil)
-        #expect(place.tab == .search && place.showsPlaceSearch && place.placeQuery == "Garch")
+        LaunchOptions(arguments: ["-sampleData", "-openSheet", "place"]).apply(to: place, hunts: hunts, firstMatch: nil)
+        #expect(place.tab == .hunt && place.huntPath == [.form(.flat, hunt: 1)])
+        #expect(place.showsPlaceSearch && place.placeQuery == "Garch")
 
         let texts = LaunchOptions(arguments: ["-sampleData", "-sampleOwnMode", "-sampleNoTexts", "-openSheet", "settings"])
         #expect(texts.ownMode && texts.noTexts && !options.ownMode && !options.noTexts)

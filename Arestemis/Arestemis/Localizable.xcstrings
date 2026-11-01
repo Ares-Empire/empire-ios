@@ -116,6 +116,16 @@
         }
       }
     },
+    "%lld new" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld neue"
+          }
+        }
+      }
+    },
     "%lld people" : {
       "localizations" : {
         "de" : {
@@ -206,6 +216,16 @@
         }
       }
     },
+    "Add word" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hinzufügen"
+          }
+        }
+      }
+    },
     "Age, studies or job, non-smoker, …" : {
       "localizations" : {
         "de" : {
@@ -256,6 +276,16 @@
         }
       }
     },
+    "Anything else: size, colour, with box …" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sonst noch etwas: Größe, Farbe, mit Karton …"
+          }
+        }
+      }
+    },
     "Application" : {
       "localizations" : {
         "de" : {
@@ -296,6 +326,66 @@
         }
       }
     },
+    "Asked" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Angefragt"
+          }
+        }
+      }
+    },
+    "At least" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mindestens"
+          }
+        }
+      }
+    },
+    "At most 1,000 characters." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Höchstens 1.000 Zeichen."
+          }
+        }
+      }
+    },
+    "At most 100 characters." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Höchstens 100 Zeichen."
+          }
+        }
+      }
+    },
+    "At most 5 places." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Höchstens 5 Orte."
+          }
+        }
+      }
+    },
+    "Between" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zwischen"
+          }
+        }
+      }
+    },
     "Cancel" : {
       "localizations" : {
         "de" : {
@@ -326,6 +416,16 @@
         }
       }
     },
+    "Checked less often right now" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wird gerade seltener geprüft"
+          }
+        }
+      }
+    },
     "Choose a city" : {
       "localizations" : {
         "de" : {
@@ -336,12 +436,32 @@
         }
       }
     },
+    "Choose a condition." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähle einen Zustand."
+          }
+        }
+      }
+    },
     "Choose a place and at least one portal." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Wähle einen Ort und mindestens ein Portal."
+          }
+        }
+      }
+    },
+    "Choose a place, or Shipping." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähle einen Ort oder Versand."
           }
         }
       }
@@ -392,6 +512,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kalt"
+          }
+        }
+      }
+    },
+    "Condition" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zustand"
+          }
+        }
+      }
+    },
+    "Condition, at least" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zustand, mindestens"
           }
         }
       }
@@ -487,6 +627,16 @@
         }
       }
     },
+    "Defective is fine too" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Defekt ist auch okay"
+          }
+        }
+      }
+    },
     "Delete search" : {
       "localizations" : {
         "de" : {
@@ -503,6 +653,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Suche löschen?"
+          }
+        }
+      }
+    },
+    "Delivery" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Übergabe"
           }
         }
       }
@@ -537,6 +697,16 @@
         }
       }
     },
+    "Distance" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Entfernung"
+          }
+        }
+      }
+    },
     "District" : {
       "localizations" : {
         "de" : {
@@ -553,6 +723,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Fertig"
+          }
+        }
+      }
+    },
+    "Edit search" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suche bearbeiten"
+          }
+        }
+      }
+    },
+    "Either" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beides"
           }
         }
       }
@@ -667,6 +857,16 @@
         }
       }
     },
+    "Flat applications" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wohnungsbewerbungen"
+          }
+        }
+      }
+    },
     "Flat or WG" : {
       "localizations" : {
         "de" : {
@@ -677,12 +877,32 @@
         }
       }
     },
+    "Flat or room" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wohnung oder Zimmer"
+          }
+        }
+      }
+    },
     "Flatmates" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Mitbewohner"
+          }
+        }
+      }
+    },
+    "Free" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zu verschenken"
           }
         }
       }
@@ -717,22 +937,22 @@
         }
       }
     },
-    "Hunt" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Suche"
-          }
-        }
-      }
-    },
     "Hunting" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Suche läuft"
+          }
+        }
+      }
+    },
+    "Hunts" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suche"
           }
         }
       }
@@ -787,6 +1007,26 @@
         }
       }
     },
+    "Leave it empty to name it after what it looks for." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bleibt der Name leer, heißt sie nach dem, was sie sucht."
+          }
+        }
+      }
+    },
+    "Leave out" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ausschließen"
+          }
+        }
+      }
+    },
     "Listing dismissed." : {
       "localizations" : {
         "de" : {
@@ -823,6 +1063,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Angebote der letzten 7 Tage, die zu den Feldern passten, aber nicht durch die Prüfung kamen. Landen gute hier, ist die Suche vielleicht zu streng."
+          }
+        }
+      }
+    },
+    "Listings with one of these words in the title don't show." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Angebote mit einem dieser Wörter im Titel erscheinen nicht."
           }
         }
       }
@@ -873,6 +1123,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Als beworben markieren"
+          }
+        }
+      }
+    },
+    "Mark asked" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Angefragt"
           }
         }
       }
@@ -937,12 +1197,62 @@
         }
       }
     },
+    "Name" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Name"
+          }
+        }
+      }
+    },
+    "Needs a newer app" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Braucht eine neuere App-Version"
+          }
+        }
+      }
+    },
+    "Negotiable listings a little over your maximum still show." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verhandelbare Angebote etwas über deinem Maximum zeigen sich trotzdem."
+          }
+        }
+      }
+    },
+    "Negotiable, at most this much over your maximum, in euros" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verhandelbar, höchstens so viel über deinem Maximum, in Euro"
+          }
+        }
+      }
+    },
     "New" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Neu"
+          }
+        }
+      }
+    },
+    "New search" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neue Suche"
           }
         }
       }
@@ -1013,6 +1323,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Noch keine Suche. Richte eine ein, dann erscheinen Angebote hier, sobald sie gefunden werden."
+          }
+        }
+      }
+    },
+    "No sellers asked yet." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch niemanden angefragt."
           }
         }
       }
@@ -1097,6 +1417,16 @@
         }
       }
     },
+    "Online at start" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schon online beim Start"
+          }
+        }
+      }
+    },
     "Only" : {
       "localizations" : {
         "de" : {
@@ -1143,6 +1473,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Öffnet das Angebot bei %@"
+          }
+        }
+      }
+    },
+    "Opens the search" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öffnet die Suche"
           }
         }
       }
@@ -1197,6 +1537,46 @@
         }
       }
     },
+    "Pickup" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abholung"
+          }
+        }
+      }
+    },
+    "Pickup only" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nur Abholung"
+          }
+        }
+      }
+    },
+    "Pickup, %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abholung, %@"
+          }
+        }
+      }
+    },
+    "Place" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ort"
+          }
+        }
+      }
+    },
     "Portals" : {
       "localizations" : {
         "de" : {
@@ -1217,12 +1597,62 @@
         }
       }
     },
+    "Price" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preis"
+          }
+        }
+      }
+    },
+    "Price not given" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preis nicht angegeben"
+          }
+        }
+      }
+    },
+    "Price on request" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preis auf Anfrage"
+          }
+        }
+      }
+    },
+    "Private only" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nur privat"
+          }
+        }
+      }
+    },
     "Push" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Push"
+          }
+        }
+      }
+    },
+    "Radius" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Umkreis"
           }
         }
       }
@@ -1247,6 +1677,26 @@
         }
       }
     },
+    "Rename" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Umbenennen"
+          }
+        }
+      }
+    },
+    "Rename search" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suche umbenennen"
+          }
+        }
+      }
+    },
     "Rent" : {
       "localizations" : {
         "de" : {
@@ -1263,6 +1713,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Miete nicht angegeben"
+          }
+        }
+      }
+    },
+    "Reserved" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reserviert"
           }
         }
       }
@@ -1322,27 +1782,37 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Filter"
+            "value" : "Suche"
           }
         }
       }
     },
-    "Set up your search" : {
+    "Search actions" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Suche einrichten"
+            "value" : "Weitere Aktionen"
           }
         }
       }
     },
-    "Set what you are looking for. Arestemis then watches the portals and tells you the moment a listing fits." : {
+    "Seller" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Leg fest, was du suchst. Arestemis beobachtet dann die Portale und meldet sich, sobald ein Angebot passt."
+            "value" : "Verkäufer"
+          }
+        }
+      }
+    },
+    "Set what you are looking for: a flat, or something to buy. Arestemis then watches the portals and tells you the moment a listing fits." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leg fest, was du suchst: eine Wohnung oder etwas zum Kaufen. Arestemis beobachtet dann die Portale und meldet sich, sobald ein Angebot passt."
           }
         }
       }
@@ -1363,6 +1833,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Einstellungen nicht gespeichert. %@"
+          }
+        }
+      }
+    },
+    "Shipping" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Versand"
+          }
+        }
+      }
+    },
+    "Shipping cost" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Versandkosten"
           }
         }
       }
@@ -1407,12 +1897,32 @@
         }
       }
     },
+    "Something to buy" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Etwas kaufen"
+          }
+        }
+      }
+    },
     "Start hunting" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Suche starten"
+          }
+        }
+      }
+    },
+    "Status" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Status"
           }
         }
       }
@@ -1447,16 +1957,6 @@
         }
       }
     },
-    "The hunt starts paused. Start it on the Hunt tab." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Die Suche beginnt pausiert. Starte sie im Tab „Suche“."
-          }
-        }
-      }
-    },
     "The hunt stops and its listings are deleted." : {
       "localizations" : {
         "de" : {
@@ -1473,6 +1973,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Die niedrigste Kaltmiete liegt über der höchsten."
+          }
+        }
+      }
+    },
+    "The lowest price is above the highest." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der niedrigste Preis liegt über dem höchsten."
           }
         }
       }
@@ -1497,12 +2007,42 @@
         }
       }
     },
+    "The radius goes up to 200 km." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Umkreis geht bis 200 km."
+          }
+        }
+      }
+    },
     "The room's smallest size is above its largest." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Die kleinste Zimmergröße liegt über der größten."
+          }
+        }
+      }
+    },
+    "The search starts paused." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Suche beginnt pausiert."
+          }
+        }
+      }
+    },
+    "This search is gone." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Suche gibt es nicht mehr."
           }
         }
       }
@@ -1557,6 +2097,16 @@
         }
       }
     },
+    "Type an amount in euros." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gib einen Betrag in Euro ein."
+          }
+        }
+      }
+    },
     "Type at least two letters. Places in Germany that the portals can search." : {
       "localizations" : {
         "de" : {
@@ -1567,12 +2117,52 @@
         }
       }
     },
+    "Type what you look for." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gib ein, was du suchst."
+          }
+        }
+      }
+    },
     "Until" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Bis"
+          }
+        }
+      }
+    },
+    "Up to 20 words, each at most 40 characters." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bis zu 20 Wörter mit je höchstens 40 Zeichen."
+          }
+        }
+      }
+    },
+    "VB up to" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "VB bis"
+          }
+        }
+      }
+    },
+    "VB, %@ over" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "VB, %@ darüber"
           }
         }
       }
@@ -1613,6 +2203,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Was"
+          }
+        }
+      }
+    },
+    "What are you looking for?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was suchst du?"
+          }
+        }
+      }
+    },
+    "What you look for" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was du suchst"
           }
         }
       }
@@ -1717,6 +2327,16 @@
         }
       }
     },
+    "bid" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gebot"
+          }
+        }
+      }
+    },
     "blocked" : {
       "localizations" : {
         "de" : {
@@ -1733,6 +2353,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "kalt"
+          }
+        }
+      }
+    },
+    "e.g. Herman Miller Aeron" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "z. B. Herman Miller Aeron"
           }
         }
       }
@@ -1757,12 +2387,32 @@
         }
       }
     },
+    "e.g. a Herman Miller Aeron up to €450, pickup near Garching or shipped" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "z. B. ein Herman Miller Aeron bis 450 €, Abholung bei Garching oder Versand"
+          }
+        }
+      }
+    },
     "e.g. furnished, balcony, not on the ground floor" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "z. B. möbliert, Balkon, nicht im Erdgeschoss"
+          }
+        }
+      }
+    },
+    "e.g. size B, black, with the original box" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "z. B. Größe B, schwarz, mit Originalkarton"
           }
         }
       }
@@ -1849,6 +2499,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "antwortet nicht"
+          }
+        }
+      }
+    },
+    "over" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "darüber"
           }
         }
       }
