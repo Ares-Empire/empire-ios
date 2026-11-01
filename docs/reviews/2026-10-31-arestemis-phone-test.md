@@ -78,3 +78,10 @@ told. ImmoScout24 scans once Patrik turns it on in the search's portals.
    mask. Brief 67 (Claude agent) finds the cause and fixes it without changing the look; build 4 carries it.
 2. **Tabs renamed in German**: "Jagd" → "Suche", and the search's own tab "Suche" → "Filter" (its slider icon; places,
    portals, rent). English stays Hunt / Search. Done by Claude (0e89d13).
+
+**Build 0.1 (4)** (uploaded 2026-11-01, commit 1009513): the black corner (brief 67: the glass card's blur was drawn
+offscreen inside its shadow and the scroll fade's mask, and the pulsing dot redrew the corner through both every frame;
+now the blur draws straight onto the screen, the look unchanged; the simulator never showed it, so this build is the
+test) and the German tabs Suche / Angebote / Filter. Server since build 3: brief 63 live, a portal's 429 Retry-After
+waited out only up to 30 s (Arestemis 5f3ead4; found by the Aresus session). Evidence and before/after shots:
+`build/67/` (local, not in git).
