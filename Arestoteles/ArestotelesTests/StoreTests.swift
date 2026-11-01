@@ -74,12 +74,22 @@ struct StoreTests {
         let h = try await makeStore(persistence: persistence)
         #expect(h.store.vault == nil && h.store.pendingQuickNotes.isEmpty)
         #expect(persistence.vault == nil && persistence.quickNotes.isEmpty)
+        await h.store.spotlightSettled()
+        #expect(h.spotlight.calls == [.removeAll])
     }
 
     @Test func aVaultLeftAfterALogoutElsewhereIsDeleted() async throws {
         let persistence = try saved()
         let h = try await makeStore(persistence: persistence, savedAccount: nil)
         #expect(h.store.vault == nil && persistence.vault == nil)
+        await h.store.spotlightSettled()
+        #expect(h.spotlight.calls == [.removeAll])
+    }
+
+    @Test func noSavedLoginOrVaultStillClearsSpotlight() async throws {
+        let h = try await makeStore(savedAccount: nil)
+        await h.store.spotlightSettled()
+        #expect(h.store.vault == nil && h.spotlight.calls == [.removeAll])
     }
 
     @Test(arguments: ["account-a", "account-b", nil] as [String?])
@@ -98,10 +108,13 @@ struct StoreTests {
         #expect((persistence.vault != nil) == (account == "account-a"))
     }
 
-    @Test func aVaultWithoutAKnownAccountIsNotShown() async throws {
+    @Test(arguments: ["account-a", nil] as [String?])
+    func aVaultWithoutAKnownAccountIsNotShown(savedAccount: String?) async throws {
         let persistence = try saved(account: nil)
-        let h = try await makeStore(persistence: persistence, savedAccount: nil)
+        let h = try await makeStore(persistence: persistence, savedAccount: savedAccount)
         #expect(h.store.vault == nil && persistence.vault == nil)
+        await h.store.spotlightSettled()
+        #expect(h.spotlight.calls == [.removeAll])
     }
 
     @Test func offlineKeepsTheSavedVault() async throws {
@@ -214,6 +227,31 @@ struct StoreTests {
         gate.resume()
         await load.value
         #expect(h.store.vault != nil && !h.store.isRefreshing)
+    }
+
+    @Test func onlyTheDownloadedVaultIsExcludedFromBackupAfterEveryWrite() throws {
+        let directory = FileManager.default.temporaryDirectory.appending(path: "arestoteles-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let files = FilePersistence(directory: directory)
+        let cached = CachedVault(vault: try sampleVault(), etag: nil, account: "account-a")
+        let note = PendingQuickNote(text: "A thought not sent yet")
+
+        for _ in 0..<2 {
+            try files.saveVault(cached)
+            try files.saveQuickNotes([note])
+            let vaultValues = try directory.appending(path: "vault.json")
+                .resourceValues(forKeys: [.isExcludedFromBackupKey])
+            let quickNoteValues = try directory.appending(path: "quick-notes.json")
+                .resourceValues(forKeys: [.isExcludedFromBackupKey])
+            #expect(vaultValues.isExcludedFromBackup == true)
+            #expect(quickNoteValues.isExcludedFromBackup == false)
+
+            // Clear the flag so the next save must set it again, even if the filesystem preserves metadata.
+            var file = directory.appending(path: "vault.json")
+            var values = URLResourceValues()
+            values.isExcludedFromBackup = false
+            try file.setResourceValues(values)
+        }
     }
 
     @Test func filesSurviveARestartAndLogoutDeletesThem() throws {

@@ -120,11 +120,15 @@ final class VaultStore {
         if let cached = persistence.loadVault() {
             guard let account, cached.account == account else {
                 try? persistence.deleteAll()
+                updateSpotlight(nil)
                 return
             }
             // Indexed when it was loaded, unless that was in the other language.
             apply(cached.vault, etag: cached.etag, account: cached.account, save: false,
                   reindex: spotlight.language != AppLanguage.current)
+        } else if account == nil {
+            // A crash may have left the index behind after the saved vault was removed.
+            updateSpotlight(nil)
         }
         pendingQuickNotes = persistence.loadQuickNotes()
     }

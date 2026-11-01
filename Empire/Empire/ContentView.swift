@@ -90,6 +90,7 @@ struct ContentView: View {
         // `initial`: a tap that launched the app may be handed over before this view first appears.
         .onChange(of: push?.openedURL, initial: true) { _, url in
             guard url != nil, let url = push?.takeOpenedURL() else { return }
+            showsSettings = false
             Task { await navigation.open(url, store: store) }
         }
         #if DEBUG
