@@ -1,8 +1,8 @@
-# 90: The local places list in the app: measure memory first, then use it
+# 95: The local places list in the app: measure memory first, then use it
 
 Status: brief
-Branch: `codex/90-local-places-app` · Worktree: `../empire-ios-90-local-places-app` · Model: `gpt-6.1-sol`, effort
-`high` · Simulator: `codex-90` (create it: iPhone 17, iOS 27.0) · Needs aresium at `b04ff9b` or later (brief 86).
+Branch: `codex/95-local-places-app` · Worktree: `../empire-ios-95-local-places-app` · Model: `gpt-6.1-sol`, effort
+`high` · Simulator: `codex-95` (create it: iPhone 17, iOS 27.0) · Needs aresium at `b04ff9b` or later (brief 86).
 
 ## Goal
 
@@ -68,8 +68,8 @@ fits the budget below, uses the list in phone mode's sorting.
 - The measurements (memory and times, with and without, how measured) are in the final message and in a short
   section of `CLAUDE.md`.
 - If within budget: `xcodebuild test -project Aresium/Aresium.xcodeproj -scheme Aresium -destination 'platform=iOS
-  Simulator,name=codex-90' -derivedDataPath build/DerivedData` passes, `scripts/strings.py check` says 0 problems, a
-  screenshot of the licence entry (`build/90-licence-*.png`, German and English), and `CLAUDE.md` updated.
+  Simulator,name=codex-95' -derivedDataPath build/DerivedData` passes, `scripts/strings.py check` says 0 problems, a
+  screenshot of the licence entry (`build/95-licence-*.png`, German and English), and `CLAUDE.md` updated.
 
 ## Final message
 
