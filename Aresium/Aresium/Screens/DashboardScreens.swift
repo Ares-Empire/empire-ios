@@ -32,13 +32,28 @@ extension DashboardRoute {
 /// person's dashboard keeps it in `ContentView`, the tour's in `TourModel` (so the tour can move it). Whether the graph
 /// shows is no part of it: that is a setting (`GraphSetting`, brief 42).
 struct DashboardPlace {
-    var path: [DashboardRoute] = []
+    var path: [DashboardRoute] = [] {
+        didSet { followSelection() }
+    }
     var current = true
     var side = DashboardSide.expenses
     /// The payment whose detail is open.
     var payment: Transaction?
     /// The day whose page is open (brief 77): a sheet over the dashboard, from a tap on a day of a day graph.
     var day: DayRoute?
+    /// The payments ticked in the category's month list on top of the stack, while it selects (brief 82).
+    var selection: PaymentSelection?
+
+    /// Selecting belongs to the list on top: it follows that list (a category renamed meanwhile) and ends when another
+    /// page is on top.
+    private mutating func followSelection() {
+        guard let selection else { return }
+        if let top = path.last, top.isSameList(as: selection.route) {
+            if top != selection.route { self.selection?.route = top }
+        } else {
+            self.selection = nil
+        }
+    }
 
     /// Shows a page: pushed on the stack, or, for a name's page already on it, back to that page (brief 55: All on a
     /// name's month's rows goes back to the name's page below rather than stacking a second copy of it).
@@ -116,7 +131,14 @@ struct DashboardStack<Top: View, Root: View>: View {
             .tourSpotlight()
             .navigationDestination(for: DashboardRoute.self) { route in
                 VStack(spacing: 0) {
-                    top(route)
+                    // Brief 82: while its list selects, the header has All, the count and Done in place of the arrow,
+                    // the title and the buttons.
+                    if place.selection?.belongs(to: route) == true {
+                        SelectionHeader(selection: $place.selection, store: store, palette: palette)
+                            .transition(.opacity)
+                    } else {
+                        top(route)
+                    }
                     if route.search {
                         SearchScreen(store: store, palette: palette, band: band, pick: open)
                     } else if let month = route.monthPage {
@@ -134,7 +156,8 @@ struct DashboardStack<Top: View, Root: View>: View {
                         CashMonthsScreen(store: store, palette: palette, band: band, pick: open)
                     } else if route.month != nil {
                         TransactionsScreen(route: route, store: store, palette: palette, band: band,
-                                           selection: $place.payment, rowMenus: rows, pick: open)
+                                           selection: $place.payment, selecting: $place.selection, rowMenus: rows,
+                                           pick: open)
                     } else {
                         CategoryScreen(route: route, store: store, palette: palette, graph: graph,
                                        graphMoves: graphMoves, band: band, pick: open)
@@ -145,8 +168,9 @@ struct DashboardStack<Top: View, Root: View>: View {
                 // The bar is hidden (the header is the app's own); this keeps the system's back swipe, which a hidden
                 // bar turns off. The edge swipe and the swipe from anywhere both: a graph reads only after a hold
                 // (`SeriesChart`), and the start page's sideways swipe is on the root, which stays the system's. A
-                // month's page turns its pages only with its dots (`DashboardPages.swipesPages`).
-                .backSwipe(shortcuts)
+                // month's page turns its pages only with its dots (`DashboardPages.swipesPages`). While a list selects
+                // (brief 82) the back swipe waits, as the arrow does, until Done.
+                .backSwipe(shortcuts && place.selection == nil)
                 .tourSpotlight()
             }
         }
@@ -610,6 +634,8 @@ struct TransactionsScreen: View {
     let band: AresiumBand
     /// The payment whose detail is open (the dashboard's place).
     @Binding var selection: Transaction?
+    /// The payments ticked while a list selects (brief 82, the dashboard's place): this list's when its route is this.
+    @Binding var selecting: PaymentSelection?
     /// The rows' long press (brief 41) and swipe (brief 44); off while the tour holds the screen
     /// (`DashboardStack.shortcuts`).
     var rowMenus = true
@@ -617,6 +643,11 @@ struct TransactionsScreen: View {
     var pick: (DashboardRoute) -> Void = { _ in }
     /// The rows' windows, the row swiped open and the summed rows shown open (`PaymentList.swift`).
     @State private var menu = PaymentRowMenu()
+    /// The selection's Category window and its Name (brief 82), while open.
+    @State private var changing: SelectionCategoryChange?
+    @State private var renaming: SelectionRename?
+    /// What an action on the selection did, with Undo (`UndoBar`); or a line saying why it could not.
+    @State private var undo: UndoOffer?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     #if DEBUG
     /// The launch arguments below act once: `.task` runs again whenever the list shows again (back from a pushed name's
@@ -635,20 +666,25 @@ struct TransactionsScreen: View {
                 #else
                 let swiped: (id: String, points: CGFloat)? = nil
                 #endif
+                // While selecting (brief 82) a row's tap ticks it; its long press and swipe wait until Done.
+                let ticking = listSelection
+                let shortcuts = rowMenus && ticking == nil
                 LazyVStack(spacing: 0) {
                     ForEach(list.entries) { entry in
+                        let mark = ticking.map { SelectionMark(ticked: $0.isTicked(entry, in: store), palette: palette) }
                         switch entry {
                         case let .payment(row, addsUp):
-                            PaymentRow(row: row, store: store, palette: palette, menu: menu, shortcuts: rowMenus,
+                            PaymentRow(row: row, store: store, palette: palette, menu: menu, shortcuts: shortcuts,
                                        allFrom: pick, addUp: addsUp && store.offersSums ? { addUp(row) } : nil,
-                                       shownAt: swiped?.id == row.id ? swiped?.points : nil) {
-                                selection = $0
+                                       shownAt: swiped?.id == row.id ? swiped?.points : nil, selection: mark) {
+                                if ticking != nil { tick(entry) } else { selection = $0 }
                             }
                             .transition(.opacity)
                         case let .summed(sum):
-                            SummedPaymentGroup(sum: sum, store: store, palette: palette, menu: menu, shortcuts: rowMenus,
+                            SummedPaymentGroup(sum: sum, store: store, palette: palette, menu: menu, shortcuts: shortcuts,
                                                separate: { separate(sum) }, allFrom: pick,
-                                               shownAt: swiped?.id == sum.id ? swiped?.points : nil) {
+                                               shownAt: swiped?.id == sum.id ? swiped?.points : nil,
+                                               selection: mark, select: { tick(entry) }) {
                                 selection = $0
                             }
                             .transition(.opacity)
@@ -663,11 +699,34 @@ struct TransactionsScreen: View {
             .closesRowSwipe($menu.openRow)
             .tourScrollsToTarget()
         }
+        // What an action did (with Undo), or why it could not: above the selection's bar while it shows.
+        .undoBar($undo, accent: nil)
+        // Brief 82: the bar at the bottom while selecting, as Mail's toolbar, rising and going with it. It stays at the
+        // bottom while the name's alert has the keyboard up.
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if let ticking = listSelection {
+                SelectionBar(state: SelectionBarState(summary: store.selectionSummary(ticking.live(in: store)),
+                                                      ownNames: store.ownNames),
+                             naming: renaming?.isWorking == true, palette: palette,
+                             category: openCategory, name: openName)
+                    .transition(.move(edge: .bottom))
+            }
+        }
+        .ignoresSafeArea(.keyboard)
         .paymentListSheets(menu, store: store, palette: palette, selection: $selection, pick: pick)
+        .sheet(item: $changing) { change in RecategoriseSheet(window: change, palette: palette) }
+        .selectionRenameAlerts($renaming, palette: palette)
+        // Selecting starts: a row swiped open closes and summed rows close, each standing for its payments.
+        .onChange(of: listSelection != nil) { _, selecting in
+            guard selecting else { return }
+            menu.openRow = nil
+            withAnimation(SumMotion.animation(reduceMotion: reduceMotion)) { menu.openSums = [] }
+        }
         .task {
             #if DEBUG
             guard !launchActionsDone else { return }
             launchActionsDone = true
+            await debugSelection()
             let arguments = LaunchArguments.current
             if store.isSample, let index = arguments.firstIndex(of: "-sampleTransaction"),
                arguments.indices.contains(index + 1) {
@@ -709,6 +768,122 @@ struct TransactionsScreen: View {
             #endif
         }
     }
+
+    // MARK: selecting (brief 82)
+
+    /// This list's selection while it selects.
+    private var listSelection: PaymentSelection? { selecting?.belongs(to: route) == true ? selecting : nil }
+
+    /// A tap on a row while selecting: its payments ticked or unticked (a summed row's all at once).
+    private func tick(_ entry: PaymentListEntry) {
+        guard selecting?.belongs(to: route) == true else { return }
+        selecting?.toggle(entry, in: store)
+    }
+
+    /// The bar's Category: the change window for what is ticked.
+    private func openCategory() {
+        guard let ticking = listSelection else { return }
+        changing = SelectionCategoryChange(ids: ticking.live(in: store), route: route, store: store) { outcome in
+            changing = nil
+            ended(outcome)
+        }
+    }
+
+    /// The bar's Name: Apple's alert with the name's field.
+    private func openName() {
+        guard let ticking = listSelection else { return }
+        renaming = SelectionRename(ids: ticking.live(in: store), store: store) { outcome in
+            renaming = nil
+            ended(outcome)
+        }
+    }
+
+    /// An action is done: selecting ends, the list shows the store as it is now, and the undo bar says what happened.
+    /// Its Undo puts it back, or says it cannot (the data changed since). Not done: a line says why, still selecting.
+    private func ended(_ outcome: SelectionOutcome) {
+        switch outcome {
+        case let .failed(problem):
+            undo = UndoOffer(message: problem)
+        case let .done(message, batchUndo):
+            withAnimation(SumMotion.animation(reduceMotion: reduceMotion)) { selecting = nil }
+            undo = UndoOffer(message: message) {
+                do {
+                    let outcome = try await batchUndo.perform()
+                    if outcome == .unavailable { undo = UndoOffer(message: outcome.message) }
+                } catch {
+                    undo = UndoOffer(message: error.localizedDescription)
+                }
+            }
+        }
+    }
+
+    #if DEBUG
+    /// Screenshots (brief 82, with `-samplePhone -sampleCategory <name> -sampleMonth <YYYY-MM>`): `-selectPayments <n|all>`
+    /// starts selecting and ticks the first n rows (a summed row is one); `-selectionWindow` opens Category for them
+    /// (`-selectionMode add`, `-samplePick <name,name>` picks tiles, `-selectionSave` saves, `-selectionAnswer
+    /// remove|keep|all|only` answers what Save asks: the undo bar follows); `-selectionName` opens Name
+    /// (`-selectionNameText <text>` typed, `-selectionRename` renames, `-selectionRenameAnswer all|only`);
+    /// `-sampleUndoRefused` shows the line of an undo the data no longer allows.
+    private func debugSelection() async {
+        guard !store.isSample, let count = LaunchArguments.value("-selectPayments") else {
+            if LaunchArguments.current.contains("-sampleUndoRefused") {
+                undo = UndoOffer(message: BatchUndoOutcome.unavailable.message)
+            }
+            return
+        }
+        for _ in 0..<40 where store.dashboard == nil { try? await Task.sleep(for: .milliseconds(100)) }
+        try? await Task.sleep(for: .milliseconds(500))
+        withAnimation(SumMotion.animation(reduceMotion: reduceMotion)) { selecting = PaymentSelection(route: route) }
+        try? await Task.sleep(for: .milliseconds(600))
+        let list = store.paymentList(category: route.category, month: route.month ?? "", side: route.side)
+        if count == "all" { selecting?.toggleAll(in: store) }
+        else {
+            for entry in list.entries.filter({ !store.selectionIDs(for: $0).isEmpty }).prefix(Int(count) ?? 0) {
+                tick(entry)
+            }
+        }
+        if LaunchArguments.current.contains("-sampleUndoRefused") {
+            undo = UndoOffer(message: BatchUndoOutcome.unavailable.message)
+        }
+        let arguments = LaunchArguments.current
+        if arguments.contains("-selectionWindow") {
+            try? await Task.sleep(for: .milliseconds(400))
+            openCategory()
+            guard let window = changing else { return }
+            if LaunchArguments.value("-selectionMode") == "add" { window.mode = .add }
+            try? await Task.sleep(for: .milliseconds(900))
+            for name in (LaunchArguments.value("-samplePick") ?? "").split(separator: ",") {
+                window.select(String(name))
+            }
+            guard arguments.contains("-selectionSave") else { return }
+            try? await Task.sleep(for: .milliseconds(600))
+            await window.save()
+            guard let answer = LaunchArguments.value("-selectionAnswer") else { return }
+            try? await Task.sleep(for: .milliseconds(1200))
+            switch answer {
+            case "remove", "keep": await window.answerRemoveCurrent(remove: answer == "remove")
+            default: window.answer(moveOthers: answer == "all")
+            }
+            if case .merchant = window.question, let next = LaunchArguments.value("-selectionAnswerNext") {
+                try? await Task.sleep(for: .milliseconds(1200))
+                window.answer(moveOthers: next == "all")
+            }
+        }
+        if arguments.contains("-selectionName") {
+            try? await Task.sleep(for: .milliseconds(400))
+            openName()
+            guard let model = renaming else { return }
+            if let text = LaunchArguments.value("-selectionNameText") { model.text = text }
+            guard arguments.contains("-selectionRename") else { return }
+            try? await Task.sleep(for: .milliseconds(900))
+            model.isAsking = false
+            await model.rename()
+            guard let answer = LaunchArguments.value("-selectionRenameAnswer") else { return }
+            try? await Task.sleep(for: .milliseconds(1200))
+            await model.answer(all: answer == "all")
+        }
+    }
+    #endif
 
     /// Add up (the swipe, the long press): this name's payments in this category as one row, every month.
     private func addUp(_ row: TransactionRow) {

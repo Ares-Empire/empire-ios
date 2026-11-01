@@ -70,7 +70,7 @@ struct TourTests {
         #expect(tour.phase == .running)
         #expect(tour.step == .welcome)
         #expect(tour.target == nil)
-        #expect(tour.count == 19)
+        #expect(tour.count == 20)
         let world = try #require(tour.world)
         #expect(world.root.deletingLastPathComponent().standardizedFileURL == parent.standardizedFileURL)
         #expect(world.phone.summary.payments > 100)
@@ -92,7 +92,7 @@ struct TourTests {
         #expect(tour.target == .graph, "the graph itself, on the start screen")
         #expect(tour.holdsTheScreen)
         #expect(!tour.place.current, "Overview stays for the graph")
-        #expect(tour.number == 4 && tour.count == 19)
+        #expect(tour.number == 4 && tour.count == 20)
 
         place = tour.place
         place.side = .expenses                                  // the person moves the page: the step asks nothing
@@ -164,9 +164,27 @@ struct TourTests {
         #expect(question.count > 3)
         #expect(tour.step == .switchCategory, "still waiting for the answer")
         detail.answer(moveOthers: true)
-        await eventually { tour.step == .addUp }
-        #expect(tour.step == .addUp)
+        await eventually { tour.step == .select }
+        #expect(tour.step == .select)
         #expect(tour.place.payment == nil, "the payment closes: the list under it")
+
+        // Brief 82: the list's select icon. Selecting works on the tour's store and frees the screen; Next goes on and
+        // ends it.
+        #expect(tour.target == .selectIcon)
+        #expect(tour.holdsTheScreen && !tour.rowShortcuts)
+        let listRoute = try #require(tour.place.path.last)
+        place = tour.place
+        place.selection = PaymentSelection(route: listRoute)
+        tour.update(place)
+        #expect(tour.step == .select, "selecting asks nothing of the step")
+        #expect(tour.target == nil && !tour.holdsTheScreen, "the list, its bar and its windows are free to try")
+        place = tour.place
+        place.selection?.toggleAll(in: world.dashboard)
+        tour.update(place)
+        #expect(world.dashboard.selectionSummary(try #require(tour.place.selection).ids).canSwitch)
+        tour.next()
+        #expect(tour.step == .addUp)
+        #expect(tour.place.selection == nil, "Next ends selecting")
 
         // The swipe's Add up on the ringed single row: the name as one row, in the tour's choices.
         var list = try shownList(tour)
@@ -266,6 +284,9 @@ struct TourTests {
             case .switchCategory:
                 #expect(tour.place.payment != nil, "a payment's page")
                 #expect(tour.target == .change)
+            case .select:
+                #expect(tour.place.payment == nil && tour.place.path.last?.isCategoryList == true)
+                #expect(tour.target == .selectIcon)
             case .addUp, .allFrom:
                 #expect(tour.place.payment == nil && tour.place.path.last?.isCategoryList == true)
                 if case .payment? = tour.target {} else { Issue.record("a single row at \(tour.step)") }
@@ -295,11 +316,11 @@ struct TourTests {
             if tour.phase == .running { seen.append(tour.step) }
         }
         #expect(seen == TourStep.allCases)
-        #expect(seen.count == 19)
+        #expect(seen.count == 20)
         #expect(Self.tourFolders(in: parent).isEmpty)
     }
 
-    /// With the graph hidden in Settings (brief 42), the tour has no graph step: eighteen steps, counted 1 to 18 on the
+    /// With the graph hidden in Settings (brief 42), the tour has no graph step: nineteen steps, counted 1 to 19 on the
     /// card, Overview followed by the search (brief 77); a DEBUG start at the graph's step starts at the search; no card
     /// mentions the graph (brief 59).
     @Test func withTheGraphHiddenTheGraphStepIsLeftOut() async throws {
@@ -308,7 +329,7 @@ struct TourTests {
 
         let tour = Self.model(in: Self.parent(), showsGraph: false)
         await tour.start()
-        #expect(tour.count == 18)
+        #expect(tour.count == 19)
         var numbers: [Int] = []
         var seen: [TourStep] = []
         while tour.phase == .running {
@@ -320,7 +341,7 @@ struct TourTests {
             if tour.step == .done { #expect(tour.nextStep == nil) }
             tour.next()
         }
-        #expect(numbers == Array(1...18))
+        #expect(numbers == Array(1...19))
         #expect(!seen.contains(.graph) && seen.first == .welcome && seen.last == .done)
         for step in TourStep.steps(showingGraph: false) {
             #expect(!step.text(.english, showingGraph: false).localizedCaseInsensitiveContains("graph"))
@@ -350,6 +371,9 @@ struct TourTests {
         #expect(TourStep.categories.text(.german).contains("Umbenennen oder Löschen"))
         #expect(TourStep.addUp.text(.german).contains("Summieren"))
         #expect(TourStep.allFrom.text(.german).contains("Alle"))
+        #expect(TourStep.select.text(.english) == "Tap to select several payments and move or rename them at once.")
+        #expect(TourStep.select.text(.german)
+                == "Tippe hier, um mehrere Buchungen auszuwählen und auf einmal zu verschieben oder umzubenennen.")
         #expect(TourStep.importFiles.text(.english) == "Files from your bank, receipts and cash come in here.")
         #expect(TourStep.dashboardSettings.text(.german, showingGraph: true).contains("Diagramm"))
         #expect(TourStep.dashboardSettings.text(.german, showingGraph: false) == "Hier summierst du gleiche Namen in jeder Liste.")

@@ -62,8 +62,9 @@ private struct MinimumTapArea: ViewModifier {
 
 /// A screen's header: Aresium's mark or the back arrow, the title in the middle, and the buttons on the right, each on the
 /// wall without a box (brief 56, `HeaderButtonLook`): red mode's X first (so the others keep their places when it comes),
-/// then the page's own buttons (the start screen's search and import, brief 77; a category's icon of adding up, brief
-/// 53), then the gear.
+/// then the page's own buttons (the start screen's search and import, brief 77; a category's month list's select icon,
+/// brief 82, and icon of adding up, brief 53), then the gear. While a list selects, `SelectionHeader` stands in its
+/// place.
 /// Light and dark are chosen in Settings → General → Appearance (brief 42: the sun button that switched them is gone).
 struct ScreenHeader: View {
     /// The category's icon of adding up: what it shows, and its tap.
@@ -85,6 +86,8 @@ struct ScreenHeader: View {
     var category: Category? = nil
     let palette: Palette
     var back: (() -> Void)? = nil
+    /// A category's month list (brief 82, phone mode): the select icon, which turns the list into selection.
+    var select: (() -> Void)? = nil
     var sums: Sums? = nil
     /// The start screen's search (brief 77, phone mode): the magnifying glass beside the import button.
     var search: (() -> Void)? = nil
@@ -115,6 +118,12 @@ struct ScreenHeader: View {
                     IconButton(symbol: "xmark", label: String(localized: "Exit Aresium mode"), palette: palette,
                                action: leaveRed)
                 }
+                if let select {
+                    IconButton(symbol: "checkmark.circle", label: String(localized: "Select"), palette: palette,
+                               action: select)
+                        .tourAnchor(.selectIcon)
+                        .accessibilityIdentifier("selectPayments")
+                }
                 if let sums {
                     SumCategoryButton(on: sums.on, palette: palette, action: sums.toggle)
                         .tourAnchor(.sumIcon)
@@ -138,8 +147,9 @@ struct ScreenHeader: View {
 
 /// The header's three parts: the mark or the arrow at the leading edge, the buttons at the trailing edge, and the title
 /// in the middle of the screen while it fits there, else as near the middle as the buttons let it stand (brief 56: the
-/// start screen's two buttons on the right would have pushed "Aresium" off the middle in a plain row).
-private struct HeaderLayout: Layout {
+/// start screen's two buttons on the right would have pushed "Aresium" off the middle in a plain row). A selecting list's
+/// header (`SelectionHeader`, brief 82) lays out its words the same way.
+struct HeaderLayout: Layout {
     let spacing: CGFloat
 
     private struct Parts {
