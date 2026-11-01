@@ -467,7 +467,7 @@ final class TourWorld {
             phone.today = { LedgerExport.day(now) }
             try await phone.load()
             for id in TourData.chosen { try await ledger.choose(id) }
-            try await phone.addCustom(named: TourData.customName())
+            try await phone.addCustom(named: TourData.customName(), side: .spend)
             _ = try await phone.importFiles([TourData.bankFile(now: now)], auth: BackendAuth(token: nil))
             // Its own session, never logged in: the tour asks no server and follows no login.
             let session = EmpireSession(app: .aresium, storage: TourTokens(), restoreOnLaunch: false)

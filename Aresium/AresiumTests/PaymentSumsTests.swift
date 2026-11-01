@@ -298,7 +298,7 @@ struct PaymentSumsStoreFlowTests {
 
     @Test func theCategorysKeyIsItsIdInBothLanguages() async throws {
         let phone = try await phone()
-        try await phone.addCustom(named: "Climbing")
+        try await phone.addCustom(named: "Climbing", side: .spend)
         let dashboard = await store(phone)
         #expect(dashboard.sumCategoryKey("Groceries") == "id:groceries")
         let german = AppLanguage.$scoped.withValue(.german) { dashboard.sumCategoryKey("Lebensmittel") }

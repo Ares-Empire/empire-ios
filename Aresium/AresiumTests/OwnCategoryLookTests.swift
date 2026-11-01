@@ -125,9 +125,9 @@ struct OwnCategoryLookTests {
         let phone = try await PhoneTest.backend(storage: storage, chosen: ["groceries"])
         _ = try await phone.importFiles([PhoneTest.vrBank([("21.10.2026", "Fictional Gym Nord", "Beitrag", -2990)])],
                                         auth: none)
-        let gym = try await phone.addCustom(named: "Fitness")
-        let dog = try await phone.addCustom(named: "Hund")
-        let club = try await phone.addCustom(named: "Fictional club")
+        let gym = try await phone.addCustom(named: "Fitness", side: .spend)
+        let dog = try await phone.addCustom(named: "Hund", side: .spend)
+        let club = try await phone.addCustom(named: "Fictional club", side: .spend)
         let list = try await phone.categories()
         #expect(list.look(of: gym) == CategoryLook(icon: "Dumbbell", color: "#FF9F1C"))
         #expect(list.look(of: dog) == CategoryLook(icon: "Dog", color: "#2DD4BF"))
@@ -147,7 +147,7 @@ struct OwnCategoryLookTests {
 
         // Removing one frees its icon for the next; the others never change, also after the store is opened again.
         try await phone.unchoose(dog, moveTo: nil)
-        let cat = try await phone.addCustom(named: "Hund")
+        let cat = try await phone.addCustom(named: "Hund", side: .spend)
         let reopened = try await PhoneTest.backend(storage: storage)
         let again = try await reopened.categories()
         #expect(again.look(of: gym) == CategoryLook(icon: "Dumbbell", color: "#FF9F1C"))
@@ -157,8 +157,8 @@ struct OwnCategoryLookTests {
 
     @Test func exportAndRestoreCarryTheLooks() async throws {
         let phone = try await PhoneTest.backend(chosen: ["groceries"])
-        try await phone.addCustom(named: "Fictional club")
-        try await phone.addCustom(named: "Kaffee")
+        try await phone.addCustom(named: "Fictional club", side: .spend)
+        try await phone.addCustom(named: "Kaffee", side: .spend)
         let export = try await phone.export()
         #expect(export.categories.compactMap(\.look?.icon) == ["Tag", "Coffee"])
         let file = try export.encoded()

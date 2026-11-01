@@ -16,7 +16,36 @@ struct EngineTests {
     @Test func dashboardMatchesServerExactlyAndDecodes() throws {
         let engine = try EngineHarness(bundle: appEngine())
         let result = try engine.dashboard(resourceText("dashboard.sample-source.json"))
-        let expected = try Data(contentsOf: Self.directory.appendingPathComponent("server-dashboard.sample.json"))
+        let server = try Data(contentsOf: Self.directory.appendingPathComponent("server-dashboard.sample.json"))
+        // The server sample is deliberately unchanged in brief 69. Brief 68 offers transfers for money out and
+        // counts money given back against its income category; apply only those pinned contract changes here.
+        var expectedJSON = try #require(JSONSerialization.jsonObject(with: server) as? [String: Any])
+        var pick = try #require(expectedJSON["pick"] as? [String: [String]])
+        pick["spend", default: []].append("Transfer")
+        expectedJSON["pick"] = pick
+        var transactions = try #require(expectedJSON["transactions"] as? [[String: Any]])
+        #expect((transactions[3]["tags"] as? [String])?.contains("Income") == true)
+        #expect(transactions[3]["amount"] as? Double == -24.90)
+        transactions[3]["incomeBuckets"] = ["Income"]
+        expectedJSON["transactions"] = transactions
+        func subtractRepayment(_ value: Any?) throws -> [String: Any] {
+            var totals = try #require(value as? [String: Any])
+            var buckets = try #require(totals["incomeBuckets"] as? [[String: Any]])
+            let index = try #require(buckets.firstIndex { $0["name"] as? String == "Income" })
+            buckets[index]["total"] = (((try #require(buckets[index]["total"] as? Double)) * 100).rounded() - 2490) / 100
+            totals["incomeBuckets"] = buckets
+            return totals
+        }
+        expectedJSON["total"] = try subtractRepayment(expectedJSON["total"])
+        var byMonth = try #require(expectedJSON["byMonth"] as? [String: Any])
+        byMonth["2025-09"] = try subtractRepayment(byMonth["2025-09"])
+        expectedJSON["byMonth"] = byMonth
+        var income = try #require(expectedJSON["income"] as? [String: [String: Any]])
+        var months = try #require(income["Income"]?["months"] as? [Double])
+        months[0] = ((months[0] * 100).rounded() - 2490) / 100
+        income["Income"]?["months"] = months
+        expectedJSON["income"] = income
+        let expected = try JSONSerialization.data(withJSONObject: expectedJSON)
         try expectSameJSON(Data(result.utf8), expected)
         let dashboard = try Dashboard.decode(Data(result.utf8))
         #expect(dashboard.version == 2)

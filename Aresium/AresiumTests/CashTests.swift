@@ -105,7 +105,7 @@ struct CashTests {
     /// last); switching drops a category that does not fit and Paid from for received; Save keeps it, Edit updates it.
     @Test func theAddCashWindow() async throws {
         let phone = try await phone([withdrawal("02.10.2026")])
-        let custom = try await phone.addCustom(named: "Fictional hobby")
+        let custom = try await phone.addCustom(named: "Fictional hobby", side: .spend)
         let window = CashEntryModel(phone: phone, today: try #require(ReceiptDay.date("2026-10-06")), language: .english)
         await window.load()
         let spendIDs = window.choices.map(\.id)
@@ -119,7 +119,7 @@ struct CashTests {
         #expect(window.paidFromName == "Withdrawal of 2 Oct")
         window.direction = .in
         #expect(window.category == nil && window.paidFrom == nil, "eating out is no income; received is paid from nothing")
-        #expect(window.choices.map(\.id).contains("salary") && window.choices.map(\.id).contains(custom))
+        #expect(window.choices.map(\.id).contains("salary") && !window.choices.map(\.id).contains(custom))
         window.category = "parents-family"
         window.amountText = "50"
         window.what = "Geburtstag Oma"
@@ -266,7 +266,7 @@ struct CashTests {
             }
             #expect(try list.checkedName("Cash box") == "Cash box")
         }
-        await #expect(throws: LedgerError.nameTaken) { try await phone.addCustom(named: "Bargeld") }
+        await #expect(throws: LedgerError.nameTaken) { try await phone.addCustom(named: "Bargeld", side: .spend) }
         let list = try await phone.categories(language: .german)
         #expect(list.name(of: "cash") == "Abhebungen")
         #expect(try await phone.categories(language: .english).name(of: "cash") == "Cash withdrawals")

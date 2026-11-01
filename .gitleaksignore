@@ -1,0 +1,2 @@
+# Confirmed gitleaks false alarms (made-up test data), one fingerprint per line.
+5e5cbb278aae522f613de2e0156ad0160c8fbe94:Shared/Auth/SampleAccount.swift:jwt:44

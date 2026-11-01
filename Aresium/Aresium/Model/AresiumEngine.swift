@@ -61,6 +61,29 @@ actor AresiumEngine {
         try Self.evaluate(Self.bridge, in: context)
     }
 
+    /// Opening an old store is synchronous, before the ledger can be read. Use the engine's own no-side rule,
+    /// including its receipt, cash and currency counting, in a temporary VM used only for this migration.
+    nonisolated static func legacyCategoryKinds(
+        input: (CategoryCatalog) throws -> DashboardSourceInput
+    ) throws -> [String: String] {
+        guard let url = bundledScriptURL(), let context = JSContext() else { throw EngineError.missingBundle }
+        try evaluate(String(contentsOf: url, encoding: .utf8), in: context)
+        try evaluate(bridge, in: context)
+        guard let catalogJSON = context.objectForKeyedSubscript("__aresiumCall")?
+            .call(withArguments: ["catalog", "{}"])?.toString() else { throw EngineError.invalidAnswer("catalog") }
+        let catalog = try JSONDecoder().decode(Envelope<CategoryCatalog>.self, from: Data(catalogJSON.utf8))
+        guard let catalog = catalog.ok else { throw EngineError.invalidAnswer("catalog") }
+        let source = try input(catalog)
+        let json = String(decoding: try JSONEncoder().encode(source), as: UTF8.self)
+        let call = context.evaluateScript("(json) => JSON.stringify(AresiumEngine.buildDashboardSource(JSON.parse(json)).categories)")
+        guard let result = call?.call(withArguments: [json])?.toString(), context.exception == nil else {
+            throw EngineError.invalidAnswer("legacy category sides")
+        }
+        struct Kind: Decodable { let name: String; let kind: String }
+        let kinds = try JSONDecoder().decode([Kind].self, from: Data(result.utf8))
+        return Dictionary(kinds.map { ($0.name, $0.kind) }, uniquingKeysWith: { first, _ in first })
+    }
+
     // MARK: typed calls
 
     /// The default categories, the built-ins and their looks (`DEFAULT_CATEGORIES`, `BUILT_IN_CATEGORIES`,

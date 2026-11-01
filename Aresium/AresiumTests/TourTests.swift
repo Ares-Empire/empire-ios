@@ -192,7 +192,7 @@ struct TourTests {
         #expect(tour.step == .categories, "a row answers only its own step")
         tour.setCategoriesShown(true)
         #expect(tour.target == nil, "free to choose and add categories")
-        try await world.phone.addCustom(named: "Fiktiv-Kategorie")
+        try await world.phone.addCustom(named: "Fiktiv-Kategorie", side: .spend)
         tour.next()
         #expect(tour.step == .messages)
         #expect(tour.showsSettings && !tour.showsCategories, "back in the tour's Settings, at Messages")
@@ -383,7 +383,7 @@ struct TourTests {
         // Changes in the tour: a payment moved and its shop learned, a category of one's own.
         let moved = try #require(try await world.phone.ledger.payments().first)
         _ = try await world.phone.switchCategory(id: moved.id, to: eatingOut, auth: BackendAuth(token: nil))
-        try await world.phone.addCustom(named: "Tour-Kategorie")
+        try await world.phone.addCustom(named: "Tour-Kategorie", side: .spend)
         #expect(FileManager.default.fileExists(atPath: world.root.path))
 
         tour.end()

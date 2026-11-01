@@ -145,12 +145,12 @@ final class CategoryPickerModel {
     func cancelUntick() { untick = nil }
 
     /// Adds one's own category from the field (ticked).
-    func addCustom() async {
+    func addCustom(side: CategorySide) async {
         guard !isWorking else { return }
         problem = nil
         let typed = newName
         await work {
-            try await self.phone.addCustom(named: typed)
+            try await self.phone.addCustom(named: typed, side: side)
             self.newName = ""
             try await self.selectionChanged()
         }
