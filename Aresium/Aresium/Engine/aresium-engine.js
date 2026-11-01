@@ -5798,11 +5798,18 @@ var __AresiumEngine = (() => {
   var umlauts = { \u00E4: "ae", \u00F6: "oe", \u00FC: "ue", \u00DF: "ss" };
   var bareVowels = { \u00E4: "a", \u00F6: "o", \u00FC: "u", \u00DF: "ss" };
   function words(text2, letters) {
-    const plain2 = text2.normalize("NFC").toLowerCase().replace(/[äöüß]/gu, (c) => letters[c]).normalize("NFD").replace(/\p{M}+/gu, "").replace(/['’‘`´]/gu, "");
+    const plain2 = text2.normalize("NFC").toLowerCase().replace(/[äöüß]/gu, (c) => letters[c]).normalize("NFD").replace(/\p{M}+/gu, "").replace(/ø/gu, "o").replace(/['’‘`´]/gu, "");
     return plain2.match(/[\p{L}\p{N}]+|[&+]/gu) ?? [];
   }
   function shopWords(text2) {
     return words(text2, umlauts);
+  }
+  function withoutShopReferences(text2) {
+    return text2.replace(/\b(?:eref|mref|cred|kref|iban|bic|mandatsreferenz|mandatsref|gläubiger-id|glaeubiger-id|kundenreferenz)\s*[:+]\s*\S+/giu, " ");
+  }
+  var foodEndings = ["restaurant", "imbiss", "baeckerei", "cafe", "backstube", "hofladen"];
+  function foodBusinessWord(word) {
+    return foodEndings.find((ending) => word.length >= ending.length + 2 && word.endsWith(ending)) ?? null;
   }
   function shopSpellings(name, otherWords = /* @__PURE__ */ new Set()) {
     const spellings = [shopWords(name).join(" ")];
@@ -5816,8 +5823,17 @@ var __AresiumEngine = (() => {
   // src/engine/sorting/shop-matcher.ts
   var moneyOf = (amount2) => typeof amount2 !== "number" || !Number.isFinite(amount2) || amount2 === 0 ? null : amount2 < 0 ? "out" : "in";
   var applies = (direction, money2) => money2 === null || direction === "both" || direction === money2;
-  var references = /\b(?:eref|mref|cred|kref|iban|bic|mandatsreferenz|mandatsref|gläubiger-id|glaeubiger-id|kundenreferenz)\s*[:+]\s*\S+/giu;
   var branchNumber = /^((?:\D*[^\p{L}\p{N}])?)\d{2,6}(?![\p{L}\p{N}]|[.,:]\d)/u;
+  var processorPrefix = /^(?:(?:sumup|sq|iz|izettle|zettle|stripe|adyen|klarna|nexi|worldline)\s*[*_]\s*)/iu;
+  function shopPayment(payment) {
+    const clean2 = (text2) => text2.replace(processorPrefix, "");
+    return {
+      ...payment,
+      counterparty: payment.counterparty ? clean2(payment.counterparty) : payment.counterparty,
+      description: payment.description ? clean2(payment.description) : payment.description,
+      bookingText: payment.bookingText ? clean2(payment.bookingText) : payment.bookingText
+    };
+  }
   function compileShopList(list2) {
     const rules = [];
     const handWritten = /* @__PURE__ */ new Map(), brands = /* @__PURE__ */ new Map();
@@ -5854,7 +5870,9 @@ var __AresiumEngine = (() => {
     function find(index, words2) {
       const found = [];
       for (let start = 0; start < words2.length; start++) {
-        for (const entry of index.get(words2[start]) ?? []) {
+        const compound = index === handWritten ? foodBusinessWord(words2[start]) : null;
+        const entries = [...index.get(words2[start]) ?? [], ...compound ? index.get(compound) ?? [] : []];
+        for (const entry of entries) {
           const end = start + entry.words.length;
           if (end > words2.length) continue;
           let same = true;
@@ -5884,6 +5902,7 @@ var __AresiumEngine = (() => {
     function townMerchant(payment, towns) {
       const card = cardMerchant(payeeText(payment)) ?? cardMerchant(payment.description ?? payment.bookingText ?? "");
       const name = shopWords(merchantKey(payment));
+      if (["de", "deu", "deutschland"].includes(name.at(-1) ?? "")) name.pop();
       if (name.length < 2) return null;
       const town = card ? shopWords(card.town) : [];
       const proven2 = town.length === 1 && name.at(-1) === town[0] || towns.some((text2) => {
@@ -5897,11 +5916,12 @@ var __AresiumEngine = (() => {
       const money2 = moneyOf(payment.amount);
       const details = payment.description ?? payment.bookingText ?? "";
       const text2 = `${cardMerchant(payment.counterparty ?? "")?.merchant ?? payment.counterparty ?? ""} ${cardMerchant(details)?.merchant ?? details}`;
-      const words2 = shopWords(text2.replace(references, " "));
+      const words2 = shopWords(withoutShopReferences(text2));
       const written = find(handWritten, words2);
       const rule = best(written, written, money2);
       if (rule) return rule;
-      const merchant = merchants.get(shopWords(merchantKey(payment)).join(" ")) ?? branchMerchant(payment) ?? townMerchant(payment, towns);
+      const shop = shopPayment(payment);
+      const merchant = merchants.get(shopWords(merchantKey(shop)).join(" ")) ?? branchMerchant(shop) ?? townMerchant(shop, towns);
       if (merchant) {
         const { categoryId, direction, name } = merchant;
         return applies(direction, money2) ? { categoryId, name, source: "merchant", direction, at: null } : null;
@@ -6092,6 +6112,100 @@ var __AresiumEngine = (() => {
         "in"
       ],
       [
+        "personal-care",
+        [
+          "haarschnitt"
+        ],
+        "out"
+      ],
+      [
+        "household",
+        [
+          "m\xF6belkauf"
+        ],
+        "out"
+      ],
+      [
+        "going-out",
+        [
+          "cocktails"
+        ],
+        "out"
+      ],
+      [
+        "parents-family",
+        [
+          "unterst\xFCtzung von eltern",
+          "unterhalt von eltern",
+          "taschengeld von eltern",
+          "unterst\xFCtzung von familie"
+        ],
+        "in"
+      ],
+      [
+        "gifts",
+        [
+          "geschenk",
+          "geburtstagsgeschenk",
+          "weihnachtsgeschenk",
+          "hochzeitsgeschenk"
+        ],
+        "both"
+      ],
+      [
+        "other-income",
+        [
+          "mieteinnahme",
+          "mieteinnahmen"
+        ],
+        "in"
+      ],
+      [
+        "hobbies",
+        [
+          "r\xFCckzahlung buchkauf",
+          "erstattung buchkauf"
+        ],
+        "in"
+      ],
+      [
+        "work",
+        [
+          "b\xFCromaterial",
+          "b\xFCrobedarf",
+          "arbeitsmittel",
+          "hosting beruflich"
+        ],
+        "out"
+      ],
+      [
+        "subscriptions",
+        [
+          "film abo",
+          "mail abo",
+          "streaming abo"
+        ],
+        "both"
+      ],
+      [
+        "other",
+        [
+          "bestattung",
+          "bestattungshaus",
+          "bestattungskosten",
+          "beerdigungskosten"
+        ],
+        "out"
+      ],
+      [
+        "friends",
+        [
+          "anteil gemeinsames abendessen",
+          "anteil abendessen zur\xFCck"
+        ],
+        "both"
+      ],
+      [
         "subscriptions",
         [
           "netflix",
@@ -6231,7 +6345,32 @@ var __AresiumEngine = (() => {
           "steakhouse",
           "sushi",
           "kantine",
-          "cafeteria"
+          "cafeteria",
+          "grill",
+          "grillhaus",
+          "grillrestaurant",
+          "schnellrestaurant",
+          "burrito",
+          "burritos",
+          "veggie",
+          "vegan",
+          "ramen",
+          "pho",
+          "poke",
+          "bowl",
+          "bowls",
+          "noodle",
+          "noodles",
+          "falafel",
+          "brasserie",
+          "burger",
+          "onigiri",
+          "street food",
+          "thai food",
+          "hot dog",
+          "ocakba\u015F\u0131",
+          "ocakbasi",
+          "banh mi"
         ],
         "out"
       ],
@@ -6336,7 +6475,21 @@ var __AresiumEngine = (() => {
           "gelateria",
           "bakery",
           "boulangerie",
-          "patisserie"
+          "patisserie",
+          "croissant",
+          "croissants",
+          "croissanterie",
+          "brotmanufaktur",
+          "backhaus",
+          "kaffeer\xF6sterei",
+          "caff\xE8",
+          "gelato",
+          "pasticceria",
+          "waffle",
+          "waffeln",
+          "confiserie",
+          "milchbar",
+          "fladenbrot"
         ],
         "out"
       ],
@@ -6424,7 +6577,11 @@ var __AresiumEngine = (() => {
           "wochenmarkt",
           "hofladen",
           "asiamarkt",
-          "asia markt"
+          "asia markt",
+          "bauernhof",
+          "feinkost",
+          "helal markt",
+          "tee contor"
         ],
         "out"
       ],
@@ -6446,7 +6603,8 @@ var __AresiumEngine = (() => {
         "drugstore",
         [
           "drogeriemarkt",
-          "drogerie"
+          "drogerie",
+          "naturdrogerie"
         ],
         "out"
       ],
@@ -6635,7 +6793,10 @@ var __AresiumEngine = (() => {
           "carwash",
           "maut",
           "vignette",
-          "ladestation"
+          "ladestation",
+          "gastankstelle",
+          "tanke",
+          "kfz meisterbetrieb"
         ],
         "out"
       ],
@@ -6744,7 +6905,9 @@ var __AresiumEngine = (() => {
           "bergbahnen",
           "kurtaxe",
           "umbuchung flug",
-          "flug umbuchung"
+          "flug umbuchung",
+          "apartmenthotel",
+          "familienferienst\xE4tte"
         ],
         "out"
       ],
@@ -6935,7 +7098,9 @@ var __AresiumEngine = (() => {
         [
           "mobilfunk",
           "handyvertrag",
-          "glasfaser"
+          "glasfaser",
+          "internet festnetz",
+          "festnetzanschluss"
         ],
         "out"
       ],
@@ -7328,7 +7493,9 @@ var __AresiumEngine = (() => {
           "augenoptik",
           "h\xF6rger\xE4te",
           "h\xF6rakustik",
-          "rezeptgeb\xFChr"
+          "rezeptgeb\xFChr",
+          "\xE4rztehaus",
+          "zahn\xE4rzte"
         ],
         "out"
       ],
@@ -7377,7 +7544,11 @@ var __AresiumEngine = (() => {
           "eishalle",
           "eisstadion",
           "skihalle",
-          "tennis"
+          "tennis",
+          "sporthalle",
+          "sportplatz",
+          "schulsportplatz",
+          "tennisclub"
         ],
         "out"
       ],
@@ -7417,7 +7588,11 @@ var __AresiumEngine = (() => {
           "wimpern",
           "fu\xDFpflege",
           "tattoo",
-          "piercing"
+          "piercing",
+          "friseure",
+          "friseurinnen",
+          "hair design",
+          "hairstyle"
         ],
         "out"
       ],
@@ -7485,7 +7660,9 @@ var __AresiumEngine = (() => {
           "only store",
           "globetrotter ausr\xFCstung",
           "levi strauss",
-          "levi's store"
+          "levi's store",
+          "m&s outlet",
+          "marks & spencer outlet"
         ],
         "both"
       ],
@@ -7516,7 +7693,10 @@ var __AresiumEngine = (() => {
           "jeans",
           "dessous",
           "lingerie",
-          "trachten"
+          "trachten",
+          "strumpfmoden",
+          "schmuck",
+          "uhren"
         ],
         "out"
       ],
@@ -7557,6 +7737,20 @@ var __AresiumEngine = (() => {
           "smartbox"
         ],
         "both"
+      ],
+      [
+        "gifts",
+        [
+          "floristik",
+          "florist",
+          "blumenladen",
+          "blumen",
+          "blumenhaus",
+          "geschenke",
+          "geschenkeladen",
+          "geschenkshop"
+        ],
+        "out"
       ],
       [
         "electronics",
@@ -7764,6 +7958,18 @@ var __AresiumEngine = (() => {
         "both"
       ],
       [
+        "coffee-snacks",
+        [
+          "bahlsen",
+          "eilles",
+          "lindt",
+          "l\xE4derach",
+          "neuhaus",
+          "storck"
+        ],
+        "both"
+      ],
+      [
         "household",
         [
           "bauhaus",
@@ -7859,7 +8065,22 @@ var __AresiumEngine = (() => {
           "cecil",
           "salamander",
           "zero",
-          "closed"
+          "closed",
+          "stradivarius",
+          "ecco",
+          "barbour",
+          "o'neill",
+          "mephisto",
+          "parfois",
+          "reno",
+          "outfit",
+          "street shoes",
+          "r.m.williams",
+          "red wing",
+          "we fashion",
+          "herm\xE8s",
+          "bvlgari",
+          "bulgari"
         ],
         "both"
       ],
@@ -8022,10 +8243,6 @@ var __AresiumEngine = (() => {
           "60 seconds to napoli",
           "aposto",
           "applebee's",
-          "applebee's neighborhood grill & bar",
-          "applebees bar and grill",
-          "applebees grill and bar",
-          "applebees neighborhood bar and grill",
           "asiahung",
           "auntie anne's",
           "auntie annes pretzels",
@@ -8038,7 +8255,6 @@ var __AresiumEngine = (() => {
           "burgerheart",
           "burgerme",
           "burguer king",
-          "burrito company",
           "carl's jr.",
           "checkers drive-in restaurants, inc",
           "chipotle",
@@ -8083,7 +8299,6 @@ var __AresiumEngine = (() => {
           "mr. sub",
           "nobu",
           "o'tacos",
-          "oakberry a\xE7a\xED bowls",
           "old chang kee",
           "olive garden",
           "olive garden italian kitchen",
@@ -8117,7 +8332,6 @@ var __AresiumEngine = (() => {
           "schweinske",
           "shake shack",
           "shakey's",
-          "shiso burger",
           "shoo loong kan",
           "sticks'n'sushi",
           "swing kitchen",
@@ -8125,10 +8339,8 @@ var __AresiumEngine = (() => {
           "telepizza",
           "tgi fridays",
           "the chicken rice shop",
-          "tommi's burger joint",
           "tony roma",
           "tony roma's",
-          "veggie pret",
           "wagamama",
           "wahlburgers",
           "wayback burgers",
@@ -8143,16 +8355,18 @@ var __AresiumEngine = (() => {
         [
           "allw\xF6rden",
           "amorino",
-          "backhaus hackner",
-          "backhaus hennig",
-          "backhaus nahrstedt",
+          "arko",
+          "bahlsen outlet",
           "barbarossa brotkultur",
           "baskin-robbins",
+          "bears & friends",
           "ben & jerry's",
+          "ben's cookies",
           "brioche dor\xE9e",
           "brothaus",
+          "b\xE4ren-treff",
+          "b\xE4renland",
           "cadera",
-          "caff\xE8 pascucci",
           "campus suite",
           "chatime",
           "coco fresh tea & juice",
@@ -8163,6 +8377,8 @@ var __AresiumEngine = (() => {
           "costa drive thru",
           "dallmeyers backhus",
           "dat backhus",
+          "debeukelaer",
+          "debeukelaer factory outlet",
           "die lohner's",
           "ding tea",
           "d\xE9lifrance",
@@ -8171,8 +8387,6 @@ var __AresiumEngine = (() => {
           "erster wiener",
           "espressolab",
           "familienb\xE4cker musswessels",
-          "familienb\xE4ckerei grimminger",
-          "familienb\xE4ckerei musswessels",
           "gilgen's",
           "goeken backen",
           "grimminger",
@@ -8184,21 +8398,21 @@ var __AresiumEngine = (() => {
           "hinnerb\xE4cker",
           "hofpfisterei",
           "hosselmann",
+          "hussel",
           "h\xE4agen-dazs",
           "ihle",
           "ihr landb\xE4cker",
           "janny's",
           "janny's eis",
+          "jeff de bruges",
           "joe & the juice",
           "julius meinl",
           "kf tea",
           "kolls",
-          "kolls familienb\xE4ckerei",
           "kung fu tea",
           "la romana",
-          "landb\xE4ckerei ihle",
-          "landb\xE4ckerei stinges",
           "lavazza",
+          "le chocolat alain ducasse",
           "le pain quotidien",
           "leifert",
           "lieblingsb\xE4cker",
@@ -8208,7 +8422,6 @@ var __AresiumEngine = (() => {
           "machi machi",
           "malzers",
           "marble slab creamery",
-          "mccaf\xE9",
           "mein lieblingsb\xE4cker",
           "milkau",
           "millie's cookies",
@@ -8227,30 +8440,26 @@ var __AresiumEngine = (() => {
           "pekara",
           "pinkberry",
           "rischart",
-          "rischarts backhaus",
           "rose bakeshop",
           "royaltea",
           "schw\xE4lmer brotladen",
           "second cup",
           "segafredo",
           "sipl",
-          "stadtb\xE4ckerei kamp",
-          "stangengr\xFCner m\xFChlenb\xE4ckerei",
           "steinecke",
           "steiskal",
           "sternenb\xE4ck",
           "stinges",
-          "stinges landb\xE4ckerei",
+          "storck welt outlet",
           "tcby",
           "teeamo",
           "tiger sugar",
           "tim hortons",
           "uncle tetsu's cheesecake",
+          "viba",
           "von allw\xF6rden",
           "wiener feinb\xE4cker",
           "wiener feinb\xE4cker heberer",
-          "wiener feinb\xE4ckerei",
-          "wiener feinb\xE4ckerei heberer",
           "wonderwaffel",
           "xing fu tang",
           "yi fang fruit tea",
@@ -8320,6 +8529,7 @@ var __AresiumEngine = (() => {
           "sherwin williams paints",
           "sherwin-williams",
           "siematic",
+          "s\xF8strene grene",
           "tedox",
           "tefal",
           "tempur",
@@ -8497,6 +8707,7 @@ var __AresiumEngine = (() => {
           "everfuel",
           "evgateway",
           "fastned",
+          "gr\xF8nn kontakt",
           "intermarch\xE9 contact",
           "intermarch\xE9 super",
           "ionity",
@@ -8961,6 +9172,8 @@ var __AresiumEngine = (() => {
         [
           "& other stories",
           "5.11 tactical",
+          "585 gold",
+          "a. lange & s\xF6hne",
           "abc schuh-center",
           "abercrombie & fitch",
           "abercrombie kids",
@@ -8974,12 +9187,15 @@ var __AresiumEngine = (() => {
           "allbirds",
           "amo's style",
           "anson's",
+          "apm monaco",
           "ara shoes",
+          "aristocrazy",
           "arket",
           "armani exchange",
           "asics",
           "athletes world",
           "aubade",
+          "audemars piguet",
           "awg-modecenter",
           "ba&sh",
           "balenciaga",
@@ -8988,9 +9204,11 @@ var __AresiumEngine = (() => {
           "banana republic",
           "banana republic factory",
           "bata",
+          "baume & mercier",
           "ben sherman",
           "bershka",
           "betty barclay",
+          "bijou brigitte",
           "billabong",
           "bimba & lola",
           "bimba y lola",
@@ -9004,6 +9222,7 @@ var __AresiumEngine = (() => {
           "bottega veneta",
           "brandy melville",
           "brax",
+          "breitling",
           "breuninger",
           "brooks brothers",
           "brunello cucinelli",
@@ -9022,6 +9241,7 @@ var __AresiumEngine = (() => {
           "catimini",
           "celio",
           "charles v\xF6gele",
+          "chaumet",
           "claire's stores",
           "claires accessories",
           "claudie pierlot",
@@ -9110,17 +9330,22 @@ var __AresiumEngine = (() => {
           "hunkem\xF6ller",
           "hush puppies",
           "iblues",
+          "international watch co",
+          "international watch company",
           "intimissimi",
           "intimissimi uomo",
           "intrend",
           "izod",
           "jacadi",
           "jack & jones",
+          "jaeger-lecoultre",
           "jd sports",
           "jil sander",
           "jimmy choo",
+          "juwelier kraemer",
           "k und k schuh-center",
           "k+k schuh-center",
+          "kalyan jewellers",
           "karl lagerfeld",
           "kate spade new york",
           "kate spade ny",
@@ -9168,6 +9393,7 @@ var __AresiumEngine = (() => {
           "moser trachtenwelt",
           "mountain warehouse",
           "mulberry",
+          "my jewellery",
           "myshoes",
           "naf naf",
           "napapijri",
@@ -9185,6 +9411,7 @@ var __AresiumEngine = (() => {
           "olymp & hades",
           "omoda",
           "only & sons",
+          "orovivo",
           "orsay",
           "oshkosh",
           "oshkosh b'gosh",
@@ -9221,11 +9448,13 @@ var __AresiumEngine = (() => {
           "riu paris",
           "roberto cavalli",
           "rockport",
+          "rolex",
           "s.oliver",
           "saint laurent",
           "salvatore ferragamo",
           "samsoe&samsoe",
           "samsonite",
+          "sams\xF8e sams\xF8e",
           "san antonio shoe",
           "sas shoes",
           "schiesser",
@@ -9252,8 +9481,11 @@ var __AresiumEngine = (() => {
           "stuart weitzman",
           "suitsupply",
           "superdry",
+          "swarovski",
+          "swatch",
           "sweaty betty",
           "s\xE9zane",
+          "tag heuer",
           "tally weijl",
           "tamaris",
           "tartine et chocolat",
@@ -9265,7 +9497,9 @@ var __AresiumEngine = (() => {
           "the north face",
           "the walking company",
           "thom browne",
+          "tiffany & company",
           "timberland",
+          "tissot",
           "tom tailor",
           "tommy hilfiger",
           "tommy hilfiger kids",
@@ -9286,6 +9520,7 @@ var __AresiumEngine = (() => {
           "uniqlo",
           "united colors of benetton",
           "urban outfitters",
+          "vacheron constantin",
           "van heusen",
           "van laack",
           "vaude",
@@ -9299,6 +9534,7 @@ var __AresiumEngine = (() => {
           "walbusch",
           "weekend max mara",
           "wellensteyn",
+          "wempe",
           "witt weiden",
           "wolford",
           "women's secret",
@@ -9362,12 +9598,15 @@ var __AresiumEngine = (() => {
           "karstadt warenhaus gmbh",
           "kr\xFCmet",
           "manufactum",
+          "mcarthurglen",
+          "mcarthurglen designer outlet",
           "miniso",
           "muji",
           "m\xE4c-geiz",
           "pfennigpfeiffer",
           "postenb\xF6rse",
           "rusta",
+          "westfield",
           "wreesmann",
           "wreesmann sonderpostenmarkt"
         ]
@@ -9615,11 +9854,27 @@ var __AresiumEngine = (() => {
     });
   }
 
+  // src/engine/sorting/payment-purpose.ts
+  function paymentPurpose(payment) {
+    const words2 = shopWords(withoutShopReferences([payment.counterparty, payment.description, payment.bookingText].filter(Boolean).join(" ")));
+    const has2 = (...names2) => names2.some((name) => words2.includes(name));
+    const amount2 = payment.amount;
+    if (typeof amount2 === "number" && Number.isFinite(amount2) && amount2 < 0) {
+      const purpose = shopWords(withoutShopReferences(payment.description || payment.bookingText || "")).join(" ");
+      if (has2("brot") && has2("einkauf") && !purpose.includes("ihr einkauf bei")) return "groceries";
+      if ((has2("wolt") || ` ${words2.join(" ")} `.includes(" uber eats ")) && has2("apotheke")) return "health";
+    }
+    if (typeof amount2 === "number" && Number.isFinite(amount2) && amount2 > 0 && has2("vinted", "kleiderkreisel", "ebay", "kleinanzeigen", "momox", "wirkaufens", "zoxs", "rebuy") && has2("auszahlung", "verkauf", "verkaufserloes", "verkaufserloese") && !has2("erstattung", "rueckerstattung", "rueckzahlung", "rueckgabe", "rueckabwicklung", "retoure", "refund", "stornierung", "storniert")) {
+      return "selling-things";
+    }
+    return null;
+  }
+
   // src/engine/sorting/starter-rules.ts
   var matcher2 = compileShopList(shops_de_default);
   var STARTER_RULES = matcher2.rules;
   function starterCategory(payment, categories, towns) {
-    const categoryId = matcher2.match(payment, towns);
+    const categoryId = paymentPurpose(payment) ?? matcher2.match(payment, towns);
     return categoryId !== null && categories.some((c) => c.id === categoryId) ? categoryId : null;
   }
   var findShop = (payment, towns) => matcher2.find(payment, towns);
@@ -9742,10 +9997,20 @@ var __AresiumEngine = (() => {
   var proven = (a, b) => a.other !== "" && a.other === b.iban || b.other !== "" && b.other === a.iban || a.says && b.says;
   function ownTransfers(payments) {
     const result = payments.map(() => null);
-    const hasPaypalExport = payments.some((p) => p.source === "paypal");
+    let paypalStart = Infinity, paypalEnd = -Infinity;
+    for (const p of payments) {
+      const date = p.source === "paypal" ? parseDay(p.date) : null;
+      if (!date) continue;
+      const day2 = dayNumber(date);
+      paypalStart = Math.min(paypalStart, day2);
+      paypalEnd = Math.max(paypalEnd, day2);
+    }
     const conversions = paypalConversionRows(payments.filter((p) => !isPaypalBankFunding({ description: p.description ?? "", raw: p.raw })));
     payments.forEach((p, i) => {
-      if (isPaypalFundingRow(p) || isPaypalWithdrawalRow(p) || hasPaypalExport && isPaypalBankLine(p)) result[i] = { rule: "paypal" };
+      const date = parseDay(p.date);
+      const day2 = date ? dayNumber(date) : NaN;
+      const covered = day2 >= paypalStart - TRANSFER_DAYS && day2 <= paypalEnd + TRANSFER_DAYS;
+      if (isPaypalFundingRow(p) || isPaypalWithdrawalRow(p) || covered && isPaypalBankLine(p)) result[i] = { rule: "paypal" };
       if (conversions.has(p)) result[i] = { rule: "paypal-conversion" };
     });
     const groups2 = /* @__PURE__ */ new Map();
@@ -10170,6 +10435,27 @@ var __AresiumEngine = (() => {
     }
     return fromCodePoints(points);
   }
+  var LATIN_15 = {
+    164: 8364,
+    166: 352,
+    168: 353,
+    180: 381,
+    184: 382,
+    188: 338,
+    189: 339,
+    190: 376
+  };
+  function latin15(bytes) {
+    let euro = false;
+    for (let i = 0; i < bytes.length; i++) {
+      if (bytes[i] >= 128 && bytes[i] <= 159) return null;
+      if (bytes[i] === 164) euro = true;
+    }
+    if (!euro) return null;
+    const points = new Array(bytes.length);
+    for (let i = 0; i < bytes.length; i++) points[i] = LATIN_15[bytes[i]] ?? bytes[i];
+    return fromCodePoints(points);
+  }
   function utf16(bytes, littleEndian) {
     const units = [];
     for (let i = 2; i + 1 < bytes.length; i += 2) {
@@ -10185,6 +10471,8 @@ var __AresiumEngine = (() => {
     const bom = bytes[0] === 239 && bytes[1] === 187 && bytes[2] === 191;
     const text2 = utf8(bytes, bom ? 3 : 0);
     if (text2 !== null) return { text: text2, encoding: "utf-8" };
+    const latin = latin15(bytes);
+    if (latin !== null) return { text: latin, encoding: "iso-8859-15" };
     return { text: windows1252(bytes), encoding: "windows-1252" };
   }
   function decodeBankFile(bytes) {
@@ -10209,11 +10497,15 @@ var __AresiumEngine = (() => {
   // src/engine/readers/csv.ts
   var SEPARATORS = [";", ",", "	", "|"];
   function splitCsv(text2, separator) {
+    return inspectCsv(text2, separator).rows;
+  }
+  function inspectCsv(text2, separator) {
     const rows = [];
     let row = [];
     let field2 = "";
     let quoted = false;
     let fieldStarted = false;
+    let closed = false, damaged = false;
     for (let i = 0; i < text2.length; i++) {
       const ch = text2[i];
       if (quoted) {
@@ -10221,7 +10513,10 @@ var __AresiumEngine = (() => {
           if (text2[i + 1] === '"') {
             field2 += '"';
             i++;
-          } else quoted = false;
+          } else {
+            quoted = false;
+            closed = true;
+          }
         } else field2 += ch;
         continue;
       }
@@ -10234,6 +10529,7 @@ var __AresiumEngine = (() => {
         row.push(field2);
         field2 = "";
         fieldStarted = false;
+        closed = false;
         continue;
       }
       if (ch === "\n" || ch === "\r") {
@@ -10243,8 +10539,10 @@ var __AresiumEngine = (() => {
         row = [];
         field2 = "";
         fieldStarted = false;
+        closed = false;
         continue;
       }
+      if (closed && ch.trim() !== "") damaged = true;
       field2 += ch;
       if (ch !== " ") fieldStarted = true;
     }
@@ -10252,7 +10550,7 @@ var __AresiumEngine = (() => {
       row.push(field2);
       rows.push(row);
     }
-    return rows;
+    return { rows, damaged: damaged || quoted };
   }
   function countsPerLine(text2, separator, maxLines) {
     const counts = [];
@@ -10308,6 +10606,12 @@ var __AresiumEngine = (() => {
     if (year < 1970 || year > 2100 || month < 1 || month > 12 || day2 < 1) return null;
     if (day2 > new Date(Date.UTC(year, month, 0)).getUTCDate()) return null;
     return `${year}-${String(month).padStart(2, "0")}-${String(day2).padStart(2, "0")}`;
+  }
+  function columnDateFormats(values, preferred = []) {
+    const order = [.../* @__PURE__ */ new Set([...preferred, "MM/DD/YYYY", ...DATE_FORMATS])];
+    const counts = order.map((format) => values.filter((value) => parseDate(value, format) !== null).length);
+    const most = Math.max(...counts);
+    return most === 0 ? [] : order.filter((_, i) => counts[i] === most);
   }
   function canonicalAmount(negative, whole, fraction) {
     const intPart = whole.replace(/^0+(?=\d)/, "") || "0";
@@ -10394,6 +10698,11 @@ var __AresiumEngine = (() => {
       this.name = "BankFileError";
     }
   };
+  function checkedCsvRows(text2, separator) {
+    const result = inspectCsv(text2.replace(/^\uFEFF/, ""), separator);
+    if (result.damaged) throw new BankFileError("unknown", "The file has a broken or unfinished quoted field. Download it again.");
+    return result.rows;
+  }
   function trimRow(row) {
     let end = row.length;
     while (end > 0 && row[end - 1].trim() === "") end--;
@@ -10458,7 +10767,7 @@ var __AresiumEngine = (() => {
     return index === void 0 ? "" : (row[index] ?? "").trim();
   }
   function readCsv(text2, layout) {
-    const rows = splitCsv(text2, layout.separator);
+    const rows = checkedCsvRows(text2, layout.separator);
     if (rows.length === 0) throw new BankFileError("empty", "The file is empty.");
     const headerIndex = findTable(rows, layout);
     if (headerIndex === null) throw new BankFileError("headerMismatch", "The file's header row does not match the layout.");
@@ -10470,24 +10779,53 @@ var __AresiumEngine = (() => {
     const names2 = uniqueHeader(headerIndex >= 0 ? rows[headerIndex].map((h) => h.trim()) : new Array(width).fill(""));
     const transactions = [];
     const idFields = [];
-    const references2 = [];
+    const references = [];
     let skipped = 0;
+    let unreadable = 0;
     let ownIban2;
-    let currency = layout.currency ?? "EUR";
+    const accountColumn = layout.header.findIndex((h) => /^(kontoname|accountname|bezeichnungauftragskonto|kontonummerauftragskonto)$/.test(headerKey(h)));
+    let ownAccount;
+    const amountHeader = layout.header[c.amount ?? c.debit ?? c.credit ?? -1] ?? "";
+    const headerCurrencies = [...new Set(amountHeader.toUpperCase().match(/\b(EUR|USD|GBP|CHF|JPY|CAD|AUD|CNY|DKK|NOK|SEK|PLN|CZK|HUF)\b/g) ?? [])];
+    if (headerCurrencies.length > 1 && c.currency === void 0) {
+      throw new BankFileError("unknown", "The amount column names several currencies without identifying each payment's currency.");
+    }
+    let currency = layout.currency ?? headerCurrencies[0] ?? "EUR";
     const skip = (layout.skipStatus ?? []).map((s) => s.toLowerCase());
     const keep = (layout.keepStatus ?? []).map((s) => s.toLowerCase());
     const dateHeader = headerIndex >= 0 ? headerKey(rows[headerIndex][c.date] ?? "") : "";
+    const datedRows = rows.slice(headerIndex + 1).filter((row) => DATE_FORMATS.some((f) => parseDate(cell(row, c.date), f) !== null));
+    const expectedWidth = Math.min(
+      layout.columnCount ?? layout.header.length,
+      datedRows.reduce((n, row) => Math.max(n, row.length), 0)
+    );
     for (let r = headerIndex + 1; r < rows.length; r++) {
       const row = rows[r];
       if (row.every((v) => v.trim() === "")) continue;
+      if (row.length < expectedWidth && DATE_FORMATS.some((f) => parseDate(cell(row, c.date), f) !== null)) {
+        throw new BankFileError("unknown", "A payment row is cut off or has missing columns. Download the file again.");
+      }
       if (dateHeader && headerKey(cell(row, c.date)) === dateHeader) {
-        skipped += rows.slice(r).filter((rest) => rest.some((v) => v.trim() !== "")).length;
-        break;
+        throw new BankFileError("unknown", "This file contains several payment tables or accounts. Export each account separately.");
+      }
+      const keys = row.map(headerKey);
+      if (keys.some((k) => /^(date|bookingdate|buchungstag|buchungsdatum|buchung|umsatztag|belegdatum)$/.test(k)) && keys.some((k) => /^(amount|amounteur|betrag|betrageur|umsatzineur|debit|soll)$/.test(k))) {
+        throw new BankFileError("unknown", "This file contains several payment tables or accounts. Export each account separately.");
       }
       const date = parseDate(cell(row, c.date), layout.dateFormat);
       const status = cell(row, c.status).toLowerCase();
-      if (!date || c.status !== void 0 && (skip.some((s) => status.includes(s)) || keep.length > 0 && !keep.some((s) => status.includes(s)))) {
+      if (c.status !== void 0 && (skip.some((s) => status.includes(s)) || keep.length > 0 && !keep.some((s) => status.includes(s)))) {
         skipped++;
+        continue;
+      }
+      if (!date) {
+        skipped++;
+        const dateCell = cell(row, c.date);
+        const notice = /^(offen|pending|vorgemerkt|--)$/.test(dateCell.toLowerCase()) || /^(summe|total|saldo|anfangssaldo|endsaldo|alter kontostand|neuer kontostand)\b/i.test(cleanText(...row));
+        if (!notice && DATE_FORMATS.some((f) => parseDate(dateCell, f) !== null)) {
+          throw new BankFileError("unknown", "The date column mixes incompatible formats. Check how its dates are written.");
+        }
+        if (!notice) unreadable++;
         continue;
       }
       let amount2 = null;
@@ -10507,6 +10845,7 @@ var __AresiumEngine = (() => {
       }
       if (!amount2) {
         skipped++;
+        unreadable++;
         continue;
       }
       if (layout.invertSign) amount2 = negate(amount2);
@@ -10533,12 +10872,21 @@ var __AresiumEngine = (() => {
         if (labelled !== void 0) paymentText = labelled;
         else if (counterparty) paymentText = "";
       }
-      const description = paymentText || cleanText(cell(row, c.kind)) || cleanText(counterparty) || "(no description)";
+      let description = paymentText || cleanText(cell(row, c.kind)) || cleanText(counterparty) || "(no description)";
+      if (layout.idStyle === "vrbank") {
+        description = (c.text ?? []).map((i) => cell(row, i)).find(Boolean) || cell(row, c.kind) || "(no description)";
+      }
       const valueDate = c.valueDate !== void 0 ? parseDate(cell(row, c.valueDate), layout.dateFormat) : void 0;
       const balance = c.balance !== void 0 ? parseAmountStrict(cell(row, c.balance), layout.numberFormat) : void 0;
       const rowCurrency = /^[A-Za-z]{3}$/.test(cell(row, c.currency)) ? cell(row, c.currency).toUpperCase() : currency;
       currency = rowCurrency;
-      ownIban2 ?? (ownIban2 = c.accountIban !== void 0 ? normalizeIban(cell(row, c.accountIban)) ?? void 0 : void 0);
+      const rowIban = c.accountIban !== void 0 ? normalizeIban(cell(row, c.accountIban)) ?? void 0 : void 0;
+      const rowAccount = accountColumn >= 0 ? cell(row, accountColumn) : "";
+      if (ownIban2 && rowIban && ownIban2 !== rowIban || ownAccount && rowAccount && ownAccount !== rowAccount) {
+        throw new BankFileError("unknown", "This file contains payments from several accounts. Export each account separately.");
+      }
+      ownIban2 ?? (ownIban2 = rowIban);
+      ownAccount ?? (ownAccount = rowAccount || void 0);
       const counterpartyIban = c.iban !== void 0 ? normalizeIban(cell(row, c.iban)) : null;
       const raw = {};
       names2.forEach((name2, i) => {
@@ -10555,17 +10903,25 @@ var __AresiumEngine = (() => {
         ...counterpartyIban ? { counterpartyIban } : {},
         raw
       });
-      idFields.push([
-        date,
-        amount2,
-        ...[c.payer, c.payee, ...c.counterparty ?? [], ...c.text ?? []].map((i) => cleanText(cell(row, i))),
-        cell(row, c.iban).replace(/\s/g, "")
-      ].join("|"));
-      references2.push(cell(row, c.reference).replace(/^'+|'+$/g, "") || void 0);
+      if (layout.idStyle === "vrbank") {
+        let legacy = parseAmount(cell(row, c.amount));
+        if (/^(s|d|soll)/i.test(cell(row, c.sign)) && !legacy.startsWith("-")) legacy = `-${legacy}`;
+        idFields.push(`${date}T00:00:00.000Z|${legacy}|${description}|${counterparty}`);
+      } else {
+        idFields.push([
+          date,
+          amount2,
+          ...[c.payer, c.payee, ...c.counterparty ?? [], ...c.text ?? []].map((i) => cleanText(cell(row, i))),
+          cell(row, c.iban).replace(/\s/g, "")
+        ].join("|"));
+      }
+      references.push(cell(row, c.reference).replace(/^'+|'+$/g, "") || void 0);
     }
+    if (transactions.length === 0) throw new BankFileError("noTable", "No readable booked payments were found in this file.");
+    if (unreadable > transactions.length) throw new BankFileError("unknown", "Most payment rows could not be read. Check the file's columns and formats.");
     if (!ownIban2) for (const row of rows.slice(0, Math.max(headerIndex, 0))) ownIban2 ?? (ownIban2 = findIban(row.join(" ")));
     const hashed = bookingIds(idFields);
-    const ids = withReferences(references2, hashed);
+    const ids = withReferences(references, hashed);
     const name = layout.name ?? "Bank";
     const account = { name: accountName(name, ownIban2), currency };
     if (ownIban2) account.iban = ownIban2;
@@ -10577,10 +10933,10 @@ var __AresiumEngine = (() => {
       layout
     };
   }
-  function withReferences(references2, hashed) {
+  function withReferences(references, hashed) {
     const counts = /* @__PURE__ */ new Map();
-    for (const ref of references2) if (ref) counts.set(ref, (counts.get(ref) ?? 0) + 1);
-    return references2.map((ref, i) => ref && counts.get(ref) === 1 ? ref : hashed[i]);
+    for (const ref of references) if (ref) counts.set(ref, (counts.get(ref) ?? 0) + 1);
+    return references.map((ref, i) => ref && counts.get(ref) === 1 ? ref : hashed[i]);
   }
 
   // src/engine/readers/camt.ts
@@ -10829,6 +11185,7 @@ var __AresiumEngine = (() => {
   function findHeader(rows) {
     for (let i = 0; i < Math.min(rows.length, 60); i++) {
       const cells = trimRow(rows[i]);
+      if (cells.some((v) => /^(plannedamount|forecastamount|budgetamount)/.test(headerKey(v)))) continue;
       const filled = cells.filter(Boolean);
       if (filled.length < 3 || filled.length < cells.length * 0.6) continue;
       if (!filled.every((v) => hasLetter(v) && !isDateLike(v) && !DE_DECIMAL.test(v) && !EN_DECIMAL.test(v))) continue;
@@ -10857,7 +11214,7 @@ var __AresiumEngine = (() => {
       };
       const dm = sorted("DD/MM/YYYY"), md = sorted("MM/DD/YYYY");
       best = md && !dm ? "MM/DD/YYYY" : "DD/MM/YYYY";
-      ambiguous = dm === md;
+      ambiguous = true;
     }
     return { format: best, share, ambiguous };
   }
@@ -10892,13 +11249,13 @@ var __AresiumEngine = (() => {
   }
   function analyseCsv(text2) {
     const separator = detectSeparator(text2);
-    const rows = splitCsv(text2, separator);
+    const rows = checkedCsvRows(text2, separator);
     const table = findTableStart(rows);
     if (!table) throw new BankFileError("noTable", "No table with a header row and dates was found in this file.");
     const { headerRow, width } = table;
     const header = headerRow >= 0 ? trimRow(rows[headerRow]) : [];
     const names2 = headerRow >= 0 ? header : Array.from({ length: width }, (_, i) => `Column ${i + 1}`);
-    const data = rows.slice(headerRow + 1, headerRow + 401).map(trimRow).filter((r) => r.length >= Math.ceil(width / 2) && r.some(isDateLike)).slice(0, 300);
+    const data = rows.slice(headerRow + 1).map(trimRow).filter((r) => r.length >= Math.ceil(width / 2) && r.some(isDateLike));
     const column = (j) => data.map((r) => r[j] ?? "");
     let de = 0, en = 0;
     for (const r of data) for (const v of r) {
@@ -11015,7 +11372,13 @@ var __AresiumEngine = (() => {
     if (status && new Set(status.values).size <= 6) take("status", status.index);
     const reference = byWord("reference", ["text", "number"]);
     if (reference && new Set(reference.values.filter(Boolean)).size === reference.values.filter(Boolean).length) take("reference", reference.index);
+    const bookingType = (col) => col.values.filter(Boolean).every((v) => /^(lastschrift|sepa.lastschrift|überweisung|sepa.überweisung|gutschrift|kartenzahlung|kartenverfügung|dauerauftrag|card payment|transfer)$/i.test(v.trim()));
+    const purpose = columns.filter((col) => col.kind === "text" && !taken.has(col.index) && wordScore(col.header, "text") > wordScore(col.header, "kind") && wordScore(col.header, "text") > 0).sort((a, b) => wordScore(b.header, "text") - wordScore(a.header, "text"))[0];
+    if (purpose) take("text", purpose.index);
+    const type = columns.filter((col) => col.kind === "text" && !taken.has(col.index) && wordScore(col.header, "kind") > 0 && bookingType(col)).sort((a, b) => wordScore(b.header, "kind") - wordScore(a.header, "kind"))[0];
+    if (type) take("kind", type.index);
     for (const role of ["kind", "counterparty", "text"]) {
+      if (roles[role] !== void 0) continue;
       const col = byWord(role, ["text"]);
       if (col) take(role, col.index);
     }
@@ -11548,7 +11911,7 @@ ${line}`;
         `${GH}pb-/beancount-comdirect/blob/HEAD/beancount_comdirect/accounts.py`,
         `${GH}sercxanto/go-homebank-csv/blob/HEAD/pkg/parser/testfiles/comdirect/umsaetze_1234567890_20231006_1804.csv`
       ],
-      unconfirmed: "A file with several sections (giro account, Visa card, savings) is read up to the end of its first section.",
+      unconfirmed: "A file with several account sections is refused; BankFile can represent only one account.",
       separator: ";",
       match: ["Buchungstag", "Wertstellung (Valuta)", "Vorgang", "Buchungstext", "Umsatz in EUR"],
       dateFormat: "DD.MM.YYYY",
@@ -11858,7 +12221,7 @@ ${line}`;
         `${GH}fer0n/Relay/blob/601c317a2bac55afabf8db6493e3715b30f5dd6e/RelayTests/StatementImportParsingTests.swift`,
         `${GH}13excite/c24-expences/blob/d18a48a0fda8451c95e5f3b29fd2819da675518a/testdata/transaction.csv.mock`
       ],
-      unconfirmed: 'One file can hold several C24 accounts ("Kontoname"); they are read as one account. Pending rows: unknown.',
+      unconfirmed: 'Several C24 accounts ("Kontoname") in one file are refused. Pending rows: unknown.',
       separator: ",",
       match: ["Transaktionstyp", "Buchungsdatum", "Betrag", "Zahlungsempf\xE4nger", "Verwendungszweck", "Beschreibung"],
       dateFormat: "DD.MM.YYYY",
@@ -11938,20 +12301,18 @@ ${line}`;
   ];
 
   // src/engine/readers/profiles.ts
-  var separators = (profile) => Array.isArray(profile.separator) ? profile.separator : [profile.separator];
   var formats = (profile) => Array.isArray(profile.dateFormat) ? profile.dateFormat : [profile.dateFormat];
   var names = (column) => Array.isArray(column) ? column : [column];
   function fitsHeaderless(profile, rows) {
     const shape = profile.headerless;
     const first = rows.find((r) => r.some((v) => v.trim() !== ""));
     if (!first || first.length !== shape.columnCount || typeof profile.columns.date !== "number") return false;
-    if (!formats(profile).some((f) => parseDate(first[profile.columns.date] ?? "", f) !== null)) return false;
+    if (!DATE_FORMATS.some((f) => parseDate(first[profile.columns.date] ?? "", f) !== null)) return false;
     return shape.ibanColumn === void 0 || normalizeIban(first[shape.ibanColumn] ?? "") !== null;
   }
-  function findProfile(rows, separator) {
+  function findProfile(rows, _separator) {
     let best = null;
     for (const profile of BANK_PROFILES) {
-      if (!separators(profile).includes(separator)) continue;
       if (profile.headerless) {
         if (!best && fitsHeaderless(profile, rows)) best = { profile, headerRow: -1 };
         continue;
@@ -11962,14 +12323,19 @@ ${line}`;
     }
     return best;
   }
-  function fileNumberFormat(rows, columns) {
+  function fileNumberFormat(rows, columns, preferred = "de") {
     let de = 0, en = 0;
     for (const row of rows) for (const j of columns) {
       const v = row[j] ?? "";
-      if (parseAmountStrict(v, "de") !== null && /,\d/.test(v)) de++;
-      if (parseAmountStrict(v, "en") !== null && /\.\d/.test(v)) en++;
+      if (parseAmountStrict(v, "de") !== null) de++;
+      if (parseAmountStrict(v, "en") !== null) en++;
     }
-    return en > de ? "en" : "de";
+    return en === de ? preferred : en > de ? "en" : "de";
+  }
+  function profileDateAmbiguous(profile, rows, headerRow, layout) {
+    if (formats(profile).includes(layout.dateFormat)) return false;
+    const choices = columnDateFormats(rows.slice(headerRow + 1).map((r) => r[layout.columns.date] ?? ""));
+    return choices.includes("DD/MM/YYYY") && choices.includes("MM/DD/YYYY");
   }
   function profileLayout(profile, rows, headerRow, separator) {
     const header = headerRow >= 0 ? trimRow(rows[headerRow]) : [];
@@ -12010,8 +12376,8 @@ ${line}`;
     if (columns.date < 0) return null;
     if (columns.amount === void 0 && (columns.debit === void 0 || columns.credit === void 0)) return null;
     const amountColumns = [columns.amount, columns.debit, columns.credit].filter((i) => i !== void 0);
-    const data = rows.slice(headerRow + 1).filter((r) => r.some((v) => v.trim() !== "")).slice(0, 20);
-    const dateFormat = formats(profile).find((f) => data.some((r) => parseDate(r[columns.date] ?? "", f) !== null)) ?? formats(profile)[0];
+    const data = rows.slice(headerRow + 1).filter((r) => r.some((v) => v.trim() !== ""));
+    const dateFormat = columnDateFormats(data.map((r) => r[columns.date] ?? ""), formats(profile))[0] ?? formats(profile)[0];
     const above = rows.slice(0, Math.max(headerRow, 0)).map((r) => r.join(" ").toLowerCase());
     const name = profile.bankInPreamble?.find((n) => above.some((line) => line.includes(n.toLowerCase()))) ?? profile.bank;
     return {
@@ -12022,7 +12388,7 @@ ${line}`;
       header,
       ...profile.headerless ? { columnCount: profile.headerless.columnCount } : {},
       dateFormat,
-      numberFormat: profile.numberFormat === "either" ? fileNumberFormat(data, amountColumns) : profile.numberFormat,
+      numberFormat: fileNumberFormat(data, amountColumns, profile.numberFormat === "either" ? "de" : profile.numberFormat),
       columns,
       ...profile.skipStatus ? { skipStatus: profile.skipStatus } : {},
       ...profile.keepStatus ? { keepStatus: profile.keepStatus } : {},
@@ -12058,15 +12424,22 @@ ${line}`;
     }
     if (/^:20:/m.test(head) && /^:(61|60F|60M):/m.test(head)) return { format: "mt940" };
     const separator = detectSeparator(head);
-    const rows = splitCsv(head.slice(0, 2e5), separator);
+    const rows = splitCsv(head, separator);
     const paypalRow = rows.slice(0, 5).findIndex(isPaypalHeader);
     if (paypalRow >= 0) return { format: "paypal", separator, headerRow: paypalRow };
     const saved = savedLayoutFor(head, savedLayouts);
     if (saved) return { format: "csv", separator: saved.layout.separator, headerRow: saved.headerRow, layout: saved.layout };
-    const known = findProfile(rows, separator);
+    const known = findProfile(rows);
     const layout = known ? profileLayout(known.profile, rows, known.headerRow, separator) : null;
     if (known && layout) {
-      return { format: "csv", separator, headerRow: known.headerRow, layout, profile: { id: known.profile.id, bank: known.profile.bank } };
+      return {
+        format: "csv",
+        separator,
+        headerRow: known.headerRow,
+        layout,
+        profile: { id: known.profile.id, bank: known.profile.bank },
+        ...profileDateAmbiguous(known.profile, rows, known.headerRow, layout) ? { dateAmbiguous: true } : {}
+      };
     }
     const table = findTableStart(rows);
     return table ? { format: "csv", separator, headerRow: table.headerRow } : { format: "unknown", reason: "noTable" };
@@ -12080,6 +12453,30 @@ ${line}`;
   }
   var findKnown = (id) => BANK_PROFILES.find((p) => p.id === id);
   var bankName = (profile) => profile.variant ? `${profile.bank} (${profile.variant})` : profile.bank;
+  function dateConfirmation(rows, headerRow, layout) {
+    if (layout.profile === "volksbank" && headerRow === 0) layout = { ...layout, idStyle: "vrbank" };
+    const data = rows.slice(headerRow + 1);
+    const c = layout.columns;
+    const names2 = layout.header.length ? layout.header : Array.from({ length: layout.columnCount ?? 0 }, (_, i) => `Column ${i + 1}`);
+    const columns = names2.map((header, index) => ({
+      index,
+      header,
+      kind: index === c.date || index === c.valueDate ? "date" : [c.amount, c.debit, c.credit, c.balance, ...c.fees ?? [], ...c.addAmounts ?? []].includes(index) ? "amount" : [c.iban, c.accountIban].includes(index) ? "iban" : index === c.currency ? "currency" : index === c.sign ? "sign" : "text",
+      samples: data.map((r) => r[index] ?? "").filter(Boolean).slice(0, 3),
+      ...index === layout.columns.date ? { dateFormat: layout.dateFormat } : {}
+    }));
+    return {
+      layout,
+      confidence: 0.7,
+      unsure: ["dateFormat"],
+      missing: [],
+      separator: layout.separator,
+      header: layout.header,
+      headerRow,
+      columns,
+      preview: readTable(rows, headerRow, layout).transactions.slice(0, 5)
+    };
+  }
   function recordCounterpartyIban(record, profile) {
     if (!record || typeof record !== "object" || profile.columns.iban === void 0) return void 0;
     const names2 = [profile.columns.iban].flat().filter((name) => typeof name === "string");
@@ -12137,7 +12534,12 @@ ${line}`;
       case "mt940":
         return readMt940(text2);
       case "paypal": {
-        const table = detected.headerRow === 0 ? text2 : text2.replace(/^\uFEFF/, "").split(/\r?\n/).slice(detected.headerRow).join("\n");
+        const rows = checkedCsvRows(text2, detected.separator).slice(detected.headerRow);
+        const data = rows.slice(1).filter((r) => r.some((v) => v.trim() !== ""));
+        if (data.length === 0) throw new BankFileError("noTable", "No readable booked payments were found in this file.");
+        const width = Math.min(rows[0].length, data.reduce((n, row) => Math.max(n, row.length), 0));
+        if (data.some((r) => r.length < width)) throw new BankFileError("unknown", "A payment row is cut off or has missing columns. Download the file again.");
+        const table = rows.map((row) => row.map((v) => `"${v.replace(/"/g, '""')}"`).join(",")).join("\n");
         const parsed = parsePaypalCsv2(table);
         return {
           format: "paypal",
@@ -12147,11 +12549,27 @@ ${line}`;
         };
       }
       case "csv": {
+        const rows = checkedCsvRows(text2, detected.separator);
         const { layout, profile } = detected;
         const known = profile ? findKnown(profile.id) : void 0;
-        if (known?.reader === "vrbank" && detected.headerRow === 0) return readVrBank(text2, known);
+        if (layout && detected.dateAmbiguous) {
+          return { format: "csv", transactions: [], needsLayout: dateConfirmation(rows, detected.headerRow, layout) };
+        }
+        if (known?.reader === "vrbank" && detected.headerRow === 0 && layout) {
+          const checked4 = readTable(rows, detected.headerRow, layout);
+          const c = layout.columns;
+          const kept = rows.filter((r, i) => i === 0 || parseDate(r[c.date] ?? "", layout.dateFormat) !== null && parseAmountStrict(r[c.amount] ?? "", layout.numberFormat) !== null);
+          const changedDates = layout.dateFormat === "DD/MM/YYYY";
+          if (changedDates) for (let i = 1; i < kept.length; i++) {
+            kept[i] = [...kept[i]];
+            for (const j of [c.date, c.valueDate]) if (j !== void 0) {
+              kept[i][j] = parseDate(kept[i][j] ?? "", layout.dateFormat) ?? "";
+            }
+          }
+          const compatible = changedDates || kept.length !== rows.length || detected.separator === "	" || detected.separator === "|" ? kept.map((row) => row.map((v) => `"${v.replace(/"/g, '""')}"`).join(";")).join("\n") : text2;
+          return { ...readVrBank(compatible, known), skipped: checked4.skipped };
+        }
         if (layout) {
-          const rows = splitCsv(text2.replace(/^\uFEFF/, ""), layout.separator);
           const file = readTable(rows, detected.headerRow, layout);
           return known ? { ...file, bank: { id: known.id, name: bankName(known) } } : file;
         }
@@ -12248,12 +12666,28 @@ ${line}`;
   function readingsOfUnknownText(text2, savedLayouts = []) {
     const clean2 = text2.replace(/^\uFEFF/, "");
     const detected = detectBankFile(clean2, savedLayouts);
-    if (detected.format !== "csv" || detected.layout) return [];
+    if (detected.format !== "csv") return [];
+    if (detected.layout) {
+      if (!detected.dateAmbiguous) return [];
+      const rows2 = checkedCsvRows(clean2, detected.separator);
+      const first = dateConfirmation(rows2, detected.headerRow, detected.layout).layout;
+      return [first, { ...first, dateFormat: OTHER_DAY_ORDER[first.dateFormat] }].map((layout, i) => ({
+        layout,
+        reason: i === 0 ? null : "dateFormat",
+        preview: readTable(rows2, detected.headerRow, layout).transactions.slice(0, PREVIEW_PAYMENTS)
+      }));
+    }
     const { guess, columns, rows, payments: guessed } = analyseCsv(clean2);
     if (!guess.layout) return [];
     const read2 = (layout) => {
       const start = findTable(rows, layout);
-      return start === null ? [] : readTable(rows, start, layout).transactions;
+      if (start === null) return [];
+      try {
+        return readTable(rows, start, layout).transactions;
+      } catch (error) {
+        if (error instanceof BankFileError) return [];
+        throw error;
+      }
     };
     const candidates = [
       { layout: guess.layout, reason: null, payments: guessed },
