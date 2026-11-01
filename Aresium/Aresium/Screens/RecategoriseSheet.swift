@@ -2,10 +2,9 @@ import SwiftUI
 import UIKit
 
 /// Switch or Add for one payment. Like every iOS edit sheet, Cancel is top left and Save top right (brief 36, Patrik's
-/// phone test: Save at the bottom was far from a category at the top), in ink like the app's other sheets; in Add mode
-/// "Save & remove from current" follows the choices as the quiet second answer. After a Switch in phone mode the
-/// merchant's other payments are asked about before the sheet closes. Under "Currently in" one quiet line says why the
-/// payment is there (brief 47, from the payment's page). Opened from the payment's page (its category's chip or pen, an
+/// phone test: Save at the bottom was far from a category at the top), in ink like the app's other sheets. Save in
+/// Add first asks whether to remove the current category, then asks about the shop's other payments when applicable.
+/// Under "Currently in" one quiet line says why the payment is there (brief 47, from the payment's page). Opened from the payment's page (its category's chip or pen, an
 /// extra category's chip at Add) or from its row's long press (brief 41), which opens it before the payment has loaded.
 /// In phone mode the grid ends with two quiet action tiles, for money out and money in alike: Other category… (brief 70,
 /// while the other side has a category not offered here: Apple's menu of them, picked into the grid with Save storing it
@@ -61,11 +60,6 @@ struct RecategoriseSheet: View {
                             Text(error).foregroundStyle(palette.expenseText).accessibilityIdentifier("recategorisationError")
                             Button("Retry") { Task { await store.retrySave() } }.disabled(!store.canSave)
                         }
-                        if store.mode == .add {
-                            Button("Save & remove from current") { Task { await store.save(dropCurrent: true) } }
-                                .buttonStyle(QuietButtonStyle())
-                                .disabled(!store.canRemoveCurrent)
-                        }
                     }
                     .padding(20)
                     .font(AppFont.text(14)).foregroundStyle(palette.ink)
@@ -106,26 +100,22 @@ struct RecategoriseSheet: View {
         .environment(\.font, nil)
         .tourCard()
         .tint(palette.ink)
-        .interactiveDismissDisabled(store.isSaving || store.followUp != nil || store.newCategory.isMaking)
-        // Phone mode, after a Switch: the merchant's other payments, as a short centred question. The count is on the
-        // button, so every sentence reads right for one payment or many.
-        .alert(followUpTitle, isPresented: followUpShown, presenting: store.followUp) { followUp in
-            Button("Move \(followUp.count) more") { store.answer(moveOthers: true) }
-            Button("Only this one", role: .cancel) { store.answer(moveOthers: false) }
-        } message: { followUp in
-            Text("From now on, payments from \(followUp.shop) go to \(followUp.category).")
+        .interactiveDismissDisabled(store.isSaving || store.followUp != nil || store.removeCurrentQuestion != nil || store.newCategory.isMaking)
+        .alert(Text(verbatim: store.question?.title ?? ""),
+               isPresented: Binding(get: { store.question != nil }, set: { _ in }),
+               presenting: store.question) { question in
+            switch question {
+            case let .remove(question):
+                Button(question.removeTitle()) { Task { await store.answerRemoveCurrent(remove: true) } }
+                Button(question.keepTitle(), role: .cancel) { Task { await store.answerRemoveCurrent(remove: false) } }
+            case let .merchant(followUp):
+                Button(followUp.wording.allTitle()) { store.answer(moveOthers: true) }
+                Button(followUp.wording.onlyTitle(), role: .cancel) { store.answer(moveOthers: false) }
+            }
+        } message: { question in
+            if let message = question.message { Text(verbatim: message) }
         }
         .tint(palette.ink)      // the question's buttons in ink, as the sheet's
-    }
-
-    private var followUpTitle: Text {
-        guard let followUp = store.followUp else { return Text(verbatim: "") }
-        return Text("Also the other payments from \(followUp.shop)?")
-    }
-
-    private var followUpShown: Binding<Bool> {
-        // After a button the answer is already taken, so a dismissal that follows answers nothing twice.
-        Binding(get: { store.followUp != nil }, set: { shown in if !shown { store.answer(moveOthers: false) } })
     }
 
     /// The grid's last tile (brief 60): the category tiles' size, quiet ink and the line's thin outline, no category

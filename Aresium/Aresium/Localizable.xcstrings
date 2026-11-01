@@ -4482,16 +4482,6 @@
         }
       }
     },
-    "Save & remove from current" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Speichern & aus aktueller entfernen"
-          }
-        }
-      }
-    },
     "Saved: cash received." : {
       "localizations" : {
         "de" : {
@@ -6246,6 +6236,234 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "“%1$@” is your name for every payment from %2$@."
+          }
+        }
+      }
+    },
+    "Also add %@ and remove %@ for the other %lld payments from %@?" : {
+      "localizations" : {
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Bei der anderen %3$lld Buchung von %4$@ auch %1$@ hinzufügen und %2$@ entfernen?"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Bei den anderen %3$lld Buchungen von %4$@ auch %1$@ hinzufügen und %2$@ entfernen?"
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Also add %@ and remove %@ for the other %lld payment from %@?"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Also add %@ and remove %@ for the other %lld payments from %@?"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Also add %@ and remove %@ for the other %lld payments from these %lld shops?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bei den anderen %3$lld Buchungen von diesen %4$lld Geschäften auch %1$@ hinzufügen und %2$@ entfernen?"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Also add %@ and remove %@ for the other %lld payments from these %lld shops?"
+          }
+        }
+      }
+    },
+    "Also add %@ to the other %lld payments from %@?" : {
+      "localizations" : {
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%1$@ auch zu der anderen %2$lld Buchung von %3$@ hinzufügen?"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%1$@ auch zu den anderen %2$lld Buchungen von %3$@ hinzufügen?"
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Also add %@ to the other %lld payment from %@?"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Also add %@ to the other %lld payments from %@?"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Also add %@ to the other %lld payments from these %lld shops?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ auch zu den anderen %2$lld Buchungen von diesen %3$lld Geschäften hinzufügen?"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Also add %@ to the other %lld payments from these %lld shops?"
+          }
+        }
+      }
+    },
+    "Also remove %@ from the other %lld payments from %@?" : {
+      "localizations" : {
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%1$@ auch bei der anderen %2$lld Buchung von %3$@ entfernen?"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%1$@ auch bei den anderen %2$lld Buchungen von %3$@ entfernen?"
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Also remove %@ from the other %lld payment from %@?"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Also remove %@ from the other %lld payments from %@?"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Also remove %@ from the other %lld payments from these %lld shops?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ auch bei den anderen %2$lld Buchungen von diesen %3$lld Geschäften entfernen?"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Also remove %@ from the other %lld payments from these %lld shops?"
+          }
+        }
+      }
+    },
+    "Also remove from %@?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auch aus %@ entfernen?"
+          }
+        }
+      }
+    },
+    "Also remove them from %@?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auch aus %@ entfernen?"
+          }
+        }
+      }
+    },
+    "Keep both" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beide behalten"
+          }
+        }
+      }
+    },
+    "Only these" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nur diese"
+          }
+        }
+      }
+    },
+    "Then it counts only under %@." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dann zählt sie nur unter %@."
+          }
+        }
+      }
+    },
+    "Then they count only under %@." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dann zählen sie nur unter %@."
           }
         }
       }

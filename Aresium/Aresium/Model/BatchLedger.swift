@@ -28,16 +28,18 @@ nonisolated final class BatchSaveObserver: @unchecked Sendable {
 
 nonisolated enum BatchLedgerAction: Sendable {
     case switchCategory(String), addCategory(String), rename(String, BatchRenameScope)
+    case editCategories(added: [String], removed: [String], dropCurrent: String?)
     var kind: BatchChangeKind {
         switch self {
         case .switchCategory: .switchCategory
-        case .addCategory: .addCategory
+        case .addCategory, .editCategories: .addCategory
         case .rename: .rename
         }
     }
     var category: String? {
         switch self {
         case let .switchCategory(name), let .addCategory(name): name
+        case let .editCategories(added, _, _): added.first
         case .rename: nil
         }
     }
@@ -59,6 +61,12 @@ nonisolated struct BatchFollowUpPlan: Sendable {
     let categoryName: String
     let shopCount: Int
     let shop: String?
+    var added: [String] = []
+    var removed: [String] = []
+    var addedNames: [String] = []
+    var removedNames: [String] = []
+    var selectedCount = 1
+    var changesExtras: Bool { !added.isEmpty || !removed.isEmpty }
 }
 
 nonisolated struct BatchLedgerResult: Sendable {
@@ -95,20 +103,55 @@ extension PhoneLedger {
             target = id
         } else { target = nil }
 
+        // Add may switch just the rows in the list's current category, plus any unsorted rows.
+        let edit: (added: [String], removed: [String], drop: String?)?
+        switch action {
+        case let .addCategory(name): edit = ([name], [], nil)
+        case let .editCategories(added, removed, drop): edit = (added, removed, drop)
+        default: edit = nil
+        }
+        func categoryIDs(_ names: [String]) throws -> [String] {
+            try names.map {
+                guard let id = list.id(named: $0), id != CategoryCatalog.ownTransfers else { throw LedgerError.notFound }
+                return id
+            }
+        }
+        let added = try categoryIDs(edit?.added ?? []), removed = try categoryIDs(edit?.removed ?? [])
+        let drop: String?
+        if let name = edit?.drop {
+            guard let id = list.id(named: name) else { throw LedgerError.notFound }
+            drop = id
+        } else { drop = nil }
+        let switchingPayments: [LedgerPayment]
+        let switchingReceipts: [LedgerReceipt]
+        if case .switchCategory = action {
+            switchingPayments = selected.payments
+            switchingReceipts = selected.receipts
+        } else if edit != nil, let target {
+            switchingPayments = selected.payments.filter {
+                $0.category != target && ($0.category == nil || (drop != nil && $0.category == drop))
+            }
+            switchingReceipts = selected.receipts.filter {
+                $0.category != target && ($0.category == nil || (drop != nil && $0.category == drop))
+            }
+        } else { switchingPayments = []; switchingReceipts = [] }
+        let switching = Set(switchingPayments.map(\.id) + switchingReceipts.map(\.id))
         var learned: [String: String] = [:]
         var snapshot: ShopSnapshot?
-        switch action {
-        case .switchCategory:
-            var corrections = selected.payments.map { $0.sorting(raw: false) }
-            corrections += selected.receipts.filter { $0.kind == .receipt && $0.category != target }.compactMap { receipt in
+        if !switching.isEmpty {
+            var corrections = switchingPayments.map { $0.sorting(raw: false) }
+            corrections += switchingReceipts.filter { $0.kind == .receipt && $0.category != target }.compactMap { receipt in
                 guard let shop = receipt.shop, !shop.isEmpty else { return nil }
                 return SortingPayment(counterparty: shop, description: shop, source: "bank", account: "receipt",
                                       amount: -receipt.totalValue, currency: receipt.currency, date: receipt.date)
             }
             learned = try await engine.learn(corrections, categoryID: target!)
             snapshot = try await shopSnapshot(engine: engine)
-        case .rename(_, .shops): snapshot = try await shopSnapshot(engine: engine)
-        case .addCategory, .rename(_, .payments): break
+        } else {
+            switch action {
+            case .rename(_, .shops), .addCategory, .editCategories: snapshot = try await shopSnapshot(engine: engine)
+            default: break
+            }
         }
         // Do not apply an answer computed from rows changed while the engine was working.
         guard observer.value == revision else { throw BatchChangeError.changed }
@@ -118,40 +161,55 @@ extension PhoneLedger {
         var changed = BatchCounts(), skipped = BatchCounts()
         var followUp: BatchFollowUpPlan?
         do {
-            switch action {
-            case let .switchCategory(name):
-                for payment in payments where ids.contains(payment.id) {
+            // Both Switch and Add/Remove use this same mutation, learning and shop-follow-up path.
+            for payment in payments where switching.contains(payment.id) {
+                payment.category = target
+                payment.categorySource = CategorySource.manual.rawValue
+                payment.extraCategories.removeAll { $0 == target }
+                changed.bankPayments += 1
+            }
+            for receipt in receipts where switching.contains(receipt.id) {
+                receipt.category = target
+                receipt.categorySource = CategorySource.manual.rawValue
+                if receipt.kind == ReceiptKind.manual.rawValue { changed.cashEntries += 1 }
+                else { changed.receipts += 1 }
+                if let paymentID = receipt.paymentID, let payment = byID[paymentID],
+                   payment.categorySource == CategorySource.receipt.rawValue {
                     payment.category = target
-                    payment.categorySource = CategorySource.manual.rawValue
                     payment.extraCategories.removeAll { $0 == target }
-                    changed.bankPayments += 1
                 }
-                for receipt in receipts where ids.contains(receipt.id) {
-                    receipt.category = target
-                    receipt.categorySource = CategorySource.manual.rawValue
-                    if receipt.kind == ReceiptKind.manual.rawValue { changed.cashEntries += 1 }
-                    else { changed.receipts += 1 }
-                    if let paymentID = receipt.paymentID, let payment = byID[paymentID],
-                       payment.categorySource == CategorySource.receipt.rawValue {
-                        payment.category = target
-                        payment.extraCategories.removeAll { $0 == target }
-                    }
+            }
+            try batchRemember(learned)
+            if !switching.isEmpty, let snapshot, let target {
+                followUp = batchFollowUp(snapshot, learnedKeys: Set(learned.keys), excluding: ids,
+                                         target: target, name: action.category ?? "")
+            }
+            switch action {
+            case .switchCategory: break
+            case .addCategory, .editCategories:
+                for receipt in selected.receipts where !switching.contains(receipt.id) {
+                    if receipt.kind == .manual { skipped.cashEntries += 1 } else { skipped.receipts += 1 }
                 }
-                try batchRemember(learned)
-                if let snapshot {
-                    followUp = batchFollowUp(snapshot, learnedKeys: Set(learned.keys), excluding: ids,
-                                             target: target!, name: name)
-                }
-            case .addCategory:
-                skipped = BatchCounts(receipts: selected.receipts.filter { $0.kind == .receipt }.count,
-                                      cashEntries: selected.receipts.filter { $0.kind == .manual }.count)
                 for payment in payments where ids.contains(payment.id) {
-                    guard payment.category != target, !payment.extraCategories.contains(target!) else {
-                        skipped.bankPayments += 1
-                        continue
+                    let old = payment.extraCategories
+                    payment.extraCategories.removeAll { removed.contains($0) || $0 == payment.category }
+                    for category in added where category != payment.category && !payment.extraCategories.contains(category) {
+                        payment.extraCategories.append(category)
                     }
-                    payment.extraCategories.append(target!)
-                    changed.bankPayments += 1
+                    if !switching.contains(payment.id) {
+                        if payment.extraCategories == old { skipped.bankPayments += 1 }
+                        else { changed.bankPayments += 1 }
+                    }
+                }
+                if switching.isEmpty, let snapshot, let edit {
+                    let adding = zip(added, edit.added).filter { category, _ in
+                        selected.payments.contains { $0.category != category && !$0.extraCategories.contains(category) }
+                    }
+                    let removing = zip(removed, edit.removed).filter { category, _ in
+                        selected.payments.contains { $0.extraCategories.contains(category) }
+                    }
+                    followUp = extrasFollowUp(snapshot, selected: ids, added: adding.map(\.0), removed: removing.map(\.0),
+                                              addedNames: adding.map(\.1), removedNames: removing.map(\.1))
                 }
             case let .rename(name, scope):
                 skipped = BatchCounts(receipts: selected.receipts.filter { $0.kind == .receipt }.count,
@@ -230,6 +288,32 @@ extension PhoneLedger {
                                  shop: shops.count == 1 ? shops.first.flatMap { titles[$0] } : nil)
     }
 
+    /// Extras may change manual and receipt-set bank rows too; they never change the primary or learn rules.
+    private func extrasFollowUp(_ snapshot: ShopSnapshot, selected: Set<String>, added: [String], removed: [String],
+                                addedNames: [String], removedNames: [String]) -> BatchFollowUpPlan? {
+        let identities = Set(zip(snapshot.payments, snapshot.paymentKeys).compactMap { payment, key in
+            selected.contains(payment.id) && !key.isEmpty ? snapshot.shops.identity(key) : nil
+        }.filter { !$0.isEmpty })
+        var ids = Set<String>(), shops = Set<String>(), titles: [String: String] = [:]
+        for (payment, key) in zip(snapshot.payments, snapshot.paymentKeys) {
+            let identity = snapshot.shops.identity(key)
+            guard !key.isEmpty, identities.contains(identity) else { continue }
+            titles[identity] = payment.place
+            guard !selected.contains(payment.id), payment.category != CategoryCatalog.ownTransfers,
+                  payment.categorySource != .structural else { continue }
+            if added.contains(where: { $0 != payment.category && !payment.extraCategories.contains($0) })
+                || removed.contains(where: { payment.extraCategories.contains($0) }) {
+                ids.insert(payment.id)
+                shops.insert(identity)
+            }
+        }
+        guard !ids.isEmpty else { return nil }
+        return BatchFollowUpPlan(ids: ids, keys: [], target: "", categoryName: addedNames.first ?? removedNames.first ?? "",
+                                 shopCount: shops.count, shop: shops.count == 1 ? shops.first.flatMap { titles[$0] } : nil,
+                                 added: added, removed: removed, addedNames: addedNames, removedNames: removedNames,
+                                 selectedCount: snapshot.payments.filter { selected.contains($0.id) }.count)
+    }
+
     func batchRenameInfo(ids: Set<String>, engine: AresiumEngine) async throws -> BatchRenameInfo {
         let observer = batchObserver(), revision = observer.value
         let before = try batchSnapshot()
@@ -258,11 +342,20 @@ extension PhoneLedger {
         guard try canUndoBatch(token) else { throw BatchChangeError.changed }
         do {
             for payment in try modelContext.fetch(FetchDescriptor<StoredPayment>()) where plan.ids.contains(payment.id) {
-                payment.category = plan.target
-                payment.categorySource = CategorySource.learned.rawValue
-                payment.extraCategories.removeAll { $0 == plan.target }
+                if plan.changesExtras {
+                    payment.extraCategories.removeAll { plan.removed.contains($0) }
+                    for category in plan.added where category != payment.category && !payment.extraCategories.contains(category) {
+                        payment.extraCategories.append(category)
+                    }
+                } else {
+                    payment.category = plan.target
+                    payment.categorySource = CategorySource.learned.rawValue
+                    payment.extraCategories.removeAll { $0 == plan.target }
+                }
             }
-            try batchRemember(Dictionary(uniqueKeysWithValues: plan.keys.map { ($0, plan.target) }))
+            if !plan.changesExtras {
+                try batchRemember(Dictionary(uniqueKeysWithValues: plan.keys.map { ($0, plan.target) }))
+            }
             try modelContext.save()
         } catch { modelContext.rollback(); throw error }
         let observer = batchObserver()

@@ -177,6 +177,7 @@ struct CategorySideTests {
         #expect(try await phone.export() == before)
         window.pickFromOtherSide(name)
         await window.save()
+        if window.removeCurrentQuestion != nil { await window.answerRemoveCurrent(remove: false) }
         #expect(window.saveError == nil)
         #expect(try await phone.categories().hasOtherSide(id))
         let saved = try #require(try await phone.ledger.payment(window.paymentID))
@@ -193,6 +194,7 @@ struct CategorySideTests {
         window.pickFromOtherSide("Selling things")
         window.select("Selling things")
         await window.save()
+        if window.removeCurrentQuestion != nil { await window.answerRemoveCurrent(remove: false) }
         #expect(window.saveError == nil)
         #expect(try await !phone.categories().hasOtherSide("selling-things"))
     }
@@ -266,6 +268,7 @@ struct CategorySideTests {
         #expect(made.side == (income ? "income" : "spend"))
         #expect(window.extras == ["Fictional addition"])
         await window.save()
+        if window.removeCurrentQuestion != nil { await window.answerRemoveCurrent(remove: false) }
         #expect(window.saveError == nil)
         #expect(try await phone.ledger.payment(window.paymentID)?.extraCategories == [made.id])
     }
