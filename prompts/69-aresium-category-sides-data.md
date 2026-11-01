@@ -1,6 +1,6 @@
 # 69: Every category has a side: the app's data and choices
 
-Status: running (Codex, 2026-11-01)
+Status: merged 2026-11-01 (660 Aresium tests pass; schema 6, export 5; existing stores keep their menus)
 Branch: `codex/69-category-sides` · Worktree: `../empire-ios-69-category-sides` · Model: `gpt-6.1-sol`, effort `high`
 · The screens follow in brief 70 (a Claude agent), on this brief's API.
 
