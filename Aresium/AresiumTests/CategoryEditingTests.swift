@@ -323,10 +323,11 @@ struct CategoryEditingTests {
         #expect(own.title(language: .english) == "Delete Hobby?")
         #expect(own.title(language: .german) == "Hobby löschen?")
         #expect(own.message(language: .english) == "Its 1 payment is sorted again. Those Aresium can't sort go to Not sorted.")
-        #expect(own.message(language: .german) == "Seine 1 Buchung wird neu sortiert. Was Aresium nicht sortieren kann, kommt zu Nicht sortiert.")
+        #expect(own.message(language: .german) == "Die Buchung darin wird neu sortiert. Was Aresium nicht sortieren kann, kommt zu Nicht sortiert.")
         let standard = CategoryRemoval(id: "friends", name: "Freunde", count: 12)
         #expect(standard.title(language: .german) == "Freunde entfernen?")
-        #expect(standard.message(language: .german).hasSuffix("Du kannst sie jederzeit wieder anhaken."))
+        #expect(standard.message(language: .german).hasPrefix("Die 12 Buchungen darin werden neu sortiert."))
+        #expect(standard.message(language: .german).hasSuffix("Du kannst die Kategorie jederzeit wieder anhaken."))
         #expect(CategoryRemoval(id: "custom-fake", name: "Hobby", count: 0).message(language: .english).isEmpty)
         #expect(CategoryRemoval(id: "friends", name: "Friends", count: 0).message(language: .english) == "You can tick it again any time.")
     }
