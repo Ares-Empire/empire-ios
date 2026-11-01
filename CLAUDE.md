@@ -230,9 +230,13 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
    back swipe and the comfort items (briefs 38–41). Build 4 (2026-10-30 evening): own names and the name's page with the
    left swipe, the graph as a setting, Aresium's own messages (briefs 42–46). Build 5 (2026-10-30 night): the payment page with pens, switches readable in
    dark, no cover flash, one shop under changing names, adding up names in a list (briefs 47, 48, 53, 54). Build 6 (2026-10-31): day tiles as dates, the name's months as pages, Settings' work off the main thread, the graph read by sliding and moving away, the header without boxes, the add-up icon fixed (briefs 55–57, fix 58). Build 7 (2026-10-31 evening): the tour in one walk of 18 steps over everything above (brief 59). Build 8 (2026-10-31 night): New category in the change window, the receipt window and Add cash (brief 60). Build 9 (2026-11-01): every category has a side (own categories for income too, "Andere Kategorie …" offers one of the other side, side and offers in Settings → Categories), and every payment counts as it happened, money out as Ausgaben and money in as Einnahmen under its own category (briefs 68–71). **Arestemis 0.1 (1) uploaded 2026-10-30** (after its comfort items, brief 49). Arestemis build 2 (2026-10-31 evening): Patrik's fine-tuning rounds 1–3, no "KI" anywhere, "Suche starten", no one-account line on the login (`docs/reviews/2026-10-31-arestemis-phone-test.md`). Arestemis build 3 (2026-10-31 night): Settings → Application as rows with the switch, notes and About you pages, settings loaded with the home screen, ImmoScout24 known to the app, "Suche läuft" (briefs 61, 62). Arestemis build 4 (2026-11-01 night): the black corner on the hunt's card (the glass card's blur no longer drawn offscreen, brief 67), German tabs Suche / Angebote / Filter. **Aresus 0.1 (1) uploaded 2026-10-31 21:16** (98 tests; the
-   Aresync tab included; Arestemis's outage alerts come from the aresus server, brief 64, no app change). The other
-   two (Arestoteles, Empire) have their comfort items merged (briefs 51–52) and wait only for
-   `scripts/testflight.sh <App>`. Their App Store Connect records exist (Patrik, 2026-10-30: Arestemis, Aresus, Arestoteles, Ares Empire),
+   Aresync tab included; Arestemis's outage alerts come from the aresus server, brief 64, no app change). **Empire 0.1
+   (1) uploaded 2026-11-01 02:13** (306 tests; the uploaded build carries `aps-environment` production) and **Arestoteles
+   0.1 (1) uploaded 2026-11-01 02:25** (156 tests; the bust without the watermark, brief 72; Spotlight and backup fixes,
+   brief 74), after a check of what differs between the simulator and the phone (brief 73: no blocker; its three fixes
+   in brief 74, whose Empire part, a notification's tap closing Settings, ships with Empire build 2; later: Preview
+   Content and samples are bundled in Release builds of all apps, and a failed write of Arestoteles's quick-note queue
+   is not reported). So all five apps reach Patrik's iPhone. App Store Connect records (Patrik, 2026-10-30: Arestemis, Aresus, Arestoteles, Ares Empire),
    each with an internal group that gets every build automatically (Arestemis's checked: Patrik as tester). Original
    list: set the paid team (project level, all five projects; done); the App Groups
    `group.de.ares-empire.aresium` + `group.de.ares-empire.shared` registered for the bundle ids, the widgets' too
@@ -262,9 +266,9 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
    Patrik, one key for all apps), on the server as `/etc/empire-push/AuthKey_22BDWZ79KS.p8` (empire-push, 600), settings
    in `/root/ares-empire/push/.env` (600); `/health` says `"dry_run": false`. A copy is in the Mac's Keychain (generic
    password "Ares Empire APNs key (base64 of AuthKey_22BDWZ79KS.p8)", restore with `security find-generic-password -s
-   '<that name>' -w | base64 -d`); Apple never offers the file again. Left: enable the Push Notifications
-   capability for Arestemis, Aresus and the Empire app, Time Sensitive for Arestemis and Aresus (entitlements are
-   already in the projects). **Arestemis's push works on Patrik's iPhone** (test notification 2026-10-31), so its Telegram copy is off since
+   '<that name>' -w | base64 -d`); Apple never offers the file again. The Push Notifications capability (and Time
+   Sensitive for Arestemis and Aresus) came with automatic signing: the uploaded Arestemis, Aresus and Empire builds
+   carry `aps-environment` production. **Arestemis's push works on Patrik's iPhone** (test notification 2026-10-31), so its Telegram copy is off since
    2026-10-31 (`TELEGRAM_*` in /root/Arestemis/.env commented out). Left: check on the phone the Empire app ("<App> is
    ready" for a member's account, its tap showing the ring). Aresus works on the phone (test push 2026-11-01), so
    Aresync's Telegram is retired (aresync e10dc07: the code is gone; `TG_*` commented out on the Mac and the server). Aresium's own bot (`aresium-bot.service`, its `current` command) was stopped and disabled 2026-10-30
@@ -274,8 +278,10 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
 8. **Build 2026-10-24 record:** `docs/build-2026-10-24/STATUS.md` (what was built, decisions, live tests). Built after the main work: the Aresus
    widget and the hub's live lines from Aresus.
 9. **Arestoteles on the phone:** check the Discuss hand-off (`DiscussPrompt.target`, now `https://claude.ai/code`: does
-   the Claude app open, and how to start a session there with the copied prompt); replace the bust (the website's
-   `aristotle-bust.png` has a faint "Magnific" watermark); a widget with a position to revisit (needs a widget target).
+   the Claude app open, and how to start a session there with the copied prompt); ~~replace the bust~~ (done
+   2026-11-01, brief 72: the hub's clean `arestoteles_transparent.png` in the icon, the app, arestoteles.de and the
+   hub's ring mark; `showcase/` still shows the old one until `scripts/showcase.py` runs again); a widget with a
+   position to revisit (needs a widget target).
 10. ~~Light mode~~: built 2026-10-25 (section "Light mode"). On the phone, check both looks once TestFlight runs
    (the iPhone switching by itself in the evening while an app is open, the widgets on a light and a dark home screen).
 11. **Aresync file sharing from the phone** (Patrik, 2026-10-25): on hold; Patrik will say what it should do when it
