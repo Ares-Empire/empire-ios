@@ -1,6 +1,6 @@
 # 70: Every category has a side: the screens
 
-Status: running (a Claude agent, 2026-11-01)
+Status: merged 2026-11-01 (672 Aresium tests pass with brief 71 merged in; the list is Apple's menu, Settings' side a quiet line that is a menu, no mark on tiles brought in)
 Branch: `claude/70-category-sides` · Worktree: `../empire-ios-70-category-sides` · Built by: a Claude agent (the look
 and flow of the change window and Settings → Categories) · Simulator: `claude-70`
 

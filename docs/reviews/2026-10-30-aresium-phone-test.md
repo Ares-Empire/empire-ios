@@ -207,3 +207,14 @@ that way is best overall and easier because we dont rely on matching." So every 
 it went, under its own category; nothing is subtracted (only a withdrawal's cash covered by receipts still moves to the
 receipt's category). "Rückerstattungen" goes: money back shows under Einnahmen with its category's name. Brief 71
 (engine, Codex); the sides only decide the menus.
+
+**In build 9** (2026-11-01): briefs 68–71. Every category has a side. On an income payment the change window now
+offers "Neue Kategorie" (made as an income category) and "Andere Kategorie …": a menu of the spending categories
+(Freunde for a friend's payback); one picked there is offered for money in from then on, and a long press on its tile
+takes it back ("Nicht für Einnahmen"). The same works the other way on a purchase. Settings → Kategorien shows each own
+category's side under its name (a menu: Ausgaben, Einnahmen, "Auch für Einnahmen/Ausgaben"), says when a category is
+offered the other way too, and the add row asks the side. Bargeld eintragen and the receipt window offer the categories
+of their side. Counting: every payment once, as it happened (money out Ausgaben, money in Einnahmen, under its own
+category; "Rückerstattungen" gone; a Zalando return shows as spent and received). Existing data keeps its menus:
+own categories got the side their money gave them, and a spending category that counted as income (Freunde) stays
+offered for money in.
