@@ -651,15 +651,58 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   restore of schemas 1–4 assigns them after all payments and receipts are present. `PhoneCategoryList.offered(for:includingTransfers:)` is the shared menu rule: home categories, transfers when requested, then other-home categories
   with `otherSide`; receipts and cash omit transfers and append Not sorted. The dashboard's engine `pick` has the same
   membership, ordered by its totals. New category requires `CategorySide` in `PhoneBackend.addCustom(named:side:)`:
-  change window follows the payment, receipt uses spending, Add cash follows Spent/Received; Settings accepts a side
-  (the existing screen passes spending until brief 70). `setSide(_:of:)` changes one's own home and keeps the old
+  change window follows the payment, receipt uses spending, Add cash follows Spent/Received; Settings → Categories the
+  add row's side (brief 70). `setSide(_:of:)` changes one's own home and keeps the old
   direction offered if it holds primary payments or receipts/entries; `setOtherSide(_:for:)` changes a chosen
   non-transfer's additional offer. `ChosenCategory` equality includes both fields, so dashboard invalidation notices.
   `TransactionDetailStore.otherSideChoices` lists unused other-home choices; `pickFromOtherSide` picks locally and shows
   it last before the tiles. Save stores `otherSide` for the picks actually saved (Switch and Add); Cancel stores nothing.
   `stopOffering` removes an additional offer immediately, except a home or current category. The tour uses its own
-  store and the same APIs. No new screen text. Tests: `CategorySideTests`, updated `NewCategoryInChangeTests` and
+  store and the same APIs. Tests: `CategorySideTests`, updated `NewCategoryInChangeTests` and
   `NewCategoryInWindowsTests`.
+  **Category sides on screen** (brief 70, Patrik 2026-11-01: own categories for income too, menus not bloated, "if
+  category A is on expenses but also has incomes then it should be addable not just switchable"; a side only decides
+  where a category is offered, and since brief 71 every payment counts in the direction it went, so no screen explains
+  any effect on totals). Words in one place, `Model/CategorySideWording.swift` (both languages, tested); the German uses
+  the app's terms (money in = Einnahmen, money out = Ausgaben: "Geldeingänge" wrapped in the context menu). **The
+  change window** (`RecategoriseSheet`): the grid ends with two quiet action tiles in brief 60's look (`ActionTile`: the
+  tiles' size, the second ink, the line's thin outline, no category colour), for money in and money out alike, in
+  Switch and Add, phone mode only: **Other category…** / "Andere Kategorie …" (`square.grid.2x2`; the two-arrow symbol
+  looked like Own transfers' tile beside it), only while `otherSideChoices` is not empty
+  (`TransactionDetailStore.offersOtherCategory`), then New category, last as before. Other category… is Apple's menu
+  (not a sheet: tried with every default ticked, 30 spending categories for money in, it scrolls as iOS's menus do and
+  stays readable, and it spares a third sheet over the payment's page and the window): one quiet header line, "From
+  spending" / "Aus den Ausgaben" for money in, "From income" / "Aus den Einnahmen" for money out (`otherSideListLine`),
+  then the categories in the engine's order, each with its symbol in its own colour (`CategoryMenuIcon`: a UIKit image
+  drawn as it is, since a menu draws plain symbols in its own ink), `menuOrder(.fixed)` so the header stays on top when
+  it opens upwards. Picking one closes it and shows the category before the action tiles, picked
+  (`pickFromOtherSide`); Save stores it as offered here (brief 69). **Taking one back:** a tile offered here only from
+  the other side (stored, or picked in this opening; never this side's own, a transfer or the payment's current
+  category, `offeredFromOtherSide`) has Apple's context menu with one entry, "Not for money in" / "Nicht für
+  Einnahmen" (or "Not for money out" / "Nicht für Ausgaben", `stopOfferingEntry`, `minus.circle`); every other tile has
+  no long press. It stores at once (`stopOffering`); one picked in this opening only leaves the window, nothing stored.
+  No mark on such tiles: in the grid they read as categories like the rest, and the person put them there; the long
+  press is the only difference. **Settings → Categories** (`CategoryPickerScreen`, also after an import and in the
+  tour's Settings): one's own rows say their side in a quiet line under the name ("Spending" / "Ausgaben", "Income" /
+  "Einnahmen", 12 pt muted, the up-down chevron), which is Apple's menu: the two sides (`setSide`) and, after a divider,
+  "Also for money in" (or out) as a tick (`setOtherSide`). A ticked row offered on the other side too says so in the same
+  quiet line ("Also for money in" / "Auch für Einnahmen", or "Also for money out" / "Auch für Ausgaben"), for default
+  and own categories; that line is the same menu. Every ticked row but a transfer's has the same choices on its long
+  press (Apple's context menu; a default row only the tick); an unticked row and a transfer's none
+  (`CategoryGroup.Item`: `side`, `otherSide`, `canOfferOtherSide`, `choosesSide`, `showsOtherSide`). The line's menu is
+  laid over the row where a hidden copy of the line stands (`SideLineAnchor`, `overlayPreferenceValue`): inside the row's
+  button the button took its tap and ticked the row off (seen with real taps). The menus' tick is Apple's toggle
+  (`.toggleStyle(.automatic)`): Settings' `EmpireSwitchStyle` drew it greyed in a menu. Chosen from the line rather than
+  a chip on the right (the count and the tick are there already) or two sections (switching would still need a long
+  press, and the add row would be in neither). **Adding one** asks the side under the field, as a row's line (Apple's
+  menu, spending first, kept while the picker is open: `CategoryPickerModel.newSide`, `addCustom()`). A side change or
+  an offer refreshes the rows at once and builds the dashboard again when the picker closes (no sort). DEBUG (with
+  `-samplePhone`): `-sampleIncome` (the income side, also for `-sampleCategory`, e.g. `-sampleIncome -sampleCategory
+  Other -sampleMonth 2026-10 -samplePhoneTransaction Erika -sampleRecategorise switch`: a money-in window),
+  `-otherCategoryPick <name>` (picked from the list in that window), `-sampleOwnIncome <name,…>` (own income
+  categories), `-sampleOtherSide <id or own name,…>` (offered on the other side too), `-sampleChooseAll` (every default
+  ticked: the longest list). The menus and context menus need real taps: a temporary UI test in `Aresus/AresusUITests`
+  driving Aresium (deleted). Tests: `CategorySideScreensTests`. Screenshots: `build/70-*.png`.
   **New category where a category is chosen** (brief 60,
   Patrik after build 7: "otherwise you have to leave, create it, come back"): one piece for three places,
   `NewCategoryModel` (`Model/NewCategory.swift`: the alert's name, kept after a name problem; whether the alert shows;
@@ -940,7 +983,8 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   counted again after every change; in muted ink before the tick, under the name at the accessibility text sizes; read
   out as "34 payments"; with numbers on the rows the picker's note adds "The number by a category is how many of your
   payments it has, or would get once ticked."; in every picker: after an import, Settings → Categories, the tour's
-  Settings), after a Switch the alert "Also the other payments from <shop>?" (the count on its button), the store's
+  Settings; one's own rows say their side and every ticked row whether it is also offered the other way, brief 70's
+  "Category sides on screen" above), after a Switch the alert "Also the other payments from <shop>?" (the count on its button), the store's
   opening state.
   **An unknown bank's file** (brief 23, Patrik 2026-10-27: most people don't know what a CSV is;
   `Model/FileCheck.swift`,

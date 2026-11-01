@@ -172,7 +172,10 @@ struct PhoneFirstScreen: View {
 /// The category picker: the default list by group, each category as the dashboard's rows draw it with a tick on the
 /// right and, quietly before it, how many payments it has or would get if ticked; one's own names below; unticking a
 /// category with payments asks where they go (`UntickSheet`). Pushed from Settings, or in a sheet after an import that
-/// added payments while none is chosen, with a line on top that they are in.
+/// added payments while none is chosen, with a line on top that they are in. Sides (brief 70): one's own rows say their
+/// side in a quiet line under the name, which is Apple's menu to switch it; a ticked category offered for the other
+/// direction too says so in the same quiet way ("Also for money in"), and every ticked row but a transfer's turns that
+/// on or off with its long press; the add row asks the side under its field (spending first).
 struct CategoryPickerScreen: View {
     @State var model: CategoryPickerModel
     /// Opened after an import (`ImportStore.asksForCategories`): the line that the payments are in.
@@ -276,7 +279,8 @@ struct CategoryPickerScreen: View {
         CategoryPickerRow(item: item, count: model.count(of: item.id), model: model).equatable()
     }
 
-    /// A name of one's own: a plus tile, the field, Add.
+    /// A name of one's own: a plus tile, the field with its side under it (as a row's name and side line; spending
+    /// first, Apple's menu), Add.
     private var addRow: some View {
         let canAdd = !model.newName.trimmingCharacters(in: .whitespaces).isEmpty && !model.isWorking
         return HStack(spacing: 12) {
@@ -285,10 +289,21 @@ struct CategoryPickerScreen: View {
                 .background(Ink.card2, in: RoundedRectangle(cornerRadius: 9))
                 .overlay(RoundedRectangle(cornerRadius: 9).stroke(Ink.line))
                 .accessibilityHidden(true)
-            TextField("", text: $model.newName, prompt: Text("A category of your own").foregroundStyle(Ink.muted))
-                .font(AppFont.text(15)).foregroundStyle(Ink.primary)
-                .textInputAutocapitalization(.sentences)
-                .focused($typing).submitLabel(.done).onSubmit(add)
+            VStack(alignment: .leading, spacing: 2) {
+                TextField("", text: $model.newName, prompt: Text("A category of your own").foregroundStyle(Ink.muted))
+                    .font(AppFont.text(15)).foregroundStyle(Ink.primary)
+                    .textInputAutocapitalization(.sentences)
+                    .focused($typing).submitLabel(.done).onSubmit(add)
+                Menu {
+                    SidePicker(side: $model.newSide)
+                } label: {
+                    SideLine(side: model.newSide)
+                }
+                .menuOrder(.fixed)
+                .accessibilityLabel(Text(verbatim: CategorySideWording.name(model.newSide)))
+                .accessibilityIdentifier("newSide")
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
             Button("Add", action: add)
                 .font(AppFont.text(14.5, weight: .semibold)).foregroundStyle(canAdd ? Ink.primary : Ink.muted)
                 .buttonStyle(.plain)
@@ -298,7 +313,69 @@ struct CategoryPickerScreen: View {
     }
 
     private func add() {
-        Task { await model.addCustom(side: .spend) }
+        Task { await model.addCustom() }
+    }
+}
+
+/// A category's side as its row says it (brief 70): the side's name in the rows' quiet line, then "Also for money in" (or
+/// out) while it is offered there too; the first line carries Apple's small up-down chevron, so it reads as a choice to
+/// tap.
+private struct SideLine: View {
+    var side: CategorySide?
+    var alsoFor: String? = nil
+
+    var body: some View {
+        let lines = [side.map { CategorySideWording.name($0) }, alsoFor].compactMap { $0 }
+        VStack(alignment: .leading, spacing: 1) {
+            ForEach(Array(lines.enumerated()), id: \.offset) { index, line in
+                HStack(spacing: 4) {
+                    Text(verbatim: line)
+                    if index == 0 {
+                        Image(systemName: "chevron.up.chevron.down").font(.system(size: 8.5, weight: .semibold))
+                    }
+                }
+            }
+        }
+        .font(AppFont.text(12)).foregroundStyle(Ink.muted)
+        .lineLimit(1)
+        .padding(.vertical, 3).contentShape(Rectangle())
+    }
+}
+
+/// The two sides as Apple's menu shows a choice (the current one ticked): spending first.
+private struct SidePicker: View {
+    @Binding var side: CategorySide
+
+    var body: some View {
+        Picker(selection: $side) {
+            ForEach(CategorySide.allCases, id: \.self) { side in
+                Text(verbatim: CategorySideWording.name(side)).tag(side)
+            }
+        } label: { EmptyView() }
+        .pickerStyle(.inline)
+    }
+}
+
+/// A ticked row's side choices (brief 70), in its side line's menu and its long press: one's own category's side, then
+/// whether it is offered for the other direction too.
+private struct SideMenuItems: View {
+    let item: CategoryGroup.Item
+    let model: CategoryPickerModel
+
+    var body: some View {
+        if item.choosesSide, let side = item.side {
+            SidePicker(side: Binding(get: { side }, set: { new in Task { await model.setSide(new, of: item.id) } }))
+            Divider()
+        }
+        if let side = item.side {
+            Toggle(isOn: Binding(get: { item.otherSide },
+                                 set: { on in Task { await model.setOtherSide(on, for: item.id) } })) {
+                Text(verbatim: CategorySideWording.alsoFor(otherSideOf: side))
+            }
+            // Apple's own (a tick in the menu): Settings gives its switches the Empire's style, which a menu cannot
+            // draw (it showed the item greyed).
+            .toggleStyle(.automatic)
+        }
     }
 }
 
@@ -337,17 +414,14 @@ private struct CategoryPickerRow: View, Equatable {
         Button { Task { await model.toggle(item.id) } } label: {
             HStack(spacing: 12) {
                 CategoryTile(icon: item.look.icon, color: item.look.color)
-                if typeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: 2) {
+                    name
+                    sideLine
                     // The largest text sizes: the number under the name, so the name keeps the row's width.
-                    VStack(alignment: .leading, spacing: 2) {
-                        name
-                        if let count { countLabel(count) }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                } else {
-                    name.frame(maxWidth: .infinity, alignment: .leading)
-                    if let count { countLabel(count) }
+                    if typeSize.isAccessibilitySize, let count { countLabel(count) }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                if !typeSize.isAccessibilitySize, let count { countLabel(count) }
                 Image(systemName: item.chosen ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 21, weight: .regular))
                     .foregroundStyle(item.chosen ? Ink.primary : Ink.muted)
@@ -359,6 +433,41 @@ private struct CategoryPickerRow: View, Equatable {
         }
         .buttonStyle(SettingsRowStyle())
         .accessibilityAddTraits(item.chosen ? .isSelected : [])
+        // The side line's menu lies over the row where its hidden copy stands: inside the row's button the button took
+        // its tap (and ticked the row off).
+        .overlayPreferenceValue(SideLineAnchor.self) { anchor in
+            // Only rows with a side line measure anything.
+            if let anchor, let line = sideLineContent {
+                GeometryReader { proxy in
+                    let place = proxy[anchor]
+                    Menu {
+                        SideMenuItems(item: item, model: model)
+                    } label: {
+                        line
+                    }
+                    .menuOrder(.fixed)
+                    .accessibilityIdentifier("side-\(item.id)")
+                    .frame(width: place.width, height: place.height)
+                    .offset(x: place.minX, y: place.minY)
+                }
+            }
+        }
+        .sideMenu(item, model: model)
+    }
+
+    /// One's own category's side, and "Also for money in" (or out) while it is offered there too: quiet, under the name.
+    private var sideLineContent: SideLine? {
+        let alsoFor = item.showsOtherSide ? item.side.map { CategorySideWording.alsoFor(otherSideOf: $0) } : nil
+        guard item.choosesSide || alsoFor != nil else { return nil }
+        return SideLine(side: item.choosesSide ? item.side : nil, alsoFor: alsoFor)
+    }
+
+    /// The side line's place in the row: drawn by the menu over the row (`overlayPreferenceValue`), Apple's menu of the
+    /// row's side choices, its own tap, not the row's tick.
+    @ViewBuilder private var sideLine: some View {
+        if let line = sideLineContent {
+            line.hidden().anchorPreference(key: SideLineAnchor.self, value: .bounds) { $0 }
+        }
     }
 
     /// How many payments a category has (or would get): a quiet number, read out as "34 payments".
@@ -366,6 +475,24 @@ private struct CategoryPickerRow: View, Equatable {
         Text(count, format: .number).font(AppFont.number(12.5, weight: .medium)).foregroundStyle(Ink.muted)
             .lineLimit(1).fixedSize()
             .accessibilityLabel(Text("\(count) payments"))
+    }
+}
+
+/// Where a picker row's side line stands, for the menu laid over it.
+private struct SideLineAnchor: PreferenceKey {
+    static let defaultValue: Anchor<CGRect>? = nil
+    static func reduce(value: inout Anchor<CGRect>?, nextValue: () -> Anchor<CGRect>?) { value = value ?? nextValue() }
+}
+
+private extension View {
+    /// A ticked row's long press (brief 70): Apple's context menu with its side choices (`SideMenuItems`), for every
+    /// ticked category but a transfer. An unticked row or a transfer's has no long press.
+    @ViewBuilder func sideMenu(_ item: CategoryGroup.Item, model: CategoryPickerModel) -> some View {
+        if item.canOfferOtherSide {
+            contextMenu { SideMenuItems(item: item, model: model) }
+        } else {
+            self
+        }
     }
 }
 

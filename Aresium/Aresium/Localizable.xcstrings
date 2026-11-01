@@ -704,6 +704,26 @@
         }
       }
     },
+    "Also for money in" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auch für Einnahmen"
+          }
+        }
+      }
+    },
+    "Also for money out" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auch für Ausgaben"
+          }
+        }
+      }
+    },
     "Also in" : {
       "localizations" : {
         "de" : {
@@ -2130,6 +2150,16 @@
         }
       }
     },
+    "From income" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aus den Einnahmen"
+          }
+        }
+      }
+    },
     "From now on, payments from %@ go to %@." : {
       "localizations" : {
         "de" : {
@@ -2142,6 +2172,16 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "From now on, payments from %1$@ go to %2$@."
+          }
+        }
+      }
+    },
+    "From spending" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aus den Ausgaben"
           }
         }
       }
@@ -3196,6 +3236,26 @@
         }
       }
     },
+    "Not for money in" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nicht für Einnahmen"
+          }
+        }
+      }
+    },
+    "Not for money out" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nicht für Ausgaben"
+          }
+        }
+      }
+    },
     "Not found on the receipt." : {
       "localizations" : {
         "de" : {
@@ -3502,6 +3562,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Andere Beträge"
+          }
+        }
+      }
+    },
+    "Other category…" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Andere Kategorie …"
           }
         }
       }
@@ -4252,6 +4322,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Falsch einsortiert? Tippe auf die Kategorie. Aresium merkt sich den Laden."
+          }
+        }
+      }
+    },
+    "Spending" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ausgaben"
           }
         }
       }

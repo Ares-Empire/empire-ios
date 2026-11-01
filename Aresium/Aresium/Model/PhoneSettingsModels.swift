@@ -27,6 +27,8 @@ final class CategoryPickerModel {
 
     private(set) var list: PhoneCategoryList?
     var newName = ""
+    /// The add row's side (brief 70): spending first; kept while the picker is open, so several of one side go quickly.
+    var newSide = CategorySide.spend
     private(set) var problem: String?
     private(set) var isWorking = false
     private(set) var untick: Untick?
@@ -144,6 +146,9 @@ final class CategoryPickerModel {
 
     func cancelUntick() { untick = nil }
 
+    /// Adds one's own category from the field (ticked), on the side the add row shows.
+    func addCustom() async { await addCustom(side: newSide) }
+
     /// Adds one's own category from the field (ticked).
     func addCustom(side: CategorySide) async {
         guard !isWorking else { return }
@@ -153,6 +158,27 @@ final class CategoryPickerModel {
             try await self.phone.addCustom(named: typed, side: side)
             self.newName = ""
             try await self.selectionChanged()
+        }
+    }
+
+    /// One's own category's side line (brief 70): where it is offered. Its payments stay where they are; while it holds
+    /// payments of the side it leaves, it stays offered there too (`PhoneBackend.setSide`).
+    func setSide(_ side: CategorySide, of id: String) async {
+        guard list?.side(of: id) != side else { return }
+        await work {
+            self.problem = nil
+            try await self.phone.setSide(side, of: id)
+            try await self.sidesChanged()
+        }
+    }
+
+    /// "Also for money in" (or out) on a ticked category's row (brief 70): offered for the other direction too, or not.
+    func setOtherSide(_ on: Bool, for id: String) async {
+        guard let list, list.isChosen(id), !list.isTransfer(id), list.hasOtherSide(id) != on else { return }
+        await work {
+            self.problem = nil
+            try await self.phone.setOtherSide(on, for: id)
+            try await self.sidesChanged()
         }
     }
 
@@ -176,6 +202,13 @@ final class CategoryPickerModel {
 
     private func publishList(_ value: PhoneCategoryList?) {
         PickerTiming.measure("list.publish") { if list != value { list = value } }
+    }
+
+    /// A side changed: the rows show it at once and the dashboard is built again when the picker closes. Nothing is
+    /// sorted again (a side decides only where a category is offered).
+    private func sidesChanged() async throws {
+        publishList(try await phone.categories())
+        pendingDashboard = true
     }
 
     private func selectionChanged() async throws {

@@ -100,7 +100,8 @@ nonisolated struct PhoneCategoryList: Equatable, Sendable {
         var groups: [CategoryGroup] = []
         for category in catalog.defaults {
             let item = CategoryGroup.Item(id: category.id, name: category.name(in: language), look: look(of: category.id),
-                                          chosen: isChosen(category.id))
+                                          chosen: isChosen(category.id), side: side(of: category.id),
+                                          otherSide: hasOtherSide(category.id))
             if let index = groups.firstIndex(where: { $0.id == category.group }) { groups[index].items.append(item) }
             else { groups.append(CategoryGroup(id: category.group, title: CategoryGroup.title(category.group, language: language),
                                                items: [item])) }
@@ -111,7 +112,8 @@ nonisolated struct PhoneCategoryList: Equatable, Sendable {
     /// One's own categories, in the order they were added.
     var custom: [CategoryGroup.Item] {
         chosen.filter { ChosenCategory.isCustom($0.id) }.map {
-            CategoryGroup.Item(id: $0.id, name: $0.name ?? "", look: look(of: $0.id), chosen: true)
+            CategoryGroup.Item(id: $0.id, name: $0.name ?? "", look: look(of: $0.id), chosen: true, side: side(of: $0.id),
+                               otherSide: $0.otherSide)
         }
     }
 }
@@ -123,6 +125,18 @@ nonisolated struct CategoryGroup: Identifiable, Equatable, Sendable {
         let name: String
         let look: CategoryLook
         let chosen: Bool
+        /// Its home side: where it is offered (brief 69); nil for transfers, which are offered both ways.
+        var side: CategorySide? = nil
+        /// Also offered for the other direction.
+        var otherSide = false
+
+        /// Settings can offer it for the other direction too, or take that back (brief 70): a ticked category with a
+        /// side (`PhoneBackend.setOtherSide`; never a transfer).
+        var canOfferOtherSide: Bool { chosen && side != nil }
+        /// The side line under the name: one's own category's side, which the person chooses (`setSide`).
+        var choosesSide: Bool { ChosenCategory.isCustom(id) && side != nil }
+        /// The quiet line "Also for money in" (or out) under the name.
+        var showsOtherSide: Bool { canOfferOtherSide && otherSide }
     }
 
     /// The engine's group word.
