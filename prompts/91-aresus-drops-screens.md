@@ -1,6 +1,6 @@
 # 91: Aresus app: the send screen and the drops on the Aresync tab
 
-Status: draft
+Status: merged 2026-11-01 (9312656, 145 tests; Claude: sheet starts at half height, three drops on the tab)
 Branch: `claude/91-drops-screens` · Worktree: `../empire-ios-91-drops-screens` · Built by a **Claude agent** (design work,
 `CLAUDE.md` → Workflow) · Simulator: `claude-91` (create it: iPhone 17, iOS 27.0)
 
