@@ -89,6 +89,8 @@ final class DashboardStore {
     @ObservationIgnored var builtLists = PaymentListCache()
     /// The name's pages built since the dashboard last changed (`namePage(_:)`, brief 55).
     @ObservationIgnored var builtNamePages = NamePageCache()
+    @ObservationIgnored var builtNameSearch = NameSearchCache()
+    @ObservationIgnored var builtDays = DayPaymentsCache()
     /// Installed by the live app (`installMessages`); in DEBUG the phone sample gets a pretend one
     /// (`installSampleMessages`, brief 46); never a test store.
     var messages: AresiumMessages?

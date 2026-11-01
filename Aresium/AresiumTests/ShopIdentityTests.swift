@@ -29,6 +29,47 @@ struct ShopIdentityTests {
         """.utf8))
     }
 
+    @Test func bankLineProbesShareTheNameJobAndNeverBecomeRuleKeys() async throws {
+        let phone = try await PhoneCountingTests.backend()
+        _ = try await phone.importFiles([PhoneTest.vrBank([
+            ("01.10.2026", "Fictional Payment Service", "Purchase from Fictional Shop", -1000)])], auth: auth)
+        try await phone.ledger.addReceipt(LedgerReceipt(id: "probe-receipt", date: "2026-10-02", time: nil,
+                shop: "Fictional Receipt Shop", total: "2.00", currency: "EUR", euroAmount: nil, method: .cash,
+                category: nil, categorySource: .none, rows: [], from: "text", paymentID: nil, created: .now))
+        let engine = try AresiumEngine(script: """
+        let merchantCalls = 0, identityCalls = 0, cardCalls = 0;
+        globalThis.AresiumEngine = {
+            merchantKey: row => {
+                const index = merchantCalls++;
+                if (index > 2 ||
+                    (index === 0 && (row.counterparty !== "Fictional Payment Service" || !row.description)) ||
+                    (index === 1 && row.counterparty !== "Fictional Receipt Shop") ||
+                    (index === 2 && (row.counterparty !== "Fictional Payment Service" || row.description !== ""))) {
+                    throw new Error("Expected full payment, receipt and line-only probe in order");
+                }
+                return ["payment key", "receipt key", "line-only key"][index];
+            },
+            cardMerchant: line => {
+                if (++cardCalls !== 1 || line !== "Fictional Payment Service") {
+                    throw new Error("Expected the original line in the engine card-statement check");
+                }
+                return null;
+            },
+            shopIdentities: keys => {
+                if (cardCalls !== 1 || merchantCalls !== 3 || ++identityCalls !== 1 || keys.join("|") !== "line-only key|payment key|receipt key") {
+                    throw new Error("Expected one complete identity universe");
+                }
+                return keys.map(key => key === "receipt key" ? "receipt shop" : "payment shop");
+            }
+        };
+        """)
+        let snapshot = try await phone.ledger.shopSnapshot(engine: engine)
+        #expect(snapshot.paymentKeys == ["payment key"] && snapshot.receiptKeys == ["receipt key"])
+        #expect(snapshot.bankLineIdentities == ["payment shop"])
+        #expect(snapshot.shops.byKey == ["payment key": "payment shop", "receipt key": "receipt shop"],
+                "probe keys cannot enter the set of keys used for learning or name rules")
+    }
+
     @Test func bridgePreservesOrderDuplicatesAndSeparatesNearMisses() async throws {
         let engine = try await AresiumEngine.bundledForPhone()
         let keys = ["mgp vinted - kleiderkreisel", "vinted uab", "dm-drogerie markt", "dm drogeriemarkt",
@@ -260,12 +301,15 @@ struct ShopIdentityTests {
         let list = try await phone.categories()
         let original = try await phone.engine.dashboard(PhoneDashboard.input(payments: payments, list: list,
                                                                             today: phone.today(), receipts: []))
-        // All engine-produced dashboard fields must be identical; only app-side names/groups are additional.
+        // Display names are applied after counting. Restore original names before comparing all engine fields.
+        let originals = Dictionary(uniqueKeysWithValues: original.transactions.map { ($0.id, $0.place) })
         var counted = before
         counted.nameGroups = nil
         for index in counted.transactions.indices {
             counted.transactions[index].nameKey = nil
             counted.transactions[index].isOwnName = nil
+            counted.transactions[index].place = originals[counted.transactions[index].id] ?? counted.transactions[index].place
+            counted.transactions[index].bankName = nil
         }
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
@@ -277,13 +321,18 @@ struct ShopIdentityTests {
         let allKeys = zip(payments, keys).map { ($0.0.id, $0.1) }
         let expected = Dictionary(grouping: allKeys.filter { eligible.contains($0.0) }, by: { $0.1 })
         let allCounts = Dictionary(grouping: allKeys, by: { $0.1 })
+        let snapshot = try await phone.ledger.shopSnapshot(engine: phone.engine)
         for group in try #require(before.nameGroups).values {
             let row = try #require(group.rows.first)
             let index = try #require(payments.firstIndex { $0.id == row.id })
             let key = keys[index]
             #expect(group.count == expected[key]?.count)
             for row in group.rows {
-                #expect(row.place == payments.first { $0.id == row.id }?.place)
+                let identity = snapshot.shops.identity(key)
+                let newest = zip(zip(snapshot.payments, snapshot.paymentKeys), snapshot.bankLineIdentities).filter {
+                    snapshot.shops.identity($0.0.1) == identity && $0.1 == identity
+                }.last?.0.0
+                #expect(row.place == (key.isEmpty ? originals[row.id] : newest?.place ?? originals[row.id]))
             }
             #expect(try await phone.renameInfo(id: row.id).otherPaymentCount == (allCounts[key]?.count ?? 1) - 1)
         }

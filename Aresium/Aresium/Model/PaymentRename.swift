@@ -70,13 +70,14 @@ nonisolated struct RenamePlan: Equatable {
     let info: PaymentRenameInfo
 
     /// What the field shows when it opens: the name the page shows.
-    var start: String { info.ownName ?? info.bankName }
+    var start: String { info.ownName ?? info.bankDisplayName }
 
     /// Whether a new name asks about the shop's other payments (a merchant key and N > 0).
     var asksAboutOthers: Bool { info.canRenameShop && info.otherPaymentCount > 0 }
 
     func intent(_ typed: String) -> RenameIntent {
         let name = PaymentNames.normalized(typed)
+        if name == PaymentNames.normalized(start) { return .nothing }
         if name.isEmpty || name == PaymentNames.keptBankName(info.bankName) {
             return info.ownName == nil ? .nothing : .bankName
         }

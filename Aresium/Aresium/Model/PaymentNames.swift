@@ -24,6 +24,9 @@ nonisolated struct PaymentRenameInfo: Equatable, Sendable {
     }
     /// "Use the bank's name" → Only this one (brief 47): this payment shows the bank's name while its shop keeps its name.
     var keepsBankName: Bool { paymentOwnName != nil && ownName == nil }
+    /// Newest non-card bank line that itself names the shop; nil when none qualifies. Independent of Own names.
+    var shopBankName: String? = nil
+    var bankDisplayName: String { shopBankName ?? bankName }
     var shopIdentity: String = ""
     var canRename: Bool { true } // Only produced for a stored bank/PayPal payment.
     var canRenameShop: Bool { !merchantKey.isEmpty }
@@ -60,11 +63,26 @@ nonisolated enum PaymentNames {
         return merchant.isEmpty ? "bank:" + bankName : "merchant:" + merchant
     }
 
+    /// Newest qualifying booking date, then later store order. A line must itself name this shop according to the
+    /// engine and not be a card statement, so neither a payment service nor a payment-specific card line names the shop.
+    static func bankNames(payments: [LedgerPayment], keys: [String], bankLineIdentities: [String],
+                          identities: ShopIdentities) -> [String: String] {
+        assert(payments.count == keys.count && keys.count == bankLineIdentities.count)
+        var newest: [String: LedgerPayment] = [:]
+        for ((payment, key), lineIdentity) in zip(zip(payments, keys), bankLineIdentities) where !key.isEmpty {
+            let identity = identities.identity(key)
+            guard !identity.isEmpty, lineIdentity == identity else { continue }
+            if newest[identity].map({ $0.bookingDate <= payment.bookingDate }) ?? true { newest[identity] = payment }
+        }
+        return newest.mapValues(\.place)
+    }
+
     /// After the engine has finished counting: names never enter its sorting, receipt matching or cash allocation.
-    static func apply(to dashboard: inout Dashboard, payments: [LedgerPayment], paymentKeys: [String],
+    static func apply(to dashboard: inout Dashboard, payments: [LedgerPayment], paymentKeys: [String], bankLineIdentities: [String],
                       receipts: [LedgerReceipt], receiptKeys: [String], rules: [String: String], identities: ShopIdentities, enabled: Bool) {
         assert(!Thread.isMainThread)
         let bank = Dictionary(uniqueKeysWithValues: zip(payments, paymentKeys).map { ($0.0.id, ($0.0, $0.1)) })
+        let bankNames = bankNames(payments: payments, keys: paymentKeys, bankLineIdentities: bankLineIdentities, identities: identities)
         let shops = Dictionary(uniqueKeysWithValues: zip(receipts, receiptKeys).map { ($0.0.id, ($0.0, $0.1)) })
         for index in dashboard.transactions.indices {
             var row = dashboard.transactions[index]
@@ -75,7 +93,7 @@ nonisolated enum PaymentNames {
                 row.nameKey = key(ownName: own, merchant: identities.identity(merchant), bankName: receipt.shop ?? row.place)
             } else if let (payment, merchant) = bank[row.id] {
                 let own = enabled ? shown(payment: payment.ownName, shop: rules[merchant], bankName: payment.place) : nil
-                row.place = own ?? payment.place
+                row.place = own ?? (merchant.isEmpty ? nil : bankNames[identities.identity(merchant)]) ?? payment.place
                 row.bankName = row.place == payment.place ? nil : payment.place
                 row.isOwnName = own != nil
                 row.ownNameSource = own == nil ? nil : payment.ownName == own ? .payment : .shop
@@ -88,7 +106,7 @@ nonisolated enum PaymentNames {
                 let movement = cash.movements[index]
                 guard movement.kind == .withdrawal, let (payment, merchant) = bank[movement.id] else { continue }
                 let own = enabled ? shown(payment: payment.ownName, shop: rules[merchant], bankName: payment.place) : nil
-                cash.movements[index].place = own ?? payment.place
+                cash.movements[index].place = own ?? (merchant.isEmpty ? nil : bankNames[identities.identity(merchant)]) ?? payment.place
             }
             dashboard.cash = cash
         }
@@ -122,7 +140,23 @@ nonisolated enum PaymentNames {
             let sorted = rows.enumerated().sorted {
                 $0.element.date == $1.element.date ? $0.offset < $1.offset : $0.element.date > $1.element.date
             }.map(\.element)
-            return PaymentNameGroup(rows: sorted, amounts: total, months: months)
+            // Keep every searchable spelling, including own names hidden by the display setting or an override.
+            var names: [String] = []
+            var seen = Set<String>()
+            func add(_ name: String?) {
+                if let name, !name.isEmpty, seen.insert(name).inserted { names.append(name) }
+            }
+            for row in sorted {
+                add(row.place)
+                if let (payment, merchant) = bank[row.id] {
+                    add(payment.place)
+                    add(payment.ownName)
+                    add(rules[merchant])
+                } else if let receiptID = row.receiptId, let (_, merchant) = shops[receiptID] {
+                    add(rules[merchant])
+                }
+            }
+            return PaymentNameGroup(rows: sorted, amounts: total, months: months, names: names)
         }
     }
 }
@@ -136,7 +170,7 @@ extension PhoneLedger {
             let list = PhoneCategoryList(catalog: catalog, chosen: try chosen(), language: language)
             var detail = PhoneDashboard.detail(payment, account: try account(payment.account), list: list)
             let own = enabled ? info.ownName : nil
-            detail.place = own ?? info.bankName
+            detail.place = own ?? info.bankDisplayName
             detail.bankName = detail.place == info.bankName ? nil : info.bankName
             detail.isOwnName = own != nil
             detail.ownNameSource = own == nil ? nil : info.source
@@ -162,8 +196,11 @@ extension PhoneLedger {
         let count = merchant.isEmpty ? 0 : zip(snapshot.payments, snapshot.paymentKeys).filter {
             $0.0.id != id && snapshot.shops.identity($0.1) == identity
         }.count
+        let shopName = PaymentNames.bankNames(payments: snapshot.payments, keys: snapshot.paymentKeys,
+                                              bankLineIdentities: snapshot.bankLineIdentities, identities: snapshot.shops)[identity]
         return PaymentRenameInfo(bankName: payment.place, merchantKey: merchant, paymentOwnName: payment.ownName,
-                                 shopOwnName: rule, otherPaymentCount: count, shopIdentity: identity)
+                                 shopOwnName: rule, otherPaymentCount: count,
+                                 shopBankName: merchant.isEmpty ? nil : shopName, shopIdentity: identity)
     }
 
     /// Engine revisions can shorten foreign-card keys. Keep absent shops, and move only obsolete name keys to
@@ -245,7 +282,10 @@ extension DashboardStore {
     }
 
     /// O(1) access to the group built with the dashboard; nil for excluded rows and server mode.
+    /// Search hits and name routes already carry the opaque group key.
+    func nameGroup(_ key: String) -> PaymentNameGroup? { dashboard?.nameGroups?[key] }
+
     func nameGroup(for transaction: Transaction) -> PaymentNameGroup? {
-        transaction.nameKey.flatMap { dashboard?.nameGroups?[$0] }
+        transaction.nameKey.flatMap { nameGroup($0) }
     }
 }

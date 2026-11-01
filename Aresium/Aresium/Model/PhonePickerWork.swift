@@ -38,7 +38,8 @@ extension PhoneLedger {
         }
         var dashboard = try await engine.dashboard(input)
         PickerTiming.measure("names.groups") {
-            PaymentNames.apply(to: &dashboard, payments: payments, paymentKeys: snapshot.paymentKeys, receipts: receipts,
+            PaymentNames.apply(to: &dashboard, payments: payments, paymentKeys: snapshot.paymentKeys,
+                               bankLineIdentities: snapshot.bankLineIdentities, receipts: receipts,
                                receiptKeys: snapshot.receiptKeys, rules: snapshot.shops.rules(snapshot.names),
                                identities: snapshot.shops, enabled: ownNames)
         }

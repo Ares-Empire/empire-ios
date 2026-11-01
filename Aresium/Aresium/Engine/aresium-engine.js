@@ -2133,6 +2133,7 @@ var __AresiumEngine = (() => {
     STARTER_RULES: () => STARTER_RULES,
     buildDashboard: () => buildDashboard,
     buildDashboardSource: () => buildDashboardSource,
+    cardMerchant: () => cardMerchant,
     categoryLook: () => categoryLook,
     decodeBankFile: () => decodeBankFile,
     detectBankFile: () => detectBankFile,

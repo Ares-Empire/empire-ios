@@ -88,6 +88,20 @@ struct EngineHostTests {
         #expect(keys[1] == keys[2] && keys[0] != keys[1] && keys[1] == rule.keys.first)
     }
 
+    @Test func nameJobChecksCardStatementsAlongsideMerchantKeys() async throws {
+        let engine = try PhoneTest.engine()
+        let plain = SortingPayment(counterparty: "Fictional Shop, UAB", description: "", source: "paypal", account: "sample",
+                                   amount: -10, currency: "EUR", date: "2026-10-01")
+        var card = plain
+        card.counterparty = "FICTIONAL SHOP, UAB   IRL CORK   EUR  14,99   Umsatz vom 02.10.2026   MC Fictional Card"
+        let checked = try await engine.nameKeys([plain, card], lines: [plain, card, plain])
+        #expect(checked.keys.count == 2 && checked.keys[0] == checked.keys[1])
+        #expect(checked.lineKeys == [checked.keys[0], checked.keys[0], checked.keys[0]])
+        #expect(checked.cardLines == [false, true, false])
+        let empty = try await engine.nameKeys([], lines: [])
+        #expect(empty.keys.isEmpty && empty.lineKeys.isEmpty && empty.cardLines.isEmpty)
+    }
+
     @Test func ownTransfersNeedProof() async throws {
         let engine = try PhoneTest.engine()
         let out = SortingPayment(counterparty: "Fiktiv Person", description: "Umbuchung", source: "bank", account: "a",
