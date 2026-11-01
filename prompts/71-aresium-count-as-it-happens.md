@@ -1,6 +1,6 @@
 # 71: Every payment counts as it happened: the engine
 
-Status: running (Codex, 2026-11-01)
+Status: merged 2026-11-01 (aresium 62ff840, website sample fbfb742; 400 engine tests; in the app with 661 tests, empire-ios merge of claude/71-engine-in-app). Not deployed to the server
 Repo: **aresium** · Worktree: `../aresium-71-as-it-happens` (branch `codex/71-as-it-happens`) · Model: `gpt-6.1-sol`,
 effort `high` · Claude copies the engine into the app and adjusts the app's tests afterwards.
 
