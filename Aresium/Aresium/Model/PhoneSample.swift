@@ -22,6 +22,10 @@ enum PhoneSample {
         try await backend.load()
         guard !empty else { return (backend, storage) }
         for id in chosen { try await ledger.choose(id) }
+        // `-sampleChooseAll` (brief 70): every default category ticked, so the other side's list is as long as it gets.
+        if LaunchArguments.current.contains("-sampleChooseAll"), let catalog = backend.catalog {
+            for category in catalog.defaults where !chosen.contains(category.id) { try await ledger.choose(category.id) }
+        }
         try await backend.addCustom(named: customName, side: .spend)
         if let size = LaunchArguments.value("-sampleSize").flatMap(Int.init), size > 0 {
             _ = try await backend.importFiles([sizedFile(size: size)], auth: BackendAuth(token: nil))
@@ -31,6 +35,15 @@ enum PhoneSample {
         // `-sampleOwn <name,name,…>`: more own categories after Climbing, each with the look its name gives it.
         for name in (LaunchArguments.value("-sampleOwn") ?? "").split(separator: ",") {
             try await backend.addCustom(named: String(name), side: .spend)
+        }
+        // Category sides (brief 70): `-sampleOwnIncome <name,name,…>` own categories for money in, `-sampleOtherSide
+        // <id,id,…>` categories offered for the other direction too (ids, or one's own by name).
+        for name in (LaunchArguments.value("-sampleOwnIncome") ?? "").split(separator: ",") {
+            try await backend.addCustom(named: String(name), side: .income)
+        }
+        for key in (LaunchArguments.value("-sampleOtherSide") ?? "").split(separator: ",").map(String.init) {
+            let list = try await backend.categories()
+            try await backend.setOtherSide(true, for: list.id(named: key) ?? key)
         }
         var files = [ImportFile(name: "Umsaetze-Girokonto.csv", data: Data(TourData.vrBankCSV(now: .now).utf8)),
                      ImportFile(name: "Umsaetze-Girokonto-Februar.csv", data: Data(paypalBankLine.utf8))]

@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Switch or Add for one payment. Like every iOS edit sheet, Cancel is top left and Save top right (brief 36, Patrik's
 /// phone test: Save at the bottom was far from a category at the top), in ink like the app's other sheets; in Add mode
@@ -6,8 +7,11 @@ import SwiftUI
 /// merchant's other payments are asked about before the sheet closes. Under "Currently in" one quiet line says why the
 /// payment is there (brief 47, from the payment's page). Opened from the payment's page (its category's chip or pen, an
 /// extra category's chip at Add) or from its row's long press (brief 41), which opens it before the payment has loaded.
-/// In phone mode, for money out, the grid ends with New category (brief 60): Apple's alert with a name's field makes one
-/// of one's own categories as Settings → Categories does, and it shows before the tile, picked.
+/// In phone mode the grid ends with two quiet action tiles, for money out and money in alike: Other category… (brief 70,
+/// while the other side has a category not offered here: Apple's menu of them, picked into the grid with Save storing it
+/// as offered here) and New category (brief 60: Apple's alert with a name's field makes one of one's own categories as
+/// Settings → Categories does). Either shows its category before the tiles, picked. A tile offered here only from the
+/// other side takes Apple's context menu with "Not for money in" (or out), which takes it back.
 struct RecategoriseSheet: View {
     @Bindable var store: TransactionDetailStore
     let palette: Palette
@@ -41,6 +45,7 @@ struct RecategoriseSheet: View {
                             .font(AppFont.text(13)).foregroundStyle(palette.secondary)
                         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 9) {
                             ForEach(store.choices) { category in choice(category, current: detail.category) }
+                            if store.offersOtherCategory { otherCategoryTile }
                             if store.offersNewCategory { newCategoryTile }
                         }
                         // A name that made no category: why, in Settings → Categories' words (brief 60).
@@ -127,21 +132,38 @@ struct RecategoriseSheet: View {
     /// colour, so it reads as an action. While the category is made it shows the busy sign; the others are greyed.
     private var newCategoryTile: some View {
         let making = store.newCategory.isMaking
-        let shape = RoundedRectangle(cornerRadius: 10)
         return Button { store.beginNewCategory() } label: {
-            HStack(spacing: 7) {
-                if !making { Image(systemName: "plus").frame(width: 20) }
-                BusyLabel(text: Text("New category").font(AppFont.text(13, weight: .semibold)), busy: making,
-                          tint: palette.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .foregroundStyle(palette.secondary).padding(10).frame(maxWidth: .infinity, minHeight: 48)
-            .overlay(shape.stroke(palette.line, lineWidth: 1))
-            .contentShape(shape)
+            ActionTile(symbol: "plus", title: Text("New category"), busy: making, palette: palette)
         }
         .buttonStyle(.plain)
         .whileWorking(making, tapped: true)
         .accessibilityIdentifier("newCategory")
+    }
+
+    /// Other category… (brief 70), New category's quiet look: Apple's menu of the other side's categories not offered
+    /// here yet, each with its icon in its colour, under one line saying where they come from ("From spending"). Picking
+    /// one closes the menu and shows it before the action tiles, picked (`pickFromOtherSide`). In a fixed order, so the
+    /// line stays on top and the list reads as the window's (iOS would turn it round when it opens upwards).
+    private var otherCategoryTile: some View {
+        Menu {
+            Section {
+                ForEach(store.otherSideChoices) { category in
+                    Button { store.pickFromOtherSide(category.name) } label: {
+                        Label { Text(verbatim: category.shownName) } icon: { CategoryMenuIcon(category: category) }
+                    }
+                }
+            } header: {
+                if let line = store.otherSideListLine { Text(verbatim: line) }
+            }
+        } label: {
+            ActionTile(symbol: "square.grid.2x2", title: Text(verbatim: CategorySideWording.otherCategory()),
+                       palette: palette)
+        }
+        .menuOrder(.fixed)
+        .buttonStyle(.plain)
+        .opacity(store.newCategory.isMaking ? 0.4 : 1)
+        .disabled(store.newCategory.isMaking)
+        .accessibilityIdentifier("otherCategory")
     }
 
     private func choice(_ category: Category, current: String) -> some View {
@@ -165,5 +187,59 @@ struct RecategoriseSheet: View {
             .whileWorking(store.newCategory.isMaking, tapped: false)
             .accessibilityLabel(category.name == current ? String(localized: "\(category.shownName), current") : category.shownName)
             .accessibilityAddTraits(selected ? .isSelected : [])
+            .takesBack(store.stopOfferingEntry(for: category.name)) { Task { await store.stopOffering(category.name) } }
+    }
+}
+
+/// The grid's quiet action tile (New category, Other category…): the category tiles' size, the second ink and the line's
+/// thin outline, no category colour, so it reads as an action. While it works it shows the busy sign in its symbol's
+/// place.
+private struct ActionTile: View {
+    let symbol: String
+    let title: Text
+    var busy = false
+    let palette: Palette
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: 10)
+        HStack(spacing: 7) {
+            if !busy { Image(systemName: symbol).frame(width: 20) }
+            BusyLabel(text: title.font(AppFont.text(13, weight: .semibold)), busy: busy, tint: palette.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .foregroundStyle(palette.secondary).padding(10).frame(maxWidth: .infinity, minHeight: 48)
+        .overlay(shape.stroke(palette.line, lineWidth: 1))
+        .contentShape(shape)
+    }
+}
+
+/// A category's symbol in its own colour inside Apple's menu, which draws plain symbols in its own ink (an image drawn
+/// as it is keeps its colour there).
+struct CategoryMenuIcon: View {
+    let category: Category
+
+    var body: some View {
+        let symbol = CategorySymbol.name(for: category.icon)
+        if let image = UIImage(systemName: symbol)?
+            .withTintColor(UIColor(Color(hex: category.color)), renderingMode: .alwaysOriginal) {
+            Image(uiImage: image)
+        } else {
+            Image(systemName: symbol)
+        }
+    }
+}
+
+private extension View {
+    /// A tile offered here only from the other side (brief 70): its long press is Apple's context menu with one entry,
+    /// "Not for money in" (or out). Every other tile has no long press.
+    @ViewBuilder func takesBack(_ entry: String?, action: @escaping () -> Void) -> some View {
+        if let entry {
+            contentShape(.contextMenuPreview, RoundedRectangle(cornerRadius: 10))
+                .contextMenu {
+                    Button(action: action) { Label { Text(verbatim: entry) } icon: { Image(systemName: "minus.circle") } }
+                }
+        } else {
+            self
+        }
     }
 }

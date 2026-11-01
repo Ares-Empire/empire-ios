@@ -157,11 +157,13 @@ struct ContentView: View {
         }
         if phoneSample {
             // Screenshots: `-sampleOverview` (Overview, not Current), `-sampleCategory`. The graph follows the setting.
-            var place = DashboardPlace(current: !arguments.contains("-sampleOverview"))
+            // `-sampleIncome`: the income side, also for `-sampleCategory` (a payment of money in, brief 70).
+            let side: DashboardSide = arguments.contains("-sampleIncome") ? .income : .expenses
+            var place = DashboardPlace(current: !arguments.contains("-sampleOverview"), side: side)
             if let index = arguments.firstIndex(of: "-sampleCategory"), arguments.indices.contains(index + 1) {
-                place.path = [DashboardRoute(category: arguments[index + 1], side: .expenses)]
+                place.path = [DashboardRoute(category: arguments[index + 1], side: side)]
                 if let month = arguments.firstIndex(of: "-sampleMonth"), arguments.indices.contains(month + 1) {
-                    place.path.append(DashboardRoute(category: arguments[index + 1], side: .expenses,
+                    place.path.append(DashboardRoute(category: arguments[index + 1], side: side,
                                                      month: arguments[month + 1]))
                 }
             }

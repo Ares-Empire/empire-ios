@@ -92,6 +92,34 @@ final class TransactionDetailStore {
         }
     }
 
+    /// The payment's side: money in is income's, money out spending's (where its window's categories come from).
+    var paymentSide: CategorySide? { detail.map { CategorySide(amount: $0.amount) } }
+
+    /// Other category… (brief 70): the tile before New category, in Switch and Add, phone mode only, while the other
+    /// side has a category not offered here yet.
+    var offersOtherCategory: Bool { offersNewCategory && !otherSideChoices.isEmpty }
+
+    /// The other side's list's line ("From spending" for money in); nil where there is no list.
+    var otherSideListLine: String? {
+        guard offersOtherCategory, let paymentSide else { return nil }
+        return CategorySideWording.otherSideList(for: paymentSide)
+    }
+
+    /// A tile offered here only from the other side: one stored as offered here (not the payment's current category),
+    /// or one picked from the list in this opening. Its long press takes it back (`stopOffering`).
+    func offeredFromOtherSide(_ name: String) -> Bool {
+        guard let detail, let list = categoryList, dashboardStore.phone != nil, name != detail.category else { return false }
+        if pickedOtherSide.contains(name) { return true }
+        guard let id = list.id(named: name), let side = list.side(of: id) else { return false }
+        return side != CategorySide(amount: detail.amount) && list.hasOtherSide(id)
+    }
+
+    /// The long press's one entry on such a tile: "Not for money in" (or out); nil on every other tile.
+    func stopOfferingEntry(for name: String) -> String? {
+        guard offeredFromOtherSide(name), let paymentSide else { return nil }
+        return CategorySideWording.notFor(paymentSide)
+    }
+
     /// Picks locally; Save widens the category's menu, and Cancel has no stored effect.
     func pickFromOtherSide(_ name: String) {
         guard !isSaving, !newCategory.isMaking, otherSideChoices.contains(where: { $0.name == name }) else { return }
@@ -101,7 +129,16 @@ final class TransactionDetailStore {
     }
 
     /// Removes an addition to this direction at once. A home category and the payment's current category stay offered.
+    /// One picked from the other side in this opening was never stored: it only leaves the window (and the list has it
+    /// again).
     func stopOffering(_ name: String) async {
+        if pickedOtherSide.contains(name), !isSaving, !newCategory.isMaking {
+            pickedOtherSide.remove(name)
+            madeHere.removeAll { $0 == name }
+            if target == name { target = nil }
+            extras.removeAll { $0 == name }
+            return
+        }
         guard !isSaving, !newCategory.isMaking, let detail, let phone = dashboardStore.phone,
               let list = categoryList, let id = list.id(named: name), list.hasOtherSide(id),
               let side = list.side(of: id), side != CategorySide(amount: detail.amount), name != detail.category else { return }

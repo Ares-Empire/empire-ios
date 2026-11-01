@@ -94,6 +94,8 @@ struct TransactionDetailSheet: View {
                 store.beginRecategorisation()
                 store.mode = arguments[index + 1] == "add" ? .add : .switchCategory
                 if let pick = LaunchArguments.value("-samplePick") { store.select(pick) }
+                // `-otherCategoryPick <name>`: a category of the other side picked from Other category… (brief 70).
+                if let pick = LaunchArguments.value("-otherCategoryPick") { store.pickFromOtherSide(pick) }
                 await debugNewCategory()
             }
             // Phone sample: a Switch to this category at once (the "also the N others" question follows).
