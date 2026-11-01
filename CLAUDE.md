@@ -233,7 +233,7 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
    Aresync tab included; Arestemis's outage alerts come from the aresus server, brief 64, no app change). **Empire 0.1
    (1) uploaded 2026-11-01 02:13** (306 tests; the uploaded build carries `aps-environment` production) and **Arestoteles
    0.1 (1) uploaded 2026-11-01 02:25** (156 tests; the bust without the watermark, brief 72; Spotlight and backup fixes,
-   brief 74), after a check of what differs between the simulator and the phone (brief 73: no blocker; its three fixes
+   brief 74); **Arestoteles build 2 uploaded 2026-11-01 03:01** (brief 75: a note closes at once and is sent in the background, the vault prepared off the main thread), after a check of what differs between the simulator and the phone (brief 73: no blocker; its three fixes
    in brief 74, whose Empire part, a notification's tap closing Settings, ships with Empire build 2; later: Preview
    Content and samples are bundled in Release builds of all apps, and a failed write of Arestoteles's quick-note queue
    is not reported). So all five apps reach Patrik's iPhone. App Store Connect records (Patrik, 2026-10-30: Arestemis, Aresus, Arestoteles, Ares Empire),
