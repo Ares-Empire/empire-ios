@@ -1,6 +1,6 @@
 # 71: Every payment counts as it happened: the engine
 
-Status: draft
+Status: running (Codex, 2026-11-01)
 Repo: **aresium** · Worktree: `../aresium-71-as-it-happens` (branch `codex/71-as-it-happens`) · Model: `gpt-6.1-sol`,
 effort `high` · Claude copies the engine into the app and adjusts the app's tests afterwards.
 

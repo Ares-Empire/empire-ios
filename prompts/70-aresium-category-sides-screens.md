@@ -1,6 +1,6 @@
 # 70: Every category has a side: the screens
 
-Status: draft (starts after brief 69 is merged)
+Status: running (a Claude agent, 2026-11-01)
 Branch: `claude/70-category-sides` · Worktree: `../empire-ios-70-category-sides` · Built by: a Claude agent (the look
 and flow of the change window and Settings → Categories) · Simulator: `claude-70`
 
@@ -12,7 +12,7 @@ addable not just switchable." Briefs 68 (engine) and 69 (data) gave every catego
 offered on the other side too (`otherSide`). This brief draws it:
 
 - The change window offers **New category** for money in too, and **Other category…** to bring in a category of the
-  other side (a friend paying back their share → Friends). From then on that category is offered there.
+  other side (a friend paying back their share → Friends, counted as income there). From then on that category is offered there.
 - Settings → Categories shows each own category's side and lets the person switch it; any category offered on the
   other side says so there and can be taken back.
 
@@ -32,10 +32,11 @@ offered on the other side too (`otherSide`). This brief draws it:
    about it changes.
 2. **Other category…** / **Andere Kategorie …**: a tile in the grid's quiet action style (brief 60's tile: the tiles'
    size, the second ink, the line's thin outline, no category colour), only while `otherSideChoices` is not empty,
-   in Switch and Add, phone mode only. A tap shows the other side's categories with their icons and colours, with one
-   short line saying what it means for this payment: for money in, that the money counts as paid back and lowers that
-   category's spending; for money out, that it counts as given back and lowers that income (your words, plain, the
-   app's terms Ausgaben/Einnahmen). Apple's menu is the first thing to try; if the list is long enough to be awkward
+   in Switch and Add, phone mode only. A tap shows the other side's categories with their icons and colours. How the
+   money counts needs no explaining: since brief 71 (Patrik, 2026-11-01: "booking everything as it happens") every
+   payment counts in the direction it went, so money in put in Friends is income under Friends, money out put in an
+   income category is spending under it; nothing is subtracted. If a line helps the person know what the list is,
+   keep it short and plain (the app's terms Ausgaben/Einnahmen). Apple's menu is the first thing to try; if the list is long enough to be awkward
    there (money in can list some 30 spending categories), a small sheet with the window's tiles is fine: choose what
    reads best on the phone and say why. Picking one closes it and the category shows in the grid before the action
    tiles, picked (`pickFromOtherSide`); Save stores it as offered here (brief 69 does that).
