@@ -1,6 +1,6 @@
 # 98: The packed local places list in the app, measured
 
-Status: brief
+Status: merged 2026-11-01 (kept loaded: about +13 MB, about 94 ms once at engine start; 772 Aresium tests; the list is downloadable at aresium.de/osm/)
 Branch: `codex/98-local-places-packed-app` · Worktree: `../empire-ios-98-local-places-packed-app` · Model:
 `gpt-6.1-sol`, effort `high` · Simulator: `codex-98` (create it: iPhone 17, iOS 27.0) · Needs aresium at `eadfc47` or
 later (brief 97).

@@ -262,3 +262,11 @@ anderen 39 Buchungen von … hinzufügen?"; the button at the window's end is go
 sorting round 1 (sales on Vinted/eBay/Kleinanzeigen, florists and gifts, many food words, more brands, clear purposes;
 a bank's PayPal line counts as a transfer only for the months a PayPal export covers) and reading round 1 (no test
 file read wrong any more; spreadsheet-rewritten dates, cut-off files refused, re-saved VR Bank files keep their ids).
+
+**In build 13** (2026-11-01): the engine's sorting round 3 (chains as card statements spell them, "MC DONALDS",
+"MEDIAMARKTSATURN", long company names; business words in compounds and cut off at the field's end; the SPC* prefix;
+towns without their umlauts; regional utilities, car dealers and charging operators; memberships) and a list of
+Germany's local places from OpenStreetMap (264,744 places, packed, kept loaded: about 13 MB). On Patrik's data a new
+person's day one sorts 984 payments (was 966 before round 1), 969 as he has them, and needs 103 fixes over 14 months
+(was 111). Settings → Über → Schriften & Lizenzen lists "© OpenStreetMap-Mitwirkende" with the ODbL and the list's
+download (aresium.de/osm/).
