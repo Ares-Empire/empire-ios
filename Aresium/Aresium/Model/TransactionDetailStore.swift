@@ -13,6 +13,33 @@ enum RecategorisationMode: String, CaseIterable {
     }
 }
 
+/// A single alert presenter prevents the first alert's dismissal from answering the next question.
+enum RecategorisationQuestion: Identifiable {
+    case remove(RemoveCurrentQuestion)
+    case merchant(MerchantFollowUp)
+
+    var id: UUID {
+        switch self {
+        case let .remove(question): question.id
+        case let .merchant(question): question.id
+        }
+    }
+
+    var title: String {
+        switch self {
+        case let .remove(question): question.title()
+        case let .merchant(question): question.wording.question()
+        }
+    }
+
+    var message: String? {
+        switch self {
+        case let .remove(question): question.message()
+        case let .merchant(question): question.wording.message()
+        }
+    }
+}
+
 @MainActor @Observable
 final class TransactionDetailStore {
     private(set) var detail: TransactionDetail?
@@ -25,7 +52,7 @@ final class TransactionDetailStore {
     private(set) var target: String?
     // Keep insertion order: with dropCurrent, the server promotes categories[0].
     private(set) var extras: [String] = []
-    /// Phone mode, after a Switch: "Also the N other payments from <shop>?", asked before the sheet closes.
+    /// Phone mode, after saving: the shop's other payments, asked before the sheet closes.
     private(set) var followUp: MerchantFollowUp?
     /// Phone mode: the receipt joined to this payment (its page's Receipt section).
     private(set) var receipt: LedgerReceipt?
@@ -39,6 +66,12 @@ final class TransactionDetailStore {
     private var categoryList: PhoneCategoryList?
     private var pickedOtherSide: Set<String> = []
     private var retryDropCurrent = false
+    private(set) var removeCurrentQuestion: RemoveCurrentQuestion?
+    var question: RecategorisationQuestion? {
+        if let removeCurrentQuestion { return .remove(removeCurrentQuestion) }
+        return followUp.map(RecategorisationQuestion.merchant)
+    }
+    private var retryAnsweredRemoval = false
 
     init(transaction: Transaction, dashboardStore: DashboardStore) {
         self.transaction = transaction
@@ -53,7 +86,9 @@ final class TransactionDetailStore {
     /// before the New category tile where it was asked for (brief 60), so it shows picked where the person looks.
     var choices: [Category] {
         guard let detail else { return [] }
-        let all = dashboardStore.dashboard?.recategorisationChoices(amount: detail.amount) ?? []
+        let all = (dashboardStore.dashboard?.recategorisationChoices(amount: detail.amount) ?? []).filter {
+            mode != .add || categoryList?.id(named: $0.name) != CategoryCatalog.ownTransfers
+        }
         guard !madeHere.isEmpty else { return all }
         let made = madeHere.compactMap { name in dashboardStore.dashboard?.categories.first { $0.name == name } }
         return all.filter { !madeHere.contains($0.name) } + made
@@ -66,7 +101,8 @@ final class TransactionDetailStore {
         return mode == .add || (target != nil && target != detail.category)
     }
     var canRemoveCurrent: Bool {
-        !isSaving && !newCategory.isMaking && extras.contains { $0 != detail?.category }
+        !isSaving && !newCategory.isMaking && detail?.category != CategoryName.uncategorised
+            && extras.contains { $0 != detail?.category && !(detail?.tags.contains($0) ?? false) }
     }
 
     // MARK: a new category from the change window (brief 60)
@@ -264,6 +300,8 @@ final class TransactionDetailStore {
         target = nil
         extras = detail.tags
         saveError = nil
+        removeCurrentQuestion = nil
+        followUp = nil
         madeHere = []
         pickedOtherSide = []
         newCategory.reset()
@@ -293,12 +331,27 @@ final class TransactionDetailStore {
     }
 
     func save(dropCurrent: Bool = false) async {
-        guard canSave, let detail, !dropCurrent || (mode == .add && canRemoveCurrent) else { return }
+        await save(dropCurrent: dropCurrent, answeredRemoval: false)
+    }
+
+    func answerRemoveCurrent(remove: Bool) async {
+        guard removeCurrentQuestion != nil else { return }
+        removeCurrentQuestion = nil
+        await save(dropCurrent: remove, answeredRemoval: true)
+    }
+
+    private func save(dropCurrent: Bool, answeredRemoval: Bool) async {
+        guard canSave, let detail, !dropCurrent || (mode == .add && !extras.isEmpty) else { return }
+        if dashboardStore.phone != nil, mode == .add, !dropCurrent, !answeredRemoval, canRemoveCurrent {
+            removeCurrentQuestion = RemoveCurrentQuestion(category: detail.category, categories: extras)
+            return
+        }
         guard !isSample else {
             saveError = "Not available with sample data"
             return
         }
         retryDropCurrent = dropCurrent
+        retryAnsweredRemoval = answeredRemoval
         isSaving = true
         saveError = nil
         defer { isSaving = false }
@@ -326,6 +379,10 @@ final class TransactionDetailStore {
                 let result = try await backend.switchCategory(id: detail.id, to: target, auth: auth)
                 updated = result.detail
                 followUp = result.followUp
+            } else if let phone = backend as? PhoneBackend {
+                let result = try await phone.saveTags(id: detail.id, categories: extras, dropCurrent: dropCurrent, auth: auth)
+                updated = result.detail
+                followUp = result.followUp
             } else {
                 updated = try await backend.setTags(id: detail.id, categories: extras, dropCurrent: dropCurrent, auth: auth)
             }
@@ -342,7 +399,7 @@ final class TransactionDetailStore {
         }
     }
 
-    func retrySave() async { await save(dropCurrent: retryDropCurrent) }
+    func retrySave() async { await save(dropCurrent: retryDropCurrent, answeredRemoval: retryAnsweredRemoval) }
 
     /// The Receipt section's Unjoin: the receipt waits for its bank payment again (and counts on its own); a category
     /// this payment took from it goes.

@@ -20,14 +20,21 @@ struct SwitchResult {
     var followUp: MerchantFollowUp?
 }
 
-/// "Also the N other payments from <shop>?": asked once after a Switch in phone mode, when other payments of the same
-/// merchant were not set by hand. `apply` moves them.
+/// The shop's other payments after Switch or an extras change. Switch moves eligible non-manual rows; extras
+/// change only additions/removals, regardless of their primary source. `wording` is shared with selections.
 struct MerchantFollowUp: Identifiable {
     let id = UUID()
     let shop: String
     let category: String
     let count: Int
+    var added: [String] = []
+    var removed: [String] = []
     let apply: () async throws -> Void
+
+    var wording: CategoryQuestionWording {
+        CategoryQuestionWording(count: count, selectedCount: 1, shopCount: 1, shop: shop, category: category,
+                                added: added, removed: removed)
+    }
 }
 
 /// How a batch of files is sent: the server takes requests of at most 25 MB; the phone reads them all in one go.

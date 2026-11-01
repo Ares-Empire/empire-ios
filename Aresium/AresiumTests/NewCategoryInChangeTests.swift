@@ -113,7 +113,11 @@ struct NewCategoryInChangeTests {
         #expect(try await phone.ledger.payment(store.paymentID)?.extraCategories.isEmpty == true, "nothing before Save")
 
         await store.save()
-        #expect(store.followUp == nil && !store.showsRecategorisation)
+        #expect(store.removeCurrentQuestion != nil)
+        await store.answerRemoveCurrent(remove: false)
+        #expect(store.followUp?.count == 2)
+        await store.answerFollowUp(moveOthers: false)
+        #expect(!store.showsRecategorisation)
         let saved = try #require(try await phone.ledger.payment(store.paymentID))
         #expect(saved.category == "groceries", "Add keeps it where it is")
         #expect(saved.extraCategories == [made.id])
@@ -131,7 +135,7 @@ struct NewCategoryInChangeTests {
         // A new opening shows them where the dashboard puts them (no longer after the others by force).
         store.showsRecategorisation = false
         store.beginRecategorisation(mode: .add)
-        let order = dashboard.dashboard?.recategorisationChoices(amount: -1).map(\.name)
+        let order = dashboard.dashboard?.recategorisationChoices(amount: -1).filter { $0.name != "Own transfers" }.map(\.name)
         #expect(store.choices.map(\.name) == order)
     }
 

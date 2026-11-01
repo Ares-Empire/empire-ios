@@ -889,6 +889,28 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   categories), `-sampleOtherSide <id or own name,…>` (offered on the other side too), `-sampleChooseAll` (every default
   ticked: the longest list). The menus and context menus need real taps: a temporary UI test in `Aresus/AresusUITests`
   driving Aresium (deleted). Tests: `CategorySideScreensTests`. Screenshots: `build/70-*.png`.
+  **Save in Add asks** (brief 83; phone mode, `CategoryQuestions.swift`): after adding a category, Save asks
+  “Also remove from <current>?” with the Foundation-formatted list of the remaining categories, Remove and Keep both.
+  Remove uses Switch's learning and shop question; Not sorted promotes the first category without asking. The quiet
+  bottom button is gone. Keep both, or changing only extras, asks whether to add/remove those extras on the shop's
+  eligible other bank payments. The count excludes rows already carrying an addition, rows without a removed extra,
+  own transfers and structural rows; receipt and cash rows have no extras. All adds/removes extras in one ledger job
+  and one rebuild, preserving primary categories and learning nothing. The follow-up's `wording` builds its title,
+  optional message and button titles for both one payment and a selection.
+  **Selection window API for Add:** call `DashboardStore.prepareAddCategories(ids:names:currentCategory:removing:)`
+  on Save with the list's category and the added/removed extra names (`offeredCategories(for:mode: .add)` omits
+  Own transfers). Present the returned `BatchAddRequest.question`
+  if present (`RemoveCurrentQuestion.title/message/removeTitle/keepTitle`); then call `request.save(removeCurrent:)`.
+  Without a question call `request.save()`. The returned `BatchChangeResult.followUp` is the usual shared, single-use
+  follow-up; its original undo also restores an applied answer. Remove switches only selected rows whose primary is
+  the list's category; the others get extras. Unsorted selected rows switch automatically. The lower-level
+  `addCategory(ids:name:removingCurrent:)` and `addCategories(ids:names:removing:removingCurrent:)` save an already
+  answered choice. The selection screens remain brief 82's work.
+  DEBUG (with `-samplePhone -sampleCategory Groceries -sampleMonth 2026-10 -samplePhoneTransaction REWE
+  -sampleRecategorise add`): `-samplePick Clothes -sampleAddSave` picks and taps Save after the sheet opens;
+  `-sampleRemoveAnswer keep|remove` answers the first alert and shows the shop alert. Tests: `AddQuestionsTests`,
+  plus updated new-category and other-side tests. Screenshots: `build/83-en-remove.png`, `build/83-de-remove.png`,
+  `build/83-en-add.png`, `build/83-de-add.png` (English/German; the Add screenshots use Keep both).
   **New category where a category is chosen** (brief 60,
   Patrik after build 7: "otherwise you have to leave, create it, come back"): one piece for three places,
   `NewCategoryModel` (`Model/NewCategory.swift`: the alert's name, kept after a name problem; whether the alert shows;

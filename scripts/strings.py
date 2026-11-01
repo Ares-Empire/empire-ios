@@ -277,6 +277,22 @@ def fix_lookups() -> None:
             print(f"{path.relative_to(ROOT)}: {len(changes)} lookup(s)")
 
 
+def format_arguments(text: str) -> list[tuple[int, str]]:
+    """Compare argument identities and types even when a translation changes their order."""
+    arguments = []
+    sequential = 0
+    for placeholder in PLACEHOLDER.findall(text):
+        if placeholder == "%%":
+            continue
+        positional = re.fullmatch(r"%(\d+)\$(.+)", placeholder)
+        if positional:
+            arguments.append((int(positional[1]), positional[2]))
+        else:
+            sequential += 1
+            arguments.append((sequential, placeholder[1:]))
+    return sorted(arguments)
+
+
 def report(fail: bool) -> None:
     problems = lookup_problems()
     for path in catalogs():
@@ -288,9 +304,9 @@ def report(fail: bool) -> None:
             if texts is None:
                 problems.append(f"no German: {where}")
                 continue
-            english = sorted(PLACEHOLDER.findall(key))
+            english = format_arguments(key)
             for text in texts:
-                found = sorted(PLACEHOLDER.findall(text))
+                found = format_arguments(text)
                 # A plural form may leave out the count ("eine Person"); otherwise the placeholders must match.
                 if found != english and not (len(texts) > 1 and set(found) <= set(english)):
                     problems.append(f"placeholders differ ({english} vs {found}): {where} -> {text!r}")

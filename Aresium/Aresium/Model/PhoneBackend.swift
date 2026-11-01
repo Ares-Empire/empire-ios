@@ -155,10 +155,14 @@ final class PhoneBackend: AresiumBackend {
 
     /// Moves the payment by hand, learns its merchant, and finds the merchant's other payments not set by hand.
     func switchCategory(id: String, to category: String, auth: BackendAuth) async throws -> SwitchResult {
+        try await changeCategory(id: id, to: category, extras: nil, auth: auth)
+    }
+
+    private func changeCategory(id: String, to category: String, extras: [String]?, auth: BackendAuth) async throws -> SwitchResult {
         let list = try await categories()
         guard let target = list.id(named: category) else { throw LedgerError.notFound }
         guard let payment = try await ledger.payment(id) else { throw LedgerError.notFound }
-        try await ledger.setCategory(id, category: target, source: .manual)
+        try await ledger.setCategory(id, category: target, extras: extras, source: .manual)
         let rules = try await engine.learn(payment.sorting(raw: false), categoryID: target)
         try await ledger.remember(rules)
         try await refresh()
@@ -177,19 +181,29 @@ final class PhoneBackend: AresiumBackend {
     }
 
     func setTags(id: String, categories names: [String], dropCurrent: Bool, auth: BackendAuth) async throws -> TransactionDetail {
+        try await saveTags(id: id, categories: names, dropCurrent: dropCurrent, auth: auth).detail
+    }
+
+    /// Add's saved answer. Promoting an extra shares Switch's mutation, learning and follow-up code above.
+    func saveTags(id: String, categories names: [String], dropCurrent: Bool, auth: BackendAuth) async throws -> SwitchResult {
         let list = try await categories()
         let ids = try names.map { name in
-            guard let id = list.id(named: name) else { throw LedgerError.notFound }
+            guard let id = list.id(named: name), id != CategoryCatalog.ownTransfers else { throw LedgerError.notFound }
             return id
         }
         guard let payment = try await ledger.payment(id) else { throw LedgerError.notFound }
-        if dropCurrent, let first = ids.first {
-            try await ledger.setCategory(id, category: first, extras: Array(ids.dropFirst()), source: .manual)
-        } else {
-            try await ledger.setCategory(id, category: payment.category, extras: ids, source: payment.categorySource)
+        if (dropCurrent || payment.category == nil), let first = names.first {
+            return try await changeCategory(id: id, to: first, extras: Array(ids.dropFirst()), auth: auth)
         }
-        try await refresh()
-        return try await transactionDetail(id: id, auth: auth)
+        let added = zip(names, ids).filter { !payment.extraCategories.contains($0.1) && payment.category != $0.1 }.map(\.0)
+        let removed = payment.extraCategories.filter { !ids.contains($0) }.compactMap { list.name(of: $0) }
+        let result = try await addCategories(ids: [id], names: added, removing: removed)
+        let detail = try await transactionDetail(id: id, auth: auth)
+        let followUp = result.followUp.map { question in
+            MerchantFollowUp(shop: payment.place, category: question.category, count: question.count,
+                             added: added, removed: removed) { _ = try await question.apply() }
+        }
+        return SwitchResult(detail: detail, followUp: followUp)
     }
 
     var importExtensions: Set<String> { ImportFileReader.phoneExtensions }

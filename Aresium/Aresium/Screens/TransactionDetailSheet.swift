@@ -97,6 +97,14 @@ struct TransactionDetailSheet: View {
                 // `-otherCategoryPick <name>`: a category of the other side picked from Other category… (brief 70).
                 if let pick = LaunchArguments.value("-otherCategoryPick") { store.pickFromOtherSide(pick) }
                 await debugNewCategory()
+                if arguments.contains("-sampleAddSave"), !store.isSample {
+                    try? await Task.sleep(for: .milliseconds(900))
+                    await store.save()
+                    if let answer = LaunchArguments.value("-sampleRemoveAnswer"), store.removeCurrentQuestion != nil {
+                        try? await Task.sleep(for: .milliseconds(900))
+                        await store.answerRemoveCurrent(remove: answer == "remove")
+                    }
+                }
             }
             // Phone sample: a Switch to this category at once (the "also the N others" question follows).
             if !store.isSample, let index = arguments.firstIndex(of: "-samplePhoneSwitch"),

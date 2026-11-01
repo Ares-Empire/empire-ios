@@ -101,7 +101,13 @@ final class BatchMerchantFollowUp {
         category = plan.categoryName
     }
 
-    var question: String { BatchWording.question(count: count, shops: shopCount, shop: shop) }
+    var added: [String] { plan.addedNames }
+    var removed: [String] { plan.removedNames }
+    var wording: CategoryQuestionWording {
+        CategoryQuestionWording(count: count, selectedCount: plan.selectedCount, shopCount: shopCount, shop: shop,
+                                category: category, added: added, removed: removed, selection: true)
+    }
+    var question: String { wording.question() }
 
     func apply() async throws -> BatchChangeResult {
         guard !applied, let token = undo.token else { throw BatchChangeError.unavailable }
@@ -110,7 +116,7 @@ final class BatchMerchantFollowUp {
         undo.token = saved.undo
         try await phone.refresh()
         await undo.afterChange?()
-        return BatchChangeResult(action: .switchCategory, category: category, changed: saved.changed,
+        return BatchChangeResult(action: plan.changesExtras ? .addCategory : .switchCategory, category: category, changed: saved.changed,
                                  skipped: saved.skipped, undo: undo, followUp: nil)
     }
 }
@@ -146,6 +152,21 @@ nonisolated enum BatchWording {
         if let shop, shops == 1 { return language.string("Also move \(count) other payments from \(shop)?") }
         return language.string("Also move \(count) other payments from \(shops) shops?")
     }
+}
+
+/// The selection window prepares once on Save, presents `question` when present, then saves its answer.
+/// No payment is changed until the answer. The resulting follow-up and undo are the normal batch handles.
+@MainActor
+struct BatchAddRequest {
+    let question: RemoveCurrentQuestion?
+    private let saveAnswer: (Bool) async throws -> BatchChangeResult
+
+    init(question: RemoveCurrentQuestion?, save: @escaping (Bool) async throws -> BatchChangeResult) {
+        self.question = question
+        saveAnswer = save
+    }
+
+    func save(removeCurrent: Bool = false) async throws -> BatchChangeResult { try await saveAnswer(removeCurrent) }
 }
 
 extension DashboardStore {
@@ -195,7 +216,7 @@ extension DashboardStore {
     }
 
     /// The same membership as the single payment's change window; a common primary category is left out.
-    func offeredCategories(for ids: Set<String>) -> [Category] {
+    func offeredCategories(for ids: Set<String>, mode: RecategorisationMode = .switchCategory) -> [Category] {
         guard let phone, let catalog = phone.catalog else { return [] }
         let summary = selectionSummary(ids)
         guard let side = summary.side else { return [] }
@@ -203,6 +224,7 @@ extension DashboardStore {
         let offered = Set(list.offered(for: side == .income ? .in : .out).compactMap { list.name(of: $0) })
         return (dashboard?.recategorisationChoices(amount: side == .income ? 1 : -1) ?? []).filter {
             offered.contains($0.name) && $0.name != summary.currentCategory
+                && (mode != .add || list.id(named: $0.name) != CategoryCatalog.ownTransfers)
         }
     }
 
@@ -212,10 +234,32 @@ extension DashboardStore {
         return await publishBatch(try await phone.switchCategory(ids: ids, to: category))
     }
 
-    func addCategory(ids: Set<String>, name: String) async throws -> BatchChangeResult {
+    func addCategory(ids: Set<String>, name: String, removingCurrent: String? = nil) async throws -> BatchChangeResult {
+        try await addCategories(ids: ids, names: [name], removingCurrent: removingCurrent)
+    }
+
+    func addCategories(ids: Set<String>, names: [String], removing: [String] = [],
+                       removingCurrent: String? = nil) async throws -> BatchChangeResult {
         guard let phone else { throw BatchChangeError.unavailable }
         try validateSelection(ids)
-        return await publishBatch(try await phone.addCategory(ids: ids, name: name))
+        return await publishBatch(try await phone.addCategories(ids: ids, names: names, removing: removing,
+                                                                removingCurrent: removingCurrent))
+    }
+
+    func prepareAddCategories(ids: Set<String>, names: [String], currentCategory: String,
+                              removing: [String] = []) throws -> BatchAddRequest {
+        guard phone != nil else { throw BatchChangeError.unavailable }
+        try validateSelection(ids)
+        let rows = selectionRows(ids)
+        let adds = names.filter { name in rows.contains { $0.categoryName != name && !$0.tags.contains(name) } }
+        let question: RemoveCurrentQuestion? = currentCategory != CategoryName.uncategorised
+            && !names.contains(currentCategory) && !adds.isEmpty && rows.contains { $0.categoryName == currentCategory }
+            ? RemoveCurrentQuestion(category: currentCategory, categories: names, selection: true) : nil
+        return BatchAddRequest(question: question) { [weak self] remove in
+            guard let self else { throw BatchChangeError.unavailable }
+            return try await self.addCategories(ids: ids, names: names, removing: removing,
+                                               removingCurrent: remove && question != nil ? currentCategory : nil)
+        }
     }
 
     func renameInfo(ids: Set<String>) async throws -> BatchRenameInfo {
@@ -248,8 +292,13 @@ extension PhoneBackend {
         try await batch(ids: ids, action: .switchCategory(category))
     }
 
-    func addCategory(ids: Set<String>, name: String) async throws -> BatchChangeResult {
-        try await batch(ids: ids, action: .addCategory(name))
+    func addCategory(ids: Set<String>, name: String, removingCurrent: String? = nil) async throws -> BatchChangeResult {
+        try await addCategories(ids: ids, names: [name], removingCurrent: removingCurrent)
+    }
+
+    func addCategories(ids: Set<String>, names: [String], removing: [String] = [],
+                       removingCurrent: String? = nil) async throws -> BatchChangeResult {
+        try await batch(ids: ids, action: .editCategories(added: names, removed: removing, dropCurrent: removingCurrent))
     }
 
     func renameInfo(ids: Set<String>) async throws -> BatchRenameInfo {
