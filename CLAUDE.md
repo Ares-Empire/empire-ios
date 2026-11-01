@@ -611,7 +611,10 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   only the selected scope. Removing a payment override reveals a remaining shop rule; changing/removing a shop rule
   leaves payment overrides intact. An empty merchant key allows only the payment scope.
   **Shop identities** (brief 54): one engine `shopIdentities` call per name/lookup job over the distinct keys of all
-  bank payments, receipts, stored name rules and learned category rules (`ShopIdentities.swift`, `names.identities`).
+  bank payments, receipts, stored name rules, learned category rules and bank-line-only probes (`ShopIdentities.swift`,
+  `names.identities`). `AresiumEngine.nameKeys` batches the full merchant keys, place-alone probes (counterparty =
+  place, empty description) and the engine's `cardMerchant(place)` checks in one bridge call. The probes share the
+  identity universe; they only qualify display names and never become additional learned/name rule keys.
   Original merchant keys and stored/exported rules stay unchanged. Different names of one shop group together, including
   receipts and cash entries; payment-only names and exact bank-line grouping for empty keys keep their behavior. A name
   rule uses the exact merchant key first, then the lexical first rule of its shop. Renaming/removing a shop name
@@ -631,9 +634,32 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   `saveError`. Row and page use the same store. Phone samples use their real temporary ledger, as category changes do.
   The lower-level `PhoneBackend.renameInfo(id:)` returns that info; `rename(id:name:scope:)` saves and returns the new
   `TransactionDetail` (callers outside the detail store must reload their dashboard).
+  **One bank name per shop** (brief 76): after counting, `PaymentNames` chooses `LedgerPayment.place` from the
+  shop identity's newest qualifying bank payment (booking date, then later store order) for every bank row without
+  an effective own name. A line qualifies only when the engine's merchant key of that line alone belongs to the same
+  shop identity AND `cardMerchant(line)` returns null. Card statements carrying a payment's amount/date never supply
+  the shop name; a payment service named as counterparty cannot supply it merely because the shop appears in the
+  description. Both checks use the engine, with no Swift copies of its patterns. If no line qualifies, each payment keeps its own bank line. A payment's own
+  name still wins over the shop rule; Own names off hides only own names, keeping the
+  shop's newest qualifying bank line. An empty merchant key keeps its own bank line. `Transaction.bankName` and the detail's
+  `bankName` carry that payment's original line whenever different, including when the title is the shop's bank name
+  (`isOwnName` remains false). Cash withdrawals, name pages/months, summed rows and the rename field follow the shown
+  name; receipts and cash entries keep their typed Shop. `PaymentRenameInfo.shopBankName`/`bankDisplayName` supply
+  the fallback to details and `RenamePlan.start`; original fields never change or reach the engine under a display name.
+  **Name search API** (brief 76, data only; screens in 77): `NameSearch.results(for:in:)` takes a query and
+  `Dashboard.nameGroups`; `DashboardStore.searchNames(_:)` uses a `NameSearch.Index` cached by dashboard `revision`
+  for keystrokes. A group retains `names`: shown spellings, every original bank line and every own name (also hidden
+  names). All query words must match one spelling, folding case, accents and ß/ss, with punctuation treated as spaces.
+  Ranking: equal, full prefix, all word prefixes in any order, all substrings, then one insertion/deletion/substitution
+  per query word of at least four letters (short words must match exactly as substrings). Within each tier: shown name,
+  more payments, newer last payment; the opaque key breaks remaining ties. Empty queries return none; at most 50 hits.
+  `NameSearchResult` returns `key` (also `id`), `shownName`, optional `matchedName` (the other original spelling),
+  `count`, positive `moneyOut`/`moneyIn`, `newestDate` and `categoryName` (the newest row's); `nameGroup(_ key:)`
+  looks up that result's group. Server mode has no name groups and returns no hits. The index builds once per
+  dashboard; `NameSearchTests` times 1,000 groups / 5,000 payments.
   **Setting:** `DashboardStore.ownNames` (or `PhoneBackend.ownNames`) reads `aresium.ownNames`, default true.
   Settings calls `await DashboardStore.setOwnNames(_:)` to persist and rebuild, rather than writing defaults directly.
-  Off hides names without deleting them. `Transaction.place` and `TransactionDetail.place` carry the shown name;
+  Off hides own names without deleting them. `Transaction.place` and `TransactionDetail.place` carry the shown name;
   optional `bankName` is set only when different, `isOwnName` says whether the shown name is own, `ownNameSource` says
   which scope, and `nameKey` is an opaque grouping key. These fields are absent in server data.
   **All payments of this name:** `DashboardStore.nameGroup(for:)` looks up the prebuilt `Dashboard.nameGroups` dictionary
@@ -647,8 +673,8 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   `PaymentNamesTests` checks the worker spans (`names.*`) and opens an actual schema 3 store with all record types.
   **Renaming and the name's page** (brief 44, the screens; Patrik 2026-10-30: swipe left only, no direction setting;
   **brief 47**, Patrik's test of build 4: renaming was hard to find): the payment's page shows the shown name as its
-  title and, when it is an own name, the bank's name small under it. **The name is edited where it stands** (brief 47;
-  brief 44's Name row, its Rename button and `RenameSheet` are gone): in phone mode with Own names on, a small pen
+  title and, whenever different, this payment's original bank line small under it. **The name is edited where it
+  stands** (brief 47; brief 44's Name row, its Rename button and `RenameSheet` are gone): in phone mode with Own names on, a small pen
   (`PenButton`: SF `pencil`, muted ink, 44 pt tap area, VoiceOver "Rename") follows the title, and a single tap on the
   name or the pen (Patrik asked for a double tap; a single tap is found without being told and a double tap still
   works, its first tap opens the field; Patrik agreed 2026-10-30) turns the title into a field in the title's own font
@@ -664,8 +690,8 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   through the shop's rule asks "Use the bank's name for all N+1 payments?": **All N+1** (the rule goes), **Only this
   one** (brief 47: this payment shows the bank's name while the shop keeps its name; stored as the payment's own name
   equal to the bank's name as names are kept, `PaymentNames.keptBankName`, read by `PaymentNames.shown` as no own name,
-  so the payment shows and counts with the bank's name; export and restore carry it as any own name), Cancel. Server
-  mode and Own names off: no pen, no field. **The category** (brief 47): the chip and a pen beside it ("Change
+  so the payment shows the shop's bank name and counts with that shop; export and restore carry it as any own name),
+  Cancel. Server mode and Own names off: no pen, no field. **The category** (brief 47): the chip and a pen beside it ("Change
   category") open the change window, an extra category's chip opens it at Add; the Change button and the reason sentence
   went, the reason (`PaymentWording.categoryReason`) is one quiet line under "Currently in" at the window's top. Server
   mode the same wherever the page has categories to change to.
@@ -675,6 +701,17 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   spent and as received, and there is no Refunds / Rückerstattungen row. The one exception is a withdrawal's cash covered
   by receipts, which moves to the receipt's category. A payment's `categoriesIn` (its spending lists) holds categories
   only for money out, its `incomeBuckets` only for money in; `PaymentNames` groups a row that has either.
+  **A day's payments API** (brief 76, data only; screens in 77): `DashboardStore.day(_:)` takes `YYYY-MM-DD` and
+  returns `DayPayments` cached by dashboard `revision`. `date`, `expenses` and `income`; each side has `rows` and
+  `total`, also accessible as `day[.expenses]` / `day[.income]`. Each `DayPayments.Row` has the usual `TransactionRow`
+  in `row`, a convenience `transaction`, `id`, and the dashboard's `Category` (name, icon, colour and kind) in
+  `category`. Rows keep the month lists' stable order and covered rows, one occurrence per payment despite extra
+  categories. The category is the primary list on that side, else its first list (server mode's Other, for example).
+  Totals come directly from `dayExpense` / `dayIncome`, including covered cash on the withdrawal's date; transfers
+  stay absent as in month lists. Phone and server mode both work; invalid/absent dates return empty lists and zero.
+  `dayDate(atChartIndex:scope:)` maps a zero-based day point on `.current` (including a review month) or `.month(key)`
+  to its date; `.overview`, missing months and indices outside the graph return nil. `DayPaymentsTests` compares every
+  sample day with the graphs and month lists in both modes, plus covered cash, extra categories and revision changes.
   **Category sides** (brief 69): every category has one home side, which since brief 71 decides only where it is
   offered (the menus), not where its money counts. Defaults take `kind` from the engine's
   catalog; one's own store `side` (`"spend"` or `"income"`) in schema 6's chosen category, alongside `otherSide` (false

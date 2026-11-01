@@ -154,6 +154,14 @@ actor AresiumEngine {
         return keys
     }
 
+    /// Full merchant keys plus line-only keys and card-statement checks, in one name-job bridge call.
+    func nameKeys(_ payments: [SortingPayment], lines: [SortingPayment]) throws -> NameKeys {
+        let answer = try call("nameKeys", NameKeyInput(payments: payments, lines: lines), as: NameKeys.self)
+        guard answer.keys.count == payments.count, answer.lineKeys.count == lines.count,
+              answer.cardLines.count == lines.count else { throw EngineError.invalidAnswer("nameKeys: wrong count") }
+        return answer
+    }
+
     /// `shopIdentities` for each merchant key, in the same order and length.
     func shopIdentities(_ keys: [String]) throws -> [String] {
         try PickerTiming.measure("names.identities") {
@@ -212,6 +220,11 @@ actor AresiumEngine {
         sortPayments: (input) => E.sortPayments(input.payments, { categories: input.categories, learned: input.learned }),
         learn: (input) => E.learn(input.learned, input.payment, input.categoryId),
         merchantKeys: (payments) => payments.map((payment) => E.merchantKey(payment)),
+        nameKeys: (input) => ({
+          keys: input.payments.map((payment) => E.merchantKey(payment)),
+          lineKeys: input.lines.map((payment) => E.merchantKey(payment)),
+          cardLines: input.lines.map((payment) => E.cardMerchant(payment.counterparty) !== null),
+        }),
         shopIdentities: (keys) => E.shopIdentities(keys),
         shareableLayout: (layout) => E.shareableLayout(layout),
         readReceipt: (capture) => E.readReceipt(capture),

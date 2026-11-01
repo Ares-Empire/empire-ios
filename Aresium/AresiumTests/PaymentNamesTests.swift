@@ -20,6 +20,244 @@ struct PaymentNamesTests {
                          ("03.10.2026", "PENNY Markt Berlin", "Purchase", -3000)])
     }
 
+    @Test func newestBankNameFollowsEveryRowDetailListAndRenameStart() async throws {
+        let phone = try await pennyPhone()
+        let payments = try await phone.ledger.payments()
+        let oldest = try #require(payments.first)
+        let newest = try #require(payments.last)
+        let before = try await phone.ledger.sortingSnapshot()
+        let session = await PhoneTest.session(nil, transport: RoutedTransport())
+        let store = DashboardStore(session: session, backend: phone)
+        await store.reload()
+        let rows = try #require(store.dashboard?.transactions)
+        #expect(rows.allSatisfy { $0.place == newest.place && $0.isOwnName == false && $0.ownNameSource == nil })
+        #expect(rows.first { $0.id == oldest.id }?.bankName == oldest.place)
+        #expect(rows.first { $0.id == newest.id }?.bankName == nil)
+        let detail = try await phone.transactionDetail(id: oldest.id, auth: auth)
+        #expect(detail.place == newest.place && detail.bankName == oldest.place && detail.isOwnName == false)
+        let info = try await phone.renameInfo(id: oldest.id)
+        let plan = RenamePlan(info: info)
+        #expect(plan.start == newest.place && plan.intent(plan.start) == .nothing)
+        #expect(plan.intent("") == .nothing && plan.intent(oldest.place) == .nothing)
+        let group = try #require(store.nameGroup(for: rows[0]))
+        #expect(group.rows.allSatisfy { $0.place == newest.place })
+        let page = try #require(store.namePage(rows[0].nameKey!))
+        #expect(page.months.flatMap(\.rows).allSatisfy { $0.transaction.place == newest.place })
+        store.sums.setEverywhere(true)
+        let list = store.paymentList(category: "Groceries", month: "2026-10", side: .expenses)
+        #expect(list.entries.contains { if case let .summed(sum) = $0 { return sum.title == newest.place }; return false })
+        #expect(store.searchNames(oldest.place).first?.matchedName == oldest.place)
+        #expect(try await phone.ledger.sortingSnapshot().payments == before.payments)
+
+        _ = try await phone.rename(id: oldest.id, name: "Weekly shop", scope: .shop)
+        _ = try await phone.rename(id: oldest.id, name: "Party", scope: .payment)
+        let own = try await phone.dashboard(auth: auth)
+        #expect(own.transactions.first { $0.id == oldest.id }?.place == "Party")
+        #expect(own.transactions.filter { $0.id != oldest.id }.allSatisfy { $0.place == "Weekly shop" })
+        await store.setOwnNames(false)
+        #expect(store.dashboard?.transactions.allSatisfy { $0.place == newest.place && $0.isOwnName == false } == true)
+        #expect(store.searchNames("Party").first?.matchedName == "Party", "hidden own names remain searchable")
+        #expect(store.searchNames("Weekly shop").first?.matchedName == "Weekly shop")
+        let hit = try #require(store.searchNames("Party").first)
+        #expect(store.nameGroup(hit.key)?.count == 3 && store.builtNameSearch.revision == store.revision)
+        await store.setOwnNames(true)
+        #expect(store.searchNames("Party").first?.key != hit.key, "a new dashboard rebuilds the cached index")
+        #expect(store.builtNameSearch.revision == store.revision)
+        await store.setOwnNames(false)
+        #expect(try await phone.transactionDetail(id: oldest.id, auth: auth).bankName == oldest.place)
+    }
+
+    @Test func bankNameUsesBookingDateThenStoreOrderAndNeverGroupsEmptyKeys() async throws {
+        let phone = try await pennyPhone()
+        let payments = try await phone.ledger.payments()
+        var old = payments[0], first = payments[1], last = payments[2]
+        // The dates are immutable; use the two October rows as a same-day pair copied from one payment.
+        first.counterparty = "Fictional earlier line"
+        last = first
+        last.counterparty = "Fictional later line"
+        old.counterparty = "Fictional older line"
+        let identities = ShopIdentities(byKey: ["old": "shop", "new": "shop", "": "shop"])
+        let names = PaymentNames.bankNames(payments: [first, last, old], keys: ["old", "new", "old"],
+                                           bankLineIdentities: ["shop", "shop", "shop"], identities: identities)
+        #expect(names["shop"] == "Fictional later line", "later store order breaks a booking-date tie; older date cannot win")
+        #expect(PaymentNames.bankNames(payments: [last], keys: [""], bankLineIdentities: ["shop"], identities: identities).isEmpty)
+        let bare = try await self.phone([("01.10.2026", "PayPal", "Unspecified", -1000),
+                                        ("02.10.2026", "PAYPAL", "Unspecified", -2000)])
+        #expect(try await bare.dashboard(auth: auth).transactions.map(\.place) == ["PayPal", "PAYPAL"])
+    }
+
+    @Test func madeUpShopIdentitySharesNewestBankLineIncludingCashWithdrawals() async throws {
+        let phone = try await pennyPhone()
+        var payments = try await phone.ledger.payments()
+        payments[0].counterparty = "MGP Luma - Old Market"
+        payments[1].counterparty = "Luma, Ltd"
+        payments[2].counterparty = "Luma, Ltd"
+        var dashboard = try Dashboard.sample()
+        dashboard.transactions = payments.map {
+            Transaction(id: $0.id, date: $0.bookingDate, day: Int($0.bookingDate.suffix(2))!, month: String($0.bookingDate.prefix(7)),
+                        amount: $0.amountValue, categoryName: "Groceries", tags: [], place: $0.place, city: "",
+                        categoriesIn: ["Groceries"], incomeBuckets: [])
+        }
+        let receipt = LedgerReceipt(id: "typed-shop", date: "2026-10-04", time: nil, shop: "Luma receipt as typed", total: "2.00",
+                                    currency: "EUR", euroAmount: nil, method: .cash, category: "groceries", categorySource: .manual,
+                                    rows: [], from: "text", paymentID: nil, created: .now)
+        dashboard.transactions.append(Transaction(id: "receipt:typed-shop", date: receipt.date, day: 4, month: "2026-10", amount: -2,
+                                                   categoryName: "Groceries", tags: [], place: receipt.shop!, city: "",
+                                                   categoriesIn: ["Groceries"], incomeBuckets: [], receiptId: receipt.id))
+        dashboard.cash = CashView(months: [:], movements: [CashMovement(id: payments[0].id, date: payments[0].bookingDate,
+                                  amount: 10, kind: .withdrawal, place: payments[0].place, category: "Cash withdrawals",
+                                  paidFrom: nil, coveredBy: [], left: 10)])
+        let source = dashboard, bank = payments
+        let named = await Task.detached {
+            var result = source
+            PaymentNames.apply(to: &result, payments: bank, paymentKeys: ["old luma", "luma", "luma"],
+                               bankLineIdentities: ["luma-shop", "luma-shop", "luma-shop"], receipts: [receipt], receiptKeys: ["receipt luma"], rules: [:],
+                               identities: ShopIdentities(byKey: ["old luma": "luma-shop", "luma": "luma-shop", "receipt luma": "luma-shop"]),
+                               enabled: true)
+            return result
+        }.value
+        #expect(named.transactions.prefix(3).allSatisfy { $0.place == "Luma, Ltd" && $0.isOwnName == false })
+        #expect(named.transactions.first?.bankName == "MGP Luma - Old Market")
+        #expect(named.cash?.movements.first?.place == "Luma, Ltd")
+        #expect(named.transactions.last?.place == "Luma receipt as typed")
+        let groups = try #require(named.nameGroups)
+        let hit = try #require(NameSearch.results(for: "mgp luma", in: groups).first)
+        #expect(hit.count == 4 && hit.matchedName == "MGP Luma - Old Market")
+    }
+
+    @Test(arguments: [true, false])
+    func paymentServiceLineCannotBecomeItsShopsName(ownNames: Bool) async throws {
+        let phone = try await self.phone()
+        let shopName = "Fictional Shop, UAB"
+        let serviceName = "PayPal Europe S.a.r.l. et Cie S.C.A"
+        let paypal = ImportFile(name: "fictional-shop-paypal.csv", data: Data("""
+        Datum,Name,Typ,Währung,Brutto,Netto,Transaktionscode,Auswirkung auf Guthaben
+        01.10.2026,"Fictional Shop, UAB",Allgemeine Zahlung,EUR,"-10,00","-10,00",FICTIONAL-SHOP-PURCHASE,Debit
+        """.utf8))
+        _ = try await phone.importFiles([paypal, PhoneTest.vrBank([
+            ("02.10.2026", serviceName, "Ihr Einkauf bei Fictional Shop, UAB", -2000)])], auth: auth)
+        let payments = try await phone.ledger.payments()
+        let older = try #require(payments.first { $0.source == "paypal" })
+        let newer = try #require(payments.first { $0.source == "bank" })
+        for payment in payments { try await phone.ledger.setCategory(payment.id, category: "groceries", source: .manual) }
+        let snapshot = try await phone.ledger.shopSnapshot(engine: phone.engine)
+        let olderIndex = try #require(snapshot.payments.firstIndex { $0.id == older.id })
+        let newerIndex = try #require(snapshot.payments.firstIndex { $0.id == newer.id })
+        let identity = snapshot.shops.identity(snapshot.paymentKeys[olderIndex])
+        #expect(!identity.isEmpty && identity == snapshot.shops.identity(snapshot.paymentKeys[newerIndex]))
+        #expect(snapshot.bankLineIdentities[olderIndex] == identity)
+        #expect(snapshot.bankLineIdentities[newerIndex] != identity, "the engine sees only the payment service in its line")
+        let before = try await phone.ledger.payments()
+        phone.setOwnNames(ownNames)
+        let dashboard = try await phone.dashboard(auth: auth)
+        #expect(dashboard.transactions.count == 2)
+        #expect(dashboard.transactions.allSatisfy { $0.place == shopName && $0.isOwnName == false && $0.ownNameSource == nil })
+        #expect(dashboard.transactions.first { $0.id == older.id }?.bankName == nil)
+        #expect(dashboard.transactions.first { $0.id == newer.id }?.bankName == serviceName)
+        for payment in [older, newer] {
+            let detail = try await phone.transactionDetail(id: payment.id, auth: auth)
+            #expect(detail.place == shopName && detail.isOwnName == false)
+            #expect(detail.bankName == (payment.id == newer.id ? serviceName : nil))
+            let info = try await phone.renameInfo(id: payment.id)
+            #expect(info.shopBankName == shopName && RenamePlan(info: info).start == shopName)
+        }
+        let groups = try #require(dashboard.nameGroups)
+        let group = try #require(groups.values.first)
+        #expect(groups.count == 1 && group.count == 2 && group.moneyOut == 30)
+        #expect(group.rows.allSatisfy { $0.place == shopName })
+        #expect(NameSearch.results(for: serviceName, in: groups).first?.matchedName == serviceName)
+        #expect(try await phone.ledger.payments() == before, "original fields and categories remain unchanged")
+    }
+
+    @Test(arguments: [true, false])
+    func newerCardStatementUsesTheShopsPlainPayPalLine(ownNames: Bool) async throws {
+        let phone = try await self.phone()
+        let shopName = "Fictional Shop, UAB"
+        let cardLine = "FICTIONAL SHOP, UAB   IRL CORK   EUR  14,99   Umsatz vom 02.10.2026   MC Fictional Card"
+        let paypal = ImportFile(name: "fictional-card-shop-paypal.csv", data: Data("""
+        Datum,Name,Typ,Währung,Brutto,Netto,Transaktionscode,Auswirkung auf Guthaben
+        01.10.2026,"Fictional Shop, UAB",Allgemeine Zahlung,EUR,"-10,00","-10,00",FICTIONAL-PLAIN-SHOP,Debit
+        """.utf8))
+        _ = try await phone.importFiles([paypal, PhoneTest.vrBank([
+            ("02.10.2026", cardLine, "Fictional card purchase", -1499)])], auth: auth)
+        let payments = try await phone.ledger.payments()
+        let plain = try #require(payments.first { $0.source == "paypal" })
+        let card = try #require(payments.first { $0.source == "bank" })
+        for payment in payments { try await phone.ledger.setCategory(payment.id, category: "groceries", source: .manual) }
+        let snapshot = try await phone.ledger.shopSnapshot(engine: phone.engine)
+        let plainIndex = try #require(snapshot.payments.firstIndex { $0.id == plain.id })
+        let cardIndex = try #require(snapshot.payments.firstIndex { $0.id == card.id })
+        let identity = snapshot.shops.identity(snapshot.paymentKeys[plainIndex])
+        #expect(!identity.isEmpty && snapshot.shops.identity(snapshot.paymentKeys[cardIndex]) == identity)
+        var lineOnly = card.sorting(raw: false)
+        lineOnly.counterparty = card.place
+        lineOnly.description = ""
+        let keys = try await phone.engine.merchantKeys([lineOnly])
+        #expect(snapshot.shops.identity(keys[0]) == identity, "the card line names the shop but still cannot name other rows")
+        #expect(snapshot.bankLineIdentities[plainIndex] == identity && snapshot.bankLineIdentities[cardIndex].isEmpty)
+        phone.setOwnNames(ownNames)
+        let dashboard = try await phone.dashboard(auth: auth)
+        #expect(dashboard.transactions.count == 2)
+        #expect(dashboard.transactions.allSatisfy { $0.place == shopName && $0.isOwnName == false })
+        #expect(dashboard.transactions.first { $0.id == card.id }?.bankName == cardLine)
+        #expect(dashboard.transactions.first { $0.id == plain.id }?.bankName == nil)
+        for payment in [plain, card] {
+            let detail = try await phone.transactionDetail(id: payment.id, auth: auth)
+            #expect(detail.place == shopName && detail.isOwnName == false)
+            #expect(detail.bankName == (payment.id == card.id ? cardLine : nil))
+            let info = try await phone.renameInfo(id: payment.id)
+            #expect(info.shopBankName == shopName && RenamePlan(info: info).start == shopName)
+        }
+        let groups = try #require(dashboard.nameGroups)
+        #expect(groups.count == 1 && groups.values.first?.count == 2 && groups.values.first?.moneyOut == 24.99)
+        #expect(groups.values.first?.rows.allSatisfy { $0.place == shopName } == true)
+        #expect(try await phone.ledger.payments().map(\.place) == payments.map(\.place))
+    }
+
+    @Test func aShopWithOnlyCardStatementsKeepsEachPaymentsOwnLine() async throws {
+        let first = "FICTIONAL SHOP, UAB   IRL CORK   EUR  10,00   Umsatz vom 01.10.2026   MC Fictional Card"
+        let second = "FICTIONAL SHOP, UAB   IRL CORK   EUR  20,00   Umsatz vom 02.10.2026   MC Fictional Card"
+        let phone = try await self.phone([
+            ("01.10.2026", first, "Fictional card purchase", -1000),
+            ("02.10.2026", second, "Fictional card purchase", -2000)])
+        let payments = try await phone.ledger.payments()
+        for payment in payments { try await phone.ledger.setCategory(payment.id, category: "groceries", source: .manual) }
+        let snapshot = try await phone.ledger.shopSnapshot(engine: phone.engine)
+        #expect(!snapshot.shops.identity(snapshot.paymentKeys[0]).isEmpty)
+        #expect(snapshot.shops.identity(snapshot.paymentKeys[0]) == snapshot.shops.identity(snapshot.paymentKeys[1]))
+        #expect(snapshot.bankLineIdentities == ["", ""])
+        for enabled in [true, false] {
+            phone.setOwnNames(enabled)
+            let dashboard = try await phone.dashboard(auth: auth)
+            #expect(dashboard.transactions.map(\.place) == [first, second])
+            #expect(dashboard.transactions.allSatisfy { $0.bankName == nil && $0.isOwnName == false })
+            for payment in payments {
+                let detail = try await phone.transactionDetail(id: payment.id, auth: auth)
+                #expect(detail.place == payment.place && detail.bankName == nil)
+                let info = try await phone.renameInfo(id: payment.id)
+                #expect(info.shopBankName == nil && RenamePlan(info: info).start == payment.place)
+            }
+        }
+    }
+
+    @Test func aShopWithoutAnyQualifyingBankLineKeepsEachPaymentsOwnLine() async throws {
+        let phone = try await self.phone([
+            ("02.10.2026", "PayPal Europe S.a.r.l. et Cie S.C.A", "Ihr Einkauf bei Fictional Shop, UAB", -1000),
+            ("03.10.2026", "PayPal", "Ihr Einkauf bei Fictional Shop, UAB", -2000)])
+        let snapshot = try await phone.ledger.shopSnapshot(engine: phone.engine)
+        let identity = snapshot.shops.identity(snapshot.paymentKeys[0])
+        #expect(!identity.isEmpty && identity == snapshot.shops.identity(snapshot.paymentKeys[1]))
+        #expect(snapshot.bankLineIdentities.allSatisfy { $0 != identity })
+        let dashboard = try await phone.dashboard(auth: auth)
+        let originals = Dictionary(uniqueKeysWithValues: snapshot.payments.map { ($0.id, $0.place) })
+        for row in dashboard.transactions {
+            #expect(row.place == originals[row.id] && row.bankName == nil && row.isOwnName == false)
+            let detail = try await phone.transactionDetail(id: row.id, auth: auth)
+            #expect(detail.place == originals[row.id] && detail.bankName == nil)
+            #expect(try await phone.renameInfo(id: row.id).shopBankName == nil)
+        }
+    }
+
     @Test func shopRuleNamesAllSpellingsAndLaterImportsWithoutChangingSorting() async throws {
         let phone = try await pennyPhone()
         let before = try await phone.ledger.payments()
@@ -56,7 +294,7 @@ struct PaymentNamesTests {
         #expect(try await phone.transactionDetail(id: payment.id, auth: auth).place == "Weekly shop")
         _ = try await phone.rename(id: payment.id, name: "", scope: .shop)
         let restored = try await phone.dashboard(auth: auth)
-        #expect(restored.transactions.allSatisfy { $0.isOwnName == false && $0.bankName == nil && $0.ownNameSource == nil })
+        #expect(restored.transactions.allSatisfy { $0.isOwnName == false && $0.place == "PENNY Markt Berlin" && $0.ownNameSource == nil })
         #expect(try await phone.ledger.paymentNames().isEmpty)
         #expect(PaymentNames.normalized("  " + String(repeating: "👨‍👩‍👧‍👦", count: 61) + "\n").count == 60)
         _ = try await phone.rename(id: payment.id, name: String(repeating: "a", count: 70), scope: .payment)

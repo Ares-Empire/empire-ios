@@ -244,6 +244,19 @@ nonisolated struct SortingPayment: Codable, Equatable, Sendable {
     var externalId: String? = nil
 }
 
+/// One name job: the full payment/receipt inputs and the bank lines checked on their own.
+nonisolated struct NameKeyInput: Encodable {
+    let payments: [SortingPayment]
+    let lines: [SortingPayment]
+}
+
+nonisolated struct NameKeys: Decodable {
+    let keys: [String]
+    let lineKeys: [String]
+    /// The engine's cardMerchant(line) is non-null: the line describes a particular card payment.
+    let cardLines: [Bool]
+}
+
 /// One payment's category from `sortPayments`, and the layer that chose it ("structural", "learned", "starter"), or
 /// none.
 nonisolated struct SortResult: Codable, Equatable, Sendable {

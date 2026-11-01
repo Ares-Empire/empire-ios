@@ -28,6 +28,8 @@ nonisolated struct ShopSnapshot: Sendable {
     let receipts: [LedgerReceipt]
     let paymentKeys: [String]
     let receiptKeys: [String]
+    /// Identity of each eligible place-alone line, in payment order; empty for card-statement lines.
+    let bankLineIdentities: [String]
     let names: [String: String]
     let learned: [String: String]
     let shops: ShopIdentities
@@ -45,13 +47,25 @@ extension PhoneLedger {
             SortingPayment(counterparty: $0.shop, description: $0.shop ?? "", source: "bank", account: "receipt",
                            amount: -$0.totalValue, currency: $0.currency, date: $0.date)
         }
-        let keys = try await engine.merchantKeys(input)
-        let distinct = Array(Set(keys + names.keys + learned.keys)).sorted()
+        // Ask the engine about the displayed bank lines too: a payment service can name the actual shop only in
+        // the description. Batch keys and the engine's card-statement checks with the full payments in one call.
+        let lines = payments.map {
+            SortingPayment(counterparty: $0.place, description: "", source: $0.source, account: $0.account,
+                           amount: $0.amountValue, currency: $0.currency, date: $0.bookingDate)
+        }
+        let checked = try await engine.nameKeys(input, lines: lines)
+        let paymentKeys = Array(checked.keys.prefix(payments.count))
+        let receiptKeys = Array(checked.keys.dropFirst(payments.count))
+        let lineKeys = checked.lineKeys
+        let current = Set(paymentKeys + receiptKeys + names.keys + learned.keys)
+        let distinct = Array(current.union(lineKeys)).sorted()
         let identities = try await engine.shopIdentities(distinct)
+        let byKey = Dictionary(uniqueKeysWithValues: zip(distinct, identities))
         return ShopSnapshot(payments: payments, receipts: receipts,
-                            paymentKeys: Array(keys.prefix(payments.count)),
-                            receiptKeys: Array(keys.dropFirst(payments.count)), names: names, learned: learned,
-                            shops: ShopIdentities(byKey: Dictionary(uniqueKeysWithValues: zip(distinct, identities))))
+                            paymentKeys: paymentKeys, receiptKeys: receiptKeys,
+                            bankLineIdentities: zip(lineKeys, checked.cardLines).map { $0.1 ? "" : byKey[$0.0] ?? "" }, names: names, learned: learned,
+                            // Line-only probes check display names; they must not create learned/name rule keys.
+                            shops: ShopIdentities(byKey: byKey.filter { current.contains($0.key) }))
     }
 
     func otherShopPayments(of merchant: String, besides id: String, target: String,

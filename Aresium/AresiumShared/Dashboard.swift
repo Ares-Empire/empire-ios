@@ -111,7 +111,7 @@ nonisolated struct Transaction: Codable, Identifiable {
     /// Phone mode (brief 32): a cash withdrawal (the shop list's cash rule), a source of the wallet.
     var cashWithdrawal: Bool? = nil
 
-    /// Phone mode only: the bank name when different, and where the shown own name came from.
+    /// Phone mode only: this payment's bank line when different from the shown name, and any own name's source.
     var bankName: String? = nil
     var isOwnName: Bool? = nil
     var ownNameSource: PaymentNameSource? = nil
@@ -244,6 +244,8 @@ nonisolated struct PaymentNameGroup: Codable {
     let amounts: PaymentNameAmounts
     /// Every dashboard month, including months without a payment of this name.
     let months: [String: PaymentNameAmounts]
+    /// Search spellings: shown names, every bank line and own name, including hidden own names. Phone mode only.
+    var names: [String]? = nil
     var count: Int { rows.count }
     var moneyOut: Double { amounts.moneyOut }
     var moneyIn: Double { amounts.moneyIn }
