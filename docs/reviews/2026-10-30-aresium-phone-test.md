@@ -218,3 +218,13 @@ of their side. Counting: every payment once, as it happened (money out Ausgaben,
 category; "Rückerstattungen" gone; a Zalando return shows as spent and received). Existing data keeps its menus:
 own categories got the side their money gave them, and a spending category that counted as income (Freunde) stays
 offered for money in.
+
+**After build 9** (2026-11-01), Patrik: "sometimes the issue still happens that the same vendor has different names: I
+found it in resales (check data)". Claude checked his files on the Mac: Vinted is one shop to Aresium (all 157 payments
+in one shop identity), but each row showed its own bank line ("MGP Vinted - Kleiderkreisel" before, "Vinted, UAB"
+after the change). Fix: a shop shows the bank name of its newest payment unless it has an own name (brief 76). New
+feature: "Search expenses and filter by day … make days clickable too and lead to a screen with that days expenses and
+income (in two tabs with swipe). For search: A small search icon … search by names which uses own given and also
+original names organized by best match." Briefs 76 (data, Codex) and 77 (screens, a Claude agent): the day's page is a
+sheet so its sides can be swiped; search finds names and opens the name's page. The bank files in Downloads may stay
+on his Mac ("this is my device").
