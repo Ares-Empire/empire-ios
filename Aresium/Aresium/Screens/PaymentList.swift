@@ -74,6 +74,9 @@ struct PaymentRow<Label: View>: View {
     var addUp: (() -> Void)? = nil
     /// Screenshots only: the row shown so far left, as halfway through a swipe.
     var shownAt: CGFloat? = nil
+    /// Whether the row swipes (its long press stays). Off on a day's page (brief 77), whose sides turn with a sideways
+    /// swipe: a swipe left there turns to Income wherever it starts, rather than opening a row.
+    var swipes = true
     let open: (Transaction) -> Void
     @ViewBuilder let label: () -> Label
 
@@ -85,7 +88,7 @@ struct PaymentRow<Label: View>: View {
         }
         .buttonStyle(.plain)
         .contextMenu { if shortcuts { items } }
-        .rowSwipe(swipes, id: transaction.id, open: $menu.openRow, shownAt: shownAt)
+        .rowSwipe(swipeActions, id: transaction.id, open: $menu.openRow, shownAt: shownAt)
         // Around the row's place, not its sliding content: at the tour's swipe steps the ring stays still and the
         // actions the swipe shows lie inside it, where they take taps.
         .tourAnchor(.payment(transaction.id))
@@ -97,8 +100,8 @@ struct PaymentRow<Label: View>: View {
 
     /// The swipe: Add up (in a category's list, when the name has more payments there), then "All from <name>" at the
     /// edge, which a full swipe does; each an icon and a short word, the whole name for VoiceOver.
-    private var swipes: [RowSwipeAction] {
-        guard shortcuts else { return [] }
+    private var swipeActions: [RowSwipeAction] {
+        guard shortcuts, swipes else { return [] }
         var actions: [RowSwipeAction] = []
         if let addUp { actions.append(.addUp(addUp)) }
         if let allFrom, let route = nameRoute { actions.append(.all(route, name: transaction.place, open: allFrom)) }
@@ -157,6 +160,17 @@ extension RowSwipeAction {
 }
 
 extension PaymentRow where Label == PaymentRowLabel {
+    /// A day's page's row (brief 77): its category in the day's place, the tap and the long press as in a month's
+    /// list, no swipe (a sideways swipe turns the page's side there) and no Add up.
+    init(day row: DayPayments.Row, store: DashboardStore, palette: Palette, menu: PaymentRowMenu,
+         shortcuts: Bool = true, allFrom: ((DashboardRoute) -> Void)? = nil, open: @escaping (Transaction) -> Void) {
+        self.init(transaction: row.transaction, store: store, menu: menu, shortcuts: shortcuts, allFrom: allFrom,
+                  swipes: false, open: open) {
+            PaymentRowLabel(transaction: row.transaction, tagged: false, store: store, palette: palette,
+                            category: row.category)
+        }
+    }
+
     /// A month's or a name's page's row.
     init(row: TransactionRow, store: DashboardStore, palette: Palette, menu: PaymentRowMenu, shortcuts: Bool = true,
          namePage: String? = nil, allFrom: ((DashboardRoute) -> Void)? = nil, addUp: (() -> Void)? = nil,
@@ -183,16 +197,23 @@ extension PaymentList {
 #endif
 
 /// A payment row as a month's list draws it (the website's `.txn`): the day, who (or the receipt's words) with its
-/// marks, its second line, the amount.
+/// marks, its second line, the amount. On a day's page (brief 77) the category takes the day's place: its tile, and
+/// its name first in the second line (every row there has the same day, and nothing else says the category).
 struct PaymentRowLabel: View {
     let transaction: Transaction
     let tagged: Bool
     let store: DashboardStore
     let palette: Palette
+    /// A day's page: the row's category, shown in place of the day.
+    var category: Category? = nil
 
     var body: some View {
         HStack(spacing: 12) {
-            DayTile(palette: palette) { Text(verbatim: DayWording.alone(transaction.day)) }
+            if let category {
+                CategoryTile(icon: category.icon, color: category.color)
+            } else {
+                DayTile(palette: palette) { Text(verbatim: DayWording.alone(transaction.day)) }
+            }
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 5) {
                     Text(verbatim: ReceiptRowWording.title(transaction, movement: store.cashMovement(transaction.receiptId)))
@@ -210,12 +231,18 @@ struct PaymentRowLabel: View {
                             .accessibilityLabel("Added here by tag; primary category \(CategoryName.shown(transaction.categoryName))")
                     }
                 }
-                Text(verbatim: ReceiptRowWording.line(transaction, movement: store.cashMovement(transaction.receiptId))).font(AppFont.text(12.5))
-                    .foregroundStyle(palette.muted).lineLimit(1)
+                Text(verbatim: line).font(AppFont.text(12.5)).foregroundStyle(palette.muted).lineLimit(1)
             }.frame(maxWidth: .infinity, alignment: .leading)
             Text(Money.transaction(transaction.amount)).font(AppFont.number(14))
                 .foregroundStyle(transaction.amount < 0 ? palette.expenseText : palette.income).fixedSize()
         }.padding(.horizontal, 12).padding(.vertical, 11).contentShape(Rectangle())
+    }
+
+    /// The second line: the place or the receipt's state, after the category's name on a day's page.
+    private var line: String {
+        let line = ReceiptRowWording.line(transaction, movement: store.cashMovement(transaction.receiptId))
+        guard let category else { return line }
+        return DayPageWording.line(category: category.name, listLine: line)
     }
 }
 

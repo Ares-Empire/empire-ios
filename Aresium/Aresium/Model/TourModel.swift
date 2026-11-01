@@ -2,20 +2,20 @@ import Foundation
 import Observation
 import os
 
-// The tour (briefs 24, 25, 42 and 59): the real dashboard on a made-up store of its own, eighteen steps (seventeen while
-// the graph is hidden in Settings), each pointing at one real control with one short sentence; it goes on when the
-// person does the thing or taps Next. One walk through what Aresium does (brief 59, Patrik 2026-10-31: "explains
-// everything and is coherent"): the start screen and its graph, a category, a payment and what can be done with it, a
-// list's swipe and adding up, then Settings' places in their real order, the import button, done. Everything the tour
-// shows and changes is in `TourWorld`, a store in a temporary folder that is deleted when the tour ends: the person's
-// own store, categories, learned shops, names and choices of adding up are never opened by it. Its Settings also point
-// at Own names, Messages, the Lock, the Dashboard's switches and Contact & support, which in the tour only go on: no lock
-// is set, no message planned and nothing is sent. The look is `Screens/TourScreens.swift`.
+// The tour (briefs 24, 25, 42, 59 and 77): the real dashboard on a made-up store of its own, nineteen steps (eighteen
+// while the graph is hidden in Settings), each pointing at one real control with one short sentence; it goes on when
+// the person does the thing or taps Next. One walk through what Aresium does (brief 59, Patrik 2026-10-31: "explains
+// everything and is coherent"): the start screen, its graph and its search, a category, a payment and what can be done
+// with it, a list's swipe and adding up, then Settings' places in their real order, the import button, done. Everything
+// the tour shows and changes is in `TourWorld`, a store in a temporary folder that is deleted when the tour ends: the
+// person's own store, categories, learned shops, names and choices of adding up are never opened by it. Its Settings
+// also point at Own names, Messages, the Lock, the Dashboard's switches and Contact & support, which in the tour only
+// go on: no lock is set, no message planned and nothing is sent. The look is `Screens/TourScreens.swift`.
 
 /// The tour's steps, in order. The raw value names a step (DEBUG `-tour <n>`); the card counts the steps a tour shows.
 nonisolated enum TourStep: Int, CaseIterable, Sendable {
-    case welcome = 1, income, overview, graph, category, payment, rename, switchCategory, addUp, sumIcon, allFrom,
-         categories, messages, lock, dashboardSettings, contact, importFiles, done
+    case welcome = 1, income, overview, graph, search, category, payment, rename, switchCategory, addUp, sumIcon,
+         allFrom, categories, messages, lock, dashboardSettings, contact, importFiles, done
 
     /// The steps a tour shows: all of them, but the graph's only while the dashboard shows the graph (Settings →
     /// Dashboard → Graph, `GraphSetting`); without the graph that step would point at nothing.
@@ -29,7 +29,9 @@ nonisolated enum TourStep: Int, CaseIterable, Sendable {
         case .welcome: language.string("This is Aresium with made-up sample data.")
         case .income: language.string("Swipe sideways: your income.")
         case .overview: language.string("Overview shows all months.")
-        case .graph: language.string("Hold the graph and slide to read each month. A tap opens it.")
+        case .graph:
+            language.string("Hold the graph and slide to read each month. A tap opens the month, or the day where it shows days.")
+        case .search: language.string("Search a name, your own or the bank's. A tap shows all its payments.")
         case .category: language.string("Tap a category: its payments this month.")
         case .payment: language.string("Every payment in detail.")
         case .rename: language.string("Tap the name to rename it, for this payment or all from this shop.")
@@ -60,6 +62,8 @@ nonisolated enum TourStep: Int, CaseIterable, Sendable {
 /// The real controls the tour points at; each marks itself with `.tourAnchor(_:)`.
 nonisolated enum TourTarget: Hashable, Sendable {
     case pageDots, range, graph, importButton, settings
+    /// The start screen's search, the magnifying glass in its header (brief 77).
+    case search
     /// A category's row on the start screen, by the name the dashboard shows.
     case category(String)
     /// A payment's row in a month's list, by its id.
@@ -178,8 +182,8 @@ final class TourModel {
     // MARK: what the person does
 
     /// The tour's dashboard moved (a swipe, Current/Overview, a category, a payment or a name's page opened, Back).
-    /// Doing what the step asks moves on. The graph's step asks nothing (a tap on a month may open its page there): Next
-    /// goes on.
+    /// Doing what the step asks moves on. The graph's step asks nothing (a tap on a month may open its page there, on a
+    /// day a day's), nor the search's (the search and the names it opens are free to try there): Next goes on.
     func update(_ new: DashboardPlace) {
         let old = place
         place = new
@@ -256,6 +260,8 @@ final class TourModel {
         case .income: return .pageDots
         case .overview: return .range
         case .graph: return .graph
+        // The magnifying glass on the start screen; on the search's page and the names it opens, nothing: free to try.
+        case .search: return place.path.isEmpty ? .search : nil
         case .category: return firstCategory.map { .category($0) }
         case .payment: return firstPayment.map { .payment($0.id) }
         case .rename: return place.payment != nil ? .paymentName : firstPayment.map { .payment($0.id) }
@@ -358,6 +364,9 @@ final class TourModel {
             // Overview's months: the ones a hold reads and a tap opens.
             toStart()
             place.current = false
+        case .search:
+            // The start screen, as the graph left it: its header has the search.
+            toStart()
         case .category:
             toStart()
             place.current = true
@@ -397,6 +406,7 @@ final class TourModel {
         showsSettings = false
         showsCategories = false
         showsGuide = false
+        place.day = nil
     }
 
     /// A category's month list on top of the stack: the one shown, or the one a page shown was opened from (back to

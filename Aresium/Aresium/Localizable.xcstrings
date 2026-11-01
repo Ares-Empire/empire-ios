@@ -1149,7 +1149,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Name bei der Bank: %@"
+            "value" : "Bei der Bank: %@"
           }
         }
       }
@@ -2034,6 +2034,16 @@
         }
       }
     },
+    "Finds your own names and the bank's." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Findet deine eigenen Namen und die der Bank."
+          }
+        }
+      }
+    },
     "First payments" : {
       "localizations" : {
         "de" : {
@@ -2356,12 +2366,12 @@
         }
       }
     },
-    "Hold the graph and slide to read each month. A tap opens it." : {
+    "Hold the graph and slide to read each month. A tap opens the month, or the day where it shows days." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Halte den Finger auf dem Diagramm und zieh: jeder Monat mit seiner Zahl. Antippen öffnet ihn."
+            "value" : "Halte den Finger auf dem Diagramm und zieh: jeder Monat mit seiner Zahl. Antippen öffnet den Monat, zeigt es Tage, den Tag."
           }
         }
       }
@@ -2692,6 +2702,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Später"
+          }
+        }
+      }
+    },
+    "Latest" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zuletzt"
           }
         }
       }
@@ -3106,12 +3126,32 @@
         }
       }
     },
+    "No income on this day." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keine Einnahmen an diesem Tag."
+          }
+        }
+      }
+    },
     "No income recorded." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Keine Einnahmen erfasst."
+          }
+        }
+      }
+    },
+    "No name found for “%@”." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kein Name für „%@“ gefunden."
           }
         }
       }
@@ -3142,6 +3182,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Noch keine Belege. Importieren → Beleg scannen oder Foto auswählen fügt einen hinzu."
+          }
+        }
+      }
+    },
+    "No spending on this day." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keine Ausgaben an diesem Tag."
           }
         }
       }
@@ -4132,6 +4182,36 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Beleg scannen"
+          }
+        }
+      }
+    },
+    "Search" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suche"
+          }
+        }
+      }
+    },
+    "Search a name, your own or the bank's. A tap shows all its payments." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Such nach einem Namen, deinem eigenen oder dem der Bank. Antippen zeigt alle seine Buchungen."
+          }
+        }
+      }
+    },
+    "Search names" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Namen suchen"
           }
         }
       }
@@ -5604,6 +5684,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dein letzter Import ist %lld Tage her."
+          }
+        }
+      }
+    },
+    "Your name: %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Name: %@"
           }
         }
       }

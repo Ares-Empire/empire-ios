@@ -172,6 +172,13 @@ struct ContentView: View {
                 place.current = false
                 place.path = [DashboardRoute(monthPage: month, side: .expenses)]
             }
+            // Brief 77: `-openDay <YYYY-MM-DD>` that day's page, as a tap on its point opens it (`-daySide income` on
+            // the income side); `-openSearch` the search (`-searchText <text>` typed in it).
+            if let day = LaunchArguments.value("-openDay") {
+                let side: DashboardSide = LaunchArguments.value("-daySide") == "income" ? .income : .expenses
+                place.day = DayRoute(date: day, side: side)
+            }
+            if arguments.contains("-openSearch") { place.path = [.search] }
             // `-openCash`: the Cash page (this month's; `-cashMonth <YYYY-MM>` another; with `-sampleOverview` its months).
             if arguments.contains("-openCash") {
                 let month = LaunchArguments.value("-cashMonth") ?? String(LedgerExport.day(.now).prefix(7))
@@ -214,7 +221,7 @@ struct ContentView: View {
                     if let tour {
                         TourScreen(tour: tour, palette: palette, band: tourBand(in: geometry)) { route, openSettings in
                             header(route, in: tour.world?.dashboard, imports: route == nil ? tourImport(tour) : nil,
-                                   openSettings: openSettings)
+                                   search: route == nil ? tourSearch(tour) : nil, openSettings: openSettings)
                         }
                         .transition(.opacity)
                     }
@@ -228,8 +235,10 @@ struct ContentView: View {
                     DashboardStack(store: store, palette: palette, place: $place, graph: showsGraph,
                                    graphMoves: graphMoves, band: band(in: geometry)) { route in
                         // The import button beside the gear on the start screen's title row (brief 56), only where the
-                        // dashboard shows (the first screen has its own Import data).
-                        header(route, imports: route == nil && mainScreen == .dashboard ? dashboardImport : nil)
+                        // dashboard shows (the first screen has its own Import data); the search beside it (brief 77).
+                        let start = route == nil && mainScreen == .dashboard
+                        header(route, imports: start ? dashboardImport : nil,
+                               search: start && store.offersSearch ? { place.open(.search) } : nil)
                         restoreFeedback
                     } root: {
                         switch mainScreen {
@@ -244,7 +253,8 @@ struct ContentView: View {
                         default:
                             StartScreen(store: store, palette: palette, current: $place.current,
                                         side: $place.side, graph: showsGraph, graphMoves: graphMoves,
-                                        band: band(in: geometry), openGuide: { showsGuide = true }) {
+                                        band: band(in: geometry), openGuide: { showsGuide = true },
+                                        openDay: { place.day = $0 }) {
                                 place.path.append($0)
                             }
                         }
@@ -306,7 +316,10 @@ struct ContentView: View {
             .onChange(of: modes.state) { old, new in
                 // The other mode's data. While the phone's store opened nothing was shown, so a path set meanwhile (a
                 // DEBUG sample's `-sampleCategory`) stays.
-                if old != new, old == .phone || old == .server { place.path = [] }
+                if old != new, old == .phone || old == .server {
+                    place.path = []
+                    place.day = nil
+                }
                 Task { await imports.sessionChanged() }       // files waiting for the phone's store
             }
             .onChange(of: lock.isOn) { _, on in
@@ -464,6 +477,7 @@ struct ContentView: View {
             }
             place.current = true
             place.side = .expenses
+            place.day = nil
             switch destination {
             case .start: store.showReview(month: nil); place.path = []
             case .importData: picksFiles = modes.phone != nil
@@ -774,13 +788,25 @@ struct ContentView: View {
                                    choices: .tour { tour.importTapped() })
     }
 
+    /// The tour's search (brief 77): the page on the tour's own stack, searching its made-up store.
+    private func tourSearch(_ tour: TourModel) -> (() -> Void)? {
+        guard tour.world?.dashboard.offersSearch == true else { return nil }
+        return {
+            var place = tour.place
+            place.open(.search)
+            tour.update(place)
+        }
+    }
+
     /// A screen's header; the tour's screens name its store (`in`) and open its own Settings. `imports`: the start
-    /// screen's import button.
+    /// screen's import button; `search`: its search (phone mode).
     private func header(_ route: DashboardRoute? = nil, in dashboard: DashboardStore? = nil,
-                        imports: ScreenHeader.Import? = nil, openSettings: (() -> Void)? = nil) -> some View {
+                        imports: ScreenHeader.Import? = nil, search: (() -> Void)? = nil,
+                        openSettings: (() -> Void)? = nil) -> some View {
         let store = dashboard ?? store
         let category = route.flatMap { $0.cash || $0.monthPage != nil ? nil : store.category($0.category, side: $0.side) }
-        let subtitle: String? = route.map { route in
+        let subtitle: String? = route.flatMap { route -> String? in
+            if route.search { return nil }                                                   // the search (brief 77)
             if route.monthPage != nil { return String(localized: "Expenses and income") }  // a month's page (brief 56)
             // A name's page (brief 44); its months' pages (brief 55) read as a category's month list, below.
             if route.name != nil && route.month == nil { return String(localized: "All payments") }
@@ -793,6 +819,7 @@ struct ContentView: View {
             return route.side == .income ? String(localized: "Monthly income") : String(localized: "Monthly spend")
         }
         let title = route.map { route in
+            if route.search { return String(localized: "Search") }
             if let month = route.monthPage { return store.monthTitle(month) }
             return route.name?.title ?? (route.cash ? String(localized: "Cash") : CategoryName.shown(route.category))
         } ?? "Aresium"
@@ -800,6 +827,7 @@ struct ContentView: View {
                             category: category, palette: palette,
                             back: route == nil ? nil : { back(route) },
                             sums: route.flatMap { sumsIcon($0, in: store) },
+                            search: search,
                             imports: imports,
                             leaveRed: {
             guard !theme.isAnimating, theme.red else { return }
@@ -838,6 +866,7 @@ struct ContentView: View {
     /// the phone (it never belonged to the login).
     private func logOut() {
         place.path = []
+        place.day = nil
         session.logOut()
     }
 }

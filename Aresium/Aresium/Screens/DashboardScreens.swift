@@ -12,6 +12,8 @@ struct DashboardRoute: Hashable {
     /// A month's page (brief 56): that month (`YYYY-MM`) as Current shows this month, opened from Overview's graph;
     /// `side` is the page it opens on, `category` is unused (`init(monthPage:side:)`).
     var monthPage: String? = nil
+    /// The search (brief 77): its field and the names it finds; `category` and `side` are unused (`.search`).
+    var search = false
 }
 
 extension DashboardRoute {
@@ -19,6 +21,9 @@ extension DashboardRoute {
     init(monthPage key: String, side: DashboardSide) {
         self.init(category: "", side: side, monthPage: key)
     }
+
+    /// The search (brief 77), from the magnifying glass in the start screen's header.
+    static let search = DashboardRoute(category: "", side: .expenses, search: true)
 }
 
 /// Where a dashboard is: the screens pushed, Current or Overview, the expenses or income page, the payment open. The
@@ -30,6 +35,8 @@ struct DashboardPlace {
     var side = DashboardSide.expenses
     /// The payment whose detail is open.
     var payment: Transaction?
+    /// The day whose page is open (brief 77): a sheet over the dashboard, from a tap on a day of a day graph.
+    var day: DayRoute?
 
     /// Shows a page: pushed on the stack, or, for a name's page already on it, back to that page (brief 55: All on a
     /// name's month's rows goes back to the name's page below rather than stacking a second copy of it).
@@ -79,6 +86,9 @@ struct DashboardStack<Top: View, Root: View>: View {
     @ViewBuilder let top: (DashboardRoute?) -> Top
     /// The start screen.
     @ViewBuilder let root: () -> Root
+    /// A name's page asked for in the day's sheet (a row's All, a payment's "All from"): pushed once the sheet has
+    /// gone, so it is one on the dashboard's stack with the arrow and the back swipe.
+    @State private var afterDay: DashboardRoute?
 
     var body: some View {
         NavigationStack(path: $place.path) {
@@ -92,9 +102,11 @@ struct DashboardStack<Top: View, Root: View>: View {
             .navigationDestination(for: DashboardRoute.self) { route in
                 VStack(spacing: 0) {
                     top(route)
-                    if let month = route.monthPage {
+                    if route.search {
+                        SearchScreen(store: store, palette: palette, band: band, pick: open)
+                    } else if let month = route.monthPage {
                         MonthScreen(month: month, opensOn: route.side, store: store, palette: palette, graph: graph,
-                                    graphMoves: graphMoves, band: band, pick: open)
+                                    graphMoves: graphMoves, band: band, openDay: openDay, pick: open)
                     } else if let name = route.name, let month = route.month {
                         NameMonthScreen(route: name, month: month, store: store, palette: palette, band: band,
                                         shortcuts: rows, pick: open, follow: follow, back: back)
@@ -124,10 +136,29 @@ struct DashboardStack<Top: View, Root: View>: View {
             }
         }
         .task { if store.dashboard == nil { await store.reload() } }
+        // A day's page (brief 77): a sheet, so a sideways swipe turns its sides and a swipe down closes it. It opens at
+        // medium height: a day has a few rows, and the graph that was tapped stays in view above it.
+        .sheet(item: $place.day, onDismiss: dayClosed) { day in
+            DaySheet(day: day, store: store, palette: palette, shortcuts: rows) { route in
+                afterDay = route
+                place.day = nil
+            }
+            .presentationDetents([.medium, .large])
+        }
     }
 
     /// A page pushed (`DashboardPlace.open`).
     private func open(_ route: DashboardRoute) { place.open(route) }
+
+    /// A day's page opened (a tap on a day of a month's page; the start screen's owner opens its own the same way).
+    private func openDay(_ day: DayRoute) { place.day = day }
+
+    /// The day's sheet closed: the name's page asked for in it, if any.
+    private func dayClosed() {
+        guard let route = afterDay else { return }
+        afterDay = nil
+        open(route)
+    }
 
     /// A name's pages following a rename (`DashboardPlace.follow`), in place, without the push animation.
     private func follow(_ old: PaymentNameRoute, to new: PaymentNameRoute) {
@@ -154,6 +185,8 @@ struct StartScreen: View {
     let band: AresiumBand
     /// "How do I get my file?" under an empty page (nil: not offered).
     var openGuide: (() -> Void)? = nil
+    /// A tap on a day of Current's graph: that day's page (brief 77; nil: the days open nothing).
+    var openDay: ((DayRoute) -> Void)? = nil
     let pick: (DashboardRoute) -> Void
     var body: some View {
         VStack(spacing: 0) {
@@ -167,7 +200,8 @@ struct StartScreen: View {
             .padding(.horizontal, 14).padding(.bottom, 2)
             DashboardStatus(store: store, palette: palette)
             DashboardPages(store: store, palette: palette, scope: DashboardScope(current: current), side: $side,
-                           graph: graph, graphMoves: graphMoves, band: band, openGuide: openGuide, pick: pick)
+                           graph: graph, graphMoves: graphMoves, band: band, openGuide: openGuide, openDay: openDay,
+                           pick: pick)
         }
     }
 }
@@ -183,17 +217,21 @@ struct MonthScreen: View {
     let graph: Bool
     let graphMoves: Bool
     let band: AresiumBand
+    /// A tap on a day of its graph: that day's page (brief 77).
+    let openDay: (DayRoute) -> Void
     let pick: (DashboardRoute) -> Void
     @State private var side: DashboardSide
 
     init(month: String, opensOn side: DashboardSide, store: DashboardStore, palette: Palette, graph: Bool,
-         graphMoves: Bool, band: AresiumBand, pick: @escaping (DashboardRoute) -> Void) {
+         graphMoves: Bool, band: AresiumBand, openDay: @escaping (DayRoute) -> Void,
+         pick: @escaping (DashboardRoute) -> Void) {
         self.month = month
         self.store = store
         self.palette = palette
         self.graph = graph
         self.graphMoves = graphMoves
         self.band = band
+        self.openDay = openDay
         self.pick = pick
         _side = State(initialValue: side)
     }
@@ -202,7 +240,7 @@ struct MonthScreen: View {
         VStack(spacing: 0) {
             DashboardStatus(store: store, palette: palette)
             DashboardPages(store: store, palette: palette, scope: .month(month), side: $side, graph: graph,
-                           graphMoves: graphMoves, band: band, swipesPages: false, pick: pick)
+                           graphMoves: graphMoves, band: band, swipesPages: false, openDay: openDay, pick: pick)
         }
     }
 }
@@ -223,6 +261,8 @@ struct DashboardPages: View {
     /// goes back as on every pushed page, so its pages turn only with the dots (they still slide): with a pager there,
     /// the edge swipe and the pages raced (real touches, brief 56: the edge swipe was lost now and then).
     var swipesPages = true
+    /// A tap on a day of a day graph (Current, a month's page): that day's page (brief 77; nil: the days open nothing).
+    var openDay: ((DayRoute) -> Void)? = nil
     /// The pages' width, for the dots' slide when they do not swipe.
     @State private var width: CGFloat = 0
     let pick: (DashboardRoute) -> Void
@@ -230,23 +270,11 @@ struct DashboardPages: View {
     /// height): the other page takes the same place while it is out of sight, so switching pages never makes the graph
     /// jump (`GraphMotion`).
     @State private var graphAway: CGFloat = 0
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(spacing: 0) {
-            // The page dots: each takes taps over 44 × 44 pt (brief 41) while the row keeps its height in the layout
-            // (24 pt and its padding); the area reaching over the pages below lies above them (`zIndex`).
-            HStack(spacing: 0) {
-                ForEach(DashboardSide.allCases, id: \.self) { page in
-                    Button { withAnimation(reduceMotion ? nil : .default) { side = page } } label: {
-                        Circle().fill(page == side ? palette.ink : palette.muted.opacity(0.5))
-                            .frame(width: page == side ? 8 : 7, height: page == side ? 8 : 7)
-                            .frame(width: 44, height: 44)
-                            .contentShape(Rectangle())
-                    }.buttonStyle(.plain).accessibilityLabel(page.title)
-                        .accessibilityAddTraits(page == side ? .isSelected : [])
-                }
-            }.padding(.vertical, -10).tourAnchor(.pageDots).padding(.vertical, 2).zIndex(1)
+            // The area of the dots reaching over the pages below lies above them (`zIndex`).
+            PageDots(side: $side, palette: palette).tourAnchor(.pageDots).padding(.vertical, 2).zIndex(1)
             if swipesPages {
                 TabView(selection: $side) {
                     ForEach(DashboardSide.allCases, id: \.self) { page in
@@ -277,7 +305,53 @@ extension DashboardPages {
     /// One side's page, knowing whether it is the one shown.
     fileprivate func page(_ page: DashboardSide) -> some View {
         StartPage(store: store, palette: palette, side: page, scope: scope, shown: page == side, graph: graph,
-                  graphMoves: graphMoves, graphAway: $graphAway, band: band, openGuide: openGuide, pick: pick)
+                  graphMoves: graphMoves, graphAway: $graphAway, band: band, openGuide: openGuide, openDay: openDay,
+                  pick: pick)
+    }
+}
+
+/// The Expenses/Income dots over a page pair (the start screen, a month's page, a day's page): the side shown in full
+/// ink, the other muted; a tap turns to its side (sliding, not with Reduce Motion). Each takes taps over 44 × 44 pt
+/// (brief 41) while the row keeps its height in the layout (24 pt); VoiceOver reads "Expenses" and "Income".
+struct PageDots: View {
+    @Binding var side: DashboardSide
+    let palette: Palette
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(DashboardSide.allCases, id: \.self) { page in
+                Button { withAnimation(reduceMotion ? nil : .default) { side = page } } label: {
+                    Circle().fill(page == side ? palette.ink : palette.muted.opacity(0.5))
+                        .frame(width: page == side ? 8 : 7, height: page == side ? 8 : 7)
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }.buttonStyle(.plain).accessibilityLabel(page.title)
+                    .accessibilityAddTraits(page == side ? .isSelected : [])
+            }
+        }.padding(.vertical, -10)
+    }
+}
+
+/// A page's side and total, as the start screen heads its pages: "Expenses" in its colour, the amount in the numbers'
+/// font and "spent" (or "Income", "received"). The start screen writes whole euros, a day's page the cents.
+struct SideTotal: View {
+    let side: DashboardSide
+    /// The amount written out; nil while there is none (the dashboard is loading).
+    let total: String?
+    let palette: Palette
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Text(side.title).font(AppFont.text(21, weight: .bold))
+                .foregroundStyle(side == .income ? palette.income : palette.expenseText)
+            Spacer(minLength: 4)
+            if let total {
+                Text(verbatim: total)
+                    .font(AppFont.number(21, weight: .bold)).minimumScaleFactor(0.7).lineLimit(1)
+                Text(side.caption).font(AppFont.text(11)).foregroundStyle(palette.muted)
+            }
+        }
     }
 }
 
@@ -295,6 +369,7 @@ private struct StartPage: View {
     @Binding var graphAway: CGFloat
     let band: AresiumBand
     var openGuide: (() -> Void)?
+    var openDay: ((DayRoute) -> Void)?
     let pick: (DashboardRoute) -> Void
     @State private var position = ScrollPosition(edge: .top)
     /// Where this page's list last came to rest (how far it is scrolled).
@@ -359,16 +434,24 @@ private struct StartPage: View {
         restingAt = target
     }
 
-    /// The graph: the days of the scope's month, or Overview's months; a tap on a month opens its page.
+    /// The graph: the days of the scope's month, or Overview's months; a tap on a month opens its page, on a day that
+    /// day's page (brief 77), on this page's side.
     private var chart: some View {
         SeriesChart(points: store.startChart(side: side, scope: scope),
                     color: side == .income ? palette.income : palette.expense, palette: palette,
                     xTitle: scope.isMonth ? String(localized: "Day") : String(localized: "Month"),
-                    onPick: scope.isMonth ? nil : { index in
-            if let route = store.monthPage(atChartIndex: index, side: side) { pick(route) }
-        })
+                    onPick: pickPoint)
         .frame(height: SeriesChart.dashboardHeight)
         .tourAnchor(shown ? .graph : nil)
+    }
+
+    /// What a short tap on the graph's point opens: a month's page on Overview, a day's page on a month's days.
+    private var pickPoint: ((Int) -> Void)? {
+        guard scope.isMonth else {
+            return { index in if let route = store.monthPage(atChartIndex: index, side: side) { pick(route) } }
+        }
+        guard let openDay else { return nil }
+        return { index in if let day = store.dayRoute(atChartIndex: index, side: side, scope: scope) { openDay(day) } }
     }
 
     private var list: some View {
@@ -376,16 +459,8 @@ private struct StartPage: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(store.rangeLabel(scope).uppercased()).font(AppFont.text(11, weight: .semibold))
                     .tracking(1.3).foregroundStyle(palette.muted)
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Text(side.title).font(AppFont.text(21, weight: .bold))
-                        .foregroundStyle(side == .income ? palette.income : palette.expenseText)
-                    Spacer(minLength: 4)
-                    if let totals = store.totals(scope) {
-                        Text(Money.total(side == .income ? totals.income : totals.expense))
-                            .font(AppFont.number(21, weight: .bold)).minimumScaleFactor(0.7).lineLimit(1)
-                        Text(side.caption).font(AppFont.text(11)).foregroundStyle(palette.muted)
-                    }
-                }
+                let total = store.totals(scope).map { Money.total(side == .income ? $0.income : $0.expense) }
+                SideTotal(side: side, total: total, palette: palette)
             }.padding(.horizontal, 18).padding(.top, 6).padding(.bottom, 8)
             LazyVStack(spacing: 0) {
                 let rows = rows

@@ -56,6 +56,9 @@ enum PhoneSample {
         if LaunchArguments.current.contains("-sampleRefund") {
             files.append(ImportFile(name: "Umsaetze-Retoure.csv", data: Data(refundLine(now: .now).utf8)))
         }
+        if LaunchArguments.current.contains("-sampleShopLines") {
+            files.append(ImportFile(name: "Umsaetze-Kleiderkreisel.csv", data: Data(shopLines(now: .now).utf8)))
+        }
         for name in ["sample-paypal.csv", "sample-camt.xml"] {
             let parts = name.split(separator: ".")
             if let url = Bundle.main.url(forResource: String(parts[0]), withExtension: String(parts[1])) {
@@ -145,6 +148,33 @@ enum PhoneSample {
             ;\(day);\(day);Zalando SE;Gutschrift;Retoure;40,00;EUR;H;
 
             """
+    }
+
+    /// `-sampleShopLines` (brief 77, the search finding a name through the bank's other line): made-up second-hand
+    /// purchases and one sale at a marketplace whose bank line changed during the year (brief 76's example): "MGP Vinted
+    /// - Kleiderkreisel" four and three months ago, "Vinted, UAB" since. One shop, so it shows the newest line, and a
+    /// search for "Kleider" finds it by the older one. Made-up dates and amounts.
+    private static func shopLines(now: Date) -> String {
+        let calendar = ReceiptDay.calendar
+        let thisMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: now)) ?? now
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "de_DE")
+        formatter.calendar = calendar
+        formatter.timeZone = calendar.timeZone
+        formatter.dateFormat = "dd.MM.yyyy"
+        func day(monthsBack: Int, _ day: Int) -> String {
+            let month = calendar.date(byAdding: .month, value: -monthsBack, to: thisMonth) ?? thisMonth
+            return formatter.string(from: calendar.date(byAdding: .day, value: day - 1, to: month) ?? month)
+        }
+        let old = "MGP Vinted - Kleiderkreisel", new = "Vinted, UAB"
+        let rows = [(day(monthsBack: 4, 13), old, "Bestellung 2201", "18,50", "S"),
+                    (day(monthsBack: 3, 9), old, "Bestellung 2202", "24,00", "S"),
+                    (day(monthsBack: 2, 16), new, "Bestellung 2203", "12,90", "S"),
+                    (day(monthsBack: 1, 12), new, "Verkauf Jacke", "35,00", "H"),
+                    (day(monthsBack: 1, 22), new, "Bestellung 2204", "29,40", "S")]
+        let lines = rows.map { ";\($0.0);\($0.0);\($0.1);\($0.4 == "H" ? "Gutschrift" : "Lastschrift");\($0.2);\($0.3);EUR;\($0.4);" }
+        return (["IBAN Auftragskonto;Buchungstag;Valutadatum;Name Zahlungsbeteiligter;Buchungstext;Verwendungszweck;Betrag;Währung;Soll/Haben;Saldo nach Buchung"]
+                + lines).joined(separator: "\n") + "\n"
     }
 
     /// The bank's side of the sample PayPal export's purchase at Märchenladen (made up, in the VR Bank layout): with the

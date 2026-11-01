@@ -712,6 +712,61 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   `dayDate(atChartIndex:scope:)` maps a zero-based day point on `.current` (including a review month) or `.month(key)`
   to its date; `.overview`, missing months and indices outside the graph return nil. `DayPaymentsTests` compares every
   sample day with the graphs and month lists in both modes, plus covered cash, extra categories and revision changes.
+  **A day's page and the search on screen** (brief 77, Patrik 2026-11-01: "make days clickable too and lead to a screen
+  with that days expenses and income (in two tabs with swipe)", "A small search icon … search by names which uses own
+  given and also original names organized by best match"). **A day's page** (`Screens/DayScreen.swift` `DaySheet`, words
+  and the tap in `Model/DayPage.swift`): a short tap on a day of a day graph (the start screen's Current, a month's
+  page; `SeriesChart.onPick` → `DashboardStore.dayRoute(atChartIndex:side:scope:)`) opens that day on the side of the
+  graph tapped (`DayRoute`, `DashboardPlace.day`); holding and sliding still reads the graph and opens nothing. A sheet
+  (presented by `DashboardStack`), not a pushed page, so a sideways swipe turns its sides and a swipe down closes it; it
+  opens at medium height (`.presentationDetents([.medium, .large])`, Claude's choice: a day has a few rows, and the
+  graph that was tapped stays in view above it; pulled or scrolled up it takes the whole screen): the
+  bar "Day" / "Tag" with Done (as the payment's page's "Payment"), the day written out as the title, 22 pt bold
+  (`DayPageWording.title`, the payment page's date: "Monday, 12 October 2026" / "Montag, 12. Oktober 2026"; too long
+  for a centred bar title in German), the start screen's dots (`PageDots`, shared with `DashboardPages`), then the two
+  sides as pages (`TabView` paging): each the day's total to the cent under the side's word in the start screen's
+  heading (`SideTotal`, shared with `StartPage`) and the day's rows (`DashboardStore.day`, read in `body`, so after a
+  row's page or window closes it shows the store as it is) or one quiet line ("No spending on this day." / "Keine
+  Ausgaben an diesem Tag.", "No income on this day." / "Keine Einnahmen an diesem Tag."). **The rows**
+  (`PaymentRow(day:)`): a month's list's row with the category in the day's place (`PaymentRowLabel(category:)`: its
+  tile, and its name first in the quiet line, "Groceries · Munich"; every row has the same day there, and nothing else
+  says the category), the tap (the payment's page over the sheet), the long press (Change category, Rename, "All with
+  this name"); **no swipe of their own** (`PaymentRow.swipes`, Claude's choice, 2026-11-01): a swipe left on a row
+  would have to mean both "All" and "to Income", and Patrik asked for the sides to swipe; tried with real touches, a
+  sideways swipe that starts on a row turns the side. "All" is in the long press and on the payment's page. A name's
+  page asked for there closes the sheet, then is pushed on the dashboard's stack (`DashboardStack.afterDay`). In the
+  tour the sheet has its spotlight and card; the tour's steps close it (`TourModel.closeSheets`). **The search**
+  (`Screens/SearchScreen.swift`, words in `Model/SearchPage.swift`): a magnifying glass (`magnifyingglass`, an
+  `IconButton` in `HeaderButtonLook`) in the start screen's header before the import button, phone mode only
+  (`DashboardStore.offersSearch`: server rows have no names). It pushes `DashboardRoute.search` on the dashboard's stack
+  (the header "Search" / "Suche" with its arrow and gear; the back swipe works): `SearchField` in Apple's search field
+  look (a capsule with the magnifying glass, the prompt "Search names" / "Namen suchen" and the clear button; the second
+  card and the line, the cursor in ink), the keyboard up as the page opens (once: back from a name's page it stays down
+  and the query is kept); a scroll puts the keyboard away. **Before typing** (Claude's choice): one quiet line, "Finds
+  your own names and the bank's." / "Findet deine eigenen Namen und die der Bank.", and under "LATEST" / "ZULETZT" the
+  names of the eight newest payments (`DashboardStore.latestNames`, `NameSearch.latest`), so the likely ones are one
+  tap away and the rows show what a result looks like; the line alone would leave the page empty above the keyboard. **While typing**: `searchNames` best match first; **a result** (`NameResultRow`, lines in
+  `SearchPage.Row`): the newest payment's category tile, the shown name with the money out (the list's red, "−84.50")
+  and under it the money in ("+35.00") when there is any, a quiet line "5 payments · 22 Oct · Clothes" (the newest
+  day, its year only in another year; "last"/"zuletzt" made the German line too long for the category), and when found
+  by another name that name in a second quiet line, up to two lines rather than cut: a bank payment's line "Bank's
+  name: MGP Vinted - Kleiderkreisel" / "Bei der Bank: …" (the key the payment page's VoiceOver line shares; "Name bei
+  der Bank" wrapped the row), an own name (another payment's, or hidden while Own
+  names is off) "Your name: …" / "Dein Name: …", a receipt's typed Shop alone (`SearchPage.kind`); a chevron, as rows
+  that open a page. A tap opens the name's page (`DashboardRoute.name`). No match: "No name found for “…”." / "Kein
+  Name für „…“ gefunden." DEBUG (with `-samplePhone`): `-openDay <YYYY-MM-DD>` (`-daySide income`), `-openSearch`
+  (`-searchText <text>` typed, `-searchKeyboardDown` without the keyboard), `-sampleShopLines` (made-up Vinted
+  payments under two bank lines, "MGP Vinted - Kleiderkreisel" four and three months ago, "Vinted, UAB" since, with one
+  sale on the 12th of last month: a search for "Kleider" finds it by the older line). Tests: `SearchAndDayScreensTests`
+  (which tap opens which day on which side, the day page's words and empty side, the rows' category, the page
+  following the store, the search only in phone mode, the result rows' lines in both languages, before typing),
+  `TourTests`. Real touches (a temporary UI test in `Aresus/AresusUITests`, deleted; 3 of 3 runs each, the day's
+  sheet again at medium height): a tap on the 12th opens its page on the side tapped, a sideways swipe starting on a row
+  turns to Income and back, a swipe down closes it, a row's tap opens the payment's page over it, the long press's "All
+  with this name" closes it and pushes the name's page, a hold-and-slide reads 5–20 Oct (the `graph` log) and opens nothing, a hold alone opens nothing, a tap on
+  Current's day opens it, the search's field has the keyboard at once, "Kleider" finds Vinted with its bank's line, the
+  result opens the name's page and back keeps the query, the edge swipe leaves the search. Screenshots:
+  `build/77-*.png`.
   **Category sides** (brief 69): every category has one home side, which since brief 71 decides only where it is
   offered (the menus), not where its money counts. Defaults take `kind` from the engine's
   catalog; one's own store `side` (`"spend"` or `"income"`) in schema 6's chosen category, alongside `otherSide` (false
@@ -1148,7 +1203,7 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   the nearest point `ChartReading.nearest`), a selection haptic per point; letting go hides it. A drag that moves before
   the hold is up stays the scroll's, the pages' or the back swipe's; once the hold has begun they give way until the
   finger lifts. A short tap opens a month where one opens (`onPick`): Overview's graph that month's page, a category's
-  that month's payments, a name's its month (brief 55); the day graphs open nothing. VoiceOver reads the points as
+  that month's payments, a name's its month (brief 55); a day graph's that day's page (brief 77). VoiceOver reads the points as
   before (the finger's layer is hidden). DEBUG `-readGraph <index>` shows the chip on that point (every graph shown);
   the debug log category `graph` records each point read (the real-touch check reads it). **A month's page**
   (`DashboardRoute(monthPage:side:)`, `MonthScreen`, pushed on the dashboard's stack; the header shows the month and
@@ -1181,9 +1236,9 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   so two rows can take it away as well. DEBUG `-scrollGraph <points>` scrolls the shown page that far. **The header**
   (`ScreenHeader`, every screen alike): each button on the wall without card or outline (`HeaderButtonLook`: a 19 pt
   symbol in the second ink, drawn 42 pt, taps over 44 pt, 44 pt apart): red mode's X first (the others keep their
-  places when it comes), then the page's own (the start screen's import button, beside the gear since brief 56, with its
-  menu and spinner; a category's icon of adding up), then the gear; the title stays in the middle of the screen while it
-  fits (`HeaderLayout`). The tour's `.importButton` and `.settings` rings follow them there. Tests:
+  places when it comes), then the page's own (the start screen's search, brief 77, and import button, beside the gear
+  since brief 56, with its menu and spinner; a category's icon of adding up), then the gear; the title stays in the middle of the screen while it
+  fits (`HeaderLayout`). The tour's `.search`, `.importButton` and `.settings` rings follow them there. Tests:
   `GraphAndHeaderTests` (`ChartReadingTests`, `MonthPageTests`, `MonthRouteTests`, `GraphMotionSettingTests`).
   Screenshots: `build/56-*.png`. Settings →
   About → Fonts & licences also lists the shop list's name-suggestion-index notice (BSD-3-Clause,
@@ -1242,11 +1297,16 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   file, this month always full), its own session (never logged in) and widget numbers inside that folder; the person's
   store, categories and learned shops are never opened. The folder is deleted on End tour (always on the card), at the
   end, when a widget's link or a shared file opens the app, and at the next launch if the app was closed during a tour
-  (`removeLeftovers`). **Eighteen steps, seventeen while the graph is hidden** (brief 59, Patrik 2026-10-31: "update the
-  tour so it explains everything and is coherent"; `TourStep`, one walk: the start screen, a category, a payment and what
-  can be done with it, the list's swipe and adding up, Settings' places in their real order, import, done): welcome;
-  income (the page dots, the swipe); overview (the range); graph (Overview's graph: hold and slide reads each month, a
-  tap opens its month's page, which the ring follows; Next); category (a row); payment (its row opens the page); rename
+  (`removeLeftovers`). **Nineteen steps, eighteen while the graph is hidden** (brief 59, Patrik 2026-10-31: "update the
+  tour so it explains everything and is coherent"; brief 77 added the search; `TourStep`, one walk: the start screen, a
+  category, a payment and what can be done with it, the list's swipe and adding up, Settings' places in their real
+  order, import, done): welcome; income (the page dots, the swipe); overview (the range); graph (Overview's graph: hold
+  and slide reads each month, a tap opens its month's page, which the ring follows, and there a day's; the card says so:
+  "… A tap opens the month, or the day where it shows days."; Next); search (brief 77: the start screen's magnifying
+  glass, `.search`; on the search's page and the names it opens the tour points at nothing, so they are free to try on
+  the tour's store; Next, as the graph's, since the category's step brings the start screen back: "Search a name, your
+  own or the bank's. A tap shows all its payments." / "Such nach einem Namen, deinem eigenen oder dem der Bank.
+  Antippen zeigt alle seine Buchungen."); category (a row); payment (its row opens the page); rename
   (`.paymentName`: the page's name and pen, the field while open; goes on when a name is saved, `onRenamed`); switch
   (the category's chip and pen, `.change`; the shop question answered); addUp (the list's first single row whose name
   has more payments there: the swipe's or the long press's Add up); sumIcon (the header's icon of adding up, `.sumIcon`;
@@ -1286,9 +1346,9 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   app's defaults before and after a walk). The import button only answers its step, the band does not enter red mode.
   VoiceOver: the card takes the focus at each step, the highlighted control stays reachable; Reduce Motion: the ring
   jumps, nothing slides. Launch arguments (DEBUG, with `-samplePhone` or `-samplePhoneEmpty`): `-openGuide list|<bank
-  id>` (`-guidePlace app|website`, `-guideSearch <text>`, `-scrollToEnd` the page's end), `-tour <1–18>` (`-tourSettings`:
+  id>` (`-guidePlace app|website`, `-guideSearch <text>`, `-scrollToEnd` the page's end), `-tour <1–19>` (`-tourSettings`:
   its Settings open). Tests: `BankGuideTests`, `TourTests` (every step's target and what moves it on, Next's screens,
-  the hidden graph's 17 and its words, every card's German, adding up in memory only, the person's store and defaults
+  the hidden graph's 18 and its words, the search's step, every card's German, adding up in memory only, the person's store and defaults
   untouched, ending at any step). Screenshots: `build/24-*.png`, contact sheet `build/24-sheet.png`; brief 59's walk
   `build/59-*.png`.
   **Receipts** (brief 31, Patrik 2026-10-27; D8 in `ares-empire/docs/ARESIUM-FOR-OTHERS.md` → part 6; phone mode
