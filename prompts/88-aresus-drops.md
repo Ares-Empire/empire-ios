@@ -1,6 +1,6 @@
 # 88: Aresus server: drops, files from the iPhone to the MacBook
 
-Status: draft
+Status: merged 2026-11-01 (aresus eceb410, 579 tests; Claude: pending drops never cleaned up, upload time limit grows with the file)
 Branch: `codex/88-drops` · Worktree: `../aresus-88-drops` (a worktree of **`~/aresus`**, the server repo, not of
 empire-ios) · Model: `gpt-6.1-sol`, effort `high`
 
