@@ -85,3 +85,5 @@ now the blur draws straight onto the screen, the look unchanged; the simulator n
 test) and the German tabs Suche / Angebote / Filter. Server since build 3: brief 63 live, a portal's 429 Retry-After
 waited out only up to 30 s (Arestemis 5f3ead4; found by the Aresus session). Evidence and before/after shots:
 `build/67/` (local, not in git).
+Patrik on build 4 (2026-11-01): "very nice, much better". ImmoScout24 is on in his search: scans list 46 listings
+(31 before), every portal ok.
