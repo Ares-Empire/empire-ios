@@ -1,6 +1,6 @@
 # 89: Aresync on the Mac: drops land in their folders, receipts get their inventory row
 
-Status: draft
+Status: merged 2026-11-01 (aresync a94064d, 25 drop tests; Claude: Grund sentences joined by spaces like the folder)
 Branch: `codex/89-drops` · Worktree: `../aresync-89-drops` (a worktree of **`~/aresync`**, not of empire-ios) ·
 Model: `gpt-6.1-sol`, effort `high`
 
