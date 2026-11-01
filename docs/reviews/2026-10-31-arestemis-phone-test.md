@@ -87,3 +87,17 @@ waited out only up to 30 s (Arestemis 5f3ead4; found by the Aresus session). Evi
 `build/67/` (local, not in git).
 Patrik on build 4 (2026-11-01): "very nice, much better". ImmoScout24 is on in his search: scans list 46 listings
 (31 before), every portal ok.
+
+## Round 5 (build 4, 2026-11-01 evening)
+
+Patrik: "I still get the black corner on my phone. I can even force it by reloading the screen." His screenshot (Hunt
+tab, dark, hunt running) shows a sharp greenish-black rectangle over the card's top left, reaching past the card to the
+screen's edge. Its edges are the pulse ring's shadow to the point, and it is drawn after the card's fill and before the
+dot and the edge line: `GlassCard`'s `.shadow` gave every piece of the card's content a pathless shadow, and the pulsing
+ring's was redrawn offscreen every frame. Brief 67 had blamed the blur, so build 4 did not fix it.
+
+**Build 0.1 (5)** (uploaded 2026-11-01, commit 48b1d92; brief 87): the glass card draws no pathless shadow any more (a
+still image inside the card, shape-style shadows outside, none on the content). Per pulse frame on the simulator: about
+45 shadow, mask and group passes before, none after. All five apps' screens compared before and after: dark unchanged,
+light within 4 levels except that chips and buttons inside cards lose a faint halo. Before/after shots: `build/87/`
+(local).
