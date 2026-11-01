@@ -190,3 +190,14 @@ and Bargeld eintragen's category menus end with "Neue Kategorie …". A name, An
 own icon and colour) and already picked; a taken or reserved name makes nothing and says why. On a payment of money in
 the tile is not offered: a new category counts as spending until money in lands in it, so it could not take one (an
 older limit, also in Settings; open for Patrik to decide).
+
+**After build 8** (2026-11-01), Patrik on the money-in limit: "yes definetly, good call. own categories for income. but
+not all default categories should show up there Id argue since not all of them can be income right? And not sure if
+custom categories should be automatically shared between income and expenses because it could unnecessarily bloat the
+menu." Claude proposed one home side per category (defaults by the engine's list, one's own by where it is made,
+switchable in Settings), which he took ("yes good idea"), adding: "if category A is on expenses but also has incomes
+then it should be addable not just switchable." So any category can also be offered on the other side, added from the
+change window by using it there ("Andere Kategorie …"), removable again; money in on a spending category lowers its
+spending, money out on an income category lowers that income. Transfers are offered both ways. Briefs 68 (engine,
+Codex), 69 (data, Codex), 70 (screens, a Claude agent). Asked separately: should paid-back money still also count
+under Einnahmen as Rückerstattungen (today it lowers the spending and counts as income too)?
