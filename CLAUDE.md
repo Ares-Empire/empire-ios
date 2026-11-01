@@ -1663,3 +1663,53 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   `python3 scripts/showcase.py [app ...]` (builds the apps, uses its own simulator `claude-showcase` and deletes it,
   about 6 min for all five); the shots and their launch arguments are the `SHOTS` table in the script. After a screen
   changes, re-run that app and look at its images (and `build/showcase/contact-sheet.png`) before committing.
+
+## Local places memory gate (brief 95, 2026-11-01)
+
+**Over budget; app integration stopped.** The shipped engine, resources, sorting and licence UI are unchanged.
+Measured on `codex-95`, iPhone 17 (`iPhone18,3`), iOS 27.0 / 24A434, Apple M5 / 16 GB. These are simulator
+app-hosted measurements with a fresh `AresiumEngine` on a worker, Release `-O`, no `DEBUG`, and
+`task_vm_info.phys_footprint` (decimal MB); physical-device memory remains unmeasured. Three independent candidate
+processes used aresium `b04ff9b`; the separate control used today's shipped engine, `400754e5`.
+
+| Candidate process | Before loading, MB | Loaded after GC, MB | Added, MB | Released after sorting and 10 s, MB |
+|---|---:|---:|---:|---:|
+| 1 | 114.61 | 217.83 | 103.22 | 240.85 |
+| 2 | 115.89 | 219.68 | 103.79 | 239.72 |
+| 3 | 114.79 | 218.07 | 103.28 | 242.91 |
+
+Today's no-list control: **116.66 MB** initially, **120.39 MB** after the same number of sorts and 10 s of GC.
+After each load, temporary native data/strings leave an autorelease pool, then three `JSGarbageCollect` calls run
+and 250 ms elapse. After sorting, the context's list global is set to `undefined` and checked, GC runs three times
+immediately and after each of ten one-second waits. The release figures are process footprint, including retained
+VM/allocator pages; they do not prove a live-object leak. Both the +60 MB loaded and +5 MB released gates fail.
+
+Loading the 3,428,315-byte gzip (10,503,935-byte JSON) took **100.45 ms median**, **90.68–155.39 ms** across the
+three processes: read **0.96 ms**, gunzip plus UTF-8 **19.32 ms**, native string bridge plus JSC JSON parse
+**83.41 ms** (component medians). File reads use the warm filesystem cache; this is not cold-launch timing.
+
+| Fictional payments | Today's engine, no list | Candidate, no list | Candidate, with list |
+|---|---:|---:|---:|
+| 1,250 | 9.89 ms | 17.27 ms | 10.24 ms |
+| 5,000 | 44.81 ms | 40.41 ms | 48.16 ms |
+
+Sort medians include the string bridge, JSC input parsing, sorting, result JSON and Swift decoding; input JSON is
+prepared beforehand. Three warmups per size precede sampling; five paired samples per size/variant/process
+alternate order (15 each), with ten per size in the control. Timings vary with JIT/GC and simulator scheduling;
+the 1,250-payment figures do not establish a speedup. Payments use fictional amounts and merchants plus REWE.
+
+Reproduce with `bash scripts/95-local-places-measure.sh` after creating/booting the owned simulator. It builds the
+candidate into `build/` using aresium's existing esbuild, reads the source repo only, runs one `xcodebuild test`
+and three `test-without-building` calls, and exports diagnostics and result summaries. Existing tests depend on
+DEBUG-only helpers, so this Release-only experiment excludes their sources via a command-line build setting;
+the project file is untouched. **Four runs: one test each, zero failures** (`TEST SUCCEEDED`, then three
+`TEST EXECUTE SUCCEEDED`). The full suite was not run; the initial full Release compilation failed on those
+existing helpers. `python3 scripts/strings.py check`: **0 problem(s)**. No new UI strings or licence screenshots.
+Raw results: `build/95-measure-final.log`, `build/95-20261101-215832-*.xcresult` and matching diagnostics;
+gzip SHA-256: `6cf2685ffbd014173646f9bb3ba87ad59dc3cca64db04817c17025153faeba9b`.
+
+Before another app attempt, change the format in aresium: a sorted UTF-8 name blob with offset tables and flat
+integer category/town columns, exposed as typed arrays and searched in place. Give the builder and matcher the
+same ordering; decode only a matched record, avoiding hundreds of thousands of nested JS arrays and strings.
+Keep structural rules and learning first, preserve the existing matching safeguards, then remeasure the new format
+against the same two memory gates. This format change is outside brief 95.
