@@ -1,6 +1,6 @@
 # 73: Arestoteles and the Empire app: ready for the iPhone? (review)
 
-Status: running
+Status: done 2026-11-01: no blocker; three fixes confirmed by Claude went to brief 74, two "later" items noted (Preview Content in Release, quick-note write failures)
 Worktree: `~/empire-ios-73-review` (detached at `main`, read-only) · Model: `gpt-6.1-sol`, effort `high`, `-s read-only`
 
 ## Goal
