@@ -68,7 +68,14 @@ struct FilePersistence: VaultPersistence {
 
     func loadVault() -> CachedVault? { read(CachedVault.self, from: vaultFile) }
 
-    func saveVault(_ cached: CachedVault) throws { try write(cached, to: vaultFile) }
+    func saveVault(_ cached: CachedVault) throws {
+        try write(cached, to: vaultFile)
+        // The server's vault can be downloaded again. Atomic writes replace the file, so set this every time.
+        var file = vaultFile
+        var values = URLResourceValues()
+        values.isExcludedFromBackup = true
+        try file.setResourceValues(values)
+    }
 
     func loadQuickNotes() -> [PendingQuickNote] { read([PendingQuickNote].self, from: quickNotesFile) ?? [] }
 
