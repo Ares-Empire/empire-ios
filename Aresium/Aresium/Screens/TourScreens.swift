@@ -333,7 +333,8 @@ struct TourScreen<Header: View>: View {
                     header(route) { tour.openSettings() }
                 } root: {
                     StartScreen(store: world.dashboard, palette: palette, current: place.current, side: place.side,
-                                graph: tour.showsGraph, graphMoves: tour.graphMoves, band: band) {
+                                graph: tour.showsGraph, graphMoves: tour.graphMoves, band: band,
+                                openDay: { place.wrappedValue.day = $0 }) {
                         place.wrappedValue.path.append($0)
                     }
                 }

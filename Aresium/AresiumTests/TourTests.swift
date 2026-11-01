@@ -3,10 +3,10 @@ import SwiftUI
 import Testing
 @testable import Aresium
 
-/// The tour (briefs 24, 25, 42 and 59): its eighteen steps go on when the person does the thing or taps Next, the
-/// graph's and the Settings rows' steps only point and go on, the graph's step is left out (and no card mentions the
-/// graph) while the graph is hidden, adding up works on the tour's own choices in memory, and it runs on a made-up store
-/// of its own that is deleted when it ends, at any step, without touching the person's store or settings.
+/// The tour (briefs 24, 25, 42, 59 and 77): its nineteen steps go on when the person does the thing or taps Next, the
+/// graph's, the search's and the Settings rows' steps only point and go on, the graph's step is left out (and no card
+/// mentions the graph) while the graph is hidden, adding up works on the tour's own choices in memory, and it runs on a
+/// made-up store of its own that is deleted when it ends, at any step, without touching the person's store or settings.
 @MainActor
 struct TourTests {
     /// 27 Oct 2026, noon: the made-up months end in October.
@@ -70,7 +70,7 @@ struct TourTests {
         #expect(tour.phase == .running)
         #expect(tour.step == .welcome)
         #expect(tour.target == nil)
-        #expect(tour.count == 18)
+        #expect(tour.count == 19)
         let world = try #require(tour.world)
         #expect(world.root.deletingLastPathComponent().standardizedFileURL == parent.standardizedFileURL)
         #expect(world.phone.summary.payments > 100)
@@ -92,7 +92,7 @@ struct TourTests {
         #expect(tour.target == .graph, "the graph itself, on the start screen")
         #expect(tour.holdsTheScreen)
         #expect(!tour.place.current, "Overview stays for the graph")
-        #expect(tour.number == 4 && tour.count == 18)
+        #expect(tour.number == 4 && tour.count == 19)
 
         place = tour.place
         place.side = .expenses                                  // the person moves the page: the step asks nothing
@@ -102,6 +102,27 @@ struct TourTests {
         tour.update(place)
         #expect(tour.step == .graph, "only Next goes on from the graph")
         #expect(tour.target == .graph, "the month's page has its own graph")
+        place = tour.place
+        place.day = DayRoute(date: "2026-09-14", side: .expenses)            // a tap on a day there (brief 77)
+        tour.update(place)
+        #expect(tour.step == .graph)
+        tour.next()
+
+        // Brief 77: the search's magnifying glass on the start screen; the search and the names it opens are free.
+        #expect(tour.step == .search)
+        #expect(tour.place.path.isEmpty && tour.place.day == nil, "back on the start screen, the day's sheet closed")
+        #expect(tour.target == .search && tour.holdsTheScreen)
+        #expect(tour.number == 5)
+        place = tour.place
+        place.open(.search)                                                   // the magnifying glass
+        tour.update(place)
+        #expect(tour.step == .search, "only Next goes on from the search")
+        #expect(tour.target == nil && !tour.holdsTheScreen, "free to type and open a name")
+        let found = try #require(world.dashboard.searchNames("REWE").first, "the tour's search runs on its own store")
+        place = tour.place
+        place.open(DashboardRoute(name: PaymentNameRoute(key: found.key, title: found.shownName)))
+        tour.update(place)
+        #expect(tour.step == .search && tour.target == nil)
         tour.next()
         #expect(tour.step == .category)
         #expect(tour.place.path.isEmpty, "back on the start screen")
@@ -232,6 +253,9 @@ struct TourTests {
             case .graph:
                 #expect(!tour.place.current, "Overview's months")
                 #expect(tour.target == .graph)
+            case .search:
+                #expect(tour.place.path.isEmpty && tour.place.day == nil)
+                #expect(tour.target == .search)
             case .payment:
                 #expect(tour.place.path.last?.month == "2026-10", "this month's payments of a category")
                 #expect(tour.target != nil)
@@ -270,12 +294,12 @@ struct TourTests {
             if tour.phase == .running { seen.append(tour.step) }
         }
         #expect(seen == TourStep.allCases)
-        #expect(seen.count == 18)
+        #expect(seen.count == 19)
         #expect(Self.tourFolders(in: parent).isEmpty)
     }
 
-    /// With the graph hidden in Settings (brief 42), the tour has no graph step: seventeen steps, counted 1 to 17 on the
-    /// card, Overview followed by the category; a DEBUG start at the graph's step starts at the category; no card
+    /// With the graph hidden in Settings (brief 42), the tour has no graph step: eighteen steps, counted 1 to 18 on the
+    /// card, Overview followed by the search (brief 77); a DEBUG start at the graph's step starts at the search; no card
     /// mentions the graph (brief 59).
     @Test func withTheGraphHiddenTheGraphStepIsLeftOut() async throws {
         #expect(TourStep.steps(showingGraph: true) == TourStep.allCases)
@@ -283,7 +307,7 @@ struct TourTests {
 
         let tour = Self.model(in: Self.parent(), showsGraph: false)
         await tour.start()
-        #expect(tour.count == 17)
+        #expect(tour.count == 18)
         var numbers: [Int] = []
         var seen: [TourStep] = []
         while tour.phase == .running {
@@ -291,11 +315,11 @@ struct TourTests {
             seen.append(tour.step)
             #expect(tour.target != .graph)
             #expect(!tour.text.localizedCaseInsensitiveContains("graph"), "\(tour.step)")
-            if tour.step == .overview { #expect(tour.nextStep == .category) }
+            if tour.step == .overview { #expect(tour.nextStep == .search) }
             if tour.step == .done { #expect(tour.nextStep == nil) }
             tour.next()
         }
-        #expect(numbers == Array(1...17))
+        #expect(numbers == Array(1...18))
         #expect(!seen.contains(.graph) && seen.first == .welcome && seen.last == .done)
         for step in TourStep.steps(showingGraph: false) {
             #expect(!step.text(.english, showingGraph: false).localizedCaseInsensitiveContains("graph"))
@@ -304,7 +328,7 @@ struct TourTests {
 
         let started = Self.model(in: Self.parent(), showsGraph: false)
         await started.start(at: .graph)
-        #expect(started.step == .category && started.number == 4)
+        #expect(started.step == .search && started.number == 4)
         started.end()
     }
 
@@ -317,8 +341,10 @@ struct TourTests {
                 #expect(!english.contains("!") && !german.contains("!"), "no exclamation marks")
             }
         }
-        #expect(TourStep.graph.text(.english) == "Hold the graph and slide to read each month. A tap opens it.")
-        #expect(TourStep.graph.text(.german) == "Halte den Finger auf dem Diagramm und zieh: jeder Monat mit seiner Zahl. Antippen öffnet ihn.")
+        #expect(TourStep.graph.text(.english) == "Hold the graph and slide to read each month. A tap opens the month, or the day where it shows days.")
+        #expect(TourStep.graph.text(.german) == "Halte den Finger auf dem Diagramm und zieh: jeder Monat mit seiner Zahl. Antippen öffnet den Monat, zeigt es Tage, den Tag.")
+        #expect(TourStep.search.text(.english) == "Search a name, your own or the bank's. A tap shows all its payments.")
+        #expect(TourStep.search.text(.german).contains("Namen") && TourStep.search.text(.german).contains("Bank"))
         #expect(TourStep.addUp.text(.german).contains("Summieren"))
         #expect(TourStep.allFrom.text(.german).contains("Alle"))
         #expect(TourStep.importFiles.text(.english) == "Files from your bank, receipts and cash come in here.")

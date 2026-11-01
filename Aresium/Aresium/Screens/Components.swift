@@ -62,7 +62,8 @@ private struct MinimumTapArea: ViewModifier {
 
 /// A screen's header: Aresium's mark or the back arrow, the title in the middle, and the buttons on the right, each on the
 /// wall without a box (brief 56, `HeaderButtonLook`): red mode's X first (so the others keep their places when it comes),
-/// then the page's own button (the start screen's import, a category's icon of adding up, brief 53), then the gear.
+/// then the page's own buttons (the start screen's search and import, brief 77; a category's icon of adding up, brief
+/// 53), then the gear.
 /// Light and dark are chosen in Settings → General → Appearance (brief 42: the sun button that switched them is gone).
 struct ScreenHeader: View {
     /// The category's icon of adding up: what it shows, and its tap.
@@ -85,6 +86,8 @@ struct ScreenHeader: View {
     let palette: Palette
     var back: (() -> Void)? = nil
     var sums: Sums? = nil
+    /// The start screen's search (brief 77, phone mode): the magnifying glass beside the import button.
+    var search: (() -> Void)? = nil
     var imports: Import? = nil
     /// Red mode's X, the way out of it (red is entered through the band).
     let leaveRed: () -> Void
@@ -116,6 +119,11 @@ struct ScreenHeader: View {
                     SumCategoryButton(on: sums.on, palette: palette, action: sums.toggle)
                         .tourAnchor(.sumIcon)
                         .transition(.opacity)
+                }
+                if let search {
+                    IconButton(symbol: "magnifyingglass", label: String(localized: "Search"), palette: palette,
+                               action: search)
+                        .tourAnchor(.search)
                 }
                 if let imports {
                     ImportButton(store: imports.store, sample: imports.sample, palette: palette, choices: imports.choices)
