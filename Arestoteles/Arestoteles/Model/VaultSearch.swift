@@ -6,7 +6,7 @@ import Foundation
 /// Ranking: every word of the query must appear in a result. Results whose title holds all the words come first (a
 /// title that starts with the query before the rest), then the summary, then a glossary term, then the text, then notes
 /// where the words are spread over several of these. Within a rank, by title.
-struct VaultSearch: Sendable {
+nonisolated struct VaultSearch: Sendable {
     enum Rank: Int, Comparable, Sendable {
         case titleStart, title, summary, term, text, spread
         static func < (a: Rank, b: Rank) -> Bool { a.rawValue < b.rawValue }

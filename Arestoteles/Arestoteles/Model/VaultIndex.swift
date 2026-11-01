@@ -3,7 +3,7 @@ import Foundation
 /// The lookups the screens need, built once per vault: notes and positions by id, backlinks, the topic overviews, the
 /// library (mechanisms with how often they are used, events by year and region, questions, actors). Pure: the tests
 /// build it from the samples.
-struct VaultIndex: Sendable {
+nonisolated struct VaultIndex: Sendable {
     /// One year of the events timeline (`year` nil: events without a year, at the end).
     struct EventYear: Equatable, Sendable {
         let year: Int?

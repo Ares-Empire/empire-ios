@@ -47,14 +47,14 @@ struct ArestotelesAPI: VaultBackend {
         let (data, response) = try await transport.send(request)
         if response.statusCode == 304 { return .notModified }
         try check(response, data: data)
-        return .fresh(try JSONDecoder().decode(Vault.self, from: data), etag: response.value(forHTTPHeaderField: "ETag"))
+        return .fresh(try await Self.decode(Vault.self, from: data), etag: response.value(forHTTPHeaderField: "ETag"))
     }
 
     func source(note id: String) async throws -> NoteSource {
         let request = try request("GET", path: "/notes/" + NoteLink.encode(id) + "/source")
         let (data, response) = try await transport.send(request)
         try check(response, data: data)
-        return try JSONDecoder().decode(NoteSource.self, from: data)
+        return try await Self.decode(NoteSource.self, from: data)
     }
 
     /// The passages that answer a query, by words and meaning. Short timeout: the search waits for nobody, and the
@@ -64,7 +64,7 @@ struct ArestotelesAPI: VaultBackend {
                                   timeout: 5)
         let (data, response) = try await transport.send(request)
         try check(response, data: data)
-        return try JSONDecoder().decode(SearchAnswer.self, from: data)
+        return try await Self.decode(SearchAnswer.self, from: data)
     }
 
     func send(_ edit: Edit) async throws -> EditResult {
@@ -74,16 +74,21 @@ struct ArestotelesAPI: VaultBackend {
         let (data, response) = try await transport.send(request)
         switch response.statusCode {
         case 409:
-            let body = try? JSONDecoder().decode(ConflictBody.self, from: data)
+            let body = try? await Self.decode(ConflictBody.self, from: data)
             throw VaultAPIError.conflict(message: body?.error, current: body?.current)
         case 422:
-            let body = try? JSONDecoder().decode(ServerMessage.self, from: data)
+            let body = try? await Self.decode(ServerMessage.self, from: data)
             throw VaultAPIError.invalid(message: body?.error ?? body?.message
                                         ?? String(localized: "The vault's check refused this edit."))
         default:
             try check(response, data: data)
         }
-        return try JSONDecoder().decode(EditResult.self, from: data)
+        return try await Self.decode(EditResult.self, from: data)
+    }
+
+    @concurrent
+    private static func decode<T: Decodable & Sendable>(_ type: T.Type, from data: Data) async throws -> T {
+        try JSONDecoder().decode(type, from: data)
     }
 
     // MARK: - requests
@@ -95,7 +100,7 @@ struct ArestotelesAPI: VaultBackend {
     }
 
     /// `{"error": "…", "current": Note}` of a 409.
-    private struct ConflictBody: Decodable {
+    nonisolated private struct ConflictBody: Decodable, Sendable {
         let error: String?
         let current: Note?
     }

@@ -14,7 +14,7 @@ protocol SpotlightIndexing: Sendable {
     var language: AppLanguage? { get }
 }
 
-enum SpotlightItems {
+nonisolated enum SpotlightItems {
     /// All the vault's items share this domain, so replacing them never touches anything else.
     static let domain = "de.ares-empire.arestoteles.notes"
 
@@ -36,6 +36,11 @@ enum SpotlightItems {
         return item
     }
 
+    @concurrent
+    static func prepare(_ notes: [Note], language: AppLanguage) async -> [CSSearchableItem] {
+        make(notes, language: language)
+    }
+
     /// The note a tapped Spotlight result stands for.
     static func link(from activity: NSUserActivity) -> NoteLink? {
         guard activity.activityType == CSSearchableItemActionType,
@@ -50,9 +55,10 @@ struct DeviceSpotlight: SpotlightIndexing {
 
     func replace(with notes: [Note]) async throws {
         let language = AppLanguage.current
+        let items = await SpotlightItems.prepare(notes, language: language)
         let index = CSSearchableIndex.default()
         try await index.deleteSearchableItems(withDomainIdentifiers: [SpotlightItems.domain])
-        try await index.indexSearchableItems(SpotlightItems.make(notes, language: language))
+        try await index.indexSearchableItems(items)
         UserDefaults.standard.set(language.code, forKey: Self.languageKey)
     }
 

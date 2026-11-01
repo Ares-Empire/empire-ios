@@ -1222,16 +1222,6 @@
         }
       }
     },
-    "Saved on the phone. It goes to the Inbox once the server can be reached." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Auf dem Telefon gespeichert. Sie kommt in den Eingang, sobald der Server erreichbar ist."
-          }
-        }
-      }
-    },
     "Saved. It reaches the laptops once the server can push it to GitHub." : {
       "localizations" : {
         "de" : {

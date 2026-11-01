@@ -32,8 +32,8 @@ final class VaultStore {
     }
 
     nonisolated enum QuickNoteOutcome: Equatable, Sendable {
-        case sent
-        case waiting                    // kept on the phone, sent once the server is reachable
+        case queued                     // durable on the phone; sending belongs to the store
+        case failed(String)
         case empty
     }
 
@@ -44,8 +44,8 @@ final class VaultStore {
     private let backend: any VaultBackend
     private let persistence: any VaultPersistence
     private let spotlight: any SpotlightIndexing
-    /// The account of the login saved on the device (read once at launch, before the login is renewed).
-    private let savedAccount: () -> String?
+    private let worker: VaultWorker
+    private let preparation: any VaultPreparing
 
     // the vault
     private(set) var vault: Vault?
@@ -70,6 +70,20 @@ final class VaultStore {
     /// The last thing worth saying about an edit, shown briefly over the tabs.
     private(set) var notice: Notice?
 
+    private var failedQuickNotes: Set<UUID> = []
+    var waitingQuickNoteCount: Int {
+        pendingQuickNotes.count { $0.problem == nil && failedQuickNotes.contains($0.id) }
+    }
+
+    /// True while the vault saved on the phone is read at launch, off the main thread (a moment). The screen shows the
+    /// launch wall meanwhile, so the launch goes straight from iOS's launch screen to the tabs.
+    private(set) var isLoadingSaved = true
+    private var loadingTask: Task<Void, Never>?
+    private var quickNotesTask: Task<Void, Never>?
+    private var flushID: UUID?
+    private var backgroundTask: QuickNoteBackgroundTask?
+    /// Advanced when an answer is accepted for preparation; refreshes remember the value before their request.
+    private var vaultRevision = 0
     private var etag: String?
     private var vaultAccount: String?
     private var resetGeneration = 0
@@ -79,12 +93,14 @@ final class VaultStore {
 
     init(session: EmpireSession, backend: any VaultBackend, persistence: any VaultPersistence,
          spotlight: any SpotlightIndexing, savedAccount: @escaping () -> String?, sample: Bool = false,
-         searchTiming: BestMatches.Timing = BestMatches.Timing()) {
+         searchTiming: BestMatches.Timing = BestMatches.Timing(), preparation: (any VaultPreparing)? = nil) {
         self.session = session
         self.backend = backend
         self.persistence = persistence
+        let worker = VaultWorker(persistence: persistence)
+        self.worker = worker
+        self.preparation = preparation ?? worker
         self.spotlight = spotlight
-        self.savedAccount = savedAccount
         #if DEBUG
         let sampleMode = sample
         #else
@@ -95,7 +111,16 @@ final class VaultStore {
             try await Self.passages(for: query, backend: backend, session: session, sample: sampleMode)
         }
         session.onAppDataReset { [weak self] in self?.clear() }
-        loadFromDisk()
+        VaultTiming.measure("disk.load") {
+            pendingQuickNotes = persistence.loadQuickNotes()
+            let context = context
+            let account = isSample ? Self.sampleAccount : savedAccount()
+            let queuedOnLaunch = Set(pendingQuickNotes.map(\.id))
+            loadingTask = Task {
+                await self.loadFromDisk(account: account, context: context, queuedOnLaunch: queuedOnLaunch)
+                self.isLoadingSaved = false
+            }
+        }
     }
 
     /// An edit or a quick note is on its way to the server.
@@ -115,46 +140,53 @@ final class VaultStore {
     /// The vault and quick notes saved on the device, if they belong to the login saved on the device. Anything else
     /// is deleted (another account logged in, or every Empire app logged out, while this app was closed); so is a vault
     /// whose account cannot be told.
-    private func loadFromDisk() {
-        let account = isSample ? Self.sampleAccount : savedAccount()
-        if let cached = persistence.loadVault() {
+    private func loadFromDisk(account: String?, context: Context, queuedOnLaunch: Set<UUID>) async {
+        let revision = vaultRevision
+        let cached = await worker.load()
+        guard isCurrent(context), revision == vaultRevision else { return }
+        if let cached {
             guard let account, cached.account == account else {
-                try? persistence.deleteAll()
+                // Discard the old account's queue, preserving any new note queued during the asynchronous load.
+                pendingQuickNotes.removeAll { queuedOnLaunch.contains($0.id) }
+                failedQuickNotes.subtract(queuedOnLaunch)
+                saveQuickNotes()
+                worker.deleteVault()
                 updateSpotlight(nil)
+                await worker.settled()
                 return
             }
             // Indexed when it was loaded, unless that was in the other language.
-            apply(cached.vault, etag: cached.etag, account: cached.account, save: false,
-                  reindex: spotlight.language != AppLanguage.current)
+            await apply(cached.vault, etag: cached.etag, account: cached.account, context: context,
+                        revision: revision, save: false, reindex: spotlight.language != AppLanguage.current)
         } else if account == nil {
-            // A crash may have left the index behind after the saved vault was removed.
             updateSpotlight(nil)
         }
-        pendingQuickNotes = persistence.loadQuickNotes()
     }
 
     /// Asks the server for the vault (`If-None-Match` with the ETag of the one shown), then sends waiting quick notes.
     func refresh() async {
+        await loadingSettled()
         guard canAct, !isRefreshing else { return }
         isRefreshing = true
         let context = context
         defer { if isCurrent(context) { isRefreshing = false } }
+        let revision = vaultRevision
         let account = currentAccount
         let sameAccount = vault != nil && account == vaultAccount
         let token = session.token           // what the request goes with (the API reads it before suspending)
         do {
             let fetched = try await backend.vault(ifNoneMatch: sameAccount ? etag : nil)
-            guard isCurrent(context) else { return }
+            guard isCurrent(context), revision == vaultRevision else { return }
             isOffline = false
             loadError = nil
             lastRefresh = .now
             if case let .fresh(vault, etag) = fetched {
-                apply(vault, etag: etag, account: account)
+                await apply(vault, etag: etag, account: account, context: context, revision: nextVaultRevision())
             }
         } catch {
             guard isCurrent(context) else { return }
             session.handleAuthFailure(error, generation: context.session, token: token)
-            guard isCurrent(context) else { return }
+            guard isCurrent(context), revision == vaultRevision else { return }
             if Self.isOffline(error) {
                 isOffline = true
             } else {
@@ -162,6 +194,7 @@ final class VaultStore {
             }
             return
         }
+        guard isCurrent(context) else { return }
         isRefreshing = false
         await flushQuickNotes()
     }
@@ -173,6 +206,7 @@ final class VaultStore {
     /// - `renewsLogin`: false right after the launch restored the login itself.
     func update(now: Date = .now, minimumAge: TimeInterval? = nil, renewAfter: TimeInterval = 12 * 3600,
                 renewsLogin: Bool = true) async {
+        await loadingSettled()
         guard !foregroundUpdating else { return }
         foregroundUpdating = true
         // Not tied to the login it started with: renewing a waiting login starts a new session on purpose.
@@ -375,7 +409,7 @@ final class VaultStore {
         do {
             let result = try await backend.send(edit)
             guard isCurrent(context) else { return .failed("") }
-            accept(result)
+            await accept(result, context: context, revision: nextVaultRevision())
             return .applied
         } catch VaultAPIError.conflict {
             return .conflict
@@ -393,8 +427,9 @@ final class VaultStore {
     }
 
     /// An edit's answer: its vault replaces the app's (it has no ETag, so the next refresh downloads the vault again).
-    private func accept(_ result: EditResult) {
-        apply(result.vault, etag: nil, account: currentAccount)
+    private func accept(_ result: EditResult, context: Context, revision: Int) async {
+        await apply(result.vault, etag: nil, account: currentAccount, context: context, revision: revision)
+        guard isCurrent(context), revision == vaultRevision else { return }
         isOffline = false
         if let text = Self.savedNotice(for: result) { show(text, .info) }
     }
@@ -416,30 +451,77 @@ final class VaultStore {
     /// A quick note for the Inbox, verbatim. Kept on the phone first, so nothing is lost offline; sent at once when the
     /// server is reachable.
     @discardableResult
-    func addQuickNote(_ text: String, about: String? = nil, kind: QuickNoteKind = .note,
-                      now: Date = .now) async -> QuickNoteOutcome {
+    func queueQuickNote(_ text: String, about: String? = nil, kind: QuickNoteKind = .note,
+                        now: Date = .now) -> QuickNoteOutcome {
         // A "discuss later" mark may come without words; a note needs some.
         guard kind == .discuss || !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return .empty }
         let note = PendingQuickNote(text: text, created: now, about: about, kind: kind)
         pendingQuickNotes.append(note)
-        saveQuickNotes()
-        await flushQuickNotes()
-        return pendingQuickNotes.contains { $0.id == note.id } ? .waiting : .sent
+        do {
+            try persistence.saveQuickNotes(pendingQuickNotes)
+        } catch {
+            pendingQuickNotes.removeAll { $0.id == note.id }
+            show(error.localizedDescription, .problem)
+            return .failed(error.localizedDescription)
+        }
+        startQuickNotes()
+        return .queued
     }
 
     /// A quick note the server refused (or one Patrik no longer wants sent) is deleted from the phone.
     func deleteQuickNote(_ id: UUID) {
+        failedQuickNotes.remove(id)
         pendingQuickNotes.removeAll { $0.id == id }
         saveQuickNotes()
     }
 
-    /// Sends the waiting quick notes in order; stops at the first that cannot reach the server (tried again later).
+    /// Starts a store-owned task. Its lifetime is independent of the sheet's task or dismissal.
+    private func startQuickNotes() {
+        guard quickNotesTask == nil else { return }
+        let id = UUID()
+        flushID = id
+        // Ask synchronously, before Save returns and the user can leave the app.
+        let background = canAct && pendingQuickNotes.contains { $0.problem == nil } ? QuickNoteBackgroundTask() : nil
+        backgroundTask = background
+        quickNotesTask = Task {
+            defer {
+                background?.end()
+                if self.flushID == id {
+                    self.quickNotesTask = nil
+                    self.flushID = nil
+                    self.backgroundTask = nil
+                }
+            }
+            await self.runQuickNotes()
+        }
+    }
+
+    /// Refreshes and other edits can wait for the very same flush; there is only one sender.
     func flushQuickNotes() async {
-        guard canAct, !isFlushing, pendingQuickNotes.contains(where: { $0.problem == nil }) else { return }
+        startQuickNotes()
+        await quickNotesTask?.value
+    }
+
+    func quickNotesSettled() async { await quickNotesTask?.value }
+    func sendingSettled() async { await lastOperation?.value }
+
+    /// Sends in order, stopping at a connection/server failure. Refused notes stay aside.
+    private func runQuickNotes() async {
+        await loadingSettled()
+        guard !Task.isCancelled, !isFlushing,
+              pendingQuickNotes.contains(where: { $0.problem == nil }) else { return }
+        guard canAct else {
+            if session.needsRestoreRetry {
+                failedQuickNotes.formUnion(pendingQuickNotes.map(\.id))
+                isOffline = true
+            }
+            return
+        }
         isFlushing = true
         let context = context
         defer { if isCurrent(context) { isFlushing = false } }
-        while isCurrent(context), canAct, let next = pendingQuickNotes.first(where: { $0.problem == nil }) {
+        while !Task.isCancelled, isCurrent(context), canAct,
+              let next = pendingQuickNotes.first(where: { $0.problem == nil }) {
             let done = await serially { await self.send(next, context: context) }
             if !done { break }
         }
@@ -453,11 +535,13 @@ final class VaultStore {
             let result = try await backend.send(.quickNote(text: note.text, about: note.about, kind: note.kind))
             guard isCurrent(context) else { return false }
             pendingQuickNotes.removeAll { $0.id == note.id }
+            failedQuickNotes.remove(note.id)
             saveQuickNotes()
-            accept(result)
+            await accept(result, context: context, revision: nextVaultRevision())
             return true
         } catch let VaultAPIError.invalid(message) {
             guard isCurrent(context) else { return false }
+            failedQuickNotes.insert(note.id)
             if let index = pendingQuickNotes.firstIndex(where: { $0.id == note.id }) {
                 pendingQuickNotes[index].problem = message
             }
@@ -467,6 +551,7 @@ final class VaultStore {
         } catch {
             session.handleAuthFailure(error, generation: context.session, token: token)
             guard isCurrent(context) else { return false }
+            failedQuickNotes.insert(note.id)
             if Self.isOffline(error) { isOffline = true }
             return false
         }
@@ -502,6 +587,13 @@ final class VaultStore {
     /// Everything this app knows about the account (logout, or this app denied): also on the disk and in Spotlight.
     func clear() {
         resetGeneration += 1
+        vaultRevision += 1
+        quickNotesTask?.cancel()
+        quickNotesTask = nil
+        flushID = nil
+        backgroundTask?.end()
+        backgroundTask = nil
+        failedQuickNotes = []
         vault = nil
         index = .empty
         search = .empty
@@ -517,26 +609,40 @@ final class VaultStore {
         isFlushing = false
         foregroundUpdating = false
         notice = nil
-        try? persistence.deleteAll()
+        saveQuickNotes()
+        worker.deleteVault()
         updateSpotlight(nil)
     }
 
     // MARK: - plumbing
 
-    private func apply(_ vault: Vault, etag: String?, account: String?, save: Bool = true, reindex: Bool = true) {
-        let changed = vault != self.vault
-        self.vault = vault
-        self.etag = etag
-        vaultAccount = account
-        if changed {
-            index = VaultIndex(vault: vault)
-            search = VaultSearch(vault: vault)
-            tabSearch = TabSearch(vault: vault, index: index)
-            if reindex { updateSpotlight(vault.notes) }
-        }
-        // A failed write only means the next launch starts without this vault.
-        if save { try? persistence.saveVault(CachedVault(vault: vault, etag: etag, account: account)) }
+    private func nextVaultRevision() -> Int {
+        vaultRevision += 1
+        return vaultRevision
     }
+
+    private func apply(_ vault: Vault, etag: String?, account: String?, context: Context, revision: Int,
+                       save: Bool = true, reindex: Bool = true) async {
+        let prepared = await preparation.prepare(vault, previous: self.vault)
+        guard isCurrent(context), revision == vaultRevision else { return }
+        VaultTiming.measure(save ? "vault.apply" : "disk.assign") {
+            self.vault = prepared.vault
+            self.etag = etag
+            vaultAccount = account
+            if let index = prepared.index, let search = prepared.search, let tabSearch = prepared.tabSearch {
+                self.index = index
+                self.search = search
+                self.tabSearch = tabSearch
+                if reindex { updateSpotlight(vault.notes) }
+            }
+            // Enqueue before leaving the main actor. A later accepted vault or logout is written after this one.
+            if save { worker.save(CachedVault(vault: vault, etag: etag, account: account)) }
+        }
+        await worker.settled()
+    }
+
+    func loadingSettled() async { await loadingTask?.value }
+    func persistenceSettled() async { await worker.settled() }
 
     /// Spotlight changes run in order, so a removal at logout is never overtaken by an earlier indexing.
     private func updateSpotlight(_ notes: [Note]?) {

@@ -194,7 +194,8 @@ final class AppNavigation {
 /// answers after 3 s), `-tab positions|topics|library|search`, `-library mechanisms|events|questions|actors`,
 /// `-search <query>`, `-tabSearch <query>` (typed in the search field of the tab `-tab`/`-library` opens),
 /// `-openBestMatch <n>` (taps the search's n-th best match once it is there), `-openNote <id>[#<heading>]`,
-/// `-openPosition <id>`, `-openSheet brief|edit|quicknote|discuss|discussions|reword|change|drop|add|evidence|settings`.
+/// `-openPosition <id>`, `-openSheet brief|edit|quicknote|discuss|discussions|reword|change|drop|add|evidence|settings`,
+/// `-quickNoteText <text>` (fills a sample quick-note sheet), `-saveQuickNote` (saves it after two seconds).
 struct LaunchOptions {
     var sample = false
     var editConflict = false

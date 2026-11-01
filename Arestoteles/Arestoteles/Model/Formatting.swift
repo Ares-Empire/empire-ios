@@ -2,7 +2,7 @@ import Foundation
 
 /// How the app writes the vault's values in the app's language (ares-empire/docs/LANGUAGES.md). Pure functions with the
 /// language passed in, so the tests pin both. The vault's own words (titles, text) are never translated.
-enum Format {
+nonisolated enum Format {
     /// "Topic", "Mechanism", … (an unknown type shows its own word).
     static func type(_ type: NoteType, language: AppLanguage = .current) -> String {
         switch type {

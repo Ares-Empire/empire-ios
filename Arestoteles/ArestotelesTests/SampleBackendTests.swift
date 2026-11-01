@@ -40,15 +40,19 @@ struct SampleBackendTests {
         #expect(await invalid.rewordPosition("Positions#1", text: "x") == .invalid("A position must be one sentence."))
         let (later, _) = try store(.init(pushLater: true))
         await later.update()
-        #expect(await later.addQuickNote("a thought") == .sent && later.notice?.tone == .info)
+        #expect(later.queueQuickNote("a thought") == .queued)
+        await later.quickNotesSettled()
+        #expect(later.notice?.tone == .info)
     }
 
     @Test func offlineShowsTheSavedSample() async throws {
         let (store, _) = try store(.init(offline: true), saved: try SampleBackend.savedVault())
+        await store.loadingSettled()
         #expect(store.vault?.commit == "a1b2c3d")
         await store.update()
         #expect(store.isOffline && store.vault != nil)
-        #expect(await store.addQuickNote("on the train") == .waiting)
+        #expect(store.queueQuickNote("on the train") == .queued)
+        await store.quickNotesSettled()
     }
 
     @Test func discussedSampleDisappearsAndUndoBringsItBack() async throws {

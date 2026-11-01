@@ -2,7 +2,7 @@ import Foundation
 
 /// The contract's `Text`: inline Markdown (**bold**, *italic*, `code`, links). Note links arrive as
 /// `[shown text](arestoteles://note/<id>#<anchor>)`; a link to a missing note is plain text already; web links stay.
-enum InlineMarkdown {
+nonisolated enum InlineMarkdown {
     /// For display: `AttributedString(markdown:)`, inline only, whitespace kept. Text that is not valid Markdown shows as
     /// it is.
     static func attributed(_ markdown: String) -> AttributedString {

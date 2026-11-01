@@ -152,7 +152,8 @@ struct Harness {
 func makeStore(session: EmpireSession? = nil, transport: FakeTransport = FakeTransport(),
                persistence: MemoryPersistence = MemoryPersistence(), savedAccount: String? = "account-a",
                searchTiming: BestMatches.Timing = .quick,
-               spotlight: FakeSpotlight = FakeSpotlight()) async throws -> Harness {
+               spotlight: FakeSpotlight = FakeSpotlight(),
+               preparation: (any VaultPreparing)? = nil) async throws -> Harness {
     var signedIn = session
     if signedIn == nil { signedIn = await signedInSession() }
     let session = signedIn!
@@ -161,7 +162,8 @@ func makeStore(session: EmpireSession? = nil, transport: FakeTransport = FakeTra
     }
     let api = ArestotelesAPI(transport: transport, token: { session.token })
     let store = VaultStore(session: session, backend: api, persistence: persistence, spotlight: spotlight,
-                           savedAccount: { savedAccount }, searchTiming: searchTiming)
+                           savedAccount: { savedAccount }, searchTiming: searchTiming, preparation: preparation)
+    await store.loadingSettled()
     return Harness(store: store, transport: transport, session: session, persistence: persistence, spotlight: spotlight)
 }
 

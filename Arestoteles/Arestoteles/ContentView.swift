@@ -69,7 +69,10 @@ struct ContentView: View {
 
     var body: some View {
         Group {
-            if showsVault {
+            if store.isLoadingSaved {
+                // The saved vault is being read (a moment): iOS's launch screen, so no loading screen flashes first.
+                Color("LaunchBackground").ignoresSafeArea()
+            } else if showsVault {
                 MainTabs()
             } else if store.isSample || session.isSignedIn {
                 ProvinceLoading(name: "Arestoteles", bust: Image("Bust"), accent: Look.accent,
@@ -87,6 +90,8 @@ struct ContentView: View {
         .environment(navigation)
         .environment(\.logOut, LogOutAction(run: logOut))
         .task {
+            // Keep the saved vault ahead of login renewal, as when its load was synchronous.
+            await store.loadingSettled()
             if restoresOnLaunch { await session.restore() }
             await store.update(renewsLogin: false)
         }

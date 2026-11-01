@@ -4,7 +4,7 @@ import NaturalLanguage
 /// Quick lookups (Patrik, 2026-10-24: "usually I just want to quickly look up a fact, a figure or a source"): a note's
 /// passages and their sentences, the sentences that hold a figure or a date, the note's sources, and the first sentence
 /// of a position for its short card. Pure, so the tests pin it.
-enum Lookup {
+nonisolated enum Lookup {
     /// One passage of a note: a paragraph, a list item, a quote or a callout; where it sits and what it says.
     struct Passage: Equatable, Identifiable, Sendable {
         let note: String
