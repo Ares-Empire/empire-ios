@@ -1,6 +1,6 @@
 # 85: Reading bank files, improvement round 1
 
-Status: brief
+Status: merged 2026-11-01 (see the merge commit in aresium)
 Repo: **aresium** · Worktree: `../aresium-85-reading-round-1` (branch `codex/85-reading-round-1`) · Model:
 `gpt-6.1-sol`, effort `high` · Runs beside brief 84 (sorting, `src/engine/sorting/`); you own `src/engine/readers/`.
 

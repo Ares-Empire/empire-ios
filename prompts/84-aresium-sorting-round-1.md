@@ -1,6 +1,6 @@
 # 84: Sorting, improvement round 1
 
-Status: brief
+Status: merged 2026-11-01 (see the merge commit in aresium)
 Repo: **aresium** · Worktree: `../aresium-84-sorting-round-1` (branch `codex/84-sorting-round-1`) · Model:
 `gpt-6.1-sol`, effort `high` · Runs beside brief 85 (reading bank files, `src/engine/readers/`); you own
 `src/engine/sorting/`, `scripts/shop-list.de.ts` and the shop list build.
