@@ -4,13 +4,13 @@ import Foundation
 /// (`Aresium-<date>.json`, through the share sheet). Restoring reads it back into an empty store, checked first, all or
 /// nothing. Schema version 2 (brief 31) adds the receipts; version 3 (brief 33) the receipts' direction, kind, where
 /// cash was paid from and the shop as read, and the corrected shop names; version 4 adds payment names and name rules.
-/// Versions 1–3 still restore. A change to
+/// Version 5 adds category sides and otherSide. Versions 1–4 still restore. A change to
 /// these fields (or to `LedgerPayment`, `LedgerAccount`, `ChosenCategory`, `LearnedRule`, `CsvLayout`, `LedgerReceipt`,
 /// `ShopNameCorrection`, `PaymentNameRule`) is a new version, and `restore` keeps reading the older ones.
 nonisolated struct LedgerExport: Codable, Equatable, Sendable {
-    static let currentSchema = 4
+    static let currentSchema = 5
     /// The versions `decode` reads.
-    static let readableSchemas = 1...4
+    static let readableSchemas = 1...5
     static let appName = "Aresium"
 
     var app = Self.appName
@@ -109,6 +109,15 @@ nonisolated struct LedgerExport: Codable, Equatable, Sendable {
             } else if !known.contains(category.id) {
                 throw fail("unknown category \(category.id)")
             }
+        }
+        for category in categories where schema >= 5 {
+            if ChosenCategory.isCustom(category.id) {
+                guard category.side.flatMap(CategorySide.init(rawValue:)) != nil else { throw fail("category side") }
+            } else {
+                guard category.side == nil else { throw fail("default category side") }
+            }
+            guard catalog.category(category.id)?.kind != "transfer" || !category.otherSide
+            else { throw fail("transfer other side") }
         }
         // Payments may be in a chosen category or a built-in one (own transfers); learned rules may also point at a
         // default category that is not ticked now (they wait for it).

@@ -150,14 +150,14 @@ struct PhoneStoreTests {
 
     @Test func exportRoundTripsIntoAnEmptyStore() async throws {
         let phone = try await PhoneTest.backend(chosen: ["groceries", "rent", "utilities"])
-        try await phone.addCustom(named: "Fictional hobby")
+        try await phone.addCustom(named: "Fictional hobby", side: .spend)
         _ = try await phone.importFiles([PhoneTest.fixture("dkb.csv")], auth: BackendAuth(token: nil))
         let guess = try #require(try await phone.engine.readBankFile(PhoneTest.fixture("unknown-fiktivbank.csv").data,
                                                                     layouts: []).needsLayout)
         try await phone.saveLayout(try #require(guess.layout))
         try await phone.ledger.remember(["fiktiv laden": "groceries"])
         let export = try await phone.export()
-        #expect(export.schema == 4 && export.fileName.hasPrefix("Aresium-") && export.fileName.hasSuffix(".json"))
+        #expect(export.schema == 5 && export.fileName.hasPrefix("Aresium-") && export.fileName.hasSuffix(".json"))
         let data = try export.encoded()
 
         let fresh = try await PhoneTest.backend()

@@ -535,7 +535,8 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   layouts the person confirmed, receipts (schema version 2, brief 31), the receipts' direction, kind, `paidFrom` and the
   shop as read plus the corrected shop names (schema version 3, brief 33), one's own categories' icon and colour (schema
   version 4, brief 36), bank payments’ own names and merchant name rules (schema
-  version 5, brief 43; `LedgerSchemaCurrent` names the version the app opens, tests use it too); older stores move on by lightweight stages,
+  version 5, brief 43), category sides and other-side offers (schema
+  version 6, brief 69; `LedgerSchemaCurrent` names the version the app opens, tests use it too); older stores move on by lightweight stages,
   one after the other (`LedgerMigrationPlan`; a model change always adds the next version, never edits one in place;
   `ReceiptBookTests` opens a version 1 store, `ReceiptCorrectionTests` a version 2 one, `OwnCategoryLookTests` a version 3
   one). **Own categories' looks** (brief 36, `Model/OwnCategoryLook.swift`): an icon from a word of the name (English and
@@ -571,9 +572,9 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   `storage`). **Lifecycle:** the data belongs to the iPhone, not to a login: logging in or out, leaving Aresium and
   deleting the Ares account never touch it; it goes only with Settings → Delete Aresium data on this iPhone or the
   lock's "Forgot the code?". Settings → Your data on this iPhone (phone mode): Categories, Receipts, Export (one JSON file,
-  schema 4 with the receipts, cash entries, corrected shop names and payment names, `Aresium-<date>.json`, through the share sheet), Restore
+  schema 5 with the receipts, cash entries, corrected shop names, payment names and category sides, `Aresium-<date>.json`, through the share sheet), Restore
   from an export (only into an empty store, all or nothing; chosen categories and corrected shop names are replaced;
-  schema 1–3 files still restore).
+  schema 1–4 files still restore).
   **Payment names and groups** (brief 43, data only; `Model/PaymentNames.swift`, screens in brief 44):
   `LedgerPayment.place` always stays the bank name; sorting, learning and receipt matching use only those original
   fields. Schema 5 adds `LedgerPayment.ownName` and merchant → name rules (`PhoneLedger.paymentNames()`); export schema
@@ -639,19 +640,38 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   mode and Own names off: no pen, no field. **The category** (brief 47): the chip and a pen beside it ("Change
   category") open the change window, an extra category's chip opens it at Add; the Change button and the reason sentence
   went, the reason (`PaymentWording.categoryReason`) is one quiet line under "Currently in" at the window's top. Server
-  mode the same wherever the page has categories to change to. **New category where a category is chosen** (brief 60,
+  mode the same wherever the page has categories to change to.
+  **Category sides** (brief 69): every category has one home side for totals. Defaults take `kind` from the engine's
+  catalog; one's own store `side` (`"spend"` or `"income"`) in schema 6's chosen category, alongside `otherSide` (false
+  by default) for any chosen category. Transfers have no side and are offered in both directions. `PhoneStorage.open`
+  runs `PhoneLedger.giveCategoriesSides` before exposing the store: the engine's old no-side counting (primary
+  categories, including receipts and cash as usual) gives an own category income for a positive net, otherwise spending;
+  a default spending category with a positive net gets `otherSide`. An empty income default stays income. The internal
+  `sidesAssigned` flag makes this once-only, so removing an offer survives reopening. Export schema 5 keeps both values;
+  restore of schemas 1–4 assigns them after all payments and receipts are present. `PhoneCategoryList.offered(for:includingTransfers:)` is the shared menu rule: home categories, transfers when requested, then other-home categories
+  with `otherSide`; receipts and cash omit transfers and append Not sorted. The dashboard's engine `pick` has the same
+  membership, ordered by its totals. New category requires `CategorySide` in `PhoneBackend.addCustom(named:side:)`:
+  change window follows the payment, receipt uses spending, Add cash follows Spent/Received; Settings accepts a side
+  (the existing screen passes spending until brief 70). `setSide(_:of:)` changes one's own home and keeps the old
+  direction offered if it holds primary payments or receipts/entries; `setOtherSide(_:for:)` changes a chosen
+  non-transfer's additional offer. `ChosenCategory` equality includes both fields, so dashboard invalidation notices.
+  `TransactionDetailStore.otherSideChoices` lists unused other-home choices; `pickFromOtherSide` picks locally and shows
+  it last before the tiles. Save stores `otherSide` for the picks actually saved (Switch and Add); Cancel stores nothing.
+  `stopOffering` removes an additional offer immediately, except a home or current category. The tour uses its own
+  store and the same APIs. No new screen text. Tests: `CategorySideTests`, updated `NewCategoryInChangeTests` and
+  `NewCategoryInWindowsTests`.
+  **New category where a category is chosen** (brief 60,
   Patrik after build 7: "otherwise you have to leave, create it, come back"): one piece for three places,
   `NewCategoryModel` (`Model/NewCategory.swift`: the alert's name, kept after a name problem; whether the alert shows;
-  the busy state; the problem's line; `create(in:offer:)` makes the category with `PhoneBackend.addCustom(named:)`,
+  the busy state; the problem's line; `create(in:side:offer:)` makes the category with `PhoneBackend.addCustom(named:side:)`,
   Settings → Categories' path with its name check and brief 36's icon and colour, then the window's `offer` puts it
   among its choices and picks it) and `Screens/NewCategoryPieces.swift` (`newCategoryAlert`: Apple's alert "New
   category" / "Neue Kategorie" with the field "Name", Cancel and Create / Anlegen; `CategoryMenuRow`). **The change
   window** (`RecategoriseSheet`, `TransactionDetailStore.newCategory`, `createCategory`): the grid's last tile, "New
   category" with `plus`, the category tiles' size, the second ink and the line's thin outline, no category colour; in
-  Switch and Add, phone mode only, and only for money out: `pick.income` takes a category only once its payments add up
-  to money in (the engine's `buildDashboardSource` kinds: `excludeFromTotals` → transfer, net > 0 → income, else
-  spend), so a category made just now is never a choice for money in (`Dashboard.takesNewCategory(amount:)`, beside
-  `recategorisationChoices`). Create rebuilds the dashboard and picks it (the target in Switch, an extra in Add); one
+  Switch and Add, phone mode only, for money out and money in alike: the new category gets the payment's side
+  (`CategorySide.spend` / `.income`), so the engine offers it in that direction immediately. Create rebuilds the
+  dashboard and picks it (the target in Switch, an extra in Add); one
   made in this opening of the window comes last, just before the tile (`madeHere`), the next opening has the
   dashboard's order. While it is made the tile shows `BusyLabel` and the other tiles are greyed (0.4, `whileWorking`),
   the segmented control and Save are off and the swipe down is held. Nothing about the payment is saved before Save;
@@ -659,7 +679,7 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   the category. **The receipt window and Add cash** (`ReceiptCheckView`, `CashEntryView`, both `CategoryMenuRow`): the
   category menu ends with "New category…" / "Neue Kategorie …" (`plus`, after a divider); the same alert; the category
   is made, offered and picked there (`ReceiptCheckModel.createCategory`, `CashEntryModel.createCategory`; in Add cash for
-  spent and received alike, one's own being in both lists); while it is made the chip shows a spinner and the menu is
+  spent and received alike, with the side of that window); while it is made the chip shows a spinner and the menu is
   off. A name problem (taken in either language, reserved) makes nothing and keeps the typed name for the next tap: one
   line in the window's error style (the change window's under the grid, `FormProblem` under the menus' row) with
   Settings → Categories' words (`LedgerError`). Create is off while the name is empty or spaces; the keyboard's Return
@@ -1241,7 +1261,7 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   item of phone mode's import menu (the first screen's too; `banknote`) and the Cash page's Add spending / Add received
   cash: one window in the check window's look (`CashEntryView`, `CashEntryModel`): Spent / Received (segmented, with
   a line on what each is for), Amount (euros only), Date, What ("Where or what for" / "From whom or what for"),
-  Category (spending categories for spent, income ones for received, one's own in both, Not sorted last;
+  Category (its home side's categories, then the other side's with `otherSide`, no transfers, Not sorted last;
   `CashCategories`), and for Spent **Paid from**. Kept as a receipt (`CashEntryDraft` → `LedgerReceipt`: kind
   `manual`, cash, its direction, no rows, never joined: `PhoneDashboard.source` never sends a hand entry's payment,
   and cash is never matched); its category is not learned (an entry names an occasion more often than a shop). A store

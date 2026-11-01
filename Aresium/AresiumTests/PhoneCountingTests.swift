@@ -276,9 +276,9 @@ struct PhoneCountingTests {
     }
 
     @Test func handCashEntryCountsAtSpendingAndIncomeOnce() async throws {
-        let phone = try await Self.backend(chosen: ["groceries", "gifts"])
+        let phone = try await Self.backend(chosen: ["groceries", "parents-family"])
         let gift = try await phone.addCashEntry(CashEntryDraft(direction: .in, amount: 50, date: "2026-10-01",
-            what: "Fictional gift", category: "gifts", paidFrom: nil))
+            what: "Fictional gift", category: "parents-family", paidFrom: nil))
         _ = try await phone.addCashEntry(CashEntryDraft(direction: .out, amount: 20, date: "2026-10-02",
             what: "Fictional market", category: "groceries", paidFrom: gift.id))
         try await totals(phone, spending: 20, income: 50)

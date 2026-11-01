@@ -297,12 +297,26 @@ final class PhoneBackend: AresiumBackend {
 
     /// Adds one's own category (ticked).
     @discardableResult
-    func addCustom(named typed: String) async throws -> String {
+    func addCustom(named typed: String, side: CategorySide) async throws -> String {
         let name = try await categories().checkedName(typed)
         let id = "custom-" + UUID().uuidString.lowercased()
-        try await ledger.choose(id, name: name)
+        try await ledger.choose(id, name: name, side: side.rawValue)
         try await refresh()
         return id
+    }
+
+    /// Changes one's own home side, keeping the old direction offered while it still holds payments.
+    func setSide(_ side: CategorySide, of id: String) async throws {
+        try await ledger.setSide(side, of: id)
+        try await refresh()
+    }
+
+    /// Widens or narrows a chosen category's menu. Transfers already belong to both directions.
+    func setOtherSide(_ on: Bool, for id: String) async throws {
+        let list = try await categories()
+        guard list.isChosen(id), !list.isTransfer(id) else { throw LedgerError.notFound }
+        try await ledger.setOtherSide(on, for: id)
+        try await refresh()
     }
 
     func paymentCount(in id: String) async throws -> Int { try await ledger.paymentCount(in: id) }

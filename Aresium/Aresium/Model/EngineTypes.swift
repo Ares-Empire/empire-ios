@@ -277,6 +277,8 @@ nonisolated struct SourceCategory: Codable, Equatable, Sendable {
     let icon: String
     let color: String
     let excludeFromTotals: Bool
+    var side: String? = nil
+    var otherSide: Bool? = nil
 }
 
 nonisolated struct DashboardSourceInput: Codable, Equatable, Sendable {

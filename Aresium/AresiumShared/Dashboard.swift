@@ -48,10 +48,7 @@ extension Dashboard {
     /// Money in moves among the income list (`pick.income`), everything else among spending (`pick.spend`).
     static func picksIncome(amount: Double) -> Bool { amount > 0 }
 
-    /// Whether a category made just now is among `recategorisationChoices(amount:)` (brief 60). It has no payments yet,
-    /// and the engine counts a category as income only once its payments add up to money in (`buildDashboardSource`),
-    /// so a new one is a spending category: a choice for money out, never for money in.
-    static func takesNewCategory(amount: Double) -> Bool { !picksIncome(amount: amount) }
+
 }
 
 nonisolated struct Month: Codable, Identifiable {
@@ -89,6 +86,7 @@ nonisolated struct Category: Codable, Identifiable {
     let icon: String
     let color: String
     let kind: Kind
+    var otherSide: Bool? = nil
     var id: String { name }
 }
 
@@ -162,6 +160,7 @@ nonisolated struct CashMovement: Codable, Equatable, Identifiable {
     /// From the wallet's side: + in, − out.
     let amount: Double
     let kind: Kind
+    var otherSide: Bool? = nil
     var place: String
     /// The category's name on the dashboard ("Uncategorised" for none).
     let category: String
