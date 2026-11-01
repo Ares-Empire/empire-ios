@@ -14,6 +14,46 @@
         }
       }
     },
+    "%@ is already in your list." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ist schon in deiner Liste."
+          }
+        }
+      }
+    },
+    "%@ is now offered for money in too." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ gibt es jetzt auch für Einnahmen."
+          }
+        }
+      }
+    },
+    "%@ is now offered for money out too." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ gibt es jetzt auch für Ausgaben."
+          }
+        }
+      }
+    },
+    "%@ is ticked." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ist angehakt."
+          }
+        }
+      }
+    },
     "%@ is too large (max 25 MB before JSON encoding)" : {
       "localizations" : {
         "de" : {
@@ -714,12 +754,32 @@
         }
       }
     },
+    "Also for money in." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auch für Einnahmen."
+          }
+        }
+      }
+    },
     "Also for money out" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Auch für Ausgaben"
+          }
+        }
+      }
+    },
+    "Also for money out." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auch für Ausgaben."
           }
         }
       }
@@ -1394,6 +1454,16 @@
         }
       }
     },
+    "Choose categories and add your own. Hold a category to rename or delete it." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähle Kategorien, ergänze eigene. Halte eine zum Umbenennen oder Löschen."
+          }
+        }
+      }
+    },
     "Choose file" : {
       "localizations" : {
         "de" : {
@@ -1620,6 +1690,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Löschen"
+          }
+        }
+      }
+    },
+    "Delete %@?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ löschen?"
           }
         }
       }
@@ -2336,16 +2416,6 @@
         }
       }
     },
-    "Here you choose categories and add your own. Own names can be turned off." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hier wählst du Kategorien und legst eigene an. Eigene Namen lassen sich abschalten."
-          }
-        }
-      }
-    },
     "Here you switch the graph, its moving away as you scroll, and adding up in every list." : {
       "localizations" : {
         "de" : {
@@ -2612,6 +2682,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dann zählt er nicht mehr in seiner Kategorie."
+          }
+        }
+      }
+    },
+    "Its %lld payments are sorted again. Those Aresium can't sort go to Not sorted." : {
+      "localizations" : {
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Die Buchung darin wird neu sortiert. Was Aresium nicht sortieren kann, kommt zu Nicht sortiert."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Die %lld Buchungen darin werden neu sortiert. Was Aresium nicht sortieren kann, kommt zu Nicht sortiert."
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Its %lld payment is sorted again. Those Aresium can't sort go to Not sorted."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Its %lld payments are sorted again. Those Aresium can't sort go to Not sorted."
+                }
+              }
+            }
           }
         }
       }
@@ -4016,6 +4126,26 @@
         }
       }
     },
+    "Remove" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Entfernen"
+          }
+        }
+      }
+    },
+    "Remove %@?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ entfernen?"
+          }
+        }
+      }
+    },
     "Remove code" : {
       "localizations" : {
         "de" : {
@@ -4032,6 +4162,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Umbenennen"
+          }
+        }
+      }
+    },
+    "Rename category" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kategorie umbenennen"
+          }
+        }
+      }
+    },
+    "Rename…" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Umbenennen …"
           }
         }
       }
@@ -5248,6 +5398,16 @@
         }
       }
     },
+    "Use the original name" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Originalnamen verwenden"
+          }
+        }
+      }
+    },
     "Value date" : {
       "localizations" : {
         "de" : {
@@ -5594,6 +5754,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ja, importieren"
+          }
+        }
+      }
+    },
+    "You can tick it again any time." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du kannst die Kategorie jederzeit wieder anhaken."
           }
         }
       }

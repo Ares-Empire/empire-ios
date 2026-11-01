@@ -26,6 +26,10 @@ enum PhoneSample {
         if LaunchArguments.current.contains("-sampleChooseAll"), let catalog = backend.catalog {
             for category in catalog.defaults where !chosen.contains(category.id) { try await ledger.choose(category.id) }
         }
+        // Seed the same requested ticks before import too, so screenshot fixtures can change their offers or payments.
+        for id in (LaunchArguments.value("-sampleTick") ?? "").split(separator: ",").map(String.init) {
+            try await ledger.choose(id)
+        }
         try await backend.addCustom(named: customName, side: .spend)
         if let size = LaunchArguments.value("-sampleSize").flatMap(Int.init), size > 0 {
             _ = try await backend.importFiles([sizedFile(size: size)], auth: BackendAuth(token: nil))
@@ -44,6 +48,14 @@ enum PhoneSample {
         for key in (LaunchArguments.value("-sampleOtherSide") ?? "").split(separator: ",").map(String.init) {
             let list = try await backend.categories()
             try await backend.setOtherSide(true, for: list.id(named: key) ?? key)
+        }
+        // Reproduce a spending-only category from an existing store (brief 80).
+        for id in (LaunchArguments.value("-sampleNoOtherSide") ?? "").split(separator: ",").map(String.init) {
+            try await backend.setOtherSide(false, for: id)
+        }
+        if let key = LaunchArguments.value("-sampleRenameCategory"), let name = LaunchArguments.value("-categoryName") {
+            let id = try await backend.categories().id(named: key) ?? key
+            try await backend.rename(id, to: name)
         }
         var files = [ImportFile(name: "Umsaetze-Girokonto.csv", data: Data(TourData.vrBankCSV(now: .now).utf8)),
                      ImportFile(name: "Umsaetze-Girokonto-Februar.csv", data: Data(paypalBankLine.utf8))]
@@ -66,6 +78,14 @@ enum PhoneSample {
             }
         }
         _ = try await backend.importFiles(files, auth: BackendAuth(token: nil))
+        // Confirmation screenshots: give a category made-up primary payments, never changing the real store.
+        if let key = LaunchArguments.value("-sampleCategoryPayments"),
+           let id = try await backend.categories().id(named: key) ?? (backend.summary.chosen.contains { $0.id == key } ? key : nil) {
+            let count = LaunchArguments.value("-sampleCategoryPaymentCount").flatMap(Int.init) ?? 12
+            let payments = try await ledger.payments().filter { $0.categorySource != .structural }.prefix(max(0, count))
+            for payment in payments { try await ledger.setCategory(payment.id, category: id, source: .manual) }
+            try await backend.refresh()
+        }
         // Own names (brief 44): on unless `-ownNames off` (the sample's settings outlive a launch); `-sampleNames` names
         // the bakery's shop and one dinner.
         backend.setOwnNames(LaunchArguments.value("-ownNames") != "off")

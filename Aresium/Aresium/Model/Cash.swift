@@ -183,9 +183,11 @@ nonisolated enum CashWording {
 /// every category the person has (a scanned receipt, as before).
 @MainActor
 enum CashCategories {
-    static func choices(_ list: PhoneCategoryList, for direction: ReceiptDirection?) -> [ReceiptCheckModel.Choice] {
-        let ids = direction.map { list.offered(for: $0, includingTransfers: false) }
+    static func choices(_ list: PhoneCategoryList, for direction: ReceiptDirection?, keeping selected: String? = nil) -> [ReceiptCheckModel.Choice] {
+        var ids = direction.map { list.offered(for: $0, includingTransfers: false) }
             ?? list.chosen.map(\.id).filter { !list.isTransfer($0) }
+        // A transfer explicitly requested by name stays selected when its receipt or entry is edited later.
+        if let selected, list.isChosen(selected), list.isTransfer(selected), !ids.contains(selected) { ids.append(selected) }
         return ids.compactMap { id in
             guard let name = list.name(of: id) else { return nil }
             return ReceiptCheckModel.Choice(id: id, name: name, look: list.look(of: id))
@@ -302,8 +304,8 @@ final class CashEntryModel: Identifiable {
     /// Both lists from the person's categories; false when they could not be read.
     private func loadChoices() async -> Bool {
         guard let list = try? await phone.categories(language: language) else { return false }
-        spendChoices = CashCategories.choices(list, for: .out)
-        incomeChoices = CashCategories.choices(list, for: .in)
+        spendChoices = CashCategories.choices(list, for: .out, keeping: category)
+        incomeChoices = CashCategories.choices(list, for: .in, keeping: category)
         return true
     }
 
@@ -311,8 +313,12 @@ final class CashEntryModel: Identifiable {
     /// category is made (`NewCategoryModel`), offered and picked here. Cancel asks first; the category stays after it.
     func createCategory() async {
         await newCategory.create(in: phone, side: CategorySide(direction: direction)) { id, _ in
-            _ = await loadChoices()
-            guard choices.contains(where: { $0.id == id }) else { return nil }
+            guard await loadChoices(), let list = try? await phone.categories(language: language) else { return LedgerError.notFound.localizedDescription }
+            if !choices.contains(where: { $0.id == id }), let name = list.name(of: id) {
+                let choice = ReceiptCheckModel.Choice(id: id, name: name, look: list.look(of: id))
+                if direction == .out { spendChoices.insert(choice, at: max(0, spendChoices.count - 1)) }
+                else { incomeChoices.insert(choice, at: max(0, incomeChoices.count - 1)) }
+            }
             category = id
             return nil
         }

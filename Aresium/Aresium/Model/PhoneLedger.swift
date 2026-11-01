@@ -74,7 +74,7 @@ nonisolated struct LedgerPayment: Codable, Equatable, Sendable {
 /// A category on the person's list: a default one (by id), or their own (`custom-…`, with its name and look).
 nonisolated struct ChosenCategory: Codable, Equatable, Sendable {
     let id: String
-    /// Only for one's own categories: the name as typed.
+    /// The personal name: required for own categories, optional override for defaults.
     var name: String?
     var order: Int
     /// Only for one's own categories: the icon and colour chosen when it was made (`OwnCategoryLook`, brief 36), kept so
@@ -216,7 +216,8 @@ actor PhoneLedger: ModelActor {
                 look = OwnCategoryLook.look(for: name ?? "", besides: others)
             }
             modelContext.insert(StoredChosen(id: id, customName: name, order: (all.map(\.order).max() ?? -1) + 1, look: look,
-                                             side: ChosenCategory.isCustom(id) ? (side ?? "spend") : nil))
+                                             side: ChosenCategory.isCustom(id) ? (side ?? "spend") : nil,
+                                             otherSide: id == "friends"))
             try modelContext.save()
         }
     }
@@ -304,6 +305,14 @@ actor PhoneLedger: ModelActor {
         else { throw LedgerError.notFound }
         category.otherSide = on
         category.sidesAssigned = true
+        try modelContext.save()
+    }
+
+    /// Only the name changes; every reference, look and choice stays on the stable id.
+    func rename(_ id: String, to name: String?) throws {
+        guard let category = try modelContext.fetch(FetchDescriptor<StoredChosen>(predicate: #Predicate { $0.id == id })).first
+        else { throw LedgerError.notFound }
+        category.customName = name
         try modelContext.save()
     }
 

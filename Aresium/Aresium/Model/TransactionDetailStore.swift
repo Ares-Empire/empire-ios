@@ -168,12 +168,13 @@ final class TransactionDetailStore {
     func createCategory() async {
         guard offersNewCategory, let phone = dashboardStore.phone, !isSaving else { return }
         await newCategory.create(in: phone, side: CategorySide(amount: detail?.amount ?? transaction.amount)) { _, name in
-            madeHere.append(name)
+            if !madeHere.contains(name) { madeHere.append(name) }
+            categoryList = try? await phone.categories()
             await dashboardStore.reloadAfterTransactionChange()
             // Not offered only when the dashboard could not be built again: the category is made (Settings →
             // Categories shows it), but the window cannot offer it yet.
             guard choices.contains(where: { $0.name == name }) else { return dashboardStore.error }
-            select(name)
+            if mode == .switchCategory || !extras.contains(name) { select(name) }
             return nil
         }
     }

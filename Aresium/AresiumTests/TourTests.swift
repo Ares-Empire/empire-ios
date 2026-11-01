@@ -258,6 +258,7 @@ struct TourTests {
                 #expect(tour.target == .search)
             case .payment:
                 #expect(tour.place.path.last?.month == "2026-10", "this month's payments of a category")
+                #expect(tour.place.path.last?.categoryID == TourData.firstCategory, "the tour's page follows a category rename")
                 #expect(tour.target != nil)
             case .rename:
                 #expect(tour.place.payment != nil, "a payment's page")
@@ -345,6 +346,8 @@ struct TourTests {
         #expect(TourStep.graph.text(.german) == "Halte den Finger auf dem Diagramm und zieh: jeder Monat mit seiner Zahl. Antippen öffnet den Monat, zeigt es Tage, den Tag.")
         #expect(TourStep.search.text(.english) == "Search a name, your own or the bank's. A tap shows all its payments.")
         #expect(TourStep.search.text(.german).contains("Namen") && TourStep.search.text(.german).contains("Bank"))
+        #expect(TourStep.categories.text(.english) == "Choose categories and add your own. Hold a category to rename or delete it.")
+        #expect(TourStep.categories.text(.german).contains("Umbenennen oder Löschen"))
         #expect(TourStep.addUp.text(.german).contains("Summieren"))
         #expect(TourStep.allFrom.text(.german).contains("Alle"))
         #expect(TourStep.importFiles.text(.english) == "Files from your bank, receipts and cash come in here.")

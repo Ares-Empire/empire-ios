@@ -137,7 +137,7 @@ struct NewCategoryInChangeTests {
 
     // MARK: a name problem
 
-    @Test(arguments: ["Lebensmittel", "GROCERIES", "Bargeld", "Cash", "Not sorted", "Boulder", "   "])
+    @Test(arguments: ["Bargeld", "Cash", "Not sorted", "Own transfers", "   "])
     func aTakenReservedOrEmptyNameMakesNothingAndKeepsTheName(name: String) async throws {
         let (phone, dashboard) = try await phoneDashboard()
         try await phone.addCustom(named: "Boulder", side: .spend)              // one of one's own, made earlier
@@ -423,7 +423,7 @@ struct NewCategoryInWindowsTests {
         #expect(edit.category == (try await phone.categories().custom.last?.id))
     }
 
-    @Test(arguments: ["Bargeld", "Groceries", "  "])
+    @Test(arguments: ["Bargeld", "Own transfers", "  "])
     func aNameProblemInTheMenusMakesNothingAndKeepsTheName(name: String) async throws {
         let phone = try await phone()
         let check = ReceiptCheckModel(reading: reading(), phone: phone, language: .english)

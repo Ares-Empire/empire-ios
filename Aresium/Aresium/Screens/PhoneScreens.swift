@@ -218,6 +218,7 @@ struct CategoryPickerScreen: View {
                     }
                     .id("picker-own")
                     if let problem = model.problem { FormProblem(text: problem).padding(.top, 12) }
+                    else if let notice = model.notice { FormNote(text: notice).padding(.top, 12).accessibilityIdentifier("categoryNotice") }
                 }
                 .padding(.horizontal, 18).padding(.bottom, 34)
             }
@@ -244,6 +245,7 @@ struct CategoryPickerScreen: View {
         // The system Back button and its edge swipe stay: a sort still waiting runs as the picker goes.
         .onDisappear { Task { await model.flush() } }
         .tint(Ink.primary)
+        .renameCategoryAlert(model)
         .sheet(item: Binding(get: { model.untick }, set: { if $0 == nil { model.cancelUntick() } })) { untick in
             UntickSheet(untick: untick) { model.resolve(moveTo: $0) }
         }
@@ -254,13 +256,20 @@ struct CategoryPickerScreen: View {
     /// where its payments go), `-scrollToCategory <id>` scrolls to its row, `-samplePickerDone` then closes the picker.
     private func debugLaunch(_ proxy: ScrollViewProxy) async {
         let arguments = LaunchArguments.current
+        func categoryID(_ key: String) -> String { model.list?.id(named: key) ?? key }
         let ticked = Set((model.groups.flatMap(\.items) + model.custom).filter(\.chosen).map(\.id))
         for id in (LaunchArguments.value("-sampleTick") ?? "").split(separator: ",").map(String.init)
         where !ticked.contains(id) { await model.toggle(id) }
         if let index = arguments.firstIndex(of: "-sampleUntick"), arguments.indices.contains(index + 1) {
             await model.toggle(arguments[index + 1])
         }
-        if let id = LaunchArguments.value("-scrollToCategory") {
+        if let typed = LaunchArguments.value("-categoryAddName") {
+            model.newName = typed
+            model.newSide = LaunchArguments.value("-categoryAddSide") == "income" ? .income : .spend
+            await model.addCustom()
+        }
+        if let key = LaunchArguments.value("-scrollToCategory") {
+            let id = categoryID(key)
             try? await Task.sleep(for: .milliseconds(300))
             // A lazy section must exist before ScrollViewReader can address a row inside its card.
             if let group = model.groups.first(where: { $0.items.contains(where: { $0.id == id }) }) {
@@ -270,6 +279,14 @@ struct CategoryPickerScreen: View {
             }
             try? await Task.sleep(for: .milliseconds(100))
             proxy.scrollTo(id, anchor: .top)
+        }
+        if let id = LaunchArguments.value("-renameCategory") {
+            try? await Task.sleep(for: .milliseconds(900))
+            model.beginRename(categoryID(id))
+        }
+        if let id = LaunchArguments.value("-removeCategory") {
+            try? await Task.sleep(for: .milliseconds(900))
+            await model.askToRemove(categoryID(id))
         }
         if arguments.contains("-samplePickerDone"), await model.flush() { done?() }
     }
@@ -433,6 +450,7 @@ private struct CategoryPickerRow: View, Equatable {
         }
         .buttonStyle(SettingsRowStyle())
         .accessibilityAddTraits(item.chosen ? .isSelected : [])
+        .accessibilityIdentifier("category-\(item.id)")
         // The side line's menu lies over the row where its hidden copy stands: inside the row's button the button took
         // its tap (and ticked the row off).
         .overlayPreferenceValue(SideLineAnchor.self) { anchor in
@@ -453,6 +471,17 @@ private struct CategoryPickerRow: View, Equatable {
             }
         }
         .sideMenu(item, model: model)
+        .confirmationDialog(model.removal?.title() ?? "",
+            isPresented: Binding(get: { model.removal?.id == item.id },
+                                 set: { if !$0 && model.removal?.id == item.id { model.cancelRemoval() } }),
+            titleVisibility: .visible) {
+                if let removal = model.removal, removal.id == item.id {
+                    Button(removal.action(), role: .destructive) { Task { await model.remove() } }
+                    Button("Cancel", role: .cancel) { model.cancelRemoval() }
+                }
+            } message: {
+                if let removal = model.removal, !removal.message().isEmpty { Text(verbatim: removal.message()) }
+            }
     }
 
     /// One's own category's side, and "Also for money in" (or out) while it is offered there too: quiet, under the name.
@@ -486,10 +515,25 @@ private struct SideLineAnchor: PreferenceKey {
 
 private extension View {
     /// A ticked row's long press (brief 70): Apple's context menu with its side choices (`SideMenuItems`), for every
-    /// ticked category but a transfer. An unticked row or a transfer's has no long press.
+    /// ticked category, including transfers. Unticked rows have no long press.
     @ViewBuilder func sideMenu(_ item: CategoryGroup.Item, model: CategoryPickerModel) -> some View {
-        if item.canOfferOtherSide {
-            contextMenu { SideMenuItems(item: item, model: model) }
+        if item.chosen {
+            contextMenu {
+                Button { model.beginRename(item.id) } label: { Label("Rename…", systemImage: "pencil") }
+                if let original = item.originalName {
+                    Button { Task { await model.useOriginalName(item.id) } } label: {
+                        Text("Use the original name")
+                        Text(verbatim: original)
+                        Image(systemName: "arrow.uturn.backward")
+                    }
+                }
+                if item.canOfferOtherSide { SideMenuItems(item: item, model: model) }
+                Divider()
+                Button(role: .destructive) { Task { await model.askToRemove(item.id) } } label: {
+                    if ChosenCategory.isCustom(item.id) { Label("Delete", systemImage: "trash") }
+                    else { Label("Remove", systemImage: "minus.circle") }
+                }
+            }
         } else {
             self
         }
@@ -573,7 +617,7 @@ struct PhoneSettingsSection: View {
     #if DEBUG
     /// Screenshots: `-openReceipts` opens Receipts at once, `-openCategories` Categories.
     @State private var showsReceipts = LaunchArguments.current.contains("-openReceipts")
-    @State private var showsCategories = LaunchArguments.current.contains("-openCategories")
+    @State private var showsCategories = false
     #else
     @State private var showsReceipts = false
     @State private var showsCategories = false
@@ -637,7 +681,7 @@ struct PhoneSettingsSection: View {
             }
         }
         #if DEBUG
-        .task { if showsCategories && picker == nil { openCategories() } }
+        .task { if LaunchArguments.current.contains("-openCategories") && picker == nil { openCategories() } }
         #endif
         .navigationDestination(isPresented: $showsReceipts) {
             if let phone = modes.phone {
