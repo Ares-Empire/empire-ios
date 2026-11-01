@@ -156,8 +156,10 @@ any more (above): everyone but Patrik uses it without one, on their iPhone; its 
    that service's terms allow it). Arestemis reads WG-Gesucht, Kleinanzeigen and Immowelt without permission
    (`Arestemis/CLAUDE.md`: "scraping is against their terms") and shows their text and photos. Fine for private
    TestFlight use; a public App Store release needs permission or a different source. **[Patrik]**
-3. **Support URL** (required on the App Store page): `https://www.ares-empire.de/kontakt` (the contact form, live
-   since 2026-10-25; English `/contact`).
+3. **Support URL** (required on the App Store page): each app's own contact page (2026-11-01), German for the German
+   store page, English `/contact` otherwise: Aresium `https://aresium.de/kontakt`, Arestemis
+   `https://www.ares-empire.de/arestemis/kontakt`, Ares Empire `https://www.ares-empire.de/kontakt` (also the Empire's
+   general contact, so Aresus and Arestoteles, which have no page of their own, use it too).
 4. **EU trader status** (App Store Connect → Business, required for EU distribution under the Digital Services Act):
    **[Patrik]** declares himself a non-trader (private, non-commercial), or a trader, whose address and phone number
    Apple then shows on the App Store.
