@@ -1,6 +1,6 @@
 # 76: One name per shop, the search's ranking, a day's payments: the data
 
-Status: running (Codex, 2026-11-01)
+Status: merged 2026-11-01 (696 Aresium tests; checked on Patrik's files: 101 of 167 shops get one name, none a PayPal or card line; Vinted "Vinted, UAB", Apple "Apple Services"; search 7.6 ms at 1,000 names)
 Branch: `codex/76-names-search-day` · Worktree: `../empire-ios-76-names-search-day` · Model: `gpt-6.1-sol`, effort
 `high` · The screens follow in brief 77 (a Claude agent), on this brief's API.
 

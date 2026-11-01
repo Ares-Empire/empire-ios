@@ -1,6 +1,6 @@
 # 77: Search and a day's page: the screens
 
-Status: draft (starts after brief 76 is merged)
+Status: running (a Claude agent, 2026-11-01)
 Branch: `claude/77-search-day` · Worktree: `../empire-ios-77-search-day` · Built by: a Claude agent (the look and flow)
 · Simulator: `claude-77`
 
