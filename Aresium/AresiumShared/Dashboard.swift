@@ -117,6 +117,9 @@ nonisolated struct Transaction: Codable, Identifiable {
     var ownNameSource: PaymentNameSource? = nil
     /// Opaque group identity; use as a dictionary key, never display it.
     var nameKey: String? = nil
+    /// Phone mode only (brief 99): a bank payment's text as the bank wrote it (Verwendungszweck), for the quick sort's
+    /// example lines. Nil for receipts, cash entries and server rows.
+    var purpose: String? = nil
 
     /// A card receipt counted on its own until its bank payment comes.
     var isWaitingReceipt: Bool { provisional == true }

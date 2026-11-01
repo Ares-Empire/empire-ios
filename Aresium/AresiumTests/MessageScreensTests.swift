@@ -98,8 +98,9 @@ struct MessageScreensTests {
         let free = ReminderOffer.Moment(ready: true)
         #expect(ReminderOffer.shows(free))
         #expect(!ReminderOffer.shows(ReminderOffer.Moment()))
+        // Brief 99: the quick sort's offer (or its flow) goes first.
         for blocked: WritableKeyPath<ReminderOffer.Moment, Bool> in [\.tour, \.locked, \.importing, \.picker, \.result,
-                                                                       \.window] {
+                                                                       \.window, \.quickSort] {
             var moment = free
             moment[keyPath: blocked] = true
             #expect(!ReminderOffer.shows(moment))

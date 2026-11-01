@@ -220,9 +220,12 @@ extension CategoryWindow {
 
     /// The alert's Create (or the keyboard's Return): the category is made (`NewCategoryModel`), the dashboard is built
     /// again so the window's choices have it, and it is picked: the target in Switch, one of the extras in Add. Nothing
-    /// about the payments is saved before Save.
-    func createCategory() async {
-        guard offersNewCategory, let phone = dashboardStore.phone, let side = paymentSide, !isSaving else { return }
+    /// about the payments is saved before Save. Returns the name picked, nil when none was (the quick sort, brief 99,
+    /// sorts its card into it at once).
+    @discardableResult
+    func createCategory() async -> String? {
+        guard offersNewCategory, let phone = dashboardStore.phone, let side = paymentSide, !isSaving else { return nil }
+        var picked: String?
         await newCategory.create(in: phone, side: side) { _, name in
             picks.cameHere(name)
             picks.list = try? await phone.categories()
@@ -231,8 +234,10 @@ extension CategoryWindow {
             // Categories shows it), but the window cannot offer it yet.
             guard choices.contains(where: { $0.name == name }) else { return dashboardStore.error }
             if mode == .switchCategory || !extras.contains(name) { select(name) }
+            picked = name
             return nil
         }
+        return picked
     }
 }
 

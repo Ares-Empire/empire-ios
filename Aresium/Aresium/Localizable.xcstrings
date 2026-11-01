@@ -322,6 +322,46 @@
         }
       }
     },
+    "%lld names" : {
+      "localizations" : {
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Name"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Namen"
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld name"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld names"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld new transactions imported" : {
       "localizations" : {
         "de" : {
@@ -374,6 +414,22 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$lld new · %2$lld already there · %3$lld sorted · %4$lld not sorted"
+          }
+        }
+      }
+    },
+    "%lld of %lld" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld von %lld"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld of %2$lld"
           }
         }
       }
@@ -474,6 +530,86 @@
         }
       }
     },
+    "%lld payments not sorted" : {
+      "localizations" : {
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Buchung nicht sortiert"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Buchungen nicht sortiert"
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld payment not sorted"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld payments not sorted"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld payments sorted" : {
+      "localizations" : {
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Buchung sortiert"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Buchungen sortiert"
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld payment sorted"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld payments sorted"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld receipts joined" : {
       "localizations" : {
         "de" : {
@@ -530,6 +666,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld übersprungen"
+          }
+        }
+      }
+    },
+    "%lld sorted" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld sortiert"
           }
         }
       }
@@ -640,6 +786,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Eine Erinnerung an neue Kontoauszüge, gezählt ab deinem letzten Import."
+          }
+        }
+      }
+    },
+    "A tap sorts all %lld and Aresium remembers the name." : {
+      "localizations" : {
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Einmal tippen sortiert sie, und Aresium merkt sich den Namen."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Einmal tippen sortiert alle %lld, und Aresium merkt sich den Namen."
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "A tap sorts it and Aresium remembers the name."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "A tap sorts all %lld and Aresium remembers the name."
+                }
+              }
+            }
           }
         }
       }
@@ -2514,6 +2700,16 @@
         }
       }
     },
+    "Everything is sorted." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alles ist sortiert."
+          }
+        }
+      }
+    },
     "Exit Aresium mode" : {
       "localizations" : {
         "de" : {
@@ -2690,6 +2886,46 @@
         }
       }
     },
+    "From %lld names" : {
+      "localizations" : {
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Von %lld Namen"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Von %lld Namen"
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "From %lld name"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "From %lld names"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "From Safari" : {
       "localizations" : {
         "de" : {
@@ -2802,6 +3038,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Unterwegs"
+          }
+        }
+      }
+    },
+    "Go through" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Durchgehen"
           }
         }
       }
@@ -4066,6 +4312,16 @@
         }
       }
     },
+    "Nothing sorted" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nichts sortiert"
+          }
+        }
+      }
+    },
     "Nothing to show yet." : {
       "localizations" : {
         "de" : {
@@ -4162,6 +4418,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Eine Zeile mit Summe je Name und Monat"
+          }
+        }
+      }
+    },
+    "One tap sorts all payments of a name." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einmal tippen sortiert alle Buchungen eines Namens."
           }
         }
       }
@@ -5136,12 +5402,32 @@
         }
       }
     },
+    "Skip" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Überspringen"
+          }
+        }
+      }
+    },
     "Something wrong? Tap it and change it." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Stimmt etwas nicht? Tipp es an und ändere es."
+          }
+        }
+      }
+    },
+    "Sort name by name" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Name für Name sortieren"
           }
         }
       }
@@ -6168,6 +6454,16 @@
         }
       }
     },
+    "What an import leaves Not sorted, you go through here name by name. One tap sorts all of a name's payments." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was nach einem Import nicht sortiert ist, gehst du hier Name für Name durch. Einmal tippen sortiert alle Buchungen eines Namens."
+          }
+        }
+      }
+    },
     "What is sent" : {
       "localizations" : {
         "de" : {
@@ -6628,6 +6924,16 @@
         }
       }
     },
+    "all months" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "alle Monate"
+          }
+        }
+      }
+    },
     "current" : {
       "localizations" : {
         "de" : {
@@ -6728,6 +7034,16 @@
         }
       }
     },
+    "© OpenStreetMap contributors" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "© OpenStreetMap-Mitwirkende"
+          }
+        }
+      }
+    },
     "“%@” is your name for every payment from %@." : {
       "localizations" : {
         "de" : {
@@ -6740,16 +7056,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "“%1$@” is your name for every payment from %2$@."
-          }
-        }
-      }
-    },
-    "© OpenStreetMap contributors" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "© OpenStreetMap-Mitwirkende"
           }
         }
       }

@@ -43,6 +43,9 @@ struct DashboardPlace {
     var day: DayRoute?
     /// The payments ticked in the category's month list on top of the stack, while it selects (brief 82).
     var selection: PaymentSelection?
+    /// The quick sort while it is open (brief 99): a sheet over the dashboard, from the card on Not sorted's list or the
+    /// offer after an import.
+    var quickSort: QuickSortFlow?
 
     /// Selecting belongs to the list on top: it follows that list (a category renamed meanwhile) and ends when another
     /// page is on top.
@@ -157,7 +160,7 @@ struct DashboardStack<Top: View, Root: View>: View {
                     } else if route.month != nil {
                         TransactionsScreen(route: route, store: store, palette: palette, band: band,
                                            selection: $place.payment, selecting: $place.selection, rowMenus: rows,
-                                           pick: open)
+                                           pick: open, quickSort: { place.quickSort = QuickSortFlow(store: store) })
                     } else {
                         CategoryScreen(route: route, store: store, palette: palette, graph: graph,
                                        graphMoves: graphMoves, band: band, pick: open)
@@ -188,6 +191,10 @@ struct DashboardStack<Top: View, Root: View>: View {
                 place.day = nil
             }
             .presentationDetents([.medium, .large])
+        }
+        // The quick sort (brief 99): at full height, its cards one at a time; Done or a swipe down ends it.
+        .sheet(item: $place.quickSort) { flow in
+            QuickSortSheet(flow: flow, palette: palette)
         }
     }
 
@@ -641,6 +648,8 @@ struct TransactionsScreen: View {
     var rowMenus = true
     /// Shows a name's page on the dashboard's stack (the rows' swipe and long press, a payment page's line).
     var pick: (DashboardRoute) -> Void = { _ in }
+    /// Opens the quick sort over the dashboard (brief 99): the card at the top of Not sorted's list.
+    var quickSort: (() -> Void)? = nil
     /// The rows' windows, the row swiped open and the summed rows shown open (`PaymentList.swift`).
     @State private var menu = PaymentRowMenu()
     /// The selection's Category window and its Name (brief 82), while open.
@@ -670,6 +679,12 @@ struct TransactionsScreen: View {
                 let ticking = listSelection
                 let shortcuts = rowMenus && ticking == nil
                 LazyVStack(spacing: 0) {
+                    // Brief 99: Not sorted's list starts with the way through it, name by name (not while selecting).
+                    if let quickSort, ticking == nil, store.offersQuickSort(on: route) {
+                        QuickSortListCard(tally: store.quickSortTally, palette: palette, open: quickSort)
+                            .padding(.bottom, 8)
+                            .transition(.opacity)
+                    }
                     ForEach(list.entries) { entry in
                         let mark = ticking.map { SelectionMark(ticked: $0.isTicked(entry, in: store), palette: palette) }
                         switch entry {

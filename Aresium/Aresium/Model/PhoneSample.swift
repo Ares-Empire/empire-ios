@@ -71,6 +71,9 @@ enum PhoneSample {
         if LaunchArguments.current.contains("-sampleShopLines") {
             files.append(ImportFile(name: "Umsaetze-Kleiderkreisel.csv", data: Data(shopLines(now: .now).utf8)))
         }
+        if LaunchArguments.current.contains("-sampleQuickSort") {
+            files.append(ImportFile(name: "Umsaetze-Privat.csv", data: Data(quickSortLines(now: .now).utf8)))
+        }
         for name in ["sample-paypal.csv", "sample-camt.xml"] {
             let parts = name.split(separator: ".")
             if let url = Bundle.main.url(forResource: String(parts[0]), withExtension: String(parts[1])) {
@@ -193,6 +196,43 @@ enum PhoneSample {
                     (day(monthsBack: 1, 12), new, "Verkauf Jacke", "35,00", "H"),
                     (day(monthsBack: 1, 22), new, "Bestellung 2204", "29,40", "S")]
         let lines = rows.map { ";\($0.0);\($0.0);\($0.1);\($0.4 == "H" ? "Gutschrift" : "Lastschrift");\($0.2);\($0.3);EUR;\($0.4);" }
+        return (["IBAN Auftragskonto;Buchungstag;Valutadatum;Name Zahlungsbeteiligter;Buchungstext;Verwendungszweck;Betrag;Währung;Soll/Haben;Saldo nach Buchung"]
+                + lines).joined(separator: "\n") + "\n"
+    }
+
+    /// `-sampleQuickSort` (brief 99, the quick sort's cards): made-up personal payments no rule can sort, as a new
+    /// person's first import has them: a made-up relative's monthly transfers in and one payment back to her, a made-up
+    /// friend paid for a garage every month, and a made-up drinks shop a few times. Made-up names, dates and amounts.
+    private static func quickSortLines(now: Date) -> String {
+        let calendar = ReceiptDay.calendar
+        let thisMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: now)) ?? now
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "de_DE")
+        formatter.calendar = calendar
+        formatter.timeZone = calendar.timeZone
+        formatter.dateFormat = "dd.MM.yyyy"
+        let today = calendar.component(.day, from: now)
+        func day(monthsBack: Int, _ day: Int) -> String {
+            let month = calendar.date(byAdding: .month, value: -monthsBack, to: thisMonth) ?? thisMonth
+            let shown = monthsBack == 0 ? min(day, today) : day
+            return formatter.string(from: calendar.date(byAdding: .day, value: shown - 1, to: month) ?? month)
+        }
+        let months = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober",
+                      "November", "Dezember"]
+        func monthName(_ back: Int) -> String {
+            let month = calendar.date(byAdding: .month, value: -back, to: thisMonth) ?? thisMonth
+            return months[calendar.component(.month, from: month) - 1]
+        }
+        var rows: [(String, String, String, String, String, String)] = []
+        for back in 0..<7 {
+            rows.append((day(monthsBack: back, 2), "Lena Beispiel", "Gutschrift", "Für dich \(monthName(back))", "150,00", "H"))
+            rows.append((day(monthsBack: back, 4), "Jonas Fiktiv", "Überweisung", "Garage \(monthName(back))", "45,00", "S"))
+        }
+        rows.append((day(monthsBack: 1, 19), "Lena Beispiel", "Überweisung", "Kinokarten", "24,00", "S"))
+        for (back, amount) in [(1, "18,40"), (2, "22,90"), (4, "15,60")] {
+            rows.append((day(monthsBack: back, 11), "Fiktiv Getraenkequelle", "Kartenzahlung", "Getränke", amount, "S"))
+        }
+        let lines = rows.map { ";\($0.0);\($0.0);\($0.1);\($0.2);\($0.3);\($0.4);EUR;\($0.5);" }
         return (["IBAN Auftragskonto;Buchungstag;Valutadatum;Name Zahlungsbeteiligter;Buchungstext;Verwendungszweck;Betrag;Währung;Soll/Haben;Saldo nach Buchung"]
                 + lines).joined(separator: "\n") + "\n"
     }

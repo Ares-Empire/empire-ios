@@ -2,21 +2,21 @@ import Foundation
 import Observation
 import os
 
-// The tour (briefs 24, 25, 42, 59, 77 and 82): the real dashboard on a made-up store of its own, twenty steps (nineteen
-// while the graph is hidden in Settings), each pointing at one real control with one short sentence; it goes on when
-// the person does the thing or taps Next. One walk through what Aresium does (brief 59, Patrik 2026-10-31: "explains
-// everything and is coherent"): the start screen, its graph and its search, a category, a payment and what can be done
-// with it, selecting several payments, a list's swipe and adding up, then Settings' places in their real order, the
-// import button, done. Everything the tour shows and changes is in `TourWorld`, a store in a temporary folder that is
-// deleted when the tour ends: the person's own store, categories, learned shops, names and choices of adding up are
-// never opened by it. Its Settings
-// also point at Own names, Messages, the Lock, the Dashboard's switches and Contact & support, which in the tour only
-// go on: no lock is set, no message planned and nothing is sent. The look is `Screens/TourScreens.swift`.
+// The tour (briefs 24, 25, 42, 59, 77, 82 and 99): the real dashboard on a made-up store of its own, twenty-one steps
+// (twenty while the graph is hidden in Settings), each pointing at one real control with one short sentence; it goes on
+// when the person does the thing or taps Next. One walk through what Aresium does (brief 59, Patrik 2026-10-31:
+// "explains everything and is coherent"): the start screen, its graph and its search, a category, a payment and what can
+// be done with it, selecting several payments, a list's swipe and adding up, then Settings' places in their real order,
+// the import button, going through what an import left Not sorted (brief 99), done. Everything the tour shows and
+// changes is in `TourWorld`, a store in a temporary folder that is deleted when the tour ends: the person's own store,
+// categories, learned shops, names and choices of adding up are never opened by it. Its Settings also point at Own
+// names, Messages, the Lock, the Dashboard's switches and Contact & support, which in the tour only go on: no lock is
+// set, no message planned and nothing is sent. The look is `Screens/TourScreens.swift`.
 
 /// The tour's steps, in order. The raw value names a step (DEBUG `-tour <n>`); the card counts the steps a tour shows.
 nonisolated enum TourStep: Int, CaseIterable, Sendable {
     case welcome = 1, income, overview, graph, search, category, payment, rename, switchCategory, select, addUp, sumIcon,
-         allFrom, categories, messages, lock, dashboardSettings, contact, importFiles, done
+         allFrom, categories, messages, lock, dashboardSettings, contact, importFiles, quickSort, done
 
     /// The steps a tour shows: all of them, but the graph's only while the dashboard shows the graph (Settings →
     /// Dashboard → Graph, `GraphSetting`); without the graph that step would point at nothing.
@@ -49,6 +49,8 @@ nonisolated enum TourStep: Int, CaseIterable, Sendable {
                          : language.string("Here you add up same names in every list.")
         case .contact: language.string("Questions, ideas, problems? Write to us here.")
         case .importFiles: language.string("Files from your bank, receipts and cash come in here.")
+        case .quickSort:
+            language.string("What an import leaves Not sorted, you go through here name by name. One tap sorts all of a name's payments.")
         case .done: language.string("Done. Now with your own data.")
         }
     }
@@ -80,6 +82,8 @@ nonisolated enum TourTarget: Hashable, Sendable {
     case sumIcon
     /// The select icon in a category's list's header (brief 82).
     case selectIcon
+    /// The card at the top of Not sorted's month list that opens the quick sort (brief 99).
+    case quickSortCard
     /// The tour's Settings: Your data on this iPhone (Categories and Own names), Messages, the Lock section, the
     /// Dashboard's switches and Contact & support.
     case dataRows, messagesRow, lockRow, dashboardRows, contactRow
@@ -199,6 +203,8 @@ final class TourModel {
         case .category: done = new.path.count > old.path.count && new.path.last?.month != nil
         case .payment: done = new.payment != nil && old.payment == nil
         case .allFrom: done = new.path.count > old.path.count && new.path.last?.isNamePage == true
+        // Brief 99: the quick sort opened from Not sorted's card and closed again (Done, or a swipe down).
+        case .quickSort: done = old.quickSort != nil && new.quickSort == nil
         default: done = false
         }
         if done { next() }
@@ -281,6 +287,8 @@ final class TourModel {
         case .dashboardSettings: return showsSettings ? .dashboardRows : .settings
         case .contact: return showsSettings ? .contactRow : .settings
         case .importFiles: return .importButton
+        // Not sorted's card; while the quick sort is open, nothing: its cards are free to sort on the tour's store.
+        case .quickSort: return place.quickSort == nil && notSortedShown ? .quickSortCard : nil
         }
     }
 
@@ -310,6 +318,12 @@ final class TourModel {
         guard let dashboard = world?.dashboard, let route = place.path.last, route.isCategoryList,
               let month = route.month else { return nil }
         return (route, dashboard.paymentList(category: route.category, month: month, side: route.side))
+    }
+
+    /// Not sorted's month list is on top and shows its quick sort card (brief 99).
+    private var notSortedShown: Bool {
+        guard let dashboard = world?.dashboard, let route = shownList?.route else { return false }
+        return dashboard.offersQuickSort(on: route)
     }
 
     /// The month list on screen can select (the select step's icon shows).
@@ -401,6 +415,10 @@ final class TourModel {
             // The gear is in every screen's header: the page stays, the payment closes.
             closeSheets()
             place.payment = nil
+        case .quickSort:
+            // This month's Not sorted list, with the card at its top.
+            toStart()
+            showNotSorted()
         case .messages, .lock, .dashboardSettings, .contact:
             // The tour's Settings, open on its rows (the category picker closes).
             showsGuide = false
@@ -421,6 +439,15 @@ final class TourModel {
         showsCategories = false
         showsGuide = false
         place.day = nil
+        place.quickSort = nil
+    }
+
+    /// Not sorted's month list of this month (brief 99), as a tap on Not sorted in Current opens it.
+    private func showNotSorted() {
+        guard let dashboard = world?.dashboard, let month = dashboard.currentMonth?.key else { return }
+        place.current = true
+        place.side = .expenses
+        place.path = [dashboard.route(category: CategoryName.uncategorised, side: .expenses, scope: .month(month))]
     }
 
     /// A category's month list on top of the stack: the one shown, or the one a page shown was opened from (back to

@@ -664,7 +664,9 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   (`BatchCounts.bankPayments`, `receipts`, `cashEntries`, `total`), `side`, positive `total` in euros, a shared
   `currentCategory`, `canSwitch`, `canRename` (Own names must show). `offeredCategories(for:)` returns `[Category]`
   from `PhoneCategoryList.offered` for that side, leaving out a common primary category. Empty, missing, mixed-month
-  or mixed-side action selections are refused. Server mode offers nothing; the tour's ledger uses the same API.
+  or mixed-side action selections are refused (`switchCategory(ids:to:span: .allMonths)`, brief 99, lets one name's
+  payments of one direction span every month: the quick sort's card). Server mode offers nothing; the tour's ledger
+  uses the same API.
   `switchCategory(ids:to:)`, `addCategory(ids:name:)`, `rename(ids:to:scope:)` are async/throwing and return
   `BatchChangeResult`: `action`, `category`, `changed` and `skipped` counts, localized `message`, `undo`, optional
   `followUp`. Switch sets bank rows manual and learns each payment, changes receipts as Edit (learns their shops)
@@ -955,7 +957,7 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   as it is, and the shared undo bar (`UndoBar`, `accent: nil` = Undo in ink; above the selection's bar while one shows)
   says it in brief 81's words (`result.message`; after All the selection's and the others' count together,
   `SelectionWording.done`) with Undo (`BatchUndo.perform`); a refused undo shows its line alone ("Cannot undo because
-  the data changed."), as does a failed action (`UndoOffer(message:)` without Undo, Shared). **The tour**: step 10 of 20
+  the data changed."), as does a failed action (`UndoOffer(message:)` without Undo, Shared). **The tour**: step 10 of 21
   (`TourStep.select`, after the payment's switch and before Add up): the ring on the icon (`.selectIcon`), "Tap to select
   several payments and move or rename them at once." / "Tippe hier, um mehrere Buchungen auszuwählen und auf einmal zu
   verschieben oder umzubenennen.", Next; selecting frees the screen and works on the tour's store; Next ends it.
@@ -977,6 +979,77 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   `-sampleRemoveAnswer keep|remove` answers the first alert and shows the shop alert. Tests: `AddQuestionsTests`,
   plus updated new-category and other-side tests. Screenshots: `build/83-en-remove.png`, `build/83-de-remove.png`,
   `build/83-en-add.png`, `build/83-de-add.png` (English/German; the Add screenshots use Keep both).
+  **Quick sort** (brief 99, Patrik 2026-11-01, after three sorting rounds still left about 240 of his payments Not sorted
+  on day one, most of them personal: "a way to see the top not sorted factors and going through them"; logic
+  `Model/QuickSort.swift` and `Model/QuickSortFlow.swift`, look `Screens/QuickSortScreens.swift`, phone mode only).
+  **The groups** (`QuickSort.groups(in:)`, pure): every Not sorted row (no category; a withdrawal's covered row is none)
+  over every month, grouped by `Transaction.nameKey` (the name groups' key: shop identity, own name, or the exact bank
+  line for an empty merchant key; a person paying or paid by transfer is a name too) and **split by direction**
+  (`CategorySide(amount:)`: a name's money in and money out are two cards), ranked by count, then money in integer cents,
+  then the newest payment, then the key (singles last by that). A group has the newest row (its shown name), count,
+  cents, first and last day, up to three example texts (`Transaction.purpose`, the bank's text, set on phone rows by
+  `PhoneDashboard.addPurposes`; tidied, newest first, none repeated ignoring case and accents, none that only repeats
+  the name or the bank's line) and its ids. Built off the main thread (`QuickSortCache.build`, a detached task) from each
+  phone dashboard in `DashboardStore.reload` before it is published, and published in the same turn with its
+  `revision` (`builtQuickSort`), so `quickSortGroups` (and `quickSortTally`: names, payments, `hasRepeats`) never belong
+  to another dashboard; server mode has none. **Sorting a card** (`QuickSortCard`, a `CategoryWindow`, so its tiles,
+  Other category… and New category are the change window's own: the grid is one view, `CategoryGrid`, extracted from
+  `RecategoriseSheet`, with `pick`/`pickFromOtherSide` for what a tile does and `working` greying the others; New
+  category's `createCategory()` now returns the name it picked): a tap is brief 81's
+  `switchCategory(ids:to:span: .allMonths)` at once (by hand, every payment learned, one save and rebuild, its undo),
+  after storing a category picked from the other side as offered here (brief 69). Brief 81's question about the shop's
+  other payments is never asked: it is applied by itself only when every payment it would move is the same name's, same
+  direction and Not sorted in the rebuilt dashboard (`QuickSort.takesFollowUp`; by construction they are in the card, so
+  only payments imported while the flow is open, a shared file, qualify). Found while building it, and left alone: the
+  question can also hold the shop's payments in the other direction (a card of their own), its payments under an own
+  name (a card of their own) and its payments already sorted by the built-in list or a learned rule (the quick sort
+  changes no sorted payment). **The flow** (`QuickSortFlow`, in `DashboardPlace.quickSort`, a sheet of `DashboardStack`
+  at full height): the groups as they were when it opened, one outcome per card (`sorted(payments:)`, `skipped`, `gone`
+  for one whose payments were all sorted meanwhile); Skip; Undo puts back the last card sorted (brief 81's single-use
+  undo, so only the last; any later save refuses it with "Cannot undo because the data changed.", shown as a line), the
+  card shows again and the cards after it come again. The look (Claude's): the bar "Not sorted" / "Nicht sortiert" with
+  `navigationSubtitle` "3 of 12 · 41 sorted" / "3 von 12 · 41 sortiert" and Done (gone at the end, where the summary's
+  Done is the way out); the list's thin bar for how far; the card (`palette.card`, the line, radius 14): the direction in
+  small capitals ("MONEY OUT" / "AUSGABEN", "MONEY IN" / "EINNAHMEN"), the name in the payment page's title style (22 pt
+  bold), the money signed as the payment page shows it (`palette.expenseText` / `palette.balance`, mono 20 bold), "18
+  payments · Jan – Oct 2026" (Foundation's interval style: "Jan.–Okt. 2026"), a hairline and the example lines in quiet
+  type; VoiceOver reads it as one (`QuickSortWording.spoken`), the tiles are buttons. Over the tiles "A tap sorts all 18
+  and Aresium remembers the name." / "Einmal tippen sortiert alle 18, und Aresium merkt sich den Namen." (not "Ein
+  Tipp", which reads as advice). Undo ("Widerrufen", the shared undo bar's word, iOS's own) and Skip ("Überspringen")
+  in the selection's bottom bar (`BottomBar`/`BarItem`, shared with `SelectionBar` now). A tap sorts, a light haptic
+  (`sensoryFeedback`, not for an undo), and the next card slides in from the right while the last fades (from the left
+  after Undo; Reduce Motion: a fade). At the end a ringed check, "84 payments sorted" / "Nothing sorted", "From 9 names ·
+  3 skipped" or "… Everything is sorted.", Done. **Where it starts:** (1) **the offer after an import** (`QuickSortOffer`,
+  in the import result's place and card as brief 46's: `OfferCard`, shared with the messages' offer now): set by
+  `ImportStore.finishIfDone` when an import in phone mode added payments (`offersQuickSort`); shown while payments are
+  Not sorted once the import's work, the category picker and the result are gone, never over another window
+  (`ContentView.windowOpen` or the flow), in the tour or behind the lock; it goes first, the messages' offer waits
+  (`ReminderOffer.Moment.quickSort`). "34 payments not sorted" / "34 Buchungen nicht sortiert", "From 12 names. One tap
+  sorts all payments of a name." / "Von 12 Namen. Einmal tippen sortiert alle Buchungen eines Namens.", **Go through** /
+  **Durchgehen** (the flow) and **Later** / **Später** (also the swipe down). Answered by either, by opening the flow from
+  Not sorted's card, or over when nothing is left Not sorted (`QuickSortOffer.expires`, so it never shows later without
+  an import); the next import that adds payments offers again. The cards are **names**, not payees: the app calls
+  whoever a payment is with its name everywhere (Search names, the name's page), and "payee" / "Absender" are one
+  direction only. (2) **The card at the top of Not sorted's month list** (Current and Overview, both sides; not while
+  selecting; `DashboardStore.offersQuickSort(on:)`: phone mode while some name has two or more payments Not sorted):
+  `QuickSortListCard`, a list row on the card colour with the line, the stack symbol in the day tile's place, "Sort name
+  by name" / "Name für Name sortieren", "9 names · 42 payments · all months" / "9 Namen · 42 Buchungen · alle Monate",
+  the chevron. Not in server mode. DEBUG (with `-samplePhone`): `-sampleQuickSort` (made-up people to go through: a
+  relative's monthly transfers in and one payment back, a friend paid for a garage, a drinks shop),
+  `-sampleQuickSortOffer` (the offer, as after an import), `-openQuickSort` (the flow at launch; `-quickSortSkip <n>`
+  skips n cards, `-quickSortSort <category>` sorts the card shown, `-quickSortFinish` skips the rest: the end); the
+  card: `-sampleCategory Uncategorised -sampleMonth <YYYY-MM>`. Tests: `QuickSortTests` (grouping: names, persons, own
+  names, directions, covered rows, sorted payments out, ranking, all months, the texts; server mode; a tap: manual,
+  learned, the next import sorted by it; Skip and Undo, a refused undo; the question only for the name's own Not sorted
+  payments, newcomers taken; New category on a card; the offer's conditions and its end; the card on Not sorted; the
+  words in both languages; VoiceOver's line), `TourTests`, `MessageScreensTests` (the messages' offer after the quick
+  sort's). Real touches (a temporary UI test in `Aresus/AresusUITests` driving Aresium, deleted; 3 of 3 runs): the
+  made-up bank file imported into the empty store, the picker ticked and closed, the result gone, the offer's Go through
+  opens the flow; a tile sorts and the next card comes; Skip; Undo brings the sorted card back (and is then off); Done
+  closes it and the offer does not come back; Not sorted's card opens the flow, Skip, a swipe down closes it.
+  Screenshots: `build/99-{offer,list,person,shop,end}-{en,de}-{light,dark}.png`, red mode `build/99-person-en-red.png`
+  and `build/99-offer-de-red.png`, contact sheets `build/99-sheet-en.png`, `build/99-sheet-de.png`,
+  `build/99-sheet-red.png`.
   **New category where a category is chosen** (brief 60,
   Patrik after build 7: "otherwise you have to leave, create it, come back"): one piece for three places,
   `NewCategoryModel` (`Model/NewCategory.swift`: the alert's name, kept after a name problem; whether the alert shows;
@@ -1444,8 +1517,8 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   file, this month always full), its own session (never logged in) and widget numbers inside that folder; the person's
   store, categories and learned shops are never opened. The folder is deleted on End tour (always on the card), at the
   end, when a widget's link or a shared file opens the app, and at the next launch if the app was closed during a tour
-  (`removeLeftovers`). **Twenty steps, nineteen while the graph is hidden** (brief 59, Patrik 2026-10-31: "update the
-  tour so it explains everything and is coherent"; brief 77 added the search, brief 82 selecting; `TourStep`, one walk: the start screen, a
+  (`removeLeftovers`). **Twenty-one steps, twenty while the graph is hidden** (brief 59, Patrik 2026-10-31: "update the
+  tour so it explains everything and is coherent"; brief 77 added the search, brief 82 selecting, brief 99 the quick sort; `TourStep`, one walk: the start screen, a
   category, a payment and what can be done with it, the list's swipe and adding up, Settings' places in their real
   order, import, done): welcome; income (the page dots, the swipe); overview (the range); graph (Overview's graph: hold
   and slide reads each month, a tap opens its month's page, which the ring follows, and there a day's; the card says so:
@@ -1461,7 +1534,9 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   its tap); allFrom (the name added up at addUp, `.summed(key)`, or its first row: All opens the name's page, which
   stays under the next step's gear); categories (the gear, then Categories with Own names, `.dataRows`; the picker free);
   messages (`.messagesRow`); lock; dashboardSettings (`.dashboardRows`: Graph, Graph moves away, Add up same names);
-  contact; import (files, receipts and cash); done. Without the graph the graph step drops out and the Dashboard card
+  contact; import (files, receipts and cash); quickSort (brief 99: this month's Not sorted list with its card ringed,
+  `.quickSortCard`, "What an import leaves Not sorted, you go through here name by name. …"; the card opens the flow on
+  the tour's store, free to sort, and closing it goes on); done. Without the graph the graph step drops out and the Dashboard card
   says only "Here you add up same names in every list." (`TourStep.text(showingGraph:)`): no card mentions the graph.
   The cards' words are `TourStep.text` (German in the catalog). Each step points at a real control (`.tourAnchor`, anchor preferences; a payment row's and a summed
   row's anchor sit outside their swipe, so the ring stays still and the swipe's actions lie inside it);
@@ -1494,7 +1569,7 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   app's defaults before and after a walk). The import button only answers its step, the band does not enter red mode.
   VoiceOver: the card takes the focus at each step, the highlighted control stays reachable; Reduce Motion: the ring
   jumps, nothing slides. Launch arguments (DEBUG, with `-samplePhone` or `-samplePhoneEmpty`): `-openGuide list|<bank
-  id>` (`-guidePlace app|website`, `-guideSearch <text>`, `-scrollToEnd` the page's end), `-tour <1–20>` (`-tourSettings`:
+  id>` (`-guidePlace app|website`, `-guideSearch <text>`, `-scrollToEnd` the page's end), `-tour <1–21>` (`-tourSettings`:
   its Settings open). Tests: `BankGuideTests`, `TourTests` (every step's target and what moves it on, Next's screens,
   the hidden graph's 18 and its words, the search's step, every card's German, adding up in memory only, the person's store and defaults
   untouched, ending at any step). Screenshots: `build/24-*.png`, contact sheet `build/24-sheet.png`; brief 59's walk
