@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct DashboardRoute: Hashable {
-    let category: String
+    var category: String
     let side: DashboardSide
     var month: String? = nil
     /// The Cash page (brief 33): a month's (with `month`) or its months (Overview); `category` is unused.
@@ -14,6 +14,8 @@ struct DashboardRoute: Hashable {
     var monthPage: String? = nil
     /// The search (brief 77): its field and the names it finds; `category` and `side` are unused (`.search`).
     var search = false
+    /// Phone category pages follow personal names by their stable id.
+    var categoryID: String? = nil
 }
 
 extension DashboardRoute {
@@ -54,6 +56,19 @@ struct DashboardPlace {
     mutating func follow(_ old: PaymentNameRoute, to new: PaymentNameRoute) {
         for index in path.indices where path[index].name?.key == old.key {
             path[index] = path[index].month.map { DashboardRoute(name: new, month: $0) } ?? DashboardRoute(name: new)
+        }
+    }
+
+    /// Keep the open category pages on rename, and return calmly if their category was removed.
+    mutating func followCategories(_ list: PhoneCategoryList) {
+        for index in path.indices {
+            guard let id = path[index].categoryID ?? list.id(named: path[index].category) else { continue }
+            guard list.sortingIDs.contains(id), let name = list.name(of: id) else {
+                path.removeSubrange(index...)
+                return
+            }
+            path[index].categoryID = id
+            path[index].category = name
         }
     }
 
@@ -136,6 +151,11 @@ struct DashboardStack<Top: View, Root: View>: View {
             }
         }
         .task { if store.dashboard == nil { await store.reload() } }
+        .onChange(of: store.revision) {
+            if let phone = store.phone, let catalog = phone.catalog {
+                place.followCategories(PhoneCategoryList(catalog: catalog, chosen: phone.summary.chosen))
+            }
+        }
         // A day's page (brief 77): a sheet, so a sideways swipe turns its sides and a swipe down closes it. It opens at
         // medium height: a day has a few rows, and the graph that was tapped stays in view above it.
         .sheet(item: $place.day, onDismiss: dayClosed) { day in
@@ -579,7 +599,7 @@ struct CategoryScreen: View {
 
     /// A month of this category: its payments.
     private func open(_ month: String) {
-        pick(DashboardRoute(category: route.category, side: route.side, month: month))
+        pick(DashboardRoute(category: route.category, side: route.side, month: month, categoryID: route.categoryID))
     }
 }
 

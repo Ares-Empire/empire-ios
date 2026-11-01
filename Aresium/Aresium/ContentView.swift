@@ -484,7 +484,7 @@ struct ContentView: View {
             case .review(let month): store.showReview(month: month); place.path = []
             case .category(let name):
                 store.showReview(month: nil)
-                place.path = [store.route(category: name, side: .expenses, current: true)]
+                place.path = store.widgetCategoryRoute(name).map { [$0] } ?? []
             }
         }
     }

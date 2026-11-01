@@ -229,7 +229,7 @@ struct PhoneBackendTests {
         #expect(picker.custom.map(\.name) == ["Fictional club"] && picker.newName.isEmpty)
         picker.newName = "lebensmittel"
         await picker.addCustom(side: .spend)
-        #expect(picker.problem == "There is already a category with this name.")
+        #expect(picker.problem == nil && picker.notice == "Groceries is ticked." && picker.newName.isEmpty)
         await picker.flush()
     }
 

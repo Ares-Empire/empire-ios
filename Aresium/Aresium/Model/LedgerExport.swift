@@ -4,13 +4,13 @@ import Foundation
 /// (`Aresium-<date>.json`, through the share sheet). Restoring reads it back into an empty store, checked first, all or
 /// nothing. Schema version 2 (brief 31) adds the receipts; version 3 (brief 33) the receipts' direction, kind, where
 /// cash was paid from and the shop as read, and the corrected shop names; version 4 adds payment names and name rules.
-/// Version 5 adds category sides and otherSide. Versions 1–4 still restore. A change to
+/// Version 5 adds category sides and otherSide; version 6 allows personal names on defaults. Versions 1–5 still restore. A change to
 /// these fields (or to `LedgerPayment`, `LedgerAccount`, `ChosenCategory`, `LearnedRule`, `CsvLayout`, `LedgerReceipt`,
 /// `ShopNameCorrection`, `PaymentNameRule`) is a new version, and `restore` keeps reading the older ones.
 nonisolated struct LedgerExport: Codable, Equatable, Sendable {
-    static let currentSchema = 5
+    static let currentSchema = 6
     /// The versions `decode` reads.
-    static let readableSchemas = 1...5
+    static let readableSchemas = 1...6
     static let appName = "Aresium"
 
     var app = Self.appName
@@ -108,6 +108,15 @@ nonisolated struct LedgerExport: Codable, Equatable, Sendable {
                 }
             } else if !known.contains(category.id) {
                 throw fail("unknown category \(category.id)")
+            }
+        }
+        let list = PhoneCategoryList(catalog: catalog, chosen: categories)
+        for category in categories {
+            if let name = category.name {
+                guard schema >= 6 || ChosenCategory.isCustom(category.id) else { throw fail("default name before schema 6") }
+                if schema >= 6 {
+                    guard (try? list.checkedName(name, excluding: category.id)) == name else { throw fail("category name") }
+                }
             }
         }
         for category in categories where schema >= 5 {

@@ -135,6 +135,7 @@ struct CategorySideTests {
 
     private func world() async throws -> (PhoneBackend, DashboardStore) {
         let phone = try await PhoneTest.backend(chosen: ["groceries", "friends", "salary", "selling-things", "savings-investing"])
+        try await phone.setOtherSide(false, for: "friends")
         _ = try await phone.importFiles([PhoneTest.vrBank([
             ("05.10.2026", "REWE Markt GmbH", "REWE", -2000),
             ("06.10.2026", "REWE Markt GmbH", "REWE", -1500),
@@ -274,7 +275,7 @@ struct CategorySideTests {
         let own = try await phone.addCustom(named: "Fictional work", side: .income)
         try await phone.setOtherSide(true, for: own)
         let file = try await phone.export()
-        #expect(file.schema == 5)
+        #expect(file.schema == 6)
         let restored = try await PhoneTest.backend()
         try await restored.restore(file.encoded())
         #expect(try await restored.ledger.chosen() == file.categories)

@@ -27,9 +27,9 @@ nonisolated struct PhoneCategoryList: Equatable, Sendable {
 
     func isChosen(_ id: String) -> Bool { chosen.contains { $0.id == id } }
 
-    /// A category's name in the app's language: a default or built-in one from the engine, one's own as typed.
+    /// Personal names override the catalog in both languages; unnamed defaults follow the app language.
     func name(of id: String) -> String? {
-        if let custom = chosen.first(where: { $0.id == id && ChosenCategory.isCustom(id) }) { return custom.name }
+        if let name = chosen.first(where: { $0.id == id })?.name { return name }
         return catalog.category(id)?.name(in: language)
     }
 
@@ -83,15 +83,32 @@ nonisolated struct PhoneCategoryList: Equatable, Sendable {
         catalog.category(CategoryCatalog.notSorted)?.name(in: language) ?? language.string("Not sorted")
     }
 
-    /// A new category's name, trimmed; refused when empty or when any category is already called that (in either
-    /// language, ignoring case), or when the dashboard uses it for its own entries.
-    func checkedName(_ typed: String) throws -> String {
+    /// Shared comparison for creation, reuse and rename, in either language and ignoring case and accents.
+    static func sameName(_ lhs: String, _ rhs: String) -> Bool {
+        lhs.compare(rhs, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame
+    }
+
+    /// Finds an available category by its own name or either original default name. Built-ins and page names refuse.
+    func reusableID(named typed: String) throws -> String? {
         let name = typed.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty else { throw LedgerError.emptyName }
-        let taken = catalog.defaults.flatMap { [$0.name.en, $0.name.de] } + catalog.builtIns.flatMap { [$0.name.en, $0.name.de] }
-            + chosen.compactMap(\.name) + Self.reservedNames
-        guard !taken.contains(where: { $0.compare(name, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame })
-        else { throw LedgerError.nameTaken }
+        let refused = catalog.builtIns.flatMap { [$0.name.en, $0.name.de] } + Self.reservedNames
+        guard !refused.contains(where: { Self.sameName($0, name) }) else { throw LedgerError.nameTaken }
+        if let own = chosen.first(where: { $0.name.map { Self.sameName($0, name) } == true }) { return own.id }
+        return catalog.defaults.first { Self.sameName($0.name.en, name) || Self.sameName($0.name.de, name) }?.id
+    }
+
+    /// A new or renamed category, excluding this category's own current and original names from collisions.
+    func checkedName(_ typed: String, excluding id: String? = nil) throws -> String {
+        let name = typed.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty else { throw LedgerError.emptyName }
+        let ownNames = catalog.defaults.filter { $0.id == id }.flatMap { [$0.name.en, $0.name.de] }
+            + chosen.filter { $0.id == id }.compactMap(\.name)
+        let reserved = Self.reservedNames.filter { reserved in !ownNames.contains { Self.sameName($0, reserved) } }
+        let taken = catalog.defaults.filter { $0.id != id }.flatMap { [$0.name.en, $0.name.de] }
+            + catalog.builtIns.flatMap { [$0.name.en, $0.name.de] }
+            + chosen.filter { $0.id != id }.compactMap(\.name) + reserved
+        guard !taken.contains(where: { Self.sameName($0, name) }) else { throw LedgerError.nameTaken }
         return name
     }
 
@@ -99,9 +116,10 @@ nonisolated struct PhoneCategoryList: Equatable, Sendable {
     var groups: [CategoryGroup] {
         var groups: [CategoryGroup] = []
         for category in catalog.defaults {
-            let item = CategoryGroup.Item(id: category.id, name: category.name(in: language), look: look(of: category.id),
+            let item = CategoryGroup.Item(id: category.id, name: name(of: category.id) ?? category.name(in: language), look: look(of: category.id),
                                           chosen: isChosen(category.id), side: side(of: category.id),
-                                          otherSide: hasOtherSide(category.id))
+                                          otherSide: hasOtherSide(category.id),
+                                          originalName: chosen.first { $0.id == category.id }?.name == nil ? nil : category.name(in: language))
             if let index = groups.firstIndex(where: { $0.id == category.group }) { groups[index].items.append(item) }
             else { groups.append(CategoryGroup(id: category.group, title: CategoryGroup.title(category.group, language: language),
                                                items: [item])) }
@@ -129,6 +147,8 @@ nonisolated struct CategoryGroup: Identifiable, Equatable, Sendable {
         var side: CategorySide? = nil
         /// Also offered for the other direction.
         var otherSide = false
+        /// Present only while a default has a personal name.
+        var originalName: String? = nil
 
         /// Settings can offer it for the other direction too, or take that back (brief 70): a ticked category with a
         /// side (`PhoneBackend.setOtherSide`; never a transfer).

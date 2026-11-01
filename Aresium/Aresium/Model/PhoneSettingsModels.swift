@@ -30,6 +30,72 @@ final class CategoryPickerModel {
     /// The add row's side (brief 70): spending first; kept while the picker is open, so several of one side go quickly.
     var newSide = CategorySide.spend
     private(set) var problem: String?
+    private(set) var notice: String?
+    private(set) var renamingID: String?
+    var renameName = ""
+    var showsRename = false
+    private var renameOriginal = ""
+    private(set) var removal: CategoryRemoval?
+
+    var canRename: Bool {
+        !isWorking && !renameName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && renameName.trimmingCharacters(in: .whitespacesAndNewlines) != renameOriginal
+    }
+
+    func beginRename(_ id: String) {
+        guard let list, list.isChosen(id), let name = list.name(of: id) else { return }
+        if renamingID != id { renameName = name }
+        renamingID = id
+        renameOriginal = name
+        showsRename = true
+    }
+
+    func cancelRename() { renamingID = nil; renameName = "" }
+
+    func rename() async {
+        guard !isWorking, let id = renamingID,
+              renameName.trimmingCharacters(in: .whitespacesAndNewlines) != renameOriginal else { return }
+        await work {
+            self.problem = nil
+            self.notice = nil
+            try await self.phone.rename(id, to: self.renameName)
+            self.cancelRename()
+            try await self.sidesChanged()
+        }
+    }
+
+    func useOriginalName(_ id: String) async {
+        await work {
+            self.problem = nil
+            self.notice = nil
+            try await self.phone.rename(id, to: nil)
+            self.cancelRename()
+            try await self.sidesChanged()
+        }
+    }
+
+    func askToRemove(_ id: String) async {
+        await work {
+            try await self.flushPending()
+            guard let list = self.list, list.isChosen(id), let name = list.name(of: id) else { return }
+            self.removal = CategoryRemoval(id: id, name: name, count: try await self.phone.paymentCount(in: id))
+        }
+    }
+
+    func cancelRemoval() { removal = nil }
+
+    func remove() async {
+        guard let removal else { return }
+        self.removal = nil
+        await work {
+            self.problem = nil
+            self.notice = nil
+            try await self.phone.unchoose(removal.id, moveTo: nil, sorting: false)
+            try await self.selectionChanged()
+            try await self.flushPending()
+        }
+    }
+
     private(set) var isWorking = false
     private(set) var untick: Untick?
     /// Category id → payments (`PhoneBackend.categoryCounts`): in it now, or for a default one not ticked, how many it
@@ -155,9 +221,15 @@ final class CategoryPickerModel {
         problem = nil
         let typed = newName
         await work {
-            try await self.phone.addCustom(named: typed, side: side)
+            self.notice = nil
+            let result = try await self.phone.useCategory(named: typed, side: side, sorting: false)
             self.newName = ""
-            try await self.selectionChanged()
+            switch result.outcome {
+            case .made, .ticked: try await self.selectionChanged()
+            case .offered: try await self.sidesChanged()
+            case .existing: self.publishList(try await self.phone.categories())
+            }
+            self.notice = result.message(name: self.list?.name(of: result.id) ?? typed)
         }
     }
 

@@ -5,6 +5,11 @@ import SwiftUI
 // draws its own tile (`RecategoriseSheet`) and uses the same alert.
 
 extension View {
+    /// The picker uses the same plain ink action and keyboard Return as New category.
+    func renameCategoryAlert(_ model: CategoryPickerModel) -> some View {
+        modifier(RenameCategoryAlert(model: model))
+    }
+
     /// The New category alert: Apple's alert with a name's field ("Name"), Cancel and Create, in the window's ink (`tint`;
     /// not Apple's filled default button, which iOS draws in the system blue whatever the tint). Create is off while the
     /// name is empty or spaces; the keyboard's Return creates too, and on such a name iOS's Return closes the alert like
@@ -12,6 +17,29 @@ extension View {
     func newCategoryAlert(_ model: NewCategoryModel, tint: Color = Ink.primary,
                           create: @escaping () async -> Void) -> some View {
         modifier(NewCategoryAlert(model: model, tint: tint, create: create))
+    }
+}
+
+private struct RenameCategoryAlert: ViewModifier {
+    @Bindable var model: CategoryPickerModel
+
+    func body(content: Content) -> some View {
+        content.alert("Rename category", isPresented: $model.showsRename) {
+            TextField("Name", text: $model.renameName)
+                .textInputAutocapitalization(.sentences)
+                .submitLabel(.done)
+                .onSubmit {
+                    model.showsRename = false
+                    Task { await model.rename() }
+                }
+            Button("Cancel", role: .cancel) { model.cancelRename() }
+            Button("Rename") {
+                model.showsRename = false
+                Task { await model.rename() }
+            }
+            .disabled(!model.canRename)
+        }
+        .tint(Ink.primary)
     }
 }
 

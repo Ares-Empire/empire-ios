@@ -242,7 +242,7 @@ final class ReceiptCheckModel {
     @discardableResult
     private func loadChoices() async -> PhoneCategoryList? {
         guard let list = try? await phone.categories(language: language) else { return nil }
-        choices = CashCategories.choices(list, for: .out)
+        choices = CashCategories.choices(list, for: .out, keeping: category)
         return list
     }
 
@@ -250,8 +250,10 @@ final class ReceiptCheckModel {
     /// change of the person's, so Cancel asks first; the category stays after Cancel.
     func createCategory() async {
         await newCategory.create(in: phone, side: .spend) { id, _ in
-            await loadChoices()
-            guard choices.contains(where: { $0.id == id }) else { return nil }
+            guard let list = await loadChoices() else { return LedgerError.notFound.localizedDescription }
+            if !choices.contains(where: { $0.id == id }), let name = list.name(of: id) {
+                choices.insert(.init(id: id, name: name, look: list.look(of: id)), at: max(0, choices.count - 1))
+            }
             category = id
             return nil
         }

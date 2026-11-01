@@ -600,9 +600,9 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   `storage`). **Lifecycle:** the data belongs to the iPhone, not to a login: logging in or out, leaving Aresium and
   deleting the Ares account never touch it; it goes only with Settings → Delete Aresium data on this iPhone or the
   lock's "Forgot the code?". Settings → Your data on this iPhone (phone mode): Categories, Receipts, Export (one JSON file,
-  schema 5 with the receipts, cash entries, corrected shop names, payment names and category sides, `Aresium-<date>.json`, through the share sheet), Restore
+  schema 6 with the receipts, cash entries, corrected shop names, payment names, category sides and default personal names, `Aresium-<date>.json`, through the share sheet), Restore
   from an export (only into an empty store, all or nothing; chosen categories and corrected shop names are replaced;
-  schema 1–4 files still restore).
+  schema 1–5 files still restore).
   **Payment names and groups** (brief 43, data only; `Model/PaymentNames.swift`, screens in brief 44):
   `LedgerPayment.place` always stays the bank name; sorting, learning and receipt matching use only those original
   fields. Schema 5 adds `LedgerPayment.ownName` and merchant → name rules (`PhoneLedger.paymentNames()`); export schema
@@ -799,6 +799,33 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   Current's day opens it, the search's field has the keyboard at once, "Kleider" finds Vinted with its bank's line, the
   result opens the name's page and back keeps the query, the edge swipe leaves the search. Screenshots:
   `build/77-*.png`.
+  **Category names, rename and removal** (brief 80): every New category field uses
+  `PhoneBackend.useCategory(named:side:sorting:)`: a name in either original language or a chosen personal name,
+  ignoring case and accents, reuses that category. The result is made, existing, offered on this side, or a default
+  ticked (with waiting payments sorted). Built-ins and reserved page names still refuse. Settings clears the add row
+  and shows the result in a quiet line using the shown name; the change, receipt and cash windows pick it. A newly
+  ticked Friends is offered for money in too; existing chosen entries and restored side choices are preserved.
+  Holding any chosen row in Categories opens Apple's menu: Rename…, Use the original name while a default is renamed
+  (with its original name as subtitle), the existing side choices, then Delete for one's own or Remove for a default.
+  Rename uses Apple's name-field alert with a plain ink button, keeps a rejected name for correction, and checks other
+  categories while allowing its own current and original names. Defaults keep their personal name in the existing
+  `customName` field (no storage migration); it stays in both languages until restored to the original.
+  Delete/Remove confirms in Apple's dialog anchored at the row, with the payment count and re-sorting explanation;
+  Remove also says it can be ticked again. Both reuse `unchoose(id, moveTo: nil)` and sort: primary manual choices are
+  reset, learned rules and built-in sorting run again, unknowns stay Not sorted, extra-category references go, receipts
+  and cash entries become Not sorted. Own rules go with a deleted category; default rules wait for its next tick.
+  The tick's existing move-to sheet is unchanged. Rows/counts update in the picker; its close rebuilds the dashboard.
+  Dashboard source/detail/tag names use `PhoneCategoryList.name(of:)`; open category routes carry their stable id and
+  follow a rename (or close on removal), and stale widget name links open the dashboard. Sum choices keep their id keys.
+  Export schema 6 carries default personal names; schemas 1–5 still restore; SwiftData stays on V6.
+  The tour's categories card mentions holding to rename/delete. Tests: `CategoryEditingTests`, `TourTests` and the
+  existing category/window/export suites. DEBUG with `-samplePhone -openSheet settings -openCategories`: `-sampleRenameCategory <id>
+  -categoryName <name>` renames before display; `-renameCategory <id>` opens the alert; `-removeCategory <id>` opens
+  its confirmation; `-sampleTick <id,id,…>` seeds defaults absent from the sample (use it for Friends);
+  `-categoryAddName <name> -categoryAddSide spend|income` uses the add row; `-scrollToCategory <id>`
+  brings its row into view (`own` brings the add row). `-sampleNoOtherSide <id,id,…>` reproduces existing offers;
+  `-sampleCategoryPayments <id|name> -sampleCategoryPaymentCount <n>` puts made-up payments there for confirmations. Context menus are checked with real UI-test long presses.
+  Screenshots: `build/80-*.png` (English/German, light/dark).
   **Category sides** (brief 69): every category has one home side, which since brief 71 decides only where it is
   offered (the menus), not where its money counts. Defaults take `kind` from the engine's
   catalog; one's own store `side` (`"spend"` or `"income"`) in schema 6's chosen category, alongside `otherSide` (false
@@ -865,7 +892,7 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   **New category where a category is chosen** (brief 60,
   Patrik after build 7: "otherwise you have to leave, create it, come back"): one piece for three places,
   `NewCategoryModel` (`Model/NewCategory.swift`: the alert's name, kept after a name problem; whether the alert shows;
-  the busy state; the problem's line; `create(in:side:offer:)` makes the category with `PhoneBackend.addCustom(named:side:)`,
+  the busy state; the problem's line; `create(in:side:offer:)` resolves the name with `PhoneBackend.useCategory(named:side:sorting:)`,
   Settings → Categories' path with its name check and brief 36's icon and colour, then the window's `offer` puts it
   among its choices and picks it) and `Screens/NewCategoryPieces.swift` (`newCategoryAlert`: Apple's alert "New
   category" / "Neue Kategorie" with the field "Name", Cancel and Create / Anlegen; `CategoryMenuRow`). **The change
@@ -882,7 +909,7 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   category menu ends with "New category…" / "Neue Kategorie …" (`plus`, after a divider); the same alert; the category
   is made, offered and picked there (`ReceiptCheckModel.createCategory`, `CashEntryModel.createCategory`; in Add cash for
   spent and received alike, with the side of that window); while it is made the chip shows a spinner and the menu is
-  off. A name problem (taken in either language, reserved) makes nothing and keeps the typed name for the next tap: one
+  off. A name problem (built-in or reserved) makes nothing and keeps the typed name for the next tap: one
   line in the window's error style (the change window's under the grid, `FormProblem` under the menus' row) with
   Settings → Categories' words (`LedgerError`). Create is off while the name is empty or spaces; the keyboard's Return
   creates, and on an empty or spaces-only field iOS's Return closes the alert like Cancel (nothing made, no line).

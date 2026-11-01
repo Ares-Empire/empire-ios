@@ -39,7 +39,7 @@ nonisolated enum TourStep: Int, CaseIterable, Sendable {
         case .addUp: language.string("Swipe a payment left: Add up makes one row of its name.")
         case .sumIcon: language.string("Here you add up every name in this list.")
         case .allFrom: language.string("Swipe the row again: All shows every payment of the name. Hold a row for more.")
-        case .categories: language.string("Here you choose categories and add your own. Own names can be turned off.")
+        case .categories: language.string("Choose categories and add your own. Hold a category to rename or delete it.")
         case .messages: language.string("Reminders to import and a review of each month, made on this iPhone.")
         case .lock: language.string("Protect Aresium with Face ID or a code of your own.")
         case .dashboardSettings:
@@ -421,7 +421,7 @@ final class TourModel {
         place.current = true
         place.side = .expenses
         guard let category = firstCategory, let month = dashboard.currentMonth?.key else { return }
-        place.path = [DashboardRoute(category: category, side: .expenses, month: month)]
+        place.path = [dashboard.route(category: category, side: .expenses, scope: .month(month))]
     }
 }
 

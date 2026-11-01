@@ -4,7 +4,7 @@ import Observation
 /// New category where a category is chosen (brief 60): the change window's last tile, and the last item of the receipt
 /// window's and Add cash's category menu. One piece for the three places: the alert's name (kept after a name problem, so
 /// the next tap shows it to correct), whether the alert shows, the busy state while the category is made, and the name
-/// problem's line. The category is made as Settings → Categories makes it (`PhoneBackend.addCustom(named:side:)`: the name
+/// problem's line. The category is made as Settings → Categories makes it (`PhoneBackend.useCategory(named:side:sorting:)`: the name
 /// check, its icon and colour, ticked); the window it was asked from then offers it and picks it (`create(in:side:offer:)`).
 /// The look is `Screens/NewCategoryPieces.swift` (the alert; the menus' row) and the change window's tile.
 @MainActor @Observable
@@ -41,7 +41,7 @@ final class NewCategoryModel {
 
     /// Create (or the keyboard's Return): the category is made from the typed name, then `offer` puts it among the
     /// window's choices and picks it, given its id and its name as the windows show it; `offer` answers why it could not,
-    /// or nil. A name problem (empty, taken in either language, reserved) makes nothing and keeps the typed name.
+    /// or nil. A name problem (empty, built-in or reserved) makes nothing and keeps the typed name.
     func create(in phone: PhoneBackend, side: CategorySide, offer: (_ id: String, _ name: String) async -> String?) async {
         guard !isMaking else { return }
         let typed = name
@@ -52,7 +52,8 @@ final class NewCategoryModel {
             #if DEBUG
             await DebugLaunch.holdWork()
             #endif
-            let id = try await phone.addCustom(named: typed, side: side)
+            let result = try await phone.useCategory(named: typed, side: side)
+            let id = result.id
             name = ""
             let shown = try await phone.categories().name(of: id) ?? typed.trimmingCharacters(in: .whitespacesAndNewlines)
             problem = await offer(id, shown)

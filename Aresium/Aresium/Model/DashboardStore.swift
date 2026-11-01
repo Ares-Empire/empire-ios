@@ -273,6 +273,20 @@ final class DashboardStore {
         if lastSuccessfulLoad.map({ now.timeIntervalSince($0) > 5 * 60 }) ?? true { await reload() }
     }
 
+    /// Widget category links carry a shown name. An old name after rename/removal opens the dashboard.
+    func widgetCategoryRoute(_ name: String) -> DashboardRoute? {
+        if let phone, let catalog = phone.catalog {
+            let list = PhoneCategoryList(catalog: catalog, chosen: phone.summary.chosen)
+            if list.id(named: name) == nil {
+                let built = PhoneCategoryList(catalog: catalog, chosen: builtChosen ?? [])
+                // Engine-only buckets may still be linked; a category from the older dashboard must not be.
+                guard built.id(named: name) == nil,
+                      dashboard?.categories.contains(where: { $0.name == name }) == true else { return nil }
+            }
+        }
+        return route(category: name, side: .expenses, current: true)
+    }
+
     /// Where a tap on a category in the start screen leads (`CategoryRoute`).
     func route(category: String, side: DashboardSide, current: Bool) -> DashboardRoute {
         route(category: category, side: side, scope: DashboardScope(current: current))
@@ -280,7 +294,11 @@ final class DashboardStore {
 
     /// Where a tap on a category of a page leads: that month's payments for a month's scope, its months in Overview.
     func route(category: String, side: DashboardSide, scope: DashboardScope) -> DashboardRoute {
-        CategoryRoute.route(category: category, side: side, current: scope.isMonth, currentMonth: monthKey(scope))
+        var route = CategoryRoute.route(category: category, side: side, current: scope.isMonth, currentMonth: monthKey(scope))
+        if let phone, let catalog = phone.catalog {
+            route.categoryID = PhoneCategoryList(catalog: catalog, chosen: phone.summary.chosen).id(named: category)
+        }
+        return route
     }
 
     /// The month a scope counts (`YYYY-MM`): Current's (`currentMonth`) or a month page's own; nil for Overview.

@@ -305,6 +305,41 @@ final class PhoneBackend: AresiumBackend {
         return id
     }
 
+    /// One path for every New category field: make, reuse, offer on this side, or tick a default and sort its waiting payments.
+    func useCategory(named typed: String, side: CategorySide, sorting: Bool = true) async throws -> CategoryUse {
+        let list = try await categories()
+        guard let id = try list.reusableID(named: typed) else {
+            return CategoryUse(id: try await addCustom(named: typed, side: side), outcome: .made, alsoOffered: nil)
+        }
+        if !list.isChosen(id) {
+            try await choose(id, sorting: sorting)
+            if let home = list.side(of: id), home != side { try await setOtherSide(true, for: id) }
+            let updated = try await categories()
+            let also = updated.hasOtherSide(id) ? updated.side(of: id).map { $0 == .spend ? CategorySide.income : .spend } : nil
+            return CategoryUse(id: id, outcome: .ticked, alsoOffered: also)
+        }
+        if let home = list.side(of: id), home != side, !list.hasOtherSide(id) {
+            try await setOtherSide(true, for: id)
+            return CategoryUse(id: id, outcome: .offered, alsoOffered: side)
+        }
+        return CategoryUse(id: id, outcome: .existing, alsoOffered: nil)
+    }
+
+    /// Defaults keep an optional personal name in their existing chosen entry; nil restores the catalog's name.
+    func rename(_ id: String, to typed: String?) async throws {
+        let list = try await categories()
+        guard list.isChosen(id), ![CategoryCatalog.notSorted, CategoryCatalog.ownTransfers].contains(id) else {
+            throw LedgerError.notFound
+        }
+        if let typed {
+            try await ledger.rename(id, to: list.checkedName(typed, excluding: id))
+        } else {
+            guard !ChosenCategory.isCustom(id) else { throw LedgerError.emptyName }
+            try await ledger.rename(id, to: nil)
+        }
+        try await refresh()
+    }
+
     /// Changes one's own home side, keeping the old direction offered while it still holds payments.
     func setSide(_ side: CategorySide, of id: String) async throws {
         try await ledger.setSide(side, of: id)
@@ -334,6 +369,8 @@ final class PhoneBackend: AresiumBackend {
 
     /// Unticks a category; its payments go to `target` (or Not sorted, then sorted again with the rest of the list).
     func unchoose(_ id: String, moveTo target: String?, sorting: Bool = true) async throws {
+        guard ![CategoryCatalog.ownTransfers, CategoryCatalog.notSorted].contains(id),
+              try await categories().isChosen(id) else { throw LedgerError.notFound }
         try await ledger.unchoose(id, moveTo: target)
         if sorting { try await sort() }
         try await refresh()
