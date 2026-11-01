@@ -270,3 +270,13 @@ Germany's local places from OpenStreetMap (264,744 places, packed, kept loaded: 
 person's day one sorts 984 payments (was 966 before round 1), 969 as he has them, and needs 103 fixes over 14 months
 (was 111). Settings → Über → Schriften & Lizenzen lists "© OpenStreetMap-Mitwirkende" with the ODbL and the list's
 download (aresium.de/osm/).
+
+**In build 14** (2026-11-02): the quick sort (brief 99). After an import that leaves payments Nicht sortiert, the
+result's place offers "42 Buchungen nicht sortiert · Von 9 Namen. Einmal tippen sortiert alle Buchungen eines Namens."
+with **Durchgehen** / **Später**; Nicht sortiert's month list starts with a card "Name für Name sortieren · 9 Namen ·
+42 Buchungen · alle Monate". The flow shows one card per name and direction (Einnahmen and Ausgaben of one person are
+two cards), the most payments first: the name, the money, "8 Buchungen · März–Okt. 2026", up to three of the bank's
+texts, then the side's category tiles with Andere Kategorie … and Neue Kategorie. A tap sorts all of them by hand and
+Aresium learns the name for the next import; Überspringen, Widerrufen (the last card), and a summary at the end. Only
+Nicht sortiert payments are touched. The tour has 21 steps. To try: does it feel quicker than the lists for his
+parents, friends and own categories, and is the order (most payments first) the right one?
