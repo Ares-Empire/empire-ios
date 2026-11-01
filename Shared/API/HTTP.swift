@@ -9,12 +9,26 @@ import os
 /// alone, as before.
 protocol HTTPTransport {
     func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse)
+    func upload(_ request: URLRequest, fromFile fileURL: URL) async throws -> (Data, HTTPURLResponse)
+}
+
+extension HTTPTransport {
+    // Existing fakes that never upload need not implement it. Never fall back to reading a file into Data.
+    func upload(_ request: URLRequest, fromFile fileURL: URL) async throws -> (Data, HTTPURLResponse) {
+        throw HTTPError.invalidResponse
+    }
 }
 
 struct URLSessionTransport: HTTPTransport {
     let session = URLSession(configuration: .ephemeral)
     func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
         let (data, response) = try await session.data(for: request.withLanguage())
+        guard let response = response as? HTTPURLResponse else { throw HTTPError.invalidResponse }
+        return (data, response)
+    }
+
+    func upload(_ request: URLRequest, fromFile fileURL: URL) async throws -> (Data, HTTPURLResponse) {
+        let (data, response) = try await session.upload(for: request.withLanguage(), fromFile: fileURL)
         guard let response = response as? HTTPURLResponse else { throw HTTPError.invalidResponse }
         return (data, response)
     }

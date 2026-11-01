@@ -53,6 +53,13 @@ nonisolated struct AresusSamples: Sendable {
     /// The moment the samples were taken: 12 s after the overview's check, so the screens read like a live answer.
     func now() throws -> Date { try overview().checked.addingTimeInterval(12) }
 
+    func folders() throws -> FolderList { try Self.load("drop-folders") }
+    func drops() throws -> [Drop] {
+        if emptySync { return [] }
+        let answer: DropsAnswer = try Self.load("drops")
+        return answer.drops
+    }
+
     // MARK: loading
 
     static func load<T: Decodable>(_ name: String) throws -> T {
