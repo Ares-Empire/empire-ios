@@ -171,6 +171,8 @@ nonisolated enum LedgerError: LocalizedError, Equatable {
 /// export and restore. Values in, values out; the models never leave the actor. The engine is not used here
 /// (`PhoneBackend` brings the two together).
 actor PhoneLedger: ModelActor {
+    /// Created on the ledger executor when batch work first needs a save revision.
+    var batchSaveObserver: BatchSaveObserver?
     nonisolated let modelContainer: ModelContainer
     private nonisolated let executor: PhoneLedgerExecutor
     nonisolated var modelExecutor: any ModelExecutor { executor }
