@@ -238,3 +238,17 @@ there, the long press keeps "Alle mit dem Namen"). The magnifying glass in the h
 banks') best match first, a typo forgiven, "Bei der Bank: …" when found by another line, the newest names before
 typing; a result opens the name's page. The tour has 19 steps (the search). Unsorted money in now shows as "Nicht
 sortiert" on the income side too (it showed the engine's untranslated "Other").
+
+**After build 10** (Patrik, 2026-11-01): Freunde was a spending category and could not be added for money in ("already
+exists"); categories should be renamable and deletable ("on delete items that can be resorted get resorted and
+otherwise not sorted"); several payments should be selectable like in Mail and moved or renamed at once; Add in the
+change window should ask about the shop's other payments and whether to leave the current category (its button at the
+end was easy to miss).
+
+**In build 11** (2026-11-01): brief 80. A typed category name that exists is that category: in Settings → Kategorien's
+add row and every window's New category it is offered on the other side ("Freunde gibt es jetzt auch für
+Einnahmen."), ticked, or picked; only Nicht sortiert and Eigene Umbuchungen are refused. Freunde is offered both ways
+when ticked. A category's long press in Settings → Kategorien: Umbenennen … (defaults too, "Originalnamen verwenden"
+takes the original back), Löschen (own) or Entfernen (default): its payments are sorted again, what Aresium cannot
+sort goes to Nicht sortiert. The tour's categories card says so. Also in it, not visible yet: brief 81's data for
+selecting several payments (the screens follow in build 12 with brief 82, and Add's questions with brief 83).
