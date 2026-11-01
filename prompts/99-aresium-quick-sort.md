@@ -1,6 +1,6 @@
 # 99: Quick sort: going through what is not sorted, biggest first
 
-Status: brief
+Status: merged 2026-11-02 (787 Aresium tests; the offer after an import, the card on Not sorted, the flow, a tour step)
 Branch: `claude/99-quick-sort` · Worktree: `../empire-ios-99-quick-sort` · Built by: a Claude agent (the flow and its
 look, and the small model behind it) · Simulator: `claude-99` (create it: iPhone 17, iOS 27.0)
 
