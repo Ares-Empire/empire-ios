@@ -1,6 +1,6 @@
 # 83: Add asks: remove from the current category? and the shop's other payments?
 
-Status: brief
+Status: merged 2026-11-01 (750 Aresium tests; the bottom button gone; a selection's Add asks both once)
 Branch: `codex/83-add-asks` · Worktree: `../empire-ios-83-add-asks` · Model: `gpt-6.1-sol`, effort `high` · Simulator:
 `codex-83` (create it: iPhone 17, iOS 27.0) · Starts after briefs 80 and 81 are merged (branch from that main); brief
 82 (the selection's screens) shows this brief's questions for a selection.
