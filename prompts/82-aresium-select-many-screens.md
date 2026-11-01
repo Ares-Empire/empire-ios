@@ -13,8 +13,8 @@ statements slightly to the right and shows circles to tick like in Mail when sel
 
 Brief 81 built the data (`DashboardStore`: what can be selected, switch, add a category, one name, the follow-up
 question, undo); its API is in `CLAUDE.md` ("Aresium phone mode") and Codex's final message
-(`codex-runs/81-select-many-data.md`). Brief 80 (merged before you start) made a typed category name that exists into
-that category and added Rename and Delete to Settings → Categories. This brief draws the selection.
+(`codex-runs/81-select-many-data.md`). Briefs 80 and 83 are merged before you start: brief 80 made a typed category name that exists into
+that category and added Rename and Delete to Settings → Categories; brief 83 made Save in Add ask "Also remove from <current>?" and about the shop's other payments, for one payment and (as an API) for a selection. This brief draws the selection.
 
 ## Read first
 
@@ -50,9 +50,12 @@ that category and added Rename and Delete to Settings → Categories. This brief
    `offeredCategories`, its Switch and Add as for one payment ("Add" adds the category to every selected payment), the
    tiles "Andere Kategorie …" and New category working as they do for one payment. Make `RecategoriseSheet` serve one
    payment and a selection from one view (a small protocol or model it reads), never a copy. Save does brief 81's
-   switch or add; then the follow-up question, if any, as the single Switch asks it (Apple's alert; words from brief
-   81's result: one shop "Also the other 23 payments from REWE?", several "Also the other 23 payments from these 6
-   shops?"; **All 33** / **Only these 10**).
+   switch, or for Add brief 83's questions (merged before you start; `CLAUDE.md` → "Save in Add asks" and "Selection
+   window API for Add": `prepareAddCategories`, its `RemoveCurrentQuestion` "Also remove them from Groceries?", then
+   `save(removeCurrent:)`), shown with the same alert pieces the single window uses (brief 83's `RecategoriseSheet`
+   presenter); then the follow-up question, if any, as the single window asks it (its `wording`: one shop "Also the
+   other 23 payments from REWE?", several "Also the other 23 payments from these 6 shops?"; **All 33** / **Only these
+   10**).
 4. **Name** opens Apple's alert as New category's (`newCategoryAlert`'s pieces): "Name for 10 payments" / "Name für 10
    Buchungen", the field empty (or the name all of them show, when they share one), the action "Rename" /
    "Umbenennen" as a plain button in the window's ink; then, when the shops have other payments (`renameInfo`), the
