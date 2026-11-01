@@ -43,7 +43,9 @@ struct ContentView: View {
                                                                              moreFailure: options.moreFailure,
                                                                              longDescription: options.longDescription,
                                                                              ownMode: options.ownMode, noTexts: options.noTexts)) {
-            return ArestemisStore(session: session, backend: sample, sample: true)
+            let store = ArestemisStore(session: session, backend: sample, sample: true)
+            store.selectedHuntID = options.sampleHunt
+            return store
         }
         #endif
         return ArestemisStore(session: session, backend: ArestemisAPI(token: { session.token }))

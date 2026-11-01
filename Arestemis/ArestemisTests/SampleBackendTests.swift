@@ -31,7 +31,7 @@ struct SampleBackendTests {
     @Test func actionsWorkInMemory() async throws {
         let store = try await store()
         await store.setState(.saved, for: 41)
-        #expect(store.match(41)?.state == .saved && store.overview?.counts.new == 0 && store.overview?.counts.saved == 2)
+        #expect(store.match(41)?.state == .saved && store.overview?.counts.new == 4 && store.overview?.counts.saved == 2)
         await store.setHuntActive(false)
         #expect(store.hunt?.active == false && store.overview?.sources.first?.state == .idle)
         await store.loadMatches(.saved)
@@ -42,9 +42,9 @@ struct SampleBackendTests {
 
     @Test func searchesAreCreatedPausedAndDeleted() async throws {
         let store = try await store(.init(noHunt: true))
-        let search = try #require(try sample(Overview.self, "overview").hunt?.search)
+        let search = try #require(try sample(Overview.self, "overview").hunt?.search.flat)
         #expect(await store.saveSearch(search))
-        #expect(store.hunt?.active == false && store.hunt?.search == search)
+        #expect(store.hunt?.active == false && store.hunt?.search.flat == search)
         #expect(await store.deleteSearch())
         #expect(store.hunt == nil)
     }

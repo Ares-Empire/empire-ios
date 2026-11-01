@@ -91,7 +91,7 @@ struct SearchScreen: View {
             }
         }
         .onAppear { sync(force: false) }
-        .onChange(of: store.hunt?.search) { _, _ in sync(force: false) }
+        .onChange(of: store.hunt?.search.flat) { _, _ in sync(force: false) }
         .onChange(of: store.hunt?.id) { _, _ in sync(force: false) }
         .onChange(of: draft) { _, new in store.keepSearchDraft(new, baseline: baseline) }
     }
@@ -99,7 +99,7 @@ struct SearchScreen: View {
     /// Restores edits only while their original server search is still current (`force` takes the server).
     private func sync(force: Bool) {
         // The kept draft is checked against the current server search even when this tab stayed alive.
-        baseline = store.hunt?.search
+        baseline = store.hunt?.search.flat
         draft = force ? (baseline.map { SearchDraft($0) } ?? SearchDraft()) : store.searchDraft()
     }
 

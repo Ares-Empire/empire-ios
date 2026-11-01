@@ -167,14 +167,64 @@ struct ParsedSearch: Codable, Equatable, Sendable {
     let unclear: [String]
 }
 
+enum HuntKind: Equatable, Hashable, Codable, Sendable {
+    case flat, item, unknown(String)
+
+    var rawValue: String {
+        switch self { case .flat: "flat"; case .item: "item"; case .unknown(let value): value }
+    }
+    init(from decoder: Decoder) throws {
+        let value = try decoder.singleValueContainer().decode(String.self)
+        self = value == "flat" ? .flat : value == "item" ? .item : .unknown(value)
+    }
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
+}
+
+enum HuntSearch: Equatable, Encodable, Sendable {
+    case flat(Search), item(ItemSearch), unsupported
+
+    var flat: Search? { if case .flat(let value) = self { value } else { nil } }
+    var item: ItemSearch? { if case .item(let value) = self { value } else { nil } }
+    var kind: HuntKind? {
+        switch self { case .flat: .flat; case .item: .item; case .unsupported: nil }
+    }
+    func encode(to encoder: Encoder) throws {
+        switch self {
+        case .flat(let search): try search.encode(to: encoder)
+        case .item(let search): try search.encode(to: encoder)
+        case .unsupported:
+            throw EncodingError.invalidValue(self, .init(codingPath: encoder.codingPath,
+                                                        debugDescription: "Unsupported hunt search"))
+        }
+    }
+}
+
 struct Hunt: Codable, Equatable, Identifiable, Sendable {
     let id: Int
-    let kind: String               // "flat", the only hunt type today
+    let kind: HuntKind
+    var name: String? = nil
     var active: Bool
-    var search: Search
+    var search: HuntSearch
     let created: String
-    let updated: String
-    let activated: String?
+    var updated: String
+    var activated: String?
+    var lastScan: String? = nil
+
+    enum CodingKeys: String, CodingKey {
+        case id, kind, name, active, search, created, updated, activated
+        case lastScan = "last_scan"
+    }
+}
+
+struct HuntCard: Codable, Equatable, Identifiable, Sendable {
+    var hunt: Hunt
+    var counts: Overview.Counts
+    var sources: [Source]
+    var slowed: Bool
+    var id: Int { hunt.id }
 }
 
 struct SourceStatus: Codable, Equatable, Identifiable, Sendable {
@@ -207,9 +257,10 @@ struct Listing: Codable, Equatable, Sendable {
     let posted: String?
     let imageURL: String?
     let description: String
+    var item: ItemDetails? = nil
 
     enum CodingKeys: String, CodingKey {
-        case source, url, title, kind, sqm, rooms, flatmates, city, district, address, furnished, posted, description
+        case source, url, title, kind, sqm, rooms, flatmates, city, district, address, furnished, posted, description, item
         case sourceName = "source_name", rentWarm = "rent_warm", rentCold = "rent_cold"
         case availableFrom = "available_from", availableUntil = "available_until", imageURL = "image_url"
     }
@@ -234,10 +285,12 @@ struct Match: Codable, Equatable, Identifiable, Sendable {
     let reason: String
     let warnings: [String]
     var application: Application?
+    var atStart: Bool = false
+    var overMax: Double? = nil
 
     enum CodingKeys: String, CodingKey {
         case id, state, found, listing, reason, warnings, application
-        case huntID = "hunt_id"
+        case huntID = "hunt_id", atStart = "at_start", overMax = "over_max"
     }
 }
 
@@ -290,6 +343,7 @@ struct Overview: Codable, Equatable, Sendable {
     let version: Int
     let me: Me
     var hunt: Hunt?
+    var hunts: [HuntCard] = []
     var sources: [SourceStatus]
     let lastScan: String?
     var counts: Counts
@@ -308,7 +362,7 @@ struct Overview: Codable, Equatable, Sendable {
     }
 
     enum CodingKeys: String, CodingKey {
-        case version, me, hunt, sources, counts, latest
+        case version, me, hunt, hunts, sources, counts, latest
         case lastScan = "last_scan"
     }
 }
@@ -322,4 +376,56 @@ struct MatchPage: Codable, Equatable, Sendable {
 /// `GET /rejected`
 struct RejectedPage: Codable, Equatable, Sendable {
     let items: [Rejected]
+}
+
+extension Overview {
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        version = try c.decode(Int.self, forKey: .version)
+        me = try c.decode(Me.self, forKey: .me)
+        hunt = try c.decodeIfPresent(Hunt.self, forKey: .hunt)
+        sources = try c.decode([SourceStatus].self, forKey: .sources)
+        lastScan = try c.decodeIfPresent(String.self, forKey: .lastScan)
+        counts = try c.decode(Counts.self, forKey: .counts)
+        latest = try c.decode([Match].self, forKey: .latest)
+        hunts = try c.decodeIfPresent([HuntCard].self, forKey: .hunts)
+            ?? hunt.map { [HuntCard(hunt: $0, counts: counts,
+                                   sources: $0.active ? sources.filter { $0.state != .idle }.map(\.source) : [],
+                                   slowed: false)] } ?? []
+    }
+}
+
+extension Hunt {
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(Int.self, forKey: .id)
+        kind = try c.decode(HuntKind.self, forKey: .kind)
+        name = try c.decodeIfPresent(String.self, forKey: .name)
+        active = try c.decode(Bool.self, forKey: .active)
+        switch kind {
+        case .flat: search = (try? c.decode(Search.self, forKey: .search)).map(HuntSearch.flat) ?? .unsupported
+        case .item: search = (try? c.decode(ItemSearch.self, forKey: .search)).map(HuntSearch.item) ?? .unsupported
+        case .unknown: search = .unsupported
+        }
+        created = try c.decode(String.self, forKey: .created)
+        updated = try c.decode(String.self, forKey: .updated)
+        activated = try c.decodeIfPresent(String.self, forKey: .activated)
+        lastScan = try c.decodeIfPresent(String.self, forKey: .lastScan)
+    }
+}
+
+extension Match {
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(Int.self, forKey: .id)
+        huntID = try c.decode(Int.self, forKey: .huntID)
+        state = try c.decode(MatchState.self, forKey: .state)
+        found = try c.decode(String.self, forKey: .found)
+        listing = try c.decode(Listing.self, forKey: .listing)
+        reason = try c.decode(String.self, forKey: .reason)
+        warnings = try c.decode([String].self, forKey: .warnings)
+        application = try c.decodeIfPresent(Application.self, forKey: .application)
+        atStart = try c.decodeIfPresent(Bool.self, forKey: .atStart) ?? false
+        overMax = try c.decodeIfPresent(Double.self, forKey: .overMax)
+    }
 }

@@ -266,6 +266,16 @@
         }
       }
     },
+    "Application texts are for flats." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bewerbungstexte gibt es nur für Wohnungen."
+          }
+        }
+      }
+    },
     "Applied" : {
       "localizations" : {
         "de" : {
@@ -428,7 +438,6 @@
     },
     "Could not load older listings." : {
       "comment" : "DEBUG pagination failure sample; release exports do not scan SampleBackend.",
-      "extractionState" : "manual",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -444,16 +453,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Das Angebot konnte nicht als beworben markiert werden."
-          }
-        }
-      }
-    },
-    "Could not pause the hunt. %@" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Die Suche konnte nicht pausiert werden. %@"
           }
         }
       }
@@ -474,16 +473,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Das Angebot konnte nicht gespeichert werden."
-          }
-        }
-      }
-    },
-    "Could not start the hunt. %@" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Die Suche konnte nicht gestartet werden. %@"
           }
         }
       }

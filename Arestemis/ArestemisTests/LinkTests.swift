@@ -43,8 +43,8 @@ struct LinkTests {
 
     @Test func theMatchCategory() throws {
         let categories = MatchNotification.categories
-        #expect(categories.count == 1)
-        let category = try #require(categories.first)
+        #expect(categories.count == 2)
+        let category = try #require(categories.first { $0.identifier == MatchNotification.category })
         #expect(category.identifier == "ARESTEMIS_MATCH")
         #expect(category.actions.map(\.title) == ["Open listing", "Application"])
         #expect(category.actions.map(\.identifier) == [MatchNotification.openListingAction, MatchNotification.applicationAction])

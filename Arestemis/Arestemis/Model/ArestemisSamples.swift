@@ -3,7 +3,7 @@ import Foundation
 /// The contract's made-up sample answers (Samples/, copies of Arestemis/docs/samples/), for the tests and for
 /// `-sampleData`.
 enum ArestemisSamples {
-    nonisolated static let files = ["overview", "matches", "match", "rejected", "settings", "places"]
+    nonisolated static let files = ["overview", "matches", "match", "rejected", "settings", "places", "hunts", "item-matches"]
 
     static func data(_ name: String) throws -> Data {
         guard let url = Bundle.main.url(forResource: name, withExtension: "json") else {
@@ -57,7 +57,8 @@ final class SampleBackend: ArestemisBackend {
     }
 
     private var base: Overview
-    private var hunt: Hunt?
+    private var huntValues: [Hunt]
+    private var nextHuntID: Int
     private var matches: [Match]
     private var rejectedItems: [Rejected]
     private var settingsValue: Settings
@@ -74,6 +75,7 @@ final class SampleBackend: ArestemisBackend {
         let page = try ArestemisSamples.decode(MatchPage.self, from: "matches", shift: shift)
         let single = try ArestemisSamples.decode(Match.self, from: "match", shift: shift)
         matches = page.items + (page.items.contains { $0.id == single.id } ? [] : [single])
+            + (try ArestemisSamples.decode(MatchPage.self, from: "item-matches", shift: shift)).items
         if options.longDescription {
             // Extend only the fictional listing description, leaving the contract's fields unchanged.
             matches = try matches.map { match in
@@ -93,24 +95,28 @@ final class SampleBackend: ArestemisBackend {
             settingsValue.aboutMe = ""
         }
         let suggestions = try ArestemisSamples.decode([Place].self, from: "places")
-        let searched = base.hunt?.search.places ?? []
+        let searched = base.hunt?.search.flat?.places ?? []
         knownPlaces = searched + suggestions.filter { place in !searched.contains { $0.id == place.id } }
-        hunt = base.hunt
+        huntValues = base.hunts.map(\.hunt)
+        nextHuntID = (huntValues.map(\.id).max() ?? 0) + 1
         if options.noHunt {
-            hunt = nil
+            huntValues = []
+            nextHuntID = 1
             matches = []
             rejectedItems = []
         }
-        if options.paused { hunt?.active = false }
+        if options.paused { for index in huntValues.indices { huntValues[index].active = false } }
     }
 
     func overview() async throws -> Overview {
         if options.hangs { try await Task.sleep(for: .seconds(3600)) }
         var overview = base
-        overview.hunt = hunt
+        overview.hunt = huntValues.first { $0.kind == .flat }
         overview.sources = base.sources.map { status in
             var status = status
-            if hunt?.active != true { status.state = .idle }
+            if !huntValues.contains(where: { hunt in
+                hunt.active && Self.sources(hunt.search).contains(status.source)
+            }) { status.state = .idle }
             return status
         }
         let visible = matches.filter { $0.state != .dismissed }.sorted { $0.id > $1.id }
@@ -119,43 +125,80 @@ final class SampleBackend: ArestemisBackend {
         }
         overview.counts = .init(new: visible.count { $0.state == .new }, today: today.count,
                                 saved: visible.count { $0.state == .saved }, applied: visible.count { $0.state == .applied })
+        overview.hunts = huntValues.map { hunt in
+            HuntCard(hunt: hunt, counts: Self.counts(matches.filter { $0.huntID == hunt.id }),
+                     sources: hunt.active ? Self.sources(hunt.search) : [], slowed: false)
+        }
         overview.latest = Array(visible.prefix(3))
         return overview
     }
 
-    func createHunt(_ search: Search) async throws -> Hunt {
-        guard hunt == nil else { throw HTTPError.server(409, "There is a search already.") }
+    func hunts() async throws -> [Hunt] { huntValues }
+
+    func createHunt(kind: HuntKind, name: String?, search: HuntSearch) async throws -> Hunt {
+        guard huntValues.count < 30 else { throw HTTPError.server(409, "This account has 30 hunts. Delete one first.") }
+        guard kind == search.kind else { throw HTTPError.server(400, "This hunt needs a newer app.") }
+        let name = try Self.name(name)
         let now = ArestemisSamples.iso(.now)
-        let created = Hunt(id: 1, kind: "flat", active: false, search: search, created: now, updated: now, activated: nil)
-        hunt = created
+        let created = Hunt(id: nextHuntID, kind: kind, name: name, active: false, search: search,
+                           created: now, updated: now, activated: nil)
+        nextHuntID += 1
+        huntValues.append(created)
         return created
     }
-
-    func updateHunt(id: Int, search: Search) async throws -> Hunt {
-        guard let current = try currentHunt(id) else { throw HTTPError.server(404, nil) }
-        let updated = Hunt(id: current.id, kind: current.kind, active: current.active, search: search,
-                           created: current.created, updated: ArestemisSamples.iso(.now), activated: current.activated)
-        hunt = updated
-        return updated
+    func updateHunt(id: Int, search: HuntSearch, name: String?) async throws -> Hunt {
+        let index = try huntIndex(id)
+        guard huntValues[index].kind == search.kind else { throw HTTPError.server(400, "The hunt kind cannot change.") }
+        huntValues[index].name = try Self.name(name)
+        huntValues[index].search = search
+        huntValues[index].updated = ArestemisSamples.iso(.now)
+        return huntValues[index]
     }
-
-    func setHunt(id: Int, active: Bool) async throws -> Hunt {
-        guard let current = try currentHunt(id) else { throw HTTPError.server(404, nil) }
-        let changed = Hunt(id: current.id, kind: current.kind, active: active, search: current.search,
-                           created: current.created, updated: current.updated,
-                           activated: active ? ArestemisSamples.iso(.now) : current.activated)
-        hunt = changed
-        return changed
+    func setActive(id: Int, active: Bool) async throws -> Hunt {
+        let index = try huntIndex(id)
+        if active, !huntValues[index].active, huntValues.count(where: { $0.active }) >= 10 {
+            throw HTTPError.server(409, "At most 10 hunts can run at once. Pause one first.")
+        }
+        huntValues[index].active = active
+        if active { huntValues[index].activated = ArestemisSamples.iso(.now) }
+        return huntValues[index]
     }
-
     func deleteHunt(id: Int) async throws {
-        guard try currentHunt(id) != nil else { throw HTTPError.server(404, nil) }
-        hunt = nil
-        matches = []
-        rejectedItems = []
+        let index = try huntIndex(id)
+        huntValues.remove(at: index)
+        matches.removeAll { $0.huntID == id }
+        rejectedItems.removeAll { $0.huntID == id }
+    }
+    private func huntIndex(_ id: Int) throws -> Int {
+        guard let index = huntValues.firstIndex(where: { $0.id == id }) else { throw HTTPError.server(404, nil) }
+        return index
+    }
+    private static func name(_ value: String?) throws -> String? {
+        let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard trimmed.count <= 60 else { throw HTTPError.server(400, "The name must be at most 60 characters.") }
+        return trimmed.isEmpty ? nil : trimmed
+    }
+    private static func sources(_ search: HuntSearch) -> [Source] {
+        switch search { case .flat(let search): search.sources; case .item(let search): search.sources; case .unsupported: [] }
+    }
+    private static func counts(_ matches: [Match]) -> Overview.Counts {
+        let visible = matches.filter { $0.state != .dismissed }
+        return .init(new: visible.count { $0.state == .new },
+                     today: visible.count { Timestamp.parse($0.found).map { Calendar.app.isDateInToday($0) } ?? false },
+                     saved: visible.count { $0.state == .saved }, applied: visible.count { $0.state == .applied })
     }
 
-    func parse(_ text: String) async throws -> ParsedSearch {
+    func parse(text: String, kind: HuntKind) async throws -> HuntParseResult {
+        switch kind {
+        case .flat: return .flat(try await parseFlat(text))
+        case .item:
+            let search = base.hunts.first { $0.hunt.kind == .item }?.hunt.search.item
+            return .item(ParsedItemSearch(search: PartialItemSearch(query: search?.query, priceMax: search?.priceMax,
+                                                                   delivery: search?.delivery, places: search?.places), unclear: []))
+        case .unknown: throw HTTPError.server(400, "This hunt needs a newer app.")
+        }
+    }
+    private func parseFlat(_ text: String) async throws -> ParsedSearch {
         try await Task.sleep(for: .milliseconds(600))
         let year = Calendar.app.component(.year, from: .now)
         let munich = knownPlaces.first { $0.name == "München" }
@@ -172,13 +215,14 @@ final class SampleBackend: ArestemisBackend {
         }.prefix(10))
     }
 
-    func matches(states: [MatchState]?, limit: Int, before: Int?) async throws -> MatchPage {
+    func matches(hunt: Int?, state states: [MatchState]?, limit: Int, before: Int?) async throws -> MatchPage {
+        if let hunt { _ = try huntIndex(hunt) }
         if before != nil {
             if options.moreLoading { try await Task.sleep(for: .seconds(3600)) }
             if options.moreFailure { throw HTTPError.server(500, String(localized: "Could not load older listings.")) }
         }
         let wanted = matches.filter { match in
-            (states?.contains(match.state) ?? (match.state != .dismissed)) && match.id < (before ?? .max)
+            (hunt == nil || match.huntID == hunt) && (states?.contains(match.state) ?? (match.state != .dismissed)) && match.id < (before ?? .max)
         }.sorted { $0.id > $1.id }
         return MatchPage(items: Array(wanted.prefix(limit)), more: wanted.count > limit || (before == nil && (options.moreLoading || options.moreFailure)))
     }
@@ -196,6 +240,7 @@ final class SampleBackend: ArestemisBackend {
 
     func application(match id: Int, regenerate: Bool) async throws -> Application {
         guard let index = matches.firstIndex(where: { $0.id == id }) else { throw HTTPError.server(404, nil) }
+        guard matches[index].listing.item == nil else { throw HTTPError.server(400, "Application texts are for flats.") }
         if let cached = matches[index].application, !regenerate { return cached }
         try await Task.sleep(for: .milliseconds(900))
         let mode = settingsValue.applicationMode
@@ -206,18 +251,16 @@ final class SampleBackend: ArestemisBackend {
         return written
     }
 
-    func rejected(limit: Int) async throws -> RejectedPage { RejectedPage(items: Array(rejectedItems.prefix(limit))) }
+    func rejected(hunt: Int?, limit: Int) async throws -> RejectedPage {
+        if let hunt { _ = try huntIndex(hunt) }
+        return RejectedPage(items: Array(rejectedItems.filter { hunt == nil || $0.huntID == hunt }.prefix(limit)))
+    }
 
     func settings() async throws -> Settings { settingsValue }
 
     func saveSettings(_ settings: Settings) async throws -> Settings {
         settingsValue = settings
         return settings
-    }
-
-    private func currentHunt(_ id: Int) throws -> Hunt? {
-        guard let hunt, hunt.id == id else { return nil }
-        return hunt
     }
 
     /// A made-up automatic text for the sample (German, like the real ones), with the notes as their own paragraph.

@@ -43,6 +43,7 @@ final class ArestemisStore {
     private(set) var isLoadingOverview = false
     private(set) var overviewError: String?
     private(set) var lastOverviewLoad: Date?
+    // brief 114 replaces
     private(set) var isTogglingHunt = false
 
     // matches
@@ -107,7 +108,23 @@ final class ArestemisStore {
 
     // MARK: - overview
 
-    var hunt: Hunt? { overview?.hunt }
+    var hunts: [HuntCard] { overview?.hunts ?? [] }
+    // brief 114 replaces: today's screens edit the first flat hunt.
+    var hunt: Hunt? { hunts.first { $0.hunt.kind == .flat }?.hunt }
+    private(set) var changingHunts: Set<Int> = []
+    private var nextTemporaryHuntID = -1
+    private var listGeneration = 0
+    var selectedHuntID: Int? {
+        didSet {
+            guard selectedHuntID != oldValue else { return }
+            listGeneration += 1
+            lists = [:]
+            rejected = []
+            rejectedLoaded = false
+            isLoadingRejected = false
+            rejectedError = nil
+        }
+    }
 
     /// Loads the home screen. `quiet` keeps the current one on screen and reports nothing (refreshes after actions).
     func reloadOverview(quiet: Bool = false) async {
@@ -117,9 +134,15 @@ final class ArestemisStore {
         let context = context
         defer { if isCurrent(context) { isLoadingOverview = false } }
         do {
-            let loaded = try await backend.overview()
+            var loaded = try await backend.overview()
             guard isCurrent(context) else { return }
+            // An overview arriving during an action must keep its pending card (or pending deletion).
+            let pending = hunts.filter { changingHunts.contains($0.id) }
+            loaded.hunts.removeAll { changingHunts.contains($0.id) }
+            loaded.hunts.append(contentsOf: pending)
+            loaded.hunts.sort { $0.id < $1.id }
             overview = loaded
+            syncFlatHunt()
             overviewError = nil
             lastOverviewLoad = .now
             for match in loaded.latest { remember(match) }
@@ -133,6 +156,7 @@ final class ArestemisStore {
     }
 
     /// The three newest matches as they are now (a state changed here shows before the next overview).
+    // brief 114 replaces
     var latest: [Match] {
         (overview?.latest ?? []).map { matchesByID[$0.id] ?? $0 }.filter { $0.state != .dismissed }
     }
@@ -156,105 +180,195 @@ final class ArestemisStore {
 
     // MARK: - search draft
 
+    // brief 114 replaces
     func searchDraft() -> SearchDraft {
         #if DEBUG
         if isSample, LaunchArguments.current.contains("-sampleSearchDraft") {
-            var draft = hunt.map { SearchDraft($0.search) } ?? SearchDraft()
+            var draft = hunt?.search.flat.map { SearchDraft($0) } ?? SearchDraft()
             draft.people = draft.people == 1 ? 2 : 1
             return draft
         }
         #endif
         guard !isSample, let account = session.accountID else {
-            return hunt.map { SearchDraft($0.search) } ?? SearchDraft()
+            return hunt?.search.flat.map { SearchDraft($0) } ?? SearchDraft()
         }
-        return keptDraft.restore(for: hunt?.search, account: account)
+        return keptDraft.restore(for: hunt?.search.flat, account: account, huntID: hunt?.id)
     }
 
+    // brief 114 replaces
     func keepSearchDraft(_ draft: SearchDraft, baseline: Search?) {
         guard !isSample, canAct, let account = session.accountID else { return }
-        keptDraft.keep(draft, baseline: baseline, account: account)
-    }
-
-    private func dropSearchDraft() {
-        guard !isSample, let account = session.accountID else { return }
-        keptDraft.drop(account: account)
+        keptDraft.keep(draft, baseline: baseline, account: account, huntID: hunt?.id)
     }
 
     // MARK: - hunt
 
-    /// Start or pause, shown at once; rolled back if the server refuses.
+    // brief 114 replaces: entry points used by today's single flat screens.
     func setHuntActive(_ active: Bool) async {
-        guard canAct, !isTogglingHunt, let hunt = overview?.hunt, hunt.active != active else { return }
-        isTogglingHunt = true
-        overview?.hunt?.active = active
+        guard !isTogglingHunt, let hunt else { return }
         let context = context
+        isTogglingHunt = true
         defer { if isCurrent(context) { isTogglingHunt = false } }
-        do {
-            let returned = try await backend.setHunt(id: hunt.id, active: active)
-            guard isCurrent(context) else { return }
-            overview?.hunt = returned
-            await reloadOverview(quiet: true)
-        } catch {
-            guard isCurrent(context) else { return }
-            if overview?.hunt?.id == hunt.id { overview?.hunt?.active = hunt.active }
-            handle(error, context: context) { self.show(active ? String(localized: "Could not start the hunt. \($0)")
-                                                                     : String(localized: "Could not pause the hunt. \($0)")) }
-        }
+        await setActive(id: hunt.id, active: active)
     }
-
-    /// Creates the hunt (paused, as the server does) or replaces its search. True when saved.
     @discardableResult
     func saveSearch(_ search: Search) async -> Bool {
-        guard canAct, !isSavingSearch else { return false }
-        isSavingSearch = true
-        searchError = nil
-        let context = context
-        defer { if isCurrent(context) { isSavingSearch = false } }
-        do {
-            let saved: Hunt
-            if let hunt = overview?.hunt {
-                saved = try await backend.updateHunt(id: hunt.id, search: search)
-            } else {
-                saved = try await backend.createHunt(search)
-            }
-            guard isCurrent(context) else { return false }
-            dropSearchDraft()
-            overview?.hunt = saved
-            await reloadOverview(quiet: true)
-            return true
-        } catch {
-            guard isCurrent(context) else { return false }
-            handle(error, context: context) { self.searchError = $0 }
-            return false
-        }
+        await saveHunt(id: hunt?.id, kind: .flat, name: hunt?.name, search: .flat(search)) != nil
     }
-
-    /// Deletes the hunt and with it every match. True when deleted.
     @discardableResult
     func deleteSearch() async -> Bool {
-        guard canAct, !isSavingSearch, let hunt = overview?.hunt else { return false }
+        guard !isSavingSearch, let hunt else { return false }
+        let context = context
+        isSavingSearch = true
+        defer { if isCurrent(context) { isSavingSearch = false } }
+        return await deleteHunt(id: hunt.id)
+    }
+
+    private func putHunt(_ hunt: Hunt) {
+        if let index = overview?.hunts.firstIndex(where: { $0.id == hunt.id }) {
+            overview?.hunts[index].hunt = hunt
+            if !hunt.active { overview?.hunts[index].sources = [] }
+        } else {
+            overview?.hunts.append(HuntCard(hunt: hunt, counts: .init(new: 0, today: 0, saved: 0, applied: 0),
+                                            sources: [], slowed: false))
+        }
+        syncFlatHunt()
+    }
+    private func syncFlatHunt() {
+        let flat = hunts.first { $0.hunt.kind == .flat }?.hunt
+        overview?.hunt = flat
+    }
+    private func restoreCard(_ card: HuntCard) {
+        overview?.hunts.removeAll { $0.id == card.id }
+        overview?.hunts.append(card)
+        overview?.hunts.sort { $0.id < $1.id }
+        syncFlatHunt()
+    }
+
+    func setActive(id: Int, active: Bool) async {
+        guard canAct, !changingHunts.contains(id), let card = hunts.first(where: { $0.id == id }),
+              card.hunt.active != active else { return }
+        changingHunts.insert(id)
+        let context = context
+        defer { if isCurrent(context) { changingHunts.remove(id) } }
+        var optimistic = card.hunt
+        optimistic.active = active
+        putHunt(optimistic)
+        do {
+            let saved = try await backend.setActive(id: id, active: active)
+            guard isCurrent(context) else { return }
+            putHunt(saved)
+            changingHunts.remove(id)
+            await reloadOverview(quiet: true)
+        } catch {
+            guard isCurrent(context) else { return }
+            restoreCard(card)
+            handle(error, context: context) { self.show($0) }
+        }
+    }
+
+    /// A pending creation uses a temporary id; only the affected card is rolled back on refusal.
+    @discardableResult
+    func saveHunt(id: Int?, kind: HuntKind, name: String?, search: HuntSearch) async -> Hunt? {
+        guard canAct, search.kind == kind, !isSavingSearch else { return nil }
+        let old = id.flatMap { id in hunts.first { $0.id == id } }
+        guard id == nil || (old != nil && !changingHunts.contains(id!)) else { return nil }
+        let actionID = id ?? nextTemporaryHuntID
+        if id == nil { nextTemporaryHuntID -= 1 }
+        changingHunts.insert(actionID)
         isSavingSearch = true
         searchError = nil
         let context = context
-        defer { if isCurrent(context) { isSavingSearch = false } }
+        defer { if isCurrent(context) { changingHunts.remove(actionID); isSavingSearch = false } }
+        let now = ArestemisSamples.iso(.now)
+        var optimistic = old?.hunt ?? Hunt(id: actionID, kind: kind, active: false, search: search,
+                                           created: now, updated: now, activated: nil)
+        optimistic.search = search
+        optimistic.name = name
+        putHunt(optimistic)
         do {
-            try await backend.deleteHunt(id: hunt.id)
+            let saved: Hunt
+            if let id { saved = try await backend.updateHunt(id: id, search: search, name: name) }
+            else { saved = try await backend.createHunt(kind: kind, name: name, search: search) }
+            guard isCurrent(context) else { return nil }
+            overview?.hunts.removeAll { $0.id == actionID }
+            if let old { restoreCard(old) }
+            putHunt(saved)
+            if !isSample, let account = session.accountID { keptDraft.drop(account: account, huntID: id, kind: kind) }
+            changingHunts.remove(actionID)
+            await reloadOverview(quiet: true)
+            return saved
+        } catch {
+            guard isCurrent(context) else { return nil }
+            overview?.hunts.removeAll { $0.id == actionID }
+            if let old { restoreCard(old) }
+            syncFlatHunt()
+            handle(error, context: context) { self.searchError = $0; self.show($0) }
+            return nil
+        }
+    }
+    @discardableResult
+    func renameHunt(id: Int, name: String?) async -> Bool {
+        guard let hunt = hunts.first(where: { $0.id == id })?.hunt else { return false }
+        return await saveHunt(id: id, kind: hunt.kind, name: name, search: hunt.search) != nil
+    }
+    @discardableResult
+    func deleteHunt(id: Int) async -> Bool {
+        guard canAct, !changingHunts.contains(id), let card = hunts.first(where: { $0.id == id }) else { return false }
+        changingHunts.insert(id)
+        searchError = nil
+        let context = context
+        defer { if isCurrent(context) { changingHunts.remove(id) } }
+        overview?.hunts.removeAll { $0.id == id }
+        syncFlatHunt()
+        do {
+            try await backend.deleteHunt(id: id)
             guard isCurrent(context) else { return false }
-            dropSearchDraft()
-            overview?.hunt = nil
-            overview?.latest = []
-            forgetMatches()
+            if !isSample, let account = session.accountID { keptDraft.drop(account: account, huntID: id, kind: card.hunt.kind) }
+            let removed = Set(matchesByID.values.filter { $0.huntID == id }.map(\.id))
+            for match in removed { matchesByID[match] = nil; applications[match] = nil; seen.remove(match) }
+            overview?.latest.removeAll { $0.huntID == id }
+            rejected.removeAll { $0.huntID == id }
+            if selectedHuntID == id { selectedHuntID = nil }
+            listGeneration += 1
+            lists = [:]
+            isLoadingRejected = false
+            rejectedLoaded = false
+            changingHunts.remove(id)
             await reloadOverview(quiet: true)
             return true
         } catch {
             guard isCurrent(context) else { return false }
-            handle(error, context: context) { self.searchError = $0 }
+            restoreCard(card)
+            handle(error, context: context) { self.searchError = $0; self.show($0) }
             return false
         }
     }
 
-    /// "Describe it": what the server read from the sentence, or nil (then `parseError` says why).
-    func parse(_ text: String) async -> ParsedSearch? {
+    func itemSearchDraft(huntID: Int? = nil) -> ItemSearchDraft {
+        let search = hunts.first { $0.id == huntID }?.hunt.search.item
+        guard !isSample, let account = session.accountID else { return search.map(ItemSearchDraft.init) ?? ItemSearchDraft() }
+        return keptDraft.restoreItem(for: search, account: account, huntID: huntID)
+    }
+    func keepItemSearchDraft(_ draft: ItemSearchDraft, baseline: ItemSearch?, huntID: Int? = nil) {
+        guard !isSample, canAct, let account = session.accountID else { return }
+        keptDraft.keep(draft, baseline: baseline, account: account, huntID: huntID)
+    }
+    func flatSearchDraft(huntID: Int?) -> SearchDraft {
+        let search = hunts.first { $0.id == huntID }?.hunt.search.flat
+        guard !isSample, let account = session.accountID else { return search.map { SearchDraft($0) } ?? SearchDraft() }
+        return keptDraft.restore(for: search, account: account, huntID: huntID)
+    }
+    func keepFlatSearchDraft(_ draft: SearchDraft, baseline: Search?, huntID: Int?) {
+        guard !isSample, canAct, let account = session.accountID else { return }
+        keptDraft.keep(draft, baseline: baseline, account: account, huntID: huntID)
+    }
+
+    func parseItem(_ text: String) async -> ParsedItemSearch? {
+        guard case .item(let parsed) = await parse(text: text, kind: .item) else { return nil }
+        return parsed
+    }
+    func parse(text: String, kind: HuntKind) async -> HuntParseResult? {
         let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard canAct, !isParsing, !text.isEmpty else { return nil }
         isParsing = true
@@ -262,9 +376,8 @@ final class ArestemisStore {
         let context = context
         defer { if isCurrent(context) { isParsing = false } }
         do {
-            let parsed = try await backend.parse(text)
-            guard isCurrent(context) else { return nil }
-            return parsed
+            let parsed = try await backend.parse(text: text, kind: kind)
+            return isCurrent(context) ? parsed : nil
         } catch {
             guard isCurrent(context) else { return nil }
             handle(error, context: context) { self.parseError = $0 }
@@ -272,11 +385,18 @@ final class ArestemisStore {
         }
     }
 
+    /// "Describe it": what the server read from the sentence, or nil (then `parseError` says why).
+    // brief 114 replaces
+    func parse(_ text: String) async -> ParsedSearch? {
+        guard case .flat(let parsed) = await parse(text: text, kind: .flat) else { return nil }
+        return parsed
+    }
+
     // MARK: - matches
 
     /// The matches of a filter, newest first, as known now (including changes made here since the last load).
     func matches(_ filter: MatchFilter) -> [Match] {
-        matchesByID.values.filter { filter.includes($0.state) }.sorted { $0.id > $1.id }
+        matchesByID.values.filter { filter.includes($0.state) && (selectedHuntID == nil || $0.huntID == selectedHuntID) }.sorted { $0.id > $1.id }
     }
 
     func list(_ filter: MatchFilter) -> MatchList { lists[filter] ?? MatchList() }
@@ -290,14 +410,15 @@ final class ArestemisStore {
         if more && (before == nil || lists[filter]?.more != true) { return }
         lists[filter, default: MatchList()].isLoading = true
         if !quiet { lists[filter]?.error = nil }
+        let selection = listGeneration
         let context = context
-        defer { if isCurrent(context) { lists[filter]?.isLoading = false } }
+        defer { if isCurrent(context) && selection == listGeneration { lists[filter]?.isLoading = false } }
         do {
-            let page = try await backend.matches(states: filter.states, limit: Self.pageSize, before: before)
-            guard isCurrent(context) else { return }
+            let page = try await backend.matches(hunt: selectedHuntID, state: filter.states, limit: Self.pageSize, before: before)
+            guard isCurrent(context) && selection == listGeneration else { return }
             merge(page, filter: filter, appending: more)
         } catch {
-            guard isCurrent(context) else { return }
+            guard isCurrent(context) && selection == listGeneration else { return }
             if quiet { session.handleAuthFailure(error, generation: context.session, token: context.token) }
             else { handle(error, context: context) { self.lists[filter]?.error = $0 } }
         }
@@ -362,15 +483,16 @@ final class ArestemisStore {
         guard canAct, !isLoadingRejected else { return }
         isLoadingRejected = true
         rejectedError = nil
+        let selection = listGeneration
         let context = context
-        defer { if isCurrent(context) { isLoadingRejected = false } }
+        defer { if isCurrent(context) && selection == listGeneration { isLoadingRejected = false } }
         do {
-            let page = try await backend.rejected(limit: Self.pageSize)
-            guard isCurrent(context) else { return }
+            let page = try await backend.rejected(hunt: selectedHuntID, limit: Self.pageSize)
+            guard isCurrent(context) && selection == listGeneration else { return }
             rejected = page.items
             rejectedLoaded = true
         } catch {
-            guard isCurrent(context) else { return }
+            guard isCurrent(context) && selection == listGeneration else { return }
             handle(error, context: context) { self.rejectedError = $0 }
         }
     }
@@ -383,6 +505,11 @@ final class ArestemisStore {
     /// server writes it (`regenerate` = "Write again").
     func loadApplication(for id: Int, regenerate: Bool = false) async {
         guard canAct, !(applications[id]?.isLoading ?? false) else { return }
+        guard let loadedMatch = await loadMatch(id) else { return }
+        if loadedMatch.listing.item != nil || hunts.first(where: { $0.id == loadedMatch.huntID })?.hunt.kind == .item {
+            applications[id] = ApplicationState(error: String(localized: "Application texts are for flats."))
+            return
+        }
         let cached = match(id)?.application ?? applications[id]?.application
         if !regenerate, let cached, settings.map({ $0.applicationMode == cached.mode }) ?? true {
             applications[id] = ApplicationState(application: cached)
@@ -451,6 +578,8 @@ final class ArestemisStore {
         if !isSample { keptDraft.clear() }
         undo = nil
         resetGeneration += 1
+        changingHunts = []
+        selectedHuntID = nil
         overview = nil
         overviewError = nil
         lastOverviewLoad = nil
@@ -511,7 +640,7 @@ final class ArestemisStore {
         let returned = Set(page.items.map(\.id))
         let lowest = page.items.map(\.id).min() ?? 0
         let upper = appending ? (lists[filter]?.ids.min() ?? Int.max) : Int.max
-        for (id, match) in matchesByID where filter.includes(match.state) && !returned.contains(id)
+        for (id, match) in matchesByID where (selectedHuntID == nil || match.huntID == selectedHuntID) && filter.includes(match.state) && !returned.contains(id)
             && !changingState.contains(id) && id < upper && (!page.more || id >= lowest) {
             matchesByID[id] = nil
         }

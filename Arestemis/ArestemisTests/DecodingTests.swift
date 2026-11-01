@@ -14,6 +14,8 @@ struct DecodingTests {
         case "rejected": try roundTrip(RejectedPage.self, file)
         case "settings": try roundTrip(Settings.self, file)
         case "places": try roundTrip([Place].self, file)
+        case "hunts": try roundTrip([Hunt].self, file)
+        case "item-matches": try roundTrip(MatchPage.self, file)
         default: Issue.record("No model for \(file)")
         }
     }
@@ -27,19 +29,19 @@ struct DecodingTests {
         let overview = try sample(Overview.self, "overview")
         #expect(overview.version == 2 && overview.me.name == "Patrik")
         let hunt = try #require(overview.hunt)
-        #expect(hunt.id == 1 && hunt.kind == "flat" && hunt.active)
-        #expect(hunt.search.kinds == [.flat, .wg] && hunt.search.people == 1)
-        #expect(hunt.search.places.map(\.id) == ["wg:90", "wg:400"])
-        #expect(hunt.search.places[1].sources == [.wgGesucht, .kleinanzeigen, .immowelt, .immoscout24])
-        #expect(hunt.search.rentWarmMin == 400 && hunt.search.rentWarmMax == 1000 && hunt.search.rentColdMax == nil)
-        #expect(hunt.search.sqmMin == 28 && hunt.search.sqmMax == nil && hunt.search.roomsMin == nil)
-        #expect(hunt.search.roomSqmMin == 14 && hunt.search.roomSqmMax == nil)
-        #expect(hunt.search.flatmatesMax == 2 && hunt.search.sublet == .exclude)
-        #expect(hunt.search.moveInFrom == "2026-12-01" && hunt.search.moveInUntil == "2027-02-01")
+        #expect(hunt.id == 1 && hunt.kind == .flat && hunt.active)
+        #expect(hunt.search.flat!.kinds == [.flat, .wg] && hunt.search.flat!.people == 1)
+        #expect(hunt.search.flat!.places.map(\.id) == ["wg:90", "wg:400"])
+        #expect(hunt.search.flat!.places[1].sources == [.wgGesucht, .kleinanzeigen, .immowelt, .immoscout24])
+        #expect(hunt.search.flat!.rentWarmMin == 400 && hunt.search.flat!.rentWarmMax == 1000 && hunt.search.flat!.rentColdMax == nil)
+        #expect(hunt.search.flat!.sqmMin == 28 && hunt.search.flat!.sqmMax == nil && hunt.search.flat!.roomsMin == nil)
+        #expect(hunt.search.flat!.roomSqmMin == 14 && hunt.search.flat!.roomSqmMax == nil)
+        #expect(hunt.search.flat!.flatmatesMax == 2 && hunt.search.flat!.sublet == .exclude)
+        #expect(hunt.search.flat!.moveInFrom == "2026-12-01" && hunt.search.flat!.moveInUntil == "2027-02-01")
         #expect(overview.sources.map(\.source) == [.wgGesucht, .kleinanzeigen, .immowelt, .immoscout24])
         #expect(overview.sources.map(\.state) == [.ok, .ok, .ok, .ok])
         #expect(overview.sources.allSatisfy { $0.note == nil })
-        #expect(overview.counts == .init(new: 1, today: 2, saved: 1, applied: 1))
+        #expect(overview.counts == .init(new: 5, today: 6, saved: 1, applied: 1))
         #expect(overview.latest.map(\.id) == [41, 40, 38])
         #expect(overview.lastScan == "2026-10-24T10:02:00Z")
     }
@@ -71,7 +73,7 @@ struct DecodingTests {
 
     /// The app sends every search field, unknown ones as null, under the contract's names.
     @Test func searchEncodesEveryFieldWithNulls() throws {
-        var search = try #require(try sample(Overview.self, "overview").hunt?.search)
+        var search = try #require(try sample(Overview.self, "overview").hunt?.search.flat)
         search.rentWarmMax = nil
         search.moveInUntil = nil
         let json = try #require(try JSONSerialization.jsonObject(with: JSONEncoder().encode(search)) as? [String: Any])
@@ -138,8 +140,8 @@ struct DecodingTests {
         sources.append(["source": "newportal", "name": "New Portal", "state": "ok", "checked": NSNull(), "note": NSNull()])
         object["sources"] = sources
         let overview = try JSONDecoder().decode(Overview.self, from: JSONSerialization.data(withJSONObject: object))
-        #expect(overview.hunt?.search.sources == [.kleinanzeigen])
-        #expect(overview.hunt?.search.places.first?.sources == [.wgGesucht])
+        #expect(overview.hunt?.search.flat?.sources == [.kleinanzeigen])
+        #expect(overview.hunt?.search.flat?.places.first?.sources == [.wgGesucht])
         #expect(overview.sources.map(\.source) == [.wgGesucht, .kleinanzeigen, .immowelt, .immoscout24])
     }
 

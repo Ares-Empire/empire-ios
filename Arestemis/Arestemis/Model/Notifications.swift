@@ -38,6 +38,7 @@ struct ArestemisLink: Equatable {
 /// (`AppNavigation.follow`).
 enum MatchNotification {
     static let category = "ARESTEMIS_MATCH"
+    static let itemCategory = "ARESTEMIS_ITEM"
     static let openListingAction = "ARESTEMIS_OPEN_LISTING"
     static let applicationAction = "ARESTEMIS_APPLICATION"
 
@@ -47,7 +48,8 @@ enum MatchNotification {
         let application = UNNotificationAction(identifier: applicationAction, title: String(localized: "Application"),
                                                options: [.foreground], icon: UNNotificationActionIcon(systemImageName: "text.quote"))
         return [UNNotificationCategory(identifier: category, actions: [open, application], intentIdentifiers: [],
-                                       options: [])]
+                                       options: []),
+                UNNotificationCategory(identifier: itemCategory, actions: [open], intentIdentifiers: [], options: [])]
     }
 
     /// A tapped notification (or one of its actions) as a link; nil when it is not about a match.

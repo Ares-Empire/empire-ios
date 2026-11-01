@@ -23,7 +23,8 @@
         "furnished": true,
         "posted": "2026-10-24T08:44:00Z",
         "image_url": null,
-        "description": "Möbliert, befristet bis 31.03.2027. Warmmiete 950 €."
+        "description": "Möbliert, befristet bis 31.03.2027. Warmmiete 950 €.",
+        "item": null
       },
       "reason": "Sublet: limited until 31 Mar 2027."
     },
@@ -50,7 +51,8 @@
         "furnished": null,
         "posted": "2026-10-24T06:10:00Z",
         "image_url": null,
-        "description": "Wohnungstausch: Biete 2 Zimmer, suche 3 Zimmer."
+        "description": "Wohnungstausch: Biete 2 Zimmer, suche 3 Zimmer.",
+        "item": null
       },
       "reason": "Flat swap, not a rental."
     }

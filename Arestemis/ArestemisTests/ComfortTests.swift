@@ -25,7 +25,8 @@ struct ComfortTests {
         try transport.answer("POST /matches/41/state", encoding: changed)
         overview.latest.insert(changed, at: 0)
         try transport.answer("GET /overview", encoding: overview)
-        await undo.undo()
+        let undoAction = try #require(undo.undo)
+        await undoAction()
         #expect(store.match(41)?.state == earlier)
         #expect(store.matches(.all).map(\.id) == original)
         #expect(store.latest.map(\.id) == original)
@@ -50,7 +51,7 @@ struct ComfortTests {
         let offer = try #require(store.undo)
         session.logOut()
         #expect(store.undo == nil)
-        await offer.undo()
+        await offer.undo?()
         #expect(transport.requests("POST /matches/41/state").count == 1)
     }
 
@@ -85,7 +86,7 @@ struct ComfortTests {
     @Test func draftSurvivesRecreatingPersistenceAndKeepsInvalidFields() throws {
         let defaults = defaults()
         defer { KeptSearchDraft(defaults: defaults).clear() }
-        let search = try #require(try sample(Overview.self, "overview").hunt?.search)
+        let search = try #require(try sample(Overview.self, "overview").hunt?.search.flat)
         var draft = SearchDraft(search)
         draft.warmRent = .init(min: 1500, max: 1000)
         draft.moveInFrom = Clock.now
@@ -100,7 +101,7 @@ struct ComfortTests {
     @Test func changedServerSearchDropsTheDraft() throws {
         let defaults = defaults()
         defer { KeptSearchDraft(defaults: defaults).clear() }
-        var search = try #require(try sample(Overview.self, "overview").hunt?.search)
+        var search = try #require(try sample(Overview.self, "overview").hunt?.search.flat)
         let baseline = search
         var draft = SearchDraft(search)
         draft.extra = "Fictional draft"
@@ -114,7 +115,7 @@ struct ComfortTests {
     @Test func anotherAccountsDraftIsNeverShown() throws {
         let defaults = defaults()
         defer { KeptSearchDraft(defaults: defaults).clear() }
-        let search = try #require(try sample(Overview.self, "overview").hunt?.search)
+        let search = try #require(try sample(Overview.self, "overview").hunt?.search.flat)
         var draft = SearchDraft(search)
         draft.extra = "Fictional draft"
         let kept = KeptSearchDraft(defaults: defaults)
@@ -131,7 +132,7 @@ struct ComfortTests {
         let store = ArestemisStore(session: session, backend: ArestemisAPI(transport: transport, token: { session.token }),
                                    defaults: defaults)
         await store.reloadOverview()
-        let search = try #require(store.hunt?.search)
+        let search = try #require(store.hunt?.search.flat)
         var draft = SearchDraft(search)
         draft.extra = "Fictional draft"
         store.keepSearchDraft(draft, baseline: search)
@@ -145,6 +146,7 @@ struct ComfortTests {
             transport.answer("DELETE /hunts/1", 204, json: Data())
             var empty = try sample(Overview.self, "overview")
             empty.hunt = nil
+            empty.hunts = []
             empty.latest = []
             try transport.answer("GET /overview", encoding: empty)
             #expect(await store.deleteSearch())

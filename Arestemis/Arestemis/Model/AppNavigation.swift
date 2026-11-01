@@ -109,7 +109,7 @@ final class AppNavigation {
 }
 
 /// DEBUG launch arguments for screenshots: `-sampleData`, `-sampleNoHunt`, `-samplePaused`, `-sampleLoading`,
-/// `-tab hunt|listings|search`, `-filter new|saved|applied|all`, `-openMatch <id>`,
+/// `-sampleHunt <id>` (Listings for that hunt), `-tab hunt|listings|search`, `-filter new|saved|applied|all`, `-openMatch <id>`,
 /// `-openSheet settings|application|rejected|place|describe`, `-scrollBottom` (Hunt and Search),
 /// `-scrollTo size|rent|movein` (Search), `-sampleUndo`, `-sampleSearchDraft`,
 /// `-sampleMoreLoading`, `-sampleMoreFailure`, `-sampleLongDescription`; Settings → Application: `-sampleOwnMode` (the
@@ -125,6 +125,7 @@ struct LaunchOptions {
     var moreFailure = false
     var longDescription = false
     var ownMode = false
+    var sampleHunt: Int?
     var noTexts = false
     var tab: AppTab?
     var filter: MatchFilter?
@@ -138,6 +139,7 @@ struct LaunchOptions {
             guard let index = arguments.firstIndex(of: name), arguments.indices.contains(index + 1) else { return nil }
             return arguments[index + 1]
         }
+        sampleHunt = value("-sampleHunt").flatMap(Int.init)
         sample = arguments.contains("-sampleData")
         noHunt = arguments.contains("-sampleNoHunt")
         paused = arguments.contains("-samplePaused")
@@ -148,7 +150,7 @@ struct LaunchOptions {
         longDescription = arguments.contains("-sampleLongDescription")
         ownMode = arguments.contains("-sampleOwnMode")
         noTexts = arguments.contains("-sampleNoTexts")
-        tab = value("-tab").flatMap(AppTab.init(rawValue:))
+        tab = value("-tab").flatMap(AppTab.init(rawValue:)) ?? (sampleHunt == nil ? nil : .listings)
         filter = value("-filter").flatMap(MatchFilter.init(rawValue:))
         openMatch = value("-openMatch").flatMap(Int.init)
         openSheet = value("-openSheet")

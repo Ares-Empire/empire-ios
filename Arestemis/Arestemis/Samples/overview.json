@@ -66,7 +66,9 @@
     },
     "created": "2026-10-24T08:12:00Z",
     "updated": "2026-10-24T08:40:00Z",
-    "activated": "2026-10-24T08:41:00Z"
+    "activated": "2026-10-24T08:41:00Z",
+    "name": null,
+    "last_scan": "2026-10-24T10:02:00Z"
   },
   "sources": [
     {
@@ -100,8 +102,8 @@
   ],
   "last_scan": "2026-10-24T10:02:00Z",
   "counts": {
-    "new": 1,
-    "today": 2,
+    "new": 5,
+    "today": 6,
     "saved": 1,
     "applied": 1
   },
@@ -130,11 +132,14 @@
         "furnished": false,
         "posted": "2026-10-24T09:58:00Z",
         "image_url": null,
-        "description": "Wir vermieten ab 1. Dezember eine helle 2-Zimmer-Wohnung im 3. OG mit Südbalkon. Warmmiete 980 € inkl. Nebenkosten und Heizung. Einbauküche vorhanden, Keller, Fahrradkeller. U-Bahn Hohenzollernplatz 3 Minuten."
+        "description": "Wir vermieten ab 1. Dezember eine helle 2-Zimmer-Wohnung im 3. OG mit Südbalkon. Warmmiete 980 € inkl. Nebenkosten und Heizung. Einbauküche vorhanden, Keller, Fahrradkeller. U-Bahn Hohenzollernplatz 3 Minuten.",
+        "item": null
       },
       "reason": "€980 warm, 42 m² with a balcony in Schwabing, from 1 Dec — fits.",
       "warnings": [],
-      "application": null
+      "application": null,
+      "at_start": false,
+      "over_max": null
     },
     {
       "id": 40,
@@ -160,7 +165,8 @@
         "furnished": null,
         "posted": "2026-10-24T07:21:00Z",
         "image_url": null,
-        "description": "Ruhige 2-Zimmer-Wohnung, 51 m², 2. OG, Balkon zum Hof. Gesamtmiete 1.150 €. Bezug ab Januar."
+        "description": "Ruhige 2-Zimmer-Wohnung, 51 m², 2. OG, Balkon zum Hof. Gesamtmiete 1.150 €. Bezug ab Januar.",
+        "item": null
       },
       "reason": "51 m² for €1,150 warm in Freimann; the 40 m²+ limit of €1,200 applies.",
       "warnings": [
@@ -170,7 +176,9 @@
         "text": "Hallo,\n\nmit großem Interesse habe ich Ihre Anzeige für die 2-Zimmer-Wohnung in Freimann gelesen. ...",
         "mode": "ai",
         "created": "2026-10-24T07:25:00Z"
-      }
+      },
+      "at_start": false,
+      "over_max": null
     },
     {
       "id": 38,
@@ -196,11 +204,224 @@
         "furnished": true,
         "posted": "2026-10-23T18:05:00Z",
         "image_url": null,
-        "description": "Wir ziehen beide aus, die ganze Wohnung (2 Zimmer) wird neu vermietet. Du ziehst mit einer Person deiner Wahl ein."
+        "description": "Wir ziehen beide aus, die ganze Wohnung (2 Zimmer) wird neu vermietet. Du ziehst mit einer Person deiner Wahl ein.",
+        "item": null
       },
       "reason": "Whole 2-person WG is re-let; you choose the flatmate. €610 warm.",
       "warnings": [],
-      "application": null
+      "application": null,
+      "at_start": false,
+      "over_max": null
+    }
+  ],
+  "hunts": [
+    {
+      "hunt": {
+        "id": 1,
+        "kind": "flat",
+        "active": true,
+        "search": {
+          "kinds": [
+            "flat",
+            "wg"
+          ],
+          "people": 1,
+          "flatmates_max": 2,
+          "places": [
+            {
+              "id": "wg:90",
+              "name": "München",
+              "region": "Bayern",
+              "sources": [
+                "wg_gesucht",
+                "kleinanzeigen",
+                "immowelt",
+                "immoscout24"
+              ]
+            },
+            {
+              "id": "wg:400",
+              "name": "Garching bei München",
+              "region": "Bayern",
+              "sources": [
+                "wg_gesucht",
+                "kleinanzeigen",
+                "immowelt",
+                "immoscout24"
+              ]
+            }
+          ],
+          "districts": [
+            "Schwabing",
+            "Maxvorstadt",
+            "Freimann"
+          ],
+          "sqm_min": 28,
+          "sqm_max": null,
+          "room_sqm_min": 14,
+          "room_sqm_max": null,
+          "rooms_min": null,
+          "rent_cold_min": null,
+          "rent_cold_max": null,
+          "rent_warm_min": 400,
+          "rent_warm_max": 1000,
+          "move_in_from": "2026-12-01",
+          "move_in_until": "2027-02-01",
+          "sublet": "exclude",
+          "extra": "Balkon wäre schön, kein Erdgeschoss",
+          "sources": [
+            "wg_gesucht",
+            "kleinanzeigen",
+            "immowelt",
+            "immoscout24"
+          ]
+        },
+        "created": "2026-10-24T08:12:00Z",
+        "updated": "2026-10-24T08:40:00Z",
+        "activated": "2026-10-24T08:41:00Z",
+        "name": null,
+        "last_scan": "2026-10-24T10:02:00Z"
+      },
+      "counts": {
+        "new": 1,
+        "today": 2,
+        "saved": 1,
+        "applied": 1
+      },
+      "sources": [
+        "wg_gesucht",
+        "kleinanzeigen",
+        "immowelt",
+        "immoscout24"
+      ],
+      "slowed": false
+    },
+    {
+      "hunt": {
+        "id": 2,
+        "kind": "item",
+        "name": null,
+        "active": true,
+        "search": {
+          "query": "Herman Miller Aeron",
+          "exclude": [],
+          "price_min": null,
+          "price_max": 450,
+          "vb_over_max": 45,
+          "condition_min": null,
+          "for_parts": false,
+          "delivery": "either",
+          "places": [
+            {
+              "id": "wg:400",
+              "name": "Garching bei München",
+              "region": "Bayern",
+              "sources": [
+                "wg_gesucht",
+                "kleinanzeigen",
+                "immowelt",
+                "immoscout24"
+              ]
+            }
+          ],
+          "radius_km": 20,
+          "seller": "any",
+          "extra": "",
+          "sources": [
+            "kleinanzeigen"
+          ]
+        },
+        "created": "2026-10-24T08:12:00Z",
+        "updated": "2026-10-24T08:40:00Z",
+        "activated": "2026-10-24T08:41:00Z",
+        "last_scan": "2026-10-24T10:02:00Z"
+      },
+      "counts": {
+        "new": 4,
+        "today": 4,
+        "saved": 0,
+        "applied": 0
+      },
+      "sources": [
+        "kleinanzeigen"
+      ],
+      "slowed": false
+    },
+    {
+      "hunt": {
+        "id": 3,
+        "kind": "flat",
+        "active": false,
+        "search": {
+          "kinds": [
+            "flat",
+            "wg"
+          ],
+          "people": 1,
+          "flatmates_max": 2,
+          "places": [
+            {
+              "id": "wg:90",
+              "name": "München",
+              "region": "Bayern",
+              "sources": [
+                "wg_gesucht",
+                "kleinanzeigen",
+                "immowelt",
+                "immoscout24"
+              ]
+            },
+            {
+              "id": "wg:400",
+              "name": "Garching bei München",
+              "region": "Bayern",
+              "sources": [
+                "wg_gesucht",
+                "kleinanzeigen",
+                "immowelt",
+                "immoscout24"
+              ]
+            }
+          ],
+          "districts": [
+            "Schwabing",
+            "Maxvorstadt",
+            "Freimann"
+          ],
+          "sqm_min": 28,
+          "sqm_max": null,
+          "room_sqm_min": 14,
+          "room_sqm_max": null,
+          "rooms_min": null,
+          "rent_cold_min": null,
+          "rent_cold_max": null,
+          "rent_warm_min": 400,
+          "rent_warm_max": 1000,
+          "move_in_from": "2026-12-01",
+          "move_in_until": "2027-02-01",
+          "sublet": "exclude",
+          "extra": "Balkon wäre schön, kein Erdgeschoss",
+          "sources": [
+            "wg_gesucht",
+            "kleinanzeigen",
+            "immowelt",
+            "immoscout24"
+          ]
+        },
+        "created": "2026-10-24T08:12:00Z",
+        "updated": "2026-10-24T08:40:00Z",
+        "activated": null,
+        "name": "A quieter flat",
+        "last_scan": null
+      },
+      "counts": {
+        "new": 0,
+        "today": 0,
+        "saved": 0,
+        "applied": 0
+      },
+      "sources": [],
+      "slowed": false
     }
   ]
 }

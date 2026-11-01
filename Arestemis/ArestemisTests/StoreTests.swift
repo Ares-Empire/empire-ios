@@ -138,7 +138,7 @@ struct StoreTests {
         gate.resume()
         await pause.value
         #expect(store.hunt?.active == true && !store.isTogglingHunt)
-        #expect(store.notice?.text == "Could not pause the hunt. Login service unavailable, try again")
+        #expect(store.notice?.text == "Login service unavailable, try again")
         #expect(try body(transport.requests("POST /hunts/1/active").first)?["active"] as? Bool == false)
     }
 
@@ -147,23 +147,24 @@ struct StoreTests {
         let overview = try sample(Overview.self, "overview")
         var withoutHunt = overview
         withoutHunt.hunt = nil
+        withoutHunt.hunts = []
         withoutHunt.latest = []
         try transport.answer("GET /overview", encoding: withoutHunt)
         await store.reloadOverview()
         let hunt = try #require(overview.hunt)
         try transport.answer("POST /hunts", encoding: hunt)
-        #expect(await store.saveSearch(hunt.search))
+        #expect(await store.saveSearch(hunt.search.flat!))
         #expect(transport.requests("POST /hunts").count == 1 && transport.requests("PUT /hunts/1").isEmpty)
 
         try transport.answer("GET /overview", sample: "overview")
         await store.reloadOverview()
         try transport.answer("PUT /hunts/1", encoding: hunt)
-        #expect(await store.saveSearch(hunt.search))
+        #expect(await store.saveSearch(hunt.search.flat!))
         let sent = try #require(try body(transport.requests("PUT /hunts/1").first)?["search"] as? [String: Any])
         #expect(sent["rent_warm_max"] as? Double == 1000 && sent["people"] as? Int == 1)
 
         transport.answer("PUT /hunts/1", 400, json: Data(#"{"error":"At least one place","field":"places"}"#.utf8))
-        #expect(await store.saveSearch(hunt.search) == false)
+        #expect(await store.saveSearch(hunt.search.flat!) == false)
         #expect(store.searchError == "At least one place")
     }
 
@@ -175,6 +176,7 @@ struct StoreTests {
         transport.answer("DELETE /hunts/1", 204, json: Data())
         var afterDelete = try sample(Overview.self, "overview")
         afterDelete.hunt = nil
+        afterDelete.hunts = []
         afterDelete.latest = []
         try transport.answer("GET /overview", encoding: afterDelete)
         #expect(await store.deleteSearch())

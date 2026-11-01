@@ -8,7 +8,7 @@ struct SearchDraftTests {
     private let calendar = Clock.berlin
 
     private func sampleSearch() throws -> Search {
-        try #require(try sample(Overview.self, "overview").hunt?.search)
+        try #require(try sample(Overview.self, "overview").hunt?.search.flat)
     }
 
     private var munich: Place { Place(id: "wg:90", name: "München", region: "Bayern", sources: [.wgGesucht]) }

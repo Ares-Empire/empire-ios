@@ -55,11 +55,11 @@ struct APITests {
         }
 
         func call(_ api: ArestemisAPI) async throws {
-            let search = try #require(try sample(Overview.self, "overview").hunt?.search)
+            let search = try #require(try sample(Overview.self, "overview").hunt?.search.flat)
             switch self {
             case .overview: _ = try await api.overview()
             case .createHunt: _ = try await api.createHunt(search)
-            case .updateHunt: _ = try await api.updateHunt(id: 1, search: search)
+            case .updateHunt: _ = try await api.updateHunt(id: 1, search: .flat(search), name: nil)
             case .startHunt: _ = try await api.setHunt(id: 1, active: true)
             case .deleteHunt: try await api.deleteHunt(id: 1)
             case .parse: _ = try await api.parse("2 rooms in Schwabing")
@@ -97,9 +97,9 @@ struct APITests {
         switch route {
         case .createHunt, .updateHunt:
             let search = try #require(json?["search"] as? [String: Any])
-            #expect(json?.count == 1 && search["kinds"] as? [String] == ["flat", "wg"])
+            #expect(json?.count == (route == .createHunt ? 3 : 2) && json?["name"] is NSNull && search["kinds"] as? [String] == ["flat", "wg"])
         case .startHunt: #expect(json?["active"] as? Bool == true && json?.count == 1)
-        case .parse: #expect(json?["text"] as? String == "2 rooms in Schwabing" && json?.count == 1)
+        case .parse: #expect(json?["text"] as? String == "2 rooms in Schwabing" && json?["kind"] as? String == "flat" && json?.count == 2)
         case .state: #expect(json?["state"] as? String == "saved" && json?.count == 1)
         case .application: #expect(json?.isEmpty == true)
         case .regenerate: #expect(json?["regenerate"] as? Bool == true && json?.count == 1)

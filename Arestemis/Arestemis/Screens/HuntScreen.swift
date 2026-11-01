@@ -21,7 +21,7 @@ struct HuntScreen: View {
                                 Text(error).font(AppFont.text(12)).foregroundStyle(Ink.muted)
                                     .frame(maxWidth: .infinity).multilineTextAlignment(.center).padding(.bottom, 10)
                             }
-                            HuntCard(hunt: store.hunt, busy: store.isTogglingHunt,
+                            FlatHuntCard(hunt: store.hunt, busy: store.isTogglingHunt,
                                      toggle: { active in Task { await store.setHuntActive(active) } },
                                      setUp: { navigation.tab = .search })
                             if let overview = store.overview, overview.hunt != nil {
@@ -167,7 +167,7 @@ struct HuntScreen: View {
 
 /// The hunt's card: status, what and where, and the one button (Start hunting / Pause). Without a hunt: the way to
 /// set one up.
-private struct HuntCard: View {
+private struct FlatHuntCard: View {
     let hunt: Hunt?
     let busy: Bool
     let toggle: (Bool) -> Void
@@ -175,14 +175,14 @@ private struct HuntCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if let hunt {
+            if let hunt, let search = hunt.search.flat {
                 HStack(spacing: 9) {
                     StatusDot(active: hunt.active)
                     StatusLabel(text: hunt.active ? String(localized: "Hunting") : String(localized: "Paused"), tone: hunt.active ? .accent : .inactive,
                                 accent: Look.accent)
                 }
                 .accessibilityElement(children: .combine)
-                let summary = SearchSummary(hunt.search)
+                let summary = SearchSummary(search)
                 Text(summary.wrappingKinds).font(AppFont.text(20, weight: .semibold)).foregroundStyle(Ink.primary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 14)

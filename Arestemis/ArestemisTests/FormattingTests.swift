@@ -74,7 +74,7 @@ struct FormattingTests {
 
     @Test func summaryOfTheSampleSearch() throws {
         let hunt = try #require(try sample(Overview.self, "overview").hunt)
-        let summary = SearchSummary(hunt.search, now: now, calendar: calendar)
+        let summary = SearchSummary(hunt.search.flat!, now: now, calendar: calendar)
         #expect(summary.kinds == "Flat or WG room")
         #expect(summary.details == "München, Garching · €400–1,000 warm · 1 Dec – 1 Feb")
         #expect(summary.parts.count == 3)
@@ -180,7 +180,7 @@ extension FormattingTests {
 
     @Test func germanSummary() throws {
         let hunt = try #require(try sample(Overview.self, "overview").hunt)
-        let summary = SearchSummary(hunt.search, now: now, calendar: calendar, language: .german)
+        let summary = SearchSummary(hunt.search.flat!, now: now, calendar: calendar, language: .german)
         #expect(summary.kinds == "Wohnung oder WG-Zimmer")
         #expect(summary.details == "München, Garching · 400–1.000\u{a0}€ warm · 1. Dez. – 1. Feb.")
         let both = SearchSummary(search(kinds: [.wg, .flat], people: 2, warm: 1150, until: "2027-02-01"),
