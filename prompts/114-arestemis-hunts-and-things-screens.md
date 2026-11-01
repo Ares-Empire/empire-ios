@@ -1,6 +1,6 @@
 # 114: Arestemis app: the Hunts list, the thing search and the thing cards (screens)
 
-Status: draft
+Status: merged 2026-11-02 (empire-ios 03d4503, 149 tests; designed by a Claude agent, Claude fixed the auction and shipping texts and kept Patrik's Settings wording under "Flat applications"). Uploaded as Arestemis build 6.
 Branch: `claude/114-arestemis-screens` · Worktree: `../empire-ios-114-arestemis-screens` · **For a Claude agent**
 (design work stays with Claude: `CLAUDE.md` → Workflow)
 
