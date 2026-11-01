@@ -1,6 +1,6 @@
 # 86: Sorting round 2: an experiment with a list of local places from OpenStreetMap
 
-Status: brief
+Status: merged 2026-11-01 as an experiment, off by default (aresium b04ff9b; known places right 187 -> 437 of 500, wrong unchanged; Patrik +5 right; memory on the phone not measured yet)
 Repo: **aresium** · Worktree: `../aresium-86-local-places` (branch `codex/86-local-places`) · Model: `gpt-6.1-sol`,
 effort `high` · An experiment: Claude decides from your numbers whether it goes into the app.
 
