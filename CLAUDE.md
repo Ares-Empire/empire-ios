@@ -524,6 +524,23 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   server's best matches (`GET /search`, by words and meaning; `BestMatches`: asked once typing pauses, a newer query
   cancels the older, 5 s timeout, nothing shown on failure) above the device's results; sample mode answers every
   query with `Samples/search.json`.
+  **Notes go in the background** (brief 75, Patrik's first day on the phone, 2026-11-01: "notes lock me in the note
+  creation screen while waiting to be sent"): Save in a note sheet and Later in Discuss call
+  `VaultStore.queueQuickNote` (synchronous: the note is written to `quick-notes.json` first) and close at once; the
+  store's own task sends the queue in order, holding an iOS background grant (`QuickNoteBackgroundTask`) so a note saved
+  just before leaving the app still goes; what is left goes with the next refresh. Success is silent; the tabs'
+  "N quick notes waiting" counts only notes that already failed once (`failedQuickNotes`), so it never flashes after a
+  Save; a 422 shows the notice and keeps the note under "Not sent yet". **The vault off the main thread** (same brief;
+  Patrik: "slight lags initially"): decoding (`ArestotelesAPI.decode`, `@concurrent`), comparing, building
+  `VaultIndex`/`VaultSearch`/`TabSearch` and reading/writing `vault.json` run on `VaultWorker` (one serial queue, so a
+  logout's delete always follows an accepted save); the main actor only assigns the results after its context and
+  `vaultRevision` checks, so a late answer never replaces a newer vault or outlives a logout. Measured on the simulator
+  with a made-up vault as large as the real one (80 notes, 305 KB, 540 passages): the main actor's share went from about
+  90 ms to under 0.4 ms at a launch from the saved vault, the first download and an edit's answer
+  (`TEST_RUNNER_VAULT_TIMINGS=1` with `-only-testing:ArestotelesTests/VaultTimingTests`). The saved vault is now read
+  after the first frame, so while it is read (`VaultStore.isLoadingSaved`) ContentView shows the plain
+  `LaunchBackground`, iOS's launch screen, not the loading screen (Claude, checked by recording launches: no flash, the
+  launch as long as before). DEBUG: `-quickNoteText <text>` fills the open note sheet, `-saveQuickNote` then saves.
 - **Aresium phone mode** (2026-10-27, briefs 15, 18 and 22; plan `ares-empire/docs/ARESIUM-FOR-OTHERS.md`): everyone
   but Patrik keeps their Aresium data on their iPhone. **No account** (Patrik, 2026-10-27, brief 22): Aresium opens in
   phone mode on the phone's one store at once, without a login and without waiting for any server (`ModeStore.start`);

@@ -15,7 +15,8 @@ struct QuickNoteTests {
 
     @Test func sentAtOnceAndVerbatim() async throws {
         let h = try await online()
-        #expect(await h.store.addQuickNote("  paper was the bottleneck?? check\n") == .sent)
+        #expect(h.store.queueQuickNote("  paper was the bottleneck?? check\n") == .queued)
+        await h.store.quickNotesSettled()
         #expect(try h.transport.edits().only as? [String: String]
                 == ["op": "quick_note", "text": "  paper was the bottleneck?? check\n"])
         #expect(h.store.pendingQuickNotes.isEmpty && h.persistence.quickNotes.isEmpty)
@@ -24,15 +25,17 @@ struct QuickNoteTests {
 
     @Test func emptyNotesAreNotKept() async throws {
         let h = try await online()
-        #expect(await h.store.addQuickNote(" \n ") == .empty)
+        #expect(h.store.queueQuickNote(" \n ") == .empty)
         #expect(h.store.pendingQuickNotes.isEmpty && h.transport.requests("POST /edits").isEmpty)
     }
 
     @Test func offlineTheyWaitAndGoOutInOrder() async throws {
         let h = try await online()
         h.transport.failure = URLError(.notConnectedToInternet)
-        #expect(await h.store.addQuickNote("first") == .waiting)
-        #expect(await h.store.addQuickNote("second") == .waiting)
+        #expect(h.store.queueQuickNote("first") == .queued)
+        await h.store.quickNotesSettled()
+        #expect(h.store.queueQuickNote("second") == .queued)
+        await h.store.quickNotesSettled()
         #expect(h.store.pendingQuickNotes.map(\.text) == ["first", "second"])
         #expect(h.persistence.quickNotes.map(\.text) == ["first", "second"])
         #expect(h.store.isOffline)
@@ -58,13 +61,16 @@ struct QuickNoteTests {
     @Test func aRefusedNoteStaysAsideUntilDeleted() async throws {
         let h = try await online()
         h.transport.answer("POST /edits", 422, json: Data(#"{"error":"Made-up refusal"}"#.utf8))
-        #expect(await h.store.addQuickNote("odd one") == .waiting)
+        #expect(h.store.queueQuickNote("odd one") == .queued)
+        await h.store.quickNotesSettled()
         let refused = try #require(h.store.pendingQuickNotes.only)
         #expect(refused.problem == "Made-up refusal" && h.persistence.quickNotes.first?.problem == "Made-up refusal")
         #expect(h.store.notice?.text == "A quick note was not saved: Made-up refusal")
+        #expect(h.store.waitingQuickNoteCount == 0)
 
         try h.transport.answer("POST /edits", sample: "edit-result")
-        #expect(await h.store.addQuickNote("next one") == .sent)  // the refused one does not block the queue
+        #expect(h.store.queueQuickNote("next one") == .queued)  // the refused one does not block the queue
+        await h.store.quickNotesSettled()
         #expect(try h.transport.edits().map { $0["text"] as? String } == ["odd one", "next one"])
         h.store.deleteQuickNote(refused.id)
         #expect(h.store.pendingQuickNotes.isEmpty && h.persistence.quickNotes.isEmpty)
@@ -73,8 +79,9 @@ struct QuickNoteTests {
     @Test func aServerErrorKeepsTheNoteForLater() async throws {
         let h = try await online()
         h.transport.answer("POST /edits", 409, json: Data(#"{"error":"Push conflict, try again."}"#.utf8))
-        #expect(await h.store.addQuickNote("keep me") == .waiting)
-        #expect(h.store.pendingQuickNotes.only?.problem == nil)
+        #expect(h.store.queueQuickNote("keep me") == .queued)
+        await h.store.quickNotesSettled()
+        #expect(h.store.pendingQuickNotes.only?.problem == nil && h.store.waitingQuickNoteCount == 1)
     }
 
     @Test func theyWaitWhileTheLoginWaits() async throws {
@@ -84,15 +91,18 @@ struct QuickNoteTests {
         let session = EmpireSession(app: .arestoteles, storage: storage, client: EmpireAuthClient(transport: auth))
         let h = try await makeStore(session: session)
         await session.restore()
-        #expect(await h.store.addQuickNote("no login yet") == .waiting)
+        #expect(h.store.queueQuickNote("no login yet") == .queued)
+        await h.store.quickNotesSettled()
         #expect(h.transport.requests.isEmpty)
     }
 
     @Test func aLogoutForgetsThem() async throws {
         let h = try await online()
         h.transport.failure = URLError(.notConnectedToInternet)
-        await h.store.addQuickNote("unsent")
+        h.store.queueQuickNote("unsent")
+        await h.store.quickNotesSettled()
         h.session.logOut()
+        await h.store.persistenceSettled()
         #expect(h.store.pendingQuickNotes.isEmpty && h.persistence.quickNotes.isEmpty)
     }
 }

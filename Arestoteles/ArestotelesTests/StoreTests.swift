@@ -93,7 +93,7 @@ struct StoreTests {
     }
 
     @Test(arguments: ["account-a", "account-b", nil] as [String?])
-    func launchUsesTheMarkerBeforeRestoringOrReadingAToken(account: String?) throws {
+    func launchUsesTheMarkerBeforeRestoringOrReadingAToken(account: String?) async throws {
         let suite = "arestoteles.tests.marker." + UUID().uuidString
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
@@ -103,6 +103,7 @@ struct StoreTests {
         let persistence = try saved()
         let store = VaultStore(session: session, backend: ArestotelesAPI(token: { nil }), persistence: persistence,
                                spotlight: NoSpotlight(), savedAccount: { LoginMarker.account(in: defaults) })
+        await store.loadingSettled()
         #expect(session.token == nil && session.isRestoring)
         #expect((store.vault != nil) == (account == "account-a"))
         #expect((persistence.vault != nil) == (account == "account-a"))
@@ -187,6 +188,7 @@ struct StoreTests {
         #expect(h.store.pendingQuickNotes.count == 1)
         h.transport.answer("GET /vault", 401, json: Data())
         await h.store.refresh()
+        await h.store.persistenceSettled()
         #expect(!h.session.isSignedIn && storage.token == nil)
         #expect(h.store.vault == nil && h.store.pendingQuickNotes.isEmpty && h.store.loadError == nil)
         #expect(persistence.vault == nil && persistence.quickNotes.isEmpty)
@@ -199,6 +201,7 @@ struct StoreTests {
         let h = try await makeStore(session: await signedInSession(storage: storage), persistence: try saved())
         h.transport.answer("GET /vault", 403, json: Data(#"{"error":"No arestoteles service."}"#.utf8))
         await h.store.refresh()
+        await h.store.persistenceSettled()
         #expect(h.session.isDenied && h.session.access == .denied("No arestoteles service."))
         #expect(storage.token != nil)                              // the other apps keep the login
         #expect(h.store.vault == nil && h.persistence.vault == nil)
@@ -213,6 +216,7 @@ struct StoreTests {
         h.session.logOut()
         gate.resume()
         await load.value
+        await h.store.persistenceSettled()
         #expect(h.store.vault == nil && h.persistence.vault == nil && !h.store.isRefreshing)
     }
 

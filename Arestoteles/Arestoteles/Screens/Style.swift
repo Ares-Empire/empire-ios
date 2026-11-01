@@ -234,7 +234,7 @@ struct StatusLine: View {
     @Environment(VaultStore.self) private var store
 
     var body: some View {
-        let waiting = store.pendingQuickNotes.count { $0.problem == nil }
+        let waiting = store.waitingQuickNoteCount
         if store.isOffline || waiting > 0 || store.loadError != nil {
             VStack(spacing: 4) {
                 if store.isOffline {

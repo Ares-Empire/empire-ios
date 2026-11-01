@@ -1,7 +1,8 @@
 import Foundation
+import Synchronization
 
 /// The last vault the app had, with what it needs to ask the server whether it is still current.
-struct CachedVault: Codable, Equatable, Sendable {
+nonisolated struct CachedVault: Codable, Equatable, Sendable {
     let vault: Vault
     /// The server's `ETag` for it; nil after an edit (the edit's answer carries no ETag).
     let etag: String?
@@ -10,7 +11,7 @@ struct CachedVault: Codable, Equatable, Sendable {
 }
 
 /// A quick note typed in the app, waiting to be sent (`quick_note`), possibly offline.
-struct PendingQuickNote: Codable, Equatable, Identifiable, Sendable {
+nonisolated struct PendingQuickNote: Codable, Equatable, Identifiable, Sendable {
     let id: UUID
     let text: String
     let created: Date
@@ -43,18 +44,19 @@ struct PendingQuickNote: Codable, Equatable, Identifiable, Sendable {
 
 /// Where the app keeps what must survive a restart: the last vault (so it opens offline) and the quick notes not yet
 /// sent. Both are forgotten on logout.
-protocol VaultPersistence {
+nonisolated protocol VaultPersistence: Sendable {
     func loadVault() -> CachedVault?
     func saveVault(_ cached: CachedVault) throws
     func loadQuickNotes() -> [PendingQuickNote]
     func saveQuickNotes(_ notes: [PendingQuickNote]) throws
+    func deleteVault() throws
     /// Logout: everything above is deleted.
     func deleteAll() throws
 }
 
 /// Files in Application Support/Arestoteles: `vault.json`, `quick-notes.json`. Written atomically and protected by the
 /// device's data protection.
-struct FilePersistence: VaultPersistence {
+nonisolated struct FilePersistence: VaultPersistence {
     let directory: URL
 
     /// The app's own folder in Application Support.
@@ -87,8 +89,10 @@ struct FilePersistence: VaultPersistence {
         }
     }
 
+    func deleteVault() throws { try remove(vaultFile) }
+
     func deleteAll() throws {
-        try remove(vaultFile)
+        try deleteVault()
         try remove(quickNotesFile)
     }
 
@@ -117,21 +121,29 @@ struct FilePersistence: VaultPersistence {
 }
 
 /// In memory only: tests, and sample mode (which must never touch the real files).
-final class MemoryPersistence: VaultPersistence {
-    var vault: CachedVault?
-    var quickNotes: [PendingQuickNote] = []
+nonisolated final class MemoryPersistence: VaultPersistence {
+    private struct State: Sendable {
+        var vault: CachedVault?
+        var quickNotes: [PendingQuickNote]
+    }
+    private let state: Mutex<State>
+    var vault: CachedVault? {
+        get { state.withLock { $0.vault } }
+        set { state.withLock { $0.vault = newValue } }
+    }
+    var quickNotes: [PendingQuickNote] {
+        get { state.withLock { $0.quickNotes } }
+        set { state.withLock { $0.quickNotes = newValue } }
+    }
 
     init(vault: CachedVault? = nil, quickNotes: [PendingQuickNote] = []) {
-        self.vault = vault
-        self.quickNotes = quickNotes
+        state = Mutex(State(vault: vault, quickNotes: quickNotes))
     }
 
     func loadVault() -> CachedVault? { vault }
     func saveVault(_ cached: CachedVault) throws { vault = cached }
     func loadQuickNotes() -> [PendingQuickNote] { quickNotes }
     func saveQuickNotes(_ notes: [PendingQuickNote]) throws { quickNotes = notes }
-    func deleteAll() throws {
-        vault = nil
-        quickNotes = []
-    }
+    func deleteVault() throws { vault = nil }
+    func deleteAll() throws { state.withLock { $0.vault = nil; $0.quickNotes = [] } }
 }

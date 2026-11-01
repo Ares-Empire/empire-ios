@@ -11,7 +11,7 @@ import Foundation
 /// - **Library:** mechanisms, events, questions and actors together, by title, summary (without one: the first
 ///   paragraph, which the row then shows) and an event's places. Titles that start with the query first, then titles
 ///   that hold it, then the rest; by title within each.
-struct TabSearch: Sendable {
+nonisolated struct TabSearch: Sendable {
     struct PositionGroup: Equatable, Sendable {
         let title: String
         let note: String

@@ -241,11 +241,8 @@ struct DiscussSheet: View {
                         }
                         VStack(alignment: .leading, spacing: 10) {
                             Button {
-                                let typed = question
-                                Task {
-                                    if await store.addQuickNote(typed, about: subject.id, kind: .discuss) != .empty {
-                                        dismiss()
-                                    }
+                                if store.queueQuickNote(question, about: subject.id, kind: .discuss) == .queued {
+                                    dismiss()
                                 }
                             } label: {
                                 Label("Later", systemImage: "bookmark")
@@ -299,7 +296,6 @@ extension DiscussSubject {
 struct QuickNoteSheet: View {
     let about: DiscussSubject?
     @State private var text = ""
-    @State private var waitingNow = false
     @FocusState private var focused: Bool
     @Environment(VaultStore.self) private var store
     @Environment(\.dismiss) private var dismiss
@@ -317,10 +313,6 @@ struct QuickNoteSheet: View {
                         .padding(12).glassCard()
                     Text("Goes to the vault's Inbox as you write it; Claude works it in later.")
                         .font(AppFont.text(12)).foregroundStyle(Ink.muted)
-                    if waitingNow {
-                        Text("Saved on the phone. It goes to the Inbox once the server can be reached.")
-                            .font(AppFont.text(13)).foregroundStyle(Ink.secondary)
-                    }
                     if !store.pendingQuickNotes.isEmpty {
                         SectionHeading(text: String(localized: "Not sent yet")).padding(.top, 10)
                         ForEach(store.pendingQuickNotes) { note in PendingRow(note: note) }
@@ -330,23 +322,31 @@ struct QuickNoteSheet: View {
             }
         } actions: {
             ToolbarItem(placement: .confirmationAction) {
-                Button("Save") {
-                    let typed = text
-                    Task {
-                        switch await store.addQuickNote(typed, about: about?.id) {
-                        case .sent: dismiss()
-                        case .waiting:
-                            text = ""
-                            waitingNow = true
-                        case .empty: break
-                        }
-                    }
-                }
-                .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                Button("Save", action: save)
+                    .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
         }
         .interactiveDismissDisabled(DraftChanges.hasChanges(text))
         .onAppear { focused = true }
+        .task {
+            #if DEBUG
+            // Sample-only screenshot driver: fills the field, then invokes the same Save action.
+            let arguments = LaunchArguments.current
+            if store.isSample, let index = arguments.firstIndex(of: "-quickNoteText"),
+               arguments.indices.contains(index + 1) {
+                text = arguments[index + 1]
+                if arguments.contains("-saveQuickNote") {
+                    try? await Task.sleep(for: .seconds(2))
+                    guard !Task.isCancelled else { return }
+                    save()
+                }
+            }
+            #endif
+        }
+    }
+
+    private func save() {
+        if store.queueQuickNote(text, about: about?.id) == .queued { dismiss() }
     }
 }
 
