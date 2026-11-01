@@ -1,6 +1,6 @@
 # 68: Every category has a side: the engine
 
-Status: draft
+Status: running (Codex, 2026-11-01)
 Repo: **aresium** · Worktree: `../aresium-68-category-sides` (branch `codex/68-category-sides`) · Model: `gpt-6.1-sol`,
 effort `high` · The app's side follows in brief 69 (a Claude agent wires it into empire-ios).
 
