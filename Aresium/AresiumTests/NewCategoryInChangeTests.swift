@@ -3,9 +3,9 @@ import Testing
 @testable import Aresium
 
 /// Brief 60: a new category straight from the change window. The window's New category tile makes one of one's own
-/// categories through Settings → Categories' own path (`PhoneBackend.addCustom(named:)`), shows it before the tile and
+/// categories through Settings → Categories' own path (`PhoneBackend.addCustom(named:side:)`), shows it before the tile and
 /// picks it; Save then moves or adds the payment as with any category, and the shop question follows a Switch. A name
-/// problem makes nothing and keeps the typed name; Cancel keeps the category. Phone mode and money out only; the tour's
+/// problem makes nothing and keeps the typed name; Cancel keeps the category. Phone mode, both directions; the tour's
 /// window works on the tour's store. Everything is made up.
 @MainActor
 struct NewCategoryInChangeTests {
@@ -140,7 +140,7 @@ struct NewCategoryInChangeTests {
     @Test(arguments: ["Lebensmittel", "GROCERIES", "Bargeld", "Cash", "Not sorted", "Boulder", "   "])
     func aTakenReservedOrEmptyNameMakesNothingAndKeepsTheName(name: String) async throws {
         let (phone, dashboard) = try await phoneDashboard()
-        try await phone.addCustom(named: "Boulder")              // one of one's own, made earlier
+        try await phone.addCustom(named: "Boulder", side: .spend)              // one of one's own, made earlier
         await dashboard.reload()
         let store = try await window(dashboard, place: "REWE")
         let before = try await own(phone)
@@ -157,7 +157,7 @@ struct NewCategoryInChangeTests {
         let settings = CategoryPickerModel(phone: phone, changed: {})
         await settings.load()
         settings.newName = name
-        await settings.addCustom()
+        await settings.addCustom(side: .spend)
         let problem = try #require(store.newCategory.problem)
         #expect(problem == settings.problem)
         let expected = name.trimmingCharacters(in: .whitespaces).isEmpty ? LedgerError.emptyName : LedgerError.nameTaken
@@ -228,24 +228,23 @@ struct NewCategoryInChangeTests {
         #expect(store.newCategory.problem == nil && store.target == nil)
     }
 
-    /// Money in moves among the income list, which takes a category only once its payments add up to money in: one made
-    /// just now is a spending one, so there is no tile for money in.
-    @Test func noTileForMoneyInWhoseListCannotHoldANewCategory() async throws {
+    @Test func moneyInMakesAnIncomeCategoryAndPicksIt() async throws {
         let (phone, dashboard) = try await phoneDashboard()
         let salary = try await window(dashboard, place: "Employer")
-        #expect(!salary.choices.isEmpty)
-        #expect(!salary.offersNewCategory)
+        #expect(salary.offersNewCategory)
         salary.beginNewCategory()
-        #expect(!salary.newCategory.isAsking)
-        #expect(!Dashboard.takesNewCategory(amount: 2100) && Dashboard.takesNewCategory(amount: -23.45))
-
-        // The engine's lists: a category made just now is a choice for money out only.
-        try await phone.addCustom(named: "Nebenjob")
-        await dashboard.reloadAfterTransactionChange()
+        #expect(salary.newCategory.isAsking)
+        salary.newCategory.name = "Side work"
+        await salary.createCategory()
+        let made = try #require(try await phone.ledger.chosen().first { $0.name == "Side work" })
+        #expect(made.side == "income" && !made.otherSide)
+        #expect(salary.target == "Side work" && salary.choices.last?.name == "Side work")
         let built = try #require(dashboard.dashboard)
-        #expect(built.recategorisationChoices(amount: -10).contains { $0.name == "Nebenjob" })
-        #expect(!built.recategorisationChoices(amount: 10).contains { $0.name == "Nebenjob" })
-        #expect(!salary.choices.contains { $0.name == "Nebenjob" })
+        #expect(!built.recategorisationChoices(amount: -10).contains { $0.name == "Side work" })
+        #expect(built.recategorisationChoices(amount: 10).contains { $0.name == "Side work" })
+        await salary.save()
+        #expect(salary.saveError == nil)
+        #expect(try await phone.ledger.payment(salary.paymentID)?.category == made.id)
     }
 
     // MARK: the tour
@@ -259,7 +258,7 @@ struct NewCategoryInChangeTests {
         let person = try await PhoneTest.backend(storage: personal, chosen: ["groceries", "eating-out"])
         _ = try await person.importFiles([PhoneTest.vrBank([("01.10.2026", "REWE Markt GmbH", "REWE", -2000)])],
                                          auth: none)
-        try await person.addCustom(named: "Boulder")
+        try await person.addCustom(named: "Boulder", side: .spend)
         let before = try await person.ledger.export(on: Self.now)
 
         let parent = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
@@ -326,6 +325,7 @@ struct NewCategoryInWindowsTests {
         await check.createCategory()
         let made = try #require(try await phone.categories().custom.first)
         #expect(made.name == "Fiktiv Markt")
+        #expect(try await phone.ledger.chosen().first { $0.id == made.id }?.side == "spend")
         #expect(check.category == made.id, "picked in the window")
         let offered = try #require(check.choices.first { $0.id == made.id })
         #expect(offered.look == made.look)
@@ -390,12 +390,14 @@ struct NewCategoryInWindowsTests {
         await window.createCategory()
         let made = try #require(try await phone.categories().custom.first)
         #expect(window.category == made.id, "picked")
+        #expect(try await phone.ledger.chosen().first { $0.id == made.id }?.side == CategorySide(direction: direction).rawValue)
         #expect(window.choices.contains { $0.id == made.id } && window.choices.last?.id == nil)
         #expect(window.hasChanges, "Cancel asks first")
-        // One's own is in both lists: switching sides keeps it.
+        // A new own category belongs to this direction only.
         window.direction = direction == .out ? .in : .out
-        #expect(window.category == made.id)
+        #expect(window.category == nil)
         window.direction = direction
+        window.category = made.id
 
         window.amountText = "12"
         let saved = try #require(await window.save())

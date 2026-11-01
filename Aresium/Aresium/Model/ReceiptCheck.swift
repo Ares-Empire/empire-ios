@@ -242,16 +242,14 @@ final class ReceiptCheckModel {
     @discardableResult
     private func loadChoices() async -> PhoneCategoryList? {
         guard let list = try? await phone.categories(language: language) else { return nil }
-        choices = list.chosen.compactMap { chosen in
-            list.name(of: chosen.id).map { Choice(id: chosen.id, name: $0, look: list.look(of: chosen.id)) }
-        } + [Choice(id: nil, name: list.notSortedName, look: nil)]
+        choices = CashCategories.choices(list, for: .out)
         return list
     }
 
     /// The menu's New category… (brief 60): the category is made (`NewCategoryModel`), offered and picked here. It is a
     /// change of the person's, so Cancel asks first; the category stays after Cancel.
     func createCategory() async {
-        await newCategory.create(in: phone) { id, _ in
+        await newCategory.create(in: phone, side: .spend) { id, _ in
             await loadChoices()
             guard choices.contains(where: { $0.id == id }) else { return nil }
             category = id

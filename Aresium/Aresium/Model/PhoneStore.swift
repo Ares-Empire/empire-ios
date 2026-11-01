@@ -12,7 +12,7 @@ import SwiftData
 // shop as read, and adds the shop-name corrections, a lightweight stage too (a new model, attributes with defaults);
 // version 4 (brief 36) gives one's own categories their icon and colour, a lightweight stage (attributes with defaults;
 // the looks themselves are chosen when the store is opened); version 5 (brief 43) adds payment names and name rules,
-// also lightweight. The older versions' models stay below, unchanged, so their stores are recognised and moved on
+// also lightweight; version 6 (brief 69) adds home sides and other-side offers, assigned once at opening. The older versions' models stay below, unchanged, so their stores are recognised and moved on
 // (`ReceiptBookTests` opens one made by version 1's code,
 // `ReceiptCorrectionTests` one made by version 2's, `OwnCategoryLookTests` one made by version 3's).
 
@@ -893,31 +893,252 @@ nonisolated enum LedgerSchemaV5: VersionedSchema {
 
 }
 
+/// Version 6 (brief 69): categories keep their home side and whether the other side offers them.
+nonisolated enum LedgerSchemaV6: VersionedSchema {
+    static let versionIdentifier = Schema.Version(6, 0, 0)
+    static var models: [any PersistentModel.Type] {
+        [Account.self, Payment.self, Chosen.self, Rule.self, Layout.self, Receipt.self, ShopName.self, PaymentName.self]
+    }
+
+    /// A bank account, card or PayPal account the person imported from.
+    @Model final class Account {
+        /// The account's key (`AccountKey`): "iban:DE…", "paypal", "bank:<profile>…", "layout:<header>".
+        @Attribute(.unique) var id: String
+        var name: String
+        var iban: String?
+        var bank: String?
+        var currency: String?
+
+        init(id: String, name: String, iban: String?, bank: String?, currency: String?) {
+            self.id = id
+            self.name = name
+            self.iban = iban
+            self.bank = bank
+            self.currency = currency
+        }
+    }
+
+    /// One payment. Unique by (account, source, `externalId`), kept as `key`.
+    @Model final class Payment {
+        @Attribute(.unique) var id: String
+        @Attribute(.unique) var key: String
+        var account: String
+        /// "bank" or "paypal".
+        var source: String
+        var externalId: String
+        /// `YYYY-MM-DD`.
+        var bookingDate: String
+        var valueDate: String?
+        /// The bank's amount as a decimal string ("-12.30"); negative = money out.
+        var amount: String
+        var currency: String
+        var text: String
+        var counterparty: String?
+        /// The other party's IBAN, where the file has one (the own-transfer proof).
+        var counterpartyIban: String?
+        var balance: String?
+        /// The bank's original row, as JSON.
+        var raw: Data
+        /// A category id (a default one, a built-in, or "custom-…"), or nil: not sorted.
+        var category: String?
+        /// Who set the category: `CategorySource`'s raw value.
+        var categorySource: String
+        /// Extra ("Add") categories it is also listed under.
+        var extraCategories: [String]
+        /// The order it was added in, so payments of one day keep their order.
+        var sequence: Int
+        /// The name for this payment alone; nil lets the shop rule apply.
+        var ownName: String? = nil
+
+        init(_ value: LedgerPayment) {
+            id = value.id
+            key = LedgerPayment.key(account: value.account, source: value.source, externalId: value.externalId)
+            account = value.account
+            source = value.source
+            externalId = value.externalId
+            bookingDate = value.bookingDate
+            valueDate = value.valueDate
+            amount = value.amount
+            currency = value.currency
+            text = value.text
+            counterparty = value.counterparty
+            counterpartyIban = value.counterpartyIban
+            balance = value.balance
+            raw = (try? JSONEncoder().encode(value.raw ?? .null)) ?? Data("null".utf8)
+            category = value.category
+            categorySource = value.categorySource.rawValue
+            extraCategories = value.extraCategories
+            sequence = value.sequence
+            ownName = value.ownName
+        }
+    }
+
+    /// A category the person chose: a default one by id, or their own (`custom-…`, with its name and its look).
+    @Model final class Chosen {
+        @Attribute(.unique) var id: String
+        var customName: String?
+        var order: Int
+        /// One's own category: its icon (an engine icon name, drawn by `CategorySymbol`) and colour (`#RRGGBB`), chosen
+        /// when it was made and kept so it never changes. Nil for a default category (the engine's look).
+        var icon: String? = nil
+        var color: String? = nil
+
+        /// Only one's own category stores a home side; defaults use the engine's catalog.
+        var side: String? = nil
+        var otherSide: Bool = false
+        /// Internal, once-only migration marker: removing otherSide must survive reopening an older store.
+        var sidesAssigned: Bool = false
+
+        init(id: String, customName: String?, order: Int, look: CategoryLook? = nil, side: String? = nil, otherSide: Bool = false,
+             sidesAssigned: Bool = true) {
+            self.id = id
+            self.customName = customName
+            self.order = order
+            icon = look?.icon
+            color = look?.color
+            self.side = side
+            self.otherSide = otherSide
+            self.sidesAssigned = sidesAssigned
+        }
+    }
+
+    /// A learned rule: payments of this merchant (the engine's `merchantKey`) go to this category.
+    @Model final class Rule {
+        @Attribute(.unique) var merchant: String
+        var category: String
+
+        init(merchant: String, category: String) {
+            self.merchant = merchant
+            self.category = category
+        }
+    }
+
+    /// A CSV layout the person confirmed from a guess (never a known bank's layout, which would freeze it).
+    @Model final class Layout {
+        /// The separator and header row it is recognised by: a newer confirmation of the same table replaces it.
+        @Attribute(.unique) var id: String
+        var layout: Data
+        var savedAt: Date
+
+        init(id: String, layout: Data, savedAt: Date) {
+            self.id = id
+            self.layout = layout
+            self.savedAt = savedAt
+        }
+    }
+
+    /// A receipt the person scanned or picked as a photo and checked (brief 31): what was read and confirmed, never
+    /// the image.
+    @Model final class Receipt {
+        @Attribute(.unique) var id: String
+        /// The purchase day, `YYYY-MM-DD`, and its time (`HH:MM`) when the receipt printed one.
+        var date: String
+        var time: String?
+        var shop: String?
+        /// The amount paid as a decimal string ("27.65"), in `currency`.
+        var total: String
+        /// ISO 4217 ("EUR").
+        var currency: String
+        /// A cash receipt in another currency: what it cost in euros, as the person typed it (decimal string).
+        var euroAmount: String?
+        /// `ReceiptMethod`'s raw value: "card" or "cash".
+        var method: String
+        /// A category id, or nil: not sorted. Who set it: `CategorySource`'s raw value.
+        var category: String?
+        var categorySource: String
+        /// The receipt's lines as the engine read them, top to bottom (what is kept instead of a photo).
+        var rows: [String]
+        /// "code" when the register's QR code was read, else "text".
+        var from: String
+        /// The bank payment it is joined to; nil while it waits (card) or for cash.
+        var paymentID: String?
+        /// Payments the person said are not this receipt's: never offered for it again.
+        var declined: [String]
+        var created: Date
+        /// `ReceiptDirection`'s raw value: "out" (a purchase), or "in" (cash received, entered by hand).
+        var direction: String = "out"
+        /// `ReceiptKind`'s raw value: "receipt" (scanned or picked) or "manual" (typed by hand).
+        var kind: String = "receipt"
+        /// Cash out: the withdrawal payment or received-cash entry it was paid from; nil: automatic.
+        var paidFrom: String? = nil
+        /// The shop's name as the engine read it (a later change of the shop teaches the name, `ShopNames`).
+        var shopAsRead: String? = nil
+
+        init(_ value: LedgerReceipt) {
+            id = value.id
+            date = value.date
+            time = value.time
+            shop = value.shop
+            total = value.total
+            currency = value.currency
+            euroAmount = value.euroAmount
+            method = value.method.rawValue
+            category = value.category
+            categorySource = value.categorySource.rawValue
+            rows = value.rows
+            from = value.from
+            paymentID = value.paymentID
+            declined = value.declined
+            created = value.created
+            direction = value.direction.rawValue
+            kind = value.kind.rawValue
+            paidFrom = value.paidFrom
+            shopAsRead = value.shopAsRead
+        }
+    }
+
+    /// A shop's name as the person corrected it (brief 33): the shop as read, normalised (`ShopNames.key`), and the
+    /// name they typed. The next receipt read the same way shows that name.
+    @Model final class ShopName {
+        @Attribute(.unique) var read: String
+        var name: String
+        var saved: Date
+
+        init(read: String, name: String, saved: Date) {
+            self.read = read
+            self.name = name
+            self.saved = saved
+        }
+    }
+    /// A payment name for every bank payment with the engine's merchant key.
+    @Model final class PaymentName {
+        @Attribute(.unique) var merchant: String
+        var name: String
+
+        init(merchant: String, name: String) {
+            self.merchant = merchant
+            self.name = name
+        }
+    }
+
+}
+
 nonisolated enum LedgerMigrationPlan: SchemaMigrationPlan {
     static var schemas: [any VersionedSchema.Type] {
-        [LedgerSchemaV1.self, LedgerSchemaV2.self, LedgerSchemaV3.self, LedgerSchemaV4.self, LedgerSchemaV5.self]
+        [LedgerSchemaV1.self, LedgerSchemaV2.self, LedgerSchemaV3.self, LedgerSchemaV4.self, LedgerSchemaV5.self, LedgerSchemaV6.self]
     }
-    /// Version 2 only adds a model; versions 3–5 add attributes with defaults (3 and 5 also a model): SwiftData moves the
+    /// Version 2 only adds a model; versions 3–6 add attributes with defaults (3 and 5 also a model): SwiftData moves the
     /// store on by itself, one stage after the other. Version 4's looks are chosen when the store is opened
     /// (`PhoneLedger.giveOwnCategoriesLooks`), since a lightweight stage cannot compute them.
     static var stages: [MigrationStage] {
         [.lightweight(fromVersion: LedgerSchemaV1.self, toVersion: LedgerSchemaV2.self),
          .lightweight(fromVersion: LedgerSchemaV2.self, toVersion: LedgerSchemaV3.self),
          .lightweight(fromVersion: LedgerSchemaV3.self, toVersion: LedgerSchemaV4.self),
-         .lightweight(fromVersion: LedgerSchemaV4.self, toVersion: LedgerSchemaV5.self)]
+         .lightweight(fromVersion: LedgerSchemaV4.self, toVersion: LedgerSchemaV5.self),
+         .lightweight(fromVersion: LedgerSchemaV5.self, toVersion: LedgerSchemaV6.self)]
     }
 }
 
 /// The version the app opens its store with; tests that make a store use it too, so a new version needs no change there.
-typealias LedgerSchemaCurrent = LedgerSchemaV5
-typealias StoredAccount = LedgerSchemaV5.Account
-typealias StoredPayment = LedgerSchemaV5.Payment
-typealias StoredChosen = LedgerSchemaV5.Chosen
-typealias StoredRule = LedgerSchemaV5.Rule
-typealias StoredLayout = LedgerSchemaV5.Layout
-typealias StoredReceipt = LedgerSchemaV5.Receipt
-typealias StoredShopName = LedgerSchemaV5.ShopName
-typealias StoredPaymentName = LedgerSchemaV5.PaymentName
+typealias LedgerSchemaCurrent = LedgerSchemaV6
+typealias StoredAccount = LedgerSchemaV6.Account
+typealias StoredPayment = LedgerSchemaV6.Payment
+typealias StoredChosen = LedgerSchemaV6.Chosen
+typealias StoredRule = LedgerSchemaV6.Rule
+typealias StoredLayout = LedgerSchemaV6.Layout
+typealias StoredReceipt = LedgerSchemaV6.Receipt
+typealias StoredShopName = LedgerSchemaV6.ShopName
+typealias StoredPaymentName = LedgerSchemaV6.PaymentName
 
 /// Where the phone's one store lives (`Application Support/Aresium/local/`), opening and deleting it, and moving an
 /// older per-account store over. Aresium's data belongs to the iPhone, not to an account (Patrik, 2026-10-27): until
@@ -963,7 +1184,9 @@ nonisolated struct PhoneStorage: Sendable {
         let container = try ModelContainer(for: schema, migrationPlan: LedgerMigrationPlan.self,
                                            configurations: configuration)
         // One's own categories made before version 4 get their looks now, in the order they were made.
-        try PhoneLedger.giveOwnCategoriesLooks(in: ModelContext(container))
+        let opening = ModelContext(container)
+        try PhoneLedger.giveOwnCategoriesLooks(in: opening)
+        try PhoneLedger.giveCategoriesSides(in: opening)
         // New files inherit the folder's protection; the ones SQLite made before (or an older store's) get it here.
         for file in (try? manager.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)) ?? [] {
             try? manager.setAttributes([.protectionKey: FileProtectionType.complete], ofItemAtPath: file.path)

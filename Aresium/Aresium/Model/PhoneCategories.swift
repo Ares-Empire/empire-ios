@@ -1,5 +1,14 @@
 import Foundation
 
+/// A category's home for totals; payment direction only controls which choices are offered.
+nonisolated enum CategorySide: String, Codable, Sendable, CaseIterable {
+    case spend, income
+
+    init(direction: ReceiptDirection) { self = direction == .in ? .income : .spend }
+    init(amount: Double) { self = amount > 0 ? .income : .spend }
+    var direction: ReceiptDirection { self == .income ? .in : .out }
+}
+
 /// The person's categories in phone mode, by id (what the store keeps) and by name (what the dashboard and the Switch/Add
 /// choices use). Default and built-in categories are named in the app's language from the engine's list; one's own keep
 /// the name as typed. Names are unique in both languages (`checkedName`), so a name always leads back to one id.
@@ -38,12 +47,34 @@ nonisolated struct PhoneCategoryList: Equatable, Sendable {
     /// Transfers (own transfers, savings) count as neither spending nor income.
     func isTransfer(_ id: String) -> Bool { catalog.category(id)?.kind == "transfer" }
 
+    /// Defaults take their home side from the catalog; one's own keep it in the store. Transfers have no side.
+    func side(of id: String) -> CategorySide? {
+        if ChosenCategory.isCustom(id) {
+            return chosen.first { $0.id == id }?.side.flatMap(CategorySide.init(rawValue:))
+        }
+        return catalog.category(id).flatMap { CategorySide(rawValue: $0.kind) }
+    }
+
+    func hasOtherSide(_ id: String) -> Bool { chosen.first { $0.id == id }?.otherSide == true }
+
+    /// Categories for this direction: its home categories, transfers when requested, then the other home's additions.
+    /// Each part keeps the chosen order. The engine orders its tiles by all-time totals; membership is identical.
+    /// Not sorted is represented by nil in receipt/cash menus and appended there after these ids.
+    func offered(for direction: ReceiptDirection, includingTransfers: Bool = true) -> [String] {
+        let home = CategorySide(direction: direction)
+        let own = chosen.map(\.id).filter { side(of: $0) == home }
+        let transfers = includingTransfers ? sortingIDs.filter(isTransfer) : []
+        let added = chosen.map(\.id).filter { side(of: $0) != nil && side(of: $0) != home && hasOtherSide($0) }
+        return own + transfers + added
+    }
+
     /// The list `buildDashboardSource` gets: every category payments may be in, named and with its look.
     var sourceCategories: [SourceCategory] {
         sortingIDs.compactMap { id in
             guard let name = name(of: id) else { return nil }
             let look = look(of: id)
-            return SourceCategory(name: name, icon: look.icon, color: look.color, excludeFromTotals: isTransfer(id))
+            return SourceCategory(name: name, icon: look.icon, color: look.color, excludeFromTotals: isTransfer(id),
+                                  side: side(of: id)?.rawValue, otherSide: hasOtherSide(id) ? true : nil)
         }
     }
 

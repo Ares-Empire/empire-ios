@@ -225,10 +225,10 @@ struct PhoneBackendTests {
         #expect(rewe.category == nil && rewe.categorySource == .none)
 
         picker.newName = "  Fictional club  "
-        await picker.addCustom()
+        await picker.addCustom(side: .spend)
         #expect(picker.custom.map(\.name) == ["Fictional club"] && picker.newName.isEmpty)
         picker.newName = "lebensmittel"
-        await picker.addCustom()
+        await picker.addCustom(side: .spend)
         #expect(picker.problem == "There is already a category with this name.")
         await picker.flush()
     }

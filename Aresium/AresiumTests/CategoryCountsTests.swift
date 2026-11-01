@@ -28,7 +28,7 @@ struct CategoryCountsTests {
 
     @Test func tickedUntickedAndOwnCategories() async throws {
         let phone = try await PhoneTest.backend(chosen: ["groceries"])
-        let climbing = try await phone.addCustom(named: "Climbing")
+        let climbing = try await phone.addCustom(named: "Climbing", side: .spend)
         _ = try await phone.importFiles([Self.bankFile], auth: none)
         // One climbing payment put into one's own category by hand (the other stays Not sorted: not asked here).
         let hall = try #require(try await phone.ledger.payments().first { $0.counterparty == "Fiktiv Kletterhalle" })

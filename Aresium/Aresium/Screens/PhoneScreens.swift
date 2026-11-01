@@ -298,7 +298,7 @@ struct CategoryPickerScreen: View {
     }
 
     private func add() {
-        Task { await model.addCustom() }
+        Task { await model.addCustom(side: .spend) }
     }
 }
 

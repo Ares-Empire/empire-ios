@@ -184,11 +184,11 @@ nonisolated enum CashWording {
 @MainActor
 enum CashCategories {
     static func choices(_ list: PhoneCategoryList, for direction: ReceiptDirection?) -> [ReceiptCheckModel.Choice] {
-        let kind = direction.map { $0 == .out ? "spend" : "income" }
-        return list.chosen.compactMap { chosen in
-            let fits = kind == nil || ChosenCategory.isCustom(chosen.id) || list.catalog.category(chosen.id)?.kind == kind
-            guard fits, let name = list.name(of: chosen.id) else { return nil }
-            return ReceiptCheckModel.Choice(id: chosen.id, name: name, look: list.look(of: chosen.id))
+        let ids = direction.map { list.offered(for: $0, includingTransfers: false) }
+            ?? list.chosen.map(\.id).filter { !list.isTransfer($0) }
+        return ids.compactMap { id in
+            guard let name = list.name(of: id) else { return nil }
+            return ReceiptCheckModel.Choice(id: id, name: name, look: list.look(of: id))
         } + [ReceiptCheckModel.Choice(id: nil, name: list.notSortedName, look: nil)]
     }
 }
@@ -307,10 +307,10 @@ final class CashEntryModel: Identifiable {
         return true
     }
 
-    /// The menu's New category… (brief 60), for spent and received alike (one's own category is in both lists): the
+    /// The menu's New category… (brief 60), for spent and received alike (the new category takes this window's side): the
     /// category is made (`NewCategoryModel`), offered and picked here. Cancel asks first; the category stays after it.
     func createCategory() async {
-        await newCategory.create(in: phone) { id, _ in
+        await newCategory.create(in: phone, side: CategorySide(direction: direction)) { id, _ in
             _ = await loadChoices()
             guard choices.contains(where: { $0.id == id }) else { return nil }
             category = id

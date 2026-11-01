@@ -81,6 +81,33 @@ nonisolated struct ChosenCategory: Codable, Equatable, Sendable {
     /// it never changes. An export carries it; one without it (made before) gets a look when restored.
     var look: CategoryLook? = nil
 
+    /// Own categories only: "spend" or "income". Defaults use the catalog.
+    var side: String? = nil
+    /// Also offered for the opposite payment direction; totals still follow the home side.
+    var otherSide: Bool = false
+
+    private enum CodingKeys: String, CodingKey { case id, name, order, look, side, otherSide }
+
+    init(id: String, name: String? = nil, order: Int, look: CategoryLook? = nil,
+         side: String? = nil, otherSide: Bool = false) {
+        self.id = id
+        self.name = name
+        self.order = order
+        self.look = look
+        self.side = side
+        self.otherSide = otherSide
+    }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        id = try values.decode(String.self, forKey: .id)
+        name = try values.decodeIfPresent(String.self, forKey: .name)
+        order = try values.decode(Int.self, forKey: .order)
+        look = try values.decodeIfPresent(CategoryLook.self, forKey: .look)
+        side = try values.decodeIfPresent(String.self, forKey: .side)
+        otherSide = try values.decodeIfPresent(Bool.self, forKey: .otherSide) ?? false
+    }
+
     static func isCustom(_ id: String) -> Bool { id.hasPrefix("custom-") }
 }
 
@@ -173,12 +200,13 @@ actor PhoneLedger: ModelActor {
 
     func chosen() throws -> [ChosenCategory] {
         try modelContext.fetch(FetchDescriptor<StoredChosen>(sortBy: [SortDescriptor(\.order), SortDescriptor(\.id)]))
-            .map { ChosenCategory(id: $0.id, name: $0.customName, order: $0.order, look: Self.look(of: $0)) }
+            .map { ChosenCategory(id: $0.id, name: $0.customName, order: $0.order, look: Self.look(of: $0),
+                                  side: $0.side, otherSide: $0.otherSide) }
     }
 
     /// Ticks a default category (or adds one's own, with `name`, and gives it its look beside the other own ones,
     /// `OwnCategoryLook`). Ticking one that is on the list changes nothing.
-    func choose(_ id: String, name: String? = nil) throws {
+    func choose(_ id: String, name: String? = nil, side: String? = nil) throws {
         try PickerTiming.measure("ledger.choose") {
             let all = try modelContext.fetch(FetchDescriptor<StoredChosen>())
             guard !all.contains(where: { $0.id == id }) else { return }
@@ -187,7 +215,8 @@ actor PhoneLedger: ModelActor {
                 let others = all.filter { ChosenCategory.isCustom($0.id) }.compactMap(Self.look)
                 look = OwnCategoryLook.look(for: name ?? "", besides: others)
             }
-            modelContext.insert(StoredChosen(id: id, customName: name, order: (all.map(\.order).max() ?? -1) + 1, look: look))
+            modelContext.insert(StoredChosen(id: id, customName: name, order: (all.map(\.order).max() ?? -1) + 1, look: look,
+                                             side: ChosenCategory.isCustom(id) ? (side ?? "spend") : nil))
             try modelContext.save()
         }
     }
@@ -205,6 +234,77 @@ actor PhoneLedger: ModelActor {
             category.color = look.color
         }
         try context.save()
+    }
+
+    /// Once per old chosen category, before the store is exposed or after an older export's payments are restored.
+    /// The engine computes the old net from primary categories exactly as it did before explicit sides.
+    nonisolated static func giveCategoriesSides(in context: ModelContext) throws {
+        let all = try context.fetch(FetchDescriptor<StoredChosen>())
+        let pending = all.filter { !$0.sidesAssigned }
+        guard !pending.isEmpty else { return }
+        let payments = try context.fetch(FetchDescriptor<StoredPayment>()).map(Self.value)
+        let receipts = try context.fetch(FetchDescriptor<StoredReceipt>()).map(Self.value)
+        var list: PhoneCategoryList?
+        let kinds = try AresiumEngine.legacyCategoryKinds { catalog in
+            let old = PhoneCategoryList(catalog: catalog, chosen: all.map {
+                ChosenCategory(id: $0.id, name: $0.customName, order: $0.order)
+            }, language: .english)
+            list = old
+            let input = PhoneDashboard.input(payments: payments, list: old, today: LedgerExport.day(.now), receipts: receipts)
+            // Classification is all-time. The date only selects the current dashboard month.
+            let categories = input.categories.map {
+                SourceCategory(name: $0.name, icon: $0.icon, color: $0.color, excludeFromTotals: $0.excludeFromTotals)
+            }
+            return DashboardSourceInput(transactions: input.transactions, categories: categories,
+                                        today: input.today, receipts: input.receipts)
+        }
+        guard let list else { return }
+        for category in pending {
+            let wasIncome = list.name(of: category.id).flatMap { kinds[$0] } == "income"
+            if ChosenCategory.isCustom(category.id), category.side == nil {
+                category.side = wasIncome ? "income" : "spend"
+            } else if list.side(of: category.id) == .spend, wasIncome {
+                category.otherSide = true
+            }
+            category.sidesAssigned = true
+        }
+        try context.save()
+    }
+
+    /// Returns which directions have primary payments, including receipts/entries as the engine receives them.
+    func hasPayments(in id: String, direction: ReceiptDirection) throws -> Bool {
+        let payments = try payments()
+        if payments.contains(where: { $0.category == id && ($0.amountValue > 0 ? .in : ReceiptDirection.out) == direction }) {
+            return true
+        }
+        let paymentIDs = Set(payments.map(\.id))
+        return try receipts().contains { receipt in
+            guard receipt.category == id,
+                  receipt.kind == .manual || receipt.paymentID.map({ !paymentIDs.contains($0) }) ?? true,
+                  receipt.euros != nil else { return false }
+            return (receipt.method == .card ? ReceiptDirection.out : receipt.direction) == direction
+        }
+    }
+
+    func setSide(_ side: CategorySide, of id: String) throws {
+        guard ChosenCategory.isCustom(id),
+              let category = try modelContext.fetch(FetchDescriptor<StoredChosen>(predicate: #Predicate { $0.id == id })).first
+        else { throw LedgerError.notFound }
+        if let old = category.side.flatMap(CategorySide.init(rawValue:)), old != side,
+           try hasPayments(in: id, direction: old.direction) {
+            category.otherSide = true
+        }
+        category.side = side.rawValue
+        category.sidesAssigned = true
+        try modelContext.save()
+    }
+
+    func setOtherSide(_ on: Bool, for id: String) throws {
+        guard let category = try modelContext.fetch(FetchDescriptor<StoredChosen>(predicate: #Predicate { $0.id == id })).first
+        else { throw LedgerError.notFound }
+        category.otherSide = on
+        category.sidesAssigned = true
+        try modelContext.save()
     }
 
     /// A stored category's own look: both parts, or none.
@@ -664,7 +764,10 @@ actor PhoneLedger: ModelActor {
                     ChosenCategory.isCustom(category.id) && OwnCategoryLook.isUsable($0) ? $0 : nil
                 }
                 modelContext.insert(StoredChosen(id: category.id, customName: category.name, order: category.order,
-                                                 look: look))
+                                                 look: look,
+                                                 side: export.schema >= 5 ? category.side : nil,
+                                                 otherSide: export.schema >= 5 && category.otherSide,
+                                                 sidesAssigned: export.schema >= 5))
             }
             for rule in export.learned { modelContext.insert(StoredRule(merchant: rule.merchant, category: rule.category)) }
             for (index, layout) in export.layouts.enumerated() {
@@ -678,6 +781,7 @@ actor PhoneLedger: ModelActor {
                                                    saved: Date(timeIntervalSince1970: TimeInterval(index))))
             }
             try Self.giveOwnCategoriesLooks(in: modelContext)
+            try Self.giveCategoriesSides(in: modelContext)
             try modelContext.save()
         } catch {
             modelContext.rollback()
@@ -691,7 +795,7 @@ actor PhoneLedger: ModelActor {
         try modelContext.fetch(FetchDescriptor<StoredPayment>(sortBy: [SortDescriptor(\.bookingDate), SortDescriptor(\.sequence)]))
     }
 
-    private static func value(_ payment: StoredPayment) -> LedgerPayment {
+    private nonisolated static func value(_ payment: StoredPayment) -> LedgerPayment {
         LedgerPayment(id: payment.id, account: payment.account, source: payment.source, externalId: payment.externalId,
                       bookingDate: payment.bookingDate, valueDate: payment.valueDate, amount: payment.amount,
                       currency: payment.currency, text: payment.text, counterparty: payment.counterparty,
@@ -702,7 +806,7 @@ actor PhoneLedger: ModelActor {
                       extraCategories: payment.extraCategories, sequence: payment.sequence, ownName: payment.ownName)
     }
 
-    private static func value(_ receipt: StoredReceipt) -> LedgerReceipt {
+    private nonisolated static func value(_ receipt: StoredReceipt) -> LedgerReceipt {
         LedgerReceipt(id: receipt.id, date: receipt.date, time: receipt.time, shop: receipt.shop, total: receipt.total,
                       currency: receipt.currency, euroAmount: receipt.euroAmount,
                       method: ReceiptMethod(rawValue: receipt.method) ?? .card, category: receipt.category,
