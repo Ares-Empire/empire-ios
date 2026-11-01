@@ -1,6 +1,6 @@
 # 80: A name that exists is used, categories can be renamed and deleted
 
-Status: brief
+Status: merged 2026-11-01 (735 Aresium tests; export schema 6, storage V6; German "Die 12 Buchungen darin …" so it fits every category)
 Branch: `codex/80-category-rename-delete` · Worktree: `../empire-ios-80-category-rename-delete` · Model: `gpt-6.1-sol`,
 effort `high` · Simulator: `codex-80` (create it: iPhone 17, iOS 27.0) · The look is settled below (Apple's alert, menu
 and confirmation as the app already uses them); Claude checks the screenshots.
