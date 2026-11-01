@@ -1,6 +1,6 @@
 # 96: Sorting, improvement round 3
 
-Status: brief
+Status: merged 2026-11-01 (aresium; worked-on missed 135 -> 100, wrong 4 -> 2; held back missed 82 -> 73; Patrik replay 113 -> 108)
 Repo: **aresium** · Worktree: `../aresium-96-sorting-round-3` (branch `codex/96-sorting-round-3`) · Model:
 `gpt-6.1-sol`, effort `high` · Runs beside brief 95 (the local places list in the app, in empire-ios); you own
 `src/engine/sorting/`, `scripts/shop-list.de.ts` and the shop list build.
