@@ -1,6 +1,6 @@
 # 81: Several payments changed at once: the data
 
-Status: brief
+Status: merged 2026-11-01 (720 Aresium tests; 500 rows from 60 shops in about 80 ms; undo guarded by the ledger's save revision)
 Branch: `codex/81-select-many-data` · Worktree: `../empire-ios-81-select-many-data` · Model: `gpt-6.1-sol`, effort
 `high` · Simulator: `codex-81` (create it: iPhone 17, iOS 27.0) · The screens follow in brief 82 (a Claude agent) on
 this brief's API.
