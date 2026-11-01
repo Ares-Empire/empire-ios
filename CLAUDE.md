@@ -1325,7 +1325,7 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   About → Fonts & licences also lists the shop list's name-suggestion-index notice (BSD-3-Clause,
   `BundledLicence.shopList`, Aresium only). **Engine:** `bash scripts/aresium-engine.sh` runs `npm run engine` in
   aresium and copies the bundle (its commit in `Engine/engine-version.txt`), the engine's test files and the licence
-  notice (`Engine/name-suggestion-index-licence.txt`); the bundle is never edited by hand. Launch arguments (DEBUG):
+  notice (`Engine/name-suggestion-index-licence.txt`); the bundle is never edited by hand. A confirmed layout keeps every field the engine gives it: `CsvLayout.idStyle` ("vrbank", aresium brief 85) carries the id formula that keeps a VR Bank file's ids when a spreadsheet re-saved it (`LayoutIdStyleTests`); a new engine layout field needs its Swift twin, or saving drops it. Launch arguments (DEBUG):
   `-samplePhone` (a made-up store in a temporary folder, filled through the real import), `-samplePhoneEmpty` (the
   first screen; `-importData` taps Import data at launch: the file picker; `-sampleImport` imports the tour's made-up
   bank file as if picked, so on the empty store the category picker opens after it as after a real import),
