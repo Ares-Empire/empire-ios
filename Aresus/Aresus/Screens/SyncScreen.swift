@@ -4,6 +4,7 @@ import SwiftUI
 /// muted line per machine and day; tap a run for its report.
 struct SyncScreen: View {
     let store: AresusStore
+    var drops: DropsStore? = nil
     let open: (Int) -> Void
     let openSettings: () -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -21,7 +22,10 @@ struct SyncScreen: View {
             .padding(.bottom, 36)
         }
         .scrollIndicators(.hidden)
-        .refreshable { await store.load(.sync) }
+        .refreshable {
+            await store.load(.sync)
+            await drops?.refresh()
+        }
         .background { ProvinceWall(accent: .aresus) }
     }
 

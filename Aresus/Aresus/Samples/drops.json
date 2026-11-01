@@ -1,0 +1,69 @@
+{
+  "drops": [
+    {
+      "id": 5,
+      "kind": "file",
+      "name": "garden.jpg",
+      "size": 24000,
+      "target": null,
+      "state": "cancelled",
+      "landed": null,
+      "fallback": false,
+      "note": null,
+      "created": "2026-11-01T15:04:00Z",
+      "updated": "2026-11-01T15:05:00Z"
+    },
+    {
+      "id": 4,
+      "kind": "file",
+      "name": "sketch.pdf",
+      "size": 18000,
+      "target": {"root": "documents", "folder": "Examples/Sketches: old", "new_folder": null},
+      "state": "failed",
+      "landed": null,
+      "fallback": false,
+      "note": "The MacBook could not write the file.",
+      "created": "2026-11-01T15:03:00Z",
+      "updated": "2026-11-01T15:06:00Z"
+    },
+    {
+      "id": 3,
+      "kind": "receipt",
+      "name": "2026-11-01 Example Shop - Desk lamp - 12,34 EUR.pdf",
+      "size": 48000,
+      "target": null,
+      "state": "landed",
+      "landed": "Documents/Receipts/2026-11-01 Example Shop - Desk lamp - 12,34 EUR.pdf",
+      "fallback": false,
+      "note": null,
+      "created": "2026-11-01T15:02:00Z",
+      "updated": "2026-11-01T15:07:00Z"
+    },
+    {
+      "id": 2,
+      "kind": "file",
+      "name": "diagram.png",
+      "size": 32000,
+      "target": {"root": "downloads", "folder": "Examples", "new_folder": "Diagrams"},
+      "state": "waiting",
+      "landed": null,
+      "fallback": false,
+      "note": null,
+      "created": "2026-11-01T15:01:00Z",
+      "updated": "2026-11-01T15:02:00Z"
+    },
+    {
+      "id": 1,
+      "kind": "file",
+      "name": "clouds.jpg",
+      "size": 64000,
+      "target": null,
+      "state": "uploading",
+      "landed": null,
+      "fallback": false,
+      "note": null,
+      "created": "2026-11-01T15:00:00Z",
+      "updated": "2026-11-01T15:00:00Z"
+    }
+  ]
+}

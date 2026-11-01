@@ -5,6 +5,7 @@ import UIKit
 /// What is on screen refreshes every minute while the app is open (`AresusStore.interval`).
 struct AresusTabs: View {
     let store: AresusStore
+    let drops: DropsStore
     @Bindable var navigation: AresusNavigation
     let marks: [String: UIImage]
     let logOut: () -> Void
@@ -17,7 +18,7 @@ struct AresusTabs: View {
                     .tint(Ink.primary)
             }
             Tab("Aresync", systemImage: "arrow.triangle.2.circlepath", value: AresusNavigation.Tab.aresync) {
-                SyncScreen(store: store, open: { navigation.openRun = RunRef(id: $0) },
+                SyncScreen(store: store, drops: drops, open: { navigation.openRun = RunRef(id: $0) },
                            openSettings: { navigation.showsSettings = true })
                     .tint(Ink.primary)
             }
@@ -38,10 +39,12 @@ struct AresusTabs: View {
             guard scenePhase == .active else { return }
             let parts = navigation.visibleParts
             await store.refresh(parts, olderThan: AresusStore.interval)
+            if navigation.tab == .aresync { await drops.refresh(olderThan: AresusStore.interval) }
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(AresusStore.interval))
                 guard !Task.isCancelled else { return }
                 await store.refresh(parts)
+                if navigation.tab == .aresync { await drops.refresh() }
             }
         }
     }

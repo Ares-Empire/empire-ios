@@ -9,6 +9,7 @@ import UIKit
 /// `-widgetGallery good|issues|loggedout` for the widget's views.
 struct ContentView: View {
     @State private var store: AresusStore
+    @State private var drops: DropsStore
     @State private var navigation: AresusNavigation
     @State private var markImages: [String: UIImage] = [:]
     // State, like the store: SwiftUI may build this view again (a new session each time); the marks must keep using
@@ -53,6 +54,7 @@ struct ContentView: View {
         self.push = push
         #endif
         _store = State(initialValue: AresusStore(session: session, samples: samples, widget: widget))
+        _drops = State(initialValue: DropsStore(session: session, samples: samples, automatic: restores || samples != nil))
         _navigation = State(initialValue: navigation)
         _marks = State(initialValue: ProvinceMarks(session: session, sample: samples != nil))
         restoresOnLaunch = restores
@@ -73,7 +75,7 @@ struct ContentView: View {
     private var app: some View {
         Group {
             if store.isSample || session.isSignedIn {
-                AresusTabs(store: store, navigation: navigation, marks: markImages, logOut: logOut)
+                AresusTabs(store: store, drops: drops, navigation: navigation, marks: markImages, logOut: logOut)
                     .task(id: logos) { await loadMarks() }
             } else if session.isRestoring {
                 ProvinceLoading(name: "Aresus", bust: Image("Bust"), accent: .aresus)
@@ -84,6 +86,7 @@ struct ContentView: View {
         .task {
             push?.start(app: "de.ares-empire.aresus", session: session)
             if restoresOnLaunch { await session.restore() }
+            drops.outbox?.start()
         }
         .onChange(of: push?.openedURL) { _, url in
             if url != nil, let url = push?.takeOpenedURL() { navigation.open(url) }
@@ -91,6 +94,8 @@ struct ContentView: View {
         .onEmpireForeground(session: session) {
             await session.followSharedLogin()        // another Empire app may have logged in or out
             await store.refreshOnForeground(visible: navigation.visibleParts)
+            drops.outbox?.start()
+            if navigation.tab == .aresync { await drops.refresh(olderThan: 10) }
         }
         .onChange(of: session.generation) { _, _ in
             markImages = [:]
@@ -103,6 +108,7 @@ struct ContentView: View {
         #if DEBUG
         if store.isSample {
             store.leaveSample()
+            drops.leaveSample()
             navigation.reset()
             return
         }

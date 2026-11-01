@@ -1,0 +1,8 @@
+{
+  "updated": "2026-11-01T15:00:00Z",
+  "documents": ["Examples", "Examples/Sketches: old", "Receipts", "Receipts/Permanent", "To sort"],
+  "downloads": ["Examples", "Examples/Diagrams"],
+  "fallback": "To sort",
+  "fallback_count": 2,
+  "receipts": "Receipts"
+}
