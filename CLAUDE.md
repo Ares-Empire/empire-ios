@@ -292,8 +292,9 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
    position to revisit (needs a widget target).
 10. ~~Light mode~~: built 2026-10-25 (section "Light mode"). On the phone, check both looks once TestFlight runs
    (the iPhone switching by itself in the evening while an app is open, the widgets on a light and a dark home screen).
-11. **Aresync file sharing from the phone** (Patrik, 2026-10-25): on hold; Patrik will say what it should do when it
-   comes up. Don't ask before then.
+11. **Aresync file sharing from the phone** (Patrik, 2026-10-25; specified 2026-11-01): send any file or photo from
+   Aresus's Aresync tab or the share button to a chosen folder on the MacBook, receipts into Rechnungen with their
+   inventory line. Plan: `ares-empire/docs/ARESYNC-DROP.md`. Not built yet.
 12. **Before anyone but Patrik gets an app** (council 2026-10-25): ~~log out centrally~~: merged 2026-10-26 (brief 09,
    "One login for all apps" below; on the phone: check a widget and a notification after logging out in another app).
    ~~A privacy cover in the app switcher~~: built 2026-10-26 ("App switcher cover" below; on the phone: check the
