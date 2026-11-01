@@ -1,6 +1,6 @@
 # 72: Arestoteles: the bust without the watermark
 
-Status: running
+Status: merged 2026-11-01: the hub's clean bust (arestoteles_transparent.png) in the app icon, the in-app bust, arestoteles.de and the hub's ring mark; checked by Claude (icons, screens in both looks, web framing)
 Branch: `claude/72-arestoteles-bust` in three repos · Worktrees: `~/empire-ios-72-arestoteles-bust`,
 `~/Arestoteles-72-bust`, `~/ares-empire-72-bust` · Agent: Claude (design)
 
