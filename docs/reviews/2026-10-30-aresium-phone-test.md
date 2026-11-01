@@ -252,3 +252,13 @@ when ticked. A category's long press in Settings → Kategorien: Umbenennen … 
 takes the original back), Löschen (own) or Entfernen (default): its payments are sorted again, what Aresium cannot
 sort goes to Nicht sortiert. The tour's categories card says so. Also in it, not visible yet: brief 81's data for
 selecting several payments (the screens follow in build 12 with brief 82, and Add's questions with brief 83).
+
+**In build 12** (2026-11-01): briefs 81–85. **Selecting several payments** in a category's month list (Not sorted
+too): the circle icon in the header; the rows slide right with circles as in Mail; "Alle"/"Fertig"; the bar's
+**Kategorie** (the change window for all of them, Verschieben or Hinzufügen) and **Name**; one question for all their
+shops ("Auch 92 weitere Buchungen von 3 Geschäften verschieben?"); then "… verschoben · Widerrufen". **Save in
+Hinzufügen** asks "Auch aus Lebensmittel entfernen?" (Entfernen works like Verschieben) and then "Kleidung auch zu den
+anderen 39 Buchungen von … hinzufügen?"; the button at the window's end is gone. The tour has 20 steps. The engine:
+sorting round 1 (sales on Vinted/eBay/Kleinanzeigen, florists and gifts, many food words, more brands, clear purposes;
+a bank's PayPal line counts as a transfer only for the months a PayPal export covers) and reading round 1 (no test
+file read wrong any more; spreadsheet-rewritten dates, cut-off files refused, re-saved VR Bank files keep their ids).

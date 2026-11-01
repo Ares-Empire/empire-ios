@@ -1,6 +1,6 @@
 # 82: Several payments changed at once: the screens
 
-Status: brief
+Status: merged 2026-11-01 (765 Aresium tests; real touches 4 of 4; the tour has 20 steps)
 Branch: `claude/82-select-many` · Worktree: `../empire-ios-82-select-many` · Built by: a Claude agent (the look and
 flow) · Simulator: `claude-82` (create it: iPhone 17, iOS 27.0)
 
