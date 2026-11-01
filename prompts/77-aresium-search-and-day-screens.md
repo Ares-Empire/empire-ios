@@ -1,6 +1,6 @@
 # 77: Search and a day's page: the screens
 
-Status: running (a Claude agent, 2026-11-01)
+Status: merged 2026-11-01 (706 Aresium tests; the day's page a sheet at half height with swipeable sides and no row swipe, search before typing shows the eight newest names, tour 19 steps)
 Branch: `claude/77-search-day` · Worktree: `../empire-ios-77-search-day` · Built by: a Claude agent (the look and flow)
 · Simulator: `claude-77`
 
