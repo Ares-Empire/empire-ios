@@ -1365,7 +1365,7 @@ struct ServerSampleMatchesWebsiteTests {
                 }
             }
         }
-        #expect(compared == 509)
+        #expect(compared == 488) // brief 71: money in leaves the spending lists
     }
 }
 

@@ -92,12 +92,12 @@ nonisolated enum PaymentNames {
             }
             dashboard.cash = cash
         }
-        let kinds = Dictionary(dashboard.categories.map { ($0.name, $0.kind) }, uniquingKeysWith: { first, _ in first })
         var grouped: [String: [Transaction]] = [:]
         for row in dashboard.transactions {
-            // Mirror the engine's overall totals: extra categories never make an excluded payment count.
+            // Mirror the engine's overall totals (brief 71): a payment counts as spending when it is in a spending list
+            // and as income when it has an income row; a transfer has neither, whatever its extra categories.
             guard row.coveredBy == nil, let key = row.nameKey,
-                  kinds[row.categoryName] == .spend || !row.incomeBuckets.isEmpty else { continue }
+                  !row.categoriesIn.isEmpty || !row.incomeBuckets.isEmpty else { continue }
             grouped[key, default: []].append(row)
         }
         let emptyMonths = Dictionary(uniqueKeysWithValues: dashboard.months.map { ($0.key, PaymentNameAmounts()) })

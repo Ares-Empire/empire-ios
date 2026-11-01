@@ -646,7 +646,14 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   category") open the change window, an extra category's chip opens it at Add; the Change button and the reason sentence
   went, the reason (`PaymentWording.categoryReason`) is one quiet line under "Currently in" at the window's top. Server
   mode the same wherever the page has categories to change to.
-  **Category sides** (brief 69): every category has one home side for totals. Defaults take `kind` from the engine's
+  **Counting as it happened** (brief 71, Patrik 2026-11-01: "booking everything as it happens is clearer and more
+  truthful"): every payment counts once, in the direction it went, under its own category (and its extra ones): money
+  out is Ausgaben, money in is Einnahmen, whatever the category's side; nothing is netted, so a returned order shows as
+  spent and as received, and there is no Refunds / Rückerstattungen row. The one exception is a withdrawal's cash covered
+  by receipts, which moves to the receipt's category. A payment's `categoriesIn` (its spending lists) holds categories
+  only for money out, its `incomeBuckets` only for money in; `PaymentNames` groups a row that has either.
+  **Category sides** (brief 69): every category has one home side, which since brief 71 decides only where it is
+  offered (the menus), not where its money counts. Defaults take `kind` from the engine's
   catalog; one's own store `side` (`"spend"` or `"income"`) in schema 6's chosen category, alongside `otherSide` (false
   by default) for any chosen category. Transfers have no side and are offered in both directions. `PhoneStorage.open`
   runs `PhoneLedger.giveCategoriesSides` before exposing the store: the engine's old no-side counting (primary
