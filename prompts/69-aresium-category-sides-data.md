@@ -1,6 +1,6 @@
 # 69: Every category has a side: the app's data and choices
 
-Status: draft (starts after brief 68 is merged and its engine copied into the app)
+Status: running (Codex, 2026-11-01)
 Branch: `codex/69-category-sides` · Worktree: `../empire-ios-69-category-sides` · Model: `gpt-6.1-sol`, effort `high`
 · The screens follow in brief 70 (a Claude agent), on this brief's API.
 

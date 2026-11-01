@@ -1,6 +1,6 @@
 # 68: Every category has a side: the engine
 
-Status: running (Codex, 2026-11-01)
+Status: merged to aresium main 2026-11-01 (7b26812; 399 tests; the server sample changes only as asked: transfers in pick.spend, one tagged payment given back lowers its income row). Not deployed: the server is not used by the app (server mode empty)
 Repo: **aresium** · Worktree: `../aresium-68-category-sides` (branch `codex/68-category-sides`) · Model: `gpt-6.1-sol`,
 effort `high` · The app's side follows in brief 69 (a Claude agent wires it into empire-ios).
 
