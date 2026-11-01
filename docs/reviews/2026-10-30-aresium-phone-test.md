@@ -228,3 +228,13 @@ income (in two tabs with swipe). For search: A small search icon … search by n
 original names organized by best match." Briefs 76 (data, Codex) and 77 (screens, a Claude agent): the day's page is a
 sheet so its sides can be swiped; search finds names and opens the name's page. The bank files in Downloads may stay
 on his Mac ("this is my device").
+
+**In build 10** (2026-11-01): briefs 76 and 77. A shop shows one name: the bank line of its newest payment that names
+it by itself (checked on Patrik's files: 101 of 167 shops get one name, Vinted "Vinted, UAB", Apple "Apple Services";
+never a PayPal or a card statement line, which would show another payment's amount and date); the payment's page keeps
+its own line under the title. A tap on a day of the day graph (Aktuell, a month's page) opens that day as a sheet:
+Ausgaben and Einnahmen swipe, each with the day's total and rows (category in the day's place; rows have no swipe
+there, the long press keeps "Alle mit dem Namen"). The magnifying glass in the header opens Suche: names (own and the
+banks') best match first, a typo forgiven, "Bei der Bank: …" when found by another line, the newest names before
+typing; a result opens the name's page. The tour has 19 steps (the search). Unsorted money in now shows as "Nicht
+sortiert" on the income side too (it showed the engine's untranslated "Other").
