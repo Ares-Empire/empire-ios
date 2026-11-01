@@ -64,6 +64,11 @@ final class ImportStore {
     /// the app (ContentView), saying they are in; ticking sorts them at once. Decided here, at the import's end, for
     /// every way files come in (`finishIfDone`).
     private(set) var asksForCategories = false
+    /// Brief 99: an import in phone mode ended that added payments. While payments are Not sorted, the quick sort is
+    /// offered in the result's place once the result, the category picker and every other window are done
+    /// (`QuickSortOffer`); answered (Go through, Later, a swipe down, or the flow opened from Not sorted's list) or over
+    /// when nothing is left Not sorted.
+    private(set) var offersQuickSort = false
     /// Payments the import under way has added so far: all its files, those confirmed in the file check window too.
     @ObservationIgnored private var addedSoFar = 0
     private var generation = 0
@@ -308,10 +313,15 @@ final class ImportStore {
         guard !isBusy, pending.isEmpty, layoutQueue.isEmpty else { return }
         let added = addedSoFar
         addedSoFar = 0
-        guard added > 0, backend?.waitsForCategories == true else { return }
+        guard added > 0 else { return }
+        if backend?.mode == .phone { offersQuickSort = true }
+        guard backend?.waitsForCategories == true else { return }
         bannerTask?.cancel()            // the result waits under the picker; it is counted again when the picker closes
         asksForCategories = true
     }
+
+    /// The quick sort's offer answered, or over (brief 99): it shows again only after the next import that adds payments.
+    func quickSortOfferAnswered() { offersQuickSort = false }
 
     /// The category picker after an import closed (Done, or swiped away; closing with nothing ticked is allowed: the
     /// payments stay Not sorted and the next import asks again). The result line is counted again as the store holds
@@ -355,6 +365,8 @@ final class ImportStore {
         pending.append(contentsOf: files)
         schedulePendingImport()
     }
+    /// `-sampleQuickSortOffer` in the phone sample: as after an import, the quick sort offers what is Not sorted.
+    func debugOfferQuickSort() { offersQuickSort = true }
     /// `-sampleImportResult` in the phone sample: an import's result that stays (no timer), for screenshots.
     func debugShowResult(_ message: String, files: [String]) {
         bannerTask?.cancel()

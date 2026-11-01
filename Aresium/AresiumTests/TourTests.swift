@@ -3,7 +3,7 @@ import SwiftUI
 import Testing
 @testable import Aresium
 
-/// The tour (briefs 24, 25, 42, 59 and 77): its nineteen steps go on when the person does the thing or taps Next, the
+/// The tour (briefs 24, 25, 42, 59, 77 and 99): its steps go on when the person does the thing or taps Next, the
 /// graph's, the search's and the Settings rows' steps only point and go on, the graph's step is left out (and no card
 /// mentions the graph) while the graph is hidden, adding up works on the tour's own choices in memory, and it runs on a
 /// made-up store of its own that is deleted when it ends, at any step, without touching the person's store or settings.
@@ -70,7 +70,7 @@ struct TourTests {
         #expect(tour.phase == .running)
         #expect(tour.step == .welcome)
         #expect(tour.target == nil)
-        #expect(tour.count == 20)
+        #expect(tour.count == 21)
         let world = try #require(tour.world)
         #expect(world.root.deletingLastPathComponent().standardizedFileURL == parent.standardizedFileURL)
         #expect(world.phone.summary.payments > 100)
@@ -92,7 +92,7 @@ struct TourTests {
         #expect(tour.target == .graph, "the graph itself, on the start screen")
         #expect(tour.holdsTheScreen)
         #expect(!tour.place.current, "Overview stays for the graph")
-        #expect(tour.number == 4 && tour.count == 20)
+        #expect(tour.number == 4 && tour.count == 21)
 
         place = tour.place
         place.side = .expenses                                  // the person moves the page: the step asks nothing
@@ -253,6 +253,23 @@ struct TourTests {
         #expect(tour.target == .importButton)
 
         tour.importTapped()
+        // Brief 99: what an import left Not sorted, name by name: Not sorted's card on this month's list opens the quick
+        // sort on the tour's store; closing it goes on.
+        #expect(tour.step == .quickSort)
+        let notSorted = try #require(tour.place.path.last)
+        #expect(notSorted.category == CategoryName.uncategorised && notSorted.month == "2026-10" && tour.place.current)
+        #expect(tour.target == .quickSortCard && tour.holdsTheScreen)
+        place = tour.place
+        place.quickSort = QuickSortFlow(store: world.dashboard)            // the card's tap
+        tour.update(place)
+        #expect(tour.step == .quickSort && tour.target == nil, "its cards are free to sort")
+        let card = try #require(tour.place.quickSort?.card)
+        let pick = try #require(card.choices.first?.name)
+        await card.sort(pick)
+        #expect(tour.place.quickSort?.sortedPayments == card.ids.count, "sorted on the tour's store")
+        place = tour.place
+        place.quickSort = nil                                               // Done
+        tour.update(place)
         #expect(tour.step == .done)
         #expect(tour.target == nil)
         tour.next()
@@ -307,6 +324,9 @@ struct TourTests {
                 #expect(tour.showsSettings && tour.target == .contactRow)
             case .importFiles, .welcome, .done:
                 #expect(tour.place.path.isEmpty && tour.place.payment == nil)
+            case .quickSort:
+                #expect(tour.place.path.last?.category == CategoryName.uncategorised)
+                #expect(tour.target == .quickSortCard)
             default:
                 #expect(tour.place.path.isEmpty)
                 #expect(tour.target != nil)
@@ -316,11 +336,11 @@ struct TourTests {
             if tour.phase == .running { seen.append(tour.step) }
         }
         #expect(seen == TourStep.allCases)
-        #expect(seen.count == 20)
+        #expect(seen.count == 21)
         #expect(Self.tourFolders(in: parent).isEmpty)
     }
 
-    /// With the graph hidden in Settings (brief 42), the tour has no graph step: nineteen steps, counted 1 to 19 on the
+    /// With the graph hidden in Settings (brief 42), the tour has no graph step: twenty steps, counted 1 to 20 on the
     /// card, Overview followed by the search (brief 77); a DEBUG start at the graph's step starts at the search; no card
     /// mentions the graph (brief 59).
     @Test func withTheGraphHiddenTheGraphStepIsLeftOut() async throws {
@@ -329,7 +349,7 @@ struct TourTests {
 
         let tour = Self.model(in: Self.parent(), showsGraph: false)
         await tour.start()
-        #expect(tour.count == 19)
+        #expect(tour.count == 20)
         var numbers: [Int] = []
         var seen: [TourStep] = []
         while tour.phase == .running {
@@ -341,7 +361,7 @@ struct TourTests {
             if tour.step == .done { #expect(tour.nextStep == nil) }
             tour.next()
         }
-        #expect(numbers == Array(1...19))
+        #expect(numbers == Array(1...20))
         #expect(!seen.contains(.graph) && seen.first == .welcome && seen.last == .done)
         for step in TourStep.steps(showingGraph: false) {
             #expect(!step.text(.english, showingGraph: false).localizedCaseInsensitiveContains("graph"))
@@ -375,6 +395,10 @@ struct TourTests {
         #expect(TourStep.select.text(.german)
                 == "Tippe hier, um mehrere Buchungen auszuwählen und auf einmal zu verschieben oder umzubenennen.")
         #expect(TourStep.importFiles.text(.english) == "Files from your bank, receipts and cash come in here.")
+        #expect(TourStep.quickSort.text(.english)
+                == "What an import leaves Not sorted, you go through here name by name. One tap sorts all of a name's payments.")
+        #expect(TourStep.quickSort.text(.german)
+                == "Was nach einem Import nicht sortiert ist, gehst du hier Name für Name durch. Einmal tippen sortiert alle Buchungen eines Namens.")
         #expect(TourStep.dashboardSettings.text(.german, showingGraph: true).contains("Diagramm"))
         #expect(TourStep.dashboardSettings.text(.german, showingGraph: false) == "Hier summierst du gleiche Namen in jeder Liste.")
     }

@@ -485,6 +485,15 @@ nonisolated enum PhoneDashboard {
                              paidFrom: receipt.method == .cash && receipt.direction == .out ? receipt.paidFrom : nil)
     }
 
+    /// Each bank payment's row gets its text (brief 99: the quick sort shows a name's purpose lines). The engine's rows
+    /// carry no text of their own; receipts and cash entries have none.
+    static func addPurposes(to dashboard: inout Dashboard, payments: [LedgerPayment]) {
+        let texts = Dictionary(payments.map { ($0.id, $0.text) }, uniquingKeysWith: { first, _ in first })
+        for index in dashboard.transactions.indices where dashboard.transactions[index].receiptId == nil {
+            dashboard.transactions[index].purpose = texts[dashboard.transactions[index].id]
+        }
+    }
+
     /// The dashboard's own name and look for payments without a category (the engine's `UNCATEGORISED`).
     static let uncategorised = (name: "Uncategorised", color: "#9ca3af")
 

@@ -85,6 +85,7 @@ struct PickerScrollTests {
                     worker.transactions[index].isOwnName = nil
                     worker.transactions[index].ownNameSource = nil
                     worker.transactions[index].nameKey = nil
+                    worker.transactions[index].purpose = nil   // brief 99: the bank's text for the quick sort
                 }
                 #expect(try encoder.encode(reference) == encoder.encode(worker))
             }

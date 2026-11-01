@@ -91,6 +91,9 @@ final class DashboardStore {
     @ObservationIgnored var builtNamePages = NamePageCache()
     @ObservationIgnored var builtNameSearch = NameSearchCache()
     @ObservationIgnored var builtDays = DayPaymentsCache()
+    /// The quick sort's groups (brief 99), built with each phone dashboard and published in the same turn as it, so the
+    /// card on Not sorted's list, the offer and the flow never read groups of another dashboard.
+    private(set) var builtQuickSort = QuickSortCache()
     /// Installed by the live app (`installMessages`); in DEBUG the phone sample gets a pretend one
     /// (`installSampleMessages`, brief 46); never a test store.
     var messages: AresiumMessages?
@@ -183,8 +186,12 @@ final class DashboardStore {
                 })
             }
             guard current() else { return }
+            // Brief 99: what is Not sorted, grouped by name, off the main thread before the dashboard shows.
+            let groups = backend?.mode == .phone ? await QuickSortCache.build(loaded) : []
+            guard current() else { return }
             try PickerTiming.measure("dashboard.publish") {
                 dashboard = loaded
+                builtQuickSort = QuickSortCache(revision: revision, groups: groups)
                 builtChosen = chosen
                 lastSuccessfulLoad = .now
                 try publishWidget(loaded)

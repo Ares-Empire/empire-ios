@@ -42,6 +42,7 @@ extension PhoneLedger {
                                bankLineIdentities: snapshot.bankLineIdentities, receipts: receipts,
                                receiptKeys: snapshot.receiptKeys, rules: snapshot.shops.rules(snapshot.names),
                                identities: snapshot.shops, enabled: ownNames)
+            PhoneDashboard.addPurposes(to: &dashboard, payments: payments)
         }
         return dashboard
     }

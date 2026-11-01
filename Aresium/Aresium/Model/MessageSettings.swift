@@ -87,13 +87,15 @@ nonisolated enum ReminderOffer {
         var result = false
         /// Another window of the app is open: Settings, the guide, the file check, a receipt or its question, a picker.
         var window = false
+        /// The quick sort's offer (brief 99) shows in its place, or its flow is open: it goes first.
+        var quickSort = false
     }
 
     /// In the import result's place once the result (with its send card) and the category picker are done: never with
-    /// them, never in the tour or behind the lock or another window.
+    /// them, never in the tour or behind the lock or another window, and after the quick sort's offer.
     static func shows(_ moment: Moment) -> Bool {
         moment.ready && !moment.tour && !moment.locked && !moment.importing && !moment.picker && !moment.result
-            && !moment.window
+            && !moment.window && !moment.quickSort
     }
 
     /// Turn on: Messages on with both messages; how often and the time stay as they are (every 2 weeks and 18:00
@@ -110,9 +112,10 @@ nonisolated enum ReminderOffer {
 extension ReminderOffer.Moment {
     /// The moment as the app's state has it: the messages' readiness and the import's own state (its work, the category
     /// picker, the result with or without its send card); the screen adds the tour, the lock and its other windows.
-    @MainActor init(messages: AresiumMessages, imports: ImportStore, tour: Bool, locked: Bool, window: Bool) {
+    @MainActor init(messages: AresiumMessages, imports: ImportStore, tour: Bool, locked: Bool, window: Bool,
+                    quickSort: Bool = false) {
         self.init(ready: messages.shouldOfferReminder, tour: tour, locked: locked, importing: imports.isBusy,
-                  picker: imports.asksForCategories, result: imports.banner != nil, window: window)
+                  picker: imports.asksForCategories, result: imports.banner != nil, window: window, quickSort: quickSort)
     }
 }
 

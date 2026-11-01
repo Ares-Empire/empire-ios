@@ -186,7 +186,7 @@ struct ContentView: View {
             }
             _place = State(initialValue: place)
         }
-        // Screenshots: `-openGuide list|<bank id>` (the guide), `-tour <step>` (the tour at that step, 1–20).
+        // Screenshots: `-openGuide list|<bank id>` (the guide), `-tour <step>` (the tour at that step, 1–21).
         if sample, LaunchArguments.value("-openGuide") != nil { _showsGuide = State(initialValue: true) }
         if sample { modes.holdForSample(server: !phoneSample) }
         if sample && !phoneSample {
@@ -333,7 +333,7 @@ struct ContentView: View {
             }
             .onOpenURL(perform: route)
             .overlay(alignment: .bottom) {
-                ImportFeedback(store: imports, palette: palette, offer: reminderOffer)
+                ImportFeedback(store: imports, palette: palette, offer: reminderOffer, quickSort: quickSortOffer)
             }
             .sheet(isPresented: $showsSettings, onDismiss: importPickedInGuide) {
                 SettingsScreen(app: SettingsApp(name: "Aresium",
@@ -425,6 +425,10 @@ struct ContentView: View {
             if let url = MessageTapRouter.shared.take() { route(url) }
         }
         .onChange(of: tour != nil) { _, touring in store.messages?.setTour(touring) }
+        // Brief 99: the quick sort opened from Not sorted's list answers its offer too; and an offer whose import left
+        // nothing Not sorted (or it was sorted since) is over, so it never shows later without an import.
+        .onChange(of: place.quickSort != nil) { _, open in if open { imports.quickSortOfferAnswered() } }
+        .onChange(of: quickSortOfferExpired) { _, expired in if expired { imports.quickSortOfferAnswered() } }
         .onChange(of: modes.state) { _, _ in routeHeldLink() }
         .onChange(of: lock.isLocked) { _, _ in routeHeldLink() }
         .accessibilityHidden(lock.isLocked)
@@ -509,7 +513,7 @@ struct ContentView: View {
     }
 
     #if DEBUG
-    /// Screenshots: `-tour <step>` starts the tour at that step (1–20); `-tourSettings` opens its Settings.
+    /// Screenshots: `-tour <step>` starts the tour at that step (1–21); `-tourSettings` opens its Settings.
     private func startDebugTour() async {
         guard sampleActive, tour == nil, let value = LaunchArguments.value("-tour"),
               let step = Int(value).flatMap(TourStep.init(rawValue:)) else { return }
@@ -572,15 +576,40 @@ struct ContentView: View {
     /// `-sampleReminderOffer`).
     private var reminderOffer: ReminderOfferChoice? {
         guard let messages = store.messages else { return nil }
-        let windowOpen = showsSettings || showsGuide || picksFiles || restoringExport || imports.layoutRequest != nil
-            || pendingReceiptQuestion != nil || receipts.reading != nil || receipts.scanning || receipts.pickingPhoto
-            || cashEntry != nil
         let moment = ReminderOffer.Moment(messages: messages, imports: imports, tour: tour != nil, locked: lock.isLocked,
-                                          window: windowOpen)
+                                          window: windowOpen, quickSort: quickSortOffer != nil || place.quickSort != nil)
         guard ReminderOffer.shows(moment) else { return nil }
         return ReminderOfferChoice(interval: messages.preferences.interval,
                                    turnOn: { acceptReminderOffer(messages) },
                                    notNow: { messages.declineReminderOffer() })
+    }
+
+    /// A window of the app the offers after an import wait for (an offer never shows on top of one).
+    private var windowOpen: Bool {
+        showsSettings || showsGuide || picksFiles || restoringExport || imports.layoutRequest != nil
+            || pendingReceiptQuestion != nil || receipts.reading != nil || receipts.scanning || receipts.pickingPhoto
+            || cashEntry != nil
+    }
+
+    /// The quick sort's offer after an import (brief 99), in the result's place before the messages' offer: "34 payments
+    /// not sorted", Go through (the flow over the dashboard) and Later. Phone mode only: the groups are phone mode's.
+    private var quickSortOffer: QuickSortOfferChoice? {
+        let moment = quickSortMoment
+        guard modes.phone != nil, QuickSortOffer.shows(moment) else { return nil }
+        return QuickSortOfferChoice(tally: moment.tally, goThrough: {
+            imports.quickSortOfferAnswered()
+            place.quickSort = QuickSortFlow(store: store)
+        }, later: { imports.quickSortOfferAnswered() })
+    }
+
+    private var quickSortMoment: QuickSortOffer.Moment {
+        QuickSortOffer.Moment(imports: imports, store: store, tour: tour != nil, locked: lock.isLocked,
+                              window: windowOpen || place.quickSort != nil)
+    }
+
+    /// The import that set the offer left nothing Not sorted, or it was sorted since.
+    private var quickSortOfferExpired: Bool {
+        QuickSortOffer.expires(quickSortMoment, dashboardShown: store.dashboard != nil && modes.phone != nil)
     }
 
     /// The offer's Turn on: both messages on (iOS asks now, the first time); once iOS allowed them, a line in the
@@ -663,6 +692,7 @@ struct ContentView: View {
                 imports.debugImport([file])           // the window; `-sampleReading 2|columns` in it
             }
             if arguments.contains("-sampleFormat") { await showSampleFormat(phone) }
+            await startQuickSortSample(arguments)
             if arguments.contains("-sampleImportResult") {
                 // An import's result line, as a bank file of 45 payments leaves it (made-up numbers).
                 let result = PhoneImportResult(name: "Umsaetze-Girokonto.csv", added: 42, already: 3, sorted: 38, waiting: 4)
@@ -670,6 +700,28 @@ struct ContentView: View {
             }
         } catch {
             modes.debugShow(.failed(error.localizedDescription))
+        }
+    }
+
+    /// The quick sort in the phone sample (brief 99): `-sampleQuickSortOffer` offers it as after an import (on the
+    /// dashboard once it shows); `-openQuickSort` opens it, `-quickSortSkip <n>` skips the first n cards,
+    /// `-quickSortSort <category>` then sorts the card shown into it, `-quickSortFinish` skips the rest (the end).
+    /// `-sampleQuickSort` (PhoneSample) adds made-up people to go through.
+    private func startQuickSortSample(_ arguments: [String]) async {
+        if arguments.contains("-sampleQuickSortOffer") { imports.debugOfferQuickSort() }
+        guard arguments.contains("-openQuickSort") else { return }
+        for _ in 0..<100 where store.dashboard == nil { try? await Task.sleep(for: .milliseconds(100)) }
+        try? await Task.sleep(for: .milliseconds(400))
+        let flow = QuickSortFlow(store: store)
+        place.quickSort = flow
+        try? await Task.sleep(for: .milliseconds(700))
+        for _ in 0..<(LaunchArguments.value("-quickSortSkip").flatMap(Int.init) ?? 0) { flow.skip() }
+        if let name = LaunchArguments.value("-quickSortSort") {
+            try? await Task.sleep(for: .milliseconds(500))
+            await flow.card?.sort(name)
+        }
+        if arguments.contains("-quickSortFinish") {
+            while flow.card != nil { flow.skip() }
         }
     }
 

@@ -310,6 +310,7 @@ struct ShopIdentityTests {
             counted.transactions[index].isOwnName = nil
             counted.transactions[index].place = originals[counted.transactions[index].id] ?? counted.transactions[index].place
             counted.transactions[index].bankName = nil
+            counted.transactions[index].purpose = nil           // brief 99's text, added after counting too
         }
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]

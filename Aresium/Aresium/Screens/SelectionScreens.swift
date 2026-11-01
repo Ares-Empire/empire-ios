@@ -148,27 +148,49 @@ struct SelectionBar: View {
     let name: () -> Void
 
     var body: some View {
-        HStack(spacing: 0) {
-            item(symbol: "square.grid.2x2", title: Text("Category"), enabled: state.category, action: category)
+        BottomBar(palette: palette) {
+            BarItem(symbol: "square.grid.2x2", title: Text("Category"), enabled: state.category, palette: palette,
+                    action: category)
                 .accessibilityIdentifier("selectionCategory")
             if state.offersName {
-                item(symbol: "pencil", title: Text("Name"), enabled: state.name && !naming, busy: naming, action: name)
+                BarItem(symbol: "pencil", title: Text("Name"), enabled: state.name && !naming, busy: naming,
+                        palette: palette, action: name)
                     .accessibilityIdentifier("selectionName")
             }
         }
-        .padding(.horizontal, 28).padding(.top, 7).padding(.bottom, 3)
-        .frame(maxWidth: .infinity)
-        .background {
-            // The card's colour laid over the wall's (the rows scrolling under it never show through), into the
-            // home indicator's area, with the line on top.
-            ZStack { palette.background; palette.card }
-                .overlay(alignment: .top) { Rectangle().fill(palette.line).frame(height: 1) }
-                .ignoresSafeArea(edges: .bottom)
-        }
     }
+}
 
-    private func item(symbol: String, title: Text, enabled: Bool, busy: Bool = false,
-                      action: @escaping () -> Void) -> some View {
+/// The app's bar at the bottom of a screen (Mail's toolbar in the app's card look): the selection's Category and Name
+/// (brief 82), the quick sort's Undo and Skip (brief 99). Its items side by side on the card's colour laid over the
+/// wall's (what scrolls under it never shows through), into the home indicator's area, with the line on top.
+struct BottomBar<Content: View>: View {
+    let palette: Palette
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        HStack(spacing: 0) { content }
+            .padding(.horizontal, 28).padding(.top, 7).padding(.bottom, 3)
+            .frame(maxWidth: .infinity)
+            .background {
+                ZStack { palette.background; palette.card }
+                    .overlay(alignment: .top) { Rectangle().fill(palette.line).frame(height: 1) }
+                    .ignoresSafeArea(edges: .bottom)
+            }
+    }
+}
+
+/// One item of the bottom bar: its symbol with its word under it, in ink, muted while off; the busy sign in the symbol's
+/// place while it works.
+struct BarItem: View {
+    let symbol: String
+    let title: Text
+    var enabled = true
+    var busy = false
+    let palette: Palette
+    let action: () -> Void
+
+    var body: some View {
         Button(action: action) {
             VStack(spacing: 3) {
                 ZStack {

@@ -99,6 +99,9 @@ struct ImportFeedback: View {
     /// The messages' offer after the first import (brief 46), in the result's place once the result has gone; nil while
     /// it does not show (`ReminderOffer.shows`).
     var offer: ReminderOfferChoice? = nil
+    /// The quick sort's offer after an import (brief 99), first in that place; nil while it does not show
+    /// (`QuickSortOffer.shows`).
+    var quickSort: QuickSortOfferChoice? = nil
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -106,6 +109,13 @@ struct ImportFeedback: View {
             // One toast per result: a new result starts unmoved (`BottomToast`'s swipe).
             if let banner = store.banner {
                 ImportToast(banner: banner, store: store, palette: palette).id(banner.id)
+            } else if let quickSort {
+                // Later, also as a swipe down.
+                BottomToast(palette: palette, closesBySwipe: { true }, close: quickSort.later) {
+                    QuickSortOfferCard(offer: quickSort, palette: palette)
+                }
+                .id("quick-sort-offer")
+                .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
             } else if let offer {
                 // Not now, also as a swipe down, as the send card's.
                 BottomToast(palette: palette, closesBySwipe: { true }, close: offer.notNow) {
@@ -115,9 +125,12 @@ struct ImportFeedback: View {
                 .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
             }
         }
-        // The offer comes by itself after the result: it rises into place rather than appearing at once.
-        .animation(reduceMotion ? .easeOut(duration: 0.2) : .spring(duration: 0.35), value: offer != nil)
+        // An offer comes by itself after the result: it rises into place rather than appearing at once.
+        .animation(reduceMotion ? .easeOut(duration: 0.2) : .spring(duration: 0.35), value: shownOffer)
     }
+
+    /// Which offer shows: none, the messages' or the quick sort's.
+    private var shownOffer: Int { quickSort != nil ? 2 : offer != nil ? 1 : 0 }
 }
 
 private struct ImportToast: View {
@@ -270,26 +283,46 @@ struct ReminderOfferCard: View {
     let palette: Palette
 
     var body: some View {
+        OfferCard(symbol: "bell", title: String(localized: "Remind you to import new statements?"),
+                  line: MessageWording.offerLine(offer.interval), main: Text("Turn on"), quiet: Text("Not now"),
+                  palette: palette, act: offer.turnOn, decline: offer.notNow)
+    }
+}
+
+/// An offer in the import result's card and place (the messages', brief 46; the quick sort's, brief 99): a quiet
+/// symbol, the question, one line under it, then the main button and a quiet word that declines (taking taps over
+/// 44 pt, brief 41), side by side or one under the other when they do not fit.
+struct OfferCard: View {
+    let symbol: String
+    let title: String
+    let line: String
+    let main: Text
+    let quiet: Text
+    let palette: Palette
+    let act: () -> Void
+    let decline: () -> Void
+
+    var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .firstTextBaseline, spacing: 9) {
-                Image(systemName: "bell").foregroundStyle(palette.secondary).accessibilityHidden(true)
+                Image(systemName: symbol).foregroundStyle(palette.secondary).accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("Remind you to import new statements?").font(AppFont.text(14.5, weight: .semibold))
+                    Text(verbatim: title).font(AppFont.text(14.5, weight: .semibold))
                         .foregroundStyle(palette.ink).fixedSize(horizontal: false, vertical: true)
                         .accessibilityAddTraits(.isHeader)
-                    Text(verbatim: MessageWording.offerLine(offer.interval)).font(AppFont.text(12.5))
+                    Text(verbatim: line).font(AppFont.text(12.5))
                         .foregroundStyle(palette.secondary).lineSpacing(2).fixedSize(horizontal: false, vertical: true)
                 }
             }
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 24) {
-                    turnOn.fixedSize(horizontal: true, vertical: false)
+                    mainButton.fixedSize(horizontal: true, vertical: false)
                     Spacer(minLength: 0)
-                    notNow
+                    quietButton
                 }
                 VStack(alignment: .leading, spacing: 10) {
-                    turnOn
-                    notNow
+                    mainButton
+                    quietButton
                 }
             }
             .padding(.top, 12)
@@ -297,14 +330,14 @@ struct ReminderOfferCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private var turnOn: some View {
-        Button(action: offer.turnOn) { Text("Turn on") }
+    private var mainButton: some View {
+        Button(action: act) { main }
             .buttonStyle(FormButtonStyle(accent: nil))
     }
 
     /// A quiet word, taking taps over 44 pt (brief 41), as the send card's Not now.
-    private var notNow: some View {
-        Button(action: offer.notNow) { Text("Not now").minimumTapArea() }
+    private var quietButton: some View {
+        Button(action: decline) { quiet.minimumTapArea() }
             .buttonStyle(.plain)
             .font(AppFont.text(13, weight: .bold)).foregroundStyle(palette.ink)
             .fixedSize(horizontal: false, vertical: true)

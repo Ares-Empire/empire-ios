@@ -88,14 +88,14 @@ extension PhoneLedger {
 
     /// One actor operation for all rows. Awaited engine work precedes every mutation; a save revision check catches
     /// reentrant changes during those awaits. All fetching, planning, applying and snapshot lifetimes stay off main.
-    func changeBatch(ids: Set<String>, action: BatchLedgerAction, engine: AresiumEngine,
-                     catalog: CategoryCatalog, language: AppLanguage = .current) async throws -> BatchLedgerResult {
+    func changeBatch(ids: Set<String>, action: BatchLedgerAction, engine: AresiumEngine, catalog: CategoryCatalog,
+                     language: AppLanguage = .current, span: BatchSpan = .oneMonth) async throws -> BatchLedgerResult {
         assert(!Thread.isMainThread)
         let timing = PickerTiming.begin("batch.change")
         defer { timing.end() }
         let observer = batchObserver(), revision = observer.value
         let before = try batchSnapshot()
-        let selected = try batchSelected(ids, from: before)
+        let selected = try batchSelected(ids, from: before, span: span)
         let list = PhoneCategoryList(catalog: catalog, chosen: before.categories, language: language)
         let target: String?
         if let name = action.category {
@@ -248,7 +248,8 @@ extension PhoneLedger {
                                  followUp: followUp)
     }
 
-    private func batchSelected(_ ids: Set<String>, from snapshot: LedgerExport) throws
+    /// One direction always; one month unless `span` allows every month (brief 99's group of one name).
+    private func batchSelected(_ ids: Set<String>, from snapshot: LedgerExport, span: BatchSpan = .oneMonth) throws
         -> (payments: [LedgerPayment], receipts: [LedgerReceipt]) {
         let payments = snapshot.payments.filter { ids.contains($0.id) }
         let receipts = snapshot.receipts.filter { ids.contains($0.id) }
@@ -256,7 +257,7 @@ extension PhoneLedger {
         let directions = Set(payments.map { $0.amountValue > 0 ? "in" : "out" }
             + receipts.map { $0.direction.rawValue })
         let months = Set(payments.map { String($0.bookingDate.prefix(7)) } + receipts.map { String($0.date.prefix(7)) })
-        guard directions.count == 1, months.count == 1 else { throw BatchChangeError.invalidSelection }
+        guard directions.count == 1, span == .allMonths || months.count == 1 else { throw BatchChangeError.invalidSelection }
         return (payments, receipts)
     }
 

@@ -33,11 +33,7 @@ struct RecategoriseSheet<Window: CategoryWindow>: View {
                                                                       selection: heading.selection))
                             .font(AppFont.text(13)).foregroundStyle(palette.secondary)
                             .fixedSize(horizontal: false, vertical: true)
-                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 9) {
-                            ForEach(window.choices) { category in choice(category, current: window.currentCategory) }
-                            if window.offersOtherCategory { otherCategoryTile }
-                            if window.offersNewCategory { newCategoryTile }
-                        }
+                        CategoryGrid(window: window, palette: palette)
                         // A name that made no category: why, in Settings → Categories' words (brief 60).
                         if let problem = window.newCategory.problem {
                             Text(problem).foregroundStyle(palette.expenseText)
@@ -142,6 +138,31 @@ struct RecategoriseSheet<Window: CategoryWindow>: View {
             }
         }
     }
+}
+
+/// The change window's grid (briefs 60, 70, 82): the categories offered for the payments' side, then, in phone mode,
+/// Other category… (while the other side has one not offered here) and New category. One piece for the change window and
+/// the quick sort's card (brief 99), so both show the same tiles. `pick` is what a tile does (nil: the window picks it
+/// for Save); `pickFromOtherSide` what a category from Other category…'s list does (nil: picked into the grid).
+/// `working`: a tile's tap is at work (the quick sort sorts at once): the tapped tile keeps its look, the others grey and
+/// take no taps, as while a new category is made.
+struct CategoryGrid<Window: CategoryWindow>: View {
+    let window: Window
+    let palette: Palette
+    var working = false
+    var pick: ((String) -> Void)? = nil
+    var pickFromOtherSide: ((String) -> Void)? = nil
+
+    var body: some View {
+        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 9) {
+            ForEach(window.choices) { category in choice(category, current: window.currentCategory) }
+            if window.offersOtherCategory { otherCategoryTile }
+            if window.offersNewCategory { newCategoryTile }
+        }
+    }
+
+    /// A category being made, or a tile's tap at work: the other tiles grey and still.
+    private var busy: Bool { window.newCategory.isMaking || working }
 
     /// The grid's last tile (brief 60): the category tiles' size, quiet ink and the line's thin outline, no category
     /// colour, so it reads as an action. While the category is made it shows the busy sign; the others are greyed.
@@ -151,7 +172,8 @@ struct RecategoriseSheet<Window: CategoryWindow>: View {
             ActionTile(symbol: "plus", title: Text("New category"), busy: making, palette: palette)
         }
         .buttonStyle(.plain)
-        .whileWorking(making, tapped: true)
+        .opacity(working ? 0.4 : 1)
+        .whileWorking(busy, tapped: making)
         .accessibilityIdentifier("newCategory")
     }
 
@@ -163,7 +185,7 @@ struct RecategoriseSheet<Window: CategoryWindow>: View {
         Menu {
             Section {
                 ForEach(window.otherSideChoices) { category in
-                    Button { window.pickFromOtherSide(category.name) } label: {
+                    Button { (pickFromOtherSide ?? window.pickFromOtherSide)(category.name) } label: {
                         Label { Text(verbatim: category.shownName) } icon: { CategoryMenuIcon(category: category) }
                     }
                 }
@@ -176,15 +198,15 @@ struct RecategoriseSheet<Window: CategoryWindow>: View {
         }
         .menuOrder(.fixed)
         .buttonStyle(.plain)
-        .opacity(window.newCategory.isMaking ? 0.4 : 1)
-        .disabled(window.newCategory.isMaking)
+        .opacity(busy ? 0.4 : 1)
+        .disabled(busy)
         .accessibilityIdentifier("otherCategory")
     }
 
     private func choice(_ category: Category, current: String?) -> some View {
         let selected = window.isPicked(category.name)
         let color = Color(hex: category.color)
-        return Button { window.select(category.name) } label: {
+        return Button { (pick ?? window.select)(category.name) } label: {
             HStack(spacing: 7) {
                 Image(systemName: CategorySymbol.name(for: category.icon)).frame(width: 20)
                 VStack(alignment: .leading, spacing: 2) {
@@ -197,9 +219,10 @@ struct RecategoriseSheet<Window: CategoryWindow>: View {
                 .overlay(RoundedRectangle(cornerRadius: 10).stroke(color.opacity(selected ? 1 : 0.33), lineWidth: selected ? 2 : 1))
         }.buttonStyle(.plain)
             .disabled(window.mode == .add && category.name == current)
-            // A category being made (brief 60): the others greyed and still, as the app's other busy buttons.
-            .opacity(window.newCategory.isMaking ? 0.4 : 1)
-            .whileWorking(window.newCategory.isMaking, tapped: false)
+            // A category being made (brief 60), or the quick sort's tap at work: the others greyed and still, as the
+            // app's other busy buttons; the tapped one keeps its look.
+            .opacity(busy && !(working && selected) ? 0.4 : 1)
+            .whileWorking(busy, tapped: working && selected)
             .accessibilityLabel(category.name == current ? String(localized: "\(category.shownName), current") : category.shownName)
             .accessibilityAddTraits(selected ? .isSelected : [])
             .takesBack(window.stopOfferingEntry(for: category.name)) { Task { await window.stopOffering(category.name) } }

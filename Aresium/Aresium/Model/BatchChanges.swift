@@ -23,6 +23,10 @@ struct PaymentSelectionSummary {
 
 nonisolated enum BatchRenameScope: Sendable { case payments, shops }
 
+/// Which months one batch may cover. A category's month list is one month (brief 81's selection, the default); the quick
+/// sort's group (brief 99) is one name's payments in one direction over every month.
+nonisolated enum BatchSpan: Sendable { case oneMonth, allMonths }
+
 nonisolated struct BatchRenameInfo: Equatable, Sendable {
     let bankPaymentCount: Int
     let otherPaymentCount: Int
@@ -103,6 +107,9 @@ final class BatchMerchantFollowUp {
 
     var added: [String] { plan.addedNames }
     var removed: [String] { plan.removedNames }
+    /// The other payments the question would move (brief 99 applies it only when they are the same name's Not sorted
+    /// payments).
+    var ids: Set<String> { plan.ids }
     var wording: CategoryQuestionWording {
         CategoryQuestionWording(count: count, selectedCount: plan.selectedCount, shopCount: shopCount, shop: shop,
                                 category: category, added: added, removed: removed, selection: true)
@@ -228,10 +235,11 @@ extension DashboardStore {
         }
     }
 
-    func switchCategory(ids: Set<String>, to category: String) async throws -> BatchChangeResult {
+    /// `span`: one month's list (brief 81), or one name's payments over every month (the quick sort, brief 99).
+    func switchCategory(ids: Set<String>, to category: String, span: BatchSpan = .oneMonth) async throws -> BatchChangeResult {
         guard let phone else { throw BatchChangeError.unavailable }
-        try validateSelection(ids)
-        return await publishBatch(try await phone.switchCategory(ids: ids, to: category))
+        try validateSelection(ids, span: span)
+        return await publishBatch(try await phone.switchCategory(ids: ids, to: category, span: span))
     }
 
     func addCategory(ids: Set<String>, name: String, removingCurrent: String? = nil) async throws -> BatchChangeResult {
@@ -274,9 +282,9 @@ extension DashboardStore {
         return await publishBatch(try await phone.rename(ids: ids, to: name, scope: scope))
     }
 
-    private func validateSelection(_ ids: Set<String>) throws {
+    private func validateSelection(_ ids: Set<String>, span: BatchSpan = .oneMonth) throws {
         let rows = selectionRows(ids)
-        guard !ids.isEmpty, rows.count == ids.count, Set(rows.map(\.month)).count == 1,
+        guard !ids.isEmpty, rows.count == ids.count, span == .allMonths || Set(rows.map(\.month)).count == 1,
               selectionSummary(ids).side != nil else { throw BatchChangeError.invalidSelection }
     }
 
@@ -288,8 +296,8 @@ extension DashboardStore {
 }
 
 extension PhoneBackend {
-    func switchCategory(ids: Set<String>, to category: String) async throws -> BatchChangeResult {
-        try await batch(ids: ids, action: .switchCategory(category))
+    func switchCategory(ids: Set<String>, to category: String, span: BatchSpan = .oneMonth) async throws -> BatchChangeResult {
+        try await batch(ids: ids, action: .switchCategory(category), span: span)
     }
 
     func addCategory(ids: Set<String>, name: String, removingCurrent: String? = nil) async throws -> BatchChangeResult {
@@ -309,10 +317,10 @@ extension PhoneBackend {
         try await batch(ids: ids, action: .rename(name, scope))
     }
 
-    private func batch(ids: Set<String>, action: BatchLedgerAction) async throws -> BatchChangeResult {
+    private func batch(ids: Set<String>, action: BatchLedgerAction, span: BatchSpan = .oneMonth) async throws -> BatchChangeResult {
         // `load` normally fills this; querying the engine here also supports the tour's in-memory ledger.
         let catalog = try await engine.catalog()
-        let saved = try await ledger.changeBatch(ids: ids, action: action, engine: engine, catalog: catalog)
+        let saved = try await ledger.changeBatch(ids: ids, action: action, engine: engine, catalog: catalog, span: span)
         try await refresh()
         let undo = BatchUndo(token: saved.undo, phone: self)
         let followUp = saved.followUp.map { BatchMerchantFollowUp(plan: $0, phone: self, undo: undo) }
