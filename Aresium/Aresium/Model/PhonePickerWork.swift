@@ -8,7 +8,7 @@ extension PhoneLedger {
         guard !snapshot.ids.isEmpty else { return [:] }
         let list = PhoneCategoryList(catalog: catalog, chosen: try chosen())
         let ids = PickerTiming.measure("sort.list") { list.sortingIDs }
-        let results = try await engine.sortPayments(snapshot.payments, categories: ids, learned: snapshot.learned)
+        let results = try await engine.sortPayments(snapshot.payments, categories: ids, learned: snapshot.learned, localPlaces: true)
         return try applySort(ids: snapshot.ids, results: results, fresh: fresh)
     }
 
@@ -19,7 +19,7 @@ extension PhoneLedger {
         let waiting = try sortingSnapshot(waitingOnly: true)
         if !unticked.isEmpty, !waiting.ids.isEmpty {
             let results = try await engine.sortPayments(waiting.payments, categories: list.sortingIDs + unticked,
-                                                        learned: waiting.learned)
+                                                        learned: waiting.learned, localPlaces: true)
             let estimated = Set(unticked)
             PickerTiming.measure("counts.reduce") {
                 for case let id? in results.map(\.categoryId) where estimated.contains(id) { counts[id, default: 0] += 1 }

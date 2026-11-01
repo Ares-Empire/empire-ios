@@ -53,7 +53,13 @@ nonisolated struct BundledLicence: Identifiable, Hashable, Sendable {
     let purpose: String         // what the app uses it for, in the app's language
     let licenceName: String     // "BSD-3-Clause"
     let file: String            // the text file's name in the bundle, without ".txt"
+    var links: [SourceLink] = []
     var id: String { name }
+
+    nonisolated struct SourceLink: Hashable, Sendable {
+        let title: String
+        let url: URL
+    }
 
     /// The licence text from the app's bundle; nil if the file is missing.
     func text(in bundle: Bundle = .main) -> String? {

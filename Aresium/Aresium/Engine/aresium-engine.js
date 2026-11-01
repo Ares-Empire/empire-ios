@@ -2137,7 +2137,9 @@ var __AresiumEngine = (() => {
     categoryLook: () => categoryLook,
     decodeBankFile: () => decodeBankFile,
     detectBankFile: () => detectBankFile,
+    findLocalPlace: () => findLocalPlace,
     guessCsvLayout: () => guessCsvLayout,
+    indexLocalPlaces: () => indexLocalPlaces,
     learn: () => learn,
     matchReceipt: () => matchReceipt,
     merchantKey: () => merchantKey,
@@ -2152,6 +2154,7 @@ var __AresiumEngine = (() => {
     readMt940: () => readMt940,
     readReceipt: () => readReceipt,
     readingsOfUnknownFile: () => readingsOfUnknownFile,
+    setLocalPlaces: () => setLocalPlaces,
     shareableLayout: () => shareableLayout,
     shopIdentities: () => shopIdentities,
     sortPayments: () => sortPayments,
@@ -5767,6 +5770,7 @@ var __AresiumEngine = (() => {
     return parts ? { merchant: parts[1].trim(), town: parts[2].trim() } : null;
   }
   var BOOKING_TYPE = /^(?:(?:sepa[ -])?(?:basis[ -]?)?lastschrift|kartenzahlung|debitkartenzahlung|kaufumsatz|sepa überweisung)\s*[:/-]?\s*/u;
+  var SHOP_PROCESSOR_PREFIX = /^(?:paypal|sumup|spc|sq|iz|izettle|zettle|stripe|adyen|klarna|nexi|worldline)\s*[*_]\s*/iu;
   function merchantKey(payment) {
     let text2 = payeeText(payment);
     text2 = cardMerchant(text2)?.merchant ?? text2;
@@ -5811,22 +5815,77 @@ var __AresiumEngine = (() => {
   function foodBusinessWord(word) {
     return foodEndings.find((ending) => word.length >= ending.length + 2 && word.endsWith(ending)) ?? null;
   }
+  function businessWord(word) {
+    if (/^grill(?:huette|hutte|haus|stube|imbiss|restaurant)$/u.test(word)) return "grill";
+    if (/^kaffee(?:kontor|contor|haus|stube|bar|roesterei|rosterei)$/u.test(word)) return "cafe";
+    if (/^(?:haar(?:werkstatt|studio|atelier|design)|hair(?:design|studio|styling|style|stylist))$/u.test(word)) return "friseur";
+    if (/^lebensmittel(?:markt|laden|handel|geschaeft)$/u.test(word)) return "lebensmittel";
+    if (word === "baumkuchenhaus") return "konditorei";
+    return foodBusinessWord(word);
+  }
+  function businessFieldWords(text2) {
+    const cleaned2 = withoutShopReferences(text2.trimEnd());
+    const words2 = shopWords(cleaned2);
+    const tail = words2.at(-1);
+    if (cleaned2.endsWith(" ") || !tail || !/[\p{L}.…]\s*$/u.test(text2)) return words2;
+    if (/^lebensmit(?:t(?:e(?:l)?)?)?$/u.test(tail)) words2[words2.length - 1] = "lebensmittel";
+    if (/^hairst(?:y(?:l(?:e)?)?)?$/u.test(tail)) words2[words2.length - 1] = "hairstyle";
+    if (/^podo(?:l(?:o(?:g(?:i(?:e)?)?)?)?)?$/u.test(tail) && /(?:^| )praxis (?:fuer|fur) podo[a-z]*$/u.test(words2.join(" "))) words2[words2.length - 1] = "podolog";
+    return words2;
+  }
   function shopSpellings(name, otherWords = /* @__PURE__ */ new Set()) {
     const spellings = [shopWords(name).join(" ")];
+    if (/['’‘`´]/u.test(name)) spellings.push(shopWords(name.replace(/['’‘`´]/gu, " ")).join(" "));
     if (/[äöü]/iu.test(name)) {
       const plain2 = words(name, bareVowels).join(" ");
       if (!otherWords.has(plain2)) spellings.push(plain2);
+      const blanks = shopWords(name.replace(/[äöü]/giu, " ")).join(" ");
+      if (!otherWords.has(plain2) && blanks.replace(/[^a-z]/gu, "").length >= 5) spellings.push(blanks);
     }
     return [...new Set(spellings)].filter(Boolean);
+  }
+
+  // src/engine/sorting/towns.ts
+  var SHOP_TOWNS = [
+    "m\xFCnchen",
+    "berlin",
+    "hamburg",
+    "k\xF6ln",
+    "frankfurt",
+    "frankfurt am main",
+    "stuttgart",
+    "d\xFCsseldorf",
+    "leipzig",
+    "dresden",
+    "hannover",
+    "n\xFCrnberg",
+    "bremen",
+    "heidelberg",
+    "mannheim",
+    "karlsruhe",
+    "augsburg",
+    "bonn",
+    "essen",
+    "dortmund"
+  ];
+  function townMatches(printed, town, cutoff = false) {
+    const actual = shopWords(printed).join(" ");
+    const normal = shopWords(town).join(" ");
+    if (!actual || !normal) return false;
+    const variants = [
+      normal,
+      normal.replace(/ae|oe|ue/gu, (pair) => pair[0]),
+      normal.replace(/ae|oe|ue/gu, " ").replace(/\s+/gu, " ").trim()
+    ];
+    return variants.some((variant) => actual === variant || cutoff && actual.replaceAll(" ", "").length >= 7 && variant.startsWith(actual) && variant.length - actual.length <= 2);
   }
 
   // src/engine/sorting/shop-matcher.ts
   var moneyOf = (amount2) => typeof amount2 !== "number" || !Number.isFinite(amount2) || amount2 === 0 ? null : amount2 < 0 ? "out" : "in";
   var applies = (direction, money2) => money2 === null || direction === "both" || direction === money2;
-  var branchNumber = /^((?:\D*[^\p{L}\p{N}])?)\d{2,6}(?![\p{L}\p{N}]|[.,:]\d)/u;
-  var processorPrefix = /^(?:(?:sumup|sq|iz|izettle|zettle|stripe|adyen|klarna|nexi|worldline)\s*[*_]\s*)/iu;
+  var branchNumber = /^(.+?[^\p{L}\p{N}])\d{2,6}(?![\p{L}\p{N}]|[.,:]\d)/u;
   function shopPayment(payment) {
-    const clean2 = (text2) => text2.replace(processorPrefix, "");
+    const clean2 = (text2) => text2.toLowerCase().trim().replace(BOOKING_TYPE, "").replace(SHOP_PROCESSOR_PREFIX, "");
     return {
       ...payment,
       counterparty: payment.counterparty ? clean2(payment.counterparty) : payment.counterparty,
@@ -5841,8 +5900,24 @@ var __AresiumEngine = (() => {
     const seen = /* @__PURE__ */ new Set();
     const otherWords = new Set(list2.plainVowelWords ?? []);
     const noBranches = new Set((list2.noBranches ?? []).flatMap((name) => shopSpellings(name, otherWords)));
-    const add = (index, name, categoryId, rank, direction, source) => {
+    const compactOwners = /* @__PURE__ */ new Map();
+    for (const [categoryId, names2] of [...list2.rules, ...list2.merchants, ...list2.brands]) for (const name of names2) {
       for (const spelling of shopSpellings(name, otherWords)) {
+        const compact = spelling.replaceAll(" ", "");
+        const owners = compactOwners.get(compact) ?? /* @__PURE__ */ new Set();
+        owners.add(categoryId);
+        compactOwners.set(compact, owners);
+      }
+    }
+    const add = (index, name, categoryId, rank, direction, source) => {
+      const spellings = shopSpellings(name, otherWords);
+      if (source === "brand") for (const spelling of [...spellings]) {
+        const compact = spelling.replaceAll(" ", "");
+        if (/^[a-z]+(?: [a-z]+)+$/u.test(spelling) && compact.length >= 6 && compactOwners.get(compact)?.size === 1) {
+          spellings.push(compact);
+        }
+      }
+      for (const spelling of spellings) {
         if (seen.has(spelling)) continue;
         seen.add(spelling);
         const words2 = spelling.split(" ");
@@ -5870,7 +5945,7 @@ var __AresiumEngine = (() => {
     function find(index, words2) {
       const found = [];
       for (let start = 0; start < words2.length; start++) {
-        const compound = index === handWritten ? foodBusinessWord(words2[start]) : null;
+        const compound = index === handWritten ? businessWord(words2[start]) : null;
         const entries = [...index.get(words2[start]) ?? [], ...compound ? index.get(compound) ?? [] : []];
         for (const entry of entries) {
           const end = start + entry.words.length;
@@ -5902,22 +5977,26 @@ var __AresiumEngine = (() => {
     function townMerchant(payment, towns) {
       const card = cardMerchant(payeeText(payment)) ?? cardMerchant(payment.description ?? payment.bookingText ?? "");
       const name = shopWords(merchantKey(payment));
-      if (["de", "deu", "deutschland"].includes(name.at(-1) ?? "")) name.pop();
-      if (name.length < 2) return null;
-      const town = card ? shopWords(card.town) : [];
-      const proven2 = town.length === 1 && name.at(-1) === town[0] || towns.some((text2) => {
-        const words2 = shopWords(text2);
-        return words2.length === 1 && name.at(-1) === words2[0];
-      });
-      if (!proven2) return null;
-      return merchants.get(name.slice(0, -1).join(" ")) ?? null;
+      const country = ["de", "deu", "deutschland"].includes(name.at(-1) ?? "");
+      if (country) name.pop();
+      const knownTowns = [...SHOP_TOWNS, ...towns, ...card ? [card.town] : []];
+      const found = [];
+      for (let cut = 1; cut < name.length; cut++) {
+        const merchant = merchants.get(name.slice(0, cut).join(" "));
+        if (!merchant) continue;
+        const tail = name.slice(cut).join(" ");
+        if (!knownTowns.some((town) => townMatches(tail, town, country || !!card))) continue;
+        found.push(merchant);
+      }
+      return found.length && new Set(found.map((m) => m.categoryId)).size === 1 ? found[0] : null;
     }
     function decide(payment, towns = []) {
       const money2 = moneyOf(payment.amount);
       const details = payment.description ?? payment.bookingText ?? "";
-      const text2 = `${cardMerchant(payment.counterparty ?? "")?.merchant ?? payment.counterparty ?? ""} ${cardMerchant(details)?.merchant ?? details}`;
-      const words2 = shopWords(withoutShopReferences(text2));
-      const written = find(handWritten, words2);
+      const payeeField = cardMerchant(payment.counterparty ?? "")?.merchant ?? payment.counterparty ?? "";
+      const detailField = cardMerchant(details)?.merchant ?? details;
+      const ruleWords = [...businessFieldWords(payeeField), ...businessFieldWords(detailField)];
+      const written = find(handWritten, ruleWords);
       const rule = best(written, written, money2);
       if (rule) return rule;
       const shop = shopPayment(payment);
@@ -5926,6 +6005,7 @@ var __AresiumEngine = (() => {
         const { categoryId, direction, name } = merchant;
         return applies(direction, money2) ? { categoryId, name, source: "merchant", direction, at: null } : null;
       }
+      const words2 = shopWords(withoutShopReferences(`${payeeField} ${detailField}`));
       const branded = find(brands, words2);
       return best(branded, [...written, ...branded], money2);
     }
@@ -6287,6 +6367,8 @@ var __AresiumEngine = (() => {
           "mcdonald",
           "mcdonalds",
           "mcdonald's",
+          "mc donald's",
+          "mc donalds",
           "burger king",
           "kfc",
           "subway",
@@ -6362,6 +6444,12 @@ var __AresiumEngine = (() => {
           "noodle",
           "noodles",
           "falafel",
+          "chicken",
+          "mezedes",
+          "kimchi",
+          "simit",
+          "spanferkel",
+          "ratskeller",
           "brasserie",
           "burger",
           "onigiri",
@@ -6719,6 +6807,41 @@ var __AresiumEngine = (() => {
       [
         "car-fuel",
         [
+          "autobahnen und schnellstra\xDFen finanzierungs aktiengesellschaft",
+          "autobahnen und schnellstra\xDFen finanzierungs ag"
+        ],
+        "both"
+      ],
+      [
+        "car-fuel",
+        [
+          "wirelane",
+          "allego",
+          "evbox",
+          "leap24",
+          "citywatt",
+          "comfortcharge",
+          "qwello",
+          "reev",
+          "e-flux",
+          "ladeverbund+",
+          "autostrom plus"
+        ],
+        "both"
+      ],
+      [
+        "car-fuel",
+        [
+          "motors",
+          "automobile",
+          "autozentrum",
+          "audi zentrum"
+        ],
+        "out"
+      ],
+      [
+        "car-fuel",
+        [
           "aral",
           "shell",
           "esso",
@@ -7009,7 +7132,56 @@ var __AresiumEngine = (() => {
       [
         "utilities",
         [
+          "123energie",
+          "allg\xE4uer \xFCberlandwerk",
+          "avacon",
+          "bayernwerk",
+          "bigge energie",
+          "bs energy",
+          "e-regio",
+          "e-werk mittelbaden",
+          "eberwerk",
+          "eins energie in sachsen",
+          "emscher lippe energie",
+          "energie calw",
+          "energie saarlorlux",
+          "energie und wasser potsdam",
+          "energiedienst",
+          "energis",
+          "enviam",
+          "envia mitteldeutsche energie",
+          "fairenergie",
+          "herzo werke",
+          "inselwerke",
+          "kreiswerke main-kinzig",
+          "lechwerke",
+          "lokalwerke",
+          "lsw energie",
+          "maingau",
+          "mark-e",
+          "naturenergie",
+          "pfalzwerke",
+          "regionalwerk bodensee",
+          "rewag",
+          "rh\xF6nenergie fulda",
+          "stadtwerk am see",
+          "stawag",
+          "s\xFCwag",
+          "teag th\xFCringer energie",
+          "th\xFCringer energie",
+          "wemag",
+          "westenergie",
+          "zeag energie"
+        ],
+        "both"
+      ],
+      [
+        "utilities",
+        [
           "stadtwerke",
+          "gemeindewerke",
+          "regionalwerk",
+          "kreiswerke",
           "rundfunkbeitrag",
           "nebenkosten",
           "energieversorgung",
@@ -7278,6 +7450,7 @@ var __AresiumEngine = (() => {
           "moemax",
           "jysk",
           "bauhaus fachcentrum",
+          "bauhaus e-business gesellschaft",
           "bauhaus gesellschaft",
           "bauhaus fil",
           "bauhaus filiale",
@@ -7420,7 +7593,10 @@ var __AresiumEngine = (() => {
           "musikhaus",
           "buchhandlung",
           "buchhaus",
-          "modellbau"
+          "modellbau",
+          "books",
+          "bookshop",
+          "b\xFCcherladen"
         ],
         "out"
       ],
@@ -7445,6 +7621,8 @@ var __AresiumEngine = (() => {
         [
           "apotheke",
           "arztpraxis",
+          "gemeinschaftspraxis",
+          "salzgrotte",
           "zahnarzt",
           "podolog",
           "physiotherapie",
@@ -7758,6 +7936,7 @@ var __AresiumEngine = (() => {
           "apple store",
           "mediamarkt",
           "media markt",
+          "mediamarktsaturn",
           "saturn",
           "cyberport",
           "notebooksbilliger",
@@ -7788,7 +7967,8 @@ var __AresiumEngine = (() => {
       [
         "electronics",
         [
-          "elektromarkt"
+          "elektromarkt",
+          "computer"
         ],
         "out"
       ],
@@ -7866,7 +8046,19 @@ var __AresiumEngine = (() => {
           "mieterverein",
           "sportverein",
           "turnverein",
-          "f\xF6rderverein"
+          "f\xF6rderverein",
+          "vereinsbeitr\xE4ge",
+          "vereinsmitgliedschaft",
+          "mitgliedsgeb\xFChr",
+          "mitgliedsgeb\xFChren",
+          "parteibeitrag",
+          "parteibeitr\xE4ge",
+          "gewerkschaftsbeitrag",
+          "gewerkschaftsbeitr\xE4ge",
+          "clubbeitrag",
+          "clubbeitr\xE4ge",
+          "klubbeitrag",
+          "klubbeitr\xE4ge"
         ],
         "out"
       ],
@@ -7970,6 +8162,22 @@ var __AresiumEngine = (() => {
         "both"
       ],
       [
+        "utilities",
+        [
+          "ewv",
+          "eam",
+          "ewr",
+          "evo",
+          "avu",
+          "eswe",
+          "ggew",
+          "ovag",
+          "teag",
+          "swb"
+        ],
+        "both"
+      ],
+      [
         "household",
         [
           "bauhaus",
@@ -7991,6 +8199,67 @@ var __AresiumEngine = (() => {
           "tesla"
         ],
         "both"
+      ],
+      [
+        "car-fuel",
+        [
+          "abarth",
+          "acura",
+          "aixam",
+          "alfa romeo",
+          "aston martin",
+          "audi",
+          "bentley",
+          "bmw",
+          "byd",
+          "cadillac",
+          "chevrolet",
+          "chrysler",
+          "citro\xEBn",
+          "cupra",
+          "dacia",
+          "daihatsu",
+          "dodge",
+          "ferrari",
+          "fiat",
+          "ford",
+          "honda",
+          "hyundai",
+          "infiniti",
+          "isuzu",
+          "jeep",
+          "kia",
+          "koenigsegg",
+          "lamborghini",
+          "lancia",
+          "land rover",
+          "maserati",
+          "mazda",
+          "mclaren",
+          "mercedes-benz",
+          "mitsubishi",
+          "nissan",
+          "opel",
+          "peugeot",
+          "polestar",
+          "porsche",
+          "range rover",
+          "renault",
+          "rolls-royce",
+          "skoda",
+          "ssangyong",
+          "subaru",
+          "suzuki",
+          "toyota",
+          "vauxhall",
+          "volkswagen",
+          "volvo",
+          "xpeng",
+          "bp",
+          "q1",
+          "oil!"
+        ],
+        "out"
       ],
       [
         "taxi-sharing",
@@ -8111,6 +8380,30 @@ var __AresiumEngine = (() => {
           "hallesche"
         ],
         "both"
+      ],
+      [
+        "memberships",
+        [
+          "spd",
+          "cdu",
+          "csu",
+          "fdp",
+          "afd",
+          "b\xFCndnis 90 die gr\xFCnen",
+          "die linke",
+          "sozialdemokratische partei deutschlands",
+          "christlich demokratische union",
+          "christlich demokratische union deutschlands",
+          "christlich soziale union",
+          "christlich soziale union in bayern",
+          "freie demokratische partei",
+          "alternative f\xFCr deutschland",
+          "gew",
+          "ngg",
+          "gdp",
+          "evg"
+        ],
+        "out"
       ],
       [
         "memberships",
@@ -8247,7 +8540,6 @@ var __AresiumEngine = (() => {
           "auntie anne's",
           "auntie annes pretzels",
           "bageterie boulevard",
-          "bb.q chicken",
           "beets & roots",
           "belchicken",
           "bigchefs",
@@ -8258,7 +8550,6 @@ var __AresiumEngine = (() => {
           "carl's jr.",
           "checkers drive-in restaurants, inc",
           "chipotle",
-          "cinnabon",
           "dairy queen",
           "domino's",
           "domino's australia",
@@ -8307,7 +8598,6 @@ var __AresiumEngine = (() => {
           "papa john's",
           "papparich",
           "pelicana",
-          "pelicana chicken",
           "pepper lunch",
           "peter pane",
           "pita pit",
@@ -8321,7 +8611,6 @@ var __AresiumEngine = (() => {
           "quiznos sub",
           "quiznos subs",
           "red lobster",
-          "risa chicken",
           "royal donuts",
           "ruby tuesday",
           "saizeriya",
@@ -8338,7 +8627,6 @@ var __AresiumEngine = (() => {
           "taco bell",
           "telepizza",
           "tgi fridays",
-          "the chicken rice shop",
           "tony roma",
           "tony roma's",
           "wagamama",
@@ -8369,6 +8657,7 @@ var __AresiumEngine = (() => {
           "cadera",
           "campus suite",
           "chatime",
+          "cinnabon",
           "coco fresh tea & juice",
           "coffeeshop company",
           "cold stone",
@@ -9158,7 +9447,6 @@ var __AresiumEngine = (() => {
           "lumas",
           "mayersche",
           "osiander",
-          "press & books",
           "readshop",
           "tsutaya",
           "warhammer",
@@ -9551,7 +9839,6 @@ var __AresiumEngine = (() => {
       [
         "electronics",
         [
-          "arlt computer",
           "bang & olufsen",
           "beko",
           "bose",
@@ -9860,6 +10147,7 @@ var __AresiumEngine = (() => {
     const has2 = (...names2) => names2.some((name) => words2.includes(name));
     const amount2 = payment.amount;
     if (typeof amount2 === "number" && Number.isFinite(amount2) && amount2 < 0) {
+      if (has2("kantine", "betriebskantine", "mensa")) return "eating-out";
       const purpose = shopWords(withoutShopReferences(payment.description || payment.bookingText || "")).join(" ");
       if (has2("brot") && has2("einkauf") && !purpose.includes("ihr einkauf bei")) return "groceries";
       if ((has2("wolt") || ` ${words2.join(" ")} `.includes(" uber eats ")) && has2("apotheke")) return "health";
@@ -9869,12 +10157,17 @@ var __AresiumEngine = (() => {
     }
     return null;
   }
+  function associationPurpose(payment) {
+    if (!(typeof payment.amount === "number" && Number.isFinite(payment.amount) && payment.amount < 0)) return null;
+    const payee = withoutShopReferences(payment.counterparty?.trim() || payment.description || payment.bookingText || "");
+    return /\be\s*\.\s*v\.?(?=[^.\p{L}\p{N}]|$)/iu.test(payee) || /(?:^| )eingetragener verein(?: |$)/u.test(shopWords(payee).join(" ")) ? "memberships" : null;
+  }
 
   // src/engine/sorting/starter-rules.ts
   var matcher2 = compileShopList(shops_de_default);
   var STARTER_RULES = matcher2.rules;
   function starterCategory(payment, categories, towns) {
-    const categoryId = paymentPurpose(payment) ?? matcher2.match(payment, towns);
+    const categoryId = paymentPurpose(payment) ?? matcher2.match(payment, towns) ?? associationPurpose(payment);
     return categoryId !== null && categories.some((c) => c.id === categoryId) ? categoryId : null;
   }
   var findShop = (payment, towns) => matcher2.find(payment, towns);
@@ -10056,9 +10349,270 @@ var __AresiumEngine = (() => {
     return result;
   }
 
+  // src/engine/sorting/local-places-packed.ts
+  var PLACES_MAGIC = 1347179073;
+  var PLACES_VERSION = 1;
+  var PLACES_HEADER_BYTES = 128;
+  var NO_LOCAL_CATEGORY = 65535;
+  var fail = (reason) => {
+    throw new Error(`Invalid packed local places: ${reason}`);
+  };
+  var aligned = (size) => Math.ceil(size / 4) * 4;
+  function placesChecksum(bytes) {
+    let hash = 2166136261;
+    for (let i = 0; i < bytes.length; i++) hash = Math.imul(hash ^ (i >= 88 && i < 92 ? 0 : bytes[i]), 16777619);
+    return hash >>> 0;
+  }
+  function localUtf8(text2) {
+    const bytes = [];
+    for (const char of text2) {
+      let cp = char.codePointAt(0);
+      if (cp >= 55296 && cp <= 57343) cp = 65533;
+      if (cp < 128) bytes.push(cp);
+      else if (cp < 2048) bytes.push(192 | cp >> 6, 128 | cp & 63);
+      else if (cp < 65536) bytes.push(224 | cp >> 12, 128 | cp >> 6 & 63, 128 | cp & 63);
+      else bytes.push(240 | cp >> 18, 128 | cp >> 12 & 63, 128 | cp >> 6 & 63, 128 | cp & 63);
+    }
+    return new Uint8Array(bytes);
+  }
+  function textAt(bytes, offsets, row) {
+    let text2 = "";
+    for (let i = offsets[row]; i < offsets[row + 1]; ) {
+      const b = bytes[i++];
+      let cp = b;
+      if (b >= 192) {
+        const need = b < 224 ? 1 : b < 240 ? 2 : 3;
+        cp = b & (need === 1 ? 31 : need === 2 ? 15 : 7);
+        for (let n = 0; n < need; n++) cp = cp << 6 | bytes[i++] & 63;
+      }
+      text2 += String.fromCodePoint(cp);
+    }
+    return text2;
+  }
+  function compare3(bytes, start, end, other, from2 = 0, to = other.length) {
+    while (start < end && from2 < to) {
+      const difference = bytes[start++] - other[from2++];
+      if (difference) return difference;
+    }
+    return end - start - (to - from2);
+  }
+  function checkStrings(bytes, offsets, sorted) {
+    if (offsets[0] !== 0 || offsets[offsets.length - 1] !== bytes.length) fail("string offsets");
+    for (let row = 0; row + 1 < offsets.length; row++) {
+      const start = offsets[row], end = offsets[row + 1];
+      if (end < start || end > bytes.length || sorted && end === start) fail("string range");
+      if (sorted && row && compare3(bytes, offsets[row - 1], start, bytes, start, end) >= 0) fail("name ordering");
+      for (let i = start; i < end; ) {
+        const b = bytes[i++];
+        if (b < 128) continue;
+        const need = b >= 194 && b <= 223 ? 1 : b >= 224 && b <= 239 ? 2 : b >= 240 && b <= 244 ? 3 : 0;
+        if (!need || i + need > end) fail("UTF-8");
+        let cp = b & (need === 1 ? 31 : need === 2 ? 15 : 7);
+        for (let n = 0; n < need; n++) {
+          const next = bytes[i++];
+          if ((next & 192) !== 128) fail("UTF-8");
+          cp = cp << 6 | next & 63;
+        }
+        if (cp < (need === 1 ? 128 : need === 2 ? 2048 : 65536) || cp > 1114111 || cp >= 55296 && cp <= 57343) fail("UTF-8");
+      }
+    }
+  }
+  var PackedLocalPlaces = class {
+    constructor(input) {
+      __publicField(this, "bytes");
+      __publicField(this, "header");
+      __publicField(this, "nameOffsets");
+      __publicField(this, "names");
+      __publicField(this, "nationalCategories");
+      __publicField(this, "matchOffsets");
+      __publicField(this, "matchTowns");
+      __publicField(this, "matchCategories");
+      __publicField(this, "townOffsets");
+      __publicField(this, "towns");
+      __publicField(this, "categoryOffsets");
+      __publicField(this, "categories");
+      __publicField(this, "metadataOffsets");
+      __publicField(this, "metadata");
+      this.bytes = ArrayBuffer.isView(input) ? new Uint8Array(input.buffer, input.byteOffset, input.byteLength) : new Uint8Array(input);
+      const bytes = this.bytes, base = bytes.byteOffset, buffer = bytes.buffer;
+      if (base % 4) fail("buffer byteOffset must be aligned to 4 bytes");
+      if (bytes.length < PLACES_HEADER_BYTES) fail("truncated header");
+      if (new Uint8Array(new Uint32Array([16909060]).buffer)[0] !== 4) fail("little-endian host required");
+      const h = this.header = new Uint32Array(buffer, base, PLACES_HEADER_BYTES / 4);
+      if (h[0] !== PLACES_MAGIC) fail("magic");
+      if (h[1] !== PLACES_VERSION) fail(`unsupported version ${h[1]}`);
+      if (h[2] !== 16909060 || h[8] !== PLACES_HEADER_BYTES || h[3] !== bytes.length) fail("header or file length");
+      if (h[6] >= NO_LOCAL_CATEGORY || Array.from(h.subarray(23)).some(Boolean)) fail("header counts or reserved words");
+      if (placesChecksum(bytes) !== h[22]) fail("checksum");
+      let next = PLACES_HEADER_BYTES;
+      const numeric = (word, count, width) => {
+        if (h[word] !== next || next + count * width > bytes.length) fail("section bounds or alignment");
+        const start = next;
+        next += aligned(count * width);
+        for (let i = start + count * width; i < next; i++) if (bytes[i]) fail("section padding");
+        return base + start;
+      };
+      const blob = (word, offsets) => {
+        const size = offsets[offsets.length - 1];
+        const start = numeric(word, size, 1);
+        return new Uint8Array(buffer, start, size);
+      };
+      this.nameOffsets = new Uint32Array(buffer, numeric(9, h[4] + 1, 4), h[4] + 1);
+      this.names = blob(10, this.nameOffsets);
+      this.nationalCategories = new Uint16Array(buffer, numeric(11, h[4], 2), h[4]);
+      this.matchOffsets = new Uint32Array(buffer, numeric(12, h[4] + 1, 4), h[4] + 1);
+      this.matchTowns = new Uint32Array(buffer, numeric(13, h[7], 4), h[7]);
+      this.matchCategories = new Uint16Array(buffer, numeric(14, h[7], 2), h[7]);
+      this.townOffsets = new Uint32Array(buffer, numeric(15, h[5] + 1, 4), h[5] + 1);
+      this.towns = blob(16, this.townOffsets);
+      this.categoryOffsets = new Uint32Array(buffer, numeric(17, h[6] + 1, 4), h[6] + 1);
+      this.categories = blob(18, this.categoryOffsets);
+      this.metadataOffsets = new Uint32Array(buffer, numeric(19, 4, 4), 4);
+      this.metadata = blob(20, this.metadataOffsets);
+      if (next !== bytes.length || h[21] !== next) fail("end offset");
+      checkStrings(this.names, this.nameOffsets, true);
+      checkStrings(this.towns, this.townOffsets, false);
+      checkStrings(this.categories, this.categoryOffsets, false);
+      checkStrings(this.metadata, this.metadataOffsets, false);
+      if (this.matchOffsets[0] !== 0 || this.matchOffsets[h[4]] !== h[7]) fail("match offsets");
+      for (let row = 0; row < h[4]; row++) {
+        const category = this.nationalCategories[row];
+        if (category !== NO_LOCAL_CATEGORY && category >= h[6]) fail("national category code");
+        const start = this.matchOffsets[row], end = this.matchOffsets[row + 1];
+        if (end < start || end > h[7]) fail("match range");
+        for (let i = start; i < end; i++) {
+          if (this.matchTowns[i] >= h[5] || this.matchCategories[i] >= h[6]) fail("town/category code");
+          if (i > start && (this.matchTowns[i] < this.matchTowns[i - 1] || this.matchTowns[i] === this.matchTowns[i - 1] && this.matchCategories[i] < this.matchCategories[i - 1])) fail("town match ordering");
+        }
+      }
+    }
+    get version() {
+      return 1;
+    }
+    get dataDate() {
+      return textAt(this.metadata, this.metadataOffsets, 0);
+    }
+    get attribution() {
+      return textAt(this.metadata, this.metadataOffsets, 1);
+    }
+    get source() {
+      return textAt(this.metadata, this.metadataOffsets, 2);
+    }
+    rowFor(name) {
+      const query = localUtf8(name);
+      let low = 0, high = this.nationalCategories.length;
+      while (low < high) {
+        const middle = low + high >>> 1;
+        if (compare3(this.names, this.nameOffsets[middle], this.nameOffsets[middle + 1], query) < 0) low = middle + 1;
+        else high = middle;
+      }
+      return low < this.nationalCategories.length && compare3(this.names, this.nameOffsets[low], this.nameOffsets[low + 1], query) === 0 ? low : -1;
+    }
+    town(code) {
+      return textAt(this.towns, this.townOffsets, code);
+    }
+    category(code) {
+      return textAt(this.categories, this.categoryOffsets, code);
+    }
+  };
+
+  // src/engine/sorting/local-places.ts
+  var packedIndexes = /* @__PURE__ */ new WeakMap();
+  var installed;
+  function indexLocalPlaces(data) {
+    if (data instanceof PackedLocalPlaces || "rows" in data) return data;
+    let index = packedIndexes.get(data);
+    if (!index) {
+      index = new PackedLocalPlaces(data);
+      packedIndexes.set(data, index);
+    }
+    return index;
+  }
+  function setLocalPlaces(data) {
+    const next = data === null ? void 0 : indexLocalPlaces(data);
+    installed = next;
+  }
+  function resolveLocalPlaces(option) {
+    return option === true ? installed : option ? indexLocalPlaces(option) : void 0;
+  }
+  var localName = (text2) => shopWords(text2).join(" ");
+  var ordinary = new Set(`lieblingsstueck lieblingsplatz glueck gluecklich zuhause daheim heimat freiheit liebe leben
+  sonne mond stern himmel erde wasser feuer luft zeit raum mitte zentral central royal international express
+  mueller muller schmidt schneider fischer weber meyer wagner becker schulz hoffmann schaefer koch richter klein wolf
+  danke vielen dank einkauf zahlung rechnung gutschrift lastschrift ueberweisung dauerauftrag kartenzahlung
+  gehalt lohn miete unterhalt erstattung rueckzahlung umbuchung auszahlung verkauf privat familie freunde
+  terminal filiale beleg karte paypal klarna stripe adyen sumup zettle worldline nexi sparkasse volksbank
+  deutschland germany berlin hamburg muenchen koeln leipzig restaurant cafe apotheke baeckerei blumen kosmetik
+  optik praxis friseur hotel pension parkplatz supermarkt tankstelle shopping fashion beauty service services
+  am markt am bahnhof am park zur post zur sonne zum stern
+  an im in auf bei beim der die das dem den des ein eine und oder mit ohne fuer von vom`.split(/\s+/u));
+  var phrases = /* @__PURE__ */ new Set(["am markt", "am bahnhof", "am park", "zur post", "zur sonne", "zum stern", "vielen dank"]);
+  function safeLocalName(name) {
+    const words2 = name.split(" ");
+    const letters = name.replace(/[^\p{L}]/gu, "").length;
+    return name === localName(name) && letters >= 8 && name.length <= 100 && !phrases.has(name) && !(words2.length === 1 && ordinary.has(name)) && words2.some((word) => word.length >= 3 && !ordinary.has(word)) && !/\b(?:iban|eref|mref|gmbh|inhaber|doktor|dr)\b/u.test(name);
+  }
+  function rowFor(data, name) {
+    let low = 0, high = data.rows.length;
+    while (low < high) {
+      const middle = low + high >>> 1;
+      if (data.rows[middle][0] < name) low = middle + 1;
+      else high = middle;
+    }
+    return data.rows[low]?.[0] === name ? data.rows[low] : void 0;
+  }
+  function findLocalPlace(payment, input) {
+    const data = indexLocalPlaces(input);
+    if (data.version !== 1 || !(typeof payment.amount === "number" && Number.isFinite(payment.amount) && payment.amount < 0)) return null;
+    const raw = payeeText(payment);
+    const card = cardMerchant(raw);
+    if (card && !/^deu\b/u.test(raw.slice(card.merchant.length).trim())) return null;
+    const clean2 = (text2) => localName(text2.toLowerCase().replace(BOOKING_TYPE, "").replace(SHOP_PROCESSOR_PREFIX, "").split(/\b(?:eref|mref|cred|iban|bic|mandatsreferenz|glaeubiger-id|gläubiger-id)\s*[:+]/iu)[0]);
+    const head = clean2(card?.merchant ?? raw);
+    const details = clean2(payment.description ?? payment.bookingText ?? "");
+    const explicitTown = card ? localName(card.town) : "";
+    const found = [];
+    const consider = (name, tail) => {
+      if (!safeLocalName(name)) return;
+      const packed = data instanceof PackedLocalPlaces ? data : void 0;
+      const row = packed ? void 0 : rowFor(data, name);
+      const index = packed ? packed.rowFor(name) : -1;
+      if (packed ? index < 0 : !row) return;
+      const located = (text2, town) => {
+        const country = / (?:de|deu)$/u.test(text2);
+        return townMatches(text2.replace(/ (?:de|deu)$/u, ""), town, country);
+      };
+      const location = (town) => !tail && townMatches(explicitTown, town, true) || located(tail, town) || !tail && details.startsWith(`${name} `) && located(details.slice(name.length + 1), town);
+      const categories = /* @__PURE__ */ new Set();
+      if (packed) {
+        for (let i = packed.matchOffsets[index]; i < packed.matchOffsets[index + 1]; i++) {
+          if (location(packed.town(packed.matchTowns[i]))) categories.add(packed.matchCategories[i]);
+        }
+      } else {
+        const json = data;
+        for (let i = 0; i < row[2].length; i += 2) if (location(json.towns[row[2][i]])) categories.add(row[2][i + 1]);
+      }
+      if (categories.size > 1) {
+        found.push({ categoryId: "", name, town: true });
+        return;
+      }
+      const national = packed ? packed.nationalCategories[index] : row[1];
+      const category = categories.size ? [...categories][0] : tail ? -1 : national;
+      const categoryId = category < 0 || category === NO_LOCAL_CATEGORY ? void 0 : packed ? packed.category(category) : data.categories[category];
+      if (categoryId) found.push({ categoryId, name, town: categories.size === 1 });
+    };
+    consider(head, "");
+    const words2 = head.split(" ");
+    for (let cut = 1; cut < words2.length; cut++) consider(words2.slice(0, cut).join(" "), words2.slice(cut).join(" "));
+    const specific = found.some((match) => match.town) ? found.filter((match) => match.town) : found;
+    return specific.length && new Set(specific.map((match) => match.categoryId)).size === 1 && specific[0].categoryId ? specific[0] : null;
+  }
+
   // src/engine/sorting/sort.ts
   function sortPayments(payments, options) {
+    const localPlaces = resolveLocalPlaces(options.localPlaces);
     const allowed = new Set(options.categories.map((c) => c.id));
+    const starterCategories = localPlaces ? [...DEFAULT_CATEGORIES, ...BUILT_IN_CATEGORIES, ...options.categories] : options.categories;
     const transfers = ownTransfers(payments);
     const provenTowns = /* @__PURE__ */ new Set();
     for (const payment of payments) for (const text2 of [payment.counterparty, payment.description, payment.bookingText]) {
@@ -10083,7 +10637,10 @@ var __AresiumEngine = (() => {
       const key = keys[index];
       const remembered = !key ? null : Object.hasOwn(learned, key) ? learned[key] : rememberedShops.get(identities.get(key));
       if (remembered && allowed.has(remembered)) return { categoryId: remembered, source: "learned" };
-      const categoryId = starterCategory(payment, options.categories, towns);
+      const existing = starterCategory(payment, starterCategories, towns);
+      const local = existing === null && localPlaces ? findLocalPlace(payment, localPlaces)?.categoryId : null;
+      const proposed = existing ?? local ?? null;
+      const categoryId = proposed && allowed.has(proposed) ? proposed : null;
       return { categoryId, source: categoryId ? "starter" : null };
     });
   }

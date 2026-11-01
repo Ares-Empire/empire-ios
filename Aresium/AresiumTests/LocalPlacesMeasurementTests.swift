@@ -7,6 +7,7 @@ import zlib
 
 /// Opt-in app-host measurement, deliberately separate from ordinary tests. All inputs are fictional.
 /// Supply TEST_RUNNER_LOCAL_PLACES_MEASURE=1, TEST_RUNNER_LOCAL_PLACES_SCRIPT and TEST_RUNNER_LOCAL_PLACES_GZIP.
+/// TEST_RUNNER_LOCAL_PLACES_PACKED=1 measures native inflation and the actual no-copy ArrayBuffer installation.
 @Suite(.serialized, .enabled(if: ProcessInfo.processInfo.environment["LOCAL_PLACES_MEASURE"] == "1"))
 struct LocalPlacesMeasurementTests {
     @Test func memoryAndSorting() async throws {
@@ -17,6 +18,7 @@ struct LocalPlacesMeasurementTests {
         let environment = ProcessInfo.processInfo.environment
         let scriptURL = URL(fileURLWithPath: try #require(environment["LOCAL_PLACES_SCRIPT"]))
         let gzipURL = URL(fileURLWithPath: try #require(environment["LOCAL_PLACES_GZIP"]))
+        let packed = environment["LOCAL_PLACES_PACKED"] == "1"
         let engine = try AresiumEngine(script: String(contentsOf: scriptURL, encoding: .utf8))
         // Measurement-only access to the actual host's VM; no production API added for instrumentation.
         let context = try #require(Mirror(reflecting: engine).children.first { $0.label == "context" }?.value as? JSContext)
@@ -24,10 +26,11 @@ struct LocalPlacesMeasurementTests {
         globalThis.__measureSort = (json, local) => {
           const input = JSON.parse(json);
           return JSON.stringify(AresiumEngine.sortPayments(input.payments, {
-            categories: input.categories, learned: {}, localPlaces: local ? globalThis.__measurePlaces : undefined
+            categories: input.categories, learned: {}, localPlaces: local ? (globalThis.__measurePacked ? true : globalThis.__measurePlaces) : undefined
           }));
         };
         """)
+        context.setObject(packed, forKeyedSubscript: "__measurePacked" as NSString)
         func footprint() throws -> Double {
             var info = task_vm_info_data_t()
             var count = mach_msg_type_number_t(MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<integer_t>.size)
@@ -90,22 +93,36 @@ struct LocalPlacesMeasurementTests {
             let before = try footprint()
             let start = CFAbsoluteTimeGetCurrent()
             var readMS = 0.0, inflateMS = 0.0, parseMS = 0.0
-            try autoreleasepool {
-                let compressed = try Data(contentsOf: gzipURL)
-                let readEnd = CFAbsoluteTimeGetCurrent()
-                let text = try Self.gunzip(compressed)
-                let inflateEnd = CFAbsoluteTimeGetCurrent()
-                let parser = context.evaluateScript("(json) => { globalThis.__measurePlaces = JSON.parse(json); }")
-                parser?.call(withArguments: [text])
-                #expect(context.exception == nil)
-                let parseEnd = CFAbsoluteTimeGetCurrent()
-                readMS = (readEnd - start) * 1000
-                inflateMS = (inflateEnd - readEnd) * 1000
-                parseMS = (parseEnd - inflateEnd) * 1000
+            if packed {
+                let places = try autoreleasepool {
+                    let compressed = try Data(contentsOf: gzipURL)
+                    let readEnd = CFAbsoluteTimeGetCurrent()
+                    let places = try PackedLocalPlaces.inflate(compressed)
+                    readMS = (readEnd - start) * 1000
+                    inflateMS = (CFAbsoluteTimeGetCurrent() - readEnd) * 1000
+                    return places
+                }
+                let handover = CFAbsoluteTimeGetCurrent()
+                try await engine.setLocalPlaces(places)
+                parseMS = (CFAbsoluteTimeGetCurrent() - handover) * 1000
+            } else {
+                try autoreleasepool {
+                    let compressed = try Data(contentsOf: gzipURL)
+                    let readEnd = CFAbsoluteTimeGetCurrent()
+                    let text = try Self.gunzip(compressed)
+                    let inflateEnd = CFAbsoluteTimeGetCurrent()
+                    let parser = context.evaluateScript("(json) => { globalThis.__measurePlaces = JSON.parse(json); }")
+                    parser?.call(withArguments: [text])
+                    #expect(context.exception == nil)
+                    let parseEnd = CFAbsoluteTimeGetCurrent()
+                    readMS = (readEnd - start) * 1000
+                    inflateMS = (inflateEnd - readEnd) * 1000
+                    parseMS = (parseEnd - inflateEnd) * 1000
+                }
             }
             let loadMS = (CFAbsoluteTimeGetCurrent() - start) * 1000
             let peak = try footprint()
-            #expect(context.evaluateScript("__measurePlaces.version === 1 && __measurePlaces.rows.length > 200000")?.toBool() == true)
+            if !packed { #expect(context.evaluateScript("__measurePlaces.version === 1 && __measurePlaces.rows.length > 200000")?.toBool() == true) }
             collect()
             try await Task.sleep(for: .milliseconds(250))
             let loaded = try footprint()
@@ -118,6 +135,7 @@ struct LocalPlacesMeasurementTests {
                     }
                 }
             }
+            if packed { try await engine.setLocalPlaces(nil) }
             autoreleasepool { context.evaluateScript("globalThis.__measurePlaces = undefined; void 0;") }
             #expect(context.evaluateScript("typeof globalThis.__measurePlaces")?.toString() == "undefined")
             collect()

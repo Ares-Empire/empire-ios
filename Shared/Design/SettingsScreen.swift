@@ -446,7 +446,7 @@ struct FontsScreen: View {
                         ForEach(Array(licences.enumerated()), id: \.element.id) { index, licence in
                             if index > 0 { SettingsDivider() }
                             NavigationLink {
-                                LicenceScreen(title: licence.name, text: licence.text(), accent: accent)
+                                LicenceScreen(title: licence.name, text: licence.text(), accent: accent, links: licence.links)
                             } label: {
                                 row(Text(verbatim: licence.name).font(AppFont.text(15, weight: .medium)),
                                     detail: "\(licence.purpose) · \(licence.licenceName)")
@@ -464,7 +464,7 @@ struct FontsScreen: View {
         .navigationBarTitleDisplayMode(.inline)
         #if DEBUG
         .navigationDestination(item: $shown) { licence in
-            LicenceScreen(title: licence.name, text: licence.text(), accent: accent)
+            LicenceScreen(title: licence.name, text: licence.text(), accent: accent, links: licence.links)
         }
         .task {
             let arguments = LaunchArguments.current
@@ -510,10 +510,18 @@ struct LicenceScreen: View {
     let title: String
     let text: String?
     let accent: AppAccent?
+    var links: [BundledLicence.SourceLink] = []
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
+                ForEach(links, id: \.url) { link in
+                    Link(destination: link.url) {
+                        Text(verbatim: link.title).font(AppFont.text(14, weight: .medium))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .padding(.vertical, 4)
+                }
                 let paragraphs = text.map(LicenceParagraph.paragraphs) ?? []
                 ForEach(Array(paragraphs.enumerated()), id: \.offset) { index, paragraph in
                     if paragraph.isHeading {

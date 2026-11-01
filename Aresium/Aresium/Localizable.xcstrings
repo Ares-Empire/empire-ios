@@ -2334,6 +2334,16 @@
         }
       }
     },
+    "Download the local places list" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Liste der lokalen Orte herunterladen"
+          }
+        }
+      }
+    },
     "EUR" : {
       "localizations" : {
         "de" : {
@@ -3336,6 +3346,16 @@
         }
       }
     },
+    "Local places for sorting" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lokale Orte zum Sortieren"
+          }
+        }
+      }
+    },
     "Location" : {
       "localizations" : {
         "de" : {
@@ -4252,6 +4272,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Offen"
+          }
+        }
+      }
+    },
+    "Open Database License (ODbL) 1.0" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Database License (ODbL) 1.0"
+          }
+        }
+      }
+    },
+    "OpenStreetMap copyright and contributors" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OpenStreetMap: Urheberrecht und Mitwirkende"
           }
         }
       }
@@ -6700,6 +6740,16 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "“%1$@” is your name for every payment from %2$@."
+          }
+        }
+      }
+    },
+    "© OpenStreetMap contributors" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "© OpenStreetMap-Mitwirkende"
           }
         }
       }

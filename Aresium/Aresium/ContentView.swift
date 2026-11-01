@@ -338,7 +338,7 @@ struct ContentView: View {
             .sheet(isPresented: $showsSettings, onDismiss: importPickedInGuide) {
                 SettingsScreen(app: SettingsApp(name: "Aresium",
                                                 signInNote: String(localized: "Only for an Aresium server of your own. Your data here stays on this iPhone."),
-                                                licences: [.shopList()]),
+                                                licences: [.shopList(), .localPlaces()]),
                                session: session, sample: sampleActive, logOut: logOut) {
                     if modes.phone != nil { PhoneSettingsSection(modes: modes, data: phoneData, palette: palette) }
                     // Brief 46: Aresium's own messages (phone mode), after the data they are about, before the Lock.

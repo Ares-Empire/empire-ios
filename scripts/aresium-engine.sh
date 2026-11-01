@@ -10,6 +10,7 @@
 # 4. writes the shop list's licence notice (name-suggestion-index, from the header of
 #    src/engine/sorting/shops.de.json) to Engine/name-suggestion-index-licence.txt, which Settings → About → Fonts &
 #    licences shows (`BundledLicence.shopList`; `LicenceTests` checks it against the bundle).
+# 5. copies the packed local places database and writes its ODbL attribution and download notice.
 # The bundle is never edited by hand.
 set -euo pipefail
 
@@ -48,3 +49,25 @@ require("fs").writeFileSync(process.argv[2], [copyright, about, ...licence].join
 ' "$aresium/src/engine/sorting/shops.de.json" "$app/name-suggestion-index-licence.txt"
 
 echo "Engine copied: $(wc -c < "$app/aresium-engine.js" | tr -d ' ') bytes from aresium $commit"
+
+cp "$aresium/data/local-places/de.places.bin.gz" "$app/de.places.bin.gz"
+node - "$aresium/data/local-places" "$app/local-places-licence.txt" <<'JS'
+const fs = require('node:fs');
+const path = require('node:path');
+const zlib = require('node:zlib');
+const root = process.argv[2];
+const data = zlib.gunzipSync(fs.readFileSync(path.join(root, 'de.places.bin.gz')));
+const offsets = data.readUInt32LE(76); // Header word 19: metadata offsets.
+const blob = data.readUInt32LE(80);
+const meta = Array.from({length: 3}, (_, i) => data.toString('utf8',
+  blob + data.readUInt32LE(offsets + i * 4), blob + data.readUInt32LE(offsets + (i + 1) * 4)));
+fs.writeFileSync(process.argv[3], [
+  '© OpenStreetMap contributors',
+  'Local places for sorting on this iPhone. Open Database License (ODbL) 1.0.',
+  'https://www.openstreetmap.org/copyright',
+  'https://opendatacommons.org/licenses/odbl/1-0/',
+  'Download the database: https://aresium.de/osm/local-places-de.places.bin.gz',
+  `Data date: ${meta[0]}`, `Source and licence: ${meta[2]}`,
+  `Packed database built from the Germany extract; aresium ${require('node:child_process').execFileSync('git', ['-C', path.join(root, '../..'), 'rev-parse', 'HEAD'], {encoding: 'utf8'}).trim()}.`,
+].join('\n\n') + '\n');
+JS

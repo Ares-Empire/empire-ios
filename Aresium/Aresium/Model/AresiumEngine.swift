@@ -24,9 +24,10 @@ nonisolated enum EngineError: LocalizedError, Equatable {
 
 /// The shared engine (aresium/src/engine: the server's own TypeScript, bundled by `npm run engine` and copied into the
 /// app by `scripts/aresium-engine.sh`), run in JavaScriptCore. One actor owns one `JSContext` with the bundle loaded,
-/// so calls never overlap. Every call crosses the bridge as JSON: Swift values are encoded, parsed in JavaScript, the
-/// engine's function runs, and its answer comes back as JSON and is decoded (bank-file bytes go across as a
-/// `Uint8Array`). A JavaScript exception becomes an `EngineError`; the engine's bank-file errors keep their `code`.
+/// so calls never overlap. Ordinary typed calls cross the bridge as JSON: Swift values are encoded, parsed in
+/// JavaScript, and the engine's answer comes back as JSON and is decoded. Bank-file bytes go across as a
+/// `Uint8Array`; the separately installed local places list uses a no-copy native `ArrayBuffer`. A JavaScript
+/// exception becomes an `EngineError`; the engine's bank-file errors keep their `code`.
 actor AresiumEngine {
     private let context: JSContext
     private var cachedCatalog: CategoryCatalog?
@@ -47,7 +48,10 @@ actor AresiumEngine {
     /// there after a sort, even though the engine call itself runs on this actor.
     @concurrent
     nonisolated static func bundledForPhone(in bundle: Bundle = .main) async throws -> AresiumEngine {
-        try PickerTiming.measure("engine.initialize") { try bundled(in: bundle) }
+        let engine = try PickerTiming.measure("engine.initialize") { try bundled(in: bundle) }
+        let places = try await PackedLocalPlaces.bundled(in: bundle)
+        try await engine.setLocalPlaces(places)
+        return engine
     }
 
     init(script: String) throws {
@@ -82,6 +86,39 @@ actor AresiumEngine {
         struct Kind: Decodable { let name: String; let kind: String }
         let kinds = try JSONDecoder().decode([Kind].self, from: Data(result.utf8))
         return Dictionary(kinds.map { ($0.name, $0.kind) }, uniquingKeysWith: { first, _ in first })
+    }
+
+    /// Install actual bytes, never a JSON/string/number-array representation. The C API owns the retained owner
+    /// on success and on exceptions; only a null return without an exception needs host cleanup.
+    func setLocalPlaces(_ places: PackedLocalPlaces?) throws {
+        let ctx = context.jsGlobalContextRef!
+        var exception: JSValueRef?
+        let argument: JSValueRef
+        if let places {
+            let owner = Unmanaged.passRetained(places).toOpaque()
+            let buffer = JSObjectMakeArrayBufferWithBytesNoCopy(ctx, places.bytes, places.count, { _, owner in
+                if let owner { Unmanaged<PackedLocalPlaces>.fromOpaque(owner).release() }
+            }, owner, &exception)
+            guard let buffer, exception == nil else {
+                if exception == nil { Unmanaged<PackedLocalPlaces>.fromOpaque(owner).release() }
+                throw EngineError.javascript("The local places bytes could not be handed to the engine")
+            }
+            argument = buffer
+        } else {
+            argument = JSValueMakeNull(ctx)
+        }
+        JSValueProtect(ctx, argument)
+        defer { JSValueUnprotect(ctx, argument) }
+        guard let engine = context.objectForKeyedSubscript("AresiumEngine"),
+              let function = engine.forProperty("setLocalPlaces") else {
+            throw EngineError.invalidAnswer("setLocalPlaces is missing")
+        }
+        var arguments: [JSValueRef?] = [argument]
+        JSObjectCallAsFunction(ctx, JSValueToObject(ctx, function.jsValueRef, &exception),
+                               JSValueToObject(ctx, engine.jsValueRef, &exception), 1, &arguments, &exception)
+        if let exception {
+            throw EngineError.javascript(JSValue(jsValueRef: exception, in: context).toString() ?? "setLocalPlaces failed")
+        }
     }
 
     // MARK: typed calls
@@ -132,10 +169,12 @@ actor AresiumEngine {
     }
 
     /// `sortPayments` over all of the person's payments (the own-transfer rules look across them): one result per
-    /// payment, in order. `categories` are the ids the person may be sorted into.
+    /// payment, in order. `categories` are the ids the person may be sorted into. Phone callers opt into the
+    /// separately installed local list; other callers omit the option entirely.
     func sortPayments(_ payments: [SortingPayment], categories: [String],
-                      learned: [String: String]) throws -> [SortResult] {
-        let input = SortInput(payments: payments, categories: categories.map { CategoryID(id: $0) }, learned: learned)
+                      learned: [String: String], localPlaces: Bool = false) throws -> [SortResult] {
+        let input = SortInput(payments: payments, categories: categories.map { CategoryID(id: $0) }, learned: learned,
+                              localPlaces: localPlaces ? true : nil)
         let results = try call("sortPayments", input, as: [SortResult].self)
         guard results.count == payments.count else { throw EngineError.invalidAnswer("sortPayments: wrong count") }
         return results
@@ -204,7 +243,7 @@ actor AresiumEngine {
 
     // MARK: the bridge
 
-    /// Every call goes through these functions, which turn the engine's answer, or its exception, into one JSON text.
+    /// Ordinary typed calls go through these functions, turning the answer or exception into one JSON text.
     private static let bridge = """
     (function () {
       const E = globalThis.AresiumEngine;
@@ -224,7 +263,10 @@ actor AresiumEngine {
         catalog: () => ({ defaults: E.DEFAULT_CATEGORIES, builtIns: E.BUILT_IN_CATEGORIES,
                           looks: E.CATEGORY_LOOK, custom: E.CUSTOM_CATEGORY_LOOK }),
         dashboard: (input) => E.buildDashboard(E.buildDashboardSource(input)),
-        sortPayments: (input) => E.sortPayments(input.payments, { categories: input.categories, learned: input.learned }),
+        sortPayments: (input) => E.sortPayments(input.payments, {
+          categories: input.categories, learned: input.learned,
+          ...(input.localPlaces === true ? { localPlaces: true } : {}),
+        }),
         learn: (input) => E.learn(input.learned, input.payment, input.categoryId),
         learnMany: (input) => {
           const rules = {};
@@ -335,6 +377,7 @@ actor AresiumEngine {
         let payments: [SortingPayment]
         let categories: [CategoryID]
         let learned: [String: String]
+        let localPlaces: Bool?
     }
     private nonisolated struct MatchInput: Encodable {
         let receipt: MatchReceipt

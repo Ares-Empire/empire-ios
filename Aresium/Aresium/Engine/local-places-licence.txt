@@ -1,0 +1,15 @@
+© OpenStreetMap contributors
+
+Local places for sorting on this iPhone. Open Database License (ODbL) 1.0.
+
+https://www.openstreetmap.org/copyright
+
+https://opendatacommons.org/licenses/odbl/1-0/
+
+Download the database: https://aresium.de/osm/local-places-de.places.bin.gz
+
+Data date: 2026-10-31T21:23:06.000Z
+
+Source and licence: https://download.geofabrik.de/europe/germany.html (OpenStreetMap); https://www.openstreetmap.org/copyright; https://opendatacommons.org/licenses/odbl/1-0/
+
+Packed database built from the Germany extract; aresium eadfc47e97b6241923f1c992a40826eb2f19582e.
