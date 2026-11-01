@@ -355,3 +355,17 @@ struct BankFormatTests {
         #expect(card.shared.bank == "Fiktiv Bank" && card.shared.columns.count == Self.layout.header.count)
     }
 }
+
+/// A confirmed VR Bank layout keeps the engine's id formula when the app saves and reads it back (aresium brief 85),
+/// so a VR file re-saved by a spreadsheet gives its payments the same ids and nothing shows twice.
+struct LayoutIdStyleTests {
+    @Test func savedLayoutKeepsTheEnginesIdStyle() throws {
+        var layout = BankFormatTests.layout
+        layout.idStyle = "vrbank"
+        let saved = try JSONEncoder().encode(layout)
+        #expect(try JSONDecoder().decode(CsvLayout.self, from: saved).idStyle == "vrbank")
+        let plain = try JSONEncoder().encode(BankFormatTests.layout)
+        #expect(try JSONDecoder().decode(CsvLayout.self, from: plain).idStyle == nil)
+        #expect(String(decoding: plain, as: UTF8.self).contains("idStyle") == false)
+    }
+}

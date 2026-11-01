@@ -140,6 +140,9 @@ nonisolated struct CsvLayout: Codable, Equatable, Sendable {
     var invertSign: Bool?
     var labelledText: LabelledText?
     var currency: String?
+    /// The engine's id formula for a confirmed layout: "vrbank" keeps a VR Bank file's own payment ids when a
+    /// spreadsheet only rewrote its dates or separator (aresium brief 85). Kept as saved; nil for every other layout.
+    var idStyle: String?
 }
 
 /// What the layout guesser saw in one column (`ColumnInfo`).
