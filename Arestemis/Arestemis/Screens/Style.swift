@@ -291,32 +291,89 @@ func endTyping() {
 }
 
 extension View {
-    /// The wall every Arestemis screen stands on.
+    /// The wall every Arestemis screen stands on. It also draws the fades of the scroll views standing on it
+    /// (`edgeFade`): the same wall again, in the same place, over the scroll view's faded edges.
     func provinceWall() -> some View {
         background { ProvinceWall(accent: Look.accent) }
-    }
-
-    private func fadeFreeEdges(top: CGFloat, bottom: CGFloat) -> Edge.Set {
-        var edges: Edge.Set = []
-        if top == 0 { edges.insert(.top) }
-        if bottom == 0 { edges.insert(.bottom) }
-        return edges
+            .overlayPreferenceValue(EdgeFadeKey.self) { fades in
+                if !fades.isEmpty {
+                    ProvinceWall(accent: Look.accent)
+                        .mask { EdgeFadeBands(fades: fades) }
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                }
+            }
+            .transformPreference(EdgeFadeKey.self) { $0 = [] }   // drawn here, never again by a wall further out
     }
 
     /// Scrolling content fades out at a fixed header (`top`) or bottom bar (`bottom`) instead of running under it, so
     /// the wall stays one surface. An edge without a fade lets the content run under the system bars as usual.
+    ///
+    /// The fade is drawn by the wall around the scroll view (`provinceWall()`, which every screen has): the wall again,
+    /// over the content's edge, opaque at the edge and clear after `top` / `bottom` points. It used to be a mask over the
+    /// scroll view, which looks the same but renders the whole scroll view offscreen, the glass cards' blur included,
+    /// and redraws it there whenever anything in it moves (brief 67: the black corner on the hunt's card).
     func edgeFade(top: CGFloat = 0, bottom: CGFloat = 0) -> some View {
-        mask {
-            VStack(spacing: 0) {
-                if top > 0 {
-                    LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom).frame(height: top)
+        background {
+            // Ignoring the safe area, this covers where the scroll view draws: its frame and the bars' area its content
+            // runs on under at an edge.
+            Color.clear.ignoresSafeArea()
+                .anchorPreference(key: EdgeFadeKey.self, value: .bounds) { drawn in
+                    [EdgeFade(drawn: drawn, top: top, bottom: bottom)]
                 }
-                Rectangle()
-                if bottom > 0 {
-                    LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom).frame(height: bottom)
+        }
+        .transformAnchorPreference(key: EdgeFadeKey.self, value: .bounds) { fades, frame in
+            for index in fades.indices where fades[index].frame == nil { fades[index].frame = frame }
+        }
+    }
+}
+
+/// A scroll view's faded edges, for the wall it stands on to draw.
+private struct EdgeFade {
+    /// Where the scroll view draws: its frame and the bars' area its content runs on under.
+    let drawn: Anchor<CGRect>
+    let top: CGFloat
+    let bottom: CGFloat
+    /// The scroll view's frame, where the fades begin.
+    var frame: Anchor<CGRect>?
+}
+
+private struct EdgeFadeKey: PreferenceKey {
+    static let defaultValue: [EdgeFade] = []
+    static func reduce(value: inout [EdgeFade], nextValue: () -> [EdgeFade]) { value += nextValue() }
+}
+
+/// Where the wall covers a faded scroll view: opaque over the content that runs on under the bar at a faded edge
+/// (hidden, as the mask hid it), then fading to clear over the fade's height. Elsewhere the content shows.
+private struct EdgeFadeBands: View {
+    let fades: [EdgeFade]
+
+    var body: some View {
+        GeometryReader { proxy in
+            ForEach(fades.indices, id: \.self) { index in
+                if let frameAnchor = fades[index].frame {
+                    let fade = fades[index]
+                    let drawn = proxy[fade.drawn]
+                    let frame = proxy[frameAnchor]
+                    if fade.top > 0 {
+                        band(Color.black, x: drawn.minX, y: drawn.minY, width: drawn.width, height: frame.minY - drawn.minY)
+                        band(LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom),
+                             x: drawn.minX, y: frame.minY, width: drawn.width, height: fade.top)
+                    }
+                    if fade.bottom > 0 {
+                        band(LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom),
+                             x: drawn.minX, y: frame.maxY - fade.bottom, width: drawn.width, height: fade.bottom)
+                        band(Color.black, x: drawn.minX, y: frame.maxY, width: drawn.width, height: drawn.maxY - frame.maxY)
+                    }
                 }
             }
-            .ignoresSafeArea(edges: fadeFreeEdges(top: top, bottom: bottom))
         }
+        .ignoresSafeArea()
+    }
+
+    private func band(_ fill: some ShapeStyle, x: CGFloat, y: CGFloat, width: CGFloat, height: CGFloat) -> some View {
+        Rectangle().fill(fill)
+            .frame(width: max(width, 0), height: max(height, 0))
+            .position(x: x + width / 2, y: y + height / 2)
     }
 }
