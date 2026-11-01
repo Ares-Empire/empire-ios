@@ -150,49 +150,69 @@ struct ProvinceWall: View {
 /// On the light wall the card is nearly white with a strong white edge and a soft shadow; on the dark one it is
 /// smoked glass with a faint edge.
 ///
-/// The blur (the material) is kept out of the shadow (brief 67). Under `.shadow`, SwiftUI gives each layer its own
-/// shadow without a path, which Core Animation draws from the layer's pixels in an offscreen pass; the material's blur
-/// was then taken inside that pass instead of from the screen. The hunt's pulsing dot redraws a patch over the card's
-/// top left corner every frame, and on Patrik's iPhone that corner flashed black. Now the material draws straight onto
-/// the screen like any system blur (Apple: a blur must be "combined as part of the content they're layered on top of"),
-/// and `MaterialShadow` casts its share of the shadow from a plain shape of the card's outline. The fill, the
-/// highlight, the content and the edge keep their own shadows, so the card looks the same.
+/// Nothing of the card is drawn offscreen while something on it moves (brief 87). Under `.shadow`, SwiftUI gives every
+/// layer below it a shadow of its own without a path, and Core Animation draws that shadow from the layer's pixels in an
+/// offscreen pass, again in every frame in which anything over it changes. With the hunt's dot pulsing (`StatusDot`),
+/// one of those passes came out on Patrik's iPhone (iOS 27.0.1) as a black rectangle the size of the pulse's shadow.
+/// So the card is drawn in the old order, from the bottom up, without such shadows:
+/// 1. the blur, its shadow part of its style (no pass), as dark as the blur's and the fill's together outside the card
+///    (`CardShadow.outside`); the blur is never inside a shadow, mask or group (brief 67);
+/// 2. a still image (`drawingGroup`, drawn once) clipped to the outline: the fill over its shadow, which shows through
+///    the see-through fill as the card's depth, and the highlight's shadow alone;
+/// 3. the highlight, its shadow outside the card part of its style;
+/// 4. the content, with no shadow (it used to have one: a 22 pt shadow under every word and chip, never meant);
+/// 5. the edge, its shadow part of its style.
+/// The still image stays within the card: a `List` row cuts off what its content draws past the row (Arestemis's
+/// listings). Measured on the simulator (`scripts/offscreens/`, the hunt pulsing): about 45 shadow, mask and group
+/// passes per frame before, none after.
 struct GlassCard: ViewModifier {
     var accent: AppAccent? = nil
     var radius: CGFloat = Ink.cardRadius
     var raised = false            // a little lighter, for the one card that matters most on a screen
     var edge: Color? = nil        // one colour in place of the bright edge (Aresus's issue box: a faint red)
     @Environment(\.colorScheme) private var scheme
+    @Environment(\.self) private var environment
 
     func body(content: Content) -> some View {
         let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
         let light = scheme == .light
         let tint = accent?.deep ?? .white
+        let fill = raised ? Ink.card2 : Ink.card
         let shadow = CardShadow(light: light)
+        let highlight = { (color: Color) in
+            RadialGradient(colors: [color.opacity(light ? 0.6 : 0.07), .clear], center: .topLeading,
+                           startRadius: 0, endRadius: 220)
+        }
         content
             .background {
+                shape.fill(highlight(.white).shadow(shadow.drop))
+            }
+            .background {
                 ZStack {
-                    shape.fill(raised ? Ink.card2 : Ink.card)
-                    shape.fill(RadialGradient(colors: [.white.opacity(light ? 0.6 : 0.07), .clear], center: .topLeading,
-                                              startRadius: 0, endRadius: 220))
+                    shape.fill(fill)
+                        .shadow(color: Ink.shadow, radius: shadow.radius, y: shadow.y)
+                    // The highlight's shadow alone: the highlight in the shadow's colour, moved and blurred as one.
+                    shape.fill(highlight(Ink.shadow))
+                        .offset(y: shadow.y)
+                        .blur(radius: shadow.radius)
                 }
+                .clipShape(shape)
+                .drawingGroup()
             }
             .overlay {
                 if let edge {
-                    shape.strokeBorder(edge, lineWidth: 1)
+                    shape.strokeBorder(edge.shadow(shadow.drop), lineWidth: 1)
                 } else {
-                    glassEdge(shape, light: light, tint: tint)
+                    glassEdge(shape, light: light, tint: tint, shadow: shadow)
                 }
             }
-            .shadow(color: Ink.shadow, radius: shadow.radius, y: shadow.y)
             .background {
-                shape.fill(.ultraThinMaterial)
-                    .background { MaterialShadow(shape: shape, shadow: shadow) }
+                shape.fill(Material.ultraThinMaterial.shadow(shadow.outside(under: fill, in: environment)))
             }
     }
 
     /// The bright edge that fades: white from the top left, the accent's tint lower down.
-    private func glassEdge(_ shape: RoundedRectangle, light: Bool, tint: Color) -> some View {
+    private func glassEdge(_ shape: RoundedRectangle, light: Bool, tint: Color, shadow: CardShadow) -> some View {
         shape.strokeBorder(LinearGradient(stops: light ? [
             .init(color: .white.opacity(0.95), location: 0),
             .init(color: .white.opacity(0.4), location: 0.35),
@@ -203,7 +223,7 @@ struct GlassCard: ViewModifier {
             .init(color: .white.opacity(0.04), location: 0.30),
             .init(color: accent == nil ? .white.opacity(0.03) : (accent?.color ?? .white).opacity(0.10), location: 0.68),
             .init(color: .white.opacity(0.03), location: 1)
-        ], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
+        ], startPoint: .topLeading, endPoint: .bottomTrailing).shadow(shadow.drop), lineWidth: 1)
     }
 }
 
@@ -216,28 +236,19 @@ private struct CardShadow {
         radius = light ? 18 : 22
         y = light ? 10 : 14
     }
-}
 
-/// The shadow the card's material used to cast, from a plain shape of the card's outline instead of the material, so
-/// no blur is ever drawn inside a shadow's offscreen pass (`GlassCard`). The shape's inside is cut away: the material
-/// above it blurs the wall behind the card, as before, never this shape. Its fill is the wall's colour so the few
-/// half-covered pixels along the rounded corners match the wall too.
-private struct MaterialShadow: View {
-    let shape: RoundedRectangle
-    let shadow: CardShadow
+    /// The shadow as part of a shape's style (the highlight, the edge).
+    var drop: ShadowStyle { .drop(color: Ink.shadow, radius: radius, y: y) }
 
-    var body: some View {
-        // Room around the card for the whole shadow: its blur fades out within three times its radius, plus the offset.
-        let reach = shadow.radius * 3 + shadow.y
-        shape.fill(Ink.background)
-            .shadow(color: Ink.shadow, radius: shadow.radius, y: shadow.y)
-            .mask {
-                Rectangle().padding(-reach)
-                    .overlay { shape.blendMode(.destinationOut) }
-                    .compositingGroup()
-            }
-            .allowsHitTesting(false)
-            .accessibilityHidden(true)
+    /// The shadow outside the card. The blur (opaque) and the see-through fill used to cast this same shadow onto the
+    /// same place, one over the other; one shadow as dark as the two together where they are whole stands in for both.
+    /// Where they fade it is off by at most a quarter of the two opacities multiplied (half a percent on the light wall,
+    /// five on the dark one, which is nearly black there).
+    func outside(under fill: Color, in environment: EnvironmentValues) -> ShadowStyle {
+        var color = Ink.shadow.resolve(in: environment)
+        let fillOpacity = fill.resolve(in: environment).opacity
+        color.opacity *= 1 + fillOpacity * (1 - color.opacity)   // 1 − (1 − s)(1 − s·fill)
+        return .drop(color: Color(color), radius: radius, y: y)
     }
 }
 
