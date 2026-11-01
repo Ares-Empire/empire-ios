@@ -1,6 +1,6 @@
 # 74: Arestoteles and the Empire app: three fixes from the release check
 
-Status: running
+Status: merged 2026-11-01 (Arestoteles 156 tests, Empire 306, run by Claude); the Empire part ships with its next build
 Branch: `codex/74-release-fixes` · Worktree: `../empire-ios-74-release-fixes` · Model: `gpt-6.1-sol`, effort `high`
 
 ## Goal
