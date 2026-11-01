@@ -1,6 +1,6 @@
 # 113: Arestemis app: several hunts and things for sale, the data side
 
-Status: draft
+Status: merged 2026-11-01 (empire-ios da3f98a, 130 tests; screens follow in brief 114)
 Branch: `codex/113-arestemis-hunts-data` · Worktree: `../empire-ios-113-arestemis-hunts-data` · Model: `gpt-6.1-sol`,
 effort `high`
 

@@ -15,6 +15,12 @@ enum Format {
         return language == .german ? range + "\u{a0}€" : "€" + range
     }
 
+    /// "€6.19"; German "6,19 €" (shipping costs, to the cent).
+    static func cents(_ euros: Double, language: AppLanguage = .current) -> String {
+        let amount = euros.formatted(.number.precision(.fractionLength(2)).locale(language.locale))
+        return language == .german ? amount + "\u{a0}€" : "€" + amount
+    }
+
     private static func whole(_ euros: Double, language: AppLanguage) -> String {
         Int(euros.rounded()).formatted(.number.locale(language.locale))
     }
@@ -172,7 +178,7 @@ struct SearchSummary: Equatable {
     var wrappingKinds: String { sentence(kindPhrases.map(Self.unbreakable)) }
     var wrappingDetails: String { parts.map(Self.unbreakable).joined(separator: " · ") }
 
-    private static func unbreakable(_ phrase: String) -> String {
+    static func unbreakable(_ phrase: String) -> String {
         phrase.replacingOccurrences(of: " ", with: "\u{00A0}")
             .replacingOccurrences(of: "-", with: "-\u{2060}")
             .replacingOccurrences(of: "–", with: "\u{2060}–\u{2060}")

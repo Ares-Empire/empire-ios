@@ -1,0 +1,10 @@
+{
+  "application_mode": "ai",
+  "own_text": "Hallo,\n\nmein Name ist Leon, ich studiere Architektur in Regensburg. Ich lebe ordentlich und bin Nichtraucher. Über eine Besichtigung würde ich mich sehr freuen.\n\nViele Grüße\nLeon",
+  "application_notes": "Ich kann jeden Abend zur Besichtigung kommen und bringe eine Bürgschaft mit.",
+  "about_me": "24, Architektur-Student in Regensburg, Nichtraucher, ruhig.",
+  "notify": {
+    "push": true,
+    "time_sensitive": true
+  }
+}

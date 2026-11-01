@@ -106,3 +106,64 @@ struct ItemSearchDraft: Codable, Equatable {
         return value.formatted(.number.locale(Locale(identifier: "en_US_POSIX")).grouping(.never).precision(.fractionLength(0...10)))
     }
 }
+
+// MARK: - the form's helpers and lines
+
+extension ItemSearchDraft {
+    static let maxPlaces = 5
+
+    /// Adds a place (up to five); false when it is there already or five are chosen.
+    @discardableResult
+    mutating func add(_ place: Place) -> Bool {
+        guard places.count < Self.maxPlaces, !places.contains(where: { $0.id == place.id }) else { return false }
+        places.append(place)
+        return true
+    }
+
+    /// Adds a word to leave out; false for an empty or repeated one (any case).
+    @discardableResult
+    mutating func addExclude(_ text: String) -> Bool {
+        let word = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !word.isEmpty, !exclude.contains(where: { $0.caseInsensitiveCompare(word) == .orderedSame }) else { return false }
+        exclude.append(word)
+        return true
+    }
+
+    /// Places and the radius apply unless the thing is only to be shipped.
+    var asksPlaces: Bool { delivery != .shipping }
+
+    /// What is wrong, in a sentence.
+    func message(_ problem: Problem, language: AppLanguage = .current) -> String {
+        let l = language
+        switch problem {
+        case .query:
+            return query.trimmingCharacters(in: .whitespacesAndNewlines).count > 100
+                ? l.string("At most 100 characters.") : l.string("Type what you look for.")
+        case .exclude: return l.string("Up to 20 words, each at most 40 characters.")
+        case .priceMin, .priceMax, .vbOverMax: return l.string("Type an amount in euros.")
+        case .priceOrder: return l.string("The lowest price is above the highest.")
+        case .condition: return l.string("Choose a condition.")
+        case .radius: return l.string("The radius goes up to 200 km.")
+        case .places:
+            return places.count > Self.maxPlaces ? l.string("At most 5 places.") : l.string("Choose a place, or Shipping.")
+        case .extra: return l.string("At most 1,000 characters.")
+        case .sources: return l.string("Choose at least one portal.")
+        }
+    }
+
+    /// The line under a field: what is wrong with what is there. A field that is simply still empty (what you look
+    /// for, the place) says so only under Save (`hint`), so a new form opens without warnings.
+    func fieldLine(_ problem: Problem, language: AppLanguage = .current) -> String? {
+        guard problems.contains(problem) else { return nil }
+        switch problem {
+        case .query where query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty: return nil
+        case .places where places.isEmpty: return nil
+        default: return message(problem, language: language)
+        }
+    }
+
+    /// One calm line under Save: the first thing still missing or wrong.
+    func hint(language: AppLanguage = .current) -> String? {
+        problems.first.map { message($0, language: language) }
+    }
+}

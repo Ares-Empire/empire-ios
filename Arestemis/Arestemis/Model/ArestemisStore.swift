@@ -43,11 +43,11 @@ final class ArestemisStore {
     private(set) var isLoadingOverview = false
     private(set) var overviewError: String?
     private(set) var lastOverviewLoad: Date?
-    // brief 114 replaces
-    private(set) var isTogglingHunt = false
 
     // matches
     private(set) var matchesByID: [Int: Match] = [:]
+    /// Each hunt's newest matches for its page (ids, newest first), loaded when the page opens.
+    private(set) var huntLatest: [Int: [Int]] = [:]
     private(set) var lists: [MatchFilter: MatchList] = [:]
     private(set) var seen: Set<Int> = []
     private(set) var changingState: Set<Int> = []
@@ -109,8 +109,10 @@ final class ArestemisStore {
     // MARK: - overview
 
     var hunts: [HuntCard] { overview?.hunts ?? [] }
-    // brief 114 replaces: today's screens edit the first flat hunt.
-    var hunt: Hunt? { hunts.first { $0.hunt.kind == .flat }?.hunt }
+    /// One hunt's card, as known now.
+    func card(_ id: Int) -> HuntCard? { hunts.first { $0.id == id } }
+    /// A hunt being started, paused, saved, renamed or deleted (its buttons wait).
+    func isChanging(hunt id: Int) -> Bool { changingHunts.contains(id) }
     private(set) var changingHunts: Set<Int> = []
     private var nextTemporaryHuntID = -1
     private var listGeneration = 0
@@ -155,8 +157,8 @@ final class ArestemisStore {
         }
     }
 
-    /// The three newest matches as they are now (a state changed here shows before the next overview).
-    // brief 114 replaces
+    /// The account's three newest matches, across all hunts, as they are now (a state changed here shows before the
+    /// next overview).
     var latest: [Match] {
         (overview?.latest ?? []).map { matchesByID[$0.id] ?? $0 }.filter { $0.state != .dismissed }
     }
@@ -178,51 +180,7 @@ final class ArestemisStore {
         }
     }
 
-    // MARK: - search draft
-
-    // brief 114 replaces
-    func searchDraft() -> SearchDraft {
-        #if DEBUG
-        if isSample, LaunchArguments.current.contains("-sampleSearchDraft") {
-            var draft = hunt?.search.flat.map { SearchDraft($0) } ?? SearchDraft()
-            draft.people = draft.people == 1 ? 2 : 1
-            return draft
-        }
-        #endif
-        guard !isSample, let account = session.accountID else {
-            return hunt?.search.flat.map { SearchDraft($0) } ?? SearchDraft()
-        }
-        return keptDraft.restore(for: hunt?.search.flat, account: account, huntID: hunt?.id)
-    }
-
-    // brief 114 replaces
-    func keepSearchDraft(_ draft: SearchDraft, baseline: Search?) {
-        guard !isSample, canAct, let account = session.accountID else { return }
-        keptDraft.keep(draft, baseline: baseline, account: account, huntID: hunt?.id)
-    }
-
-    // MARK: - hunt
-
-    // brief 114 replaces: entry points used by today's single flat screens.
-    func setHuntActive(_ active: Bool) async {
-        guard !isTogglingHunt, let hunt else { return }
-        let context = context
-        isTogglingHunt = true
-        defer { if isCurrent(context) { isTogglingHunt = false } }
-        await setActive(id: hunt.id, active: active)
-    }
-    @discardableResult
-    func saveSearch(_ search: Search) async -> Bool {
-        await saveHunt(id: hunt?.id, kind: .flat, name: hunt?.name, search: .flat(search)) != nil
-    }
-    @discardableResult
-    func deleteSearch() async -> Bool {
-        guard !isSavingSearch, let hunt else { return false }
-        let context = context
-        isSavingSearch = true
-        defer { if isCurrent(context) { isSavingSearch = false } }
-        return await deleteHunt(id: hunt.id)
-    }
+    // MARK: - hunts
 
     private func putHunt(_ hunt: Hunt) {
         if let index = overview?.hunts.firstIndex(where: { $0.id == hunt.id }) {
@@ -329,6 +287,7 @@ final class ArestemisStore {
             for match in removed { matchesByID[match] = nil; applications[match] = nil; seen.remove(match) }
             overview?.latest.removeAll { $0.huntID == id }
             rejected.removeAll { $0.huntID == id }
+            huntLatest[id] = nil
             if selectedHuntID == id { selectedHuntID = nil }
             listGeneration += 1
             lists = [:]
@@ -356,6 +315,14 @@ final class ArestemisStore {
     }
     func flatSearchDraft(huntID: Int?) -> SearchDraft {
         let search = hunts.first { $0.id == huntID }?.hunt.search.flat
+        #if DEBUG
+        // Screenshots: an unsaved change, so the form shows its Save.
+        if isSample, LaunchArguments.current.contains("-sampleSearchDraft") {
+            var draft = search.map { SearchDraft($0) } ?? SearchDraft()
+            draft.people = draft.people == 1 ? 2 : 1
+            return draft
+        }
+        #endif
         guard !isSample, let account = session.accountID else { return search.map { SearchDraft($0) } ?? SearchDraft() }
         return keptDraft.restore(for: search, account: account, huntID: huntID)
     }
@@ -364,10 +331,8 @@ final class ArestemisStore {
         keptDraft.keep(draft, baseline: baseline, account: account, huntID: huntID)
     }
 
-    func parseItem(_ text: String) async -> ParsedItemSearch? {
-        guard case .item(let parsed) = await parse(text: text, kind: .item) else { return nil }
-        return parsed
-    }
+    /// "Describe it": what the server read from the sentence for a search of this kind, or nil (then `parseError`
+    /// says why).
     func parse(text: String, kind: HuntKind) async -> HuntParseResult? {
         let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard canAct, !isParsing, !text.isEmpty else { return nil }
@@ -385,13 +350,6 @@ final class ArestemisStore {
         }
     }
 
-    /// "Describe it": what the server read from the sentence, or nil (then `parseError` says why).
-    // brief 114 replaces
-    func parse(_ text: String) async -> ParsedSearch? {
-        guard case .flat(let parsed) = await parse(text: text, kind: .flat) else { return nil }
-        return parsed
-    }
-
     // MARK: - matches
 
     /// The matches of a filter, newest first, as known now (including changes made here since the last load).
@@ -400,6 +358,31 @@ final class ArestemisStore {
     }
 
     func list(_ filter: MatchFilter) -> MatchList { lists[filter] ?? MatchList() }
+
+    /// A hunt's newest matches for its page, as known now; nil until they were loaded (`loadLatest(hunt:)`).
+    func latest(hunt id: Int) -> [Match]? {
+        huntLatest[id].map { ids in ids.compactMap { matchesByID[$0] }.filter { $0.state != .dismissed } }
+    }
+
+    /// The hunt's three newest matches (every state but dismissed), for its page. Quiet: a failure keeps what was shown.
+    func loadLatest(hunt id: Int) async {
+        guard canAct, id > 0 else { return }
+        let context = context
+        do {
+            let page = try await backend.matches(hunt: id, state: nil, limit: 3, before: nil)
+            guard isCurrent(context), card(id) != nil else { return }
+            for match in page.items { remember(match) }
+            huntLatest[id] = page.items.map(\.id)
+        } catch {
+            guard isCurrent(context) else { return }
+            session.handleAuthFailure(error, generation: context.session, token: context.token)
+        }
+    }
+
+    /// A thing for sale: its listing has a thing's details, or its hunt is a thing hunt (no application for it).
+    func isThing(_ match: Match) -> Bool {
+        match.isThing || card(match.huntID)?.hunt.kind == .item
+    }
 
     func match(_ id: Int) -> Match? { matchesByID[id] ?? overview?.latest.first { $0.id == id } }
 
@@ -506,7 +489,7 @@ final class ArestemisStore {
     func loadApplication(for id: Int, regenerate: Bool = false) async {
         guard canAct, !(applications[id]?.isLoading ?? false) else { return }
         guard let loadedMatch = await loadMatch(id) else { return }
-        if loadedMatch.listing.item != nil || hunts.first(where: { $0.id == loadedMatch.huntID })?.hunt.kind == .item {
+        if isThing(loadedMatch) {
             applications[id] = ApplicationState(error: String(localized: "Application texts are for flats."))
             return
         }
@@ -584,7 +567,6 @@ final class ArestemisStore {
         overviewError = nil
         lastOverviewLoad = nil
         isLoadingOverview = false
-        isTogglingHunt = false
         forgetMatches()
         settings = nil
         settingsError = nil
@@ -601,6 +583,7 @@ final class ArestemisStore {
     private func forgetMatches() {
         undo = nil
         matchesByID = [:]
+        huntLatest = [:]
         lists = [:]
         seen = []
         changingState = []

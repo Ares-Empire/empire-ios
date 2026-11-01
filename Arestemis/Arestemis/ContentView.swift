@@ -1,7 +1,7 @@
 import SwiftUI
 import UserNotifications
 
-/// Arestemis: the shared Empire login, then three tabs (Hunt, Listings, Search). Logged in once in any Empire app means
+/// Arestemis: the shared Empire login, then two tabs (Hunts, Listings); a hunt's search opens from the hunt. Logged in once in any Empire app means
 /// logged in here. `-sampleData` shows the bundled samples (see `LaunchOptions` for the screenshot arguments).
 /// A new match arrives as a push (Shared/Push); tapping it, or its "Open listing" / "Application" action, opens the match.
 struct ContentView: View {
@@ -42,7 +42,9 @@ struct ContentView: View {
                                                                              hangs: options.loading, moreLoading: options.moreLoading,
                                                                              moreFailure: options.moreFailure,
                                                                              longDescription: options.longDescription,
-                                                                             ownMode: options.ownMode, noTexts: options.noTexts)) {
+                                                                             ownMode: options.ownMode, noTexts: options.noTexts,
+                                                                             slowed: options.slowed,
+                                                                             newerKind: options.newerKind)) {
             let store = ArestemisStore(session: session, backend: sample, sample: true)
             store.selectedHuntID = options.sampleHunt
             return store
@@ -56,7 +58,7 @@ struct ContentView: View {
             if store.isSample || session.isSignedIn {
                 if store.overview != nil {
                     MainTabs(store: store, navigation: navigation, logOut: logOut,
-                             scrollTarget: store.isSample ? options.scrollTo : nil)
+                             scrollsToBottom: store.isSample && options.scrollTo == "bottom" && options.form == nil)
                 } else {
                     ProvinceLoading(name: "Arestemis", bust: Image("Bust"), accent: Look.accent,
                                     message: store.isLoadingOverview ? nil : store.overviewError,
@@ -89,7 +91,7 @@ struct ContentView: View {
         }
         .onChange(of: store.overview != nil) { _, loaded in
             if loaded {
-                options.apply(to: navigation, firstMatch: store.latest.first?.id)
+                options.apply(to: navigation, hunts: store.hunts, firstMatch: store.latest.first?.id)
                 #if DEBUG
                 if store.isSample, options.sampleUndo, let id = store.latest.first?.id {
                     Task {
@@ -118,25 +120,22 @@ struct ContentView: View {
     }
 }
 
-/// The three tabs, the sheets over them, and the notice for a failed action.
+/// The two tabs, the sheets over them, and the notice for a failed action.
 private struct MainTabs: View {
     let store: ArestemisStore
     @Bindable var navigation: AppNavigation
     let logOut: () -> Void
-    var scrollTarget: String? = nil
+    var scrollsToBottom = false
     @Environment(\.openURL) private var openURL
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         TabView(selection: $navigation.tab) {
-            Tab("Hunt", systemImage: "scope", value: AppTab.hunt) {
-                HuntScreen(store: store, navigation: navigation, scrollsToBottom: scrollTarget == "bottom")
+            Tab("Hunts", systemImage: "scope", value: AppTab.hunt) {
+                HuntsScreen(store: store, navigation: navigation, scrollsToBottom: scrollsToBottom)
             }
             Tab("Listings", systemImage: "list.bullet.rectangle", value: AppTab.listings) {
                 ListingsScreen(store: store, navigation: navigation)
-            }
-            Tab("Search", systemImage: "slider.horizontal.3", value: AppTab.search) {
-                SearchScreen(store: store, navigation: navigation, scrollTarget: scrollTarget)
             }
         }
         .tint(Look.accent.color)

@@ -132,12 +132,12 @@ struct StoreTests {
         transport.answer("POST /hunts/1/active", 503, json: Data())
         let gate = RequestGate()
         transport.gates["POST /hunts/1/active"] = gate
-        let pause = Task { await store.setHuntActive(false) }
+        let pause = Task { await store.setActive(id: 1, active: false) }
         await gate.waitUntilPaused()
-        #expect(store.hunt?.active == false && store.isTogglingHunt)
+        #expect(store.card(1)?.hunt.active == false && store.isChanging(hunt: 1))
         gate.resume()
         await pause.value
-        #expect(store.hunt?.active == true && !store.isTogglingHunt)
+        #expect(store.card(1)?.hunt.active == true && !store.isChanging(hunt: 1))
         #expect(store.notice?.text == "Login service unavailable, try again")
         #expect(try body(transport.requests("POST /hunts/1/active").first)?["active"] as? Bool == false)
     }
@@ -153,18 +153,18 @@ struct StoreTests {
         await store.reloadOverview()
         let hunt = try #require(overview.hunt)
         try transport.answer("POST /hunts", encoding: hunt)
-        #expect(await store.saveSearch(hunt.search.flat!))
+        #expect(await store.saveHunt(id: nil, kind: .flat, name: nil, search: hunt.search) != nil)
         #expect(transport.requests("POST /hunts").count == 1 && transport.requests("PUT /hunts/1").isEmpty)
 
         try transport.answer("GET /overview", sample: "overview")
         await store.reloadOverview()
         try transport.answer("PUT /hunts/1", encoding: hunt)
-        #expect(await store.saveSearch(hunt.search.flat!))
+        #expect(await store.saveHunt(id: 1, kind: .flat, name: nil, search: hunt.search) != nil)
         let sent = try #require(try body(transport.requests("PUT /hunts/1").first)?["search"] as? [String: Any])
         #expect(sent["rent_warm_max"] as? Double == 1000 && sent["people"] as? Int == 1)
 
         transport.answer("PUT /hunts/1", 400, json: Data(#"{"error":"At least one place","field":"places"}"#.utf8))
-        #expect(await store.saveSearch(hunt.search.flat!) == false)
+        #expect(await store.saveHunt(id: 1, kind: .flat, name: nil, search: hunt.search) == nil)
         #expect(store.searchError == "At least one place")
     }
 
@@ -179,8 +179,8 @@ struct StoreTests {
         afterDelete.hunts = []
         afterDelete.latest = []
         try transport.answer("GET /overview", encoding: afterDelete)
-        #expect(await store.deleteSearch())
-        #expect(store.hunt == nil)
+        #expect(await store.deleteHunt(id: 1))
+        #expect(store.card(1) == nil && store.hunts.isEmpty)
         #expect(store.matchesByID.isEmpty && store.list(.all).loaded == false)
         #expect(transport.requests("DELETE /hunts/1").count == 1)
     }
@@ -188,10 +188,12 @@ struct StoreTests {
     @Test func describeIt() async throws {
         let (store, transport, _) = try await makeStore()
         transport.answer("POST /search/parse", json: Data(#"{"search":{"rooms_min":2},"unclear":["Which city?"]}"#.utf8))
-        let parsed = await store.parse("  2 rooms  ")
-        #expect(parsed?.search.roomsMin == 2 && parsed?.unclear == ["Which city?"])
+        guard case .flat(let parsed)? = await store.parse(text: "  2 rooms  ", kind: .flat) else {
+            Issue.record("Expected a flat search"); return
+        }
+        #expect(parsed.search.roomsMin == 2 && parsed.unclear == ["Which city?"])
         #expect(try body(transport.requests.last)?["text"] as? String == "2 rooms")
-        #expect(await store.parse("   ") == nil && transport.requests("POST /search/parse").count == 1)
+        #expect(await store.parse(text: "   ", kind: .flat) == nil && transport.requests("POST /search/parse").count == 1)
     }
 
     // MARK: lists

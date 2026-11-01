@@ -54,6 +54,8 @@ final class SampleBackend: ArestemisBackend {
         var longDescription = false // -sampleLongDescription: a description with More
         var ownMode = false         // -sampleOwnMode: the own text instead of automatic texts
         var noTexts = false         // -sampleNoTexts: no own text, notes or facts about you yet
+        var slowed = false          // -sampleSlowed: the thing hunt is read less often
+        var newerKind = false       // -sampleNewerKind: a hunt of a kind this build does not know
     }
 
     private var base: Overview
@@ -106,6 +108,12 @@ final class SampleBackend: ArestemisBackend {
             rejectedItems = []
         }
         if options.paused { for index in huntValues.indices { huntValues[index].active = false } }
+        if options.newerKind {
+            let created = ArestemisSamples.iso(now)
+            huntValues.append(Hunt(id: nextHuntID, kind: .unknown("car"), name: "Camper van", active: true,
+                                   search: .unsupported, created: created, updated: created, activated: created))
+            nextHuntID += 1
+        }
     }
 
     func overview() async throws -> Overview {
@@ -127,7 +135,8 @@ final class SampleBackend: ArestemisBackend {
                                 saved: visible.count { $0.state == .saved }, applied: visible.count { $0.state == .applied })
         overview.hunts = huntValues.map { hunt in
             HuntCard(hunt: hunt, counts: Self.counts(matches.filter { $0.huntID == hunt.id }),
-                     sources: hunt.active ? Self.sources(hunt.search) : [], slowed: false)
+                     sources: hunt.active ? Self.sources(hunt.search) : [],
+                     slowed: options.slowed && hunt.active && hunt.kind == .item)
         }
         overview.latest = Array(visible.prefix(3))
         return overview

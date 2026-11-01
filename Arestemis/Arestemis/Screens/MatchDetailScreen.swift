@@ -1,7 +1,10 @@
 import SwiftUI
 
 /// One match: the rent big, the title, the facts grid, why the AI let it through (and what to check), the
-/// description; at the bottom "Open on <portal>" and "Application". The menu sets the state.
+/// description; at the bottom "Open on <portal>" and "Application". The menu sets the state. A thing for sale: its
+/// price big (with "VB" or how far it lies over the maximum), its facts (condition, delivery, shipping cost, distance,
+/// seller, place, posted), and only "Open on Kleinanzeigen", as the one main button; its seller is "Asked", not
+/// applied to.
 struct MatchDetailScreen: View {
     let id: Int
     let store: ArestemisStore
@@ -47,8 +50,9 @@ struct MatchDetailScreen: View {
                         .clipShape(RoundedRectangle(cornerRadius: Ink.cardRadius, style: .continuous))
                         .padding(.bottom, 22)
                 }
-                hero(match)
-                let facts = listing.detailFacts()
+                let thing = store.isThing(match)
+                hero(match, thing: thing)
+                let facts = thing ? listing.itemDetailFacts() : listing.detailFacts()
                 if !facts.isEmpty { FactsGrid(facts: facts).padding(.top, 22) }
                 SectionHeading(text: String(localized: "Why it fits")).padding(.leading, 4).padding(.top, Look.sectionGap)
                 WhyItFits(reason: match.reason, warnings: match.warnings).padding(.top, Look.headingGap)
@@ -65,10 +69,24 @@ struct MatchDetailScreen: View {
         }
     }
 
-    private func hero(_ match: Match) -> some View {
+    private func hero(_ match: Match, thing: Bool) -> some View {
         let listing = match.listing
         return VStack(alignment: .leading, spacing: 0) {
-            if let rent = listing.shownRent {
+            if thing {
+                if let price = match.itemPrice() {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        if let amount = price.amount {
+                            Text(amount).font(AppFont.number(34, weight: .bold)).foregroundStyle(Ink.primary)
+                                .minimumScaleFactor(0.7)
+                            if let label = price.label { Text(label).font(AppFont.text(13)).foregroundStyle(Ink.muted) }
+                        } else if let label = price.label {
+                            Text(label).font(AppFont.text(28, weight: .bold)).foregroundStyle(Ink.primary)
+                                .minimumScaleFactor(0.7)
+                        }
+                    }
+                    .lineLimit(1)
+                }
+            } else if let rent = listing.shownRent {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text(rent.amount).font(AppFont.number(34, weight: .bold)).foregroundStyle(Ink.primary)
                         .minimumScaleFactor(0.7)
@@ -89,9 +107,10 @@ struct MatchDetailScreen: View {
                 .padding(.top, 14)
             HStack(spacing: 10) {
                 TimelineView(.periodic(from: .now, by: 30)) { context in
-                    Text(match.sourceLine(now: context.date)).font(AppFont.text(12)).foregroundStyle(Ink.muted)
+                    Text(thing ? match.itemSourceLine(now: context.date) : match.sourceLine(now: context.date))
+                        .font(AppFont.text(12)).foregroundStyle(Ink.muted)
                 }
-                if let word = match.state.word {
+                if let word = match.state.word(thing: thing) {
                     Text("·").font(AppFont.text(12)).foregroundStyle(Ink.muted)
                     CapsLabel(text: word, size: 10, color: Ink.secondary)
                 }
@@ -102,15 +121,18 @@ struct MatchDetailScreen: View {
     }
 
     private func actions(_ match: Match) -> some View {
-        HStack(spacing: 10) {
+        let thing = store.isThing(match)
+        return HStack(spacing: 10) {
             Button("Open on \(match.listing.sourceName)") {
                 if let url = match.listing.portalURL { openURL(url) }
             }
-            .buttonStyle(.glassy)
+            .buttonStyle(ProvinceButtonStyle(kind: thing ? .accent : .glass))
             .disabled(match.listing.portalURL == nil)
-            Button("Application") { navigation.sheet = .application(match.id) }
-                .buttonStyle(.accent)
-                .frame(width: 142)
+            if !thing {
+                Button("Application") { navigation.sheet = .application(match.id) }
+                    .buttonStyle(.accent)
+                    .frame(width: 142)
+            }
         }
         .padding(.horizontal, Look.side).padding(.top, 4).padding(.bottom, 6)
     }
@@ -118,7 +140,10 @@ struct MatchDetailScreen: View {
     private func stateMenu(_ match: Match) -> some View {
         Menu {
             Toggle(isOn: stateBinding(match, .saved)) { Label("Save", systemImage: "bookmark") }
-            Toggle(isOn: stateBinding(match, .applied)) { Label("Mark applied", systemImage: "checkmark.circle") }
+            Toggle(isOn: stateBinding(match, .applied)) {
+                if store.isThing(match) { Label("Mark asked", systemImage: "checkmark.circle") }
+                else { Label("Mark applied", systemImage: "checkmark.circle") }
+            }
             Toggle(isOn: stateBinding(match, .dismissed)) { Label("Dismiss", systemImage: "xmark.circle") }
         } label: {
             Image(systemName: "ellipsis")

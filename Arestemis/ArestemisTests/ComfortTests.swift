@@ -132,16 +132,16 @@ struct ComfortTests {
         let store = ArestemisStore(session: session, backend: ArestemisAPI(transport: transport, token: { session.token }),
                                    defaults: defaults)
         await store.reloadOverview()
-        let search = try #require(store.hunt?.search.flat)
+        let hunt = try #require(store.card(1)?.hunt)
+        let search = try #require(hunt.search.flat)
         var draft = SearchDraft(search)
         draft.extra = "Fictional draft"
-        store.keepSearchDraft(draft, baseline: search)
-        #expect(store.searchDraft() == draft)
+        store.keepFlatSearchDraft(draft, baseline: search, huntID: 1)
+        #expect(store.flatSearchDraft(huntID: 1) == draft)
         switch action {
         case "save":
-            let hunt = try #require(store.hunt)
             try transport.answer("PUT /hunts/1", encoding: hunt)
-            #expect(await store.saveSearch(search))
+            #expect(await store.saveHunt(id: 1, kind: .flat, name: nil, search: .flat(search)) != nil)
         case "delete":
             transport.answer("DELETE /hunts/1", 204, json: Data())
             var empty = try sample(Overview.self, "overview")
@@ -149,10 +149,11 @@ struct ComfortTests {
             empty.hunts = []
             empty.latest = []
             try transport.answer("GET /overview", encoding: empty)
-            #expect(await store.deleteSearch())
+            #expect(await store.deleteHunt(id: 1))
         default: session.logOut()
         }
-        #expect(KeptSearchDraft(defaults: defaults).restore(for: search, account: "fictional-account") == SearchDraft(search))
+        #expect(KeptSearchDraft(defaults: defaults).restore(for: search, account: "fictional-account", huntID: 1)
+                == SearchDraft(search))
     }
 
     @Test func unsavedNewSearchIsKeptAndReturningToBaselineDropsIt() {

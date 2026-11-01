@@ -38,6 +38,12 @@ struct Caption: View {
     }
 }
 
+/// The euro sign beside an amount: before it in English, after it in German ("€400", "400 €").
+enum Euro {
+    static var prefix: String? { AppLanguage.current == .german ? nil : "€" }
+    static var suffix: String? { AppLanguage.current == .german ? "€" : nil }
+}
+
 /// A whole number in a quiet well, with "€" before or "m²" after; empty = no limit ("Any").
 struct NumberField: View {
     @Binding var value: Double?
@@ -185,5 +191,241 @@ struct TextArea: View {
             .background(inWell ? Look.well : .clear, in: RoundedRectangle(cornerRadius: Ink.rowRadius, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: Ink.rowRadius, style: .continuous)
                 .strokeBorder(inWell ? Look.wellEdge : .clear))
+    }
+}
+
+// MARK: - pieces both search forms share
+
+/// A titled part of a search form: the heading, its card, and the lines saying what is wrong there (`problems`).
+struct FormSection<Content: View>: View {
+    let title: String
+    var problems: [String] = []
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Look.headingGap) {
+            SectionHeading(text: title).padding(.leading, 4)
+            content
+            ForEach(problems, id: \.self) { ProblemLine(text: $0).padding(.leading, 4) }
+        }
+        .padding(.top, Look.sectionGap)
+    }
+}
+
+/// What is wrong with a field, under it: a small amber mark and the sentence (as a match's warnings).
+struct ProblemLine: View {
+    let text: String
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 7) {
+            Image(systemName: "exclamationmark.circle").font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(Look.amber)
+            Text(text).font(AppFont.text(12)).foregroundStyle(Ink.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// "Describe it": the line at the top of a search form that opens the sheet where a sentence fills the fields in.
+struct DescribeLine: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button {
+            endTyping()
+            action()
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "sparkles").font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(Look.accent.color)
+                    .frame(width: 22)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Describe it").font(AppFont.text(15, weight: .semibold)).foregroundStyle(Ink.primary)
+                    Text("Say what you look for; the fields fill in.").font(AppFont.text(12)).foregroundStyle(Ink.muted)
+                        .lineLimit(1).minimumScaleFactor(0.9)
+                }
+                Spacer(minLength: 8)
+                Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold)).foregroundStyle(Ink.muted)
+            }
+            .padding(.horizontal, 16).frame(minHeight: 60)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .glassCard()
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .padding(.top, 8)
+    }
+}
+
+/// The chosen places as chips (× removes one) and a chip that opens the place search.
+struct PlaceChips: View {
+    let places: [Place]
+    var canAdd = true
+    let remove: (Place) -> Void
+    let add: () -> Void
+
+    var body: some View {
+        FlowLayout(spacing: 8, lineSpacing: 8) {
+            ForEach(places) { place in
+                Chip(text: place.name) { remove(place) }
+            }
+            if canAdd {
+                Button(action: add) {
+                    Chip(text: places.isEmpty ? String(localized: "Choose a city") : String(localized: "Add city"), symbol: "plus")
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+}
+
+/// Words as chips (× removes one) and a dashed chip to type a new one in (the flat form's areas, the thing form's
+/// words to leave out).
+struct WordChips: View {
+    let words: [String]
+    let placeholder: String
+    let remove: (String) -> Void
+    /// Adds the typed word; false keeps it in the field (empty or there already).
+    let add: (String) -> Bool
+    @State private var text = ""
+
+    var body: some View {
+        FlowLayout(spacing: 8, lineSpacing: 8) {
+            ForEach(words, id: \.self) { word in
+                Chip(text: word) { remove(word) }
+            }
+            HStack(spacing: 6) {
+                TextField("", text: $text, prompt: Text(placeholder).foregroundStyle(Ink.muted))
+                    .font(AppFont.text(14)).foregroundStyle(Ink.primary)
+                    .submitLabel(.done)
+                    .onSubmit(addTyped)
+                    .frame(width: 104)
+                if !text.trimmingCharacters(in: .whitespaces).isEmpty {
+                    Button(action: addTyped) {
+                        Image(systemName: "plus").font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(Look.accent.color).frame(width: 22, height: 22)
+                            .padding(11).contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(placeholder)
+                    .padding(-11)
+                }
+            }
+            .padding(.horizontal, 13).frame(minHeight: 34)
+            .overlay(Capsule().strokeBorder(Ink.line, style: StrokeStyle(lineWidth: 1, dash: [4, 3])))
+        }
+    }
+
+    private func addTyped() {
+        if add(text) { text = "" }
+    }
+}
+
+/// One switch per portal, with the portal's note from the server ("Blocked since 14:02").
+struct PortalToggles: View {
+    let sources: [Source]
+    @Binding var chosen: Set<Source>
+    let statuses: [SourceStatus]
+
+    var body: some View {
+        FormCard {
+            ForEach(Array(sources.enumerated()), id: \.element) { index, source in
+                if index > 0 { Hairline() }
+                let status = statuses.first { $0.source == source }
+                Toggle(isOn: Binding(get: { chosen.contains(source) }, set: { on in
+                    if on { chosen.insert(source) } else { chosen.remove(source) }
+                })) {
+                    HStack(spacing: 10) {
+                        Text(status?.name ?? source.name).font(AppFont.text(15, weight: .medium)).foregroundStyle(Ink.primary)
+                        if let note = status?.note {
+                            Text(note).font(AppFont.text(12)).foregroundStyle(Ink.muted).lineLimit(1)
+                        }
+                    }
+                }
+                .tint(Look.accent.color)
+                .frame(minHeight: 50)
+            }
+        }
+    }
+}
+
+/// "Extras": the free text every listing is checked against, in a glass card, with its caption.
+struct ExtrasField: View {
+    let placeholder: String
+    @Binding var text: String
+    let caption: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            TextArea(placeholder: placeholder, text: $text, minHeight: 84, inWell: false)
+                .glassCard()
+            Caption(text: caption).padding(.leading, 4)
+        }
+    }
+}
+
+/// The bottom of a search form: Save (or Create), the line under it, and Delete for a search that exists.
+struct SearchSaveArea: View {
+    let creating: Bool
+    let canSave: Bool
+    let saving: Bool
+    /// The server's refusal, else what is still missing, else a note on what saving does.
+    let line: String?
+    let save: () -> Void
+    let delete: (() -> Void)?
+
+    var body: some View {
+        VStack(spacing: 12) {
+            Button(action: save) {
+                HStack(spacing: 8) {
+                    if saving { ProgressView().controlSize(.small).tint(Look.onAccent) }
+                    Text(creating ? "Create search" : "Save search")
+                }
+            }
+            .buttonStyle(.accent)
+            .disabled(!canSave || saving)
+
+            if let line { Caption(text: line).multilineTextAlignment(.center) }
+
+            if let delete {
+                Button("Delete search", role: .destructive, action: delete)
+                    .buttonStyle(.destructiveQuiet)
+                    .disabled(saving)
+                    .padding(.top, 14)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, Look.sectionGap)
+    }
+}
+
+extension View {
+    /// A search form pushed on the Hunts tab: its title in the bar, Save at the top while there is something to save
+    /// (comfort item 3), the keyboard's Done, no tab bar.
+    func searchFormChrome(title: String, showsSave: Bool, saving: Bool, save: @escaping () -> Void) -> some View {
+        self
+            .provinceWall()
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar(.hidden, for: .tabBar)
+            .toolbar {
+                if showsSave {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button(action: save) {
+                            HStack(spacing: 6) {
+                                if saving { ProgressView().controlSize(.small).tint(Look.accent.color) }
+                                // The app's accent, so it reads as the action it is (grey read as switched off).
+                                Text("Save").font(AppFont.text(16, weight: .semibold)).foregroundStyle(Look.accent.color)
+                            }
+                        }
+                        .disabled(saving)
+                    }
+                }
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") { endTyping() }
+                }
+            }
     }
 }

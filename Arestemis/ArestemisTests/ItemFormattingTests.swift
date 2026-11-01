@@ -17,7 +17,7 @@ struct ItemFormattingTests {
         item.priceKind = .free; #expect(item.priceLine(language: language) == (de ? "Zu verschenken" : "Free"))
         item.priceKind = .onRequest; #expect(item.priceLine(language: language) == (de ? "Preis auf Anfrage" : "Price on request"))
         item.priceKind = .auction; item.price = 80
-        #expect(spaces(item.priceLine(language: language)) == (de ? "80 € (bid)" : "€80 (bid)"))
+        #expect(spaces(item.priceLine(language: language)) == (de ? "80 € (Gebot)" : "€80 (bid)"))
         item.priceKind = nil; #expect(item.priceLine(language: language) == nil)
     }
     @Test(arguments: [AppLanguage.english, .german])
@@ -29,7 +29,7 @@ struct ItemFormattingTests {
         item.shipping = .yes
         #expect(item.shippingLine(language: language) == (de ? "Versand" : "Shipping"))
         item.shippingCost = 6.19
-        #expect(item.shippingLine(language: language) == (de ? "Versand ab 6,19 €" : "Shipping from 6.19 €"))
+        #expect(spaces(item.shippingLine(language: language)) == (de ? "Versand ab 6,19 €" : "Shipping from €6.19"))
         item.shipping = .pickupOnly
         #expect(item.shippingLine(language: language) == (de ? "Nur Abholung" : "Pickup only"))
         item.distanceKm = 5; #expect(item.distanceLine(language: language) == "5 km")
@@ -44,8 +44,11 @@ struct ItemFormattingTests {
         let de = language == .german
         let matches = try sample(MatchPage.self, "item-matches").items
         #expect(matches[0].listing.itemFacts(language: language) == (de ? "Wie neu · Garching (5 km) · Nur Abholung · Privat" : "Like new · Garching (5 km) · Pickup only · Private"))
-        let facts = matches[2].listing.itemDetailFacts(language: language)
-        #expect(facts.map(\.value) == (de ? ["Gut", "Versand ab 6,19 €", "Garching", "Privat"] : ["Good", "Shipping from 6.19 €", "Garching", "Private"]))
+        let facts = matches[2].listing.itemDetailFacts(now: Clock.now, calendar: Clock.berlin, language: language)
+        #expect(facts.map(\.label) == (de ? ["Zustand", "Übergabe", "Versandkosten", "Verkäufer", "Ort", "Eingestellt"]
+                                          : ["Condition", "Delivery", "Shipping cost", "Seller", "Place", "Posted"]))
+        #expect(facts.dropLast().map { spaces($0.value) } == (de ? ["Gut", "Versand", "ab 6,19 €", "Privat", "Garching"]
+                                                              : ["Good", "Shipping", "from €6.19", "Private", "Garching"]))
         #expect(matches[1].overMaxLine(language: language) == (de ? "VB, 30 € über deinem Limit" : "VB, 30 € over your limit"))
         #expect(matches[0].overMaxLine(language: language) == nil)
         let overview = try sample(Overview.self, "overview")
