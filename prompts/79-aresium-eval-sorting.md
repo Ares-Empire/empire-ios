@@ -1,6 +1,6 @@
 # 79: A test set for automatic sorting, with a score
 
-Status: brief
+Status: merged 2026-11-01 (aresium 5ea344b; 2,039 cases judged blind by Claude agents and Codex, 2 disputed; first score worked-on 766 of 1,415 sorted, 745 right, 21 wrong, 304 missed; held back 333 of 622 sorted, 322 right, 11 wrong)
 Repo: **aresium** · Worktree: `../aresium-79-eval-sorting` (branch `codex/79-eval-sorting`) · Model: `gpt-6.1-sol`,
 effort `high` · Runs beside brief 78 (bank files, `eval/files/`); you own `eval/sorting/` only.
 
