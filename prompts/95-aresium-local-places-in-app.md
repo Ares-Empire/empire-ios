@@ -1,6 +1,6 @@
 # 95: The local places list in the app: measure memory first, then use it
 
-Status: brief
+Status: merged 2026-11-01 as a measurement: over budget (+103 MB loaded, about +120 MB kept after release), nothing adopted; next a packed format in aresium
 Branch: `codex/95-local-places-app` · Worktree: `../empire-ios-95-local-places-app` · Model: `gpt-6.1-sol`, effort
 `high` · Simulator: `codex-95` (create it: iPhone 17, iOS 27.0) · Needs aresium at `b04ff9b` or later (brief 86).
 
