@@ -201,3 +201,9 @@ change window by using it there ("Andere Kategorie …"), removable again; money
 spending, money out on an income category lowers that income. Transfers are offered both ways. Briefs 68 (engine,
 Codex), 69 (data, Codex), 70 (screens, a Claude agent). Asked separately: should paid-back money still also count
 under Einnahmen as Rückerstattungen (today it lowers the spending and counts as income too)?
+Patrik's answer (2026-11-01): "booking everything as it happens is clearer and more truthful. Plus in the other way
+errors are worse. So while returns and refunds are kinda weird with the expense 100 income 100 I do think doing it
+that way is best overall and easier because we dont rely on matching." So every payment counts once, in the direction
+it went, under its own category; nothing is subtracted (only a withdrawal's cash covered by receipts still moves to the
+receipt's category). "Rückerstattungen" goes: money back shows under Einnahmen with its category's name. Brief 71
+(engine, Codex); the sides only decide the menus.
