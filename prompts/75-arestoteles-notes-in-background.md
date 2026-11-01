@@ -1,6 +1,6 @@
 # 75: Arestoteles: a note closes at once and is sent in the background; no lag when the vault arrives
 
-Status: running
+Status: merged 2026-11-01 (171 tests run by Claude; main-actor work ~90 ms → <0.4 ms; Claude added the launch wall while the saved vault is read, so no loading screen flashes); in Arestoteles build 2
 Branch: `codex/75-arestoteles-background` · Worktree: `../empire-ios-75-arestoteles-background` · Model: `gpt-6.1-sol`, effort `high`
 
 ## Goal
