@@ -700,7 +700,7 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   out is Ausgaben, money in is Einnahmen, whatever the category's side; nothing is netted, so a returned order shows as
   spent and as received, and there is no Refunds / Rückerstattungen row. The one exception is a withdrawal's cash covered
   by receipts, which moves to the receipt's category. A payment's `categoriesIn` (its spending lists) holds categories
-  only for money out, its `incomeBuckets` only for money in; `PaymentNames` groups a row that has either.
+  only for money out, its `incomeBuckets` only for money in; `PaymentNames` groups a row that has either. Unsorted money in counts under the same "Uncategorised" as unsorted money out (aresium cd20cf8, 2026-11-01; it was "Other", which showed untranslated and in English shared its row with the default category Other), so both sides show it as "Not sorted" / "Nicht sortiert" (`CategoryName.shown`).
   **A day's payments API** (brief 76, data only; screens in 77): `DashboardStore.day(_:)` takes `YYYY-MM-DD` and
   returns `DayPayments` cached by dashboard `revision`. `date`, `expenses` and `income`; each side has `rows` and
   `total`, also accessible as `day[.expenses]` / `day[.income]`. Each `DayPayments.Row` has the usual `TransactionRow`

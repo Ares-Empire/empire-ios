@@ -5470,10 +5470,9 @@ var __AresiumEngine = (() => {
 
   // src/data/dashboard.ts
   var money = (n) => Math.round(n * 100) / 100;
-  var isUnsorted = (categoryName) => !categoryName || categoryName === "Uncategorised";
-  var INCOME_META = {
-    Other: { name: "Other", icon: "CircleHelp", color: "#9AA6B8", kind: "income" }
-  };
+  var UNSORTED = "Uncategorised";
+  var isUnsorted = (categoryName) => !categoryName || categoryName === UNSORTED;
+  var UNSORTED_META = { name: UNSORTED, icon: "CircleHelp", color: "#9ca3af", kind: "spend" };
   function buildDashboard(source) {
     const { months, categories, balanceByDay } = source;
     const catByName = new Map(categories.map((c) => [c.name, c]));
@@ -5519,7 +5518,7 @@ var __AresiumEngine = (() => {
       const spending = !isTransfer && (t.amount < 0 || covered);
       const incoming = !isTransfer && t.amount > 0 && !covered;
       const categoriesIn = spending ? names2 : [];
-      const buckets = incoming ? [...new Set(names2.map((name) => isUnsorted(name) ? "Other" : name))] : [];
+      const buckets = incoming ? [...new Set(names2.map((name) => isUnsorted(name) ? UNSORTED : name))] : [];
       const txn = {
         id: t.id,
         date: t.date,
@@ -5624,7 +5623,7 @@ var __AresiumEngine = (() => {
       months,
       categories,
       pick: pick2,
-      incomeBuckets: [...income.keys()].map((name) => catByName.get(name) ?? INCOME_META[name] ?? { name, icon: "Tag", color: "#34E27A", kind: "income" }),
+      incomeBuckets: [...income.keys()].map((name) => catByName.get(name) ?? (name === UNSORTED ? UNSORTED_META : void 0) ?? { name, icon: "Tag", color: "#34E27A", kind: "income" }),
       transactions,
       total,
       byMonth,
