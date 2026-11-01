@@ -11,6 +11,11 @@ Read `README.md` first, then the decision record in the ares-empire repo
   (near-black, polished gold accent, Space Grotesk / JetBrains Mono).
 - Every screen works in light and dark (Settings → Appearance): build it from the shared colours, never fixed ones
   (below, "Light mode").
+- **A blur draws straight onto the screen** (brief 67): never put a material (`.ultraThinMaterial`, `GlassCard`'s
+  blur) under `.shadow`, `.mask`, `.compositingGroup`/`.drawingGroup` or a blend mode. Core Animation then takes the
+  blur inside an offscreen pass, and on Patrik's iPhone the hunt card's corner flashed black while its dot pulsed.
+  `GlassCard` casts its blur's share of the shadow from a plain shape (`MaterialShadow`); Arestemis's `edgeFade` is
+  drawn by the wall (`provinceWall()`) instead of masking the scroll view.
 - Every app's main screen (the first tab's root) ends with the app's name: `WordmarkScrollView`
   (`Shared/Design/EmpireDesign.swift`) in place of its `ScrollView`; the band scrolls with the content and shows only
   when you scroll down (Patrik, 2026-10-24). Its launch argument for screenshots: `-scrollToEnd` (Arestemis `-scrollBottom`).
