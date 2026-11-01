@@ -1,6 +1,6 @@
 # 78: A test set for reading bank files, with a score
 
-Status: brief
+Status: merged 2026-11-01 (aresium b7d3460; 228 files: 179 read right, 37 read wrong, 40 rows silently wrong, re-import ids kept in 123 of 159; test files stored as exact bytes, 6efc3cc)
 Repo: **aresium** · Worktree: `../aresium-78-eval-files` (branch `codex/78-eval-files`) · Model: `gpt-6.1-sol`,
 effort `high` · Runs beside brief 79 (the sorting test set, `eval/sorting/`); you own `eval/files/` only.
 

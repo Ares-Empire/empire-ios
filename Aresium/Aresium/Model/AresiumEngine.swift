@@ -147,6 +147,13 @@ actor AresiumEngine {
         try call("learn", LearnInput(learned: [:], payment: payment, categoryId: categoryID), as: [String: String].self)
     }
 
+    /// The same `learn` correction for each payment, with one JSON bridge crossing for the whole selection.
+    func learn(_ payments: [SortingPayment], categoryID: String) throws -> [String: String] {
+        try PickerTiming.measure("batch.learn") {
+            try call("learnMany", LearnManyInput(payments: payments, categoryId: categoryID), as: [String: String].self)
+        }
+    }
+
     /// `merchantKey` for each payment, in order ("" when it names none).
     func merchantKeys(_ payments: [SortingPayment]) throws -> [String] {
         let keys = try call("merchantKeys", payments, as: [String].self)
@@ -219,6 +226,11 @@ actor AresiumEngine {
         dashboard: (input) => E.buildDashboard(E.buildDashboardSource(input)),
         sortPayments: (input) => E.sortPayments(input.payments, { categories: input.categories, learned: input.learned }),
         learn: (input) => E.learn(input.learned, input.payment, input.categoryId),
+        learnMany: (input) => {
+          const rules = {};
+          for (const payment of input.payments) Object.assign(rules, E.learn({}, payment, input.categoryId));
+          return rules;
+        },
         merchantKeys: (payments) => payments.map((payment) => E.merchantKey(payment)),
         nameKeys: (input) => ({
           keys: input.payments.map((payment) => E.merchantKey(payment)),
@@ -332,6 +344,10 @@ actor AresiumEngine {
     private nonisolated struct LearnInput: Encodable {
         let learned: [String: String]
         let payment: SortingPayment
+        let categoryId: String
+    }
+    private nonisolated struct LearnManyInput: Encodable {
+        let payments: [SortingPayment]
         let categoryId: String
     }
 }

@@ -4,6 +4,46 @@
     "" : {
       "shouldTranslate" : false
     },
+    "%@ added to %lld payments" : {
+      "localizations" : {
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%@ zu %lld Buchung hinzugefügt"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%@ zu %lld Buchungen hinzugefügt"
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%1$@ added to %2$lld payment"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%1$@ added to %2$lld payments"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%@ in euros" : {
       "localizations" : {
         "de" : {
@@ -387,6 +427,46 @@
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld payments"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld payments moved to %@" : {
+      "localizations" : {
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Buchung nach %@ verschoben"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Buchungen nach %@ verschoben"
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld payment moved to %@"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld payments moved to %@"
                 }
               }
             }
@@ -790,6 +870,62 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Auch in"
+          }
+        }
+      }
+    },
+    "Also move %lld other payments from %@?" : {
+      "localizations" : {
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Auch %lld weitere Buchung von %@ verschieben?"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Auch %lld weitere Buchungen von %@ verschieben?"
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Also move %lld other payment from %@?"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Also move %lld other payments from %@?"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Also move %lld other payments from %lld shops?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auch %lld weitere Buchungen von %lld Geschäften verschieben?"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Also move %1$lld other payments from %2$lld shops?"
           }
         }
       }
@@ -1274,6 +1410,16 @@
         }
       }
     },
+    "Cannot undo because the data changed." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rückgängig nicht möglich, die Daten haben sich geändert."
+          }
+        }
+      }
+    },
     "Card" : {
       "localizations" : {
         "de" : {
@@ -1410,6 +1556,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Code ändern"
+          }
+        }
+      }
+    },
+    "Change undone." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Änderung rückgängig gemacht."
           }
         }
       }
@@ -3096,6 +3252,46 @@
         }
       }
     },
+    "Name changed for %lld payments" : {
+      "localizations" : {
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Name für %lld Buchung geändert"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Name für %lld Buchungen geändert"
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Name changed for %lld payment"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Name changed for %lld payments"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "Name of the bank" : {
       "localizations" : {
         "de" : {
@@ -4366,6 +4562,16 @@
         }
       }
     },
+    "Select payments from one month's list." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähle Buchungen aus der Liste eines Monats."
+          }
+        }
+      }
+    },
     "Semicolon" : {
       "localizations" : {
         "de" : {
@@ -4782,6 +4988,16 @@
         }
       }
     },
+    "The data changed. Select the payments again." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Daten haben sich geändert. Wähle die Buchungen erneut."
+          }
+        }
+      }
+    },
     "The file is empty." : {
       "localizations" : {
         "de" : {
@@ -4968,6 +5184,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Diese Kategorie gibt es nicht mehr."
+          }
+        }
+      }
+    },
+    "This change is no longer available." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Änderung ist nicht mehr verfügbar."
           }
         }
       }
