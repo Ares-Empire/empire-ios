@@ -1,6 +1,6 @@
 # 90: Aresus app: drops, the data side (outbox, upload, folder list, list of drops)
 
-Status: draft
+Status: merged 2026-11-01 (82b5d7d; Claude: server samples, tests adjusted, German strings)
 Branch: `codex/90-drops-data` · Worktree: `../empire-ios-90-drops-data` · Model: `gpt-6.1-sol`, effort `high`
 
 ## Goal
