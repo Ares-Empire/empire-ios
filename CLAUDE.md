@@ -646,6 +646,38 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   (`isOwnName` remains false). Cash withdrawals, name pages/months, summed rows and the rename field follow the shown
   name; receipts and cash entries keep their typed Shop. `PaymentRenameInfo.shopBankName`/`bankDisplayName` supply
   the fallback to details and `RenamePlan.start`; original fields never change or reach the engine under a display name.
+  **Several payments at once — data API** (brief 81; screens in 82; `Model/BatchChanges.swift`,
+  `Model/BatchLedger.swift`): phone mode's category month lists, Current and Overview, Not sorted included.
+  `DashboardStore.offersSelection(in:)` (or `category:month:side:`) and `selectableRows(in:)` exclude covered rows;
+  `selectionIDs(for: PaymentListEntry)` returns one id or all a sum's member ids. Keep a `Set<String>` of these row ids.
+  `selectionRows(_:)` resolves live rows; `selectionSummary(_:)` returns `PaymentSelectionSummary`: `counts`
+  (`BatchCounts.bankPayments`, `receipts`, `cashEntries`, `total`), `side`, positive `total` in euros, a shared
+  `currentCategory`, `canSwitch`, `canRename` (Own names must show). `offeredCategories(for:)` returns `[Category]`
+  from `PhoneCategoryList.offered` for that side, leaving out a common primary category. Empty, missing, mixed-month
+  or mixed-side action selections are refused. Server mode offers nothing; the tour's ledger uses the same API.
+  `switchCategory(ids:to:)`, `addCategory(ids:name:)`, `rename(ids:to:scope:)` are async/throwing and return
+  `BatchChangeResult`: `action`, `category`, `changed` and `skipped` counts, localized `message`, `undo`, optional
+  `followUp`. Switch sets bank rows manual and learns each payment, changes receipts as Edit (learns their shops)
+  and entries as Edit (no learning); one save, no sort. Add preserves primary/source and extras, skips bank rows
+  already carrying the category and receipts/entries. `renameInfo(ids:)` returns `BatchRenameInfo` with
+  `bankPaymentCount`, `otherPaymentCount` (distinct shops, excluding selected ids), `shopCount`, `allPaymentCount`
+  and skipped receipt/entry counts. `BatchRenameScope.payments` sets each selected bank row's own name;
+  `.shops` consolidates each distinct shop's rule and drops selected overrides; keyless rows get their own name.
+  Names use the single rename's trim/60-character rule; empty removes names in that scope. Receipts and entries
+  keep their typed Shop. These APIs also exist on `PhoneBackend` (save/summary only; no dashboard rebuild).
+  `BatchMerchantFollowUp` supplies `count`, `shopCount`, `shop` (one shop only), `category`, localized `question`;
+  `apply()` returns a new result with the same undo handle. It moves each eligible other bank payment once,
+  excluding manual, receipt-set, structural, own-transfer, selected and already-target rows, and replaces every
+  relevant alias's learned rule. `BatchUndo.perform()` returns `.undone` or `.unavailable` with a localized
+  `message`; the original handle also undoes an applied follow-up. Each store action, applied question and
+  successful undo rebuilds dashboard/widgets once. An observer of **every save on the ledger context** increments
+  a revision; tokens also check ledger identity and complete before/after value snapshots. An intervening import
+  or save (even changing a payment and changing it back) invalidates the whole undo/question before any write.
+  Undo restores only the changed row category/source/extras, own names, and added/replaced/removed learned/name
+  rules, with one save. The revision also protects planning across engine awaits. All ledger work
+  stays on its executor in one operation per action; the bridge's `learnMany` calls the existing engine `learn`
+  for each correction in one JSON crossing. Tests: `BatchChangesTests`, including 500 selected rows / 60 shops
+  (79.739 ms on codex-81, including learning, save and undo snapshots; the learning bridge 1.575 ms).
   **Name search API** (brief 76, data only; screens in 77): `NameSearch.results(for:in:)` takes a query and
   `Dashboard.nameGroups`; `DashboardStore.searchNames(_:)` uses a `NameSearch.Index` cached by dashboard `revision`
   for keystrokes. A group retains `names`: shown spellings, every original bank line and every own name (also hidden
