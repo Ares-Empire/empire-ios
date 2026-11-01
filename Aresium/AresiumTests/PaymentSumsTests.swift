@@ -267,7 +267,7 @@ struct RowSwipeTwoActionsTests {
     }
 }
 
-/// The model on a real phone store: Penny three times in October's Groceries (one a refund), REWE once, the category's
+/// The model on a real phone store: Penny twice in October's Groceries plus a refund (income since brief 71), REWE once, the category's
 /// key in both languages, the menus, Delete data and the tour.
 @MainActor
 struct PaymentSumsStoreFlowTests {
@@ -323,7 +323,7 @@ struct PaymentSumsStoreFlowTests {
         let english = await store(phone, sums: PaymentSums(defaults: defaults))
         let list = groceries(english)
         let penny = try #require(list.entries.compactMap { if case let .summed(sum) = $0 { sum } else { nil } }.first)
-        #expect(penny.count == 3 && penny.total == -45, "−20 −30 +5")
+        #expect(penny.count == 2 && penny.total == -50, "−20 −30; the +5 refund counts under income (brief 71)")
         #expect(list.allSummed, "the icon shows on in English too")
     }
 
@@ -339,7 +339,10 @@ struct PaymentSumsStoreFlowTests {
 
         dashboard.sums.setEverywhere(true)
         let summed = groceries(dashboard)
-        #expect(summed.entries.count == single.rows.count - 2 && summed.rows.count == single.rows.count)
+        #expect(summed.entries.count == single.rows.count - 1 && summed.rows.count == single.rows.count)
+        // Brief 71: the refund is not in Groceries' spending list but in its income list.
+        #expect(!single.rows.contains { $0.transaction.amount > 0 })
+        #expect(dashboard.paymentList(category: "Groceries", month: "2026-10", side: .income).rows.map(\.transaction.amount) == [5])
         #expect(dashboard.builtLists.sums == dashboard.sums.revision, "built again after the change")
         let after = try #require(dashboard.dashboard)
         #expect(after.total.expense == before.total.expense && after.byMonth["2026-10"]?.expense == before.byMonth["2026-10"]?.expense)

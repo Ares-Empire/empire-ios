@@ -149,6 +149,14 @@ struct ProvinceWall: View {
 /// (`--glass-edge` and `--spec` of Aresium's light and dark themes, the edge tinted with the accent instead of red).
 /// On the light wall the card is nearly white with a strong white edge and a soft shadow; on the dark one it is
 /// smoked glass with a faint edge.
+///
+/// The blur (the material) is kept out of the shadow (brief 67). Under `.shadow`, SwiftUI gives each layer its own
+/// shadow without a path, which Core Animation draws from the layer's pixels in an offscreen pass; the material's blur
+/// was then taken inside that pass instead of from the screen. The hunt's pulsing dot redraws a patch over the card's
+/// top left corner every frame, and on Patrik's iPhone that corner flashed black. Now the material draws straight onto
+/// the screen like any system blur (Apple: a blur must be "combined as part of the content they're layered on top of"),
+/// and `MaterialShadow` casts its share of the shadow from a plain shape of the card's outline. The fill, the
+/// highlight, the content and the edge keep their own shadows, so the card looks the same.
 struct GlassCard: ViewModifier {
     var accent: AppAccent? = nil
     var radius: CGFloat = Ink.cardRadius
@@ -160,10 +168,10 @@ struct GlassCard: ViewModifier {
         let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
         let light = scheme == .light
         let tint = accent?.deep ?? .white
+        let shadow = CardShadow(light: light)
         content
             .background {
                 ZStack {
-                    shape.fill(.ultraThinMaterial)
                     shape.fill(raised ? Ink.card2 : Ink.card)
                     shape.fill(RadialGradient(colors: [.white.opacity(light ? 0.6 : 0.07), .clear], center: .topLeading,
                                               startRadius: 0, endRadius: 220))
@@ -176,7 +184,11 @@ struct GlassCard: ViewModifier {
                     glassEdge(shape, light: light, tint: tint)
                 }
             }
-            .shadow(color: Ink.shadow, radius: light ? 18 : 22, y: light ? 10 : 14)
+            .shadow(color: Ink.shadow, radius: shadow.radius, y: shadow.y)
+            .background {
+                shape.fill(.ultraThinMaterial)
+                    .background { MaterialShadow(shape: shape, shadow: shadow) }
+            }
     }
 
     /// The bright edge that fades: white from the top left, the accent's tint lower down.
@@ -192,6 +204,40 @@ struct GlassCard: ViewModifier {
             .init(color: accent == nil ? .white.opacity(0.03) : (accent?.color ?? .white).opacity(0.10), location: 0.68),
             .init(color: .white.opacity(0.03), location: 1)
         ], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
+    }
+}
+
+/// The glass card's shadow: softer and shorter on the light wall.
+private struct CardShadow {
+    let radius: CGFloat
+    let y: CGFloat
+
+    init(light: Bool) {
+        radius = light ? 18 : 22
+        y = light ? 10 : 14
+    }
+}
+
+/// The shadow the card's material used to cast, from a plain shape of the card's outline instead of the material, so
+/// no blur is ever drawn inside a shadow's offscreen pass (`GlassCard`). The shape's inside is cut away: the material
+/// above it blurs the wall behind the card, as before, never this shape. Its fill is the wall's colour so the few
+/// half-covered pixels along the rounded corners match the wall too.
+private struct MaterialShadow: View {
+    let shape: RoundedRectangle
+    let shadow: CardShadow
+
+    var body: some View {
+        // Room around the card for the whole shadow: its blur fades out within three times its radius, plus the offset.
+        let reach = shadow.radius * 3 + shadow.y
+        shape.fill(Ink.background)
+            .shadow(color: Ink.shadow, radius: shadow.radius, y: shadow.y)
+            .mask {
+                Rectangle().padding(-reach)
+                    .overlay { shape.blendMode(.destinationOut) }
+                    .compositingGroup()
+            }
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
     }
 }
 

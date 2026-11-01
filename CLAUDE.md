@@ -11,6 +11,11 @@ Read `README.md` first, then the decision record in the ares-empire repo
   (near-black, polished gold accent, Space Grotesk / JetBrains Mono).
 - Every screen works in light and dark (Settings → Appearance): build it from the shared colours, never fixed ones
   (below, "Light mode").
+- **A blur draws straight onto the screen** (brief 67): never put a material (`.ultraThinMaterial`, `GlassCard`'s
+  blur) under `.shadow`, `.mask`, `.compositingGroup`/`.drawingGroup` or a blend mode. Core Animation then takes the
+  blur inside an offscreen pass, and on Patrik's iPhone the hunt card's corner flashed black while its dot pulsed.
+  `GlassCard` casts its blur's share of the shadow from a plain shape (`MaterialShadow`); Arestemis's `edgeFade` is
+  drawn by the wall (`provinceWall()`) instead of masking the scroll view.
 - Every app's main screen (the first tab's root) ends with the app's name: `WordmarkScrollView`
   (`Shared/Design/EmpireDesign.swift`) in place of its `ScrollView`; the band scrolls with the content and shows only
   when you scroll down (Patrik, 2026-10-24). Its launch argument for screenshots: `-scrollToEnd` (Arestemis `-scrollBottom`).
@@ -224,7 +229,7 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
    Testing). Build 2 (2026-10-30): the fixes of Patrik's first test (briefs 34–37). Build 3: the picker's scroll, the
    back swipe and the comfort items (briefs 38–41). Build 4 (2026-10-30 evening): own names and the name's page with the
    left swipe, the graph as a setting, Aresium's own messages (briefs 42–46). Build 5 (2026-10-30 night): the payment page with pens, switches readable in
-   dark, no cover flash, one shop under changing names, adding up names in a list (briefs 47, 48, 53, 54). Build 6 (2026-10-31): day tiles as dates, the name's months as pages, Settings' work off the main thread, the graph read by sliding and moving away, the header without boxes, the add-up icon fixed (briefs 55–57, fix 58). Build 7 (2026-10-31 evening): the tour in one walk of 18 steps over everything above (brief 59). Build 8 (2026-10-31 night): New category in the change window, the receipt window and Add cash (brief 60). **Arestemis 0.1 (1) uploaded 2026-10-30** (after its comfort items, brief 49). Arestemis build 2 (2026-10-31 evening): Patrik's fine-tuning rounds 1–3, no "KI" anywhere, "Suche starten", no one-account line on the login (`docs/reviews/2026-10-31-arestemis-phone-test.md`). Arestemis build 3 (2026-10-31 night): Settings → Application as rows with the switch, notes and About you pages, settings loaded with the home screen, ImmoScout24 known to the app, "Suche läuft" (briefs 61, 62). **Aresus 0.1 (1) uploaded 2026-10-31 21:16** (98 tests; the
+   dark, no cover flash, one shop under changing names, adding up names in a list (briefs 47, 48, 53, 54). Build 6 (2026-10-31): day tiles as dates, the name's months as pages, Settings' work off the main thread, the graph read by sliding and moving away, the header without boxes, the add-up icon fixed (briefs 55–57, fix 58). Build 7 (2026-10-31 evening): the tour in one walk of 18 steps over everything above (brief 59). Build 8 (2026-10-31 night): New category in the change window, the receipt window and Add cash (brief 60). **Arestemis 0.1 (1) uploaded 2026-10-30** (after its comfort items, brief 49). Arestemis build 2 (2026-10-31 evening): Patrik's fine-tuning rounds 1–3, no "KI" anywhere, "Suche starten", no one-account line on the login (`docs/reviews/2026-10-31-arestemis-phone-test.md`). Arestemis build 3 (2026-10-31 night): Settings → Application as rows with the switch, notes and About you pages, settings loaded with the home screen, ImmoScout24 known to the app, "Suche läuft" (briefs 61, 62). Arestemis build 4 (2026-11-01 night): the black corner on the hunt's card (the glass card's blur no longer drawn offscreen, brief 67), German tabs Suche / Angebote / Filter. **Aresus 0.1 (1) uploaded 2026-10-31 21:16** (98 tests; the
    Aresync tab included; Arestemis's outage alerts come from the aresus server, brief 64, no app change). The other
    two (Arestoteles, Empire) have their comfort items merged (briefs 51–52) and wait only for
    `scripts/testflight.sh <App>`. Their App Store Connect records exist (Patrik, 2026-10-30: Arestemis, Aresus, Arestoteles, Ares Empire),
@@ -641,7 +646,14 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   category") open the change window, an extra category's chip opens it at Add; the Change button and the reason sentence
   went, the reason (`PaymentWording.categoryReason`) is one quiet line under "Currently in" at the window's top. Server
   mode the same wherever the page has categories to change to.
-  **Category sides** (brief 69): every category has one home side for totals. Defaults take `kind` from the engine's
+  **Counting as it happened** (brief 71, Patrik 2026-11-01: "booking everything as it happens is clearer and more
+  truthful"): every payment counts once, in the direction it went, under its own category (and its extra ones): money
+  out is Ausgaben, money in is Einnahmen, whatever the category's side; nothing is netted, so a returned order shows as
+  spent and as received, and there is no Refunds / Rückerstattungen row. The one exception is a withdrawal's cash covered
+  by receipts, which moves to the receipt's category. A payment's `categoriesIn` (its spending lists) holds categories
+  only for money out, its `incomeBuckets` only for money in; `PaymentNames` groups a row that has either.
+  **Category sides** (brief 69): every category has one home side, which since brief 71 decides only where it is
+  offered (the menus), not where its money counts. Defaults take `kind` from the engine's
   catalog; one's own store `side` (`"spend"` or `"income"`) in schema 6's chosen category, alongside `otherSide` (false
   by default) for any chosen category. Transfers have no side and are offered in both directions. `PhoneStorage.open`
   runs `PhoneLedger.giveCategoriesSides` before exposing the store: the engine's old no-side counting (primary
