@@ -289,6 +289,11 @@ struct QuickSortTests {
         await imports.categoriesClosed()?.value
         #expect(imports.banner != nil && !QuickSortOffer.shows(moment()))
         imports.close()
+        // Brief 215 changed this on purpose (the first-run review's finding 1): with no category chosen the quick sort
+        // cannot help, so its offer waits until one is. One none of these payments fits keeps the tally as it was.
+        #expect(!QuickSortOffer.shows(moment()) && moment().categories)
+        try await phone.choose("salary")
+        await store.reloadAfterTransactionChange()
         let shown = moment()
         #expect(QuickSortOffer.shows(shown))
         #expect(shown.tally.payments == 4 && shown.tally.names == 3)

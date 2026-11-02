@@ -277,6 +277,8 @@ struct DashboardStatus: View {
 struct SeriesChart: View {
     /// The graph's height on the start screen and on a category's page (the same on both, brief 42).
     static let dashboardHeight: CGFloat = 235
+    /// The two stretches' series (brief 215): only told apart, never shown (no legend), so not in the catalog.
+    private static let stretch = "stretch"
 
     let points: [ChartPoint]
     let color: Color
@@ -305,19 +307,40 @@ struct SeriesChart: View {
     }
 
     private var chart: some View {
-        Chart(points) { point in
-            if points.count == 1 {
+        Chart {
+            if points.count == 1, let point = points.first {
                 RuleMark(x: .value(xTitle, point.index), yStart: .value("EUR", 0), yEnd: .value("EUR", point.value))
                     .foregroundStyle(color).lineStyle(StrokeStyle(lineWidth: 2.6, lineCap: .round))
                 PointMark(x: .value(xTitle, point.index), y: .value("EUR", point.value))
                     .foregroundStyle(color).symbolSize(90)
                     .accessibilityLabel(point.label).accessibilityValue(Money.total(point.value))
             } else {
-                AreaMark(x: .value(xTitle, point.index), y: .value("EUR", point.value))
-                    .foregroundStyle(LinearGradient(colors: [color.opacity(0.36), color.opacity(0)], startPoint: .top, endPoint: .bottom))
-                LineMark(x: .value(xTitle, point.index), y: .value("EUR", point.value))
-                    .foregroundStyle(color).lineStyle(StrokeStyle(lineWidth: 2.6, lineCap: .round, lineJoin: .round))
-                    .accessibilityLabel(point.label).accessibilityValue(Money.total(point.value))
+                // Brief 215: the stretch to a month still running is dashed over a fainter area (its amount is not
+                // final, and a solid fall read as "spent less"); no legend, the dashes say it.
+                let stretches = ChartStretches(points)
+                ForEach(stretches.done) { point in
+                    AreaMark(x: .value(xTitle, point.index), y: .value("EUR", point.value),
+                             series: .value(Self.stretch, "done"), stacking: .unstacked)
+                        .foregroundStyle(LinearGradient(colors: [color.opacity(0.36), color.opacity(0)],
+                                                        startPoint: .top, endPoint: .bottom))
+                    LineMark(x: .value(xTitle, point.index), y: .value("EUR", point.value),
+                             series: .value(Self.stretch, "done"))
+                        .foregroundStyle(color).lineStyle(StrokeStyle(lineWidth: 2.6, lineCap: .round, lineJoin: .round))
+                        .accessibilityLabel(point.label).accessibilityValue(Money.total(point.value))
+                }
+                ForEach(stretches.running) { point in
+                    AreaMark(x: .value(xTitle, point.index), y: .value("EUR", point.value),
+                             series: .value(Self.stretch, "running"), stacking: .unstacked)
+                        .foregroundStyle(LinearGradient(colors: [color.opacity(0.14), color.opacity(0)],
+                                                        startPoint: .top, endPoint: .bottom))
+                    LineMark(x: .value(xTitle, point.index), y: .value("EUR", point.value),
+                             series: .value(Self.stretch, "running"))
+                        .foregroundStyle(color)
+                        .lineStyle(StrokeStyle(lineWidth: 2.6, lineCap: .butt, lineJoin: .round, dash: [5, 4]))
+                        // Its first point is the done stretch's last, read there already.
+                        .accessibilityHidden(point.index != stretches.running.last?.index)
+                        .accessibilityLabel(point.label).accessibilityValue(Money.total(point.value))
+                }
             }
         }
         .chartYScale(domain: .automatic(includesZero: true))
@@ -418,6 +441,23 @@ struct SeriesChart: View {
                 }
                 .position(x: min(max(half, x), max(half, layout.size.width - half)), y: chipBottom)
         }
+    }
+}
+
+/// A graph's line in two stretches (brief 215): up to the last finished point, and from there to a month still running
+/// (`ChartPoint.running`), which is drawn dashed. Without a running last point, all of it is done.
+struct ChartStretches {
+    let done: [ChartPoint]
+    let running: [ChartPoint]
+
+    init(_ points: [ChartPoint]) {
+        guard points.count >= 2, let last = points.last, last.running else {
+            done = points
+            running = []
+            return
+        }
+        done = Array(points.dropLast())
+        running = Array(points.suffix(2))
     }
 }
 

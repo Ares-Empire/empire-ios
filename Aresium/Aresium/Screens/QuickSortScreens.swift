@@ -207,10 +207,41 @@ private struct QuickSortEnd: View {
 }
 
 /// The card at the top of Not sorted's month list (Current and Overview): the way through what is Not sorted, name by
-/// name, over all months. A month list's row on the card colour with the line around it, so it reads as part of the
-/// list and as a way somewhere; the stack in the day's tile's place.
+/// name, over all months, in the look of `ListCard`, the stack in the day's tile's place.
 struct QuickSortListCard: View {
     let tally: QuickSortTally
+    let palette: Palette
+    let open: () -> Void
+
+    var body: some View {
+        ListCard(symbol: "square.stack.3d.up", title: QuickSortWording.cardTitle(),
+                 line: QuickSortWording.cardLine(tally), palette: palette, open: open)
+            .tourAnchor(.quickSortCard)
+            .accessibilityIdentifier("quickSortListCard")
+    }
+}
+
+/// While no category is chosen (brief 215, `DashboardStore.waitsForCategories`): the start screen's card, and Not
+/// sorted's in the quick sort card's place, that opens the category list. The quick sort card's look, the categories'
+/// grid (the selection bar's Category symbol) in the day's tile's place.
+struct CategoriesCard: View {
+    let palette: Palette
+    let open: () -> Void
+
+    var body: some View {
+        ListCard(symbol: "square.grid.2x2", title: ChooseCategoriesWording.cardTitle(),
+                 line: ChooseCategoriesWording.cardLine(), palette: palette, open: open)
+            .accessibilityIdentifier("categoriesCard")
+    }
+}
+
+/// A card in a list that leads somewhere (the quick sort's, the categories'): a month list's row on the card colour
+/// with the line around it, so it reads as part of the list and as a way somewhere; a symbol in the day's tile's place,
+/// the title, a quiet line, the chevron.
+struct ListCard: View {
+    let symbol: String
+    let title: String
+    let line: String
     let palette: Palette
     let open: () -> Void
 
@@ -219,12 +250,12 @@ struct QuickSortListCard: View {
         Button(action: open) {
             HStack(spacing: 12) {
                 DayTile(palette: palette) {
-                    Image(systemName: "square.stack.3d.up").font(.system(size: 17, weight: .medium))
+                    Image(systemName: symbol).font(.system(size: 17, weight: .medium))
                 }
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(verbatim: QuickSortWording.cardTitle()).font(AppFont.text(14.5, weight: .semibold))
+                    Text(verbatim: title).font(AppFont.text(14.5, weight: .semibold))
                         .foregroundStyle(palette.ink)
-                    Text(verbatim: QuickSortWording.cardLine(tally)).font(AppFont.text(12.5))
+                    Text(verbatim: line).font(AppFont.text(12.5))
                         .foregroundStyle(palette.muted).fixedSize(horizontal: false, vertical: true)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -237,8 +268,6 @@ struct QuickSortListCard: View {
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
-        .tourAnchor(.quickSortCard)
-        .accessibilityIdentifier("quickSortListCard")
     }
 }
 

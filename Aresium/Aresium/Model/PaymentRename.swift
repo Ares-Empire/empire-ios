@@ -292,7 +292,7 @@ nonisolated struct NamePage {
         }
         chart = dashboard.months.enumerated().map { index, month in
             ChartPoint(index: index, label: month.shortTitle(language), value: amount(group.months[month.key]),
-                       title: month.title(language))
+                       title: month.title(language), running: month.partial)
         }
         let titles = Dictionary(dashboard.months.map { ($0.key, $0.title(language)) }, uniquingKeysWith: { first, _ in first })
         category = Self.mostCommonCategory(group.rows, spends: spends, dashboard: dashboard)

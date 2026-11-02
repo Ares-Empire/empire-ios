@@ -15,6 +15,12 @@ final class AresiumMessages {
     private(set) var error: String?
     /// The dashboard observes only eligibility, not the page's individual preferences or scheduling context.
     private(set) var shouldOfferReminder = false
+    /// The import that readied the offer came in this opening of the app, so the offer waits until Aresium is opened
+    /// again: a launch, or coming back from the background (`appOpenedAgain`). Brief 215, the first-run review's
+    /// finding 11: right after the first import a newcomer met the result, the quick sort's offer and then this one, so
+    /// the first minute now asks two things at most (the category list and the quick sort). Another import in the same
+    /// opening does not end the wait (a file confirmed in the file check window is an import of its own).
+    private(set) var offerWaitsForNextOpening = false
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let scheduler: MessageScheduler
     @ObservationIgnored private let now: @Sendable () -> Date
@@ -68,11 +74,20 @@ final class AresiumMessages {
         for account in accounts { history.accountImports[account] = date }
         if addedPayments > 0 {
             history.lastImport = date
-            if !history.offered && !preferences.enabled { history.offerReady = true }
+            if !history.offered && !preferences.enabled && !history.offerReady {
+                history.offerReady = true
+                offerWaitsForNextOpening = true
+            }
         }
         updateOffer()
         save()
         enqueue()
+    }
+
+    /// Aresium was opened again (back from the background; a launch makes a new model): an offer readied before may
+    /// show now.
+    func appOpenedAgain() {
+        if offerWaitsForNextOpening { offerWaitsForNextOpening = false }
     }
 
     /// The offer's answer (including Not now) consumes it permanently, regardless of the chosen switches.
@@ -118,6 +133,7 @@ final class AresiumMessages {
         dataGeneration += 1
         preferences = MessagePreferences()
         history = MessageHistory()
+        offerWaitsForNextOpening = false
         updateOffer()
         dashboard = nil
         for key in defaults.dictionaryRepresentation().keys where key.hasPrefix("aresium.messages.") {

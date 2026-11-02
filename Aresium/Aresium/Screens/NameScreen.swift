@@ -102,7 +102,7 @@ struct NameScreen: View {
 }
 
 /// A name's payments in one month (brief 55): pushed from a month's row or the graph on the name's page, under the
-/// header with the name as its title and the month as the line under it ("Oct 2026 · activities", as a category's month
+/// header with the name as its title and the month as the line under it ("Oct 2026 · payments", as a category's month
 /// list), so the arrow and the back swipe go back to the name's page. Its rows are a category's month list's
 /// (`PaymentRow`: the tap opens the payment's page, the long press, the swipe with All, which goes back to the name's
 /// page below), without Add up: every row has the same name. The rows come from `NamePage`, built once per dashboard.

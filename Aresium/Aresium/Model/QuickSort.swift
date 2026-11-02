@@ -150,9 +150,11 @@ extension DashboardStore {
     var quickSortTally: QuickSortTally { QuickSortTally(quickSortGroups) }
 
     /// The card at the top of Not sorted's month list (Current and Overview): phone mode, while some name has two or
-    /// more payments Not sorted.
+    /// more payments Not sorted and a category is chosen (brief 215: before, its cards could offer only Own transfers
+    /// and New category; the categories' card stands there instead, `offersCategoriesCard`).
     func offersQuickSort(on route: DashboardRoute) -> Bool {
-        guard phone != nil, route.isCategoryList, route.category == CategoryName.uncategorised else { return false }
+        guard phone != nil, route.isCategoryList, route.category == CategoryName.uncategorised,
+              !waitsForCategories else { return false }
         return quickSortTally.hasRepeats
     }
 }
@@ -191,11 +193,14 @@ nonisolated enum QuickSortOffer {
         var result = false
         /// Another window of the app is open, the quick sort's own flow included.
         var window = false
+        /// No category is chosen yet (brief 215, `DashboardStore.waitsForCategories`): the quick sort cannot help
+        /// before, so the offer waits until one is (it then shows, as the import's offer was not answered).
+        var categories = false
     }
 
     static func shows(_ moment: Moment) -> Bool {
         moment.pending && moment.tally.payments > 0 && !moment.tour && !moment.locked && !moment.importing
-            && !moment.picker && !moment.result && !moment.window
+            && !moment.picker && !moment.result && !moment.window && !moment.categories
     }
 
     /// The import left nothing Not sorted (or it was sorted since): the offer is over, so it never shows later for
@@ -210,7 +215,7 @@ extension QuickSortOffer.Moment {
     @MainActor init(imports: ImportStore, store: DashboardStore, tour: Bool, locked: Bool, window: Bool) {
         self.init(pending: imports.offersQuickSort, tally: store.quickSortTally, tour: tour, locked: locked,
                   importing: imports.isBusy, picker: imports.asksForCategories, result: imports.banner != nil,
-                  window: window)
+                  window: window, categories: store.waitsForCategories)
     }
 }
 

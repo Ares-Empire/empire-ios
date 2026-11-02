@@ -86,7 +86,8 @@ struct ImportButton: View {
     private var icon: some View {
         Group {
             if store.isBusy { ProgressView().tint(palette.secondary) }
-            else { Image(systemName: "tray.and.arrow.up") }
+            // The tray with the arrow in, as the drop overlay's (brief 215: the arrow out read as share or export).
+            else { Image(systemName: "tray.and.arrow.down") }
         }
         .headerButtonFace()
         .foregroundStyle(palette.secondary)
@@ -177,7 +178,12 @@ private struct ImportToast: View {
                         Button { Task { await store.importPendingFiles() } } label: { Text("Retry").minimumTapArea() }
                         Button { store.discard() } label: { Text("Discard").minimumTapArea() }
                     } else {
-                        Button { store.close() } label: { Text("Dismiss").minimumTapArea() }
+                        // Close / Schließen (brief 215): it only closes the notice; "Dismiss" shared Arestemis's
+                        // "Entfernen", which read as removing the payments just imported.
+                        Button { store.close() } label: {
+                            Text("Close", comment: "The import result's button: closes the notice, nothing else.")
+                                .minimumTapArea()
+                        }
                     }
                 }.font(AppFont.text(13, weight: .bold)).tint(palette.ink)
             }

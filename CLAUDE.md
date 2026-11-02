@@ -173,9 +173,14 @@ app's log-out did before (in sample mode it leaves the sample, as before); then,
 whose server keeps data per account passes its `DELETE …/me` as `SettingsApp(serverData:)` (today only Arestemis:
 `ArestemisAPI.accountDataURL`); leaving deletes it there first. An app that works without an account
 (`EmpireAppIdentity.accountOptional`, only Aresium, brief 22) shows, while no Ares app is logged in, a quiet "Ares
-account" section last instead: Sign in (`Shared/Design/SignInSheet.swift`, the login without Create account) and the
-app's line `SettingsApp(signInNote:)`; signed in, the account section as everywhere (Leave <app> only while the account
-has the app). **Switches** (brief 47, Patrik's phone: in dark mode "on" was a pale ink track under the white knob, so on
+account" section last instead when it offers to sign in (`SettingsApp(offersSignIn:)`, true by default): Sign in
+(`Shared/Design/SignInSheet.swift`, the login without Create account) and the app's line `SettingsApp(signInNote:)`;
+signed in, the account section as everywhere (Leave <app> only while the account has the app); which one is
+`SettingsAccountSection.shown`. **Aresium offers no sign-in** (brief 215, Patrik 2026-11-02, the first-run review's
+finding 5: an Ares account there is only for his own server, so testers met a sign-in they could not use): signed out,
+its Settings end with About; its "Ares account" section shows only while a login of the Ares apps exists on the iPhone
+(Patrik signs in through his other apps). The Sign in sheet stays (DEBUG `-openSignIn`), without "One Ares account for
+all Ares apps" since brief 215. **Switches** (brief 47, Patrik's phone: in dark mode "on" was a pale ink track under the white knob, so on
 and off could not be told apart): `SettingsScreen` gives every switch inside it `EmpireSwitchStyle`
 (`Shared/Design/FormPieces.swift`): Apple's switch, on in the app's accent, or for the ink-only apps (Aresium, Empire)
 in the Empire's green for on and running (`StatusTone.activeColor`, the colour iOS gives a switch that is on); never
@@ -403,7 +408,8 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
 - **Accounts in every app** (2026-10-25, brief F2; contract `docs/build-2026-10-25/briefs/F-accounts-contract.md`,
   server side `ares-empire/docs/ACCOUNTS.md` → Accounts in every app): one Ares account, made and run from any app.
   The login (`AresLogin` in `Shared/Design/ProvinceLogin.swift`, used by the provinces and the Empire app; Aresium has
-  no login screen since brief 22, only Settings' `SignInSheet` from the same pieces) shows the app's mark, the fields and Log in (the line "One Ares account for all Ares apps" under the name went 2026-10-31, Patrik) and offers Create account (email,
+  no login screen since brief 22, and since brief 215 no sign-in in Settings either; `SignInSheet` from the same pieces
+  stays for an app that offers one) shows the app's mark, the fields and Log in (the line "One Ares account for all Ares apps" under the name went 2026-10-31, Patrik) and offers Create account (email,
   password twice, optional name; asks for this app's service, sends the app's language; then "confirm your email,
   Patrik approves, an email follows") and Forgot password? (sheets, `Shared/Design/AccountSheets.swift`). Its error
   names an account not confirmed or approved yet too. An account without this app sees the no-access panel
@@ -1370,7 +1376,7 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   an import); the next import that adds payments offers again. The cards are **names**, not payees: the app calls
   whoever a payment is with its name everywhere (Search names, the name's page), and "payee" / "Absender" are one
   direction only. (2) **The card at the top of Not sorted's month list** (Current and Overview, both sides; while
-  selecting it stays in its place, faded and taking no taps, brief 200; `DashboardStore.offersQuickSort(on:)`: phone mode while some name has two or more payments Not sorted):
+  selecting it stays in its place, faded and taking no taps, brief 200; `DashboardStore.offersQuickSort(on:)`: phone mode while some name has two or more payments Not sorted and a category is chosen, brief 215; before, the categories' card stands there):
   `QuickSortListCard`, a list row on the card colour with the line, the stack symbol in the day tile's place, "Sort name
   by name" / "Name für Name sortieren", "9 names · 42 payments · all months" / "9 Namen · 42 Buchungen · alle Monate",
   the chevron. Not in server mode. DEBUG (with `-samplePhone`): `-sampleQuickSort` (made-up people to go through: a
@@ -1436,7 +1442,7 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   round: the payments listed below the months were "very weird"; "make each month just as the other months"): a month's
   row or its graph point (`SeriesChart.onPick`, the one hook) opens that month's payments of the name on a page of its
   own (`NameMonthScreen`, `DashboardRoute(name:month:)`, pushed like the others): the name as the header's title, "Oct
-  2026 · activities" / "Okt. 2026 · Buchungen" under it (a category's month list's line), the arrow and the back swipe
+  2026 · payments" / "Okt. 2026 · Buchungen" under it (brief 215: "activities" went; "No payments" too) (a category's month list's line), the arrow and the back swipe
   (Apple's, `BackSwipe` unchanged); its rows a category's month list's, in its order (`Transaction.listOrder`, by day):
   `PaymentRow` with tap, long press and the swipe's All, no Add up (every row is the same name). All, "All with this
   name" and a payment page's "All from" there go back to the name's page below instead of stacking a second copy
@@ -1602,7 +1608,21 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   file/widget URL route, ending a tour first. `AresiumURL.importData` (`aresium://import`) opens phone mode's file
   picker after the store and lock are ready; `.review("2026-10")` (`aresium://review/2026-10`) opens that month's
   dashboard totals/categories/graph (`DashboardStore.showReview(month:)`). This month stays focused until the app goes to the background, a widget/start
-  link, backend switch or a rebuilt root; `showReview(month: nil)` restores the latest month. No new screen.
+  link, backend switch or a rebuilt root; `showReview(month: nil)` restores Current's own month (below). No new screen.
+  **Which month Current shows** (brief 215, the first-run review's finding 2: on 2 November a fresh import of three
+  months showed "Rent" and a two-point graph after "74 new"): one rule, `Model/CurrentMonth.swift`, read with the day the
+  person opened the app (`DashboardStore.openedOn`: at launch and on coming back from the background, never while the
+  app is open, so the start screen never changes its month under anyone): in a month's first seven days, while the
+  data's newest month is that running month and the month before it is in the data, Current opens on the month before
+  (the month review's month, a full month for the first look); otherwise on the newest month, as before. A month chosen
+  wins until the app goes to the background (`DashboardStore.CurrentChoice`, which holds what `reviewMonth` held): a
+  review message's, the range line's other month, or the newest from a widget's link (`showNewestMonth`: the widget
+  shows the newest). **The range line's other month** (`OtherMonthLink` in `StartPage`, Current only): on the right of
+  "OCT 2026", in the line's small capitals a little stronger, "NOVEMBER SO FAR ›" / "NOVEMBER BISHER ›" (the running
+  month, `Month.partial`) or "‹ OCTOBER" / "‹ OKTOBER" back (`CurrentMonth.other`, `CurrentMonthWording`): one tap
+  either way, kept until the app goes to the background; from the 8th there is none. Only the app's own dashboard has a
+  clock (`DashboardStore(clock:)`): tests, the tour and previews show the newest month whatever the day. DEBUG
+  `-openedOn <YYYY-MM-DD>` pins the day (screenshots, the real-touch check). Tests: `FirstRunTests`.
   **DEBUG verification:** `-enableMessages -logMessages` enables live local messages and logs owned pending IDs;
   never combine it with sample/test arguments (those install no live model). It uses the normal interval, with no
   accelerated delivery argument. Verified on `codex-45` (2026-10-30): Allow, three pending reminders
@@ -1627,7 +1647,13 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   (`ReminderOffer.shows`, built from the stores by `ReminderOffer.Moment(messages:imports:…)`): "Remind you to import
   new statements?", the line names the reminder's interval and the review, Turn on (both messages, interval and time
   kept; then, once iOS allowed, "Messages are on. You can change them in Settings." in the result's place) and Not now
-  (also a swipe down); both answer it for good. The start screen's expense graph in red mode draws the light ink
+  (also a swipe down); both answer it for good. **Not in the opening of the app whose import readied it** (brief 215,
+  the first-run review's finding 11: a newcomer met the result, the quick sort's offer and this in one minute): the
+  first import that adds payments readies it and it waits until Aresium is opened again, a launch or coming back from
+  the background (`AresiumMessages.offerWaitsForNextOpening`, ended by `appOpenedAgain()` through
+  `DashboardStore.appReturned`; `ReminderOffer.Moment.firstOpening`); another import in the same opening does not end
+  the wait (a file confirmed in the file check is an import of its own). `-sampleReminderOffer`'s made-up import counts
+  as an earlier opening. The start screen's expense graph in red mode draws the light ink
   (`Palette.expense`; the website's black read at about 1.3:1 on the app's darker red), as the widget's line; income
   keeps its green (about 10:1). **DEBUG** (with `-samplePhone`/`-samplePhoneEmpty`; the sample gets a pretend model,
   `Model/MessageSample.swift`: its own defaults emptied at launch, a center that reaches nothing in iOS):
@@ -1655,8 +1681,22 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   already, a restore from an export, the tour, or with categories chosen. It is decided in one place, the import's end
   (`ImportStore.finishIfDone` → `asksForCategories`, with `AresiumBackend.waitsForCategories`; ContentView only presents
   it, once no other sheet is open). Its line on top: "Your payments are in. Aresium sorts them as you tick." Ticking
-  sorts the waiting payments at once (`PhoneBackend.choose`); closing it with nothing ticked is allowed (the payments
-  stay Not sorted and the next import asks again). **The result line stays true:** the import's line ("4 new · 0
+  sorts the waiting payments at once (`PhoneBackend.choose`). **Done with nothing ticked asks once** (brief 215, the
+  first-run review's finding 1: a newcomer who tapped Done to "look first" found every payment Not sorted and a quick
+  sort that offered only Own transfers and New category): Apple's alert "Use the 12 categories that fit?" / "Die 12
+  passenden Kategorien verwenden?", "Aresium sorts your payments right away. You can change your categories any time
+  in Settings → Categories." (`ChooseCategoriesWording`), **Use** / **Verwenden** (a plain button in ink: ticks every
+  default category the rows count payments for, `CategoryPickerModel.fitting`, sorts and closes, `useFitting`) and
+  **Not now** / **Nicht jetzt** (closes as it is: the payments stay Not sorted and the next import asks again). Nothing
+  that fits (or something ticked): Done closes at once (`closes()`). While it would ask, the sheet's swipe down is held,
+  so the way out is Done. **While no category is chosen** and payments exist (`DashboardStore.waitsForCategories`), the
+  start screen's pages start with one card in the quick sort card's look (`ListCard`, shared; `CategoriesCard`: the
+  categories' grid symbol, "Choose your categories" / "Wähl deine Kategorien", "Then Aresium sorts your payments." /
+  "Dann sortiert Aresium deine Buchungen.", one line each), and Not sorted's list has it in the quick sort card's place; it opens
+  the same list as after an import (`DashboardPlace.choosesCategories`, presented by ContentView with the import's;
+  Done asks there too). The quick sort's offer and card wait until a category is chosen (`QuickSortOffer.Moment
+  .categories`; the import's offer then shows). DEBUG: `-samplePhoneEmpty -sampleImport -samplePickerDone` (Done:
+  the question) `-sampleFitAnswer use|notNow`. Tests: `FirstRunTests`. **The result line stays true:** the import's line ("4 new · 0
   already there · 0 sorted · 4 not sorted") waits under the picker and, when it closes, is counted again from the store
   for that import's own payments (`PhoneImportResult.newIDs`, `AresiumBackend.recount`), then goes after the usual
   pause; the files' lines claim no sorting. What shows is `MainScreen.choose` (the tour, the store's state, the first
@@ -1745,16 +1785,22 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   this menu are the dashboard's shortcuts (`DashboardStack.shortcuts`): the tour turns both off while it holds the
   screen (at the payment step the ringed row must open the page the card speaks of), except the rows' swipe and long
   press at its swipe steps (`rowShortcuts`, brief 59). **The import result goes with a
-  swipe down** (`ImportStore.closesBySwipe`: where Dismiss or the send card's Not now would, never while Retry and
+  swipe down** (`ImportStore.closesBySwipe`: where Close or the send card's Not now would, never while Retry and
   Discard are offered or the format is sending, nor while the result scrolls; VoiceOver's escape does the same); a
   success still goes by itself after 4.5 s. DEBUG `-sampleBannerDrag <points>` shows it moved as halfway through the
   swipe (with `-sampleImportResult` or `-sampleFormat`). **Tap areas of 44 pt** (`minimumTapArea()` in `Screens/Components.swift`:
-  the area grows around a control drawn smaller, layout unchanged): the result's Dismiss, Retry, Discard, "What is
+  the area grows around a control drawn smaller, layout unchanged): the result's Close (brief 215: "Close" /
+  "Schließen", a key of its own; it was "Dismiss", which Aresium's catalog shared with Arestemis's "Entfernen", read as
+  removing the payments just imported), Retry, Discard, "What is
   sent?" and Not now, the header's 42 pt buttons (`IconButton`, `headerButtonFace`) and the import button; the
   Expenses/Income dots are 44 × 44 pt each. Tests: `DashboardComfortTests` (`PaymentRowMenuTests`,
   `ImportBannerSwipeTests`, `LogOutQuestionTests`). Screenshots: `build/41-*.png`.
   **The graph and the header** (brief 56, Patrik's fifth round of 2026-10-31, items 5–7 in
-  `docs/reviews/2026-10-30-aresium-phone-test.md`). **Reading a graph** (every `SeriesChart`: the start screen's day and
+  `docs/reviews/2026-10-30-aresium-phone-test.md`). **The running month** (brief 215, the first-run review's finding
+  12: Overview's line fell at the unfinished month and read as "spent less"): every month graph (Overview's, a
+  category's months, a name's months) draws the stretch to a month still running (`ChartPoint.running`, the engine's
+  `Month.partial`) dashed, over a fainter area (`ChartStretches`: two series, no legend); the day graphs are unchanged.
+  **Reading a graph** (every `SeriesChart`: the start screen's day and
   month graphs, a month's page, a category's months, a name's months): a finger held still for 0.25 s on the graph
   (`ChartHold`, UIKit's long press, `ChartReading.holdDuration`, 10 pt of wander) and then followed shows a dashed guide
   line (`Palette.guide`, the website's `--guide`), a dot on the line ringed in the wall's colour and a one-line chip just
@@ -1797,7 +1843,8 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   (`ScreenHeader`, every screen alike): each button on the wall without card or outline (`HeaderButtonLook`: a 19 pt
   symbol in the second ink, drawn 42 pt, taps over 44 pt, 44 pt apart): red mode's X first (the others keep their
   places when it comes), then the page's own (the start screen's search, brief 77, and import button, beside the gear
-  since brief 56, with its menu and spinner; a category's select icon, brief 82, and icon of adding up), then the gear; the title stays in the middle of the screen while it
+  since brief 56, with its menu and spinner, the tray with the arrow in, `tray.and.arrow.down`, as the drop overlay's
+  since brief 215: the arrow out read as share or export; a category's select icon, brief 82, and icon of adding up), then the gear; the title stays in the middle of the screen while it
   fits (`HeaderLayout`). The tour's `.search`, `.importButton` and `.settings` rings follow them there. Tests:
   `GraphAndHeaderTests` (`ChartReadingTests`, `MonthPageTests`, `MonthRouteTests`, `GraphMotionSettingTests`).
   Screenshots: `build/56-*.png`. Settings →
@@ -2020,7 +2067,8 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   with `direction`, `kind` and `paidFrom` (`SourceReceipt`), so the dashboard carries `cash` (`CashView`: the months'
   withdrawn, received, spent, unaccounted; every movement from the wallet's side) and marks withdrawals
   `cashWithdrawal` (`Transaction`). **The Cash page** ("Cash" / "Bargeld"; `DashboardRoute(cash: true)`): a row below
-  the categories on both pages of the dashboard (`CashRow`: a wallet mark, "Cash", what is not accounted for; no
+  the categories on both pages of the dashboard (`CashRow`: a wallet mark, "Cash", what is not accounted for in plain
+  words, "€300.00 without receipts" / "300,00 € ohne Belege" since brief 215, as Overview's Cash months; no
   amount column, set apart by a hairline), only while `cash` has a movement; it follows Current / Overview like a
   category (`DashboardStore.cashRoute`): this month's page, or its months (`CashMonthsScreen`). The month's page
   (`CashScreen`): Not accounted for with its number and "In your wallet still, or spent without a receipt.", then

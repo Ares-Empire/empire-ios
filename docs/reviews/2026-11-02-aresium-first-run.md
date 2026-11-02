@@ -42,6 +42,9 @@ them.**
   A quiet line on a dashboard that has only Not sorted, leading to the category list, would also do.
 - *Screenshots:* `207-noticks-quicksort-de-light.png`, `207-noticks-overview-de-light.png`,
   `207-noticks2-de-light.png`.
+- *Fixed in build 19 (brief 215):* Done with nothing ticked asks once, "Use the 12 categories that fit?" (Use ticks
+  every category the rows count payments for and sorts; Not now leaves them); while none is chosen the start screen and
+  Not sorted's list show a card "Choose your categories" that opens the list, and the quick sort waits until one is.
 
 ### Confuses
 
@@ -56,6 +59,9 @@ them.**
   `reviewMonth` already does this for the review message) or on Overview, with one quiet line saying which month is
   shown.
 - *Screenshots:* `207-after-picker-en-dark.png`, `207-quicksort-offer-en-dark.png`.
+- *Fixed in build 19 (brief 215):* on the 1st–7th, while the newest month is the running one, Current opens on last
+  month (read when the app is opened, never while it is open), with "NOVEMBER SO FAR ›" on the range line one tap away
+  and "‹ OCTOBER" back.
 
 **3. German: the import result's "Dismiss" is "Entfernen" (remove).**
 - *Where:* any import → the result card at the bottom ("3 neu · 0 schon da · …") → its button.
@@ -66,6 +72,7 @@ them.**
   worry after tapping it.
 - *Suggestion:* "Schließen" or "OK" for this button (a key of its own in Aresium's catalog).
 - *Screenshots:* `207-multi-result-de-light.png` (the card, mid-fade, over the quick sort offer).
+- *Fixed in build 19 (brief 215):* the button is "Close" / "Schließen", a key of its own; Arestemis keeps "Entfernen".
 
 **4. The tour on the first days of a month: "this month" is pressed into one or two days.**
 - *Where:* Start tour (first screen) → step 1 and every list in the tour, on 1–3 November (the review is running
@@ -92,6 +99,8 @@ them.**
   Version); otherwise say plainly "Only for the developer. Aresium needs no account." and drop the "One Ares account
   for all Ares apps" line from this sheet (it went from the logins on 2026-10-31).
 - *Screenshots:* `207-settings-end-en-dark.png`, `207-signin-en-dark.png`.
+- *Fixed in build 19 (brief 215):* signed out, Aresium's Settings have no "Ares account" section (it shows only while a
+  login of the Ares apps exists), and the Sign in sheet lost "One Ares account for all Ares apps".
 
 **6. Check the guide for PayPal, N26 and Trade Republic once before friends with these accounts start.** (Content,
 not the screens; the guide's own notes flag all three.)
@@ -112,6 +121,7 @@ not the screens; the guide's own notes flag all three.)
 **7. English month lists say "activities".** Category → a month: the subtitle is "Oct 2026 · activities" (key
 `%@ · activities`, also "No activity"); everywhere else the English app says "payments", and the German says
 "Buchungen". Suggest "payments". `207-month-list-en-dark.png`.
+*Fixed in build 19 (brief 215):* "Oct 2026 · payments", "No payments", "No payments recorded."
 
 **8. German tour step 4 is hard to read.** "Halte den Finger auf dem Diagramm und zieh: jeder Monat mit seiner Zahl.
 Antippen öffnet den Monat, zeigt es Tage, den Tag." The second sentence does not parse on first reading. Suggest e.g.
@@ -124,15 +134,20 @@ up. Suggest "Swipe a row: All shows …". `207-tour-14-en-dark.png`.
 **10. The header's import icon points up.** The start screen's import button is `tray.and.arrow.up`, which iOS uses
 for share/export; the drop overlay of the same app uses `tray.and.arrow.down`. A newcomer looking for "import" may pass
 it by (the tour's step 20 does point at it). Suggest the downward tray, as in the drop overlay. `207-after-picker-en-dark.png`.
+*Fixed in build 19 (brief 215):* `tray.and.arrow.down`, as the drop overlay.
 
 **11. Three cards in a row after the first import.** The result card, then the quick sort offer, then "Remind you to
 import new statements?". Each is calm, but a newcomer is asked three things in a minute. Suggest holding the
 reminders offer until a later launch or the second import. `207-after-picker-en-dark.png`,
 `207-quicksort-offer-en-dark.png`, `207-overview-en-dark.png`.
+*Fixed in build 19 (brief 215):* the reminders' offer waits until Aresium is opened again (a launch, or coming back to
+it); a second import in the same opening does not bring it.
 
 **12. Overview's graph drops at the current month.** With two days of November, Overview's line falls from about
 €1,500 to €780 at Nov; it reads as "spent less". Suggest drawing the unfinished month differently (dashed, or a
 quiet "so far"). `207-overview-en-dark.png`.
+*Fixed in build 19 (brief 215):* every month graph draws the stretch to the running month dashed over a fainter area,
+no legend.
 
 **13. Tour step 10 hides which payment it is.** The payment page scrolls so the paid-back section shows; the name
 "Ferienwohnung Fiktivsee" and "−128.00" sit under the bar, half covered. "To: Ferienwohnung Fiktivsee" is still
@@ -141,6 +156,8 @@ readable, so this is small. `207-tour-10-en-dark.png`.
 **14. Cash row wording for a newcomer.** With withdrawals and no receipts, Overview shows "Cash · €300.00 not
 accounted for" ("nicht erfasst"). Without receipts it can read like a warning. Optional: say what to do or what it
 means. `207-noticks-overview-de-light.png`.
+*Fixed in build 19 (brief 215):* "Cash · €300.00 without receipts" / "300,00 € ohne Belege" (the Cash page keeps its
+explained heading).
 
 **15. Review notes in `docs/APP-STORE.md` are older than the app.** They say "choose a few categories, then import
 the attached made-up bank file" (the app is file-first since brief 27) and do not mention Start tour. Check that the

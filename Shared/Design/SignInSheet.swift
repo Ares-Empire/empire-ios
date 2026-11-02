@@ -51,9 +51,8 @@ struct SignInSheet: View {
                         .focused($focus, equals: .password).submitLabel(.go).onSubmit(logIn)
                 }
                 .glassCard(accent: accent).padding(.top, note == nil ? 0 : 20)
-                FormNote(text: String(localized: LocalizedStringResource("One Ares account for all Ares apps",
-                                                                         table: "Shared", locale: .appLanguage)))
-                    .padding(.top, 10)
+                // No "One Ares account for all Ares apps" under the fields: it went from the logins on 2026-10-31
+                // (Patrik), and from this sheet with brief 215.
             }
             .padding(.horizontal, 18).padding(.top, 16).padding(.bottom, 24)
         }
