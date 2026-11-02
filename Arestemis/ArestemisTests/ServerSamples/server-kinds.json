@@ -1,7 +1,7 @@
 [
   {
     "kind": "flat",
-    "name": "Flat or room",
+    "name": "Flat",
     "sources": [
       {
         "source": "wg_gesucht",
@@ -35,7 +35,7 @@
   },
   {
     "kind": "item",
-    "name": "Something to buy",
+    "name": "Things",
     "sources": [
       {
         "source": "kleinanzeigen",
@@ -82,8 +82,13 @@
     ]
   },
   {
+    "kind": "price",
+    "name": "Price monitor",
+    "sources": []
+  },
+  {
     "kind": "watch",
-    "name": "Watch a page",
+    "name": "Watch a website",
     "sources": []
   }
 ]

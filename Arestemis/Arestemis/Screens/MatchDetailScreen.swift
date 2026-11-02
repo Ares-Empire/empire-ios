@@ -7,7 +7,9 @@ import SwiftUI
 /// <site>" (the server's name: "Open on eBay"), as the one main button; its seller is "Asked", not applied to. A change
 /// on a watched page (brief 131): the server's summary as the title, "Now: …", the host and when, then the lines that
 /// came and went (the removed ones labelled and struck through, not told apart by colour alone), and "Open page" (the
-/// watched address) as the one main button; its menu only saves or dismisses.
+/// watched address) as the one main button; its menu only saves or dismisses. A monitor's alarm (brief 137): the new price
+/// big with the old one beside it ("was €483.99"; "back in stock" when it came back), the product, the shop and when, and
+/// "Open in shop" as the one main button; its menu only saves or dismisses.
 struct MatchDetailScreen: View {
     let id: Int
     let store: ArestemisStore
@@ -54,7 +56,9 @@ struct MatchDetailScreen: View {
                         .padding(.bottom, 22)
                 }
                 let kind = store.kind(of: match)
-                if kind == .watch {
+                if kind == .price {
+                    priceHero(match)
+                } else if kind == .watch {
                     watchHero(match)
                     if let change = listing.page, !change.added.isEmpty || !change.removed.isEmpty {
                         SectionHeading(text: String(localized: "What changed")).padding(.leading, 4)
@@ -126,6 +130,37 @@ struct MatchDetailScreen: View {
         .accessibilityElement(children: .combine)
     }
 
+    /// A monitor's alarm: the new price big, the old one beside it (or "back in stock"), the product, the shop and when.
+    private func priceHero(_ match: Match) -> some View {
+        let change = match.listing.priceChange
+        return VStack(alignment: .leading, spacing: 0) {
+            if let change {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(verbatim: PriceWords.money(change.new, currency: change.currency))
+                        .font(AppFont.number(34, weight: .bold)).foregroundStyle(Ink.primary).minimumScaleFactor(0.7)
+                    Text(verbatim: PriceWords.alarmLabel(change)).font(AppFont.text(13)).foregroundStyle(Ink.muted)
+                }
+                .lineLimit(1)
+            }
+            Text(match.listing.title).font(AppFont.text(17, weight: .semibold)).foregroundStyle(Ink.primary)
+                .lineLimit(2).fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 14)
+            HStack(spacing: 10) {
+                TimelineView(.periodic(from: .now, by: 30)) { context in
+                    Text(match.priceSourceLine(now: context.date)).font(AppFont.text(12)).foregroundStyle(Ink.muted)
+                }
+                if let word = match.state.word() {
+                    Text("·").font(AppFont.text(12)).foregroundStyle(Ink.muted)
+                    CapsLabel(text: word, size: 10, color: Ink.secondary)
+                }
+            }
+            .padding(.top, 6)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(verbatim: match.priceTitle()))
+    }
+
     /// A watched page's change: the summary as the title, what the page says now, the host and when it was found.
     private func watchHero(_ match: Match) -> some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -174,6 +209,8 @@ struct MatchDetailScreen: View {
             Group {
                 if kind == .watch {
                     Button("Open page") { if let url = match.listing.portalURL { openURL(url) } }
+                } else if kind == .price {
+                    Button("Open in shop") { if let url = match.listing.portalURL { openURL(url) } }
                 } else {
                     Button("Open on \(match.listing.sourceName)") { if let url = match.listing.portalURL { openURL(url) } }
                 }
@@ -192,7 +229,7 @@ struct MatchDetailScreen: View {
     private func stateMenu(_ match: Match) -> some View {
         Menu {
             Toggle(isOn: stateBinding(match, .saved)) { Label("Save", systemImage: "bookmark") }
-            if store.kind(of: match) != .watch {
+            if store.kind(of: match).appliesOrAsks {
                 Toggle(isOn: stateBinding(match, .applied)) {
                     if store.isThing(match) { Label("Mark asked", systemImage: "checkmark.circle") }
                     else { Label("Mark applied", systemImage: "checkmark.circle") }

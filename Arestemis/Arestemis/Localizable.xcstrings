@@ -24,6 +24,16 @@
         }
       }
     },
+    "%@ is back in stock" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ist wieder lieferbar"
+          }
+        }
+      }
+    },
     "%@ is not set up yet." : {
       "localizations" : {
         "de" : {
@@ -116,6 +126,22 @@
         }
       }
     },
+    "%@: %@ (was %@)" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: %2$@ (vorher %3$@)"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@: %2$@ (was %3$@)"
+          }
+        }
+      }
+    },
     "%lld applied" : {
       "localizations" : {
         "de" : {
@@ -132,6 +158,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld angefragt"
+          }
+        }
+      }
+    },
+    "%lld days" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld Tage"
           }
         }
       }
@@ -336,12 +372,32 @@
         }
       }
     },
+    "3.4.0 is out, not a release candidate" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "3.4.0 fertig ist, kein Release Candidate"
+          }
+        }
+      }
+    },
     "A page you know: a new version, a new job, tickets, the canteen menu." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Eine Seite, die du kennst: neue Version, neue Stelle, Tickets, der Speiseplan."
+          }
+        }
+      }
+    },
+    "A push when it happens" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Push, wenn es so weit ist"
           }
         }
       }
@@ -412,6 +468,66 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Alter, Studium oder Beruf, Nichtraucher, …"
+          }
+        }
+      }
+    },
+    "Alarm" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alarm"
+          }
+        }
+      }
+    },
+    "Alarm under %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alarm unter %@"
+          }
+        }
+      }
+    },
+    "Alarm under %@ or back in stock" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alarm unter %@ oder wieder lieferbar"
+          }
+        }
+      }
+    },
+    "Alarm when back in stock" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alarm, wenn wieder lieferbar"
+          }
+        }
+      }
+    },
+    "Alarm when the price is under, in euros" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alarm, wenn der Preis darunter liegt, in Euro"
+          }
+        }
+      }
+    },
+    "Alarms" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alarme"
           }
         }
       }
@@ -556,6 +672,16 @@
         }
       }
     },
+    "At least one of the two." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mindestens eins von beiden."
+          }
+        }
+      }
+    },
     "At most 1,000 characters." : {
       "localizations" : {
         "de" : {
@@ -602,6 +728,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Höchstens 500 Zeichen."
+          }
+        }
+      }
+    },
+    "Back in stock" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wieder lieferbar"
           }
         }
       }
@@ -907,6 +1043,16 @@
         }
       }
     },
+    "Create price monitor" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preismonitor anlegen"
+          }
+        }
+      }
+    },
     "Create search" : {
       "localizations" : {
         "de" : {
@@ -923,6 +1069,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Beobachtung anlegen"
+          }
+        }
+      }
+    },
+    "Day" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tag"
+          }
+        }
+      }
+    },
+    "Days" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tage"
           }
         }
       }
@@ -947,12 +1113,32 @@
         }
       }
     },
+    "Delete price monitor" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preismonitor löschen"
+          }
+        }
+      }
+    },
     "Delete search" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Suche löschen"
+          }
+        }
+      }
+    },
+    "Delete the price monitor?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preismonitor löschen?"
           }
         }
       }
@@ -1073,6 +1259,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Bearbeiten"
+          }
+        }
+      }
+    },
+    "Edit price monitor" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preismonitor bearbeiten"
           }
         }
       }
@@ -1237,6 +1433,16 @@
         }
       }
     },
+    "Fills in the sentence" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Füllt den Satz aus"
+          }
+        }
+      }
+    },
     "Filtered out" : {
       "localizations" : {
         "de" : {
@@ -1337,6 +1543,16 @@
         }
       }
     },
+    "Found: %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gefunden: %@"
+          }
+        }
+      }
+    },
     "Frame size 56" : {
       "localizations" : {
         "de" : {
@@ -1383,6 +1599,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Hallo, …"
+          }
+        }
+      }
+    },
+    "Highest %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Höchstpreis %@"
+          }
+        }
+      }
+    },
+    "History only" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nur Verlauf"
           }
         }
       }
@@ -1463,6 +1699,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Art"
+          }
+        }
+      }
+    },
+    "Last 30 days" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Letzte 30 Tage"
           }
         }
       }
@@ -1573,6 +1819,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Angebot wird geladen…"
+          }
+        }
+      }
+    },
+    "Lowest %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tiefstpreis %@"
           }
         }
       }
@@ -1747,6 +2003,16 @@
         }
       }
     },
+    "New price monitor" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neuer Preismonitor"
+          }
+        }
+      }
+    },
     "New search" : {
       "localizations" : {
         "de" : {
@@ -1783,6 +2049,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nein"
+          }
+        }
+      }
+    },
+    "No alarm yet. It comes as a push the moment it rings." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch kein Alarm. Er kommt als Push, sobald es so weit ist."
           }
         }
       }
@@ -1863,6 +2139,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Keine"
+          }
+        }
+      }
+    },
+    "Not saved. %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nicht gespeichert. %@"
           }
         }
       }
@@ -1957,6 +2243,16 @@
         }
       }
     },
+    "One product in one shop: its price history, and a word when it gets cheaper or is back in stock." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein Produkt in einem Shop: der Preisverlauf, und Bescheid, wenn es günstiger oder wieder lieferbar ist."
+          }
+        }
+      }
+    },
     "One text per listing" : {
       "localizations" : {
         "de" : {
@@ -2003,6 +2299,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Open Database License (ODbL) 1.0"
+          }
+        }
+      }
+    },
+    "Open in shop" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Im Shop öffnen"
           }
         }
       }
@@ -2077,6 +2383,16 @@
         }
       }
     },
+    "Opens the price monitor" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öffnet den Preismonitor"
+          }
+        }
+      }
+    },
     "Opens the search" : {
       "localizations" : {
         "de" : {
@@ -2127,6 +2443,16 @@
         }
       }
     },
+    "Out of stock" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nicht lieferbar"
+          }
+        }
+      }
+    },
     "Page" : {
       "localizations" : {
         "de" : {
@@ -2137,12 +2463,12 @@
         }
       }
     },
-    "Pages that need a login, or build their content with JavaScript (such as appointment bookings), can't be watched yet." : {
+    "Pages behind a login, or that need clicks (such as appointment bookings), can't be watched." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Seiten mit Login oder solche, die ihren Inhalt erst mit JavaScript aufbauen (etwa Terminbuchungen), lassen sich noch nicht beobachten."
+            "value" : "Seiten hinter einem Login oder solche, die Klicks brauchen (etwa Terminbuchungen), lassen sich nicht beobachten."
           }
         }
       }
@@ -2153,6 +2479,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Füg die Adresse der Seite ein."
+          }
+        }
+      }
+    },
+    "Paste the product's link." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Füg den Link zum Produkt ein."
           }
         }
       }
@@ -2257,6 +2593,36 @@
         }
       }
     },
+    "Price and availability as a curve" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preis und Lieferbarkeit als Kurve"
+          }
+        }
+      }
+    },
+    "Price history" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preisverlauf"
+          }
+        }
+      }
+    },
+    "Price monitor" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preismonitor"
+          }
+        }
+      }
+    },
     "Price not given" : {
       "localizations" : {
         "de" : {
@@ -2277,12 +2643,42 @@
         }
       }
     },
+    "Price under" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preis unter"
+          }
+        }
+      }
+    },
+    "Price under € …" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preis unter … €"
+          }
+        }
+      }
+    },
     "Private only" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nur privat"
+          }
+        }
+      }
+    },
+    "Product" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Produkt"
           }
         }
       }
@@ -2333,6 +2729,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Liest…"
+          }
+        }
+      }
+    },
+    "Record the history" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verlauf aufzeichnen"
           }
         }
       }
@@ -2437,6 +2843,16 @@
         }
       }
     },
+    "Save price monitor" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preismonitor speichern"
+          }
+        }
+      }
+    },
     "Save search" : {
       "localizations" : {
         "de" : {
@@ -2467,12 +2883,32 @@
         }
       }
     },
+    "Saving it again tries again." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Speichern versucht es noch einmal."
+          }
+        }
+      }
+    },
     "Say what you look for; the fields fill in." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sag, was du suchst; die Felder füllen sich."
+          }
+        }
+      }
+    },
+    "Say when the alarm should ring." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sag, wann der Alarm kommen soll."
           }
         }
       }
@@ -2677,6 +3113,16 @@
         }
       }
     },
+    "Stretch" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abschnitt"
+          }
+        }
+      }
+    },
     "Tell me when" : {
       "localizations" : {
         "de" : {
@@ -2693,6 +3139,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Zwischenmiete"
+          }
+        }
+      }
+    },
+    "The curve starts with the next read." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Kurve beginnt mit dem nächsten Lesen."
           }
         }
       }
@@ -2787,6 +3243,36 @@
         }
       }
     },
+    "The price monitor starts paused." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Preismonitor beginnt pausiert."
+          }
+        }
+      }
+    },
+    "The price monitor stops and its history and alarms are deleted." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Preismonitor endet; sein Verlauf und seine Alarme werden gelöscht."
+          }
+        }
+      }
+    },
+    "The product's link" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Link zum Produkt"
+          }
+        }
+      }
+    },
     "The radius goes up to 200 km." : {
       "localizations" : {
         "de" : {
@@ -2853,6 +3339,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Die Seite zeigt das nicht."
+          }
+        }
+      }
+    },
+    "This page shows no single product with a price." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Seite zeigt kein einzelnes Produkt mit Preis."
           }
         }
       }
@@ -3087,6 +3583,16 @@
         }
       }
     },
+    "What it should do" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was er tun soll"
+          }
+        }
+      }
+    },
     "What should Arestemis find for you?" : {
       "localizations" : {
         "de" : {
@@ -3143,6 +3649,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Automatisch schreiben"
+          }
+        }
+      }
+    },
+    "Write your own sentence" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schreib deinen eigenen Satz"
           }
         }
       }
@@ -3207,6 +3723,26 @@
         }
       }
     },
+    "a date changes" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "sich ein Datum ändert"
+          }
+        }
+      }
+    },
+    "a new entry appears" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ein neuer Eintrag dazukommt"
+          }
+        }
+      }
+    },
     "a new job is posted" : {
       "localizations" : {
         "de" : {
@@ -3223,6 +3759,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "eine neue Version erscheint"
+          }
+        }
+      }
+    },
+    "back in stock" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "wieder lieferbar"
           }
         }
       }
@@ -3373,6 +3919,16 @@
         }
       }
     },
+    "in stock" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "lieferbar"
+          }
+        }
+      }
+    },
     "just now" : {
       "localizations" : {
         "de" : {
@@ -3413,12 +3969,42 @@
         }
       }
     },
+    "out of stock" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nicht lieferbar"
+          }
+        }
+      }
+    },
     "over" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "darüber"
+          }
+        }
+      }
+    },
+    "own description" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "eigene Beschreibung"
+          }
+        }
+      }
+    },
+    "preorder" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "vorbestellbar"
           }
         }
       }
@@ -3439,16 +4025,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "der neue Speiseplan online ist"
-          }
-        }
-      }
-    },
-    "the price is under 45 €" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "der Preis unter 45 € liegt"
           }
         }
       }
@@ -3505,6 +4081,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "warm"
+          }
+        }
+      }
+    },
+    "was %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "vorher %@"
           }
         }
       }

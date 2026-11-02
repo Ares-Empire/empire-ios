@@ -1,0 +1,87 @@
+{
+  "items": [
+    {
+      "id": 39,
+      "hunt_id": 9,
+      "state": "new",
+      "found": "2026-10-24T08:00:30Z",
+      "listing": {
+        "source": "page",
+        "source_name": "www.mediamarkt.de",
+        "url": "https://www.mediamarkt.de/de/product/_nintendo-switch-2-2981741.html",
+        "title": "Nintendo Switch 2",
+        "kind": null,
+        "rent_warm": null,
+        "rent_cold": null,
+        "sqm": null,
+        "rooms": null,
+        "flatmates": null,
+        "city": null,
+        "district": null,
+        "address": null,
+        "available_from": null,
+        "available_until": null,
+        "furnished": null,
+        "posted": null,
+        "image_url": null,
+        "description": "",
+        "item": null,
+        "page": null,
+        "price_change": {
+          "old": 483.99,
+          "new": 449.0,
+          "currency": "EUR",
+          "availability": "in_stock",
+          "kind": "below"
+        }
+      },
+      "reason": "Nintendo Switch 2: 449,00 € (was 483,99 €)",
+      "warnings": [],
+      "application": null,
+      "at_start": false,
+      "over_max": null
+    },
+    {
+      "id": 37,
+      "hunt_id": 9,
+      "state": "saved",
+      "found": "2026-10-09T10:00:30Z",
+      "listing": {
+        "source": "page",
+        "source_name": "www.mediamarkt.de",
+        "url": "https://www.mediamarkt.de/de/product/_nintendo-switch-2-2981741.html",
+        "title": "Nintendo Switch 2",
+        "kind": null,
+        "rent_warm": null,
+        "rent_cold": null,
+        "sqm": null,
+        "rooms": null,
+        "flatmates": null,
+        "city": null,
+        "district": null,
+        "address": null,
+        "available_from": null,
+        "available_until": null,
+        "furnished": null,
+        "posted": null,
+        "image_url": null,
+        "description": "",
+        "item": null,
+        "page": null,
+        "price_change": {
+          "old": null,
+          "new": 483.99,
+          "currency": "EUR",
+          "availability": "in_stock",
+          "kind": "back"
+        }
+      },
+      "reason": "Nintendo Switch 2 is back in stock",
+      "warnings": [],
+      "application": null,
+      "at_start": false,
+      "over_max": null
+    }
+  ],
+  "more": false
+}

@@ -51,7 +51,7 @@ struct SearchRow: Equatable, Identifiable {
 
     init(_ card: HuntCard, sites: SiteNames = SiteNames(), language: AppLanguage = .current) {
         huntID = card.id
-        text = HuntText(card.hunt, page: card.page, sites: sites, language: language)
+        text = HuntText(card, sites: sites, language: language)
         guard let kind = text.kind else {
             newCount = nil
             line = nil
@@ -65,7 +65,7 @@ struct SearchRow: Equatable, Identifiable {
             switch kind {
             case .flat: parts.append(language.string("\(card.counts.applied) applied"))
             case .item: parts.append(language.string("\(card.counts.applied) asked"))
-            case .watch: break
+            case .price, .watch: break
             }
         }
         line = parts.isEmpty ? nil : parts.joined(separator: " · ")

@@ -5,16 +5,18 @@ import Foundation
 /// its card's long press offer, the word for the "applied" state, the name's rule and the radius steps. The Listings
 /// tab's own parts: `ListingsPresentation.swift`.
 
-/// The kinds of search this build can make and edit: a flat, a thing for sale, and a page to watch (brief 131). A hunt
-/// of another kind (from a newer server) shows its name and "Needs a newer app", nothing else.
+/// The kinds of search this build can make and edit: a flat, a thing for sale, a product's price (brief 137) and a page
+/// to watch (brief 131). A hunt of another kind (from a newer server) shows its name and "Needs a newer app", nothing
+/// else.
 enum SearchKind: String, CaseIterable, Hashable, Identifiable, Sendable {
-    case flat, item, watch
+    case flat, item, price, watch
     var id: String { rawValue }
 
     init?(_ kind: HuntKind) {
         switch kind {
         case .flat: self = .flat
         case .item: self = .item
+        case .price: self = .price
         case .watch: self = .watch
         case .unknown: return nil
         }
@@ -24,12 +26,14 @@ enum SearchKind: String, CaseIterable, Hashable, Identifiable, Sendable {
         switch self {
         case .flat: .flat
         case .item: .item
+        case .price: .price
         case .watch: .watch
         }
     }
 
-    /// Every kind this build can make, in the order of the server's `/kinds`: Flat, Things, Watch a website.
-    static let all: [SearchKind] = [.flat, .item, .watch]
+    /// Every kind this build can make, in the order of the server's `/kinds`: Flat, Things, Price monitor, Watch a
+    /// website.
+    static let all: [SearchKind] = [.flat, .item, .price, .watch]
 
     /// New search's cards: the kinds the server offers (`GET /kinds`) that this build can make, in the server's order (a
     /// kind this build cannot open, such as one from a newer server, is left out); all of them while there is no answer
@@ -45,33 +49,42 @@ enum SearchKind: String, CaseIterable, Hashable, Identifiable, Sendable {
     }
 
     /// The kind's name while the server has not named it (`/kinds` names it as the server's texts say, brief 134):
-    /// "Flat" / "Wohnung", "Things" / "Dinge", "Watch a website" / "Webseite beobachten".
+    /// "Flat" / "Wohnung", "Things" / "Dinge", "Price monitor" / "Preismonitor", "Watch a website" / "Webseite
+    /// beobachten".
     func choiceTitle(language: AppLanguage = .current) -> String {
         switch self {
         case .flat: language.string("Flat")
         case .item: language.string("Things")
+        case .price: language.string("Price monitor")
         case .watch: language.string("Watch a website")
         }
     }
 
-    /// The small mark on a hunt's card and row (SF Symbols): a house for a flat, a tag for a thing, an eye for a page.
+    /// The small mark on a hunt's card and row (SF Symbols): a house for a flat, a tag for a thing, a falling line for a
+    /// price, an eye for a page.
     var symbol: String {
         switch self {
         case .flat: "house"
         case .item: "tag"
+        case .price: "chart.line.downtrend.xyaxis"
         case .watch: "eye"
         }
     }
 
-    /// The "applied" state's word: flats are applied for, a thing's seller is asked. A watch's change is neither (its
-    /// page offers only Save and Dismiss).
+    /// The "applied" state's word: flats are applied for, a thing's seller is asked. A watch's change and a price alarm
+    /// are neither (their pages offer only Save and Dismiss).
     func appliedWord(language: AppLanguage = .current) -> String {
         self == .item ? language.string("Asked") : language.string("Applied")
     }
+
+    /// Whether its listings can be applied for (a flat) or asked about (a thing); a watch's changes and a monitor's
+    /// alarms are only saved or dismissed.
+    var appliesOrAsks: Bool { self == .flat || self == .item }
 }
 
-/// The words for a hunt that name what it is: a search (a flat or a thing) or a watch ("Beobachtung"). A hunt of a kind
-/// this build does not know (`nil`) is a search.
+/// The words for a hunt that name what it is: a search (a flat or a thing), a price monitor ("Preismonitor") or a watch
+/// ("Beobachtung"). A hunt of a kind this build does not know (`nil`) is a search. A monitor and a watch both watch: their
+/// status reads "Watching" ("Beobachtung läuft"), as the sketch's monitor card does.
 struct HuntWords: Equatable {
     let kind: SearchKind?
     let language: AppLanguage
@@ -81,13 +94,17 @@ struct HuntWords: Equatable {
         self.language = language
     }
 
-    private var watch: Bool { kind == .watch }
-    private func pick(_ search: LocalizedStringResource, _ watch: LocalizedStringResource) -> String {
-        self.watch ? language.string(watch) : language.string(search)
+    private func pick(_ search: LocalizedStringResource, _ watch: LocalizedStringResource,
+                      price: LocalizedStringResource? = nil) -> String {
+        switch kind {
+        case .watch: language.string(watch)
+        case .price: language.string(price ?? watch)
+        case .flat, .item, nil: language.string(search)
+        }
     }
 
-    /// The status beside the pulse: "Hunting" / "Watching", or "Paused"; a watch whose page refuses the server reads
-    /// "Stopped" (the server reads it no more until it is edited), without the pulse.
+    /// The status beside the pulse: "Hunting" / "Watching", or "Paused"; a watch or a monitor whose page refuses the
+    /// server reads "Stopped" (the server reads it no more until it is edited), without the pulse.
     func status(active: Bool, stopped: Bool = false) -> String {
         if active && stopped { return language.string("Stopped") }
         return active ? pick("Hunting", "Watching") : language.string("Paused")
@@ -95,20 +112,23 @@ struct HuntWords: Equatable {
     /// The one primary button of a paused hunt.
     var start: String { pick("Start hunting", "Start watching") }
     /// A form's title in the bar.
-    var newTitle: String { pick("New search", "New watch") }
-    var editTitle: String { pick("Edit search", "Edit watch") }
+    var newTitle: String { pick("New search", "New watch", price: "New price monitor") }
+    var editTitle: String { pick("Edit search", "Edit watch", price: "Edit price monitor") }
     /// The hunt's page's button to its form, beside Listings at half the width: "Beobachtung bearbeiten" did not fit.
     var editButton: String { pick("Edit search", "Edit") }
     /// The form's main button.
-    var create: String { pick("Create search", "Create watch") }
-    var save: String { pick("Save search", "Save watch") }
+    var create: String { pick("Create search", "Create watch", price: "Create price monitor") }
+    var save: String { pick("Save search", "Save watch", price: "Save price monitor") }
     /// Under a new form's main button.
-    var startsPaused: String { pick("The search starts paused.", "The watch starts paused.") }
+    var startsPaused: String {
+        pick("The search starts paused.", "The watch starts paused.", price: "The price monitor starts paused.")
+    }
     /// The hunt's page, its card's long press and its form: delete, and its question.
-    var delete: String { pick("Delete search", "Delete watch") }
-    var deleteQuestion: String { pick("Delete the search?", "Delete the watch?") }
+    var delete: String { pick("Delete search", "Delete watch", price: "Delete price monitor") }
+    var deleteQuestion: String { pick("Delete the search?", "Delete the watch?", price: "Delete the price monitor?") }
     var deleteMessage: String {
-        pick("The hunt stops and its listings are deleted.", "The watch stops and the changes it found are deleted.")
+        pick("The hunt stops and its listings are deleted.", "The watch stops and the changes it found are deleted.",
+             price: "The price monitor stops and its history and alarms are deleted.")
     }
 }
 
@@ -123,10 +143,10 @@ struct HuntText: Equatable {
     /// Instead of the details, for a hunt this build cannot show: "Needs a newer app".
     let newerApp: String?
 
-    /// `page`: a watch's page as last read (`HuntCard.page`), for its title and host. `sites`: the server's names for a
-    /// thing hunt's sites (`ArestemisStore.siteNames`).
-    init(_ hunt: Hunt, page: PageState? = nil, sites: SiteNames = SiteNames(), now: Date = .now,
-         calendar: Calendar = .app, language: AppLanguage = .current) {
+    /// `page`: a watch's page as last read (`HuntCard.page`), for its title and host; `price`: a monitor's product as
+    /// last read (`HuntCard.price`). `sites`: the server's names for a thing hunt's sites (`ArestemisStore.siteNames`).
+    init(_ hunt: Hunt, page: PageState? = nil, price: PriceState? = nil, sites: SiteNames = SiteNames(),
+         now: Date = .now, calendar: Calendar = .app, language: AppLanguage = .current) {
         let ownName = Self.text(hunt.name)
         guard let kind = SearchKind(hunt.kind), hunt.search != .unsupported else {
             self.kind = nil
@@ -145,6 +165,20 @@ struct HuntText: Equatable {
             newerApp = nil
             return
         }
+        if case .price(let search) = hunt.search {
+            // A monitor is named by its own name, else the product once read, else the host; then the product (under an
+            // own name), the host, and what it does: "Alarm under €450", or "History only".
+            let product = Self.text(price?.product)
+            let host = Self.text(price?.host) ?? WatchAddress.host(search.url)
+            let title = ownName ?? Self.automaticTitle(hunt.search, price: price) ?? search.url
+            let parts = [product, host].compactMap { $0 }.filter { $0 != title }
+                + [PriceWords.mode(search, language: language)]
+            self.kind = kind
+            self.title = title
+            details = parts.joined(separator: " · ")
+            newerApp = nil
+            return
+        }
         let summary = HuntSummary(hunt.search, sites: sites, now: now, calendar: calendar, language: language)
         let parts = (ownName == nil ? [] : [summary.title]) + summary.parts
         self.kind = kind
@@ -153,13 +187,24 @@ struct HuntText: Equatable {
         newerApp = nil
     }
 
+    /// A card's lines: its hunt, with the page or the product the server last read for it.
+    init(_ card: HuntCard, sites: SiteNames = SiteNames(), now: Date = .now, calendar: Calendar = .app,
+         language: AppLanguage = .current) {
+        self.init(card.hunt, page: card.page, price: card.price, sites: sites, now: now, calendar: calendar,
+                  language: language)
+    }
+
     /// The title a search has without a name of its own (brief 135: the name fields' grey placeholder): what it looks
-    /// for (a flat's kinds, a thing's words), a watch's page title once read, else its host; nil while there is nothing
-    /// yet (a thing without words, a watch without an address) and for a search this build cannot read.
-    static func automaticTitle(_ search: HuntSearch, page: PageState? = nil, language: AppLanguage = .current) -> String? {
+    /// for (a flat's kinds, a thing's words), a watch's page title once read, else its host, a monitor's product once
+    /// read, else its host; nil while there is nothing yet (a thing without words, a watch without an address) and for a
+    /// search this build cannot read.
+    static func automaticTitle(_ search: HuntSearch, page: PageState? = nil, price: PriceState? = nil,
+                               language: AppLanguage = .current) -> String? {
         switch search {
         case .watch(let watch):
             text(page?.pageTitle) ?? text(page?.host) ?? WatchAddress.host(watch.url)
+        case .price(let monitor):
+            text(price?.product) ?? text(price?.host) ?? WatchAddress.host(monitor.url)
         case .flat, .item:
             text(HuntSummary(search, language: language).title)
         case .unsupported:
@@ -168,7 +213,7 @@ struct HuntText: Equatable {
     }
 
     /// A text with something in it, trimmed; nil for nil, empty or only spaces.
-    private static func text(_ value: String?) -> String? {
+    static func text(_ value: String?) -> String? {
         value.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.flatMap { $0.isEmpty ? nil : $0 }
     }
 }
@@ -190,9 +235,9 @@ struct HuntPageActions: Equatable {
     }
 
     /// The figures under the hunt's card, each opening those listings: New, Today, and Applied (flats) or Asked
-    /// (things); a watch's changes are never applied for, so its third figure is Saved.
+    /// (things); a watch's changes and a monitor's alarms are never applied for, so their third figure is Saved.
     static func figures(_ kind: SearchKind?, counts: Overview.Counts, language: AppLanguage = .current) -> [HuntFigure] {
-        let third = kind == .watch
+        let third = kind == .watch || kind == .price
             ? HuntFigure(label: language.string("Saved"), value: counts.saved, filter: .saved)
             : HuntFigure(label: (kind ?? .flat).appliedWord(language: language), value: counts.applied, filter: .applied)
         return [HuntFigure(label: language.string("New"), value: counts.new, filter: .new),
@@ -290,7 +335,9 @@ extension MatchState {
 extension Match {
     /// A thing for sale (its listing has the item details): no application, "Asked" for the applied state.
     var isThing: Bool { listing.item != nil }
-    /// A change found on a watched page (its listing has the page's change, or comes from `"page"`): no application,
-    /// no applied state.
-    var isPageChange: Bool { listing.page != nil || listing.source == .page }
+    /// An alarm of a price monitor (its listing has the price change): no application, no applied state.
+    var isPriceChange: Bool { listing.priceChange != nil }
+    /// A change found on a watched page (its listing has the page's change, or comes from `"page"` without a price
+    /// change, which a monitor's alarms also come from): no application, no applied state.
+    var isPageChange: Bool { !isPriceChange && (listing.page != nil || listing.source == .page) }
 }

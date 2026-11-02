@@ -3,7 +3,8 @@ import SwiftUI
 /// A watch's form ("Watch a website", brief 131), built from the thing form's pieces in its order of habit: its name
 /// (brief 135: first, as in every form; empty: the page's title once read, else the host), the page's address (the URL
 /// keyboard, nothing corrected or capitalised; a whole shared text pasted in keeps only its first link), the change in
-/// the user's own words and how often the page is read; one line on what a watch cannot read yet; then save. Pushed on
+/// the user's own words, with examples as chips over it that fill the sentence for the user to sharpen (brief 137,
+/// `WatchChange`), and how often the page is read; one line on what a watch cannot read; then save. Pushed on
 /// the Hunts tab for one watch, or for a new one (empty, or from one of New search's examples), which it creates paused. What is wrong shows under its field (`WatchSearchDraft.fieldLine`), and
 /// so does the server's refusal of the address or the description (`ArestemisStore.searchErrorField`); unsaved edits
 /// are kept per watch.
@@ -20,6 +21,9 @@ struct WatchSearchScreen: View {
     @State private var exampleApplied = false
     @State private var confirmDelete = false
     @State private var launchDone = false
+    /// The example chip tapped last, shown chosen while its sentence is sharpened; at first the one whose sentence the
+    /// field holds.
+    @State private var chosenChange: WatchChange?
     @FocusState private var focus: Field?
     @Environment(\.dismiss) private var dismiss
 
@@ -46,14 +50,17 @@ struct WatchSearchScreen: View {
                     }
                     FormSection(title: String(localized: "Page"), problems: lines(.url, field: Self.urlField)) { address }
                     FormSection(title: String(localized: "Tell me when"), problems: lines(.change, field: Self.changeField)) {
-                        TextArea(placeholder: String(localized: "the price is under 45 €"), text: $draft.change,
-                                 minHeight: 84, inWell: false)
-                            .focused($focus, equals: .change)
-                            .accessibilityLabel("Tell me when")
-                            .glassCard()
+                        VStack(alignment: .leading, spacing: 10) {
+                            changeChips
+                            TextArea(placeholder: String(localized: "3.4.0 is out, not a release candidate"),
+                                     text: $draft.change, minHeight: 84, inWell: false)
+                                .focused($focus, equals: .change)
+                                .accessibilityLabel("Tell me when")
+                                .glassCard()
+                        }
                     }
-                    FormSection(title: String(localized: "How often")) { interval }
-                    Caption(text: String(localized: "Pages that need a login, or build their content with JavaScript (such as appointment bookings), can't be watched yet."))
+                    FormSection(title: String(localized: "How often")) { ReadIntervalCard(every: $draft.every) }
+                    Caption(text: String(localized: "Pages behind a login, or that need clicks (such as appointment bookings), can't be watched."))
                         .padding(.leading, 4).padding(.top, 18)
                     SearchSaveArea(words: words, creating: creating, canSave: canSave, saving: store.isSavingSearch,
                                    line: saveLine, save: saveWatch, delete: creating ? nil : { confirmDelete = true })
@@ -122,6 +129,7 @@ struct WatchSearchScreen: View {
             exampleApplied = true
             draft = filled
         }
+        if chosenChange == nil { chosenChange = WatchChange.example(in: draft.change) }
     }
 
     /// The lines under a section: what is wrong with its field, and the server's refusal of it.
@@ -149,31 +157,25 @@ struct WatchSearchScreen: View {
             .glassCard()
     }
 
-    /// How often the page is read: Apple's menu in a quiet well, as the thing form's condition.
-    private var interval: some View {
-        FormCard {
-            FormRow(label: String(localized: "Read the page")) {
-                Menu {
-                    Picker("How often", selection: $draft.every) {
-                        ForEach(WatchInterval.choices(keeping: draft.every), id: \.self) { minutes in
-                            Text(verbatim: WatchInterval.title(minutes)).tag(minutes)
-                        }
-                    }
+    /// The examples over the sentence (the sketch's third mockup): a tap fills it in and puts the cursor in it, to
+    /// sharpen; "own description" empties a sentence that is still an example's. The chip tapped last shows chosen.
+    private var changeChips: some View {
+        FlowLayout(spacing: 8, lineSpacing: 8) {
+            ForEach(WatchChange.allCases) { change in
+                Button {
+                    draft.change = change.apply(to: draft.change)
+                    chosenChange = change
+                    focus = .change
                 } label: {
-                    HStack(spacing: 6) {
-                        Text(verbatim: WatchInterval.title(draft.every))
-                            .font(AppFont.text(15)).foregroundStyle(Ink.primary)
-                        Image(systemName: "chevron.up.chevron.down").font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(Ink.muted)
-                    }
-                    .padding(.horizontal, 12).frame(height: 38)
-                    .background(Look.well, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Look.wellEdge))
+                    Chip(text: change.title(), selected: chosenChange == change)
+                        .padding(.vertical, 5).contentShape(Rectangle()).padding(.vertical, -5)
                 }
-                .accessibilityLabel("How often")
-                .accessibilityValue(WatchInterval.title(draft.every))
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(chosenChange == change ? .isSelected : [])
+                .accessibilityHint(change == .own ? Text("Write your own sentence") : Text("Fills in the sentence"))
             }
         }
+        .padding(.leading, 2)
     }
 
     // MARK: save and delete

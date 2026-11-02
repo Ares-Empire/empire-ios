@@ -32,8 +32,8 @@ struct ArestemisLink: Equatable {
 
 /// The push for a new match (Arestemis/docs/API.md → push), `url` = `arestemis://match/<id>`: a flat's in category
 /// `ARESTEMIS_MATCH` with the actions "Open listing" and "Application", a thing's in `ARESTEMIS_ITEM` with "Open
-/// listing", a watch's change in `ARESTEMIS_WATCH` with "Open page" (the watched page; brief 131). Tapping any opens the
-/// match.
+/// listing", a watch's change in `ARESTEMIS_WATCH` with "Open page" (the watched page; brief 131), a price monitor's
+/// alarm in `ARESTEMIS_PRICE` with "Open in shop" (the product's page; brief 137). Tapping any opens the match.
 ///
 /// Wiring (Shared/Push, by the lead after merging): register `categories` with the PushCenter; when it reports a tapped
 /// notification, pass its `url` and action identifier to `link(url:action:)` and route the result like a deep link
@@ -42,6 +42,7 @@ enum MatchNotification {
     static let category = "ARESTEMIS_MATCH"
     static let itemCategory = "ARESTEMIS_ITEM"
     static let watchCategory = "ARESTEMIS_WATCH"
+    static let priceCategory = "ARESTEMIS_PRICE"
     static let openListingAction = "ARESTEMIS_OPEN_LISTING"
     static let applicationAction = "ARESTEMIS_APPLICATION"
 
@@ -53,10 +54,14 @@ enum MatchNotification {
         // The watched page opens like a listing (`ArestemisLink.Then.openListing`: the match, then its address).
         let openPage = UNNotificationAction(identifier: openListingAction, title: String(localized: "Open page"),
                                             options: [.foreground], icon: UNNotificationActionIcon(systemImageName: "safari"))
+        // The product's page opens like a listing too.
+        let openShop = UNNotificationAction(identifier: openListingAction, title: String(localized: "Open in shop"),
+                                            options: [.foreground], icon: UNNotificationActionIcon(systemImageName: "safari"))
         return [UNNotificationCategory(identifier: category, actions: [open, application], intentIdentifiers: [],
                                        options: []),
                 UNNotificationCategory(identifier: itemCategory, actions: [open], intentIdentifiers: [], options: []),
-                UNNotificationCategory(identifier: watchCategory, actions: [openPage], intentIdentifiers: [], options: [])]
+                UNNotificationCategory(identifier: watchCategory, actions: [openPage], intentIdentifiers: [], options: []),
+                UNNotificationCategory(identifier: priceCategory, actions: [openShop], intentIdentifiers: [], options: [])]
     }
 
     /// A tapped notification (or one of its actions) as a link; nil when it is not about a match.

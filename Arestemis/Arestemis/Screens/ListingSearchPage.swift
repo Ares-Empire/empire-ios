@@ -25,7 +25,7 @@ struct ListingSearchPage: View {
     }
 
     private var huntText: HuntText? {
-        hunt.flatMap(store.card).map { HuntText($0.hunt, page: $0.page, sites: store.siteNames) }
+        hunt.flatMap(store.card).map { HuntText($0, sites: store.siteNames) }
     }
 
     var body: some View {
@@ -103,7 +103,7 @@ struct ListingSearchPage: View {
     }
 
     private func text(of match: Match) -> HuntText? {
-        store.card(match.huntID).map { HuntText($0.hunt, page: $0.page, sites: store.siteNames) }
+        store.card(match.huntID).map { HuntText($0, sites: store.siteNames) }
     }
 
     private func nothingFound(_ words: String) -> some View {

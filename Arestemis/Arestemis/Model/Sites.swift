@@ -147,13 +147,13 @@ struct SiteChoices: Equatable {
         self.delivery = delivery
     }
 
-    /// The lists of before `/kinds`: the four flat portals, and Kleinanzeigen for things. A watch reads its own page and
-    /// has no sites.
+    /// The lists of before `/kinds`: the four flat portals, and Kleinanzeigen for things. A watch and a price monitor read
+    /// their own page and have no sites.
     static func fallback(_ kind: SearchKind) -> [Source] {
         switch kind {
         case .flat: Source.flatPortals
         case .item: [.kleinanzeigen]
-        case .watch: []
+        case .price, .watch: []
         }
     }
 

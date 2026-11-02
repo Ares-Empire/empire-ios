@@ -135,14 +135,55 @@
       "note": null
     }
   ],
-  "last_scan": "2026-11-01T09:05:00Z",
+  "last_scan": "2026-11-03T12:00:00Z",
   "counts": {
-    "new": 5,
-    "today": 4,
+    "new": 6,
+    "today": 5,
     "saved": 1,
     "applied": 1
   },
   "latest": [
+    {
+      "id": 88,
+      "hunt_id": 8,
+      "state": "new",
+      "found": "2026-11-03T12:00:00Z",
+      "listing": {
+        "source": "page",
+        "source_name": "shop.example",
+        "url": "https://shop.example/shelf/",
+        "title": "Nintendo Switch 2",
+        "kind": null,
+        "rent_warm": null,
+        "rent_cold": null,
+        "sqm": null,
+        "rooms": null,
+        "flatmates": null,
+        "city": null,
+        "district": null,
+        "address": null,
+        "available_from": null,
+        "available_until": null,
+        "furnished": null,
+        "posted": null,
+        "image_url": null,
+        "description": "",
+        "item": null,
+        "page": null,
+        "price_change": {
+          "old": 483.99,
+          "new": 449,
+          "currency": "EUR",
+          "availability": "in_stock",
+          "kind": "below"
+        }
+      },
+      "reason": "Nintendo Switch 2: 449,00 € (was 483,99 €)",
+      "warnings": [],
+      "application": null,
+      "at_start": false,
+      "over_max": null
+    },
     {
       "id": 104,
       "hunt_id": 3,
@@ -181,7 +222,8 @@
           "bids": null,
           "ends": null
         },
-        "page": null
+        "page": null,
+        "price_change": null
       },
       "reason": "Free office chair in good condition, Garching — fits.",
       "warnings": [],
@@ -227,7 +269,8 @@
           "bids": null,
           "ends": null
         },
-        "page": null
+        "page": null,
+        "price_change": null
       },
       "reason": "75 € plus shipping from 4.99 €, like new — fits.",
       "warnings": [
@@ -236,54 +279,6 @@
       "application": null,
       "at_start": false,
       "over_max": null
-    },
-    {
-      "id": 102,
-      "hunt_id": 3,
-      "state": "new",
-      "found": "2026-11-01T09:02:00Z",
-      "listing": {
-        "source": "kleinanzeigen",
-        "source_name": "Kleinanzeigen",
-        "url": "https://www.kleinanzeigen.de/s-anzeige/erfundener-buerostuhl/9900000202-93-9999",
-        "title": "Erfundener Bürostuhl mit Armlehnen",
-        "kind": null,
-        "rent_warm": null,
-        "rent_cold": null,
-        "sqm": null,
-        "rooms": null,
-        "flatmates": null,
-        "city": "Garching",
-        "district": null,
-        "address": null,
-        "available_from": null,
-        "available_until": null,
-        "furnished": null,
-        "posted": "2026-11-01T09:00:00Z",
-        "image_url": "https://images.example.invalid/office-chair.jpg",
-        "description": "Erfundenes Angebot eines Bürostuhls. Alle Angaben in diesem Beispiel sind fiktiv.",
-        "item": {
-          "price": 110,
-          "price_kind": "negotiable",
-          "shipping": "pickup_only",
-          "shipping_cost": null,
-          "condition": "like_new",
-          "condition_label": "Sehr Gut",
-          "seller": "private",
-          "distance_km": 4,
-          "reserved": false,
-          "bids": null,
-          "ends": null
-        },
-        "page": null
-      },
-      "reason": "110 € VB, like new, Garching — fits with negotiation.",
-      "warnings": [
-        "VB, 10 € over your limit"
-      ],
-      "application": null,
-      "at_start": false,
-      "over_max": 10
     }
   ],
   "hunts": [
@@ -367,7 +362,8 @@
         "immoscout24"
       ],
       "slowed": false,
-      "page": null
+      "page": null,
+      "price": null
     },
     {
       "hunt": {
@@ -429,7 +425,8 @@
       },
       "sources": [],
       "slowed": false,
-      "page": null
+      "page": null,
+      "price": null
     },
     {
       "hunt": {
@@ -484,7 +481,8 @@
         "kleinanzeigen"
       ],
       "slowed": false,
-      "page": null
+      "page": null,
+      "price": null
     },
     {
       "hunt": {
@@ -517,8 +515,10 @@
         "read": "ok",
         "checked": "2026-11-02T12:00:00Z",
         "changed": "2026-11-02T10:00:00Z",
-        "note": null
-      }
+        "note": null,
+        "reader": "plain"
+      },
+      "price": null
     },
     {
       "hunt": {
@@ -526,7 +526,7 @@
         "name": "New releases",
         "active": true,
         "search": {
-          "url": "https://shop.example/shelf/",
+          "url": "https://events.example/releases/",
           "change": "When FJORD costs under 45 €",
           "every": 60
         },
@@ -545,13 +545,102 @@
       "sources": [],
       "slowed": false,
       "page": {
-        "page_title": "Fjord shelf",
-        "host": "shop.example",
+        "page_title": "New releases",
+        "host": "events.example",
         "now": null,
         "read": "blocked",
         "checked": "2026-11-02T12:00:00Z",
         "changed": "2026-11-02T10:00:00Z",
-        "note": "Cloudflare refuses the server since 13:00."
+        "note": "Cloudflare refuses the server, also with a browser.",
+        "reader": "browser"
+      },
+      "price": null
+    },
+    {
+      "hunt": {
+        "id": 8,
+        "kind": "price",
+        "name": "Console",
+        "active": true,
+        "search": {
+          "url": "https://shop.example/shelf/",
+          "history": true,
+          "alarm": {
+            "below": 450.0,
+            "back_in_stock": true
+          },
+          "every": 60
+        },
+        "created": "2026-11-02T12:00:00Z",
+        "updated": "2026-11-02T12:00:00Z",
+        "activated": "2026-11-02T12:00:00Z",
+        "last_scan": "2026-11-03T12:00:00Z"
+      },
+      "counts": {
+        "new": 1,
+        "today": 1,
+        "saved": 0,
+        "applied": 0
+      },
+      "sources": [],
+      "slowed": false,
+      "page": null,
+      "price": {
+        "product": "Nintendo Switch 2",
+        "host": "shop.example",
+        "price": 449,
+        "currency": "EUR",
+        "availability": "in_stock",
+        "source": "shop",
+        "read": "ok",
+        "checked": "2026-11-03T12:00:00Z",
+        "note": null,
+        "low_30d": 449,
+        "high_30d": 483.99,
+        "since": "2026-11-02T12:00:00Z",
+        "reader": "plain"
+      }
+    },
+    {
+      "hunt": {
+        "id": 9,
+        "kind": "price",
+        "name": "Console history",
+        "active": true,
+        "search": {
+          "url": "https://console.example/product/",
+          "history": true,
+          "alarm": null,
+          "every": 60
+        },
+        "created": "2026-11-02T12:00:00Z",
+        "updated": "2026-11-02T12:00:00Z",
+        "activated": "2026-11-02T12:00:00Z",
+        "last_scan": "2026-11-03T12:00:00Z"
+      },
+      "counts": {
+        "new": 0,
+        "today": 0,
+        "saved": 0,
+        "applied": 0
+      },
+      "sources": [],
+      "slowed": false,
+      "page": null,
+      "price": {
+        "product": "Nintendo Switch 2",
+        "host": "console.example",
+        "price": 449,
+        "currency": "EUR",
+        "availability": "in_stock",
+        "source": "shop",
+        "read": "ok",
+        "checked": "2026-11-03T12:00:00Z",
+        "note": "Read with a browser through an exit, every 60 minutes.",
+        "low_30d": 449,
+        "high_30d": 483.99,
+        "since": "2026-11-02T12:00:00Z",
+        "reader": "browser_exit"
       }
     }
   ]

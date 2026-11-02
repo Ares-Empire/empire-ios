@@ -409,6 +409,38 @@ struct ExtrasField: View {
     }
 }
 
+/// How often a watched page or a product's page is read (the watch form, the monitor's): Apple's menu in a quiet well, as
+/// the thing form's condition, the server's intervals (`WatchInterval`).
+struct ReadIntervalCard: View {
+    @Binding var every: Int
+
+    var body: some View {
+        FormCard {
+            FormRow(label: String(localized: "Read the page")) {
+                Menu {
+                    Picker("How often", selection: $every) {
+                        ForEach(WatchInterval.choices(keeping: every), id: \.self) { minutes in
+                            Text(verbatim: WatchInterval.title(minutes)).tag(minutes)
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        Text(verbatim: WatchInterval.title(every))
+                            .font(AppFont.text(15)).foregroundStyle(Ink.primary)
+                        Image(systemName: "chevron.up.chevron.down").font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(Ink.muted)
+                    }
+                    .padding(.horizontal, 12).frame(height: 38)
+                    .background(Look.well, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Look.wellEdge))
+                }
+                .accessibilityLabel("How often")
+                .accessibilityValue(WatchInterval.title(every))
+            }
+        }
+    }
+}
+
 /// The bottom of a search form: Save (or Create), the line under it, and Delete for a search that exists; in a watch's
 /// form the words name a watch (`words`).
 struct SearchSaveArea: View {

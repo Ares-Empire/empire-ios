@@ -47,14 +47,14 @@ struct ListingsTests {
         let groups = NewListings.groups(store.matches(.new))
         // Found 09:59 (flat), 09:58 (the Aeron auction), 09:55 (jeans), 09:41 (bookcase), 09:00 (KALLAX), 3 days ago
         // (the Mensa, read at the watch's start).
-        #expect(groups.map(\.huntID) == [1, 2, 5, 4, 6, 8])
+        #expect(groups.map(\.huntID) == [1, 2, 5, 4, 6, 9, 8])
         #expect(groups[1].matches.map(\.id) == [32, 31, 30, 29, 28])        // 31–28 found together: the higher id first
         #expect(groups.flatMap(\.matches).allSatisfy { $0.state == .new })
         // A group goes with its last new listing.
         await store.setState(.saved, for: 41)
-        #expect(NewListings.groups(store.matches(.new)).map(\.huntID) == [2, 5, 4, 6, 8])
+        #expect(NewListings.groups(store.matches(.new)).map(\.huntID) == [2, 5, 4, 6, 9, 8])
         for id in [32, 31, 30, 29, 28] { await store.setState(.dismissed, for: id) }
-        #expect(NewListings.groups(store.matches(.new)).map(\.huntID) == [5, 4, 6, 8])
+        #expect(NewListings.groups(store.matches(.new)).map(\.huntID) == [5, 4, 6, 9, 8])
     }
 
     @Test func newestByWhenFoundThenById() throws {
@@ -78,9 +78,9 @@ struct ListingsTests {
         let de = language == .german
         let cards = try sample(Overview.self, "overview").hunts
         let rows = cards.map { SearchRow($0, language: language) }
-        #expect(rows.map(\.huntID) == [1, 2, 3, 4, 5, 6, 7, 8])
-        #expect(rows.map(\.newCount) == [1, 4, 0, 1, 1, 1, 0, 1])
-        #expect(rows.map(\.text.kind) == [.flat, .item, .flat, .item, .item, .watch, .watch, .watch])
+        #expect(rows.map(\.huntID) == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
+        #expect(rows.map(\.newCount) == [1, 4, 0, 1, 1, 1, 0, 1, 1, 0, 0])
+        #expect(rows.map(\.text.kind) == [.flat, .item, .flat, .item, .item, .watch, .watch, .watch, .price, .price, .price])
         #expect(rows[0].line == (de ? "1 gespeichert · 1 beworben" : "1 saved · 1 applied"))
         // Counts of zero are left out: nothing kept, no line; paused alone says so.
         #expect(rows[1].line == nil)

@@ -41,6 +41,20 @@ final class ArestemisStore {
         var error: String?
     }
 
+    /// A price monitor's history over one window, as last loaded for its card's last read.
+    struct PriceHistory: Equatable {
+        var prices: Prices?
+        /// The card's `checked` the history was loaded for: a newer read brings a newer point, so it is asked again.
+        var loadedFor: String?
+        var isLoading = false
+        var error: String?
+    }
+
+    struct PriceHistoryKey: Hashable {
+        let hunt: Int
+        let days: Int
+    }
+
     struct Notice: Equatable, Identifiable {
         let id = UUID()
         let text: String
@@ -77,6 +91,13 @@ final class ArestemisStore {
 
     // filtered out, of every search (nil) and of single ones
     private(set) var rejectedLists: [Int?: RejectedList] = [:]
+
+    // price monitors (brief 137)
+    private(set) var priceHistories: [PriceHistoryKey: PriceHistory] = [:]
+    /// Monitors whose switches are being saved from their page (`saveMonitor`).
+    private(set) var savingMonitors: Set<Int> = []
+    /// The newest switches asked for while a save of the same monitor was on its way: sent once it has answered.
+    private var monitorWanted: [Int: PriceSearch] = [:]
 
     // applications, settings, search
     private(set) var applications: [Int: ApplicationState] = [:]
@@ -159,6 +180,10 @@ final class ArestemisStore {
             loaded.hunts.removeAll { changingHunts.contains($0.id) }
             loaded.hunts.append(contentsOf: pending)
             loaded.hunts.sort { $0.id < $1.id }
+            // A monitor whose switches are being saved keeps them as shown until the server answered.
+            for index in loaded.hunts.indices where savingMonitors.contains(loaded.hunts[index].id) {
+                if let shown = card(loaded.hunts[index].id) { loaded.hunts[index].hunt.search = shown.hunt.search }
+            }
             overview = loaded
             syncFlatHunt()
             overviewError = nil
@@ -365,6 +390,7 @@ final class ArestemisStore {
             for match in removed { matchesByID[match] = nil; applications[match] = nil; seen.remove(match) }
             overview?.latest.removeAll { $0.huntID == id }
             huntLatest[id] = nil
+            priceHistories = priceHistories.filter { $0.key.hunt != id }
             // Every list is asked again when it shows (the counts and pages of every search changed).
             listGeneration += 1
             lists = [:]
@@ -486,9 +512,11 @@ final class ArestemisStore {
         }
     }
 
-    /// What a match is: a change on a watched page, a thing for sale, or a flat; by its listing (the page's change, a
-    /// thing's details), else by its hunt's kind (a match loaded before its details), else a flat.
+    /// What a match is: a monitor's alarm, a change on a watched page, a thing for sale, or a flat; by its listing (the
+    /// price's change, the page's change, a thing's details), else by its hunt's kind (a match loaded before its
+    /// details), else a flat.
     func kind(of match: Match) -> SearchKind {
+        if match.isPriceChange { return .price }
         if match.isPageChange { return .watch }
         if match.isThing { return .item }
         return card(match.huntID).flatMap { SearchKind($0.hunt.kind) } ?? .flat
@@ -624,6 +652,119 @@ final class ArestemisStore {
         }
     }
 
+    // MARK: - price monitors
+
+    /// A monitor's history over a window (30, 90 or 365 days), as last loaded.
+    func prices(hunt id: Int, days: Int) -> PriceHistory {
+        priceHistories[PriceHistoryKey(hunt: id, days: days)] ?? PriceHistory()
+    }
+
+    /// Loads a monitor's history over a window, quietly: again only once its card shows a newer read (a new point), or
+    /// when `force`d (pull to refresh). A failure keeps what was shown; with nothing shown yet its sentence stays
+    /// (`error`). A monitor without its history has none (the server's 404).
+    func loadPrices(hunt id: Int, days: Int, force: Bool = false) async {
+        let key = PriceHistoryKey(hunt: id, days: days)
+        guard canAct, id > 0, let card = card(id), card.hunt.search.price?.history == true,
+              !(priceHistories[key]?.isLoading ?? false) else { return }
+        let checked = card.price?.checked
+        if !force, let known = priceHistories[key], known.prices != nil, known.loadedFor == checked { return }
+        priceHistories[key, default: PriceHistory()].isLoading = true
+        let context = context
+        defer { if isCurrent(context) { priceHistories[key]?.isLoading = false } }
+        do {
+            let loaded = try await backend.prices(hunt: id, days: days)
+            guard isCurrent(context), self.card(id) != nil else { return }
+            priceHistories[key]?.prices = loaded
+            priceHistories[key]?.loadedFor = checked
+            priceHistories[key]?.error = nil
+        } catch HTTPError.server(404, _) {
+            guard isCurrent(context) else { return }
+            priceHistories[key]?.prices = Prices(points: [], low: nil, high: nil)
+            priceHistories[key]?.loadedFor = checked
+        } catch {
+            guard isCurrent(context) else { return }
+            if priceHistories[key]?.prices == nil {
+                handle(error, context: context) { self.priceHistories[key]?.error = $0 }
+            } else {
+                session.handleAuthFailure(error, generation: context.session, token: context.token)
+            }
+        }
+    }
+
+    /// `POST /price/preview`: what the server reads on a product page now. A refused login goes to the session first;
+    /// an answer for a login that has ended meanwhile is dropped (`CancellationError`).
+    func pricePreview(url: String) async throws -> PricePreview {
+        guard canAct else { throw CancellationError() }
+        let context = context
+        do {
+            let preview = try await backend.pricePreview(url: url)
+            guard isCurrent(context) else { throw CancellationError() }
+            return preview
+        } catch let error as CancellationError {
+            throw error
+        } catch {
+            guard isCurrent(context) else { throw CancellationError() }
+            session.handleAuthFailure(error, generation: context.session, token: context.token)
+            throw error
+        }
+    }
+
+    /// A new preview for the monitor's form.
+    func pricePreviewModel() -> PricePreviewModel {
+        PricePreviewModel { [weak self] url in
+            guard let self else { throw CancellationError() }
+            return try await self.pricePreview(url: url)
+        }
+    }
+
+    /// A monitor's switches changed on its page (brief 137, "changeable anytime"): shown at once and saved with the whole
+    /// search (`PUT`, the name as it is). Changes made while one is on its way are sent once it has answered, the newest
+    /// only. A refusal puts back what the server last confirmed, with a notice. Only the switches and the conditions come
+    /// from the server's answer, so a start or pause meanwhile is kept.
+    func saveMonitor(id: Int, search: PriceSearch) async {
+        guard canAct, id > 0, let card = card(id), card.hunt.search.price != nil else { return }
+        var shown = card.hunt
+        shown.search = .price(search)
+        putHunt(shown)
+        guard !savingMonitors.contains(id) else {
+            monitorWanted[id] = search
+            return
+        }
+        savingMonitors.insert(id)
+        let context = context
+        defer { if isCurrent(context) { savingMonitors.remove(id); monitorWanted[id] = nil } }
+        var confirmed = card.hunt.search
+        var sending = search
+        while true {
+            do {
+                let saved = try await backend.updateHunt(id: id, search: .price(sending), name: self.card(id)?.hunt.name)
+                guard isCurrent(context) else { return }
+                confirmed = saved.search
+                if let next = monitorWanted.removeValue(forKey: id), next != sending {
+                    sending = next
+                    continue
+                }
+                if var current = self.card(id)?.hunt {
+                    current.search = saved.search
+                    current.updated = saved.updated
+                    putHunt(current)
+                }
+                break
+            } catch {
+                guard isCurrent(context) else { return }
+                monitorWanted[id] = nil
+                if var current = self.card(id)?.hunt {
+                    current.search = confirmed
+                    putHunt(current)
+                }
+                handle(error, context: context) { self.show(String(localized: "Not saved. \($0)")) }
+                return
+            }
+        }
+        savingMonitors.remove(id)
+        await reloadOverview(quiet: true)
+    }
+
     // MARK: - applications
 
     func application(_ match: Int) -> ApplicationState { applications[match] ?? ApplicationState() }
@@ -736,6 +877,9 @@ final class ArestemisStore {
         matchErrors = [:]
         rejectedLists = [:]
         applications = [:]
+        priceHistories = [:]
+        savingMonitors = []
+        monitorWanted = [:]
     }
 
     // MARK: - plumbing

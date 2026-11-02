@@ -13,6 +13,10 @@ protocol ArestemisBackend {
     func setActive(id: Int, active: Bool) async throws -> Hunt
     func deleteHunt(id: Int) async throws
     func parse(text: String, kind: HuntKind) async throws -> HuntParseResult
+    /// `POST /price/preview`: the server reads a product page once now (nothing is saved; one per account every 5 s).
+    func pricePreview(url: String) async throws -> PricePreview
+    /// `GET /hunts/{id}/prices?days=`: a price monitor's history over 30, 90 or 365 days (404 while its history is off).
+    func prices(hunt id: Int, days: Int) async throws -> Prices
     func places(query: String) async throws -> [Place]
     func matches(hunt: Int?, state: [MatchState]?, limit: Int, before: Int?) async throws -> MatchPage
     /// `GET /matches?q=`: every state but dismissed, best match first (brief 132).
@@ -71,8 +75,17 @@ struct ArestemisAPI: ArestemisBackend {
         switch kind {
         case .flat: return .flat(try await send(.post, "search/parse", body: body, timeout: Self.aiTimeout))
         case .item: return .item(try await send(.post, "search/parse", body: body, timeout: Self.aiTimeout))
-        case .watch, .unknown: throw HTTPError.server(400, "This hunt needs a newer app.")
+        case .price, .watch, .unknown: throw HTTPError.server(400, "This hunt needs a newer app.")
         }
+    }
+
+    func pricePreview(url: String) async throws -> PricePreview {
+        // The server may ask the AI when the shop gives no product data.
+        try await send(.post, "price/preview", body: ["url": url], timeout: Self.aiTimeout)
+    }
+
+    func prices(hunt id: Int, days: Int) async throws -> Prices {
+        try await send(.get, "hunts/\(id)/prices", query: [URLQueryItem(name: "days", value: String(days))])
     }
 
     func places(query: String) async throws -> [Place] {

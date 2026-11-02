@@ -13,35 +13,38 @@ struct NewSearchTests {
     // MARK: New search's cards
 
     @Test func theCardsComeFromKindsInTheServersOrder() throws {
-        // The sample as the server answers after brief 134: flat, item, price, watch.
+        // The sample as the server answers after brief 134: flat, item, price, watch; the Preismonitor's card since brief
+        // 137.
         let kinds = try sample([OfferedKind].self, "kinds")
         let cards = NewSearchCard.cards(offered: kinds, language: en)
-        // The Preismonitor's form comes in brief 137: this build shows no card for it.
-        #expect(cards.map(\.kind) == [.flat, .item, .watch])
-        #expect(cards.map(\.name) == ["Flat", "Things", "Watch a website"])
+        #expect(cards.map(\.kind) == [.flat, .item, .price, .watch])
+        #expect(cards.map(\.name) == ["Flat", "Things", "Price monitor", "Watch a website"])
 
         // The server's order and names, whatever they are; a kind of a newer server is left out, as is one this build
         // cannot open; a kind named twice is one card.
         let server = [OfferedKind(kind: .watch, name: "Webseite beobachten", sources: []),
                       OfferedKind(kind: .unknown("car"), name: "Auto", sources: []),
-                      OfferedKind(kind: .unknown("price"), name: "Preismonitor", sources: []),
+                      OfferedKind(kind: .price, name: "Preismonitor", sources: []),
                       OfferedKind(kind: .flat, name: "Wohnung", sources: []),
                       OfferedKind(kind: .watch, name: "Again", sources: [])]
         let ordered = NewSearchCard.cards(offered: server, language: de)
-        #expect(ordered.map(\.kind) == [.watch, .flat])
-        #expect(ordered.map(\.name) == ["Webseite beobachten", "Wohnung"])
+        #expect(ordered.map(\.kind) == [.watch, .price, .flat])
+        #expect(ordered.map(\.name) == ["Webseite beobachten", "Preismonitor", "Wohnung"])
         // A server without watches offers none.
-        #expect(NewSearchCard.cards(offered: kinds.filter { $0.kind != .watch }, language: en).map(\.kind) == [.flat, .item])
+        #expect(NewSearchCard.cards(offered: kinds.filter { $0.kind != .watch }, language: en).map(\.kind)
+                == [.flat, .item, .price])
         // A name the server leaves empty: this build's.
         let unnamed = NewSearchCard.cards(offered: [OfferedKind(kind: .item, name: "  ", sources: [])], language: en)
         #expect(unnamed.map(\.name) == ["Things"])
-        // No answer (offline, an older server), or one naming none of this build's kinds: all three, never an empty page.
-        let none: [[OfferedKind]?] = [nil, [], [OfferedKind(kind: .unknown("price"), name: "Price monitor", sources: [])]]
+        // No answer (offline, an older server), or one naming none of this build's kinds: all four, never an empty page.
+        let none: [[OfferedKind]?] = [nil, [], [OfferedKind(kind: .unknown("car"), name: "Car", sources: [])]]
         for answer in none {
-            #expect(NewSearchCard.cards(offered: answer, language: en).map(\.kind) == [.flat, .item, .watch])
+            #expect(NewSearchCard.cards(offered: answer, language: en).map(\.kind) == [.flat, .item, .price, .watch])
         }
-        #expect(NewSearchCard.cards(offered: nil, language: en).map(\.name) == ["Flat", "Things", "Watch a website"])
-        #expect(NewSearchCard.cards(offered: nil, language: de).map(\.name) == ["Wohnung", "Dinge", "Webseite beobachten"])
+        #expect(NewSearchCard.cards(offered: nil, language: en).map(\.name)
+                == ["Flat", "Things", "Price monitor", "Watch a website"])
+        #expect(NewSearchCard.cards(offered: nil, language: de).map(\.name)
+                == ["Wohnung", "Dinge", "Preismonitor", "Webseite beobachten"])
     }
 
     @Test(arguments: [AppLanguage.english, .german])
@@ -51,19 +54,23 @@ struct NewSearchTests {
         #expect(cards.map(\.line) == (german ? [
             "Neue Angebote von WG-Gesucht, Kleinanzeigen, Immowelt und ImmoScout24, Minuten nachdem sie online sind.",
             "Gebraucht und günstig: Kleinanzeigen, eBay, Vinted, IKEA Preowned und mehr, mit Preisgrenze und Abholung in der Nähe.",
+            "Ein Produkt in einem Shop: der Preisverlauf, und Bescheid, wenn es günstiger oder wieder lieferbar ist.",
             "Eine Seite, die du kennst: neue Version, neue Stelle, Tickets, der Speiseplan.",
         ] : [
             "New listings from WG-Gesucht, Kleinanzeigen, Immowelt and ImmoScout24, minutes after they go online.",
             "Used and cheap: Kleinanzeigen, eBay, Vinted, IKEA Preowned and more, with a price limit and pickup nearby.",
+            "One product in one shop: its price history, and a word when it gets cheaper or is back in stock.",
             "A page you know: a new version, a new job, tickets, the canteen menu.",
         ]))
         #expect(cards.map { $0.examples.map { $0.title(language: language) } } == (german ? [
             ["2 Zimmer bis 1.100 € warm", "WG-Zimmer"],
             ["Kallax bis 40 €", "Rennrad Größe 56"],
+            ["Preis unter … €", "Wieder lieferbar"],
             ["Neue Version", "Neue Stelle", "Speiseplan"],
         ] : [
             ["2 rooms up to €1,100 warm", "WG room"],
             ["Kallax up to €40", "Road bike size 56"],
+            ["Price under € …", "Back in stock"],
             ["New version", "New job", "Canteen menu"],
         ]))
         #expect(language.string("What should Arestemis find for you?")
@@ -114,7 +121,7 @@ struct NewSearchTests {
         // Each example fills its own kind's form, and only that.
         for example in SearchExample.allCases {
             let filled = [example.flatDraft != nil, example.itemDraft(language: language) != nil,
-                          example.watchDraft(language: language) != nil]
+                          example.priceDraft != nil, example.watchDraft(language: language) != nil]
             #expect(filled == SearchKind.all.map { $0 == example.kind })
         }
         #expect(SearchKind.all.flatMap(SearchExample.examples(for:)) == SearchExample.allCases)

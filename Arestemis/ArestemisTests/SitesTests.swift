@@ -73,8 +73,8 @@ struct SitesTests {
 
     @Test func kindsDecodeLeniently() throws {
         let kinds = try sample([OfferedKind].self, "kinds")
-        // The names brief 134 gives the kinds; the Preismonitor (`price`) is kept as a kind this build does not know.
-        #expect(kinds.map(\.kind) == [.flat, .item, .unknown("price"), .watch]
+        // The names brief 134 gives the kinds; the Preismonitor (`price`) is a kind this build knows since brief 137.
+        #expect(kinds.map(\.kind) == [.flat, .item, .price, .watch]
                 && kinds.map(\.name) == ["Flat", "Things", "Price monitor", "Watch a website"])
         #expect(kinds[2].sources.isEmpty && kinds[3].sources.isEmpty)
         #expect(kinds[1].sources.map(\.source) == thingSites)
@@ -125,7 +125,7 @@ struct SitesTests {
         try transport.answer("GET /kinds", sample: "kinds")
         await store.reloadOverview()
         await settle { store.kinds != nil }
-        #expect(store.kinds?.map(\.kind) == [.flat, .item, .unknown("price"), .watch]
+        #expect(store.kinds?.map(\.kind) == [.flat, .item, .price, .watch]
                 && transport.requests("GET /kinds").count == 1)
         let form = store.siteChoices(.item, chosen: [.kleinanzeigen])
         #expect(form.sites.map(\.name) == ["Kleinanzeigen", "eBay", "mydealz", "MTB-News Bikemarkt", "IKEA Preowned", "Vinted"])

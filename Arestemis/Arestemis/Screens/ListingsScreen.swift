@@ -124,7 +124,7 @@ private struct NewPart: View {
     }
 
     private func heading(_ group: NewGroup, first: Bool) -> some View {
-        let text = store.card(group.huntID).map { HuntText($0.hunt, page: $0.page, sites: store.siteNames) }
+        let text = store.card(group.huntID).map { HuntText($0, sites: store.siteNames) }
         return NewGroupHeading(kind: text?.kind, title: text?.title ?? String(localized: "Search"),
                                count: group.matches.count) {
             navigation.openSearch(group.huntID, filter: .new)

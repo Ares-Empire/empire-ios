@@ -13,13 +13,14 @@ struct HuntsScreensTests {
     // MARK: New search's kinds
 
     @Test(arguments: [AppLanguage.english, .german])
-    func withoutTheServerNewSearchOffersFlatThenThingsThenWatch(_ language: AppLanguage) {
+    func withoutTheServerNewSearchOffersFlatThenThingsThenPriceThenWatch(_ language: AppLanguage) {
         let de = language == .german
         let choices = SearchKind.choices(offered: nil)
-        #expect(choices == [.flat, .item, .watch])
+        #expect(choices == [.flat, .item, .price, .watch])
         #expect(choices.map { $0.choiceTitle(language: language) }
-                == (de ? ["Wohnung", "Dinge", "Webseite beobachten"] : ["Flat", "Things", "Watch a website"]))
-        #expect(choices.map(\.huntKind) == [.flat, .item, .watch])
+                == (de ? ["Wohnung", "Dinge", "Preismonitor", "Webseite beobachten"]
+                    : ["Flat", "Things", "Price monitor", "Watch a website"]))
+        #expect(choices.map(\.huntKind) == [.flat, .item, .price, .watch])
         #expect(SearchKind(.unknown("car")) == nil && SearchKind(.item) == .item)
         #expect(SearchKind.flat.symbol == "house" && SearchKind.item.symbol == "tag" && SearchKind.watch.symbol == "eye")
     }
@@ -262,7 +263,7 @@ struct HuntsScreensTests {
         let store = ArestemisStore(session: session, backend: try SampleBackend(options: .init(slowed: true, newerKind: true)),
                                    sample: true, placeDelay: .zero)
         await store.reloadOverview()
-        #expect(store.hunts.map(\.slowed) == [false, true, false, true, true, false, false, false, false])
+        #expect(store.hunts.map(\.slowed) == [false, true, false, true, true, false, false, false, false, false, false, false])
         #expect(store.hunts.last?.hunt.kind == .unknown("car") && store.hunts.last?.hunt.search == .unsupported)
     }
 

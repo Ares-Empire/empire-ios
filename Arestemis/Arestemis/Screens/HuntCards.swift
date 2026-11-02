@@ -4,19 +4,23 @@ import SwiftUI
 /// beside it, what it looks for in one or two lines, "checked less often" when the server reads it less often, then the
 /// status line (the pulse while it runs, PAUSED otherwise) beside its Start / Pause, smaller. A watch shows its host under
 /// its name, then what the page says now as its main fact (or a quiet line: reading, or why the page cannot be read) and
-/// when it was checked and changed (`WatchLines`). Tapping the card opens the hunt's page; the button is its own (beside
-/// the card's, not inside it). A hunt of a kind this build does not know shows its name and "Needs a newer app", nothing
-/// else.
+/// when it was checked and changed (`WatchLines`). A price monitor (brief 137, the sketch's card) shows the product, the
+/// host and what it does ("Alarm under €450", "History only") under its name, then the price large with its
+/// availability, the small 30-day line while the history is on, and when it was checked (`PriceLines`). Tapping the card
+/// opens the hunt's page; the button is its own (beside the card's, not inside it). A hunt of a kind this build does not
+/// know shows its name and "Needs a newer app", nothing else.
 struct HuntListCard: View {
     let card: HuntCard
     /// The server's names for a thing hunt's sites.
     let sites: SiteNames
+    /// A monitor's 30-day line; nil without a history (or before it loaded).
+    var chart: PriceChart? = nil
     let busy: Bool
     let open: () -> Void
     let toggle: (Bool) -> Void
 
     var body: some View {
-        let text = HuntText(card.hunt, page: card.page, sites: sites)
+        let text = HuntText(card, sites: sites)
         let known = text.kind != nil
         ZStack(alignment: .bottomTrailing) {
             Button(action: open) {
@@ -34,12 +38,15 @@ struct HuntListCard: View {
                     if text.kind == .watch {
                         WatchLines(page: card.page, compact: true).padding(.top, 10)
                     }
+                    if text.kind == .price {
+                        PriceLines(state: card.price, compact: true, chart: chart).padding(.top, 10)
+                    }
                     if card.slowed && known {
                         SlowedLine().padding(.top, 6)
                     }
                     if known {
                         // The status line; its button sits on this row's right, outside this label.
-                        HuntStatus(active: card.hunt.active, kind: text.kind, stopped: card.page?.read == .blocked)
+                        HuntStatus(active: card.hunt.active, kind: text.kind, stopped: card.isStopped)
                             .frame(maxWidth: .infinity, minHeight: 36, alignment: .leading)
                             .padding(.top, 12)
                     }
@@ -49,7 +56,8 @@ struct HuntListCard: View {
                 .contentShape(RoundedRectangle(cornerRadius: Ink.cardRadius, style: .continuous))
             }
             .buttonStyle(CardPressStyle())
-            .accessibilityHint(text.kind == .watch ? Text("Opens the watch") : Text("Opens the search"))
+            .accessibilityHint(text.kind == .watch ? Text("Opens the watch")
+                               : text.kind == .price ? Text("Opens the price monitor") : Text("Opens the search"))
             if known {
                 StartPauseButton(active: card.hunt.active, kind: text.kind, busy: busy, height: 36, toggle: toggle)
                     .fixedSize()
@@ -75,10 +83,10 @@ struct HuntHeroCard<Title: View>: View {
     @ViewBuilder let title: (HuntText) -> Title
 
     var body: some View {
-        let text = HuntText(card.hunt, page: card.page, sites: sites)
+        let text = HuntText(card, sites: sites)
         VStack(alignment: .leading, spacing: 0) {
             if text.kind != nil {
-                HuntStatus(active: card.hunt.active, kind: text.kind, stopped: card.page?.read == .blocked).padding(.bottom, 14)
+                HuntStatus(active: card.hunt.active, kind: text.kind, stopped: card.isStopped).padding(.bottom, 14)
             }
             title(text)
             if let line = text.details ?? text.newerApp {
@@ -88,6 +96,9 @@ struct HuntHeroCard<Title: View>: View {
             }
             if text.kind == .watch {
                 WatchLines(page: card.page, compact: false).padding(.top, 14)
+            }
+            if text.kind == .price {
+                PriceLines(state: card.price, compact: false).padding(.top, 14)
             }
             if card.slowed && text.kind != nil {
                 SlowedLine().padding(.top, 8)
@@ -154,7 +165,7 @@ struct WatchLines: View {
     }
 }
 
-/// The kind's small mark (a house, a tag, an eye; muted ink) and the hunt's name.
+/// The kind's small mark (a house, a tag, a falling line, an eye; muted ink) and the hunt's name.
 struct HuntTitle: View {
     let kind: SearchKind?
     let title: String
@@ -409,16 +420,17 @@ struct PortalsCard: View {
 }
 
 /// A few matches as cards (the Hunts tab's Latest, a hunt's page), each opening its page, with "All listings" under
-/// them; or one quiet line while there are none.
+/// them; or one quiet line while there are none (`empty`; a monitor's says its alarms).
 struct LatestMatches: View {
     let matches: [Match]
     let store: ArestemisStore
+    var empty: LocalizedStringKey = "No listings yet. They appear here the moment they're found."
     let open: (Int) -> Void
     let showAll: () -> Void
 
     var body: some View {
         if matches.isEmpty {
-            Text("No listings yet. They appear here the moment they're found.")
+            Text(empty)
                 .font(AppFont.text(13)).foregroundStyle(Ink.muted).lineSpacing(3)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.leading, 4)

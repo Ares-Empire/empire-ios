@@ -24,7 +24,7 @@ struct SearchListingsPage: View {
     }
 
     private func page(_ card: HuntCard) -> some View {
-        let text = HuntText(card.hunt, page: card.page, sites: store.siteNames)
+        let text = HuntText(card, sites: store.siteNames)
         let filters = MatchFilter.choices(for: text.kind)
         let filter = filters.contains(navigation.filter) ? navigation.filter : .all
         let list = store.list(filter, hunt: id)

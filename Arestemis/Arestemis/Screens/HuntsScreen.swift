@@ -65,6 +65,8 @@ struct HuntsScreen: View {
                     FlatSearchScreen(store: store, navigation: navigation, huntID: id, example: example)
                 case .form(.item, let id, let example):
                     ItemSearchScreen(store: store, navigation: navigation, huntID: id, example: example)
+                case .form(.price, let id, let example):
+                    PriceSearchScreen(store: store, navigation: navigation, huntID: id, example: example)
                 case .form(.watch, let id, let example):
                     WatchSearchScreen(store: store, navigation: navigation, huntID: id, example: example)
                 }
@@ -86,17 +88,27 @@ struct HuntsScreen: View {
     private var hunts: some View {
         VStack(spacing: Look.rowGap) {
             ForEach(store.hunts) { card in
-                HuntListCard(card: card, sites: store.siteNames, busy: store.isChanging(hunt: card.id),
+                HuntListCard(card: card, sites: store.siteNames, chart: monitorChart(card),
+                             busy: store.isChanging(hunt: card.id),
                              open: { navigation.huntPath.append(.hunt(card.id)) },
                              toggle: { active in Task { await store.setActive(id: card.id, active: active) } })
                     .huntCardMenu(card, store: store, navigation: navigation)
                     .id(Self.cardID(card.id))
+                    // A monitor's 30-day line, asked again after each new read (a new point).
+                    .task(id: MonitorRead(card)) { await store.loadPrices(hunt: card.id, days: 30) }
             }
             NewSearchButton { navigation.startNewSearch() }
         }
     }
 
     private static func cardID(_ hunt: Int) -> String { "hunt-\(hunt)" }
+
+    /// A monitor's 30-day line on its card, while its history is on and has loaded.
+    private func monitorChart(_ card: HuntCard) -> PriceChart? {
+        guard let search = card.hunt.search.price, search.history,
+              let prices = store.prices(hunt: card.id, days: 30).prices else { return nil }
+        return PriceChart(prices, limit: search.alarm?.below, days: 30)
+    }
 
     /// While the tab is on screen and the app is active, the cards and figures follow the server every minute.
     private func keepFresh() async {
@@ -144,5 +156,18 @@ private struct NewSearchButton: View {
             .contentShape(RoundedRectangle(cornerRadius: Ink.cardRadius, style: .continuous))
         }
         .buttonStyle(CardPressStyle())
+    }
+}
+
+/// What a monitor's history depends on: its last read and whether the history is on (other kinds: nothing).
+struct MonitorRead: Hashable {
+    let hunt: Int
+    let checked: String?
+    let history: Bool
+
+    init(_ card: HuntCard) {
+        hunt = card.id
+        checked = card.price?.checked
+        history = card.hunt.search.price?.history ?? false
     }
 }
