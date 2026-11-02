@@ -18,6 +18,8 @@ enum SendRoute: Hashable {
 struct SendSheet: View {
     let drops: DropsStore
     var sharing = false
+    /// Items of the share sheet or a drop that could not be read: one quiet line under the picked row.
+    var unreadable = 0
     var sent: (() -> Void)?
     var cancelled: (() -> Void)?
 
@@ -25,15 +27,13 @@ struct SendSheet: View {
          sent: (() -> Void)? = nil, cancelled: (() -> Void)? = nil) {
         self.drops = drops
         self.sharing = sharing
+        self.unreadable = unreadable
         self.sent = sent
         self.cancelled = cancelled
         let draft = SendDraft(temporary: temporary)
         draft.tree = DropFolderTree(drops.folders)
         draft.use(files.map { PickedFile(file: $0, displayName: $0.suggestedName) },
                   source: files.first?.source ?? .file, last: drops.recentFolders.lastBySource[files.first?.source ?? .file])
-        if unreadable > 0 {
-            draft.show(String(localized: LocalizedStringResource("\(unreadable) items could not be read.", table: "AresusDrops", locale: .appLanguage)))
-        }
         _draft = State(initialValue: draft)
     }
     @State private var draft = SendDraft()
@@ -154,7 +154,11 @@ struct SendSheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     pickedHeader
-                    PickedStrip(draft: draft).padding(.top, 12)
+                    PickedStrip(draft: draft, removable: draft.canRemove(sharing: sharing), remove: remove)
+                        .padding(.top, 12)
+                    if unreadable > 0 {
+                        FormNote(text: SendPickText.unreadable(unreadable)).padding(.top, 12)
+                    }
 
                     SectionHeading(text: String(localized: LocalizedStringResource("Folder", table: "AresusDrops", locale: .appLanguage))).padding(.leading, 4).padding(.top, 28)
                     folderCard.padding(.top, 10)
@@ -179,36 +183,49 @@ struct SendSheet: View {
         }
     }
 
-    /// "PHOTOS 3" with Change, which goes back to the three choices.
+    /// "PHOTOS 3" (a mix of photos and files says FILES), and in the app "+ Add", Apple's menu with the three choices
+    /// in the start's order; a pick adds to what is there (brief 94). The share sheet adds nothing: what was shared is
+    /// what it sends.
     private var pickedHeader: some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
-            SectionHeading(text: pickedTitle)
+            SectionHeading(text: SendPickText.heading(draft.picked.map(\.file.source)))
             if draft.picked.count > 1 {
                 Text(verbatim: "\(draft.picked.count)").font(AppFont.number(11, weight: .regular)).foregroundStyle(Ink.muted)
+                    .contentTransition(.numericText())
             }
             Spacer(minLength: 8)
-            if !sharing { Menu {
-                Button { picksPhotos = true } label: { Text("Photos", tableName: "AresusDrops") }
-                Button { picksFiles = true } label: { Text("Files", tableName: "AresusDrops") }
-                if CameraPicker.isAvailable { Button { Task { await openCamera() } } label: { Text("Camera", tableName: "AresusDrops") } }
-            } label: {
-                Text("Add", tableName: "AresusDrops").font(AppFont.text(13, weight: .medium)).foregroundStyle(Ink.secondary)
+            if !sharing {
+                Menu {
+                    Button { picksPhotos = true } label: {
+                        Label { Text("Photos", tableName: "AresusDrops") } icon: { Image(systemName: "photo.on.rectangle") }
+                    }
+                    if CameraPicker.isAvailable {
+                        Button { Task { await openCamera() } } label: {
+                            Label { Text("Camera", tableName: "AresusDrops") } icon: { Image(systemName: "camera") }
+                        }
+                    }
+                    Button { picksFiles = true } label: {
+                        Label { Text("Files", tableName: "AresusDrops") } icon: { Image(systemName: "folder") }
+                    }
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: "plus").font(.system(size: 11, weight: .semibold)).accessibilityHidden(true)
+                        Text("Add", tableName: "AresusDrops").font(AppFont.text(13, weight: .medium))
+                    }
+                    .foregroundStyle(Ink.secondary)
                     .padding(.leading, 14).frame(minHeight: 32).contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .disabled(draft.isSending)
+                }
+                .buttonStyle(.plain)
+                .menuOrder(.fixed)
+                .disabled(draft.isSending || draft.isLoading)
             }
         }
         .padding(.leading, 4)
     }
 
-    private var pickedTitle: String {
-        switch (draft.source, draft.picked.count == 1) {
-        case (.file, true): String(localized: LocalizedStringResource("File", table: "AresusDrops", locale: .appLanguage))
-        case (.file, false): String(localized: LocalizedStringResource("Files", table: "AresusDrops", locale: .appLanguage))
-        case (_, true): String(localized: LocalizedStringResource("Photo", table: "AresusDrops", locale: .appLanguage))
-        case (_, false): String(localized: LocalizedStringResource("Photos", table: "AresusDrops", locale: .appLanguage))
-        }
+    /// One item out of the pick; the last one goes back to the three choices (the share sheet keeps its last).
+    private func remove(_ id: PickedFile.ID) {
+        withAnimation(reduceMotion ? nil : .easeOut(duration: 0.2)) { draft.remove(id) }
     }
 
     /// Where it goes; a tap opens the folder picker, where a new folder is made too.
@@ -336,15 +353,31 @@ private struct ChoiceTile: View {
     }
 }
 
-/// What was picked, in one row that scrolls sideways: photos as small pictures, files as their symbol and name.
+/// What was picked, in one row that scrolls sideways: photos as small pictures, files as their symbol and name, each
+/// with a small remove badge in its corner (brief 100) while one may go (`SendDraft.canRemove`). VoiceOver offers
+/// Remove as an action on the item.
 private struct PickedStrip: View {
     let draft: SendDraft
+    var removable = false
+    var remove: (PickedFile.ID) -> Void = { _ in }
 
     var body: some View {
         ScrollView(.horizontal) {
             HStack(spacing: 10) {
                 ForEach(draft.picked) { item in
-                    if item.file.source == .file { FileTile(item: item) } else { PhotoTile(item: item, draft: draft) }
+                    Group {
+                        if item.file.source == .file { FileTile(item: item) } else { PhotoTile(item: item, draft: draft) }
+                    }
+                    .overlay(alignment: .topTrailing) {
+                        if removable { RemoveBadge { remove(item.id) }.transition(.opacity) }
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityActions {
+                        if removable {
+                            Button { remove(item.id) } label: { Text("Remove", tableName: "AresusDrops") }
+                        }
+                    }
+                    .transition(.opacity.combined(with: .scale(scale: 0.92)))
                 }
             }
             .padding(.horizontal, 18)
@@ -352,6 +385,27 @@ private struct PickedStrip: View {
         .scrollIndicators(.hidden)
         .scrollClipDisabled()
         .padding(.horizontal, -18)
+    }
+}
+
+/// The remove badge on a picked item, as iOS marks an attachment: a small round mark with an x in the item's top
+/// corner, in the wall's colour (dark on the dark wall, light on the light one) so it reads over a photo too, with the
+/// cards' thin edge. The tap area is the corner's 40 pt; VoiceOver uses the item's Remove action instead.
+private struct RemoveBadge: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "xmark").font(.system(size: 9, weight: .bold)).foregroundStyle(Ink.primary)
+                .frame(width: 22, height: 22)
+                .background(Ink.background.opacity(0.82), in: .circle)
+                .overlay(Circle().strokeBorder(Ink.edge))
+                .padding(6)
+                .frame(width: 40, height: 40, alignment: .topTrailing)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(PressedBox())
+        .accessibilityHidden(true)
     }
 }
 
@@ -447,7 +501,7 @@ struct CameraPicker: UIViewControllerRepresentable {
 
 #if DEBUG
 extension SendSheet {
-    /// Screenshots (with `-sampleData -openSheet send`): `-samplePick photo|photos|file|files` (made-up pictures and
+    /// Screenshots (with `-sampleData -openSheet send`): `-samplePick photo|photos|file|files|mixed` (made-up pictures and
     /// files, as if picked), `-sendFolder <root>/<path>` (`documents/Examples`), `-sendNewFolder <text>` (made in it, as
     /// the picker's New folder does), `-sendName <text>`, `-sendNow` (Send at once), `-sampleRecents` (two recent
     /// folders), `-openFolders` (the folder picker), `-folderPath <root>/<path>` (opened down to it; `-newFolderText
@@ -499,6 +553,9 @@ enum SampleSendPicks {
                 PickedFile(file: DropFile(content: .data(Data("Made-up sample".utf8)), suggestedName: $0, source: .file),
                            displayName: $0)
             }
+        case "mixed":
+            // Two photos and a PDF, as a second pick adds files to photos (brief 100).
+            return Array(make("photos").prefix(2)) + make("file")
         default:
             let looks: [(UIColor, UIColor, UIColor)] = [
                 (UIColor(red: 0.55, green: 0.70, blue: 0.86, alpha: 1), UIColor(red: 0.93, green: 0.84, blue: 0.72, alpha: 1),

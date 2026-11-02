@@ -179,10 +179,17 @@ struct PhoneFirstScreen: View {
 /// on or off with its long press; the add row asks the side under its field (spending first).
 struct CategoryPickerScreen: View {
     @State var model: CategoryPickerModel
-    /// Opened after an import (`ImportStore.asksForCategories`): the line that the payments are in.
-    var afterImport = false
-    var done: (() -> Void)? = nil
+    /// Opened after an import (`ImportStore.asksForCategories`): the line that the payments are in. Kept as it opened, so
+    /// the line stays while the sheet goes (the import's flag ends as Done closes it).
+    @State private var afterImport: Bool
+    var done: (() -> Void)?
     @FocusState private var typing: Bool
+
+    init(model: CategoryPickerModel, afterImport: Bool = false, done: (() -> Void)? = nil) {
+        _model = State(initialValue: model)
+        _afterImport = State(initialValue: afterImport)
+        self.done = done
+    }
 
     /// What the picker is for; with numbers on the rows, also what they mean.
     private var note: String {
@@ -239,14 +246,19 @@ struct CategoryPickerScreen: View {
         .toolbar {
             if let done {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { Task { if await model.flush() { done() } } }
+                    // Brief 215: with nothing ticked it asks first whether to use the categories that fit.
+                    Button("Done") { Task { if await model.closes() { done() } } }
                 }
             }
         }
         // The system Back button and its edge swipe stay: a sort still waiting runs as the picker goes.
         .onDisappear { Task { await model.flush() } }
+        // In a sheet with nothing ticked and categories that fit, the way out is Done, which asks (brief 215): a swipe
+        // down would leave every payment Not sorted without the question.
+        .interactiveDismissDisabled(done != nil && !model.fitting.isEmpty)
         .tint(Ink.primary)
         .renameCategoryAlert(model)
+        .useFittingAlert(model) { done?() }
         .sheet(item: Binding(get: { model.untick }, set: { if $0 == nil { model.cancelUntick() } })) { untick in
             UntickSheet(untick: untick) { model.resolve(moveTo: $0) }
         }
@@ -254,7 +266,8 @@ struct CategoryPickerScreen: View {
 
     #if DEBUG
     /// Screenshots: `-sampleTick <id,id,…>` ticks those at once, `-sampleUntick <category id>` unticks one (the question
-    /// where its payments go), `-scrollToCategory <id>` scrolls to its row, `-samplePickerDone` then closes the picker.
+    /// where its payments go), `-scrollToCategory <id>` scrolls to its row, `-samplePickerDone` then taps Done (with
+    /// nothing ticked its question shows; `-sampleFitAnswer use|notNow` answers it).
     private func debugLaunch(_ proxy: ScrollViewProxy) async {
         let arguments = LaunchArguments.current
         func categoryID(_ key: String) -> String { model.list?.id(named: key) ?? key }
@@ -289,7 +302,16 @@ struct CategoryPickerScreen: View {
             try? await Task.sleep(for: .milliseconds(900))
             await model.askToRemove(categoryID(id))
         }
-        if arguments.contains("-samplePickerDone"), await model.flush() { done?() }
+        // Done as a tap does it (brief 215: with nothing ticked it asks first); `-sampleFitAnswer use|notNow` answers.
+        if arguments.contains("-samplePickerDone") {
+            if await model.closes() { done?(); return }
+            try? await Task.sleep(for: .milliseconds(600))
+            switch LaunchArguments.value("-sampleFitAnswer") {
+            case "use": model.asksToUseFitting = false; if await model.useFitting() { done?() }
+            case "notNow": model.asksToUseFitting = false; done?()
+            default: break
+            }
+        }
     }
     #endif
 

@@ -36,9 +36,11 @@ struct ShareItems {
                     url = try await Self.object(provider, type: type, suggested: suggested, folder: folder)
                 }
                 let media = UTType(type).map { $0.conforms(to: .image) || $0.conforms(to: .movie) } ?? false
-                let date = media ? await PhotoDate.captured(url) ?? .now : .now
+                // A picture keeps a name a person gave it; a camera's or the system's name becomes its capture time.
+                let photo = media && (suggested.map(DropNames.isCameraName) ?? true)
+                let date = photo ? await PhotoDate.captured(url) ?? .now : .now
                 answer.files.append(DropFile(content: .file(url), suggestedName: url.lastPathComponent,
-                                             source: media ? .photo : .file, date: date))
+                                             source: photo ? .photo : .file, date: date))
             } catch { answer.unreadable += 1 }
         }
         return answer

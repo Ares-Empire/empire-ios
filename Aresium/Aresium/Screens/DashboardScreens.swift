@@ -49,6 +49,9 @@ struct DashboardPlace {
     /// The quick sort while it is open (brief 99): a sheet over the dashboard, from the card on Not sorted's list or the
     /// offer after an import.
     var quickSort: QuickSortFlow?
+    /// The category list over the dashboard (brief 215): opened by the card shown while no category is chosen; the
+    /// owner presents it (ContentView, as the one after an import).
+    var choosesCategories = false
 
     /// Selecting belongs to the list on top: it follows that list (a category renamed meanwhile) and ends when another
     /// page is on top.
@@ -161,7 +164,8 @@ struct DashboardStack<Top: View, Root: View>: View {
                     } else if route.month != nil {
                         TransactionsScreen(route: route, store: store, palette: palette, band: band,
                                            selection: $place.payment, selecting: $place.selection, rowMenus: rows,
-                                           pick: open, quickSort: { place.quickSort = QuickSortFlow(store: store) })
+                                           pick: open, quickSort: { place.quickSort = QuickSortFlow(store: store) },
+                                           openCategories: { place.choosesCategories = true })
                     } else {
                         CategoryScreen(route: route, store: store, palette: palette, graph: graph,
                                        graphMoves: graphMoves, band: band, pick: open)
@@ -276,6 +280,8 @@ struct StartScreen: View {
     var openGuide: (() -> Void)? = nil
     /// A tap on a day of Current's graph: that day's page (brief 77; nil: the days open nothing).
     var openDay: ((DayRoute) -> Void)? = nil
+    /// The category list over the dashboard, from the card shown while no category is chosen (brief 215).
+    var openCategories: (() -> Void)? = nil
     let pick: (DashboardRoute) -> Void
     var body: some View {
         VStack(spacing: 0) {
@@ -290,7 +296,7 @@ struct StartScreen: View {
             DashboardStatus(store: store, palette: palette)
             DashboardPages(store: store, palette: palette, scope: DashboardScope(current: current), side: $side,
                            graph: graph, graphMoves: graphMoves, band: band, openGuide: openGuide, openDay: openDay,
-                           pick: pick)
+                           openCategories: openCategories, pick: pick)
         }
     }
 }
@@ -352,6 +358,8 @@ struct DashboardPages: View {
     var swipesPages = true
     /// A tap on a day of a day graph (Current, a month's page): that day's page (brief 77; nil: the days open nothing).
     var openDay: ((DayRoute) -> Void)? = nil
+    /// The category list, from the card shown while no category is chosen (brief 215; nil: no card).
+    var openCategories: (() -> Void)? = nil
     /// The pages' width, for the dots' slide when they do not swipe.
     @State private var width: CGFloat = 0
     let pick: (DashboardRoute) -> Void
@@ -395,7 +403,7 @@ extension DashboardPages {
     fileprivate func page(_ page: DashboardSide) -> some View {
         StartPage(store: store, palette: palette, side: page, scope: scope, shown: page == side, graph: graph,
                   graphMoves: graphMoves, graphAway: $graphAway, band: band, openGuide: openGuide, openDay: openDay,
-                  pick: pick)
+                  openCategories: openCategories, pick: pick)
     }
 }
 
@@ -461,6 +469,7 @@ private struct StartPage: View {
     let band: AresiumBand
     var openGuide: (() -> Void)?
     var openDay: ((DayRoute) -> Void)?
+    var openCategories: (() -> Void)?
     let pick: (DashboardRoute) -> Void
     @State private var position = ScrollPosition(edge: .top)
     /// Where this page's list last came to rest (how far it is scrolled).
@@ -548,8 +557,18 @@ private struct StartPage: View {
     private var list: some View {
         VStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(store.rangeLabel(scope).uppercased()).font(AppFont.text(11, weight: .semibold))
-                    .tracking(1.3).foregroundStyle(palette.muted)
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(store.rangeLabel(scope).uppercased()).font(AppFont.text(11, weight: .semibold))
+                        .tracking(1.3).foregroundStyle(palette.muted)
+                    Spacer(minLength: 8)
+                    // Brief 215: Current's other month, one tap away (the running month while the first days show the
+                    // month before, and back).
+                    if scope == .current, let other = store.currentOtherMonth, let shown = store.currentMonth {
+                        OtherMonthLink(month: other, later: other.key > shown.key, palette: palette) {
+                            store.showCurrent(month: other.key)
+                        }
+                    }
+                }
                 let total = store.totals(scope).map { Money.total(side == .income ? $0.income : $0.expense) }
                 SideTotal(side: side, total: total, palette: palette)
                 // Brief 209: Overview's average month and what of it is fixed, which opens the fixed costs.
@@ -559,6 +578,10 @@ private struct StartPage: View {
                 }
             }.padding(.horizontal, 18).padding(.top, 6).padding(.bottom, 8)
             LazyVStack(spacing: 0) {
+                // Brief 215: while no category is chosen, the way to them comes first.
+                if let openCategories, store.waitsForCategories {
+                    CategoriesCard(palette: palette, open: openCategories).padding(.bottom, 8)
+                }
                 let rows = rows
                 ForEach(rows) { row in
                     // A month (Current, a month's page): that month's payments of the category at once; Overview: its
@@ -586,6 +609,38 @@ private struct StartPage: View {
                 }
             }.padding(.horizontal, 12).padding(.top, 8)
         }
+    }
+}
+
+/// The range line's way to Current's other month (brief 215): its name in the line's own small capitals, a little
+/// stronger than the line, with a chevron towards it ("NOVEMBER SO FAR ›", "‹ OCTOBER"). A tap shows that month until
+/// the app goes to the background.
+private struct OtherMonthLink: View {
+    let month: Month
+    /// The month comes after the one shown (the chevron points forward).
+    let later: Bool
+    let palette: Palette
+    let show: () -> Void
+
+    var body: some View {
+        let words = CurrentMonthWording.other(month)
+        Button(action: show) {
+            HStack(spacing: 4) {
+                if !later { chevron("chevron.left") }
+                Text(verbatim: words.uppercased()).font(AppFont.text(11, weight: .semibold)).tracking(1.3)
+                    .lineLimit(1)
+                if later { chevron("chevron.right") }
+            }
+            .foregroundStyle(palette.secondary)
+            .minimumTapArea()
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(verbatim: words))
+        .accessibilityIdentifier("otherMonth")
+    }
+
+    private func chevron(_ name: String) -> some View {
+        Image(systemName: name).font(.system(size: 9, weight: .bold)).accessibilityHidden(true)
     }
 }
 
@@ -653,7 +708,7 @@ struct CategoryScreen: View {
                                 }.buttonStyle(.plain)
                             }
                             if months.isEmpty {
-                                EmptyMessage(text: String(localized: "No activity recorded."), palette: palette)
+                                EmptyMessage(text: String(localized: "No payments recorded."), palette: palette)
                             }
                         }.padding(.horizontal, 12).padding(.top, 8)
                     }
@@ -695,6 +750,9 @@ struct TransactionsScreen: View {
     var pick: (DashboardRoute) -> Void = { _ in }
     /// Opens the quick sort over the dashboard (brief 99): the card at the top of Not sorted's list.
     var quickSort: (() -> Void)? = nil
+    /// Opens the category list over the dashboard (brief 215): the card in the quick sort card's place while no
+    /// category is chosen.
+    var openCategories: (() -> Void)? = nil
     /// The rows' windows, the row swiped open and the summed rows shown open (`PaymentList.swift`).
     @State private var menu = PaymentRowMenu()
     /// The selection's Category window and its Name (brief 82), while open.
@@ -739,6 +797,14 @@ struct TransactionsScreen: View {
                     // where it is, faded and not taking taps (brief 200: gone, it moved every row up by its height).
                     if let quickSort, store.offersQuickSort(on: route) {
                         QuickSortListCard(tally: store.quickSortTally, palette: palette, open: quickSort)
+                            .opacity(ticking == nil ? 1 : SelectionLook.unavailable)
+                            .allowsHitTesting(ticking == nil)
+                            .accessibilityHidden(ticking != nil)
+                            .padding(.bottom, 8)
+                            .transition(.opacity)
+                    } else if let openCategories, store.offersCategoriesCard(on: route) {
+                        // Brief 215: before any category is chosen, the way to them stands where the quick sort's will.
+                        CategoriesCard(palette: palette, open: openCategories)
                             .opacity(ticking == nil ? 1 : SelectionLook.unavailable)
                             .allowsHitTesting(ticking == nil)
                             .accessibilityHidden(ticking != nil)

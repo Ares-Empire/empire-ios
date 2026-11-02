@@ -17,7 +17,7 @@ Patrik (2026-11-02), on the sketch at https://claude.ai/artifact/X2rxw1Vj9JotohS
   place**: tap the name at the top of a search's page and it becomes that field, as Aresium renames a payment. A long
   press on a search's card offers Umbenennen (the same in-place field), Pausieren, Löschen.
 
-The kinds' names change on the server (brief 134, running at the same time): **Wohnung, Dinge, Preismonitor,
+The kinds' names change on the server (the Arestemis repo, `docs/briefs/134-arestemis-price-monitor.md`, running at the same time): **Wohnung, Dinge, Preismonitor,
 Webseite beobachten**. The app shows `/kinds`' names as today; the Preismonitor's own form and card come in brief 137,
 so this brief shows a kind's card only when this build can open its form.
 

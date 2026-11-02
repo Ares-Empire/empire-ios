@@ -10,6 +10,13 @@ extension View {
         modifier(RenameCategoryAlert(model: model))
     }
 
+    /// Done with nothing ticked (brief 215): Apple's alert "Use the 12 categories that fit?", what Use does and where
+    /// the categories change later; Use (a plain button in the window's ink) ticks them and sorts, Not now closes the
+    /// list as it is. Either way the list then closes (`closed`).
+    func useFittingAlert(_ model: CategoryPickerModel, closed: @escaping () -> Void) -> some View {
+        modifier(UseFittingAlert(model: model, closed: closed))
+    }
+
     /// The New category alert: Apple's alert with a name's field ("Name"), Cancel and Create, in the window's ink (`tint`;
     /// not Apple's filled default button, which iOS draws in the system blue whatever the tint). Create is off while the
     /// name is empty or spaces; the keyboard's Return creates too, and on such a name iOS's Return closes the alert like
@@ -17,6 +24,23 @@ extension View {
     func newCategoryAlert(_ model: NewCategoryModel, tint: Color = Ink.primary,
                           create: @escaping () async -> Void) -> some View {
         modifier(NewCategoryAlert(model: model, tint: tint, create: create))
+    }
+}
+
+private struct UseFittingAlert: ViewModifier {
+    @Bindable var model: CategoryPickerModel
+    let closed: () -> Void
+
+    func body(content: Content) -> some View {
+        content.alert(Text(verbatim: ChooseCategoriesWording.question(model.fittingAsked)),
+                      isPresented: $model.asksToUseFitting) {
+            Button(role: .cancel) { closed() } label: { Text(verbatim: ChooseCategoriesWording.notNow()) }
+            Button { Task { if await model.useFitting() { closed() } } } label: {
+                Text(verbatim: ChooseCategoriesWording.use())
+            }
+        } message: {
+            Text(verbatim: ChooseCategoriesWording.questionLine())
+        }
     }
 }
 

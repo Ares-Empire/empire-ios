@@ -1,6 +1,21 @@
 import SwiftUI
 import UIKit
 
+/// Which section Settings ends with. Every app signed in: the account (in an app that works without one, named "Ares
+/// account"). Signed out (no Ares app on the iPhone logged in), only an app that works without an account opens
+/// Settings: "Ares account" with Sign in while it offers to sign in (`SettingsApp.offersSignIn`), else no section at
+/// all (`hidden`: Aresium, brief 215).
+enum SettingsAccountSection: Equatable {
+    case account
+    case signIn
+    case hidden
+
+    static func shown(accountOptional: Bool, offersSignIn: Bool, signedIn: Bool) -> SettingsAccountSection {
+        guard accountOptional, !signedIn else { return .account }
+        return offersSignIn ? .signIn : .hidden
+    }
+}
+
 /// The app a Settings screen belongs to.
 struct SettingsApp {
     let name: String                    // "Arestoteles": also names the app in the iOS Settings path
@@ -9,8 +24,12 @@ struct SettingsApp {
     /// The app's `DELETE …/me` when its server keeps data per account (today only Arestemis): leaving the app deletes it
     /// there first. nil: the server keeps nothing per account (Aresium, Aresus, Arestoteles hold only Patrik's data).
     var serverData: URL? = nil
-    /// In an app that works without an account (`EmpireAppIdentity.accountOptional`, Aresium): the line under the
-    /// signed-out "Ares account" row, what an account is for in this app.
+    /// In an app that works without an account (`EmpireAppIdentity.accountOptional`): whether Settings offers to sign
+    /// in while no Ares app on the iPhone is logged in (an "Ares account" section with Sign in, `SignInSheet`). Aresium
+    /// does not (brief 215, Patrik 2026-11-02: an Ares account there is only for his own server, so testers met a sign-in
+    /// they could not use); its "Ares account" section shows only while a login exists.
+    var offersSignIn = true
+    /// The line under the signed-out "Ares account" row: what an account is for in this app.
     var signInNote: String? = nil
     /// Licences besides the fonts', on the Fonts & licences page (Aresium: its shop list's).
     var licences: [BundledLicence] = []
@@ -21,8 +40,9 @@ struct SettingsApp {
 /// that send them), Help (the app's own help rows, optional, the `help` slot, e.g. Aresium's bank guide and tour; then
 /// Contact & support), About (Privacy, Imprint, Fonts & licences, Version) and Account (email, Change password, Log out;
 /// then Leave <app> and Delete Ares account, `AccountScreens.swift`).
-/// An app that works without an account (Aresium) shows, while no Ares app on the iPhone is logged in, a quiet "Ares
-/// account" section in place of Account: Sign in (`SignInSheet`) and the app's line on what an account is for.
+/// An app that works without an account shows, while no Ares app on the iPhone is logged in, a quiet "Ares account"
+/// section in place of Account (Sign in, `SignInSheet`, and the app's line on what an account is for) when it offers to
+/// sign in, else none (Aresium, brief 215): `SettingsAccountSection`.
 /// Log out does what the app's log-out did before (in sample mode it leaves the sample); so does the end of leaving or
 /// deleting in sample mode, where nothing is sent.
 struct SettingsScreen<AppSection: View, AppHelp: View>: View {
@@ -141,8 +161,11 @@ struct SettingsScreen<AppSection: View, AppHelp: View>: View {
         }
     }
 
-    /// The app works without an account and no Ares app on the iPhone is logged in: Settings offers to sign in.
-    private var signedOut: Bool { session.app.accountOptional && session.token == nil }
+    /// The section Settings ends with: the account, Sign in, or none (`SettingsAccountSection`).
+    private var accountSection: SettingsAccountSection {
+        .shown(accountOptional: session.app.accountOptional, offersSignIn: app.offersSignIn,
+               signedIn: session.token != nil)
+    }
 
     private static var accountID: String { "settings-account" }
 
@@ -228,7 +251,11 @@ struct SettingsScreen<AppSection: View, AppHelp: View>: View {
     }
 
     @ViewBuilder private var account: some View {
-        if signedOut { signIn } else { signedIn }
+        switch accountSection {
+        case .account: signedIn
+        case .signIn: signIn
+        case .hidden: EmptyView()
+        }
     }
 
     /// Signed out, in an app that works without an account: a quiet row to sign in, and what an account is for here.

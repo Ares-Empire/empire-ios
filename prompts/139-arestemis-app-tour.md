@@ -1,6 +1,6 @@
 # 139: Arestemis app: a tour of eight steps
 
-Status: running (Claude agent, 2026-11-02; branched from main after Aresium 206 and brief 137)
+Status: merged 2026-11-02 (Arestemis build 13)
 Branch: `claude/139-arestemis-tour` · Worktree: `../empire-ios-139-arestemis-tour` · **For a Claude agent**
 
 ## Goal

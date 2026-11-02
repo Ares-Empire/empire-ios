@@ -1,6 +1,6 @@
 # 213: Aresium: the owner's email from the owner file
 
-Status: running
+Status: merged 2026-11-02
 Repo: `aresium` · Branch: `codex/213-owner-file` · Worktree: `../aresium-213-owner-file` · Model: `gpt-6.1-sol`, effort `high`
 
 ## Goal

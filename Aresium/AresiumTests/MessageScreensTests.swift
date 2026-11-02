@@ -98,9 +98,10 @@ struct MessageScreensTests {
         let free = ReminderOffer.Moment(ready: true)
         #expect(ReminderOffer.shows(free))
         #expect(!ReminderOffer.shows(ReminderOffer.Moment()))
-        // Brief 99: the quick sort's offer (or its flow) goes first.
+        // Brief 99: the quick sort's offer (or its flow) goes first. Brief 215: not in the opening of the app whose
+        // import readied it.
         for blocked: WritableKeyPath<ReminderOffer.Moment, Bool> in [\.tour, \.locked, \.importing, \.picker, \.result,
-                                                                       \.window, \.quickSort] {
+                                                                       \.window, \.quickSort, \.firstOpening] {
             var moment = free
             moment[keyPath: blocked] = true
             #expect(!ReminderOffer.shows(moment))
@@ -147,7 +148,11 @@ struct MessageScreensTests {
         // The result line, counted again: not with it either.
         #expect(s.imports.banner != nil && !s.offers)
         s.imports.close()
-        #expect(s.offers, "after them")
+        // Brief 215 changed the moment on purpose (the first-run review's finding 11): after them it waits for the next
+        // opening of the app, so the first minute asks two things at most.
+        #expect(!s.offers && s.messages.offerWaitsForNextOpening, "not in the opening of the first import")
+        s.messages.appOpenedAgain()
+        #expect(s.offers, "after them, the next time Aresium is opened")
         // Not now answers it for good: the next import that adds payments offers nothing.
         s.messages.declineReminderOffer()
         #expect(!s.offers && !s.messages.preferences.enabled)
@@ -172,8 +177,11 @@ struct MessageScreensTests {
         await s.imports.importPendingFiles()
         #expect(s.imports.banner?.share != nil && !s.imports.asksForCategories)
         #expect(s.messages.shouldOfferReminder && !s.offers, "the send card first")
-        // Its Not now closes the result: the offer follows in its place.
+        // Its Not now closes the result: the offer follows in its place, the next time Aresium is opened (brief 215
+        // moved it there on purpose: the first import's opening asks two things at most).
         s.imports.close()
+        #expect(!s.offers)
+        s.messages.appOpenedAgain()
         #expect(s.offers)
     }
 
@@ -190,6 +198,7 @@ struct MessageScreensTests {
         await s.imports.importPendingFiles()
         await s.imports.categoriesClosed()?.value
         s.imports.close()
+        s.messages.appOpenedAgain()          // brief 215: the offer waits for the next opening of the app
         #expect(s.offers)
         s.messages.acceptReminderOffer()
         await s.messages.idle()

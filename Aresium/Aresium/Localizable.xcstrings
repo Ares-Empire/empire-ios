@@ -184,16 +184,6 @@
         }
       }
     },
-    "%@ not accounted for" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ nicht erfasst"
-          }
-        }
-      }
-    },
     "%@ not income" : {
       "localizations" : {
         "de" : {
@@ -230,6 +220,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "davon %@ regelmäßig"
+          }
+        }
+      }
+    },
+    "%@ so far" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ bisher"
           }
         }
       }
@@ -294,7 +294,17 @@
         }
       }
     },
-    "%@ · activities" : {
+    "%@ without receipts" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ohne Belege"
+          }
+        }
+      }
+    },
+    "%@ · payments" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2183,6 +2193,16 @@
         }
       }
     },
+    "Aresium sorts your payments right away. You can change your categories any time in Settings → Categories." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aresium sortiert deine Buchungen sofort. Deine Kategorien kannst du jederzeit unter Einstellungen → Kategorien ändern."
+          }
+        }
+      }
+    },
     "Aresium's engine could not do this." : {
       "localizations" : {
         "de" : {
@@ -2713,6 +2733,16 @@
         }
       }
     },
+    "Choose your categories" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähl deine Kategorien"
+          }
+        }
+      }
+    },
     "Clear" : {
       "localizations" : {
         "de" : {
@@ -2729,6 +2759,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Klettern"
+          }
+        }
+      }
+    },
+    "Close" : {
+      "comment" : "The import result's button: closes the notice, nothing else.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schließen"
           }
         }
       }
@@ -3039,16 +3080,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Änderungen verwerfen?"
-          }
-        }
-      }
-    },
-    "Dismiss" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Entfernen"
           }
         }
       }
@@ -4685,26 +4716,6 @@
         }
       }
     },
-    "No activity" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Keine Buchungen"
-          }
-        }
-      }
-    },
-    "No activity recorded." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Keine Buchungen erfasst."
-          }
-        }
-      }
-    },
     "No bank payment fits yet. The receipt waits for the bank statement." : {
       "localizations" : {
         "de" : {
@@ -4805,12 +4816,32 @@
         }
       }
     },
+    "No payments" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keine Buchungen"
+          }
+        }
+      }
+    },
     "No payments could be read with these columns." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Mit diesen Spalten ließ sich keine Buchung lesen."
+          }
+        }
+      }
+    },
+    "No payments recorded." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keine Buchungen erfasst."
           }
         }
       }
@@ -5201,16 +5232,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Einmal tippen sortiert alle Buchungen eines Namens."
-          }
-        }
-      }
-    },
-    "Only for an Aresium server of your own. Your data here stays on this iPhone." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nur für einen eigenen Aresium-Server. Deine Daten hier bleiben auf diesem iPhone."
           }
         }
       }
@@ -6751,6 +6772,16 @@
         }
       }
     },
+    "Then Aresium sorts your payments." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dann sortiert Aresium deine Buchungen."
+          }
+        }
+      }
+    },
     "Then it counts only under %@." : {
       "localizations" : {
         "de" : {
@@ -7273,6 +7304,56 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Entpack die Datei zuerst und importier dann, was darin ist."
+          }
+        }
+      }
+    },
+    "Use" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verwenden"
+          }
+        }
+      }
+    },
+    "Use the %lld categories that fit?" : {
+      "localizations" : {
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Die passende Kategorie verwenden?"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Die %lld passenden Kategorien verwenden?"
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Use the category that fits?"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Use the %lld categories that fit?"
+                }
+              }
+            }
           }
         }
       }

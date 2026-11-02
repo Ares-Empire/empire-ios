@@ -42,6 +42,7 @@ extension View {
 struct AppRoot<Content: View>: View {
     private let setting: LanguageSetting
     private let widget: WidgetLanguage?
+    private let extensionLook: ExtensionAppearance?
     private let content: () -> Content
     @State private var language = AppLanguage.current
     @State private var window: WindowReference
@@ -53,12 +54,15 @@ struct AppRoot<Content: View>: View {
     @Environment(\.scenePhase) private var scenePhase
 
     /// - Parameters:
-    ///   - widget: where the app's widget reads the app's choice; nil for apps without a widget.
+    ///   - widget: where the app's widget reads the app's choice; nil for apps without a widget. An app's share
+    ///     extension reads the language there too (Aresus).
+    ///   - extensionLook: where the app's share extension reads the app's appearance; nil for apps without one.
     ///   - cover: what the app switcher shows instead of the app's screens (`PrivacyCover`); by default the app's name.
-    init(setting: LanguageSetting = .standard, widget: WidgetLanguage? = nil, cover: PrivacyCover = .app,
-         @ViewBuilder content: @escaping () -> Content) {
+    init(setting: LanguageSetting = .standard, widget: WidgetLanguage? = nil, extensionLook: ExtensionAppearance? = nil,
+         cover: PrivacyCover = .app, @ViewBuilder content: @escaping () -> Content) {
         self.setting = setting
         self.widget = widget
+        self.extensionLook = extensionLook
         self.content = content
         _window = State(initialValue: WindowReference(cover: cover))
     }
@@ -74,6 +78,7 @@ struct AppRoot<Content: View>: View {
                 Task { @MainActor in held = scheme }
             }
             .onChange(of: held ?? chosen, initial: true) { _, scheme in window.show(scheme) }
+            .onChange(of: appearance, initial: true) { _, saved in extensionLook?.publish(Appearance(saved: saved)) }
             .background { WindowReader(reference: window, sceneChanged: readIPhoneScheme) }
             .onChange(of: scenePhase) { _, phase in
                 if phase == .active { readIPhoneScheme() }
@@ -279,7 +284,7 @@ nonisolated enum LaunchArguments {
         "-sampleTransaction", "-sampleRecategorise", "-sampleIntroProgress", "-supportKind", "-supportText",
         "-supportPhase", "-supportEmail", "-confirmLanguage", "-switchLanguage", "-openAccount", "-accountEmail",
         "-accountPhase", "-openCodeEntry", "-openGuide", "-guidePlace", "-guideSearch", "-tour",
-        "-sampleReading", "-formatBank", "-formatPhase", "-formatMessage", "-sampleReceiptShop",
+        "-sampleReading", "-formatBank", "-formatPhase", "-formatMessage", "-sampleReceiptShop", "-sampleDropHover",
     ]
     private static let opens: Set<String> = [
         "-scrollToEnd", "-scrollBottom", "-sampleIntro", "-sampleImportResult", "-sampleImportFailed", "-openLanguage",

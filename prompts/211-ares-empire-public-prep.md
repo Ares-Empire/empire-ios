@@ -1,6 +1,6 @@
 # 211: Ares Empire ready to be public: owner details from a file, server IP out, Arestemis research out
 
-Status: running
+Status: merged 2026-11-02
 Repo: `ares-empire` · Branch: `codex/211-public-prep` · Worktree: `../ares-empire-211-public-prep` · Model: `gpt-6.1-sol`, effort `high`
 
 ## Goal

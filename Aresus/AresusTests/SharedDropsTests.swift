@@ -278,7 +278,7 @@ struct ShareItemsTests {
             UIColor.systemBlue.setFill(); context.fill(CGRect(x: 0, y: 0, width: 8, height: 8))
         }
         let image = NSItemProvider()
-        image.suggestedName = "Example"
+        image.suggestedName = "IMG_0001"
         image.registerDataRepresentation(forTypeIdentifier: UTType.png.identifier, visibility: .all) { completion in
             completion(png, nil); return nil
         }
@@ -287,14 +287,21 @@ struct ShareItemsTests {
         data.registerDataRepresentation(forTypeIdentifier: UTType.plainText.identifier, visibility: .all) { completion in
             completion(Data("fictional note".utf8), nil); return nil
         }
-        let item = NSExtensionItem(); item.attachments = [image, data]
+        // A picture with a name someone chose (from Files) keeps it, so it is sent as a file.
+        let named = NSItemProvider()
+        named.suggestedName = "Lake"
+        named.registerDataRepresentation(forTypeIdentifier: UTType.png.identifier, visibility: .all) { completion in
+            completion(png, nil); return nil
+        }
+        let item = NSExtensionItem(); item.attachments = [image, data, named]
         let answer = await ShareItems(temporary: SendTemporaryFiles(base: root)).read([item])
-        #expect(answer.files.count == 2 && answer.unreadable == 0)
-        #expect(answer.files.map(\.source) == [.photo, .file])
-        #expect(answer.files.first?.suggestedName == "Example.png")
+        #expect(answer.files.count == 3 && answer.unreadable == 0)
+        #expect(answer.files.map(\.source) == [.photo, .file, .file])
+        #expect(answer.files.first?.suggestedName == "IMG_0001.png")
+        #expect(answer.files.last.map(SendDraft.defaultName) == "Lake.png")
         let photo = try #require(answer.files.first)
         #expect(SendDraft.defaultName(photo).hasSuffix(".png"))
-        #expect(SendDraft.defaultName(photo) != "Example.png", "Photos and share photos use the capture-date name")
+        #expect(SendDraft.defaultName(photo) != "IMG_0001.png", "a camera's name becomes the capture-date name")
         for file in answer.files {
             guard case .file(let url) = file.content else { Issue.record("must be file-backed"); continue }
             #expect(FileManager.default.fileExists(atPath: url.path))

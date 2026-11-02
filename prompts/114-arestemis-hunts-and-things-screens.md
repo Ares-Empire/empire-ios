@@ -7,7 +7,7 @@ Branch: `claude/114-arestemis-screens` · Worktree: `../empire-ios-114-arestemis
 ## Goal
 
 Arestemis now holds several hunts of two kinds, flats and things for sale (plan:
-`~/ares-empire/docs/ARESTEMIS-ANYTHING.md`; the data side is merged, brief 113). Its screens still show one flat hunt.
+`~/Arestemis/docs/ARESTEMIS-ANYTHING.md`; the data side is merged, brief 113). Its screens still show one flat hunt.
 After this brief the app shows **every hunt**, lets Patrik **add a thing hunt** with its own form, and shows **a thing's
 matches** with the facts that matter for buying (price and VB, condition, shipping or pickup with distance, seller).
 Flats look and work as today wherever they appear. This build goes to Patrik's iPhone through TestFlight.
@@ -25,7 +25,7 @@ Flats look and work as today wherever they appear. This build goes to Patrik's i
   `ArestemisStore.swift` (its `// brief 114 replaces` parts are yours to replace), `SearchDraft.swift`,
   `ItemSearchDraft.swift`, `KeptSearchDraft.swift`, `Formatting.swift`, `ItemFormatting.swift`, `AppNavigation.swift`,
   `Notifications.swift`, `ArestemisSamples.swift`), the samples in `Samples/`, and the contract in
-  `prompts/112-arestemis-several-hunts.md` → "The contract"
+  the Arestemis repo, `docs/briefs/112-arestemis-several-hunts.md` → "The contract"
 - Today's screens: `Arestemis/Arestemis/Screens/` (`HuntScreen`, `ListingsScreen`, `MatchRow`, `MatchDetailScreen`,
   `SearchScreen`, `SettingsSheet`, `FormFields`, `Style`) and `ContentView.swift`
 

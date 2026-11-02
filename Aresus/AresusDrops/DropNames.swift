@@ -44,6 +44,22 @@ nonisolated enum DropNames {
         return formatter.string(from: date) + (ext.isEmpty ? "" : "." + ext)
     }
 
+    /// Whether a shared picture's name is one a camera or the system gave it ("IMG_1234", "IMG_E1234",
+    /// "PXL_20261102_123456789", "DSC01234", "FullSizeRender", "image", a UUID), not one a person chose. Such a picture is
+    /// named like a Photos pick (its capture time); any other name ("Lake.jpg" from Files) is kept. Takes the name with
+    /// or without its extension.
+    static func isCameraName(_ name: String) -> Bool {
+        let stem = (name as NSString).deletingPathExtension.trimmingCharacters(in: .whitespaces)
+        // No name, or only an extension (".jpg"): nothing a person chose.
+        guard !stem.isEmpty, !stem.hasPrefix(".") else { return true }
+        let patterns = [
+            #"^(img|pxl|dsc[nf]?|mvimg|vid|mov|dcim)[_-]?e?[_-]?\d[\d_-]*$"#,
+            #"^(image|photo|foto|bild|fullsizerender)( ?\(?\d+\)?)?$"#,
+            #"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"#,
+        ]
+        return patterns.contains { stem.range(of: $0, options: [.regularExpression, .caseInsensitive]) != nil }
+    }
+
     /// Also avoids collisions with names that already contain a numeric suffix.
     static func unique(_ names: [String]) -> [String] {
         var used = Set<String>()

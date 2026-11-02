@@ -63,7 +63,12 @@ extension AresiumMessages {
             preferences.monthReview = start == "on" || start == "review"
             model.setPreferences(preferences)
         }
-        if offers { model.recordImport(accounts: ["sample-account"], addedPayments: 42) }
+        if offers {
+            // The made-up import came in an earlier opening of the app, so the offer does not wait for the next one
+            // (brief 215).
+            model.recordImport(accounts: ["sample-account"], addedPayments: 42)
+            model.appOpenedAgain()
+        }
         return model
     }
 }

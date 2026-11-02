@@ -40,6 +40,7 @@ to claude agents"); the exception of 2026-10-27, Aresium for other people built 
 Briefs in `prompts/`, the agents' rules in `aresium/AGENTS.md` and `AGENTS.md` here. The same rules
 hold for both (a worktree, a full brief, Claude checks and merges). A Claude agent stopped by the usage limit is resumed
 after the reset, not restarted.
+Briefs for the Arestemis server live in the Arestemis repo's `docs/briefs/` (that repo stays private), numbered in the same series as `prompts/`.
 
 ChatGPT Pro runs until about 2026-11-20. Until then Claude delegated bounded builds to Codex.
 After that, Claude builds alone: drop this section. Same setup as nametbd3 (`docs/WORKFLOW.md` there),
@@ -173,9 +174,14 @@ app's log-out did before (in sample mode it leaves the sample, as before); then,
 whose server keeps data per account passes its `DELETE …/me` as `SettingsApp(serverData:)` (today only Arestemis:
 `ArestemisAPI.accountDataURL`); leaving deletes it there first. An app that works without an account
 (`EmpireAppIdentity.accountOptional`, only Aresium, brief 22) shows, while no Ares app is logged in, a quiet "Ares
-account" section last instead: Sign in (`Shared/Design/SignInSheet.swift`, the login without Create account) and the
-app's line `SettingsApp(signInNote:)`; signed in, the account section as everywhere (Leave <app> only while the account
-has the app). **Switches** (brief 47, Patrik's phone: in dark mode "on" was a pale ink track under the white knob, so on
+account" section last instead when it offers to sign in (`SettingsApp(offersSignIn:)`, true by default): Sign in
+(`Shared/Design/SignInSheet.swift`, the login without Create account) and the app's line `SettingsApp(signInNote:)`;
+signed in, the account section as everywhere (Leave <app> only while the account has the app); which one is
+`SettingsAccountSection.shown`. **Aresium offers no sign-in** (brief 215, Patrik 2026-11-02, the first-run review's
+finding 5: an Ares account there is only for his own server, so testers met a sign-in they could not use): signed out,
+its Settings end with About; its "Ares account" section shows only while a login of the Ares apps exists on the iPhone
+(Patrik signs in through his other apps). The Sign in sheet stays (DEBUG `-openSignIn`), without "One Ares account for
+all Ares apps" since brief 215. **Switches** (brief 47, Patrik's phone: in dark mode "on" was a pale ink track under the white knob, so on
 and off could not be told apart): `SettingsScreen` gives every switch inside it `EmpireSwitchStyle`
 (`Shared/Design/FormPieces.swift`): Apple's switch, on in the app's accent, or for the ink-only apps (Aresium, Empire)
 in the Empire's green for on and running (`StatusTone.activeColor`, the colour iOS gives a switch that is on); never
@@ -237,7 +243,7 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
    Testing). Build 2 (2026-10-30): the fixes of Patrik's first test (briefs 34–37). Build 3: the picker's scroll, the
    back swipe and the comfort items (briefs 38–41). Build 4 (2026-10-30 evening): own names and the name's page with the
    left swipe, the graph as a setting, Aresium's own messages (briefs 42–46). Build 5 (2026-10-30 night): the payment page with pens, switches readable in
-   dark, no cover flash, one shop under changing names, adding up names in a list (briefs 47, 48, 53, 54). Build 6 (2026-10-31): day tiles as dates, the name's months as pages, Settings' work off the main thread, the graph read by sliding and moving away, the header without boxes, the add-up icon fixed (briefs 55–57, fix 58). Build 7 (2026-10-31 evening): the tour in one walk of 18 steps over everything above (brief 59). Build 8 (2026-10-31 night): New category in the change window, the receipt window and Add cash (brief 60). Build 9 (2026-11-01): every category has a side (own categories for income too, "Andere Kategorie …" offers one of the other side, side and offers in Settings → Categories), and every payment counts as it happened, money out as Ausgaben and money in as Einnahmen under its own category (briefs 68–71). Build 10 (2026-11-01): one name per shop (the newest bank line that names it, never a PayPal or card line), search by name, a day's page from a tap on the day graph, unsorted money in shown as Nicht sortiert (briefs 76, 77). Build 11 (2026-11-01): a typed category name that exists is used (offered, ticked or picked), rename every category, delete one's own and remove defaults with their payments sorted again (brief 80; brief 81's selection data inside, its screens in build 12). Build 12 (2026-11-01): select several payments in a category's month list as in Mail and move, add to or rename them at once with one question and an undo (briefs 81, 82); Save in Add asks to leave the current category and about the shop's other payments (brief 83); the engine's sorting and reading round 1 (aresium briefs 84, 85). Build 13 (2026-11-01): sorting round 3 (card spellings, compounds, regional utilities, cars; aresium brief 96) and the local places list from OpenStreetMap, packed and kept loaded (aresium briefs 86, 97; app brief 98), with its ODbL entry in Fonts & licences. Build 14 (2026-11-02): the quick sort, Not sorted gone through name by name, the biggest first, one tap sorting a name's payments and teaching it; offered after an import and as a card on Not sorted (brief 99). Build 15 (2026-11-02): selecting calmer (a tick fades in place, the count changes at once, one short slide in) and selecting by sliding a finger over the rows as in Mail, with the list scrolling at its edges (brief 200). Build 16 (2026-11-02): money paid back, a payment in linked by hand to the expense it pays back (all or a part, from either payment's page, suggestions first), so only one's own share counts as spent; one optional tour step (briefs 201–203). Build 17 (2026-11-02): bank files dropped on the first screen or the dashboard are imported (from Files with two hands on the iPhone), and the share sheet's way in checked with real touches: its copies (iOS keeps them in `tmp/<bundle id>-Inbox`) are now deleted after reading, and a file shared while Aresium was closed waits until the store is open (brief 204). Build 18 (2026-11-02): money paid back for several payments at once: the selection bar's third item and a payment's page open one window where several payments of the other side are ticked, the euros poured oldest expense first with a summary of what stays open or stays income, one undo (briefs 205, 206). **Arestemis 0.1 (1) uploaded 2026-10-30** (after its comfort items, brief 49). Arestemis build 2 (2026-10-31 evening): Patrik's fine-tuning rounds 1–3, no "KI" anywhere, "Suche starten", no one-account line on the login (`docs/reviews/2026-10-31-arestemis-phone-test.md`). Arestemis build 3 (2026-10-31 night): Settings → Application as rows with the switch, notes and About you pages, settings loaded with the home screen, ImmoScout24 known to the app, "Suche läuft" (briefs 61, 62). Arestemis build 4 (2026-11-01 night): the black corner on the hunt's card (the glass card's blur no longer drawn offscreen, brief 67), German tabs Suche / Angebote / Filter. Arestemis build 5 (2026-11-01 evening): build 4 still showed it; the real cause was the pulse redrawing pathless shadows offscreen every frame, so `GlassCard` draws none (brief 87). Arestemis build 6 (2026-11-02): several hunts and things for sale on Kleinanzeigen: two tabs Suche / Angebote, the Hunts list, the thing search and the thing cards (briefs 113, 114; server briefs 110–117, plan `ares-empire/docs/ARESTEMIS-ANYTHING.md`). Arestemis build 7 (2026-11-02): the sites come from the server (`GET /kinds`), eBay's auctions shown (brief 119). Arestemis build 8 (2026-11-02): sites that cannot serve the chosen delivery greyed and switched off (IKEA Preowned pickup only, Vinted and mydealz shipping only), the OpenStreetMap credit (brief 129; server briefs 124–128). Arestemis build 9 (2026-11-02): page watches, a third kind of hunt (brief 131; server brief 130), a blocked watch reads Stopped. Arestemis build 10 (2026-11-02): Angebote as New | Searches and a search over all found listings, best match first (brief 133; server brief 132). Arestemis build 11 (2026-11-02): New search as a page of cards with examples, one name field in every form, renaming in place (PATCH, the name alone), a calmer pulse (brief 135; kinds renamed Wohnung / Dinge / Preismonitor / Webseite beobachten by server brief 134). Arestemis build 12 (2026-11-02): the Preismonitor, a fourth kind (one product in one shop: its price curve over 30, 90 or 365 days and an alarm below a price or when back in stock, both switchable on the monitor's page; brief 137, server brief 134), example chips in the watch form, page watches read with a real Chrome where a plain read is refused (server brief 136). **Aresus 0.1 (1) uploaded 2026-10-31 21:16** (98 tests; the
+   dark, no cover flash, one shop under changing names, adding up names in a list (briefs 47, 48, 53, 54). Build 6 (2026-10-31): day tiles as dates, the name's months as pages, Settings' work off the main thread, the graph read by sliding and moving away, the header without boxes, the add-up icon fixed (briefs 55–57, fix 58). Build 7 (2026-10-31 evening): the tour in one walk of 18 steps over everything above (brief 59). Build 8 (2026-10-31 night): New category in the change window, the receipt window and Add cash (brief 60). Build 9 (2026-11-01): every category has a side (own categories for income too, "Andere Kategorie …" offers one of the other side, side and offers in Settings → Categories), and every payment counts as it happened, money out as Ausgaben and money in as Einnahmen under its own category (briefs 68–71). Build 10 (2026-11-01): one name per shop (the newest bank line that names it, never a PayPal or card line), search by name, a day's page from a tap on the day graph, unsorted money in shown as Nicht sortiert (briefs 76, 77). Build 11 (2026-11-01): a typed category name that exists is used (offered, ticked or picked), rename every category, delete one's own and remove defaults with their payments sorted again (brief 80; brief 81's selection data inside, its screens in build 12). Build 12 (2026-11-01): select several payments in a category's month list as in Mail and move, add to or rename them at once with one question and an undo (briefs 81, 82); Save in Add asks to leave the current category and about the shop's other payments (brief 83); the engine's sorting and reading round 1 (aresium briefs 84, 85). Build 13 (2026-11-01): sorting round 3 (card spellings, compounds, regional utilities, cars; aresium brief 96) and the local places list from OpenStreetMap, packed and kept loaded (aresium briefs 86, 97; app brief 98), with its ODbL entry in Fonts & licences. Build 14 (2026-11-02): the quick sort, Not sorted gone through name by name, the biggest first, one tap sorting a name's payments and teaching it; offered after an import and as a card on Not sorted (brief 99). Build 15 (2026-11-02): selecting calmer (a tick fades in place, the count changes at once, one short slide in) and selecting by sliding a finger over the rows as in Mail, with the list scrolling at its edges (brief 200). Build 16 (2026-11-02): money paid back, a payment in linked by hand to the expense it pays back (all or a part, from either payment's page, suggestions first), so only one's own share counts as spent; one optional tour step (briefs 201–203). Build 17 (2026-11-02): bank files dropped on the first screen or the dashboard are imported (from Files with two hands on the iPhone), and the share sheet's way in checked with real touches: its copies (iOS keeps them in `tmp/<bundle id>-Inbox`) are now deleted after reading, and a file shared while Aresium was closed waits until the store is open (brief 204). Build 18 (2026-11-02): money paid back for several payments at once: the selection bar's third item and a payment's page open one window where several payments of the other side are ticked, the euros poured oldest expense first with a summary of what stays open or stays income, one undo (briefs 205, 206). **Arestemis 0.1 (1) uploaded 2026-10-30** (after its comfort items, brief 49). Arestemis build 2 (2026-10-31 evening): Patrik's fine-tuning rounds 1–3, no "KI" anywhere, "Suche starten", no one-account line on the login (`docs/reviews/2026-10-31-arestemis-phone-test.md`). Arestemis build 3 (2026-10-31 night): Settings → Application as rows with the switch, notes and About you pages, settings loaded with the home screen, ImmoScout24 known to the app, "Suche läuft" (brief 61; the Arestemis repo, `docs/briefs/62-arestemis-application-notes.md`). Arestemis build 4 (2026-11-01 night): the black corner on the hunt's card (the glass card's blur no longer drawn offscreen, brief 67), German tabs Suche / Angebote / Filter. Arestemis build 5 (2026-11-01 evening): build 4 still showed it; the real cause was the pulse redrawing pathless shadows offscreen every frame, so `GlassCard` draws none (brief 87). Arestemis build 6 (2026-11-02): several hunts and things for sale on Kleinanzeigen: two tabs Suche / Angebote, the Hunts list, the thing search and the thing cards (briefs 113, 114; the Arestemis repo, `docs/briefs/110-arestemis-hunt-core.md`, `docs/briefs/111-arestemis-storage-for-every-type.md`, `docs/briefs/112-arestemis-several-hunts.md`, `docs/briefs/115-arestemis-kleinanzeigen-items-investigation.md`, `docs/briefs/116-arestemis-things-for-sale.md`, `docs/briefs/117-arestemis-how-often-and-how-much.md`, plan `Arestemis/docs/ARESTEMIS-ANYTHING.md`). Arestemis build 7 (2026-11-02): the sites come from the server (`GET /kinds`), eBay's auctions shown (brief 119). Arestemis build 8 (2026-11-02): sites that cannot serve the chosen delivery greyed and switched off (IKEA Preowned pickup only, Vinted and mydealz shipping only), the OpenStreetMap credit (brief 129; the Arestemis repo, `docs/briefs/124-arestemis-site-exits.md`, `docs/briefs/125-arestemis-place-coordinates.md`, `docs/briefs/126-arestemis-ikea-preowned.md`, `docs/briefs/127-arestemis-vinted-investigation.md`, `docs/briefs/128-arestemis-vinted.md`). Arestemis build 9 (2026-11-02): page watches, a third kind of hunt (brief 131; the Arestemis repo, `docs/briefs/130-arestemis-page-watches.md`), a blocked watch reads Stopped. Arestemis build 10 (2026-11-02): Angebote as New | Searches and a search over all found listings, best match first (brief 133; the Arestemis repo, `docs/briefs/132-arestemis-listing-search.md`). Arestemis build 11 (2026-11-02): New search as a page of cards with examples, one name field in every form, renaming in place (PATCH, the name alone), a calmer pulse (brief 135; kinds renamed Wohnung / Dinge / Preismonitor / Webseite beobachten as described in the Arestemis repo, `docs/briefs/134-arestemis-price-monitor.md`). Arestemis build 12 (2026-11-02): the Preismonitor, a fourth kind (one product in one shop: its price curve over 30, 90 or 365 days and an alarm below a price or when back in stock, both switchable on the monitor's page; brief 137, the Arestemis repo, `docs/briefs/134-arestemis-price-monitor.md`), example chips in the watch form, page-watch reading improved on the server (the Arestemis repo, `docs/briefs/136-arestemis-browser-reader.md`). Arestemis build 13 (2026-11-02): a tour of eight steps on its own sample data in both languages, shown once per account and from Settings → Help, the listing page's top fade (brief 139). **Aresus 0.1 (1) uploaded 2026-10-31 21:16** (98 tests; the
    Aresync tab included; Arestemis's outage alerts come from the aresus server, brief 64, no app change). **Empire 0.1
    (1) uploaded 2026-11-01 02:13** (306 tests; the uploaded build carries `aps-environment` production) and **Arestoteles
    0.1 (1) uploaded 2026-11-01 02:25** (156 tests; the bust without the watermark, brief 72; Spotlight and backup fixes,
@@ -294,7 +300,8 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
    (the iPhone switching by itself in the evening while an app is open, the widgets on a light and a dark home screen).
 11. **Aresync file sharing from the phone** (Patrik, 2026-10-25; specified 2026-11-01): send any file or photo from
    Aresus's Aresync tab or the share button to a chosen folder on the MacBook, receipts into Rechnungen with their
-   inventory line. Plan: `ares-empire/docs/ARESYNC-DROP.md`. Not built yet.
+   inventory line. Plan: `ares-empire/docs/ARESYNC-DROP.md`. **Works on the phone since 2026-11-02** (Aresus builds
+   2–4; "Aresync drops" under the Aresus app below); receipts (the plan's step 2) are next.
 12. **Before anyone but Patrik gets an app** (council 2026-10-25): ~~log out centrally~~: merged 2026-10-26 (brief 09,
    "One login for all apps" below; on the phone: check a widget and a notification after logging out in another app).
    ~~A privacy cover in the app switcher~~: built 2026-10-26 ("App switcher cover" below; on the phone: check the
@@ -403,7 +410,8 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
 - **Accounts in every app** (2026-10-25, brief F2; contract `docs/build-2026-10-25/briefs/F-accounts-contract.md`,
   server side `ares-empire/docs/ACCOUNTS.md` → Accounts in every app): one Ares account, made and run from any app.
   The login (`AresLogin` in `Shared/Design/ProvinceLogin.swift`, used by the provinces and the Empire app; Aresium has
-  no login screen since brief 22, only Settings' `SignInSheet` from the same pieces) shows the app's mark, the fields and Log in (the line "One Ares account for all Ares apps" under the name went 2026-10-31, Patrik) and offers Create account (email,
+  no login screen since brief 22, and since brief 215 no sign-in in Settings either; `SignInSheet` from the same pieces
+  stays for an app that offers one) shows the app's mark, the fields and Log in (the line "One Ares account for all Ares apps" under the name went 2026-10-31, Patrik) and offers Create account (email,
   password twice, optional name; asks for this app's service, sends the app's language; then "confirm your email,
   Patrik approves, an email follows") and Forgot password? (sheets, `Shared/Design/AccountSheets.swift`). Its error
   names an account not confirmed or approved yet too. An account without this app sees the no-access panel
@@ -498,6 +506,22 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   loses its status colour. `Aresus/AresusShared/` is compiled into app and widget (overview types, API client core,
   widget status, store, loader, views). DEBUG `-widgetGallery good|issues|loggedout` shows the views for screenshots.
   `AresusUITests` (UI tests, in the scheme): Settings → Language switched both ways with the real taps, about a minute.
+  **Aresync drops** (briefs 88–94 and 100, plan `ares-empire/docs/ARESYNC-DROP.md`): files and photos from the iPhone to a
+  folder on the MacBook through the aresus server (`aresus/docs/API.md` → Drops; encrypted there with `age`, fetched by
+  the Mac's `com.aresync.drop` agent, which needs Full Disk Access for `/usr/bin/python3`). The drop code lives in
+  `Aresus/AresusDrops/` (models, `DropsStore`, `DropOutbox`, the API calls, `SendSheet`, `FolderPicker`), compiled into
+  the app and **`AresusShareExtension`** (`Aresus/AresusShare/`, `de.ares-empire.aresus.share`: Aresus in the share sheet
+  for photos, videos and files, up to 20, showing the send sheet itself, since an extension cannot open its app; it
+  follows the app's language and appearance through the App Groups). The queue, recent folders and the last folder list
+  live in Aresus's own App Group `group.de.ares-empire.aresus` (`DropContainer`); the bytes go up in a background
+  `URLSession` (one per share, `DropBackgroundUploads`; `AresusAppDelegate` reconnects it when iOS wakes the app), so an
+  upload goes on after the share sheet closes. The Aresync tab: the send button, the newest three drops and Show all,
+  each row deleted with the shared Mail-like swipe (`Shared/Design/RowSwipe.swift`, `DELETE` in any state). The picker:
+  every folder opens, New folder under Choose (one new folder per send; the Mac makes it on arrival). Files dropped on
+  either tab open the send sheet (`Shared/ProviderFiles.swift`, `ProviderDropTarget`, shared with Aresium's file drop).
+  Shared pictures keep a name a person chose; a camera's or the system's name becomes the capture time
+  (`DropNames.isCameraName`). DEBUG: `-tab aresync`, `-openSheet send`, `-samplePick photo|photos|file|files|mixed`,
+  `-sampleDropHover <count|name>`, `-sampleShareExtension`, `-sampleShareState loading|loggedOut|unreadable`.
 - **Arestemis app** (2026-10-24, build A1): `Arestemis/` (bundle id `de.ares-empire.arestemis`), the hunter for flats and, since
   build 6 (briefs 113, 114, 2026-11-02), things for sale: several hunts, two tabs Suche (the Hunts list, each hunt's page, the
   forms opened from a hunt) and Angebote (New | Searches since brief 133, below), on the Arestemis API (`~/Arestemis/docs/API.md`; samples in `Arestemis/Arestemis/Samples/`, copies of its `docs/samples/`).
@@ -514,7 +538,7 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   (flat, WG room), areas, cold and warm rent ranges, move-in and temporary offers, portals, extras; every field optional
   except a place and a portal. "Describe it" is a line at the top that opens a sheet (`SearchDraft`, `SearchScreen`).
   **Settings → Application** (brief 61, Patrik 2026-10-31): after Notifications, one card of rows like General's: the
-  switch Write automatically (on = `ai`), the row it leads to (Your text, or Notes = `application_notes`, brief 62) and
+  switch Write automatically (on = `ai`), the row it leads to (Your text, or Notes = `application_notes`, the Arestemis repo, `docs/briefs/62-arestemis-application-notes.md`) and
   About you, each opening a page with one text field (`ApplicationPage`); one draft, saved when the sheet closes. **Sites come from the server** (brief 119, 2026-11-02): `Source` is open (`Model/Sites.swift`), a site the
   app does not know is kept and shown by the server's name (`SourceStatus.name`, `Listing.source_name`, `GET /kinds`);
   the forms' site switches come from `GET /kinds` for their kind (`SiteChoices`; today's lists when there is no answer),
@@ -529,8 +553,8 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   `Licences/town-locations-licence.txt`; the server looks up thing searches' towns on Nominatim). Sample hunts 4
   (Bookcase, pickup, IKEA Preowned) and 5 (Denimwerk jeans, shipping, Vinted) with matches 33 and 34
   (`DeliverySitesTests`; DEBUG `-sampleDelivery pickup|shipping|either`, chosen in the thing form as a tap would).
-  **Page watches** (brief 131, 2026-11-02; server brief 130, plan `ares-empire/docs/ARESTEMIS-ANYTHING.md` → Page watches):
-  a third kind, `watch` ("Watch a website" / "Webseite beobachten" since brief 134, offered when `/kinds` lists it): an
+  **Page watches** (brief 131, 2026-11-02; the Arestemis repo, `docs/briefs/130-arestemis-page-watches.md`, plan `Arestemis/docs/ARESTEMIS-ANYTHING.md` → Page watches):
+  a third kind, `watch` ("Watch a website" / "Webseite beobachten" since the server change described in the Arestemis repo, `docs/briefs/134-arestemis-price-monitor.md`, offered when `/kinds` lists it): an
   optional name (first, since brief 135), an address, the change in the user's words, how often (15 min to daily,
   default 1 h) (`Model/WatchModels.swift`,
   `WatchSearchDraft`, `Screens/WatchSearchScreen.swift`, in the thing form's style; a pasted text keeps its first link,
@@ -563,7 +587,7 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   figures open it over Searches (`AppNavigation.showSearch`); the Hunts tab's "All listings" opens the tab as it was.
   The store keeps its lists per search and filter (`ArestemisStore.ListScope`, `list(_:hunt:)`, `matches(_:hunt:)`,
   `rejected(hunt:)`; `selectedHuntID` is gone); deleting a hunt forgets them and the screens ask again. **The search over
-  listings** (`ListingSearchPage`, `ListingsRoute.find(hunt:)`; the server ranks, server brief 132, `GET /matches?q=`):
+  listings** (`ListingSearchPage`, `ListingsRoute.find(hunt:)`; the server ranks, the Arestemis repo, `docs/briefs/132-arestemis-listing-search.md`, `GET /matches?q=`):
   the place search's field on its glass card (`SearchBox`, shared with Add place), the keyboard up as it opens, the
   hint "Type at least two letters. The best matches come first."; from two letters, 0.3 s after typing pauses, the
   server's answer in its order (`ListingSearch`: a newer query cancels the older, the same words are not asked twice, at
@@ -579,7 +603,7 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   (`HuntRoute.newSearch`, no tab bar): "What should Arestemis find for you?" / "Was soll Arestemis für dich finden?",
   then one glass card per kind this build can open, in `/kinds`' order with `/kinds`' names (`NewSearchCard.cards`;
   the kinds are Flat / Wohnung, Things / Dinge, Price monitor / Preismonitor, Watch a website / Webseite beobachten
-  since server brief 134; `price` has its card since brief 137, a kind of a newer server none; without an answer this
+  since the server change described in the Arestemis repo, `docs/briefs/134-arestemis-price-monitor.md`; `price` has its card since brief 137, a kind of a newer server none; without an answer this
   build's four with its own names, `SearchKind.choiceTitle`): the Hunts list's mark and the name, a chevron, one
   sentence (`SearchKind.pitch`), the examples as chips (`SearchExample`, laid over the card's button as
   `HuntListCard`'s Start / Pause is). A tap on the card opens the kind's form (empty, or the kept draft); an example
@@ -613,11 +637,11 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   **Price monitors** (brief 137, Patrik 2026-11-02 on the sketch's section 3: the commonest page watch, "this product in
   this shop", as a kind of its own that "should have the time change graph / data … like a toggle when creating the
   search if data should be collected and if it should have an alarm (both choosable but one needs to be chosen) and
-  changeable anytime in the app"; server brief 134, `~/Arestemis/docs/API.md` → Price monitors): a fourth kind, `price`
+  changeable anytime in the app"; the Arestemis repo, `docs/briefs/134-arestemis-price-monitor.md`, `~/Arestemis/docs/API.md` → Price monitors): a fourth kind, `price`
   ("Price monitor" / "Preismonitor"; `Model/PriceModels.swift`: `PriceSearch` (`url`, `history`, `alarm {below,
   back_in_stock}`, `every`), `PriceState` on `HuntCard.price`, `PriceChange` on `Listing.price_change`, `PricePreview`,
   `Prices`; read leniently: an unknown availability reads unknown, an unknown reader is kept (`PageReader`, on
-  `PageState` too since server brief 136), a product state that cannot be read leaves the card without it). New
+  `PageState` too since the server change described in the Arestemis repo, `docs/briefs/136-arestemis-browser-reader.md`), a product state that cannot be read leaves the card without it). New
   search's card: "One product in one shop: its price history, and a word when it gets cheaper or is back in stock." /
   "Ein Produkt in einem Shop: der Preisverlauf, und Bescheid, wenn es günstiger oder wieder lieferbar ist.", examples
   "Price under € …" / "Preis unter … €" (the alarm on, its limit filled once the price is found) and "Back in stock" /
@@ -657,15 +681,59 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   Version erscheint", "ein neuer Eintrag dazukommt", "sich ein Datum ändert", "eigene Beschreibung"; a chip fills the
   sentence and puts the cursor in it, the one tapped last shows chosen; "own description" empties an example's sentence
   and keeps one's own words. The placeholder is now "3.4.0 is out, not a release candidate" and the caption "Pages behind
-  a login, or that need clicks (such as appointment bookings), can't be watched." (a browser reads JavaScript pages since
-  server brief 136). Sample monitors 9 (Nintendo Switch 2 on MediaMarkt, history and alarm under €450 or back in stock,
-  a year of history in `Samples/prices-9.json` with two stretches out of stock), 10 ("Headphones", history only, read
-  with a browser, `prices-10.json`) and 11 (LEGO Titanic, alarm when back in stock, no history, out of stock), with
+  a login, or that need clicks (such as appointment bookings), can't be watched." (page reading improved on the server;
+  the Arestemis repo, `docs/briefs/136-arestemis-browser-reader.md`). Sample monitors 9 (Nintendo Switch 2 on MediaMarkt, history and alarm under €450 or back in stock,
+  a year of history in `Samples/prices-9.json` with two stretches out of stock), 10 ("Headphones", history only, `prices-10.json`) and 11 (LEGO Titanic, alarm when back in stock, no history, out of stock), with
   alarms 39 (under the limit, new) and 37 (back in stock, saved) in `price-matches.json`; the server's own samples in
   `ArestemisTests/ServerSamples/` (`server-prices.json` new). DEBUG `-openPriceForm`, `-newPriceForm` (`-priceURL
   <text>`, `-priceSwitches both|history|alarm|none`, `-pricePreview reading|refused|failed`), `-newExample
   priceBelow|backInStock`, `-openHunt <id>` with `-priceDays 30|90|365`, `-scrollTo history|switches|bottom` and
   `-monitorLine refused|hold`. Tests: `PriceMonitorTests`. Screenshots: `build/137-*.png`.
+  **The tour** (brief 139, Patrik 2026-11-02: "it's not actually clear what Seite beobachten is for … add a tour to
+  Arestemis (like Aresium has)"; eight steps from the sketch's section 6; `Model/Tour.swift`, `Screens/TourScreens.swift`
+  on the shared pieces, below): the real tabs (`MainTabs`) on a world of its own, `TourWorld`: its own data in the app's
+  language (`Model/TourData.swift`, as Aresium's `TourData`; the main session's review: the English contract samples
+  showed in the German tour) served by `SampleBackend` in memory (no longer DEBUG-only; it takes a `SampleContent`, the
+  contract's files for `-sampleData` and the tests, `SampleContent.contract`, or the tour's; `ArestemisStore.isSample`
+  is honoured in Release for it), its own store, a session that never logs in, its own `AppNavigation` whose remembered
+  part lives in the defaults suite `de.ares-empire.arestemis.tour` (emptied when it starts and ends). **The tour's
+  data** (`TourData.content(now:language:)`): four searches, one of each kind (a flat or WG room in Munich or Garching;
+  Herman Miller Aeron; the watch "Schnitzel at the Mensa" / "Schnitzel in der Mensa" on the Mensa's menu; the Nintendo
+  Switch 2 at MediaMarkt with its alarm), the flat's new listing (step 6) and its two filtered-out ones (step 8), three
+  chairs, the menu's change and the console's alarm, the kinds' names; its words in the String Catalog (names stay
+  names, money and dates by the app; listing titles read like listings in each language), built as the server's JSON
+  and read through the app's decoders, times around `now`; the console's history is the contract's `prices-9.json`
+  (numbers only) moved to now; a made-up application text in the app's language, signed "Alex". The account's store,
+  login, drafts and defaults are never touched (`TourTests`). Settings behind the gear stays the account's own.
+  **When:** by itself once per account on this iPhone (`TourOffer`, key `arestemis.tourShown.<account id>`, set when it
+  starts) 0.8 s after the account's main screen first shows, never in sample mode and never while a notification or link
+  is opened, a sheet is up or a page is pushed (then the next launch tries again); Settings → Help → Tour of Arestemis
+  ("With sample searches") at any time (`TourRunner`, owned by `ContentView`), in place of the account's tabs without a
+  fade (a scroll issued while the tabs faded in was lost at times). A notification, a link or logging out ends it first.
+  **The steps** (`TourStep`, `TourSpot`; each rings its part of the real screen, Next gets that screen ready again): 1
+  Arestemis searches for you (the Hunts list, no ring), 2 New search (its page, the first kind's card), 3 A
+  search (the first search's card), 4 Listings → New (the newest listing's row, whose swipe works), 5 Listings → Searches
+  (the magnifying glass), 6 A listing (a flat's page, Why it fits), 7 Price monitor and Watch a website (the watch's and
+  the monitor's cards that stand together, one ring; a line each, led by the kind's name), 8 Filtered out (the flat
+  search's listings at New, its Filtered out row; a tap opens the sheet, without the card, which covered its
+  reasons at the sheet's height; closing it brings the card back). **The card**: "3 / 8",
+  Skip, the step's title over one or two sentences, Next (Done at the last) in the accent; the ring in the accent; the
+  card's glass without its blur (`glassCard(blur: false)`, the wall's colour in its place): the searches' pulse moves
+  under the card, and a blur there was taken again every frame with a group pass (`scripts/offscreens`, step 3: about 1
+  group and 4 mask/group passes per frame with it, none without, as the app without the tour). The
+  card sits on each tab's NavigationStack (it stays put while pages are pushed, under the undo bar) and every page of the
+  stack keeps its room (`tourCardRoom`, `TourModel.cardRoom`: a stack's inset does not reach its pages); a scroll view
+  shows the ringed part within its safe area (`TourGuide.cardRoomInSafeArea`), again once its height settles. **A
+  listing's page fades under its bar** (brief 139's review: scrolled, the title ran on under the back button): iOS's own
+  top edge effect hidden (`scrollEdgeEffectHidden`, it showed a blurred copy of the content no wall covers) and the
+  wall's fade from the screen's top (`edgeFade(top:bottom:underBar:)`: the scroll view's drawn area stops at its frame
+  there, so the wall covers above it by itself). DEBUG `-sampleData -tour <1–8>`. Tests: `TourTests`. Screenshots:
+  `build/139-step{1..8}-{de,en}-{light,dark}.png`.
+  **The shared tour pieces** (`Shared/Design/TourPieces.swift`, moved from Aresium's `TourScreens.swift` in brief 139,
+  Aresium's look unchanged): `TourGuide` (what a tour points at, `\.tourGuide`), `tourSpot` (each app wraps it as
+  `tourAnchor` with its own spots), `tourSpotlight` (the veil and ring, around several spots together when a step names
+  more than one), `tourScrollsToTarget` and `TourScrollPlace`, and `TourCard` (count, way out, optional title, words, main
+  button in ink or the accent, an optional link). Aresium's `\.tour`, `tourAnchor` and `tourCard()` sit on them.
 - **Arestoteles app** (2026-10-24, build R2): `Arestoteles/` (bundle id `de.ares-empire.arestoteles`, URL scheme
   `arestoteles`), Patrik's Weltbild vault on the Arestoteles API (`Arestoteles/docs/API.md`, decisions
   `ares-empire/docs/ARESTOTELES-APP.md`; samples in `Arestoteles/Arestoteles/Samples/`, copies of its `docs/samples/`).
@@ -1424,7 +1492,7 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   an import); the next import that adds payments offers again. The cards are **names**, not payees: the app calls
   whoever a payment is with its name everywhere (Search names, the name's page), and "payee" / "Absender" are one
   direction only. (2) **The card at the top of Not sorted's month list** (Current and Overview, both sides; while
-  selecting it stays in its place, faded and taking no taps, brief 200; `DashboardStore.offersQuickSort(on:)`: phone mode while some name has two or more payments Not sorted):
+  selecting it stays in its place, faded and taking no taps, brief 200; `DashboardStore.offersQuickSort(on:)`: phone mode while some name has two or more payments Not sorted and a category is chosen, brief 215; before, the categories' card stands there):
   `QuickSortListCard`, a list row on the card colour with the line, the stack symbol in the day tile's place, "Sort name
   by name" / "Name für Name sortieren", "9 names · 42 payments · all months" / "9 Namen · 42 Buchungen · alle Monate",
   the chevron. Not in server mode. DEBUG (with `-samplePhone`): `-sampleQuickSort` (made-up people to go through: a
@@ -1490,7 +1558,7 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   round: the payments listed below the months were "very weird"; "make each month just as the other months"): a month's
   row or its graph point (`SeriesChart.onPick`, the one hook) opens that month's payments of the name on a page of its
   own (`NameMonthScreen`, `DashboardRoute(name:month:)`, pushed like the others): the name as the header's title, "Oct
-  2026 · activities" / "Okt. 2026 · Buchungen" under it (a category's month list's line), the arrow and the back swipe
+  2026 · payments" / "Okt. 2026 · Buchungen" under it (brief 215: "activities" went; "No payments" too) (a category's month list's line), the arrow and the back swipe
   (Apple's, `BackSwipe` unchanged); its rows a category's month list's, in its order (`Transaction.listOrder`, by day):
   `PaymentRow` with tap, long press and the swipe's All, no Add up (every row is the same name). All, "All with this
   name" and a payment page's "All from" there go back to the name's page below instead of stacking a second copy
@@ -1656,7 +1724,21 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   file/widget URL route, ending a tour first. `AresiumURL.importData` (`aresium://import`) opens phone mode's file
   picker after the store and lock are ready; `.review("2026-10")` (`aresium://review/2026-10`) opens that month's
   dashboard totals/categories/graph (`DashboardStore.showReview(month:)`). This month stays focused until the app goes to the background, a widget/start
-  link, backend switch or a rebuilt root; `showReview(month: nil)` restores the latest month. No new screen.
+  link, backend switch or a rebuilt root; `showReview(month: nil)` restores Current's own month (below). No new screen.
+  **Which month Current shows** (brief 215, the first-run review's finding 2: on 2 November a fresh import of three
+  months showed "Rent" and a two-point graph after "74 new"): one rule, `Model/CurrentMonth.swift`, read with the day the
+  person opened the app (`DashboardStore.openedOn`: at launch and on coming back from the background, never while the
+  app is open, so the start screen never changes its month under anyone): in a month's first seven days, while the
+  data's newest month is that running month and the month before it is in the data, Current opens on the month before
+  (the month review's month, a full month for the first look); otherwise on the newest month, as before. A month chosen
+  wins until the app goes to the background (`DashboardStore.CurrentChoice`, which holds what `reviewMonth` held): a
+  review message's, the range line's other month, or the newest from a widget's link (`showNewestMonth`: the widget
+  shows the newest). **The range line's other month** (`OtherMonthLink` in `StartPage`, Current only): on the right of
+  "OCT 2026", in the line's small capitals a little stronger, "NOVEMBER SO FAR ›" / "NOVEMBER BISHER ›" (the running
+  month, `Month.partial`) or "‹ OCTOBER" / "‹ OKTOBER" back (`CurrentMonth.other`, `CurrentMonthWording`): one tap
+  either way, kept until the app goes to the background; from the 8th there is none. Only the app's own dashboard has a
+  clock (`DashboardStore(clock:)`): tests, the tour and previews show the newest month whatever the day. DEBUG
+  `-openedOn <YYYY-MM-DD>` pins the day (screenshots, the real-touch check). Tests: `FirstRunTests`.
   **DEBUG verification:** `-enableMessages -logMessages` enables live local messages and logs owned pending IDs;
   never combine it with sample/test arguments (those install no live model). It uses the normal interval, with no
   accelerated delivery argument. Verified on `codex-45` (2026-10-30): Allow, three pending reminders
@@ -1681,7 +1763,13 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   (`ReminderOffer.shows`, built from the stores by `ReminderOffer.Moment(messages:imports:…)`): "Remind you to import
   new statements?", the line names the reminder's interval and the review, Turn on (both messages, interval and time
   kept; then, once iOS allowed, "Messages are on. You can change them in Settings." in the result's place) and Not now
-  (also a swipe down); both answer it for good. The start screen's expense graph in red mode draws the light ink
+  (also a swipe down); both answer it for good. **Not in the opening of the app whose import readied it** (brief 215,
+  the first-run review's finding 11: a newcomer met the result, the quick sort's offer and this in one minute): the
+  first import that adds payments readies it and it waits until Aresium is opened again, a launch or coming back from
+  the background (`AresiumMessages.offerWaitsForNextOpening`, ended by `appOpenedAgain()` through
+  `DashboardStore.appReturned`; `ReminderOffer.Moment.firstOpening`); another import in the same opening does not end
+  the wait (a file confirmed in the file check is an import of its own). `-sampleReminderOffer`'s made-up import counts
+  as an earlier opening. The start screen's expense graph in red mode draws the light ink
   (`Palette.expense`; the website's black read at about 1.3:1 on the app's darker red), as the widget's line; income
   keeps its green (about 10:1). **DEBUG** (with `-samplePhone`/`-samplePhoneEmpty`; the sample gets a pretend model,
   `Model/MessageSample.swift`: its own defaults emptied at launch, a center that reaches nothing in iOS):
@@ -1709,8 +1797,22 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   already, a restore from an export, the tour, or with categories chosen. It is decided in one place, the import's end
   (`ImportStore.finishIfDone` → `asksForCategories`, with `AresiumBackend.waitsForCategories`; ContentView only presents
   it, once no other sheet is open). Its line on top: "Your payments are in. Aresium sorts them as you tick." Ticking
-  sorts the waiting payments at once (`PhoneBackend.choose`); closing it with nothing ticked is allowed (the payments
-  stay Not sorted and the next import asks again). **The result line stays true:** the import's line ("4 new · 0
+  sorts the waiting payments at once (`PhoneBackend.choose`). **Done with nothing ticked asks once** (brief 215, the
+  first-run review's finding 1: a newcomer who tapped Done to "look first" found every payment Not sorted and a quick
+  sort that offered only Own transfers and New category): Apple's alert "Use the 12 categories that fit?" / "Die 12
+  passenden Kategorien verwenden?", "Aresium sorts your payments right away. You can change your categories any time
+  in Settings → Categories." (`ChooseCategoriesWording`), **Use** / **Verwenden** (a plain button in ink: ticks every
+  default category the rows count payments for, `CategoryPickerModel.fitting`, sorts and closes, `useFitting`) and
+  **Not now** / **Nicht jetzt** (closes as it is: the payments stay Not sorted and the next import asks again). Nothing
+  that fits (or something ticked): Done closes at once (`closes()`). While it would ask, the sheet's swipe down is held,
+  so the way out is Done. **While no category is chosen** and payments exist (`DashboardStore.waitsForCategories`), the
+  start screen's pages start with one card in the quick sort card's look (`ListCard`, shared; `CategoriesCard`: the
+  categories' grid symbol, "Choose your categories" / "Wähl deine Kategorien", "Then Aresium sorts your payments." /
+  "Dann sortiert Aresium deine Buchungen.", one line each), and Not sorted's list has it in the quick sort card's place; it opens
+  the same list as after an import (`DashboardPlace.choosesCategories`, presented by ContentView with the import's;
+  Done asks there too). The quick sort's offer and card wait until a category is chosen (`QuickSortOffer.Moment
+  .categories`; the import's offer then shows). DEBUG: `-samplePhoneEmpty -sampleImport -samplePickerDone` (Done:
+  the question) `-sampleFitAnswer use|notNow`. Tests: `FirstRunTests`. **The result line stays true:** the import's line ("4 new · 0
   already there · 0 sorted · 4 not sorted") waits under the picker and, when it closes, is counted again from the store
   for that import's own payments (`PhoneImportResult.newIDs`, `AresiumBackend.recount`), then goes after the usual
   pause; the files' lines claim no sorting. What shows is `MainScreen.choose` (the tour, the store's state, the first
@@ -1799,16 +1901,22 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   this menu are the dashboard's shortcuts (`DashboardStack.shortcuts`): the tour turns both off while it holds the
   screen (at the payment step the ringed row must open the page the card speaks of), except the rows' swipe and long
   press at its swipe steps (`rowShortcuts`, brief 59). **The import result goes with a
-  swipe down** (`ImportStore.closesBySwipe`: where Dismiss or the send card's Not now would, never while Retry and
+  swipe down** (`ImportStore.closesBySwipe`: where Close or the send card's Not now would, never while Retry and
   Discard are offered or the format is sending, nor while the result scrolls; VoiceOver's escape does the same); a
   success still goes by itself after 4.5 s. DEBUG `-sampleBannerDrag <points>` shows it moved as halfway through the
   swipe (with `-sampleImportResult` or `-sampleFormat`). **Tap areas of 44 pt** (`minimumTapArea()` in `Screens/Components.swift`:
-  the area grows around a control drawn smaller, layout unchanged): the result's Dismiss, Retry, Discard, "What is
+  the area grows around a control drawn smaller, layout unchanged): the result's Close (brief 215: "Close" /
+  "Schließen", a key of its own; it was "Dismiss", which Aresium's catalog shared with Arestemis's "Entfernen", read as
+  removing the payments just imported), Retry, Discard, "What is
   sent?" and Not now, the header's 42 pt buttons (`IconButton`, `headerButtonFace`) and the import button; the
   Expenses/Income dots are 44 × 44 pt each. Tests: `DashboardComfortTests` (`PaymentRowMenuTests`,
   `ImportBannerSwipeTests`, `LogOutQuestionTests`). Screenshots: `build/41-*.png`.
   **The graph and the header** (brief 56, Patrik's fifth round of 2026-10-31, items 5–7 in
-  `docs/reviews/2026-10-30-aresium-phone-test.md`). **Reading a graph** (every `SeriesChart`: the start screen's day and
+  `docs/reviews/2026-10-30-aresium-phone-test.md`). **The running month** (brief 215, the first-run review's finding
+  12: Overview's line fell at the unfinished month and read as "spent less"): every month graph (Overview's, a
+  category's months, a name's months) draws the stretch to a month still running (`ChartPoint.running`, the engine's
+  `Month.partial`) dashed, over a fainter area (`ChartStretches`: two series, no legend); the day graphs are unchanged.
+  **Reading a graph** (every `SeriesChart`: the start screen's day and
   month graphs, a month's page, a category's months, a name's months): a finger held still for 0.25 s on the graph
   (`ChartHold`, UIKit's long press, `ChartReading.holdDuration`, 10 pt of wander) and then followed shows a dashed guide
   line (`Palette.guide`, the website's `--guide`), a dot on the line ringed in the wall's colour and a one-line chip just
@@ -1851,7 +1959,8 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   (`ScreenHeader`, every screen alike): each button on the wall without card or outline (`HeaderButtonLook`: a 19 pt
   symbol in the second ink, drawn 42 pt, taps over 44 pt, 44 pt apart): red mode's X first (the others keep their
   places when it comes), then the page's own (the start screen's search, brief 77, and import button, beside the gear
-  since brief 56, with its menu and spinner; a category's select icon, brief 82, and icon of adding up), then the gear; the title stays in the middle of the screen while it
+  since brief 56, with its menu and spinner, the tray with the arrow in, `tray.and.arrow.down`, as the drop overlay's
+  since brief 215: the arrow out read as share or export; a category's select icon, brief 82, and icon of adding up), then the gear; the title stays in the middle of the screen while it
   fits (`HeaderLayout`). The tour's `.search`, `.importButton` and `.settings` rings follow them there. Tests:
   `GraphAndHeaderTests` (`ChartReadingTests`, `MonthPageTests`, `MonthRouteTests`, `GraphMotionSettingTests`).
   Screenshots: `build/56-*.png`. Settings →
@@ -1937,7 +2046,7 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   says only "Here you add up same names in every list." (`TourStep.text(showingGraph:)`): no card mentions the graph.
   The cards' words are `TourStep.text` (German in the catalog). Each step points at a real control (`.tourAnchor`, anchor preferences; a payment row's and a summed
   row's anchor sit outside their swipe, so the ring stays still and the swipe's actions lie inside it);
-  `.tourSpotlight` on each screen and sheet draws a light veil in the wall's colour, `TourVeil.veil` 0.3 (brief 24 had
+  `.tourSpotlight` (shared since brief 139, `Shared/Design/TourPieces.swift`) on each screen and sheet draws a light veil in the wall's colour, `TourVeil.veil` 0.3 (brief 24 had
   0.74, far too dark: the app under it must read easily, Patrik 2026-10-27), and the full-ink ring, and keeps taps off
   the rest except at the swipe to income; `.tourCard` the glass card with Next and End tour, on a sheet's scroll view
   after its spotlight (the payment's page, the tour's Settings and the picker pushed there: on the sheet's
@@ -2074,7 +2183,8 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   with `direction`, `kind` and `paidFrom` (`SourceReceipt`), so the dashboard carries `cash` (`CashView`: the months'
   withdrawn, received, spent, unaccounted; every movement from the wallet's side) and marks withdrawals
   `cashWithdrawal` (`Transaction`). **The Cash page** ("Cash" / "Bargeld"; `DashboardRoute(cash: true)`): a row below
-  the categories on both pages of the dashboard (`CashRow`: a wallet mark, "Cash", what is not accounted for; no
+  the categories on both pages of the dashboard (`CashRow`: a wallet mark, "Cash", what is not accounted for in plain
+  words, "€300.00 without receipts" / "300,00 € ohne Belege" since brief 215, as Overview's Cash months; no
   amount column, set apart by a hairline), only while `cash` has a movement; it follows Current / Overview like a
   category (`DashboardStore.cashRoute`): this month's page, or its months (`CashMonthsScreen`). The month's page
   (`CashScreen`): Not accounted for with its number and "In your wallet still, or spent without a receipt.", then
