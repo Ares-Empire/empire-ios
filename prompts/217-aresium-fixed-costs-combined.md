@@ -1,6 +1,6 @@
 # 217: Fixed costs: a fee taken together with the monthly charge
 
-Status: running
+Status: merged 2026-11-02 (931 Aresium tests, one import test passed on a rerun alone; a follow-up for price steps after the check on the owner's export locally: one entry per subscription, no booking in two entries)
 Branch: `codex/217-fixed-costs-combined` · Worktree: `../empire-ios-217-fixed-costs-combined` · Model: `gpt-6.1-sol`,
 effort `high` · Simulator: `codex-217` (create it: iPhone 17, iOS 27.0)
 

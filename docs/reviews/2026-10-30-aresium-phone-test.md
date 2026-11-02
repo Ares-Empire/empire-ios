@@ -345,3 +345,11 @@ nothing ticked asks to use the categories that fit (or a card leads back), the f
 (this month one tap away), the import notice's button says Schließen, Settings shows no Ares sign-in to testers, the
 running month on Overview's graph is dashed, cash "ohne Belege". To try: Overview → the line under the total → the
 fixed costs; take one out and put it back; open the app on the 1st–7th of a month.
+
+**After build 19** (Patrik, 2026-11-02): his gym charges monthly and takes a service fee every six months; Claude saw
+locally that the fee comes inside that month's membership booking, so build 19 showed the membership as ended and missed
+the fee.
+
+**In build 20** (2026-11-02, brief 217): such a booking counts as the month's membership plus an extra, and the extra
+every six months is its own fixed cost at its own amount; a subscription whose price went up stays one entry at the new
+price; no booking is counted in two entries. To try: Fixkosten should show the gym monthly and its fee half-yearly.
