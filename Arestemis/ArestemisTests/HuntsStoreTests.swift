@@ -48,7 +48,7 @@ struct HuntsStoreTests {
         let gate = RequestGate(); transport.gates["POST /hunts"] = gate
         let action = Task { await store.saveHunt(id: nil, kind: .item, name: nil, search: original[1].hunt.search) }
         await gate.waitUntilPaused()
-        #expect(store.hunts.count == 4 && store.hunts.last?.id == -1)
+        #expect(store.hunts.count == 6 && store.hunts.last?.id == -1)
         gate.resume(); #expect(await action.value == nil)
         #expect(store.hunts == original && store.searchError == "This account has 30 hunts. Delete one first.")
     }
@@ -73,12 +73,12 @@ struct HuntsStoreTests {
         await store.loadApplication(for: 31)
         #expect(store.application(31).error == "Application texts are for flats.")
         let new = try #require(await store.saveHunt(id: nil, kind: .item, name: "Second chair", search: item.search))
-        #expect(new.id == 4 && !new.active && store.hunts.count == 4)
+        #expect(new.id == 6 && !new.active && store.hunts.count == 6)
         #expect(await store.deleteHunt(id: 2))
         #expect(store.selectedHuntID == nil && store.card(1)?.hunt == originalFlat && !store.hunts.contains { $0.id == 2 })
         #expect(store.match(31) == nil && store.match(41) != nil && store.application(31).error == nil)
         await store.loadMatches(.all)
-        #expect(store.matches(.all).allSatisfy { $0.huntID == 1 })
+        #expect(store.matches(.all).allSatisfy { $0.huntID != 2 } && store.matches(.all).contains { $0.huntID == 1 })
     }
     @Test func staleFilteredPagesDoNotReplaceTheNewSelection() async throws {
         let (store, transport, _) = try await makeStore()

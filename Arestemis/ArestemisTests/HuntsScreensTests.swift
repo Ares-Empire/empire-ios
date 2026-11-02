@@ -105,10 +105,10 @@ struct HuntsScreensTests {
         let de = language == .german
         let cards = try hunts()
         let chips = HuntChips.chips(cards, language: language)
-        #expect(chips.map(\.huntID) == [nil, 1, 2, 3])
+        #expect(chips.map(\.huntID) == [nil, 1, 2, 3, 4, 5])
         #expect(chips.map(\.title) == [de ? "Alle" : "All", HuntText(cards[0].hunt, language: language).title,
-                                       "Herman Miller Aeron", "A quieter flat"])
-        #expect(chips.map(\.symbol) == [nil, "house", "tag", "house"])
+                                       "Herman Miller Aeron", "A quieter flat", "Bookcase", "Denimwerk jeans"])
+        #expect(chips.map(\.symbol) == [nil, "house", "tag", "house", "tag", "tag"])
         #expect(Set(chips.map(\.id)).count == chips.count)
         // One hunt: no chips (All would be the same list).
         #expect(HuntChips.chips(Array(cards.prefix(1))).isEmpty && HuntChips.chips([]).isEmpty)
@@ -281,7 +281,7 @@ struct HuntsScreensTests {
         let store = ArestemisStore(session: session, backend: try SampleBackend(options: .init(slowed: true, newerKind: true)),
                                    sample: true, placeDelay: .zero)
         await store.reloadOverview()
-        #expect(store.hunts.map(\.slowed) == [false, true, false, false])
+        #expect(store.hunts.map(\.slowed) == [false, true, false, true, true, false])
         #expect(store.hunts.last?.hunt.kind == .unknown("car") && store.hunts.last?.hunt.search == .unsupported)
     }
 

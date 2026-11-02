@@ -151,14 +151,15 @@ final class AppNavigation {
 
 /// DEBUG launch arguments for screenshots: `-sampleData`, `-sampleNoHunt`, `-samplePaused`, `-sampleLoading`,
 /// `-sampleSlowed` (the thing hunt is checked less often), `-sampleNewerKind` (a hunt of a kind this build does not know),
-/// `-sampleEbayNotReady` (eBay not set up on the server: greyed in the thing form, read by no hunt),
+/// `-sampleEbayNotReady` (eBay not set up on the server: greyed in the thing form, read by no hunt), `-sampleDelivery
+/// pickup|shipping|either` (that delivery chosen in the thing form, read by `ArestemisStore.itemSearchDraft`),
 /// `-sampleHunt <id>` (Listings for that hunt), `-tab hunt|listings` (`search`: the first hunt's form),
 /// `-filter new|saved|applied|all`, `-openMatch <id>`, `-openHunt <id>` (a hunt's page), `-openForm <id>` (that hunt's
 /// form), `-openItemForm` (the first thing hunt's form), `-newItemForm` / `-newFlatForm` (an empty form), `-newSearch`
 /// (the kind dialog), `-openSheet settings|application|rejected|place|describe` (place and describe over a form, the
 /// first hunt's unless another is asked for), `-scrollBottom` (Hunts and the forms), `-scrollTo size|rent|movein`
-/// (the flat form), `-sampleUndo`, `-sampleSearchDraft`, `-sampleMoreLoading`, `-sampleMoreFailure`,
-/// `-sampleLongDescription`; Settings → Flats: `-sampleOwnMode` (the switch off), `-sampleNoTexts` (nothing written
+/// (the flat form), `-scrollTo where` (the thing form), `-sampleUndo`, `-sampleSearchDraft`, `-sampleMoreLoading`,
+/// `-sampleMoreFailure`, `-sampleLongDescription`; Settings → Flats: `-sampleOwnMode` (the switch off), `-sampleNoTexts` (nothing written
 /// yet), `-openSettingsPage ownText|notes|aboutMe` (with `-openSheet settings`, read by `SettingsSheet`). In a release
 /// build all are ignored.
 struct LaunchOptions {

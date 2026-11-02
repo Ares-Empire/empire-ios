@@ -18,7 +18,9 @@ struct SampleBackendTests {
         let lastScan = try #require(store.overview?.lastScan.flatMap(Timestamp.parse))
         #expect(abs(Date.now.timeIntervalSince(lastScan) - 40) < 5)
         #expect(store.card(1)?.hunt.active == true && store.latest.map(\.id) == [41, 40, 38])
-        #expect(store.overview?.sources.allSatisfy { $0.state == .ok } == true)
+        // Every site an active hunt reads answered; mydealz and MTB-News Bikemarkt, which none reads, are idle.
+        #expect(store.overview?.sources.filter { $0.state != .ok }.map(\.source.rawValue) == ["mydealz", "bikemarkt"])
+        #expect(store.overview?.sources.filter { $0.state == .idle }.count == 2)
     }
 
     @Test func pausedAndNoHunt() async throws {
@@ -31,7 +33,7 @@ struct SampleBackendTests {
     @Test func actionsWorkInMemory() async throws {
         let store = try await store()
         await store.setState(.saved, for: 41)
-        #expect(store.match(41)?.state == .saved && store.overview?.counts.new == 5 && store.overview?.counts.saved == 2)
+        #expect(store.match(41)?.state == .saved && store.overview?.counts.new == 7 && store.overview?.counts.saved == 2)
         await store.setActive(id: 1, active: false)
         #expect(store.card(1)?.hunt.active == false && store.overview?.sources.first?.state == .idle)
         await store.loadMatches(.saved)

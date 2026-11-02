@@ -161,6 +161,18 @@ extension ItemSearchDraft {
     /// Places and the radius apply unless the thing is only to be shipped.
     var asksPlaces: Bool { delivery != .shipping }
 
+    /// Switches off the chosen sites that cannot serve the delivery (`SiteDelivery.serves`; `sites` is the form's list,
+    /// `SiteChoices.sites`), since the server would refuse the search with them. The form calls it whenever the delivery
+    /// or the server's sites change, also for a saved search it opens; switching the delivery back turns none on again.
+    /// A site the list does not name serves every delivery. True when it switched one off.
+    @discardableResult
+    mutating func switchOffSitesThatCannotServe(_ sites: [KindSource]) -> Bool {
+        let kept = sources.filter { source in sites.first { $0.source == source }?.delivery.serves(delivery) ?? true }
+        guard kept.count != sources.count else { return false }
+        sources = kept
+        return true
+    }
+
     /// What is wrong, in a sentence.
     func message(_ problem: Problem, language: AppLanguage = .current) -> String {
         let l = language

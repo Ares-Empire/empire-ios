@@ -3,7 +3,9 @@ import SwiftUI
 /// A thing hunt's search ("Something to buy"), built from the flat form's pieces in the same order of habit: "Describe
 /// it" at the top, then what (the search words and words to leave out), price (with how far a negotiable price may lie
 /// over the maximum), condition, where (pickup, shipping or either; places and radius unless only shipped), seller,
-/// extras, portals (the server's sites for things, with "Include auctions" while a chosen one has auctions); then save. Pushed on the Hunts tab for one hunt, or empty for a new one, which it creates paused.
+/// extras, portals (the server's sites for things, with "Include auctions" while a chosen one has auctions; a site that
+/// cannot serve the delivery greyed and switched off, brief 129); then save. Pushed on the Hunts tab for one hunt, or
+/// empty for a new one, which it creates paused.
 /// What is wrong shows under its field (`ItemSearchDraft.fieldLine`); unsaved edits are kept per hunt.
 struct ItemSearchScreen: View {
     let store: ArestemisStore
@@ -34,6 +36,7 @@ struct ItemSearchScreen: View {
                     }
                     FormSection(title: String(localized: "Condition"), problems: lines(.condition)) { condition }
                     FormSection(title: String(localized: "Where"), problems: lines(.places, .radius)) { place }
+                        .id("where")                    // `-scrollTo where`: the delivery with the sites under it
                     FormSection(title: String(localized: "Seller")) { seller }
                     FormSection(title: String(localized: "Extras"), problems: lines(.extra)) {
                         ExtrasField(placeholder: String(localized: "e.g. size B, black, with the original box"),
@@ -81,6 +84,9 @@ struct ItemSearchScreen: View {
         .onAppear { sync() }
         .task { await store.loadKinds() }               // the sites as the server offers them now
         .onChange(of: hunt?.search.item) { _, _ in sync() }
+        // A site that cannot serve the delivery goes off at once, also when the sites' answer arrives later.
+        .onChange(of: draft.delivery) { _, _ in withAnimation(.easeOut(duration: 0.2)) { switchOffUnservedSites() } }
+        .onChange(of: store.kinds) { _, _ in switchOffUnservedSites() }
         .onChange(of: draft) { _, new in store.keepItemSearchDraft(new, baseline: baseline, huntID: huntID) }
     }
 
@@ -88,6 +94,13 @@ struct ItemSearchScreen: View {
     private func sync() {
         baseline = hunt?.search.item
         draft = store.itemSearchDraft(huntID: huntID)
+        switchOffUnservedSites()                        // a search saved before the server refused such a site
+    }
+
+    /// Switches off the chosen sites the delivery rules out (the server would refuse the search); the line under the
+    /// sites says why.
+    private func switchOffUnservedSites() {
+        draft.switchOffSitesThatCannotServe(sites.sites)
     }
 
     /// The lines under a section: what is wrong with its fields.
@@ -97,8 +110,9 @@ struct ItemSearchScreen: View {
 
     // MARK: portals
 
-    /// The server's sites for things (Kleinanzeigen alone until it answered), and any other the saved search names.
-    private var sites: SiteChoices { store.siteChoices(.item, chosen: draft.sources) }
+    /// The server's sites for things (Kleinanzeigen alone until it answered), and any other the saved search names,
+    /// for the delivery chosen.
+    private var sites: SiteChoices { store.siteChoices(.item, chosen: draft.sources, delivery: draft.delivery) }
     private var showsAuctions: Bool { sites.showsAuctions(chosen: draft.sources) }
 
     private var portals: some View {

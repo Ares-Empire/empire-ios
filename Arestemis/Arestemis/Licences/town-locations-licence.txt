@@ -1,0 +1,7 @@
+© OpenStreetMap contributors
+
+Town locations for thing searches. When a search for something to buy is saved, the Arestemis server looks up the towns chosen in it on OpenStreetMap (Nominatim) and keeps their coordinates and postcode; only a town's name and federal state are sent. The app itself contains no OpenStreetMap data. Open Database License (ODbL) 1.0.
+
+https://www.openstreetmap.org/copyright
+
+https://opendatacommons.org/licenses/odbl/1-0/

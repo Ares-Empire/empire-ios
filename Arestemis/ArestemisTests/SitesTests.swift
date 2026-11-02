@@ -9,14 +9,19 @@ import Testing
 @MainActor
 struct SitesTests {
     private func spaces(_ value: String?) -> String? { value?.replacingOccurrences(of: "\u{a0}", with: " ") }
-    private let market = Source("beispielmarkt")       // the sample's made-up third site, not set up
+    private let ikea = Source("ikea_preowned")
+    private let vinted = Source("vinted")
+    private let mydealz = Source("mydealz")
+    private let bikemarkt = Source("bikemarkt")
+    /// The server's thing sites in its order (the sample's `/kinds`).
+    private var thingSites: [Source] { [.kleinanzeigen, .ebay, mydealz, bikemarkt, ikea, vinted] }
 
-    /// The sample's `/kinds` (eBay set up, Beispielmarkt not), or with eBay not set up either.
-    private func kinds(ebayReady: Bool = true) throws -> [OfferedKind] {
+    /// The sample's `/kinds` (every site set up), with the sites named here not set up.
+    private func kinds(notReady: Set<Source> = []) throws -> [OfferedKind] {
         try sample([OfferedKind].self, "kinds").map { offered in
             OfferedKind(kind: offered.kind, name: offered.name, sources: offered.sources.map { site in
                 var site = site
-                if site.source == .ebay { site.ready = ebayReady }
+                if notReady.contains(site.source) { site.ready = false }
                 return site
             })
         }
@@ -52,7 +57,7 @@ struct SitesTests {
     @Test func namesAreTheServers() throws {
         let overview = try sample(Overview.self, "overview")
         var names = SiteNames(statuses: overview.sources, kinds: try kinds())
-        #expect(names.name(.ebay) == "eBay" && names.name(market) == "Beispielmarkt")
+        #expect(names.name(.ebay) == "eBay" && names.name(ikea) == "IKEA Preowned" && names.name(bikemarkt) == "MTB-News Bikemarkt")
         #expect(names.name(Source("newportal")) == "newportal")        // named by no answer: its id, nothing made up
         // Without any answer, the four sites of before keep the names they had.
         names = SiteNames()
@@ -69,21 +74,25 @@ struct SitesTests {
     @Test func kindsDecodeLeniently() throws {
         let kinds = try sample([OfferedKind].self, "kinds")
         #expect(kinds.map(\.kind) == [.flat, .item] && kinds.map(\.name) == ["Flat or room", "Something to buy"])
-        #expect(kinds[1].sources.map(\.source) == [.kleinanzeigen, .ebay, market])
-        #expect(kinds[1].sources.map(\.auctions) == [false, true, false] && kinds[1].sources.map(\.ready) == [true, true, false])
-        // A server without `ready` or `auctions` means set up, no auctions; a kind this build does not know is kept.
+        #expect(kinds[1].sources.map(\.source) == thingSites)
+        #expect(kinds[1].sources.map(\.auctions) == [false, true, false, false, false, false])
+        #expect(kinds[1].sources.allSatisfy { $0.ready })
+        #expect(kinds[1].sources.map(\.delivery) == [.both, .both, .shipping, .both, .pickup, .shipping])
+        // A server without `ready`, `auctions` or `delivery` means set up, no auctions, both ways; a kind this build does
+        // not know is kept.
         let older = try JSONDecoder().decode([OfferedKind].self, from: Data("""
             [{"kind": "car", "name": "A car", "sources": [{"source": "newportal", "name": "New Portal"}]}]
             """.utf8))
         #expect(older.first?.kind == .unknown("car"))
-        #expect(older.first?.sources == [KindSource(source: Source("newportal"), name: "New Portal", ready: true, auctions: false)])
+        #expect(older.first?.sources == [KindSource(source: Source("newportal"), name: "New Portal", ready: true, auctions: false,
+                                                    delivery: .both)])
     }
 
     @Test func theFormsTakeTheServersSitesInItsOrder() throws {
         let names = SiteNames()
         let item = SiteChoices(kind: .item, kinds: try kinds(), chosen: [.kleinanzeigen], names: names)
-        #expect(item.sites.map(\.source) == [.kleinanzeigen, .ebay, market])
-        #expect(item.sites.map(\.name) == ["Kleinanzeigen", "eBay", "Beispielmarkt"])
+        #expect(item.sites.map(\.source) == thingSites)
+        #expect(item.sites.map(\.name) == ["Kleinanzeigen", "eBay", "mydealz", "MTB-News Bikemarkt", "IKEA Preowned", "Vinted"])
         let flat = SiteChoices(kind: .flat, kinds: try kinds(), chosen: Set(Source.flatPortals), names: names)
         #expect(flat.sites.map(\.source) == Source.flatPortals)
         // A site the search chose that the list leaves out stays, after it, so it can be switched off.
@@ -115,7 +124,7 @@ struct SitesTests {
         await settle { store.kinds != nil }
         #expect(store.kinds?.map(\.kind) == [.flat, .item] && transport.requests("GET /kinds").count == 1)
         let form = store.siteChoices(.item, chosen: [.kleinanzeigen])
-        #expect(form.sites.map(\.name) == ["Kleinanzeigen", "eBay", "Beispielmarkt"])
+        #expect(form.sites.map(\.name) == ["Kleinanzeigen", "eBay", "mydealz", "MTB-News Bikemarkt", "IKEA Preowned", "Vinted"])
         // The quiet reloads after an action ask again only while there is no answer.
         await store.reloadOverview(quiet: true)
         await settle()
@@ -155,18 +164,19 @@ struct SitesTests {
     @Test(arguments: [AppLanguage.english, .german])
     func aSiteNotSetUpIsGreyedWithALine(_ language: AppLanguage) throws {
         let de = language == .german
-        var form = SiteChoices(kind: .item, kinds: try kinds(), chosen: [.kleinanzeigen], names: SiteNames())
+        var form = SiteChoices(kind: .item, kinds: try kinds(notReady: [vinted]), chosen: [.kleinanzeigen], names: SiteNames())
         let notSetUp = try #require(form.sites.last)
-        #expect(notSetUp.source == market && !notSetUp.ready)
+        #expect(notSetUp.source == vinted && !notSetUp.ready && !form.isOpen(notSetUp))
         #expect(!form.canSwitch(notSetUp, chosen: [.kleinanzeigen]))
-        #expect(form.canSwitch(notSetUp, chosen: [market]))          // one that is on can still be switched off
-        #expect(form.sites.filter { $0.source != market }.allSatisfy { form.canSwitch($0, chosen: []) })
+        #expect(form.canSwitch(notSetUp, chosen: [vinted]))          // one that is on can still be switched off
+        #expect(form.sites.filter { $0.source != vinted }.allSatisfy { form.canSwitch($0, chosen: []) })
         #expect(form.notReadyLine(language: language)
-                == (de ? "Beispielmarkt ist noch nicht eingerichtet." : "Beispielmarkt is not set up yet."))
-        form = SiteChoices(kind: .item, kinds: try kinds(ebayReady: false), chosen: [], names: SiteNames())
+                == (de ? "Vinted ist noch nicht eingerichtet." : "Vinted is not set up yet."))
+        #expect(form.line(language: language) == form.notReadyLine(language: language))
+        form = SiteChoices(kind: .item, kinds: try kinds(notReady: [.ebay, vinted]), chosen: [], names: SiteNames())
         #expect(!form.canSwitch(form.sites[1], chosen: []))
         #expect(form.notReadyLine(language: language)
-                == (de ? "eBay und Beispielmarkt sind noch nicht eingerichtet." : "eBay and Beispielmarkt are not set up yet."))
+                == (de ? "eBay und Vinted sind noch nicht eingerichtet." : "eBay and Vinted are not set up yet."))
         // Every site set up: no line.
         #expect(SiteChoices(kind: .flat, kinds: try kinds(), chosen: [], names: SiteNames()).notReadyLine(language: language) == nil)
     }
@@ -175,7 +185,7 @@ struct SitesTests {
         let form = SiteChoices(kind: .item, kinds: try kinds(), chosen: [], names: SiteNames())
         #expect(!form.showsAuctions(chosen: []) && !form.showsAuctions(chosen: [.kleinanzeigen]))
         #expect(form.showsAuctions(chosen: [.ebay]) && form.showsAuctions(chosen: [.kleinanzeigen, .ebay]))
-        #expect(!form.showsAuctions(chosen: [.kleinanzeigen, market]))
+        #expect(!form.showsAuctions(chosen: [.kleinanzeigen, ikea, vinted]))
         let flat = SiteChoices(kind: .flat, kinds: try kinds(), chosen: Set(Source.flatPortals), names: SiteNames())
         #expect(!flat.showsAuctions(chosen: Set(Source.flatPortals)))
         // Without an answer the app knows of no auctions.
@@ -284,7 +294,7 @@ struct SitesTests {
         var store = ArestemisStore(session: session, backend: try SampleBackend(), sample: true, placeDelay: .zero)
         await store.reloadOverview()
         await store.loadKinds()
-        #expect(store.siteChoices(.item, chosen: []).sites.map(\.ready) == [true, true, false])
+        #expect(store.siteChoices(.item, chosen: []).sites.map(\.ready) == [true, true, true, true, true, true])
         #expect(store.card(2)?.hunt.search.item?.sources == [.kleinanzeigen, .ebay])
         #expect(store.overview?.sources.first { $0.source == .ebay }?.state == .ok)
         #expect(await store.loadMatch(32)?.listing.item?.priceKind == .auction)
@@ -293,7 +303,7 @@ struct SitesTests {
                                placeDelay: .zero)
         await store.reloadOverview()
         await store.loadKinds()
-        #expect(store.siteChoices(.item, chosen: []).sites.map(\.ready) == [true, false, false])
+        #expect(store.siteChoices(.item, chosen: []).sites.map(\.ready) == [true, false, true, true, true, true])
         #expect(store.card(2)?.hunt.search.item?.sources == [.kleinanzeigen])
         #expect(store.overview?.sources.first { $0.source == .ebay }?.state == .idle)
         let options = LaunchOptions(arguments: ["-sampleData", "-sampleEbayNotReady"])

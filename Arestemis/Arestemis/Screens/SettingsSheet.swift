@@ -22,7 +22,7 @@ struct SettingsSheet: View {
 
     var body: some View {
         SettingsScreen(app: SettingsApp(name: "Arestemis", accent: Look.accent, sendsNotifications: true,
-                                       serverData: ArestemisAPI.accountDataURL),
+                                       serverData: ArestemisAPI.accountDataURL, licences: [.townLocations()]),
                        session: store.session, sample: store.isSample, logOut: logOut) {
             if let draft = Binding($draft) {
                 notifications(draft)

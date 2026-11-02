@@ -171,5 +171,75 @@
     "activated": null,
     "name": "A quieter flat",
     "last_scan": null
+  },
+  {
+    "id": 4,
+    "kind": "item",
+    "name": null,
+    "active": true,
+    "search": {
+      "query": "Bookcase",
+      "exclude": [],
+      "price_min": null,
+      "price_max": 80,
+      "vb_over_max": 8,
+      "condition_min": "good",
+      "for_parts": false,
+      "auctions": true,
+      "delivery": "pickup",
+      "places": [
+        {
+          "id": "wg:400",
+          "name": "Garching bei München",
+          "region": "Bayern",
+          "sources": [
+            "wg_gesucht",
+            "kleinanzeigen",
+            "immowelt",
+            "immoscout24"
+          ]
+        }
+      ],
+      "radius_km": 20,
+      "seller": "private",
+      "extra": "",
+      "sources": [
+        "kleinanzeigen",
+        "ikea_preowned"
+      ]
+    },
+    "created": "2026-10-24T08:50:00Z",
+    "updated": "2026-10-24T08:50:00Z",
+    "activated": "2026-10-24T08:51:00Z",
+    "last_scan": "2026-10-24T10:02:00Z"
+  },
+  {
+    "id": 5,
+    "kind": "item",
+    "name": null,
+    "active": true,
+    "search": {
+      "query": "Denimwerk jeans",
+      "exclude": [],
+      "price_min": null,
+      "price_max": 40,
+      "vb_over_max": 4,
+      "condition_min": "like_new",
+      "for_parts": false,
+      "auctions": true,
+      "delivery": "shipping",
+      "places": [],
+      "radius_km": 20,
+      "seller": "any",
+      "extra": "",
+      "sources": [
+        "kleinanzeigen",
+        "vinted"
+      ]
+    },
+    "created": "2026-10-24T09:05:00Z",
+    "updated": "2026-10-24T09:05:00Z",
+    "activated": "2026-10-24T09:06:00Z",
+    "last_scan": "2026-10-24T10:02:00Z"
   }
 ]

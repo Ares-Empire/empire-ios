@@ -194,9 +194,10 @@ final class ArestemisStore {
     /// The sites' names from the server: the overview's sites and `/kinds`.
     var siteNames: SiteNames { SiteNames(statuses: overview?.sources ?? [], kinds: kinds) }
 
-    /// What a search form of this kind offers under Portals, with the sites its search has chosen.
-    func siteChoices(_ kind: SearchKind, chosen: Set<Source>) -> SiteChoices {
-        SiteChoices(kind: kind, kinds: kinds, chosen: chosen, names: siteNames)
+    /// What a search form of this kind offers under Portals, with the sites its search has chosen and, in the thing
+    /// form, its delivery choice.
+    func siteChoices(_ kind: SearchKind, chosen: Set<Source>, delivery: Delivery? = nil) -> SiteChoices {
+        SiteChoices(kind: kind, kinds: kinds, chosen: chosen, names: siteNames, delivery: delivery)
     }
 
     /// `GET /kinds`, quietly: a failure (offline, a server from before it) keeps the last answer and says nothing; only
@@ -342,6 +343,15 @@ final class ArestemisStore {
 
     func itemSearchDraft(huntID: Int? = nil) -> ItemSearchDraft {
         let search = hunts.first { $0.id == huntID }?.hunt.search.item
+        #if DEBUG
+        // Screenshots: `-sampleDelivery pickup|shipping|either` chooses that delivery in the form, as a tap would (the
+        // form then switches off the sites it rules out).
+        if isSample, let delivery = LaunchArguments.value("-sampleDelivery").flatMap(Delivery.init(rawValue:)) {
+            var draft = search.map(ItemSearchDraft.init) ?? ItemSearchDraft()
+            draft.delivery = delivery
+            return draft
+        }
+        #endif
         guard !isSample, let account = session.accountID else { return search.map(ItemSearchDraft.init) ?? ItemSearchDraft() }
         return keptDraft.restoreItem(for: search, account: account, huntID: huntID)
     }

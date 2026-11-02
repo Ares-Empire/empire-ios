@@ -502,7 +502,8 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   `-tab hunt|listings|search` (`search`: the first hunt's form), `-filter new|saved|applied|all`, `-openMatch <id>`, brief 114's
   `-openHunt <id>`, `-openForm <id>`, `-openItemForm`, `-newItemForm`, `-newFlatForm`, `-newSearch` (the kind dialog),
   `-sampleHunt <id>` (the Listings chip), `-sampleSlowed`, `-sampleNewerKind`;
-  `-openSheet settings|application|rejected|place|describe`, `-scrollBottom`, `-scrollTo size|rent|movein`; Settings →
+  `-openSheet settings|application|rejected|place|describe`, `-scrollBottom`, `-scrollTo size|rent|movein` (the thing form:
+  `where`); Settings →
   Application (brief 61): `-openSettingsPage ownText|notes|aboutMe`, `-sampleOwnMode`, `-sampleNoTexts`. Push: the category and
   the link routing are in `Model/Notifications.swift`; `Shared/Push` is wired in ContentView.
   **Search (API version 2, 2026-10-24, Patrik):** Flat or WG / Flat / WG, people moving in, max flatmates, size ranges
@@ -515,7 +516,15 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   the forms' site switches come from `GET /kinds` for their kind (`SiteChoices`; today's lists when there is no answer),
   a site with `ready: false` is greyed with "<site> is not set up yet.", and the thing form's "Include auctions" shows
   only while a chosen site has `auctions`. An eBay auction shows its bid and time left (`DecodingTests`, `SitesTests`;
-  DEBUG `-sampleEbayNotReady`).
+  DEBUG `-sampleEbayNotReady`). **Delivery** (brief 129, 2026-11-02): `/kinds` says how a site's listings change hands
+  (`KindSource.delivery`: IKEA Preowned pickup, Vinted and mydealz shipping; absent or unknown = both); the thing form
+  greys a site its delivery cannot serve as one not set up and switches it off at once, also a saved search's and when
+  the sites arrive later, never on again by itself (`ItemSearchDraft.switchOffSitesThatCannotServe`); the one line under
+  the sites names what is not set up, then the delivery's reason in the server's words ("eBay is not set up yet.
+  mydealz and Vinted only ship."). Fonts & licences credits OpenStreetMap (`BundledLicence.townLocations`,
+  `Licences/town-locations-licence.txt`; the server looks up thing searches' towns on Nominatim). Sample hunts 4
+  (Bookcase, pickup, IKEA Preowned) and 5 (Denimwerk jeans, shipping, Vinted) with matches 33 and 34
+  (`DeliverySitesTests`; DEBUG `-sampleDelivery pickup|shipping|either`, chosen in the thing form as a tap would).
 - **Arestoteles app** (2026-10-24, build R2): `Arestoteles/` (bundle id `de.ares-empire.arestoteles`, URL scheme
   `arestoteles`), Patrik's Weltbild vault on the Arestoteles API (`Arestoteles/docs/API.md`, decisions
   `ares-empire/docs/ARESTOTELES-APP.md`; samples in `Arestoteles/Arestoteles/Samples/`, copies of its `docs/samples/`).

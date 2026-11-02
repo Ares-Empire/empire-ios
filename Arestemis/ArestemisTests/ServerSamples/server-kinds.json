@@ -7,25 +7,29 @@
         "source": "wg_gesucht",
         "name": "WG-Gesucht",
         "ready": true,
-        "auctions": false
+        "auctions": false,
+        "delivery": "both"
       },
       {
         "source": "kleinanzeigen",
         "name": "Kleinanzeigen",
         "ready": true,
-        "auctions": false
+        "auctions": false,
+        "delivery": "both"
       },
       {
         "source": "immowelt",
         "name": "Immowelt",
         "ready": true,
-        "auctions": false
+        "auctions": false,
+        "delivery": "both"
       },
       {
         "source": "immoscout24",
         "name": "ImmoScout24",
         "ready": true,
-        "auctions": false
+        "auctions": false,
+        "delivery": "both"
       }
     ]
   },
@@ -37,13 +41,43 @@
         "source": "kleinanzeigen",
         "name": "Kleinanzeigen",
         "ready": true,
-        "auctions": false
+        "auctions": false,
+        "delivery": "both"
       },
       {
         "source": "ebay",
         "name": "eBay",
         "ready": false,
-        "auctions": true
+        "auctions": true,
+        "delivery": "both"
+      },
+      {
+        "source": "mydealz",
+        "name": "mydealz",
+        "ready": false,
+        "auctions": false,
+        "delivery": "shipping"
+      },
+      {
+        "source": "bikemarkt",
+        "name": "MTB-News Bikemarkt",
+        "ready": true,
+        "auctions": false,
+        "delivery": "both"
+      },
+      {
+        "source": "ikea_preowned",
+        "name": "IKEA Preowned",
+        "ready": true,
+        "auctions": false,
+        "delivery": "pickup"
+      },
+      {
+        "source": "vinted",
+        "name": "Vinted",
+        "ready": false,
+        "auctions": false,
+        "delivery": "shipping"
       }
     ]
   }
