@@ -1,9 +1,9 @@
 import Foundation
 
 /// What the Hunts and Listings tabs show of the account's hunts, decided here so the screens only lay it out: the kinds
-/// this build can make (the New search dialog), a hunt's lines on its card and page, which actions its page offers, the
-/// word for the "applied" state, the rename field's rule and the radius steps. The Listings tab's own parts:
-/// `ListingsPresentation.swift`.
+/// this build can make (New search, `NewSearch.swift`), a hunt's lines on its card and page, which actions its page and
+/// its card's long press offer, the word for the "applied" state, the name's rule and the radius steps. The Listings
+/// tab's own parts: `ListingsPresentation.swift`.
 
 /// The kinds of search this build can make and edit: a flat, a thing for sale, and a page to watch (brief 131). A hunt
 /// of another kind (from a newer server) shows its name and "Needs a newer app", nothing else.
@@ -28,25 +28,29 @@ enum SearchKind: String, CaseIterable, Hashable, Identifiable, Sendable {
         }
     }
 
-    /// Every kind this build can make, in New search's order: "Flat or room", "Something to buy", "Watch a page".
+    /// Every kind this build can make, in the order of the server's `/kinds`: Flat, Things, Watch a website.
     static let all: [SearchKind] = [.flat, .item, .watch]
 
-    /// New search's dialog: the kinds the server offers (`GET /kinds`) that this build can make, in this build's order;
-    /// all of them while there is no answer (offline, a server from before `/kinds`), or when the answer names none of
-    /// them, so the dialog is never empty. The server still refuses a kind it does not know.
+    /// New search's cards: the kinds the server offers (`GET /kinds`) that this build can make, in the server's order (a
+    /// kind this build cannot open, such as one from a newer server, is left out); all of them while there is no answer
+    /// (offline, a server from before `/kinds`), or when the answer names none of them, so the page is never empty. The
+    /// server still refuses a kind it does not know.
     static func choices(offered kinds: [OfferedKind]?) -> [SearchKind] {
         guard let kinds else { return all }
-        let offered = Set(kinds.map(\.kind))
-        let choices = all.filter { offered.contains($0.huntKind) }
+        var choices: [SearchKind] = []
+        for offered in kinds {
+            if let kind = SearchKind(offered.kind), !choices.contains(kind) { choices.append(kind) }
+        }
         return choices.isEmpty ? all : choices
     }
 
-    /// The dialog's button for this kind.
+    /// The kind's name while the server has not named it (`/kinds` names it as the server's texts say, brief 134):
+    /// "Flat" / "Wohnung", "Things" / "Dinge", "Watch a website" / "Webseite beobachten".
     func choiceTitle(language: AppLanguage = .current) -> String {
         switch self {
-        case .flat: language.string("Flat or room")
-        case .item: language.string("Something to buy")
-        case .watch: language.string("Watch a page")
+        case .flat: language.string("Flat")
+        case .item: language.string("Things")
+        case .watch: language.string("Watch a website")
         }
     }
 
@@ -100,16 +104,11 @@ struct HuntWords: Equatable {
     var save: String { pick("Save search", "Save watch") }
     /// Under a new form's main button.
     var startsPaused: String { pick("The search starts paused.", "The watch starts paused.") }
-    /// The hunt's page and its form: delete, and its question.
+    /// The hunt's page, its card's long press and its form: delete, and its question.
     var delete: String { pick("Delete search", "Delete watch") }
     var deleteQuestion: String { pick("Delete the search?", "Delete the watch?") }
     var deleteMessage: String {
         pick("The hunt stops and its listings are deleted.", "The watch stops and the changes it found are deleted.")
-    }
-    /// The hunt's page: rename, and the line under the name's field.
-    var rename: String { pick("Rename search", "Rename watch") }
-    var renameMessage: String {
-        pick("Leave it empty to name it after what it looks for.", "Leave it empty to name it after the page.")
     }
 }
 
@@ -141,17 +140,31 @@ struct HuntText: Equatable {
             // under any other name.
             let host = Self.text(page?.host) ?? WatchAddress.host(search.url)
             self.kind = kind
-            title = ownName ?? Self.text(page?.pageTitle) ?? host ?? search.url
+            title = ownName ?? Self.automaticTitle(hunt.search, page: page) ?? search.url
             details = host == title ? nil : host
             newerApp = nil
             return
         }
-        let summary = HuntSummary(hunt, sites: sites, now: now, calendar: calendar, language: language)
+        let summary = HuntSummary(hunt.search, sites: sites, now: now, calendar: calendar, language: language)
         let parts = (ownName == nil ? [] : [summary.title]) + summary.parts
         self.kind = kind
         title = ownName ?? summary.title
         details = parts.isEmpty ? nil : parts.map(SearchSummary.unbreakable).joined(separator: " · ")
         newerApp = nil
+    }
+
+    /// The title a search has without a name of its own (brief 135: the name fields' grey placeholder): what it looks
+    /// for (a flat's kinds, a thing's words), a watch's page title once read, else its host; nil while there is nothing
+    /// yet (a thing without words, a watch without an address) and for a search this build cannot read.
+    static func automaticTitle(_ search: HuntSearch, page: PageState? = nil, language: AppLanguage = .current) -> String? {
+        switch search {
+        case .watch(let watch):
+            text(page?.pageTitle) ?? text(page?.host) ?? WatchAddress.host(watch.url)
+        case .flat, .item:
+            text(HuntSummary(search, language: language).title)
+        case .unsupported:
+            nil
+        }
     }
 
     /// A text with something in it, trimmed; nil for nil, empty or only spaces.
@@ -160,19 +173,21 @@ struct HuntText: Equatable {
     }
 }
 
-/// What a hunt's page offers. A hunt this build cannot show can still be listed, renamed and deleted, but not
-/// started, paused or edited.
+/// What a hunt's page and its card's long press offer. A hunt this build cannot show can still be listed and deleted,
+/// but not started, paused, edited or renamed (renaming sends its search again, `PUT /hunts/{id}`, which this build
+/// cannot write).
 struct HuntPageActions: Equatable {
     let startPause: Bool
     let editSearch: Bool
     let listings = true
-    let rename = true
+    let rename: Bool
     let delete = true
 
     init(_ hunt: Hunt) {
         let known = SearchKind(hunt.kind) != nil && hunt.search != .unsupported
         startPause = known
         editSearch = known
+        rename = known
     }
 
     /// The figures under the hunt's card, each opening those listings: New, Today, and Applied (flats) or Asked
@@ -200,11 +215,12 @@ struct HuntFigure: Equatable, Identifiable {
     var id: MatchFilter { filter }
 }
 
-/// A hunt's own name (Rename): 1 to 60 characters; empty clears it, so the hunt is named after its search again.
+/// A hunt's own name (the forms' Name field, renaming in place): 1 to 60 characters; empty clears it, so the hunt is
+/// named after its search again (`HuntText.automaticTitle`).
 enum HuntName {
     static let maxLength = 60
 
-    /// What the rename field keeps while typing.
+    /// What a name field keeps while typing.
     static func limited(_ text: String) -> String { String(text.prefix(maxLength)) }
 
     /// What is sent: trimmed, nil when empty.
@@ -212,6 +228,36 @@ enum HuntName {
         let trimmed = limited(text).trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? nil : trimmed
     }
+
+    /// A name field's grey placeholder: the name the search gets while the field stays empty, else "Optional" (nothing
+    /// to name it after yet).
+    static func placeholder(_ automatic: String?, language: AppLanguage = .current) -> String {
+        automatic ?? language.string("Optional")
+    }
+}
+
+/// Renaming a search where its name stands (brief 135, the search's page): the field opens with the own name (empty
+/// while the search has none, so the automatic name shows grey in its place), keeps at most 60 characters, and only a
+/// changed name is sent: Return, Save or a tap elsewhere saves it (empty: the automatic name again), Cancel or Escape
+/// leaves the name as it was.
+struct NameEdit: Equatable {
+    let hunt: Int
+    /// The own name when the field opened; nil while the search had none.
+    let original: String?
+    var text: String {
+        didSet { if text.count > HuntName.maxLength { text = HuntName.limited(text) } }
+    }
+
+    init(_ hunt: Hunt) {
+        self.hunt = hunt.id
+        original = HuntName.cleaned(hunt.name ?? "")
+        text = original ?? ""
+    }
+
+    /// The name to send: trimmed, nil when empty.
+    var name: String? { HuntName.cleaned(text) }
+    /// Whether saving would change the name (spaces around it change nothing).
+    var hasChanges: Bool { name != original }
 }
 
 /// The thing form's radius around each place, in steps (km).

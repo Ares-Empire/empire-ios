@@ -358,62 +358,55 @@ final class ArestemisStore {
         }
     }
 
+    // MARK: - the forms' drafts
+
+    /// The saved hunt as its form shows it (search and name); nil for a new one or a hunt of another kind.
+    func savedDraft<Draft: KeptDraft>(_ type: Draft.Type, huntID: Int?) -> Draft? {
+        hunts.first { $0.id == huntID }.flatMap { Draft(saved: $0.hunt) }
+    }
+
+    /// A form's draft: the saved hunt (or an empty form), with the edits kept for it while it is unchanged.
+    func searchDraft<Draft: KeptDraft>(_ type: Draft.Type, huntID: Int?) -> Draft {
+        let saved = savedDraft(type, huntID: huntID)
+        guard !isSample, let account = session.accountID else { return saved ?? Draft() }
+        return keptDraft.restore(saved: saved, account: account, huntID: huntID)
+    }
+
+    /// Keeps a form's unsaved edits for the next time it opens (forgotten once they equal the saved hunt again).
+    func keepSearchDraft<Draft: KeptDraft>(_ draft: Draft, huntID: Int?) {
+        guard !isSample, canAct, let account = session.accountID else { return }
+        keptDraft.keep(draft, saved: savedDraft(Draft.self, huntID: huntID), account: account, huntID: huntID)
+    }
+
     func itemSearchDraft(huntID: Int? = nil) -> ItemSearchDraft {
-        let search = hunts.first { $0.id == huntID }?.hunt.search.item
         #if DEBUG
         // Screenshots: `-sampleDelivery pickup|shipping|either` chooses that delivery in the form, as a tap would (the
         // form then switches off the sites it rules out).
         if isSample, let delivery = LaunchArguments.value("-sampleDelivery").flatMap(Delivery.init(rawValue:)) {
-            var draft = search.map(ItemSearchDraft.init) ?? ItemSearchDraft()
+            var draft = savedDraft(ItemSearchDraft.self, huntID: huntID) ?? ItemSearchDraft()
             draft.delivery = delivery
             return draft
         }
         #endif
-        guard !isSample, let account = session.accountID else { return search.map(ItemSearchDraft.init) ?? ItemSearchDraft() }
-        return keptDraft.restoreItem(for: search, account: account, huntID: huntID)
+        return searchDraft(ItemSearchDraft.self, huntID: huntID)
     }
-    func keepItemSearchDraft(_ draft: ItemSearchDraft, baseline: ItemSearch?, huntID: Int? = nil) {
-        guard !isSample, canAct, let account = session.accountID else { return }
-        keptDraft.keep(draft, baseline: baseline, account: account, huntID: huntID)
-    }
-    /// The watch form's draft: the saved watch (its search and name), with the edits kept for it while it is unchanged.
-    func watchSearchDraft(huntID: Int? = nil) -> WatchSearchDraft {
-        let saved = savedWatchDraft(huntID: huntID)
-        guard !isSample, let account = session.accountID else { return saved ?? WatchSearchDraft() }
-        return keptDraft.restoreWatch(for: saved, account: account, huntID: huntID)
-    }
-    func keepWatchSearchDraft(_ draft: WatchSearchDraft, huntID: Int? = nil) {
-        guard !isSample, canAct, let account = session.accountID else { return }
-        keptDraft.keep(draft, baseline: savedWatchDraft(huntID: huntID), account: account, huntID: huntID)
-    }
-    /// The saved watch as the form shows it; nil for a new one.
-    func savedWatchDraft(huntID: Int?) -> WatchSearchDraft? {
-        guard let hunt = hunts.first(where: { $0.id == huntID })?.hunt, let search = hunt.search.watch else { return nil }
-        return WatchSearchDraft(search, name: hunt.name)
+
+    func flatSearchDraft(huntID: Int?) -> SearchDraft {
+        #if DEBUG
+        // Screenshots: an unsaved change, so the form shows its Save.
+        if isSample, LaunchArguments.current.contains("-sampleSearchDraft") {
+            var draft = savedDraft(SearchDraft.self, huntID: huntID) ?? SearchDraft()
+            draft.people = draft.people == 1 ? 2 : 1
+            return draft
+        }
+        #endif
+        return searchDraft(SearchDraft.self, huntID: huntID)
     }
 
     /// A refusal shown at its field goes once that field is changed (and before every save).
     func clearSearchError() {
         searchError = nil
         searchErrorField = nil
-    }
-
-    func flatSearchDraft(huntID: Int?) -> SearchDraft {
-        let search = hunts.first { $0.id == huntID }?.hunt.search.flat
-        #if DEBUG
-        // Screenshots: an unsaved change, so the form shows its Save.
-        if isSample, LaunchArguments.current.contains("-sampleSearchDraft") {
-            var draft = search.map { SearchDraft($0) } ?? SearchDraft()
-            draft.people = draft.people == 1 ? 2 : 1
-            return draft
-        }
-        #endif
-        guard !isSample, let account = session.accountID else { return search.map { SearchDraft($0) } ?? SearchDraft() }
-        return keptDraft.restore(for: search, account: account, huntID: huntID)
-    }
-    func keepFlatSearchDraft(_ draft: SearchDraft, baseline: Search?, huntID: Int?) {
-        guard !isSample, canAct, let account = session.accountID else { return }
-        keptDraft.keep(draft, baseline: baseline, account: account, huntID: huntID)
     }
 
     /// "Describe it": what the server read from the sentence for a search of this kind, or nil (then `parseError`

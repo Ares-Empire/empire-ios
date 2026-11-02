@@ -1,20 +1,24 @@
 import SwiftUI
 
-/// A thing hunt's search ("Something to buy"), built from the flat form's pieces in the same order of habit: "Describe
+/// A thing hunt's search ("Things"), built from the flat form's pieces in the same order of habit: its name and "Describe
 /// it" at the top, then what (the search words and words to leave out), price (with how far a negotiable price may lie
 /// over the maximum), condition, where (pickup, shipping or either; places and radius unless only shipped), seller,
 /// extras, portals (the server's sites for things, with "Include auctions" while a chosen one has auctions; a site that
 /// cannot serve the delivery greyed and switched off, brief 129); then save. Pushed on the Hunts tab for one hunt, or
-/// empty for a new one, which it creates paused.
+/// for a new one (empty, or from one of New search's examples), which it creates paused.
 /// What is wrong shows under its field (`ItemSearchDraft.fieldLine`); unsaved edits are kept per hunt.
 struct ItemSearchScreen: View {
     let store: ArestemisStore
     @Bindable var navigation: AppNavigation
     /// The hunt whose search this is; nil for a new one.
     let huntID: Int?
+    /// New search's example the new form opens with, filled in.
+    var example: SearchExample? = nil
 
     @State private var draft = ItemSearchDraft()
-    @State private var baseline: ItemSearch?
+    /// The saved hunt as this form shows it (search and name); nil for a new one.
+    @State private var saved: ItemSearchDraft?
+    @State private var exampleApplied = false
     @State private var description = ""
     @State private var confirmDelete = false
     @FocusState private var queryFocused: Bool
@@ -22,13 +26,18 @@ struct ItemSearchScreen: View {
 
     private var hunt: Hunt? { huntID.flatMap { store.card($0)?.hunt } }
     private var creating: Bool { huntID == nil }
-    private var isDirty: Bool { creating ? draft != ItemSearchDraft() : draft.search() != baseline }
+    private var isDirty: Bool {
+        creating ? draft != ItemSearchDraft() : draft.search() != hunt?.search.item || draft.sentName != saved?.sentName
+    }
     private var canSave: Bool { draft.isValid && (creating || isDirty) }
 
     var body: some View {
         ScrollViewReader { reader in
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
+                    FormSection(title: String(localized: "Name")) {
+                        NameField(text: $draft.name, placeholder: draft.namePlaceholder())
+                    }
                     DescribeLine { navigation.showsDescribe = true }
                     FormSection(title: String(localized: "What"), problems: lines(.query, .exclude)) { what }
                     FormSection(title: String(localized: "Price"), problems: lines(.priceMin, .priceMax, .priceOrder, .vbOverMax)) {
@@ -83,17 +92,25 @@ struct ItemSearchScreen: View {
         }
         .onAppear { sync() }
         .task { await store.loadKinds() }               // the sites as the server offers them now
-        .onChange(of: hunt?.search.item) { _, _ in sync() }
+        // The hunt changed elsewhere (another device, renamed): taken over while nothing is edited here.
+        .onChange(of: store.savedDraft(ItemSearchDraft.self, huntID: huntID)) { _, _ in
+            if draft == (saved ?? ItemSearchDraft()) { sync() }
+        }
         // A site that cannot serve the delivery goes off at once, also when the sites' answer arrives later.
         .onChange(of: draft.delivery) { _, _ in withAnimation(.easeOut(duration: 0.2)) { switchOffUnservedSites() } }
         .onChange(of: store.kinds) { _, _ in switchOffUnservedSites() }
-        .onChange(of: draft) { _, new in store.keepItemSearchDraft(new, baseline: baseline, huntID: huntID) }
+        .onChange(of: draft) { _, new in store.keepSearchDraft(new, huntID: huntID) }
     }
 
-    /// The hunt's search as saved, with the edits kept for it while that search is still current.
+    /// The hunt as saved, with the edits kept for it while it is still current; a new form opened from an example
+    /// starts filled in from it, once.
     private func sync() {
-        baseline = hunt?.search.item
+        saved = store.savedDraft(ItemSearchDraft.self, huntID: huntID)
         draft = store.itemSearchDraft(huntID: huntID)
+        if creating, !exampleApplied, let filled = example?.itemDraft() {
+            exampleApplied = true
+            draft = filled
+        }
         switchOffUnservedSites()                        // a search saved before the server refused such a site
     }
 
@@ -314,7 +331,7 @@ struct ItemSearchScreen: View {
         endTyping()
         guard let search = draft.search() else { return }
         Task {
-            guard let saved = await store.saveHunt(id: huntID, kind: .item, name: hunt?.name, search: .item(search))
+            guard let saved = await store.saveHunt(id: huntID, kind: .item, name: draft.sentName, search: .item(search))
             else { return }
             if creating { navigation.showCreated(saved.id) } else { dismiss() }
         }

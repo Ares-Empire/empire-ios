@@ -80,15 +80,15 @@ struct WatchTests {
     @Test func theKindIsOfferedByTheServer() throws {
         let kinds = try sample([OfferedKind].self, "kinds")
         let watch = try #require(kinds.first { $0.kind == .watch })
-        #expect(watch.name == "Watch a page" && watch.sources.isEmpty)
+        #expect(watch.name == "Watch a website" && watch.sources.isEmpty)
         #expect(SearchKind.choices(offered: kinds) == [.flat, .item, .watch])
         // A server without watches: not offered. No answer, or an answer naming none of them: all three.
         #expect(SearchKind.choices(offered: kinds.filter { $0.kind != .watch }) == [.flat, .item])
         #expect(SearchKind.choices(offered: nil) == [.flat, .item, .watch])
         #expect(SearchKind.choices(offered: []) == [.flat, .item, .watch])
         #expect(SearchKind(.watch) == .watch && SearchKind.watch.huntKind == .watch && SearchKind.watch.symbol == "eye")
-        #expect(SearchKind.watch.choiceTitle(language: en) == "Watch a page")
-        #expect(SearchKind.watch.choiceTitle(language: de) == "Seite beobachten")
+        #expect(SearchKind.watch.choiceTitle(language: en) == "Watch a website")
+        #expect(SearchKind.watch.choiceTitle(language: de) == "Webseite beobachten")
         #expect(SiteChoices.fallback(.watch).isEmpty)
     }
 
@@ -189,19 +189,19 @@ struct WatchTests {
         let saved = WatchSearchDraft(WatchSearch(url: "https://shop.example/", change: "under 45 €", every: 60), name: nil)
         var edited = saved
         edited.change = "under 40 €"
-        kept.keep(edited, baseline: saved, account: "a", huntID: 6)
-        #expect(kept.restoreWatch(for: saved, account: "a", huntID: 6) == edited)
+        kept.keep(edited, saved: saved, account: "a", huntID: 6)
+        #expect(kept.restore(saved: saved, account: "a", huntID: 6) == edited)
         // Saved elsewhere meanwhile: the kept edit is dropped.
         var other = saved
         other.every = 15
-        #expect(kept.restoreWatch(for: other, account: "a", huntID: 6) == other)
+        #expect(kept.restore(saved: other, account: "a", huntID: 6) == other)
         // A new watch's draft, and nothing kept while it is empty.
         var fresh = WatchSearchDraft()
         fresh.url = "shop.example"
-        kept.keep(fresh, baseline: nil, account: "a")
-        #expect(kept.restoreWatch(for: nil, account: "a") == fresh)
-        kept.keep(WatchSearchDraft(), baseline: nil, account: "a")
-        #expect(kept.restoreWatch(for: nil, account: "a") == WatchSearchDraft())
+        kept.keep(fresh, saved: nil, account: "a")
+        #expect(kept.restore(WatchSearchDraft.self, saved: nil, account: "a") == fresh)
+        kept.keep(WatchSearchDraft(), saved: nil, account: "a")
+        #expect(kept.restore(WatchSearchDraft.self, saved: nil, account: "a") == WatchSearchDraft())
     }
 
     // MARK: the card
@@ -385,7 +385,7 @@ struct WatchTests {
         #expect(card.page?.read == .waiting && card.page?.host == "shop.example")
         #expect(WatchCardText(card.page, language: en).note == "Reading the page…")
         #expect(HuntText(card.hunt, page: card.page, language: en).title == "shop.example")
-        #expect(store.savedWatchDraft(huntID: created.id) == WatchSearchDraft(search, name: nil))
+        #expect(store.savedDraft(WatchSearchDraft.self, huntID: created.id) == WatchSearchDraft(search, name: nil))
     }
 
     @Test func theSamplesRefusalsComeAtTheirField() async throws {

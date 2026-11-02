@@ -13,13 +13,12 @@ struct HuntsScreensTests {
     // MARK: New search's kinds
 
     @Test(arguments: [AppLanguage.english, .german])
-    func theKindDialogOffersFlatThenThingThenWatch(_ language: AppLanguage) {
+    func withoutTheServerNewSearchOffersFlatThenThingsThenWatch(_ language: AppLanguage) {
         let de = language == .german
         let choices = SearchKind.choices(offered: nil)
         #expect(choices == [.flat, .item, .watch])
         #expect(choices.map { $0.choiceTitle(language: language) }
-                == (de ? ["Wohnung oder Zimmer", "Etwas kaufen", "Seite beobachten"]
-                       : ["Flat or room", "Something to buy", "Watch a page"]))
+                == (de ? ["Wohnung", "Dinge", "Webseite beobachten"] : ["Flat", "Things", "Watch a website"]))
         #expect(choices.map(\.huntKind) == [.flat, .item, .watch])
         #expect(SearchKind(.unknown("car")) == nil && SearchKind(.item) == .item)
         #expect(SearchKind.flat.symbol == "house" && SearchKind.item.symbol == "tag" && SearchKind.watch.symbol == "eye")
@@ -86,7 +85,8 @@ struct HuntsScreensTests {
         let newer = Hunt(id: 9, kind: .unknown("car"), name: nil, active: true, search: .unsupported,
                          created: "2026-10-24T08:12:00Z", updated: "2026-10-24T08:12:00Z", activated: nil)
         let actions = HuntPageActions(newer)
-        #expect(!actions.startPause && !actions.editSearch && actions.listings && actions.rename && actions.delete)
+        // Renaming sends the search again (`PUT /hunts/{id}`), which this build cannot write for a kind it cannot read.
+        #expect(!actions.startPause && !actions.editSearch && actions.listings && !actions.rename && actions.delete)
         #expect(HuntPageActions.figureLabels(.flat, language: language)
                 == (de ? ["Neu", "Heute", "Beworben"] : ["New", "Today", "Applied"]))
         #expect(HuntPageActions.figureLabels(.item, language: language)
@@ -273,21 +273,24 @@ struct HuntsScreensTests {
         navigation.tab = .listings
         navigation.huntPath = [.hunt(1)]
         navigation.startNewSearch()
-        #expect(navigation.tab == .hunt && navigation.huntPath.isEmpty && navigation.asksSearchKind)
+        #expect(navigation.tab == .hunt && navigation.huntPath == [.newSearch])
         navigation.openNewForm(.item)
-        #expect(navigation.huntPath == [.form(.item, hunt: nil)])
-        // Saving it shows the new hunt's page in the form's place.
+        #expect(navigation.huntPath == [.newSearch, .form(.item, hunt: nil)])
+        // Saving it shows the new hunt's page in the place of the form and New search, so back leads to the hunts.
         navigation.showCreated(4)
         #expect(navigation.huntPath == [.hunt(4)])
+        // An example's form, the same way.
+        navigation.startNewSearch()
+        navigation.openNewForm(.flat, example: .twoRooms)
+        #expect(navigation.huntPath == [.newSearch, .form(.flat, hunt: nil, example: .twoRooms)])
+        navigation.showCreated(5)
+        #expect(navigation.huntPath == [.hunt(5)])
         navigation.huntPath.append(.form(.item, hunt: 4))
         navigation.leaveDeleted()
         #expect(navigation.huntPath.isEmpty)
-        navigation.asksSearchKind = true
-        navigation.open(ArestemisLink(match: 31))
-        #expect(!navigation.asksSearchKind && navigation.tab == .listings && navigation.listingsPath == [.match(31)])
-        navigation.asksSearchKind = true
+        navigation.renaming = 2
         navigation.reset()
-        #expect(!navigation.asksSearchKind && navigation.formScroll == nil)
+        #expect(navigation.renaming == nil && navigation.formScroll == nil && navigation.huntPath.isEmpty)
     }
 
     @Test func launchArgumentsReachEveryScreen() throws {
@@ -305,7 +308,11 @@ struct HuntsScreensTests {
         #expect(apply(["-newItemForm", "-scrollBottom"]).huntPath == [.form(.item, hunt: nil)])
         #expect(apply(["-newItemForm", "-scrollBottom"]).formScroll == "bottom")
         #expect(apply(["-openHunt", "2", "-openItemForm"]).huntPath == [.hunt(2), .form(.item, hunt: 2)])
-        #expect(apply(["-newSearch"]).asksSearchKind)
+        #expect(apply(["-newSearch"]).huntPath == [.newSearch])
+        #expect(apply(["-newExample", "kallax"]).huntPath == [.newSearch, .form(.item, hunt: nil, example: .kallax)])
+        #expect(apply(["-newExample", "newJob"]).huntPath == [.newSearch, .form(.watch, hunt: nil, example: .newJob)])
+        let rename = apply(["-renameHunt", "2"])
+        #expect(rename.huntPath == [.hunt(2)] && rename.renaming == 2 && rename.tab == .hunt)
         #expect(apply(["-openItemForm", "-openSheet", "describe"]).showsDescribe)
         #expect(LaunchOptions.route(.firstItem, hunts: []) == .form(.item, hunt: nil))
         #expect(LaunchOptions.route(.firstHunt, hunts: []) == .form(.flat, hunt: nil))

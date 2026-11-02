@@ -1,8 +1,9 @@
 import SwiftUI
 
-/// The first tab ("Suche"): every hunt as a card, oldest first, then New search (which asks the kind), the portals and
+/// The first tab ("Suche"): every hunt as a card, oldest first, then New search (its page, brief 135), the portals and
 /// the latest matches across all hunts, and the ARESTEMIS band at the end of the scroll (`WordmarkScrollView`). A card
-/// opens the hunt's page; the stack also holds the matches' pages and the search forms (`HuntRoute`).
+/// opens the hunt's page; its long press offers Rename, Pause or Start and Delete (`huntCardMenu`). The stack also holds
+/// New search, the matches' pages and the search forms (`HuntRoute`).
 struct HuntsScreen: View {
     @Bindable var store: ArestemisStore
     @Bindable var navigation: AppNavigation
@@ -25,8 +26,7 @@ struct HuntsScreen: View {
                                     .frame(maxWidth: .infinity).multilineTextAlignment(.center).padding(.bottom, 10)
                             }
                             if store.hunts.isEmpty {
-                                NoHuntCard { navigation.asksSearchKind = true }
-                                    .searchKindDialog(navigation, kinds: store.kinds)
+                                NoHuntCard { navigation.startNewSearch() }
                             } else {
                                 hunts
                             }
@@ -60,9 +60,13 @@ struct HuntsScreen: View {
                 switch route {
                 case .hunt(let id): HuntPage(id: id, store: store, navigation: navigation)
                 case .match(let id): MatchDetailScreen(id: id, store: store, navigation: navigation)
-                case .form(.flat, let id): FlatSearchScreen(store: store, navigation: navigation, huntID: id)
-                case .form(.item, let id): ItemSearchScreen(store: store, navigation: navigation, huntID: id)
-                case .form(.watch, let id): WatchSearchScreen(store: store, navigation: navigation, huntID: id)
+                case .newSearch: NewSearchScreen(store: store, navigation: navigation)
+                case .form(.flat, let id, let example):
+                    FlatSearchScreen(store: store, navigation: navigation, huntID: id, example: example)
+                case .form(.item, let id, let example):
+                    ItemSearchScreen(store: store, navigation: navigation, huntID: id, example: example)
+                case .form(.watch, let id, let example):
+                    WatchSearchScreen(store: store, navigation: navigation, huntID: id, example: example)
                 }
             }
             .task(id: scenePhase) { await keepFresh() }
@@ -85,10 +89,10 @@ struct HuntsScreen: View {
                 HuntListCard(card: card, sites: store.siteNames, busy: store.isChanging(hunt: card.id),
                              open: { navigation.huntPath.append(.hunt(card.id)) },
                              toggle: { active in Task { await store.setActive(id: card.id, active: active) } })
+                    .huntCardMenu(card, store: store, navigation: navigation)
                     .id(Self.cardID(card.id))
             }
-            NewSearchButton { navigation.asksSearchKind = true }
-                .searchKindDialog(navigation, kinds: store.kinds)
+            NewSearchButton { navigation.startNewSearch() }
         }
     }
 
@@ -140,18 +144,5 @@ private struct NewSearchButton: View {
             .contentShape(RoundedRectangle(cornerRadius: Ink.cardRadius, style: .continuous))
         }
         .buttonStyle(CardPressStyle())
-    }
-}
-
-private extension View {
-    /// New search's question: which kind (Apple's confirmation dialog, shown from the button that asked), the kinds the
-    /// server offers (`SearchKind.choices`).
-    func searchKindDialog(_ navigation: AppNavigation, kinds: [OfferedKind]?) -> some View {
-        confirmationDialog("What are you looking for?", isPresented: Bindable(navigation).asksSearchKind,
-                           titleVisibility: .visible) {
-            ForEach(SearchKind.choices(offered: kinds)) { kind in
-                Button(kind.choiceTitle()) { navigation.openNewForm(kind) }
-            }
-        }
     }
 }

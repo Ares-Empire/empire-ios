@@ -1,10 +1,10 @@
 import SwiftUI
 
-/// A watch's form ("Watch a page", brief 131), built from the thing form's pieces in its order of habit: the page's
-/// address (the URL keyboard, nothing corrected or capitalised; a whole shared text pasted in keeps only its first link),
-/// the change in the user's own words, how often the page is read, and an optional name (empty: the page's title once
-/// read, else the host); one line on what a watch cannot read yet; then save. Pushed on the Hunts tab for one watch, or
-/// empty for a new one, which it creates paused. What is wrong shows under its field (`WatchSearchDraft.fieldLine`), and
+/// A watch's form ("Watch a website", brief 131), built from the thing form's pieces in its order of habit: its name
+/// (brief 135: first, as in every form; empty: the page's title once read, else the host), the page's address (the URL
+/// keyboard, nothing corrected or capitalised; a whole shared text pasted in keeps only its first link), the change in
+/// the user's own words and how often the page is read; one line on what a watch cannot read yet; then save. Pushed on
+/// the Hunts tab for one watch, or for a new one (empty, or from one of New search's examples), which it creates paused. What is wrong shows under its field (`WatchSearchDraft.fieldLine`), and
 /// so does the server's refusal of the address or the description (`ArestemisStore.searchErrorField`); unsaved edits
 /// are kept per watch.
 struct WatchSearchScreen: View {
@@ -12,9 +12,12 @@ struct WatchSearchScreen: View {
     @Bindable var navigation: AppNavigation
     /// The watch this form edits; nil for a new one.
     let huntID: Int?
+    /// New search's example the new form opens with, filled in.
+    var example: SearchExample? = nil
 
     @State private var draft = WatchSearchDraft()
     @State private var saved: WatchSearchDraft?
+    @State private var exampleApplied = false
     @State private var confirmDelete = false
     @State private var launchDone = false
     @FocusState private var focus: Field?
@@ -36,6 +39,11 @@ struct WatchSearchScreen: View {
         ScrollViewReader { reader in
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
+                    FormSection(title: String(localized: "Name")) {
+                        NameField(text: $draft.name,
+                                  placeholder: draft.namePlaceholder(savedURL: saved?.url, pageTitle: card?.page?.pageTitle))
+                            .focused($focus, equals: .name)
+                    }
                     FormSection(title: String(localized: "Page"), problems: lines(.url, field: Self.urlField)) { address }
                     FormSection(title: String(localized: "Tell me when"), problems: lines(.change, field: Self.changeField)) {
                         TextArea(placeholder: String(localized: "the price is under 45 €"), text: $draft.change,
@@ -45,7 +53,6 @@ struct WatchSearchScreen: View {
                             .glassCard()
                     }
                     FormSection(title: String(localized: "How often")) { interval }
-                    FormSection(title: String(localized: "Name")) { name }
                     Caption(text: String(localized: "Pages that need a login, or build their content with JavaScript (such as appointment bookings), can't be watched yet."))
                         .padding(.leading, 4).padding(.top, 18)
                     SearchSaveArea(words: words, creating: creating, canSave: canSave, saving: store.isSavingSearch,
@@ -76,20 +83,16 @@ struct WatchSearchScreen: View {
         }
         // The watch changed elsewhere: taken over while nothing is edited here. Edits stay, also through a save's
         // optimistic change and its rollback after a refusal.
-        .onChange(of: store.savedWatchDraft(huntID: huntID)) { _, _ in
+        .onChange(of: store.savedDraft(WatchSearchDraft.self, huntID: huntID)) { _, _ in
             if draft == (saved ?? WatchSearchDraft()) { sync() }
         }
-        .onChange(of: draft) { _, new in store.keepWatchSearchDraft(new, huntID: huntID) }
+        .onChange(of: draft) { _, new in store.keepSearchDraft(new, huntID: huntID) }
         .onChange(of: draft.url) { _, new in
             draft.takeAddress(new)
             if store.searchErrorField == Self.urlField { store.clearSearchError() }
         }
         .onChange(of: draft.change) { _, _ in
             if store.searchErrorField == Self.changeField { store.clearSearchError() }
-        }
-        .onChange(of: draft.name) { _, new in
-            let limited = HuntName.limited(new)
-            if limited != new { draft.name = limited }
         }
     }
 
@@ -110,10 +113,15 @@ struct WatchSearchScreen: View {
         #endif
     }
 
-    /// The watch as saved, with the edits kept for it while it is still current.
+    /// The watch as saved, with the edits kept for it while it is still current; a new form opened from an example
+    /// starts filled in from it, once.
     private func sync() {
-        saved = store.savedWatchDraft(huntID: huntID)
-        draft = store.watchSearchDraft(huntID: huntID)
+        saved = store.savedDraft(WatchSearchDraft.self, huntID: huntID)
+        draft = store.searchDraft(WatchSearchDraft.self, huntID: huntID)
+        if creating, !exampleApplied, let filled = example?.watchDraft() {
+            exampleApplied = true
+            draft = filled
+        }
     }
 
     /// The lines under a section: what is wrong with its field, and the server's refusal of it.
@@ -165,24 +173,6 @@ struct WatchSearchScreen: View {
                 .accessibilityLabel("How often")
                 .accessibilityValue(WatchInterval.title(draft.every))
             }
-        }
-    }
-
-    /// The watch's own name; while it is empty the field shows what the watch will be called.
-    private var name: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            TextField("", text: $draft.name,
-                      prompt: Text(verbatim: draft.namePlaceholder(savedURL: saved?.url, pageTitle: card?.page?.pageTitle))
-                        .foregroundStyle(Ink.muted))
-                .font(AppFont.text(16, weight: .medium)).foregroundStyle(Ink.primary)
-                .submitLabel(.done)
-                .focused($focus, equals: .name)
-                .accessibilityLabel("Name")
-                .frame(minHeight: 52)
-                .padding(.horizontal, 14)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .glassCard()
-            Caption(text: words.renameMessage).padding(.leading, 4)
         }
     }
 

@@ -24,9 +24,12 @@ struct ItemSearchDraft: Codable, Equatable {
     var seller: SearchSeller = .any
     var extra = ""
     var sources: Set<Source> = [.kleinanzeigen]
+    /// The hunt's own name (brief 135); empty = named after its words.
+    var name = ""
 
     init() {}
-    init(_ search: ItemSearch) {
+    init(_ search: ItemSearch, name: String? = nil) {
+        self.name = name ?? ""
         query = search.query
         exclude = search.exclude
         priceMin = Self.text(search.priceMin)
@@ -99,10 +102,11 @@ struct ItemSearchDraft: Codable, Equatable {
 
     private enum CodingKeys: String, CodingKey {
         case query, exclude, priceMin, priceMax, vbText, vbOverMaxTouched, conditionMin, forParts, auctions, delivery
-        case places, radiusKm, seller, extra, sources
+        case places, radiusKm, seller, extra, sources, name
     }
 
-    /// A draft kept by a build from before brief 119 has no `auctions`: on, as a new search.
+    /// A draft kept by a build from before brief 119 has no `auctions`: on, as a new search; one from before brief 135
+    /// no `name`: none.
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         query = try c.decode(String.self, forKey: .query)
@@ -120,6 +124,7 @@ struct ItemSearchDraft: Codable, Equatable {
         seller = try c.decode(SearchSeller.self, forKey: .seller)
         extra = try c.decode(String.self, forKey: .extra)
         sources = try c.decode(Set<Source>.self, forKey: .sources)
+        name = try c.decodeIfPresent(String.self, forKey: .name) ?? ""
     }
 
     private mutating func updateVBDefault() {
@@ -156,6 +161,17 @@ extension ItemSearchDraft {
         guard !word.isEmpty, !exclude.contains(where: { $0.caseInsensitiveCompare(word) == .orderedSame }) else { return false }
         exclude.append(word)
         return true
+    }
+
+    /// The name sent: trimmed and at most 60 characters; nil when empty, so the hunt is named after its words.
+    var sentName: String? { HuntName.cleaned(name) }
+
+    /// The Name field's grey placeholder: what the hunt is called while the field stays empty, its words as typed (a
+    /// thing is named after its words, `HuntSummary`; read here from the field, since a draft still missing something
+    /// has no search yet), else "Optional".
+    func namePlaceholder(language: AppLanguage = .current) -> String {
+        let words = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        return HuntName.placeholder(words.isEmpty ? nil : words, language: language)
     }
 
     /// Places and the radius apply unless the thing is only to be shipped.

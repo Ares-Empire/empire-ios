@@ -54,7 +54,7 @@ struct WatchSearchDraft: Codable, Equatable {
     func namePlaceholder(savedURL: String? = nil, pageTitle: String? = nil, language: AppLanguage = .current) -> String {
         let title = pageTitle.map(Self.trimmed) ?? ""
         if !title.isEmpty, let savedURL, Self.trimmed(savedURL) == Self.trimmed(url) { return title }
-        return WatchAddress.host(url) ?? language.string("Optional")
+        return HuntName.placeholder(WatchAddress.host(url), language: language)
     }
 
     /// What is wrong, in a sentence. A missing description says it in the server's words.
