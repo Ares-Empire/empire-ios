@@ -5,7 +5,8 @@ import SwiftUI
 /// (with "VB" or how far it lies over the maximum beside it; an auction its current bid, "bid" and the time left), its
 /// title, one facts line (condition · shipping or pickup with the distance · place), and "Online at start" for one found
 /// when the hunt started. A change on a watched page (brief 131) has no figure: the server's summary is its title, then
-/// the host and when it was found ("Already true when the watch started" for one the start read found).
+/// the host and when it was found ("Already true when the watch started" for one the start read found). In the search
+/// over listings of every search, the search it belongs to stands over it (its kind's mark and name, brief 133).
 struct MatchRow: View {
     let match: Match
     /// What the match is (`ArestemisStore.kind(of:)`): a flat, a thing for sale or a watched page's change.
@@ -13,18 +14,28 @@ struct MatchRow: View {
     var showsNewDot = false
     /// Shows SAVED / APPLIED (the "All" list and the Hunt tab, where states mix).
     var showsState = false
+    /// With `showsState`, NEW too (the search over listings, where every state shows).
+    var showsNewState = false
+    /// The search the match belongs to, over it (the search over every search's listings).
+    var hunt: HuntText? = nil
 
     private var thing: Bool { kind == .item }
+    private var stateWord: String? {
+        showsState ? match.state.word(thing: thing, includingNew: showsNewState) : nil
+    }
 
     var body: some View {
-        HStack(alignment: .center, spacing: 14) {
-            if kind == .watch {
-                change
-            } else {
-                listing
+        VStack(alignment: .leading, spacing: 9) {
+            if let hunt { huntLine(hunt) }
+            HStack(alignment: .center, spacing: 14) {
+                if kind == .watch {
+                    change
+                } else {
+                    listing
+                }
+                Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold)).foregroundStyle(Ink.muted)
+                    .accessibilityHidden(true)
             }
-            Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold)).foregroundStyle(Ink.muted)
-                .accessibilityHidden(true)
         }
         .padding(.leading, 16).padding(.trailing, 14).padding(.vertical, 14)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -43,6 +54,17 @@ struct MatchRow: View {
         .accessibilityAddTraits(.isButton)
     }
 
+    /// The search the match belongs to: its kind's small mark and its name, quiet.
+    private func huntLine(_ hunt: HuntText) -> some View {
+        HStack(spacing: 5) {
+            if let kind = hunt.kind {
+                Image(systemName: kind.symbol).font(.system(size: 10, weight: .semibold))
+            }
+            Text(hunt.title).font(AppFont.text(11.5, weight: .medium)).lineLimit(1)
+        }
+        .foregroundStyle(Ink.muted)
+    }
+
     /// A watched page's change: the summary, then the host and when.
     private var change: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -50,7 +72,7 @@ struct MatchRow: View {
                 Text(match.watchTitle).font(AppFont.text(16, weight: .semibold)).foregroundStyle(Ink.primary)
                     .lineSpacing(2).lineLimit(2).fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 8)
-                if showsState, let word = match.state.word() {
+                if let word = stateWord {
                     CapsLabel(text: word, size: 9.5, color: Ink.secondary.opacity(0.8))
                 }
             }
@@ -70,7 +92,7 @@ struct MatchRow: View {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 if thing { price } else { rent }
                 Spacer(minLength: 8)
-                if showsState, let word = match.state.word(thing: thing) {
+                if let word = stateWord {
                     CapsLabel(text: word, size: 9.5, color: Ink.secondary.opacity(0.8))
                 }
             }
@@ -143,7 +165,7 @@ struct ListingPhoto: View {
     }
 }
 
-/// Shared by the Latest stack and the Listings list; the detail page uses these same state icons. A thing's seller is
+/// Shared by the Latest stack and the Listings tab's lists; the detail page uses these same state icons. A thing's seller is
 /// asked, not applied to; a watched page's change is only saved or dismissed.
 struct MatchRowActions: View {
     let match: Match

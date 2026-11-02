@@ -37,7 +37,7 @@ struct HuntsScreen: View {
                                 HuntSection(title: String(localized: "Latest")) {
                                     LatestMatches(matches: store.latest, store: store,
                                                   open: { navigation.huntPath.append(.match($0)) },
-                                                  showAll: { showListings(.all) })
+                                                  showAll: { navigation.showListings() })
                                 }
                             }
                         }
@@ -93,13 +93,6 @@ struct HuntsScreen: View {
     }
 
     private static func cardID(_ hunt: Int) -> String { "hunt-\(hunt)" }
-
-    private func showListings(_ filter: MatchFilter) {
-        store.selectedHuntID = nil
-        navigation.filter = filter
-        navigation.listingsPath = []
-        navigation.tab = .listings
-    }
 
     /// While the tab is on screen and the app is active, the cards and figures follow the server every minute.
     private func keepFresh() async {

@@ -209,7 +209,7 @@ struct WatchSearchScreen: View {
 
     private func deleteWatch() {
         guard let huntID else { return }
-        navigation.leaveDeleted()
+        navigation.leaveDeleted(huntID)
         Task { await store.deleteHunt(id: huntID) }
     }
 }

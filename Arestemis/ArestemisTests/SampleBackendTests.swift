@@ -39,7 +39,7 @@ struct SampleBackendTests {
         await store.loadMatches(.saved)
         #expect(store.matches(.saved).map(\.id) == [41, 40])
         await store.loadRejected()
-        #expect(store.rejected.count == 2)
+        #expect(store.rejected().items.count == 2)
     }
 
     @Test func searchesAreCreatedPausedAndDeleted() async throws {

@@ -323,6 +323,46 @@ final class SampleBackend: ArestemisBackend {
         return MatchPage(items: Array(wanted.prefix(limit)), more: wanted.count > limit || (before == nil && (options.moreLoading || options.moreFailure)))
     }
 
+    /// An imitation of the server's search (brief 132) for screenshots, much simpler than the server's: every word must
+    /// begin a word of the listing; a title counts most, then the place, then the description and a page's lines; ties
+    /// newest first. The real app never ranks: it shows the server's order.
+    func findMatches(_ words: String, hunt: Int?, limit: Int) async throws -> MatchPage {
+        if let hunt { _ = try huntIndex(hunt) }
+        let wanted = Self.folded(words)
+        guard !wanted.isEmpty else { return MatchPage(items: [], more: false) }
+        let scored: [(match: Match, score: Int)] = matches.compactMap { match in
+            guard match.state != .dismissed, hunt == nil || match.huntID == hunt else { return nil }
+            let listing = match.listing
+            let fields: [(words: [String], weight: Int)] = [
+                (Self.folded(listing.title), 3),
+                (Self.folded([listing.city, listing.district].compactMap { $0 }.joined(separator: " ")), 2),
+                (Self.folded(([listing.description] + (listing.page.map { $0.added + $0.removed } ?? []))
+                    .joined(separator: " ")), 1),
+            ]
+            var score = 0
+            for word in Set(wanted) {
+                let best = fields.filter { $0.words.contains { $0.hasPrefix(word) } }.map(\.weight).max()
+                guard let best else { return nil }
+                score += best
+            }
+            return (match, score)
+        }
+        let ranked = scored.sorted { a, b in
+            if a.score != b.score { return a.score > b.score }
+            if a.match.found != b.match.found { return a.match.found > b.match.found }
+            return a.match.id > b.match.id
+        }.map(\.match)
+        return MatchPage(items: Array(ranked.prefix(limit)), more: ranked.count > limit)
+    }
+
+    /// Casefolded words without accents, ß as ss, split at anything but letters and digits.
+    private static func folded(_ text: String) -> [String] {
+        text.replacingOccurrences(of: "ß", with: "ss")
+            .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: Locale(identifier: "de_DE"))
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { !$0.isEmpty }
+    }
+
     func match(id: Int) async throws -> Match {
         guard let match = matches.first(where: { $0.id == id }) else { throw HTTPError.server(404, "This listing is gone.") }
         return match

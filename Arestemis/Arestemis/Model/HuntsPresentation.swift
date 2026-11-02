@@ -2,7 +2,8 @@ import Foundation
 
 /// What the Hunts and Listings tabs show of the account's hunts, decided here so the screens only lay it out: the kinds
 /// this build can make (the New search dialog), a hunt's lines on its card and page, which actions its page offers, the
-/// Listings tab's hunt chips and the word for the "applied" state, the rename field's rule and the radius steps.
+/// word for the "applied" state, the rename field's rule and the radius steps. The Listings tab's own parts:
+/// `ListingsPresentation.swift`.
 
 /// The kinds of search this build can make and edit: a flat, a thing for sale, and a page to watch (brief 131). A hunt
 /// of another kind (from a newer server) shows its name and "Needs a newer app", nothing else.
@@ -49,7 +50,7 @@ enum SearchKind: String, CaseIterable, Hashable, Identifiable, Sendable {
         }
     }
 
-    /// The small mark on a hunt's card and chip (SF Symbols): a house for a flat, a tag for a thing, an eye for a page.
+    /// The small mark on a hunt's card and row (SF Symbols): a house for a flat, a tag for a thing, an eye for a page.
     var symbol: String {
         switch self {
         case .flat: "house"
@@ -199,35 +200,6 @@ struct HuntFigure: Equatable, Identifiable {
     var id: MatchFilter { filter }
 }
 
-/// One chip over the Listings tab: All, or one hunt.
-struct HuntChip: Equatable, Identifiable {
-    /// nil = All.
-    let huntID: Int?
-    let title: String
-    /// The hunt's kind mark; none for All and for a kind this build does not know.
-    let symbol: String?
-    var id: String { huntID.map(String.init) ?? "all" }
-}
-
-enum HuntChips {
-    /// "All" and one chip per hunt, oldest first; none while there is only one hunt (All would be the same list).
-    static func chips(_ hunts: [HuntCard], language: AppLanguage = .current) -> [HuntChip] {
-        guard hunts.count > 1 else { return [] }
-        return [HuntChip(huntID: nil, title: language.string("All"), symbol: nil)]
-            + hunts.map { card in
-                HuntChip(huntID: card.id, title: HuntText(card.hunt, page: card.page, language: language).title,
-                         symbol: SearchKind(card.hunt.kind)?.symbol)
-            }
-    }
-
-    /// True while only things are shown: the chosen hunt is a thing hunt, or with All, every hunt is one. The picker
-    /// then says "Asked" for the applied state.
-    static func showsOnlyThings(_ hunts: [HuntCard], selected: Int?) -> Bool {
-        if let selected { return hunts.first { $0.id == selected }?.hunt.kind == .item }
-        return !hunts.isEmpty && hunts.allSatisfy { $0.hunt.kind == .item }
-    }
-}
-
 /// A hunt's own name (Rename): 1 to 60 characters; empty clears it, so the hunt is named after its search again.
 enum HuntName {
     static let maxLength = 60
@@ -258,12 +230,14 @@ enum RadiusSteps {
 }
 
 extension MatchState {
-    /// The word a row shows for a state that is not obvious from the list it is in; a thing's seller is "Asked".
-    func word(thing: Bool = false, language: AppLanguage = .current) -> String? {
+    /// The word a row shows for a state that is not obvious from the list it is in; a thing's seller is "Asked". New
+    /// only where every state shows (the search over listings).
+    func word(thing: Bool = false, includingNew: Bool = false, language: AppLanguage = .current) -> String? {
         switch self {
+        case .new: includingNew ? language.string("New") : nil
         case .saved: language.string("Saved")
         case .applied: (thing ? SearchKind.item : .flat).appliedWord(language: language)
-        case .new, .dismissed: nil
+        case .dismissed: nil
         }
     }
 }

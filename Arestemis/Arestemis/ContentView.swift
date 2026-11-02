@@ -1,7 +1,7 @@
 import SwiftUI
 import UserNotifications
 
-/// Arestemis: the shared Empire login, then two tabs (Hunts, Listings); a hunt's search opens from the hunt. Logged in once in any Empire app means
+/// Arestemis: the shared Empire login, then two tabs (Hunts, Listings: New | Searches); a hunt's search opens from the hunt. Logged in once in any Empire app means
 /// logged in here. `-sampleData` shows the bundled samples (see `LaunchOptions` for the screenshot arguments).
 /// A new match arrives as a push (Shared/Push); tapping it, or its "Open listing" / "Application" action, opens the match.
 struct ContentView: View {
@@ -47,9 +47,7 @@ struct ContentView: View {
                                                                              newerKind: options.newerKind,
                                                                              ebayNotReady: options.ebayNotReady,
                                                                              watchRead: options.watchRead)) {
-            let store = ArestemisStore(session: session, backend: sample, sample: true)
-            store.selectedHuntID = options.sampleHunt
-            return store
+            return ArestemisStore(session: session, backend: sample, sample: true)
         }
         #endif
         return ArestemisStore(session: session, backend: ArestemisAPI(token: { session.token }))
@@ -148,7 +146,7 @@ private struct MainTabs: View {
             Group {
                 switch sheet {
                 case .settings: SettingsSheet(store: store, logOut: logOut)
-                case .rejected: RejectedSheet(store: store)
+                case .rejected(let hunt): RejectedSheet(store: store, hunt: hunt)
                 case .application(let id): ApplicationSheet(matchID: id, store: store)
                 }
             }
