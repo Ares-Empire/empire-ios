@@ -10,8 +10,8 @@ Patrik sent his first file from the phone (it worked) and asked for two things o
 
 1. **Every drop can be deleted from the list** (the app gets Mail-like swipe to delete). Today `DELETE /drops/{id}`
    only cancels drops that have not landed and answers `409` for landed ones; cancelled ones stay in the list.
-2. **The push for a landed file just says it was delivered**: "Lohn1.pdf delivered" instead of
-   "Zu sortieren: Lohn1.pdf".
+2. **The push for a landed file just says it was delivered**: "Report.pdf delivered" instead of
+   "Zu sortieren: Report.pdf".
 
 The contract is already updated: `docs/API.md` → "Drops" (the 2026-11-02 note, the `DELETE /drops/{id}` row, the
 error line and the "Drop pushes" table). Build exactly that.
