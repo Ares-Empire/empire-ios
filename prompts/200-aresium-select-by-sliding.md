@@ -1,6 +1,6 @@
 # 200: Selecting calmer, and selecting by sliding a finger, as in Mail
 
-Status: brief
+Status: merged 2026-11-02 (802 Aresium tests; the bounce was the tick and the rolling count; slide to select with edge scrolling)
 Branch: `claude/200-select-by-sliding` · Worktree: `../empire-ios-200-select-by-sliding` · Built by: a Claude agent (how
 selecting moves and feels under the finger; the small model behind the slide) · Simulator: `claude-200` (create it:
 iPhone 17, iOS 27.0)
