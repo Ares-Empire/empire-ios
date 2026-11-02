@@ -49,11 +49,13 @@ struct ListingsPartMemory {
     func remember(_ part: ListingsPart) { defaults.set(part.rawValue, forKey: Self.key) }
 }
 
-/// What the Hunts tab pushes: a hunt's page, a match's page, or a search form (a hunt's search, or a new one).
+/// What the Hunts tab pushes: a hunt's page, a match's page, New search (the kinds to choose from, brief 135), or a
+/// search form (a hunt's search, or a new one, empty or filled in from one of New search's examples).
 enum HuntRoute: Hashable {
     case hunt(Int)
     case match(Int)
-    case form(SearchKind, hunt: Int?)
+    case newSearch
+    case form(SearchKind, hunt: Int?, example: SearchExample? = nil)
 }
 
 /// The filter of one search's listings: New · Saved · Applied · All (all = every state but dismissed, the API's default).
@@ -122,8 +124,8 @@ final class AppNavigation {
     /// The filter of the search's page that is open on the Listings tab.
     var filter: MatchFilter = .new
     var sheet: RootSheet?
-    /// New search asks which kind (the Hunts tab's confirmation dialog).
-    var asksSearchKind = false
+    /// The hunt whose page opens with its name's field ready (a card's long press → Rename); the page takes it.
+    var renaming: Int?
     var showsPlaceSearch = false
     /// A search form's "Describe it" sheet.
     var showsDescribe = false
@@ -165,7 +167,6 @@ final class AppNavigation {
         tab = .listings
         part = .new
         listingsPath = [.match(link.match)]
-        asksSearchKind = false
         showsPlaceSearch = false
         showsDescribe = false
         sheet = link.then == .application ? .application(link.match) : nil
@@ -206,23 +207,33 @@ final class AppNavigation {
         listingsPath.append(.find(hunt: hunt))
     }
 
-    /// New search from anywhere: the Hunts tab at its start, asking which kind.
+    /// New search from anywhere: its page on the Hunts tab, over the list of hunts.
     func startNewSearch() {
         tab = .hunt
-        huntPath = []
-        asksSearchKind = true
+        huntPath = [.newSearch]
     }
 
-    /// The kind's empty form, pushed on the Hunts tab.
-    func openNewForm(_ kind: SearchKind) {
+    /// A kind's new form, pushed on the Hunts tab (over New search): empty (as the user left it, `KeptSearchDraft`), or
+    /// filled in from an example.
+    func openNewForm(_ kind: SearchKind, example: SearchExample? = nil) {
         tab = .hunt
-        huntPath.append(.form(kind, hunt: nil))
+        huntPath.append(.form(kind, hunt: nil, example: example))
     }
 
-    /// A new hunt was saved: its page replaces the form it was made in.
+    /// A new hunt was saved: its page replaces the form it was made in and New search under it, so back leads to the
+    /// list of hunts.
     func showCreated(_ id: Int) {
-        if case .form(_, nil)? = huntPath.last { huntPath.removeLast() }
+        if case .form(_, nil, _)? = huntPath.last { huntPath.removeLast() }
+        if huntPath.last == .newSearch { huntPath.removeLast() }
         huntPath.append(.hunt(id))
+    }
+
+    /// Rename from a search's card (its long press, on either tab): the search's page on the Hunts tab, its name's field
+    /// ready.
+    func rename(_ hunt: Int) {
+        tab = .hunt
+        huntPath = [.hunt(hunt)]
+        renaming = hunt
     }
 
     /// A hunt was deleted (from its page or its form): back to the list of hunts; the Listings tab leaves its pages.
@@ -241,7 +252,7 @@ final class AppNavigation {
         listingsPath = []
         filter = .new
         sheet = nil
-        asksSearchKind = false
+        renaming = nil
         showsPlaceSearch = false
         showsDescribe = false
         placeQuery = ""
@@ -264,7 +275,10 @@ final class AppNavigation {
 /// `-openWatchForm` (the first watch's form) and `-newWatchForm` (in the form `-watchURL <text>`, `-watchChange <text>`
 /// and `-saveWatch`, read by `WatchSearchScreen`), `-sampleWatchRead <read>` (the second watch's page
 /// state: waiting, ok, unreadable, failing, blocked or any other word), `-scrollToHunt <id>` (the Hunts list at that
-/// hunt's card), `-newSearch` (the kind dialog), `-openSheet settings|application|rejected|place|describe` (place and describe over a form, the
+/// hunt's card), brief 135's `-newSearch` (New search's page), `-newExample <example>` (an example's form, filled in, over
+/// New search: `SearchExample`'s names, e.g. `twoRooms`, `kallax`, `newVersion`), `-renameHunt <id>` (that hunt's page
+/// with its name's field open; `-renameText <text>` types in it, read by `HuntPage`),
+/// `-openSheet settings|application|rejected|place|describe` (place and describe over a form, the
 /// first hunt's unless another is asked for; rejected: of the search `-openSearch` opened, else of every search), `-scrollBottom` (Hunts and the forms), `-scrollTo size|rent|movein`
 /// (the flat form), `-scrollTo where` (the thing form), `-sampleUndo`, `-sampleSearchDraft`, `-sampleMoreLoading`,
 /// `-sampleMoreFailure`, `-sampleLongDescription`; Settings → Flats: `-sampleOwnMode` (the switch off), `-sampleNoTexts` (nothing written
@@ -278,6 +292,7 @@ struct LaunchOptions {
         case firstItem              // -openItemForm
         case firstWatch             // -openWatchForm
         case new(SearchKind)        // -newFlatForm, -newItemForm, -newWatchForm
+        case example(SearchExample) // -newExample <example>
     }
 
     var sample = false
@@ -304,6 +319,7 @@ struct LaunchOptions {
     var openHunt: Int?
     var form: Form?
     var newSearch = false
+    var renameHunt: Int?
     var openSheet: String?
     var scrollTo: String?
 
@@ -344,8 +360,10 @@ struct LaunchOptions {
         else if arguments.contains("-newItemForm") { form = .new(.item) }
         else if arguments.contains("-newWatchForm") { form = .new(.watch) }
         else if arguments.contains("-newFlatForm") { form = .new(.flat) }
+        else if let example = value("-newExample").flatMap(SearchExample.init(rawValue:)) { form = .example(example) }
         else if tabValue == "search" || openSheet == "place" || openSheet == "describe" { form = .firstHunt }
         newSearch = arguments.contains("-newSearch")
+        renameHunt = value("-renameHunt").flatMap(Int.init)
         scrollTo = value("-scrollTo") ?? (arguments.contains("-scrollBottom") ? "bottom" : nil)
         #endif
     }
@@ -370,12 +388,14 @@ struct LaunchOptions {
             navigation.tab = .hunt
             navigation.huntPath = [.hunt(openHunt)]
         }
+        if newSearch { navigation.startNewSearch() }
         if let route = form.flatMap({ Self.route($0, hunts: hunts) }) {
             navigation.tab = .hunt
+            if case .example = form { navigation.huntPath = [.newSearch] }
             navigation.huntPath.append(route)
             navigation.formScroll = scrollTo
         }
-        if newSearch { navigation.startNewSearch() }
+        if let renameHunt { navigation.rename(renameHunt) }
         switch openSheet {
         case "settings": navigation.sheet = .settings
         case "rejected":
@@ -404,6 +424,7 @@ struct LaunchOptions {
         case .firstItem: return formOf(hunts.first { $0.hunt.kind == .item }) ?? .form(.item, hunt: nil)
         case .firstWatch: return formOf(hunts.first { $0.hunt.kind == .watch }) ?? .form(.watch, hunt: nil)
         case .new(let kind): return .form(kind, hunt: nil)
+        case .example(let example): return .form(example.kind, hunt: nil, example: example)
         }
     }
 }

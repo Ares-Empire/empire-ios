@@ -198,8 +198,13 @@ struct HuntSummary: Equatable {
     /// `sites` names a thing hunt's sites (the server's names).
     init(_ hunt: Hunt, sites: SiteNames = SiteNames(), now: Date = .now, calendar: Calendar = .app,
          language: AppLanguage = .current) {
+        self.init(hunt.search, sites: sites, now: now, calendar: calendar, language: language)
+    }
+
+    init(_ search: HuntSearch, sites: SiteNames = SiteNames(), now: Date = .now, calendar: Calendar = .app,
+         language: AppLanguage = .current) {
         let de = language == .german
-        switch hunt.search {
+        switch search {
         case .flat(let search):
             let flat = SearchSummary(search, now: now, calendar: calendar, language: language)
             title = flat.kinds

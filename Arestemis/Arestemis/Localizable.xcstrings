@@ -326,6 +326,26 @@
         }
       }
     },
+    "2 rooms up to €1,100 warm" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "2 Zimmer bis 1.100 € warm"
+          }
+        }
+      }
+    },
+    "A page you know: a new version, a new job, tickets, the canteen menu." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eine Seite, die du kennst: neue Version, neue Stelle, Tickets, der Speiseplan."
+          }
+        }
+      }
+    },
     "About you" : {
       "localizations" : {
         "de" : {
@@ -616,6 +636,16 @@
         }
       }
     },
+    "Canteen menu" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Speiseplan"
+          }
+        }
+      }
+    },
     "Changed %@" : {
       "localizations" : {
         "de" : {
@@ -732,6 +762,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Stadt"
+          }
+        }
+      }
+    },
+    "Clear" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leeren"
           }
         }
       }
@@ -893,6 +933,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Defekt ist auch okay"
+          }
+        }
+      }
+    },
+    "Delete" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Löschen"
           }
         }
       }
@@ -1277,22 +1327,22 @@
         }
       }
     },
-    "Flat or room" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wohnung oder Zimmer"
-          }
-        }
-      }
-    },
     "Flatmates" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Mitbewohner"
+          }
+        }
+      }
+    },
+    "Frame size 56" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rahmengröße 56"
           }
         }
       }
@@ -1397,6 +1447,16 @@
         }
       }
     },
+    "Kallax up to €40" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kallax bis 40 €"
+          }
+        }
+      }
+    },
     "Kind" : {
       "localizations" : {
         "de" : {
@@ -1423,26 +1483,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Neueste"
-          }
-        }
-      }
-    },
-    "Leave it empty to name it after the page." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bleibt der Name leer, heißt sie nach der Seite."
-          }
-        }
-      }
-    },
-    "Leave it empty to name it after what it looks for." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bleibt der Name leer, heißt sie nach dem, was sie sucht."
           }
         }
       }
@@ -1687,12 +1727,42 @@
         }
       }
     },
+    "New job" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neue Stelle"
+          }
+        }
+      }
+    },
+    "New listings from WG-Gesucht, Kleinanzeigen, Immowelt and ImmoScout24, minutes after they go online." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neue Angebote von WG-Gesucht, Kleinanzeigen, Immowelt und ImmoScout24, Minuten nachdem sie online sind."
+          }
+        }
+      }
+    },
     "New search" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Neue Suche"
+          }
+        }
+      }
+    },
+    "New version" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neue Version"
           }
         }
       }
@@ -1973,6 +2043,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "OpenStreetMap: Urheberrecht und Mitwirkende"
+          }
+        }
+      }
+    },
+    "Opens the form" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öffnet das Formular"
+          }
+        }
+      }
+    },
+    "Opens the form filled in" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öffnet das Formular ausgefüllt"
           }
         }
       }
@@ -2277,26 +2367,6 @@
         }
       }
     },
-    "Rename search" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Suche umbenennen"
-          }
-        }
-      }
-    },
-    "Rename watch" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Beobachtung umbenennen"
-          }
-        }
-      }
-    },
     "Rent" : {
       "localizations" : {
         "de" : {
@@ -2323,6 +2393,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Reserviert"
+          }
+        }
+      }
+    },
+    "Road bike" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rennrad"
+          }
+        }
+      }
+    },
+    "Road bike size 56" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rennrad Größe 56"
           }
         }
       }
@@ -2537,12 +2627,12 @@
         }
       }
     },
-    "Something to buy" : {
+    "Start" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Etwas kaufen"
+            "value" : "Starten"
           }
         }
       }
@@ -2747,6 +2837,16 @@
         }
       }
     },
+    "Things" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dinge"
+          }
+        }
+      }
+    },
     "This page doesn't show it." : {
       "localizations" : {
         "de" : {
@@ -2887,6 +2987,16 @@
         }
       }
     },
+    "Used and cheap: Kleinanzeigen, eBay, Vinted, IKEA Preowned and more, with a price limit and pickup nearby." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gebraucht und günstig: Kleinanzeigen, eBay, Vinted, IKEA Preowned und mehr, mit Preisgrenze und Abholung in der Nähe."
+          }
+        }
+      }
+    },
     "VB up to" : {
       "localizations" : {
         "de" : {
@@ -2937,12 +3047,12 @@
         }
       }
     },
-    "Watch a page" : {
+    "Watch a website" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Seite beobachten"
+            "value" : "Webseite beobachten"
           }
         }
       }
@@ -2967,22 +3077,22 @@
         }
       }
     },
-    "What are you looking for?" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Was suchst du?"
-          }
-        }
-      }
-    },
     "What changed" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Was sich geändert hat"
+          }
+        }
+      }
+    },
+    "What should Arestemis find for you?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was soll Arestemis für dich finden?"
           }
         }
       }
@@ -3093,6 +3203,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dein Text, wie er ist; die Anrede wird angepasst, wenn der Name bekannt ist."
+          }
+        }
+      }
+    },
+    "a new job is posted" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "eine neue Stelle ausgeschrieben wird"
+          }
+        }
+      }
+    },
+    "a new version comes out" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "eine neue Version erscheint"
           }
         }
       }
@@ -3299,6 +3429,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Quadratmeter"
+          }
+        }
+      }
+    },
+    "the new menu is out" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "der neue Speiseplan online ist"
           }
         }
       }

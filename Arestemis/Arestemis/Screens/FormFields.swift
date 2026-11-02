@@ -227,7 +227,30 @@ struct ProblemLine: View {
     }
 }
 
-/// "Describe it": the line at the top of a search form that opens the sheet where a sentence fills the fields in.
+/// The search's own name, first in every search form (brief 135; Patrik: "only what's necessary"): one field whose grey
+/// placeholder is the name the search gets while the field stays empty (its automatic name, following the form), at
+/// most 60 characters. Nothing else explains it.
+struct NameField: View {
+    @Binding var text: String
+    let placeholder: String
+
+    var body: some View {
+        TextField("", text: $text, prompt: Text(verbatim: placeholder).foregroundStyle(Ink.muted))
+            .font(AppFont.text(16, weight: .medium)).foregroundStyle(Ink.primary)
+            .submitLabel(.done)
+            .accessibilityLabel("Name")
+            .frame(minHeight: 52)
+            .padding(.horizontal, 14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .glassCard()
+            .onChange(of: text) { _, new in
+                let limited = HuntName.limited(new)
+                if limited != new { text = limited }
+            }
+    }
+}
+
+/// "Describe it": the line of a search form, under its name, that opens the sheet where a sentence fills the fields in.
 struct DescribeLine: View {
     let action: () -> Void
 
@@ -254,7 +277,7 @@ struct DescribeLine: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .padding(.top, 8)
+        .padding(.top, Look.sectionGap)
     }
 }
 

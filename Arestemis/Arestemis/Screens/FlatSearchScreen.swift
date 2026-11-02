@@ -1,31 +1,40 @@
 import SwiftUI
 
-/// A flat hunt's search as a form in glass cards, in the order one thinks of it: what, where, size, rent, move-in,
-/// portals, extras; then save. Every field is optional on its own (empty = any) except a place and a portal. "Describe
-/// it" (a line at the top) opens a sheet where a sentence fills the fields in. Pushed on the Hunts tab for one hunt
-/// (Edit search), or empty for a new one (New search → Flat or room), which it creates paused. Unsaved edits are kept
-/// per hunt (`KeptSearchDraft`).
+/// A flat hunt's search as a form in glass cards, in the order one thinks of it: its name, what, where, size, rent,
+/// move-in, portals, extras; then save. Every field is optional on its own (empty = any) except a place and a portal.
+/// "Describe it" (a line under the name) opens a sheet where a sentence fills the fields in. Pushed on the Hunts tab for
+/// one hunt (Edit search), or for a new one (New search → Flat, empty or from an example), which it creates paused.
+/// Unsaved edits are kept per hunt (`KeptSearchDraft`).
 struct FlatSearchScreen: View {
     let store: ArestemisStore
     @Bindable var navigation: AppNavigation
     /// The hunt whose search this is; nil for a new one.
     let huntID: Int?
+    /// New search's example the new form opens with, filled in.
+    var example: SearchExample? = nil
 
     @State private var draft = SearchDraft()
-    @State private var baseline: Search?
+    /// The saved hunt as this form shows it (search and name); nil for a new one.
+    @State private var saved: SearchDraft?
+    @State private var exampleApplied = false
     @State private var description = ""
     @State private var confirmDelete = false
     @Environment(\.dismiss) private var dismiss
 
     private var hunt: Hunt? { huntID.flatMap { store.card($0)?.hunt } }
     private var creating: Bool { huntID == nil }
-    private var isDirty: Bool { draft.search() != (baseline ?? SearchDraft().search()) }
+    private var isDirty: Bool {
+        draft.search() != (saved ?? SearchDraft()).search() || draft.sentName != saved?.sentName
+    }
     private var canSave: Bool { draft.isValid && (creating || isDirty) }
 
     var body: some View {
         ScrollViewReader { reader in
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
+                    FormSection(title: String(localized: "Name")) {
+                        NameField(text: $draft.name, placeholder: draft.namePlaceholder())
+                    }
                     DescribeLine { navigation.showsDescribe = true }
                     FormSection(title: String(localized: "What")) { what }
                     FormSection(title: String(localized: "Where")) { places }
@@ -79,14 +88,23 @@ struct FlatSearchScreen: View {
         }
         .onAppear { sync() }
         .task { await store.loadKinds() }               // the sites as the server offers them now
-        .onChange(of: hunt?.search.flat) { _, _ in sync() }
-        .onChange(of: draft) { _, new in store.keepFlatSearchDraft(new, baseline: baseline, huntID: huntID) }
+        // The hunt changed elsewhere (another device, renamed): taken over while nothing is edited here. Edits stay, also
+        // through a save's optimistic change and its rollback after a refusal.
+        .onChange(of: store.savedDraft(SearchDraft.self, huntID: huntID)) { _, _ in
+            if draft == (saved ?? SearchDraft()) { sync() }
+        }
+        .onChange(of: draft) { _, new in store.keepSearchDraft(new, huntID: huntID) }
     }
 
-    /// The hunt's search as saved, with the edits kept for it while that search is still current.
+    /// The hunt as saved, with the edits kept for it while it is still current; a new form opened from an example
+    /// starts filled in from it, once.
     private func sync() {
-        baseline = hunt?.search.flat
+        saved = store.savedDraft(SearchDraft.self, huntID: huntID)
         draft = store.flatSearchDraft(huntID: huntID)
+        if creating, !exampleApplied, let filled = example?.flatDraft {
+            exampleApplied = true
+            draft = filled
+        }
     }
 
     /// Under Save: the server's refusal, what is still missing, or what saving does.
@@ -233,7 +251,8 @@ struct FlatSearchScreen: View {
     private func saveSearch() {
         endTyping()
         Task {
-            guard let saved = await store.saveHunt(id: huntID, kind: .flat, name: hunt?.name, search: .flat(draft.search()))
+            guard let saved = await store.saveHunt(id: huntID, kind: .flat, name: draft.sentName,
+                                                   search: .flat(draft.search()))
             else { return }
             if creating { navigation.showCreated(saved.id) } else { dismiss() }
         }

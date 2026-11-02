@@ -8,6 +8,8 @@ protocol ArestemisBackend {
     func hunts() async throws -> [Hunt]
     func createHunt(kind: HuntKind, name: String?, search: HuntSearch) async throws -> Hunt
     func updateHunt(id: Int, search: HuntSearch, name: String?) async throws -> Hunt
+    /// The name alone (`PATCH /hunts/{id}`): unlike `updateHunt` the server does not start the search again.
+    func renameHunt(id: Int, name: String?) async throws -> Hunt
     func setActive(id: Int, active: Bool) async throws -> Hunt
     func deleteHunt(id: Int) async throws
     func parse(text: String, kind: HuntKind) async throws -> HuntParseResult
@@ -50,6 +52,10 @@ struct ArestemisAPI: ArestemisBackend {
 
     func updateHunt(id: Int, search: HuntSearch, name: String?) async throws -> Hunt {
         try await send(.put, "hunts/\(id)", body: UpdateBody(search: search, name: name))
+    }
+
+    func renameHunt(id: Int, name: String?) async throws -> Hunt {
+        try await send(.patch, "hunts/\(id)", body: NameBody(name: name))
     }
 
     func setActive(id: Int, active: Bool) async throws -> Hunt {
@@ -118,7 +124,7 @@ struct ArestemisAPI: ArestemisBackend {
 
     // MARK: - requests
 
-    enum Method: String { case get = "GET", post = "POST", put = "PUT", delete = "DELETE" }
+    enum Method: String { case get = "GET", post = "POST", put = "PUT", patch = "PATCH", delete = "DELETE" }
 
     private struct CreateBody: Encodable {
         let kind: HuntKind
@@ -139,6 +145,15 @@ struct ArestemisAPI: ArestemisBackend {
         func encode(to encoder: Encoder) throws {
             var c = encoder.container(keyedBy: CodingKeys.self)
             try c.encode(search, forKey: .search)
+            try c.encode(name, forKey: .name)
+        }
+    }
+    /// `{"name": null}` clears the name, so the null is sent rather than left out.
+    private struct NameBody: Encodable {
+        let name: String?
+        enum CodingKeys: CodingKey { case name }
+        func encode(to encoder: Encoder) throws {
+            var c = encoder.container(keyedBy: CodingKeys.self)
             try c.encode(name, forKey: .name)
         }
     }

@@ -7,7 +7,8 @@ import SwiftUI
 ///   to dismiss; a group goes with its last new listing. Then "Filtered out" for every search. A notification's match
 ///   opens over it.
 /// - **Searches:** one card per search, in the Hunts tab's order (paused ones too): its kind and name, the new count,
-///   saved and applied (asked) in a quiet line; a tap opens that search's listings (`SearchListingsPage`).
+///   saved and applied (asked) in a quiet line; a tap opens that search's listings (`SearchListingsPage`), the long
+///   press offers Rename, Pause or Start and Delete (`huntCardMenu`).
 /// The stack also holds the search over listings (`ListingSearchPage`) and the matches' pages.
 struct ListingsScreen: View {
     @Bindable var store: ArestemisStore
@@ -151,6 +152,7 @@ private struct SearchesPart: View {
                     SearchRowCard(row: SearchRow(card, sites: store.siteNames)) {
                         navigation.openSearch(card.id, filter: .opening(card.counts))
                     }
+                    .huntCardMenu(card, store: store, navigation: navigation)
                     .plainRow(vertical: Look.rowGap / 2)
                 }
             }

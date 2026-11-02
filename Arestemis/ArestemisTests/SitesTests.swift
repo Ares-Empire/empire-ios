@@ -73,9 +73,10 @@ struct SitesTests {
 
     @Test func kindsDecodeLeniently() throws {
         let kinds = try sample([OfferedKind].self, "kinds")
-        #expect(kinds.map(\.kind) == [.flat, .item, .watch]
-                && kinds.map(\.name) == ["Flat or room", "Something to buy", "Watch a page"])
-        #expect(kinds[2].sources.isEmpty)
+        // The names brief 134 gives the kinds; the Preismonitor (`price`) is kept as a kind this build does not know.
+        #expect(kinds.map(\.kind) == [.flat, .item, .unknown("price"), .watch]
+                && kinds.map(\.name) == ["Flat", "Things", "Price monitor", "Watch a website"])
+        #expect(kinds[2].sources.isEmpty && kinds[3].sources.isEmpty)
         #expect(kinds[1].sources.map(\.source) == thingSites)
         #expect(kinds[1].sources.map(\.auctions) == [false, true, false, false, false, false])
         #expect(kinds[1].sources.allSatisfy { $0.ready })
@@ -124,7 +125,8 @@ struct SitesTests {
         try transport.answer("GET /kinds", sample: "kinds")
         await store.reloadOverview()
         await settle { store.kinds != nil }
-        #expect(store.kinds?.map(\.kind) == [.flat, .item, .watch] && transport.requests("GET /kinds").count == 1)
+        #expect(store.kinds?.map(\.kind) == [.flat, .item, .unknown("price"), .watch]
+                && transport.requests("GET /kinds").count == 1)
         let form = store.siteChoices(.item, chosen: [.kleinanzeigen])
         #expect(form.sites.map(\.name) == ["Kleinanzeigen", "eBay", "mydealz", "MTB-News Bikemarkt", "IKEA Preowned", "Vinted"])
         // The quiet reloads after an action ask again only while there is no answer.
@@ -136,7 +138,7 @@ struct SitesTests {
         await store.reloadOverview()
         await settle { transport.requests("GET /kinds").count == 2 }
         await settle()
-        #expect(transport.requests("GET /kinds").count == 2 && store.kinds?.count == 3)
+        #expect(transport.requests("GET /kinds").count == 2 && store.kinds?.count == 4)
         #expect(store.notice == nil && store.overviewError == nil && session.isSignedIn)
         // Forgotten with the account's data.
         store.clear()
