@@ -1,6 +1,6 @@
 # 119: Arestemis app: sites from the server, eBay and auctions
 
-Status: draft
+Status: merged 2026-11-02 (172 tests; built by a Claude agent). Uploaded as Arestemis build 7.
 Branch: `claude/119-arestemis-sites` · Worktree: `../empire-ios-119-arestemis-sites` · **For a Claude agent** (mostly
 screens; the small data part goes with it)
 
