@@ -126,7 +126,7 @@ nonisolated enum PaymentNames {
             var out = 0, incoming = 0
             var monthOut: [String: Int] = [:], monthIn: [String: Int] = [:]
             for row in rows {
-                let cents = Int((abs(row.amount) * 100).rounded())
+                let cents = Int((abs(row.countedAmount) * 100).rounded())
                 if row.amount < 0 { out += cents; monthOut[row.month, default: 0] += cents }
                 else { incoming += cents; monthIn[row.month, default: 0] += cents }
             }

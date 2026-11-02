@@ -285,6 +285,7 @@ nonisolated struct SourcePayment: Codable, Equatable, Sendable {
     /// The category's name on the person's list, or nil while it has none ("Uncategorised" in the dashboard).
     var category: String?
     var tags: [String]
+    var paysBack: [PaymentLink]? = nil
 }
 
 /// A category on the person's list, with its look (`SourceCategory`).

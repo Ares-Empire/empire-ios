@@ -101,7 +101,9 @@ final class PhoneBackend: AresiumBackend {
 
     /// Reads the engine's categories and the store's numbers; call once after opening.
     func load() async throws {
-        catalog = try await engine.catalog()
+        let catalog = try await engine.catalog()
+        self.catalog = catalog
+        await ledger.configurePaybacks(catalog: catalog)
         if try await rebuildLearnedKeys() { try await sort() }
         try await refresh()
     }
@@ -150,7 +152,9 @@ final class PhoneBackend: AresiumBackend {
     }
 
     func transactionDetail(id: String, auth: BackendAuth) async throws -> TransactionDetail {
-        try await ledger.namedDetail(id: id, engine: engine, catalog: catalogValue(), language: .current, enabled: ownNames)
+        var detail = try await ledger.namedDetail(id: id, engine: engine, catalog: catalogValue(), language: .current, enabled: ownNames)
+        detail.applyPaybacks(from: try await dashboard(auth: auth))
+        return detail
     }
 
     /// Moves the payment by hand, learns its merchant, and finds the merchant's other payments not set by hand.
@@ -159,25 +163,24 @@ final class PhoneBackend: AresiumBackend {
     }
 
     private func changeCategory(id: String, to category: String, extras: [String]?, auth: BackendAuth) async throws -> SwitchResult {
-        let list = try await categories()
-        guard let target = list.id(named: category) else { throw LedgerError.notFound }
-        guard let payment = try await ledger.payment(id) else { throw LedgerError.notFound }
-        try await ledger.setCategory(id, category: target, extras: extras, source: .manual)
-        let rules = try await engine.learn(payment.sorting(raw: false), categoryID: target)
-        try await ledger.remember(rules)
-        try await refresh()
-        let detail = try await transactionDetail(id: id, auth: auth)
-        guard let merchant = rules.keys.first else { return SwitchResult(detail: detail) }
-        let others = try await ledger.otherShopPayments(of: merchant, besides: id, target: target, engine: engine)
-        guard !others.ids.isEmpty else { return SwitchResult(detail: detail) }
-        let followUp = MerchantFollowUp(shop: payment.place, category: category, count: others.ids.count) { [weak self] in
-            guard let self else { return }
-            // Replace every existing or current key's rule, so an old exact rule cannot win on the next import.
-            try await self.ledger.remember(Dictionary(uniqueKeysWithValues: others.keys.map { ($0, target) }))
-            try await self.ledger.move(others.ids, to: target, source: .learned)
-            try await self.refresh()
+        let result: BatchChangeResult
+        if let extras {
+            let list = try await categories()
+            guard let payment = try await ledger.payment(id) else { throw LedgerError.notFound }
+            let kept = extras.compactMap { list.name(of: $0) }
+            let removed = payment.extraCategories.filter { !extras.contains($0) }.compactMap { list.name(of: $0) }
+            result = try await batch(ids: [id], action: .editCategories(added: [category] + kept, removed: removed,
+                                        dropCurrent: payment.category.flatMap { list.name(of: $0) }))
+        } else {
+            result = try await switchCategory(ids: [id], to: category)
         }
-        return SwitchResult(detail: detail, followUp: followUp)
+        let detail = try await transactionDetail(id: id, auth: auth)
+        let followUp = result.followUp.map { question in
+            MerchantFollowUp(shop: detail.place, category: question.category, count: question.count) {
+                _ = try await question.apply()
+            }
+        }
+        return SwitchResult(detail: detail, followUp: followUp, undo: result.undo)
     }
 
     func setTags(id: String, categories names: [String], dropCurrent: Bool, auth: BackendAuth) async throws -> TransactionDetail {
@@ -382,12 +385,14 @@ final class PhoneBackend: AresiumBackend {
     }
 
     /// Unticks a category; its payments go to `target` (or Not sorted, then sorted again with the rest of the list).
-    func unchoose(_ id: String, moveTo target: String?, sorting: Bool = true) async throws {
+    @discardableResult
+    func unchoose(_ id: String, moveTo target: String?, sorting: Bool = true) async throws -> BatchUndo {
         guard ![CategoryCatalog.ownTransfers, CategoryCatalog.notSorted].contains(id),
               try await categories().isChosen(id) else { throw LedgerError.notFound }
-        try await ledger.unchoose(id, moveTo: target)
-        if sorting { try await sort() }
+        let token = try await ledger.unchooseWithUndo(id, moveTo: target, sorting: sorting, engine: engine,
+                                                       catalog: catalogValue())
         try await refresh()
+        return BatchUndo(token: token, phone: self)
     }
 
     // MARK: layouts
@@ -438,7 +443,15 @@ final class PhoneBackend: AresiumBackend {
     /// Restores an export's file into the empty store (checked first, all or nothing).
     func restore(_ data: Data) async throws {
         let export = try LedgerExport.decode(data)
-        try await ledger.restore(export, catalog: try await catalogValue())
+        let catalog = try await catalogValue()
+        try export.validate(catalog: catalog)
+        if export.payments.contains(where: { !($0.paysBack ?? []).isEmpty }) {
+            let list = PhoneCategoryList(catalog: catalog, chosen: export.categories)
+            let checked = try await engine.dashboard(PhoneDashboard.input(payments: export.payments, list: list,
+                                                    today: today(), receipts: export.receipts))
+            guard checked.paybacksIgnored?.isEmpty != false else { throw LedgerError.invalidExport("ignored payback") }
+        }
+        try await ledger.restore(export, catalog: catalog)
         try await rebuildLearnedKeys(force: true)
         try await sort()
         try await refresh()
@@ -464,7 +477,8 @@ nonisolated enum PhoneDashboard {
                           balance: payment.balance.flatMap(Double.init), description: payment.text,
                           counterparty: payment.counterparty, city: nil, raw: payment.raw,
                           category: payment.category.flatMap { named[$0] },
-                          tags: payment.extraCategories.compactMap { named[$0] })
+                          tags: payment.extraCategories.compactMap { named[$0] },
+                          paysBack: payment.paysBack?.map { PaymentLink(payment: $0.payment, amount: Double($0.amount) ?? 0) })
         }
         // Always the receipts, even none: the dashboard then carries the Cash page's `cash` (brief 32).
         return DashboardSourceInput(transactions: transactions, categories: list.sourceCategories, today: today,

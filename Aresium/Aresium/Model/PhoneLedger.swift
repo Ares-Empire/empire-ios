@@ -50,6 +50,8 @@ nonisolated struct LedgerPayment: Codable, Equatable, Sendable {
     var sequence: Int
     /// Schema 4 export: this payment alone, before any shop rule. Never used for sorting.
     var ownName: String? = nil
+    /// Schema 7: links carried by money in, with decimal euros as stored money.
+    var paysBack: [LedgerPayback]? = nil
 
     /// What makes a payment unique: the same booking imported again (from the same export or an overlapping one) has
     /// the same key.
@@ -173,6 +175,8 @@ nonisolated enum LedgerError: LocalizedError, Equatable {
 actor PhoneLedger: ModelActor {
     /// Created on the ledger executor when batch work first needs a save revision.
     var batchSaveObserver: BatchSaveObserver?
+    var cachedDashboard: PhoneDashboardCache?
+    var transferCategoryIDs: Set<String> = [CategoryCatalog.ownTransfers]
     nonisolated let modelContainer: ModelContainer
     private nonisolated let executor: PhoneLedgerExecutor
     nonisolated var modelExecutor: any ModelExecutor { executor }
@@ -362,6 +366,7 @@ actor PhoneLedger: ModelActor {
                     .forEach(modelContext.delete)
             }
             try modelContext.fetch(FetchDescriptor<StoredChosen>(predicate: #Predicate { $0.id == id })).forEach(modelContext.delete)
+            try removeTransferPaybacks()
             try modelContext.save()
         }
     }
@@ -539,6 +544,7 @@ actor PhoneLedger: ModelActor {
                 if let category = result.categoryId { payment.extraCategories.removeAll { $0 == category } }
                 if fresh.contains(id) { sortedFresh[id] = result.categoryId }
             }
+            try removeTransferPaybacks()
             if modelContext.hasChanges { try modelContext.save() }
             return sortedFresh
         }
@@ -553,6 +559,7 @@ actor PhoneLedger: ModelActor {
         var kept: [String] = []
         for extra in extras ?? payment.extraCategories where extra != category && !kept.contains(extra) { kept.append(extra) }
         payment.extraCategories = kept
+        try removeTransferPaybacks()
         if modelContext.hasChanges { try modelContext.save() }
     }
 
@@ -566,6 +573,7 @@ actor PhoneLedger: ModelActor {
             payment.categorySource = source.rawValue
             payment.extraCategories.removeAll { $0 == category }
         }
+        try removeTransferPaybacks()
         if modelContext.hasChanges { try modelContext.save() }
     }
 
@@ -613,6 +621,7 @@ actor PhoneLedger: ModelActor {
             payment.extraCategories.removeAll { $0 == category }
             gave = true
         }
+        try removeTransferPaybacks()
         try modelContext.save()
         return gave
     }
@@ -659,6 +668,7 @@ actor PhoneLedger: ModelActor {
         receipt.category = category
         receipt.categorySource = (category == nil ? CategorySource.none : source).rawValue
         followCategory(of: receipt)
+        try removeTransferPaybacks()
         try modelContext.save()
     }
 
@@ -685,6 +695,7 @@ actor PhoneLedger: ModelActor {
         receipt.paidFrom = value.paidFrom
         receipt.shopAsRead = value.shopAsRead
         followCategory(of: receipt)
+        try removeTransferPaybacks()
         try modelContext.save()
     }
 
@@ -761,6 +772,9 @@ actor PhoneLedger: ModelActor {
     func restore(_ export: LedgerExport, catalog: CategoryCatalog) throws {
         guard try summary().isEmpty else { throw LedgerError.notEmpty }
         try export.validate(catalog: catalog)
+        guard export.schema >= 7 || !export.payments.contains(where: { !($0.paysBack ?? []).isEmpty })
+        else { throw LedgerError.invalidExport("paybacks before schema 7") }
+        configurePaybacks(catalog: catalog)
         do {
             try modelContext.fetch(FetchDescriptor<StoredChosen>()).forEach(modelContext.delete)
             try modelContext.fetch(FetchDescriptor<StoredShopName>()).forEach(modelContext.delete)
@@ -814,7 +828,8 @@ actor PhoneLedger: ModelActor {
                       raw: try? JSONDecoder().decode(JSONValue.self, from: payment.raw),
                       category: payment.category,
                       categorySource: CategorySource(rawValue: payment.categorySource) ?? .none,
-                      extraCategories: payment.extraCategories, sequence: payment.sequence, ownName: payment.ownName)
+                      extraCategories: payment.extraCategories, sequence: payment.sequence, ownName: payment.ownName,
+                      paysBack: payment.paysBack)
     }
 
     private nonisolated static func value(_ receipt: StoredReceipt) -> LedgerReceipt {

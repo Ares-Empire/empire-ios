@@ -8,6 +8,16 @@ nonisolated enum TourData {
     static let chosen = ["groceries", "drugstore", "eating-out", "coffee-snacks", "rent", "utilities", "internet-phone",
                          "bus-train", "subscriptions", "cash", "salary", "parents-family", "clothes", "other"]
 
+    static let paybackTripName = "Fictional Lakeside Trip"
+    static let paybackPersonName = "Robin Example"
+
+    @MainActor static func linkSamplePayback(in phone: PhoneBackend) async throws {
+        let payments = try await phone.ledger.payments()
+        guard let expense = payments.first(where: { $0.place == paybackTripName }),
+              let incoming = payments.first(where: { $0.place == paybackPersonName }) else { return }
+        _ = try await phone.setPayback(from: incoming.id, to: expense.id, amount: 64)
+    }
+
     /// The category the tour points at first ("Tap a category"): it has a few shops, each paid several times.
     static let firstCategory = "groceries"
 
@@ -72,6 +82,10 @@ nonisolated enum TourData {
             add(24, "Fiktiv Laden", "Kartenzahlung", "Einkauf", -(500 + next(4_000)))
             if back % 3 == 1 { add(26, "Zalando SE", "Lastschrift", "Bestellung", -(3_000 + next(6_000))) }
         }
+        let tripDay = calendar.date(byAdding: .day, value: -4, to: thisMonth)!
+        rows.append(Row(day: tripDay, who: paybackTripName, kind: "Kartenzahlung", text: "Shared fictional trip", cents: -12_800))
+        rows.append(Row(day: calendar.date(byAdding: .day, value: 1, to: tripDay)!, who: paybackPersonName,
+                        kind: "Gutschrift", text: "Half of the fictional trip", cents: 6_400))
         rows.sort { $0.day < $1.day }
         let formatter = DateFormatter()
         formatter.calendar = calendar

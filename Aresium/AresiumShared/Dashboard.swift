@@ -16,6 +16,8 @@ nonisolated struct Dashboard: Codable {
     /// no total.
     var cash: CashView? = nil
 
+    var paybacksIgnored: [PaybackIgnored]? = nil
+
     /// Phone mode: built once with the dashboard, over all its months.
     var nameGroups: [String: PaymentNameGroup]? = nil
 
@@ -102,6 +104,12 @@ nonisolated struct Transaction: Codable, Identifiable {
     let city: String
     let categoriesIn: [String]
     let incomeBuckets: [String]
+    var counted: Double? = nil
+    var paidBack: Double? = nil
+    var paidBackBy: [PaymentLink]? = nil
+    var paysBack: [PaymentLink]? = nil
+    var countedAmount: Double { counted ?? amount }
+
     /// Phone mode's receipts (brief 31; absent from the server's JSON): the receipt this row is (a cash receipt, or a
     /// card receipt not joined yet), a card receipt waiting for its bank payment, and on a withdrawal's "covered by
     /// receipts" row the receipts that took the cash.
@@ -252,4 +260,17 @@ nonisolated struct PaymentNameGroup: Codable {
     var count: Int { rows.count }
     var moneyOut: Double { amounts.moneyOut }
     var moneyIn: Double { amounts.moneyIn }
+}
+
+/// The engine's applied links (euros), distinct from the ledger's decimal-string storage.
+nonisolated struct PaymentLink: Codable, Equatable, Sendable {
+    let payment: String
+    let amount: Double
+}
+
+nonisolated struct PaybackIgnored: Codable, Equatable, Sendable {
+    let from: String
+    let to: String
+    let reason: String
+    let amount: Double?
 }
