@@ -39,7 +39,11 @@ extension PhoneLedger {
             if notFixed {
                 if !models.contains(where: { $0.id == live.id }) { modelContext.insert(StoredFixedCostExclusion(live.mark)) }
             } else {
-                for model in models where model.id == live.id { modelContext.delete(model) }
+                // Both price segments may have been excluded before detection joined them. Count again
+                // clears every matching mark in this one save; the existing snapshot undo restores them.
+                for model in models where model.id == live.id || live.exclusionIDs.contains(model.id) {
+                    modelContext.delete(model)
+                }
             }
             try modelContext.save()
         } catch { modelContext.rollback(); throw error }

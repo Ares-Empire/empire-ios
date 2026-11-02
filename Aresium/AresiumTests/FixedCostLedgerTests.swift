@@ -64,6 +64,34 @@ struct FixedCostLedgerTests {
         await #expect(throws: BatchChangeError.unavailable) { _ = try await store.setNotFixed(entry, false) }
     }
 
+    @Test func countAgainOnMergedPriceStepClearsBothMarksInOneSaveAndUndoRestoresBoth() async throws {
+        let older = ["2026-01-03", "2026-02-03", "2026-03-03"].enumerated().map {
+            payment("old\($0.offset)", $0.element)
+        }
+        let newer = ["2026-04-03", "2026-05-03", "2026-06-03"].enumerated().map {
+            payment("new\($0.offset)", $0.element, amount: "-1040.00")
+        }
+        let (_, unmarked) = try await setup(older + newer)
+        let entry = try #require(unmarked.fixedCosts(side: .expenses)?.running.first)
+        let oldMark = FixedCostMark(key: entry.mark.key, side: .expenses, cadence: .monthly, anchor: "old0")
+        let newMark = FixedCostMark(key: entry.mark.key, side: .expenses, cadence: .monthly, anchor: "new0")
+        let marks = Set([oldMark, newMark])
+        let (phone, store) = try await setup(older + newer, marks: Array(marks))
+        let excluded = try #require(store.fixedCosts(side: .expenses)?.takenOut.first)
+        #expect(store.fixedCosts(side: .expenses)?.takenOut.count == 1 && excluded.count == 6)
+        #expect(marks.contains(excluded.mark))
+        let observer = await phone.ledger.batchObserver(), save = observer.value, revision = store.revision
+        let undo = try await store.setNotFixed(excluded, false)
+        #expect(observer.value == save + 1 && store.revision == revision + 1)
+        #expect(try await phone.export().fixedCostMarks.isEmpty == true)
+        #expect(store.fixedCosts(side: .expenses)?.monthlyTotal == 1040)
+        #expect(store.fixedCosts(side: .expenses)?.running.count == 1)
+        #expect(try await undo.perform() == .undone)
+        #expect(Set(try await phone.export().fixedCostMarks) == marks)
+        #expect(store.fixedCosts(side: .expenses)?.takenOut.count == 1)
+        #expect(store.fixedCosts(side: .expenses)?.monthlyTotal == 0)
+    }
+
     @Test func olderImportKeepsAnUnmarkedEntryID() async throws {
         let (phone, store) = try await setup()
         let entry = try #require(store.fixedCosts(side: .expenses)?.running.first)
