@@ -1,69 +1,96 @@
-# empire-ios
+<p align="center">
+  <img src="docs/images/banner.png" alt="The five Ares iPhone apps side by side" width="100%">
+</p>
 
-The iPhone apps of the **Ares Empire**. Native SwiftUI apps that talk to the existing
-services' APIs and log in with an Empire account. Installed via **TestFlight**.
+# The Ares iPhone apps
 
-Why and how this was decided (incl. verified TestFlight facts):
-[`ares-empire/docs/IPHONE-APPS.md`](https://github.com/Ares-Empire/ares-empire/blob/main/docs/IPHONE-APPS.md).
-The login they use: [`ares-empire/docs/ACCOUNTS.md`](https://github.com/Ares-Empire/ares-empire/blob/main/docs/ACCOUNTS.md).
+Five native iPhone apps on one shared account, written in SwiftUI. Each works in English and German, in light and
+dark, and on made-up sample data for trying it without an account.
+**[See them on patrikbreeck.com](https://patrikbreeck.com/en/apps/)**
 
-## Apps
+<table>
+  <tr>
+    <td width="34%" valign="top">
+      <h3>Aresium</h3>
+      Personal finance from your bank's own exports: imported, sorted and counted on the iPhone, where the data stays.
+      Widgets, receipts from a photo and a red mode.<br><br>
+      Server and engine: <a href="https://github.com/Ares-Empire/aresium">aresium</a>
+    </td>
+    <td><img src="showcase/aresium/01-overview-dark.png" alt="Aresium: three months of spending by category"></td>
+    <td><img src="showcase/aresium/02-overview-light.png" alt="Aresium in light mode"></td>
+    <td><img src="showcase/aresium/03-red-mode.png" alt="Aresium in red mode"></td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <h3>Arestemis</h3>
+      Searches that run for you: flats, things for sale, price monitors and page watches. New finds arrive as
+      notifications, each with why it fits.
+    </td>
+    <td><img src="showcase/arestemis/01-hunt-dark.png" alt="Arestemis: every search at a glance"></td>
+    <td><img src="showcase/arestemis/05-price-monitor-light.png" alt="Arestemis: a price monitor with its price history"></td>
+    <td><img src="showcase/arestemis/03-listing-dark.png" alt="Arestemis: one listing and why it fits"></td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <h3>Ares Empire</h3>
+      The hub: every app of the account on a ring, the chronicle of what was built, access requests and approvals.<br><br>
+      Server: <a href="https://github.com/Ares-Empire/ares-empire">ares-empire</a>
+    </td>
+    <td><img src="showcase/empire/01-throne-room-dark.png" alt="Ares Empire: the apps on a ring and the chronicle"></td>
+    <td><img src="showcase/empire/02-marble-hall-light.png" alt="Ares Empire in light mode"></td>
+    <td><img src="showcase/empire/03-province-light.png" alt="Ares Empire: one app's page"></td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <h3>Arestoteles</h3>
+      A personal knowledge map: positions, topics and sources from an Obsidian vault, searched by meaning and edited on
+      the phone.<br><br>
+      Server: <a href="https://github.com/Ares-Empire/Arestoteles">Arestoteles</a>
+    </td>
+    <td><img src="showcase/arestoteles/01-positions-dark.png" alt="Arestoteles: positions grouped by topic"></td>
+    <td><img src="showcase/arestoteles/02-position-light.png" alt="Arestoteles: one position and how it changed"></td>
+    <td><img src="showcase/arestoteles/04-search-light.png" alt="Arestoteles: search by meaning"></td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <h3>Aresus</h3>
+      The watchtower: the server and every service at a glance, each machine's sync runs, files sent from the iPhone
+      to the Mac, and widgets for the home and lock screen.
+    </td>
+    <td><img src="showcase/aresus/01-watchtower-dark.png" alt="Aresus: the server and every service"></td>
+    <td><img src="showcase/aresus/03-aresync-light.png" alt="Aresus: each machine's sync runs"></td>
+    <td><img src="showcase/aresus/04-widgets-dark.png" alt="Aresus: the widgets"></td>
+  </tr>
+</table>
 
-| App | Status | Talks to | Bundle ID (planned) |
-|---|---|---|---|
-| **Aresium** | built (TestFlight pending) | `aresium.de` API (`/api/data`, `/api/transaction/…`, `/api/import`) | `de.ares-empire.aresium` |
-| **Empire** (the hub) | built (TestFlight pending) | `www.ares-empire.de` API (`/api/empire`, ring, approvals) | `de.ares-empire.empire` |
-| **Aresus** (+ Aresync) | built (simulator; TestFlight pending) | Aresus API `www.ares-empire.de/api/aresus` (`aresus/docs/API.md`) | `de.ares-empire.aresus` |
-| **Arestemis** (flat hunter) | built (simulator) | `www.ares-empire.de/api/arestemis` (`Arestemis/docs/API.md`) | `de.ares-empire.arestemis` |
-| **Arestoteles** (Weltbild vault) | built (simulator), look not done yet | `www.ares-empire.de/api/arestoteles` (`Arestoteles/docs/API.md`) | `de.ares-empire.arestoteles` |
+More pictures with captions: [showcase/](showcase/README.md).
 
-## Layout
+## Shared by every app
 
+- **One account.** Logging in to one app logs in to all of them, through a shared Keychain group, and logging out
+  ends it everywhere. Each app asks for its own access; accounts are created and run from inside any app.
+- **Push.** One service on the server sends every app's notifications.
+- **The same Settings.** Language, appearance, notifications, a contact form, the legal pages, the account.
+- **Private when switching apps.** A cover hides the screen in the app switcher.
+
+## How it's built
+
+- SwiftUI for iOS 26 and later, with Apple's frameworks only (Swift Charts, SwiftData, WidgetKit, Vision,
+  JavaScriptCore, Core Spotlight) and no third-party packages.
+- One Xcode project per app. `Shared/` (login, network, push, settings, design) is compiled into every one of them.
+- Each app talks to its own server's JSON API. Aresium also runs the server's TypeScript engine on the iPhone, in
+  JavaScriptCore, so phone and server count alike.
+- Every text lives in String Catalogs, in English and German.
+- A sample mode (`-sampleData`) shows each app on made-up data with no server. `scripts/showcase.py` makes the
+  pictures above from it.
+
+## Run it
+
+Open an app's project in Xcode 27 (for example `Aresium/Aresium.xcodeproj`), choose an iOS 26 simulator, and add
+`-sampleData` to the scheme's launch arguments to look around without an account. Tests:
+
+```sh
+xcodebuild test -project Aresium/Aresium.xcodeproj -scheme Aresium -destination 'platform=iOS Simulator,name=iPhone 17'
 ```
-empire-ios/
-  Aresium/        Aresium.xcodeproj: the Aresium app, its widget extension, tests
-  Empire/         Empire.xcodeproj: the Ares Empire app (the hub), tests
-  Aresus/         Aresus.xcodeproj: the watchtower (every province, the server) and Aresync's sync runs, its
-                  status widget (home and lock screen), tests
-  Arestemis/      Arestemis.xcodeproj: the flat hunter (search, hunt, matches, applications), tests
-  Arestoteles/    Arestoteles.xcodeproj: Patrik's Weltbild vault (positions, topics, library, search, edits,
-                  quick notes, Discuss with Claude, Spotlight), tests
-  Shared/         compiled into every app: the Empire login (one login for all apps) and the account's own
-                  actions (create, password, ask for access, leave an app, delete; Auth/), the network
-                  layer, the fonts, push (Push/: PushCenter + PushAppDelegate), the contact form
-                  (Support/); each project includes it as a synchronized folder
-  scripts/        new-app-project.py (a new app project, wired to Shared/), strings.py (String Catalogs),
-                  check-shared-login.sh, aresium-fixtures.mjs
-```
 
-**Push** (`Shared/Push/`, server: `ares-empire/docs/PUSH.md`): an app adopts `PushAppDelegate` with
-`@UIApplicationDelegateAdaptor`, calls `delegate.push.start(app:session:categories:)` once its session exists and
-routes `delegate.push.openedURL`. Until the paid team allows the Push capability, try a notification on the
-simulator with `xcrun simctl push <udid> <bundle id> Shared/Push/sample-push.apns` (the app must have asked for
-permission first).
-
-Code moves into `Shared/` when a second app needs it (2026-10-24: the login, network layer and fonts, for the
-Empire app). A new province app: `python3 scripts/new-app-project.py <Name> <bundle id> "<display name>"`.
-
-## Working on it
-
-- Needs a Mac with Xcode. Work with **Claude Code on the MacBook**, so it can build, run the
-  simulator and fix errors itself. aresync clones this repo there automatically.
-- The services themselves (Aresium server, Empire login) are changed in their own repos on the server.
-- **Never commit secrets:** no API keys, no App Store Connect keys, no passwords. Server URLs are fine.
-
-## Releasing to the phone (TestFlight)
-
-1. Bump `CURRENT_PROJECT_VERSION` (project-level build settings, the one place for app and widget), commit, then
-   `scripts/testflight.sh <App>`: it archives the app (the archive appears in Xcode's Organizer) and uploads it as an
-   *App Store Connect* build (not *TestFlight Internal Only*: such a build can never go to external testers or the App
-   Store; internal testers need no review either way). `--export-only` signs without uploading. By hand, the same is
-   Product → Archive in Xcode, *Distribute App* → *App Store Connect*. Each of the five apps is uploaded on its own,
-   and its App Store Connect record must exist first (Apps → + → New App, with its bundle id).
-2. After processing (a few minutes) the build shows up in the TestFlight app on the iPhone → *Update*.
-3. Each build stays installable for 90 days; any newer build restarts that clock.
-
-Later: automate step 1 (Xcode Cloud or a script with an App Store Connect API key kept outside the repo).
-
-What App Store Connect asks (App Privacy, TestFlight test information, demo login) and what is still missing before
-the App Store: [`docs/APP-STORE.md`](docs/APP-STORE.md).
+The layout, push and releasing to TestFlight: [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).

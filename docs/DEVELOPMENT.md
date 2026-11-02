@@ -1,0 +1,56 @@
+# Developing the Ares iPhone apps
+
+How the repository is laid out, how push is wired and how a build reaches TestFlight. The overview is in the
+[README](../README.md); the full working notes are in [CLAUDE.md](../CLAUDE.md), the rules for coding agents in
+[AGENTS.md](../AGENTS.md).
+
+## Layout
+
+```
+empire-ios/
+  Aresium/        Aresium.xcodeproj: the Aresium app, its widget extension, tests
+  Empire/         Empire.xcodeproj: the Ares Empire app (the hub), tests
+  Aresus/         Aresus.xcodeproj: the watchtower (every province, the server) and Aresync's sync runs, its
+                  status widget (home and lock screen), tests
+  Arestemis/      Arestemis.xcodeproj: the flat hunter (search, hunt, matches, applications), tests
+  Arestoteles/    Arestoteles.xcodeproj: Patrik's Weltbild vault (positions, topics, library, search, edits,
+                  quick notes, Discuss with Claude, Spotlight), tests
+  Shared/         compiled into every app: the Empire login (one login for all apps) and the account's own
+                  actions (create, password, ask for access, leave an app, delete; Auth/), the network
+                  layer, the fonts, push (Push/: PushCenter + PushAppDelegate), the contact form
+                  (Support/); each project includes it as a synchronized folder
+  scripts/        new-app-project.py (a new app project, wired to Shared/), strings.py (String Catalogs),
+                  check-shared-login.sh, aresium-fixtures.mjs
+```
+
+**Push** (`Shared/Push/`, server: `ares-empire/docs/PUSH.md`): an app adopts `PushAppDelegate` with
+`@UIApplicationDelegateAdaptor`, calls `delegate.push.start(app:session:categories:)` once its session exists and
+routes `delegate.push.openedURL`. Until the paid team allows the Push capability, try a notification on the
+simulator with `xcrun simctl push <udid> <bundle id> Shared/Push/sample-push.apns` (the app must have asked for
+permission first).
+
+Code moves into `Shared/` when a second app needs it (2026-10-24: the login, network layer and fonts, for the
+Empire app). A new province app: `python3 scripts/new-app-project.py <Name> <bundle id> "<display name>"`.
+
+## Working on it
+
+- Needs a Mac with Xcode. Work with **Claude Code on the MacBook**, so it can build, run the
+  simulator and fix errors itself. aresync clones this repo there automatically.
+- The services themselves (Aresium server, Empire login) are changed in their own repos on the server.
+- **Never commit secrets:** no API keys, no App Store Connect keys, no passwords. Server URLs are fine.
+
+## Releasing to the phone (TestFlight)
+
+1. Bump `CURRENT_PROJECT_VERSION` (project-level build settings, the one place for app and widget), commit, then
+   `scripts/testflight.sh <App>`: it archives the app (the archive appears in Xcode's Organizer) and uploads it as an
+   *App Store Connect* build (not *TestFlight Internal Only*: such a build can never go to external testers or the App
+   Store; internal testers need no review either way). `--export-only` signs without uploading. By hand, the same is
+   Product → Archive in Xcode, *Distribute App* → *App Store Connect*. Each of the five apps is uploaded on its own,
+   and its App Store Connect record must exist first (Apps → + → New App, with its bundle id).
+2. After processing (a few minutes) the build shows up in the TestFlight app on the iPhone → *Update*.
+3. Each build stays installable for 90 days; any newer build restarts that clock.
+
+Later: automate step 1 (Xcode Cloud or a script with an App Store Connect API key kept outside the repo).
+
+What App Store Connect asks (App Privacy, TestFlight test information, demo login) and what is still missing before
+the App Store: [`docs/APP-STORE.md`](APP-STORE.md).

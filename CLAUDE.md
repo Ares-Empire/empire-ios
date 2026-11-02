@@ -1,6 +1,6 @@
 # empire-ios — notes for Claude Code
 
-Read `README.md` first, then the decision record in the ares-empire repo
+Read `README.md` and `docs/DEVELOPMENT.md` first, then the decision record in the ares-empire repo
 (`docs/IPHONE-APPS.md`) and the login plan (`docs/ACCOUNTS.md`).
 
 - Native SwiftUI only — no web views wrapping the websites.
