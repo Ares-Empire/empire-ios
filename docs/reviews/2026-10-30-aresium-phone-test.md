@@ -307,3 +307,10 @@ euros come off the expense, in its month and category, and no longer count as in
 open each other; the pen changes the amount or removes it (with undo). In lists the number is what counts, with a quiet
 line ("128,00 € · 64,00 € zurück"). One tour step (10 of 22); nothing else asks. To try: link the three paybacks
 (open the payment from the parents, or the expense); a payback in several transfers: link each one.
+
+**In build 17** (2026-11-02, brief 204): **files from outside.** The share sheet (exists since build 1) was checked with
+real touches: Aresium is in the app row for `.csv`, CAMT `.xml` and MT940 `.sta`/`.mt940`, opens and imports, and waits
+behind the lock. Two bugs found and fixed: iOS's copy of a shared bank file (in `tmp/…-Inbox`) was never deleted after
+reading, and a `.sta` shared while Aresium was closed was refused. **Drop:** hold a bank file in Files until it lifts,
+switch to Aresium with another finger and let go on the first screen or the dashboard ("Zum Importieren loslassen");
+other files are refused. To try: share a statement from Files or Safari's downloads into Aresium; the drop once.

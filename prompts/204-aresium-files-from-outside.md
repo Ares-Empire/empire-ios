@@ -1,6 +1,6 @@
 # 204: Files from outside: the share sheet checked, and dropping a file on Aresium
 
-Status: draft
+Status: merged 2026-11-02 (835 Aresium tests; share sheet works, two bugs fixed: shared copies in tmp/…-Inbox never deleted, an early .sta refused; drop with real touches 3 of 3)
 Branch: `claude/204-files-from-outside` · Worktree: `../empire-ios-204-files-from-outside` · Built by: a Claude agent
 (how a dropped file feels on the main screen) · Simulator: `claude-204` (create it: iPhone 17, iOS 27.0)
 
