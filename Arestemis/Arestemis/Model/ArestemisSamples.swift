@@ -4,7 +4,7 @@ import Foundation
 /// `-sampleData`.
 enum ArestemisSamples {
     nonisolated static let files = ["overview", "matches", "match", "rejected", "settings", "places", "hunts", "item-matches",
-                                    "ebay-match", "kinds"]
+                                    "ebay-match", "ikea-match", "vinted-match", "kinds"]
 
     static func data(_ name: String) throws -> Data {
         guard let url = Bundle.main.url(forResource: name, withExtension: "json") else {
@@ -81,7 +81,9 @@ final class SampleBackend: ArestemisBackend {
         let single = try ArestemisSamples.decode(Match.self, from: "match", shift: shift)
         matches = page.items + (page.items.contains { $0.id == single.id } ? [] : [single])
             + (try ArestemisSamples.decode(MatchPage.self, from: "item-matches", shift: shift)).items
-            + [try ArestemisSamples.decode(Match.self, from: "ebay-match", shift: shift)]
+            + (try ["ebay-match", "ikea-match", "vinted-match"].map {
+                try ArestemisSamples.decode(Match.self, from: $0, shift: shift)
+            })
         if options.longDescription {
             // Extend only the fictional listing description, leaving the contract's fields unchanged.
             matches = try matches.map { match in

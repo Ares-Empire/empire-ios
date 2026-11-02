@@ -1,0 +1,47 @@
+{
+  "id": 33,
+  "hunt_id": 4,
+  "state": "new",
+  "found": "2026-10-24T09:41:00Z",
+  "listing": {
+    "source": "ikea_preowned",
+    "source_name": "IKEA Preowned",
+    "url": "https://www.ikea.com/de/de/preowned/sample-bookcase/9000000033",
+    "title": "HYLLBERG bookcase, white",
+    "kind": null,
+    "rent_warm": null,
+    "rent_cold": null,
+    "sqm": null,
+    "rooms": null,
+    "flatmates": null,
+    "city": "Garching",
+    "district": null,
+    "address": "85748",
+    "available_from": null,
+    "available_until": null,
+    "furnished": null,
+    "posted": "2026-10-24T09:32:00Z",
+    "image_url": null,
+    "description": "Fictional IKEA Preowned listing for the sample app. White bookcase, 80 × 28 × 202 cm, assembled, a few marks on the side.",
+    "item": {
+      "price": null,
+      "price_kind": "negotiable",
+      "shipping": "pickup_only",
+      "shipping_cost": null,
+      "condition": "good",
+      "condition_label": "Gebraucht",
+      "seller": "private",
+      "distance_km": 5.5,
+      "reserved": null,
+      "bids": null,
+      "ends": null
+    }
+  },
+  "reason": "A white bookcase near Garching; the seller asks for offers.",
+  "warnings": [
+    "No price given: make an offer"
+  ],
+  "application": null,
+  "at_start": false,
+  "over_max": null
+}

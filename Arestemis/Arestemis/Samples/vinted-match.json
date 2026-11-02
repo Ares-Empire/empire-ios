@@ -1,0 +1,47 @@
+{
+  "id": 34,
+  "hunt_id": 5,
+  "state": "new",
+  "found": "2026-10-24T09:55:00Z",
+  "listing": {
+    "source": "vinted",
+    "source_name": "Vinted",
+    "url": "https://www.vinted.de/items/9000000034-sample-jeans",
+    "title": "Denimwerk straight jeans",
+    "kind": null,
+    "rent_warm": null,
+    "rent_cold": null,
+    "sqm": null,
+    "rooms": null,
+    "flatmates": null,
+    "city": null,
+    "district": null,
+    "address": null,
+    "available_from": null,
+    "available_until": null,
+    "furnished": null,
+    "posted": null,
+    "image_url": null,
+    "description": "Marke: Denimwerk\nGröße: W32 | DE 48\n30,00 € + 2,20 € Käuferschutz = 32,20 €",
+    "item": {
+      "price": 30,
+      "price_kind": "fixed",
+      "shipping": "yes",
+      "shipping_cost": null,
+      "condition": "like_new",
+      "condition_label": "Sehr gut",
+      "seller": "private",
+      "distance_km": null,
+      "reserved": null,
+      "bids": null,
+      "ends": null
+    }
+  },
+  "reason": "Denimwerk jeans in W32, like new, for €30 (€32.20 with buyer protection).",
+  "warnings": [
+    "The seller may be in another EU country"
+  ],
+  "application": null,
+  "at_start": false,
+  "over_max": null
+}

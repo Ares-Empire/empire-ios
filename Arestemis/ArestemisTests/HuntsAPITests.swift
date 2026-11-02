@@ -9,7 +9,7 @@ struct HuntsAPITests {
         let api = ArestemisAPI(transport: transport, token: { "fictional-token" })
         let hunt = try sample([Hunt].self, "hunts")[1]
         try transport.answer("GET /hunts", sample: "hunts")
-        #expect(try await api.hunts().count == 3)
+        #expect(try await api.hunts().count == 5)
         try transport.answer("POST /hunts", encoding: hunt)
         _ = try await api.createHunt(kind: .item, name: "Office chair", search: hunt.search)
         let created = try #require(try body(transport.requests.last))

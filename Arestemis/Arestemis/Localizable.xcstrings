@@ -14,12 +14,52 @@
         }
       }
     },
+    "%@ are pickup only." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ gibt es nur zur Abholung."
+          }
+        }
+      }
+    },
     "%@ is not set up yet." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ ist noch nicht eingerichtet."
+          }
+        }
+      }
+    },
+    "%@ is pickup only." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ gibt es nur zur Abholung."
+          }
+        }
+      }
+    },
+    "%@ only ship." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ gibt es nur mit Versand."
+          }
+        }
+      }
+    },
+    "%@ only ships." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ gibt es nur mit Versand."
           }
         }
       }
@@ -1557,6 +1597,16 @@
         }
       }
     },
+    "Open Database License (ODbL) 1.0" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Database License (ODbL) 1.0"
+          }
+        }
+      }
+    },
     "Open listing" : {
       "localizations" : {
         "de" : {
@@ -1573,6 +1623,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Bei %@ öffnen"
+          }
+        }
+      }
+    },
+    "OpenStreetMap copyright and contributors" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OpenStreetMap: Urheberrecht und Mitwirkende"
           }
         }
       }
@@ -2177,6 +2237,16 @@
         }
       }
     },
+    "Town locations for thing searches" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ortslagen für Suchen nach Dingen"
+          }
+        }
+      }
+    },
     "Town or city" : {
       "localizations" : {
         "de" : {
@@ -2715,6 +2785,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "gestern %@"
+          }
+        }
+      }
+    },
+    "© OpenStreetMap contributors" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "© OpenStreetMap-Mitwirkende"
           }
         }
       }

@@ -105,6 +105,34 @@
       "state": "idle",
       "checked": null,
       "note": null
+    },
+    {
+      "source": "mydealz",
+      "name": "mydealz",
+      "state": "idle",
+      "checked": null,
+      "note": null
+    },
+    {
+      "source": "bikemarkt",
+      "name": "MTB-News Bikemarkt",
+      "state": "idle",
+      "checked": null,
+      "note": null
+    },
+    {
+      "source": "ikea_preowned",
+      "name": "IKEA Preowned",
+      "state": "idle",
+      "checked": null,
+      "note": null
+    },
+    {
+      "source": "vinted",
+      "name": "Vinted",
+      "state": "idle",
+      "checked": null,
+      "note": null
     }
   ],
   "last_scan": "2026-11-01T09:05:00Z",

@@ -323,9 +323,9 @@ struct WordChips: View {
 }
 
 /// One switch per site, in the server's order (`SiteChoices`), with the site's note from the server ("Blocked since
-/// 14:02"). A site that is not set up is greyed and cannot be switched on (one that is on can still be switched off);
-/// one line under the card says so. `extra` follows under them (the thing form's "Include auctions", a card of its own,
-/// so it does not read as another site).
+/// 14:02"). A site that is not set up, or cannot serve the thing form's delivery (brief 129), is greyed and cannot be
+/// switched on (one that is on can still be switched off); one line under the card says why. `extra` follows under
+/// them (the thing form's "Include auctions", a card of its own, so it does not read as another site).
 struct PortalToggles<Extra: View>: View {
     let choices: SiteChoices
     @Binding var chosen: Set<Source>
@@ -340,19 +340,20 @@ struct PortalToggles<Extra: View>: View {
                     row(site)
                 }
             }
-            if let line = choices.notReadyLine() { Caption(text: line).padding(.leading, 4) }
+            if let line = choices.line() { Caption(text: line).padding(.leading, 4) }
             extra
         }
     }
 
     private func row(_ site: KindSource) -> some View {
-        let note = site.ready ? statuses.first { $0.source == site.source }?.note : nil
+        let open = choices.isOpen(site)
+        let note = open ? statuses.first { $0.source == site.source }?.note : nil
         return Toggle(isOn: Binding(get: { chosen.contains(site.source) }, set: { on in
             if on { chosen.insert(site.source) } else { chosen.remove(site.source) }
         })) {
             HStack(spacing: 10) {
                 Text(verbatim: site.name).font(AppFont.text(15, weight: .medium))
-                    .foregroundStyle(site.ready ? Ink.primary : Ink.muted)
+                    .foregroundStyle(open ? Ink.primary : Ink.muted)
                 if let note {
                     Text(note).font(AppFont.text(12)).foregroundStyle(Ink.muted).lineLimit(1)
                 }

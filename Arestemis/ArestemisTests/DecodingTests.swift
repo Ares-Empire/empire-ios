@@ -16,7 +16,7 @@ struct DecodingTests {
         case "places": try roundTrip([Place].self, file)
         case "hunts": try roundTrip([Hunt].self, file)
         case "item-matches": try roundTrip(MatchPage.self, file)
-        case "ebay-match": try roundTrip(Match.self, file)
+        case "ebay-match", "ikea-match", "vinted-match": try roundTrip(Match.self, file)
         case "kinds": try roundTrip([OfferedKind].self, file)
         default: Issue.record("No model for \(file)")
         }
@@ -40,10 +40,11 @@ struct DecodingTests {
         #expect(hunt.search.flat!.roomSqmMin == 14 && hunt.search.flat!.roomSqmMax == nil)
         #expect(hunt.search.flat!.flatmatesMax == 2 && hunt.search.flat!.sublet == .exclude)
         #expect(hunt.search.flat!.moveInFrom == "2026-12-01" && hunt.search.flat!.moveInUntil == "2027-02-01")
-        #expect(overview.sources.map(\.source) == [.wgGesucht, .kleinanzeigen, .immowelt, .immoscout24, .ebay])
-        #expect(overview.sources.map(\.state) == [.ok, .ok, .ok, .ok, .ok])
+        #expect(overview.sources.map(\.source.rawValue) == ["wg_gesucht", "kleinanzeigen", "immowelt", "immoscout24", "ebay",
+                                                             "mydealz", "bikemarkt", "ikea_preowned", "vinted"])
+        #expect(overview.sources.allSatisfy { $0.state == .ok })
         #expect(overview.sources.allSatisfy { $0.note == nil })
-        #expect(overview.counts == .init(new: 5, today: 6, saved: 1, applied: 1))
+        #expect(overview.counts == .init(new: 7, today: 8, saved: 1, applied: 1))
         #expect(overview.latest.map(\.id) == [41, 40, 38])
         #expect(overview.lastScan == "2026-10-24T10:02:00Z")
     }
@@ -145,8 +146,8 @@ struct DecodingTests {
         let overview = try JSONDecoder().decode(Overview.self, from: JSONSerialization.data(withJSONObject: object))
         #expect(overview.hunt?.search.flat?.sources == [Source("newportal"), .kleinanzeigen])
         #expect(overview.hunt?.search.flat?.places.first?.sources == [.wgGesucht, Source("newportal")])
-        #expect(overview.sources.map(\.source) == [.wgGesucht, .kleinanzeigen, .immowelt, .immoscout24, .ebay,
-                                                   Source("newportal")])
+        #expect(overview.sources.map(\.source.rawValue) == ["wg_gesucht", "kleinanzeigen", "immowelt", "immoscout24", "ebay",
+                                                             "mydealz", "bikemarkt", "ikea_preowned", "vinted", "newportal"])
         #expect(SiteNames(statuses: overview.sources).name(Source("newportal")) == "New Portal")
     }
 
