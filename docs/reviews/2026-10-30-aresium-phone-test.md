@@ -314,3 +314,16 @@ behind the lock. Two bugs found and fixed: iOS's copy of a shared bank file (in 
 reading, and a `.sta` shared while Aresium was closed was refused. **Drop:** hold a bank file in Files until it lifts,
 switch to Aresium with another finger and let go on the first screen or the dashboard ("Zum Importieren loslassen");
 other files are refused. To try: share a statement from Files or Safari's downloads into Aresium; the drop once.
+
+**After build 17** (Patrik, 2026-11-02): "I love it the connecting is great!" Then: link several payments at once,
+selected expenses and the payments in that paid them back, "it just goes expense by expense until it's empty", and the
+other way round (several payments in paying back one expense). He liked that money in cannot be used twice.
+
+**In build 18** (2026-11-02, briefs 205, 206): **several paid back at once.** While selecting in a category's month
+list, the bar's third item ("Zurückgezahlt" on an expense list, "Zahlt zurück" on an income list) opens the link window
+for the ticked payments; there several payments of the other side can be ticked (suggestions or the search). A summary
+at the bottom shows how the money goes: the oldest expense first, each filled before the next, then what stays open or
+stays income. "Verknüpfen" links them all, with one "Widerrufen". A payment's page works the same way (tick several);
+one payment on each side still asks the amount ("Weiter"). Suggestions are the 8 nearest; anything older through the
+search. To try: select expenses a friend paid back and tick the payment(s) in; select several transfers that paid back
+one expense and pick it; the summary before linking.
