@@ -2,7 +2,9 @@ import Foundation
 import Observation
 
 /// One store for the app: the overview (hunt, portals, counts), the sites each kind of search can use (`GET /kinds`),
-/// the matches by state, the filtered-out listings, applications, settings, and the search's helpers. Views read it and call its actions; nothing here knows about views.
+/// the matches by state (of every search or of one), the filtered-out listings, the search over found listings (`GET
+/// /matches?q=`), applications, settings, and the search's helpers. Views read it and call its actions; nothing here
+/// knows about views.
 ///
 /// - Optimistic changes (a match's state, start/pause, settings) show at once and roll back with a notice on failure.
 /// - Every request remembers the login it started with (`Context`); answers that arrive after a logout or a switch of
@@ -14,6 +16,20 @@ final class ArestemisStore {
     struct MatchList: Equatable {
         var ids: [Int] = []
         var more = false
+        var loaded = false
+        var isLoading = false
+        var error: String?
+    }
+
+    /// Which listings a list holds: one filter's, of every search (`hunt` nil) or of one.
+    struct ListScope: Hashable {
+        let hunt: Int?
+        let filter: MatchFilter
+    }
+
+    /// The listings filtered out of every search (`GET /rejected`), or of one.
+    struct RejectedList: Equatable {
+        var items: [Rejected] = []
         var loaded = false
         var isLoading = false
         var error: String?
@@ -54,16 +70,13 @@ final class ArestemisStore {
     private(set) var matchesByID: [Int: Match] = [:]
     /// Each hunt's newest matches for its page (ids, newest first), loaded when the page opens.
     private(set) var huntLatest: [Int: [Int]] = [:]
-    private(set) var lists: [MatchFilter: MatchList] = [:]
+    private(set) var lists: [ListScope: MatchList] = [:]
     private(set) var seen: Set<Int> = []
     private(set) var changingState: Set<Int> = []
     private(set) var matchErrors: [Int: String] = [:]
 
-    // filtered out
-    private(set) var rejected: [Rejected] = []
-    private(set) var rejectedLoaded = false
-    private(set) var isLoadingRejected = false
-    private(set) var rejectedError: String?
+    // filtered out, of every search (nil) and of single ones
+    private(set) var rejectedLists: [Int?: RejectedList] = [:]
 
     // applications, settings, search
     private(set) var applications: [Int: ApplicationState] = [:]
@@ -72,6 +85,9 @@ final class ArestemisStore {
     private(set) var settingsError: String?
     private(set) var isSavingSearch = false
     private(set) var searchError: String?
+    /// The field the server named with its refusal of a save ("search.url", `FieldRefusal`), so a form can show the
+    /// sentence at that field; nil for a refusal of the whole search.
+    private(set) var searchErrorField: String?
     private(set) var isParsing = false
     private(set) var parseError: String?
 
@@ -81,11 +97,15 @@ final class ArestemisStore {
 
     private var resetGeneration = 0
     private var foregroundRefreshing = false
+    /// How long the search over listings waits for typing to pause.
+    private let findDelay: Duration
 
     init(session: EmpireSession, backend: any ArestemisBackend, sample: Bool = false,
-         placeDelay: Duration = .milliseconds(300), defaults: UserDefaults = .standard) {
+         placeDelay: Duration = .milliseconds(300), findDelay: Duration = ListingSearch.delay,
+         defaults: UserDefaults = .standard) {
         self.session = session
         self.backend = backend
+        self.findDelay = findDelay
         keptDraft = KeptSearchDraft(defaults: defaults)
         #if DEBUG
         isSample = sample
@@ -121,18 +141,8 @@ final class ArestemisStore {
     func isChanging(hunt id: Int) -> Bool { changingHunts.contains(id) }
     private(set) var changingHunts: Set<Int> = []
     private var nextTemporaryHuntID = -1
+    /// Counts every time the lists are forgotten (a hunt deleted, a logout), so a page asked for before is dropped.
     private var listGeneration = 0
-    var selectedHuntID: Int? {
-        didSet {
-            guard selectedHuntID != oldValue else { return }
-            listGeneration += 1
-            lists = [:]
-            rejected = []
-            rejectedLoaded = false
-            isLoadingRejected = false
-            rejectedError = nil
-        }
-    }
 
     /// Loads the home screen. `quiet` keeps the current one on screen and reports nothing (refreshes after actions).
     func reloadOverview(quiet: Bool = false) async {
@@ -184,8 +194,8 @@ final class ArestemisStore {
         }
         guard lastOverviewLoad.map({ now.timeIntervalSince($0) > 30 }) ?? true else { return }
         await reloadOverview(quiet: true)
-        for filter in MatchFilter.allCases where lists[filter]?.loaded == true {
-            await loadMatches(filter, quiet: true)
+        for scope in lists.keys.sorted(by: Self.loadOrder) where lists[scope]?.loaded == true {
+            await loadMatches(scope.filter, hunt: scope.hunt, quiet: true)
         }
     }
 
@@ -262,9 +272,12 @@ final class ArestemisStore {
         }
     }
 
-    /// A pending creation uses a temporary id; only the affected card is rolled back on refusal.
+    /// A pending creation uses a temporary id; only the affected card is rolled back on refusal. A refusal is shown as a
+    /// notice over the tabs, unless it names a field the calling form shows it at (`fieldsShown`, the watch form's
+    /// address and description): then the form alone says it.
     @discardableResult
-    func saveHunt(id: Int?, kind: HuntKind, name: String?, search: HuntSearch) async -> Hunt? {
+    func saveHunt(id: Int?, kind: HuntKind, name: String?, search: HuntSearch,
+                  fieldsShown: Set<String> = []) async -> Hunt? {
         guard canAct, search.kind == kind, !isSavingSearch else { return nil }
         let old = id.flatMap { id in hunts.first { $0.id == id } }
         guard id == nil || (old != nil && !changingHunts.contains(id!)) else { return nil }
@@ -272,7 +285,7 @@ final class ArestemisStore {
         if id == nil { nextTemporaryHuntID -= 1 }
         changingHunts.insert(actionID)
         isSavingSearch = true
-        searchError = nil
+        clearSearchError()
         let context = context
         defer { if isCurrent(context) { changingHunts.remove(actionID); isSavingSearch = false } }
         let now = ArestemisSamples.iso(.now)
@@ -298,7 +311,13 @@ final class ArestemisStore {
             overview?.hunts.removeAll { $0.id == actionID }
             if let old { restoreCard(old) }
             syncFlatHunt()
-            handle(error, context: context) { self.searchError = $0; self.show($0) }
+            handle(error, context: context) { message in
+                let field = (error as? FieldRefusal)?.field
+                self.searchError = message
+                self.searchErrorField = field
+                let shownAtField = field.map { fieldsShown.contains($0) } ?? false
+                if !shownAtField { self.show(message) }
+            }
             return nil
         }
     }
@@ -311,7 +330,7 @@ final class ArestemisStore {
     func deleteHunt(id: Int) async -> Bool {
         guard canAct, !changingHunts.contains(id), let card = hunts.first(where: { $0.id == id }) else { return false }
         changingHunts.insert(id)
-        searchError = nil
+        clearSearchError()
         let context = context
         defer { if isCurrent(context) { changingHunts.remove(id) } }
         overview?.hunts.removeAll { $0.id == id }
@@ -323,13 +342,11 @@ final class ArestemisStore {
             let removed = Set(matchesByID.values.filter { $0.huntID == id }.map(\.id))
             for match in removed { matchesByID[match] = nil; applications[match] = nil; seen.remove(match) }
             overview?.latest.removeAll { $0.huntID == id }
-            rejected.removeAll { $0.huntID == id }
             huntLatest[id] = nil
-            if selectedHuntID == id { selectedHuntID = nil }
+            // Every list is asked again when it shows (the counts and pages of every search changed).
             listGeneration += 1
             lists = [:]
-            isLoadingRejected = false
-            rejectedLoaded = false
+            rejectedLists = [:]
             changingHunts.remove(id)
             await reloadOverview(quiet: true)
             return true
@@ -359,6 +376,28 @@ final class ArestemisStore {
         guard !isSample, canAct, let account = session.accountID else { return }
         keptDraft.keep(draft, baseline: baseline, account: account, huntID: huntID)
     }
+    /// The watch form's draft: the saved watch (its search and name), with the edits kept for it while it is unchanged.
+    func watchSearchDraft(huntID: Int? = nil) -> WatchSearchDraft {
+        let saved = savedWatchDraft(huntID: huntID)
+        guard !isSample, let account = session.accountID else { return saved ?? WatchSearchDraft() }
+        return keptDraft.restoreWatch(for: saved, account: account, huntID: huntID)
+    }
+    func keepWatchSearchDraft(_ draft: WatchSearchDraft, huntID: Int? = nil) {
+        guard !isSample, canAct, let account = session.accountID else { return }
+        keptDraft.keep(draft, baseline: savedWatchDraft(huntID: huntID), account: account, huntID: huntID)
+    }
+    /// The saved watch as the form shows it; nil for a new one.
+    func savedWatchDraft(huntID: Int?) -> WatchSearchDraft? {
+        guard let hunt = hunts.first(where: { $0.id == huntID })?.hunt, let search = hunt.search.watch else { return nil }
+        return WatchSearchDraft(search, name: hunt.name)
+    }
+
+    /// A refusal shown at its field goes once that field is changed (and before every save).
+    func clearSearchError() {
+        searchError = nil
+        searchErrorField = nil
+    }
+
     func flatSearchDraft(huntID: Int?) -> SearchDraft {
         let search = hunts.first { $0.id == huntID }?.hunt.search.flat
         #if DEBUG
@@ -398,12 +437,19 @@ final class ArestemisStore {
 
     // MARK: - matches
 
-    /// The matches of a filter, newest first, as known now (including changes made here since the last load).
-    func matches(_ filter: MatchFilter) -> [Match] {
-        matchesByID.values.filter { filter.includes($0.state) && (selectedHuntID == nil || $0.huntID == selectedHuntID) }.sorted { $0.id > $1.id }
+    /// The matches of a filter, of every search or of one, newest first, as known now (including changes made here since
+    /// the last load).
+    func matches(_ filter: MatchFilter, hunt: Int? = nil) -> [Match] {
+        matchesByID.values.filter { filter.includes($0.state) && (hunt == nil || $0.huntID == hunt) }.sorted { $0.id > $1.id }
     }
 
-    func list(_ filter: MatchFilter) -> MatchList { lists[filter] ?? MatchList() }
+    func list(_ filter: MatchFilter, hunt: Int? = nil) -> MatchList { lists[ListScope(hunt: hunt, filter: filter)] ?? MatchList() }
+
+    /// Every search's lists before single ones', each in the filters' order (the foreground refresh).
+    private static func loadOrder(_ a: ListScope, _ b: ListScope) -> Bool {
+        let filters = MatchFilter.allCases
+        return (a.hunt ?? 0, filters.firstIndex(of: a.filter) ?? 0) < (b.hunt ?? 0, filters.firstIndex(of: b.filter) ?? 0)
+    }
 
     /// A hunt's newest matches for its page, as known now; nil until they were loaded (`loadLatest(hunt:)`).
     func latest(hunt id: Int) -> [Match]? {
@@ -425,31 +471,65 @@ final class ArestemisStore {
         }
     }
 
-    /// A thing for sale: its listing has a thing's details, or its hunt is a thing hunt (no application for it).
-    func isThing(_ match: Match) -> Bool {
-        match.isThing || card(match.huntID)?.hunt.kind == .item
+    /// What a match is: a change on a watched page, a thing for sale, or a flat; by its listing (the page's change, a
+    /// thing's details), else by its hunt's kind (a match loaded before its details), else a flat.
+    func kind(of match: Match) -> SearchKind {
+        if match.isPageChange { return .watch }
+        if match.isThing { return .item }
+        return card(match.huntID).flatMap { SearchKind($0.hunt.kind) } ?? .flat
     }
+
+    /// A thing for sale: its listing has a thing's details, or its hunt is a thing hunt (no application for it).
+    func isThing(_ match: Match) -> Bool { kind(of: match) == .item }
 
     func match(_ id: Int) -> Match? { matchesByID[id] ?? overview?.latest.first { $0.id == id } }
 
-    /// The first page of a filter (or, with `more`, the next one).
-    func loadMatches(_ filter: MatchFilter, more: Bool = false, quiet: Bool = false) async {
-        guard canAct, !(lists[filter]?.isLoading ?? false) else { return }
-        let before = more ? lists[filter]?.ids.min() : nil
-        if more && (before == nil || lists[filter]?.more != true) { return }
-        lists[filter, default: MatchList()].isLoading = true
-        if !quiet { lists[filter]?.error = nil }
-        let selection = listGeneration
+    /// The first page of a filter, of every search or of one (or, with `more`, the next one).
+    func loadMatches(_ filter: MatchFilter, hunt: Int? = nil, more: Bool = false, quiet: Bool = false) async {
+        let scope = ListScope(hunt: hunt, filter: filter)
+        guard canAct, !(lists[scope]?.isLoading ?? false) else { return }
+        let before = more ? lists[scope]?.ids.min() : nil
+        if more && (before == nil || lists[scope]?.more != true) { return }
+        lists[scope, default: MatchList()].isLoading = true
+        if !quiet { lists[scope]?.error = nil }
+        let generation = listGeneration
         let context = context
-        defer { if isCurrent(context) && selection == listGeneration { lists[filter]?.isLoading = false } }
+        defer { if isCurrent(context) && generation == listGeneration { lists[scope]?.isLoading = false } }
         do {
-            let page = try await backend.matches(hunt: selectedHuntID, state: filter.states, limit: Self.pageSize, before: before)
-            guard isCurrent(context) && selection == listGeneration else { return }
-            merge(page, filter: filter, appending: more)
+            let page = try await backend.matches(hunt: hunt, state: filter.states, limit: Self.pageSize, before: before)
+            guard isCurrent(context) && generation == listGeneration else { return }
+            merge(page, scope: scope, appending: more)
         } catch {
-            guard isCurrent(context) && selection == listGeneration else { return }
+            guard isCurrent(context) && generation == listGeneration else { return }
             if quiet { session.handleAuthFailure(error, generation: context.session, token: context.token) }
-            else { handle(error, context: context) { self.lists[filter]?.error = $0 } }
+            else { handle(error, context: context) { self.lists[scope]?.error = $0 } }
+        }
+    }
+
+    /// `GET /matches?q=`: the found listings of every search (or of one) that match the words, best match first, the
+    /// server's order (brief 132). The matches are remembered, so a swipe on one changes it everywhere. A refused login
+    /// goes to the session first; an answer for a login that has ended meanwhile is dropped (`CancellationError`).
+    func findMatches(_ words: String, hunt: Int?, limit: Int = ListingSearch.limit) async throws -> MatchPage {
+        guard canAct else { throw CancellationError() }
+        let context = context
+        let page: MatchPage
+        do {
+            page = try await backend.findMatches(words, hunt: hunt, limit: limit)
+        } catch {
+            guard isCurrent(context) else { throw CancellationError() }
+            session.handleAuthFailure(error, generation: context.session, token: context.token)
+            throw error
+        }
+        guard isCurrent(context) else { throw CancellationError() }
+        for match in page.items { remember(match) }
+        return page
+    }
+
+    /// A new search over found listings, of every search (nil) or of one (its own page).
+    func listingSearch(hunt: Int?) -> ListingSearch {
+        ListingSearch(hunt: hunt, delay: findDelay) { [weak self] words in
+            guard let self else { throw CancellationError() }
+            return try await self.findMatches(words, hunt: hunt)
         }
     }
 
@@ -508,21 +588,24 @@ final class ArestemisStore {
 
     // MARK: - filtered out
 
-    func loadRejected() async {
-        guard canAct, !isLoadingRejected else { return }
-        isLoadingRejected = true
-        rejectedError = nil
-        let selection = listGeneration
+    /// The listings filtered out of every search (nil) or of one, as last loaded.
+    func rejected(hunt: Int? = nil) -> RejectedList { rejectedLists[hunt] ?? RejectedList() }
+
+    func loadRejected(hunt: Int? = nil) async {
+        guard canAct, !(rejectedLists[hunt]?.isLoading ?? false) else { return }
+        rejectedLists[hunt, default: RejectedList()].isLoading = true
+        rejectedLists[hunt]?.error = nil
+        let generation = listGeneration
         let context = context
-        defer { if isCurrent(context) && selection == listGeneration { isLoadingRejected = false } }
+        defer { if isCurrent(context) && generation == listGeneration { rejectedLists[hunt]?.isLoading = false } }
         do {
-            let page = try await backend.rejected(hunt: selectedHuntID, limit: Self.pageSize)
-            guard isCurrent(context) && selection == listGeneration else { return }
-            rejected = page.items
-            rejectedLoaded = true
+            let page = try await backend.rejected(hunt: hunt, limit: Self.pageSize)
+            guard isCurrent(context) && generation == listGeneration else { return }
+            rejectedLists[hunt]?.items = page.items
+            rejectedLists[hunt]?.loaded = true
         } catch {
-            guard isCurrent(context) && selection == listGeneration else { return }
-            handle(error, context: context) { self.rejectedError = $0 }
+            guard isCurrent(context) && generation == listGeneration else { return }
+            handle(error, context: context) { self.rejectedLists[hunt]?.error = $0 }
         }
     }
 
@@ -535,7 +618,7 @@ final class ArestemisStore {
     func loadApplication(for id: Int, regenerate: Bool = false) async {
         guard canAct, !(applications[id]?.isLoading ?? false) else { return }
         guard let loadedMatch = await loadMatch(id) else { return }
-        if isThing(loadedMatch) {
+        if kind(of: loadedMatch) != .flat {
             applications[id] = ApplicationState(error: String(localized: "Application texts are for flats."))
             return
         }
@@ -608,7 +691,6 @@ final class ArestemisStore {
         undo = nil
         resetGeneration += 1
         changingHunts = []
-        selectedHuntID = nil
         overview = nil
         overviewError = nil
         lastOverviewLoad = nil
@@ -620,7 +702,7 @@ final class ArestemisStore {
         settingsError = nil
         isLoadingSettings = false
         isSavingSearch = false
-        searchError = nil
+        clearSearchError()
         isParsing = false
         parseError = nil
         notice = nil
@@ -630,16 +712,14 @@ final class ArestemisStore {
 
     private func forgetMatches() {
         undo = nil
+        listGeneration += 1
         matchesByID = [:]
         huntLatest = [:]
         lists = [:]
         seen = []
         changingState = []
         matchErrors = [:]
-        rejected = []
-        rejectedLoaded = false
-        isLoadingRejected = false
-        rejectedError = nil
+        rejectedLists = [:]
         applications = [:]
     }
 
@@ -665,22 +745,23 @@ final class ArestemisStore {
         matchesByID[match.id] = match
     }
 
-    /// A page from the server is the truth for its filter: matches of that filter it no longer lists are gone
-    /// (changed or removed elsewhere), within the range the page covers.
-    private func merge(_ page: MatchPage, filter: MatchFilter, appending: Bool) {
+    /// A page from the server is the truth for its scope: matches of that filter (and search) it no longer lists are
+    /// gone (changed or removed elsewhere), within the range the page covers.
+    private func merge(_ page: MatchPage, scope: ListScope, appending: Bool) {
         let returned = Set(page.items.map(\.id))
         let lowest = page.items.map(\.id).min() ?? 0
-        let upper = appending ? (lists[filter]?.ids.min() ?? Int.max) : Int.max
-        for (id, match) in matchesByID where (selectedHuntID == nil || match.huntID == selectedHuntID) && filter.includes(match.state) && !returned.contains(id)
+        let upper = appending ? (lists[scope]?.ids.min() ?? Int.max) : Int.max
+        for (id, match) in matchesByID where (scope.hunt == nil || match.huntID == scope.hunt)
+            && scope.filter.includes(match.state) && !returned.contains(id)
             && !changingState.contains(id) && id < upper && (!page.more || id >= lowest) {
             matchesByID[id] = nil
         }
         for match in page.items { remember(match) }
         let ids = page.items.map(\.id)
-        lists[filter, default: MatchList()].ids = appending ? (lists[filter]?.ids ?? []) + ids : ids
-        lists[filter]?.more = page.more
-        lists[filter]?.loaded = true
-        lists[filter]?.error = nil
+        lists[scope, default: MatchList()].ids = appending ? (lists[scope]?.ids ?? []) + ids : ids
+        lists[scope]?.more = page.more
+        lists[scope]?.loaded = true
+        lists[scope]?.error = nil
     }
 }
 

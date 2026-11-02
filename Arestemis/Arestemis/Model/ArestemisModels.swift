@@ -116,14 +116,19 @@ struct ParsedSearch: Codable, Equatable, Sendable {
 }
 
 enum HuntKind: Equatable, Hashable, Codable, Sendable {
-    case flat, item, unknown(String)
+    case flat, item, watch, unknown(String)
 
     var rawValue: String {
-        switch self { case .flat: "flat"; case .item: "item"; case .unknown(let value): value }
+        switch self { case .flat: "flat"; case .item: "item"; case .watch: "watch"; case .unknown(let value): value }
     }
     init(from decoder: Decoder) throws {
         let value = try decoder.singleValueContainer().decode(String.self)
-        self = value == "flat" ? .flat : value == "item" ? .item : .unknown(value)
+        switch value {
+        case "flat": self = .flat
+        case "item": self = .item
+        case "watch": self = .watch
+        default: self = .unknown(value)
+        }
     }
     func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
@@ -132,17 +137,19 @@ enum HuntKind: Equatable, Hashable, Codable, Sendable {
 }
 
 enum HuntSearch: Equatable, Encodable, Sendable {
-    case flat(Search), item(ItemSearch), unsupported
+    case flat(Search), item(ItemSearch), watch(WatchSearch), unsupported
 
     var flat: Search? { if case .flat(let value) = self { value } else { nil } }
     var item: ItemSearch? { if case .item(let value) = self { value } else { nil } }
+    var watch: WatchSearch? { if case .watch(let value) = self { value } else { nil } }
     var kind: HuntKind? {
-        switch self { case .flat: .flat; case .item: .item; case .unsupported: nil }
+        switch self { case .flat: .flat; case .item: .item; case .watch: .watch; case .unsupported: nil }
     }
     func encode(to encoder: Encoder) throws {
         switch self {
         case .flat(let search): try search.encode(to: encoder)
         case .item(let search): try search.encode(to: encoder)
+        case .watch(let search): try search.encode(to: encoder)
         case .unsupported:
             throw EncodingError.invalidValue(self, .init(codingPath: encoder.codingPath,
                                                         debugDescription: "Unsupported hunt search"))
@@ -172,6 +179,8 @@ struct HuntCard: Codable, Equatable, Identifiable, Sendable {
     var counts: Overview.Counts
     var sources: [Source]
     var slowed: Bool
+    /// A watch's page as last read (brief 130); nil for the other kinds, and for a watch before its first overview.
+    var page: PageState? = nil
     var id: Int { hunt.id }
 }
 
@@ -206,9 +215,12 @@ struct Listing: Codable, Equatable, Sendable {
     let imageURL: String?
     let description: String
     var item: ItemDetails? = nil
+    /// A watch's match: the lines that changed on the page and what it says now (brief 130); nil for the other kinds.
+    var page: PageChange? = nil
 
     enum CodingKeys: String, CodingKey {
         case source, url, title, kind, sqm, rooms, flatmates, city, district, address, furnished, posted, description, item
+        case page
         case sourceName = "source_name", rentWarm = "rent_warm", rentCold = "rent_cold"
         case availableFrom = "available_from", availableUntil = "available_until", imageURL = "image_url"
     }
@@ -343,6 +355,18 @@ extension Overview {
     }
 }
 
+extension HuntCard {
+    /// A watch's page state that cannot be read is left out (the card then reads as not read yet), never the overview.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        hunt = try c.decode(Hunt.self, forKey: .hunt)
+        counts = try c.decode(Overview.Counts.self, forKey: .counts)
+        sources = try c.decode([Source].self, forKey: .sources)
+        slowed = try c.decode(Bool.self, forKey: .slowed)
+        page = (try? c.decodeIfPresent(PageState.self, forKey: .page)) ?? nil
+    }
+}
+
 extension Hunt {
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -353,6 +377,7 @@ extension Hunt {
         switch kind {
         case .flat: search = (try? c.decode(Search.self, forKey: .search)).map(HuntSearch.flat) ?? .unsupported
         case .item: search = (try? c.decode(ItemSearch.self, forKey: .search)).map(HuntSearch.item) ?? .unsupported
+        case .watch: search = (try? c.decode(WatchSearch.self, forKey: .search)).map(HuntSearch.watch) ?? .unsupported
         case .unknown: search = .unsupported
         }
         created = try c.decode(String.self, forKey: .created)

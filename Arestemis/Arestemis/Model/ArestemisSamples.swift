@@ -4,7 +4,7 @@ import Foundation
 /// `-sampleData`.
 enum ArestemisSamples {
     nonisolated static let files = ["overview", "matches", "match", "rejected", "settings", "places", "hunts", "item-matches",
-                                    "ebay-match", "ikea-match", "vinted-match", "kinds"]
+                                    "ebay-match", "ikea-match", "vinted-match", "kinds", "watch-matches"]
 
     static func data(_ name: String) throws -> Data {
         guard let url = Bundle.main.url(forResource: name, withExtension: "json") else {
@@ -58,10 +58,13 @@ final class SampleBackend: ArestemisBackend {
         var slowed = false          // -sampleSlowed: the thing hunt is read less often
         var newerKind = false       // -sampleNewerKind: a hunt of a kind this build does not know
         var ebayNotReady = false    // -sampleEbayNotReady: eBay without its keys on the server (greyed in the form)
+        var watchRead: String?      // -sampleWatchRead <read>: the second watch's page state (screenshots)
     }
 
     private var base: Overview
     private var huntValues: [Hunt]
+    /// Each watch's page as last read, by hunt id.
+    private var pages: [Int: PageState]
     private var nextHuntID: Int
     private var matches: [Match]
     private var rejectedItems: [Rejected]
@@ -84,6 +87,7 @@ final class SampleBackend: ArestemisBackend {
             + (try ["ebay-match", "ikea-match", "vinted-match"].map {
                 try ArestemisSamples.decode(Match.self, from: $0, shift: shift)
             })
+            + (try ArestemisSamples.decode(MatchPage.self, from: "watch-matches", shift: shift)).items
         if options.longDescription {
             // Extend only the fictional listing description, leaving the contract's fields unchanged.
             matches = try matches.map { match in
@@ -107,7 +111,12 @@ final class SampleBackend: ArestemisBackend {
         let searched = base.hunt?.search.flat?.places ?? []
         knownPlaces = searched + suggestions.filter { place in !searched.contains { $0.id == place.id } }
         huntValues = base.hunts.map(\.hunt)
+        pages = Dictionary(uniqueKeysWithValues: base.hunts.compactMap { card in card.page.map { (card.id, $0) } })
         nextHuntID = (huntValues.map(\.id).max() ?? 0) + 1
+        if let read = options.watchRead, let id = huntValues.filter({ $0.kind == .watch }).dropFirst().first?.id,
+           let page = pages[id] {
+            pages[id] = Self.page(page, reading: read, checked: base.lastScan)
+        }
         if options.noHunt {
             huntValues = []
             nextHuntID = 1
@@ -158,7 +167,8 @@ final class SampleBackend: ArestemisBackend {
         overview.hunts = huntValues.map { hunt in
             HuntCard(hunt: hunt, counts: Self.counts(matches.filter { $0.huntID == hunt.id }),
                      sources: hunt.active ? Self.sources(hunt.search) : [],
-                     slowed: options.slowed && hunt.active && hunt.kind == .item)
+                     slowed: options.slowed && hunt.active && hunt.kind == .item,
+                     page: hunt.kind == .watch ? pages[hunt.id] : nil)
         }
         overview.latest = Array(visible.prefix(3))
         return overview
@@ -172,9 +182,11 @@ final class SampleBackend: ArestemisBackend {
         guard huntValues.count < 30 else { throw HTTPError.server(409, "This account has 30 hunts. Delete one first.") }
         guard kind == search.kind else { throw HTTPError.server(400, "This hunt needs a newer app.") }
         let name = try Self.name(name)
+        if let watch = search.watch { try Self.check(watch) }
         let now = ArestemisSamples.iso(.now)
         let created = Hunt(id: nextHuntID, kind: kind, name: name, active: false, search: search,
                            created: now, updated: now, activated: nil)
+        if let watch = search.watch { pages[created.id] = Self.waiting(watch) }
         nextHuntID += 1
         huntValues.append(created)
         return created
@@ -182,6 +194,14 @@ final class SampleBackend: ArestemisBackend {
     func updateHunt(id: Int, search: HuntSearch, name: String?) async throws -> Hunt {
         let index = try huntIndex(id)
         guard huntValues[index].kind == search.kind else { throw HTTPError.server(400, "The hunt kind cannot change.") }
+        if let watch = search.watch {
+            try Self.check(watch)
+            // A new address or description is read again from the start, as on the server.
+            let old = huntValues[index].search.watch
+            if old?.url != watch.url || old?.change != watch.change || pages[id]?.read == .blocked {
+                pages[id] = Self.waiting(watch)
+            }
+        }
         huntValues[index].name = try Self.name(name)
         huntValues[index].search = search
         huntValues[index].updated = ArestemisSamples.iso(.now)
@@ -212,7 +232,50 @@ final class SampleBackend: ArestemisBackend {
         return trimmed.isEmpty ? nil : trimmed
     }
     private static func sources(_ search: HuntSearch) -> [Source] {
-        switch search { case .flat(let search): search.sources; case .item(let search): search.sources; case .unsupported: [] }
+        switch search {
+        case .flat(let search): search.sources
+        case .item(let search): search.sources
+        case .watch, .unsupported: []
+        }
+    }
+
+    /// The server's refusals of a watch, in its words (English, as the samples), so the form's lines at their fields can
+    /// be seen without a server. Only an imitation: the real app never judges an address itself.
+    private static func check(_ watch: WatchSearch) throws {
+        let hunted = [("kleinanzeigen.de", "Kleinanzeigen"), ("ebay.de", "eBay"), ("vinted.de", "Vinted"),
+                      ("wg-gesucht.de", "WG-Gesucht"), ("immowelt.de", "Immowelt"),
+                      ("immobilienscout24.de", "ImmoScout24"), ("mydealz.de", "mydealz")]
+        guard let host = WatchAddress.host(watch.url), host.contains("."), !host.hasSuffix(".local"),
+              host != "localhost" else {
+            throw FieldRefusal(field: "search.url", message: "This address can't be watched.")
+        }
+        if let site = hunted.first(where: { host == $0.0 || host.hasSuffix("." + $0.0) }) {
+            throw FieldRefusal(field: "search.url", message: "\(site.1) has its own hunt in Arestemis.")
+        }
+        if watch.change.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            throw FieldRefusal(field: "search.change", message: "Describe the change to watch for.")
+        }
+    }
+
+    /// A watch saved with a new address or description: not read yet.
+    private static func waiting(_ watch: WatchSearch) -> PageState {
+        PageState(host: WatchAddress.host(watch.url) ?? "", read: .waiting)
+    }
+
+    /// `-sampleWatchRead`: the second watch's page in another state, with the server's kind of note for it.
+    private static func page(_ page: PageState, reading read: String, checked: String?) -> PageState {
+        var page = page
+        page.read = PageState.Read(rawValue: read)
+        page.checked = checked
+        switch page.read {
+        case .waiting: page = PageState(host: page.host, read: .waiting)
+        case .ok: page.now = "Cheapest offer 219 €"; page.note = nil
+        case .unreadable: page.note = "This page doesn't show it; it may need a browser."
+        case .failing: page.note = "The page has not answered since yesterday."
+        case .blocked: page.note = "Cloudflare refuses the server."
+        case .unknown: page.note = "Read in a new way."
+        }
+        return page
     }
     private static func counts(_ matches: [Match]) -> Overview.Counts {
         let visible = matches.filter { $0.state != .dismissed }
@@ -228,7 +291,7 @@ final class SampleBackend: ArestemisBackend {
             let search = base.hunts.first { $0.hunt.kind == .item }?.hunt.search.item
             return .item(ParsedItemSearch(search: PartialItemSearch(query: search?.query, priceMax: search?.priceMax,
                                                                    delivery: search?.delivery, places: search?.places), unclear: []))
-        case .unknown: throw HTTPError.server(400, "This hunt needs a newer app.")
+        case .watch, .unknown: throw HTTPError.server(400, "This hunt needs a newer app.")
         }
     }
     private func parseFlat(_ text: String) async throws -> ParsedSearch {
@@ -258,6 +321,46 @@ final class SampleBackend: ArestemisBackend {
             (hunt == nil || match.huntID == hunt) && (states?.contains(match.state) ?? (match.state != .dismissed)) && match.id < (before ?? .max)
         }.sorted { $0.id > $1.id }
         return MatchPage(items: Array(wanted.prefix(limit)), more: wanted.count > limit || (before == nil && (options.moreLoading || options.moreFailure)))
+    }
+
+    /// An imitation of the server's search (brief 132) for screenshots, much simpler than the server's: every word must
+    /// begin a word of the listing; a title counts most, then the place, then the description and a page's lines; ties
+    /// newest first. The real app never ranks: it shows the server's order.
+    func findMatches(_ words: String, hunt: Int?, limit: Int) async throws -> MatchPage {
+        if let hunt { _ = try huntIndex(hunt) }
+        let wanted = Self.folded(words)
+        guard !wanted.isEmpty else { return MatchPage(items: [], more: false) }
+        let scored: [(match: Match, score: Int)] = matches.compactMap { match in
+            guard match.state != .dismissed, hunt == nil || match.huntID == hunt else { return nil }
+            let listing = match.listing
+            let fields: [(words: [String], weight: Int)] = [
+                (Self.folded(listing.title), 3),
+                (Self.folded([listing.city, listing.district].compactMap { $0 }.joined(separator: " ")), 2),
+                (Self.folded(([listing.description] + (listing.page.map { $0.added + $0.removed } ?? []))
+                    .joined(separator: " ")), 1),
+            ]
+            var score = 0
+            for word in Set(wanted) {
+                let best = fields.filter { $0.words.contains { $0.hasPrefix(word) } }.map(\.weight).max()
+                guard let best else { return nil }
+                score += best
+            }
+            return (match, score)
+        }
+        let ranked = scored.sorted { a, b in
+            if a.score != b.score { return a.score > b.score }
+            if a.match.found != b.match.found { return a.match.found > b.match.found }
+            return a.match.id > b.match.id
+        }.map(\.match)
+        return MatchPage(items: Array(ranked.prefix(limit)), more: ranked.count > limit)
+    }
+
+    /// Casefolded words without accents, ß as ss, split at anything but letters and digits.
+    private static func folded(_ text: String) -> [String] {
+        text.replacingOccurrences(of: "ß", with: "ss")
+            .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: Locale(identifier: "de_DE"))
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { !$0.isEmpty }
     }
 
     func match(id: Int) async throws -> Match {

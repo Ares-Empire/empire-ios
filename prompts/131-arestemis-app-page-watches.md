@@ -1,6 +1,6 @@
 # 131: Arestemis app: page watches
 
-Status: running (Claude agent, 2026-11-02)
+Status: merged 2026-11-02 (Claude agent; Claude added "Stopped" for a blocked watch). TestFlight with the next Arestemis build.
 Branch: `claude/131-arestemis-page-watches` · Worktree: `../empire-ios-131-arestemis-watch` · **For a Claude agent**
 (screens and their data part)
 

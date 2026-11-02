@@ -180,7 +180,8 @@
           "reserved": false,
           "bids": null,
           "ends": null
-        }
+        },
+        "page": null
       },
       "reason": "Free office chair in good condition, Garching — fits.",
       "warnings": [],
@@ -225,7 +226,8 @@
           "reserved": false,
           "bids": null,
           "ends": null
-        }
+        },
+        "page": null
       },
       "reason": "75 € plus shipping from 4.99 €, like new — fits.",
       "warnings": [
@@ -272,7 +274,8 @@
           "reserved": false,
           "bids": null,
           "ends": null
-        }
+        },
+        "page": null
       },
       "reason": "110 € VB, like new, Garching — fits with negotiation.",
       "warnings": [
@@ -363,7 +366,8 @@
         "immowelt",
         "immoscout24"
       ],
-      "slowed": false
+      "slowed": false,
+      "page": null
     },
     {
       "hunt": {
@@ -424,7 +428,8 @@
         "applied": 0
       },
       "sources": [],
-      "slowed": false
+      "slowed": false,
+      "page": null
     },
     {
       "hunt": {
@@ -478,7 +483,76 @@
       "sources": [
         "kleinanzeigen"
       ],
-      "slowed": false
+      "slowed": false,
+      "page": null
+    },
+    {
+      "hunt": {
+        "kind": "watch",
+        "name": "Shelf price",
+        "active": true,
+        "search": {
+          "url": "https://shop.example/shelf/",
+          "change": "When FJORD costs under 45 €",
+          "every": 60
+        },
+        "created": "2026-11-02T10:00:00Z",
+        "updated": "2026-11-02T10:00:00Z",
+        "activated": "2026-11-02T10:00:00Z",
+        "last_scan": "2026-11-02T12:00:00Z",
+        "id": 40
+      },
+      "counts": {
+        "new": 0,
+        "today": 0,
+        "saved": 0,
+        "applied": 0
+      },
+      "sources": [],
+      "slowed": false,
+      "page": {
+        "page_title": "Fjord shelf",
+        "host": "shop.example",
+        "now": "FJORD 49,99 €",
+        "read": "ok",
+        "checked": "2026-11-02T12:00:00Z",
+        "changed": "2026-11-02T10:00:00Z",
+        "note": null
+      }
+    },
+    {
+      "hunt": {
+        "kind": "watch",
+        "name": "New releases",
+        "active": true,
+        "search": {
+          "url": "https://shop.example/shelf/",
+          "change": "When FJORD costs under 45 €",
+          "every": 60
+        },
+        "created": "2026-11-02T10:00:00Z",
+        "updated": "2026-11-02T10:00:00Z",
+        "activated": "2026-11-02T10:00:00Z",
+        "last_scan": "2026-11-02T12:00:00Z",
+        "id": 41
+      },
+      "counts": {
+        "new": 0,
+        "today": 0,
+        "saved": 0,
+        "applied": 0
+      },
+      "sources": [],
+      "slowed": false,
+      "page": {
+        "page_title": "Fjord shelf",
+        "host": "shop.example",
+        "now": null,
+        "read": "blocked",
+        "checked": "2026-11-02T12:00:00Z",
+        "changed": "2026-11-02T10:00:00Z",
+        "note": "Cloudflare refuses the server since 13:00."
+      }
     }
   ]
 }

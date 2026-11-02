@@ -13,6 +13,8 @@ protocol ArestemisBackend {
     func parse(text: String, kind: HuntKind) async throws -> HuntParseResult
     func places(query: String) async throws -> [Place]
     func matches(hunt: Int?, state: [MatchState]?, limit: Int, before: Int?) async throws -> MatchPage
+    /// `GET /matches?q=`: every state but dismissed, best match first (brief 132).
+    func findMatches(_ words: String, hunt: Int?, limit: Int) async throws -> MatchPage
     func match(id: Int) async throws -> Match
     func setState(_ state: MatchState, match id: Int) async throws -> Match
     func application(match id: Int, regenerate: Bool) async throws -> Application
@@ -63,7 +65,7 @@ struct ArestemisAPI: ArestemisBackend {
         switch kind {
         case .flat: return .flat(try await send(.post, "search/parse", body: body, timeout: Self.aiTimeout))
         case .item: return .item(try await send(.post, "search/parse", body: body, timeout: Self.aiTimeout))
-        case .unknown: throw HTTPError.server(400, "This hunt needs a newer app.")
+        case .watch, .unknown: throw HTTPError.server(400, "This hunt needs a newer app.")
         }
     }
 
@@ -79,6 +81,15 @@ struct ArestemisAPI: ArestemisBackend {
         }
         query.append(URLQueryItem(name: "limit", value: String(limit)))
         if let before { query.append(URLQueryItem(name: "before", value: String(before))) }
+        return try await send(.get, "matches", query: query)
+    }
+
+    /// The found listings that match the words, best match first (the server's order; no `before`, no `state`: all but
+    /// dismissed). The words are the app's (`ListingSearch.words`): trimmed, 2–100 characters.
+    func findMatches(_ words: String, hunt: Int?, limit: Int) async throws -> MatchPage {
+        var query = [URLQueryItem(name: "q", value: words)]
+        if let hunt { query.append(URLQueryItem(name: "hunt", value: String(hunt))) }
+        query.append(URLQueryItem(name: "limit", value: String(limit)))
         return try await send(.get, "matches", query: query)
     }
 
@@ -151,7 +162,12 @@ struct ArestemisAPI: ArestemisBackend {
                                        body: Body?, timeout: TimeInterval = 30) async throws -> Data {
         guard let token = token(), !token.isEmpty else { throw HTTPError.unauthorized }
         var components = URLComponents(url: Self.baseURL.appendingPathComponent(path), resolvingAgainstBaseURL: false)
-        if !query.isEmpty { components?.queryItems = query }
+        if !query.isEmpty {
+            components?.queryItems = query
+            // A typed "+" stays a plus: servers read a bare one in a query as a space.
+            let encoded = components?.percentEncodedQuery?.replacingOccurrences(of: "+", with: "%2B")
+            components?.percentEncodedQuery = encoded
+        }
         guard let url = components?.url else { throw HTTPError.invalidResponse }
         var request = URLRequest(url: url)
         request.httpMethod = method.rawValue
@@ -163,8 +179,34 @@ struct ArestemisAPI: ArestemisBackend {
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.timeoutInterval = timeout
         let (data, response) = try await transport.send(request)
+        if let refusal = FieldRefusal(status: response.statusCode, data: data) { throw refusal }
         try checkResponse(response, data: data, onUnauthorized: {})
         return data
+    }
+}
+
+/// A `400` that names the field it is about (`{"error": "…", "field": "search.url"}`, Arestemis/docs/API.md), so a
+/// form can show the server's sentence at that field. Its description is the sentence, as any refusal's.
+struct FieldRefusal: LocalizedError, Equatable {
+    let field: String
+    let message: String
+
+    var errorDescription: String? { message }
+
+    /// Nil for any other answer: another status, no field or no sentence (those go on as `HTTPError`).
+    init?(status: Int, data: Data) {
+        struct Body: Decodable { let error: String?; let message: String?; let field: String? }
+        guard status == 400, let body = try? JSONDecoder().decode(Body.self, from: data),
+              let field = body.field?.trimmingCharacters(in: .whitespaces), !field.isEmpty,
+              let sentence = [body.error, body.message].compactMap({ $0?.trimmingCharacters(in: .whitespacesAndNewlines) })
+                .first(where: { !$0.isEmpty }) else { return nil }
+        self.field = field
+        message = sentence
+    }
+
+    init(field: String, message: String) {
+        self.field = field
+        self.message = message
     }
 }
 

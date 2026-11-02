@@ -73,7 +73,9 @@ struct SitesTests {
 
     @Test func kindsDecodeLeniently() throws {
         let kinds = try sample([OfferedKind].self, "kinds")
-        #expect(kinds.map(\.kind) == [.flat, .item] && kinds.map(\.name) == ["Flat or room", "Something to buy"])
+        #expect(kinds.map(\.kind) == [.flat, .item, .watch]
+                && kinds.map(\.name) == ["Flat or room", "Something to buy", "Watch a page"])
+        #expect(kinds[2].sources.isEmpty)
         #expect(kinds[1].sources.map(\.source) == thingSites)
         #expect(kinds[1].sources.map(\.auctions) == [false, true, false, false, false, false])
         #expect(kinds[1].sources.allSatisfy { $0.ready })
@@ -122,7 +124,7 @@ struct SitesTests {
         try transport.answer("GET /kinds", sample: "kinds")
         await store.reloadOverview()
         await settle { store.kinds != nil }
-        #expect(store.kinds?.map(\.kind) == [.flat, .item] && transport.requests("GET /kinds").count == 1)
+        #expect(store.kinds?.map(\.kind) == [.flat, .item, .watch] && transport.requests("GET /kinds").count == 1)
         let form = store.siteChoices(.item, chosen: [.kleinanzeigen])
         #expect(form.sites.map(\.name) == ["Kleinanzeigen", "eBay", "mydealz", "MTB-News Bikemarkt", "IKEA Preowned", "Vinted"])
         // The quiet reloads after an action ask again only while there is no answer.
@@ -134,7 +136,7 @@ struct SitesTests {
         await store.reloadOverview()
         await settle { transport.requests("GET /kinds").count == 2 }
         await settle()
-        #expect(transport.requests("GET /kinds").count == 2 && store.kinds?.count == 2)
+        #expect(transport.requests("GET /kinds").count == 2 && store.kinds?.count == 3)
         #expect(store.notice == nil && store.overviewError == nil && session.isSignedIn)
         // Forgotten with the account's data.
         store.clear()

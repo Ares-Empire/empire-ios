@@ -1,6 +1,6 @@
 # 133: Arestemis app: Angebote as "New | Searches", and a search over all listings
 
-Status: draft (starts after brief 131 is merged; the search needs server brief 132)
+Status: merged 2026-11-02 (Claude agent; Claude left out counts of zero on the Searches cards). Arestemis build 10.
 Branch: `claude/133-arestemis-angebote` · Worktree: `../empire-ios-133-arestemis-angebote` · **For a Claude agent**
 (screens and their data part)
 
