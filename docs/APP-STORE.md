@@ -85,10 +85,10 @@ internal testers (App Store Connect users, up to 100) need no Beta App Review.
 
 | Field | Value |
 |---|---|
-| Feedback Email | `REDACTED-EMAIL` |
+| Feedback Email | the owner's email (the owner file, see ares-empire `docs/PRIVACY.md`) |
 | Privacy Policy URL | `https://www.ares-empire.de/privacy` |
 | Marketing URL | empty (the hub needs a login), or `https://www.ares-empire.de` |
-| Contact (Beta App Review) | Patrik Breeck, `REDACTED-EMAIL`, phone: **[Patrik]** (entered in App Store Connect only, never here) |
+| Contact (Beta App Review) | Patrik Breeck, the owner's email (the owner file, see ares-empire `docs/PRIVACY.md`), phone: **[Patrik]** (entered in App Store Connect only, never here) |
 | Sign-in required | **Yes**: the demo login below |
 | Review notes | "Every Ares Empire app needs an approved Ares account; accounts are created in any of the apps (Create account on the login screen) or on www.ares-empire.de and approved by the developer; Settings → Account deletes the account. The demo account is approved and has access to this app. Push notifications go through the developer's own push service." (+ the app's line below) |
 
@@ -132,7 +132,7 @@ Only needed once an app goes to other people (App Store or external testers): bu
 testing, which Apple does not review (Patrik, 2026-10-25). Never the existing test account (Claude's own).
 
 1. Sign up at `https://www.ares-empire.de/signup` with an extra address on Patrik's domain that forwards to him
-   (Patrik, 2026-10-25: e.g. `review@REDACTED-DOMAIN`; his own address is his own account).
+   (Patrik, 2026-10-25: e.g. `review@example.com`; his own address is his own account).
    Password from a generator, kept only in the Keychain item `empire-review-account` and in App Store Connect.
 2. Confirm the email, then approve the account (Empire app → Approvals, or the PocketBase admin UI). In the admin UI
    set `services` to `empire` plus the app under review (`arestemis`, `aresus`); nothing else.

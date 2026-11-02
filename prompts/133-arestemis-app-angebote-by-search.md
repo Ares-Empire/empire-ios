@@ -17,15 +17,15 @@ from three drawn options:
     line). Tapping one opens **today's view for just that search**: New · Saved · Applied · All ("Asked" for things,
     as today), its swipe actions, and its "Filtered out".
 - **A search icon** in the header: type a name ("Kallax", "Aeron", "Schwabing") and see the found listings of all
-  searches, **best match first** (server brief 132). On one search's page the same icon searches only that search.
+  searches, **best match first** (the Arestemis repo, `docs/briefs/132-arestemis-listing-search.md`). On one search's page the same icon searches only that search.
 
 The chip row goes away.
 
 ## Read first
 
 - `AGENTS.md`, `CLAUDE.md` (design rules, Languages, the Arestemis app entry, strings, screenshots)
-- `~/Arestemis/docs/API.md` → `GET /matches` and its `q` parameter (brief 132; if 132 is not merged yet, its brief
-  `prompts/132-arestemis-listing-search.md` is the contract), `Overview.hunts` (`HuntCard.counts`)
+- `~/Arestemis/docs/API.md` → `GET /matches` and its `q` parameter; until the server change is merged, the contract
+  is in the Arestemis repo, `docs/briefs/132-arestemis-listing-search.md`. Also read `Overview.hunts` (`HuntCard.counts`).
 - `Screens/ListingsScreen.swift` (today's tab), `Model/AppNavigation.swift` (`listingsPath`, `filter`, launch
   arguments), `Model/HuntsPresentation.swift` (`HuntChips`), `Model/ArestemisStore.swift` (match lists per filter,
   `selectedHuntID`, rejected), `Screens/HuntPage.swift` (its "Listings" button and the figures that open listings),
@@ -63,7 +63,7 @@ The chip row goes away.
 
 ## Out of scope
 
-- The server (brief 132), TestFlight (Claude), the Hunts tab.
+- The server (the Arestemis repo, `docs/briefs/132-arestemis-listing-search.md`), TestFlight (Claude), the Hunts tab.
 
 ## Check before you report
 

@@ -30,7 +30,7 @@ from the code with **[lead to confirm]**.
   item GDPR Art. 13 needs (controller, data, purposes, legal bases, recipients, transfers outside the EU and their
   safeguards, retention, rights incl. the complaint to the supervisory authority for Bavaria, BayLDA), no tracking.
 - **Impressum / Imprint** (§ 5 DDG): Patrik Breeck, the address as the placeholder `[ADDRESS]` (Patrik decides which
-  address), email `REDACTED-EMAIL`.
+  address), contact: the owner's email (the owner file, see ares-empire `docs/PRIVACY.md`).
 - Served by the hub **without login** at `https://www.ares-empire.de/datenschutz`, `/privacy`, `/impressum`,
   `/imprint` (find how the hub serves pages: `webauth/server.py` and its open paths, `web/`), in the hub's look,
   each with a link to the other language. These are an exception to "websites stay English" (legal pages in Germany are

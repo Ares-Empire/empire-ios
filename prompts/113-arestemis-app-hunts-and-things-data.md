@@ -7,18 +7,18 @@ effort `high`
 ## Goal
 
 Arestemis grows from one flat hunt into any number of hunts of different kinds: flats, and things for sale on
-Kleinanzeigen (plan: `~/ares-empire/docs/ARESTEMIS-ANYTHING.md`). This brief builds the app's **data side** for that:
+Kleinanzeigen (plan: `~/Arestemis/docs/ARESTEMIS-ANYTHING.md`). This brief builds the app's **data side** for that:
 the types, the API client, the store with per-hunt actions, the form model of a thing search, formatting, push and the
 samples. **The screens are not yours:** a Claude agent designs them afterwards (brief 114). You only keep today's
 screens compiling and working on the new store.
 
-The server is being built at the same time (briefs 111, 112, 116), so you build against the contract below and the
+The server is being built at the same time (the Arestemis repo, `docs/briefs/111-arestemis-storage-for-every-type.md`, `docs/briefs/112-arestemis-several-hunts.md`, `docs/briefs/116-arestemis-things-for-sale.md`), so you build against the contract below and the
 samples you write from it; Claude swaps in the server's own samples when they exist.
 
 ## Read first
 
 - `AGENTS.md` and `CLAUDE.md` (always; `CLAUDE.md` → Languages, the Arestemis app entry under Setup state)
-- **The contract:** `prompts/112-arestemis-several-hunts.md` → "The contract", both parts (several hunts; things for
+- **The contract:** the Arestemis repo, `docs/briefs/112-arestemis-several-hunts.md` → "The contract", both parts (several hunts; things for
   sale). Every type and field comes from there. Anything missing: `TODO(api)`, never guessed.
 - `Arestemis/Arestemis/Model/ArestemisModels.swift`, `ArestemisStore.swift`, `SearchDraft.swift`,
   `KeptSearchDraft.swift`, `AppNavigation.swift`, `Notifications.swift`, `Formatting.swift`, `ArestemisSamples.swift`,
@@ -92,8 +92,8 @@ samples you write from it; Claude swaps in the server's own samples when they ex
 
 ## API
 
-The contract in `prompts/112-arestemis-several-hunts.md` → "The contract". The server serves the several-hunts part
-after brief 112 and the things part after brief 116; until then the app runs on its samples.
+The contract in the Arestemis repo, `docs/briefs/112-arestemis-several-hunts.md` → "The contract". The server serves the several-hunts part
+after the server change described in the Arestemis repo, `docs/briefs/112-arestemis-several-hunts.md` and the things part after the server change described in the Arestemis repo, `docs/briefs/116-arestemis-things-for-sale.md`; until then the app runs on its samples.
 
 ## Done when
 

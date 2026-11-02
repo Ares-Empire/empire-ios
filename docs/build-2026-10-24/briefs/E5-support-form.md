@@ -11,7 +11,7 @@ the smallest additions elsewhere you need).
 
 Patrik (2026-10-24): "each settings thing should get a 'support' or 'contact' entry so that a user could easily
 contact me. it should just open a menu where they can select issue, suggestion / feature, etc (dropdown or smth) and
-then write into a box what it is. It then just sends it to REDACTED-EMAIL"
+then write into a box what it is. It then just sends it to the owner's email (the owner file, see ares-empire `docs/PRIVACY.md`)"
 
 ## Server: a `feedback` collection on the account server
 
@@ -22,7 +22,7 @@ then write into a box what it is. It then just sends it to REDACTED-EMAIL"
 - Rules: create only for a verified, approved account and only as itself (`@request.body.user = @request.auth.id`);
   list, view, update, delete for superusers only (Patrik reads them in the admin UI). A rate limit for creating
   (PocketBase's built-in rate limiter, for example 10 per hour; check the right label for 0.40.6).
-- A hook `accounts/pb_hooks/feedback.pb.js`: after a feedback record is created, mail it to `REDACTED-EMAIL` (one
+- A hook `accounts/pb_hooks/feedback.pb.js`: after a feedback record is created, mail it to the owner's email (the owner file, see ares-empire `docs/PRIVACY.md`) (one
   constant at the top) from the server's sender, with `Reply-To` the account's email, subject like
   `[Arestoteles] Idea: <first words>`, and a plain body (kind, app, version, system, language, account email, the
   message). If sending fails, log it; the record stays (never fail the create because of mail).

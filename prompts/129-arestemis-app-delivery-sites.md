@@ -6,7 +6,7 @@ agent** (screens and their small data part)
 
 ## Goal
 
-The server now offers more thing sites, and two of them do not fit every search (Arestemis briefs 126, 128):
+The server now offers more thing sites, and two of them do not fit every search (the Arestemis repo, `docs/briefs/126-arestemis-ikea-preowned.md`, `docs/briefs/128-arestemis-vinted.md`):
 
 - **IKEA Preowned** is pickup only (private sellers, collected near the hunt's towns).
 - **Vinted** and **mydealz** only ship.
@@ -23,7 +23,7 @@ so the app credits OpenStreetMap under Settings → About → Fonts & licences.
 - `AGENTS.md`, `CLAUDE.md` (design rules, Languages, the Arestemis app entry, Settings)
 - The contract: `~/Arestemis/docs/API.md` → "Available kinds and sites" (`delivery`), the item listing (`ItemDetails`),
   and the samples `~/Arestemis/docs/samples/kinds.json`, `overview.json`, `matches.json` (IKEA Preowned and Vinted
-  matches are in them after brief 128)
+  matches are in them after the server change described in the Arestemis repo, `docs/briefs/128-arestemis-vinted.md`)
 - `Arestemis/Arestemis/Model/Sites.swift` (`KindSource`, `SiteChoices`: `canSwitch`, `notReadyLine`),
   `Screens/ItemSearchScreen.swift` (the sites under Portals, the delivery choice), `Model/ItemSearchDraft.swift`,
   `Model/ItemFormatting.swift`, `ArestemisTests/ServerSamplesTests.swift`

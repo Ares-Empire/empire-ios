@@ -36,8 +36,8 @@ and replaces the alert on the lock screen.
 - What Arestemis's health answers today (`~/Arestemis/docs/API.md`, `GET /health`; read only, do not change that
   repo): `{"ok": true, "hunting": 1, "last_scan": "2026-10-31T20:07:19Z", "sources": {"wg_gesucht": "ok",
   "kleinanzeigen": "ok", "immowelt": "idle"}}`. Each source is `ok | blocked | error | idle` (`idle` = not used by any
-  active hunt). Blocked = HTTP 403/429, a captcha page, or WG-Gesucht's detail pages paused after 429s; error = other
-  HTTP errors, network errors, or a list page without listings (a layout change).
+  active hunt). `blocked` means the site refused access; `error` means the server could not complete the search.
+  Site access is handled by Arestemis; Aresus only reads the reported state.
 - The push service's fields: `~/ares-empire/docs/PUSH.md` (`interruption`, `collapse_id` ≤ 64 bytes; unknown fields
   are a 400).
 
@@ -118,7 +118,7 @@ and replaces the alert on the lock screen.
 
 ## Out of scope
 
-- The Arestemis repo (another session is adding ImmoScout24 and Immowelt for every town in brief 63; ImmoScout24's
+- The Arestemis repo (another session is adding ImmoScout24 and Immowelt for every town; see the Arestemis repo, `docs/briefs/63-arestemis-more-portals.md`; ImmoScout24's
   check and the AI check's state come in a later brief once that has landed).
 - The app (empire-ios), the Aresync alerts, the server limits, the 10-minute pusher limit (keep it).
 

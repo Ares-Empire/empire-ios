@@ -1,6 +1,6 @@
 # 61: Arestemis Settings: a compact Application section, the flicker, and ImmoScout24 in the app
 
-Status: merged 2026-10-31 (tests pass; every changed screen in both languages and looks; Claude: settings load with the home screen so the sheet opens complete, samples from brief 63; the flicker not reproduced on iOS 27.0)
+Status: merged 2026-10-31 (tests pass; every changed screen in both languages and looks; Claude: settings load with the home screen so the sheet opens complete, samples from the Arestemis repo, `docs/briefs/63-arestemis-more-portals.md`; the flicker not reproduced on iOS 27.0)
 Branch: `claude/61-arestemis-settings` · Worktree: `../empire-ios-61-arestemis-settings` · Agent: Claude (design)
 
 ## Goal
@@ -75,7 +75,7 @@ both, plus the flicker. Arestemis build 3 goes to Patrik's phone right after it.
 ### 2. `application_notes` in the app's `Settings`
 
 - `Settings.applicationNotes: String` ↔ `application_notes`. **Decoding must accept a server answer without the
-  field** (the server change of brief 62 may land a little later): missing = `""`. Encoding always sends it.
+  field** (the server change described in the Arestemis repo, `docs/briefs/62-arestemis-application-notes.md` may land a little later): missing = `""`. Encoding always sends it.
 - Sample data and `SampleBackend` get the field. Tests in `DecodingTests` for both cases.
 
 ### 3. ImmoScout24 in the app
@@ -98,13 +98,13 @@ If you cannot reproduce it, say so and what you tried; do not ship a guess.
 
 ## Settled: do not re-open
 
-- Automatic mode uses the facts about you and the notes, not the own text (brief 62). The own text stays stored.
+- Automatic mode uses the facts about you and the notes, not the own text (the Arestemis repo, `docs/briefs/62-arestemis-application-notes.md`). The own text stays stored.
 - The switch, not a segmented control; the row and its page follow the switch.
 - No changes to the Application sheet (it already says "Automatisch geschrieben" / "Dein Text").
 
 ## Out of scope
 
-- The server (briefs 62 and 63). Aresium. The Hunt, Search and Listings screens beyond the portal enum.
+- The server (the Arestemis repo, `docs/briefs/62-arestemis-application-notes.md`, `docs/briefs/63-arestemis-more-portals.md`). Aresium. The Hunt, Search and Listings screens beyond the portal enum.
 
 ## Done when
 
