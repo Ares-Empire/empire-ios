@@ -92,3 +92,69 @@ extension PhoneLedger {
         return BatchLedgerUndo(ledger: observer.id, revision: observer.value, before: before, after: try batchSnapshot())
     }
 }
+
+nonisolated struct PaybackLedgerResult: Sendable {
+    let plan: PaybackPlan
+    let undo: BatchLedgerUndo
+}
+
+extension PhoneLedger {
+    func paybackGroup(ids: Set<String>, engine: AresiumEngine, catalog: CategoryCatalog,
+                      today: String, ownNames: Bool) async throws -> PaybackGroup? {
+        let observer = batchObserver(), revision = observer.value
+        configurePaybacks(catalog: catalog)
+        let dashboard = try await dashboard(engine: engine, catalog: catalog, language: .current,
+                                            today: today, ownNames: ownNames)
+        guard observer.value == revision else { throw BatchChangeError.changed }
+        return Paybacks.group(ids: ids, dashboard: dashboard, payments: try payments(), transferIDs: transferCategoryIDs,
+                              revision: PaybackRevision(ledger: observer.id, value: revision))
+    }
+
+    private func checkPaybackRevision(_ group: PaybackGroup) throws {
+        let observer = batchObserver()
+        guard let revision = group.revision, revision.ledger == observer.id, revision.value == observer.value
+        else { throw BatchChangeError.changed }
+    }
+
+    /// Both preview and save resolve current candidates on the ledger executor. Never trust rests from the screen.
+    func planPaybacks(group: PaybackGroup, others: Set<String>, engine: AresiumEngine, catalog: CategoryCatalog,
+                      today: String, ownNames: Bool) async throws -> PaybackPlan {
+        try checkPaybackRevision(group)
+        let candidates = try await paybackCandidates(engine: engine, catalog: catalog, today: today,
+                                                     ownNames: ownNames, names: false)
+        try checkPaybackRevision(group)
+        let selected = candidates.filter { group.ids.contains($0.transaction.id) && $0.state.rest > 0 }
+        let picked = candidates.filter { others.contains($0.transaction.id) && $0.state.rest > 0 }
+        guard selected.count == group.ids.count, picked.count == others.count,
+              selected.allSatisfy({ $0.state.direction == group.direction }) else { throw PaybackError.invalidPayment }
+        let current = PaybackGroup(direction: group.direction, payments: selected, skipped: group.skipped,
+                                   totalRest: group.totalRest, revision: group.revision)
+        return try PaybackPlan(group: current, others: picked)
+    }
+
+    /// One save and one snapshot undo for every new or raised pair. No suspension between the last revision check
+    /// and save, so an import, category change or another link cannot interleave with applying this plan.
+    func changePaybacks(group: PaybackGroup, others: Set<String>, engine: AresiumEngine, catalog: CategoryCatalog,
+                        today: String, ownNames: Bool) async throws -> PaybackLedgerResult {
+        let plan = try await planPaybacks(group: group, others: others, engine: engine, catalog: catalog,
+                                          today: today, ownNames: ownNames)
+        try checkPaybackRevision(group)
+        guard plan.hasLinks else { throw PaybackError.invalidPayment }
+        let observer = batchObserver(), before = try batchSnapshot()
+        let stored = Dictionary(uniqueKeysWithValues: try modelContext.fetch(FetchDescriptor<StoredPayment>()).map { ($0.id, $0) })
+        do {
+            for link in plan.links {
+                guard let payer = stored[link.from], let cents = Paybacks.cents(link.totalAmount)
+                else { throw PaybackError.invalidPayment }
+                var links = payer.paysBack ?? []
+                let value = LedgerPayback(payment: link.to, amount: Paybacks.stored(cents))
+                if let index = links.firstIndex(where: { $0.payment == link.to }) { links[index] = value }
+                else { links.append(value) }
+                payer.paysBack = links
+            }
+            try modelContext.save()
+        } catch { modelContext.rollback(); throw error }
+        return PaybackLedgerResult(plan: plan, undo: BatchLedgerUndo(ledger: observer.id, revision: observer.value,
+                                                                    before: before, after: try batchSnapshot()))
+    }
+}

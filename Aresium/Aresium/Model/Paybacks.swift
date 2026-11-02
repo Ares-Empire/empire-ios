@@ -159,15 +159,13 @@ extension PhoneBackend {
     }
 
     func paybackSuggestions(for id: String) async throws -> [PaybackSuggestion] {
-        let candidates = try await paybackCandidates(names: false)
-        guard let payment = candidates.first(where: { $0.transaction.id == id }) else { return [] }
-        return Paybacks.suggestions(for: payment, in: candidates)
+        guard let group = try await paybackGroup(ids: [id]) else { return [] }
+        return try await paybackSuggestions(forGroup: group)
     }
 
     func paybackSearch(_ query: String, for id: String) async throws -> [PaybackSuggestion] {
-        let candidates = try await paybackCandidates()
-        guard let payment = candidates.first(where: { $0.transaction.id == id }) else { return [] }
-        return Paybacks.search(query, for: payment, in: candidates)
+        guard let group = try await paybackGroup(ids: [id]) else { return [] }
+        return try await paybackSearch(query, forGroup: group)
     }
 
     /// Saves once; the dashboard store publishes the rebuilt dashboard and widget once.

@@ -194,6 +194,26 @@
         }
       }
     },
+    "%@ stays income." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ bleiben Einnahme."
+          }
+        }
+      }
+    },
+    "%@ still open." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ noch offen."
+          }
+        }
+      }
+    },
     "%@ · activities" : {
       "localizations" : {
         "de" : {
@@ -308,6 +328,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld ausgewählt"
+          }
+        }
+      }
+    },
+    "%lld expenses, %@ paid back." : {
+      "localizations" : {
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%1$lld Ausgabe, %2$@ zurückgezahlt."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%1$lld Ausgaben, %2$@ zurückgezahlt."
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%1$lld expense, %2$@ paid back."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%1$lld expenses, %2$@ paid back."
+                }
+              }
+            }
           }
         }
       }
