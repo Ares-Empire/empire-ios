@@ -45,6 +45,7 @@ struct HuntsScreen: View {
                     }
                 }
                 .scrollIndicators(.hidden)
+                .tourScrollsToTarget()
                 .edgeFade(top: 16)
                 .refreshable { await store.reloadOverview() }
                 .onAppear {
@@ -54,26 +55,32 @@ struct HuntsScreen: View {
                     }
                 }
             }
+            .tourSpotlight()
             .provinceWall()
+            .tourCardRoom()
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: HuntRoute.self) { route in
-                switch route {
-                case .hunt(let id): HuntPage(id: id, store: store, navigation: navigation)
-                case .match(let id): MatchDetailScreen(id: id, store: store, navigation: navigation)
-                case .newSearch: NewSearchScreen(store: store, navigation: navigation)
-                case .form(.flat, let id, let example):
-                    FlatSearchScreen(store: store, navigation: navigation, huntID: id, example: example)
-                case .form(.item, let id, let example):
-                    ItemSearchScreen(store: store, navigation: navigation, huntID: id, example: example)
-                case .form(.price, let id, let example):
-                    PriceSearchScreen(store: store, navigation: navigation, huntID: id, example: example)
-                case .form(.watch, let id, let example):
-                    WatchSearchScreen(store: store, navigation: navigation, huntID: id, example: example)
+                Group {
+                    switch route {
+                    case .hunt(let id): HuntPage(id: id, store: store, navigation: navigation)
+                    case .match(let id): MatchDetailScreen(id: id, store: store, navigation: navigation)
+                    case .newSearch: NewSearchScreen(store: store, navigation: navigation)
+                    case .form(.flat, let id, let example):
+                        FlatSearchScreen(store: store, navigation: navigation, huntID: id, example: example)
+                    case .form(.item, let id, let example):
+                        ItemSearchScreen(store: store, navigation: navigation, huntID: id, example: example)
+                    case .form(.price, let id, let example):
+                        PriceSearchScreen(store: store, navigation: navigation, huntID: id, example: example)
+                    case .form(.watch, let id, let example):
+                        WatchSearchScreen(store: store, navigation: navigation, huntID: id, example: example)
+                    }
                 }
+                .tourCardRoom()
             }
             .task(id: scenePhase) { await keepFresh() }
         }
         .undoBar(visibleUndo, accent: Look.accent)
+        .tourCard()
     }
 
     /// Only the visible tab owns the shared offer's timer; cancelling a hidden tab must not clear it.
@@ -94,6 +101,7 @@ struct HuntsScreen: View {
                              toggle: { active in Task { await store.setActive(id: card.id, active: active) } })
                     .huntCardMenu(card, store: store, navigation: navigation)
                     .id(Self.cardID(card.id))
+                    .tourAnchor(.huntCard(card.id))
                     // A monitor's 30-day line, asked again after each new read (a new point).
                     .task(id: MonitorRead(card)) { await store.loadPrices(hunt: card.id, days: 30) }
             }

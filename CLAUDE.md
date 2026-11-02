@@ -662,6 +662,38 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   <text>`, `-priceSwitches both|history|alarm|none`, `-pricePreview reading|refused|failed`), `-newExample
   priceBelow|backInStock`, `-openHunt <id>` with `-priceDays 30|90|365`, `-scrollTo history|switches|bottom` and
   `-monitorLine refused|hold`. Tests: `PriceMonitorTests`. Screenshots: `build/137-*.png`.
+  **The tour** (brief 139, Patrik 2026-11-02: "it's not actually clear what Seite beobachten is for … add a tour to
+  Arestemis (like Aresium has)"; eight steps from the sketch's section 6; `Model/Tour.swift`, `Screens/TourScreens.swift`
+  on the shared pieces, below): the real tabs (`MainTabs`) on a world of its own, `TourWorld`: `SampleBackend` (no longer
+  DEBUG-only; `ArestemisStore.isSample` is honoured in Release for it) in memory, its own store, a session that never logs
+  in, its own `AppNavigation` whose remembered part lives in the defaults suite `de.ares-empire.arestemis.tour` (emptied
+  when it starts and ends); a sample application text is signed "Alex" (`SampleBackend.Options.name`). The account's
+  store, login, drafts and defaults are never touched (`TourTests`). Settings behind the gear stays the account's own.
+  **When:** by itself once per account on this iPhone (`TourOffer`, key `arestemis.tourShown.<account id>`, set when it
+  starts) 0.8 s after the account's main screen first shows, never in sample mode and never while a notification or link
+  is opened, a sheet is up or a page is pushed (then the next launch tries again); Settings → Help → Tour of Arestemis
+  ("With sample searches") at any time (`TourRunner`, owned by `ContentView`), in place of the account's tabs without a
+  fade (a scroll issued while the tabs faded in was lost at times). A notification, a link or logging out ends it first.
+  **The steps** (`TourStep`, `TourSpot`; each rings its part of the real screen, Next gets that screen ready again): 1
+  Arestemis searches for you (the Hunts list, no ring), 2 New search (its page, the first kind's card), 3 A
+  search (the first search's card), 4 Listings → New (the newest listing's row, whose swipe works), 5 Listings → Searches
+  (the magnifying glass), 6 A listing (a flat's page, Why it fits), 7 Price monitor and Watch a website (the watch's and
+  the monitor's cards that stand together, one ring; a line each, led by the kind's name), 8 Filtered out (the flat
+  search's listings at New, its Filtered out row; a tap opens the sheet, which carries the card). **The card**: "3 / 8",
+  Skip, the step's title over one or two sentences, Next (Done at the last) in the accent; the ring in the accent; the
+  card's glass without its blur (`glassCard(blur: false)`, the wall's colour in its place): the searches' pulse moves
+  under the card, and a blur there was taken again every frame with a group pass (`scripts/offscreens`, step 3: about 1
+  group and 4 mask/group passes per frame with it, none without, as the app without the tour). The
+  card sits on each tab's NavigationStack (it stays put while pages are pushed, under the undo bar) and every page of the
+  stack keeps its room (`tourCardRoom`, `TourModel.cardRoom`: a stack's inset does not reach its pages); a scroll view
+  shows the ringed part within its safe area (`TourGuide.cardRoomInSafeArea`), again once its height settles. Sample mode's kind names come from the
+  English `/kinds` sample, so New search's cards read "Flat", "Things" … there; live they are German. DEBUG `-sampleData
+  -tour <1–8>`. Tests: `TourTests`. Screenshots: `build/139-step{1..8}-{de,en}-{light,dark}.png`.
+  **The shared tour pieces** (`Shared/Design/TourPieces.swift`, moved from Aresium's `TourScreens.swift` in brief 139,
+  Aresium's look unchanged): `TourGuide` (what a tour points at, `\.tourGuide`), `tourSpot` (each app wraps it as
+  `tourAnchor` with its own spots), `tourSpotlight` (the veil and ring, around several spots together when a step names
+  more than one), `tourScrollsToTarget` and `TourScrollPlace`, and `TourCard` (count, way out, optional title, words, main
+  button in ink or the accent, an optional link). Aresium's `\.tour`, `tourAnchor` and `tourCard()` sit on them.
 - **Arestoteles app** (2026-10-24, build R2): `Arestoteles/` (bundle id `de.ares-empire.arestoteles`, URL scheme
   `arestoteles`), Patrik's Weltbild vault on the Arestoteles API (`Arestoteles/docs/API.md`, decisions
   `ares-empire/docs/ARESTOTELES-APP.md`; samples in `Arestoteles/Arestoteles/Samples/`, copies of its `docs/samples/`).
@@ -1860,7 +1892,7 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   says only "Here you add up same names in every list." (`TourStep.text(showingGraph:)`): no card mentions the graph.
   The cards' words are `TourStep.text` (German in the catalog). Each step points at a real control (`.tourAnchor`, anchor preferences; a payment row's and a summed
   row's anchor sit outside their swipe, so the ring stays still and the swipe's actions lie inside it);
-  `.tourSpotlight` on each screen and sheet draws a light veil in the wall's colour, `TourVeil.veil` 0.3 (brief 24 had
+  `.tourSpotlight` (shared since brief 139, `Shared/Design/TourPieces.swift`) on each screen and sheet draws a light veil in the wall's colour, `TourVeil.veil` 0.3 (brief 24 had
   0.74, far too dark: the app under it must read easily, Patrik 2026-10-27), and the full-ink ring, and keeps taps off
   the rest except at the swipe to income; `.tourCard` the glass card with Next and End tour, on a sheet's scroll view
   after its spotlight (the payment's page, the tour's Settings and the picker pushed there: on the sheet's

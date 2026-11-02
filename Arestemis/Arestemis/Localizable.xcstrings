@@ -382,6 +382,16 @@
         }
       }
     },
+    "A listing" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein Angebot"
+          }
+        }
+      }
+    },
     "A page you know: a new version, a new job, tickets, the canteen menu." : {
       "localizations" : {
         "de" : {
@@ -392,12 +402,42 @@
         }
       }
     },
+    "A push when a price falls or a product is back in stock, with its curve." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein Push, wenn ein Preis fällt oder ein Produkt wieder lieferbar ist, dazu die Kurve."
+          }
+        }
+      }
+    },
     "A push when it happens" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Push, wenn es so weit ist"
+          }
+        }
+      }
+    },
+    "A push when something new appears on a page: a version, a job, the menu." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein Push, wenn auf einer Seite etwas Neues erscheint: eine Version, eine Stelle, der Speiseplan."
+          }
+        }
+      }
+    },
+    "A search" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eine Suche"
           }
         }
       }
@@ -638,6 +678,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Stadtteile"
+          }
+        }
+      }
+    },
+    "Arestemis searches for you" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arestemis sucht für dich"
           }
         }
       }
@@ -1253,6 +1303,16 @@
         }
       }
     },
+    "Each search with its listings. The magnifying glass searches all of them." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jede Suche mit ihren Angeboten. Die Lupe durchsucht alle."
+          }
+        }
+      }
+    },
     "Edit" : {
       "localizations" : {
         "de" : {
@@ -1383,6 +1443,16 @@
         }
       }
     },
+    "Every few minutes it reads the sites, checks each new listing against your search and sends you a push when one fits. The tour shows sample searches." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alle paar Minuten liest Arestemis die Seiten, gleicht jedes neue Angebot mit deiner Suche ab und schickt dir einen Push, wenn eins passt. Die Tour zeigt Beispiel-Suchen."
+          }
+        }
+      }
+    },
     "Every hour" : {
       "localizations" : {
         "de" : {
@@ -1399,6 +1469,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Jeder automatisch geschriebene Text enthält diese Punkte. Verwendet werden nur deine Hinweise und die Angaben über dich, erfunden wird nichts."
+          }
+        }
+      }
+    },
+    "Everything new, grouped by search. Swipe right to save a listing, left to dismiss it." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alles Neue, nach Suche geordnet. Wisch ein Angebot nach rechts zum Speichern, nach links zum Entfernen."
           }
         }
       }
@@ -1553,6 +1633,16 @@
         }
       }
     },
+    "Four kinds: Flat (2 rooms up to €1,100), Things (a Kallax up to €40), Price monitor (one product's price) and Watch a website (a new version). An example fills in the form." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vier Arten: Wohnung (2 Zimmer bis 1.100 €), Dinge (ein Kallax bis 40 €), Preismonitor (der Preis eines Produkts) und Webseite beobachten (eine neue Version). Ein Beispiel füllt das Formular aus."
+          }
+        }
+      }
+    },
     "Frame size 56" : {
       "localizations" : {
         "de" : {
@@ -1683,6 +1773,16 @@
         }
       }
     },
+    "It runs until you pause it; the number shows the new listings you haven't seen yet. Tap the card for its page." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sie läuft, bis du sie pausierst; die Zahl zeigt die neuen Angebote, die du noch nicht gesehen hast. Antippen öffnet ihre Seite."
+          }
+        }
+      }
+    },
     "Kallax up to €40" : {
       "localizations" : {
         "de" : {
@@ -1789,6 +1889,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Angebote mit einem dieser Wörter im Titel erscheinen nicht."
+          }
+        }
+      }
+    },
+    "Listings → New" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Angebote → Neu"
+          }
+        }
+      }
+    },
+    "Listings → Searches" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Angebote → Suchen"
           }
         }
       }
@@ -2039,6 +2159,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Neue Beobachtung"
+          }
+        }
+      }
+    },
+    "Next" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Weiter"
           }
         }
       }
@@ -2623,6 +2753,16 @@
         }
       }
     },
+    "Price monitor and Watch a website" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preismonitor und Webseite beobachten"
+          }
+        }
+      }
+    },
     "Price not given" : {
       "localizations" : {
         "de" : {
@@ -3063,6 +3203,16 @@
         }
       }
     },
+    "Skip" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Überspringen"
+          }
+        }
+      }
+    },
     "Start" : {
       "localizations" : {
         "de" : {
@@ -3383,6 +3533,16 @@
         }
       }
     },
+    "Tour of Arestemis" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tour durch Arestemis"
+          }
+        }
+      }
+    },
     "Town locations for thing searches" : {
       "localizations" : {
         "de" : {
@@ -3603,6 +3763,16 @@
         }
       }
     },
+    "What the check turned down in the last 7 days, each with its reason. If good listings end up here, the search is too strict." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was die Prüfung in den letzten 7 Tagen abgelehnt hat, jeweils mit Grund. Landen hier gute Angebote, ist die Suche zu streng."
+          }
+        }
+      }
+    },
     "What you look for" : {
       "localizations" : {
         "de" : {
@@ -3629,6 +3799,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Warum es passt"
+          }
+        }
+      }
+    },
+    "With sample searches" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mit Beispiel-Suchen"
           }
         }
       }
@@ -4130,6 +4310,16 @@
     },
     "–" : {
       "shouldTranslate" : false
+    },
+    "“Why it fits” says what the check found and what to check yourself. For flats, “Application” writes the text you send." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "„Warum es passt“ sagt, was die Prüfung gefunden hat und was du selbst prüfen solltest. Bei Wohnungen schreibt „Bewerbung“ den Text, den du schickst."
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

@@ -43,9 +43,9 @@ enum ArestemisSamples {
     }
 }
 
-#if DEBUG
-/// `-sampleData`: the samples as a server in memory. Actions change the in-memory state (states, start/pause, the
-/// search, settings); application texts are made up from the listing. Nothing leaves the device.
+/// The samples as a server in memory: `-sampleData` (DEBUG, screenshots) and the tour (every build, brief 139). Actions
+/// change the in-memory state (states, start/pause, the search, settings); application texts are made up from the
+/// listing. Nothing leaves the device.
 final class SampleBackend: ArestemisBackend {
     struct Options {
         var noHunt = false          // -sampleNoHunt: no search yet
@@ -61,6 +61,7 @@ final class SampleBackend: ArestemisBackend {
         var ebayNotReady = false    // -sampleEbayNotReady: eBay without its keys on the server (greyed in the form)
         var watchRead: String?      // -sampleWatchRead <read>: the second watch's page state (screenshots)
         var preview: String?        // -pricePreview reading|refused|failed: how the product's preview answers
+        var name: String?           // the name application texts are signed with (the tour's), else the sample's
     }
 
     private var base: Overview
@@ -468,7 +469,8 @@ final class SampleBackend: ArestemisBackend {
         try await Task.sleep(for: .milliseconds(900))
         let mode = settingsValue.applicationMode
         let text = mode == .own ? settingsValue.ownText
-            : Self.writtenText(for: matches[index].listing, notes: settingsValue.applicationNotes, name: base.me.name)
+            : Self.writtenText(for: matches[index].listing, notes: settingsValue.applicationNotes,
+                               name: options.name ?? base.me.name)
         let written = Application(text: text, mode: mode, created: ArestemisSamples.iso(.now))
         matches[index].application = written
         return written
@@ -509,4 +511,3 @@ final class SampleBackend: ArestemisBackend {
         """
     }
 }
-#endif

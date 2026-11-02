@@ -29,6 +29,7 @@ struct MatchDetailScreen: View {
             }
         }
         .frame(maxWidth: .infinity)
+        .tourSpotlight()
         .provinceWall()
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
@@ -71,7 +72,8 @@ struct MatchDetailScreen: View {
                     let facts = thing ? listing.itemDetailFacts() : listing.detailFacts()
                     if !facts.isEmpty { FactsGrid(facts: facts).padding(.top, 22) }
                     SectionHeading(text: String(localized: "Why it fits")).padding(.leading, 4).padding(.top, Look.sectionGap)
-                    WhyItFits(reason: match.reason, warnings: match.warnings).padding(.top, Look.headingGap)
+                    WhyItFits(reason: match.reason, warnings: match.warnings).tourAnchor(.whyItFits)
+                        .padding(.top, Look.headingGap)
                     if !listing.description.isEmpty {
                         SectionHeading(text: String(localized: "Description")).padding(.leading, 4).padding(.top, Look.sectionGap)
                         ExpandableText(text: listing.description).padding(.top, Look.headingGap).padding(.horizontal, 4)
@@ -81,6 +83,7 @@ struct MatchDetailScreen: View {
             .padding(.horizontal, Look.side).padding(.top, 6).padding(.bottom, 28)
         }
           .scrollIndicators(.hidden)
+          .tourScrollsToTarget()
           .edgeFade(bottom: 22)
           actions(match)
         }

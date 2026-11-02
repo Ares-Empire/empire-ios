@@ -23,17 +23,23 @@ struct ListingsScreen: View {
                 case .searches: SearchesPart(store: store, navigation: navigation)
                 }
             }
+            .tourSpotlight()
             .provinceWall()
+            .tourCardRoom()
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: ListingsRoute.self) { route in
-                switch route {
-                case .hunt(let id): SearchListingsPage(id: id, store: store, navigation: navigation)
-                case .find(let hunt): ListingSearchPage(hunt: hunt, store: store, navigation: navigation)
-                case .match(let id): MatchDetailScreen(id: id, store: store, navigation: navigation)
+                Group {
+                    switch route {
+                    case .hunt(let id): SearchListingsPage(id: id, store: store, navigation: navigation)
+                    case .find(let hunt): ListingSearchPage(hunt: hunt, store: store, navigation: navigation)
+                    case .match(let id): MatchDetailScreen(id: id, store: store, navigation: navigation)
+                    }
                 }
+                .tourCardRoom()
             }
         }
         .undoBar(visibleUndo, accent: Look.accent)
+        .tourCard()
     }
 
     /// Only the visible tab owns the shared offer's timer; cancelling a hidden tab must not clear it.
@@ -52,6 +58,7 @@ struct ListingsScreen: View {
                     GlassIconButton(symbol: "magnifyingglass", label: String(localized: "Search listings")) {
                         navigation.find(hunt: nil)
                     }
+                    .tourAnchor(.findAll)
                 }
             }
             Picker("Show", selection: Binding(get: { navigation.part }, set: { navigation.choose($0) })) {
@@ -110,7 +117,9 @@ private struct NewPart: View {
             ForEach(Array(groups.enumerated()), id: \.element.id) { index, group in
                 if headings { heading(group, first: index == 0) }
                 ForEach(group.matches) { match in
-                    ListingRow(match: match, store: store) { navigation.listingsPath.append(.match(match.id)) }
+                    ListingRow(match: match, store: store, spot: .newListing(match.id)) {
+                        navigation.listingsPath.append(.match(match.id))
+                    }
                 }
             }
         }
@@ -193,6 +202,8 @@ struct RejectedSheet: View {
                 .padding(.horizontal, Look.side).padding(.top, 8).padding(.bottom, 30)
             }
             .provinceWall()
+            // The tour's last step leads here: its card comes along.
+            .tourCard()
             .navigationTitle("Filtered out")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

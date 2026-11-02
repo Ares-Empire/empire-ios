@@ -285,7 +285,7 @@ final class AppNavigation {
 /// `-openSheet settings|application|rejected|place|describe` (place and describe over a form, the
 /// first hunt's unless another is asked for; rejected: of the search `-openSearch` opened, else of every search), `-scrollBottom` (Hunts and the forms), `-scrollTo size|rent|movein`
 /// (the flat form), `-scrollTo where` (the thing form), `-sampleUndo`, `-sampleSearchDraft`, `-sampleMoreLoading`,
-/// `-sampleMoreFailure`, `-sampleLongDescription`; Settings → Flats: `-sampleOwnMode` (the switch off), `-sampleNoTexts` (nothing written
+/// `-sampleMoreFailure`, `-sampleLongDescription`; brief 139's `-tour <1–8>` (the tour at that step); Settings → Flats: `-sampleOwnMode` (the switch off), `-sampleNoTexts` (nothing written
 /// yet), `-openSettingsPage ownText|notes|aboutMe` (with `-openSheet settings`, read by `SettingsSheet`). In a release
 /// build all are ignored.
 struct LaunchOptions {
@@ -328,6 +328,8 @@ struct LaunchOptions {
     var renameHunt: Int?
     var openSheet: String?
     var scrollTo: String?
+    /// `-tour <1–8>`: the tour at that step (brief 139).
+    var tour: Int?
 
     init(arguments: [String]) {
         #if DEBUG
@@ -374,6 +376,7 @@ struct LaunchOptions {
         newSearch = arguments.contains("-newSearch")
         renameHunt = value("-renameHunt").flatMap(Int.init)
         scrollTo = value("-scrollTo") ?? (arguments.contains("-scrollBottom") ? "bottom" : nil)
+        tour = value("-tour").flatMap(Int.init)
         #endif
     }
 
