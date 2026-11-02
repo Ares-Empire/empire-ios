@@ -1,6 +1,6 @@
 # 201: Money paid back: the engine
 
-Status: draft
+Status: merged 2026-11-02 (aresium 66c7725; 551 engine tests; tried on Patrik's export: two links count as expected)
 Repo: **aresium** · Worktree: `../aresium-201-paid-back` (branch `codex/201-paid-back`) · Model: `gpt-6.1-sol`, effort
 `high` · Claude copies the engine into the app afterwards; the app's data follows in brief 202 (Codex), the screens in
 brief 203 (a Claude agent).
