@@ -82,12 +82,11 @@ struct ListingsTests {
         #expect(rows.map(\.newCount) == [1, 4, 0, 1, 1, 1, 0, 1])
         #expect(rows.map(\.text.kind) == [.flat, .item, .flat, .item, .item, .watch, .watch, .watch])
         #expect(rows[0].line == (de ? "1 gespeichert · 1 beworben" : "1 saved · 1 applied"))
-        #expect(rows[1].line == (de ? "0 gespeichert · 0 angefragt" : "0 saved · 0 asked"))
-        #expect(rows[2].line == (de ? "Pausiert · 0 gespeichert · 0 beworben" : "Paused · 0 saved · 0 applied"))
-        #expect(rows[5].line == (de ? "0 gespeichert" : "0 saved"))
-        #expect(rows[1].spoken(language: language)
-                == (de ? "Herman Miller Aeron, 4 neue, 0 gespeichert · 0 angefragt"
-                       : "Herman Miller Aeron, 4 new, 0 saved · 0 asked"))
+        // Counts of zero are left out: nothing kept, no line; paused alone says so.
+        #expect(rows[1].line == nil)
+        #expect(rows[2].line == (de ? "Pausiert" : "Paused"))
+        #expect(rows[5].line == nil)
+        #expect(rows[1].spoken(language: language) == (de ? "Herman Miller Aeron, 4 neue" : "Herman Miller Aeron, 4 new"))
         // A kind this build does not know: its name only.
         let newer = HuntCard(hunt: Hunt(id: 9, kind: .unknown("car"), name: "Camper van", active: true,
                                         search: .unsupported, created: "2026-10-24T08:12:00Z",
@@ -103,7 +102,7 @@ struct ListingsTests {
         await store.loadMatches(.new)
         await store.setState(.saved, for: 31)
         let row = try #require(store.card(2).map { SearchRow($0, language: .english) })
-        #expect(row.newCount == 4 && row.line == "1 saved · 0 asked")
+        #expect(row.newCount == 4 && row.line == "1 saved")
     }
 
     // MARK: one search's listings

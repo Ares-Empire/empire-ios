@@ -38,8 +38,9 @@ enum NewListings {
 }
 
 /// One row of Searches: the search's kind and name, its new count, and what was kept from it in a quiet line ("2 saved ·
-/// 1 applied"; a thing's seller is asked; a watch's changes are only saved; "Paused" first while it is paused). A search
-/// of a kind this build does not know shows its name only.
+/// 1 applied"; a thing's seller is asked; a watch's changes are only saved; "Paused" first while it is paused). Counts of
+/// zero are left out, so a search with nothing kept has no line (eight cards of "0 saved · 0 asked" said nothing).
+/// A search of a kind this build does not know shows its name only.
 struct SearchRow: Equatable, Identifiable {
     let huntID: Int
     let text: HuntText
@@ -59,16 +60,18 @@ struct SearchRow: Equatable, Identifiable {
         newCount = card.counts.new
         var parts: [String] = []
         if !card.hunt.active { parts.append(language.string("Paused")) }
-        parts.append(language.string("\(card.counts.saved) saved"))
-        switch kind {
-        case .flat: parts.append(language.string("\(card.counts.applied) applied"))
-        case .item: parts.append(language.string("\(card.counts.applied) asked"))
-        case .watch: break
+        if card.counts.saved > 0 { parts.append(language.string("\(card.counts.saved) saved")) }
+        if card.counts.applied > 0 {
+            switch kind {
+            case .flat: parts.append(language.string("\(card.counts.applied) applied"))
+            case .item: parts.append(language.string("\(card.counts.applied) asked"))
+            case .watch: break
+            }
         }
-        line = parts.joined(separator: " · ")
+        line = parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
-    /// VoiceOver reads the row as one: "Herman Miller Aeron, 4 new, 0 saved · 0 asked".
+    /// VoiceOver reads the row as one: "Herman Miller Aeron, 4 new, 1 saved".
     func spoken(language: AppLanguage = .current) -> String {
         [text.title, newCount.map { language.string("\($0) new") }, line].compactMap { $0 }.joined(separator: ", ")
     }
