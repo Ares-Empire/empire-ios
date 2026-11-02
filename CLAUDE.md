@@ -306,9 +306,8 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
    requests stay email plus the approvals sheet, no push to him (Patrik, 2026-10-26). Opening offline (the last hub
    kept on the phone): not now, later (Patrik, 2026-10-26).
 
-14. **Arestemis sample with real details:** `Arestemis/Arestemis/Samples/settings.json` (and Arestemis's `docs/samples/`)
-   holds Patrik's real application text (name, TUM, Garching, age), so the showcase leaves that screen out. Replace it
-   with a made-up text if Patrik wants that screen shown (offered 2026-10-26).
+14. ~~**Arestemis sample with real details**~~: done; `Arestemis/Arestemis/Samples/settings.json` and Arestemis's
+   `docs/samples/` hold a made-up text ("Leon", an architecture student in Regensburg; checked 2026-11-02).
 15. ~~**Comfort items for Empire, Arestemis, Aresus, Arestoteles**~~: **built and merged 2026-10-30** (briefs 49 Arestemis,
    50 Aresus with the aresus server's province links, 51 Arestoteles, 52 Empire and Shared 2; the shared undo bar
    `Shared/Design/UndoBar.swift`, since brief 82 also in Aresium: `accent: nil` draws Undo in ink, and
