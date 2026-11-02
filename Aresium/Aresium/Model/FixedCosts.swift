@@ -195,11 +195,20 @@ nonisolated enum FixedCostWording {
     }
     /// `referenceDay` is explicit so the year and both languages are testable without a wall clock.
     static func nextDue(_ day: String, referenceDay: String = ReceiptDay.day(.now), language: AppLanguage = .current) -> String {
-        guard let date = FixedCosts.date(day) else { return day }
+        guard let formatted = shortDay(day, referenceDay: referenceDay, language: language) else { return day }
+        return language.string("next \(formatted)")
+    }
+    /// An ended entry's newest payment (brief 209): "last 3 Aug" / "zuletzt am 3. Aug.", the year as in `nextDue`.
+    static func last(_ day: String, referenceDay: String = ReceiptDay.day(.now), language: AppLanguage = .current) -> String {
+        guard let formatted = shortDay(day, referenceDay: referenceDay, language: language) else { return day }
+        return language.string("last \(formatted)")
+    }
+    /// "3 Dec" / "3. Dez.", with the year only when it is not the reference day's.
+    private static func shortDay(_ day: String, referenceDay: String, language: AppLanguage) -> String? {
+        guard let date = FixedCosts.date(day) else { return nil }
         var style = Date.FormatStyle(date: .omitted, time: .omitted, locale: language.locale,
                                      calendar: FixedCosts.calendar, timeZone: FixedCosts.calendar.timeZone).day().month(.abbreviated)
         if day.prefix(4) != referenceDay.prefix(4) { style = style.year() }
-        let formatted = date.formatted(style)
-        return language.string("next \(formatted)")
+        return date.formatted(style)
     }
 }
