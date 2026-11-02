@@ -81,11 +81,11 @@ struct WatchTests {
         let kinds = try sample([OfferedKind].self, "kinds")
         let watch = try #require(kinds.first { $0.kind == .watch })
         #expect(watch.name == "Watch a website" && watch.sources.isEmpty)
-        #expect(SearchKind.choices(offered: kinds) == [.flat, .item, .watch])
-        // A server without watches: not offered. No answer, or an answer naming none of them: all three.
-        #expect(SearchKind.choices(offered: kinds.filter { $0.kind != .watch }) == [.flat, .item])
-        #expect(SearchKind.choices(offered: nil) == [.flat, .item, .watch])
-        #expect(SearchKind.choices(offered: []) == [.flat, .item, .watch])
+        #expect(SearchKind.choices(offered: kinds) == [.flat, .item, .price, .watch])
+        // A server without watches: not offered. No answer, or an answer naming none of them: all four.
+        #expect(SearchKind.choices(offered: kinds.filter { $0.kind != .watch }) == [.flat, .item, .price])
+        #expect(SearchKind.choices(offered: nil) == [.flat, .item, .price, .watch])
+        #expect(SearchKind.choices(offered: []) == [.flat, .item, .price, .watch])
         #expect(SearchKind(.watch) == .watch && SearchKind.watch.huntKind == .watch && SearchKind.watch.symbol == "eye")
         #expect(SearchKind.watch.choiceTitle(language: en) == "Watch a website")
         #expect(SearchKind.watch.choiceTitle(language: de) == "Webseite beobachten")
@@ -259,7 +259,7 @@ struct WatchTests {
         // A watch the overview has not sent a page for yet: its address's host.
         text = HuntText(hunt, page: nil, language: language)
         #expect(text.title == "geizhals.de")
-        #expect(cards.suffix(3).map { SearchRow($0, language: language).text.title }
+        #expect(cards.filter { $0.hunt.kind == .watch }.map { SearchRow($0, language: language).text.title }
                 == ["KALLAX Regal, weiß, 77x147 cm - IKEA Deutschland", "AirPods Pro 3", "Schnitzel at the Mensa"])
     }
 
@@ -320,7 +320,7 @@ struct WatchTests {
 
     @Test func theWatchCategory() throws {
         let categories = MatchNotification.categories
-        #expect(categories.count == 3)
+        #expect(categories.count == 4)
         let watch = try #require(categories.first { $0.identifier == "ARESTEMIS_WATCH" })
         #expect(MatchNotification.watchCategory == "ARESTEMIS_WATCH")
         #expect(watch.actions.map(\.title) == ["Open page"])
@@ -351,7 +351,7 @@ struct WatchTests {
         // "page" is never a portal.
         #expect(store.overview?.sources.contains { $0.source == .page } == false)
         await store.loadKinds()
-        #expect(SearchKind.choices(offered: store.kinds) == [.flat, .item, .watch])
+        #expect(SearchKind.choices(offered: store.kinds) == [.flat, .item, .price, .watch])
         for read in ["waiting", "unreadable", "failing", "ok", "somethingnew"] {
             let shown = try await sampleStore(.init(watchRead: read))
             #expect(shown.card(7)?.page?.read == PageState.Read(rawValue: read))

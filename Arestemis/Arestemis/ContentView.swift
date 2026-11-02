@@ -46,7 +46,8 @@ struct ContentView: View {
                                                                              slowed: options.slowed,
                                                                              newerKind: options.newerKind,
                                                                              ebayNotReady: options.ebayNotReady,
-                                                                             watchRead: options.watchRead)) {
+                                                                             watchRead: options.watchRead,
+                                                                             preview: options.pricePreview)) {
             return ArestemisStore(session: session, backend: sample, sample: true)
         }
         #endif

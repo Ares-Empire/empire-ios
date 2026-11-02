@@ -89,9 +89,10 @@ enum MatchFilter: String, CaseIterable, Hashable, Identifiable {
         states?.contains(state) ?? (state != .dismissed)
     }
 
-    /// The filters a search's page offers: a watch's changes are only saved or dismissed, never applied for.
+    /// The filters a search's page offers: a watch's changes and a monitor's alarms are only saved or dismissed, never
+    /// applied for.
     static func choices(for kind: SearchKind?) -> [MatchFilter] {
-        kind == .watch ? [.new, .saved, .all] : allCases
+        kind.map { !$0.appliesOrAsks } == true ? [.new, .saved, .all] : allCases
     }
 
     /// Where a search's listings open when nothing asks for a filter: New while it has new ones, else All.
@@ -277,7 +278,10 @@ final class AppNavigation {
 /// state: waiting, ok, unreadable, failing, blocked or any other word), `-scrollToHunt <id>` (the Hunts list at that
 /// hunt's card), brief 135's `-newSearch` (New search's page), `-newExample <example>` (an example's form, filled in, over
 /// New search: `SearchExample`'s names, e.g. `twoRooms`, `kallax`, `newVersion`), `-renameHunt <id>` (that hunt's page
-/// with its name's field open; `-renameText <text>` types in it, read by `HuntPage`),
+/// with its name's field open; `-renameText <text>` types in it, read by `HuntPage`), brief 137's `-openPriceForm` (the
+/// first price monitor's form) and `-newPriceForm` (in the form `-priceURL <text>`, `-pricePreview reading|refused|failed`
+/// and `-priceSwitches history|alarm|none`, read by `PriceSearchScreen`), `-priceDays 30|90|365` (the chart on a
+/// monitor's page) and `-monitorLine refused|hold` (its switches' line, read by `MonitorPage`),
 /// `-openSheet settings|application|rejected|place|describe` (place and describe over a form, the
 /// first hunt's unless another is asked for; rejected: of the search `-openSearch` opened, else of every search), `-scrollBottom` (Hunts and the forms), `-scrollTo size|rent|movein`
 /// (the flat form), `-scrollTo where` (the thing form), `-sampleUndo`, `-sampleSearchDraft`, `-sampleMoreLoading`,
@@ -291,7 +295,8 @@ struct LaunchOptions {
         case firstHunt              // -tab search, or a sheet over a form without another form asked for
         case firstItem              // -openItemForm
         case firstWatch             // -openWatchForm
-        case new(SearchKind)        // -newFlatForm, -newItemForm, -newWatchForm
+        case firstPrice             // -openPriceForm
+        case new(SearchKind)        // -newFlatForm, -newItemForm, -newWatchForm, -newPriceForm
         case example(SearchExample) // -newExample <example>
     }
 
@@ -303,6 +308,7 @@ struct LaunchOptions {
     var newerKind = false
     var ebayNotReady = false
     var watchRead: String?
+    var pricePreview: String?
     var scrollToHunt: Int?
     var sampleUndo = false
     var moreLoading = false
@@ -337,6 +343,7 @@ struct LaunchOptions {
         newerKind = arguments.contains("-sampleNewerKind")
         ebayNotReady = arguments.contains("-sampleEbayNotReady")
         watchRead = value("-sampleWatchRead")
+        pricePreview = value("-pricePreview")
         scrollToHunt = value("-scrollToHunt").flatMap(Int.init)
         sampleUndo = arguments.contains("-sampleUndo")
         moreLoading = arguments.contains("-sampleMoreLoading")
@@ -357,6 +364,8 @@ struct LaunchOptions {
         if let id = value("-openForm").flatMap(Int.init) { form = .hunt(id) }
         else if arguments.contains("-openItemForm") { form = .firstItem }
         else if arguments.contains("-openWatchForm") { form = .firstWatch }
+        else if arguments.contains("-openPriceForm") { form = .firstPrice }
+        else if arguments.contains("-newPriceForm") { form = .new(.price) }
         else if arguments.contains("-newItemForm") { form = .new(.item) }
         else if arguments.contains("-newWatchForm") { form = .new(.watch) }
         else if arguments.contains("-newFlatForm") { form = .new(.flat) }
@@ -387,6 +396,7 @@ struct LaunchOptions {
         if let openHunt {
             navigation.tab = .hunt
             navigation.huntPath = [.hunt(openHunt)]
+            navigation.formScroll = scrollTo
         }
         if newSearch { navigation.startNewSearch() }
         if let route = form.flatMap({ Self.route($0, hunts: hunts) }) {
@@ -423,6 +433,7 @@ struct LaunchOptions {
         case .firstHunt: return formOf(hunts.first) ?? .form(.flat, hunt: nil)
         case .firstItem: return formOf(hunts.first { $0.hunt.kind == .item }) ?? .form(.item, hunt: nil)
         case .firstWatch: return formOf(hunts.first { $0.hunt.kind == .watch }) ?? .form(.watch, hunt: nil)
+        case .firstPrice: return formOf(hunts.first { $0.hunt.kind == .price }) ?? .form(.price, hunt: nil)
         case .new(let kind): return .form(kind, hunt: nil)
         case .example(let example): return .form(example.kind, hunt: nil, example: example)
         }

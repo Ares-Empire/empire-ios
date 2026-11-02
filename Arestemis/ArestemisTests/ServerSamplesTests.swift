@@ -42,9 +42,10 @@ struct ServerSamplesTests {
     /// without sites (brief 130).
     @Test func kindsAndTheirSites() throws {
         let kinds = try JSONDecoder().decode([OfferedKind].self, from: data("kinds"))
-        #expect(kinds.map(\.kind) == [.flat, .item, .watch])
-        #expect(kinds[2].name == "Watch a page" && kinds[2].sources.isEmpty)
-        #expect(SearchKind.choices(offered: kinds) == [.flat, .item, .watch])
+        #expect(kinds.map(\.kind) == [.flat, .item, .price, .watch])
+        #expect(kinds[2].name == "Price monitor" && kinds[2].sources.isEmpty)
+        #expect(kinds[3].name == "Watch a website" && kinds[3].sources.isEmpty)
+        #expect(SearchKind.choices(offered: kinds) == [.flat, .item, .price, .watch])
         #expect(kinds[0].sources.map(\.source) == Source.flatPortals
                 && kinds[0].sources.allSatisfy { $0.ready && !$0.auctions && $0.delivery == .both })
         let sites = kinds[1].sources
@@ -101,11 +102,13 @@ struct ServerSamplesTests {
         #expect(HuntText(ok.hunt, page: ok.page, language: .english).title == ok.hunt.name)
 
         let page = try JSONDecoder().decode(MatchPage.self, from: data("matches"))
-        let change = try #require(page.items.first { $0.listing.source == .page })
+        // A monitor's alarm comes from "page" too; a watch's change is the one with the page's lines.
+        let change = try #require(page.items.first { $0.listing.page != nil })
         #expect(change.isPageChange && !change.isThing && change.listing.item == nil)
         #expect(change.listing.page?.added.isEmpty == false && change.listing.page?.removed.isEmpty == false)
         #expect(change.watchNowLine(language: .english) != nil && change.watchTitle == WatchText.keepingAmounts(change.reason))
         #expect(page.items.filter { $0.listing.source != .page }.allSatisfy { $0.listing.page == nil })
+        #expect(page.items.filter { $0.listing.page == nil && $0.listing.source == .page }.allSatisfy { $0.isPriceChange })
     }
 
     @Test func theOtherAnswers() throws {

@@ -51,6 +51,8 @@ struct PageState: Codable, Equatable, Sendable {
         }
     }
 
+    /// How the server reads the page (brief 136): plainly, with a browser, through an exit. The note says it.
+    var reader: PageReader = .plain
     var pageTitle: String?         // the page's <title>; null before the first read
     var host: String               // "www.ikea.com"
     var now: String?               // what the page says now about the change ("KALLAX 49,99 €"); null before the start read
@@ -60,12 +62,13 @@ struct PageState: Codable, Equatable, Sendable {
     var note: String?              // one short line from the server, in the app's language
 
     enum CodingKeys: String, CodingKey {
-        case host, now, read, checked, changed, note
+        case reader, host, now, read, checked, changed, note
         case pageTitle = "page_title"
     }
 
-    init(pageTitle: String? = nil, host: String, now: String? = nil, read: Read, checked: String? = nil,
-         changed: String? = nil, note: String? = nil) {
+    init(reader: PageReader = .plain, pageTitle: String? = nil, host: String, now: String? = nil, read: Read,
+         checked: String? = nil, changed: String? = nil, note: String? = nil) {
+        self.reader = reader
         self.pageTitle = pageTitle
         self.host = host
         self.now = now
@@ -75,9 +78,11 @@ struct PageState: Codable, Equatable, Sendable {
         self.note = note
     }
 
-    /// Lenient: a missing host is empty (the card then names the address's host), a missing `read` is `waiting`.
+    /// Lenient: a missing host is empty (the card then names the address's host), a missing `read` is `waiting`, a missing
+    /// reader plain.
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
+        reader = try c.decodeIfPresent(String.self, forKey: .reader).map(PageReader.init(rawValue:)) ?? .plain
         pageTitle = try c.decodeIfPresent(String.self, forKey: .pageTitle)
         host = try c.decodeIfPresent(String.self, forKey: .host) ?? ""
         now = try c.decodeIfPresent(String.self, forKey: .now)
@@ -89,6 +94,7 @@ struct PageState: Codable, Equatable, Sendable {
 
     func encode(to encoder: Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(reader.rawValue, forKey: .reader)
         try c.encode(pageTitle, forKey: .pageTitle)
         try c.encode(host, forKey: .host)
         try c.encode(now, forKey: .now)

@@ -5,7 +5,9 @@ import SwiftUI
 /// (with "VB" or how far it lies over the maximum beside it; an auction its current bid, "bid" and the time left), its
 /// title, one facts line (condition · shipping or pickup with the distance · place), and "Online at start" for one found
 /// when the hunt started. A change on a watched page (brief 131) has no figure: the server's summary is its title, then
-/// the host and when it was found ("Already true when the watch started" for one the start read found). In the search
+/// the host and when it was found ("Already true when the watch started" for one the start read found). A price
+/// monitor's alarm (brief 137) is its sentence, "Nintendo Switch 2: €449.00 (was €483.99)" or "… is back in stock", then
+/// the shop and when. In the search
 /// over listings of every search, the search it belongs to stands over it (its kind's mark and name, brief 133).
 struct MatchRow: View {
     let match: Match
@@ -30,6 +32,8 @@ struct MatchRow: View {
             HStack(alignment: .center, spacing: 14) {
                 if kind == .watch {
                     change
+                } else if kind == .price {
+                    alarm
                 } else {
                     listing
                 }
@@ -78,6 +82,24 @@ struct MatchRow: View {
             }
             TimelineView(.periodic(from: .now, by: 30)) { context in
                 Text(match.watchSourceLine(now: context.date))
+                    .font(AppFont.text(11)).foregroundStyle(Ink.muted).lineLimit(1)
+            }
+        }
+    }
+
+    /// A monitor's alarm: its sentence, then the shop and when.
+    private var alarm: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text(verbatim: match.priceTitle()).font(AppFont.text(16, weight: .semibold)).foregroundStyle(Ink.primary)
+                    .lineSpacing(2).lineLimit(2).fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 8)
+                if let word = stateWord {
+                    CapsLabel(text: word, size: 9.5, color: Ink.secondary.opacity(0.8))
+                }
+            }
+            TimelineView(.periodic(from: .now, by: 30)) { context in
+                Text(match.priceSourceLine(now: context.date))
                     .font(AppFont.text(11)).foregroundStyle(Ink.muted).lineLimit(1)
             }
         }
@@ -166,7 +188,7 @@ struct ListingPhoto: View {
 }
 
 /// Shared by the Latest stack and the Listings tab's lists; the detail page uses these same state icons. A thing's seller is
-/// asked, not applied to; a watched page's change is only saved or dismissed.
+/// asked, not applied to; a watched page's change and a monitor's alarm are only saved or dismissed.
 struct MatchRowActions: View {
     let match: Match
     let store: ArestemisStore
@@ -175,7 +197,7 @@ struct MatchRowActions: View {
         if match.state == .new {
             Button { change(.saved) } label: { Label("Save", systemImage: "bookmark") }
         }
-        if match.state != .applied && match.state != .dismissed && store.kind(of: match) != .watch {
+        if match.state != .applied && match.state != .dismissed && store.kind(of: match).appliesOrAsks {
             Button { change(.applied) } label: {
                 if store.isThing(match) { Label("Mark asked", systemImage: "checkmark.circle") }
                 else { Label("Mark applied", systemImage: "checkmark.circle") }

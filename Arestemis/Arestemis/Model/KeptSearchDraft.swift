@@ -1,7 +1,7 @@
 import Foundation
 
 /// A search form's draft that is kept while it has unsaved edits: the flat form's (`SearchDraft`), the thing form's
-/// (`ItemSearchDraft`) and the watch form's (`WatchSearchDraft`). Each carries the hunt's name with its search (brief
+/// (`ItemSearchDraft`), the monitor's (`PriceSearchDraft`) and the watch form's (`WatchSearchDraft`). Each carries the hunt's name with its search (brief
 /// 135), so the saved hunt as a draft is the baseline that tells an edit made elsewhere (another device, renaming in
 /// place) from the user's own.
 protocol KeptDraft: Codable, Equatable {
@@ -33,6 +33,14 @@ extension WatchSearchDraft: @MainActor KeptDraft {
     static var kind: HuntKind { .watch }
     init?(saved hunt: Hunt) {
         guard let search = hunt.search.watch else { return nil }
+        self.init(search, name: hunt.name)
+    }
+}
+
+extension PriceSearchDraft: @MainActor KeptDraft {
+    static var kind: HuntKind { .price }
+    init?(saved hunt: Hunt) {
+        guard let search = hunt.search.price else { return nil }
         self.init(search, name: hunt.name)
     }
 }

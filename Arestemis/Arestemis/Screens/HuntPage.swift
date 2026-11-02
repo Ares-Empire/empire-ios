@@ -3,7 +3,8 @@ import SwiftUI
 /// A hunt's page (a card on the Hunts tab, pushed): today's big hunt card with Start / Pause, Edit search (the kind's
 /// form) and Listings (this search's listings on the Listings tab, over Searches), its figures (New, Today, Applied or Asked; a watch's
 /// Saved) and when it was last read (a watch's card says it), then its newest matches. A watch's words name it a watch
-/// (`HuntWords`).
+/// (`HuntWords`). A price monitor's page has Open in shop in place of Listings, then its chart, its switches and its
+/// alarms (`MonitorSections`, brief 137).
 ///
 /// **The name is renamed where it stands** (brief 135, as Aresium renames a payment): a tap on the name or the small pen
 /// after it (or Rename in the `…` menu, or a card's long press, `AppNavigation.rename`) turns it into a field in the same
@@ -22,6 +23,7 @@ struct HuntPage: View {
     /// The field selects all of the name once it has the keyboard (a selection set before that is dropped).
     @State private var selectsName = false
     @FocusState private var nameFocused: Bool
+    @Environment(\.openURL) private var openURL
 
     private var words: HuntWords { HuntWords(store.card(id).flatMap { SearchKind($0.hunt.kind) }) }
 
@@ -68,55 +70,86 @@ struct HuntPage: View {
         let actions = HuntPageActions(card.hunt)
         let kind = SearchKind(card.hunt.kind)
         let editing = edit != nil
-        return ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                HuntHeroCard(card: card, sites: store.siteNames, busy: store.isChanging(hunt: id), editing: editing) { active in
-                    Task { await store.setActive(id: id, active: active) }
-                } title: { text in
-                    name(card, text: text, renames: actions.rename)
-                }
+        return ScrollViewReader { reader in
+            ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    HStack(spacing: 10) {
-                        if actions.editSearch, let kind {
-                            Button { navigation.huntPath.append(.form(kind, hunt: id)) } label: {
-                                Label(words.editButton, systemImage: "slider.horizontal.3")
+                    HuntHeroCard(card: card, sites: store.siteNames, busy: store.isChanging(hunt: id), editing: editing) { active in
+                        Task { await store.setActive(id: id, active: active) }
+                    } title: { text in
+                        name(card, text: text, renames: actions.rename)
+                    }
+                    VStack(alignment: .leading, spacing: 0) {
+                        HStack(spacing: 10) {
+                            if actions.editSearch, let kind {
+                                Button { navigation.huntPath.append(.form(kind, hunt: id)) } label: {
+                                    Label(words.editButton, systemImage: "slider.horizontal.3")
+                                }
+                                .buttonStyle(ProvinceButtonStyle(kind: .glass, height: 46))
                             }
-                            .buttonStyle(ProvinceButtonStyle(kind: .glass, height: 46))
+                            if let monitor = card.hunt.search.price {
+                                Button { if let url = monitor.shopURL { openURL(url) } } label: {
+                                    Label("Open in shop", systemImage: "safari")
+                                }
+                                .buttonStyle(ProvinceButtonStyle(kind: .glass, height: 46))
+                                .disabled(monitor.shopURL == nil)
+                            } else {
+                                Button { showListings(nil) } label: {
+                                    Label("Listings", systemImage: "list.bullet.rectangle")
+                                }
+                                .buttonStyle(ProvinceButtonStyle(kind: .glass, height: 46))
+                            }
                         }
-                        Button { showListings(nil) } label: {
-                            Label("Listings", systemImage: "list.bullet.rectangle")
-                        }
-                        .buttonStyle(ProvinceButtonStyle(kind: .glass, height: 46))
-                    }
-                    .labelStyle(ActionLabelStyle())
-                    .padding(.top, Look.rowGap)
-                    if actions.startPause {
-                        HuntFigures(figures: HuntPageActions.figures(kind, counts: card.counts),
-                                    lastScan: card.hunt.lastScan, showsLastScan: kind != .watch, show: showListings)
-                            .padding(.top, Look.rowGap)
-                    }
-                    HuntSection(title: String(localized: "Latest")) {
-                        if let matches = store.latest(hunt: id) {
-                            LatestMatches(matches: matches, store: store,
-                                          open: { navigation.huntPath.append(.match($0)) },
-                                          showAll: { showListings(.all) })
+                        .labelStyle(ActionLabelStyle())
+                        .padding(.top, Look.rowGap)
+                        if let monitor = card.hunt.search.price {
+                            MonitorSections(card: card, search: monitor, store: store,
+                                            open: { navigation.huntPath.append(.match($0)) },
+                                            showAll: { showListings(.all) })
                         } else {
-                            ProgressView().controlSize(.small).tint(Ink.muted).frame(maxWidth: .infinity, minHeight: 44)
+                            figuresAndLatest(card, actions: actions, kind: kind)
                         }
                     }
+                    // While the name is edited the rest of the page takes no taps: a tap there ends the editing (below).
+                    .allowsHitTesting(!editing)
+                    Color.clear.frame(height: 1).id("bottom")
                 }
-                // While the name is edited the rest of the page takes no taps: a tap there ends the editing (below).
-                .allowsHitTesting(!editing)
+                .padding(.horizontal, Look.side).padding(.top, 6).padding(.bottom, 30)
+                .contentShape(Rectangle())
+                .gesture(TapGesture().onEnded { nameFocused = false }, including: editing ? .all : .subviews)
             }
-            .padding(.horizontal, Look.side).padding(.top, 6).padding(.bottom, 30)
-            .contentShape(Rectangle())
-            .gesture(TapGesture().onEnded { nameFocused = false }, including: editing ? .all : .subviews)
+            .scrollIndicators(.hidden)
+            .scrollDismissesKeyboard(.interactively)
+            .refreshable {
+                await store.reloadOverview()
+                await store.loadLatest(hunt: id)
+            }
+            .onAppear {
+                // Screenshots: `-openHunt <id> -scrollTo history|switches|bottom` (a monitor's sections).
+                guard store.isSample, let target = navigation.formScroll else { return }
+                navigation.formScroll = nil
+                Task {
+                    try? await Task.sleep(for: .milliseconds(400))
+                    reader.scrollTo(target, anchor: target == "bottom" ? .bottom : .top)
+                }
+            }
         }
-        .scrollIndicators(.hidden)
-        .scrollDismissesKeyboard(.interactively)
-        .refreshable {
-            await store.reloadOverview()
-            await store.loadLatest(hunt: id)
+    }
+
+    /// The figures and the newest matches of a search or a watch.
+    @ViewBuilder private func figuresAndLatest(_ card: HuntCard, actions: HuntPageActions, kind: SearchKind?) -> some View {
+        if actions.startPause {
+            HuntFigures(figures: HuntPageActions.figures(kind, counts: card.counts),
+                        lastScan: card.hunt.lastScan, showsLastScan: kind != .watch, show: showListings)
+                .padding(.top, Look.rowGap)
+        }
+        HuntSection(title: String(localized: "Latest")) {
+            if let matches = store.latest(hunt: id) {
+                LatestMatches(matches: matches, store: store,
+                              open: { navigation.huntPath.append(.match($0)) },
+                              showAll: { showListings(.all) })
+            } else {
+                ProgressView().controlSize(.small).tint(Ink.muted).frame(maxWidth: .infinity, minHeight: 44)
+            }
         }
     }
 
@@ -147,7 +180,8 @@ struct HuntPage: View {
     private func nameField(_ card: HuntCard, text: HuntText) -> some View {
         let shape = RoundedRectangle(cornerRadius: 10, style: .continuous)
         let binding = Binding(get: { edit?.text ?? "" }, set: { edit?.text = $0 })
-        let placeholder = HuntName.placeholder(HuntText.automaticTitle(card.hunt.search, page: card.page))
+        let placeholder = HuntName.placeholder(HuntText.automaticTitle(card.hunt.search, page: card.page,
+                                                                       price: card.price))
         return HStack(alignment: .firstTextBaseline, spacing: 9) {
             if let kind = text.kind {
                 Image(systemName: kind.symbol).font(.system(size: 20 * 0.72, weight: .medium)).foregroundStyle(Ink.muted)

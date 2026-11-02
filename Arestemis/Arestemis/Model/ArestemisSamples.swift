@@ -4,7 +4,8 @@ import Foundation
 /// `-sampleData`.
 enum ArestemisSamples {
     nonisolated static let files = ["overview", "matches", "match", "rejected", "settings", "places", "hunts", "item-matches",
-                                    "ebay-match", "ikea-match", "vinted-match", "kinds", "watch-matches"]
+                                    "ebay-match", "ikea-match", "vinted-match", "kinds", "watch-matches", "price-matches",
+                                    "prices-9", "prices-10"]
 
     static func data(_ name: String) throws -> Data {
         guard let url = Bundle.main.url(forResource: name, withExtension: "json") else {
@@ -59,12 +60,17 @@ final class SampleBackend: ArestemisBackend {
         var newerKind = false       // -sampleNewerKind: a hunt of a kind this build does not know
         var ebayNotReady = false    // -sampleEbayNotReady: eBay without its keys on the server (greyed in the form)
         var watchRead: String?      // -sampleWatchRead <read>: the second watch's page state (screenshots)
+        var preview: String?        // -pricePreview reading|refused|failed: how the product's preview answers
     }
 
     private var base: Overview
     private var huntValues: [Hunt]
     /// Each watch's page as last read, by hunt id.
     private var pages: [Int: PageState]
+    /// Each monitor's product as last read, by hunt id.
+    private var products: [Int: PriceState]
+    /// Each monitor's year of history (its sample file, timestamps moved to now), by hunt id.
+    private var histories: [Int: [PricePoint]]
     private var nextHuntID: Int
     private var matches: [Match]
     private var rejectedItems: [Rejected]
@@ -88,6 +94,7 @@ final class SampleBackend: ArestemisBackend {
                 try ArestemisSamples.decode(Match.self, from: $0, shift: shift)
             })
             + (try ArestemisSamples.decode(MatchPage.self, from: "watch-matches", shift: shift)).items
+            + (try ArestemisSamples.decode(MatchPage.self, from: "price-matches", shift: shift)).items
         if options.longDescription {
             // Extend only the fictional listing description, leaving the contract's fields unchanged.
             matches = try matches.map { match in
@@ -112,6 +119,13 @@ final class SampleBackend: ArestemisBackend {
         knownPlaces = searched + suggestions.filter { place in !searched.contains { $0.id == place.id } }
         huntValues = base.hunts.map(\.hunt)
         pages = Dictionary(uniqueKeysWithValues: base.hunts.compactMap { card in card.page.map { (card.id, $0) } })
+        products = Dictionary(uniqueKeysWithValues: base.hunts.compactMap { card in card.price.map { (card.id, $0) } })
+        histories = [:]
+        for card in base.hunts where card.hunt.kind == .price {
+            if let prices = try? ArestemisSamples.decode(Prices.self, from: "prices-\(card.id)", shift: shift) {
+                histories[card.id] = prices.points
+            }
+        }
         nextHuntID = (huntValues.map(\.id).max() ?? 0) + 1
         if let read = options.watchRead, let id = huntValues.filter({ $0.kind == .watch }).dropFirst().first?.id,
            let page = pages[id] {
@@ -168,7 +182,8 @@ final class SampleBackend: ArestemisBackend {
             HuntCard(hunt: hunt, counts: Self.counts(matches.filter { $0.huntID == hunt.id }),
                      sources: hunt.active ? Self.sources(hunt.search) : [],
                      slowed: options.slowed && hunt.active && hunt.kind == .item,
-                     page: hunt.kind == .watch ? pages[hunt.id] : nil)
+                     page: hunt.kind == .watch ? pages[hunt.id] : nil,
+                     price: hunt.kind == .price ? products[hunt.id] : nil)
         }
         overview.latest = Array(visible.prefix(3))
         return overview
@@ -183,10 +198,12 @@ final class SampleBackend: ArestemisBackend {
         guard kind == search.kind else { throw HTTPError.server(400, "This hunt needs a newer app.") }
         let name = try Self.name(name)
         if let watch = search.watch { try Self.check(watch) }
+        if let monitor = search.price { try Self.check(monitor) }
         let now = ArestemisSamples.iso(.now)
         let created = Hunt(id: nextHuntID, kind: kind, name: name, active: false, search: search,
                            created: now, updated: now, activated: nil)
         if let watch = search.watch { pages[created.id] = Self.waiting(watch) }
+        if let monitor = search.price { products[created.id] = Self.waiting(monitor) }
         nextHuntID += 1
         huntValues.append(created)
         return created
@@ -200,6 +217,14 @@ final class SampleBackend: ArestemisBackend {
             let old = huntValues[index].search.watch
             if old?.url != watch.url || old?.change != watch.change || pages[id]?.read == .blocked {
                 pages[id] = Self.waiting(watch)
+            }
+        }
+        if let monitor = search.price {
+            try Self.check(monitor)
+            // A new link is read again from the start, as on the server; the switches change nothing of the read.
+            if huntValues[index].search.price?.url != monitor.url || products[id]?.read == .blocked {
+                products[id] = Self.waiting(monitor)
+                histories[id] = nil
             }
         }
         huntValues[index].name = try Self.name(name)
@@ -241,7 +266,7 @@ final class SampleBackend: ArestemisBackend {
         switch search {
         case .flat(let search): search.sources
         case .item(let search): search.sources
-        case .watch, .unsupported: []
+        case .price, .watch, .unsupported: []
         }
     }
 
@@ -261,6 +286,23 @@ final class SampleBackend: ArestemisBackend {
         if watch.change.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             throw FieldRefusal(field: "search.change", message: "Describe the change to watch for.")
         }
+    }
+
+    /// The server's refusals of a monitor, in its words (English, as the samples): the watch's address rules, the switches'
+    /// rule and an alarm without a condition. Only an imitation.
+    private static func check(_ monitor: PriceSearch) throws {
+        try check(WatchSearch(url: monitor.url, change: "price", every: monitor.every))
+        if !monitor.history && monitor.alarm == nil {
+            throw FieldRefusal(field: "search.history", message: "Choose the history, the alarm or both.")
+        }
+        if let alarm = monitor.alarm, !alarm.isComplete {
+            throw FieldRefusal(field: "search.alarm", message: "Say when the alarm should ring.")
+        }
+    }
+
+    /// A monitor saved with a new link: not read yet.
+    private static func waiting(_ monitor: PriceSearch) -> PriceState {
+        PriceState(host: WatchAddress.host(monitor.url) ?? "", read: .waiting)
     }
 
     /// A watch saved with a new address or description: not read yet.
@@ -297,9 +339,48 @@ final class SampleBackend: ArestemisBackend {
             let search = base.hunts.first { $0.hunt.kind == .item }?.hunt.search.item
             return .item(ParsedItemSearch(search: PartialItemSearch(query: search?.query, priceMax: search?.priceMax,
                                                                    delivery: search?.delivery, places: search?.places), unclear: []))
-        case .watch, .unknown: throw HTTPError.server(400, "This hunt needs a newer app.")
+        case .price, .watch, .unknown: throw HTTPError.server(400, "This hunt needs a newer app.")
         }
     }
+
+    /// An imitation of the server's preview for screenshots: the watch's address refusals, a link without a path is no
+    /// single product, and a made-up product (the console on MediaMarkt, else one named after the link's last part).
+    /// `-pricePreview reading|refused|failed` makes it wait, refuse or fail.
+    func pricePreview(url: String) async throws -> PricePreview {
+        switch options.preview {
+        case "reading": try await Task.sleep(for: .seconds(3600))
+        case "refused": throw FieldRefusal(field: "url", message: "This page shows no single product with a price.")
+        case "failed": throw HTTPError.server(503, "The price could not be read right now. Try again in a moment.")
+        default: try await Task.sleep(for: .milliseconds(600))
+        }
+        do { try Self.check(WatchSearch(url: url, change: "price", every: 60)) } catch let refusal as FieldRefusal {
+            throw FieldRefusal(field: "url", message: refusal.message)
+        }
+        let address = url.contains("://") ? url : "https://" + url
+        guard let parts = URLComponents(string: address), let host = parts.host,
+              let last = parts.path.split(separator: "/").last else {
+            throw FieldRefusal(field: "url", message: "This page shows no single product with a price.")
+        }
+        if host.contains("mediamarkt") {
+            return PricePreview(product: "NINTENDO Switch 2", price: 483.99, currency: "EUR", availability: .inStock,
+                                source: "shop")
+        }
+        let words = last.split(whereSeparator: { "-_.".contains($0) }).filter { !$0.allSatisfy(\.isNumber) && $0 != "html" }
+        let product = words.prefix(4).map { $0.prefix(1).uppercased() + $0.dropFirst() }.joined(separator: " ")
+        return PricePreview(product: product.isEmpty ? host : product, price: 129.0, currency: "EUR",
+                            availability: .inStock, source: "shop")
+    }
+
+    /// A monitor's history over the window, from its sample year; the lowest and highest in euros, as the server.
+    func prices(hunt id: Int, days: Int) async throws -> Prices {
+        let index = try huntIndex(id)
+        guard huntValues[index].search.price?.history == true else { throw HTTPError.server(404, nil) }
+        let start = Date.now.addingTimeInterval(-Double(days) * 86_400)
+        let points = (histories[id] ?? []).filter { (Timestamp.parse($0.at) ?? .distantPast) >= start }
+        let euros = points.filter { $0.currency == "EUR" }.map(\.price)
+        return Prices(points: points, low: euros.min(), high: euros.max())
+    }
+
     private func parseFlat(_ text: String) async throws -> ParsedSearch {
         try await Task.sleep(for: .milliseconds(600))
         let year = Calendar.app.component(.year, from: .now)
