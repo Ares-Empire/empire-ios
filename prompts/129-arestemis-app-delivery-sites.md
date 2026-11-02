@@ -1,6 +1,6 @@
 # 129: Arestemis app: sites that only ship or only hand over, and the OpenStreetMap credit
 
-Status: running (Arestemis 128 merged)
+Status: merged 2026-11-02 (Arestemis app tests pass; built by a Claude agent). Uploaded as Arestemis build 8.
 Branch: `claude/129-arestemis-delivery-sites` · Worktree: `../empire-ios-129-arestemis-delivery` · **For a Claude
 agent** (screens and their small data part)
 
