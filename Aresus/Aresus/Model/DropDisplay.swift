@@ -38,7 +38,9 @@ nonisolated struct DropRow: Identifiable, Equatable, Sendable {
     /// A landed drop's note (why it went to the fallback folder, a missing inventory row), in muted text.
     let note: String?
     let canRetry: Bool
-    let canRemove: Bool
+    /// Delete (the swipe and the long press, brief 93): every drop in every state, as a mail in Mail; the server
+    /// cancels what has not landed and keeps a landed file on the Mac (`DropsStore.remove`).
+    let canRemove = true
     /// Cancelled: the whole row quieter, as an inactive machine.
     var isQuiet: Bool { tone == .muted }
 
@@ -50,17 +52,16 @@ nonisolated struct DropRow: Identifiable, Equatable, Sendable {
         switch item {
         case .phone(let phone):
             name = phone.drop.name
-            (line, tone, canRetry, canRemove) = Self.phone(phone, language: language)
+            (line, tone, canRetry) = Self.phone(phone, language: language)
             note = nil
         case .server(let drop):
             name = drop.name
             if let local {
-                (line, tone, canRetry, canRemove) = Self.phone(local, language: language)
+                (line, tone, canRetry) = Self.phone(local, language: language)
                 note = nil
             } else {
                 (line, tone, note) = Self.server(drop, now: now, calendar: calendar, language: language)
                 canRetry = false
-                canRemove = [.uploading, .waiting, .failed].contains(drop.state)
             }
         }
         kind = DropFileKind(name: name)
@@ -72,15 +73,14 @@ nonisolated struct DropRow: Identifiable, Equatable, Sendable {
         return outbox.first { $0.serverID == drop.id }
     }
 
-    private static func phone(_ item: DropOutboxItem, language: AppLanguage)
-        -> (String, Tone, retry: Bool, remove: Bool) {
-        if item.cancellationRequested { return (language.string("Removing …"), .muted, false, false) }
+    /// A drop being deleted is not in the list at all (`DropsStore.merge`), so it has no line.
+    private static func phone(_ item: DropOutboxItem, language: AppLanguage) -> (String, Tone, retry: Bool) {
         switch item.state {
-        case .onPhone: return (language.string("On the phone · waits for a connection"), .normal, false, true)
-        case .uploading: return (language.string("Uploading …"), .normal, false, true)
+        case .onPhone: return (language.string("On the phone · waits for a connection"), .normal, false)
+        case .uploading: return (language.string("Uploading …"), .normal, false)
         case .failed:
             let error = item.lastError ?? language.string("The file could not be read.")
-            return (language.string("Not sent: \(error)"), .warning, true, true)
+            return (language.string("Not sent: \(error)"), .warning, true)
         }
     }
 
@@ -137,6 +137,19 @@ nonisolated enum DropPathText {
 
     static func path(_ target: Target, language: AppLanguage = .current) -> String {
         path(target.root, target.folder, newFolder: target.newFolder, language: language)
+    }
+
+    /// The send sheet's Folder row: the place, and a quiet word the row shows after it in parentheses: the fallback
+    /// folder's own name after "Sort later" ("Sort later (Zu sortieren)"), "new" after a folder the Mac makes as the
+    /// files land (brief 93: "Documents › Studium › EIST › Blatt 3 (new)").
+    static func place(_ target: Target?, fallback: String?,
+                      language: AppLanguage = .current) -> (text: String, quiet: String?) {
+        guard let target else {
+            return (language.string("Sort later"), fallback.flatMap { $0.isEmpty ? nil : $0 })
+        }
+        let isNew = !(target.newFolder ?? "").isEmpty
+        return (path(target, language: language),
+                isNew ? language.string("new") : nil)
     }
 
     /// The folder a drop landed in, from the Mac's path relative to its home ("Documents/Receipts/x.pdf" → "Receipts";
@@ -217,7 +230,9 @@ nonisolated struct DropNameParts: Equatable, Sendable {
 nonisolated struct DropDay: Identifiable, Equatable, Sendable {
     let title: String
     let items: [DropsItem]
-    var id: String { items.first?.id ?? title }
+    /// The day's title (with its count when the phone's items and the server's both have that day), not its first
+    /// drop's: deleting that drop takes only its row out, not the whole day's card.
+    let id: String
 
     static func group(_ items: [DropsItem], now: Date = .now, calendar: Calendar = .current,
                       language: AppLanguage = .current) -> [DropDay] {
@@ -225,9 +240,10 @@ nonisolated struct DropDay: Identifiable, Equatable, Sendable {
         for item in items {
             let title = AresusFormat.dayHeading(item.created, now: now, calendar: calendar, language: language)
             if let last = days.last, last.title == title {
-                days[days.count - 1] = DropDay(title: title, items: last.items + [item])
+                days[days.count - 1] = DropDay(title: title, items: last.items + [item], id: last.id)
             } else {
-                days.append(DropDay(title: title, items: [item]))
+                let earlier = days.filter { $0.title == title }.count
+                days.append(DropDay(title: title, items: [item], id: earlier == 0 ? title : "\(title)#\(earlier)"))
             }
         }
         return days

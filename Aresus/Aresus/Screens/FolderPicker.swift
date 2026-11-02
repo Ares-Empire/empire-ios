@@ -2,7 +2,8 @@ import SwiftUI
 
 /// Where the files go (pushed inside the send sheet, brief 91): a search over every folder of the Mac, the recent
 /// folders, Sort later (the Mac's fallback folder), then Documents and Downloads, each opened folder by folder
-/// (`FolderPage`). The tree and the search are `DropFolderTree`'s.
+/// (`FolderPage`, where a new folder is made too, brief 93). Recent folders and search results choose with one tap.
+/// The tree and the search are `DropFolderTree`'s.
 struct FolderPickerScreen: View {
     let drops: DropsStore
     let draft: SendDraft
@@ -44,7 +45,7 @@ struct FolderPickerScreen: View {
                     Button { choose(target) } label: {
                         FolderRow(symbol: "clock", title: DropPathText.name(target),
                                   subtitle: DropPathText.path(target),
-                                  trailing: DropFolderTree.resolve(target, in: tree) == chosen ? .chosen : .none)
+                                  isChosen: DropFolderTree.resolve(target, in: tree) == chosen)
                     }
                     .buttonStyle(PressedRow())
                 }
@@ -53,7 +54,7 @@ struct FolderPickerScreen: View {
         VStack(spacing: 0) {
             Button { choose(nil) } label: {
                 FolderRow(symbol: "tray", title: String(localized: "Sort later"), subtitle: sortLaterLine,
-                          trailing: chosen == nil ? .chosen : .none)
+                          isChosen: chosen == nil)
             }
             .buttonStyle(PressedRow())
         }
@@ -69,7 +70,7 @@ struct FolderPickerScreen: View {
                         if index > 0 { RowDivider() }
                         NavigationLink(value: SendRoute.folder(.init(root: root, path: ""))) {
                             FolderRow(symbol: root == .documents ? "doc" : "arrow.down.circle",
-                                      title: DropPathText.root(root), trailing: .push)
+                                      title: DropPathText.root(root), pushes: true)
                         }
                         .buttonStyle(PressedRow())
                     }
@@ -111,7 +112,7 @@ struct FolderPickerScreen: View {
                     Button { choose(folder.target) } label: {
                         FolderRow(symbol: "folder", title: DropPathText.name(folder.root, folder.path),
                                   subtitle: DropPathText.path(folder.root, folder.path),
-                                  trailing: folder.target == chosen ? .chosen : .none)
+                                  isChosen: folder.target == chosen)
                     }
                     .buttonStyle(PressedRow())
                 }
@@ -130,53 +131,50 @@ struct FolderPickerScreen: View {
     }
 }
 
-/// A folder of the Mac: "Choose <folder>" at the top, then the folders inside it. A folder with folders inside opens
-/// its own page; one without is chosen with a tap.
+/// A folder of the Mac (brief 93): "Choose <folder>" at the top, then New folder, then every folder inside, each opening
+/// its own page (one with no folders inside too: its page says so, quietly, under New folder). The page's words and
+/// marks are `DropFolderPage`'s; New folder is `DropNewFolder` (checked as it is typed).
 struct FolderPage: View {
     let folder: DropFolderTree.Folder
     let draft: SendDraft
     let choose: (Target?) -> Void
+    /// New folder's field while it is open (a tap on the row opens it, in place, with the keyboard).
+    @State private var entry: DropNewFolder?
+    @FocusState private var typing: Bool
 
     private var tree: DropFolderTree { draft.tree }
-    private var chosen: Target? { draft.sendTarget }
-
     private var name: String { DropPathText.name(folder.root, folder.path) }
 
     var body: some View {
-        let inside = tree.folders(in: folder.root, under: folder.path)
+        let page = DropFolderPage(folder, tree: tree, chosen: draft.sendTarget)
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 VStack(spacing: 0) {
                     Button { choose(folder.target) } label: {
                         FolderRow(symbol: "checkmark.circle", title: String(localized: "Choose \(name)"),
                                   subtitle: folder.path.isEmpty ? nil : DropPathText.path(folder.root, folder.path),
-                                  trailing: folder.target == chosen ? .chosen : .none,
+                                  isChosen: page.isChosen,
                                   tint: AppAccent.aresus.color, symbolTint: AppAccent.aresus.color)
                     }
                     .buttonStyle(PressedRow())
+                    RowDivider()
+                    if entry != nil { field } else { newFolderRow(page) }
                 }
                 .glassCard()
                 .padding(.top, 8)
-                if inside.isEmpty {
+                if let entry { entryLine(entry).padding(.top, 10) }
+                if page.isLeaf {
                     Text("No folders inside.").font(AppFont.text(13)).foregroundStyle(Ink.muted)
                         .frame(maxWidth: .infinity).padding(.top, 36)
                 } else {
                     FolderSection(title: String(localized: "Inside")) {
-                        ForEach(Array(inside.enumerated()), id: \.element) { index, child in
+                        ForEach(Array(page.rows.enumerated()), id: \.element.id) { index, row in
                             if index > 0 { RowDivider() }
-                            if tree.hasFolders(in: child.root, under: child.path) {
-                                NavigationLink(value: SendRoute.folder(child)) {
-                                    FolderRow(symbol: "folder", title: DropPathText.name(child.root, child.path),
-                                              trailing: .push)
-                                }
-                                .buttonStyle(PressedRow())
-                            } else {
-                                Button { choose(child.target) } label: {
-                                    FolderRow(symbol: "folder", title: DropPathText.name(child.root, child.path),
-                                              trailing: child.target == chosen ? .chosen : .none)
-                                }
-                                .buttonStyle(PressedRow())
+                            NavigationLink(value: SendRoute.folder(row.folder)) {
+                                FolderRow(symbol: "folder", title: DropPathText.name(row.folder.root, row.folder.path),
+                                          pushes: true, isChosen: row.isChosen)
                             }
+                            .buttonStyle(PressedRow())
                         }
                     }
                 }
@@ -184,6 +182,7 @@ struct FolderPage: View {
             .padding(.horizontal, 18).padding(.bottom, 30)
         }
         .scrollIndicators(.hidden)
+        .scrollDismissesKeyboard(.interactively)
         .background { ProvinceWall(accent: .aresus) }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -191,7 +190,101 @@ struct FolderPage: View {
                 Text(verbatim: name).font(AppFont.text(17, weight: .bold)).foregroundStyle(Ink.primary).lineLimit(1)
             }
         }
+        // Leaving the field with nothing typed puts the row back.
+        .onChange(of: typing) { _, now in
+            if !now, entry?.name.isEmpty == true { entry = nil }
+        }
+        #if DEBUG
+        .task { applyLaunchArguments() }
+        #endif
     }
+
+    /// "New folder", or the new folder already chosen here (a tap edits it).
+    private func newFolderRow(_ page: DropFolderPage) -> some View {
+        Button { open(page.newFolder ?? "") } label: {
+            if let new = page.newFolder {
+                FolderRow(symbol: "folder.badge.plus", title: new, subtitle: String(localized: "New folder"),
+                          isChosen: true, plainSubtitle: true)
+            } else {
+                FolderRow(symbol: "folder.badge.plus", title: String(localized: "New folder"))
+            }
+        }
+        .buttonStyle(PressedRow())
+    }
+
+    /// New folder's name, typed where it stands: the field in the row's place, Create (Choose for a folder that is
+    /// there already) at its end; Return does the same.
+    private var field: some View {
+        let entry = entry ?? DropNewFolder(parent: folder)
+        let existing = entry.existing(in: tree)
+        let target = entry.target(in: tree)
+        return HStack(spacing: 12) {
+            Image(systemName: "folder.badge.plus").font(.system(size: 15, weight: .regular)).foregroundStyle(Ink.muted)
+                .frame(width: 22)
+            TextField("", text: Binding(get: { self.entry?.text ?? "" }, set: { self.entry?.text = $0 }),
+                      prompt: Text("Folder name").foregroundStyle(Ink.muted))
+                .font(AppFont.text(15, weight: .medium)).foregroundStyle(Ink.primary)
+                .textInputAutocapitalization(.sentences).autocorrectionDisabled()
+                .submitLabel(.done)
+                .focused($typing)
+                .onSubmit(create)
+                .accessibilityLabel(Text("New folder"))
+            Button(action: create) {
+                Text(existing == nil ? String(localized: "Create") : String(localized: "Choose"))
+                    .font(AppFont.text(15, weight: .semibold))
+                    .foregroundStyle(target == nil ? Ink.muted : AppAccent.aresus.color)
+                    .padding(.horizontal, 10).frame(minHeight: 44).contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .disabled(target == nil)
+        }
+        .padding(.leading, 16).padding(.trailing, 6).frame(minHeight: 50)
+    }
+
+    /// Under the card: the rule the name breaks, else that the folder is there already, else when the Mac makes it.
+    @ViewBuilder private func entryLine(_ entry: DropNewFolder) -> some View {
+        if let rule = entry.rule(in: tree) {
+            FormProblem(text: DropRuleWording.text(rule))
+        } else if let existing = entry.existing(in: tree) {
+            FormNote(text: String(localized: "“\(DropPathText.name(existing.root, existing.path))” is already here."))
+        } else {
+            FormNote(text: draft.picked.count > 1 ? String(localized: "The MacBook makes it when the files arrive.")
+                                                   : String(localized: "The MacBook makes it when the file arrives."))
+        }
+    }
+
+    private func open(_ text: String) {
+        entry = DropNewFolder(parent: folder, text: text)
+        focusField()
+    }
+
+    /// The keyboard for the field once it is on screen (it is made in the same update as the tap).
+    private func focusField() {
+        Task {
+            await Task.yield()
+            typing = true
+        }
+    }
+
+    /// Chooses this folder with the new one in it (or the one of that name already here) and goes back to the sheet.
+    /// Return with a name that cannot be made only puts the keyboard away; the line under the card says why.
+    private func create() {
+        guard let target = entry?.target(in: tree) else { return }
+        typing = false
+        choose(target)
+    }
+
+    #if DEBUG
+    /// Screenshots: `-newFolderText <text>` opens New folder with that text on the page `-folderPath` opens.
+    private func applyLaunchArguments() {
+        guard entry == nil, let text = LaunchArguments.value("-newFolderText"),
+              let path = LaunchArguments.value("-folderPath") else { return }
+        let parts = path.split(separator: "/", maxSplits: 1).map(String.init)
+        guard parts.first == folder.root.rawValue, (parts.count > 1 ? parts[1] : "") == folder.path else { return }
+        entry = DropNewFolder(parent: folder, text: text)
+        if !LaunchArguments.current.contains("-newFolderKeyboardDown") { focusField() }
+    }
+    #endif
 }
 
 // MARK: - pieces
@@ -210,38 +303,41 @@ private struct FolderSection<Content: View>: View {
     }
 }
 
-/// A row of the picker: a symbol, the folder's name over its path, and where a tap leads (deeper, or the chosen mark).
+/// A row of the picker: a symbol, the folder's name over its path, the chosen mark, and the chevron of a folder that
+/// opens its page.
 private struct FolderRow: View {
-    enum Trailing { case push, chosen, none }
-
     let symbol: String
     let title: String
     var subtitle: String? = nil
-    var trailing: Trailing = .none
+    var pushes = false
+    var isChosen = false
     var tint: Color = Ink.primary
     var symbolTint: Color = Ink.muted
+    /// The subtitle is words, not a path: cut at its end.
+    var plainSubtitle = false
 
     var body: some View {
         HStack(spacing: 12) {
+            // Decoration: read out, "checkmark.circle" said "Selected" on every Choose row.
             Image(systemName: symbol).font(.system(size: 15, weight: .regular)).foregroundStyle(symbolTint)
                 .frame(width: 22)
+                .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
                 Text(verbatim: title).font(AppFont.text(15, weight: .medium)).foregroundStyle(tint).lineLimit(1)
                 if let subtitle {
                     Text(verbatim: subtitle).font(AppFont.text(12)).foregroundStyle(Ink.muted)
-                        .lineLimit(1).truncationMode(.head)
+                        .lineLimit(1).truncationMode(plainSubtitle ? .tail : .head)
                 }
             }
             Spacer(minLength: 8)
-            switch trailing {
-            case .push:
-                Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold)).foregroundStyle(Ink.muted)
-            case .chosen:
+            if isChosen {
                 Image(systemName: "checkmark").font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(AppAccent.aresus.color)
                     .accessibilityLabel(Text("Chosen"))
-            case .none:
-                EmptyView()
+            }
+            if pushes {
+                Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold)).foregroundStyle(Ink.muted)
+                    .accessibilityHidden(true)
             }
         }
         .padding(.horizontal, 16).frame(minHeight: subtitle == nil ? 50 : 58)

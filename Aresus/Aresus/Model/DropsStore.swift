@@ -24,6 +24,9 @@ final class DropsStore {
     private(set) var samples: AresusSamples?
     private(set) var outbox: DropOutbox?
     private(set) var recentFolders: DropRecentFolders
+    /// Server drops deleted on this iPhone (brief 93): out of the list at once, while the DELETE runs and after it (a
+    /// list asked for before the DELETE may still hold them). One the server refuses leaves the set and comes back.
+    private var deleted: Set<Int> = []
     private let session: EmpireSession
     private let client: AresusAPI
     private var cacheURL: URL?
@@ -34,7 +37,7 @@ final class DropsStore {
     private var generation = 0
     var isSample: Bool { samples != nil }
 
-    var items: [DropsItem] { Self.merge(outbox: outbox?.items ?? [], server: serverDrops) }
+    var items: [DropsItem] { Self.merge(outbox: outbox?.items ?? [], server: serverDrops, deleted: deleted) }
 
     init(session: EmpireSession, client: AresusAPI = AresusAPI(), samples: AresusSamples? = nil,
          directory: URL? = nil, cacheURL: URL? = URL.cachesDirectory.appendingPathComponent("drop-folders.json"),
@@ -56,10 +59,16 @@ final class DropsStore {
         session.onAppDataReset { [weak self] in self?.clear() }
     }
 
-    static func merge(outbox: [DropOutboxItem], server: [Drop]) -> [DropsItem] {
-        let ids = Set(server.map(\.id))
-        let phone = outbox.filter { $0.serverID.map { !ids.contains($0) } ?? true }.sorted { $0.created < $1.created }
-        return phone.map(DropsItem.phone) + server.sorted {
+    /// The list: the phone's own items (oldest first) over the server's drops (newest first). A server drop stands for
+    /// the phone's copy it came from. Left out: what is being deleted, the phone's items the outbox is removing (with
+    /// their server drop) and the server drops in `deleted`.
+    static func merge(outbox: [DropOutboxItem], server: [Drop], deleted: Set<Int> = []) -> [DropsItem] {
+        let removing = deleted.union(outbox.filter(\.cancellationRequested).compactMap(\.serverID))
+        let shown = server.filter { !removing.contains($0.id) }
+        let ids = Set(shown.map(\.id))
+        let phone = outbox.filter { !$0.cancellationRequested && ($0.serverID.map { !ids.contains($0) } ?? true) }
+            .sorted { $0.created < $1.created }
+        return phone.map(DropsItem.phone) + shown.sorted {
             $0.created == $1.created ? $0.id > $1.id : $0.created > $1.created
         }.map(DropsItem.server)
     }
@@ -154,33 +163,62 @@ final class DropsStore {
         }
     }
 
+    /// Deletes a drop (brief 93, Mail's Delete, every state): it leaves `items` at once, before any request.
+    /// - On this iPhone (or a server drop still uploading from it): the outbox stops the upload and forgets it, telling
+    ///   the server (`DELETE`), later if there is no connection now; the upload has stopped, so the Mac never gets it.
+    /// - On the server: `DELETE /drops/{id}`; uploading, waiting and failed drops are cancelled (the Mac never gets
+    ///   them), landed and cancelled ones only leave the list (a landed file stays on the Mac). A `404` counts as deleted.
+    /// If the server refuses, the drop comes back and `errors[.drops]` (the section's "Not refreshed: …") says why.
     func remove(_ item: DropsItem) async {
         switch item {
-        case .phone(let local): await outbox?.remove(local.id)
+        case .phone(let local): _ = await removeLocal(local.id)
         case .server(let drop):
+            // A server row that stands for a local upload: that upload and its durable copy go, and the outbox's
+            // DELETE is this drop's.
+            if let local = outbox?.items.first(where: { $0.serverID == drop.id }) {
+                deleted.insert(drop.id)
+                let epoch = generation
+                let refused = await !removeLocal(local.id)
+                guard epoch == generation else { return }
+                if refused { deleted.remove(drop.id) }
+                else if outbox?.items.contains(where: { $0.id == local.id }) == false {
+                    serverDrops.removeAll { $0.id == drop.id }
+                }
+                return
+            }
+            deleted.insert(drop.id)
             if isSample { serverDrops.removeAll { $0.id == drop.id }; return }
             let epoch = generation
             let login = session.generation
-            guard let token = session.token else { return }
+            guard let token = session.token else {
+                deleted.remove(drop.id)
+                return
+            }
             do {
-                // If the merged row hides a local upload, cancel that request and its durable copy as well.
-                if let local = outbox?.items.first(where: { $0.serverID == drop.id }) {
-                    await outbox?.remove(local.id)
-                    guard outbox?.items.contains(where: { $0.id == local.id }) == false else {
-                        errors[.drops] = outbox?.items.first(where: { $0.id == local.id })?.lastError
-                        return
-                    }
-                } else { try await client.cancel(drop.id, token: token) }
+                try await client.delete(drop.id, token: token)
                 guard epoch == generation, login == session.generation else { return }
                 serverDrops.removeAll { $0.id == drop.id }
                 errors[.drops] = nil
             } catch {
                 guard epoch == generation, login == session.generation else { return }
+                deleted.remove(drop.id)
                 session.handleAuthFailure(error, generation: login, token: token)
                 guard epoch == generation else { return }
                 errors[.drops] = DropOutbox.message(error)
             }
         }
+    }
+
+    /// The outbox removes it: gone, or waiting for a connection (out of the list meanwhile); false when the server
+    /// refused the DELETE: the item is back in the list (`DropOutbox`) and `errors[.drops]` says why.
+    private func removeLocal(_ id: UUID) async -> Bool {
+        guard let outbox else { return true }
+        let epoch = generation
+        await outbox.remove(id)
+        guard epoch == generation else { return true }
+        guard let left = outbox.items.first(where: { $0.id == id }), !left.cancellationRequested else { return true }
+        errors[.drops] = left.lastError
+        return false
     }
 
     func clear() {
@@ -191,6 +229,7 @@ final class DropsStore {
         loading = []
         loadedAt = [:]
         recentFolders.clear()
+        deleted = []
         outbox?.clear()
         cacheError = nil
         if let cacheURL, FileManager.default.fileExists(atPath: cacheURL.path) {

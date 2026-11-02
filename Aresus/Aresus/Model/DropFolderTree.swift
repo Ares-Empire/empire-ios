@@ -45,6 +45,16 @@ nonisolated struct DropFolderTree: Equatable, Sendable {
         return children[root]?[parent]?.contains(path) == true
     }
 
+    /// The folder named `name` inside one, ignoring case as the Mac's disk does ("eist" finds "EIST"; accents count);
+    /// nil when there is none.
+    func folder(named name: String, in root: DropRoot, under path: String) -> Folder? {
+        let wanted = DropNames.normalized(name)
+        return folders(in: root, under: path).first { folder in
+            let last = DropNames.normalized(String(folder.path.split(separator: "/").last ?? ""))
+            return last.compare(wanted, options: .caseInsensitive) == .orderedSame
+        }
+    }
+
     /// Every folder whose path (the root's name included) holds each word of the query, ignoring case and accents:
     /// a folder named like the query first, then one starting with it, one holding it, then any path holding it; within
     /// each the shallower first, Documents before Downloads, then Finder's order. At most `limit`.
@@ -92,14 +102,79 @@ extension DropFolderTree {
         return (Target(root: target.root, folder: target.folder), target.newFolder ?? "")
     }
 
-    /// The same as one target: the new folder folded into the folder once the Mac lists it.
+    /// The same as one target: the new folder folded into the folder once the Mac lists it (ignoring case: the Mac's
+    /// disk put the file into a folder of that name that was there already).
     static func resolve(_ target: Target?, in tree: DropFolderTree) -> Target? {
         guard let target else { return nil }
         guard let new = target.newFolder, !new.isEmpty else { return Target(root: target.root, folder: target.folder) }
-        let path = target.folder.isEmpty ? new : target.folder + "/" + new
-        if tree.contains(target.root, path) { return Target(root: target.root, folder: path) }
+        if let listed = tree.folder(named: new, in: target.root, under: target.folder) { return listed.target }
         return target
     }
+}
+
+/// The picker's New folder on a folder's page (brief 93): a name typed where the folders are, checked as it is typed.
+/// Nothing is made on the Mac until the file is sent: the drop carries the name (`Target.newFolder`, one folder inside
+/// `parent`) and the Mac makes the folder as it lands.
+nonisolated struct DropNewFolder: Equatable, Sendable {
+    let parent: DropFolderTree.Folder
+    var text = ""
+
+    /// The name as it is sent, without surrounding spaces.
+    var name: String { text.trimmingCharacters(in: .whitespacesAndNewlines) }
+
+    /// The rule the name breaks, for the line under the field; nil while nothing is typed (Create is simply off) and
+    /// for a folder that is there already (its name is the Mac's, and Create chooses it).
+    func rule(in tree: DropFolderTree) -> DropNames.Rule? {
+        guard !name.isEmpty, existing(in: tree) == nil else { return nil }
+        return DropNames.newName(name)
+    }
+
+    /// A folder of that name already in `parent`, ignoring case as the Mac's disk does: Create chooses it instead.
+    func existing(in tree: DropFolderTree) -> DropFolderTree.Folder? {
+        name.isEmpty ? nil : tree.folder(named: name, in: parent.root, under: parent.path)
+    }
+
+    /// What Create chooses: the folder already there, else `parent` with the new folder in it; nil while it cannot.
+    func target(in tree: DropFolderTree) -> Target? {
+        if let existing = existing(in: tree) { return existing.target }
+        guard !name.isEmpty, DropNames.newName(name) == nil else { return nil }
+        return Target(root: parent.root, folder: parent.path, newFolder: name)
+    }
+}
+
+/// A folder's page in the picker (brief 93): "Choose <folder>", New folder, then every folder inside, each opening its
+/// own page (one with no folders inside too, where New folder is the way on); what is chosen now carries the marks.
+nonisolated struct DropFolderPage: Equatable, Sendable {
+    struct Row: Equatable, Identifiable, Sendable {
+        let folder: DropFolderTree.Folder
+        /// This folder is the one chosen now.
+        let isChosen: Bool
+        var id: String { folder.id }
+    }
+
+    let folder: DropFolderTree.Folder
+    /// The folders inside, in Finder's order; each opens its page.
+    let rows: [Row]
+    /// "Choose <folder>" carries the mark: this folder is chosen, without a new folder.
+    let isChosen: Bool
+    /// The new folder chosen inside this one, shown in place of "New folder" (a tap edits it).
+    let newFolder: String?
+
+    /// - Parameter chosen: where the files go now (`SendDraft.sendTarget`); nil = Sort later.
+    init(_ folder: DropFolderTree.Folder, tree: DropFolderTree, chosen: Target?) {
+        self.folder = folder
+        let plain = chosen?.newFolder == nil ? chosen : nil
+        rows = tree.folders(in: folder.root, under: folder.path).map { Row(folder: $0, isChosen: $0.target == plain) }
+        isChosen = folder.target == plain
+        if let chosen, let new = chosen.newFolder, chosen.root == folder.root, chosen.folder == folder.path {
+            newFolder = new
+        } else {
+            newFolder = nil
+        }
+    }
+
+    /// No folders inside: the page says so, quietly, under New folder.
+    var isLeaf: Bool { rows.isEmpty }
 }
 
 extension Target {

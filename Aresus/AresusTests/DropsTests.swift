@@ -50,7 +50,7 @@ struct DropsTests {
         let file = URL(fileURLWithPath: "/fictional/upload.file")
         _ = try await api.upload(44, fileURL: file, token: "fictional")
         _ = try await api.drops(token: "fictional")
-        try await api.cancel(44, token: "fictional")
+        try await api.delete(44, token: "fictional")
         #expect(fake.requests.map(\.httpMethod) == ["GET", "POST", "PUT", "GET", "DELETE"])
         #expect(fake.requests.map { $0.url!.path } == ["/api/aresus/drops/folders", "/api/aresus/drops", "/api/aresus/drops/44/file", "/api/aresus/drops", "/api/aresus/drops/44"])
         #expect(fake.files == [file])
@@ -68,8 +68,21 @@ struct DropsTests {
             Issue.record("Expected rejection")
         } catch { #expect(error.localizedDescription == "This file is too large.") }
         var unauthorized = false
-        await #expect(throws: HTTPError.self) { try await api.cancel(44, token: "fictional", onUnauthorized: { unauthorized = true }) }
+        await #expect(throws: HTTPError.self) { try await api.delete(44, token: "fictional", onUnauthorized: { unauthorized = true }) }
         #expect(unauthorized)
+    }
+
+    @Test func deleteTakesA404AsAlreadyGone() async throws {
+        let fake = DropTransport()
+        fake.responses = [.answer(404, Data(#"{"error":"Unknown drop."}"#.utf8)),
+                          .answer(409, Data(#"{"error":"Not now."}"#.utf8))]
+        let api = AresusAPI(transport: fake)
+        try await api.delete(44, token: "fictional")
+        do {
+            try await api.delete(44, token: "fictional")
+            Issue.record("Expected a refusal")
+        } catch { #expect(error.localizedDescription == "Not now.") }
+        #expect(fake.requests.map(\.httpMethod) == ["DELETE", "DELETE"])
     }
 
     @Test func mergedListHidesLocalDuplicatesAndOrdersBothGroups() throws {
@@ -79,6 +92,19 @@ struct DropsTests {
         let hidden = localItem(serverID: server.drops[1].id, created: at("2026-11-01T16:00:00Z"))
         let merged = DropsStore.merge(outbox: [second, hidden, first], server: server.drops.reversed())
         #expect(merged == [.phone(first), .phone(second)] + server.drops.map(DropsItem.server))
+    }
+
+    @Test func mergedListLeavesOutWhatIsBeingDeleted() throws {
+        let server: DropsAnswer = try sample("drops")
+        var leaving = localItem(serverID: nil)
+        leaving.cancellationRequested = true
+        var uploading = localItem(serverID: server.drops[1].id)
+        uploading.cancellationRequested = true
+        let staying = localItem(serverID: nil)
+        let merged = DropsStore.merge(outbox: [leaving, uploading, staying], server: server.drops,
+                                      deleted: [server.drops[3].id])
+        #expect(merged == [.phone(staying), .server(server.drops[0]), .server(server.drops[2]), .server(server.drops[4])],
+                "the phone's item being removed, the server drop it uploads to and a drop being deleted are out")
     }
 
     @Test func recentsKeepEightUniqueTargetsAndLastPerSource() throws {

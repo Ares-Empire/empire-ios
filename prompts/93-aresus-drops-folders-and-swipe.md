@@ -1,6 +1,6 @@
 # 93: Aresus app: new folders in the picker, swipe to delete, the sheet closes with one swipe
 
-Status: open
+Status: merged 2026-11-02 (Aresus 163 and Aresium 748 tests; RowSwipe now in Shared/Design)
 Branch: `claude/93-drops-folders-swipe` · Worktree: `../empire-ios-93-drops-folders-swipe` · Built by a **Claude
 agent** (design work, `CLAUDE.md` → Workflow) · Simulator: `claude-93` (create it: iPhone 17, iOS 27.0)
 
