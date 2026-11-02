@@ -100,3 +100,32 @@ nonisolated func at(_ text: String) -> Date { AresusJSON.date(text)! }
 extension Array {
     var only: Element? { count == 1 ? first : nil }
 }
+
+/// Runs the real request/status/decode path against a fake transport; production always uses the background driver.
+@MainActor
+final class ImmediateDropUploads: DropUploading {
+    let identifier = "test-background-upload"
+    var completed: ((DropUploadID, Result<Drop, Error>, String?) async -> Void)?
+    let transport: any HTTPTransport
+    init(_ transport: any HTTPTransport) { self.transport = transport }
+    func activeIDs() async -> Set<UUID> { [] }
+    func cancel(_ id: UUID) async {}
+    func submit(_ id: DropUploadID, request: URLRequest, file: URL, earliestBeginDate: Date?) async throws {
+        let result: Result<Drop, Error>
+        do {
+            let (data, response) = try await transport.upload(request, fromFile: file)
+            result = DropBackgroundUploads.result(data: data, response: response, error: nil)
+        } catch { result = .failure(error) }
+        let token = request.value(forHTTPHeaderField: "Authorization").map { String($0.dropFirst(7)) }
+        await completed?(id, result, token)
+    }
+}
+
+extension AresusAPI {
+    /// An API test's upload goes through the background driver's response parser, without making a URLSession.
+    func testedUpload(_ id: Int, fileURL: URL, token: String) async throws -> Drop {
+        let request = try uploadRequest(id, token: token)
+        let (data, response) = try await transport.upload(request, fromFile: fileURL)
+        return try DropBackgroundUploads.result(data: data, response: response, error: nil).get()
+    }
+}

@@ -4,7 +4,7 @@ import Foundation
 /// made-up details the samples lack (other provinces, other runs), so every screen can be opened in sample mode.
 /// `-sampleAllGood` turns the sample's issue into a running province; `-sampleEmpty` empties the sync overview;
 /// `-sampleNoFolders`: the MacBook has not sent its folders yet.
-nonisolated struct AresusSamples: Sendable {
+nonisolated struct AresusSamples: DropSamples {
     let allGood: Bool
     /// `-sampleEmpty`: no machine has reported yet.
     var emptySync = false

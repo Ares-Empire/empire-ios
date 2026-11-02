@@ -1,0 +1,344 @@
+import Foundation
+import Testing
+import UIKit
+import UniformTypeIdentifiers
+@testable import Aresus
+
+@MainActor
+final class HeldDropUploads: DropUploading {
+    let identifier: String
+    var completed: ((DropUploadID, Result<Drop, Error>, String?) async -> Void)?
+    var tasks: [DropUploadID] = []
+    var cancelled: [UUID] = []
+    var requests: [URLRequest] = []
+    var supportsDeferredRetry = false
+    var deadlines: [Date?] = []
+    init(identifier: String = "test-held-upload") { self.identifier = identifier }
+    func submit(_ id: DropUploadID, request: URLRequest, file: URL, earliestBeginDate: Date?) async throws {
+        #expect(FileManager.default.fileExists(atPath: file.path))
+        tasks.append(id); requests.append(request); deadlines.append(earliestBeginDate)
+    }
+    func cancel(_ id: UUID) async { cancelled.append(id); tasks.removeAll { $0.record == id } }
+    func activeIDs() async -> Set<UUID> { Set(tasks.map(\.record)) }
+    func finish(_ result: Result<Drop, Error>) async throws {
+        let ticket = try #require(tasks.first)
+        tasks.removeFirst()
+        await completed?(ticket, result, "fictional-empire-token")
+    }
+}
+
+@MainActor
+struct SharedDropsTests {
+    @Test func migrationPreservesFilesIDsAndNewerGroupRecordsAndRunsOnce() async throws {
+        let root = testDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let old = root.appendingPathComponent("old")
+        let group = root.appendingPathComponent("group")
+        let session = await signedInSession()
+        let first = DropOutbox(session: session, directory: old, automatic: false, uploads: HeldDropUploads())
+        let id = try await enqueue(first)
+        var record = try #require(first.items.only)
+        record.serverID = 44
+        try DropJournal(directory: old).save(record)
+        let migrated = DropOutbox(session: session, directory: group, automatic: false, legacyDirectory: old, uploads: HeldDropUploads())
+        #expect(migrated.items.only?.id == id && migrated.items.only?.serverID == 44)
+        #expect(try Data(contentsOf: group.appendingPathComponent(record.localFile)) == Data("abc".utf8))
+        #expect(!FileManager.default.fileExists(atPath: old.path))
+        // A partial older migration must not replace a record already advanced in the group.
+        try FileManager.default.createDirectory(at: old, withIntermediateDirectories: true)
+        var stale = record; stale.serverID = nil
+        try DropJournal(directory: old).save(stale)
+        try Data("abc".utf8).write(to: old.appendingPathComponent(stale.localFile))
+        try DropJournal(directory: group).migrate(from: old)
+        migrated.reload()
+        #expect(migrated.items.only?.serverID == 44)
+        try DropJournal(directory: group).migrate(from: old)
+        #expect(migrated.items.count == 1)
+    }
+
+    @Test func twoOutboxesSeeAddsAndCompletionsAfterReloadAndNeverCreateTwice() async throws {
+        let directory = testDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let session = await signedInSession()
+        let api = DropTransport()
+        api.responses = [.answer(201, try dropAnswer())]
+        let uploads = HeldDropUploads()
+        let first = DropOutbox(session: session, client: AresusAPI(transport: api), directory: directory, automatic: false, uploads: uploads)
+        let otherUploads = HeldDropUploads(identifier: "other-process")
+        let second = DropOutbox(session: session, client: AresusAPI(transport: api), directory: directory, automatic: false, uploads: otherUploads)
+        let id = try await enqueue(first)
+        #expect(second.items.isEmpty)
+        second.reload()
+        #expect(second.items.only?.id == id)
+        await first.process()
+        await second.process()
+        #expect(api.requests.count == 1 && uploads.tasks.count == 1 && otherUploads.tasks.isEmpty)
+        let ticket = try #require(uploads.tasks.first)
+        let uploaded = try AresusJSON.decoder().decode(Drop.self, from: dropAnswer(state: .waiting))
+        // iOS delivers the first process's task to a newly opened process.
+        await second.finished(ticket, result: .success(uploaded), token: session.token)
+        #expect(first.items.count == 1)
+        first.reload()
+        #expect(first.items.isEmpty && second.items.isEmpty)
+        #expect(!FileManager.default.fileExists(atPath: directory.appendingPathComponent(id.uuidString + ".file").path))
+    }
+
+    @Test func operationLeasePreventsASecondCreateWhileAnotherProcessWaitsForPOST() async throws {
+        let directory = testDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let session = await signedInSession()
+        let api = DropTransport(); api.responses = [.answer(201, try dropAnswer())]
+        let gate = RequestGate(); api.gate = gate; api.gateMethod = "POST"
+        let firstUploads = HeldDropUploads(), otherUploads = HeldDropUploads(identifier: "other-process")
+        let first = DropOutbox(session: session, client: AresusAPI(transport: api), directory: directory, automatic: false, uploads: firstUploads)
+        let second = DropOutbox(session: session, client: AresusAPI(transport: api), directory: directory, automatic: false, uploads: otherUploads)
+        _ = try await enqueue(first)
+        let pass = Task { await first.process() }
+        await gate.waitUntilPaused()
+        await second.process()
+        #expect(api.requests.count == 1 && otherUploads.tasks.isEmpty)
+        gate.resume()
+        await pass.value
+        #expect(api.requests.count == 1 && firstUploads.tasks.count == 1)
+    }
+
+    @Test func backgroundFailureRetryCancellationAndStaleCompletion() async throws {
+        let directory = testDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let api = DropTransport(); api.responses = [.answer(201, try dropAnswer()), .answer(204, Data())]
+        let uploads = HeldDropUploads()
+        let outbox = DropOutbox(session: await signedInSession(), client: AresusAPI(transport: api), directory: directory,
+                                automatic: false, uploads: uploads)
+        let id = try await enqueue(outbox)
+        await outbox.process()
+        let oldTicket = try #require(uploads.tasks.first)
+        try await uploads.finish(.failure(URLError(.networkConnectionLost)))
+        #expect(outbox.items.only?.state == .onPhone && outbox.items.only?.retryAt != nil)
+        await outbox.retry(id)
+        #expect(uploads.tasks.count == 1 && api.requests.count == 1)
+        let waiting = try AresusJSON.decoder().decode(Drop.self, from: dropAnswer(state: .waiting))
+        await outbox.finished(oldTicket, result: .success(waiting), token: "fictional-empire-token")
+        #expect(outbox.items.count == 1, "late completion of an older attempt cannot finish the retry")
+        await outbox.remove(id)
+        #expect(uploads.cancelled == [id] && outbox.items.isEmpty)
+        #expect(api.requests.map(\.httpMethod) == ["POST", "DELETE"])
+    }
+
+    @Test func retryDeadlineIsHandedToBackgroundSessionBeforeClosing() async throws {
+        let directory = testDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let api = DropTransport(); api.responses = [.answer(201, try dropAnswer())]
+        let uploads = HeldDropUploads(); uploads.supportsDeferredRetry = true
+        let outbox = DropOutbox(session: await signedInSession(), client: AresusAPI(transport: api), directory: directory,
+                                automatic: false, uploads: uploads)
+        _ = try await enqueue(outbox); await outbox.process()
+        try await uploads.finish(.failure(HTTPError.server(503, "Try later.")))
+        let item = try #require(outbox.items.only)
+        #expect(item.uploadSession == uploads.identifier && item.state == .onPhone && item.attempts == 2)
+        #expect(uploads.tasks.count == 1 && uploads.deadlines.last! == item.retryAt)
+        #expect(api.requests.count == 1, "retrying bytes never creates another server drop")
+    }
+
+    @Test func background401EndsSharedSessionAndClearsQueue() async throws {
+        let directory = testDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let session = await signedInSession()
+        let api = DropTransport(); api.responses = [.answer(201, try dropAnswer())]
+        let uploads = HeldDropUploads()
+        let outbox = DropOutbox(session: session, client: AresusAPI(transport: api), directory: directory,
+                                automatic: false, uploads: uploads)
+        _ = try await enqueue(outbox); await outbox.process()
+        try await uploads.finish(.failure(HTTPError.unauthorized))
+        #expect(!session.isSignedIn && outbox.items.isEmpty)
+        #expect(!FileManager.default.fileExists(atPath: directory.path))
+    }
+
+    @Test func reconnectKeepsRunningTaskAndRecoversAnInterruptedSubmission() async throws {
+        let directory = testDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let api = DropTransport(); api.responses = [.answer(201, try dropAnswer())]
+        let uploads = HeldDropUploads()
+        let outbox = DropOutbox(session: await signedInSession(), client: AresusAPI(transport: api), directory: directory,
+                                automatic: false, uploads: uploads)
+        _ = try await enqueue(outbox); await outbox.process()
+        await outbox.reconnect()
+        #expect(outbox.items.only?.uploadSession == uploads.identifier)
+        uploads.tasks = [] // daemon cancelled the task after a force quit, or the process died before task creation
+        api.responses = [.answer(200, Data("{\"drops\":[".utf8) + (try dropAnswer()) + Data("]}".utf8))]
+        await outbox.reconnect()
+        #expect(outbox.items.only?.uploadSession == nil && outbox.items.only?.state == .onPhone)
+        await outbox.process()
+        #expect(uploads.tasks.count == 1 && api.requests.filter { $0.httpMethod == "POST" }.count == 1)
+    }
+
+    @Test func reconnectRecognizesBytesAcceptedBeforeForceQuit() async throws {
+        let directory = testDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let api = DropTransport(); api.responses = [.answer(201, try dropAnswer())]
+        let uploads = HeldDropUploads()
+        let outbox = DropOutbox(session: await signedInSession(), client: AresusAPI(transport: api), directory: directory,
+                                automatic: false, uploads: uploads)
+        _ = try await enqueue(outbox); await outbox.process()
+        uploads.tasks = []
+        api.responses = [.answer(200, Data("{\"drops\":[".utf8) + (try dropAnswer(state: .waiting)) + Data("]}".utf8))]
+        var handedOver = false
+        outbox.onUploaded = { #expect($0.state == .waiting); handedOver = true }
+        await outbox.reconnect()
+        #expect(outbox.items.isEmpty && handedOver)
+        #expect(api.requests.map(\.httpMethod) == ["POST", "GET"])
+    }
+
+    @Test func delegateParsesResponsesAndFinishesEventsAfterRecordUpdate() async throws {
+        let configuration = DropBackgroundUploads.configuration(identifier: DropContainer.appUploadSession)
+        #expect(configuration.sharedContainerIdentifier == DropContainer.appGroup)
+        #expect(configuration.sessionSendsLaunchEvents && configuration.waitsForConnectivity)
+        let response = HTTPURLResponse(url: AresusAPI.baseURL, statusCode: 200, httpVersion: nil, headerFields: nil)!
+        let data = try dropAnswer(state: .waiting)
+        #expect(try DropBackgroundUploads.result(data: data, response: response, error: nil).get().state == .waiting)
+        let unauthorized = HTTPURLResponse(url: AresusAPI.baseURL, statusCode: 401, httpVersion: nil, headerFields: nil)!
+        #expect(throws: HTTPError.self) { try DropBackgroundUploads.result(data: Data(), response: unauthorized, error: nil).get() }
+        let driver = DropBackgroundUploads(identifier: "test-delegate-\(UUID())")
+        defer { driver.invalidate() }
+        var updated = false
+        driver.completed = { _, _, _ in await Task.yield(); updated = true }
+        await withCheckedContinuation { continuation in
+            driver.finishedEvents = { #expect(updated); continuation.resume() }
+            driver.deliver(DropUploadID(record: UUID()), result: .success(try! AresusJSON.decoder().decode(Drop.self, from: data)), token: nil)
+            driver.finishEvents()
+        }
+    }
+
+    @Test func folderCacheMigrationCannotResurrectFoldersAfterLogout() async throws {
+        let root = testDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let old = root.appendingPathComponent("old-folders.json"), group = root.appendingPathComponent("group-folders.json")
+        try sampleData("drop-folders").write(to: old)
+        let session = await signedInSession()
+        let store = DropsStore(session: session, directory: root.appendingPathComponent("outbox"), cacheURL: group,
+                               defaults: nil, automatic: false, uploads: HeldDropUploads(), legacyCacheURL: old)
+        #expect(store.folders != nil && FileManager.default.fileExists(atPath: group.path))
+        #expect(!FileManager.default.fileExists(atPath: old.path))
+        session.logOut()
+        let reopened = DropsStore(session: await signedInSession(), directory: root.appendingPathComponent("outbox"), cacheURL: group,
+                                  defaults: nil, automatic: false, uploads: HeldDropUploads(), legacyCacheURL: old)
+        #expect(reopened.folders == nil)
+    }
+
+    @Test func recentsMigrateOnceAndKeepTheGroupsNewerSelection() throws {
+        let oldName = "test-old-\(UUID())", groupName = "test-group-\(UUID())"
+        let old = try #require(UserDefaults(suiteName: oldName)), group = try #require(UserDefaults(suiteName: groupName))
+        defer { old.removePersistentDomain(forName: oldName); group.removePersistentDomain(forName: groupName) }
+        let target = Target(root: .documents, folder: "Examples")
+        DropRecentFolders(defaults: old).use(target, source: .photo)
+        let migrated = DropRecentFolders(defaults: group, legacyDefaults: old)
+        #expect(migrated.targets == [target] && migrated.lastBySource[.photo] == target)
+        let newer = Target(root: .downloads, folder: "Newer")
+        migrated.use(newer, source: .file)
+        DropRecentFolders(defaults: old).use(Target(root: .documents, folder: "Stale"), source: .file)
+        let reopened = DropRecentFolders(defaults: group, legacyDefaults: old)
+        #expect(reopened.targets == [newer, target])
+        reopened.clear()
+        #expect(DropRecentFolders(defaults: group, legacyDefaults: old).targets.isEmpty)
+    }
+}
+
+@MainActor
+struct ShareItemsTests {
+    private func fileProvider(_ url: URL, type: UTType, name: String?) -> NSItemProvider {
+        let provider = NSItemProvider()
+        provider.suggestedName = name
+        provider.registerFileRepresentation(forTypeIdentifier: type.identifier, fileOptions: [], visibility: .all) { completion in
+            completion(url, false, nil)
+            return nil
+        }
+        return provider
+    }
+
+    @Test func filesCopiedBeforeProviderAccessEndsAndKeepSuggestedNames() async throws {
+        let root = testDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let original = root.appendingPathComponent("provider.pdf")
+        try Data("fictional document".utf8).write(to: original)
+        let temporary = SendTemporaryFiles(base: root.appendingPathComponent("group"))
+        let answer = await ShareItems(temporary: temporary).read(providers: [fileProvider(original, type: .pdf, name: "Notes")])
+        try FileManager.default.removeItem(at: original)
+        let file = try #require(answer.files.only)
+        #expect(file.suggestedName == "Notes.pdf" && file.source == .file && answer.unreadable == 0)
+        guard case .file(let url) = file.content else { Issue.record("must be file-backed"); return }
+        #expect(url.path.hasPrefix(temporary.base.path + "/"))
+        #expect(try Data(contentsOf: url) == Data("fictional document".utf8))
+    }
+
+    @Test func imageDataAndSeveralAttachmentsBecomeFiles() async throws {
+        let root = testDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let png = UIGraphicsImageRenderer(size: CGSize(width: 8, height: 8)).pngData { context in
+            UIColor.systemBlue.setFill(); context.fill(CGRect(x: 0, y: 0, width: 8, height: 8))
+        }
+        let image = NSItemProvider()
+        image.suggestedName = "Example"
+        image.registerDataRepresentation(forTypeIdentifier: UTType.png.identifier, visibility: .all) { completion in
+            completion(png, nil); return nil
+        }
+        let data = NSItemProvider()
+        data.suggestedName = "Read me"
+        data.registerDataRepresentation(forTypeIdentifier: UTType.plainText.identifier, visibility: .all) { completion in
+            completion(Data("fictional note".utf8), nil); return nil
+        }
+        let item = NSExtensionItem(); item.attachments = [image, data]
+        let answer = await ShareItems(temporary: SendTemporaryFiles(base: root)).read([item])
+        #expect(answer.files.count == 2 && answer.unreadable == 0)
+        #expect(answer.files.map(\.source) == [.photo, .file])
+        #expect(answer.files.first?.suggestedName == "Example.png")
+        let photo = try #require(answer.files.first)
+        #expect(SendDraft.defaultName(photo).hasSuffix(".png"))
+        #expect(SendDraft.defaultName(photo) != "Example.png", "Photos and share photos use the capture-date name")
+        for file in answer.files {
+            guard case .file(let url) = file.content else { Issue.record("must be file-backed"); continue }
+            #expect(FileManager.default.fileExists(atPath: url.path))
+        }
+    }
+
+    @Test func unreadableItemsAreCountedAndOnlyTwentyAreRead() async throws {
+        let root = testDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let good = NSItemProvider()
+        good.suggestedName = "Example.txt"
+        good.registerDataRepresentation(forTypeIdentifier: UTType.plainText.identifier, visibility: .all) { completion in
+            completion(Data("fictional".utf8), nil); return nil
+        }
+        let broken = NSItemProvider()
+        broken.registerFileRepresentation(forTypeIdentifier: UTType.pdf.identifier, fileOptions: [], visibility: .all) { completion in
+            completion(nil, false, CocoaError(.fileReadUnknown)); return nil
+        }
+        let answer = await ShareItems(temporary: SendTemporaryFiles(base: root)).read(providers: [broken] + Array(repeating: good, count: 20))
+        #expect(answer.files.count == 19 && answer.unreadable == 2)
+    }
+
+    @Test func defaultNamesHaveExtensionsAndCannotEscapeCopyFolder() {
+        #expect(ShareItems.name(suggested: "", loaded: nil, type: UTType.pdf.identifier) == "File.pdf")
+        #expect(ShareItems.name(suggested: "Sketch", loaded: "x.png", type: UTType.png.identifier) == "Sketch.png")
+        #expect(ShareItems.name(suggested: "Plan.pdf", loaded: "x.pdf", type: UTType.pdf.identifier) == "Plan.pdf")
+        #expect(!ShareItems.name(suggested: "../../outside", loaded: nil, type: UTType.pdf.identifier).contains("/"))
+    }
+
+    @Test func draftStartsWithFilesAddsDeduplicatesAndRemoves() {
+        let first = DropFile(content: .file(URL(fileURLWithPath: "/fictional/first.pdf")), suggestedName: "First.pdf")
+        let second = DropFile(content: .file(URL(fileURLWithPath: "/fictional/second.pdf")), suggestedName: "Second.pdf")
+        let draft = SendDraft(files: [first])
+        draft.choose(Target(root: .documents, folder: "Examples"))
+        draft.useFiles([URL(fileURLWithPath: "/fictional/first.pdf"), URL(fileURLWithPath: "/fictional/second.pdf")], last: nil)
+        #expect(draft.picked.count == 2 && draft.target?.folder == "Examples")
+        draft.remove(draft.picked[0].id)
+        #expect(draft.picked.only?.file.suggestedName == "second.pdf" && draft.name.name == "second.pdf")
+        draft.remove(draft.picked[0].id)
+        #expect(!draft.hasPicked && !draft.canSend)
+        // Photos re-picked via PhotosPicker keep the asset identity despite having a new temporary URL.
+        var photo = first; photo.identity = "fictional-photo-asset"; photo.source = .photo
+        var copy = second; copy.identity = photo.identity; copy.source = .photo
+        draft.use([PickedFile(file: photo, displayName: "First.pdf"), PickedFile(file: copy, displayName: "Second.pdf")], source: .photo, last: nil)
+        #expect(draft.picked.count == 1)
+    }
+}

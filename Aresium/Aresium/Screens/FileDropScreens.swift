@@ -25,52 +25,9 @@ private struct FileDropArea: ViewModifier {
             .overlay {
                 if let hovering, enabled { DropHover(hover: hovering, palette: palette).transition(.opacity) }
             }
-            .onDrop(of: [.item], delegate: FileDropTarget(enabled: enabled, hovering: $hovering,
+            .onDrop(of: [.item], delegate: ProviderDropTarget(enabled: enabled, type: FileDrop.importType,
+                                                          copy: { FileDrop.copyTaken($0, done: $1) }, hovering: $hovering,
                                                           reduceMotion: reduceMotion, dropped: dropped))
-    }
-}
-
-/// The main screen's drop target. Every drag is looked at (`onDrop(of: [.item])`), so one the import does not take gets
-/// the system's "not allowed" look instead of none; while files it takes hover, `hovering` says how many (and the name).
-struct FileDropTarget: DropDelegate {
-    /// Off over the tour, while the store opens, in server mode and behind the lock (`FileDrop.targetOn`).
-    let enabled: Bool
-    @Binding var hovering: FileDrop.Hover?
-    let reduceMotion: Bool
-    /// The copies of the dropped files, on the main actor once they are all copied, and how many could not be copied.
-    let dropped: ([URL], Int) -> Void
-
-    func validateDrop(info: DropInfo) -> Bool { enabled }
-
-    func dropEntered(info: DropInfo) { show(Self.hover(info)) }
-
-    func dropUpdated(info: DropInfo) -> DropProposal? {
-        let hover = Self.hover(info)
-        if hover != hovering { show(hover) }
-        return DropProposal(operation: hover == nil ? .forbidden : .copy)
-    }
-
-    func dropExited(info: DropInfo) { show(nil) }
-
-    func performDrop(info: DropInfo) -> Bool {
-        show(nil)
-        let providers = info.itemProviders(for: [.item])
-        guard enabled, FileDrop.accepts(providers.map(Self.item)) else { return false }
-        FileDrop.copyTaken(providers) { copies, failed in dropped(copies, failed) }
-        return true
-    }
-
-    private static func hover(_ info: DropInfo) -> FileDrop.Hover? {
-        FileDrop.hover(info.itemProviders(for: [.item]).map(item))
-    }
-
-    private static func item(_ provider: NSItemProvider) -> FileDrop.Item {
-        FileDrop.Item(types: provider.registeredTypeIdentifiers, name: provider.suggestedName)
-    }
-
-    /// A short fade in and out; nothing moves, so Reduce Motion keeps it (only quicker).
-    private func show(_ hover: FileDrop.Hover?) {
-        withAnimation(.easeOut(duration: reduceMotion ? 0.12 : 0.18)) { hovering = hover }
     }
 }
 

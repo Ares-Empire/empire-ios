@@ -17,7 +17,7 @@ struct FolderPickerScreen: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                SearchCapsule(text: $query, prompt: String(localized: "Search folders"))
+                SearchCapsule(text: $query, prompt: String(localized: LocalizedStringResource("Search folders", table: "AresusDrops", locale: .appLanguage)))
                 if query.trimmingCharacters(in: .whitespaces).isEmpty { browse } else { results }
             }
             .padding(.horizontal, 18).padding(.top, 8).padding(.bottom, 30)
@@ -28,7 +28,7 @@ struct FolderPickerScreen: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {
-                Text("Folder").font(AppFont.text(17, weight: .bold)).foregroundStyle(Ink.primary)
+                Text("Folder", tableName: "AresusDrops").font(AppFont.text(17, weight: .bold)).foregroundStyle(Ink.primary)
             }
         }
         .task { if drops.folders == nil { await drops.load(.folders) } }
@@ -39,7 +39,7 @@ struct FolderPickerScreen: View {
     @ViewBuilder private var browse: some View {
         let recents = drops.recentFolders.targets
         if !recents.isEmpty {
-            FolderSection(title: String(localized: "Recent")) {
+            FolderSection(title: String(localized: LocalizedStringResource("Recent", table: "AresusDrops", locale: .appLanguage))) {
                 ForEach(Array(recents.enumerated()), id: \.offset) { index, target in
                     if index > 0 { RowDivider() }
                     Button { choose(target) } label: {
@@ -53,7 +53,7 @@ struct FolderPickerScreen: View {
         }
         VStack(spacing: 0) {
             Button { choose(nil) } label: {
-                FolderRow(symbol: "tray", title: String(localized: "Sort later"), subtitle: sortLaterLine,
+                FolderRow(symbol: "tray", title: String(localized: LocalizedStringResource("Sort later", table: "AresusDrops", locale: .appLanguage)), subtitle: sortLaterLine,
                           isChosen: chosen == nil)
             }
             .buttonStyle(PressedRow())
@@ -62,10 +62,10 @@ struct FolderPickerScreen: View {
         .padding(.top, recents.isEmpty ? 22 : 18)
         if let folders = drops.folders {
             if folders.updated == nil {
-                CalmMessage(text: String(localized: "The MacBook has not sent its folders yet. Files can still go to Sort later."))
+                CalmMessage(text: String(localized: LocalizedStringResource("The MacBook has not sent its folders yet. Files can still go to Sort later.", table: "AresusDrops", locale: .appLanguage)))
                     .padding(.top, 48)
             } else {
-                FolderSection(title: String(localized: "On the MacBook")) {
+                FolderSection(title: String(localized: LocalizedStringResource("On the MacBook", table: "AresusDrops", locale: .appLanguage))) {
                     ForEach(Array(DropRoot.allCases.enumerated()), id: \.offset) { index, root in
                         if index > 0 { RowDivider() }
                         NavigationLink(value: SendRoute.folder(.init(root: root, path: ""))) {
@@ -76,13 +76,13 @@ struct FolderPickerScreen: View {
                     }
                 }
                 if let updated = folders.updated {
-                    Text("Folders as of \(DropPathText.when(updated, now: .now))")
+                    Text("Folders as of \(DropPathText.when(updated, now: .now))", tableName: "AresusDrops")
                         .font(AppFont.text(12)).foregroundStyle(Ink.muted)
                         .frame(maxWidth: .infinity).padding(.top, 22)
                 }
             }
         } else if let error = drops.errors[.folders] {
-            CalmMessage(text: error, actionTitle: String(localized: "Try again")) { Task { await drops.load(.folders) } }
+            CalmMessage(text: error, actionTitle: String(localized: LocalizedStringResource("Try again", table: "AresusDrops", locale: .appLanguage))) { Task { await drops.load(.folders) } }
                 .padding(.top, 48)
         } else {
             CalmLoading().padding(.top, 60)
@@ -94,7 +94,7 @@ struct FolderPickerScreen: View {
         guard let folders = drops.folders, !folders.fallback.isEmpty else { return nil }
         let place = DropPathText.path(.documents, folders.fallback)
         guard folders.fallbackCount > 0 else { return place }
-        return place + " · " + String(localized: "\(folders.fallbackCount) files waiting")
+        return place + " · " + String(localized: LocalizedStringResource("\(folders.fallbackCount) files waiting", table: "AresusDrops", locale: .appLanguage))
     }
 
     // MARK: searching
@@ -102,7 +102,7 @@ struct FolderPickerScreen: View {
     @ViewBuilder private var results: some View {
         let found = tree.search(query)
         if found.isEmpty {
-            Text("No folder matches “\(query.trimmingCharacters(in: .whitespaces))”.")
+            Text("No folder matches “\(query.trimmingCharacters(in: .whitespaces))”.", tableName: "AresusDrops")
                 .font(AppFont.text(13)).foregroundStyle(Ink.muted)
                 .frame(maxWidth: .infinity).multilineTextAlignment(.center).padding(.top, 40)
         } else {
@@ -151,7 +151,7 @@ struct FolderPage: View {
             VStack(alignment: .leading, spacing: 0) {
                 VStack(spacing: 0) {
                     Button { choose(folder.target) } label: {
-                        FolderRow(symbol: "checkmark.circle", title: String(localized: "Choose \(name)"),
+                        FolderRow(symbol: "checkmark.circle", title: String(localized: LocalizedStringResource("Choose \(name)", table: "AresusDrops", locale: .appLanguage)),
                                   subtitle: folder.path.isEmpty ? nil : DropPathText.path(folder.root, folder.path),
                                   isChosen: page.isChosen,
                                   tint: AppAccent.aresus.color, symbolTint: AppAccent.aresus.color)
@@ -164,10 +164,10 @@ struct FolderPage: View {
                 .padding(.top, 8)
                 if let entry { entryLine(entry).padding(.top, 10) }
                 if page.isLeaf {
-                    Text("No folders inside.").font(AppFont.text(13)).foregroundStyle(Ink.muted)
+                    Text("No folders inside.", tableName: "AresusDrops").font(AppFont.text(13)).foregroundStyle(Ink.muted)
                         .frame(maxWidth: .infinity).padding(.top, 36)
                 } else {
-                    FolderSection(title: String(localized: "Inside")) {
+                    FolderSection(title: String(localized: LocalizedStringResource("Inside", table: "AresusDrops", locale: .appLanguage))) {
                         ForEach(Array(page.rows.enumerated()), id: \.element.id) { index, row in
                             if index > 0 { RowDivider() }
                             NavigationLink(value: SendRoute.folder(row.folder)) {
@@ -203,10 +203,10 @@ struct FolderPage: View {
     private func newFolderRow(_ page: DropFolderPage) -> some View {
         Button { open(page.newFolder ?? "") } label: {
             if let new = page.newFolder {
-                FolderRow(symbol: "folder.badge.plus", title: new, subtitle: String(localized: "New folder"),
+                FolderRow(symbol: "folder.badge.plus", title: new, subtitle: String(localized: LocalizedStringResource("New folder", table: "AresusDrops", locale: .appLanguage)),
                           isChosen: true, plainSubtitle: true)
             } else {
-                FolderRow(symbol: "folder.badge.plus", title: String(localized: "New folder"))
+                FolderRow(symbol: "folder.badge.plus", title: String(localized: LocalizedStringResource("New folder", table: "AresusDrops", locale: .appLanguage)))
             }
         }
         .buttonStyle(PressedRow())
@@ -222,15 +222,15 @@ struct FolderPage: View {
             Image(systemName: "folder.badge.plus").font(.system(size: 15, weight: .regular)).foregroundStyle(Ink.muted)
                 .frame(width: 22)
             TextField("", text: Binding(get: { self.entry?.text ?? "" }, set: { self.entry?.text = $0 }),
-                      prompt: Text("Folder name").foregroundStyle(Ink.muted))
+                      prompt: Text("Folder name", tableName: "AresusDrops").foregroundStyle(Ink.muted))
                 .font(AppFont.text(15, weight: .medium)).foregroundStyle(Ink.primary)
                 .textInputAutocapitalization(.sentences).autocorrectionDisabled()
                 .submitLabel(.done)
                 .focused($typing)
                 .onSubmit(create)
-                .accessibilityLabel(Text("New folder"))
+                .accessibilityLabel(Text("New folder", tableName: "AresusDrops"))
             Button(action: create) {
-                Text(existing == nil ? String(localized: "Create") : String(localized: "Choose"))
+                Text(existing == nil ? String(localized: LocalizedStringResource("Create", table: "AresusDrops", locale: .appLanguage)) : String(localized: LocalizedStringResource("Choose", table: "AresusDrops", locale: .appLanguage)))
                     .font(AppFont.text(15, weight: .semibold))
                     .foregroundStyle(target == nil ? Ink.muted : AppAccent.aresus.color)
                     .padding(.horizontal, 10).frame(minHeight: 44).contentShape(Rectangle())
@@ -246,10 +246,10 @@ struct FolderPage: View {
         if let rule = entry.rule(in: tree) {
             FormProblem(text: DropRuleWording.text(rule))
         } else if let existing = entry.existing(in: tree) {
-            FormNote(text: String(localized: "“\(DropPathText.name(existing.root, existing.path))” is already here."))
+            FormNote(text: String(localized: LocalizedStringResource("“\(DropPathText.name(existing.root, existing.path))” is already here.", table: "AresusDrops", locale: .appLanguage)))
         } else {
-            FormNote(text: draft.picked.count > 1 ? String(localized: "The MacBook makes it when the files arrive.")
-                                                   : String(localized: "The MacBook makes it when the file arrives."))
+            FormNote(text: draft.picked.count > 1 ? String(localized: LocalizedStringResource("The MacBook makes it when the files arrive.", table: "AresusDrops", locale: .appLanguage))
+                                                   : String(localized: LocalizedStringResource("The MacBook makes it when the file arrives.", table: "AresusDrops", locale: .appLanguage)))
         }
     }
 
@@ -333,7 +333,7 @@ private struct FolderRow: View {
             if isChosen {
                 Image(systemName: "checkmark").font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(AppAccent.aresus.color)
-                    .accessibilityLabel(Text("Chosen"))
+                    .accessibilityLabel(Text("Chosen", tableName: "AresusDrops"))
             }
             if pushes {
                 Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold)).foregroundStyle(Ink.muted)
@@ -364,7 +364,7 @@ private struct SearchCapsule: View {
                         .frame(width: 30, height: 30).contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(Text("Clear"))
+                .accessibilityLabel(Text("Clear", tableName: "AresusDrops"))
             }
         }
         .padding(.leading, 14).padding(.trailing, 6).frame(height: 44)
