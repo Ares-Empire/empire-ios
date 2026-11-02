@@ -170,6 +170,9 @@ struct GlassCard: ViewModifier {
     var radius: CGFloat = Ink.cardRadius
     var raised = false            // a little lighter, for the one card that matters most on a screen
     var edge: Color? = nil        // one colour in place of the bright edge (Aresus's issue box: a faint red)
+    /// false: the wall's colour in place of the blur, for a card that lies over something moving (Arestemis's tour card
+    /// over a pulsing search, brief 139): a blur there is taken again in every frame, with a group pass.
+    var blur = true
     @Environment(\.colorScheme) private var scheme
     @Environment(\.self) private var environment
 
@@ -207,7 +210,11 @@ struct GlassCard: ViewModifier {
                 }
             }
             .background {
-                shape.fill(Material.ultraThinMaterial.shadow(shadow.outside(under: fill, in: environment)))
+                if blur {
+                    shape.fill(Material.ultraThinMaterial.shadow(shadow.outside(under: fill, in: environment)))
+                } else {
+                    shape.fill(Ink.background.shadow(shadow.outside(under: fill, in: environment)))
+                }
             }
     }
 
@@ -254,8 +261,8 @@ private struct CardShadow {
 
 extension View {
     func glassCard(accent: AppAccent? = nil, radius: CGFloat = Ink.cardRadius, raised: Bool = false,
-                   edge: Color? = nil) -> some View {
-        modifier(GlassCard(accent: accent, radius: radius, raised: raised, edge: edge))
+                   edge: Color? = nil, blur: Bool = true) -> some View {
+        modifier(GlassCard(accent: accent, radius: radius, raised: raised, edge: edge, blur: blur))
     }
 }
 

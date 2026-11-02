@@ -309,18 +309,21 @@ extension View {
 
     /// Scrolling content fades out at a fixed header (`top`) or bottom bar (`bottom`) instead of running under it, so
     /// the wall stays one surface. An edge without a fade lets the content run under the system bars as usual.
+    /// `underBar`: the scroll view stands under a navigation bar, which its content runs on under (a pushed page with
+    /// a back button): the wall covers everything above the scroll view, to the screen's top, before the fade begins
+    /// (brief 139, a listing's page; with iOS's own edge effect hidden, `scrollEdgeEffectHidden`).
     ///
     /// The fade is drawn by the wall around the scroll view (`provinceWall()`, which every screen has): the wall again,
     /// over the content's edge, opaque at the edge and clear after `top` / `bottom` points. It used to be a mask over the
     /// scroll view, which looks the same but renders the whole scroll view offscreen, the glass cards' blur included,
     /// and redraws it there whenever anything in it moves (brief 67: the black corner on the hunt's card).
-    func edgeFade(top: CGFloat = 0, bottom: CGFloat = 0) -> some View {
+    func edgeFade(top: CGFloat = 0, bottom: CGFloat = 0, underBar: Bool = false) -> some View {
         background {
             // Ignoring the safe area, this covers where the scroll view draws: its frame and the bars' area its content
             // runs on under at an edge.
             Color.clear.ignoresSafeArea()
                 .anchorPreference(key: EdgeFadeKey.self, value: .bounds) { drawn in
-                    [EdgeFade(drawn: drawn, top: top, bottom: bottom)]
+                    [EdgeFade(drawn: drawn, top: top, bottom: bottom, underBar: underBar)]
                 }
         }
         .transformAnchorPreference(key: EdgeFadeKey.self, value: .bounds) { fades, frame in
@@ -335,6 +338,8 @@ private struct EdgeFade {
     let drawn: Anchor<CGRect>
     let top: CGFloat
     let bottom: CGFloat
+    /// The wall covers everything above the scroll view, to the screen's top (`edgeFade(underBar:)`).
+    var underBar = false
     /// The scroll view's frame, where the fades begin.
     var frame: Anchor<CGRect>?
 }
@@ -357,7 +362,8 @@ private struct EdgeFadeBands: View {
                     let drawn = proxy[fade.drawn]
                     let frame = proxy[frameAnchor]
                     if fade.top > 0 {
-                        band(Color.black, x: drawn.minX, y: drawn.minY, width: drawn.width, height: frame.minY - drawn.minY)
+                        let start = fade.underBar ? 0 : drawn.minY
+                        band(Color.black, x: drawn.minX, y: start, width: drawn.width, height: frame.minY - start)
                         band(LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom),
                              x: drawn.minX, y: frame.minY, width: drawn.width, height: fade.top)
                     }

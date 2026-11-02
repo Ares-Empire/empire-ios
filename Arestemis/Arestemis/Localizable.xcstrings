@@ -382,6 +382,36 @@
         }
       }
     },
+    "A balcony would be nice, not on the ground floor" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Balkon wäre schön, kein Erdgeschoss"
+          }
+        }
+      }
+    },
+    "A flat swap, not a flat to rent." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein Wohnungstausch, keine Wohnung zur Miete."
+          }
+        }
+      }
+    },
+    "A listing" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein Angebot"
+          }
+        }
+      }
+    },
     "A page you know: a new version, a new job, tickets, the canteen menu." : {
       "localizations" : {
         "de" : {
@@ -392,12 +422,52 @@
         }
       }
     },
+    "A push when a price falls or a product is back in stock, with its curve." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein Push, wenn ein Preis fällt oder ein Produkt wieder lieferbar ist, dazu die Kurve."
+          }
+        }
+      }
+    },
     "A push when it happens" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Push, wenn es so weit ist"
+          }
+        }
+      }
+    },
+    "A push when something new appears on a page: a version, a job, the menu." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein Push, wenn auf einer Seite etwas Neues erscheint: eine Version, eine Stelle, der Speiseplan."
+          }
+        }
+      }
+    },
+    "A search" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eine Suche"
+          }
+        }
+      }
+    },
+    "A sublet with an end date; you excluded sublets." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eine Zwischenmiete mit Enddatum; Zwischenmieten hast du ausgeschlossen."
           }
         }
       }
@@ -458,6 +528,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Hinzugekommen"
+          }
+        }
+      }
+    },
+    "Aeron office chair with adjustable armrests" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aeron Bürostuhl mit verstellbaren Armlehnen"
           }
         }
       }
@@ -582,6 +662,36 @@
         }
       }
     },
+    "An Aeron in size B under your price limit, 5 km away." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein Aeron in Größe B unter deinem Preislimit, 5 km entfernt."
+          }
+        }
+      }
+    },
+    "An Aeron in size B; the bid is still well under your limit." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein Aeron in Größe B; das Gebot liegt noch deutlich unter deinem Limit."
+          }
+        }
+      }
+    },
+    "An Aeron that ships, a little under your limit." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein Aeron mit Versand, knapp unter deinem Limit."
+          }
+        }
+      }
+    },
     "Any" : {
       "localizations" : {
         "de" : {
@@ -638,6 +748,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Stadtteile"
+          }
+        }
+      }
+    },
+    "Arestemis searches for you" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arestemis sucht für dich"
           }
         }
       }
@@ -742,6 +862,16 @@
         }
       }
     },
+    "Barely used, from a home office. Pickup in Garching." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kaum benutzt, aus dem Homeoffice. Abholung in Garching."
+          }
+        }
+      }
+    },
     "Between" : {
       "localizations" : {
         "de" : {
@@ -758,6 +888,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Gebote"
+          }
+        }
+      }
+    },
+    "Bright 2-room flat on the 3rd floor with a south-facing balcony. Fitted kitchen, cellar, bike room. Hohenzollernplatz underground station 3 minutes away." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Helle 2-Zimmer-Wohnung im 3. OG mit Südbalkon. Einbauküche, Keller, Fahrradkeller. U-Bahn Hohenzollernplatz 3 Minuten."
+          }
+        }
+      }
+    },
+    "Bright 2-room flat with balcony in Schwabing" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Helle 2-Zimmer-Wohnung mit Balkon in Schwabing"
           }
         }
       }
@@ -1253,6 +1403,16 @@
         }
       }
     },
+    "Each search with its listings. The magnifying glass searches all of them." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jede Suche mit ihren Angeboten. Die Lupe durchsucht alle."
+          }
+        }
+      }
+    },
     "Edit" : {
       "localizations" : {
         "de" : {
@@ -1383,6 +1543,16 @@
         }
       }
     },
+    "Every few minutes it reads the sites, checks each new listing against your search and sends you a push when one fits. The tour shows sample searches." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alle paar Minuten liest Arestemis die Seiten, gleicht jedes neue Angebot mit deiner Suche ab und schickt dir einen Push, wenn eins passt. Die Tour zeigt Beispiel-Suchen."
+          }
+        }
+      }
+    },
     "Every hour" : {
       "localizations" : {
         "de" : {
@@ -1399,6 +1569,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Jeder automatisch geschriebene Text enthält diese Punkte. Verwendet werden nur deine Hinweise und die Angaben über dich, erfunden wird nichts."
+          }
+        }
+      }
+    },
+    "Everything new, grouped by search. Swipe right to save a listing, left to dismiss it." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alles Neue, nach Suche geordnet. Wisch ein Angebot nach rechts zum Speichern, nach links zum Entfernen."
           }
         }
       }
@@ -1533,6 +1713,16 @@
         }
       }
     },
+    "Flat swap: I offer 2 rooms and am looking for 3." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wohnungstausch: Biete 2 Zimmer, suche 3."
+          }
+        }
+      }
+    },
     "Flatmates" : {
       "localizations" : {
         "de" : {
@@ -1549,6 +1739,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Gefunden: %@"
+          }
+        }
+      }
+    },
+    "Four kinds: Flat (2 rooms up to €1,100), Things (a Kallax up to €40), Price monitor (one product's price) and Watch a website (a new version). Tap an example and the form is filled in." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vier Arten: Wohnung (2 Zimmer bis 1.100 €), Dinge (ein Kallax bis 40 €), Preismonitor (der Preis eines Produkts) und Webseite beobachten (eine neue Version). Tippe auf ein Beispiel, dann ist das Formular schon ausgefüllt."
           }
         }
       }
@@ -1593,12 +1793,68 @@
         }
       }
     },
+    "Furnished 1-room flat, Maxvorstadt" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Möblierte 1-Zimmer-Wohnung, Maxvorstadt"
+          }
+        }
+      }
+    },
+    "Furnished, for a limited time only." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Möbliert, nur befristet."
+          }
+        }
+      }
+    },
     "Hallo, …" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Hallo, …"
+          }
+        }
+      }
+    },
+    "Hello,\n\nI read your listing “%@” with great interest. I live quietly and tidily, I don't smoke, and the rent is secure.\n\nI would be glad to come to a viewing; my times are flexible.\n\nBest regards\n%@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hallo,\n\nmit großem Interesse habe ich Ihre Anzeige „%@“ gelesen. Ich lebe ruhig und ordentlich, bin Nichtraucher, und die Miete ist gesichert.\n\nÜber einen Besichtigungstermin würde ich mich sehr freuen; ich bin zeitlich flexibel.\n\nViele Grüße\n%@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hello,\n\nI read your listing “%1$@” with great interest. I live quietly and tidily, I don't smoke, and the rent is secure.\n\nI would be glad to come to a viewing; my times are flexible.\n\nBest regards\n%2$@"
+          }
+        }
+      }
+    },
+    "Herman Miller Aeron office chair, size B, auction" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Herman Miller Aeron Bürostuhl, Größe B, Auktion"
+          }
+        }
+      }
+    },
+    "Herman Miller Aeron, size B, like new" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Herman Miller Aeron, Größe B, wie neu"
           }
         }
       }
@@ -1679,6 +1935,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Auktionen einbeziehen"
+          }
+        }
+      }
+    },
+    "It runs until you pause it; the number shows the new listings you haven't seen yet. Tap the card for its page." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sie läuft, bis du sie pausierst; die Zahl zeigt die neuen Angebote, die du noch nicht gesehen hast. Antippen öffnet ihre Seite."
           }
         }
       }
@@ -1793,6 +2059,26 @@
         }
       }
     },
+    "Listings → New" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Angebote → Neu"
+          }
+        }
+      }
+    },
+    "Listings → Searches" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Angebote → Suchen"
+          }
+        }
+      }
+    },
     "Loading listings…" : {
       "localizations" : {
         "de" : {
@@ -1879,6 +2165,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Max. Mitbewohner"
+          }
+        }
+      }
+    },
+    "Mensa Garching menu" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Speiseplan Mensa Garching"
           }
         }
       }
@@ -2039,6 +2335,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Neue Beobachtung"
+          }
+        }
+      }
+    },
+    "Next" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Weiter"
           }
         }
       }
@@ -2563,6 +2869,16 @@
         }
       }
     },
+    "Pork schnitzel with fries on Tuesday" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schweineschnitzel mit Pommes am Dienstag"
+          }
+        }
+      }
+    },
     "Portals" : {
       "localizations" : {
         "de" : {
@@ -2619,6 +2935,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Preismonitor"
+          }
+        }
+      }
+    },
+    "Price monitor and Watch a website" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preismonitor und Webseite beobachten"
           }
         }
       }
@@ -2913,6 +3239,16 @@
         }
       }
     },
+    "Schnitzel at the Mensa" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schnitzel in der Mensa"
+          }
+        }
+      }
+    },
     "Search" : {
       "localizations" : {
         "de" : {
@@ -3063,6 +3399,36 @@
         }
       }
     },
+    "Size B, black. Shipping possible." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Größe B, schwarz. Versand möglich."
+          }
+        }
+      }
+    },
+    "Size B, original armrests, a few marks on the base." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Größe B, Original-Armlehnen, ein paar Gebrauchsspuren am Fuß."
+          }
+        }
+      }
+    },
+    "Skip" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Überspringen"
+          }
+        }
+      }
+    },
     "Start" : {
       "localizations" : {
         "de" : {
@@ -3123,6 +3489,16 @@
         }
       }
     },
+    "Swap: my 2 rooms in Schwabing for 3 rooms" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tausche 2 Zi. in Schwabing gegen 3 Zi."
+          }
+        }
+      }
+    },
     "Tell me when" : {
       "localizations" : {
         "de" : {
@@ -3179,6 +3555,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Die Suche endet und ihre Angebote werden gelöscht."
+          }
+        }
+      }
+    },
+    "The listing does not say how much the deposit is." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Anzeige nennt keine Kaution."
           }
         }
       }
@@ -3383,6 +3769,16 @@
         }
       }
     },
+    "Tour of Arestemis" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tour durch Arestemis"
+          }
+        }
+      }
+    },
     "Town locations for thing searches" : {
       "localizations" : {
         "de" : {
@@ -3409,6 +3805,36 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Erneut versuchen"
+          }
+        }
+      }
+    },
+    "Tuesday: pork schnitzel with fries" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dienstag: Schweineschnitzel mit Pommes"
+          }
+        }
+      }
+    },
+    "Tuesday: vegetable lasagne" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dienstag: Gemüselasagne"
+          }
+        }
+      }
+    },
+    "Two rooms with a balcony in Schwabing, under your warm rent limit and free when you want to move in." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zwei Zimmer mit Balkon in Schwabing, unter deiner Grenze für die Warmmiete und frei, wann du einziehen willst."
           }
         }
       }
@@ -3603,6 +4029,16 @@
         }
       }
     },
+    "What the check turned down in the last 7 days, each with its reason. If good listings end up here, the search is too strict." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was die Prüfung in den letzten 7 Tagen abgelehnt hat, jeweils mit Grund. Landen hier gute Angebote, ist die Suche zu streng."
+          }
+        }
+      }
+    },
     "What you look for" : {
       "localizations" : {
         "de" : {
@@ -3629,6 +4065,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Warum es passt"
+          }
+        }
+      }
+    },
+    "With sample searches" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mit Beispiel-Suchen"
           }
         }
       }
@@ -4029,6 +4475,16 @@
         }
       }
     },
+    "there is schnitzel this week" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "es diese Woche Schnitzel gibt"
+          }
+        }
+      }
+    },
     "today %@" : {
       "localizations" : {
         "de" : {
@@ -4130,6 +4586,16 @@
     },
     "–" : {
       "shouldTranslate" : false
+    },
+    "“Why it fits” says what the check found and what to check yourself. For flats, “Application” writes the text you send." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "„Warum es passt“ sagt, was die Prüfung gefunden hat und was du selbst prüfen solltest. Bei Wohnungen schreibt „Bewerbung“ den Text, den du schickst."
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

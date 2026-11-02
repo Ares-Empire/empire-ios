@@ -19,6 +19,7 @@ struct SearchListingsPage: View {
             }
         }
         .frame(maxWidth: .infinity)
+        .tourSpotlight()
         .provinceWall()
         .navigationBarTitleDisplayMode(.inline)
     }
