@@ -1,6 +1,6 @@
 # 206: Money paid back for several payments at once: the screens
 
-Status: draft (waits for brief 205)
+Status: running
 Branch: `claude/206-paid-back-many` · Worktree: `../empire-ios-206-paid-back-many` · Built by: a Claude agent (the look
 and the flow) · Simulator: `claude-206` (create it: iPhone 17, iOS 27.0)
 

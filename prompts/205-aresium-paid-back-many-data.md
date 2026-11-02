@@ -1,6 +1,6 @@
 # 205: Money paid back for several payments at once: the data
 
-Status: draft
+Status: merged 2026-11-02 (850 Aresium tests, one import test passed on a rerun alone; PaybackGroups.swift: group, pouring plan, group suggestions, setPaybacks with one undo)
 Branch: `codex/205-paid-back-many` · Worktree: `../empire-ios-205-paid-back-many` · Model: `gpt-6.1-sol`, effort `high` ·
 Simulator: `codex-205` (create it: iPhone 17, iOS 27.0) · The screens follow in brief 206 (a Claude agent) on this
 brief's API.
