@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!-- One login for all Empire apps: the shared App Group and Keychain group (Shared/EmpireShared.swift).
+     Aresus's own App Group: drops shared with the share extension (AresusDrops/DropContainer.swift).
      Push notifications (ares-empire/docs/PUSH.md), time-sensitive ones for new matches / issues. Both need the paid
      team on a device; the simulator embeds them as simulated entitlements. -->
 <plist version="1.0">
@@ -12,6 +13,7 @@
 	<key>com.apple.security.application-groups</key>
 	<array>
 		<string>group.de.ares-empire.shared</string>
+		<string>group.de.ares-empire.aresus</string>
 	</array>
 	<key>keychain-access-groups</key>
 	<array>

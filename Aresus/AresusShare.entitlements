@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- The share extension: the shared App Group and Keychain group (the Empire login, Shared/EmpireShared.swift), and
+     Aresus's own App Group, where drops wait between the share sheet and the app and the background uploads keep their
+     files (AresusDrops/DropContainer.swift). Needs the paid team on a device. -->
+<plist version="1.0">
+<dict>
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.de.ares-empire.shared</string>
+		<string>group.de.ares-empire.aresus</string>
+	</array>
+	<key>keychain-access-groups</key>
+	<array>
+		<string>$(AppIdentifierPrefix)de.ares-empire.shared</string>
+	</array>
+</dict>
+</plist>
