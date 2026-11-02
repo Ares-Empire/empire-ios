@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// A hunt's page (a card on the Hunts tab, pushed): today's big hunt card with Start / Pause, Edit search (the kind's
-/// form) and Listings (the Listings tab with this hunt chosen), its figures (New, Today, Applied or Asked; a watch's
+/// form) and Listings (this search's listings on the Listings tab, over Searches), its figures (New, Today, Applied or Asked; a watch's
 /// Saved) and when it was last read (a watch's card says it), then its newest matches. The `…` in the bar renames it
 /// (Apple's name alert, up to 60 characters; empty names it after its search, or a watch after its page, again) or
 /// deletes it with its matches (Apple's destructive confirmation). A watch's words name it a watch (`HuntWords`).
@@ -47,7 +47,7 @@ struct HuntPage: View {
         }
         .confirmationDialog(words.deleteQuestion, isPresented: $confirmDelete, titleVisibility: .visible) {
             Button(words.delete, role: .destructive) {
-                navigation.leaveDeleted()
+                navigation.leaveDeleted(id)
                 Task { await store.deleteHunt(id: id) }
             }
         } message: {
@@ -121,12 +121,10 @@ struct HuntPage: View {
         .accessibilityLabel("Search actions")
     }
 
-    /// The Listings tab with this hunt chosen, and the filter asked for (or the one it shows).
+    /// This search's listings on the Listings tab at the filter asked for (Listings: New while it has new ones, else
+    /// All).
     private func showListings(_ filter: MatchFilter?) {
-        store.selectedHuntID = id
-        if let filter { navigation.filter = filter }
-        navigation.listingsPath = []
-        navigation.tab = .listings
+        navigation.showSearch(id, filter: filter ?? .opening(store.card(id)?.counts))
     }
 }
 

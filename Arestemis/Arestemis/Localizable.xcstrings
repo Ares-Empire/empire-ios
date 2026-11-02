@@ -116,6 +116,26 @@
         }
       }
     },
+    "%lld applied" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld beworben"
+          }
+        }
+      }
+    },
+    "%lld asked" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld angefragt"
+          }
+        }
+      }
+    },
     "%lld days left" : {
       "localizations" : {
         "de" : {
@@ -296,6 +316,16 @@
         }
       }
     },
+    "%lld saved" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld gespeichert"
+          }
+        }
+      }
+    },
     "About you" : {
       "localizations" : {
         "de" : {
@@ -382,6 +412,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Alle Angebote"
+          }
+        }
+      }
+    },
+    "All searches" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alle Suchen"
           }
         }
       }
@@ -692,6 +732,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Stadt"
+          }
+        }
+      }
+    },
+    "Clear text" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Text löschen"
           }
         }
       }
@@ -1557,6 +1607,16 @@
         }
       }
     },
+    "More listings match. Another word narrows it down." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Es passen noch mehr Angebote. Ein weiteres Wort grenzt ein."
+          }
+        }
+      }
+    },
     "Move-in" : {
       "localizations" : {
         "de" : {
@@ -1753,6 +1813,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Hinweise"
+          }
+        }
+      }
+    },
+    "Nothing found for “%@”." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nichts gefunden für „%@“."
           }
         }
       }
@@ -2337,6 +2407,36 @@
         }
       }
     },
+    "Search by name or place" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nach Name oder Ort suchen"
+          }
+        }
+      }
+    },
+    "Search listings" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Angebote durchsuchen"
+          }
+        }
+      }
+    },
+    "Searches" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suchen"
+          }
+        }
+      }
+    },
     "Seller" : {
       "localizations" : {
         "de" : {
@@ -2743,6 +2843,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Gib mindestens zwei Buchstaben ein. Orte in Deutschland, die die Portale durchsuchen können."
+          }
+        }
+      }
+    },
+    "Type at least two letters. The best matches come first." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gib mindestens zwei Buchstaben ein. Die besten Treffer kommen zuerst."
           }
         }
       }

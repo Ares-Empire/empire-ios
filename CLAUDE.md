@@ -496,12 +496,12 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   `AresusUITests` (UI tests, in the scheme): Settings → Language switched both ways with the real taps, about a minute.
 - **Arestemis app** (2026-10-24, build A1): `Arestemis/` (bundle id `de.ares-empire.arestemis`), the hunter for flats and, since
   build 6 (briefs 113, 114, 2026-11-02), things for sale: several hunts, two tabs Suche (the Hunts list, each hunt's page, the
-  forms opened from a hunt) and Angebote (hunt chips), on the Arestemis API (`~/Arestemis/docs/API.md`; samples in `Arestemis/Arestemis/Samples/`, copies of its `docs/samples/`).
+  forms opened from a hunt) and Angebote (New | Searches since brief 133, below), on the Arestemis API (`~/Arestemis/docs/API.md`; samples in `Arestemis/Arestemis/Samples/`, copies of its `docs/samples/`).
   Data in `API/` + `Model/` (one `ArestemisStore`, optimistic changes with rollback), screens in `Screens/` on
   `Shared/Design`. Launch arguments (DEBUG): `-sampleData` (+ `-sampleNoHunt`, `-samplePaused`, `-sampleLoading`),
   `-tab hunt|listings|search` (`search`: the first hunt's form), `-filter new|saved|applied|all`, `-openMatch <id>`, brief 114's
   `-openHunt <id>`, `-openForm <id>`, `-openItemForm`, `-newItemForm`, `-newFlatForm`, `-newSearch` (the kind dialog),
-  `-sampleHunt <id>` (the Listings chip), `-sampleSlowed`, `-sampleNewerKind`;
+  `-sampleSlowed`, `-sampleNewerKind`; brief 133's `-listings new|searches`, `-openSearch <id>`, `-search <words>`;
   `-openSheet settings|application|rejected|place|describe`, `-scrollBottom`, `-scrollTo size|rent|movein` (the thing form:
   `where`); Settings →
   Application (brief 61): `-openSettingsPage ownText|notes|aboutMe`, `-sampleOwnMode`, `-sampleNoTexts`. Push: the category and
@@ -540,6 +540,34 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   matches 35 and 36 (`at_start`); DEBUG `-openWatchForm`, `-newWatchForm` (`-watchURL <text>`, `-watchChange <text>`,
   `-saveWatch`: the sample imitates the server's refusals), `-sampleWatchRead <read>` (hunt 7's state),
   `-scrollToHunt <id>`. Tests: `WatchTests`. Screenshots: `build/131-*.png`.
+  **Angebote as "New | Searches"** (brief 133, Patrik 2026-11-02, chosen from three drawn options: with several searches
+  the one list with a chip per search was "a little unorganized"; the chips are gone). The tab's header (`ListingsScreen`)
+  has the magnifying glass and a segmented switch **New | Searches** ("Neu" | "Suchen"); the part the user picks is
+  remembered across launches (`AppNavigation.choose`, `ListingsPartMemory`, key `arestemis.listingsPart`); a
+  notification's match opens over New and a hunt's page shows Searches without changing that choice. **New:** every
+  search's new listings (`loadMatches(.new)`), grouped under a heading per search (`NewListings.groups`: the search with
+  the newest finding first, newest first within it, by `found` then id; `NewGroupHeading`: the kind's mark, the name,
+  the hunt card's "● 3 NEW" and a chevron opening that search's listings at New; no headings while the account has one
+  search), the usual swipes, a group gone with its last new listing; then "Filtered out" of every search. **Searches:**
+  one glass card per search in the Hunts tab's order, paused ones too (`SearchRow`, `SearchRowCard`): the kind's mark
+  and name, the new count, "2 saved · 1 applied" ("asked" for things, saved only for a watch, "Paused" first) in a quiet
+  line; a kind this build does not know shows its name only. A tap opens **one search's listings**
+  (`SearchListingsPage`, `ListingsRoute.hunt`): its name as the title, the magnifying glass for its own listings, New ·
+  Saved · Applied/Asked · All (a watch has no Applied, `MatchFilter.choices`; it opens at New while there are new ones,
+  else All, `MatchFilter.opening`), its own "Filtered out" (`RootSheet.rejected(hunt)`). A hunt's page's Listings and
+  figures open it over Searches (`AppNavigation.showSearch`); the Hunts tab's "All listings" opens the tab as it was.
+  The store keeps its lists per search and filter (`ArestemisStore.ListScope`, `list(_:hunt:)`, `matches(_:hunt:)`,
+  `rejected(hunt:)`; `selectedHuntID` is gone); deleting a hunt forgets them and the screens ask again. **The search over
+  listings** (`ListingSearchPage`, `ListingsRoute.find(hunt:)`; the server ranks, server brief 132, `GET /matches?q=`):
+  the place search's field on its glass card (`SearchBox`, shared with Add place), the keyboard up as it opens, the
+  hint "Type at least two letters. The best matches come first."; from two letters, 0.3 s after typing pauses, the
+  server's answer in its order (`ListingSearch`: a newer query cancels the older, the same words are not asked twice, at
+  most 100 characters, 50 results with "More listings match. Another word narrows it down." when there are more); each
+  row the usual card with its state (NEW too) and, over every search, the search's mark and name above it; tap, swipes
+  and long press as elsewhere; "Nothing found for “…”." / "Nichts gefunden für „…“."; a failure is a calm line with Try
+  again. Sample mode imitates the server's search simply (`SampleBackend.findMatches`; the app never ranks). Tests:
+  `ListingsTests`; the server's sample answer `ArestemisTests/ServerSamples/server-matches-search.json`. Screenshots:
+  `build/133-*.png`.
 - **Arestoteles app** (2026-10-24, build R2): `Arestoteles/` (bundle id `de.ares-empire.arestoteles`, URL scheme
   `arestoteles`), Patrik's Weltbild vault on the Arestoteles API (`Arestoteles/docs/API.md`, decisions
   `ares-empire/docs/ARESTOTELES-APP.md`; samples in `Arestoteles/Arestoteles/Samples/`, copies of its `docs/samples/`).

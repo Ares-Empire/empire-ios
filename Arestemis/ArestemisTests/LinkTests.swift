@@ -55,15 +55,17 @@ struct LinkTests {
         let navigation = AppNavigation()
         navigation.huntPath = [.match(38)]
         navigation.sheet = .settings
+        navigation.part = .searches
+        navigation.listingsPath = [.hunt(2), .find(hunt: 2)]
         navigation.open(ArestemisLink(match: 41))
-        #expect(navigation.tab == .listings && navigation.listingsPath == [41])
+        #expect(navigation.tab == .listings && navigation.listingsPath == [.match(41)] && navigation.part == .new)
         #expect(navigation.sheet == nil && navigation.pendingListing == nil)
 
         navigation.open(ArestemisLink(match: 40, then: .application))
-        #expect(navigation.listingsPath == [40] && navigation.sheet == .application(40))
+        #expect(navigation.listingsPath == [.match(40)] && navigation.sheet == .application(40))
 
         navigation.open(ArestemisLink(match: 38, then: .openListing))
-        #expect(navigation.listingsPath == [38] && navigation.sheet == nil && navigation.pendingListing == 38)
+        #expect(navigation.listingsPath == [.match(38)] && navigation.sheet == nil && navigation.pendingListing == 38)
     }
 
     @Test func followedLinksWaitForTheTabs() {
@@ -71,9 +73,9 @@ struct LinkTests {
         navigation.follow(ArestemisLink(match: 41, then: .application))
         #expect(navigation.listingsPath.isEmpty && navigation.pendingLink == ArestemisLink(match: 41, then: .application))
         navigation.openPendingLink()
-        #expect(navigation.listingsPath == [41] && navigation.sheet == .application(41) && navigation.pendingLink == nil)
+        #expect(navigation.listingsPath == [.match(41)] && navigation.sheet == .application(41) && navigation.pendingLink == nil)
         navigation.openPendingLink()
-        #expect(navigation.listingsPath == [41])
+        #expect(navigation.listingsPath == [.match(41)])
     }
 
     @Test func resetGoesBackToTheStart() {
@@ -92,7 +94,7 @@ struct LinkTests {
         #expect(navigation.tab == .hunt && navigation.huntPath == [.match(41)])
         navigation.tab = .listings
         navigation.showMatch(40)
-        #expect(navigation.tab == .listings && navigation.listingsPath == [40])
+        #expect(navigation.tab == .listings && navigation.listingsPath == [.match(40)])
     }
 
     @Test func filters() {

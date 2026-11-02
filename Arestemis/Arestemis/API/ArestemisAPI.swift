@@ -13,6 +13,8 @@ protocol ArestemisBackend {
     func parse(text: String, kind: HuntKind) async throws -> HuntParseResult
     func places(query: String) async throws -> [Place]
     func matches(hunt: Int?, state: [MatchState]?, limit: Int, before: Int?) async throws -> MatchPage
+    /// `GET /matches?q=`: every state but dismissed, best match first (brief 132).
+    func findMatches(_ words: String, hunt: Int?, limit: Int) async throws -> MatchPage
     func match(id: Int) async throws -> Match
     func setState(_ state: MatchState, match id: Int) async throws -> Match
     func application(match id: Int, regenerate: Bool) async throws -> Application
@@ -79,6 +81,15 @@ struct ArestemisAPI: ArestemisBackend {
         }
         query.append(URLQueryItem(name: "limit", value: String(limit)))
         if let before { query.append(URLQueryItem(name: "before", value: String(before))) }
+        return try await send(.get, "matches", query: query)
+    }
+
+    /// The found listings that match the words, best match first (the server's order; no `before`, no `state`: all but
+    /// dismissed). The words are the app's (`ListingSearch.words`): trimmed, 2–100 characters.
+    func findMatches(_ words: String, hunt: Int?, limit: Int) async throws -> MatchPage {
+        var query = [URLQueryItem(name: "q", value: words)]
+        if let hunt { query.append(URLQueryItem(name: "hunt", value: String(hunt))) }
+        query.append(URLQueryItem(name: "limit", value: String(limit)))
         return try await send(.get, "matches", query: query)
     }
 
@@ -151,7 +162,12 @@ struct ArestemisAPI: ArestemisBackend {
                                        body: Body?, timeout: TimeInterval = 30) async throws -> Data {
         guard let token = token(), !token.isEmpty else { throw HTTPError.unauthorized }
         var components = URLComponents(url: Self.baseURL.appendingPathComponent(path), resolvingAgainstBaseURL: false)
-        if !query.isEmpty { components?.queryItems = query }
+        if !query.isEmpty {
+            components?.queryItems = query
+            // A typed "+" stays a plus: servers read a bare one in a query as a space.
+            let encoded = components?.percentEncodedQuery?.replacingOccurrences(of: "+", with: "%2B")
+            components?.percentEncodedQuery = encoded
+        }
         guard let url = components?.url else { throw HTTPError.invalidResponse }
         var request = URLRequest(url: url)
         request.httpMethod = method.rawValue

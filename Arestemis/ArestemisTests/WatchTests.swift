@@ -259,7 +259,7 @@ struct WatchTests {
         // A watch the overview has not sent a page for yet: its address's host.
         text = HuntText(hunt, page: nil, language: language)
         #expect(text.title == "geizhals.de")
-        #expect(HuntChips.chips(cards, language: language).suffix(3).map(\.title)
+        #expect(cards.suffix(3).map { SearchRow($0, language: language).text.title }
                 == ["KALLAX Regal, weiß, 77x147 cm - IKEA Deutschland", "AirPods Pro 3", "Schnitzel at the Mensa"])
     }
 

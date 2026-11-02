@@ -149,19 +149,30 @@ struct WatchLines: View {
     }
 }
 
-/// The kind's small mark (a house, a tag; muted ink) and the hunt's name.
+/// The kind's small mark (a house, a tag, an eye; muted ink) and the hunt's name.
 struct HuntTitle: View {
-    let text: HuntText
+    let kind: SearchKind?
+    let title: String
     let size: CGFloat
+
+    init(text: HuntText, size: CGFloat) {
+        self.init(kind: text.kind, title: text.title, size: size)
+    }
+
+    init(kind: SearchKind?, title: String, size: CGFloat) {
+        self.kind = kind
+        self.title = title
+        self.size = size
+    }
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: size > 18 ? 9 : 7) {
-            if let kind = text.kind {
+            if let kind {
                 Image(systemName: kind.symbol).font(.system(size: size * 0.72, weight: .medium))
                     .foregroundStyle(Ink.muted)
                     .accessibilityLabel(Text(verbatim: kind == .flat ? String(localized: "Flat") : kind.choiceTitle()))
             }
-            Text(text.title).font(AppFont.text(size, weight: .semibold)).foregroundStyle(Ink.primary)
+            Text(title).font(AppFont.text(size, weight: .semibold)).foregroundStyle(Ink.primary)
                 .lineLimit(2).fixedSize(horizontal: false, vertical: true)
         }
     }

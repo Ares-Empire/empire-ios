@@ -2,8 +2,9 @@ import Foundation
 import Testing
 @testable import Arestemis
 
-/// Brief 114: what the Hunts tab, a hunt's page, the thing form and the Listings tab decide (`HuntsPresentation`,
-/// `ItemFormatting`, `ItemSearchDraft`'s lines, `AppNavigation`), and the store's per-hunt latest matches.
+/// Brief 114: what the Hunts tab, a hunt's page, the thing form and a search's listings decide (`HuntsPresentation`,
+/// `ItemFormatting`, `ItemSearchDraft`'s lines, `AppNavigation`), and the store's per-hunt latest matches. The Listings
+/// tab's parts (brief 133): `ListingsTests`.
 @MainActor
 struct HuntsScreensTests {
     private func spaces(_ value: String?) -> String? { value?.replacingOccurrences(of: "\u{a0}", with: " ") }
@@ -100,33 +101,7 @@ struct HuntsScreensTests {
         #expect(HuntName.cleaned(long)?.count == 60)
     }
 
-    // MARK: the Listings tab
-
-    @Test(arguments: [AppLanguage.english, .german])
-    func huntChips(_ language: AppLanguage) throws {
-        let de = language == .german
-        let cards = try hunts()
-        let chips = HuntChips.chips(cards, language: language)
-        #expect(chips.map(\.huntID) == [nil, 1, 2, 3, 4, 5, 6, 7, 8])
-        #expect(chips.map(\.title) == [de ? "Alle" : "All", HuntText(cards[0].hunt, language: language).title,
-                                       "Herman Miller Aeron", "A quieter flat", "Bookcase", "Denimwerk jeans",
-                                       "KALLAX Regal, weiß, 77x147 cm - IKEA Deutschland", "AirPods Pro 3",
-                                       "Schnitzel at the Mensa"])
-        #expect(chips.map(\.symbol) == [nil, "house", "tag", "house", "tag", "tag", "eye", "eye", "eye"])
-        #expect(Set(chips.map(\.id)).count == chips.count)
-        // One hunt: no chips (All would be the same list).
-        #expect(HuntChips.chips(Array(cards.prefix(1))).isEmpty && HuntChips.chips([]).isEmpty)
-    }
-
-    @Test func askedOnlyWhileOnlyThingsShow() throws {
-        let cards = try hunts()
-        #expect(!HuntChips.showsOnlyThings(cards, selected: nil))
-        #expect(HuntChips.showsOnlyThings(cards, selected: 2))
-        #expect(!HuntChips.showsOnlyThings(cards, selected: 1))
-        #expect(!HuntChips.showsOnlyThings(cards, selected: 99))
-        #expect(HuntChips.showsOnlyThings([cards[1]], selected: nil))
-        #expect(!HuntChips.showsOnlyThings([], selected: nil))
-    }
+    // MARK: a search's listings
 
     @Test(arguments: [AppLanguage.english, .german])
     func appliedOrAsked(_ language: AppLanguage) {
@@ -138,6 +113,8 @@ struct HuntsScreensTests {
         #expect(MatchState.applied.word(thing: false, language: language) == (de ? "Beworben" : "Applied"))
         #expect(MatchState.saved.word(thing: true, language: language) == (de ? "Gespeichert" : "Saved"))
         #expect(MatchState.new.word(language: language) == nil && MatchState.dismissed.word(language: language) == nil)
+        #expect(MatchState.new.word(includingNew: true, language: language) == (de ? "Neu" : "New"))
+        #expect(MatchState.dismissed.word(includingNew: true, language: language) == nil)
     }
 
     // MARK: a thing's row and page
@@ -260,9 +237,9 @@ struct HuntsScreensTests {
         await store.loadLatest(hunt: 1)
         #expect(store.latest(hunt: 1)?.map(\.id) == [41, 40, 38])
         #expect(store.latest(hunt: 1)?.contains { store.isThing($0) } == false)
-        // A dismissed match leaves the page; the Listings tab's choice is untouched.
+        // A dismissed match leaves the page.
         await store.setState(.dismissed, for: 31)
-        #expect(store.latest(hunt: 2)?.map(\.id) == [32, 30] && store.selectedHuntID == nil)
+        #expect(store.latest(hunt: 2)?.map(\.id) == [32, 30])
         // An unknown hunt is not remembered; a deleted one is forgotten.
         await store.loadLatest(hunt: 99)
         #expect(store.latest(hunt: 99) == nil)
@@ -307,7 +284,7 @@ struct HuntsScreensTests {
         #expect(navigation.huntPath.isEmpty)
         navigation.asksSearchKind = true
         navigation.open(ArestemisLink(match: 31))
-        #expect(!navigation.asksSearchKind && navigation.tab == .listings && navigation.listingsPath == [31])
+        #expect(!navigation.asksSearchKind && navigation.tab == .listings && navigation.listingsPath == [.match(31)])
         navigation.asksSearchKind = true
         navigation.reset()
         #expect(!navigation.asksSearchKind && navigation.formScroll == nil)
@@ -332,7 +309,7 @@ struct HuntsScreensTests {
         #expect(apply(["-openItemForm", "-openSheet", "describe"]).showsDescribe)
         #expect(LaunchOptions.route(.firstItem, hunts: []) == .form(.item, hunt: nil))
         #expect(LaunchOptions.route(.firstHunt, hunts: []) == .form(.flat, hunt: nil))
-        let options = LaunchOptions(arguments: ["-sampleData", "-sampleSlowed", "-sampleNewerKind", "-sampleHunt", "2"])
+        let options = LaunchOptions(arguments: ["-sampleData", "-sampleSlowed", "-sampleNewerKind", "-openSearch", "2"])
         #expect(options.slowed && options.newerKind && options.tab == .listings && options.form == nil)
     }
 }
