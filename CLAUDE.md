@@ -338,6 +338,11 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   a signing-only archive on 2026-10-30 (`scripts/testflight.sh <App> --export-only`, `-allowProvisioningUpdates`), so
   App Store Connect's New App could offer their bundle ids; the signed Arestemis carries `aps-environment` production
   and the time-sensitive entitlement. Uploads: `scripts/testflight.sh <App>` (README → Releasing).
+- **App Store Connect API** (2026-11-02): a team key with the App Manager role (Patrik), only in the Mac's Keychain
+  (item "Ares Empire App Store Connect API key": the base64 of the .p8, the key ID as account, the issuer ID in the
+  comment; Apple offers the file once, the download was deleted). `scripts/asc.py get|post|patch|delete <path> [body.json]`
+  signs a token with openssl and calls the API through curl (no packages; python.org's Python has no certificates).
+  Used for TestFlight: Aresium's test information, the external group "Tester", builds' "What to Test", Beta App Review.
 - Xcode project `Aresium/Aresium.xcodeproj` (2026-10-23): app + tests, folder-synchronized groups (new Swift
   files need no `project.pbxproj` edits), bundle id `de.ares-empire.aresium`, iOS 26+. Signing team: `WQN8SHAH9B`
   (project level). Launch argument `-sampleData` shows the server's bundled sample (`-scrollToEnd`: the start
