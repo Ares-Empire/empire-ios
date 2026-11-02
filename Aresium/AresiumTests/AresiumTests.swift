@@ -1200,6 +1200,29 @@ struct AresiumTests {
         #expect(!FileManager.default.fileExists(atPath: incoming.path))
     }
 
+    /// Brief 204: iOS puts the share sheet's copy in `tmp/<bundle id>-Inbox` (an app with scenes); it goes once read,
+    /// and leftovers go at the next launch, except the file the launch was opened with.
+    @Test func theShareSheetsCopyInTmpIsRemovedToo() throws {
+        let container = try importDirectory()
+        defer { try? FileManager.default.removeItem(at: container) }
+        let inbox = try #require(ImportFileReader.inboxes(container: container).first)
+        #expect(inbox.lastPathComponent == "de.ares-empire.aresium-Inbox")
+        #expect(inbox.deletingLastPathComponent().lastPathComponent == "tmp")
+        try FileManager.default.createDirectory(at: inbox, withIntermediateDirectories: true)
+        let shared = inbox.appendingPathComponent("Umsaetze.csv")
+        let incoming = inbox.appendingPathComponent("incoming.csv")
+        let leftover = inbox.appendingPathComponent("leftover.csv")
+        let other = container.appendingPathComponent("tmp/other.csv")
+        for file in [shared, incoming, leftover, other] { try Data("fictional".utf8).write(to: file) }
+        #expect(try ImportFileReader.read([shared], source: .shared, container: container).count == 1)
+        #expect(!FileManager.default.fileExists(atPath: shared.path))
+        ImportFileReader.clearInbox(container: container, excluding: [incoming])
+        #expect(FileManager.default.fileExists(atPath: incoming.path))
+        #expect(!FileManager.default.fileExists(atPath: leftover.path))
+        _ = try ImportFileReader.read([other], source: .shared, container: container)
+        #expect(FileManager.default.fileExists(atPath: other.path), "tmp's other files are not Aresium's copies")
+    }
+
     @Test func firstLaunchFlagIsNotSetWhenTokenDeletionFails() throws {
         let suite = "aresium.tests.install.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suite))

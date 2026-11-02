@@ -38,7 +38,7 @@ struct ContentView: View {
     @State private var sampleActive: Bool
     /// DEBUG `-samplePhone` / `-samplePhoneEmpty`: phone mode on a made-up store, without a login.
     @State private var samplePhone: Bool
-    /// Files shared into Aresium while it was locked: imported once it is unlocked.
+    /// Files shared into Aresium (or dropped on it) while it was locked: imported once it is unlocked.
     @State private var heldFiles: [URL] = []
     @State private var heldLink: URL?
     @State private var showsSettings = false
@@ -238,7 +238,8 @@ struct ContentView: View {
                         // dashboard shows (the first screen has its own Import data); the search beside it (brief 77).
                         let start = route == nil && mainScreen == .dashboard
                         header(route, imports: start ? dashboardImport : nil,
-                               search: start && store.offersSearch ? { place.open(.search) } : nil)
+                               search: start && store.offersSearch ? { place.open(.search) } : nil,
+                               dropPoint: takesDrops)
                         restoreFeedback
                     } root: {
                         switch mainScreen {
@@ -335,6 +336,9 @@ struct ContentView: View {
             .overlay(alignment: .bottom) {
                 ImportFeedback(store: imports, palette: palette, offer: reminderOffer, quickSort: quickSortOffer)
             }
+            // Brief 204: files dropped on the main screen go the way a shared file goes; while they hover, the screen
+            // says that letting go imports them (over the import's result too).
+            .fileDrops(enabled: takesDrops, palette: palette, dropped: receiveDropped)
             .sheet(isPresented: $showsSettings, onDismiss: importPickedInGuide) {
                 SettingsScreen(app: SettingsApp(name: "Aresium",
                                                 signInNote: String(localized: "Only for an Aresium server of your own. Your data here stays on this iPhone."),
@@ -471,8 +475,7 @@ struct ContentView: View {
     private func route(_ url: URL) {
         tour?.end()
         if url.isFileURL {
-            if lock.isLocked { heldFiles.append(url) }
-            else { Task { await imports.receive([url], source: .shared) } }
+            receiveFromOutside([url])
         } else if let destination = AresiumURL(url: url) {
             // A cold-launch tap waits for the phone's store; a picker waits for the lock window to open too.
             if modes.state == .opening || (destination == .importData && lock.isLocked) {
@@ -491,6 +494,29 @@ struct ContentView: View {
                 place.path = store.widgetCategoryRoute(name).map { [$0] } ?? []
             }
         }
+    }
+
+    /// The one way in for files from outside Aresium (the share sheet's and AirDrop's Inbox copies, a drop's copies):
+    /// the import as for a shared file, which removes the copies once read; held while the lock is on, imported once it
+    /// is unlocked.
+    private func receiveFromOutside(_ urls: [URL]) {
+        guard !urls.isEmpty else { return }
+        if lock.isLocked { heldFiles.append(contentsOf: urls) }
+        else { Task { await imports.receive(urls, source: .shared) } }
+    }
+
+    /// The copies of the files dropped on the main screen (brief 204). A drop the import took whose files could not be
+    /// copied at all says so in the result's place.
+    private func receiveDropped(_ copies: [URL], failed: Int) {
+        if copies.isEmpty, failed > 0 {
+            imports.show(String(localized: "The dropped file could not be read."), success: false)
+        }
+        receiveFromOutside(copies)
+    }
+
+    /// Whether the main screen takes dropped files now (`FileDrop.targetOn`).
+    private var takesDrops: Bool {
+        FileDrop.targetOn(screen: mainScreen, phoneMode: modes.phone != nil, locked: lock.isLocked)
     }
 
     private func routeHeldLink() {
@@ -853,7 +879,7 @@ struct ContentView: View {
     /// A screen's header; the tour's screens name its store (`in`) and open its own Settings. `imports`: the start
     /// screen's import button; `search`: its search (phone mode).
     private func header(_ route: DashboardRoute? = nil, in dashboard: DashboardStore? = nil,
-                        imports: ScreenHeader.Import? = nil, search: (() -> Void)? = nil,
+                        imports: ScreenHeader.Import? = nil, search: (() -> Void)? = nil, dropPoint: Bool = false,
                         openSettings: (() -> Void)? = nil) -> some View {
         let store = dashboard ?? store
         let category = route.flatMap { $0.cash || $0.monthPage != nil ? nil : store.category($0.category, side: $0.side) }
@@ -882,6 +908,7 @@ struct ContentView: View {
                             sums: route.flatMap { sumsIcon($0, in: store) },
                             search: search,
                             imports: imports,
+                            dropPoint: dropPoint,
                             leaveRed: {
             guard !theme.isAnimating, theme.red else { return }
             bandLanding = nil

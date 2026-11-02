@@ -1278,8 +1278,9 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   when Face ID is on; "Forgot the code?" deletes Aresium's data on this iPhone and the lock, and in server mode also
   logs out, so the lock never opens the server's data to someone without the code) or, with Face ID alone, one Face ID
   button under the band where the cover has it. Face ID is offered once by itself when locked and active. A file shared
-  into Aresium while locked waits until it is unlocked. While the lock is on, the widgets show only "Locked" (no numbers
-  are kept for them: `widget-locked.json` in the App Group). `NSFaceIDUsageDescription` in `Info.plist`, German in
+  into Aresium (or dropped on it) while locked waits unread until it is unlocked (brief 204, below). While the lock is
+  on, the widgets show only "Locked" (no numbers are kept for them: `widget-locked.json` in the App Group).
+  `NSFaceIDUsageDescription` in `Info.plist`, German in
   `InfoPlist.xcstrings`. **Contact & support** always without a login: the `contact` path (above). **Push:** Aresium never
   registers a device (only the cleanup-only center that removes the other apps' devices when someone logs out here).
   **Local messages** (brief 45, logic only; Settings and the offer are brief 46): phone mode uses
@@ -1791,8 +1792,50 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
 - `Aresium/Aresium/Info.plist` holds only what build settings cannot (document types: the share sheet offers
   "Aresium" for `.csv`/`.xml` exports and MT940 `.sta`/`.mt940`, an imported type `de.ares-empire.aresium.mt940`; not
   `.txt`, which iOS knows only as plain text, so Aresium would be offered for every text file; `.txt` statements are
-  picked inside the app); it is merged with the generated plist and excluded from the folder's resources in the project
-  file.
+  picked inside the app; not `.zip` (brief 204): the engine reads no ZIP, it only answers "Unzip the file first", so
+  Aresium would be offered for every zip on the phone just to refuse it; the picker and a drop still take a `.zip` to
+  say so); it is merged with the generated plist and excluded from the folder's resources in the project file.
+- **Files from outside** (brief 204, 2026-11-02; Patrik asked for Aresium in the share sheet and for dropping a file on
+  the main screen). One way in for every file that comes from outside: ContentView's `receiveFromOutside` (the share
+  sheet's, Files' Open With's and AirDrop's copy through `route`, a drop's copies) → `ImportStore.receive(_:source:
+  .shared)`, held unread while the lock is on, the copies removed once read (`ImportFileReader.removeSharedCopy`) and
+  left-overs at the next launch (`clearInbox`, sparing the file the launch was opened with). **The share sheet,
+  checked with real touches** (a temporary UI test in `Aresus/AresusUITests` driving the simulator's Files app and
+  Aresium, deleted; 3 of 3 runs): made-up VR Bank and PayPal `.csv`, a CAMT `.xml` and an MT940 `.sta` in On My
+  iPhone; each one's share sheet shows Aresium in its app row; choosing it opens Aresium (from cold or from the
+  background), the category picker follows as after any import, the result line counts the payments and iOS's copy is
+  gone; with the lock on (Aresium's own code), from cold and after more than 10 s away, the lock screen shows, the copy
+  waits unread and is imported once the code is typed. **Found and fixed:** (1) iOS puts its copy in `tmp/<bundle
+  id>-Inbox` (an app with scenes), not `Documents/Inbox`, so the copies were never removed (`ImportFileReader.inboxes`
+  names both); (2) a file that opened Aresium from cold was read before the phone's store had opened, with the
+  server's types, so an MT940 `.sta` was refused ("Pick a VR Bank or PayPal .csv (or CAMT .xml) export."); files that
+  come before the mode is known now wait unread until it is (`ImportStore.unread`, read in `sessionChanged`). AirDrop's
+  "open in Aresium" hands the file over the same way; the simulator has no AirDrop, so that is untested.
+  **Dropping files** (`Model/FileDrop.swift`, `Screens/FileDropScreens.swift`): phone mode's main screen (the first
+  screen and every dashboard page; not the tour, the store while it opens, server mode or behind the lock:
+  `FileDrop.targetOn`; sheets and the lock screen are views of their own and take no drop) takes one or several files of
+  the import's types by their own extensions (`FileDrop.importType`: CSV, CAMT XML, MT940, `.txt`, `.zip`; not
+  Markdown, a property list, an SVG or an export's `.json`, which only conform to text or XML; plain text only with a
+  name, so a piece of text dragged from a page is not taken; a mixed drop takes its bank files). Anything else gets the
+  system's "not allowed" badge (`onDrop(of: [.item])` with a `.forbidden` proposal). Letting go copies each file out of
+  the drop at once into `tmp/Dropped/<uuid>/` under its own name (Files suggests it; the system's copy lasts only while
+  its handler runs; the handler is built nonisolated, as Swift stops the app when the system calls a main-actor closure
+  on its own queue) and hands the copies to `receiveFromOutside`. **While accepted files hover** the screen fades
+  (0.18 s, 0.12 s with Reduce Motion; nothing moves) to the app's own wall (`Wall`; a veil let the first screen's
+  button and the dashboard's cards show through as grey ghosts) with the first screen's mark in its thin circle
+  (`tray.and.arrow.down`), "Let go to import" / "Zum Importieren loslassen" and the file's name (several: "2 files" /
+  "2 Dateien"); ink only, in light, dark and red. VoiceOver: a drop point "Import files" / "Dateien importieren" on the
+  header's title and on the first screen's heading (`FileDropPoint`; not tried with VoiceOver's own Drag). Letting go
+  starts the import feedback a picked file's import shows. **Real touches** (the same temporary UI test, 3 of 3): the
+  iPhone's two-handed drop played with XCTest's own touch paths (the private `XCPointerEventPath` and
+  `XCSynthesizedEventRecord`, two fingers in one event): one finger holds the file in Files until it lifts (0.55 s;
+  sooner Files scrolls, later its context menu opens and no drag starts) and pulls it out, a second swipes along the
+  bottom edge to Aresium, the first carries the file over Aresium, holds and lets go: onto a fresh install's first
+  screen, then the dashboard (the hover's words, the picker, the result, no copies left); `Notiz.json` gets the "not
+  allowed" badge and imports nothing; over the lock screen nothing is taken and nothing waits. Files' context menu
+  never reports its animations done, so XCTest waited 60 s after each touch there; the test switched that wait off
+  (`shouldSkipPreEventQuiescence`). Tests: `FileDropTests`, `AresiumTests.theShareSheetsCopyInTmpIsRemovedToo`.
+  Screenshots: `build/204-{share,hover,dropped}-{en,de}-{light,dark}.png`, red `build/204-{hover,dropped}-de-red.png`.
 - **Privacy** (2026-10-24, brief E6): each app and widget folder has its `PrivacyInfo.xcprivacy` (what it collects,
   the required-reason APIs its Release binary really imports); each app's `Info.plist` has
   `ITSAppUsesNonExemptEncryption = NO`. A new data type or API means updating the manifest, `docs/APP-STORE.md` (App

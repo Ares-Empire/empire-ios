@@ -53,6 +53,10 @@ final class ImportStore {
     private(set) var isImporting = false
     private var readingCount = 0
     private var pending: [ImportFile] = []
+    /// Files that came before the mode was known (shared into Aresium as it opens, while the phone's store opens): read
+    /// once it is (`sessionChanged`), with that mode's types. Read before, a phone mode file the server does not read
+    /// (an MT940 `.sta`) was refused (brief 204's check, 2026-11-02).
+    private var unread: [(urls: [URL], source: ImportFileSource)] = []
     private var attempted: [ImportFile] = []
     private var batchScheduled = false
     @ObservationIgnored private var batchTask: Task<Void, Never>?
@@ -81,7 +85,7 @@ final class ImportStore {
     /// Where a confirmed unknown bank's format goes when the person sends it (phone mode); nil: never offered.
     private let outbox: BankOutbox?
 
-    var isBusy: Bool { readingCount > 0 || isImporting || batchScheduled }
+    var isBusy: Bool { readingCount > 0 || isImporting || batchScheduled || !unread.isEmpty }
     var waitingCount: Int { pending.count + attempted.count }
     var canRetry: Bool { !attempted.isEmpty && !isImporting && (isReady || dashboard.isSample) }
     /// A swipe down on the result does what its Dismiss does, or the send card's Not now (both `close()`), brief 41.
@@ -171,15 +175,20 @@ final class ImportStore {
         batchScheduled = false
         pending.removeAll()
         attempted.removeAll()
+        unread.removeAll()
         layoutQueue.removeAll()
         dismiss()
     }
 
     func receive(_ urls: [URL], source: ImportFileSource = .picker) async {
         guard !dashboard.isSample else { showSampleUnavailable(); return }
+        guard let backend else {
+            // The mode is not known yet: the files wait unread (a shared file's Inbox copy stays until then).
+            unread.append((urls, source))
+            return
+        }
         let generation = generation
-        // Before the mode is known (files shared before login), only what both modes read.
-        let extensions = backend?.importExtensions ?? ImportFileReader.serverExtensions
+        let extensions = backend.importExtensions
         readingCount += 1
         defer { readingCount -= 1; schedulePendingImport(); finishIfDone() }
         do {
@@ -195,10 +204,15 @@ final class ImportStore {
         }
     }
 
-    /// The login or the mode changed: files waiting for either are imported now. The category picker an import of the
-    /// phone's store asked for is not asked any more once the app left phone mode.
+    /// The login or the mode changed: files waiting for either are read and imported now. The category picker an import
+    /// of the phone's store asked for is not asked any more once the app left phone mode.
     func sessionChanged() async {
         if asksForCategories, backend?.waitsForCategories != true { asksForCategories = false }
+        if backend != nil, !unread.isEmpty {
+            let waiting = unread
+            unread.removeAll()
+            for files in waiting { await receive(files.urls, source: files.source) }
+        }
         if isReady { await importPendingFiles() }
     }
 
