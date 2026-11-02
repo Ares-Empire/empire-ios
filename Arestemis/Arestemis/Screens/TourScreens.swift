@@ -30,8 +30,8 @@ extension View {
     /// Marks a part of a real screen the tour may point at (nothing outside the tour).
     func tourAnchor(_ spot: TourSpot?) -> some View { tourSpot(spot.map(AnyHashable.init)) }
 
-    /// The tour's card at the bottom of a tab's stack (it stays put while pages are pushed, under the undo bar) or of a
-    /// sheet's page.
+    /// The tour's card at the bottom of a tab's stack (it stays put while pages are pushed, under the undo bar). The
+    /// sheets the person opens on the way (Filtered out, Application) have none: they say what they are.
     func tourCard() -> some View { modifier(TourCardInset()) }
 
     /// On each page of a tab's stack: the room the card takes at the bottom, so lists end and bars stand above it (a

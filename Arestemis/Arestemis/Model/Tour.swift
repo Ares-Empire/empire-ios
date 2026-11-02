@@ -4,9 +4,9 @@ import os
 
 // The tour (brief 139, Patrik 2026-11-02: "it's not actually clear what Seite beobachten is for … We should add a tour
 // to Arestemis (like Aresium has) that explains it"; eight steps, the sketch's section 6). It runs the app's real tabs
-// on a world of its own: the sample searches and listings in memory (`SampleBackend`, the screenshots' made-up server),
-// its own store, a session that is never logged in and its own navigation, so the account's searches, listings,
-// drafts and choices are never touched. Each step points at one part of a real screen (`TourSpot`, the shared veil and
+// on a world of its own: its own searches and listings in the app's language (`TourData`) as a server in memory
+// (`SampleBackend`), its own store, a session that is never logged in and its own navigation, so the account's searches,
+// listings, drafts and choices are never touched. Each step points at one part of a real screen (`TourSpot`, the shared veil and
 // ring of `Shared/Design/TourPieces.swift`) and says what it is for in one or two sentences; Next goes on, Skip ends it.
 // It shows by itself once per account on this iPhone, after the first login (`TourOffer`), and again from Settings →
 // Help. The look is `Screens/TourScreens.swift`.
@@ -36,7 +36,7 @@ nonisolated enum TourStep: Int, CaseIterable, Sendable {
         case .welcome:
             [TourLine(language.string("Every few minutes it reads the sites, checks each new listing against your search and sends you a push when one fits. The tour shows sample searches."))]
         case .newSearch:
-            [TourLine(language.string("Four kinds: Flat (2 rooms up to €1,100), Things (a Kallax up to €40), Price monitor (one product's price) and Watch a website (a new version). An example fills in the form."))]
+            [TourLine(language.string("Four kinds: Flat (2 rooms up to €1,100), Things (a Kallax up to €40), Price monitor (one product's price) and Watch a website (a new version). Tap an example and the form is filled in."))]
         case .search:
             [TourLine(language.string("It runs until you pause it; the number shows the new listings you haven't seen yet. Tap the card for its page."))]
         case .newListings:
@@ -227,9 +227,9 @@ final class TourModel {
     }
 }
 
-/// The tour's made-up world: the sample searches and listings as a server in memory (`SampleBackend`), a store on it
-/// with a session of its own that is never logged in, and a navigation whose remembered choice (New or Searches) lives
-/// in a defaults suite of its own. Nothing here reads or writes the account's store, the shared login, its drafts or the
+/// The tour's made-up world: its own searches and listings in the app's language (`TourData`) as a server in memory
+/// (`SampleBackend`), a store on it with a session of its own that is never logged in, and a navigation whose
+/// remembered choice (New or Searches) lives in a defaults suite of its own. Nothing here reads or writes the account's store, the shared login, its drafts or the
 /// app's defaults. `forget()` empties that suite.
 @MainActor
 final class TourWorld {
@@ -258,11 +258,11 @@ final class TourWorld {
         monitorAndWatch = Self.monitorAndWatch(store.hunts)
     }
 
-    /// Reads the samples into a store of the tour's own and loads what its steps show.
-    static func make(now: Date = .now) async throws -> TourWorld {
+    /// Makes the tour's data into a store of its own and loads what its steps show.
+    static func make(now: Date = .now, language: AppLanguage = .current) async throws -> TourWorld {
         let defaults = UserDefaults(suiteName: suite) ?? UserDefaults()
         defaults.removePersistentDomain(forName: suite)
-        let backend = try SampleBackend(options: .init(name: TourWorld.name), now: now)
+        let backend = try SampleBackend(content: TourData.content(now: now, language: language), now: now)
         // Its own session, never logged in: the tour asks no server and follows no login.
         let session = EmpireSession(app: .arestemis, storage: TourTokens(), restoreOnLaunch: false)
         let store = ArestemisStore(session: session, backend: backend, sample: true, defaults: defaults)
@@ -272,9 +272,6 @@ final class TourWorld {
         await store.loadMatches(.new)
         return TourWorld(store: store, navigation: AppNavigation(defaults: defaults), defaults: defaults)
     }
-
-    /// The name a sample application text is signed with in the tour (the sample's own is the samples' account).
-    static let name = "Alex"
 
     /// The cards the step about the Preismonitor and the page watch rings: a watch and a monitor that stand together.
     static func monitorAndWatch(_ hunts: [HuntCard]) -> [Int] {

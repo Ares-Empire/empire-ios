@@ -235,7 +235,65 @@ struct TourTests {
         let flat = try #require(world.flatMatch)
         await world.store.loadApplication(for: flat)
         let text = try #require(world.store.application(flat).application?.text)
-        #expect(text.hasSuffix(TourWorld.name))
+        #expect(text.hasPrefix("Hello,") && text.hasSuffix(TourData.name))
+    }
+
+    // MARK: the tour's own data
+
+    @Test func theToursDataIsInTheAppsLanguage() throws {
+        let now = Date.now
+        let en = try TourData.content(now: now, language: .english)
+        let de = try TourData.content(now: now, language: .german)
+        // The same four searches, one of each kind, with the same listings in both languages.
+        #expect(de.overview.hunts.map(\.hunt.kind) == [.flat, .item, .watch, .price])
+        #expect(en.overview.hunts.map(\.id) == de.overview.hunts.map(\.id))
+        #expect(en.matches.map(\.id) == de.matches.map(\.id) && en.rejected.map(\.id) == de.rejected.map(\.id))
+
+        // Every word people read is the app's language; names stay names (the console, the sites, the towns).
+        for (english, german) in zip(en.matches, de.matches) {
+            if english.listing.title != "Nintendo Switch 2" { #expect(english.listing.title != german.listing.title) }
+            #expect(english.reason != german.reason)
+            #expect(english.listing.description.isEmpty || english.listing.description != german.listing.description)
+            #expect(english.warnings.isEmpty || english.warnings != german.warnings)
+            #expect(english.listing.page?.now == nil || english.listing.page?.now != german.listing.page?.now)
+        }
+        for (english, german) in zip(en.rejected, de.rejected) {
+            #expect(english.listing.title != german.listing.title && english.reason != german.reason)
+            #expect(english.listing.description != german.listing.description)
+        }
+        #expect(de.kinds.map(\.name) == ["Wohnung", "Dinge", "Preismonitor", "Webseite beobachten"])
+        #expect(en.kinds.map(\.name) == ["Flat", "Things", "Price monitor", "Watch a website"])
+        let watch = try #require(de.overview.hunts.first { $0.hunt.kind == .watch })
+        #expect(watch.hunt.name == "Schnitzel in der Mensa")
+        #expect(watch.page?.now == "Dienstag: Schweineschnitzel mit Pommes")
+        #expect(watch.hunt.search.watch?.change == "es diese Woche Schnitzel gibt")
+        #expect(de.overview.hunts[0].hunt.search.flat?.extra == "Balkon wäre schön, kein Erdgeschoss")
+        let flat = try #require(de.matches.first)
+        #expect(flat.listing.title == "Helle 2-Zimmer-Wohnung mit Balkon in Schwabing")
+        #expect(flat.reason.hasPrefix("Zwei Zimmer mit Balkon in Schwabing"))
+        // The price alarm in the app's own words and money.
+        let euros = { (amount: Double, language: AppLanguage) in PriceWords.money(amount, language: language) }
+        #expect(de.matches.last?.reason
+                == "Nintendo Switch 2: \(euros(449, .german)) (vorher \(euros(483.99, .german)))")
+        #expect(en.matches.last?.reason == "Nintendo Switch 2: €449.00 (was €483.99)")
+        // A made-up application in the app's language, signed by the tour's name.
+        let application = try #require(de.application)
+        #expect(application(flat.listing, TourData.name).hasPrefix("Hallo,"))
+        #expect(application(flat.listing, TourData.name).contains("„Helle 2-Zimmer-Wohnung mit Balkon in Schwabing“"))
+        #expect(application(flat.listing, TourData.name).hasSuffix("\nAlex"))
+    }
+
+    @Test func theToursDataIsAroundNow() throws {
+        let now = Date.now
+        let content = try TourData.content(now: now, language: .english)
+        // Found minutes or hours ago, a move-in date ahead, the console's history up to an hour ago.
+        let flat = try #require(content.matches.first)
+        let found = try #require(Timestamp.parse(flat.found))
+        #expect(found < now && now.timeIntervalSince(found) < 3600)
+        let moveIn = try #require(flat.listing.availableFrom.flatMap { DateOnly.parse($0) })
+        #expect(moveIn > now)
+        let last = try #require(content.histories[TourData.monitor]?.last.flatMap { Timestamp.parse($0.at) })
+        #expect(abs(now.addingTimeInterval(-3600).timeIntervalSince(last)) < 1)
     }
 
     // MARK: the words

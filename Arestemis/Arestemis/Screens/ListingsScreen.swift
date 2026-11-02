@@ -202,8 +202,6 @@ struct RejectedSheet: View {
                 .padding(.horizontal, Look.side).padding(.top, 8).padding(.bottom, 30)
             }
             .provinceWall()
-            // The tour's last step leads here: its card comes along.
-            .tourCard()
             .navigationTitle("Filtered out")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

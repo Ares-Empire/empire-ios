@@ -664,11 +664,20 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   `-monitorLine refused|hold`. Tests: `PriceMonitorTests`. Screenshots: `build/137-*.png`.
   **The tour** (brief 139, Patrik 2026-11-02: "it's not actually clear what Seite beobachten is for … add a tour to
   Arestemis (like Aresium has)"; eight steps from the sketch's section 6; `Model/Tour.swift`, `Screens/TourScreens.swift`
-  on the shared pieces, below): the real tabs (`MainTabs`) on a world of its own, `TourWorld`: `SampleBackend` (no longer
-  DEBUG-only; `ArestemisStore.isSample` is honoured in Release for it) in memory, its own store, a session that never logs
-  in, its own `AppNavigation` whose remembered part lives in the defaults suite `de.ares-empire.arestemis.tour` (emptied
-  when it starts and ends); a sample application text is signed "Alex" (`SampleBackend.Options.name`). The account's
-  store, login, drafts and defaults are never touched (`TourTests`). Settings behind the gear stays the account's own.
+  on the shared pieces, below): the real tabs (`MainTabs`) on a world of its own, `TourWorld`: its own data in the app's
+  language (`Model/TourData.swift`, as Aresium's `TourData`; the main session's review: the English contract samples
+  showed in the German tour) served by `SampleBackend` in memory (no longer DEBUG-only; it takes a `SampleContent`, the
+  contract's files for `-sampleData` and the tests, `SampleContent.contract`, or the tour's; `ArestemisStore.isSample`
+  is honoured in Release for it), its own store, a session that never logs in, its own `AppNavigation` whose remembered
+  part lives in the defaults suite `de.ares-empire.arestemis.tour` (emptied when it starts and ends). **The tour's
+  data** (`TourData.content(now:language:)`): four searches, one of each kind (a flat or WG room in Munich or Garching;
+  Herman Miller Aeron; the watch "Schnitzel at the Mensa" / "Schnitzel in der Mensa" on the Mensa's menu; the Nintendo
+  Switch 2 at MediaMarkt with its alarm), the flat's new listing (step 6) and its two filtered-out ones (step 8), three
+  chairs, the menu's change and the console's alarm, the kinds' names; its words in the String Catalog (names stay
+  names, money and dates by the app; listing titles read like listings in each language), built as the server's JSON
+  and read through the app's decoders, times around `now`; the console's history is the contract's `prices-9.json`
+  (numbers only) moved to now; a made-up application text in the app's language, signed "Alex". The account's store,
+  login, drafts and defaults are never touched (`TourTests`). Settings behind the gear stays the account's own.
   **When:** by itself once per account on this iPhone (`TourOffer`, key `arestemis.tourShown.<account id>`, set when it
   starts) 0.8 s after the account's main screen first shows, never in sample mode and never while a notification or link
   is opened, a sheet is up or a page is pushed (then the next launch tries again); Settings → Help → Tour of Arestemis
@@ -679,16 +688,20 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   search (the first search's card), 4 Listings → New (the newest listing's row, whose swipe works), 5 Listings → Searches
   (the magnifying glass), 6 A listing (a flat's page, Why it fits), 7 Price monitor and Watch a website (the watch's and
   the monitor's cards that stand together, one ring; a line each, led by the kind's name), 8 Filtered out (the flat
-  search's listings at New, its Filtered out row; a tap opens the sheet, which carries the card). **The card**: "3 / 8",
+  search's listings at New, its Filtered out row; a tap opens the sheet, without the card, which covered its
+  reasons at the sheet's height; closing it brings the card back). **The card**: "3 / 8",
   Skip, the step's title over one or two sentences, Next (Done at the last) in the accent; the ring in the accent; the
   card's glass without its blur (`glassCard(blur: false)`, the wall's colour in its place): the searches' pulse moves
   under the card, and a blur there was taken again every frame with a group pass (`scripts/offscreens`, step 3: about 1
   group and 4 mask/group passes per frame with it, none without, as the app without the tour). The
   card sits on each tab's NavigationStack (it stays put while pages are pushed, under the undo bar) and every page of the
   stack keeps its room (`tourCardRoom`, `TourModel.cardRoom`: a stack's inset does not reach its pages); a scroll view
-  shows the ringed part within its safe area (`TourGuide.cardRoomInSafeArea`), again once its height settles. Sample mode's kind names come from the
-  English `/kinds` sample, so New search's cards read "Flat", "Things" … there; live they are German. DEBUG `-sampleData
-  -tour <1–8>`. Tests: `TourTests`. Screenshots: `build/139-step{1..8}-{de,en}-{light,dark}.png`.
+  shows the ringed part within its safe area (`TourGuide.cardRoomInSafeArea`), again once its height settles. **A
+  listing's page fades under its bar** (brief 139's review: scrolled, the title ran on under the back button): iOS's own
+  top edge effect hidden (`scrollEdgeEffectHidden`, it showed a blurred copy of the content no wall covers) and the
+  wall's fade from the screen's top (`edgeFade(top:bottom:underBar:)`: the scroll view's drawn area stops at its frame
+  there, so the wall covers above it by itself). DEBUG `-sampleData -tour <1–8>`. Tests: `TourTests`. Screenshots:
+  `build/139-step{1..8}-{de,en}-{light,dark}.png`.
   **The shared tour pieces** (`Shared/Design/TourPieces.swift`, moved from Aresium's `TourScreens.swift` in brief 139,
   Aresium's look unchanged): `TourGuide` (what a tour points at, `\.tourGuide`), `tourSpot` (each app wraps it as
   `tourAnchor` with its own spots), `tourSpotlight` (the veil and ring, around several spots together when a step names

@@ -119,8 +119,19 @@ struct ContentView: View {
             if loaded {
                 options.apply(to: navigation, hunts: store.hunts, firstMatch: store.latest.first?.id)
                 #if DEBUG
-                // Screenshots: `-tour <1–8>` starts the tour at that step.
-                if store.isSample, let step = options.tour.flatMap(TourStep.init(rawValue:)) { startTour(at: step) }
+                // Screenshots: `-tour <1–8>` starts the tour at that step (`-tourSheet rejected|application` then
+                // opens that sheet of the tour's flat).
+                if store.isSample, let step = options.tour.flatMap(TourStep.init(rawValue:)) {
+                    Task {
+                        await tours.start(at: step, account: nil)
+                        guard let world = tours.tour?.world else { return }
+                        switch options.tourSheet {
+                        case "rejected": world.navigation.sheet = .rejected(world.flatHunt)
+                        case "application": world.navigation.sheet = world.flatMatch.map { .application($0) }
+                        default: break
+                        }
+                    }
+                }
                 if store.isSample, options.sampleUndo, let id = store.latest.first?.id {
                     Task {
                         try? await Task.sleep(for: .seconds(1))
@@ -187,7 +198,6 @@ private struct MainTabs: View {
     var scrollsToHunt: Int? = nil
     @Environment(\.openURL) private var openURL
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.tour) private var tour
 
     var body: some View {
         TabView(selection: $navigation.tab) {
@@ -212,8 +222,6 @@ private struct MainTabs: View {
                 case .application(let id): ApplicationSheet(matchID: id, store: store)
                 }
             }
-            // The tour's last step leads to Filtered out: its card comes along (`RejectedSheet`).
-            .environment(\.tour, tour)
             .presentationDetents(sheet == .settings ? [.large] : [.medium, .large])
             .presentationBackground(Ink.background)
         }

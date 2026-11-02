@@ -43,9 +43,55 @@ enum ArestemisSamples {
     }
 }
 
-/// The samples as a server in memory: `-sampleData` (DEBUG, screenshots) and the tour (every build, brief 139). Actions
-/// change the in-memory state (states, start/pause, the search, settings); application texts are made up from the
-/// listing. Nothing leaves the device.
+/// What a sample server holds: the contract's files (`contract`, `-sampleData` and the tests) or the tour's own, in the
+/// app's language (`TourData`, brief 139).
+struct SampleContent {
+    var overview: Overview
+    var matches: [Match]
+    var rejected: [Rejected]
+    var settings: Settings
+    var kinds: [OfferedKind]
+    /// The places the place search knows besides the flat hunt's own.
+    var places: [Place]
+    /// Each price monitor's history, by hunt id.
+    var histories: [Int: [PricePoint]]
+    /// An application text for a listing, signed with the name; nil: the samples' German one.
+    var application: ((Listing, String) -> String)? = nil
+
+    /// The contract's sample files (copies of the server's `docs/samples`), their timestamps moved so the last scan was
+    /// 40 s before `now`.
+    static func contract(now: Date = .now) throws -> SampleContent {
+        let raw = try ArestemisSamples.decode(Overview.self, from: "overview")
+        let lastScan = raw.lastScan.flatMap(Timestamp.parse) ?? now
+        let shift = now.addingTimeInterval(-40).timeIntervalSince(lastScan)
+        let overview = try ArestemisSamples.decode(Overview.self, from: "overview", shift: shift)
+        let page = try ArestemisSamples.decode(MatchPage.self, from: "matches", shift: shift)
+        let single = try ArestemisSamples.decode(Match.self, from: "match", shift: shift)
+        let matches = page.items + (page.items.contains { $0.id == single.id } ? [] : [single])
+            + (try ArestemisSamples.decode(MatchPage.self, from: "item-matches", shift: shift)).items
+            + (try ["ebay-match", "ikea-match", "vinted-match"].map {
+                try ArestemisSamples.decode(Match.self, from: $0, shift: shift)
+            })
+            + (try ArestemisSamples.decode(MatchPage.self, from: "watch-matches", shift: shift)).items
+            + (try ArestemisSamples.decode(MatchPage.self, from: "price-matches", shift: shift)).items
+        var histories: [Int: [PricePoint]] = [:]
+        for card in overview.hunts where card.hunt.kind == .price {
+            if let prices = try? ArestemisSamples.decode(Prices.self, from: "prices-\(card.id)", shift: shift) {
+                histories[card.id] = prices.points
+            }
+        }
+        return SampleContent(overview: overview, matches: matches,
+                             rejected: try ArestemisSamples.decode(RejectedPage.self, from: "rejected", shift: shift).items,
+                             settings: try ArestemisSamples.decode(Settings.self, from: "settings"),
+                             kinds: try ArestemisSamples.decode([OfferedKind].self, from: "kinds"),
+                             places: try ArestemisSamples.decode([Place].self, from: "places"),
+                             histories: histories)
+    }
+}
+
+/// A sample server in memory: `-sampleData` on the contract's files (DEBUG, screenshots) and the tour on its own data
+/// (every build, brief 139). Actions change the in-memory state (states, start/pause, the search, settings);
+/// application texts are made up from the listing. Nothing leaves the device.
 final class SampleBackend: ArestemisBackend {
     struct Options {
         var noHunt = false          // -sampleNoHunt: no search yet
@@ -61,7 +107,6 @@ final class SampleBackend: ArestemisBackend {
         var ebayNotReady = false    // -sampleEbayNotReady: eBay without its keys on the server (greyed in the form)
         var watchRead: String?      // -sampleWatchRead <read>: the second watch's page state (screenshots)
         var preview: String?        // -pricePreview reading|refused|failed: how the product's preview answers
-        var name: String?           // the name application texts are signed with (the tour's), else the sample's
     }
 
     private var base: Overview
@@ -78,24 +123,19 @@ final class SampleBackend: ArestemisBackend {
     private var settingsValue: Settings
     private var kindsValue: [OfferedKind]
     private let knownPlaces: [Place]
+    private let application: ((Listing, String) -> String)?
     private let options: Options
 
-    init(options: Options = Options(), now: Date = .now) throws {
+    /// The contract's sample files (`-sampleData`), the last scan 40 s before `now`.
+    convenience init(options: Options = Options(), now: Date = .now) throws {
+        try self.init(content: .contract(now: now), options: options, now: now)
+    }
+
+    init(content: SampleContent, options: Options = Options(), now: Date = .now) throws {
         self.options = options
-        // The sample's last scan becomes "40 s ago".
-        let raw = try ArestemisSamples.decode(Overview.self, from: "overview")
-        let lastScan = raw.lastScan.flatMap(Timestamp.parse) ?? now
-        let shift = now.addingTimeInterval(-40).timeIntervalSince(lastScan)
-        base = try ArestemisSamples.decode(Overview.self, from: "overview", shift: shift)
-        let page = try ArestemisSamples.decode(MatchPage.self, from: "matches", shift: shift)
-        let single = try ArestemisSamples.decode(Match.self, from: "match", shift: shift)
-        matches = page.items + (page.items.contains { $0.id == single.id } ? [] : [single])
-            + (try ArestemisSamples.decode(MatchPage.self, from: "item-matches", shift: shift)).items
-            + (try ["ebay-match", "ikea-match", "vinted-match"].map {
-                try ArestemisSamples.decode(Match.self, from: $0, shift: shift)
-            })
-            + (try ArestemisSamples.decode(MatchPage.self, from: "watch-matches", shift: shift)).items
-            + (try ArestemisSamples.decode(MatchPage.self, from: "price-matches", shift: shift)).items
+        base = content.overview
+        matches = content.matches
+        application = content.application
         if options.longDescription {
             // Extend only the fictional listing description, leaving the contract's fields unchanged.
             matches = try matches.map { match in
@@ -106,27 +146,22 @@ final class SampleBackend: ArestemisBackend {
                 return try JSONDecoder().decode(Match.self, from: JSONSerialization.data(withJSONObject: object))
             }
         }
-        rejectedItems = try ArestemisSamples.decode(RejectedPage.self, from: "rejected", shift: shift).items
-        settingsValue = try ArestemisSamples.decode(Settings.self, from: "settings")
-        kindsValue = try ArestemisSamples.decode([OfferedKind].self, from: "kinds")
+        rejectedItems = content.rejected
+        settingsValue = content.settings
+        kindsValue = content.kinds
         if options.ownMode { settingsValue.applicationMode = .own }
         if options.noTexts {
             settingsValue.ownText = ""
             settingsValue.applicationNotes = ""
             settingsValue.aboutMe = ""
         }
-        let suggestions = try ArestemisSamples.decode([Place].self, from: "places")
+        let suggestions = content.places
         let searched = base.hunt?.search.flat?.places ?? []
         knownPlaces = searched + suggestions.filter { place in !searched.contains { $0.id == place.id } }
         huntValues = base.hunts.map(\.hunt)
         pages = Dictionary(uniqueKeysWithValues: base.hunts.compactMap { card in card.page.map { (card.id, $0) } })
         products = Dictionary(uniqueKeysWithValues: base.hunts.compactMap { card in card.price.map { (card.id, $0) } })
-        histories = [:]
-        for card in base.hunts where card.hunt.kind == .price {
-            if let prices = try? ArestemisSamples.decode(Prices.self, from: "prices-\(card.id)", shift: shift) {
-                histories[card.id] = prices.points
-            }
-        }
+        histories = content.histories
         nextHuntID = (huntValues.map(\.id).max() ?? 0) + 1
         if let read = options.watchRead, let id = huntValues.filter({ $0.kind == .watch }).dropFirst().first?.id,
            let page = pages[id] {
@@ -468,9 +503,10 @@ final class SampleBackend: ArestemisBackend {
         if let cached = matches[index].application, !regenerate { return cached }
         try await Task.sleep(for: .milliseconds(900))
         let mode = settingsValue.applicationMode
+        let listing = matches[index].listing
         let text = mode == .own ? settingsValue.ownText
-            : Self.writtenText(for: matches[index].listing, notes: settingsValue.applicationNotes,
-                               name: options.name ?? base.me.name)
+            : application?(listing, base.me.name)
+                ?? Self.writtenText(for: listing, notes: settingsValue.applicationNotes, name: base.me.name)
         let written = Application(text: text, mode: mode, created: ArestemisSamples.iso(.now))
         matches[index].application = written
         return written
