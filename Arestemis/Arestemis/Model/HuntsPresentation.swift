@@ -81,9 +81,11 @@ struct HuntWords: Equatable {
         self.watch ? language.string(watch) : language.string(search)
     }
 
-    /// The status beside the pulse: "Hunting" / "Watching", or "Paused".
-    func status(active: Bool) -> String {
-        active ? pick("Hunting", "Watching") : language.string("Paused")
+    /// The status beside the pulse: "Hunting" / "Watching", or "Paused"; a watch whose page refuses the server reads
+    /// "Stopped" (the server reads it no more until it is edited), without the pulse.
+    func status(active: Bool, stopped: Bool = false) -> String {
+        if active && stopped { return language.string("Stopped") }
+        return active ? pick("Hunting", "Watching") : language.string("Paused")
     }
     /// The one primary button of a paused hunt.
     var start: String { pick("Start hunting", "Start watching") }

@@ -269,6 +269,9 @@ struct WatchTests {
         let watch = HuntWords(.watch, language: language)
         #expect(watch.status(active: true) == (german ? "Beobachtung läuft" : "Watching"))
         #expect(watch.status(active: false) == (german ? "Pausiert" : "Paused"))
+        // A blocked watch: the server reads its page no more until it is edited.
+        #expect(watch.status(active: true, stopped: true) == (german ? "Angehalten" : "Stopped"))
+        #expect(watch.status(active: false, stopped: true) == (german ? "Pausiert" : "Paused"))
         #expect(watch.start == (german ? "Beobachtung starten" : "Start watching"))
         #expect([watch.newTitle, watch.editTitle, watch.create, watch.save, watch.delete]
                 == (german ? ["Neue Beobachtung", "Beobachtung bearbeiten", "Beobachtung anlegen", "Beobachtung speichern",

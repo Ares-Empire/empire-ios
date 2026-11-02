@@ -39,7 +39,7 @@ struct HuntListCard: View {
                     }
                     if known {
                         // The status line; its button sits on this row's right, outside this label.
-                        HuntStatus(active: card.hunt.active, kind: text.kind)
+                        HuntStatus(active: card.hunt.active, kind: text.kind, stopped: card.page?.read == .blocked)
                             .frame(maxWidth: .infinity, minHeight: 36, alignment: .leading)
                             .padding(.top, 12)
                     }
@@ -74,7 +74,7 @@ struct HuntHeroCard: View {
         let text = HuntText(card.hunt, page: card.page, sites: sites)
         VStack(alignment: .leading, spacing: 0) {
             if text.kind != nil {
-                HuntStatus(active: card.hunt.active, kind: text.kind).padding(.bottom, 14)
+                HuntStatus(active: card.hunt.active, kind: text.kind, stopped: card.page?.read == .blocked).padding(.bottom, 14)
             }
             HuntTitle(text: text, size: 20)
             if let line = text.details ?? text.newerApp {
@@ -100,15 +100,18 @@ struct HuntHeroCard: View {
     }
 }
 
-/// "● HUNTING" (a watch: "● WATCHING") with the pulse, or "● PAUSED" in grey.
+/// "● HUNTING" (a watch: "● WATCHING") with the pulse, or "● PAUSED" in grey; a blocked watch "● STOPPED" in grey, as
+/// the server reads its page no more.
 struct HuntStatus: View {
     let active: Bool
     var kind: SearchKind? = nil
+    var stopped = false
 
     var body: some View {
+        let running = active && !stopped
         HStack(spacing: 9) {
-            StatusDot(active: active)
-            StatusLabel(text: HuntWords(kind).status(active: active), tone: active ? .accent : .inactive,
+            StatusDot(active: running)
+            StatusLabel(text: HuntWords(kind).status(active: active, stopped: stopped), tone: running ? .accent : .inactive,
                         accent: Look.accent)
         }
         .accessibilityElement(children: .combine)

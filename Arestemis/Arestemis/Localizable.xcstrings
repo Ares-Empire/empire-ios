@@ -2477,6 +2477,16 @@
         }
       }
     },
+    "Stopped" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Angehalten"
+          }
+        }
+      }
+    },
     "Tell me when" : {
       "localizations" : {
         "de" : {
