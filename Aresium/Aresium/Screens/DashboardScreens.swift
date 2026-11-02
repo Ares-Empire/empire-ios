@@ -14,6 +14,9 @@ struct DashboardRoute: Hashable {
     var monthPage: String? = nil
     /// The search (brief 77): its field and the names it finds; `category` and `side` are unused (`.search`).
     var search = false
+    /// The fixed costs page of `side` (brief 209: Regular income on the income side); `category` is unused
+    /// (`.fixedCosts(_:)`).
+    var fixedCosts = false
     /// Phone category pages follow personal names by their stable id.
     var categoryID: String? = nil
 }
@@ -142,6 +145,9 @@ struct DashboardStack<Top: View, Root: View>: View {
                     PageHeader(selection: $place.selection, route: route, store: store, palette: palette) { top(route) }
                     if route.search {
                         SearchScreen(store: store, palette: palette, band: band, pick: open)
+                    } else if route.fixedCosts {
+                        FixedCostsScreen(side: route.side, store: store, palette: palette, band: band,
+                                         shortcuts: rows, pick: open)
                     } else if let month = route.monthPage {
                         MonthScreen(month: month, opensOn: route.side, store: store, palette: palette, graph: graph,
                                     graphMoves: graphMoves, band: band, openDay: openDay, pick: open)
@@ -431,6 +437,8 @@ struct SideTotal: View {
     /// The amount written out; nil while there is none (the dashboard is loading).
     let total: String?
     let palette: Palette
+    /// The word after the amount; nil: "spent" or "received" (the fixed costs page: "a month", brief 209).
+    var caption: String? = nil
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 6) {
@@ -440,7 +448,7 @@ struct SideTotal: View {
             if let total {
                 Text(verbatim: total)
                     .font(AppFont.number(21, weight: .bold)).minimumScaleFactor(0.7).lineLimit(1)
-                Text(side.caption).font(AppFont.text(11)).foregroundStyle(palette.muted)
+                Text(verbatim: caption ?? side.caption).font(AppFont.text(11)).foregroundStyle(palette.muted)
             }
         }
     }
@@ -563,6 +571,11 @@ private struct StartPage: View {
                 }
                 let total = store.totals(scope).map { Money.total(side == .income ? $0.income : $0.expense) }
                 SideTotal(side: side, total: total, palette: palette)
+                // Brief 209: Overview's average month and what of it is fixed, which opens the fixed costs.
+                if scope == .overview, let line = AverageLine(average: store.monthlyAverage(side: side),
+                                          fixedCosts: store.fixedCosts(side: side), side: side, scope: scope) {
+                    AverageLineView(line: line, palette: palette) { pick(.fixedCosts(side)) }
+                }
             }.padding(.horizontal, 18).padding(.top, 6).padding(.bottom, 8)
             LazyVStack(spacing: 0) {
                 // Brief 215: while no category is chosen, the way to them comes first.

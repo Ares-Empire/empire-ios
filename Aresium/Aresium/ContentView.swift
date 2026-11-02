@@ -187,6 +187,14 @@ struct ContentView: View {
                 place.day = DayRoute(date: day, side: side)
             }
             if arguments.contains("-openSearch") { place.path = [.search] }
+            // Brief 209: `-openFixedCosts expenses|income` the fixed costs page (Regular income) over Overview, as its
+            // line opens it (`-fixedCostOut <text>` then takes one out).
+            if let opened = LaunchArguments.value("-openFixedCosts") {
+                let side: DashboardSide = opened == "income" ? .income : .expenses
+                place.current = false
+                place.side = side
+                place.path = [.fixedCosts(side)]
+            }
             // `-openCash`: the Cash page (this month's; `-cashMonth <YYYY-MM>` another; with `-sampleOverview` its months).
             if arguments.contains("-openCash") {
                 let month = LaunchArguments.value("-cashMonth") ?? String(LedgerExport.day(.now).prefix(7))
@@ -902,9 +910,12 @@ struct ContentView: View {
                         imports: ScreenHeader.Import? = nil, search: (() -> Void)? = nil, dropPoint: Bool = false,
                         openSettings: (() -> Void)? = nil) -> some View {
         let store = dashboard ?? store
-        let category = route.flatMap { $0.cash || $0.monthPage != nil ? nil : store.category($0.category, side: $0.side) }
+        let category = route.flatMap {
+            $0.cash || $0.monthPage != nil || $0.fixedCosts ? nil : store.category($0.category, side: $0.side)
+        }
         let subtitle: String? = route.flatMap { route -> String? in
             if route.search { return nil }                                                   // the search (brief 77)
+            if route.fixedCosts { return nil }                                   // the fixed costs page (brief 209)
             if route.monthPage != nil { return String(localized: "Expenses and income") }  // a month's page (brief 56)
             // A name's page (brief 44); its months' pages (brief 55) read as a category's month list, below.
             if route.name != nil && route.month == nil { return String(localized: "All payments") }
@@ -918,6 +929,7 @@ struct ContentView: View {
         }
         let title = route.map { route in
             if route.search { return String(localized: "Search") }
+            if route.fixedCosts { return FixedCostWords.title(route.side) }
             if let month = route.monthPage { return store.monthTitle(month) }
             return route.name?.title ?? (route.cash ? String(localized: "Cash") : CategoryName.shown(route.category))
         } ?? "Aresium"

@@ -59,6 +59,95 @@ struct FixedCostsTests {
         #expect(FixedCosts.entries(in: dashboard(double)).isEmpty)
     }
 
+    @Test func yearlySupermarketPairAmongOtherPurchasesIsNotFixed() {
+        let pair = rows(["2025-10-15", "2026-10-15"], amount: -25, name: "Fictional Supermarket")
+        let visits = (0..<40).map { index in
+            let date = FixedCosts.calendar.date(byAdding: .day, value: index * 7,
+                                                to: FixedCosts.date("2025-11-01")!)!
+            return row("visit\(index)", LedgerExport.day(date, calendar: FixedCosts.calendar),
+                       -Double(60 + index % 4), name: "Fictional Supermarket")
+        }
+        #expect(FixedCosts.entries(in: dashboard(pair + visits)).isEmpty)
+    }
+
+    @Test func halfYearlyRestaurantPairAmongOtherVisitsIsNotFixed() {
+        let pair = rows(["2026-04-15", "2026-10-15"], amount: -30, name: "Fictional Restaurant")
+        let visits = rows(["2026-05-02", "2026-05-19", "2026-08-10"], amount: -80,
+                          name: "Fictional Restaurant", prefix: "visit")
+        #expect(FixedCosts.entries(in: dashboard(pair + visits)).isEmpty)
+    }
+
+    @Test func gymMonthlyAndHalfYearlyFeesBothCountButUnrelatedVisitsBlockOnlyLongCadence() throws {
+        let fee = rows(monthly, amount: -40, name: "Fictional Gym")
+        let halfYear = rows(["2026-04-03", "2026-10-03"], amount: -120, name: "Fictional Gym", prefix: "half")
+        // A same-name payment in the other direction does not dirty the expense name.
+        let refund = row("refund", "2026-10-05", 200, name: "Fictional Gym")
+        let d = dashboard(fee + halfYear + [refund])
+        let entries = FixedCosts.entries(in: d)
+        #expect(Set(entries.map(\.cadence)) == [.monthly, .halfYearly])
+        #expect(entries.count == 2)
+        let monthlyMark = try #require(entries.first { $0.cadence == .monthly }).mark
+        #expect(FixedCosts.entries(in: d, marks: [monthlyMark]).count == 2,
+                "A person's Not fixed mark does not make an otherwise regular companion series irregular")
+        let extra = row("visit", "2026-08-19", -200, name: "Fictional Gym")
+        #expect(FixedCosts.entries(in: dashboard(fee + halfYear + [extra])).map(\.cadence) == [.monthly])
+    }
+
+    @Test func insuranceWithOnlyTwoYearlyPaymentsCounts() throws {
+        let insurance = rows(["2025-10-15", "2026-10-15"], amount: -498.96, name: "Fictional Insurance")
+        let entries = FixedCosts.entries(in: dashboard(insurance))
+        let entry = try #require(entries.first)
+        #expect(entries.count == 1 && entry.cadence == .yearly && entry.count == 2)
+    }
+
+    @Test func monthlyShopAmountsOnScatteredDaysAreNotFixedEvenAmongOtherAmounts() {
+        // Every gap is monthly, but the day drifts across the month. Gap regularity alone accepted this series.
+        let visits = rows(["2026-01-01", "2026-02-04", "2026-03-08", "2026-04-12", "2026-05-16",
+                           "2026-06-20", "2026-07-24", "2026-08-28", "2026-10-01", "2026-11-05", "2026-12-09"],
+                          amount: -25, name: "Fictional Shop")
+        #expect(FixedCosts.entries(in: dashboard(visits)).isEmpty)
+        let others = rows(["2026-02-10", "2026-02-15", "2026-03-20", "2026-05-01"], amount: -90,
+                          name: "Fictional Shop", prefix: "other")
+        #expect(FixedCosts.entries(in: dashboard(visits + others)).isEmpty)
+    }
+
+    @Test func quarterlyAlsoNeedsASteadyDay() {
+        let visits = rows(["2025-01-01", "2025-04-04", "2025-07-08", "2025-10-12", "2026-01-16",
+                           "2026-04-20", "2026-07-24", "2026-10-28"], amount: -50, name: "Fictional Shop")
+        #expect(FixedCosts.entries(in: dashboard(visits)).isEmpty)
+    }
+
+    @Test func rentAllowsDayShiftsAndNextWorkingDay() throws {
+        // 1 February 2026 is Sunday: paid on Monday the 2nd. Other months move by at most three days.
+        let payments = rows(["2026-01-01", "2026-02-02", "2026-03-04", "2026-04-02", "2026-05-01", "2026-06-03"])
+        let entries = FixedCosts.entries(in: dashboard(payments))
+        #expect(entries.count == 1)
+        #expect(try #require(entries.first).cadence == .monthly)
+    }
+
+    @Test func steadyDayWrapsAcrossMonthEndsIncludingFebruary() {
+        for days in [
+            ["2026-05-30", "2026-06-30", "2026-07-31", "2026-09-01", "2026-10-02"],
+            ["2026-01-31", "2026-02-28", "2026-03-31", "2026-04-30", "2026-06-01"],
+            ["2024-01-31", "2024-02-29", "2024-03-31", "2024-04-30"],
+        ] {
+            let entries = FixedCosts.entries(in: dashboard(rows(days)))
+            #expect(entries.count == 1 && entries.first?.cadence == .monthly)
+        }
+    }
+
+    @Test func steadyDayAllowsExactlyThreeQuartersAndFiveDays() {
+        // Five payments pin the usual day to the 3rd. One is exactly five days away, two are outliers.
+        // Six of eight payments pass the day rule; six of seven gaps pass the existing interval rule.
+        let allowed = ["2026-01-03", "2026-02-03", "2026-03-03", "2026-04-03",
+                       "2026-05-03", "2026-06-08", "2026-07-13", "2026-08-13"]
+        #expect(FixedCosts.entries(in: dashboard(rows(allowed))).count == 1)
+        // With a third outlier fewer than three quarters fall within five days of the usual day.
+        let rejected = ["2026-01-03", "2026-02-03", "2026-03-03", "2026-04-03",
+                        "2026-05-03", "2026-06-09", "2026-07-13", "2026-08-13"]
+        #expect(FixedCosts.entries(in: dashboard(rows(rejected))).isEmpty)
+    }
+
     @Test func endedUsesNewestLedgerPaymentAndGraceIsInclusive() throws {
         let gym = rows(["2026-03-01", "2026-04-01", "2026-05-01"], amount: -20, name: "Fictional Gym")
         let latest = row("reference", "2026-09-01", 1, key: nil)

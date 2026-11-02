@@ -78,6 +78,11 @@ enum PhoneSample {
         if paybackGroup {
             files.append(ImportFile(name: "Umsaetze-Geteilt.csv", data: Data(paybackGroupLines(now: .now).utf8)))
         }
+        let fixedCosts = LaunchArguments.current.contains("-sampleFixedCosts")
+        if fixedCosts {
+            for id in FixedCostSample.categories.values where !chosen.contains(id) { try await ledger.choose(id) }
+            files.append(ImportFile(name: "Umsaetze-Vorjahr.csv", data: Data(fixedCostLines(now: .now).utf8)))
+        }
         for name in ["sample-paypal.csv", "sample-camt.xml"] {
             let parts = name.split(separator: ".")
             if let url = Bundle.main.url(forResource: String(parts[0]), withExtension: String(parts[1])) {
@@ -88,6 +93,7 @@ enum PhoneSample {
         // The made-up payback, linked as in the tour; `-sampleNoPayback` leaves it to be linked by hand (brief 203).
         if !LaunchArguments.current.contains("-sampleNoPayback") { try await TourData.linkSamplePayback(in: backend) }
         if paybackGroup { try await sortPaybackGroup(backend) }
+        if fixedCosts { try await sortFixedCosts(backend) }
         // Confirmation screenshots: give a category made-up primary payments, never changing the real store.
         if let key = LaunchArguments.value("-sampleCategoryPayments"),
            let id = try await backend.categories().id(named: key) ?? (backend.summary.chosen.contains { $0.id == key } ? key : nil) {
@@ -294,6 +300,77 @@ enum PhoneSample {
             } else {
                 continue
             }
+            try await backend.ledger.setCategory(payment.id, category: category, source: .manual)
+        }
+        try await backend.refresh()
+    }
+
+    /// `-sampleFixedCosts` (brief 209, the fixed costs page): an older made-up statement and contracts over the last 14
+    /// months, so a yearly payment is seen twice. The months before the tour's nine carry its regular payments (salary,
+    /// pocket money, the rent at €750 before its raise to €780, the bills, cash) and groceries, so the average month stays
+    /// a normal one; over all 14 months two subscriptions at one shop (StreamFiktiv €7.99 and €12.99), a yearly liability
+    /// insurance (€498.96, so €41.58 a month), a quarterly account fee (€15) and a gym cancelled four months ago (€29.90,
+    /// Ended). Made-up names, dates and amounts; this month's payments only up to today.
+    private static func fixedCostLines(now: Date) -> String {
+        let calendar = ReceiptDay.calendar
+        let thisMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: now)) ?? now
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "de_DE")
+        formatter.calendar = calendar
+        formatter.timeZone = calendar.timeZone
+        formatter.dateFormat = "dd.MM.yyyy"
+        let monthNames = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober",
+                          "November", "Dezember"]
+        var lines = ["IBAN Auftragskonto;Buchungstag;Valutadatum;Name Zahlungsbeteiligter;Buchungstext;Verwendungszweck;Betrag;Währung;Soll/Haben;Saldo nach Buchung"]
+        var seed = 11
+        func next(_ range: Int) -> Int { seed = (seed * 1103 + 12345) % 65536; return seed % range }
+        func euros(_ cents: Int) -> String { String(format: "%ld,%02ld", cents / 100, cents % 100) }
+        func add(_ back: Int, _ day: Int, _ who: String, _ kind: String, _ text: String, _ euros: String, _ sign: String) {
+            let month = calendar.date(byAdding: .month, value: -back, to: thisMonth) ?? thisMonth
+            guard let date = calendar.date(byAdding: .day, value: day - 1, to: month), date <= now else { return }
+            let shown = formatter.string(from: date)
+            lines.append(";\(shown);\(shown);\(who);\(kind);\(text);\(euros);EUR;\(sign);")
+        }
+        for back in 0...13 {
+            let month = calendar.date(byAdding: .month, value: -back, to: thisMonth) ?? thisMonth
+            let name = monthNames[calendar.component(.month, from: month) - 1]
+            // The months before the tour's statement (it starts eight months back): its regular payments go on.
+            if back >= 9 {
+                add(back, 1, "Fiktiv Werke GmbH", "Gehalt/Rente", "Gehalt \(name)", "2.450,00", "H")
+                add(back, 2, "Fiktiv Hausverwaltung", "Dauerauftrag", "Miete \(name)", "750,00", "S")
+                add(back, 3, "Erika Mustermann", "Gutschrift", "Taschengeld \(name)", "150,00", "H")
+                add(back, 5, "Stadtwerke Fiktivstadt", "Lastschrift", "Abschlag Strom \(name)", "45,00", "S")
+                add(back, 6, "Vodafone GmbH", "Lastschrift", "Mobilfunk \(name)", "29,99", "S")
+                add(back, 7, "MVG", "Lastschrift", "Deutschlandticket \(name)", "58,00", "S")
+                add(back, 8, "Spotify", "Lastschrift", "Spotify Premium", "10,99", "S")
+                add(back, 9, "Netflix", "Lastschrift", "Netflix Abo", "13,99", "S")
+                add(back, 18, "Geldautomat Fiktivbank", "Auszahlung", "Bargeldauszahlung", "100,00", "S")
+                // Groceries at changing amounts (a fixed seed, as the tour's), so they never look like a contract.
+                for week in 0..<4 {
+                    add(back, 4 + week * 7, "REWE Markt GmbH", "Kartenzahlung", "REWE SAGT DANKE", euros(2_000 + next(4_500)), "S")
+                    add(back, 6 + week * 7, "LIDL DIENSTLEISTUNG", "Kartenzahlung", "Lidl sagt Danke", euros(900 + next(2_500)), "S")
+                }
+            }
+            add(back, 11, "StreamFiktiv", "Lastschrift", "StreamFiktiv Abo", "7,99", "S")
+            add(back, 14, "StreamFiktiv", "Lastschrift", "StreamFiktiv Abo", "12,99", "S")
+            if back >= 4 { add(back, 10, "Fiktiv Fitness GmbH", "Lastschrift", "Mitgliedsbeitrag \(name)", "29,90", "S") }
+            if back == 13 || back == 1 {
+                add(back, 15, "Fiktiv Versicherung AG", "Lastschrift", "Haftpflichtversicherung Jahresbeitrag", "498,96", "S")
+            }
+            if back % 3 == 1 { add(back, 28, "Fiktiv Bank", "Entgelt", "Kontoführung Quartal", "15,00", "S") }
+        }
+        return lines.joined(separator: "\n") + "\n"
+    }
+
+    /// The contracts' categories (by hand, so the page shows the same tiles whatever the sorting makes of the names).
+    private enum FixedCostSample {
+        static let categories = ["StreamFiktiv": "subscriptions", "Fiktiv Versicherung AG": "insurance",
+                                 "Fiktiv Bank": "fees", "Fiktiv Fitness GmbH": "sports-fitness"]
+    }
+
+    private static func sortFixedCosts(_ backend: PhoneBackend) async throws {
+        for payment in try await backend.ledger.payments() {
+            guard let name = payment.counterparty, let category = FixedCostSample.categories[name] else { continue }
             try await backend.ledger.setCategory(payment.id, category: category, source: .manual)
         }
         try await backend.refresh()

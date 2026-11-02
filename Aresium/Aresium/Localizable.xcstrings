@@ -4,6 +4,26 @@
     "" : {
       "shouldTranslate" : false
     },
+    "%@ a month" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ im Monat"
+          }
+        }
+      }
+    },
+    "%@ a year" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ im Jahr"
+          }
+        }
+      }
+    },
     "%@ added to %lld payments" : {
       "localizations" : {
         "de" : {
@@ -50,6 +70,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ zurück"
+          }
+        }
+      }
+    },
+    "%@ counted again." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ wird wieder gezählt."
+          }
+        }
+      }
+    },
+    "%@ fixed" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "davon %@ fix"
           }
         }
       }
@@ -174,6 +214,16 @@
         }
       }
     },
+    "%@ regular" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "davon %@ regelmäßig"
+          }
+        }
+      }
+    },
     "%@ so far" : {
       "localizations" : {
         "de" : {
@@ -220,6 +270,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ noch offen."
+          }
+        }
+      }
+    },
+    "%@ taken out of fixed costs." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ aus den Fixkosten genommen."
+          }
+        }
+      }
+    },
+    "%@ taken out of regular income." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ aus den regelmäßigen Einnahmen genommen."
           }
         }
       }
@@ -2223,6 +2293,26 @@
         }
       }
     },
+    "Average of the finished months: %@ a month" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Durchschnitt der abgeschlossenen Monate: %@ im Monat"
+          }
+        }
+      }
+    },
+    "Avg. %@ a month" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ø %@ im Monat"
+          }
+        }
+      }
+    },
     "Back" : {
       "localizations" : {
         "de" : {
@@ -2744,6 +2834,16 @@
         }
       }
     },
+    "Count again" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wieder zählen"
+          }
+        }
+      }
+    },
     "Counted as its bank payment" : {
       "localizations" : {
         "de" : {
@@ -3094,6 +3194,16 @@
         }
       }
     },
+    "Ended" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beendet"
+          }
+        }
+      }
+    },
     "Enter Aresium mode" : {
       "localizations" : {
         "de" : {
@@ -3324,6 +3434,26 @@
         }
       }
     },
+    "Fixed costs" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fixkosten"
+          }
+        }
+      }
+    },
+    "Fixed costs: %@ a month" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fixkosten: %@ im Monat"
+          }
+        }
+      }
+    },
     "Food shop" : {
       "localizations" : {
         "de" : {
@@ -3350,6 +3480,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Code vergessen?"
+          }
+        }
+      }
+    },
+    "Found in payments of the same name with about the same amount at the same interval, monthly to yearly. Hold a row to take it out." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gefunden in Buchungen desselben Namens mit etwa gleichem Betrag im gleichen Abstand, monatlich bis jährlich. Halte eine Zeile gedrückt, um sie herauszunehmen."
           }
         }
       }
@@ -4626,6 +4766,16 @@
         }
       }
     },
+    "No fixed costs found yet. They show up after three payments of one name at the same interval, a yearly one after two." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch keine Fixkosten gefunden. Sie erscheinen nach drei Buchungen eines Namens im gleichen Abstand, jährliche nach zwei."
+          }
+        }
+      }
+    },
     "No income on this day." : {
       "localizations" : {
         "de" : {
@@ -4712,6 +4862,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Noch keine Belege. Importieren → Beleg scannen oder Foto auswählen fügt einen hinzu."
+          }
+        }
+      }
+    },
+    "No regular income found yet. It shows up after three payments of one name at the same interval, a yearly one after two." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch keine regelmäßigen Einnahmen gefunden. Sie erscheinen nach drei Buchungen eines Namens im gleichen Abstand, jährliche nach zwei."
           }
         }
       }
@@ -4826,6 +4986,26 @@
         }
       }
     },
+    "Not counted" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nicht gezählt"
+          }
+        }
+      }
+    },
+    "Not fixed" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nicht fix"
+          }
+        }
+      }
+    },
     "Not for money in" : {
       "localizations" : {
         "de" : {
@@ -4872,6 +5052,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nicht auf dem Beleg. Karte ist gewählt, weil eine Buchung passt."
+          }
+        }
+      }
+    },
+    "Not regular" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nicht regelmäßig"
           }
         }
       }
@@ -5642,6 +5832,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Referenz"
+          }
+        }
+      }
+    },
+    "Regular income" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Regelmäßige Einnahmen"
+          }
+        }
+      }
+    },
+    "Regular income: %@ a month" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Regelmäßige Einnahmen: %@ im Monat"
           }
         }
       }
@@ -6478,6 +6688,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Die Zahl bei einer Kategorie: wie viele deiner Buchungen sie hat oder bekäme, wenn du sie wählst."
+          }
+        }
+      }
+    },
+    "The payments changed meanwhile. Try again." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Buchungen haben sich inzwischen geändert. Versuch es noch mal."
           }
         }
       }
@@ -7758,6 +7978,16 @@
         }
       }
     },
+    "a month" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "im Monat"
+          }
+        }
+      }
+    },
     "a quarter" : {
       "localizations" : {
         "de" : {
@@ -7834,6 +8064,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ganz"
+          }
+        }
+      }
+    },
+    "last %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "zuletzt am %@"
           }
         }
       }
