@@ -135,13 +135,8 @@ struct DashboardStack<Top: View, Root: View>: View {
             .navigationDestination(for: DashboardRoute.self) { route in
                 VStack(spacing: 0) {
                     // Brief 82: while its list selects, the header has All, the count and Done in place of the arrow,
-                    // the title and the buttons.
-                    if place.selection?.belongs(to: route) == true {
-                        SelectionHeader(selection: $place.selection, store: store, palette: palette)
-                            .transition(.opacity)
-                    } else {
-                        top(route)
-                    }
+                    // the title and the buttons (brief 200: in place, fading, at the page header's height).
+                    PageHeader(selection: $place.selection, route: route, store: store, palette: palette) { top(route) }
                     if route.search {
                         SearchScreen(store: store, palette: palette, band: band, pick: open)
                     } else if let month = route.monthPage {
@@ -220,6 +215,43 @@ struct DashboardStack<Top: View, Root: View>: View {
 
     /// One page back (a name's month page whose month has no payments of the name left).
     private func back() { place.back() }
+}
+
+/// A pushed page's header, or while its list selects the selection's (brief 82) in its place. Brief 200: the two fade
+/// into each other in place over selecting's motion (`SelectionMotion`), and the selection's keeps the page header's
+/// height, so nothing under it moves. The selection is read here, through its binding, so the outgoing header fades in
+/// the motion of whoever starts or ends selecting; the incoming one fades in by itself (`fadesIn`), as it took no
+/// animation coming in (measured: it came in one frame, also with a transition's own animation).
+private struct PageHeader<Top: View>: View {
+    @Binding var selection: PaymentSelection?
+    let route: DashboardRoute
+    let store: DashboardStore
+    let palette: Palette
+    @ViewBuilder let top: () -> Top
+    /// The page header's height, kept while the selection's stands in its place.
+    @State private var height: CGFloat = 0
+    /// This page has selected: its header fades back in at Done (and not as the page is first pushed).
+    @State private var hasSelected = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        let selecting = selection?.belongs(to: route) == true
+        let motion = SelectionMotion.animation(reduceMotion: reduceMotion)
+        ZStack {
+            if selecting {
+                SelectionHeader(selection: $selection, store: store, palette: palette)
+                    .frame(minHeight: height)
+                    .fadesIn(motion)
+                    .transition(.opacity)
+            } else {
+                top()
+                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height = $0 }
+                    .fadesIn(hasSelected ? motion : nil)
+                    .transition(.opacity)
+            }
+        }
+        .onChange(of: selecting) { _, now in if now { hasSelected = true } }
+    }
 }
 
 /// The start screen (brief 56): the range picker on its own row under the header (the import button moved up beside the
@@ -657,6 +689,12 @@ struct TransactionsScreen: View {
     @State private var renaming: SelectionRename?
     /// What an action on the selection did, with Undo (`UndoBar`); or a line saying why it could not.
     @State private var undo: UndoOffer?
+    /// Selecting by sliding a finger over the rows (brief 200): the rows' frames, the finger, the edges' scrolling.
+    @State private var slide = SlideTracker()
+    /// The list's scroll position, which the slide moves near the edges.
+    @State private var scroll = ScrollPosition()
+    /// Counts the rows a slide changed: a light haptic each.
+    @State private var slideSteps = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     #if DEBUG
     /// The launch arguments below act once: `.task` runs again whenever the list shows again (back from a pushed name's
@@ -679,9 +717,13 @@ struct TransactionsScreen: View {
                 let ticking = listSelection
                 let shortcuts = rowMenus && ticking == nil
                 LazyVStack(spacing: 0) {
-                    // Brief 99: Not sorted's list starts with the way through it, name by name (not while selecting).
-                    if let quickSort, ticking == nil, store.offersQuickSort(on: route) {
+                    // Brief 99: Not sorted's list starts with the way through it, name by name. While selecting it stays
+                    // where it is, faded and not taking taps (brief 200: gone, it moved every row up by its height).
+                    if let quickSort, store.offersQuickSort(on: route) {
                         QuickSortListCard(tally: store.quickSortTally, palette: palette, open: quickSort)
+                            .opacity(ticking == nil ? 1 : SelectionLook.unavailable)
+                            .allowsHitTesting(ticking == nil)
+                            .accessibilityHidden(ticking != nil)
                             .padding(.bottom, 8)
                             .transition(.opacity)
                     }
@@ -694,6 +736,7 @@ struct TransactionsScreen: View {
                                        shownAt: swiped?.id == row.id ? swiped?.points : nil, selection: mark) {
                                 if ticking != nil { tick(entry) } else { selection = $0 }
                             }
+                            .slideRow(entry.id, in: slide)
                             .transition(.opacity)
                         case let .summed(sum):
                             SummedPaymentGroup(sum: sum, store: store, palette: palette, menu: menu, shortcuts: shortcuts,
@@ -702,29 +745,38 @@ struct TransactionsScreen: View {
                                                selection: mark, select: { tick(entry) }) {
                                 selection = $0
                             }
+                            .slideRow(entry.id, in: slide)
                             .transition(.opacity)
                         }
                     }
                     if list.rows.isEmpty {
                         EmptyMessage(text: String(localized: "No transactions this month."), palette: palette)
                     }
-                }.padding(.horizontal, 12).padding(.top, 8)
+                }
+                .padding(.horizontal, 12).padding(.top, 8)
+                // Brief 200: while selecting, a finger sliding over the rows ticks them (`SlideSelect.swift`).
+                .slideSelects(slide, enabled: ticking != nil)
             } band: { _ in band }
+            .slideViewport(slide, position: $scroll)
             .refreshable { await store.reload() }.scrollBounceBehavior(.always)
             .closesRowSwipe($menu.openRow)
             .tourScrollsToTarget()
         }
+        .sensoryFeedback(.selection, trigger: slideSteps)
         // What an action did (with Undo), or why it could not: above the selection's bar while it shows.
         .undoBar($undo, accent: nil)
-        // Brief 82: the bar at the bottom while selecting, as Mail's toolbar, rising and going with it. It stays at the
-        // bottom while the name's alert has the keyboard up.
+        // Brief 82: the bar at the bottom while selecting, as Mail's toolbar, coming and going with it (brief 200: fading
+        // in place; it had come in one frame and sunk out over half a second). It stays at the bottom while the name's
+        // alert has the keyboard up.
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if let ticking = listSelection {
                 SelectionBar(state: SelectionBarState(summary: store.selectionSummary(ticking.live(in: store)),
                                                       ownNames: store.ownNames),
                              naming: renaming?.isWorking == true, palette: palette,
                              category: openCategory, name: openName)
-                    .transition(.move(edge: .bottom))
+                    // As the header's: the inset's content took no animation coming in, so it fades in by itself.
+                    .fadesIn(SelectionMotion.animation(reduceMotion: reduceMotion))
+                    .transition(.opacity)
             }
         }
         .ignoresSafeArea(.keyboard)
@@ -735,8 +787,9 @@ struct TransactionsScreen: View {
         .onChange(of: listSelection != nil) { _, selecting in
             guard selecting else { return }
             menu.openRow = nil
-            withAnimation(SumMotion.animation(reduceMotion: reduceMotion)) { menu.openSums = [] }
+            withAnimation(SelectionMotion.animation(reduceMotion: reduceMotion)) { menu.openSums = [] }
         }
+        .onAppear(perform: connectSlide)
         .task {
             #if DEBUG
             guard !launchActionsDone else { return }
@@ -795,6 +848,25 @@ struct TransactionsScreen: View {
         selecting?.toggle(entry, in: store)
     }
 
+    /// The slide (brief 200) reads this list's rows and selection and ticks through them; it scrolls this list.
+    private func connectSlide() {
+        let store = store, route = route, selecting = $selecting, steps = $slideSteps, scroll = $scroll
+        slide.shownRows = {
+            store.paymentList(category: route.category, month: route.month ?? "", side: route.side).entries
+                .map { ($0.id, store.selectionIDs(for: $0)) }
+        }
+        slide.ticked = {
+            guard let selection = selecting.wrappedValue, selection.belongs(to: route) else { return nil }
+            return selection.ids
+        }
+        slide.tick = { ids in
+            guard selecting.wrappedValue?.belongs(to: route) == true else { return }
+            selecting.wrappedValue?.ids = ids
+            steps.wrappedValue += 1
+        }
+        slide.scrollTo = { y in scroll.wrappedValue.scrollTo(y: y) }
+    }
+
     /// The bar's Category: the change window for what is ticked.
     private func openCategory() {
         guard let ticking = listSelection else { return }
@@ -820,7 +892,7 @@ struct TransactionsScreen: View {
         case let .failed(problem):
             undo = UndoOffer(message: problem)
         case let .done(message, batchUndo):
-            withAnimation(SumMotion.animation(reduceMotion: reduceMotion)) { selecting = nil }
+            withAnimation(SelectionMotion.animation(reduceMotion: reduceMotion)) { selecting = nil }
             undo = UndoOffer(message: message) {
                 do {
                     let outcome = try await batchUndo.perform()
@@ -848,7 +920,7 @@ struct TransactionsScreen: View {
         }
         for _ in 0..<40 where store.dashboard == nil { try? await Task.sleep(for: .milliseconds(100)) }
         try? await Task.sleep(for: .milliseconds(500))
-        withAnimation(SumMotion.animation(reduceMotion: reduceMotion)) { selecting = PaymentSelection(route: route) }
+        withAnimation(SelectionMotion.animation(reduceMotion: reduceMotion)) { selecting = PaymentSelection(route: route) }
         try? await Task.sleep(for: .milliseconds(600))
         let list = store.paymentList(category: route.category, month: route.month ?? "", side: route.side)
         if count == "all" { selecting?.toggleAll(in: store) }

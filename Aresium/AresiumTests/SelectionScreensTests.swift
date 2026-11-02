@@ -160,6 +160,45 @@ struct SelectionScreensTests {
         #expect(!groceries.isSameList(as: DashboardRoute(category: "Groceries", side: .expenses, month: "2026-09")))
     }
 
+    // MARK: the slide (brief 200)
+
+    /// A slide over a real list: a summed row is one row (all its payments), a withdrawal's covered row is passed over,
+    /// and the result is the selection's, so the header's count and the bar read it as after taps.
+    @Test func aSlideOverTheListTicksASummedRowWholeAndPassesACoveredRow() async throws {
+        let (_, store) = try await setup()
+        store.sums.setEverywhere(true)
+        let list = entries(store)
+        let rows = list.map { store.selectionIDs(for: $0) }
+        let sum = try #require(list.firstIndex { if case .summed = $0 { true } else { false } })
+        var selection = PaymentSelection(route: groceries)
+        var slide = try #require(SlideSelection(rows: rows, ticked: selection.ids, anchor: 0))
+        slide.move(to: rows.count - 1)
+        selection.ids = slide.ticked
+        #expect(selection.allTicked(in: store), "every row of the list, the summed row's payments too")
+        #expect(selection.isTicked(list[sum], in: store) == true)
+        // Back to the first row: the summed row's payments go together.
+        slide.move(to: 0)
+        selection.ids = slide.ticked
+        #expect(selection.ids == rows[0])
+        #expect(sum == 0 || selection.isTicked(list[sum], in: store) == false)
+
+        let (_, cash) = try await setup([
+            payment("p1", "Geldautomat Fiktivbank", amount: "-100.00", category: "cash", source: .starter),
+        ], receipts: [receipt("r1", "Fictional Kiosk", category: nil)])
+        let cashList = cash.paymentList(category: "Cash withdrawals", month: "2026-10", side: .expenses).entries
+        let cashRows = cashList.map { cash.selectionIDs(for: $0) }
+        let covered = try #require(cashRows.firstIndex { $0.isEmpty }, "the withdrawal's covered row")
+        #expect(SlideSelection(rows: cashRows, ticked: [], anchor: covered) == nil, "no slide starts on it")
+        let first = try #require(cashRows.firstIndex { !$0.isEmpty })
+        var over = try #require(SlideSelection(rows: cashRows, ticked: [], anchor: first))
+        let end = covered > first ? cashRows.count - 1 : 0
+        over.move(to: end)
+        let range = min(first, end)...max(first, end)
+        #expect(range.contains(covered))
+        #expect(over.ticked == Set(range.flatMap { cashRows[$0] }) && !over.ticked.isEmpty,
+                "the rows on its way ticked, nothing of the covered one")
+    }
+
     // MARK: the bar
 
     @Test func theBarsStates() async throws {

@@ -3,14 +3,60 @@ import SwiftUI
 // Several payments at once, the look (brief 82; the logic is `Model/PaymentSelection.swift`): as Mail selects mails. The
 // header's icon turns a category's month list into selection: the rows slide a little to the right and a circle shows
 // at each one's left edge, a tap ticks it (the circle filled in the app's ink with a tick, the row lightly
-// highlighted); the header says how many are ticked, with All (or None) and Done; a bar at the bottom offers Category
-// and Name. Ink only, from the palette, in light, dark and red mode.
+// highlighted), and so does a finger sliding over the rows (brief 200, `SlideSelect.swift`); the header says how many
+// are ticked, with All (or None) and Done; a bar at the bottom offers Category and Name. Ink only, from the palette, in
+// light, dark and red mode.
+//
+// The motion (brief 200, Patrik on build 14: "quite bouncy … should be less bouncy"; measured on a recording of build
+// 14: every tick slid the new circle in from up to 29 pt left of its place, and the header's count rolled letter by
+// letter for 0.56 s): only the rows and their circles slide, once, in a short ease-out (`SelectionMotion`); the header
+// and the bar fade in place; a tick changes the circle and the row's background with a very short fade and nothing
+// moves.
 
 /// How a row shows while its list selects: its circle ticked or not; `ticked` nil for a row that cannot be selected (a
 /// withdrawal's covered row: no circle, faded).
 struct SelectionMark {
     let ticked: Bool?
     let palette: Palette
+}
+
+/// How selecting starts and ends (brief 200): the rows and their circles slide in one short ease-out without overshoot,
+/// and the header and the bar fade in place over the same time; nothing else moves. Its own, so adding up keeps
+/// `SumMotion`. Reduce Motion: no movement (the change shows at once).
+enum SelectionMotion {
+    static let duration = 0.25
+
+    static func animation(reduceMotion: Bool) -> Animation? {
+        guard !reduceMotion else { return nil }
+        #if DEBUG
+        // Frame strips of the motion itself: `-selectSlow <seconds>` stretches it.
+        if let seconds = LaunchArguments.value("-selectSlow").flatMap(Double.init) {
+            return .easeOut(duration: seconds)
+        }
+        #endif
+        return .easeOut(duration: duration)
+    }
+
+    /// A tick (a tap, All, None, a slide): the circle and the row's background change with a very short fade, in place.
+    static let tick = Animation.easeOut(duration: 0.1)
+}
+
+extension View {
+    /// Fades in as it appears, in `animation` (nil: shown at once). For views that come in where the transaction that
+    /// brings them gives them no animation (brief 200: the selection's header and bar came in one frame, also with a
+    /// transition's own animation; their way out fades as it should).
+    func fadesIn(_ animation: Animation?) -> some View { modifier(FadeIn(animation: animation)) }
+}
+
+private struct FadeIn: ViewModifier {
+    let animation: Animation?
+    @State private var shown = false
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(shown || animation == nil ? 1 : 0)
+            .onAppear { withAnimation(animation) { shown = true } }
+    }
 }
 
 /// The measures of selecting.
@@ -23,6 +69,9 @@ enum SelectionLook {
     static let edge: CGFloat = 12
     /// The fade of a row that cannot be selected.
     static let unavailable: Double = 0.45
+    /// The circle column (brief 200): from a row's leading edge to where its day's tile starts while selecting; a drag
+    /// that starts here selects by sliding. With the list's margin left of the rows it is 58 pt wide.
+    static let column: CGFloat = edge + inset
 }
 
 extension View {
@@ -41,7 +90,7 @@ private struct SelectionMarkLook: ViewModifier {
     func body(content: Content) -> some View {
         let ticked = mark?.ticked == true
         content
-            // Slid right by the circle and its gap (the list's own spring, `SumMotion`, set by whoever starts it).
+            // Slid right by the circle and its gap (in `SelectionMotion`, set by whoever starts or ends selecting).
             .padding(.leading, mark == nil ? 0 : SelectionLook.inset)
             .contentShape(Rectangle())
             .background {
@@ -56,29 +105,30 @@ private struct SelectionMarkLook: ViewModifier {
                 if let mark, let ticked = mark.ticked {
                     SelectionCircle(ticked: ticked, palette: mark.palette)
                         .padding(.leading, SelectionLook.edge)
-                        // It comes in with the row from the left, as Mail's.
+                        // It comes in with the row from the left, as Mail's (in the motion of whoever starts selecting).
                         .transition(.offset(x: -SelectionLook.inset).combined(with: .opacity))
                 }
             }
             .opacity(mark != nil && mark?.ticked == nil ? SelectionLook.unavailable : 1)
-            .animation(.easeOut(duration: 0.15), value: ticked)
+            .animation(SelectionMotion.tick, value: ticked)
     }
 }
 
 /// The circle at a row's left edge: empty in the muted ink, or filled in the app's ink with the tick in the wall's colour.
+/// Both are always there, one of them seen: a tick only fades between them in place. (Brief 200: as two views swapped in
+/// and out, the swap took the circle's own way in, so every tick slid the new circle in from the left.)
 struct SelectionCircle: View {
     let ticked: Bool
     let palette: Palette
 
     var body: some View {
-        Group {
-            if ticked {
-                Image(systemName: "checkmark.circle.fill")
-                    .symbolRenderingMode(.palette)
-                    .foregroundStyle(palette.background, palette.ink)
-            } else {
-                Image(systemName: "circle").foregroundStyle(palette.muted)
-            }
+        ZStack {
+            Image(systemName: "circle").foregroundStyle(palette.muted)
+                .opacity(ticked ? 0 : 1)
+            Image(systemName: "checkmark.circle.fill")
+                .symbolRenderingMode(.palette)
+                .foregroundStyle(palette.background, palette.ink)
+                .opacity(ticked ? 1 : 0)
         }
         .font(.system(size: SelectionLook.circle, weight: .regular))
         .frame(width: SelectionLook.circle, height: SelectionLook.circle)
@@ -88,15 +138,20 @@ struct SelectionCircle: View {
 
 /// The header while a list selects (Mail's): All (None once every payment is ticked) on the left, the count in the
 /// middle ("3 selected", "Select payments" at none), Done on the right, which ends selecting with nothing changed. The
-/// back arrow, the gear and the back swipe wait until then. Words on the wall, as the header's buttons (brief 56).
+/// back arrow, the gear and the back swipe wait until then. Words on the wall, as the header's buttons (brief 56). The
+/// count changes at once as rows are ticked (brief 200: it rolled letter by letter for half a second and drifted
+/// sideways as its width changed), also while a finger slides over the rows.
 struct SelectionHeader: View {
     @Binding var selection: PaymentSelection?
     let store: DashboardStore
     let palette: Palette
+    /// The selection last shown: while the header fades out after Done it keeps its words (brief 200: it showed "Select
+    /// payments" for its last frames).
+    @State private var lastShown: PaymentSelection?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        let ticking = selection ?? PaymentSelection(route: DashboardRoute(category: "", side: .expenses))
+        let ticking = selection ?? lastShown ?? PaymentSelection(route: DashboardRoute(category: "", side: .expenses))
         let count = ticking.live(in: store).count
         HeaderLayout(spacing: 10) {
             HeaderWordButton(title: SelectionWording.allButton(allTicked: ticking.allTicked(in: store)),
@@ -105,15 +160,16 @@ struct SelectionHeader: View {
             }
             .accessibilityIdentifier("selectAll")
             Text(verbatim: SelectionWording.title(count)).font(AppFont.text(17, weight: .bold)).lineLimit(1)
-                .contentTransition(.numericText())
-                .animation(reduceMotion ? nil : .default, value: count)
                 .accessibilityAddTraits(.isHeader)
             HeaderWordButton(title: String(localized: "Done"), bold: true, palette: palette) {
-                withAnimation(SumMotion.animation(reduceMotion: reduceMotion)) { selection = nil }
+                withAnimation(SelectionMotion.animation(reduceMotion: reduceMotion)) { selection = nil }
             }
             .accessibilityIdentifier("selectDone")
         }
         .padding(.horizontal, 14).padding(.top, 8).padding(.bottom, 10)
+        // The words and the count's place follow the ticks at once, whatever transaction they come in.
+        .transaction(value: count) { $0.animation = nil }
+        .onChange(of: selection, initial: true) { _, now in if let now { lastShown = now } }
     }
 }
 
