@@ -280,3 +280,15 @@ texts, then the side's category tiles with Andere Kategorie … and Neue Kategor
 Aresium learns the name for the next import; Überspringen, Widerrufen (the last card), and a summary at the end. Only
 Nicht sortiert payments are touched. The tour has 21 steps. To try: does it feel quicker than the lists for his
 parents, friends and own categories, and is the order (most payments first) the right one?
+
+**After build 14** (Patrik, 2026-11-02): "selecting statements is quite bouncy. I think it should be less bouncy. And
+can we build it like mail so you can basically just slide your finger up and down and it keeps selecting statements or
+when going up deselecting them".
+
+**In build 15** (2026-11-02, brief 200): a recording of build 14 showed the bounce: every tick slid the filled circle in
+from the left, and the count ("1 ausgewählt") rolled letter by letter for half a second; the rows' slide had a slow
+tail. Now the rows slide in once (0.25 s), a tick fades in place, the count changes at once, the header and the bar fade
+in place. **Sliding:** on the circles, a finger sliding down ticks every row it passes, back up unticks the ones it
+leaves; starting on a ticked row unticks; a sideways start on a row then up or down works too; near the top or bottom
+edge the list scrolls by itself and keeps ticking. A plain up-down drag on a row still scrolls, a tap still ticks one.
+To try: the slide's feel on the phone, the light haptic per row, and the edge scrolling's speed (both first guesses).
