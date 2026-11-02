@@ -3,7 +3,7 @@ import SwiftUI
 import Testing
 @testable import Aresium
 
-/// The tour (briefs 24, 25, 42, 59, 77 and 99): its steps go on when the person does the thing or taps Next, the
+/// The tour (briefs 24, 25, 42, 59, 77, 99 and 203): its steps go on when the person does the thing or taps Next, the
 /// graph's, the search's and the Settings rows' steps only point and go on, the graph's step is left out (and no card
 /// mentions the graph) while the graph is hidden, adding up works on the tour's own choices in memory, and it runs on a
 /// made-up store of its own that is deleted when it ends, at any step, without touching the person's store or settings.
@@ -70,7 +70,7 @@ struct TourTests {
         #expect(tour.phase == .running)
         #expect(tour.step == .welcome)
         #expect(tour.target == nil)
-        #expect(tour.count == 21)
+        #expect(tour.count == 22)
         let world = try #require(tour.world)
         #expect(world.root.deletingLastPathComponent().standardizedFileURL == parent.standardizedFileURL)
         #expect(world.phone.summary.payments > 100)
@@ -92,7 +92,7 @@ struct TourTests {
         #expect(tour.target == .graph, "the graph itself, on the start screen")
         #expect(tour.holdsTheScreen)
         #expect(!tour.place.current, "Overview stays for the graph")
-        #expect(tour.number == 4 && tour.count == 21)
+        #expect(tour.number == 4 && tour.count == 22)
 
         place = tour.place
         place.side = .expenses                                  // the person moves the page: the step asks nothing
@@ -164,7 +164,19 @@ struct TourTests {
         #expect(question.count > 3)
         #expect(tour.step == .switchCategory, "still waiting for the answer")
         detail.answer(moveOthers: true)
-        await eventually { tour.step == .select }
+        await eventually { tour.step == .payback }
+
+        // Brief 203: the made-up trip's page, half paid back, its link ringed; only Next goes on (optional).
+        #expect(tour.step == .payback)
+        let trip = try #require(world.paybackTrip)
+        #expect(tour.place.payment?.id == trip, "the trip's page")
+        #expect(tour.target == .payback && tour.holdsTheScreen)
+        #expect(tour.place.path.last?.isCategoryList == true, "the list stays under the page")
+        place = tour.place
+        place.payment = nil                                      // the page swiped away: free, nothing moves on
+        tour.update(place)
+        #expect(tour.step == .payback && tour.target == nil && !tour.holdsTheScreen)
+        tour.next()
         #expect(tour.step == .select)
         #expect(tour.place.payment == nil, "the payment closes: the list under it")
 
@@ -301,6 +313,10 @@ struct TourTests {
             case .switchCategory:
                 #expect(tour.place.payment != nil, "a payment's page")
                 #expect(tour.target == .change)
+            case .payback:
+                #expect(tour.place.payment?.id == tour.world?.paybackTrip, "the made-up trip's page")
+                #expect(tour.place.payment?.paidBack == 64)
+                #expect(tour.target == .payback)
             case .select:
                 #expect(tour.place.payment == nil && tour.place.path.last?.isCategoryList == true)
                 #expect(tour.target == .selectIcon)
@@ -336,11 +352,11 @@ struct TourTests {
             if tour.phase == .running { seen.append(tour.step) }
         }
         #expect(seen == TourStep.allCases)
-        #expect(seen.count == 21)
+        #expect(seen.count == 22)
         #expect(Self.tourFolders(in: parent).isEmpty)
     }
 
-    /// With the graph hidden in Settings (brief 42), the tour has no graph step: twenty steps, counted 1 to 20 on the
+    /// With the graph hidden in Settings (brief 42), the tour has no graph step: twenty-one steps, counted 1 to 21 on the
     /// card, Overview followed by the search (brief 77); a DEBUG start at the graph's step starts at the search; no card
     /// mentions the graph (brief 59).
     @Test func withTheGraphHiddenTheGraphStepIsLeftOut() async throws {
@@ -349,7 +365,7 @@ struct TourTests {
 
         let tour = Self.model(in: Self.parent(), showsGraph: false)
         await tour.start()
-        #expect(tour.count == 20)
+        #expect(tour.count == 21)
         var numbers: [Int] = []
         var seen: [TourStep] = []
         while tour.phase == .running {
@@ -361,7 +377,7 @@ struct TourTests {
             if tour.step == .done { #expect(tour.nextStep == nil) }
             tour.next()
         }
-        #expect(numbers == Array(1...20))
+        #expect(numbers == Array(1...21))
         #expect(!seen.contains(.graph) && seen.first == .welcome && seen.last == .done)
         for step in TourStep.steps(showingGraph: false) {
             #expect(!step.text(.english, showingGraph: false).localizedCaseInsensitiveContains("graph"))

@@ -144,10 +144,18 @@ struct SummedPaymentRow: View {
     }
 }
 
-/// The summed row as drawn (a payment row's layout, `PaymentRowLabel`).
+/// The summed row as drawn (a payment row's layout, `PaymentRowLabel`). Its sum counts what its payments count (brief
+/// 203): with money paid back its days line says how much came back ("4–28 Oct · €64.00 back").
 struct SummedRowLabel: View {
     let sum: SummedPayments
     let palette: Palette
+
+    private var line: String {
+        let days = SumWording.days(from: sum.firstDay, to: sum.lastDay)
+        let original = sum.rows.reduce(0) { $0 + $1.transaction.amount }
+        guard let back = PaybackWording.summedLine(original: original, counted: sum.total) else { return days }
+        return days.isEmpty ? back : days + " · " + back
+    }
 
     var body: some View {
         HStack(spacing: 12) {
@@ -156,8 +164,7 @@ struct SummedRowLabel: View {
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text(verbatim: sum.title).font(AppFont.text(14.5, weight: .semibold)).lineLimit(1)
-                Text(verbatim: SumWording.days(from: sum.firstDay, to: sum.lastDay)).font(AppFont.text(12.5))
-                    .foregroundStyle(palette.muted).lineLimit(1)
+                Text(verbatim: line).font(AppFont.text(12.5)).foregroundStyle(palette.muted).lineLimit(1)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             Text(verbatim: Money.transaction(sum.total)).font(AppFont.number(14))

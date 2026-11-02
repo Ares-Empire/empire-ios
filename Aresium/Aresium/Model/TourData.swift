@@ -8,14 +8,19 @@ nonisolated enum TourData {
     static let chosen = ["groceries", "drugstore", "eating-out", "coffee-snacks", "rent", "utilities", "internet-phone",
                          "bus-train", "subscriptions", "cash", "salary", "parents-family", "clothes", "other"]
 
-    static let paybackTripName = "Fictional Lakeside Trip"
-    static let paybackPersonName = "Robin Example"
+    /// Money paid back (briefs 202, 203): a made-up holiday flat paid in full and half of it paid back by a made-up
+    /// friend a day later, linked. German-looking made-up names, as the sample's other shops.
+    static let paybackTripName = "Ferienwohnung Fiktivsee"
+    static let paybackPersonName = "Max Mustermann"
 
-    @MainActor static func linkSamplePayback(in phone: PhoneBackend) async throws {
+    /// Links the made-up payback; the trip's id (nil when the file had no trip).
+    @MainActor @discardableResult
+    static func linkSamplePayback(in phone: PhoneBackend) async throws -> String? {
         let payments = try await phone.ledger.payments()
         guard let expense = payments.first(where: { $0.place == paybackTripName }),
-              let incoming = payments.first(where: { $0.place == paybackPersonName }) else { return }
+              let incoming = payments.first(where: { $0.place == paybackPersonName }) else { return nil }
         _ = try await phone.setPayback(from: incoming.id, to: expense.id, amount: 64)
+        return expense.id
     }
 
     /// The category the tour points at first ("Tap a category"): it has a few shops, each paid several times.
@@ -83,9 +88,9 @@ nonisolated enum TourData {
             if back % 3 == 1 { add(26, "Zalando SE", "Lastschrift", "Bestellung", -(3_000 + next(6_000))) }
         }
         let tripDay = calendar.date(byAdding: .day, value: -4, to: thisMonth)!
-        rows.append(Row(day: tripDay, who: paybackTripName, kind: "Kartenzahlung", text: "Shared fictional trip", cents: -12_800))
+        rows.append(Row(day: tripDay, who: paybackTripName, kind: "Kartenzahlung", text: "Wochenende am See", cents: -12_800))
         rows.append(Row(day: calendar.date(byAdding: .day, value: 1, to: tripDay)!, who: paybackPersonName,
-                        kind: "Gutschrift", text: "Half of the fictional trip", cents: 6_400))
+                        kind: "Gutschrift", text: "Hälfte Ferienwohnung", cents: 6_400))
         rows.sort { $0.day < $1.day }
         let formatter = DateFormatter()
         formatter.calendar = calendar

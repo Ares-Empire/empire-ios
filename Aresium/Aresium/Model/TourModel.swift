@@ -2,11 +2,11 @@ import Foundation
 import Observation
 import os
 
-// The tour (briefs 24, 25, 42, 59, 77, 82 and 99): the real dashboard on a made-up store of its own, twenty-one steps
-// (twenty while the graph is hidden in Settings), each pointing at one real control with one short sentence; it goes on
+// The tour (briefs 24, 25, 42, 59, 77, 82, 99 and 203): the real dashboard on a made-up store of its own, twenty-two
+// steps (twenty-one while the graph is hidden in Settings), each pointing at one real control with one short sentence; it goes on
 // when the person does the thing or taps Next. One walk through what Aresium does (brief 59, Patrik 2026-10-31:
 // "explains everything and is coherent"): the start screen, its graph and its search, a category, a payment and what can
-// be done with it, selecting several payments, a list's swipe and adding up, then Settings' places in their real order,
+// be done with it (money paid back too, brief 203), selecting several payments, a list's swipe and adding up, then Settings' places in their real order,
 // the import button, going through what an import left Not sorted (brief 99), done. Everything the tour shows and
 // changes is in `TourWorld`, a store in a temporary folder that is deleted when the tour ends: the person's own store,
 // categories, learned shops, names and choices of adding up are never opened by it. Its Settings also point at Own
@@ -15,8 +15,8 @@ import os
 
 /// The tour's steps, in order. The raw value names a step (DEBUG `-tour <n>`); the card counts the steps a tour shows.
 nonisolated enum TourStep: Int, CaseIterable, Sendable {
-    case welcome = 1, income, overview, graph, search, category, payment, rename, switchCategory, select, addUp, sumIcon,
-         allFrom, categories, messages, lock, dashboardSettings, contact, importFiles, quickSort, done
+    case welcome = 1, income, overview, graph, search, category, payment, rename, switchCategory, payback, select, addUp,
+         sumIcon, allFrom, categories, messages, lock, dashboardSettings, contact, importFiles, quickSort, done
 
     /// The steps a tour shows: all of them, but the graph's only while the dashboard shows the graph (Settings →
     /// Dashboard → Graph, `GraphSetting`); without the graph that step would point at nothing.
@@ -37,6 +37,9 @@ nonisolated enum TourStep: Int, CaseIterable, Sendable {
         case .payment: language.string("Every payment in detail.")
         case .rename: language.string("Tap the name to rename it, for this payment or all from this shop.")
         case .switchCategory: language.string("Sorted wrong? Tap the category. Aresium remembers the shop.")
+        // Brief 203: optional, said once here and nowhere else.
+        case .payback:
+            language.string("Paid back by someone? If you like, link the payment here: then only your share counts.")
         case .select: language.string("Tap to select several payments and move or rename them at once.")
         case .addUp: language.string("Swipe a payment left: Add up makes one row of its name.")
         case .sumIcon: language.string("Here you add up every name in this list.")
@@ -78,6 +81,8 @@ nonisolated enum TourTarget: Hashable, Sendable {
     case paymentName
     /// The category's chip and its pen on a payment's page.
     case change
+    /// Money paid back on a payment's page (brief 203): its links, what still counts, the quiet action.
+    case payback
     /// The icon of adding up in a category's list's header (brief 53).
     case sumIcon
     /// The select icon in a category's list's header (brief 82).
@@ -276,6 +281,8 @@ final class TourModel {
         case .payment: return firstPayment.map { .payment($0.id) }
         case .rename: return place.payment != nil ? .paymentName : firstPayment.map { .payment($0.id) }
         case .switchCategory: return place.payment != nil ? .change : firstPayment.map { .payment($0.id) }
+        // The sample's trip on its page (and the payment it opens from its link, on the same sheet); closed, nothing.
+        case .payback: return place.payment != nil ? .payback : nil
         // The list's select icon; while the person tries selecting, nothing: the list, its bar and its windows are free.
         case .select: return place.payment == nil && place.selection == nil && offersSelection ? .selectIcon : nil
         case .addUp: return place.payment == nil ? addUpRow.map { .payment($0.id) } : nil
@@ -406,6 +413,11 @@ final class TourModel {
             closeSheets()
             showList()
             if place.payment == nil { place.payment = firstPayment }
+        case .payback:
+            // The made-up trip half paid back (brief 202's sample), its page over the list as the payment's was.
+            closeSheets()
+            showList()
+            place.payment = world?.paybackTrip.flatMap { world?.dashboard.bankPayment($0) } ?? place.payment
         case .select, .addUp, .sumIcon, .allFrom:
             // The list under the payment's page, which closes.
             closeSheets()
@@ -496,14 +508,18 @@ final class TourWorld {
     let imports: ImportStore
     /// The name the dashboard shows for the tour's first category (Groceries in the app's language).
     let firstCategory: String?
+    /// The made-up trip half paid back (brief 202), whose page the paid back step shows (brief 203).
+    let paybackTrip: String?
     private static let log = Logger(subsystem: "de.ares-empire.aresium", category: "tour")
 
-    private init(root: URL, phone: PhoneBackend, dashboard: DashboardStore, imports: ImportStore, firstCategory: String?) {
+    private init(root: URL, phone: PhoneBackend, dashboard: DashboardStore, imports: ImportStore, firstCategory: String?,
+                 paybackTrip: String?) {
         self.root = root
         self.phone = phone
         self.dashboard = dashboard
         self.imports = imports
         self.firstCategory = firstCategory
+        self.paybackTrip = paybackTrip
     }
 
     /// Makes and fills the store in a new folder inside `parent` (the app's temporary folder; tests give their own).
@@ -520,7 +536,7 @@ final class TourWorld {
             for id in TourData.chosen { try await ledger.choose(id) }
             try await phone.addCustom(named: TourData.customName(), side: .spend)
             _ = try await phone.importFiles([TourData.bankFile(now: now)], auth: BackendAuth(token: nil))
-            try await TourData.linkSamplePayback(in: phone)
+            let trip = try await TourData.linkSamplePayback(in: phone)
             // Its own session, never logged in: the tour asks no server and follows no login.
             let session = EmpireSession(app: .aresium, storage: TourTokens(), restoreOnLaunch: false)
             let widgetFolder = root.appending(path: "widget", directoryHint: .isDirectory)
@@ -535,7 +551,7 @@ final class TourWorld {
             if let error = dashboard.error { throw TourError.dashboard(error) }
             let first = try await phone.categories().name(of: TourData.firstCategory)
             return TourWorld(root: root, phone: phone, dashboard: dashboard, imports: ImportStore(dashboard: dashboard),
-                             firstCategory: first)
+                             firstCategory: first, paybackTrip: trip)
         } catch {
             try? FileManager.default.removeItem(at: root)
             throw error

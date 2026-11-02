@@ -626,9 +626,10 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   `storage`). **Lifecycle:** the data belongs to the iPhone, not to a login: logging in or out, leaving Aresium and
   deleting the Ares account never touch it; it goes only with Settings → Delete Aresium data on this iPhone or the
   lock's "Forgot the code?". Settings → Your data on this iPhone (phone mode): Categories, Receipts, Export (one JSON file,
-  schema 6 with the receipts, cash entries, corrected shop names, payment names, category sides and default personal names, `Aresium-<date>.json`, through the share sheet), Restore
+  schema 7 with the receipts, cash entries, corrected shop names, payment names, category sides, default personal names
+  and the links of money paid back (brief 202), `Aresium-<date>.json`, through the share sheet), Restore
   from an export (only into an empty store, all or nothing; chosen categories and corrected shop names are replaced;
-  schema 1–5 files still restore).
+  schema 1–6 files still restore).
   **Payment names and groups** (brief 43, data only; `Model/PaymentNames.swift`, screens in brief 44):
   `LedgerPayment.place` always stays the bank name; sorting, learning and receipt matching use only those original
   fields. Schema 5 adds `LedgerPayment.ownName` and merchant → name rules (`PhoneLedger.paymentNames()`); export schema
@@ -976,8 +977,8 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   as it is, and the shared undo bar (`UndoBar`, `accent: nil` = Undo in ink; above the selection's bar while one shows)
   says it in brief 81's words (`result.message`; after All the selection's and the others' count together,
   `SelectionWording.done`) with Undo (`BatchUndo.perform`); a refused undo shows its line alone ("Cannot undo because
-  the data changed."), as does a failed action (`UndoOffer(message:)` without Undo, Shared). **The tour**: step 10 of 21
-  (`TourStep.select`, after the payment's switch and before Add up): the ring on the icon (`.selectIcon`), "Tap to select
+  the data changed."), as does a failed action (`UndoOffer(message:)` without Undo, Shared). **The tour**: step 11 of 22
+  (`TourStep.select`, after the payment's paid back step and before Add up): the ring on the icon (`.selectIcon`), "Tap to select
   several payments and move or rename them at once." / "Tippe hier, um mehrere Buchungen auszuwählen und auf einmal zu
   verschieben oder umzubenennen.", Next; selecting frees the screen and works on the tour's store; Next ends it.
   DEBUG (with `-samplePhone -sampleCategory <name> -sampleMonth <YYYY-MM>`): `-selectPayments <n|all>` (selecting, the
@@ -1038,6 +1039,71 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   middle scrolls and ticks nothing, and a slide held at the bottom edge scrolls and ticks the rows that came into view
   (held 5 s: all 48, the last row 8 pt above the bar). Screenshots: `build/200-slide-{en,de}-{light,dark}.png`,
   `build/200-slide-de-red.png`.
+  **Money paid back** (briefs 201–203, Patrik 2026-11-02: expenses paid back to him, one in full and two by half,
+  should show only his share; he chose a link made by hand, "it remains a completely optional thing to do"). **The
+  rule** (brief 201, aresium `docs/API-DATA.md`; the second exception to counting as it happened): a payment that came
+  in can pay back payments that went out, all or a part, because the person linked them; those euros come off the
+  expense, in its month, day and categories (tags too, once in the headline), and are not income. Limits: a payment in
+  pays back at most its own amount, an expense gets back at most its own; only stored bank payments in euros, never
+  transfers, withdrawals, receipts or cash entries; nothing is matched automatically. The engine gives each transaction
+  `counted` (only when it differs), the expense `paidBack`/`paidBackBy`, the payment in `paysBack`, and the dashboard
+  `paybacksIgnored` (logged in DEBUG; empty after any app operation). **The data** (brief 202, `Model/Paybacks.swift`,
+  `Model/PaybackLedger.swift`): a link lives on the payment in (`LedgerPayment.paysBack`, ledger schema 7, export schema
+  7); every number the app adds up itself uses `Transaction.countedAmount` (name groups, summed rows, the day page's
+  totals, the selection's total, the quick sort); a move to a transfer category drops the links at either end (its
+  undo brings them back). `DashboardStore.paybackState(for:)` (direction and `rest`, nil where it cannot take part),
+  `paybackSuggestions(for:)` (what fits first: whole, half, a third, a quarter or the rest within a cent; then the
+  nearest days; money in from 30 days before to 120 after the expense; at most 8), `paybackSearch(_:for:)` (names as
+  the name search spells them, no date window), `setPayback(from:to:amount:)` and `removePayback(from:to:)` (one save,
+  one rebuild, a `BatchUndo`); `from` is always the payment in. The state and the suggestions skip the search's
+  spellings (`paybackCandidates(names: false)`: no shop identities; brief 203 measured the state at 146 → 69 ms on the
+  sample and 489 → 417 ms at 5,000 payments on the simulator). Non-euro payments are not offered yet (`TODO(api)`: the
+  engine gives no currency after PayPal folding). The tour's sample has one made-up case (`TourData`: "Ferienwohnung
+  Fiktivsee" −128 €, half paid back by "Max Mustermann" a day later, linked by `linkSamplePayback`; DEBUG
+  `-sampleNoPayback` leaves it unlinked). **The screens** (brief 203, Claude; words and models `Model/PaybackPage.swift`,
+  look `Screens/PaybackScreens.swift`): optional and quiet: one action on a payment's page and one tour step, no prompts
+  after an import, no badges, no offers anywhere else. **The payment's page**: a section after its rows and receipt,
+  before the bank's own row (`PaybackSection`, `PaybackSectionContent`): while the payment has euros free one quiet row
+  in the secondary ink with SF `link`, "Pays back an expense…" / "Zahlt eine Ausgabe zurück …" (money in) or "Paid back
+  to you…" / "Wurde zurückgezahlt …" (money out), "Also pays back…" / "Also paid back by…" once linked; each link under
+  "Pays back" / "Paid back" as a card in the "All from" card's look (the other payment's name, its day and own amount,
+  the linked euros, the chevron), which opens the other payment's page **pushed on the sheet's own stack** (the
+  sheet is now `TransactionDetailSheet`'s `NavigationStack` with `PaymentDetailPage`s; a link back to a page already
+  open goes back to it; Done closes the sheet from any page); the pen beside the card ("Change link") opens its euros
+  with **Remove link**, and the card's long press has Change amount and Remove link; one line on what still counts
+  ("Your share, €64.00, counts as spent." / "Paid back in full: none of it counts as spent.", "The rest, €16.00, counts
+  as income." / "None of it counts as income."). After a link is made, changed or removed the undo bar says so ("Linked:
+  €64.00 paid back.", "Changed to €50.00.", "Link removed.") with Undo; the page reads its payment again whenever the
+  dashboard is rebuilt (`TransactionDetailStore.refresh`). `PaybackLinks.load` reads the state off the main thread as the
+  page opens (the room of the action is kept meanwhile, so the bank's row does not jump). **The window**
+  (`PaybackSheet`, a sheet over the page as the change window): the bar "Paid back by" / "Pays back" with Cancel, the
+  payment's name and amount, "Which payment paid this back?" / "Which expense does this pay back?", the search field
+  ("Search names"), then SUGGESTED (each row: the category's tile, the name, its day and what fits in the second ink,
+  "29 Oct · half" / "29. Okt. · die Hälfte"; "in full", "a third", "a quarter", "the rest"; its own amount; the
+  chevron) or, while typing, what the search finds ("No payment found for “…”."); a row pushes **Amount**: the two
+  payments (the one that came in over the expense), "How much of it was paid back?", the field with the suggestion's
+  euros (else the smaller rest; `ReceiptAmount.typed`, whole cents), "At most €64.00." (in the expense colour when
+  passed), **Link** / **Verknüpfen** in the bar, muted until it can. A change opens at Amount (Save, Remove link).
+  **The lists**: a row's number is what counts there (`PaybackWording.rowAmount`: `countedAmount`; a counted 0 reads
+  "0.00" in the quiet ink, without a sign), so a list's rows add up to its total; its quiet line says why, in place of
+  the city ("€128.00 · €64.00 back" / "128,00 € · 64,00 € zurück"; "€64.00 · pays back Ferienwohnung Fiktivsee" / "64,00 €
+  · zahlt … zurück", "… 2 expenses"), up to two lines; on a day's page after the category. Summed rows add "· €64.00
+  back" (money in: "· €64.00 not income") to their days. A name that counts nothing keeps its own side (`PaymentNameGroup.spends`:
+  the name's page, its "All from" line); the search writes "0.00" for it. **The tour**: step 10 of 22, after the
+  switch (`TourStep.payback`): the trip's page, its section ringed, "Paid back by someone? If you like, link the payment
+  here: then only your share counts." / "Hat dir jemand etwas zurückgezahlt? Wenn du magst, verknüpfe die Buchung hier:
+  Dann zählt nur dein Anteil."; Next goes on. DEBUG (with `-samplePhone`, the trip and Max Mustermann in last month's
+  Not sorted, `-sampleIncome` for the payment in): `-openPayback` (the window; `-paybackSearch <text>`, `-paybackPick
+  <text>`, `-paybackAmount <text>`, `-paybackKeyboardDown`), `-editPayback` (the first link's euros), `-openLinked` (the
+  first link's payment), `-scrollToPayback`, `-sampleNoPayback`. Tests: `PaybackScreensTests` (the words in both
+  languages, the rows' numbers and lines, the ends and the amount check, link from a payment in through change, remove
+  and undo on a real store, a search beyond the suggestions, a name that counts nothing, the tour's trip), `PaybackTests`
+  (brief 202), `TourTests`. Real touches (a temporary UI test in `Aresus/AresusUITests` driving Aresium, deleted; 3 of
+  3): Max Mustermann's page → Pays back an expense… → the suggestions leave out a Netflix payment eight months back and
+  the search finds it → the half suggestion → 64.00 → Link; the page shows the link and "None of it counts as income.",
+  his row "0.00" with its line; Overview's Not sorted falls by €64; the trip's row "−64.00" with "€128.00 · €64.00
+  back", its page shows the link and opens his page; the card's long press Remove link, the undo bar's Undo brings it
+  back. Screenshots: `build/203-*.png`.
   DEBUG (with `-samplePhone -sampleCategory Groceries -sampleMonth 2026-10 -samplePhoneTransaction REWE
   -sampleRecategorise add`): `-samplePick Clothes -sampleAddSave` picks and taps Save after the sheet opens;
   `-sampleRemoveAnswer keep|remove` answers the first alert and shows the shop alert. Tests: `AddQuestionsTests`,
@@ -1581,8 +1647,9 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   file, this month always full), its own session (never logged in) and widget numbers inside that folder; the person's
   store, categories and learned shops are never opened. The folder is deleted on End tour (always on the card), at the
   end, when a widget's link or a shared file opens the app, and at the next launch if the app was closed during a tour
-  (`removeLeftovers`). **Twenty-one steps, twenty while the graph is hidden** (brief 59, Patrik 2026-10-31: "update the
-  tour so it explains everything and is coherent"; brief 77 added the search, brief 82 selecting, brief 99 the quick sort; `TourStep`, one walk: the start screen, a
+  (`removeLeftovers`). **Twenty-two steps, twenty-one while the graph is hidden** (brief 59, Patrik 2026-10-31: "update the
+  tour so it explains everything and is coherent"; brief 77 added the search, brief 82 selecting, brief 99 the quick sort,
+  brief 203 money paid back; `TourStep`, one walk: the start screen, a
   category, a payment and what can be done with it, the list's swipe and adding up, Settings' places in their real
   order, import, done): welcome; income (the page dots, the swipe); overview (the range); graph (Overview's graph: hold
   and slide reads each month, a tap opens its month's page, which the ring follows, and there a day's; the card says so:
@@ -1592,7 +1659,9 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   own or the bank's. A tap shows all its payments." / "Such nach einem Namen, deinem eigenen oder dem der Bank.
   Antippen zeigt alle seine Buchungen."); category (a row); payment (its row opens the page); rename
   (`.paymentName`: the page's name and pen, the field while open; goes on when a name is saved, `onRenamed`); switch
-  (the category's chip and pen, `.change`; the shop question answered); select (brief 82: the list's select icon,
+  (the category's chip and pen, `.change`; the shop question answered); payback (brief 203: the made-up trip's page,
+  `TourWorld.paybackTrip`, over the list, its section ringed, `.payback`; Next goes on; the page and the payment its link
+  opens are free to try on the tour's store); select (brief 82: the list's select icon,
   `.selectIcon`; selecting frees the screen, Next goes on and ends it); addUp (the list's first single row whose name
   has more payments there: the swipe's or the long press's Add up); sumIcon (the header's icon of adding up, `.sumIcon`;
   its tap); allFrom (the name added up at addUp, `.summed(key)`, or its first row: All opens the name's page, which
@@ -1633,9 +1702,9 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   app's defaults before and after a walk). The import button only answers its step, the band does not enter red mode.
   VoiceOver: the card takes the focus at each step, the highlighted control stays reachable; Reduce Motion: the ring
   jumps, nothing slides. Launch arguments (DEBUG, with `-samplePhone` or `-samplePhoneEmpty`): `-openGuide list|<bank
-  id>` (`-guidePlace app|website`, `-guideSearch <text>`, `-scrollToEnd` the page's end), `-tour <1–21>` (`-tourSettings`:
+  id>` (`-guidePlace app|website`, `-guideSearch <text>`, `-scrollToEnd` the page's end), `-tour <1–22>` (`-tourSettings`:
   its Settings open). Tests: `BankGuideTests`, `TourTests` (every step's target and what moves it on, Next's screens,
-  the hidden graph's 18 and its words, the search's step, every card's German, adding up in memory only, the person's store and defaults
+  the hidden graph's 21 and its words, the search's step, every card's German, adding up in memory only, the person's store and defaults
   untouched, ending at any step). Screenshots: `build/24-*.png`, contact sheet `build/24-sheet.png`; brief 59's walk
   `build/59-*.png`.
   **Receipts** (brief 31, Patrik 2026-10-27; D8 in `ares-empire/docs/ARESIUM-FOR-OTHERS.md` → part 6; phone mode

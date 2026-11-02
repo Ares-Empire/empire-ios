@@ -112,6 +112,8 @@ nonisolated enum SearchPage {
         /// The money out ("−84.50") and in ("+20.00"), each only when there is any.
         let moneyOut: String?
         let moneyIn: String?
+        /// "0.00" when nothing counts either way (its payments paid back in full, or used to pay back).
+        let nothing: String?
 
         init(_ result: NameSearchResult, group: PaymentNameGroup?, now: Date = .now,
              language: AppLanguage = .current) {
@@ -122,11 +124,13 @@ nonisolated enum SearchPage {
                                                                    language: language) }
             moneyOut = result.moneyOut > 0 ? Money.transaction(-result.moneyOut, language: language) : nil
             moneyIn = result.moneyIn > 0 ? Money.transaction(result.moneyIn, language: language) : nil
+            // Brief 203: a name that counts nothing (all of it paid back) still says so, without a sign.
+            nothing = moneyOut == nil && moneyIn == nil ? String(Money.transaction(0, language: language).dropFirst()) : nil
         }
 
         /// What VoiceOver reads for the row, in one go.
         var spoken: String {
-            [title, line, match, moneyOut, moneyIn].compactMap { $0 }.joined(separator: ", ")
+            [title, line, match, moneyOut, moneyIn, nothing].compactMap { $0 }.joined(separator: ", ")
         }
     }
 

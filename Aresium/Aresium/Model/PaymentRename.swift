@@ -277,7 +277,7 @@ nonisolated struct NamePage {
         count = group.count
         moneyOut = group.moneyOut
         moneyIn = group.moneyIn
-        let spends = group.moneyOut >= group.moneyIn
+        let spends = group.spends
         self.spends = spends
         let amount = { (amounts: PaymentNameAmounts?) in (spends ? amounts?.moneyOut : amounts?.moneyIn) ?? 0 }
         let other = { (amounts: PaymentNameAmounts?) in (spends ? amounts?.moneyIn : amounts?.moneyOut) ?? 0 }
@@ -317,6 +317,16 @@ nonisolated struct NamePage {
     }
 }
 
+extension PaymentNameGroup {
+    /// The name's main side: the side where more counts. When both count the same (brief 203: a name whose payments were
+    /// wholly paid back, or wholly used to pay back, counts 0 on both), the side its payments went at the bank.
+    nonisolated var spends: Bool {
+        if moneyOut != moneyIn { return moneyOut > moneyIn }
+        let out = rows.reduce(0) { $0 + max(0, -$1.amount) }, incoming = rows.reduce(0) { $0 + max(0, $1.amount) }
+        return out >= incoming
+    }
+}
+
 /// The words of the name's page and the "All from" line, in the app's language.
 nonisolated enum NameWording {
     /// "All from Penny" (the swipe's and the long press's VoiceOver name, the page's line, the menu item).
@@ -325,17 +335,22 @@ nonisolated enum NameWording {
     }
 
     /// "23 payments · €412.30 spent", with "· €12.00 received" when money came in too.
-    static func summary(count: Int, moneyOut: Double, moneyIn: Double, language: AppLanguage = .current) -> String {
+    /// `spends`: the name's main side, which shows when nothing counts on either (brief 203: all of it paid back).
+    static func summary(count: Int, moneyOut: Double, moneyIn: Double, spends: Bool = true,
+                        language: AppLanguage = .current) -> String {
         var parts = [language.string("\(count) payments")]
-        if moneyOut > 0 || moneyIn == 0 {
+        if moneyOut > 0 || (moneyIn == 0 && spends) {
             parts.append(language.string("\(Money.precise(moneyOut, language: language)) spent"))
         }
-        if moneyIn > 0 { parts.append(language.string("\(Money.precise(moneyIn, language: language)) received")) }
+        if moneyIn > 0 || (moneyOut == 0 && !spends) {
+            parts.append(language.string("\(Money.precise(moneyIn, language: language)) received"))
+        }
         return parts.joined(separator: " · ")
     }
 
     static func summary(_ group: PaymentNameGroup, language: AppLanguage = .current) -> String {
-        summary(count: group.count, moneyOut: group.moneyOut, moneyIn: group.moneyIn, language: language)
+        summary(count: group.count, moneyOut: group.moneyOut, moneyIn: group.moneyIn, spends: group.spends,
+                language: language)
     }
 
     /// A name's month with only money the other way (brief 55): what its row writes in place of the total, signed as

@@ -148,16 +148,18 @@ nonisolated enum Paybacks {
 }
 
 extension PhoneBackend {
-    func paybackCandidates() async throws -> [PaybackCandidate] {
-        try await ledger.paybackCandidates(engine: engine, catalog: engine.catalog(), today: today(), ownNames: ownNames)
+    /// `names: false` leaves out the search's spellings (the state and the suggestions need none, brief 203).
+    func paybackCandidates(names: Bool = true) async throws -> [PaybackCandidate] {
+        try await ledger.paybackCandidates(engine: engine, catalog: engine.catalog(), today: today(), ownNames: ownNames,
+                                           names: names)
     }
 
     func paybackState(for id: String) async throws -> PaybackState? {
-        try await paybackCandidates().first { $0.transaction.id == id }?.state
+        try await paybackCandidates(names: false).first { $0.transaction.id == id }?.state
     }
 
     func paybackSuggestions(for id: String) async throws -> [PaybackSuggestion] {
-        let candidates = try await paybackCandidates()
+        let candidates = try await paybackCandidates(names: false)
         guard let payment = candidates.first(where: { $0.transaction.id == id }) else { return [] }
         return Paybacks.suggestions(for: payment, in: candidates)
     }

@@ -236,16 +236,26 @@ struct PaymentRowLabel: View {
                             .accessibilityLabel("Added here by tag; primary category \(CategoryName.shown(transaction.categoryName))")
                     }
                 }
-                Text(verbatim: line).font(AppFont.text(12.5)).foregroundStyle(palette.muted).lineLimit(1)
+                Text(verbatim: line).font(AppFont.text(12.5)).foregroundStyle(palette.muted)
+                    .lineLimit(paidBack == nil ? 1 : 2).fixedSize(horizontal: false, vertical: paidBack != nil)
             }.frame(maxWidth: .infinity, alignment: .leading)
-            Text(Money.transaction(transaction.amount)).font(AppFont.number(14))
-                .foregroundStyle(transaction.amount < 0 ? palette.expenseText : palette.income).fixedSize()
+            // What counts here (brief 203): with money paid back the counted amount, so a list's rows add up to its
+            // total; a payment that counts nothing any more reads "0.00" in the quiet ink.
+            Text(verbatim: PaybackWording.rowAmount(transaction)).font(AppFont.number(14))
+                .foregroundStyle(PaybackWording.countsNothing(transaction) ? palette.muted
+                                 : transaction.amount < 0 ? palette.expenseText : palette.income).fixedSize()
         }.padding(.horizontal, 12).padding(.vertical, 11).contentShape(Rectangle())
     }
 
-    /// The second line: the place or the receipt's state, after the category's name on a day's page.
+    /// Why a linked payment's number is not the bank's (brief 203): "€128.00 · €64.00 back", "€64.00 · pays back …".
+    private var paidBack: String? {
+        PaybackWording.rowLine(transaction) { store.paybackName($0) }
+    }
+
+    /// The second line: the place or the receipt's state (a linked payment: why it counts what it does), after the
+    /// category's name on a day's page.
     private var line: String {
-        let line = ReceiptRowWording.line(transaction, movement: store.cashMovement(transaction.receiptId))
+        let line = paidBack ?? ReceiptRowWording.line(transaction, movement: store.cashMovement(transaction.receiptId))
         guard let category else { return line }
         return DayPageWording.line(category: category.name, listLine: line)
     }
