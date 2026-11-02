@@ -1,6 +1,6 @@
 # 92: Aresus server: delete any drop from the list, "delivered" push
 
-Status: open
+Status: merged 2026-11-02 (aresus 894d25b, 589 tests; Claude: pushes sent outside the drops lock again, cancelled sample kept)
 Branch: `codex/92-drops-delete` · Worktree: `../aresus-92-drops-delete` (a worktree of **`~/aresus`**, the server
 repo) · Model: `gpt-6.1-sol`, effort `high`
 
