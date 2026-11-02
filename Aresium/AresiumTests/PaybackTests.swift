@@ -195,7 +195,7 @@ struct PaybackTests {
         let out = try #require(payments.first { $0.amountValue < 0 }), incoming = try #require(payments.first { $0.amountValue > 0 })
         _ = try await phone.setPayback(from: incoming.id, to: out.id, amount: 60)
         let before = try await phone.export()
-        #expect(before.schema == 7)
+        #expect(before.schema == LedgerExport.currentSchema)
         let decoded = try LedgerExport.decode(before.encoded())
         #expect(decoded == before && decoded.payments.first { $0.id == incoming.id }?.paysBack?.first?.amount == "60.00")
         let copy = try await PhoneCountingTests.backend()
@@ -296,7 +296,7 @@ struct PaybackTests {
         _ = try await phone.setPayback(from: incoming.id, to: "out", amount: 60)
         let reopened = try await Task.detached { try storage.open() }.value
         #expect(try await reopened.payment(incoming.id)?.paysBack == [LedgerPayback(payment: "out", amount: "60.00")])
-        #expect(try await reopened.export().schema == 7)
+        #expect(try await reopened.export().schema == LedgerExport.currentSchema)
         try await clean(phone)
     }
 

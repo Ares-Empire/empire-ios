@@ -128,6 +128,10 @@ nonisolated struct Transaction: Codable, Identifiable {
     /// Phone mode only (brief 99): a bank payment's text as the bank wrote it (Verwendungszweck), for the quick sort's
     /// example lines. Nil for receipts, cash entries and server rows.
     var purpose: String? = nil
+    /// Phone mode: original import order, so a fixed-cost series keeps its anchor after an older file is imported.
+    var ledgerSequence: Int? = nil
+    /// Phone mode: the original merchant key (or exact bank line), independent of display names and shop grouping.
+    var fixedCostKey: String? = nil
 
     /// A card receipt counted on its own until its bank payment comes.
     var isWaitingReceipt: Bool { provisional == true }

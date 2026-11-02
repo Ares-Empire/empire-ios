@@ -92,6 +92,8 @@ nonisolated enum PaymentNames {
                 let own = enabled && !merchant.isEmpty ? rules[merchant] : nil
                 row.nameKey = key(ownName: own, merchant: identities.identity(merchant), bankName: receipt.shop ?? row.place)
             } else if let (payment, merchant) = bank[row.id] {
+                row.ledgerSequence = payment.sequence
+                row.fixedCostKey = key(ownName: nil, merchant: merchant, bankName: payment.place)
                 let own = enabled ? shown(payment: payment.ownName, shop: rules[merchant], bankName: payment.place) : nil
                 row.place = own ?? (merchant.isEmpty ? nil : bankNames[identities.identity(merchant)]) ?? payment.place
                 row.bankName = row.place == payment.place ? nil : payment.place
@@ -227,6 +229,7 @@ extension PhoneLedger {
             }
             modelContext.delete(rule)
         }
+        try moveFixedCostMarks(current: current)
         try modelContext.save()
     }
 

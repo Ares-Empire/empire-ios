@@ -430,7 +430,7 @@ struct PaymentNamesTests {
         _ = try await phone.rename(id: payment.id, name: "Supermarket", scope: .shop)
         _ = try await phone.rename(id: payment.id, name: "Birthday", scope: .payment)
         let export = try await phone.export()
-        #expect(export.schema == 7 && export.nameRules.count == 1)
+        #expect(export.schema == LedgerExport.currentSchema && export.nameRules.count == 1)
         let decoded = try LedgerExport.decode(export.encoded())
         let restored = try await self.phone()
         try await restored.restore(decoded.encoded())
