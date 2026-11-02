@@ -1,6 +1,6 @@
 # 209: Monthly average and fixed costs: the screens
 
-Status: draft (starts when brief 208 is merged)
+Status: running
 Branch: `claude/209-fixed-costs-screens` · Worktree: `../empire-ios-209-fixed-costs-screens` · Built by: a Claude agent
 (the look and the flow) · Simulator: `claude-209` (create it: iPhone 17, iOS 27.0)
 
