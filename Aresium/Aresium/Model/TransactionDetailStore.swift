@@ -61,6 +61,8 @@ final class TransactionDetailStore: CategoryWindow {
     var canRename: Bool { renameInfo?.canRename == true }
     /// The Receipt section's Edit (brief 33): the receipt's page model, whose edit sheet is open.
     private(set) var receiptEditor: ReceiptPageModel?
+    /// Money paid back (brief 203): whether this payment can be linked, its window and the undo bar's offer.
+    let paybacks: PaybackLinks
     private let transaction: Transaction
     let dashboardStore: DashboardStore
     private var retryDropCurrent = false
@@ -74,6 +76,7 @@ final class TransactionDetailStore: CategoryWindow {
     init(transaction: Transaction, dashboardStore: DashboardStore) {
         self.transaction = transaction
         self.dashboardStore = dashboardStore
+        paybacks = PaybackLinks(paymentID: transaction.id, dashboardStore: dashboardStore)
     }
 
     /// The backend of the dashboard this payment was opened from (server or phone).
@@ -150,6 +153,19 @@ final class TransactionDetailStore: CategoryWindow {
             dashboardStore.session.handleAuthFailure(error, generation: generation, token: token)
             loadError = error.localizedDescription
         }
+    }
+
+    /// Phone mode, after the dashboard was built again (a link made, changed or removed here, on a payment opened from a
+    /// link, or undone): the payment as it is now, quietly (no spinner), and what it can still link (brief 203).
+    /// While the page saves something itself (a name, a category) that save sets the detail; only what it can link is
+    /// read again (a move to a transfer category drops its links, brief 202).
+    func refresh() async {
+        guard detail != nil, let phone = backend as? PhoneBackend else { return }
+        if !isLoading, !isSaving,
+           let reloaded = try? await phone.transactionDetail(id: transaction.id, auth: BackendAuth(token: nil)) {
+            detail = reloaded
+        }
+        await paybacks.load()
     }
 
     /// The page's load, which also reads what a rename needs (`renameInfo`). Phone samples use their real temporary

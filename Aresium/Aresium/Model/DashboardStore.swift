@@ -91,6 +91,8 @@ final class DashboardStore {
     @ObservationIgnored var builtNamePages = NamePageCache()
     @ObservationIgnored var builtNameSearch = NameSearchCache()
     @ObservationIgnored var builtDays = DayPaymentsCache()
+    /// The names of the expenses payments in pay back (brief 203), for the rows' lines (`paybackName`).
+    @ObservationIgnored var builtPaybackNames = PaybackNamesCache()
     /// The quick sort's groups (brief 99), built with each phone dashboard and published in the same turn as it, so the
     /// card on Not sorted's list, the offer and the flow never read groups of another dashboard.
     private(set) var builtQuickSort = QuickSortCache()

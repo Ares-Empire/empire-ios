@@ -6,6 +6,8 @@ import SwiftUI
 /// from <bank name>?" when the shop has more; the bar's Cancel leaves the name as it was (asking first once something
 /// was typed); "Use the bank's name" under the field while an own name shows. The category's chip (and the pen beside
 /// it, and an extra category's chip) opens the change window, which says why the payment is in its category.
+/// Money paid back (brief 203): a link's card opens the other payment's page, pushed on this sheet's own stack (the
+/// arrow goes back; a link back to a page already open goes back to it), with Done closing the sheet from any page.
 struct TransactionDetailSheet: View {
     @State var store: TransactionDetailStore
     let palette: Palette
@@ -17,6 +19,78 @@ struct TransactionDetailSheet: View {
     /// dashboard's stack. Nil: no line (a page opened where no name's page can be shown).
     var openName: ((DashboardRoute) -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
+    /// The payments opened from a link (brief 203), pushed over this one, by id.
+    @State private var linked: [String] = []
+
+    var body: some View {
+        NavigationStack(path: $linked) {
+            PaymentDetailPage(store: store, palette: palette, namePage: namePage, startsRenaming: startsRenaming,
+                              openName: openName, isRoot: true, close: { dismiss() }, openLinked: openLinked)
+                .navigationDestination(for: String.self) { id in
+                    LinkedPaymentPage(id: id, dashboardStore: store.dashboardStore, palette: palette, openName: openName,
+                                      close: { dismiss() }, openLinked: openLinked)
+                }
+        }
+        .font(AppFont.text(14)).foregroundStyle(palette.ink).tint(palette.balance)
+    }
+
+    /// A link's card: the other payment's page; one already open (this sheet's first page, or one pushed) is gone back
+    /// to, so following links never stacks the same two pages over and over.
+    private func openLinked(_ id: String) {
+        if id == store.paymentID {
+            linked = []
+        } else if let index = linked.firstIndex(of: id) {
+            linked = Array(linked.prefix(through: index))
+        } else {
+            linked.append(id)
+        }
+    }
+}
+
+/// A payment opened from a link (brief 203): the same page on a store of its own.
+private struct LinkedPaymentPage: View {
+    @State private var store: TransactionDetailStore?
+    let palette: Palette
+    let openName: ((DashboardRoute) -> Void)?
+    let close: () -> Void
+    let openLinked: (String) -> Void
+
+    init(id: String, dashboardStore: DashboardStore, palette: Palette, openName: ((DashboardRoute) -> Void)?,
+         close: @escaping () -> Void, openLinked: @escaping (String) -> Void) {
+        _store = State(initialValue: dashboardStore.bankPayment(id).map { dashboardStore.transactionDetailStore(for: $0) })
+        self.palette = palette
+        self.openName = openName
+        self.close = close
+        self.openLinked = openLinked
+    }
+
+    var body: some View {
+        if let store {
+            PaymentDetailPage(store: store, palette: palette, openName: openName, isRoot: false, close: close,
+                              openLinked: openLinked)
+        } else {
+            EmptyMessage(text: String(localized: "This payment is no longer there."), palette: palette)
+                .frame(maxHeight: .infinity, alignment: .top)
+                .background { Wall(palette: palette) }
+                .navigationTitle("Payment").navigationBarTitleDisplayMode(.inline)
+        }
+    }
+}
+
+/// One payment's page in the sheet's stack: everything the page shows and does (the name's field, the change window,
+/// the receipt, the links of money paid back), with its own bar.
+private struct PaymentDetailPage: View {
+    @Bindable var store: TransactionDetailStore
+    let palette: Palette
+    var namePage: String? = nil
+    var startsRenaming = false
+    var openName: ((DashboardRoute) -> Void)? = nil
+    /// The sheet's first page (the DEBUG launch arguments act on it only).
+    let isRoot: Bool
+    /// Done: the whole sheet closes, from any page.
+    let close: () -> Void
+    /// A link's card: the other payment's page.
+    let openLinked: (String) -> Void
     @Environment(\.dynamicTypeSize) private var typeSize
     /// The name's field while it is open (brief 47).
     @State private var nameEditor: PaymentRenameModel?
@@ -37,31 +111,35 @@ struct TransactionDetailSheet: View {
     #endif
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    if store.isLoading { ProgressView("Loading…").frame(maxWidth: .infinity).padding(30) }
-                    if let error = store.loadError {
-                        Text(error).foregroundStyle(palette.expenseText).padding(.vertical)
-                        Button("Retry") { Task { await store.load() } }
-                    }
-                    if let detail = store.detail { record(detail) }
-                }.padding(20)
-            }
-            .defaultScrollAnchor(showsEnd ? .bottom : .top)
-            .tourScrollsToTarget()
-            .background { Wall(palette: palette) }
-            .tourSpotlight()
-            // The tour's card on the page itself, above the veil, where its inset is room to scroll (brief 59: on the
-            // NavigationStack a ringed control low on the page could stay under the card at large text sizes).
-            .tourCard()
-            .navigationTitle("Payment").navigationBarTitleDisplayMode(.inline)
-            .toolbar { toolbar }
-            .sheet(isPresented: $store.showsRecategorisation) {
-                RecategoriseSheet(window: store, palette: palette)
-            }
+        @Bindable var paybacks = store.paybacks
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                if store.isLoading { ProgressView("Loading…").frame(maxWidth: .infinity).padding(30) }
+                if let error = store.loadError {
+                    Text(error).foregroundStyle(palette.expenseText).padding(.vertical)
+                    Button("Retry") { Task { await store.load() } }
+                }
+                if let detail = store.detail { record(detail) }
+            }.padding(20)
         }
-        .font(AppFont.text(14)).foregroundStyle(palette.ink).tint(palette.balance)
+        .defaultScrollAnchor(showsEnd ? .bottom : .top)
+        .tourScrollsToTarget()
+        .background { Wall(palette: palette) }
+        .tourSpotlight()
+        // What a link's change did, with Undo (brief 203), above the tour's card when there is one.
+        .undoBar($paybacks.undo, accent: nil)
+        // The tour's card on the page itself, above the veil, where its inset is room to scroll (brief 59: on the
+        // NavigationStack a ringed control low on the page could stay under the card at large text sizes).
+        .tourCard()
+        .navigationTitle("Payment").navigationBarTitleDisplayMode(.inline)
+        .toolbar { toolbar }
+        .sheet(isPresented: $store.showsRecategorisation) {
+            RecategoriseSheet(window: store, palette: palette)
+        }
+        // Money paid back (brief 203): the window that makes or changes a link.
+        .sheet(item: $paybacks.window) { window in
+            PaybackSheet(window: window, store: store.dashboardStore, palette: palette)
+        }
         // While the name is edited the page closes only with Save or Cancel, so nothing typed is lost by a swipe.
         .interactiveDismissDisabled(nameEditor != nil && (nameEditor?.hasChanges == true || store.isSaving
                                                           || nameEditor?.asks == true))
@@ -81,12 +159,18 @@ struct TransactionDetailSheet: View {
             Text("“\(question.shopName)” is your name for every payment from \(question.bankName).")
         }
         .onChange(of: nameEditor?.isDone == true) { _, done in if done { endRename() } }
+        // A link made, changed or removed (here, on a payment opened from a link, or undone) builds the dashboard
+        // again: the page reads its payment again, quietly.
+        .onChange(of: store.dashboardStore.revision) { Task { await store.refresh() } }
+        // Whether the payment can be linked: read off the main thread while the page shows (brief 203).
+        .task { await store.paybacks.load() }
         .task {
             if store.detail == nil { await store.load() }
             if startsRenaming { beginRename() }
             // Sample-only routing for repeatable simulator screenshots, like the
             // existing -sampleCategory / -sampleMonth launch arguments.
             #if DEBUG
+            guard isRoot else { return }
             let arguments = LaunchArguments.current
             // The change sheet open (server or phone sample): `-sampleRecategorise switch|add`, `-samplePick <category>`
             // chooses one in it.
@@ -130,6 +214,7 @@ struct TransactionDetailSheet: View {
                 try? await Task.sleep(for: .milliseconds(600))
                 openName(line.route)
             }
+            await debugPayback()
             #endif
         }
     }
@@ -150,10 +235,30 @@ struct TransactionDetailSheet: View {
     }
     #endif
 
+    #if DEBUG
+    /// Screenshots of money paid back (brief 203, phone sample): `-openPayback` opens the window (`-paybackSearch`,
+    /// `-paybackPick`, `-paybackAmount` in it, `PaybackSheet`), `-editPayback` the first link's euros, `-openLinked`
+    /// the first link's payment, `-scrollToPayback` the page's links in view.
+    private func debugPayback() async {
+        let arguments = LaunchArguments.current
+        guard !store.isSample, arguments.contains("-openPayback") || arguments.contains("-editPayback")
+                || arguments.contains("-openLinked") else { return }
+        for _ in 0..<60 where store.detail == nil || !store.paybacks.isLoaded {
+            try? await Task.sleep(for: .milliseconds(100))
+        }
+        guard let detail = store.detail else { return }
+        let links = PaybackSectionContent(detail: detail, state: store.paybacks.state).links
+        try? await Task.sleep(for: .milliseconds(600))
+        if arguments.contains("-openPayback") { store.paybacks.begin(detail: detail) }
+        if arguments.contains("-editPayback"), let link = links.first { store.paybacks.edit(link, detail: detail) }
+        if arguments.contains("-openLinked"), let link = links.first { openLinked(link.payment) }
+    }
+    #endif
+
     /// DEBUG `-openOriginal`: the page opens at its end, where the bank's own row is.
     private var showsEnd: Bool {
         #if DEBUG
-        LaunchArguments.current.contains("-openOriginal")
+        isRoot && (LaunchArguments.current.contains("-openOriginal") || LaunchArguments.current.contains("-scrollToPayback"))
         #else
         false
         #endif
@@ -183,7 +288,7 @@ struct TransactionDetailSheet: View {
                 .accessibilityIdentifier("saveName")
             }
         } else {
-            ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() } }
+            ToolbarItem(placement: .topBarTrailing) { Button("Done") { close() } }
         }
     }
 
@@ -363,6 +468,8 @@ struct TransactionDetailSheet: View {
         }
         lines(of: detail, page: page)
         if let receipt = store.receipt { receiptSection(receipt) }
+        // Money paid back (brief 203): the links, what still counts, and the quiet action; below what the page had.
+        PaybackSection(detail: detail, links: store.paybacks, palette: palette, open: openLinked)
         if let rows = detail.originalRows {
             DisclosureGroup(page.originalTitle, isExpanded: $originalExpanded) {
                 VStack(alignment: .leading, spacing: 8) {

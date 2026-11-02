@@ -6,9 +6,16 @@ extension PhoneLedger {
         transferCategoryIDs = Set((catalog.defaults + catalog.builtIns).filter { $0.kind == "transfer" }.map(\.id))
     }
 
-    func paybackCandidates(engine: AresiumEngine, catalog: CategoryCatalog, today: String, ownNames: Bool) async throws -> [PaybackCandidate] {
+    /// `names`: the search's spellings (the shops' name rules, which take the engine's shop identities). Eligibility,
+    /// rests and the suggestions need none of them, so a payment's page and the suggestions skip that work (brief 203:
+    /// measured on the simulator at 5,000 payments, the state took 489 ms with the names).
+    func paybackCandidates(engine: AresiumEngine, catalog: CategoryCatalog, today: String, ownNames: Bool,
+                           names: Bool = true) async throws -> [PaybackCandidate] {
         configurePaybacks(catalog: catalog)
         let dashboard = try await dashboard(engine: engine, catalog: catalog, language: .current, today: today, ownNames: ownNames)
+        guard names else {
+            return Paybacks.candidates(dashboard: dashboard, payments: try payments(), transferIDs: transferCategoryIDs)
+        }
         let snapshot = try await shopSnapshot(engine: engine)
         let rules = snapshot.shops.rules(snapshot.names)
         let shopNames = Dictionary(uniqueKeysWithValues: zip(snapshot.payments, snapshot.paymentKeys).compactMap { payment, key in
@@ -28,7 +35,8 @@ extension PhoneLedger {
         let previous = links.first(where: { $0.payment == to }).flatMap { Double($0.amount) } ?? 0
         if let amount {
             guard let requested = Paybacks.cents(amount), requested > 0 else { throw PaybackError.invalidAmount }
-            let candidates = try await paybackCandidates(engine: engine, catalog: catalog, today: today, ownNames: ownNames)
+            let candidates = try await paybackCandidates(engine: engine, catalog: catalog, today: today, ownNames: ownNames,
+                                                         names: false)
             guard observer.value == revision else { throw BatchChangeError.changed }
             guard from != to, let incoming = candidates.first(where: { $0.transaction.id == from }),
                   let expense = candidates.first(where: { $0.transaction.id == to }),

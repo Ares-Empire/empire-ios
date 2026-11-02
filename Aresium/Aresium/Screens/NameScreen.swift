@@ -66,10 +66,11 @@ struct NameScreen: View {
         return VStack(alignment: .leading, spacing: 4) {
             Text(verbatim: NameWording.pageLine(count: page.count, range: page.range).uppercased())
                 .font(AppFont.text(11, weight: .semibold)).tracking(1.3).foregroundStyle(palette.muted)
-            if page.moneyOut > 0 || page.moneyIn == 0 {
+            // A name that counts nothing (brief 203: all of it paid back) shows its own side at 0.
+            if page.moneyOut > 0 || (page.moneyIn == 0 && page.spends) {
                 amount(Text("Spent"), page.moneyOut, color: palette.expenseText, size: 21)
             }
-            if page.moneyIn > 0 {
+            if page.moneyIn > 0 || (page.moneyOut == 0 && !page.spends) {
                 amount(Text("Received"), page.moneyIn, color: palette.income, size: both ? 17 : 21)
             }
         }

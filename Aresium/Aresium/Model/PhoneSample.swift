@@ -81,7 +81,8 @@ enum PhoneSample {
             }
         }
         _ = try await backend.importFiles(files, auth: BackendAuth(token: nil))
-        try await TourData.linkSamplePayback(in: backend)
+        // The made-up payback, linked as in the tour; `-sampleNoPayback` leaves it to be linked by hand (brief 203).
+        if !LaunchArguments.current.contains("-sampleNoPayback") { try await TourData.linkSamplePayback(in: backend) }
         // Confirmation screenshots: give a category made-up primary payments, never changing the real store.
         if let key = LaunchArguments.value("-sampleCategoryPayments"),
            let id = try await backend.categories().id(named: key) ?? (backend.summary.chosen.contains { $0.id == key } ? key : nil) {
