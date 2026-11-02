@@ -933,15 +933,18 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   else. **Selecting** (`PaymentSelection`: the list's route and the ticked row ids, kept in `DashboardPlace.selection`, so
   the header, the rows and the bar read one state; it follows its list through a rename, `isSameList`, and ends when
   another page is on top, `DashboardPlace.path`'s `didSet`): the rows slide right by a circle and its gap
-  (`SelectionLook.inset` 34 pt) with `SumMotion`'s spring (Reduce Motion: none), an empty circle (muted ink) at each
-  selectable row's left edge; a tap anywhere on a row ticks it (`checkmark.circle.fill`, the app's ink with the tick in
+  (`SelectionLook.inset` 34 pt) in selecting's own motion (`SelectionMotion`, brief 200 below; Reduce Motion: none), an
+  empty circle (muted ink) at each selectable row's left edge; a tap anywhere on a row ticks it, and so does a finger
+  sliding over the rows (brief 200 below) (`checkmark.circle.fill`, the app's ink with the tick in
   the wall's colour; the row on `palette.card2`, radius 12; VoiceOver: selected). The rows' long press and swipe are off,
   the scroll works. A summed row has one circle for its payments and stays closed (open sums close as selecting
   starts); a withdrawal's covered row has no circle and is faded (0.45). **The header** (`SelectionHeader`, in
-  `DashboardStack` in place of the screen's header, the same `HeaderLayout`): "All" / "Alle" (then "None" / "Keine") on
+  `DashboardStack`'s `PageHeader` in place of the screen's header, at its height, the same `HeaderLayout`): "All" /
+  "Alle" (then "None" / "Keine") on
   the left, the count as the title ("3 selected" / "3 ausgewählt", "Select payments" / "Buchungen auswählen" at 0),
   "Done" / "Fertig" on the right (ends selecting, nothing changed), words in ink on the wall; the back arrow, the gear
-  and the back swipe wait. **The bar** (`SelectionBar`, a bottom `safeAreaInset`, rising with selecting): Category
+  and the back swipe wait. **The bar** (`SelectionBar`, a bottom `safeAreaInset`, fading in and out with selecting):
+  Category
   (`square.grid.2x2`) and Name (`pencil`), symbol over word, on the card colour laid over the wall's with the line on top,
   into the home indicator's area; muted while off (`SelectionBarState`: both off at 0, Name off without a bank payment,
   not offered while Own names is off, as the page's pen); it stays at the bottom under the keyboard. **Category** opens
@@ -981,6 +984,51 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   Clothes → Save → Keep both → the shops' question → Only these, Name → the alert → the question → Only these renames
   both, the list scrolls while selecting (4 of 4; a test that taps Rename in the very instant the last key is typed
   loses the tap, a moment later it works). Screenshots: `build/82-*.png`.
+  **Calmer, and selecting by sliding** (brief 200, Patrik on build 14, 2026-11-02: "selecting statements is quite bouncy
+  … can we build it like mail so you can basically just slide your finger up and down and it keeps selecting statements
+  or when going up deselecting them"). **What bounced** (a recording of build 14 on the simulator, its frames measured;
+  `build/200-motion-before.{mp4,png}`): every tick slid the new circle in from up to 29 pt left of its place while the
+  old one slid away (the circle swapped two views, and the swap took the circle's own way in, `.offset(x: -34)`), and
+  the header's count rolled letter by letter with a blur for 0.56 s (`numericText`), drifting sideways as its width
+  changed; All and None slid every circle at once; the rows' spring (`SumMotion`, 0.38 s) took 0.49 s, its last 4 pt
+  creeping; the header swapped in one frame both ways; the bar came in one frame and sank out over 0.45 s; the list itself
+  never moved (0 pt, measured on the amounts' column, also with the bar coming and going at the list's end). **Now**
+  (`build/200-motion-after.{mp4,png}`): `SelectionMotion` (an ease-out of 0.25 s; Reduce Motion: none; DEBUG
+  `-selectSlow <s>`) starts and ends selecting (the icon, Done, the end after an action, open sums closing): the rows and
+  their circles slide 34 pt (done in 0.23 s, measured), the header and the bar fade in place (`PageHeader`: the two
+  headers in one `ZStack`, the selection's at the page header's measured height; the incoming header and the bar fade in
+  by themselves, `fadesIn`, since insertions there took no animation, not even a transition's own; the outgoing header
+  keeps its last words, `lastShown`). A tick fades the circle (both symbols always there, one seen) and the row's
+  background in 0.1 s; nothing moves; the count changes at once. Not sorted's quick sort card stays in its place while
+  selecting, faded (0.45) and taking no taps (it had gone, moving every row up). `SumMotion` is adding up's alone again.
+  The plain button's press dim (to about 80 % while the finger is down, back over about 0.3 s) is left: press feedback,
+  as iOS's lists give, not motion. **The slide** (`Model/SlideSelection.swift`, pure; `Screens/SlideSelect.swift`):
+  while a list selects, a drag that starts on a row's circle column (`SelectionLook.column`: from the list's margin to
+  the day's tile, 58 pt) slides at once in any direction; elsewhere on a row only a drag that starts clearly sideways
+  (the row swipe's measure, decided after 6 pt, `SlideStart`) slides, and may then turn up or down (Photos'); a vertical
+  drag there scrolls. The first row decides (`SlideSelection`: not ticked, the slide ticks; ticked, it unticks); every
+  row between it and the finger takes that state and every other row is as it was before the slide, so the way back
+  restores; a summed row is one row (`selectionIDs(for:)`); a covered row is passed over and no slide starts on it;
+  beyond the list's start or end the finger counts as over its first or last row. The finger's row comes from the rows'
+  frames in the list's own layout (`slideRow`, `onGeometryChange` in `SlideSpace.list`, the space around the gesture
+  so both are measured in one place; `SlideRows`: a lazy list lays out only the rows near the screen, and a finger
+  beyond them is over the nearest). Near the top or bottom of the visible part (`ScrollGeometry`: under the header,
+  above the bar) the list scrolls by itself (`SlideScroll`: a 60 pt zone, the speed growing with the square of the depth
+  to 900 pt/s at the edge and past it; a display link and `ScrollPosition.scrollTo(y:)`), the rows coming in ticked as
+  they pass under the finger; it stops at the list's start and where its last row stands just above the bar (not into
+  the band). One `SlideSelectRecognizer` (a `UIPanGestureRecognizer` subclass, as the row swipe's) over the whole list:
+  it asks where the touch went down (`SlideTracker.place`), fails at once off the rows, and the list's own pan waits for
+  it while it decides (`shouldBeRequiredToFail`), so a drag on the column never scrolls instead. A light selection haptic
+  per change (`sensoryFeedback(.selection)`; the finger hides the circle it ticks). Taps still tick one row; the header,
+  the bar and the undo bar work; the back swipe waits; VoiceOver is unchanged (the slide is a shortcut). Tests:
+  `SlideSelectionTests`, `SlideTrackerTests`, `SelectionScreensTests` (a slide over a real list with a summed and a
+  covered row). Real touches (a temporary UI test in `Aresus/AresusUITests` driving Aresium, with XCTest's own
+  multi-point touch paths, deleted; 3 of 3): down the column over five rows ticks five; down five and back up
+  two leaves three; a slide from a ticked row unticks; sideways on a row's middle then down ticks; a tap ticks one row;
+  Category opens the window for the slid selection; Done ends selecting; on a 48-row list a vertical drag on a row's
+  middle scrolls and ticks nothing, and a slide held at the bottom edge scrolls and ticks the rows that came into view
+  (held 5 s: all 48, the last row 8 pt above the bar). Screenshots: `build/200-slide-{en,de}-{light,dark}.png`,
+  `build/200-slide-de-red.png`.
   DEBUG (with `-samplePhone -sampleCategory Groceries -sampleMonth 2026-10 -samplePhoneTransaction REWE
   -sampleRecategorise add`): `-samplePick Clothes -sampleAddSave` picks and taps Save after the sheet opens;
   `-sampleRemoveAnswer keep|remove` answers the first alert and shows the shop alert. Tests: `AddQuestionsTests`,
@@ -1037,8 +1085,8 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   Not sorted's card, or over when nothing is left Not sorted (`QuickSortOffer.expires`, so it never shows later without
   an import); the next import that adds payments offers again. The cards are **names**, not payees: the app calls
   whoever a payment is with its name everywhere (Search names, the name's page), and "payee" / "Absender" are one
-  direction only. (2) **The card at the top of Not sorted's month list** (Current and Overview, both sides; not while
-  selecting; `DashboardStore.offersQuickSort(on:)`: phone mode while some name has two or more payments Not sorted):
+  direction only. (2) **The card at the top of Not sorted's month list** (Current and Overview, both sides; while
+  selecting it stays in its place, faded and taking no taps, brief 200; `DashboardStore.offersQuickSort(on:)`: phone mode while some name has two or more payments Not sorted):
   `QuickSortListCard`, a list row on the card colour with the line, the stack symbol in the day tile's place, "Sort name
   by name" / "Name für Name sortieren", "9 names · 42 payments · all months" / "9 Namen · 42 Buchungen · alle Monate",
   the chevron. Not in server mode. DEBUG (with `-samplePhone`): `-sampleQuickSort` (made-up people to go through: a

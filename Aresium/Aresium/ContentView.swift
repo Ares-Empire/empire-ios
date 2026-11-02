@@ -905,11 +905,11 @@ struct ContentView: View {
     }
 
     /// A category's month list (brief 82): the select icon, while selecting is offered there (phone mode, a row to
-    /// select). Its tap turns the list into selection, the rows sliding with the list's own spring.
+    /// select). Its tap turns the list into selection, the rows sliding in selecting's own motion (brief 200).
     private func selectIcon(_ route: DashboardRoute, in store: DashboardStore) -> (() -> Void)? {
         guard store.offersSelection(on: route) else { return nil }
         return {
-            withAnimation(SumMotion.animation(reduceMotion: reduceMotion)) {
+            withAnimation(SelectionMotion.animation(reduceMotion: reduceMotion)) {
                 if let tour {
                     var place = tour.place
                     place.selection = PaymentSelection(route: route)
