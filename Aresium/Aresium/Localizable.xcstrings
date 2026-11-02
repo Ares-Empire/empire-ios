@@ -312,6 +312,46 @@
         }
       }
     },
+    "%lld files" : {
+      "localizations" : {
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Datei"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Dateien"
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld file"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld files"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld files failed" : {
       "localizations" : {
         "de" : {
@@ -2620,6 +2660,16 @@
         }
       }
     },
+    "Dropped file" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abgelegte Datei"
+          }
+        }
+      }
+    },
     "EUR" : {
       "localizations" : {
         "de" : {
@@ -3362,6 +3412,16 @@
         }
       }
     },
+    "Import files" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dateien importieren"
+          }
+        }
+      }
+    },
     "Import interrupted. Retry when you return to Aresium." : {
       "localizations" : {
         "de" : {
@@ -3668,6 +3728,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Übrig"
+          }
+        }
+      }
+    },
+    "Let go to import" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zum Importieren loslassen"
           }
         }
       }
@@ -5974,6 +6044,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Die Daten haben sich geändert. Wähle die Buchungen erneut."
+          }
+        }
+      }
+    },
+    "The dropped file could not be read." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die abgelegte Datei konnte nicht gelesen werden."
           }
         }
       }

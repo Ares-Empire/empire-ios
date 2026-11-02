@@ -129,6 +129,7 @@ struct PhoneFirstScreen: View {
             Text("No data yet").font(AppFont.text(21, weight: .bold)).foregroundStyle(palette.ink)
                 .multilineTextAlignment(.center).padding(.top, 22)
                 .accessibilityAddTraits(.isHeader)
+                .modifier(FileDropPoint(on: true))      // a file dropped here is imported (brief 204)
             Text("Aresium sorts the payments from your bank's file into categories and adds them up. Everything stays on this iPhone.")
                 .font(AppFont.text(14)).foregroundStyle(palette.secondary).lineSpacing(3)
                 .multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)

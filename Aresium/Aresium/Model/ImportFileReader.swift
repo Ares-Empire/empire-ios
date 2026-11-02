@@ -1,6 +1,12 @@
 import Foundation
 
-nonisolated enum ImportFileSource: Sendable { case picker, shared }
+nonisolated enum ImportFileSource: Sendable {
+    /// Picked in the file picker: the person's own file, read where it is and never touched.
+    case picker
+    /// A copy made for Aresium, removed once read: iOS's copy of a file shared into Aresium (`inboxes`) or Aresium's
+    /// copy of a dropped file (`FileDrop.folder`, brief 204).
+    case shared
+}
 
 enum ImportFileError: LocalizedError {
     case noExports
@@ -49,21 +55,45 @@ enum ImportFileReader {
         }
         return files
     }
-    nonisolated static func removeSharedCopy(_ url: URL, container: URL) {
-        guard url.isFileURL else { return }
-        let inbox = container.appendingPathComponent("Documents/Inbox").resolvingSymlinksInPath().standardizedFileURL
-        let path = url.resolvingSymlinksInPath().standardizedFileURL.path
-        let root = container.resolvingSymlinksInPath().standardizedFileURL.path + "/"
-        guard path.hasPrefix(root), path.hasPrefix(inbox.path + "/") else { return }
-        try? FileManager.default.removeItem(at: url)
+    /// Where iOS puts its copy of a file shared into Aresium (the share sheet, Files' Open With, AirDrop): since
+    /// iOS 13, in an app with scenes, `tmp/<bundle id>-Inbox` (seen on the simulator, brief 204: the share sheet's
+    /// copies were never removed, as only the older `Documents/Inbox` was looked at); `Documents/Inbox` as before.
+    nonisolated static func inboxes(container: URL, bundleID: String? = Bundle.main.bundleIdentifier) -> [URL] {
+        [container.appendingPathComponent("tmp/\(bundleID ?? "de.ares-empire.aresium")-Inbox", isDirectory: true),
+         container.appendingPathComponent("Documents/Inbox", isDirectory: true)]
     }
 
+    /// Removes a copy made for Aresium: a file in an Inbox, or a dropped file's own folder in `FileDrop.folder`.
+    /// Anything else (a picked original, a file outside the app's container, a link pointing out of it) stays.
+    nonisolated static func removeSharedCopy(_ url: URL, container: URL) {
+        guard url.isFileURL else { return }
+        let resolve = { (url: URL) in url.resolvingSymlinksInPath().standardizedFileURL.path }
+        let path = resolve(url)
+        guard path.hasPrefix(resolve(container) + "/") else { return }
+        if inboxes(container: container).contains(where: { path.hasPrefix(resolve($0) + "/") }) {
+            try? FileManager.default.removeItem(at: url)
+            return
+        }
+        let dropped = resolve(FileDrop.folder(container: container))
+        guard path.hasPrefix(dropped + "/") else { return }
+        // The copy's own folder (`FileDrop.copy`): the first component under the drops' folder.
+        guard let folder = path.dropFirst(dropped.count + 1).split(separator: "/").first, !folder.isEmpty else {
+            return
+        }
+        try? FileManager.default.removeItem(at: FileDrop.folder(container: container)
+            .appendingPathComponent(String(folder)))
+    }
+
+    /// At launch: copies left from an earlier launch go (shared files never read, drops held behind the lock when the
+    /// app ended), except the files this launch was opened with.
     nonisolated static func clearInbox(container: URL = URL(fileURLWithPath: NSHomeDirectory()), excluding: [URL] = []) {
-        let inbox = container.appendingPathComponent("Documents/Inbox")
-        let files = (try? FileManager.default.contentsOfDirectory(at: inbox, includingPropertiesForKeys: nil)) ?? []
         let protected = Set(excluding.map { $0.resolvingSymlinksInPath().standardizedFileURL })
-        files.filter { !protected.contains($0.resolvingSymlinksInPath().standardizedFileURL) }
-            .forEach { removeSharedCopy($0, container: container) }
+        for folder in inboxes(container: container) + [FileDrop.folder(container: container)] {
+            let files = (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil))
+                ?? []
+            files.filter { !protected.contains($0.resolvingSymlinksInPath().standardizedFileURL) }
+                .forEach { removeSharedCopy($0, container: container) }
+        }
     }
 
 }

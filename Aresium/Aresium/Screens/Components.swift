@@ -92,6 +92,8 @@ struct ScreenHeader: View {
     /// The start screen's search (brief 77, phone mode): the magnifying glass beside the import button.
     var search: (() -> Void)? = nil
     var imports: Import? = nil
+    /// While the main screen takes dropped files (brief 204): VoiceOver's drop point on the title.
+    var dropPoint = false
     /// Red mode's X, the way out of it (red is entered through the band).
     let leaveRed: () -> Void
     let openSettings: () -> Void
@@ -110,6 +112,7 @@ struct ScreenHeader: View {
                             .foregroundStyle(Color(hex: category.color)).font(.system(size: 17))
                     }
                     Text(title).font(AppFont.text(17, weight: .bold)).lineLimit(1)
+                        .modifier(FileDropPoint(on: dropPoint))
                 }
                 if let subtitle { Text(subtitle).font(AppFont.text(12)).foregroundStyle(palette.muted).lineLimit(1) }
             }
