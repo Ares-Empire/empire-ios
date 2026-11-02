@@ -346,6 +346,16 @@
         }
       }
     },
+    "Added" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hinzugekommen"
+          }
+        }
+      }
+    },
     "Age, studies or job, non-smoker, …" : {
       "localizations" : {
         "de" : {
@@ -372,6 +382,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Alle Angebote"
+          }
+        }
+      }
+    },
+    "Already true when the watch started" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schon so beim Start der Beobachtung"
           }
         }
       }
@@ -466,6 +486,16 @@
         }
       }
     },
+    "At least 3 characters." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mindestens 3 Zeichen."
+          }
+        }
+      }
+    },
     "At most 1,000 characters." : {
       "localizations" : {
         "de" : {
@@ -486,12 +516,32 @@
         }
       }
     },
+    "At most 2,000 characters." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Höchstens 2.000 Zeichen."
+          }
+        }
+      }
+    },
     "At most 5 places." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Höchstens 5 Orte."
+          }
+        }
+      }
+    },
+    "At most 500 characters." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Höchstens 500 Zeichen."
           }
         }
       }
@@ -526,6 +576,16 @@
         }
       }
     },
+    "Changed %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Geändert %@"
+          }
+        }
+      }
+    },
     "Changes apply from the next scan." : {
       "localizations" : {
         "de" : {
@@ -542,6 +602,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Prüfen: %@"
+          }
+        }
+      }
+    },
+    "Checked %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Geprüft %@"
           }
         }
       }
@@ -757,6 +827,16 @@
         }
       }
     },
+    "Create watch" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beobachtung anlegen"
+          }
+        }
+      }
+    },
     "Defective is fine too" : {
       "localizations" : {
         "de" : {
@@ -787,6 +867,26 @@
         }
       }
     },
+    "Delete the watch?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beobachtung löschen?"
+          }
+        }
+      }
+    },
+    "Delete watch" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beobachtung löschen"
+          }
+        }
+      }
+    },
     "Delivery" : {
       "localizations" : {
         "de" : {
@@ -803,6 +903,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Beschreiben"
+          }
+        }
+      }
+    },
+    "Describe the change to watch for." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beschreib, auf welche Änderung geachtet werden soll."
           }
         }
       }
@@ -857,12 +967,42 @@
         }
       }
     },
+    "Edit" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bearbeiten"
+          }
+        }
+      }
+    },
     "Edit search" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Suche bearbeiten"
+          }
+        }
+      }
+    },
+    "Edit watch" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beobachtung bearbeiten"
+          }
+        }
+      }
+    },
+    "Editing the watch tries again." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beim Bearbeiten wird es noch einmal versucht."
           }
         }
       }
@@ -883,6 +1023,76 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Endet"
+          }
+        }
+      }
+    },
+    "Every %lld min" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alle %lld Min."
+          }
+        }
+      }
+    },
+    "Every 12 hours" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alle 12 Stunden"
+          }
+        }
+      }
+    },
+    "Every 15 min" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alle 15 Min."
+          }
+        }
+      }
+    },
+    "Every 3 hours" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alle 3 Stunden"
+          }
+        }
+      }
+    },
+    "Every 30 min" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alle 30 Min."
+          }
+        }
+      }
+    },
+    "Every 6 hours" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alle 6 Stunden"
+          }
+        }
+      }
+    },
+    "Every hour" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jede Stunde"
           }
         }
       }
@@ -1077,6 +1287,16 @@
         }
       }
     },
+    "How often" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wie oft"
+          }
+        }
+      }
+    },
     "Hunting" : {
       "localizations" : {
         "de" : {
@@ -1153,6 +1373,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Neueste"
+          }
+        }
+      }
+    },
+    "Leave it empty to name it after the page." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bleibt der Name leer, heißt sie nach der Seite."
           }
         }
       }
@@ -1407,6 +1637,16 @@
         }
       }
     },
+    "New watch" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neue Beobachtung"
+          }
+        }
+      }
+    },
     "No" : {
       "localizations" : {
         "de" : {
@@ -1557,6 +1797,26 @@
         }
       }
     },
+    "Now: %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jetzt: %@"
+          }
+        }
+      }
+    },
+    "Once a day" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einmal am Tag"
+          }
+        }
+      }
+    },
     "One text per listing" : {
       "localizations" : {
         "de" : {
@@ -1627,6 +1887,16 @@
         }
       }
     },
+    "Open page" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seite öffnen"
+          }
+        }
+      }
+    },
     "OpenStreetMap copyright and contributors" : {
       "localizations" : {
         "de" : {
@@ -1657,6 +1927,26 @@
         }
       }
     },
+    "Opens the watch" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öffnet die Beobachtung"
+          }
+        }
+      }
+    },
+    "Optional" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Optional"
+          }
+        }
+      }
+    },
     "Optional, like Schwabing. None means the whole city." : {
       "localizations" : {
         "de" : {
@@ -1673,6 +1963,36 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Optional. Jedes Angebot wird darauf geprüft."
+          }
+        }
+      }
+    },
+    "Page" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seite"
+          }
+        }
+      }
+    },
+    "Pages that need a login, or build their content with JavaScript (such as appointment bookings), can't be watched yet." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seiten mit Login oder solche, die ihren Inhalt erst mit JavaScript aufbauen (etwa Terminbuchungen), lassen sich noch nicht beobachten."
+          }
+        }
+      }
+    },
+    "Paste the page's address." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Füg die Adresse der Seite ein."
           }
         }
       }
@@ -1827,6 +2147,26 @@
         }
       }
     },
+    "Read the page" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seite lesen"
+          }
+        }
+      }
+    },
+    "Reading the page…" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seite wird gelesen…"
+          }
+        }
+      }
+    },
     "Reading…" : {
       "localizations" : {
         "de" : {
@@ -1847,6 +2187,16 @@
         }
       }
     },
+    "Removed" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Weggefallen"
+          }
+        }
+      }
+    },
     "Rename" : {
       "localizations" : {
         "de" : {
@@ -1863,6 +2213,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Suche umbenennen"
+          }
+        }
+      }
+    },
+    "Rename watch" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beobachtung umbenennen"
           }
         }
       }
@@ -1923,6 +2283,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Suche speichern"
+          }
+        }
+      }
+    },
+    "Save watch" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beobachtung speichern"
           }
         }
       }
@@ -2087,12 +2457,32 @@
         }
       }
     },
+    "Start watching" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beobachtung starten"
+          }
+        }
+      }
+    },
     "Status" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Status"
+          }
+        }
+      }
+    },
+    "Tell me when" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sag mir, wenn"
           }
         }
       }
@@ -2177,6 +2567,26 @@
         }
       }
     },
+    "The page can't be read right now." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Seite lässt sich gerade nicht lesen."
+          }
+        }
+      }
+    },
+    "The page's address" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adresse der Seite"
+          }
+        }
+      }
+    },
     "The radius goes up to 200 km." : {
       "localizations" : {
         "de" : {
@@ -2203,6 +2613,36 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Die Suche beginnt pausiert."
+          }
+        }
+      }
+    },
+    "The watch starts paused." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Beobachtung beginnt pausiert."
+          }
+        }
+      }
+    },
+    "The watch stops and the changes it found are deleted." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Beobachtung endet und die gefundenen Änderungen werden gelöscht."
+          }
+        }
+      }
+    },
+    "This page doesn't show it." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Seite zeigt das nicht."
           }
         }
       }
@@ -2377,6 +2817,26 @@
         }
       }
     },
+    "Watch a page" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seite beobachten"
+          }
+        }
+      }
+    },
+    "Watching" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beobachtung läuft"
+          }
+        }
+      }
+    },
     "What" : {
       "localizations" : {
         "de" : {
@@ -2393,6 +2853,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Was suchst du?"
+          }
+        }
+      }
+    },
+    "What changed" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was sich geändert hat"
           }
         }
       }
@@ -2709,6 +3179,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Quadratmeter"
+          }
+        }
+      }
+    },
+    "the price is under 45 €" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "der Preis unter 45 € liegt"
           }
         }
       }

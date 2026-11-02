@@ -80,5 +80,10 @@
         "delivery": "shipping"
       }
     ]
+  },
+  {
+    "kind": "watch",
+    "name": "Watch a page",
+    "sources": []
   }
 ]

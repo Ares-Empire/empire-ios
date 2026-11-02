@@ -386,8 +386,10 @@ struct ExtrasField: View {
     }
 }
 
-/// The bottom of a search form: Save (or Create), the line under it, and Delete for a search that exists.
+/// The bottom of a search form: Save (or Create), the line under it, and Delete for a search that exists; in a watch's
+/// form the words name a watch (`words`).
 struct SearchSaveArea: View {
+    var words = HuntWords(nil)
     let creating: Bool
     let canSave: Bool
     let saving: Bool
@@ -401,7 +403,7 @@ struct SearchSaveArea: View {
             Button(action: save) {
                 HStack(spacing: 8) {
                     if saving { ProgressView().controlSize(.small).tint(Look.onAccent) }
-                    Text(creating ? "Create search" : "Save search")
+                    Text(creating ? words.create : words.save)
                 }
             }
             .buttonStyle(.accent)
@@ -410,7 +412,7 @@ struct SearchSaveArea: View {
             if let line { Caption(text: line).multilineTextAlignment(.center) }
 
             if let delete {
-                Button("Delete search", role: .destructive, action: delete)
+                Button(words.delete, role: .destructive, action: delete)
                     .buttonStyle(.destructiveQuiet)
                     .disabled(saving)
                     .padding(.top, 14)

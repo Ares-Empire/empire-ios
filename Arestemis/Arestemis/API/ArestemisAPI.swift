@@ -63,7 +63,7 @@ struct ArestemisAPI: ArestemisBackend {
         switch kind {
         case .flat: return .flat(try await send(.post, "search/parse", body: body, timeout: Self.aiTimeout))
         case .item: return .item(try await send(.post, "search/parse", body: body, timeout: Self.aiTimeout))
-        case .unknown: throw HTTPError.server(400, "This hunt needs a newer app.")
+        case .watch, .unknown: throw HTTPError.server(400, "This hunt needs a newer app.")
         }
     }
 
@@ -163,8 +163,34 @@ struct ArestemisAPI: ArestemisBackend {
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.timeoutInterval = timeout
         let (data, response) = try await transport.send(request)
+        if let refusal = FieldRefusal(status: response.statusCode, data: data) { throw refusal }
         try checkResponse(response, data: data, onUnauthorized: {})
         return data
+    }
+}
+
+/// A `400` that names the field it is about (`{"error": "…", "field": "search.url"}`, Arestemis/docs/API.md), so a
+/// form can show the server's sentence at that field. Its description is the sentence, as any refusal's.
+struct FieldRefusal: LocalizedError, Equatable {
+    let field: String
+    let message: String
+
+    var errorDescription: String? { message }
+
+    /// Nil for any other answer: another status, no field or no sentence (those go on as `HTTPError`).
+    init?(status: Int, data: Data) {
+        struct Body: Decodable { let error: String?; let message: String?; let field: String? }
+        guard status == 400, let body = try? JSONDecoder().decode(Body.self, from: data),
+              let field = body.field?.trimmingCharacters(in: .whitespaces), !field.isEmpty,
+              let sentence = [body.error, body.message].compactMap({ $0?.trimmingCharacters(in: .whitespacesAndNewlines) })
+                .first(where: { !$0.isEmpty }) else { return nil }
+        self.field = field
+        message = sentence
+    }
+
+    init(field: String, message: String) {
+        self.field = field
+        self.message = message
     }
 }
 

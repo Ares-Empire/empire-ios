@@ -45,7 +45,8 @@ struct ContentView: View {
                                                                              ownMode: options.ownMode, noTexts: options.noTexts,
                                                                              slowed: options.slowed,
                                                                              newerKind: options.newerKind,
-                                                                             ebayNotReady: options.ebayNotReady)) {
+                                                                             ebayNotReady: options.ebayNotReady,
+                                                                             watchRead: options.watchRead)) {
             let store = ArestemisStore(session: session, backend: sample, sample: true)
             store.selectedHuntID = options.sampleHunt
             return store
@@ -59,7 +60,8 @@ struct ContentView: View {
             if store.isSample || session.isSignedIn {
                 if store.overview != nil {
                     MainTabs(store: store, navigation: navigation, logOut: logOut,
-                             scrollsToBottom: store.isSample && options.scrollTo == "bottom" && options.form == nil)
+                             scrollsToBottom: store.isSample && options.scrollTo == "bottom" && options.form == nil,
+                             scrollsToHunt: store.isSample ? options.scrollToHunt : nil)
                 } else {
                     ProvinceLoading(name: "Arestemis", bust: Image("Bust"), accent: Look.accent,
                                     message: store.isLoadingOverview ? nil : store.overviewError,
@@ -127,13 +129,15 @@ private struct MainTabs: View {
     @Bindable var navigation: AppNavigation
     let logOut: () -> Void
     var scrollsToBottom = false
+    var scrollsToHunt: Int? = nil
     @Environment(\.openURL) private var openURL
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         TabView(selection: $navigation.tab) {
             Tab("Hunts", systemImage: "scope", value: AppTab.hunt) {
-                HuntsScreen(store: store, navigation: navigation, scrollsToBottom: scrollsToBottom)
+                HuntsScreen(store: store, navigation: navigation, scrollsToBottom: scrollsToBottom,
+                            scrollsToHunt: scrollsToHunt)
             }
             Tab("Listings", systemImage: "list.bullet.rectangle", value: AppTab.listings) {
                 ListingsScreen(store: store, navigation: navigation)

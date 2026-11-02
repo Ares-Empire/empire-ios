@@ -223,6 +223,10 @@ struct HuntSummary: Equatable {
             }
             parts.append(contentsOf: search.sources.map(sites.name))
             self.parts = parts
+        case .watch(let search):
+            // A watch's own words for it are on its card (`HuntText`, with the page's title); here its address's host.
+            title = WatchAddress.host(search.url) ?? search.url
+            parts = []
         case .unsupported:
             title = de ? "Braucht eine neuere App-Version" : "Needs a newer app"
             parts = []

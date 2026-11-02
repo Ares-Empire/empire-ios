@@ -155,8 +155,11 @@ final class AppNavigation {
 /// pickup|shipping|either` (that delivery chosen in the thing form, read by `ArestemisStore.itemSearchDraft`),
 /// `-sampleHunt <id>` (Listings for that hunt), `-tab hunt|listings` (`search`: the first hunt's form),
 /// `-filter new|saved|applied|all`, `-openMatch <id>`, `-openHunt <id>` (a hunt's page), `-openForm <id>` (that hunt's
-/// form), `-openItemForm` (the first thing hunt's form), `-newItemForm` / `-newFlatForm` (an empty form), `-newSearch`
-/// (the kind dialog), `-openSheet settings|application|rejected|place|describe` (place and describe over a form, the
+/// form), `-openItemForm` (the first thing hunt's form), `-newItemForm` / `-newFlatForm` (an empty form), brief 131's
+/// `-openWatchForm` (the first watch's form) and `-newWatchForm` (in the form `-watchURL <text>`, `-watchChange <text>`
+/// and `-saveWatch`, read by `WatchSearchScreen`), `-sampleWatchRead <read>` (the second watch's page
+/// state: waiting, ok, unreadable, failing, blocked or any other word), `-scrollToHunt <id>` (the Hunts list at that
+/// hunt's card), `-newSearch` (the kind dialog), `-openSheet settings|application|rejected|place|describe` (place and describe over a form, the
 /// first hunt's unless another is asked for), `-scrollBottom` (Hunts and the forms), `-scrollTo size|rent|movein`
 /// (the flat form), `-scrollTo where` (the thing form), `-sampleUndo`, `-sampleSearchDraft`, `-sampleMoreLoading`,
 /// `-sampleMoreFailure`, `-sampleLongDescription`; Settings → Flats: `-sampleOwnMode` (the switch off), `-sampleNoTexts` (nothing written
@@ -168,7 +171,8 @@ struct LaunchOptions {
         case hunt(Int)              // -openForm <id>
         case firstHunt              // -tab search, or a sheet over a form without another form asked for
         case firstItem              // -openItemForm
-        case new(SearchKind)        // -newFlatForm, -newItemForm
+        case firstWatch             // -openWatchForm
+        case new(SearchKind)        // -newFlatForm, -newItemForm, -newWatchForm
     }
 
     var sample = false
@@ -178,6 +182,8 @@ struct LaunchOptions {
     var slowed = false
     var newerKind = false
     var ebayNotReady = false
+    var watchRead: String?
+    var scrollToHunt: Int?
     var sampleUndo = false
     var moreLoading = false
     var moreFailure = false
@@ -208,6 +214,8 @@ struct LaunchOptions {
         slowed = arguments.contains("-sampleSlowed")
         newerKind = arguments.contains("-sampleNewerKind")
         ebayNotReady = arguments.contains("-sampleEbayNotReady")
+        watchRead = value("-sampleWatchRead")
+        scrollToHunt = value("-scrollToHunt").flatMap(Int.init)
         sampleUndo = arguments.contains("-sampleUndo")
         moreLoading = arguments.contains("-sampleMoreLoading")
         moreFailure = arguments.contains("-sampleMoreFailure")
@@ -222,7 +230,9 @@ struct LaunchOptions {
         openSheet = value("-openSheet")
         if let id = value("-openForm").flatMap(Int.init) { form = .hunt(id) }
         else if arguments.contains("-openItemForm") { form = .firstItem }
+        else if arguments.contains("-openWatchForm") { form = .firstWatch }
         else if arguments.contains("-newItemForm") { form = .new(.item) }
+        else if arguments.contains("-newWatchForm") { form = .new(.watch) }
         else if arguments.contains("-newFlatForm") { form = .new(.flat) }
         else if tabValue == "search" || openSheet == "place" || openSheet == "describe" { form = .firstHunt }
         newSearch = arguments.contains("-newSearch")
@@ -272,6 +282,7 @@ struct LaunchOptions {
         case .hunt(let id): return formOf(hunts.first { $0.id == id })
         case .firstHunt: return formOf(hunts.first) ?? .form(.flat, hunt: nil)
         case .firstItem: return formOf(hunts.first { $0.hunt.kind == .item }) ?? .form(.item, hunt: nil)
+        case .firstWatch: return formOf(hunts.first { $0.hunt.kind == .watch }) ?? .form(.watch, hunt: nil)
         case .new(let kind): return .form(kind, hunt: nil)
         }
     }

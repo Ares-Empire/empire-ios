@@ -4,7 +4,10 @@ import SwiftUI
 /// description; at the bottom "Open on <portal>" and "Application". The menu sets the state. A thing for sale: its
 /// price big (with "VB" or how far it lies over the maximum; an auction its current bid and the time left), its facts
 /// (an auction's bids and end, condition, delivery, shipping cost, distance, seller, place, posted), and only "Open on
-/// <site>" (the server's name: "Open on eBay"), as the one main button; its seller is "Asked", not applied to.
+/// <site>" (the server's name: "Open on eBay"), as the one main button; its seller is "Asked", not applied to. A change
+/// on a watched page (brief 131): the server's summary as the title, "Now: …", the host and when, then the lines that
+/// came and went (the removed ones labelled and struck through, not told apart by colour alone), and "Open page" (the
+/// watched address) as the one main button; its menu only saves or dismisses.
 struct MatchDetailScreen: View {
     let id: Int
     let store: ArestemisStore
@@ -50,15 +53,25 @@ struct MatchDetailScreen: View {
                         .clipShape(RoundedRectangle(cornerRadius: Ink.cardRadius, style: .continuous))
                         .padding(.bottom, 22)
                 }
-                let thing = store.isThing(match)
-                hero(match, thing: thing)
-                let facts = thing ? listing.itemDetailFacts() : listing.detailFacts()
-                if !facts.isEmpty { FactsGrid(facts: facts).padding(.top, 22) }
-                SectionHeading(text: String(localized: "Why it fits")).padding(.leading, 4).padding(.top, Look.sectionGap)
-                WhyItFits(reason: match.reason, warnings: match.warnings).padding(.top, Look.headingGap)
-                if !listing.description.isEmpty {
-                    SectionHeading(text: String(localized: "Description")).padding(.leading, 4).padding(.top, Look.sectionGap)
-                    ExpandableText(text: listing.description).padding(.top, Look.headingGap).padding(.horizontal, 4)
+                let kind = store.kind(of: match)
+                if kind == .watch {
+                    watchHero(match)
+                    if let change = listing.page, !change.added.isEmpty || !change.removed.isEmpty {
+                        SectionHeading(text: String(localized: "What changed")).padding(.leading, 4)
+                            .padding(.top, Look.sectionGap)
+                        ChangedLines(change: change).padding(.top, Look.headingGap)
+                    }
+                } else {
+                    let thing = kind == .item
+                    hero(match, thing: thing)
+                    let facts = thing ? listing.itemDetailFacts() : listing.detailFacts()
+                    if !facts.isEmpty { FactsGrid(facts: facts).padding(.top, 22) }
+                    SectionHeading(text: String(localized: "Why it fits")).padding(.leading, 4).padding(.top, Look.sectionGap)
+                    WhyItFits(reason: match.reason, warnings: match.warnings).padding(.top, Look.headingGap)
+                    if !listing.description.isEmpty {
+                        SectionHeading(text: String(localized: "Description")).padding(.leading, 4).padding(.top, Look.sectionGap)
+                        ExpandableText(text: listing.description).padding(.top, Look.headingGap).padding(.horizontal, 4)
+                    }
                 }
             }
             .padding(.horizontal, Look.side).padding(.top, 6).padding(.bottom, 28)
@@ -113,6 +126,32 @@ struct MatchDetailScreen: View {
         .accessibilityElement(children: .combine)
     }
 
+    /// A watched page's change: the summary as the title, what the page says now, the host and when it was found.
+    private func watchHero(_ match: Match) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(match.watchTitle).font(AppFont.text(22, weight: .semibold)).foregroundStyle(Ink.primary)
+                .lineSpacing(3).fixedSize(horizontal: false, vertical: true)
+            if let now = match.watchNowLine() {
+                Text(now).font(AppFont.text(15, weight: .medium)).foregroundStyle(Ink.secondary).lineSpacing(3)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 10)
+            }
+            HStack(spacing: 10) {
+                TimelineView(.periodic(from: .now, by: 30)) { context in
+                    Text(match.watchSourceLine(now: context.date)).font(AppFont.text(12)).foregroundStyle(Ink.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                if let word = match.state.word() {
+                    Text("·").font(AppFont.text(12)).foregroundStyle(Ink.muted)
+                    CapsLabel(text: word, size: 10, color: Ink.secondary)
+                }
+            }
+            .padding(.top, 8)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
+    }
+
     @ViewBuilder private func thingPrice(_ match: Match, now: Date) -> some View {
         if let price = match.itemPrice(now: now) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
@@ -130,14 +169,18 @@ struct MatchDetailScreen: View {
     }
 
     private func actions(_ match: Match) -> some View {
-        let thing = store.isThing(match)
+        let kind = store.kind(of: match)
         return HStack(spacing: 10) {
-            Button("Open on \(match.listing.sourceName)") {
-                if let url = match.listing.portalURL { openURL(url) }
+            Group {
+                if kind == .watch {
+                    Button("Open page") { if let url = match.listing.portalURL { openURL(url) } }
+                } else {
+                    Button("Open on \(match.listing.sourceName)") { if let url = match.listing.portalURL { openURL(url) } }
+                }
             }
-            .buttonStyle(ProvinceButtonStyle(kind: thing ? .accent : .glass))
+            .buttonStyle(ProvinceButtonStyle(kind: kind == .flat ? .glass : .accent))
             .disabled(match.listing.portalURL == nil)
-            if !thing {
+            if kind == .flat {
                 Button("Application") { navigation.sheet = .application(match.id) }
                     .buttonStyle(.accent)
                     .frame(width: 142)
@@ -149,9 +192,11 @@ struct MatchDetailScreen: View {
     private func stateMenu(_ match: Match) -> some View {
         Menu {
             Toggle(isOn: stateBinding(match, .saved)) { Label("Save", systemImage: "bookmark") }
-            Toggle(isOn: stateBinding(match, .applied)) {
-                if store.isThing(match) { Label("Mark asked", systemImage: "checkmark.circle") }
-                else { Label("Mark applied", systemImage: "checkmark.circle") }
+            if store.kind(of: match) != .watch {
+                Toggle(isOn: stateBinding(match, .applied)) {
+                    if store.isThing(match) { Label("Mark asked", systemImage: "checkmark.circle") }
+                    else { Label("Mark applied", systemImage: "checkmark.circle") }
+                }
             }
             Toggle(isOn: stateBinding(match, .dismissed)) { Label("Dismiss", systemImage: "xmark.circle") }
         } label: {
@@ -199,6 +244,43 @@ private struct FactsGrid: View {
                 if let unit = fact.unit { Text(unit).font(AppFont.text(14)).foregroundStyle(Ink.secondary) }
             }
             .foregroundStyle(Ink.primary).lineLimit(2)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// A watched page's change: the lines that came ("Added") and the lines that went ("Removed", muted and struck
+/// through), each group under its label, so they are told apart by more than colour; selectable, to copy a line.
+private struct ChangedLines: View {
+    let change: PageChange
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if !change.added.isEmpty {
+                group(String(localized: "Added"), change.added, removed: false)
+            }
+            if !change.added.isEmpty && !change.removed.isEmpty {
+                Hairline().padding(.vertical, 16)
+            }
+            if !change.removed.isEmpty {
+                group(String(localized: "Removed"), change.removed, removed: true)
+            }
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassCard()
+        .textSelection(.enabled)
+    }
+
+    private func group(_ label: String, _ lines: [String], removed: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 9) {
+            CapsLabel(text: label)
+            ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
+                Text(line).font(AppFont.text(14)).foregroundStyle(removed ? Ink.muted : Ink.primary)
+                    .strikethrough(removed, color: Ink.muted)
+                    .lineSpacing(3).fixedSize(horizontal: false, vertical: true)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)

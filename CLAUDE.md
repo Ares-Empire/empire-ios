@@ -525,6 +525,21 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   `Licences/town-locations-licence.txt`; the server looks up thing searches' towns on Nominatim). Sample hunts 4
   (Bookcase, pickup, IKEA Preowned) and 5 (Denimwerk jeans, shipping, Vinted) with matches 33 and 34
   (`DeliverySitesTests`; DEBUG `-sampleDelivery pickup|shipping|either`, chosen in the thing form as a tap would).
+  **Page watches** (brief 131, 2026-11-02; server brief 130, plan `ares-empire/docs/ARESTEMIS-ANYTHING.md` → Page watches):
+  a third kind, `watch` ("Watch a page" / "Seite beobachten", offered when `/kinds` lists it): an address, the change in
+  the user's words, how often (15 min to daily, default 1 h) and an optional name (`Model/WatchModels.swift`,
+  `WatchSearchDraft`, `Screens/WatchSearchScreen.swift`, in the thing form's style; a pasted text keeps its first link,
+  `WatchAddress.fromField`). The server decides what can be watched: its refusals come as `400` with `field`
+  (`FieldRefusal`, `ArestemisStore.searchErrorField`) and show under that field. The card (`WatchLines`,
+  `WatchCardText`): the name (own, else the page's title, else the host), the host, what the page says now as its main
+  fact, "Checked … · Changed …"; while waiting, unreadable, failing or blocked one quiet line in muted ink (the server's
+  note; blocked adds that editing tries again), never an alarm colour. The words name a watch "Beobachtung"
+  (`HuntWords`); its third figure is Saved. A found change (`Listing.page`, source `"page"`): the summary as title,
+  "Now: …", Added and Removed lines (removed struck through), Open page; Save and Dismiss only. Push category
+  `ARESTEMIS_WATCH` ("Open page"). Sample hunts 6 (KALLAX, ok), 7 (AirPods on Geizhals, blocked), 8 (Mensa, ok) with
+  matches 35 and 36 (`at_start`); DEBUG `-openWatchForm`, `-newWatchForm` (`-watchURL <text>`, `-watchChange <text>`,
+  `-saveWatch`: the sample imitates the server's refusals), `-sampleWatchRead <read>` (hunt 7's state),
+  `-scrollToHunt <id>`. Tests: `WatchTests`. Screenshots: `build/131-*.png`.
 - **Arestoteles app** (2026-10-24, build R2): `Arestoteles/` (bundle id `de.ares-empire.arestoteles`, URL scheme
   `arestoteles`), Patrik's Weltbild vault on the Arestoteles API (`Arestoteles/docs/API.md`, decisions
   `ares-empire/docs/ARESTOTELES-APP.md`; samples in `Arestoteles/Arestoteles/Samples/`, copies of its `docs/samples/`).

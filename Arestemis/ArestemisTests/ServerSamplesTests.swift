@@ -36,12 +36,15 @@ struct ServerSamplesTests {
         #expect(things.contains { $0.atStart })
     }
 
-    /// `GET /kinds`: both kinds with their sites in the server's order; eBay offered for things, not set up (no keys
-    /// in the sample), with auctions; mydealz and Vinted not set up either (no exit in the sample) and shipping only,
-    /// IKEA Preowned pickup only (brief 129); the flat portals set up, without auctions, both ways.
+    /// `GET /kinds`: the three kinds with their sites in the server's order; eBay offered for things, not set up (no
+    /// keys in the sample), with auctions; mydealz and Vinted not set up either (no exit in the sample) and shipping
+    /// only, IKEA Preowned pickup only (brief 129); the flat portals set up, without auctions, both ways; a page watch
+    /// without sites (brief 130).
     @Test func kindsAndTheirSites() throws {
         let kinds = try JSONDecoder().decode([OfferedKind].self, from: data("kinds"))
-        #expect(kinds.map(\.kind) == [.flat, .item])
+        #expect(kinds.map(\.kind) == [.flat, .item, .watch])
+        #expect(kinds[2].name == "Watch a page" && kinds[2].sources.isEmpty)
+        #expect(SearchKind.choices(offered: kinds) == [.flat, .item, .watch])
         #expect(kinds[0].sources.map(\.source) == Source.flatPortals
                 && kinds[0].sources.allSatisfy { $0.ready && !$0.auctions && $0.delivery == .both })
         let sites = kinds[1].sources
@@ -79,6 +82,30 @@ struct ServerSamplesTests {
         #expect(SiteNames(statuses: overview.sources).name(.ebay) == "eBay")
         let things = overview.hunts.compactMap { $0.hunt.search.item }
         #expect(!things.isEmpty && things.allSatisfy { $0.auctions })
+    }
+
+    /// Page watches (brief 130): an `ok` watch with what its page says now and a `blocked` one with the server's note,
+    /// both without sites, and a found change from `"page"` with its lines; the other kinds have no page.
+    @Test func pageWatchesAndAFoundChange() throws {
+        let overview = try JSONDecoder().decode(Overview.self, from: data("overview"))
+        let watches = overview.hunts.filter { $0.hunt.kind == .watch }
+        #expect(watches.map { $0.page?.read } == [.ok, .blocked])
+        #expect(watches.allSatisfy { $0.sources.isEmpty && $0.hunt.search.watch != nil })
+        #expect(overview.hunts.filter { $0.hunt.kind != .watch }.allSatisfy { $0.page == nil })
+        #expect(!overview.sources.contains { $0.source == .page })
+        let ok = try #require(watches.first)
+        let text = WatchCardText(ok.page, language: .english)
+        #expect(text.fact != nil && text.note == nil && text.times != nil)
+        let blocked = WatchCardText(watches[1].page, language: .english)
+        #expect(blocked.fact == nil && blocked.note?.hasSuffix("Editing the watch tries again.") == true)
+        #expect(HuntText(ok.hunt, page: ok.page, language: .english).title == ok.hunt.name)
+
+        let page = try JSONDecoder().decode(MatchPage.self, from: data("matches"))
+        let change = try #require(page.items.first { $0.listing.source == .page })
+        #expect(change.isPageChange && !change.isThing && change.listing.item == nil)
+        #expect(change.listing.page?.added.isEmpty == false && change.listing.page?.removed.isEmpty == false)
+        #expect(change.watchNowLine(language: .english) != nil && change.watchTitle == WatchText.keepingAmounts(change.reason))
+        #expect(page.items.filter { $0.listing.source != .page }.allSatisfy { $0.listing.page == nil })
     }
 
     @Test func theOtherAnswers() throws {
