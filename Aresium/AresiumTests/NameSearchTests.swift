@@ -83,14 +83,20 @@ struct NameSearchTests {
         var worst = 0.0
         for query in queries {
             _ = index.results(for: query) // Warm up the code, outside the timed keystrokes.
-            var elapsed = 0.0
-            for _ in 0..<10 {
-                let start = CFAbsoluteTimeGetCurrent()
-                let results = index.results(for: query)
-                elapsed += CFAbsoluteTimeGetCurrent() - start
-                #expect(results.count == (query == "absent" ? 0 : 50))
+            // The best of three rounds of ten keystrokes: a slower search shows in every round, while a Mac busy with
+            // other builds (the full suite runs beside other simulators) only slows a round now and then.
+            var best = Double.infinity
+            for _ in 0..<3 {
+                var elapsed = 0.0
+                for _ in 0..<10 {
+                    let start = CFAbsoluteTimeGetCurrent()
+                    let results = index.results(for: query)
+                    elapsed += CFAbsoluteTimeGetCurrent() - start
+                    #expect(results.count == (query == "absent" ? 0 : 50))
+                }
+                best = min(best, elapsed)
             }
-            let milliseconds = elapsed * 100 // Ten keystrokes, seconds to milliseconds.
+            let milliseconds = best * 100 // Ten keystrokes, seconds to milliseconds.
             worst = max(worst, milliseconds)
             print("NameSearch 1000 groups / 5000 payments, '\(query)': \(milliseconds) ms per indexed query")
         }

@@ -120,9 +120,17 @@ struct ContentView: View {
         let sums = PaymentSums(defaults: .standard)
         #endif
         // The server sample shows the bundled dashboard; otherwise the backend comes with the mode (`ModeStore`).
+        // The day Current's month is read with (brief 215, `CurrentMonth`); DEBUG `-openedOn <YYYY-MM-DD>` pins it for
+        // screenshots of a month's first days.
+        #if DEBUG
+        let pinned = LaunchArguments.value("-openedOn").flatMap { ReceiptDay.date($0) }
+        let clock: () -> Date = pinned.map { day in { day } } ?? Date.init
+        #else
+        let clock: () -> Date = Date.init
+        #endif
         let store = sample && !phoneSample
-            ? DashboardStore(session: session, sample: true, widgetPublisher: publisher, sums: sums)
-            : DashboardStore(session: session, backend: nil, widgetPublisher: publisher, sums: sums)
+            ? DashboardStore(session: session, sample: true, widgetPublisher: publisher, sums: sums, clock: clock)
+            : DashboardStore(session: session, backend: nil, widgetPublisher: publisher, sums: sums, clock: clock)
         #if DEBUG
         messagesActive = !debugLaunch
         #else
@@ -255,7 +263,8 @@ struct ContentView: View {
                             StartScreen(store: store, palette: palette, current: $place.current,
                                         side: $place.side, graph: showsGraph, graphMoves: graphMoves,
                                         band: band(in: geometry), openGuide: { showsGuide = true },
-                                        openDay: { place.day = $0 }) {
+                                        openDay: { place.day = $0 },
+                                        openCategories: { place.choosesCategories = true }) {
                                 place.path.append($0)
                             }
                         }
@@ -295,9 +304,10 @@ struct ContentView: View {
             .onChange(of: scenePhase) { _, phase in
                 // Before anything async: server mode on a login not renewed yet ends when the saved login changed.
                 if phase == .active { modes.followMarker() }
-                // A month review opened from its message stays on screen while the person reads it; leaving the app
-                // brings Current back to this month, so it never quietly shows an old month later.
-                if phase == .background { store.showReview(month: nil) }
+                // A month review opened from its message (or the range line's other month) stays on screen while the
+                // person reads it; leaving the app brings Current back to its own month, so it never quietly shows an
+                // old month later. Coming back reads the day again (brief 215: Current's month follows it only then).
+                if phase == .background { store.appLeft() } else { store.appReturned() }
             }
             .onEmpireForeground(session: session) {
                 await session.followSharedLogin()    // another Empire app may have logged in or out
@@ -340,8 +350,9 @@ struct ContentView: View {
             // says that letting go imports them (over the import's result too).
             .fileDrops(enabled: takesDrops, palette: palette, dropped: receiveDropped)
             .sheet(isPresented: $showsSettings, onDismiss: importPickedInGuide) {
-                SettingsScreen(app: SettingsApp(name: "Aresium",
-                                                signInNote: String(localized: "Only for an Aresium server of your own. Your data here stays on this iPhone."),
+                // Brief 215: no sign-in while signed out (an Ares account is only Patrik's, for his server); the "Ares
+                // account" section shows only while a login of the Ares apps exists on this iPhone.
+                SettingsScreen(app: SettingsApp(name: "Aresium", offersSignIn: false,
                                                 licences: [.shopList(), .localPlaces()]),
                                session: session, sample: sampleActive, logOut: logOut) {
                     if modes.phone != nil { PhoneSettingsSection(modes: modes, data: phoneData, palette: palette) }
@@ -374,14 +385,14 @@ struct ContentView: View {
             .sheet(isPresented: $showsGuide, onDismiss: importPickedInGuide) {
                 BankGuideSheet(importing: guideImport { showsGuide = false }, outbox: outbox)
             }
-            .sheet(isPresented: Binding(get: { showsCategoriesAfterImport },
-                                        set: { if !$0 { imports.categoriesClosed() } })) {
-                // After an import that added payments while no category is chosen (`ImportStore`): ticking sorts them.
+            .sheet(isPresented: Binding(get: { showsCategoryList }, set: { if !$0 { categoryListClosed() } })) {
+                // After an import that added payments while no category is chosen (`ImportStore`), or from the
+                // dashboard's card while none is (brief 215): ticking sorts the payments.
                 if let phone = modes.phone {
                     NavigationStack {
                         CategoryPickerScreen(model: CategoryPickerModel(phone: phone) {
                             await store.reloadAfterTransactionChange()
-                        }, afterImport: true, done: { imports.categoriesClosed() })
+                        }, afterImport: imports.asksForCategories, done: categoryListClosed)
                     }
                     .presentationBackground(Ink.background)
                 }
@@ -486,11 +497,13 @@ struct ContentView: View {
             place.side = .expenses
             place.day = nil
             switch destination {
-            case .start: store.showReview(month: nil); place.path = []
+            // The widget's links: the newest month, as the widget shows it (brief 215: in a month's first days Current
+            // would open on the month before).
+            case .start: store.showNewestMonth(); place.path = []
             case .importData: picksFiles = modes.phone != nil
             case .review(let month): store.showReview(month: month); place.path = []
             case .category(let name):
-                store.showReview(month: nil)
+                store.showNewestMonth()
                 place.path = store.widgetCategoryRoute(name).map { [$0] } ?? []
             }
         }
@@ -582,10 +595,17 @@ struct ContentView: View {
         await store.reloadAfterTransactionChange()
     }
 
-    /// The category picker after an import shows in phone mode once no other sheet of the app is open (a file shared in
-    /// while Settings or the guide is open waits for it to close).
-    private var showsCategoriesAfterImport: Bool {
-        imports.asksForCategories && modes.phone != nil && !showsSettings && !showsGuide
+    /// The category list over the dashboard in phone mode: after an import (`ImportStore.asksForCategories`), or from
+    /// the card shown while no category is chosen (`DashboardPlace.choosesCategories`, brief 215); once no other sheet
+    /// of the app is open (a file shared in while Settings or the guide is open waits for it to close).
+    private var showsCategoryList: Bool {
+        (imports.asksForCategories || place.choosesCategories) && modes.phone != nil && !showsSettings && !showsGuide
+    }
+
+    /// The category list closed (Done, its question answered, or swiped away once something is ticked).
+    private func categoryListClosed() {
+        imports.categoriesClosed()
+        place.choosesCategories = false
     }
 
     /// The after-import question to show now: once the import, its file check window and the category picker are done
@@ -614,7 +634,7 @@ struct ContentView: View {
     private var windowOpen: Bool {
         showsSettings || showsGuide || picksFiles || restoringExport || imports.layoutRequest != nil
             || pendingReceiptQuestion != nil || receipts.reading != nil || receipts.scanning || receipts.pickingPhoto
-            || cashEntry != nil
+            || cashEntry != nil || place.choosesCategories
     }
 
     /// The quick sort's offer after an import (brief 99), in the result's place before the messages' offer: "34 payments
@@ -892,7 +912,7 @@ struct ContentView: View {
             if route.cash { return route.month.map { store.monthTitle($0) } ?? String(localized: "By month") }
             if let key = route.month {
                 let month = store.dashboard?.months.first { $0.key == key }?.title() ?? key
-                return String(localized: "\(month) · activities")
+                return String(localized: "\(month) · payments")
             }
             return route.side == .income ? String(localized: "Monthly income") : String(localized: "Monthly spend")
         }

@@ -240,11 +240,13 @@ struct CashTests {
         #expect(CashWording.unaccounted(.german) == "Nicht erfasst")
         #expect(nbsp(CashWording.left(30, language: .german)) == "30,00 € übrig")
         #expect(CashWording.left(30, language: .english) == "€30.00 left")
-        #expect(CashRowWording.line(unaccounted: 75, language: .english) == "€75.00 not accounted for")
-        #expect(nbsp(CashRowWording.line(unaccounted: 75, language: .german)) == "75,00 € nicht erfasst")
+        // Brief 215 (the first-run review's finding 14): the row says what the cash is, "without receipts", where
+        // "not accounted for" read like a warning; the page keeps its explained heading above.
+        #expect(CashRowWording.line(unaccounted: 75, language: .english) == "€75.00 without receipts")
+        #expect(nbsp(CashRowWording.line(unaccounted: 75, language: .german)) == "75,00 € ohne Belege")
         #expect(CashRowWording.line(unaccounted: 0, language: .english) == "Withdrawals, cash received and spent")
         #expect(CashRowWording.monthLine(CashMonth(withdrawn: 100, received: 0, spent: 30, unaccounted: 70),
-                                         language: .english) == "Withdrawn €100.00 · Spent €30.00 · €70.00 not accounted for")
+                                         language: .english) == "Withdrawn €100.00 · Spent €30.00 · €70.00 without receipts")
         let empty = CashPage(cash: CashView(months: [:], movements: []))
         let alone = CashMovement(id: "r", date: "2026-10-08", amount: -5, kind: .receipt, place: "", category: "Uncategorised",
                                  paidFrom: [], coveredBy: nil, left: nil)

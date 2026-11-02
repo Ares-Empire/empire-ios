@@ -128,6 +128,42 @@ final class CategoryPickerModel {
         counts[id].flatMap { $0 > 0 ? $0 : nil }
     }
 
+    /// Done with nothing ticked (brief 215): the default categories the payments waiting as Not sorted fit into, as the
+    /// rows count them (`counts`), in the list's order; empty while any category is ticked, or none fits.
+    var fitting: [String] {
+        guard chosenCount == 0 else { return [] }
+        return groups.flatMap(\.items).filter { !$0.chosen && (counts[$0.id] ?? 0) > 0 }.map(\.id)
+    }
+
+    /// The question on Done with nothing ticked (brief 215): showing now, and how many categories it names (kept as
+    /// asked, so its words never change while it goes).
+    var asksToUseFitting = false
+    private(set) var fittingAsked = 0
+
+    /// Done in a picker that closes (after an import, or from the dashboard's card): with nothing ticked and categories
+    /// the payments fit into, it asks first (`asksToUseFitting`); true when it may close now.
+    func closes() async -> Bool {
+        guard await flush() else { return false }
+        // Done tapped before the numbers were first counted: count them now rather than close without asking.
+        if chosenCount == 0 && counts.isEmpty { await loadCounts() }
+        guard !fitting.isEmpty else { return true }
+        fittingAsked = fitting.count
+        asksToUseFitting = true
+        return false
+    }
+
+    /// The question's Use: every category in `fitting` ticked, the waiting payments sorted into them, and the
+    /// dashboard built again; true once done (the picker then closes).
+    func useFitting() async -> Bool {
+        let ids = fitting
+        guard !ids.isEmpty else { return await flush() }
+        let ticked = await work {
+            for id in ids { try await self.phone.choose(id, sorting: false) }
+            try await self.selectionChanged()
+        }
+        return await flush() && ticked
+    }
+
     /// Some row shows a number: the picker says what the numbers mean.
     var showsCounts: Bool {
         PickerTiming.measure("picker.showsCounts") { (groups.flatMap(\.items) + custom).contains { count(of: $0.id) != nil } }

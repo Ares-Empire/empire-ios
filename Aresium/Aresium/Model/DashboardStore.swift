@@ -64,13 +64,17 @@ struct ChartPoint: Identifiable {
     /// What the chip names while a finger reads the graph (brief 56): the day written out ("Mon 14 Sep") or the month
     /// with its year ("Sep 2026"); the label when not given.
     let title: String
+    /// A month still running (`Month.partial`, brief 215): the month graphs draw the stretch to it dashed, as its amount
+    /// is not final yet.
+    let running: Bool
     var id: Int { index }
 
-    nonisolated init(index: Int, label: String, value: Double, title: String? = nil) {
+    nonisolated init(index: Int, label: String, value: Double, title: String? = nil, running: Bool = false) {
         self.index = index
         self.label = label
         self.value = value
         self.title = title ?? label
+        self.running = running
     }
 }
 
@@ -100,7 +104,22 @@ final class DashboardStore {
     /// Installed by the live app (`installMessages`); in DEBUG the phone sample gets a pretend one
     /// (`installSampleMessages`, brief 46); never a test store.
     var messages: AresiumMessages?
-    private(set) var reviewMonth: String?
+    /// What Current shows besides its rule (`CurrentMonth`), until the app goes to the background: a month chosen (a
+    /// month review's message, brief 46; the range line's other month, brief 215) or the newest (a widget's link: the
+    /// widget shows the newest month).
+    enum CurrentChoice: Equatable {
+        case month(String)
+        case newest
+    }
+    private(set) var currentChoice: CurrentChoice?
+    /// The day this look at the app began (`YYYY-MM-DD`), which Current's month is read with (`CurrentMonth`): at
+    /// launch and on coming back from the background (`appReturned`), never while the app is open, so the start screen
+    /// never changes its month under the person (brief 215). nil without a clock: Current shows the newest month.
+    private(set) var openedOn: String?
+    /// The clock `openedOn` is read from: the live app's (`ContentView`). nil (tests, the tour, previews): Current shows
+    /// the newest month as before, whatever the day.
+    @ObservationIgnored private let clock: (() -> Date)?
+    @ObservationIgnored private var leftApp = false
     private(set) var isLoading = false
     private(set) var error: String?
     let session: EmpireSession
@@ -127,19 +146,25 @@ final class DashboardStore {
 
     /// Server mode from the start (tests, the server sample).
     convenience init(session: EmpireSession, client: APIClient = APIClient(), sample: Bool = false,
-                     widgetPublisher: WidgetSnapshotPublisher = .temporary(), sums: PaymentSums = PaymentSums()) {
+                     widgetPublisher: WidgetSnapshotPublisher = .temporary(), sums: PaymentSums = PaymentSums(),
+                     clock: (() -> Date)? = nil) {
         self.init(session: session, backend: ServerBackend(client: client), sample: sample, widgetPublisher: widgetPublisher,
-                  sums: sums)
+                  sums: sums, clock: clock)
     }
 
     /// `sums`: the person's choices (`PaymentSums(defaults:)`) only for the app's own dashboard; by default an empty set in
     /// memory (the tour, tests).
+    /// `clock`: the day Current's month is read with (brief 215, `CurrentMonth`); only the app's own dashboard passes
+    /// one.
     init(session: EmpireSession, backend: (any AresiumBackend)?, sample: Bool = false,
-         widgetPublisher: WidgetSnapshotPublisher = .temporary(), sums: PaymentSums = PaymentSums()) {
+         widgetPublisher: WidgetSnapshotPublisher = .temporary(), sums: PaymentSums = PaymentSums(),
+         clock: (() -> Date)? = nil) {
         self.session = session
         self.backend = backend
         self.widgetPublisher = widgetPublisher
         self.sums = sums
+        self.clock = clock
+        openedOn = clock.map { ReceiptDay.day($0()) }
         isSample = sample
         // The login ended (here or in another app), or the server refused it: server mode's dashboard and its widget
         // numbers go with it (`ModeStore` then shows the phone's store). Phone mode's belong to the iPhone and stay.
@@ -153,7 +178,7 @@ final class DashboardStore {
     func use(_ backend: (any AresiumBackend)?) {
         guard backend !== self.backend else { return }
         self.backend = backend
-        reviewMonth = nil
+        currentChoice = nil
         messages?.setPhoneMode(backend?.mode == .phone, ledger: (backend as? PhoneBackend)?.ledger)
         fetchGeneration += 1
         isLoading = false
@@ -334,13 +359,70 @@ final class DashboardStore {
         monthKey(atChartIndex: index).map { DashboardRoute(monthPage: $0, side: side) }
     }
 
+    /// The month Current shows: one chosen (`currentChoice`) while it is in the data, else the rule's (`CurrentMonth`:
+    /// in a month's first days the month before), else the newest.
     var currentMonth: Month? {
-        if let reviewMonth, let month = dashboard?.months.first(where: { $0.key == reviewMonth }) { return month }
-        return dashboard?.months.last
+        guard let months = dashboard?.months, let newest = months.last else { return nil }
+        switch currentChoice {
+        case let .month(key)?: if let month = months.first(where: { $0.key == key }) { return month }
+        case .newest?: return newest
+        case nil: break
+        }
+        guard let openedOn, let key = CurrentMonth.opening(months: months.map(\.key), openedOn: openedOn) else {
+            return newest
+        }
+        return months.first { $0.key == key } ?? newest
     }
 
-    /// A notification opens this month's totals, categories and graph on the existing dashboard root.
-    func showReview(month: String?) { reviewMonth = month }
+    /// The range line's other month on Current, one tap away (brief 215): the newest while Current shows an older
+    /// month; in a month's first days, while it shows the running month, the month before. nil: none.
+    var currentOtherMonth: Month? {
+        guard let months = dashboard?.months, let shown = currentMonth,
+              let key = CurrentMonth.other(months: months.map(\.key), shown: shown.key, openedOn: openedOn) else {
+            return nil
+        }
+        return months.first { $0.key == key }
+    }
+
+    /// A notification opens this month's totals, categories and graph on the existing dashboard root; nil: Current's
+    /// own month again (`CurrentMonth`).
+    func showReview(month: String?) { currentChoice = month.map(CurrentChoice.month) }
+
+    /// The range line's other month tapped (brief 215): Current shows it until the app goes to the background.
+    func showCurrent(month key: String) { currentChoice = .month(key) }
+
+    /// A widget's link: the newest month, as the widget shows it.
+    func showNewestMonth() { currentChoice = .newest }
+
+    /// The app went to the background: a month chosen for Current goes (a review read, the other month), so it never
+    /// quietly shows an old month later, and the day is read again when the person comes back.
+    func appLeft() {
+        currentChoice = nil
+        leftApp = true
+    }
+
+    /// Back from the background (a new look at the app): Current's month follows today's date again, and the messages'
+    /// offer that waited for this may show (brief 215, `AresiumMessages.offerWaitsForNextOpening`).
+    func appReturned() {
+        guard leftApp else { return }
+        leftApp = false
+        if let clock { openedOn = ReceiptDay.day(clock()) }
+        messages?.appOpenedAgain()
+    }
+
+    /// Phone mode with payments and no category chosen yet (brief 215, the first-run review's finding 1): the start
+    /// screen (and Not sorted's list) shows the card that opens the category list, and the quick sort waits, as its
+    /// cards could offer only Own transfers and New category.
+    var waitsForCategories: Bool {
+        guard let phone, phone.waitsForCategories else { return false }
+        return dashboard?.transactions.isEmpty == false
+    }
+
+    /// The card that opens the category list in Not sorted's month list, where the quick sort's card stands once a
+    /// category is chosen.
+    func offersCategoriesCard(on route: DashboardRoute) -> Bool {
+        waitsForCategories && route.isCategoryList && route.category == CategoryName.uncategorised
+    }
 
     // MARK: the Cash page (brief 33)
 
@@ -385,13 +467,13 @@ final class DashboardStore {
     /// The line above a page's heading: the scope's month, or Overview's first to last month.
     func rangeLabel(_ scope: DashboardScope) -> String {
         guard let first = dashboard?.months.first, let last = dashboard?.months.last else {
-            return String(localized: "No activity")
+            return String(localized: "No payments")
         }
         guard scope.isMonth else {
             // One month of data: "February 2026", not "February 2026 – February 2026".
             return first.key == last.key ? last.title() : "\(first.title()) – \(last.title())"
         }
-        return monthKey(scope).map { monthTitle($0) } ?? String(localized: "No activity")
+        return monthKey(scope).map { monthTitle($0) } ?? String(localized: "No payments")
     }
 
     func totals(current: Bool) -> Totals? { totals(DashboardScope(current: current)) }
@@ -467,7 +549,8 @@ final class DashboardStore {
     private func monthPoints(_ values: [Double]) -> [ChartPoint] {
         (dashboard?.months ?? []).enumerated().compactMap { index, month in
             guard values.indices.contains(index) else { return nil }
-            return ChartPoint(index: index, label: month.shortTitle(), value: values[index], title: month.title())
+            return ChartPoint(index: index, label: month.shortTitle(), value: values[index], title: month.title(),
+                              running: month.partial)
         }
     }
 }

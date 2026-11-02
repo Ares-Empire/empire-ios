@@ -89,13 +89,17 @@ nonisolated enum ReminderOffer {
         var window = false
         /// The quick sort's offer (brief 99) shows in its place, or its flow is open: it goes first.
         var quickSort = false
+        /// The import that readied the offer came in this opening of the app (brief 215,
+        /// `AresiumMessages.offerWaitsForNextOpening`): it waits until Aresium is opened again.
+        var firstOpening = false
     }
 
     /// In the import result's place once the result (with its send card) and the category picker are done: never with
-    /// them, never in the tour or behind the lock or another window, and after the quick sort's offer.
+    /// them, never in the tour or behind the lock or another window, after the quick sort's offer, and not in the
+    /// opening of the app that readied it (brief 215).
     static func shows(_ moment: Moment) -> Bool {
         moment.ready && !moment.tour && !moment.locked && !moment.importing && !moment.picker && !moment.result
-            && !moment.window && !moment.quickSort
+            && !moment.window && !moment.quickSort && !moment.firstOpening
     }
 
     /// Turn on: Messages on with both messages; how often and the time stay as they are (every 2 weeks and 18:00
@@ -115,7 +119,8 @@ extension ReminderOffer.Moment {
     @MainActor init(messages: AresiumMessages, imports: ImportStore, tour: Bool, locked: Bool, window: Bool,
                     quickSort: Bool = false) {
         self.init(ready: messages.shouldOfferReminder, tour: tour, locked: locked, importing: imports.isBusy,
-                  picker: imports.asksForCategories, result: imports.banner != nil, window: window, quickSort: quickSort)
+                  picker: imports.asksForCategories, result: imports.banner != nil, window: window, quickSort: quickSort,
+                  firstOpening: messages.offerWaitsForNextOpening)
     }
 }
 

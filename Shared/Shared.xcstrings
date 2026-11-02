@@ -730,16 +730,6 @@
         }
       }
     },
-    "One Ares account for all Ares apps" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ein Ares-Konto für alle Ares-Apps"
-          }
-        }
-      }
-    },
     "One Ares account for all Ares apps. Once you have confirmed your email, Patrik approves it." : {
       "localizations" : {
         "de" : {

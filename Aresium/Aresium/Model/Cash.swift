@@ -197,13 +197,15 @@ enum CashCategories {
 
 /// The Cash row's and the months' lines (pure, so tests pin both languages).
 nonisolated enum CashRowWording {
-    /// The dashboard row: what is not accounted for, or what the page holds when everything is.
+    /// The dashboard row: the cash no receipt or entry accounts for, or what the page holds when everything is. In plain
+    /// words, "€300.00 without receipts" (brief 215, the first-run review's finding 14: "not accounted for" read like a
+    /// warning to a newcomer with withdrawals and no receipts; the Cash page explains its own heading).
     static func line(unaccounted: Double, language: AppLanguage = .current) -> String {
         guard unaccounted >= 0.005 else { return language.string("Withdrawals, cash received and spent") }
-        return language.string("\(Money.precise(unaccounted, language: language)) not accounted for")
+        return language.string("\(Money.precise(unaccounted, language: language)) without receipts")
     }
 
-    /// A month in Overview: "Withdrawn €100.00 · Spent €43.40 · €56.60 not accounted for" (the parts that are not 0).
+    /// A month in Overview: "Withdrawn €100.00 · Spent €43.40 · €56.60 without receipts" (the parts that are not 0).
     static func monthLine(_ month: CashMonth, language: AppLanguage = .current) -> String {
         var parts: [String] = []
         if month.withdrawn > 0 { parts.append(language.string("Withdrawn \(Money.precise(month.withdrawn, language: language))")) }
