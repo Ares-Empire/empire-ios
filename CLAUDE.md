@@ -767,10 +767,10 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   `storage`). **Lifecycle:** the data belongs to the iPhone, not to a login: logging in or out, leaving Aresium and
   deleting the Ares account never touch it; it goes only with Settings → Delete Aresium data on this iPhone or the
   lock's "Forgot the code?". Settings → Your data on this iPhone (phone mode): Categories, Receipts, Export (one JSON file,
-  schema 7 with the receipts, cash entries, corrected shop names, payment names, category sides, default personal names
-  and the links of money paid back (brief 202), `Aresium-<date>.json`, through the share sheet), Restore
+  schema 8 with the receipts, cash entries, corrected shop names, payment names, category sides, default personal names,
+  links of money paid back (brief 202) and fixed-cost marks (brief 208), `Aresium-<date>.json`, through the share sheet), Restore
   from an export (only into an empty store, all or nothing; chosen categories and corrected shop names are replaced;
-  schema 1–6 files still restore).
+  schema 1–7 files still restore).
   **Payment names and groups** (brief 43, data only; `Model/PaymentNames.swift`, screens in brief 44):
   `LedgerPayment.place` always stays the bank name; sorting, learning and receipt matching use only those original
   fields. Schema 5 adds `LedgerPayment.ownName` and merchant → name rules (`PhoneLedger.paymentNames()`); export schema
@@ -1299,6 +1299,25 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   `-sampleRemoveAnswer keep|remove` answers the first alert and shows the shop alert. Tests: `AddQuestionsTests`,
   plus updated new-category and other-side tests. Screenshots: `build/83-en-remove.png`, `build/83-de-remove.png`,
   `build/83-en-add.png`, `build/83-de-add.png` (English/German; the Add screenshots use Keep both).
+  **Monthly average and fixed costs — data API** (brief 208; screens in 209):
+  `DashboardStore.monthlyAverage(side:)` returns `MonthlyAverage?` (`amount`, integer `cents`, `count`, `first`/`last`
+  month keys): all non-partial months, excluding the earliest payment's month when it starts after day 7; nil below
+  two months. Both backends use the engine's monthly totals, including paybacks, rounded to whole cents.
+  Phone mode's `fixedCosts(side:)` returns `FixedCostList?`: `running`, `ended`, `takenOut`, `monthlyTotal` and
+  `monthlyCents`. `fixedCost(id:)` resolves any entry, or nil after it disappears. Entries expose `name`, `category`,
+  `side`, `cadence`, `amount`/`cents`, `monthlyEquivalent`/`monthlyCents`, `count`, `first`, `last`, `nextDue`,
+  `running`, `notFixed`, row `ids` newest first and `newest` (`Transaction`). Detection groups eligible bank rows by
+  `nameKey` and direction, splits amounts at 10% or €3, follows calendar cadences and uses the ledger's newest bank
+  payment as its reference. A double cadence gap is normalized as one missed payment before the median is taken.
+  The cache is built off main and published with each dashboard's revision, like `QuickSortCache`; server mode is nil.
+  `try await setNotFixed(entry, true|false)` saves once, reloads once and returns `BatchUndo`. Schema/export 8 adds
+  `FixedCostMark`: `key` (the anchor payment's original merchant key, else its exact bank line), direction,
+  cadence, and a payment-id anchor to distinguish two subscriptions at one shop with one cadence. No amount enters
+  the mark. The earliest import sequence supplies the anchor, so older files imported later preserve an unmarked entry's id too.
+  Engine revision rebuilding moves merchant keys by the name rules' longest current whole-word prefix;
+  bank lines and absent shops stay. Display names and shop identities never enter the stored key. Export schemas 1–7 still restore; deleting the store deletes the marks.
+  Pure `FixedCostWording.cadence(_:language:)` and `nextDue(_:referenceDay:language:)` supply both languages;
+  due dates include the year only when it differs from the reference year's (default: today).
   **Quick sort** (brief 99, Patrik 2026-11-01, after three sorting rounds still left about 240 of his payments Not sorted
   on day one, most of them personal: "a way to see the top not sorted factors and going through them"; logic
   `Model/QuickSort.swift` and `Model/QuickSortFlow.swift`, look `Screens/QuickSortScreens.swift`, phone mode only).

@@ -143,7 +143,7 @@ struct CategoryEditingTests {
             #expect(dashboard.widgetCategoryRoute("Fiktiv Vorrat")?.categoryID == "groceries")
             #expect(try await phone.categories(language: language == .english ? .german : .english).name(of: "groceries") == "Fiktiv Vorrat")
             let after = try await phone.export()
-            #expect(after.schema == 7 && after.payments == before.payments && after.receipts == before.receipts && after.learned == before.learned)
+            #expect(after.schema == LedgerExport.currentSchema && after.payments == before.payments && after.receipts == before.receipts && after.learned == before.learned)
             let oldOwn = try #require(before.categories.first { $0.id == own })
             let newOwn = try #require(after.categories.first { $0.id == own })
             #expect(oldOwn.id == newOwn.id && oldOwn.look == newOwn.look && oldOwn.side == newOwn.side && oldOwn.otherSide == newOwn.otherSide && oldOwn.order == newOwn.order)

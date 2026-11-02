@@ -127,10 +127,11 @@ nonisolated struct LedgerSummary: Equatable, Sendable {
     var layouts = 0
     var receipts = 0
     var nameRules = 0
+    var fixedCostMarks = 0
     var chosen: [ChosenCategory] = []
 
     /// Nothing imported, kept or learned yet (chosen categories may exist): an export can be restored into it.
-    var isEmpty: Bool { payments == 0 && accounts == 0 && learned == 0 && layouts == 0 && receipts == 0 && nameRules == 0 }
+    var isEmpty: Bool { payments == 0 && accounts == 0 && learned == 0 && layouts == 0 && receipts == 0 && nameRules == 0 && fixedCostMarks == 0 }
 }
 
 /// The payments added from one file.
@@ -198,6 +199,7 @@ actor PhoneLedger: ModelActor {
                           layouts: try modelContext.fetchCount(FetchDescriptor<StoredLayout>()),
                           receipts: try modelContext.fetchCount(FetchDescriptor<StoredReceipt>()),
                           nameRules: try modelContext.fetchCount(FetchDescriptor<StoredPaymentName>()),
+                          fixedCostMarks: try modelContext.fetchCount(FetchDescriptor<StoredFixedCostExclusion>()),
                           chosen: try chosen())
         }
     }
@@ -764,7 +766,7 @@ actor PhoneLedger: ModelActor {
                         .map { LearnedRule(merchant: $0.merchant, category: $0.category) },
                      layouts: try modelContext.fetch(FetchDescriptor<StoredLayout>(sortBy: [SortDescriptor(\.savedAt)]))
                         .compactMap { try? JSONDecoder().decode(CsvLayout.self, from: $0.layout) },
-                     receipts: try receipts().reversed(), shopNames: try shopNames(), nameRules: try paymentNames())
+                     receipts: try receipts().reversed(), shopNames: try shopNames(), nameRules: try paymentNames(), fixedCostMarks: try fixedCostMarks())
     }
 
     /// Restores an export: only into a store without data (chosen categories and corrected shop names are replaced:
@@ -800,6 +802,7 @@ actor PhoneLedger: ModelActor {
                                                  savedAt: Date(timeIntervalSince1970: TimeInterval(index))))
             }
             for receipt in export.receipts { modelContext.insert(StoredReceipt(receipt)) }
+            for mark in export.fixedCostMarks { modelContext.insert(StoredFixedCostExclusion(mark)) }
             for rule in export.nameRules { modelContext.insert(StoredPaymentName(merchant: rule.merchant, name: rule.name)) }
             for (index, correction) in export.shopNames.enumerated() {
                 modelContext.insert(StoredShopName(read: correction.read, name: correction.name,

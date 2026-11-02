@@ -415,6 +415,10 @@ extension PhoneLedger {
             for key in changedNames {
                 if let name = oldNames[key] { modelContext.insert(StoredPaymentName(merchant: key, name: name)) }
             }
+            if before.fixedCostMarks != after.fixedCostMarks {
+                for mark in try modelContext.fetch(FetchDescriptor<StoredFixedCostExclusion>()) { modelContext.delete(mark) }
+                for mark in before.fixedCostMarks { modelContext.insert(StoredFixedCostExclusion(mark)) }
+            }
             try modelContext.save()
         } catch { modelContext.rollback(); throw error }
         return true

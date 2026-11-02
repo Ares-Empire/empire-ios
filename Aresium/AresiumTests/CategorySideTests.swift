@@ -278,7 +278,7 @@ struct CategorySideTests {
         let own = try await phone.addCustom(named: "Fictional work", side: .income)
         try await phone.setOtherSide(true, for: own)
         let file = try await phone.export()
-        #expect(file.schema == 7)
+        #expect(file.schema == LedgerExport.currentSchema)
         let restored = try await PhoneTest.backend()
         try await restored.restore(file.encoded())
         #expect(try await restored.ledger.chosen() == file.categories)

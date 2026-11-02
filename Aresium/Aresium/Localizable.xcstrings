@@ -7717,6 +7717,16 @@
         }
       }
     },
+    "every 6 months" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "halbjährlich"
+          }
+        }
+      }
+    },
     "half" : {
       "localizations" : {
         "de" : {
@@ -7743,6 +7753,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ganz"
+          }
+        }
+      }
+    },
+    "monthly" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "monatlich"
+          }
+        }
+      }
+    },
+    "next %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nächste am %@"
           }
         }
       }
@@ -7803,6 +7833,16 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "quarterly" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "vierteljährlich"
           }
         }
       }
@@ -7883,6 +7923,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "der Abhebung vom %@"
+          }
+        }
+      }
+    },
+    "yearly" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "jährlich"
           }
         }
       }

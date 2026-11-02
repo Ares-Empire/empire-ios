@@ -1,7 +1,7 @@
 import Foundation
 import Observation
 
-enum DashboardSide: String, CaseIterable, Hashable {
+nonisolated enum DashboardSide: String, Codable, CaseIterable, Hashable, Sendable {
     case expenses, income
     var title: String { self == .expenses ? String(localized: "Expenses") : String(localized: "Income") }
     var caption: String { self == .expenses ? String(localized: "spent") : String(localized: "received") }
@@ -96,6 +96,7 @@ final class DashboardStore {
     /// The quick sort's groups (brief 99), built with each phone dashboard and published in the same turn as it, so the
     /// card on Not sorted's list, the offer and the flow never read groups of another dashboard.
     private(set) var builtQuickSort = QuickSortCache()
+    private(set) var builtFixedCosts = FixedCostsCache()
     /// Installed by the live app (`installMessages`); in DEBUG the phone sample gets a pretend one
     /// (`installSampleMessages`, brief 46); never a test store.
     var messages: AresiumMessages?
@@ -190,10 +191,13 @@ final class DashboardStore {
             guard current() else { return }
             // Brief 99: what is Not sorted, grouped by name, off the main thread before the dashboard shows.
             let groups = backend?.mode == .phone ? await QuickSortCache.build(loaded) : []
+            let marks = try await (backend as? PhoneBackend)?.ledger.fixedCostMarks() ?? []
+            let fixed = backend?.mode == .phone ? await FixedCostsCache.build(loaded, marks: marks) : []
             guard current() else { return }
             try PickerTiming.measure("dashboard.publish") {
                 dashboard = loaded
                 builtQuickSort = QuickSortCache(revision: revision, groups: groups)
+                builtFixedCosts = FixedCostsCache(revision: revision, entries: fixed)
                 builtChosen = chosen
                 lastSuccessfulLoad = .now
                 try publishWidget(loaded)

@@ -157,7 +157,7 @@ struct PhoneStoreTests {
         try await phone.saveLayout(try #require(guess.layout))
         try await phone.ledger.remember(["fiktiv laden": "groceries"])
         let export = try await phone.export()
-        #expect(export.schema == 7 && export.fileName.hasPrefix("Aresium-") && export.fileName.hasSuffix(".json"))
+        #expect(export.schema == LedgerExport.currentSchema && export.fileName.hasPrefix("Aresium-") && export.fileName.hasSuffix(".json"))
         let data = try export.encoded()
 
         let fresh = try await PhoneTest.backend()

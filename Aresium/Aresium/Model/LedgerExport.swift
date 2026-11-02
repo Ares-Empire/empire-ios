@@ -4,13 +4,13 @@ import Foundation
 /// (`Aresium-<date>.json`, through the share sheet). Restoring reads it back into an empty store, checked first, all or
 /// nothing. Schema version 2 (brief 31) adds the receipts; version 3 (brief 33) the receipts' direction, kind, where
 /// cash was paid from and the shop as read, and the corrected shop names; version 4 adds payment names and name rules.
-/// Version 5 adds category sides and otherSide; version 6 allows personal names on defaults. Version 7 adds payback links; versions 1–6 still restore. A change to
+/// Version 5 adds category sides and otherSide; version 6 allows personal names on defaults. Version 7 adds payback links; version 8 adds fixed-cost exclusions. Versions 1–7 still restore. A change to
 /// these fields (or to `LedgerPayment`, `LedgerAccount`, `ChosenCategory`, `LearnedRule`, `CsvLayout`, `LedgerReceipt`,
-/// `ShopNameCorrection`, `PaymentNameRule`) is a new version, and `restore` keeps reading the older ones.
+/// `ShopNameCorrection`, `PaymentNameRule`, `FixedCostMark`) is a new version, and `restore` keeps reading the older ones.
 nonisolated struct LedgerExport: Codable, Equatable, Sendable {
-    static let currentSchema = 7
+    static let currentSchema = 8
     /// The versions `decode` reads.
-    static let readableSchemas = 1...7
+    static let readableSchemas = 1...8
     static let appName = "Aresium"
 
     var app = Self.appName
@@ -29,10 +29,12 @@ nonisolated struct LedgerExport: Codable, Equatable, Sendable {
 
     /// Schema 4: names for bank merchants.
     var nameRules: [PaymentNameRule] = []
+    /// Schema 8: the series taken out of fixed costs / regular income.
+    var fixedCostMarks: [FixedCostMark] = []
 
     init(exported: String, accounts: [LedgerAccount], payments: [LedgerPayment], categories: [ChosenCategory],
          learned: [LearnedRule], layouts: [CsvLayout], receipts: [LedgerReceipt] = [],
-         shopNames: [ShopNameCorrection] = [], nameRules: [PaymentNameRule] = []) {
+         shopNames: [ShopNameCorrection] = [], nameRules: [PaymentNameRule] = [], fixedCostMarks: [FixedCostMark] = []) {
         self.exported = exported
         self.accounts = accounts
         self.payments = payments
@@ -42,6 +44,7 @@ nonisolated struct LedgerExport: Codable, Equatable, Sendable {
         self.receipts = receipts
         self.shopNames = shopNames
         self.nameRules = nameRules
+        self.fixedCostMarks = fixedCostMarks
     }
 
     init(from decoder: Decoder) throws {
@@ -57,6 +60,7 @@ nonisolated struct LedgerExport: Codable, Equatable, Sendable {
         receipts = try container.decodeIfPresent([LedgerReceipt].self, forKey: .receipts) ?? []
         shopNames = try container.decodeIfPresent([ShopNameCorrection].self, forKey: .shopNames) ?? []
         nameRules = try container.decodeIfPresent([PaymentNameRule].self, forKey: .nameRules) ?? []
+        fixedCostMarks = try container.decodeIfPresent([FixedCostMark].self, forKey: .fixedCostMarks) ?? []
     }
 
     /// The file's name: `Aresium-2026-10-27.json`.
@@ -85,6 +89,7 @@ nonisolated struct LedgerExport: Codable, Equatable, Sendable {
         else { throw LedgerError.invalidExport("schema 4 fields in schema \(export.schema)") }
         guard export.schema >= 7 || !export.payments.contains(where: { !($0.paysBack ?? []).isEmpty })
         else { throw LedgerError.invalidExport("paybacks before schema 7") }
+        guard export.schema >= 8 || export.fixedCostMarks.isEmpty else { throw LedgerError.invalidExport("fixed costs before schema 8") }
         return export
     }
 
@@ -159,6 +164,13 @@ nonisolated struct LedgerExport: Codable, Equatable, Sendable {
             guard !rule.merchant.isEmpty, nameMerchants.insert(rule.merchant).inserted,
                   !rule.name.isEmpty, PaymentNames.normalized(rule.name) == rule.name
             else { throw fail("payment name rule") }
+        }
+        guard schema >= 8 || fixedCostMarks.isEmpty else { throw fail("fixed costs before schema 8") }
+        var markIDs = Set<String>()
+        for mark in fixedCostMarks {
+            guard mark.key.hasPrefix("bank:") || ["merchant:", "own:"].contains(where: { mark.key.hasPrefix($0) && mark.key.count > $0.count }),
+                  !mark.anchor.isEmpty, ids.contains(mark.anchor), markIDs.insert(mark.id).inserted
+            else { throw fail("fixed cost mark") }
         }
         try Paybacks.validateStored(payments: payments, transferIDs: Set(list.sortingIDs.filter(list.isTransfer)))
         var merchants = Set<String>()
