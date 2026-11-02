@@ -1022,8 +1022,8 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   `SelectionWording.done`) with Undo (`BatchUndo.perform`); a refused undo shows its line alone ("Cannot undo because
   the data changed."), as does a failed action (`UndoOffer(message:)` without Undo, Shared). **The tour**: step 11 of 22
   (`TourStep.select`, after the payment's paid back step and before Add up): the ring on the icon (`.selectIcon`), "Tap to select
-  several payments and move or rename them at once." / "Tippe hier, um mehrere Buchungen auszuwählen und auf einmal zu
-  verschieben oder umzubenennen.", Next; selecting frees the screen and works on the tour's store; Next ends it.
+  several payments and move, rename or link them at once." / "Tippe hier, um mehrere Buchungen auszuwählen und auf einmal
+  zu verschieben, umzubenennen oder zu verknüpfen." (brief 206 added "link"), Next; selecting frees the screen and works on the tour's store; Next ends it.
   DEBUG (with `-samplePhone -sampleCategory <name> -sampleMonth <YYYY-MM>`): `-selectPayments <n|all>` (selecting, the
   first n rows ticked; 0 none), `-selectionWindow` (Category; `-selectionMode add`, `-samplePick <name,…>`,
   `-selectionSave`, `-selectionAnswer remove|keep|all|only`), `-selectionName` (`-selectionNameText <text>`,
@@ -1120,10 +1120,11 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   dashboard is rebuilt (`TransactionDetailStore.refresh`). `PaybackLinks.load` reads the state off the main thread as the
   page opens (the room of the action is kept meanwhile, so the bank's row does not jump). **The window**
   (`PaybackSheet`, a sheet over the page as the change window): the bar "Paid back by" / "Pays back" with Cancel, the
-  payment's name and amount, "Which payment paid this back?" / "Which expense does this pay back?", the search field
-  ("Search names"), then SUGGESTED (each row: the category's tile, the name, its day and what fits in the second ink,
-  "29 Oct · half" / "29. Okt. · die Hälfte"; "in full", "a third", "a quarter", "the rest"; its own amount; the
-  chevron) or, while typing, what the search finds ("No payment found for “…”."); a row pushes **Amount**: the two
+  payment's name and amount, "Which payment paid this back?" / "Which expense does this pay back?" (plural since brief
+  206), the search field ("Search names"), then SUGGESTED (each row: the category's tile, the name, its day and what
+  fits in the second ink, "29 Oct · half" / "29. Okt. · die Hälfte"; "in full", "a third", "a quarter", "the rest"; its
+  own amount; the chevron) or, while typing, what the search finds ("No payment found for “…”."); a row pushes
+  **Amount** (since brief 206 a row ticks and Next pushes it, below "Several at once"): the two
   payments (the one that came in over the expense), "How much of it was paid back?", the field with the suggestion's
   euros (else the smaller rest; `ReceiptAmount.typed`, whole cents), "At most €64.00." (in the expense colour when
   passed), **Link** / **Verknüpfen** in the bar, muted until it can. A change opens at Amount (Save, Remove link).
@@ -1147,6 +1148,54 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   his row "0.00" with its line; Overview's Not sorted falls by €64; the trip's row "−64.00" with "€128.00 · €64.00
   back", its page shows the link and opens his page; the card's long press Remove link, the undo bar's Undo brings it
   back. Screenshots: `build/203-*.png`.
+  **Several at once** (brief 206, Claude; Patrik on build 17: "if I select many statements I can then select income
+  that payed them back and it just goes expense by expense until it's empty", and the other way round; the data is
+  brief 205's `Model/PaybackGroups.swift`). **One window for both starts** (brief 203's `PaybackWindow` and
+  `PaybackSheet`, grown, not copied): a payment's page (its action, as before) or a selection's bar; it reports the undo
+  bar's line and its `BatchUndo` to its owner (`done`), which closes it. **The bar's item** (`SelectionBar`, after
+  Category and Name): SF `link`, "Paid back" / "Zurückgezahlt" on an expense list, "Pays back" / "Zahlt zurück" on an
+  income list (`SelectionWording.paybackItem`, the page's words); muted while `paybackGroup(ids:)` is nil for the ticks
+  (nothing ticked, only receipts or transfers, both directions, all linked in full), read off the main thread 0.1 s after
+  the ticks stop (`PaybackOfferKey`), keeping its last state meanwhile so a slide does not make it flicker; a tap reads
+  the group again (the busy sign) and opens the window; it says nothing about rows left out. **The window**: this side
+  at the top (`PaybackHeading`): one payment's name and own amount as before, or "3 expenses" / "3 Ausgaben" ("2
+  payments in" / "2 Einnahmen") and the euros they can still be paid back or pay back, signed (`totalRest`, what their
+  rows count), with what was left out in one quiet line ("Left out: 1 receipt, 2 transfers." / "Nicht dabei: 1 Beleg, 2
+  Umbuchungen."; cash entries, withdrawals, another currency, "paid back in full" / "schon ganz zurückgezahlt", "used in
+  full" / "schon ganz verknüpft"); the question in the plural, which reads for one too ("Which payments paid this
+  back?" / "… these back?", "Which expenses does this pay back?" / "… do these pay back?"); the search; SUGGESTED (brief
+  205's group suggestions). Every row ticks with the selection's circle and highlight (`selectionMark`, VoiceOver
+  selected; the chevron is gone), a ticked search result stays shown above SUGGESTED once the field is cleared, a row
+  with euros already linked says what it has free ("€30.00 left" / "30,00 € übrig"). German bar title "Rückzahlung"
+  (was "Zurückgezahlt von"; Abbrechen and Verknüpfen beside it cut that and "Zurückgezahlt" to "Zurückgez…"). **How the money goes** (`PaybackPlanPanel`,
+  pure `PaybackPlanSummary`): while anything is ticked and the search has no keyboard (above it the panel covered the
+  results; it comes back with Search or a scroll), at the bottom in the selection bar's look (the card over the wall,
+  the line on top; fading, Reduce Motion none; more than three expenses scroll inside it): each expense in pouring
+  order, oldest first, its euros back on the right (0 in the muted ink when the money ran out before it), under its name
+  its day and "in full" / "ganz" or "€24.15 still open" / "24,15 € noch offen"; a hairline; brief 205's sentence ("3
+  expenses, €100.00 paid back.") and what stays open or stays income ("€24.15 still open." / "€15.85 stays income.";
+  never both). The preview is the pure `PaybackPlan` over the rests the window read; Link plans again under the save
+  revision (a save meanwhile: "The data changed. Select the payments again." in the window, nothing saved). **The bar's
+  button**: one payment on this side and at most one ticked: **Next** / **Weiter** (`paybackNext`) to brief 203's
+  amount step (typed euros), which now says under "At most …" what they leave ("€120.00 still open. €20.00 stays
+  income.", `PaybackPick.left(after:)`); otherwise **Link** / **Verknüpfen** (`linkPaybacks`), which pours
+  (`setPaybacks`): the window closes, a selection ends selecting, and the undo bar says brief 205's line ("3 expenses,
+  €100.00 paid back. €24.15 still open.") with one Undo for every link. Each link's euros can still be changed on a
+  payment's page (the pen). **The tour**: no new step; the select step says "move, rename or link them". DEBUG (with
+  `-samplePhone`): `-samplePaybackGroup` (made-up shared costs last month: Pizzeria Fiktivo −48 and Fiktiv Grillhaus −36
+  in Eating out with the month's Restaurant Fiktiva, Fiona Fiktiv +40 and Felix Fiktiv +100 Not sorted; Fiktiv
+  Sprachschule −200, and Erika Mustermann's two transfers +150 and +100 in Parents & family), `-selectPayments <n | i,j>`
+  (or `-selectRows <i,j>`), `-selectionPayback`, and in the window `-paybackPick <text,text>` (ticks; one on each side
+  goes on to Next unless `-paybackStay`) and `-paybackLink`. Tests: `PaybackManyScreensTests` (the words in both
+  languages, the summary from a plan, the heading and the bar's item, three expenses and one payment in with one undo,
+  two payments in and one expense found by name, a payment's page ticking two, a save meanwhile refused),
+  `PaybackScreensTests` (brief 203's flow through Next), `TourTests`. Real touches (a temporary UI test in
+  `Aresus/AresusUITests` driving Aresium, deleted; 3 of 3 runs): three dinners ticked by a slide down the circles, Paid
+  back, Felix ticked, the summary's rows oldest first (two in full, the third with what stays open), Link, the undo bar,
+  the rows' "€48.00 · €48.00 back", Undo takes all three links back; Parents & family's two transfers ticked, Pays back,
+  the course found by name, "€50.00 stays income.", Link, both rows "pays back Fiktiv Sprachschule"; Felix's page, one
+  ticked shows Next, a second Link, the page shows both links and "The rest, €16.00, counts as income.". Screenshots:
+  `build/206-*.png`.
   DEBUG (with `-samplePhone -sampleCategory Groceries -sampleMonth 2026-10 -samplePhoneTransaction REWE
   -sampleRecategorise add`): `-samplePick Clothes -sampleAddSave` picks and taps Save after the sheet opens;
   `-sampleRemoveAnswer keep|remove` answers the first alert and shows the shop alert. Tests: `AddQuestionsTests`,

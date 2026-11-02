@@ -4,6 +4,8 @@ import SwiftUI
 // and the window that makes or changes a link. Quiet and optional (Patrik, 2026-11-02): one action in the secondary ink
 // below what the page had, like its other quiet rows; nothing elsewhere asks for it. The app's own pieces only: the page's
 // cards (the "All from" card's look), the pen beside what a tap changes, the search field, the change window's bar.
+// Brief 206: the same window links several at once, opened from a payment's page or a selection's bar; its rows tick
+// with the selection's circle, and the summary at its bottom (the selection bar's look) shows how the money goes.
 
 /// The payment's page's section (after its rows and receipt, before the bank's own row): each link as a card that opens
 /// the other payment, with the pen that changes its euros or removes it (also on the card's long press); one line on what
@@ -115,9 +117,11 @@ struct PaybackLinkCard: View {
 
 // MARK: - the window
 
-/// The window (a sheet over the payment's page, as the change window): the other payment, then the euros. A new link
-/// starts at the choice: the payment and the question, the search field, the suggestions (or, while typing, what the
-/// search finds); a tap pushes the euros. A link being changed starts at its euros, with Remove link.
+/// The window (a sheet over the payment's page, as the change window, or over a selection's list, brief 206): the other
+/// side's payments, then the euros. New links start at the choice: this side's payment or group and the question, the
+/// search field, the suggestions (or, while typing, what the search finds), each ticked or not with the selection's
+/// circle; while anything is ticked the summary at the bottom shows how the money goes. One payment on each side goes on
+/// to the euros (Next); several link at once (Link). A link being changed starts at its euros, with Remove link.
 struct PaybackSheet: View {
     @Bindable var window: PaybackWindow
     let store: DashboardStore
@@ -142,28 +146,30 @@ struct PaybackSheet: View {
     }
 }
 
-/// The choice: this payment, the question, the search, then the suggestions or the search's results.
+/// The choice: this side, the question, the search, then the suggestions or the search's results to tick; the summary of
+/// how the money goes at the bottom while anything is ticked.
 private struct PaybackChoice: View {
     @Bindable var window: PaybackWindow
     let store: DashboardStore
     let palette: Palette
     @FocusState private var searching: Bool
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
+        let summary = window.summary
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(verbatim: window.payment.place).font(AppFont.text(20, weight: .bold))
-                        .fixedSize(horizontal: false, vertical: true)
-                        .accessibilityAddTraits(.isHeader)
-                    Text(verbatim: window.payment.signedAmount).font(AppFont.number(17, weight: .bold))
-                        .foregroundStyle(window.payment.amount < 0 ? palette.expenseText : palette.balance)
-                }
-                Text(verbatim: PaybackWording.question(direction: window.direction))
+                heading
+                Text(verbatim: PaybackWording.question(direction: window.direction, several: window.isSeveral))
                     .font(AppFont.text(13.5)).foregroundStyle(palette.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 12)
+                if let problem = window.problem {
+                    Text(verbatim: problem).font(AppFont.text(13)).foregroundStyle(palette.expenseText)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.top, 8)
+                }
                 SearchField(text: $window.query, prompt: SearchPage.prompt(), palette: palette, focused: $searching)
                     .padding(.top, 14)
                 list.padding(.top, 14)
@@ -172,10 +178,23 @@ private struct PaybackChoice: View {
             .font(AppFont.text(14)).foregroundStyle(palette.ink)
         }
         .scrollDismissesKeyboard(.immediately)
+        // How the money goes, under the list (it never moves the rows being ticked), fading in and out. Not while the
+        // search has the keyboard: above it the panel would cover the results being ticked; it shows again as the
+        // keyboard goes (a scroll, or Search).
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if let summary, !searching {
+                PaybackPlanPanel(summary: summary, palette: palette)
+                    .transition(.opacity)
+            }
+        }
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: summary == nil || searching)
         .background { Wall(palette: palette) }
         .navigationTitle(Text(verbatim: PaybackWording.windowTitle(direction: window.direction)))
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+            ToolbarItem(placement: .confirmationAction) { confirm }
+        }
         // The search waits a moment after the last key (each search reads the store's payments).
         .task(id: window.query) {
             try? await Task.sleep(for: .milliseconds(180))
@@ -187,18 +206,59 @@ private struct PaybackChoice: View {
         #endif
     }
 
+    /// This side: one payment's name and amount (brief 203), or the group's count and euros with what was left out.
+    private var heading: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(verbatim: window.heading.title).font(AppFont.text(20, weight: .bold))
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityAddTraits(.isHeader)
+            Text(verbatim: window.heading.amount).font(AppFont.number(17, weight: .bold))
+                .foregroundStyle(window.heading.isExpense ? palette.expenseText : palette.balance)
+            if let leftOut = window.heading.leftOut {
+                Text(verbatim: leftOut).font(AppFont.text(12.5)).foregroundStyle(palette.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 2)
+                    .accessibilityIdentifier("paybackLeftOut")
+            }
+        }
+    }
+
+    /// Next to the euros (one payment on each side), else Link: muted until it can, as the change window's Save.
+    @ViewBuilder private var confirm: some View {
+        if window.confirmsByAmount {
+            Button { window.next() } label: {
+                Text("Next").foregroundStyle(window.canNext ? palette.ink : palette.muted)
+            }
+            .disabled(!window.canNext)
+            .accessibilityIdentifier("paybackNext")
+        } else {
+            Button { Task { await window.link() } } label: {
+                if window.isWorking {
+                    ProgressView().tint(palette.ink)
+                } else {
+                    Text("Link").foregroundStyle(window.canLink ? palette.ink : palette.muted)
+                }
+            }
+            .disabled(!window.canLink)
+            .accessibilityIdentifier("linkPaybacks")
+        }
+    }
+
     @ViewBuilder private var list: some View {
         let typed = window.query.trimmingCharacters(in: .whitespacesAndNewlines)
         if typed.isEmpty {
-            Text(verbatim: PaybackWording.suggestedHeading().uppercased()).font(AppFont.text(11, weight: .semibold))
-                .tracking(1.3).foregroundStyle(palette.muted)
-                .padding(.horizontal, 4).padding(.bottom, 2)
-                .accessibilityAddTraits(.isHeader)
-            if let suggestions = window.suggestions {
-                if suggestions.isEmpty {
+            if let choices = window.choices {
+                let suggested = window.suggestions ?? []
+                let found = choices.count - suggested.count
+                if found > 0 { rows(Array(choices.prefix(found))).padding(.bottom, 14) }
+                Text(verbatim: PaybackWording.suggestedHeading().uppercased()).font(AppFont.text(11, weight: .semibold))
+                    .tracking(1.3).foregroundStyle(palette.muted)
+                    .padding(.horizontal, 4).padding(.bottom, 2)
+                    .accessibilityAddTraits(.isHeader)
+                if suggested.isEmpty {
                     EmptyMessage(text: PaybackWording.noSuggestion(), palette: palette)
                 } else {
-                    rows(suggestions)
+                    rows(suggested)
                 }
             } else {
                 ProgressView().tint(palette.secondary).frame(maxWidth: .infinity).padding(24)
@@ -214,16 +274,17 @@ private struct PaybackChoice: View {
         }
     }
 
+    /// Rows to tick, as a selecting list's: the circle at the left edge, the row lightly highlighted while ticked.
     private func rows(_ suggestions: [PaybackSuggestion]) -> some View {
         LazyVStack(spacing: 0) {
             ForEach(suggestions) { suggestion in
-                Button {
-                    searching = false
-                    window.choose(suggestion)
-                } label: {
+                let mark = SelectionMark(ticked: window.isTicked(suggestion.id), palette: palette)
+                Button { window.toggle(suggestion) } label: {
                     PaybackChoiceRow(suggestion: suggestion, store: store, palette: palette)
+                        .selectionMark(mark)
                 }
                 .buttonStyle(.plain)
+                .selectionTraits(mark)
                 .accessibilityIdentifier("paybackChoice")
             }
         }
@@ -231,29 +292,46 @@ private struct PaybackChoice: View {
     }
 
     #if DEBUG
-    /// Screenshots: `-paybackSearch <text>` types it; `-paybackPick <text>` taps the first suggestion (or result) whose
-    /// name contains the text.
+    /// Screenshots: `-paybackSearch <text>` types it; `-paybackPick <text,text>` ticks, for each text, the first
+    /// suggestion (or result) whose name contains it; one payment on each side then goes on to the euros (brief 203's
+    /// screenshots) unless `-paybackStay`; `-paybackLink` then taps Link.
     private func debugLaunch() async {
         if let text = LaunchArguments.value("-paybackSearch") {
             try? await Task.sleep(for: .milliseconds(500))
             window.query = text
         }
-        guard let text = LaunchArguments.value("-paybackPick") else { return }
+        guard let texts = LaunchArguments.value("-paybackPick")?.split(separator: ",").map(String.init) else { return }
+        var picked = 0
         for _ in 0..<40 {
-            let shown = window.query.isEmpty ? window.suggestions : window.results
-            if let hit = shown?.first(where: { $0.transaction.place.localizedCaseInsensitiveContains(text) }) {
+            let shown = window.query.isEmpty ? window.choices : window.results
+            if let shown {
                 try? await Task.sleep(for: .milliseconds(500))
-                window.choose(hit)
-                return
+                for text in texts {
+                    if let hit = shown.first(where: { $0.transaction.place.localizedCaseInsensitiveContains(text) }),
+                       !window.isTicked(hit.id) {
+                        window.toggle(hit)
+                        picked += 1
+                    }
+                }
+                break
             }
             try? await Task.sleep(for: .milliseconds(100))
+        }
+        guard picked > 0 else { return }
+        let arguments = LaunchArguments.current
+        if window.canNext, !arguments.contains("-paybackStay") {
+            try? await Task.sleep(for: .milliseconds(300))
+            window.next()
+        } else if arguments.contains("-paybackLink") {
+            try? await Task.sleep(for: .milliseconds(700))
+            await window.link()
         }
     }
     #endif
 }
 
-/// A suggestion or result: its category's tile, its name, its day and what fits ("29 Oct · half"), its own amount signed
-/// as a payment row, and the chevron (the euros come next).
+/// A suggestion or result: its category's tile, its name, its day and what fits ("29 Oct · half"), what it has free when
+/// part of it is linked already, and its own amount signed as a payment row.
 private struct PaybackChoiceRow: View {
     let suggestion: PaybackSuggestion
     let store: DashboardStore
@@ -271,8 +349,6 @@ private struct PaybackChoiceRow: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             Text(verbatim: Money.transaction(transaction.amount)).font(AppFont.number(14))
                 .foregroundStyle(transaction.amount < 0 ? palette.expenseText : palette.income).fixedSize()
-            Image(systemName: "chevron.right").font(.system(size: 11, weight: .medium)).foregroundStyle(palette.muted)
-                .accessibilityHidden(true)
         }
         .foregroundStyle(palette.ink)
         .padding(.horizontal, 12).padding(.vertical, 11)
@@ -280,12 +356,78 @@ private struct PaybackChoiceRow: View {
         .accessibilityElement(children: .combine)
     }
 
-    /// The day in the quiet ink, what fits a little stronger.
+    /// The day in the quiet ink; what fits and what it has free a little stronger.
     private var line: Text {
-        let day = Text(verbatim: PaybackWording.day(suggestion.transaction.date)).foregroundStyle(palette.muted)
-        guard let fit = suggestion.fit else { return day }
-        return day + Text(verbatim: " · ").foregroundStyle(palette.muted)
-            + Text(verbatim: PaybackWording.fit(fit)).foregroundStyle(palette.secondary)
+        let day = PaybackWording.day(suggestion.transaction.date)
+        var strong: [String] = []
+        if let fit = suggestion.fit { strong.append(PaybackWording.fit(fit)) }
+        let own = Paybacks.cents(abs(suggestion.transaction.amount)) ?? 0
+        if Paybacks.cents(suggestion.state.rest) ?? 0 < own { strong.append(PaybackWording.free(suggestion.state.rest)) }
+        guard !strong.isEmpty else { return Text(verbatim: day).foregroundStyle(palette.muted) }
+        let rest = Text(verbatim: strong.joined(separator: " · ")).foregroundStyle(palette.secondary)
+        return Text("\(Text(verbatim: day + " · ").foregroundStyle(palette.muted))\(rest)")
+    }
+}
+
+/// How the money goes (brief 206), at the bottom of the choice while anything is ticked, in the selection bar's look (the
+/// card colour over the wall's, the line on top): each expense in the order the euros reach it, oldest first, with what
+/// it gets back on the right and under its name its day and "in full" or what stays open; then brief 205's sentence and
+/// what stays open or stays income. More than three expenses scroll inside it. VoiceOver reads each row and the
+/// sentences as text.
+private struct PaybackPlanPanel: View {
+    let summary: PaybackPlanSummary
+    let palette: Palette
+    /// More expenses than this scroll inside the panel.
+    static let shownRows = 3
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if summary.rows.count > PaybackPlanPanel.shownRows {
+                // About three and a half rows, so the cut says there is more.
+                ScrollView { rows }.frame(height: 140).scrollBounceBehavior(.basedOnSize)
+            } else {
+                rows
+            }
+            Rectangle().fill(palette.line).frame(height: 1).padding(.vertical, 10).accessibilityHidden(true)
+            Text(verbatim: summary.paidBack).font(AppFont.text(14, weight: .semibold))
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("paybackPlanTotal")
+            if let left = summary.left {
+                Text(verbatim: left).font(AppFont.text(13)).foregroundStyle(palette.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 2)
+                    .accessibilityIdentifier("paybackPlanLeft")
+            }
+        }
+        .foregroundStyle(palette.ink)
+        .padding(.horizontal, 20).padding(.top, 12).padding(.bottom, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            ZStack { palette.background; palette.card }
+                .overlay(alignment: .top) { Rectangle().fill(palette.line).frame(height: 1) }
+                .ignoresSafeArea(edges: .bottom)
+        }
+    }
+
+    private var rows: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ForEach(summary.rows) { row in
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(verbatim: row.name).font(AppFont.text(13.5, weight: .semibold)).lineLimit(1)
+                        Text(verbatim: row.line).font(AppFont.text(12)).foregroundStyle(palette.muted).lineLimit(1)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    Text(verbatim: Money.precise(row.amount)).font(AppFont.number(13.5, weight: .semibold))
+                        .foregroundStyle(Paybacks.cents(row.amount) ?? 0 > 0 ? palette.ink : palette.muted)
+                        .fixedSize()
+                }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(Text(verbatim: row.spoken))
+                .accessibilityIdentifier("paybackPlanRow")
+            }
+        }
+        .fixedSize(horizontal: false, vertical: true)
     }
 }
 
@@ -314,6 +456,13 @@ private struct PaybackAmountStep: View {
                         .foregroundStyle(window.check == .tooMuch ? palette.expenseText : palette.muted)
                         .padding(.top, 8)
                         .accessibilityIdentifier("paybackMaximum")
+                    // Brief 206: what the typed euros leave open on the expense and as income, before Link.
+                    if let after = window.afterAmount {
+                        Text(verbatim: after).font(AppFont.text(12.5)).foregroundStyle(palette.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.top, 4)
+                            .accessibilityIdentifier("paybackAfterAmount")
+                    }
                     if let problem = window.problem {
                         Text(verbatim: problem).font(AppFont.text(13)).foregroundStyle(palette.expenseText)
                             .fixedSize(horizontal: false, vertical: true)
@@ -372,14 +521,16 @@ private struct PaybackAmountStep: View {
 
     /// The payment that came in over the expense it pays back, as rows of a list in one card.
     private func pair(_ pick: PaybackPick) -> some View {
-        let this = PaybackParty(detail: window.payment, store: store)
-        let other = PaybackParty(transaction: pick.other, store: store)
+        // This side's one payment: the page's (its detail), or a selection's of one.
+        let this = window.payment.map { PaybackParty(detail: $0, store: store) }
+            ?? window.group?.payments.first.map { PaybackParty(transaction: $0.transaction, store: store) }
+        let other: PaybackParty? = PaybackParty(transaction: pick.other, store: store)
         let (incoming, expense) = window.direction == .moneyIn ? (this, other) : (other, this)
         let shape = RoundedRectangle(cornerRadius: 12, style: .continuous)
         return VStack(spacing: 0) {
-            PaybackPartyRow(party: incoming, palette: palette)
+            if let incoming { PaybackPartyRow(party: incoming, palette: palette) }
             Rectangle().fill(palette.line).frame(height: 1).padding(.horizontal, 12).accessibilityHidden(true)
-            PaybackPartyRow(party: expense, palette: palette)
+            if let expense { PaybackPartyRow(party: expense, palette: palette) }
         }
         .background(palette.card, in: shape)
         .overlay(shape.stroke(palette.line))

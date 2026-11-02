@@ -40,7 +40,8 @@ nonisolated enum TourStep: Int, CaseIterable, Sendable {
         // Brief 203: optional, said once here and nowhere else.
         case .payback:
             language.string("Paid back by someone? If you like, link the payment here: then only your share counts.")
-        case .select: language.string("Tap to select several payments and move or rename them at once.")
+        // Brief 206: the selection's bar links money paid back too.
+        case .select: language.string("Tap to select several payments and move, rename or link them at once.")
         case .addUp: language.string("Swipe a payment left: Add up makes one row of its name.")
         case .sumIcon: language.string("Here you add up every name in this list.")
         case .allFrom: language.string("Swipe the row again: All shows every payment of the name. Hold a row for more.")

@@ -77,8 +77,9 @@ struct PaybackScreensTests {
                 == "Fictional Friend, 29 Oct, €64.00 paid back")
         #expect(PaybackWording.spokenLink(link, direction: .moneyIn, now: Self.now, language: .german)
                 == "Fictional Friend, 29. Okt., zahlt 64,00\u{a0}€ zurück")
-        #expect(PaybackWording.windowTitle(direction: .moneyOut, language: .german) == "Zurückgezahlt von")
-        #expect(PaybackWording.question(direction: .moneyIn, language: .german) == "Welche Ausgabe wird damit zurückgezahlt?")
+        #expect(PaybackWording.windowTitle(direction: .moneyOut, language: .german) == "Rückzahlung")
+        #expect(PaybackWording.question(direction: .moneyIn, language: .german) == "Welche Ausgaben werden damit zurückgezahlt?")
+        #expect(PaybackWording.question(direction: .moneyOut, language: .english) == "Which payments paid this back?")
         #expect(PaybackWording.maximum(64, language: .german) == "Höchstens 64,00\u{a0}€.")
         #expect(PaybackWording.linked(64, language: .english) == "Linked: €64.00 paid back.")
         #expect(PaybackWording.changed(50, language: .german) == "Geändert auf 50,00\u{a0}€.")
@@ -139,9 +140,23 @@ struct PaybackScreensTests {
         let other = Transaction(id: "in", date: "2026-10-29", day: 29, month: "2026-10", amount: 80, categoryName: "Other",
                                 tags: [], place: "Fictional Friend", city: "", categoriesIn: [], incomeBuckets: ["Other"])
         // A change: each end has its rest plus the link's own euros.
-        let change = PaybackPick(other: other, linked: 30, rest: 64, otherRest: 50)
+        let change = PaybackPick(other: other, direction: .moneyOut, linked: 30, rest: 64, otherRest: 50)
         #expect(change.maximum == 80 && change.suggested == 30)
-        #expect(PaybackPick(other: other, linked: 30, rest: 0, otherRest: 50).maximum == 30)
+        #expect(change.expenseFree == 94 && change.incomeFree == 80)
+        #expect(PaybackPick(other: other, direction: .moneyOut, linked: 30, rest: 0, otherRest: 50).maximum == 30)
+        // Brief 206: what the typed euros leave open on the expense and as income on the payment in.
+        let left = change.left(after: 50)
+        #expect(left.open == 44 && left.income == 30)
+        #expect(PaybackWording.afterAmount(open: left.open, income: left.income, language: .english)
+                == "€44.00 still open. €30.00 stays income.")
+        #expect(PaybackWording.afterAmount(open: 0, income: 16, language: .german) == "16,00\u{a0}€ bleiben Einnahme.")
+        #expect(PaybackWording.afterAmount(open: 0, income: 0) == nil)
+        // From a suggestion: the payment in's rest and the expense's, whichever side the page is.
+        let state = PaybackState(direction: .moneyIn, rest: 80)
+        let suggestion = PaybackSuggestion(transaction: other, state: state, fit: nil, amount: 64)
+        let fromExpense = PaybackPick(suggestion, rest: 64)
+        #expect(fromExpense.expenseFree == 64 && fromExpense.incomeFree == 80 && fromExpense.suggested == 64)
+        #expect(fromExpense.left(after: 64).open == 0 && fromExpense.left(after: 64).income == 16)
     }
 
     // MARK: the page and the window on a real store
@@ -176,8 +191,14 @@ struct PaybackScreensTests {
         window.query = ""
         await window.search()
         #expect(window.results == nil)
-        window.choose(first)
+        // One payment on each side: a tick, then Next to the typed euros (brief 206).
+        #expect(window.confirmsByAmount && !window.canNext && !window.canLink)
+        window.toggle(first)
+        #expect(window.isTicked(first.id) && window.confirmsByAmount && window.canNext)
+        #expect(window.summary?.rows.map(\.name) == ["Fictional Lake House"])
+        window.next()
         #expect(window.showsAmount && window.amountText == "60.00" && window.pick?.maximum == 60)
+        #expect(window.afterAmount == "€60.00 still open.")
         window.amountText = "60,01"
         #expect(window.check == .tooMuch && !window.canConfirm)
         window.amountText = "60"

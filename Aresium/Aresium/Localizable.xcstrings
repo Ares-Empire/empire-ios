@@ -204,6 +204,16 @@
         }
       }
     },
+    "%@ still open" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ noch offen"
+          }
+        }
+      }
+    },
     "%@ still open." : {
       "localizations" : {
         "de" : {
@@ -223,6 +233,9 @@
           }
         }
       }
+    },
+    "%@%@" : {
+      "shouldTranslate" : false
     },
     "%@, current" : {
       "localizations" : {
@@ -322,12 +335,92 @@
         }
       }
     },
+    "%lld cash entries" : {
+      "localizations" : {
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Bargeld-Eintrag"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Bargeld-Einträge"
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld cash entry"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld cash entries"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld chosen" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld ausgewählt"
+          }
+        }
+      }
+    },
+    "%lld expenses" : {
+      "localizations" : {
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Ausgabe"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Ausgaben"
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld expense"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld expenses"
+                }
+              }
+            }
           }
         }
       }
@@ -448,6 +541,16 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "%lld in another currency" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld in anderer Währung"
           }
         }
       }
@@ -580,6 +683,16 @@
         }
       }
     },
+    "%lld paid back in full" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld schon ganz zurückgezahlt"
+          }
+        }
+      }
+    },
     "%lld payments" : {
       "localizations" : {
         "de" : {
@@ -613,6 +726,46 @@
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld payments"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld payments in" : {
+      "localizations" : {
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Einnahme"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Einnahmen"
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld payment in"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld payments in"
                 }
               }
             }
@@ -740,6 +893,46 @@
         }
       }
     },
+    "%lld receipts" : {
+      "localizations" : {
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Beleg"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Belege"
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld receipt"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld receipts"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld receipts joined" : {
       "localizations" : {
         "de" : {
@@ -806,6 +999,96 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld sortiert"
+          }
+        }
+      }
+    },
+    "%lld transfers" : {
+      "localizations" : {
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Umbuchung"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Umbuchungen"
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld transfer"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld transfers"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld used in full" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld schon ganz verknüpft"
+          }
+        }
+      }
+    },
+    "%lld withdrawals" : {
+      "localizations" : {
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Abhebung"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Abhebungen"
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld withdrawal"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld withdrawals"
+                }
+              }
+            }
           }
         }
       }
@@ -3792,6 +4075,16 @@
         }
       }
     },
+    "Left out: %@." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nicht dabei: %@."
+          }
+        }
+      }
+    },
     "Let go to import" : {
       "localizations" : {
         "de" : {
@@ -4967,7 +5260,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zurückgezahlt von"
+            "value" : "Rückzahlung"
           }
         }
       }
@@ -6028,12 +6321,12 @@
         }
       }
     },
-    "Tap to select several payments and move or rename them at once." : {
+    "Tap to select several payments and move, rename or link them at once." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tippe hier, um mehrere Buchungen auszuwählen und auf einmal zu verschieben oder umzubenennen."
+            "value" : "Tippe hier, um mehrere Buchungen auszuwählen und auf einmal zu verschieben, umzubenennen oder zu verknüpfen."
           }
         }
       }
@@ -7004,12 +7297,22 @@
         }
       }
     },
-    "Which expense does this pay back?" : {
+    "Which expenses do these pay back?" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Welche Ausgabe wird damit zurückgezahlt?"
+            "value" : "Welche Ausgaben werden damit zurückgezahlt?"
+          }
+        }
+      }
+    },
+    "Which expenses does this pay back?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Welche Ausgaben werden damit zurückgezahlt?"
           }
         }
       }
@@ -7024,12 +7327,22 @@
         }
       }
     },
-    "Which payment paid this back?" : {
+    "Which payments paid these back?" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mit welcher Buchung wurde das zurückgezahlt?"
+            "value" : "Welche Buchungen haben diese zurückgezahlt?"
+          }
+        }
+      }
+    },
+    "Which payments paid this back?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Welche Buchungen haben das zurückgezahlt?"
           }
         }
       }

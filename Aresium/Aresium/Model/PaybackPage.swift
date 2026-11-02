@@ -81,10 +81,63 @@ nonisolated enum PaybackWording {
         direction == .moneyOut ? language.string("Paid back by") : language.string("Pays back")
     }
 
-    /// The window's question under the payment.
-    static func question(direction: PaybackDirection, language: AppLanguage = .current) -> String {
-        direction == .moneyOut ? language.string("Which payment paid this back?")
-                               : language.string("Which expense does this pay back?")
+    /// The window's question under the payment (or the payments): in the plural, since several can be ticked on the other
+    /// side (brief 206), which reads naturally for one too.
+    static func question(direction: PaybackDirection, several: Bool = false, language: AppLanguage = .current) -> String {
+        switch (direction, several) {
+        case (.moneyOut, false): language.string("Which payments paid this back?")
+        case (.moneyOut, true): language.string("Which payments paid these back?")
+        case (.moneyIn, false): language.string("Which expenses does this pay back?")
+        case (.moneyIn, true): language.string("Which expenses do these pay back?")
+        }
+    }
+
+    /// A group's title in the window: "3 expenses" / "3 Ausgaben", "2 payments in" / "2 Einnahmen".
+    static func groupTitle(count: Int, direction: PaybackDirection, language: AppLanguage = .current) -> String {
+        direction == .moneyOut ? language.string("\(count) expenses") : language.string("\(count) payments in")
+    }
+
+    /// The one quiet line under a group's heading: what of the selection cannot take part, and why. Nil when nothing was
+    /// left out. "Left out: 1 receipt, 2 transfers." / "Nicht dabei: 1 Beleg, 2 Umbuchungen."
+    static func leftOut(_ skipped: PaybackSkipped, direction: PaybackDirection,
+                        language: AppLanguage = .current) -> String? {
+        var parts: [String] = []
+        if skipped.receipts > 0 { parts.append(language.string("\(skipped.receipts) receipts")) }
+        if skipped.cashEntries > 0 { parts.append(language.string("\(skipped.cashEntries) cash entries")) }
+        if skipped.transfers > 0 { parts.append(language.string("\(skipped.transfers) transfers")) }
+        if skipped.withdrawals > 0 { parts.append(language.string("\(skipped.withdrawals) withdrawals")) }
+        if skipped.otherCurrencies > 0 {
+            parts.append(language.string("\(skipped.otherCurrencies) in another currency"))
+        }
+        if skipped.nothingLeft > 0 {
+            parts.append(direction == .moneyOut ? language.string("\(skipped.nothingLeft) paid back in full")
+                                                : language.string("\(skipped.nothingLeft) used in full"))
+        }
+        guard !parts.isEmpty else { return nil }
+        return language.string("Left out: \(parts.joined(separator: ", ")).")
+    }
+
+    /// A choice's quiet line when part of it is linked already: what it has free ("€30.00 left").
+    static func free(_ amount: Double, language: AppLanguage = .current) -> String {
+        language.string("\(Money.precise(amount, language: language)) left")
+    }
+
+    /// How the money goes, an expense's quiet line: its day, then "in full" or what stays open ("15 Oct · €36.00 still
+    /// open").
+    static func planLine(_ allocation: PaybackAllocation, date: String, now: Date = .now,
+                         language: AppLanguage = .current) -> String {
+        let day = day(date, now: now, language: language)
+        guard Paybacks.cents(allocation.rest) ?? 0 > 0 else { return day + " · " + fit(.whole, language: language) }
+        return day + " · " + language.string("\(Money.precise(allocation.rest, language: language)) still open")
+    }
+
+    /// The amount step's line under the most it can take: what the typed euros leave open on the expense and as income on
+    /// the payment in (brief 205's words), nil when they leave nothing. "€64.00 still open. €36.00 stays income."
+    static func afterAmount(open: Double, income: Double, language: AppLanguage = .current) -> String? {
+        var parts: [String] = []
+        if Paybacks.cents(open) ?? 0 > 0 { parts.append(PaybackGroupWording.open(open, language: language)) }
+        if Paybacks.cents(income) ?? 0 > 0 { parts.append(PaybackGroupWording.income(income, language: language)) }
+        return parts.isEmpty ? nil : parts.joined(separator: " ")
     }
 
     static func suggestedHeading(language: AppLanguage = .current) -> String { language.string("Suggested") }
@@ -226,36 +279,125 @@ nonisolated enum PaybackAmountCheck: Equatable {
 }
 
 /// The other payment of a link being made or changed, and the euros: the suggestion's (else the smaller rest), never
-/// more than `maximum`.
+/// more than `maximum`. Each end's euros free are kept apart, so the amount step can say what the typed euros leave open
+/// on the expense and as income on the payment in (brief 206).
 nonisolated struct PaybackPick: Equatable {
     let other: Transaction
-    let maximum: Double
+    /// What the expense can still get back, and what the payment in can still give (each with the link's own euros while
+    /// it is changed).
+    let expenseFree: Double
+    let incomeFree: Double
     let suggested: Double
+    /// The most this link can take: the smaller of both.
+    var maximum: Double { min(expenseFree, incomeFree) }
 
     static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs.other.id == rhs.other.id && lhs.maximum == rhs.maximum && lhs.suggested == rhs.suggested
+        lhs.other.id == rhs.other.id && lhs.expenseFree == rhs.expenseFree && lhs.incomeFree == rhs.incomeFree
+            && lhs.suggested == rhs.suggested
     }
 
-    /// From a suggestion: the most is the smaller of both rests.
+    /// From a suggestion (`rest`: this payment's euros free).
     init(_ suggestion: PaybackSuggestion, rest: Double) {
         other = suggestion.transaction
-        maximum = min(rest, suggestion.state.rest)
-        suggested = min(suggestion.amount, maximum)
+        let otherIsExpense = suggestion.state.direction == .moneyOut
+        expenseFree = otherIsExpense ? suggestion.state.rest : rest
+        incomeFree = otherIsExpense ? rest : suggestion.state.rest
+        suggested = min(suggestion.amount, expenseFree, incomeFree)
     }
 
-    /// A link being changed: each end has its own rest plus the link's euros free.
-    init(other: Transaction, linked: Double, rest: Double, otherRest: Double) {
+    /// A link being changed: each end has its own rest plus the link's euros free. `direction`: this payment's side.
+    init(other: Transaction, direction: PaybackDirection, linked: Double, rest: Double, otherRest: Double) {
         self.other = other
         let own = Paybacks.cents(linked) ?? 0
-        maximum = Double(min((Paybacks.cents(rest) ?? 0) + own, (Paybacks.cents(otherRest) ?? 0) + own)) / 100
+        let mine = Double((Paybacks.cents(rest) ?? 0) + own) / 100
+        let theirs = Double((Paybacks.cents(otherRest) ?? 0) + own) / 100
+        expenseFree = direction == .moneyOut ? mine : theirs
+        incomeFree = direction == .moneyOut ? theirs : mine
         suggested = linked
+    }
+
+    /// What stays open on the expense and stays income on the payment in once `amount` is linked (whole cents).
+    func left(after amount: Double) -> (open: Double, income: Double) {
+        let linked = Paybacks.cents(amount) ?? 0
+        return (Double(max(0, (Paybacks.cents(expenseFree) ?? 0) - linked)) / 100,
+                Double(max(0, (Paybacks.cents(incomeFree) ?? 0) - linked)) / 100)
+    }
+}
+
+/// The window's heading (brief 206): one payment's name and its own amount, as brief 203's window showed it, or a group's
+/// count and the euros it can still be paid back or pay back, signed as a payment ("3 expenses", "−240.00", which are
+/// the euros its rows count in the list), with what of a selection was left out in one quiet line.
+struct PaybackHeading: Equatable {
+    let title: String
+    let amount: String
+    let isExpense: Bool
+    let leftOut: String?
+
+    init(detail: TransactionDetail) {
+        title = detail.place
+        amount = detail.signedAmount
+        isExpense = detail.amount < 0
+        leftOut = nil
+    }
+
+    init(group: PaybackGroup, language: AppLanguage = .current) {
+        isExpense = group.direction == .moneyOut
+        if group.payments.count == 1, let only = group.payments.first?.transaction {
+            title = only.place
+            amount = Money.transaction(only.amount, language: language)
+        } else {
+            title = PaybackWording.groupTitle(count: group.payments.count, direction: group.direction, language: language)
+            amount = Money.transaction(isExpense ? -group.totalRest : group.totalRest, language: language)
+        }
+        leftOut = PaybackWording.leftOut(group.skipped, direction: group.direction, language: language)
+    }
+}
+
+/// How the money goes, before Link (brief 206; pure): brief 205's plan read as the window shows it. Each expense in the
+/// order the euros reach it (oldest first) with what it gets back and its day and what stays open ("in full" when
+/// nothing does), then brief 205's sentence ("3 expenses, €100.00 paid back.") and what stays open or stays income.
+struct PaybackPlanSummary: Equatable {
+    struct Row: Equatable, Identifiable {
+        let id: String
+        let name: String
+        /// The euros this expense gets back in this linking (0 when the money ran out before it).
+        let amount: Double
+        let line: String
+        /// VoiceOver's reading: "Pizzeria Fiktivo, 3 Oct · in full, €48.00 back".
+        let spoken: String
+    }
+
+    let rows: [Row]
+    let paidBack: String
+    /// "€36.00 still open." or "€20.00 stays income." (never both: the euros are poured until one side runs out).
+    let left: String?
+
+    /// `transactions`: the payments of both sides by id (the group's and the ticked ones).
+    init(plan: PaybackPlan, transactions: [String: Transaction], now: Date = .now, language: AppLanguage = .current) {
+        rows = plan.expenses.map { allocation in
+            let transaction = transactions[allocation.id]
+            let name = transaction?.place ?? ""
+            let line = PaybackWording.planLine(allocation, date: transaction?.date ?? "", now: now, language: language)
+            let back = language.string("\(Money.precise(allocation.amount, language: language)) back")
+            return Row(id: allocation.id, name: name, amount: allocation.amount, line: line,
+                       spoken: [name, line, back].joined(separator: ", "))
+        }
+        paidBack = PaybackGroupWording.summary(expenses: plan.expenseCount, linked: plan.linked, stillOpen: 0,
+                                               staysIncome: 0, language: language)
+        if Paybacks.cents(plan.stillOpen) ?? 0 > 0 {
+            left = PaybackGroupWording.open(plan.stillOpen, language: language)
+        } else if Paybacks.cents(plan.staysIncome) ?? 0 > 0 {
+            left = PaybackGroupWording.income(plan.staysIncome, language: language)
+        } else {
+            left = nil
+        }
     }
 }
 
 /// A payment's links on its page (phone mode): whether it can take part and how much is still free (`state`, loaded
 /// off the main thread when the page opens), the window that makes or changes a link, and the undo bar's offer after
-/// any change. Every change saves once and rebuilds the dashboard once (`DashboardStore.setPayback`/`removePayback`);
-/// the page then reads its payment again (`TransactionDetailStore.refresh`).
+/// any change. Every change saves once and rebuilds the dashboard once (`DashboardStore.setPayback`/`setPaybacks`/
+/// `removePayback`); the page then reads its payment again (`TransactionDetailStore.refresh`).
 @MainActor @Observable
 final class PaybackLinks {
     /// Nil while it loads, in server mode, and where the payment cannot take part (a transfer, a withdrawal, a receipt,
@@ -291,26 +433,20 @@ final class PaybackLinks {
         Self.log.debug("payback state in \(milliseconds, format: .fixed(precision: 1), privacy: .public) ms")
     }
 
-    /// The window that chooses the other payment, then the euros.
+    /// The window that chooses the other payment (one or several, brief 206), then the euros.
     func begin(detail: TransactionDetail) {
         guard let state, Paybacks.cents(state.rest) ?? 0 > 0 else { return }
-        window = PaybackWindow(links: self, detail: detail, state: state, editing: nil)
+        window = PaybackWindow(store: dashboardStore, detail: detail, state: state, editing: nil, done: finished)
     }
 
     /// The window at the euros of a link, with Remove.
     func edit(_ link: PaybackDetailLink, detail: TransactionDetail) {
         let direction: PaybackDirection = detail.amount < 0 ? .moneyOut : .moneyIn
         let state = state ?? PaybackState(direction: direction, rest: abs(detail.countedAmount))
-        window = PaybackWindow(links: self, detail: detail, state: state, editing: link)
+        window = PaybackWindow(store: dashboardStore, detail: detail, state: state, editing: link, done: finished)
     }
 
-    /// Sets (or changes) a link's euros; the undo bar says so.
-    func set(_ ends: PaybackEnds, amount: Double, changing: Bool) async throws {
-        let batch = try await dashboardStore.setPayback(from: ends.from, to: ends.to, amount: amount)
-        offer(changing ? PaybackWording.changed(amount) : PaybackWording.linked(amount), batch)
-    }
-
-    /// Removes a link (the long press's Remove link, the window's); the undo bar brings it back.
+    /// Removes a link (the long press's Remove link); the undo bar brings it back.
     func remove(_ link: PaybackDetailLink, direction: PaybackDirection) async {
         guard !isWorking else { return }
         isWorking = true
@@ -321,6 +457,14 @@ final class PaybackLinks {
             offer(PaybackWording.removed(), batch)
         } catch {
             undo = UndoOffer(message: error.localizedDescription)
+        }
+    }
+
+    /// The window made, changed or removed links: it closes, and the undo bar on the page says what happened.
+    private var finished: @MainActor (String, BatchUndo) -> Void {
+        { [weak self] message, batch in
+            self?.window = nil
+            self?.offer(message, batch)
         }
     }
 
@@ -336,45 +480,113 @@ final class PaybackLinks {
     }
 }
 
-/// The window from a payment's page (brief 203): the other payment chosen from the suggestions (brief 202's ranking:
-/// what fits first, then the nearest days) or found by name, then the euros, then Link. Changing a link opens it at the
-/// euros, with Remove link.
+/// The one window of money paid back (brief 203, grown in brief 206), from a payment's page or from a selection's bar:
+/// this side's payments at the top (one, or a group), the other side chosen from the suggestions (brief 205's ranking:
+/// what fits the group first, then the nearest days) or found by name, **several ticked** if need be. While anything is
+/// ticked the window shows how the money goes (`plan`, brief 205's pouring, oldest first). One payment on each side
+/// keeps brief 203's amount step (Next, the typed euros, Link); with several on either side Link pours them
+/// (`setPaybacks`, one undo for all). Changing a link opens it at the euros, with Remove link. When it is done the owner
+/// gets the undo bar's line and its undo (`done`) and closes the window.
 @MainActor @Observable
 final class PaybackWindow: Identifiable {
     let id = UUID()
-    /// This payment's side: money in chooses an expense, money out a payment in.
+    /// This side: money out chooses payments in, money in chooses expenses.
     let direction: PaybackDirection
-    /// This payment as its page shows it (the window's heading).
-    let payment: TransactionDetail
-    /// Euros still free on this payment.
-    let rest: Double
-    /// The link being changed; nil while a new one is made.
+    let heading: PaybackHeading
+    /// The payment's page this window was opened from (the amount step's own payment); nil from a selection.
+    let payment: TransactionDetail?
+    /// The link being changed; nil while new ones are made.
     let editing: PaybackDetailLink?
+    /// This side's payments that take part: given by a selection, read for a payment's page as the window loads.
+    private(set) var group: PaybackGroup?
     /// The suggestions, once loaded.
     private(set) var suggestions: [PaybackSuggestion]?
     var query = ""
     /// The search's results for `resultsQuery`.
     private(set) var results: [PaybackSuggestion]?
     private(set) var resultsQuery = ""
-    /// The other payment and its euros: the amount step.
+    /// The other side's payments ticked, in the order they were ticked.
+    private(set) var ticked: [PaybackSuggestion] = []
+    /// The other payment and its euros: the amount step (one payment on each side, or a link being changed).
     private(set) var pick: PaybackPick?
-    /// The amount step is pushed over the choice (a new link); a link being changed starts there.
+    /// The amount step is pushed over the choice (Next); a link being changed starts there.
     var showsAmount = false
     var amountText = ""
     private(set) var isWorking = false
-    /// Why the save or the removal did not go through.
+    /// Why the link, the save or the removal did not go through.
     private(set) var problem: String?
-    @ObservationIgnored private weak var links: PaybackLinks?
+    @ObservationIgnored let store: DashboardStore
+    /// This side's one payment (its page, or a selection of one): the link's own end in the amount step.
+    @ObservationIgnored private let ownID: String?
+    /// Euros still free on that one payment.
+    @ObservationIgnored private let ownRest: Double?
+    @ObservationIgnored private let done: @MainActor (String, BatchUndo) -> Void
 
-    init(links: PaybackLinks, detail: TransactionDetail, state: PaybackState, editing: PaybackDetailLink?) {
-        self.links = links
+    /// From a payment's page (brief 203): its group of one is read as the window loads.
+    init(store: DashboardStore, detail: TransactionDetail, state: PaybackState, editing: PaybackDetailLink?,
+         done: @escaping @MainActor (String, BatchUndo) -> Void) {
+        self.store = store
         payment = detail
         direction = state.direction
-        rest = state.rest
+        heading = PaybackHeading(detail: detail)
         self.editing = editing
+        ownID = detail.id
+        ownRest = state.rest
+        self.done = done
+    }
+
+    /// From a selection (brief 206): its group, read as the bar's item was tapped.
+    init(store: DashboardStore, group: PaybackGroup, done: @escaping @MainActor (String, BatchUndo) -> Void) {
+        self.store = store
+        payment = nil
+        direction = group.direction
+        heading = PaybackHeading(group: group)
+        editing = nil
+        self.group = group
+        let one = group.payments.count == 1 ? group.payments.first : nil
+        ownID = one?.transaction.id
+        ownRest = one?.state.rest
+        self.done = done
     }
 
     var isEditing: Bool { editing != nil }
+
+    /// More than one payment on this side (a group from a selection): the question says "these".
+    var isSeveral: Bool { ownID == nil }
+
+    /// One payment on this side and at most one ticked: the bar's button is Next, to the typed euros (brief 203's
+    /// amount step); otherwise it is Link, which pours.
+    var confirmsByAmount: Bool { ownID != nil && ticked.count <= 1 }
+
+    func isTicked(_ id: String) -> Bool { ticked.contains { $0.id == id } }
+
+    /// What shows while nothing is typed: the ticked payments the suggestions do not hold (found by the search), then the
+    /// suggestions. Nil while they load.
+    var choices: [PaybackSuggestion]? {
+        guard let suggestions else { return nil }
+        let suggested = Set(suggestions.map(\.id))
+        return ticked.filter { !suggested.contains($0.id) } + suggestions
+    }
+
+    /// How the money would go with what is ticked (pure: the rests the window read; Link plans again under the save
+    /// revision). Nil while nothing is ticked.
+    var plan: PaybackPlan? {
+        guard let group, !ticked.isEmpty else { return nil }
+        return try? PaybackPlan(group: group, others: ticked.map {
+            PaybackCandidate(transaction: $0.transaction, state: $0.state, names: [])
+        })
+    }
+
+    /// The plan as the window shows it.
+    var summary: PaybackPlanSummary? {
+        guard let plan, let group else { return nil }
+        var transactions = Dictionary(uniqueKeysWithValues: group.payments.map { ($0.transaction.id, $0.transaction) })
+        for suggestion in ticked { transactions[suggestion.id] = suggestion.transaction }
+        return PaybackPlanSummary(plan: plan, transactions: transactions)
+    }
+
+    var canNext: Bool { !isWorking && confirmsByAmount && ticked.count == 1 }
+    var canLink: Bool { !isWorking && !confirmsByAmount && group?.revision != nil && plan?.hasLinks == true }
 
     /// What was typed, checked against the most this link can take.
     var check: PaybackAmountCheck { PaybackAmountCheck(amountText, maximum: pick?.maximum ?? 0) }
@@ -383,19 +595,32 @@ final class PaybackWindow: Identifiable {
         return editing.map { Paybacks.cents($0.linkedAmount) != Paybacks.cents(amount) } ?? true
     }
 
-    /// The suggestions (a new link), or the link's other payment and how much both ends have free (a change).
+    /// The amount step's line under the most it can take: what the typed euros leave open and as income.
+    var afterAmount: String? {
+        guard let pick, let amount = check.amount else { return nil }
+        let left = pick.left(after: amount)
+        return PaybackWording.afterAmount(open: left.open, income: left.income)
+    }
+
+    /// The suggestions (new links: this payment's group read first when the window comes from its page), or the link's
+    /// other payment and how much both ends have free (a change).
     func load() async {
-        guard let store = links?.dashboardStore else { return }
         if let editing {
-            guard pick == nil, let other = store.bankPayment(editing.payment) else { return }
+            guard pick == nil, let ownRest, let other = store.bankPayment(editing.payment) else { return }
             let otherRest = (try? await store.paybackState(for: editing.payment))?.rest ?? 0
-            let pick = PaybackPick(other: other, linked: editing.linkedAmount, rest: rest, otherRest: otherRest)
+            let pick = PaybackPick(other: other, direction: direction, linked: editing.linkedAmount, rest: ownRest,
+                                   otherRest: otherRest)
             self.pick = pick
             if amountText.isEmpty { amountText = ReceiptAmount.field(pick.suggested) }
             return
         }
         guard suggestions == nil else { return }
-        suggestions = (try? await store.paybackSuggestions(for: payment.id)) ?? []
+        if group == nil, let ownID { group = try? await store.paybackGroup(ids: [ownID]) }
+        guard let group else {
+            suggestions = []
+            return
+        }
+        suggestions = (try? await store.paybackSuggestions(forGroup: group)) ?? []
     }
 
     /// The search for what is typed now (the field waits a moment after the last key).
@@ -406,26 +631,35 @@ final class PaybackWindow: Identifiable {
             resultsQuery = ""
             return
         }
-        let found = (try? await links?.dashboardStore.paybackSearch(typed, for: payment.id)) ?? []
+        guard let group else { return }
+        let found = (try? await store.paybackSearch(typed, forGroup: group)) ?? []
         guard query.trimmingCharacters(in: .whitespacesAndNewlines) == typed else { return }
         results = found
         resultsQuery = typed
     }
 
-    /// A suggestion or result tapped: the amount step, its euros filled in.
-    func choose(_ suggestion: PaybackSuggestion) {
-        let pick = PaybackPick(suggestion, rest: rest)
+    /// A tap on a suggestion or result: ticked, or unticked.
+    func toggle(_ suggestion: PaybackSuggestion) {
+        if let index = ticked.firstIndex(where: { $0.id == suggestion.id }) { ticked.remove(at: index) }
+        else { ticked.append(suggestion) }
+        problem = nil
+    }
+
+    /// Next (one payment on each side): the amount step, the suggestion's euros filled in.
+    func next() {
+        guard canNext, let ownRest, let suggestion = ticked.first else { return }
+        let pick = PaybackPick(suggestion, rest: ownRest)
         self.pick = pick
         amountText = ReceiptAmount.field(pick.suggested)
         problem = nil
         showsAmount = true
     }
 
-    /// Link (or Save while a link is changed): the window closes, the undo bar on the page says what happened. False
-    /// when it did not go through (the window says why).
+    /// Link with several on either side: the euros poured as the summary showed, planned again under the save revision
+    /// (a change meanwhile refuses), one save and one undo. False when it did not go through (the window says why).
     @discardableResult
-    func confirm() async -> Bool {
-        guard canConfirm, let pick, let amount = check.amount, let links else { return false }
+    func link() async -> Bool {
+        guard canLink, let group else { return false }
         isWorking = true
         problem = nil
         defer { isWorking = false }
@@ -433,9 +667,29 @@ final class PaybackWindow: Identifiable {
             #if DEBUG
             await DebugLaunch.holdWork()
             #endif
-            try await links.set(PaybackEnds(payment: payment.id, direction: direction, other: pick.other.id),
-                               amount: amount, changing: isEditing)
-            links.window = nil
+            let result = try await store.setPaybacks(group: group, others: Set(ticked.map(\.id)))
+            done(result.message, result.undo)
+            return true
+        } catch {
+            problem = error.localizedDescription
+            return false
+        }
+    }
+
+    /// Link (or Save while a link is changed) in the amount step: the typed euros. False when it did not go through.
+    @discardableResult
+    func confirm() async -> Bool {
+        guard canConfirm, let pick, let amount = check.amount, let ownID else { return false }
+        isWorking = true
+        problem = nil
+        defer { isWorking = false }
+        do {
+            #if DEBUG
+            await DebugLaunch.holdWork()
+            #endif
+            let ends = PaybackEnds(payment: ownID, direction: direction, other: pick.other.id)
+            let batch = try await store.setPayback(from: ends.from, to: ends.to, amount: amount)
+            done(isEditing ? PaybackWording.changed(amount) : PaybackWording.linked(amount), batch)
             return true
         } catch {
             problem = error.localizedDescription
@@ -445,11 +699,17 @@ final class PaybackWindow: Identifiable {
 
     /// Remove link (a link being changed).
     func remove() async {
-        guard let editing, let links, !isWorking else { return }
+        guard let editing, let ownID, !isWorking else { return }
         isWorking = true
+        problem = nil
         defer { isWorking = false }
-        await links.remove(editing, direction: direction)
-        links.window = nil
+        do {
+            let ends = PaybackEnds(payment: ownID, direction: direction, other: editing.payment)
+            let batch = try await store.removePayback(from: ends.from, to: ends.to)
+            done(PaybackWording.removed(), batch)
+        } catch {
+            problem = error.localizedDescription
+        }
     }
 
     #if DEBUG

@@ -4,8 +4,8 @@ import SwiftUI
 // header's icon turns a category's month list into selection: the rows slide a little to the right and a circle shows
 // at each one's left edge, a tap ticks it (the circle filled in the app's ink with a tick, the row lightly
 // highlighted), and so does a finger sliding over the rows (brief 200, `SlideSelect.swift`); the header says how many
-// are ticked, with All (or None) and Done; a bar at the bottom offers Category and Name. Ink only, from the palette, in
-// light, dark and red mode.
+// are ticked, with All (or None) and Done; a bar at the bottom offers Category, Name and money paid back (brief 206). Ink
+// only, from the palette, in light, dark and red mode.
 //
 // The motion (brief 200, Patrik on build 14: "quite bouncy … should be less bouncy"; measured on a recording of build
 // 14: every tick slid the new circle in from up to 29 pt left of its place, and the header's count rolled letter by
@@ -193,15 +193,20 @@ private struct HeaderWordButton: View {
     }
 }
 
-/// The bar at the bottom while selecting (Mail's toolbar in the app's card look): Category and Name, each its symbol
-/// with its word under it, in ink, muted while off. Name shows the busy sign while it asks the store.
+/// The bar at the bottom while selecting (Mail's toolbar in the app's card look): Category, Name and, last, money paid
+/// back (brief 206: `link`, the symbol of a payment page's action; "Paid back" on an expense list, "Pays back" on an
+/// income list), each its symbol with its word under it, in ink, muted while off. Name and Paid back show the busy sign
+/// while they ask the store.
 struct SelectionBar: View {
     let state: SelectionBarState
     /// Name is at work (it reads the shops' other payments, or saves).
     var naming = false
+    /// Paid back is at work (it reads the ticked payments' group before the window opens).
+    var linking = false
     let palette: Palette
     let category: () -> Void
     let name: () -> Void
+    let payback: () -> Void
 
     var body: some View {
         BottomBar(palette: palette) {
@@ -213,6 +218,9 @@ struct SelectionBar: View {
                         palette: palette, action: name)
                     .accessibilityIdentifier("selectionName")
             }
+            BarItem(symbol: "link", title: Text(verbatim: state.paybackTitle), enabled: state.payback && !linking,
+                    busy: linking, palette: palette, action: payback)
+                .accessibilityIdentifier("selectionPayback")
         }
     }
 }

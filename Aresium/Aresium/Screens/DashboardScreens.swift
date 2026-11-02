@@ -687,6 +687,11 @@ struct TransactionsScreen: View {
     /// The selection's Category window and its Name (brief 82), while open.
     @State private var changing: SelectionCategoryChange?
     @State private var renaming: SelectionRename?
+    /// Money paid back for the ticked payments (brief 206): whether they have a group that can be linked (read as the
+    /// ticks change; the bar's item is off without), the group being read as the item was tapped, and the window.
+    @State private var paybackReady = false
+    @State private var openingPayback = false
+    @State private var paybackWindow: PaybackWindow?
     /// What an action on the selection did, with Undo (`UndoBar`); or a line saying why it could not.
     @State private var undo: UndoOffer?
     /// Selecting by sliding a finger over the rows (brief 200): the rows' frames, the finger, the edges' scrolling.
@@ -771,9 +776,10 @@ struct TransactionsScreen: View {
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if let ticking = listSelection {
                 SelectionBar(state: SelectionBarState(summary: store.selectionSummary(ticking.live(in: store)),
-                                                      ownNames: store.ownNames),
-                             naming: renaming?.isWorking == true, palette: palette,
-                             category: openCategory, name: openName)
+                                                      ownNames: store.ownNames, side: route.side,
+                                                      payback: paybackReady),
+                             naming: renaming?.isWorking == true, linking: openingPayback, palette: palette,
+                             category: openCategory, name: openName, payback: openPayback)
                     // As the header's: the inset's content took no animation coming in, so it fades in by itself.
                     .fadesIn(SelectionMotion.animation(reduceMotion: reduceMotion))
                     .transition(.opacity)
@@ -782,7 +788,22 @@ struct TransactionsScreen: View {
         .ignoresSafeArea(.keyboard)
         .paymentListSheets(menu, store: store, palette: palette, selection: $selection, pick: pick)
         .sheet(item: $changing) { change in RecategoriseSheet(window: change, palette: palette) }
+        // Brief 206: money paid back for the selection, brief 203's window with the selection's group.
+        .sheet(item: $paybackWindow) { window in PaybackSheet(window: window, store: store, palette: palette) }
         .selectionRenameAlerts($renaming, palette: palette)
+        // Whether the ticked payments can be linked: read off the main thread a moment after the ticks stop (a slide
+        // ticks many in a row). The item keeps its last state meanwhile, so it does not flicker with every tick.
+        .task(id: paybackKey) {
+            guard let key = paybackKey, !key.ids.isEmpty, store.phone != nil else {
+                paybackReady = false
+                return
+            }
+            try? await Task.sleep(for: .milliseconds(100))
+            guard !Task.isCancelled else { return }
+            let group = try? await store.paybackGroup(ids: key.ids)
+            guard !Task.isCancelled else { return }
+            paybackReady = group != nil
+        }
         // Selecting starts: a row swiped open closes and summed rows close, each standing for its payments.
         .onChange(of: listSelection != nil) { _, selecting in
             guard selecting else { return }
@@ -885,6 +906,34 @@ struct TransactionsScreen: View {
         }
     }
 
+    /// What the bar's Paid back depends on: the ticked payments as they are now, in the dashboard as it is now.
+    private var paybackKey: PaybackOfferKey? {
+        listSelection.map { PaybackOfferKey(ids: $0.live(in: store), revision: store.revision) }
+    }
+
+    /// The bar's Paid back (brief 206): the ticked payments' group, read again now (the dashboard may have changed since
+    /// the bar's state), then the window. Linking ends selecting and the undo bar says it, as the bar's other actions.
+    private func openPayback() {
+        guard let ticking = listSelection, !openingPayback else { return }
+        let ids = ticking.live(in: store)
+        openingPayback = true
+        Task {
+            defer { openingPayback = false }
+            do {
+                guard let group = try await store.paybackGroup(ids: ids) else {
+                    paybackReady = false
+                    return
+                }
+                paybackWindow = PaybackWindow(store: store, group: group) { message, batch in
+                    paybackWindow = nil
+                    ended(.done(message: message, undo: batch))
+                }
+            } catch {
+                undo = UndoOffer(message: error.localizedDescription)
+            }
+        }
+    }
+
     /// An action is done: selecting ends, the list shows the store as it is now, and the undo bar says what happened.
     /// Its Undo puts it back, or says it cannot (the data changed since). Not done: a line says why, still selecting.
     private func ended(_ outcome: SelectionOutcome) {
@@ -910,7 +959,9 @@ struct TransactionsScreen: View {
     /// (`-selectionMode add`, `-samplePick <name,name>` picks tiles, `-selectionSave` saves, `-selectionAnswer
     /// remove|keep|all|only` answers what Save asks: the undo bar follows); `-selectionName` opens Name
     /// (`-selectionNameText <text>` typed, `-selectionRename` renames, `-selectionRenameAnswer all|only`);
-    /// `-sampleUndoRefused` shows the line of an undo the data no longer allows.
+    /// `-sampleUndoRefused` shows the line of an undo the data no longer allows. Brief 206: `-selectPayments <i,j>` (or
+    /// `-selectRows <i,j>`) ticks those rows, counted from 1; `-selectionPayback` taps Paid back (in its window
+    /// `-paybackPick <text,text>` ticks, `-paybackLink` links).
     private func debugSelection() async {
         guard !store.isSample, let count = LaunchArguments.value("-selectPayments") else {
             if LaunchArguments.current.contains("-sampleUndoRefused") {
@@ -923,16 +974,26 @@ struct TransactionsScreen: View {
         withAnimation(SelectionMotion.animation(reduceMotion: reduceMotion)) { selecting = PaymentSelection(route: route) }
         try? await Task.sleep(for: .milliseconds(600))
         let list = store.paymentList(category: route.category, month: route.month ?? "", side: route.side)
+        let selectable = list.entries.filter { !store.selectionIDs(for: $0).isEmpty }
         if count == "all" { selecting?.toggleAll(in: store) }
-        else {
-            for entry in list.entries.filter({ !store.selectionIDs(for: $0).isEmpty }).prefix(Int(count) ?? 0) {
-                tick(entry)
-            }
+        else if count.contains(",") || LaunchArguments.value("-selectRows") != nil {
+            // `-selectPayments <i,j,…>` (or `-selectRows`): those rows, counted from 1.
+            let rows = (LaunchArguments.value("-selectRows") ?? count).split(separator: ",").compactMap { Int($0) }
+            for row in rows where selectable.indices.contains(row - 1) { tick(selectable[row - 1]) }
+        } else {
+            for entry in selectable.prefix(Int(count) ?? 0) { tick(entry) }
         }
         if LaunchArguments.current.contains("-sampleUndoRefused") {
             undo = UndoOffer(message: BatchUndoOutcome.unavailable.message)
         }
         let arguments = LaunchArguments.current
+        // Brief 206: `-selectionPayback` taps the bar's Paid back (the window's own `-paybackPick`, `-paybackLink` act in
+        // it).
+        if arguments.contains("-selectionPayback") {
+            for _ in 0..<40 where !paybackReady { try? await Task.sleep(for: .milliseconds(100)) }
+            try? await Task.sleep(for: .milliseconds(400))
+            openPayback()
+        }
         if arguments.contains("-selectionWindow") {
             try? await Task.sleep(for: .milliseconds(400))
             openCategory()

@@ -6,7 +6,8 @@ import Observation
 // `BatchChanges.swift`). A category's month list turns into selection with the header's icon: what is ticked
 // (`PaymentSelection`, kept in `DashboardPlace`), the header's and the bar's words and states, the change window for the
 // selection (`SelectionCategoryChange`, read by the one `RecategoriseSheet`) and the name for all of them
-// (`SelectionRename`). The look is `Screens/SelectionScreens.swift`.
+// (`SelectionRename`). The look is `Screens/SelectionScreens.swift`. Money paid back for the selection (brief 206) opens
+// the one window of brief 203 (`PaybackWindow` with the selection's `PaybackGroup`).
 
 /// A category's month list while its payments are selected: the list (the route on top of the dashboard's stack) and the
 /// row ids ticked (`DashboardStore.selectionIDs(for:)`: a summed row stands for its payments). Kept in `DashboardPlace`, so
@@ -92,6 +93,13 @@ nonisolated enum SelectionWording {
         language.string("\(count) payments")
     }
 
+    /// The bar's item for money paid back (brief 206): an expense list's picks the payments that paid them back ("Paid
+    /// back" / "Zurückgezahlt"), an income list's the expenses they pay back ("Pays back" / "Zahlt zurück"), the words of
+    /// a payment's page and of the window it opens.
+    static func paybackItem(side: DashboardSide, language: AppLanguage = .current) -> String {
+        PaybackWording.heading(direction: side == .income ? .moneyIn : .moneyOut, language: language)
+    }
+
     /// The name's alert: "Name for 10 payments" (the bank payments that take it).
     static func nameTitle(_ count: Int, language: AppLanguage = .current) -> String {
         language.string("Name for \(count) payments")
@@ -111,19 +119,31 @@ nonisolated enum SelectionWording {
     }
 }
 
-/// The bar at the bottom while selecting: Category and Name, each off while it cannot act. Name is off while no bank
-/// payment is ticked (receipts and cash entries keep their typed Shop) and is not offered while Own names is off (as a
-/// payment's page then has no pen).
+/// The bar at the bottom while selecting: Category, Name and money paid back (brief 206), each off while it cannot act.
+/// Name is off while no bank payment is ticked (receipts and cash entries keep their typed Shop) and is not offered while
+/// Own names is off (as a payment's page then has no pen). Paid back is off while the ticked payments have no group that
+/// can be linked (`DashboardStore.paybackGroup(ids:)` nil: nothing ticked, only receipts, transfers or payments linked in
+/// full), read off the main thread as the ticks change; its word follows the list's side.
 struct SelectionBarState: Equatable {
     let category: Bool
     let name: Bool
     let offersName: Bool
+    let payback: Bool
+    let paybackTitle: String
 
-    init(summary: PaymentSelectionSummary, ownNames: Bool) {
+    init(summary: PaymentSelectionSummary, ownNames: Bool, side: DashboardSide = .expenses, payback: Bool = false) {
         category = summary.canSwitch
         name = summary.canRename
         offersName = ownNames
+        self.payback = payback
+        paybackTitle = SelectionWording.paybackItem(side: side)
     }
+}
+
+/// What the selection bar's Paid back reads its state from (brief 206): the ticked ids and the dashboard's revision.
+struct PaybackOfferKey: Equatable {
+    let ids: Set<String>
+    let revision: Int
 }
 
 /// "Also the other 14 payments from these 3 shops?" after a name for a selection: the single rename's question

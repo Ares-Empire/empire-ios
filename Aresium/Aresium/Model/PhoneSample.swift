@@ -74,6 +74,10 @@ enum PhoneSample {
         if LaunchArguments.current.contains("-sampleQuickSort") {
             files.append(ImportFile(name: "Umsaetze-Privat.csv", data: Data(quickSortLines(now: .now).utf8)))
         }
+        let paybackGroup = LaunchArguments.current.contains("-samplePaybackGroup")
+        if paybackGroup {
+            files.append(ImportFile(name: "Umsaetze-Geteilt.csv", data: Data(paybackGroupLines(now: .now).utf8)))
+        }
         for name in ["sample-paypal.csv", "sample-camt.xml"] {
             let parts = name.split(separator: ".")
             if let url = Bundle.main.url(forResource: String(parts[0]), withExtension: String(parts[1])) {
@@ -83,6 +87,7 @@ enum PhoneSample {
         _ = try await backend.importFiles(files, auth: BackendAuth(token: nil))
         // The made-up payback, linked as in the tour; `-sampleNoPayback` leaves it to be linked by hand (brief 203).
         if !LaunchArguments.current.contains("-sampleNoPayback") { try await TourData.linkSamplePayback(in: backend) }
+        if paybackGroup { try await sortPaybackGroup(backend) }
         // Confirmation screenshots: give a category made-up primary payments, never changing the real store.
         if let key = LaunchArguments.value("-sampleCategoryPayments"),
            let id = try await backend.categories().id(named: key) ?? (backend.summary.chosen.contains { $0.id == key } ? key : nil) {
@@ -237,6 +242,61 @@ enum PhoneSample {
         let lines = rows.map { ";\($0.0);\($0.0);\($0.1);\($0.2);\($0.3);\($0.4);EUR;\($0.5);" }
         return (["IBAN Auftragskonto;Buchungstag;Valutadatum;Name Zahlungsbeteiligter;Buchungstext;Verwendungszweck;Betrag;Währung;Soll/Haben;Saldo nach Buchung"]
                 + lines).joined(separator: "\n") + "\n"
+    }
+
+    /// `-samplePaybackGroup` (brief 206, money paid back for several payments at once): made-up shared costs last month.
+    /// Two dinners out (Eating out, with the month's Restaurant Fiktiva: three expenses to select) and two made-up
+    /// friends paying their part back; a made-up language course and a made-up parent's two transfers towards it
+    /// (Parents & family, with her monthly pocket money: two payments in to select). Made-up names, dates and amounts.
+    private static func paybackGroupLines(now: Date) -> String {
+        let calendar = ReceiptDay.calendar
+        let thisMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: now)) ?? now
+        let lastMonth = calendar.date(byAdding: .month, value: -1, to: thisMonth) ?? thisMonth
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "de_DE")
+        formatter.calendar = calendar
+        formatter.timeZone = calendar.timeZone
+        formatter.dateFormat = "dd.MM.yyyy"
+        func day(_ number: Int) -> String {
+            formatter.string(from: calendar.date(byAdding: .day, value: number - 1, to: lastMonth) ?? lastMonth)
+        }
+        let rows: [(Int, String, String, String, String, String)] = [
+            (3, PaybackGroupNames.pizzeria, "Kartenzahlung", "Pizza mit Freunden", "48,00", "S"),
+            (10, PaybackGroupNames.grill, "Kartenzahlung", "Grillabend", "36,00", "S"),
+            (11, "Fiona Fiktiv", "Gutschrift", "Grillabend Anteil", "40,00", "H"),
+            (18, "Felix Fiktiv", "Gutschrift", "Essen zurück", "100,00", "H"),
+            (6, PaybackGroupNames.parent, "Gutschrift", PaybackGroupNames.allowance, "150,00", "H"),
+            (8, "Fiktiv Sprachschule", "Lastschrift", "Sprachkurs Herbst", "200,00", "S"),
+            (13, PaybackGroupNames.parent, "Gutschrift", PaybackGroupNames.allowance, "100,00", "H"),
+        ]
+        let lines = rows.map { ";\(day($0.0));\(day($0.0));\($0.1);\($0.2);\($0.3);\($0.4);EUR;\($0.5);" }
+        return (["IBAN Auftragskonto;Buchungstag;Valutadatum;Name Zahlungsbeteiligter;Buchungstext;Verwendungszweck;Betrag;Währung;Soll/Haben;Saldo nach Buchung"]
+                + lines).joined(separator: "\n") + "\n"
+    }
+
+    private enum PaybackGroupNames {
+        static let pizzeria = "Pizzeria Fiktivo"
+        static let grill = "Fiktiv Grillhaus"
+        static let allowance = "Zuschuss Sprachkurs"
+        /// The tour's made-up parent (her pocket money every month).
+        static let parent = "Erika Mustermann"
+    }
+
+    /// The dinners into Eating out and the parent's transfers into Parents & family, by hand, so the lists to select
+    /// from hold them whatever the sorting makes of the made-up names.
+    private static func sortPaybackGroup(_ backend: PhoneBackend) async throws {
+        for payment in try await backend.ledger.payments() {
+            let category: String
+            if payment.counterparty == PaybackGroupNames.pizzeria || payment.counterparty == PaybackGroupNames.grill {
+                category = "eating-out"
+            } else if payment.counterparty == PaybackGroupNames.parent, payment.text.contains(PaybackGroupNames.allowance) {
+                category = "parents-family"
+            } else {
+                continue
+            }
+            try await backend.ledger.setCategory(payment.id, category: category, source: .manual)
+        }
+        try await backend.refresh()
     }
 
     /// The bank's side of the sample PayPal export's purchase at Märchenladen (made up, in the VR Bank layout): with the
