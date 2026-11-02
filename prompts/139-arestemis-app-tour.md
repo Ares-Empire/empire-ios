@@ -1,6 +1,6 @@
 # 139: Arestemis app: a tour of eight steps
 
-Status: draft (starts after brief 137 is merged, and after Aresium brief 206 is on main: it changes only the select step's line in `TourModel.swift` and its `TourTests` expectation; branch 139 from main after that)
+Status: running (Claude agent, 2026-11-02; branched from main after Aresium 206 and brief 137)
 Branch: `claude/139-arestemis-tour` · Worktree: `../empire-ios-139-arestemis-tour` · **For a Claude agent**
 
 ## Goal
