@@ -1,6 +1,6 @@
 # 202: Money paid back: the app's data
 
-Status: draft (waits for brief 201's engine)
+Status: merged 2026-11-02 (816 Aresium tests, 3 import tests passed on a rerun alone; links on the payment in, schema 7; non-euro payments not linkable yet: the engine gives no currency after folding)
 Branch: `codex/202-paid-back-data` · Worktree: `../empire-ios-202-paid-back-data` · Model: `gpt-6.1-sol`, effort
 `high` · Simulator: `codex-202` (create it: iPhone 17, iOS 27.0) · Claude copies brief 201's engine into the worktree
 first (`scripts/aresium-engine.sh`) · The screens follow in brief 203 (a Claude agent) on this brief's API.

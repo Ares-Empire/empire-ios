@@ -292,3 +292,18 @@ in place. **Sliding:** on the circles, a finger sliding down ticks every row it 
 leaves; starting on a ticked row unticks; a sideways start on a row then up or down works too; near the top or bottom
 edge the list scrolls by itself and keeps ticking. A plain up-down drag on a row still scrolls, a tap still ticks one.
 To try: the slide's feel on the phone, the light haptic per row, and the edge scrolling's speed (both first guesses).
+
+**After build 15** (Patrik, 2026-11-02): "Selection is super clean now, great work." Then: the Overview's spending
+looked far too high. It was right for all 14 months, but money paid back to him (one expense in full, two by half)
+counted as income while the expenses counted in full (brief 71). He chose a link made by hand: "Yes A actually makes
+sense, let's do it. It would need to be added to the tour but it remains a completely optional thing to do." Also asked:
+Aresium in the share sheet (exists since 2026-10-23, never watched end to end) and dropping a file on the main screen
+(brief 204, next build).
+
+**In build 16** (2026-11-02, briefs 201–203): **money paid back.** On the page of a payment that came in, "Zahlt eine
+Ausgabe zurück …"; on an expense's page, "Wurde zurückgezahlt …". Suggestions first (the whole amount, half, a third, a
+quarter, within days), a search for anything else (paid back in parts or months later), then the amount. The linked
+euros come off the expense, in its month and category, and no longer count as income. Both pages show the link and
+open each other; the pen changes the amount or removes it (with undo). In lists the number is what counts, with a quiet
+line ("128,00 € · 64,00 € zurück"). One tour step (10 of 22); nothing else asks. To try: link the three paybacks
+(open the payment from the parents, or the expense); a payback in several transfers: link each one.

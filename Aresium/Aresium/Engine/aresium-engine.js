@@ -5520,6 +5520,7 @@ var __AresiumEngine = (() => {
       const names2 = [.../* @__PURE__ */ new Set([t.categoryName, ...tags])].filter((name) => catByName.get(name)?.kind !== "transfer");
       const spending = !isTransfer && (t.amount < 0 || covered);
       const incoming = !isTransfer && t.amount > 0 && !covered;
+      const amount2 = t.counted ?? t.amount;
       const categoriesIn = spending ? names2 : [];
       const buckets = incoming ? [...new Set(names2.map((name) => isUnsorted(name) ? UNSORTED : name))] : [];
       const txn = {
@@ -5539,39 +5540,43 @@ var __AresiumEngine = (() => {
       if (t.provisional) txn.provisional = true;
       if (covered) txn.coveredBy = [...t.coveredBy];
       if (t.cashWithdrawal) txn.cashWithdrawal = true;
+      if (t.counted !== void 0 && t.counted !== t.amount) txn.counted = t.counted;
+      if (t.paidBack !== void 0) txn.paidBack = t.paidBack;
+      if (t.paidBackBy) txn.paidBackBy = t.paidBackBy.map((link) => ({ ...link }));
+      if (t.paysBack) txn.paysBack = t.paysBack.map((link) => ({ ...link }));
       transactions.push(txn);
       if (spending) {
-        total.expense += -t.amount;
+        total.expense += -amount2;
         if (mo) {
-          mo.expense += -t.amount;
-          if (validDay) mo.dayExpense[day2 - 1] += -t.amount;
+          mo.expense += -amount2;
+          if (validDay) mo.dayExpense[day2 - 1] += -amount2;
         }
       }
       for (const name of categoriesIn) {
         const series = spend.get(name);
         if (!series) continue;
-        add(categoryAll, name, -t.amount);
+        add(categoryAll, name, -amount2);
         if (index !== void 0) {
-          add(categoryMonths[index], name, -t.amount);
-          series.months[index] += -t.amount;
-          if (validDay) series.days[month][day2 - 1] += -t.amount;
+          add(categoryMonths[index], name, -amount2);
+          series.months[index] += -amount2;
+          if (validDay) series.days[month][day2 - 1] += -amount2;
         }
       }
       if (incoming) {
-        total.income += t.amount;
+        total.income += amount2;
         if (mo) {
-          mo.income += t.amount;
-          if (validDay) mo.dayIncome[day2 - 1] += t.amount;
+          mo.income += amount2;
+          if (validDay) mo.dayIncome[day2 - 1] += amount2;
         }
       }
       for (const bucket of buckets) {
         if (!income.has(bucket)) income.set(bucket, makeSeries());
-        add(incomeAll, bucket, t.amount);
+        add(incomeAll, bucket, amount2);
         if (index !== void 0) {
-          add(incomeMonths[index], bucket, t.amount);
+          add(incomeMonths[index], bucket, amount2);
           const series = income.get(bucket);
-          series.months[index] += t.amount;
-          if (validDay) series.days[month][day2 - 1] += t.amount;
+          series.months[index] += amount2;
+          if (validDay) series.days[month][day2 - 1] += amount2;
         }
       }
     }
@@ -5637,7 +5642,8 @@ var __AresiumEngine = (() => {
         income: months.map((m) => byMonth[m.key].income),
         balance: months.map((m) => byMonth[m.key].endBalance)
       },
-      ...source.cash ? { cash: source.cash } : {}
+      ...source.cash ? { cash: source.cash } : {},
+      ...source.paybacksIgnored?.length ? { paybacksIgnored: source.paybacksIgnored.map((link) => ({ ...link })) } : {}
     };
   }
 
@@ -10312,9 +10318,9 @@ var __AresiumEngine = (() => {
       const date = parseDay(p.date);
       const amount2 = p.amount;
       if (!p.account || !date || typeof amount2 !== "number" || !Number.isFinite(amount2)) return;
-      const cents4 = Math.round(Math.abs(amount2) * 100);
-      if (cents4 === 0) return;
-      const group = groups2.get(cents4) ?? { out: [], in: [] };
+      const cents5 = Math.round(Math.abs(amount2) * 100);
+      if (cents5 === 0) return;
+      const group = groups2.get(cents5) ?? { out: [], in: [] };
       (amount2 < 0 ? group.out : group.in).push({
         index,
         account: p.account,
@@ -10324,7 +10330,7 @@ var __AresiumEngine = (() => {
         other: ibanKey(p.counterpartyIban),
         says: saysOwnTransfer(p)
       });
-      groups2.set(cents4, group);
+      groups2.set(cents5, group);
     });
     const candidates = [];
     for (const { out, in: incoming } of groups2.values()) {
@@ -10806,6 +10812,55 @@ var __AresiumEngine = (() => {
     return { months, movements };
   }
 
+  // src/engine/paybacks.ts
+  var cents2 = (amount2) => Math.round(amount2 * 100);
+  var compare4 = (a, b) => a < b ? -1 : a > b ? 1 : 0;
+  function countPaybacks(originals, stored, categories) {
+    const marks = /* @__PURE__ */ new Map();
+    const ignored = [];
+    const payers = originals.filter((p) => p.paysBack?.length).sort((a, b) => compare4(a.date.slice(0, 10), b.date.slice(0, 10)) || compare4(a.id, b.id));
+    if (!payers.length) return { marks, ignored };
+    const byId = new Map(stored.map((p) => [p.id, p]));
+    const originalIds = new Set(originals.map((p) => p.id));
+    const transfers = new Set(categories.filter((c) => c.excludeFromTotals).map((c) => c.name));
+    const isTransfer = (p) => p.category != null && transfers.has(p.category);
+    const received = /* @__PURE__ */ new Map();
+    for (const original of payers) {
+      const payer = byId.get(original.id);
+      const payerReason = !payer ? "payer-not-counted" : payer.amount <= 0 ? "payer-not-money-in" : isTransfer(payer) ? "payer-transfer" : payer.currency !== "EUR" ? "payer-not-euros" : null;
+      if (!payer || payerReason) {
+        for (const link of original.paysBack) ignored.push({ from: original.id, to: link.payment, reason: payerReason ?? "payer-not-counted" });
+        continue;
+      }
+      let paid = 0;
+      for (const link of original.paysBack) {
+        const target = byId.get(link.payment);
+        const reason = !target ? originalIds.has(link.payment) ? "target-not-counted" : "target-missing" : target.amount >= 0 ? "target-not-money-out" : isTransfer(target) ? "target-transfer" : isCashWithdrawal(target) ? "target-withdrawal" : target.currency !== "EUR" ? "target-not-euros" : !Number.isFinite(link.amount) || link.amount <= 0 || cents2(link.amount) <= 0 || !Number.isSafeInteger(cents2(link.amount)) || Math.abs(link.amount - cents2(link.amount) / 100) > 1e-9 ? "invalid-amount" : null;
+        if (!target || reason) {
+          ignored.push({ from: original.id, to: link.payment, reason: reason ?? "target-missing" });
+          continue;
+        }
+        const requested = cents2(link.amount);
+        const got = received.get(target.id) ?? 0;
+        const applied = Math.min(requested, cents2(payer.amount) - paid, -cents2(target.amount) - got);
+        if (applied < requested) ignored.push({ from: original.id, to: link.payment, reason: "clamped", amount: (requested - applied) / 100 });
+        if (applied <= 0) continue;
+        paid += applied;
+        received.set(target.id, got + applied);
+        const payerMarks = marks.get(original.id) ?? {};
+        payerMarks.counted = (cents2(payer.amount) - paid) / 100;
+        (payerMarks.paysBack ?? (payerMarks.paysBack = [])).push({ payment: target.id, amount: applied / 100 });
+        marks.set(original.id, payerMarks);
+        const targetMarks = marks.get(target.id) ?? {};
+        targetMarks.counted = (cents2(target.amount) + got + applied) / 100;
+        targetMarks.paidBack = (got + applied) / 100;
+        (targetMarks.paidBackBy ?? (targetMarks.paidBackBy = [])).push({ payment: original.id, amount: applied / 100 });
+        marks.set(target.id, targetMarks);
+      }
+    }
+    return { marks, ignored };
+  }
+
   // src/engine/source.ts
   var UNCATEGORISED = Object.freeze({ name: "Uncategorised", icon: "CircleHelp", color: "#9ca3af", kind: "spend" });
   var MONTH_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -10823,6 +10878,8 @@ var __AresiumEngine = (() => {
     const today = parseDay(input.today);
     if (!today) throw new Error("today is not an ISO date (YYYY-MM-DD)");
     const stored = counted(checked3(input.transactions)).rows;
+    const paybacks = countPaybacks(input.transactions, stored, input.categories);
+    const storedPayments = new Set(stored);
     const fromReceipts = input.receipts ? countReceipts(stored, input.receipts, new Set(input.transactions.map((p) => p.id))) : null;
     const payments = fromReceipts?.rows.length ? withReceiptRows(stored, fromReceipts.rows) : stored;
     const known = new Set(input.categories.map((c) => c.name));
@@ -10834,7 +10891,8 @@ var __AresiumEngine = (() => {
       const category = categoryOf(p);
       if (category === null) hasUncategorised = true;
       const name = category ?? UNCATEGORISED.name;
-      net.set(name, (net.get(name) ?? 0) + p.amount);
+      const amount2 = (storedPayments.has(p) ? paybacks.marks.get(p.id)?.counted : void 0) ?? p.amount;
+      net.set(name, (net.get(name) ?? 0) + amount2);
     }
     const categories = input.categories.map((c) => ({
       name: c.name,
@@ -10857,7 +10915,9 @@ var __AresiumEngine = (() => {
       ...p.receiptId !== void 0 ? { receiptId: p.receiptId } : {},
       ...p.provisional ? { provisional: true } : {},
       ...p.coveredBy ? { coveredBy: [...p.coveredBy] } : {},
-      ...fromReceipts?.withdrawals.has(p) ? { cashWithdrawal: true } : {}
+      ...fromReceipts?.withdrawals.has(p) ? { cashWithdrawal: true } : {},
+      // Apply only to stored payments, even if a receipt happens to have the same id.
+      ...storedPayments.has(p) ? paybacks.marks.get(p.id) : void 0
     }));
     const months = [];
     if (payments.length) {
@@ -10906,7 +10966,8 @@ var __AresiumEngine = (() => {
       openingBalance,
       databaseCategoryNames: input.categories.map((c) => c.name),
       // The Cash page (brief 32): a view, counted nowhere.
-      ...fromReceipts ? { cash: cashView(fromReceipts, (category) => nameOf2(category) ?? UNCATEGORISED.name) } : {}
+      ...fromReceipts ? { cash: cashView(fromReceipts, (category) => nameOf2(category) ?? UNCATEGORISED.name) } : {},
+      ...paybacks.ignored.length ? { paybacksIgnored: paybacks.ignored } : {}
     };
   }
 
@@ -13915,7 +13976,7 @@ ${line}`;
   }
   var has = (line, ...kinds) => kinds.some((k) => line.kinds.has(k));
   var last = (line) => line.amounts.at(-1) ?? null;
-  var cents2 = (n) => Math.round(n * 100);
+  var cents3 = (n) => Math.round(n * 100);
   function readLine(text2, index, monthFirst) {
     const words2 = shopWords(text2);
     const hits = hitsIn(words2);
@@ -13984,19 +14045,19 @@ ${line}`;
     const paying = candidates.length ? lines.slice(candidates[0].line.index) : lines;
     const given = paying.find((l) => has(l, "given") && !has(l, "change", "card") && (last(l) ?? 0) > 0) ?? paying.find((l) => has(l, "cash") && !has(l, "card", "change", ...TOTAL_KINDS) && (last(l) ?? 0) > 0);
     const change = paying.find((l) => has(l, "change") && !has(l, "deposit") && last(l) !== null && last(l) >= 0);
-    const byChange = given && change ? (cents2(last(given)) - cents2(last(change))) / 100 : null;
+    const byChange = given && change ? (cents3(last(given)) - cents3(last(change))) / 100 : null;
     const tips = lines.filter((l) => has(l, "tip") && (last(l) ?? 0) > 0).map((l) => last(l));
     if (candidates.length) {
       const top = Math.max(...candidates.map((c) => c.strength));
       const best = candidates.filter((c) => c.strength === top);
-      const amounts = [...new Set(best.map((c) => cents2(c.amount)))];
-      const confirmed = (c) => byChange !== null && cents2(c.amount) === cents2(byChange);
+      const amounts = [...new Set(best.map((c) => cents3(c.amount)))];
+      const confirmed = (c) => byChange !== null && cents3(c.amount) === cents3(byChange);
       let pick2, sure;
       if (amounts.length === 1) {
         pick2 = best.find((c) => !c.fuzzy) ?? best[0];
         sure = !pick2.fuzzy || confirmed(pick2);
       } else {
-        const byTip = best.find((b) => best.some((a) => tips.some((t) => cents2(a.amount) + cents2(t) === cents2(b.amount))));
+        const byTip = best.find((b) => best.some((a) => tips.some((t) => cents3(a.amount) + cents3(t) === cents3(b.amount))));
         const explained = byTip ?? best.find(confirmed);
         pick2 = explained ?? best.at(-1);
         sure = !!explained && (!pick2.fuzzy || confirmed(pick2));
@@ -14005,7 +14066,7 @@ ${line}`;
       return { total: pick2.amount, sure, line: pick2.line, first: candidates[0].line };
     }
     const plain2 = lines.filter((l) => !has(l, "given", "change", "tax", "other", "deposit", "tip") && (last(l) ?? 0) > 0);
-    const confirmedLine = byChange !== null && byChange > 0 ? plain2.find((l) => l.amounts.some((a) => cents2(a) === cents2(byChange))) : void 0;
+    const confirmedLine = byChange !== null && byChange > 0 ? plain2.find((l) => l.amounts.some((a) => cents3(a) === cents3(byChange))) : void 0;
     if (confirmedLine) return { total: byChange, sure: false, line: confirmedLine, first: null };
     let largest = null;
     for (const l of plain2) if (!largest || last(l) > last(largest)) largest = l;
@@ -14245,7 +14306,7 @@ ${line}`;
     if (!bankWords.length || !shop.words.length) return "unknown";
     return shop.words.every((w) => bankWords.some((b) => sameWord(w, b))) ? "similar" : "different";
   }
-  var cents3 = (n) => Math.round(n * 100);
+  var cents4 = (n) => Math.round(n * 100);
   var currencyOf2 = (code) => (code?.trim() || "EUR").toUpperCase();
   function matchReceipt(receipt, payments, taken = []) {
     const day2 = parseDay(receipt?.date);
@@ -14266,9 +14327,9 @@ ${line}`;
         if (shop === "similar") other.push({ id: payment.id, why: "otherCurrency", days, difference: null, shop });
         continue;
       }
-      const difference = cents3(-payment.amount) - cents3(total);
+      const difference = cents4(-payment.amount) - cents4(total);
       if (difference === 0) exact.push({ id: payment.id, why: "severalSame", days, difference: 0, shop });
-      else if (shop === "similar" && (difference > 0 ? difference <= MORE_AT_MOST : -difference < LESS_UNDER * cents3(total))) {
+      else if (shop === "similar" && (difference > 0 ? difference <= MORE_AT_MOST : -difference < LESS_UNDER * cents4(total))) {
         differs.push({ id: payment.id, why: "amountDiffers", days, difference: difference / 100, shop });
       }
     }

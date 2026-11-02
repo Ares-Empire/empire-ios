@@ -145,6 +145,9 @@ private struct NameResultRow: View {
                     Text(verbatim: lines.title).font(AppFont.text(14.5, weight: .semibold)).lineLimit(1)
                     Spacer(minLength: 0)
                     amount(lines.moneyOut ?? lines.moneyIn, income: lines.moneyOut == nil)
+                    if let nothing = lines.nothing {
+                        Text(verbatim: nothing).font(AppFont.number(14)).foregroundStyle(palette.muted).fixedSize()
+                    }
                 }
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text(verbatim: lines.line).font(AppFont.text(12.5)).foregroundStyle(palette.muted).lineLimit(1)

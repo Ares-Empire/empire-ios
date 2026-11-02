@@ -7,6 +7,8 @@ struct HuntsScreen: View {
     @Bindable var store: ArestemisStore
     @Bindable var navigation: AppNavigation
     var scrollsToBottom = false
+    /// Screenshots (`-scrollToHunt <id>`): the list starts at this hunt's card.
+    var scrollsToHunt: Int? = nil
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
@@ -24,7 +26,7 @@ struct HuntsScreen: View {
                             }
                             if store.hunts.isEmpty {
                                 NoHuntCard { navigation.asksSearchKind = true }
-                                    .searchKindDialog(navigation)
+                                    .searchKindDialog(navigation, kinds: store.kinds)
                             } else {
                                 hunts
                             }
@@ -35,7 +37,7 @@ struct HuntsScreen: View {
                                 HuntSection(title: String(localized: "Latest")) {
                                     LatestMatches(matches: store.latest, store: store,
                                                   open: { navigation.huntPath.append(.match($0)) },
-                                                  showAll: { showListings(.all) })
+                                                  showAll: { navigation.showListings() })
                                 }
                             }
                         }
@@ -47,6 +49,9 @@ struct HuntsScreen: View {
                 .refreshable { await store.reloadOverview() }
                 .onAppear {
                     if scrollsToBottom { DispatchQueue.main.async { reader.scrollToWordmark() } }
+                    if let id = scrollsToHunt {
+                        DispatchQueue.main.async { reader.scrollTo(Self.cardID(id), anchor: .top) }
+                    }
                 }
             }
             .provinceWall()
@@ -57,6 +62,7 @@ struct HuntsScreen: View {
                 case .match(let id): MatchDetailScreen(id: id, store: store, navigation: navigation)
                 case .form(.flat, let id): FlatSearchScreen(store: store, navigation: navigation, huntID: id)
                 case .form(.item, let id): ItemSearchScreen(store: store, navigation: navigation, huntID: id)
+                case .form(.watch, let id): WatchSearchScreen(store: store, navigation: navigation, huntID: id)
                 }
             }
             .task(id: scenePhase) { await keepFresh() }
@@ -79,18 +85,14 @@ struct HuntsScreen: View {
                 HuntListCard(card: card, sites: store.siteNames, busy: store.isChanging(hunt: card.id),
                              open: { navigation.huntPath.append(.hunt(card.id)) },
                              toggle: { active in Task { await store.setActive(id: card.id, active: active) } })
+                    .id(Self.cardID(card.id))
             }
             NewSearchButton { navigation.asksSearchKind = true }
-                .searchKindDialog(navigation)
+                .searchKindDialog(navigation, kinds: store.kinds)
         }
     }
 
-    private func showListings(_ filter: MatchFilter) {
-        store.selectedHuntID = nil
-        navigation.filter = filter
-        navigation.listingsPath = []
-        navigation.tab = .listings
-    }
+    private static func cardID(_ hunt: Int) -> String { "hunt-\(hunt)" }
 
     /// While the tab is on screen and the app is active, the cards and figures follow the server every minute.
     private func keepFresh() async {
@@ -142,11 +144,12 @@ private struct NewSearchButton: View {
 }
 
 private extension View {
-    /// New search's question: which kind (Apple's confirmation dialog, shown from the button that asked).
-    func searchKindDialog(_ navigation: AppNavigation) -> some View {
+    /// New search's question: which kind (Apple's confirmation dialog, shown from the button that asked), the kinds the
+    /// server offers (`SearchKind.choices`).
+    func searchKindDialog(_ navigation: AppNavigation, kinds: [OfferedKind]?) -> some View {
         confirmationDialog("What are you looking for?", isPresented: Bindable(navigation).asksSearchKind,
                            titleVisibility: .visible) {
-            ForEach(SearchKind.choices) { kind in
+            ForEach(SearchKind.choices(offered: kinds)) { kind in
                 Button(kind.choiceTitle()) { navigation.openNewForm(kind) }
             }
         }

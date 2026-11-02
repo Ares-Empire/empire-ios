@@ -101,6 +101,24 @@ nonisolated enum NameSearch {
         }
     }
 
+    /// The same spelling and fuzzy matching rules, without the normal name search's 50-group cap.
+    static func matches(_ query: String, names: [String]) -> Bool {
+        let folded = fold(query)
+        guard !folded.isEmpty else { return false }
+        let words = folded.split(separator: " ").map(String.init)
+        let letters = words.map(Array.init)
+        return names.contains { original in
+            let name = fold(original)
+            if words.allSatisfy({ name.contains($0) }) { return true }
+            let nameLetters = name.split(separator: " ").map { Array($0) }
+            return words.indices.allSatisfy { index in
+                name.contains(words[index]) || (letters[index].count >= 4 && nameLetters.contains {
+                    oneEdit(letters[index], $0)
+                })
+            }
+        }
+    }
+
     private static func fold(_ name: String) -> String {
         let folded = name.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: Locale(identifier: "en_US_POSIX"))
             .replacingOccurrences(of: "ß", with: "ss")

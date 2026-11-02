@@ -8,6 +8,12 @@ struct TransactionDetail: Codable {
     var ownNameSource: PaymentNameSource? = nil
     var nameKey: String? = nil
     var amount: Double
+    var counted: Double? = nil
+    var paidBack: Double? = nil
+    var paidBackBy: [PaybackDetailLink]? = nil
+    var paysBack: [PaybackDetailLink]? = nil
+    var countedAmount: Double { counted ?? amount }
+    var paysBackTotal: Double { Double((paysBack ?? []).reduce(0) { $0 + Int(($1.linkedAmount * 100).rounded()) }) / 100 }
     let currency: String
     var bookingDate: String
     let valueDate: String?
@@ -109,5 +115,36 @@ nonisolated enum JSONValue: Codable, Equatable, Sendable {
         case .array, .object:
             String(decoding: (try? JSONEncoder().encode(self)) ?? Data(), as: UTF8.self)
         }
+    }
+}
+
+/// The other end as shown now, ready for brief 203's link list and navigation.
+nonisolated struct PaybackDetailLink: Codable, Equatable, Identifiable, Sendable {
+    let payment: String
+    let place: String
+    let date: String
+    /// Its bank amount; the link keeps the positive euros separately.
+    let amount: Double
+    let linkedAmount: Double
+    var id: String { payment }
+}
+
+extension TransactionDetail {
+    mutating func applyPaybacks(from dashboard: Dashboard) {
+        let rows = Dictionary(dashboard.transactions.filter { $0.receiptId == nil && $0.coveredBy == nil }
+            .map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        guard let row = rows[id] else { return }
+        counted = row.counted
+        paidBack = row.paidBack
+        func links(_ links: [PaymentLink]?) -> [PaybackDetailLink]? {
+            links.map { $0.compactMap { link in
+                rows[link.payment].map {
+                    PaybackDetailLink(payment: $0.id, place: $0.place, date: $0.date, amount: $0.amount,
+                                      linkedAmount: link.amount)
+                }
+            } }
+        }
+        paidBackBy = links(row.paidBackBy)
+        paysBack = links(row.paysBack)
     }
 }

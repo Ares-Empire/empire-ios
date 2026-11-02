@@ -44,6 +44,16 @@
         }
       }
     },
+    "%@ back" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ zurück"
+          }
+        }
+      }
+    },
     "%@ in euros" : {
       "localizations" : {
         "de" : {
@@ -140,6 +150,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ nicht erfasst"
+          }
+        }
+      }
+    },
+    "%@ not income" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ keine Einnahme"
+          }
+        }
+      }
+    },
+    "%@ paid back" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ zurückgezahlt"
           }
         }
       }
@@ -1278,6 +1308,26 @@
         }
       }
     },
+    "Also paid back by…" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auch zurückgezahlt von …"
+          }
+        }
+      }
+    },
+    "Also pays back…" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zahlt auch zurück …"
+          }
+        }
+      }
+    },
     "Also remove %@ from the other %lld payments from %@?" : {
       "localizations" : {
         "de" : {
@@ -1770,6 +1820,16 @@
         }
       }
     },
+    "At most %@." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Höchstens %@."
+          }
+        }
+      }
+    },
     "At your bank a button may be called a little differently." : {
       "localizations" : {
         "de" : {
@@ -2080,6 +2140,16 @@
         }
       }
     },
+    "Change amount" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Betrag ändern"
+          }
+        }
+      }
+    },
     "Change category" : {
       "localizations" : {
         "de" : {
@@ -2100,12 +2170,32 @@
         }
       }
     },
+    "Change link" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verknüpfung ändern"
+          }
+        }
+      }
+    },
     "Change undone." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Änderung rückgängig gemacht."
+          }
+        }
+      }
+    },
+    "Changed to %@." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Geändert auf %@."
           }
         }
       }
@@ -3272,6 +3362,16 @@
         }
       }
     },
+    "How much of it was paid back?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wie viel davon wurde zurückgezahlt?"
+          }
+        }
+      }
+    },
     "How often" : {
       "localizations" : {
         "de" : {
@@ -3638,6 +3738,36 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Zum Importieren loslassen"
+          }
+        }
+      }
+    },
+    "Link" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verknüpfen"
+          }
+        }
+      }
+    },
+    "Link removed." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verknüpfung entfernt."
+          }
+        }
+      }
+    },
+    "Linked: %@ paid back." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verknüpft: %@ zurückgezahlt."
           }
         }
       }
@@ -4162,6 +4292,16 @@
         }
       }
     },
+    "No payment found for “%@”." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keine Buchung für „%@“ gefunden."
+          }
+        }
+      }
+    },
     "No payments could be read with these columns." : {
       "localizations" : {
         "de" : {
@@ -4258,6 +4398,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Keine gewählt"
+          }
+        }
+      }
+    },
+    "None of it counts as income." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nichts davon zählt als Einnahme."
           }
         }
       }
@@ -4378,6 +4528,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nicht genutzt"
+          }
+        }
+      }
+    },
+    "Nothing close by fits. Search by name." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In der Nähe passt nichts. Such nach dem Namen."
           }
         }
       }
@@ -4732,6 +4892,56 @@
         }
       }
     },
+    "Paid back" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zurückgezahlt"
+          }
+        }
+      }
+    },
+    "Paid back by" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zurückgezahlt von"
+          }
+        }
+      }
+    },
+    "Paid back by someone? If you like, link the payment here: then only your share counts." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hat dir jemand etwas zurückgezahlt? Wenn du magst, verknüpfe die Buchung hier: Dann zählt nur dein Anteil."
+          }
+        }
+      }
+    },
+    "Paid back in full: none of it counts as spent." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ganz zurückgezahlt: nichts davon zählt als Ausgabe."
+          }
+        }
+      }
+    },
+    "Paid back to you…" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wurde zurückgezahlt …"
+          }
+        }
+      }
+    },
     "Paid by" : {
       "localizations" : {
         "de" : {
@@ -4798,6 +5008,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Buchungen vom Tag des Belegs bis eine Woche später. Tipp auf die, zu der dieser Beleg gehört."
+          }
+        }
+      }
+    },
+    "Pays back" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zahlt zurück"
+          }
+        }
+      }
+    },
+    "Pays back an expense…" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zahlt eine Ausgabe zurück …"
           }
         }
       }
@@ -5108,6 +5338,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Code entfernen"
+          }
+        }
+      }
+    },
+    "Remove link" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verknüpfung entfernen"
           }
         }
       }
@@ -5622,6 +5862,16 @@
         }
       }
     },
+    "Suggested" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vorschläge"
+          }
+        }
+      }
+    },
     "Suggestion %lld of %lld" : {
       "localizations" : {
         "de" : {
@@ -5878,6 +6128,16 @@
         }
       }
     },
+    "The rest, %@, counts as income." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Rest, %@, zählt als Einnahme."
+          }
+        }
+      }
+    },
     "The scanner stopped. Try again." : {
       "localizations" : {
         "de" : {
@@ -6114,6 +6374,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Diese Buchung ist nicht mehr auf diesem iPhone."
+          }
+        }
+      }
+    },
+    "This payment is no longer there." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Buchung gibt es nicht mehr."
           }
         }
       }
@@ -6674,12 +6944,32 @@
         }
       }
     },
+    "Which expense does this pay back?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Welche Ausgabe wird damit zurückgezahlt?"
+          }
+        }
+      }
+    },
     "Which file" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Welche Datei"
+          }
+        }
+      }
+    },
+    "Which payment paid this back?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mit welcher Buchung wurde das zurückgezahlt?"
           }
         }
       }
@@ -7004,6 +7294,36 @@
         }
       }
     },
+    "Your share, %@, counts as spent." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Anteil, %@, zählt als Ausgabe."
+          }
+        }
+      }
+    },
+    "a quarter" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ein Viertel"
+          }
+        }
+      }
+    },
+    "a third" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ein Drittel"
+          }
+        }
+      }
+    },
     "all months" : {
       "localizations" : {
         "de" : {
@@ -7024,6 +7344,16 @@
         }
       }
     },
+    "half" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "die Hälfte"
+          }
+        }
+      }
+    },
     "iOS has notifications off for Aresium, so no messages come." : {
       "localizations" : {
         "de" : {
@@ -7034,12 +7364,72 @@
         }
       }
     },
+    "in full" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ganz"
+          }
+        }
+      }
+    },
     "one day" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "ein Tag"
+          }
+        }
+      }
+    },
+    "pays back %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "zahlt %@ zurück"
+          }
+        }
+      }
+    },
+    "pays back %lld expenses" : {
+      "localizations" : {
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "zahlt %lld Ausgabe zurück"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "zahlt %lld Ausgaben zurück"
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "pays back %lld expense"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "pays back %lld expenses"
+                }
+              }
+            }
           }
         }
       }
@@ -7100,6 +7490,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "umgekehrt"
+          }
+        }
+      }
+    },
+    "the rest" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "der Rest"
           }
         }
       }

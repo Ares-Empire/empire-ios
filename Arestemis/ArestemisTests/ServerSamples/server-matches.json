@@ -1,6 +1,48 @@
 {
   "items": [
     {
+      "id": 400,
+      "hunt_id": 40,
+      "state": "new",
+      "found": "2026-11-01T09:04:00Z",
+      "listing": {
+        "source": "page",
+        "source_name": "shop.example",
+        "url": "https://shop.example/shelf/",
+        "title": "Fjord shelf",
+        "kind": null,
+        "rent_warm": null,
+        "rent_cold": null,
+        "sqm": null,
+        "rooms": null,
+        "flatmates": null,
+        "city": null,
+        "district": null,
+        "address": null,
+        "available_from": null,
+        "available_until": null,
+        "furnished": null,
+        "posted": null,
+        "image_url": null,
+        "description": "+ 44,99 €\n- 49,99 €",
+        "item": null,
+        "page": {
+          "added": [
+            "44,99 €"
+          ],
+          "removed": [
+            "49,99 €"
+          ],
+          "now": "FJORD 44,99 €"
+        }
+      },
+      "reason": "FJORD now 44,99 € instead of 49,99 €.",
+      "warnings": [],
+      "application": null,
+      "at_start": false,
+      "over_max": null
+    },
+    {
       "id": 104,
       "hunt_id": 3,
       "state": "new",
@@ -37,7 +79,8 @@
           "reserved": false,
           "bids": null,
           "ends": null
-        }
+        },
+        "page": null
       },
       "reason": "Free office chair in good condition, Garching — fits.",
       "warnings": [],
@@ -82,7 +125,8 @@
           "reserved": false,
           "bids": null,
           "ends": null
-        }
+        },
+        "page": null
       },
       "reason": "75 € plus shipping from 4.99 €, like new — fits.",
       "warnings": [
@@ -129,7 +173,8 @@
           "reserved": false,
           "bids": null,
           "ends": null
-        }
+        },
+        "page": null
       },
       "reason": "110 € VB, like new, Garching — fits with negotiation.",
       "warnings": [
@@ -176,7 +221,8 @@
           "reserved": false,
           "bids": null,
           "ends": null
-        }
+        },
+        "page": null
       },
       "reason": "80 €, like new, Garching (5 km) — fits.",
       "warnings": [],
@@ -209,7 +255,8 @@
         "posted": "2026-10-24T09:58:00Z",
         "image_url": null,
         "description": "Wir vermieten ab 1. Dezember eine helle 2-Zimmer-Wohnung im 3. OG mit Südbalkon. Warmmiete 980 € inkl. Nebenkosten und Heizung. Einbauküche vorhanden, Keller, Fahrradkeller. U-Bahn Hohenzollernplatz 3 Minuten.",
-        "item": null
+        "item": null,
+        "page": null
       },
       "reason": "€980 warm, 42 m² with a balcony in Schwabing, from 1 Dec — fits.",
       "warnings": [],
@@ -242,7 +289,8 @@
         "posted": "2026-10-24T07:21:00Z",
         "image_url": null,
         "description": "Ruhige 2-Zimmer-Wohnung, 51 m², 2. OG, Balkon zum Hof. Gesamtmiete 1.150 €. Bezug ab Januar.",
-        "item": null
+        "item": null,
+        "page": null
       },
       "reason": "51 m² for €1,150 warm in Freimann; the 40 m²+ limit of €1,200 applies.",
       "warnings": [
@@ -281,7 +329,8 @@
         "posted": "2026-10-23T18:05:00Z",
         "image_url": null,
         "description": "Wir ziehen beide aus, die ganze Wohnung (2 Zimmer) wird neu vermietet. Du ziehst mit einer Person deiner Wahl ein.",
-        "item": null
+        "item": null,
+        "page": null
       },
       "reason": "Whole 2-person WG is re-let; you choose the flatmate. €610 warm.",
       "warnings": [],

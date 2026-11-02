@@ -1,7 +1,7 @@
 import SwiftUI
 import UserNotifications
 
-/// Arestemis: the shared Empire login, then two tabs (Hunts, Listings); a hunt's search opens from the hunt. Logged in once in any Empire app means
+/// Arestemis: the shared Empire login, then two tabs (Hunts, Listings: New | Searches); a hunt's search opens from the hunt. Logged in once in any Empire app means
 /// logged in here. `-sampleData` shows the bundled samples (see `LaunchOptions` for the screenshot arguments).
 /// A new match arrives as a push (Shared/Push); tapping it, or its "Open listing" / "Application" action, opens the match.
 struct ContentView: View {
@@ -45,10 +45,9 @@ struct ContentView: View {
                                                                              ownMode: options.ownMode, noTexts: options.noTexts,
                                                                              slowed: options.slowed,
                                                                              newerKind: options.newerKind,
-                                                                             ebayNotReady: options.ebayNotReady)) {
-            let store = ArestemisStore(session: session, backend: sample, sample: true)
-            store.selectedHuntID = options.sampleHunt
-            return store
+                                                                             ebayNotReady: options.ebayNotReady,
+                                                                             watchRead: options.watchRead)) {
+            return ArestemisStore(session: session, backend: sample, sample: true)
         }
         #endif
         return ArestemisStore(session: session, backend: ArestemisAPI(token: { session.token }))
@@ -59,7 +58,8 @@ struct ContentView: View {
             if store.isSample || session.isSignedIn {
                 if store.overview != nil {
                     MainTabs(store: store, navigation: navigation, logOut: logOut,
-                             scrollsToBottom: store.isSample && options.scrollTo == "bottom" && options.form == nil)
+                             scrollsToBottom: store.isSample && options.scrollTo == "bottom" && options.form == nil,
+                             scrollsToHunt: store.isSample ? options.scrollToHunt : nil)
                 } else {
                     ProvinceLoading(name: "Arestemis", bust: Image("Bust"), accent: Look.accent,
                                     message: store.isLoadingOverview ? nil : store.overviewError,
@@ -127,13 +127,15 @@ private struct MainTabs: View {
     @Bindable var navigation: AppNavigation
     let logOut: () -> Void
     var scrollsToBottom = false
+    var scrollsToHunt: Int? = nil
     @Environment(\.openURL) private var openURL
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         TabView(selection: $navigation.tab) {
             Tab("Hunts", systemImage: "scope", value: AppTab.hunt) {
-                HuntsScreen(store: store, navigation: navigation, scrollsToBottom: scrollsToBottom)
+                HuntsScreen(store: store, navigation: navigation, scrollsToBottom: scrollsToBottom,
+                            scrollsToHunt: scrollsToHunt)
             }
             Tab("Listings", systemImage: "list.bullet.rectangle", value: AppTab.listings) {
                 ListingsScreen(store: store, navigation: navigation)
@@ -144,7 +146,7 @@ private struct MainTabs: View {
             Group {
                 switch sheet {
                 case .settings: SettingsSheet(store: store, logOut: logOut)
-                case .rejected: RejectedSheet(store: store)
+                case .rejected(let hunt): RejectedSheet(store: store, hunt: hunt)
                 case .application(let id): ApplicationSheet(matchID: id, store: store)
                 }
             }

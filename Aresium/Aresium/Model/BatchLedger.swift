@@ -46,7 +46,7 @@ nonisolated enum BatchLedgerAction: Sendable {
 }
 
 /// Private value token never leaves memory. Snapshot equality supplements the ledger context's save revision.
-/// Undo restores only category/source/extras, own names and rules that this action changed.
+/// Undo restores category/source/extras, own names, links and rules that this action changed.
 nonisolated struct BatchLedgerUndo: Sendable {
     let ledger: UUID
     let revision: UInt64
@@ -77,14 +77,14 @@ nonisolated struct BatchLedgerResult: Sendable {
 }
 
 extension PhoneLedger {
-    private func batchObserver() -> BatchSaveObserver {
+    func batchObserver() -> BatchSaveObserver {
         if let batchSaveObserver { return batchSaveObserver }
         let observer = BatchSaveObserver(context: modelContext)
         batchSaveObserver = observer
         return observer
     }
 
-    private func batchSnapshot() throws -> LedgerExport { try export(on: Date(timeIntervalSince1970: 0)) }
+    func batchSnapshot() throws -> LedgerExport { try export(on: Date(timeIntervalSince1970: 0)) }
 
     /// One actor operation for all rows. Awaited engine work precedes every mutation; a save revision check catches
     /// reentrant changes during those awaits. All fetching, planning, applying and snapshot lifetimes stay off main.
@@ -93,6 +93,7 @@ extension PhoneLedger {
         assert(!Thread.isMainThread)
         let timing = PickerTiming.begin("batch.change")
         defer { timing.end() }
+        configurePaybacks(catalog: catalog)
         let observer = batchObserver(), revision = observer.value
         let before = try batchSnapshot()
         let selected = try batchSelected(ids, from: before, span: span)
@@ -237,6 +238,7 @@ extension PhoneLedger {
                     changed.bankPayments += 1
                 }
             }
+            try removeTransferPaybacks()
             try modelContext.save()
         } catch {
             modelContext.rollback()
@@ -357,6 +359,7 @@ extension PhoneLedger {
             if !plan.changesExtras {
                 try batchRemember(Dictionary(uniqueKeysWithValues: plan.keys.map { ($0, plan.target) }))
             }
+            try removeTransferPaybacks()
             try modelContext.save()
         } catch { modelContext.rollback(); throw error }
         let observer = batchObserver()
@@ -382,11 +385,18 @@ extension PhoneLedger {
                 payment.categorySource = old.categorySource.rawValue
                 payment.extraCategories = old.extraCategories
                 payment.ownName = old.ownName
+                payment.paysBack = old.paysBack
             }
             for receipt in try modelContext.fetch(FetchDescriptor<StoredReceipt>()) {
                 guard let old = oldReceipts[receipt.id], old != newReceipts[receipt.id] else { continue }
                 receipt.category = old.category
                 receipt.categorySource = old.categorySource.rawValue
+            }
+            // Category removal's undo restores its list entry as well as its payments and learned rules.
+            let currentCategories = Set(try chosen().map(\.id))
+            for category in before.categories where !currentCategories.contains(category.id) {
+                modelContext.insert(StoredChosen(id: category.id, customName: category.name, order: category.order,
+                                                 look: category.look, side: category.side, otherSide: category.otherSide))
             }
             let oldRules = Dictionary(uniqueKeysWithValues: before.learned.map { ($0.merchant, $0.category) })
             let newRules = Dictionary(uniqueKeysWithValues: after.learned.map { ($0.merchant, $0.category) })

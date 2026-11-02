@@ -139,7 +139,7 @@ struct SummedPayments: Identifiable {
     init(key: String, rows: [TransactionRow]) {
         self.key = key
         self.rows = rows
-        cents = rows.reduce(0) { $0 + Int(($1.transaction.amount * 100).rounded()) }
+        cents = rows.reduce(0) { $0 + Int(($1.transaction.countedAmount * 100).rounded()) }
     }
 
     var id: String { "sum:" + key }

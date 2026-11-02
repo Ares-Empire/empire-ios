@@ -48,7 +48,7 @@ struct HuntsStoreTests {
         let gate = RequestGate(); transport.gates["POST /hunts"] = gate
         let action = Task { await store.saveHunt(id: nil, kind: .item, name: nil, search: original[1].hunt.search) }
         await gate.waitUntilPaused()
-        #expect(store.hunts.count == 6 && store.hunts.last?.id == -1)
+        #expect(store.hunts.count == 9 && store.hunts.last?.id == -1)
         gate.resume(); #expect(await action.value == nil)
         #expect(store.hunts == original && store.searchError == "This account has 30 hunts. Delete one first.")
     }
@@ -66,36 +66,50 @@ struct HuntsStoreTests {
         #expect(store.hunts[1].sources.isEmpty && !store.hunts[1].hunt.active)
         await store.setActive(id: 2, active: true)
         #expect(store.hunts[1].sources == [.kleinanzeigen, .ebay])
-        store.selectedHuntID = 2
-        await store.loadMatches(.all)
-        #expect(store.matches(.all).map(\.id) == [32, 31, 30, 29, 28])
-        await store.loadRejected(); #expect(store.rejected.isEmpty)
+        await store.loadMatches(.all, hunt: 2)
+        #expect(store.matches(.all, hunt: 2).map(\.id) == [32, 31, 30, 29, 28])
+        await store.loadRejected(hunt: 2); #expect(store.rejected(hunt: 2).items.isEmpty && store.rejected(hunt: 2).loaded)
         await store.loadApplication(for: 31)
         #expect(store.application(31).error == "Application texts are for flats.")
         let new = try #require(await store.saveHunt(id: nil, kind: .item, name: "Second chair", search: item.search))
-        #expect(new.id == 6 && !new.active && store.hunts.count == 6)
+        #expect(new.id == 9 && !new.active && store.hunts.count == 9)
         #expect(await store.deleteHunt(id: 2))
-        #expect(store.selectedHuntID == nil && store.card(1)?.hunt == originalFlat && !store.hunts.contains { $0.id == 2 })
+        #expect(store.card(1)?.hunt == originalFlat && !store.hunts.contains { $0.id == 2 })
+        #expect(!store.list(.all, hunt: 2).loaded && !store.rejected(hunt: 2).loaded)     // forgotten, asked again
         #expect(store.match(31) == nil && store.match(41) != nil && store.application(31).error == nil)
         await store.loadMatches(.all)
         #expect(store.matches(.all).allSatisfy { $0.huntID != 2 } && store.matches(.all).contains { $0.huntID == 1 })
     }
-    @Test func staleFilteredPagesDoNotReplaceTheNewSelection() async throws {
+    /// Each search's lists are their own (brief 133): a page of one search, answered late, fills only that search's list.
+    @Test func eachSearchsListsAreTheirOwn() async throws {
         let (store, transport, _) = try await makeStore()
         await store.reloadOverview()
         try transport.answer("GET /matches", sample: "item-matches")
-        store.selectedHuntID = 2
         let gate = RequestGate(); transport.gates["GET /matches"] = gate
-        let load = Task { await store.loadMatches(.all) }
+        let load = Task { await store.loadMatches(.all, hunt: 2) }
         await gate.waitUntilPaused()
-        store.selectedHuntID = 1
         try transport.answer("GET /matches", sample: "matches")
-        await store.loadMatches(.all)
+        await store.loadMatches(.all, hunt: 1)
         gate.resume(); await load.value
-        #expect(store.matches(.all).map(\.id) == [41, 40, 38] && store.list(.all).ids == [41, 40, 38])
-        #expect(store.match(31) == nil && !store.list(.all).isLoading)
+        #expect(store.list(.all, hunt: 1).ids == [41, 40, 38] && store.matches(.all, hunt: 1).map(\.id) == [41, 40, 38])
+        #expect(store.list(.all, hunt: 2).ids == [31, 30, 29, 28] && !store.list(.all, hunt: 2).isLoading)
+        #expect(!store.list(.all).loaded && store.matches(.all).count == 7)
         let queries = transport.requests("GET /matches").compactMap { URLComponents(url: $0.url!, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "hunt" }?.value }
         #expect(queries == ["2", "1"])
+    }
+
+    /// A page asked for before a hunt was deleted is dropped: the lists were forgotten meanwhile.
+    @Test func aPageAskedBeforeADeletionIsDropped() async throws {
+        let (store, transport, _) = try await makeStore()
+        await store.reloadOverview()
+        try transport.answer("GET /matches", sample: "matches")
+        transport.answer("DELETE /hunts/2", 204, json: Data())
+        let gate = RequestGate(); transport.gates["GET /matches"] = gate
+        let load = Task { await store.loadMatches(.new) }
+        await gate.waitUntilPaused()
+        #expect(await store.deleteHunt(id: 2))
+        gate.resume(); await load.value
+        #expect(!store.list(.new).loaded && !store.list(.new).isLoading)
     }
     @Test func sampleLimitsHaveTheContractSentences() async throws {
         let backend = try SampleBackend(options: .init(noHunt: true))
@@ -123,7 +137,7 @@ struct HuntsStoreTests {
         #expect(item.actions.map(\.title) == ["Open listing"])
         #expect(MatchNotification.link(url: URL(string: "arestemis://match/31"), action: item.actions[0].identifier)
                 == ArestemisLink(match: 31, then: .openListing))
-        let options = LaunchOptions(arguments: ["-sampleData", "-sampleHunt", "2"])
-        #expect(options.sample && options.sampleHunt == 2)
+        let options = LaunchOptions(arguments: ["-sampleData", "-openSearch", "2"])
+        #expect(options.sample && options.openSearch == 2 && options.tab == .listings)
     }
 }

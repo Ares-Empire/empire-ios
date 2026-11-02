@@ -237,7 +237,7 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
    Testing). Build 2 (2026-10-30): the fixes of Patrik's first test (briefs 34–37). Build 3: the picker's scroll, the
    back swipe and the comfort items (briefs 38–41). Build 4 (2026-10-30 evening): own names and the name's page with the
    left swipe, the graph as a setting, Aresium's own messages (briefs 42–46). Build 5 (2026-10-30 night): the payment page with pens, switches readable in
-   dark, no cover flash, one shop under changing names, adding up names in a list (briefs 47, 48, 53, 54). Build 6 (2026-10-31): day tiles as dates, the name's months as pages, Settings' work off the main thread, the graph read by sliding and moving away, the header without boxes, the add-up icon fixed (briefs 55–57, fix 58). Build 7 (2026-10-31 evening): the tour in one walk of 18 steps over everything above (brief 59). Build 8 (2026-10-31 night): New category in the change window, the receipt window and Add cash (brief 60). Build 9 (2026-11-01): every category has a side (own categories for income too, "Andere Kategorie …" offers one of the other side, side and offers in Settings → Categories), and every payment counts as it happened, money out as Ausgaben and money in as Einnahmen under its own category (briefs 68–71). Build 10 (2026-11-01): one name per shop (the newest bank line that names it, never a PayPal or card line), search by name, a day's page from a tap on the day graph, unsorted money in shown as Nicht sortiert (briefs 76, 77). Build 11 (2026-11-01): a typed category name that exists is used (offered, ticked or picked), rename every category, delete one's own and remove defaults with their payments sorted again (brief 80; brief 81's selection data inside, its screens in build 12). Build 12 (2026-11-01): select several payments in a category's month list as in Mail and move, add to or rename them at once with one question and an undo (briefs 81, 82); Save in Add asks to leave the current category and about the shop's other payments (brief 83); the engine's sorting and reading round 1 (aresium briefs 84, 85). Build 13 (2026-11-01): sorting round 3 (card spellings, compounds, regional utilities, cars; aresium brief 96) and the local places list from OpenStreetMap, packed and kept loaded (aresium briefs 86, 97; app brief 98), with its ODbL entry in Fonts & licences. Build 14 (2026-11-02): the quick sort, Not sorted gone through name by name, the biggest first, one tap sorting a name's payments and teaching it; offered after an import and as a card on Not sorted (brief 99). Build 15 (2026-11-02): selecting calmer (a tick fades in place, the count changes at once, one short slide in) and selecting by sliding a finger over the rows as in Mail, with the list scrolling at its edges (brief 200). **Arestemis 0.1 (1) uploaded 2026-10-30** (after its comfort items, brief 49). Arestemis build 2 (2026-10-31 evening): Patrik's fine-tuning rounds 1–3, no "KI" anywhere, "Suche starten", no one-account line on the login (`docs/reviews/2026-10-31-arestemis-phone-test.md`). Arestemis build 3 (2026-10-31 night): Settings → Application as rows with the switch, notes and About you pages, settings loaded with the home screen, ImmoScout24 known to the app, "Suche läuft" (briefs 61, 62). Arestemis build 4 (2026-11-01 night): the black corner on the hunt's card (the glass card's blur no longer drawn offscreen, brief 67), German tabs Suche / Angebote / Filter. Arestemis build 5 (2026-11-01 evening): build 4 still showed it; the real cause was the pulse redrawing pathless shadows offscreen every frame, so `GlassCard` draws none (brief 87). Arestemis build 6 (2026-11-02): several hunts and things for sale on Kleinanzeigen: two tabs Suche / Angebote, the Hunts list, the thing search and the thing cards (briefs 113, 114; server briefs 110–117, plan `ares-empire/docs/ARESTEMIS-ANYTHING.md`). Arestemis build 7 (2026-11-02): the sites come from the server (`GET /kinds`), eBay's auctions shown (brief 119). Arestemis build 8 (2026-11-02): sites that cannot serve the chosen delivery greyed and switched off (IKEA Preowned pickup only, Vinted and mydealz shipping only), the OpenStreetMap credit (brief 129; server briefs 124–128). **Aresus 0.1 (1) uploaded 2026-10-31 21:16** (98 tests; the
+   dark, no cover flash, one shop under changing names, adding up names in a list (briefs 47, 48, 53, 54). Build 6 (2026-10-31): day tiles as dates, the name's months as pages, Settings' work off the main thread, the graph read by sliding and moving away, the header without boxes, the add-up icon fixed (briefs 55–57, fix 58). Build 7 (2026-10-31 evening): the tour in one walk of 18 steps over everything above (brief 59). Build 8 (2026-10-31 night): New category in the change window, the receipt window and Add cash (brief 60). Build 9 (2026-11-01): every category has a side (own categories for income too, "Andere Kategorie …" offers one of the other side, side and offers in Settings → Categories), and every payment counts as it happened, money out as Ausgaben and money in as Einnahmen under its own category (briefs 68–71). Build 10 (2026-11-01): one name per shop (the newest bank line that names it, never a PayPal or card line), search by name, a day's page from a tap on the day graph, unsorted money in shown as Nicht sortiert (briefs 76, 77). Build 11 (2026-11-01): a typed category name that exists is used (offered, ticked or picked), rename every category, delete one's own and remove defaults with their payments sorted again (brief 80; brief 81's selection data inside, its screens in build 12). Build 12 (2026-11-01): select several payments in a category's month list as in Mail and move, add to or rename them at once with one question and an undo (briefs 81, 82); Save in Add asks to leave the current category and about the shop's other payments (brief 83); the engine's sorting and reading round 1 (aresium briefs 84, 85). Build 13 (2026-11-01): sorting round 3 (card spellings, compounds, regional utilities, cars; aresium brief 96) and the local places list from OpenStreetMap, packed and kept loaded (aresium briefs 86, 97; app brief 98), with its ODbL entry in Fonts & licences. Build 14 (2026-11-02): the quick sort, Not sorted gone through name by name, the biggest first, one tap sorting a name's payments and teaching it; offered after an import and as a card on Not sorted (brief 99). Build 15 (2026-11-02): selecting calmer (a tick fades in place, the count changes at once, one short slide in) and selecting by sliding a finger over the rows as in Mail, with the list scrolling at its edges (brief 200). Build 16 (2026-11-02): money paid back, a payment in linked by hand to the expense it pays back (all or a part, from either payment's page, suggestions first), so only one's own share counts as spent; one optional tour step (briefs 201–203). **Arestemis 0.1 (1) uploaded 2026-10-30** (after its comfort items, brief 49). Arestemis build 2 (2026-10-31 evening): Patrik's fine-tuning rounds 1–3, no "KI" anywhere, "Suche starten", no one-account line on the login (`docs/reviews/2026-10-31-arestemis-phone-test.md`). Arestemis build 3 (2026-10-31 night): Settings → Application as rows with the switch, notes and About you pages, settings loaded with the home screen, ImmoScout24 known to the app, "Suche läuft" (briefs 61, 62). Arestemis build 4 (2026-11-01 night): the black corner on the hunt's card (the glass card's blur no longer drawn offscreen, brief 67), German tabs Suche / Angebote / Filter. Arestemis build 5 (2026-11-01 evening): build 4 still showed it; the real cause was the pulse redrawing pathless shadows offscreen every frame, so `GlassCard` draws none (brief 87). Arestemis build 6 (2026-11-02): several hunts and things for sale on Kleinanzeigen: two tabs Suche / Angebote, the Hunts list, the thing search and the thing cards (briefs 113, 114; server briefs 110–117, plan `ares-empire/docs/ARESTEMIS-ANYTHING.md`). Arestemis build 7 (2026-11-02): the sites come from the server (`GET /kinds`), eBay's auctions shown (brief 119). Arestemis build 8 (2026-11-02): sites that cannot serve the chosen delivery greyed and switched off (IKEA Preowned pickup only, Vinted and mydealz shipping only), the OpenStreetMap credit (brief 129; server briefs 124–128). Arestemis build 9 (2026-11-02): page watches, a third kind of hunt (brief 131; server brief 130), a blocked watch reads Stopped. Arestemis build 10 (2026-11-02): Angebote as New | Searches and a search over all found listings, best match first (brief 133; server brief 132). **Aresus 0.1 (1) uploaded 2026-10-31 21:16** (98 tests; the
    Aresync tab included; Arestemis's outage alerts come from the aresus server, brief 64, no app change). **Empire 0.1
    (1) uploaded 2026-11-01 02:13** (306 tests; the uploaded build carries `aps-environment` production) and **Arestoteles
    0.1 (1) uploaded 2026-11-01 02:25** (156 tests; the bust without the watermark, brief 72; Spotlight and backup fixes,
@@ -496,12 +496,12 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   `AresusUITests` (UI tests, in the scheme): Settings → Language switched both ways with the real taps, about a minute.
 - **Arestemis app** (2026-10-24, build A1): `Arestemis/` (bundle id `de.ares-empire.arestemis`), the hunter for flats and, since
   build 6 (briefs 113, 114, 2026-11-02), things for sale: several hunts, two tabs Suche (the Hunts list, each hunt's page, the
-  forms opened from a hunt) and Angebote (hunt chips), on the Arestemis API (`~/Arestemis/docs/API.md`; samples in `Arestemis/Arestemis/Samples/`, copies of its `docs/samples/`).
+  forms opened from a hunt) and Angebote (New | Searches since brief 133, below), on the Arestemis API (`~/Arestemis/docs/API.md`; samples in `Arestemis/Arestemis/Samples/`, copies of its `docs/samples/`).
   Data in `API/` + `Model/` (one `ArestemisStore`, optimistic changes with rollback), screens in `Screens/` on
   `Shared/Design`. Launch arguments (DEBUG): `-sampleData` (+ `-sampleNoHunt`, `-samplePaused`, `-sampleLoading`),
   `-tab hunt|listings|search` (`search`: the first hunt's form), `-filter new|saved|applied|all`, `-openMatch <id>`, brief 114's
   `-openHunt <id>`, `-openForm <id>`, `-openItemForm`, `-newItemForm`, `-newFlatForm`, `-newSearch` (the kind dialog),
-  `-sampleHunt <id>` (the Listings chip), `-sampleSlowed`, `-sampleNewerKind`;
+  `-sampleSlowed`, `-sampleNewerKind`; brief 133's `-listings new|searches`, `-openSearch <id>`, `-search <words>`;
   `-openSheet settings|application|rejected|place|describe`, `-scrollBottom`, `-scrollTo size|rent|movein` (the thing form:
   `where`); Settings →
   Application (brief 61): `-openSettingsPage ownText|notes|aboutMe`, `-sampleOwnMode`, `-sampleNoTexts`. Push: the category and
@@ -525,6 +525,49 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   `Licences/town-locations-licence.txt`; the server looks up thing searches' towns on Nominatim). Sample hunts 4
   (Bookcase, pickup, IKEA Preowned) and 5 (Denimwerk jeans, shipping, Vinted) with matches 33 and 34
   (`DeliverySitesTests`; DEBUG `-sampleDelivery pickup|shipping|either`, chosen in the thing form as a tap would).
+  **Page watches** (brief 131, 2026-11-02; server brief 130, plan `ares-empire/docs/ARESTEMIS-ANYTHING.md` → Page watches):
+  a third kind, `watch` ("Watch a page" / "Seite beobachten", offered when `/kinds` lists it): an address, the change in
+  the user's words, how often (15 min to daily, default 1 h) and an optional name (`Model/WatchModels.swift`,
+  `WatchSearchDraft`, `Screens/WatchSearchScreen.swift`, in the thing form's style; a pasted text keeps its first link,
+  `WatchAddress.fromField`). The server decides what can be watched: its refusals come as `400` with `field`
+  (`FieldRefusal`, `ArestemisStore.searchErrorField`) and show under that field. The card (`WatchLines`,
+  `WatchCardText`): the name (own, else the page's title, else the host), the host, what the page says now as its main
+  fact, "Checked … · Changed …"; while waiting, unreadable, failing or blocked one quiet line in muted ink (the server's
+  note; blocked adds that editing tries again), never an alarm colour. The words name a watch "Beobachtung"
+  (`HuntWords`); its third figure is Saved. A found change (`Listing.page`, source `"page"`): the summary as title,
+  "Now: …", Added and Removed lines (removed struck through), Open page; Save and Dismiss only. Push category
+  `ARESTEMIS_WATCH` ("Open page"). Sample hunts 6 (KALLAX, ok), 7 (AirPods on Geizhals, blocked), 8 (Mensa, ok) with
+  matches 35 and 36 (`at_start`); DEBUG `-openWatchForm`, `-newWatchForm` (`-watchURL <text>`, `-watchChange <text>`,
+  `-saveWatch`: the sample imitates the server's refusals), `-sampleWatchRead <read>` (hunt 7's state),
+  `-scrollToHunt <id>`. Tests: `WatchTests`. Screenshots: `build/131-*.png`.
+  **Angebote as "New | Searches"** (brief 133, Patrik 2026-11-02, chosen from three drawn options: with several searches
+  the one list with a chip per search was "a little unorganized"; the chips are gone). The tab's header (`ListingsScreen`)
+  has the magnifying glass and a segmented switch **New | Searches** ("Neu" | "Suchen"); the part the user picks is
+  remembered across launches (`AppNavigation.choose`, `ListingsPartMemory`, key `arestemis.listingsPart`); a
+  notification's match opens over New and a hunt's page shows Searches without changing that choice. **New:** every
+  search's new listings (`loadMatches(.new)`), grouped under a heading per search (`NewListings.groups`: the search with
+  the newest finding first, newest first within it, by `found` then id; `NewGroupHeading`: the kind's mark, the name,
+  the hunt card's "● 3 NEW" and a chevron opening that search's listings at New; no headings while the account has one
+  search), the usual swipes, a group gone with its last new listing; then "Filtered out" of every search. **Searches:**
+  one glass card per search in the Hunts tab's order, paused ones too (`SearchRow`, `SearchRowCard`): the kind's mark
+  and name, the new count, "2 saved · 1 applied" ("asked" for things, saved only for a watch, "Paused" first) in a quiet
+  line; a kind this build does not know shows its name only. A tap opens **one search's listings**
+  (`SearchListingsPage`, `ListingsRoute.hunt`): its name as the title, the magnifying glass for its own listings, New ·
+  Saved · Applied/Asked · All (a watch has no Applied, `MatchFilter.choices`; it opens at New while there are new ones,
+  else All, `MatchFilter.opening`), its own "Filtered out" (`RootSheet.rejected(hunt)`). A hunt's page's Listings and
+  figures open it over Searches (`AppNavigation.showSearch`); the Hunts tab's "All listings" opens the tab as it was.
+  The store keeps its lists per search and filter (`ArestemisStore.ListScope`, `list(_:hunt:)`, `matches(_:hunt:)`,
+  `rejected(hunt:)`; `selectedHuntID` is gone); deleting a hunt forgets them and the screens ask again. **The search over
+  listings** (`ListingSearchPage`, `ListingsRoute.find(hunt:)`; the server ranks, server brief 132, `GET /matches?q=`):
+  the place search's field on its glass card (`SearchBox`, shared with Add place), the keyboard up as it opens, the
+  hint "Type at least two letters. The best matches come first."; from two letters, 0.3 s after typing pauses, the
+  server's answer in its order (`ListingSearch`: a newer query cancels the older, the same words are not asked twice, at
+  most 100 characters, 50 results with "More listings match. Another word narrows it down." when there are more); each
+  row the usual card with its state (NEW too) and, over every search, the search's mark and name above it; tap, swipes
+  and long press as elsewhere; "Nothing found for “…”." / "Nichts gefunden für „…“."; a failure is a calm line with Try
+  again. Sample mode imitates the server's search simply (`SampleBackend.findMatches`; the app never ranks). Tests:
+  `ListingsTests`; the server's sample answer `ArestemisTests/ServerSamples/server-matches-search.json`. Screenshots:
+  `build/133-*.png`.
 - **Arestoteles app** (2026-10-24, build R2): `Arestoteles/` (bundle id `de.ares-empire.arestoteles`, URL scheme
   `arestoteles`), Patrik's Weltbild vault on the Arestoteles API (`Arestoteles/docs/API.md`, decisions
   `ares-empire/docs/ARESTOTELES-APP.md`; samples in `Arestoteles/Arestoteles/Samples/`, copies of its `docs/samples/`).
@@ -626,9 +669,10 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   `storage`). **Lifecycle:** the data belongs to the iPhone, not to a login: logging in or out, leaving Aresium and
   deleting the Ares account never touch it; it goes only with Settings → Delete Aresium data on this iPhone or the
   lock's "Forgot the code?". Settings → Your data on this iPhone (phone mode): Categories, Receipts, Export (one JSON file,
-  schema 6 with the receipts, cash entries, corrected shop names, payment names, category sides and default personal names, `Aresium-<date>.json`, through the share sheet), Restore
+  schema 7 with the receipts, cash entries, corrected shop names, payment names, category sides, default personal names
+  and the links of money paid back (brief 202), `Aresium-<date>.json`, through the share sheet), Restore
   from an export (only into an empty store, all or nothing; chosen categories and corrected shop names are replaced;
-  schema 1–5 files still restore).
+  schema 1–6 files still restore).
   **Payment names and groups** (brief 43, data only; `Model/PaymentNames.swift`, screens in brief 44):
   `LedgerPayment.place` always stays the bank name; sorting, learning and receipt matching use only those original
   fields. Schema 5 adds `LedgerPayment.ownName` and merchant → name rules (`PhoneLedger.paymentNames()`); export schema
@@ -976,8 +1020,8 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   as it is, and the shared undo bar (`UndoBar`, `accent: nil` = Undo in ink; above the selection's bar while one shows)
   says it in brief 81's words (`result.message`; after All the selection's and the others' count together,
   `SelectionWording.done`) with Undo (`BatchUndo.perform`); a refused undo shows its line alone ("Cannot undo because
-  the data changed."), as does a failed action (`UndoOffer(message:)` without Undo, Shared). **The tour**: step 10 of 21
-  (`TourStep.select`, after the payment's switch and before Add up): the ring on the icon (`.selectIcon`), "Tap to select
+  the data changed."), as does a failed action (`UndoOffer(message:)` without Undo, Shared). **The tour**: step 11 of 22
+  (`TourStep.select`, after the payment's paid back step and before Add up): the ring on the icon (`.selectIcon`), "Tap to select
   several payments and move or rename them at once." / "Tippe hier, um mehrere Buchungen auszuwählen und auf einmal zu
   verschieben oder umzubenennen.", Next; selecting frees the screen and works on the tour's store; Next ends it.
   DEBUG (with `-samplePhone -sampleCategory <name> -sampleMonth <YYYY-MM>`): `-selectPayments <n|all>` (selecting, the
@@ -1038,6 +1082,71 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   middle scrolls and ticks nothing, and a slide held at the bottom edge scrolls and ticks the rows that came into view
   (held 5 s: all 48, the last row 8 pt above the bar). Screenshots: `build/200-slide-{en,de}-{light,dark}.png`,
   `build/200-slide-de-red.png`.
+  **Money paid back** (briefs 201–203, Patrik 2026-11-02: expenses paid back to him, one in full and two by half,
+  should show only his share; he chose a link made by hand, "it remains a completely optional thing to do"). **The
+  rule** (brief 201, aresium `docs/API-DATA.md`; the second exception to counting as it happened): a payment that came
+  in can pay back payments that went out, all or a part, because the person linked them; those euros come off the
+  expense, in its month, day and categories (tags too, once in the headline), and are not income. Limits: a payment in
+  pays back at most its own amount, an expense gets back at most its own; only stored bank payments in euros, never
+  transfers, withdrawals, receipts or cash entries; nothing is matched automatically. The engine gives each transaction
+  `counted` (only when it differs), the expense `paidBack`/`paidBackBy`, the payment in `paysBack`, and the dashboard
+  `paybacksIgnored` (logged in DEBUG; empty after any app operation). **The data** (brief 202, `Model/Paybacks.swift`,
+  `Model/PaybackLedger.swift`): a link lives on the payment in (`LedgerPayment.paysBack`, ledger schema 7, export schema
+  7); every number the app adds up itself uses `Transaction.countedAmount` (name groups, summed rows, the day page's
+  totals, the selection's total, the quick sort); a move to a transfer category drops the links at either end (its
+  undo brings them back). `DashboardStore.paybackState(for:)` (direction and `rest`, nil where it cannot take part),
+  `paybackSuggestions(for:)` (what fits first: whole, half, a third, a quarter or the rest within a cent; then the
+  nearest days; money in from 30 days before to 120 after the expense; at most 8), `paybackSearch(_:for:)` (names as
+  the name search spells them, no date window), `setPayback(from:to:amount:)` and `removePayback(from:to:)` (one save,
+  one rebuild, a `BatchUndo`); `from` is always the payment in. The state and the suggestions skip the search's
+  spellings (`paybackCandidates(names: false)`: no shop identities; brief 203 measured the state at 146 → 69 ms on the
+  sample and 489 → 417 ms at 5,000 payments on the simulator). Non-euro payments are not offered yet (`TODO(api)`: the
+  engine gives no currency after PayPal folding). The tour's sample has one made-up case (`TourData`: "Ferienwohnung
+  Fiktivsee" −128 €, half paid back by "Max Mustermann" a day later, linked by `linkSamplePayback`; DEBUG
+  `-sampleNoPayback` leaves it unlinked). **The screens** (brief 203, Claude; words and models `Model/PaybackPage.swift`,
+  look `Screens/PaybackScreens.swift`): optional and quiet: one action on a payment's page and one tour step, no prompts
+  after an import, no badges, no offers anywhere else. **The payment's page**: a section after its rows and receipt,
+  before the bank's own row (`PaybackSection`, `PaybackSectionContent`): while the payment has euros free one quiet row
+  in the secondary ink with SF `link`, "Pays back an expense…" / "Zahlt eine Ausgabe zurück …" (money in) or "Paid back
+  to you…" / "Wurde zurückgezahlt …" (money out), "Also pays back…" / "Also paid back by…" once linked; each link under
+  "Pays back" / "Paid back" as a card in the "All from" card's look (the other payment's name, its day and own amount,
+  the linked euros, the chevron), which opens the other payment's page **pushed on the sheet's own stack** (the
+  sheet is now `TransactionDetailSheet`'s `NavigationStack` with `PaymentDetailPage`s; a link back to a page already
+  open goes back to it; Done closes the sheet from any page); the pen beside the card ("Change link") opens its euros
+  with **Remove link**, and the card's long press has Change amount and Remove link; one line on what still counts
+  ("Your share, €64.00, counts as spent." / "Paid back in full: none of it counts as spent.", "The rest, €16.00, counts
+  as income." / "None of it counts as income."). After a link is made, changed or removed the undo bar says so ("Linked:
+  €64.00 paid back.", "Changed to €50.00.", "Link removed.") with Undo; the page reads its payment again whenever the
+  dashboard is rebuilt (`TransactionDetailStore.refresh`). `PaybackLinks.load` reads the state off the main thread as the
+  page opens (the room of the action is kept meanwhile, so the bank's row does not jump). **The window**
+  (`PaybackSheet`, a sheet over the page as the change window): the bar "Paid back by" / "Pays back" with Cancel, the
+  payment's name and amount, "Which payment paid this back?" / "Which expense does this pay back?", the search field
+  ("Search names"), then SUGGESTED (each row: the category's tile, the name, its day and what fits in the second ink,
+  "29 Oct · half" / "29. Okt. · die Hälfte"; "in full", "a third", "a quarter", "the rest"; its own amount; the
+  chevron) or, while typing, what the search finds ("No payment found for “…”."); a row pushes **Amount**: the two
+  payments (the one that came in over the expense), "How much of it was paid back?", the field with the suggestion's
+  euros (else the smaller rest; `ReceiptAmount.typed`, whole cents), "At most €64.00." (in the expense colour when
+  passed), **Link** / **Verknüpfen** in the bar, muted until it can. A change opens at Amount (Save, Remove link).
+  **The lists**: a row's number is what counts there (`PaybackWording.rowAmount`: `countedAmount`; a counted 0 reads
+  "0.00" in the quiet ink, without a sign), so a list's rows add up to its total; its quiet line says why, in place of
+  the city ("€128.00 · €64.00 back" / "128,00 € · 64,00 € zurück"; "€64.00 · pays back Ferienwohnung Fiktivsee" / "64,00 €
+  · zahlt … zurück", "… 2 expenses"), up to two lines; on a day's page after the category. Summed rows add "· €64.00
+  back" (money in: "· €64.00 not income") to their days. A name that counts nothing keeps its own side (`PaymentNameGroup.spends`:
+  the name's page, its "All from" line); the search writes "0.00" for it. **The tour**: step 10 of 22, after the
+  switch (`TourStep.payback`): the trip's page, its section ringed, "Paid back by someone? If you like, link the payment
+  here: then only your share counts." / "Hat dir jemand etwas zurückgezahlt? Wenn du magst, verknüpfe die Buchung hier:
+  Dann zählt nur dein Anteil."; Next goes on. DEBUG (with `-samplePhone`, the trip and Max Mustermann in last month's
+  Not sorted, `-sampleIncome` for the payment in): `-openPayback` (the window; `-paybackSearch <text>`, `-paybackPick
+  <text>`, `-paybackAmount <text>`, `-paybackKeyboardDown`), `-editPayback` (the first link's euros), `-openLinked` (the
+  first link's payment), `-scrollToPayback`, `-sampleNoPayback`. Tests: `PaybackScreensTests` (the words in both
+  languages, the rows' numbers and lines, the ends and the amount check, link from a payment in through change, remove
+  and undo on a real store, a search beyond the suggestions, a name that counts nothing, the tour's trip), `PaybackTests`
+  (brief 202), `TourTests`. Real touches (a temporary UI test in `Aresus/AresusUITests` driving Aresium, deleted; 3 of
+  3): Max Mustermann's page → Pays back an expense… → the suggestions leave out a Netflix payment eight months back and
+  the search finds it → the half suggestion → 64.00 → Link; the page shows the link and "None of it counts as income.",
+  his row "0.00" with its line; Overview's Not sorted falls by €64; the trip's row "−64.00" with "€128.00 · €64.00
+  back", its page shows the link and opens his page; the card's long press Remove link, the undo bar's Undo brings it
+  back. Screenshots: `build/203-*.png`.
   DEBUG (with `-samplePhone -sampleCategory Groceries -sampleMonth 2026-10 -samplePhoneTransaction REWE
   -sampleRecategorise add`): `-samplePick Clothes -sampleAddSave` picks and taps Save after the sheet opens;
   `-sampleRemoveAnswer keep|remove` answers the first alert and shows the shop alert. Tests: `AddQuestionsTests`,
@@ -1582,8 +1691,9 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   file, this month always full), its own session (never logged in) and widget numbers inside that folder; the person's
   store, categories and learned shops are never opened. The folder is deleted on End tour (always on the card), at the
   end, when a widget's link or a shared file opens the app, and at the next launch if the app was closed during a tour
-  (`removeLeftovers`). **Twenty-one steps, twenty while the graph is hidden** (brief 59, Patrik 2026-10-31: "update the
-  tour so it explains everything and is coherent"; brief 77 added the search, brief 82 selecting, brief 99 the quick sort; `TourStep`, one walk: the start screen, a
+  (`removeLeftovers`). **Twenty-two steps, twenty-one while the graph is hidden** (brief 59, Patrik 2026-10-31: "update the
+  tour so it explains everything and is coherent"; brief 77 added the search, brief 82 selecting, brief 99 the quick sort,
+  brief 203 money paid back; `TourStep`, one walk: the start screen, a
   category, a payment and what can be done with it, the list's swipe and adding up, Settings' places in their real
   order, import, done): welcome; income (the page dots, the swipe); overview (the range); graph (Overview's graph: hold
   and slide reads each month, a tap opens its month's page, which the ring follows, and there a day's; the card says so:
@@ -1593,7 +1703,9 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   own or the bank's. A tap shows all its payments." / "Such nach einem Namen, deinem eigenen oder dem der Bank.
   Antippen zeigt alle seine Buchungen."); category (a row); payment (its row opens the page); rename
   (`.paymentName`: the page's name and pen, the field while open; goes on when a name is saved, `onRenamed`); switch
-  (the category's chip and pen, `.change`; the shop question answered); select (brief 82: the list's select icon,
+  (the category's chip and pen, `.change`; the shop question answered); payback (brief 203: the made-up trip's page,
+  `TourWorld.paybackTrip`, over the list, its section ringed, `.payback`; Next goes on; the page and the payment its link
+  opens are free to try on the tour's store); select (brief 82: the list's select icon,
   `.selectIcon`; selecting frees the screen, Next goes on and ends it); addUp (the list's first single row whose name
   has more payments there: the swipe's or the long press's Add up); sumIcon (the header's icon of adding up, `.sumIcon`;
   its tap); allFrom (the name added up at addUp, `.summed(key)`, or its first row: All opens the name's page, which
@@ -1634,9 +1746,9 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   app's defaults before and after a walk). The import button only answers its step, the band does not enter red mode.
   VoiceOver: the card takes the focus at each step, the highlighted control stays reachable; Reduce Motion: the ring
   jumps, nothing slides. Launch arguments (DEBUG, with `-samplePhone` or `-samplePhoneEmpty`): `-openGuide list|<bank
-  id>` (`-guidePlace app|website`, `-guideSearch <text>`, `-scrollToEnd` the page's end), `-tour <1–21>` (`-tourSettings`:
+  id>` (`-guidePlace app|website`, `-guideSearch <text>`, `-scrollToEnd` the page's end), `-tour <1–22>` (`-tourSettings`:
   its Settings open). Tests: `BankGuideTests`, `TourTests` (every step's target and what moves it on, Next's screens,
-  the hidden graph's 18 and its words, the search's step, every card's German, adding up in memory only, the person's store and defaults
+  the hidden graph's 21 and its words, the search's step, every card's German, adding up in memory only, the person's store and defaults
   untouched, ending at any step). Screenshots: `build/24-*.png`, contact sheet `build/24-sheet.png`; brief 59's walk
   `build/59-*.png`.
   **Receipts** (brief 31, Patrik 2026-10-27; D8 in `ares-empire/docs/ARESIUM-FOR-OTHERS.md` → part 6; phone mode

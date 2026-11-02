@@ -17,7 +17,8 @@ struct DescribeSheet: View {
     private var placeholder: String {
         switch kind {
         case .flat: String(localized: "e.g. WG or flat in Munich for two, up to €1,400 warm, from December, furnished")
-        case .item: String(localized: "e.g. a Herman Miller Aeron up to €450, pickup near Garching or shipped")
+        // A watch's form has no "Describe it": its description is the user's own words already.
+        case .item, .watch: String(localized: "e.g. a Herman Miller Aeron up to €450, pickup near Garching or shipped")
         }
     }
 
@@ -105,18 +106,8 @@ struct PlaceSearchSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: Look.rowGap) {
-                    HStack(spacing: 10) {
-                        Image(systemName: "magnifyingglass").font(.system(size: 14, weight: .medium)).foregroundStyle(Ink.muted)
-                        TextField("", text: $text, prompt: Text("Town or city").foregroundStyle(Ink.muted))
-                            .font(AppFont.text(16)).foregroundStyle(Ink.primary)
-                            .textInputAutocapitalization(.words).autocorrectionDisabled()
-                            .submitLabel(.done)
-                            .onSubmit { focused = false }
-                            .focused($focused)
-                        if search.isSearching { ProgressView().controlSize(.small).tint(Ink.muted) }
-                    }
-                    .padding(.horizontal, 14).frame(height: 48)
-                    .glassCard(radius: 14)
+                    SearchBox(text: $text, prompt: String(localized: "Town or city"), busy: search.isSearching,
+                              capitalization: .words, submit: .done, focused: $focused)
 
                     results
                 }
@@ -184,5 +175,42 @@ struct PlaceSearchSheet: View {
             }
             .glassCard()
         }
+    }
+}
+
+/// A search field on its glass card: the magnifying glass, the field, a small spinner while the server is asked and,
+/// where `clears`, the clear button once something is typed. Place search and the search over listings.
+struct SearchBox: View {
+    @Binding var text: String
+    let prompt: String
+    var busy = false
+    var capitalization: TextInputAutocapitalization = .never
+    var submit: SubmitLabel = .search
+    var clears = false
+    var focused: FocusState<Bool>.Binding
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "magnifyingglass").font(.system(size: 14, weight: .medium)).foregroundStyle(Ink.muted)
+                .accessibilityHidden(true)
+            TextField(text: $text, prompt: Text(verbatim: prompt).foregroundStyle(Ink.muted)) { Text(verbatim: prompt) }
+                .font(AppFont.text(16)).foregroundStyle(Ink.primary)
+                .textInputAutocapitalization(capitalization).autocorrectionDisabled()
+                .submitLabel(submit)
+                .onSubmit { focused.wrappedValue = false }
+                .focused(focused)
+            if busy { ProgressView().controlSize(.small).tint(Ink.muted) }
+            if clears && !text.isEmpty {
+                Button { text = "" } label: {
+                    Image(systemName: "xmark.circle.fill").font(.system(size: 16)).foregroundStyle(Ink.muted)
+                        .frame(width: 44, height: 44).contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, -12)
+                .accessibilityLabel("Clear text")
+            }
+        }
+        .padding(.horizontal, 14).frame(height: 48)
+        .glassCard(radius: 14)
     }
 }

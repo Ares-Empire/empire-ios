@@ -1,6 +1,6 @@
 # 203: Money paid back: the screens and the tour
 
-Status: draft (waits for brief 202)
+Status: merged 2026-11-02 (824 Aresium tests; real touches 3 of 3; tour step 10 of 22; the page's state skips the search's spellings)
 Branch: `claude/203-paid-back` · Worktree: `../empire-ios-203-paid-back` · Built by: a Claude agent (the look and the
 flow) · Simulator: `claude-203` (create it: iPhone 17, iOS 27.0)
 
