@@ -16,15 +16,17 @@ struct PickedFile: Identifiable {
     var thumbnail: UIImage?
 }
 
-/// The send sheet's state (brief 91): what was picked, the folder (nil = Sort later), an optional new folder inside it,
-/// the name (one file), the rules as you type, and Send. The sheet only shows it.
+/// The send sheet's state (brief 91): what was picked, the folder (nil = Sort later) with a new folder inside it when
+/// one was made in the picker (brief 93), the name (one file), the rules as you type, and Send. The sheet only shows it.
 @MainActor @Observable
 final class SendDraft {
     private(set) var picked: [PickedFile] = []
     private(set) var source: DropSource = .file
     /// The folder on the Mac; nil = the fallback folder ("Sort later"). Never carries the new folder (that is `newFolder`).
     private(set) var target: Target?
-    var newFolder = ""
+    /// A folder to make inside `target` as the files land, set by the picker's New folder (or a recent folder made
+    /// that way and not listed by the Mac yet); "" for none. One per send: the server takes one name.
+    private(set) var newFolder = ""
     /// One file: its name, edited without its extension.
     var name = DropNameParts("")
     /// The Mac's folders as a tree (`DropsStore.folders`), kept here so every page of the sheet follows it.
@@ -40,6 +42,11 @@ final class SendDraft {
     }
 
     var hasPicked: Bool { !picked.isEmpty }
+
+    /// The sheet's one height (brief 93, so one swipe down closes it at any height): medium for the three choices,
+    /// large once something is picked.
+    enum Height: Equatable { case medium, large }
+    var height: Height { hasPicked ? .large : .medium }
 
     /// Use what was picked; the folder starts where this kind of file went last (`DropRecentFolders.lastBySource`), else
     /// Sort later.
@@ -61,7 +68,8 @@ final class SendDraft {
         temporary.clear()
     }
 
-    /// A folder from the picker; a recent one brings the new folder it was sent with, unless the Mac now lists it.
+    /// A folder from the picker, with the new folder made there (`DropNewFolder.target`); a recent one brings the new
+    /// folder it was sent with, unless the Mac now lists it (ignoring case: then that folder is chosen).
     func choose(_ target: Target?) {
         (self.target, newFolder) = DropFolderTree.start(from: target, in: tree)
     }
@@ -82,7 +90,8 @@ final class SendDraft {
     /// One file: the rule its name breaks.
     var nameRule: DropNames.Rule? { picked.count == 1 ? name.rule : nil }
 
-    /// The new folder's rule; empty is fine (it is optional), and there is none while the file goes to Sort later.
+    /// The new folder's rule (the picker checked it as it was typed; a recent one was sent before); empty is fine, and
+    /// there is none while the file goes to Sort later.
     var newFolderRule: DropNames.Rule? {
         guard target != nil, !trimmedNewFolder.isEmpty else { return nil }
         return DropNames.newName(trimmedNewFolder)

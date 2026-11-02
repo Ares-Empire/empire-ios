@@ -512,6 +512,16 @@
         }
       }
     },
+    "Choose" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wählen"
+          }
+        }
+      }
+    },
     "Choose %@" : {
       "localizations" : {
         "de" : {
@@ -538,6 +548,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Leeren"
+          }
+        }
+      }
+    },
+    "Create" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anlegen"
+          }
+        }
+      }
+    },
+    "Delete" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Löschen"
           }
         }
       }
@@ -618,6 +648,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ordner"
+          }
+        }
+      }
+    },
+    "Folder name" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ordnername"
           }
         }
       }
@@ -772,12 +812,12 @@
         }
       }
     },
-    "New folder inside (optional)" : {
+    "New folder" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Neuer Ordner darin (optional)"
+            "value" : "Neuer Ordner"
           }
         }
       }
@@ -932,26 +972,6 @@
         }
       }
     },
-    "Remove" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Entfernen"
-          }
-        }
-      }
-    },
-    "Removing …" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wird entfernt …"
-          }
-        }
-      }
-    },
     "Search folders" : {
       "localizations" : {
         "de" : {
@@ -1048,6 +1068,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Das MacBook hat seine Ordner noch nicht gesendet. „Später sortieren“ geht trotzdem."
+          }
+        }
+      }
+    },
+    "The MacBook makes it when the file arrives." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das MacBook legt ihn an, wenn die Datei ankommt."
+          }
+        }
+      }
+    },
+    "The MacBook makes it when the files arrive." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das MacBook legt ihn an, wenn die Dateien ankommen."
           }
         }
       }
@@ -1310,6 +1350,16 @@
         }
       }
     },
+    "new" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "neu"
+          }
+        }
+      }
+    },
     "no sync yet" : {
       "localizations" : {
         "de" : {
@@ -1386,6 +1436,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "gestern %@"
+          }
+        }
+      }
+    },
+    "“%@” is already here." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "„%@“ gibt es hier schon."
           }
         }
       }

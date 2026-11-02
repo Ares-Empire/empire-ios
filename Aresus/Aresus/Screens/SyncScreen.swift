@@ -2,7 +2,8 @@ import SwiftUI
 
 /// The Aresync tab: the files sent to the MacBook (when there are any), every machine with its last sync, then the runs
 /// grouped by day. Quiet runs come folded into one muted line per machine and day; tap a run for its report. The
-/// header's arrow opens the send sheet (`SendSheet`).
+/// header's arrow opens the send sheet (`SendSheet`). A drop swiped open (brief 93) closes on a scroll or a tap anywhere
+/// else on the tab, which then opens nothing (Mail's).
 struct SyncScreen: View {
     let store: AresusStore
     var drops: DropsStore? = nil
@@ -10,6 +11,8 @@ struct SyncScreen: View {
     let openSettings: () -> Void
     var openSend: () -> Void = {}
     var showAllDrops: () -> Void = {}
+    /// The drop swiped open, one at a time.
+    @State private var openDrop: String?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -23,19 +26,25 @@ struct SyncScreen: View {
                     GlassIconButton(symbol: "gearshape", label: String(localized: "Settings"),
                                     action: openSettings)
                 }
+                .closesRowSwipeOnTap($openDrop)
                 VStack(alignment: .leading, spacing: 0) {
                     if let drops, !drops.items.isEmpty {
-                        DropsSection(drops: drops, showAll: showAllDrops).padding(.top, 18)
+                        DropsSection(drops: drops, open: $openDrop, showAll: showAllDrops).padding(.top, 18)
                     }
-                    content
+                    content.closesRowSwipeOnTap($openDrop)
                 }
                 .padding(.horizontal, 18)
                 .animation(reduceMotion ? nil : .smooth, value: store.sync)
                 .animation(reduceMotion ? nil : .smooth, value: drops?.items.map(\.id))
             }
             .padding(.bottom, 36)
+            // A tap between the parts (the section's title, the gaps) closes an open drop too.
+            .background { Color.clear.closesRowSwipeOnTap($openDrop) }
         }
         .scrollIndicators(.hidden)
+        .closesRowSwipe($openDrop)
+        .closesRowSwipe(when: drops?.items ?? [], open: $openDrop)
+        .opensLaunchedSwipe(drops?.items ?? [], open: $openDrop)
         .refreshable {
             await store.load(.sync)
             await drops?.refresh()

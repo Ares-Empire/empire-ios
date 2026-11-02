@@ -142,6 +142,7 @@ final class DropOutbox {
     }
 
     /// Cancel the current request before DELETE. A failed DELETE stays durable and can be retried offline.
+    /// While it waits the item is out of the list (`DropsStore.merge`): the upload has stopped, so the Mac never gets it.
     func remove(_ id: UUID) async {
         guard let index = items.firstIndex(where: { $0.id == id }) else { return }
         items[index].cancellationRequested = true
@@ -208,7 +209,7 @@ final class DropOutbox {
             try update(id) { $0.attempts += 1; $0.state = .uploading; $0.lastError = nil; $0.retryAt = nil }
             if UIApplication.shared.applicationState == .background { beginBackgroundTime() }
             if initial.cancellationRequested {
-                if let serverID = initial.serverID { try await client.cancel(serverID, token: token) }
+                if let serverID = initial.serverID { try await client.delete(serverID, token: token) }
                 guard epoch == generation else { return }
                 try discard(id)
                 return
@@ -266,6 +267,10 @@ final class DropOutbox {
                     } else {
                         $0.state = .failed
                         $0.retryAt = nil
+                        // A DELETE the server refused (not one waiting for a connection, which is tried again): the
+                        // item is no longer being removed, so it is in the list again with its error, Try again and
+                        // Delete (brief 93).
+                        if initial.cancellationRequested { $0.cancellationRequested = false }
                     }
                 }
             } catch { storageError = error.localizedDescription }

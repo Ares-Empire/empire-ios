@@ -28,9 +28,12 @@ extension AresusAPI {
         return try AresusJSON.decoder().decode(Drop.self, from: data)
     }
 
-    func cancel(_ id: Int, token: String, onUnauthorized: () -> Void = {}) async throws {
+    /// Deletes a drop from the list, in any state (`DELETE /drops/{id}`, 2026-11-02): one not landed yet is cancelled
+    /// (the Mac never gets it); a landed file stays on the Mac. A `404` (unknown, or already removed) counts as deleted.
+    func delete(_ id: Int, token: String, onUnauthorized: () -> Void = {}) async throws {
         let request = try dropRequest(["drops", String(id)], method: "DELETE", token: token)
         let (data, response) = try await transport.send(request)
+        if response.statusCode == 404 { return }
         try checkResponse(response, data: data, onUnauthorized: onUnauthorized)
     }
 

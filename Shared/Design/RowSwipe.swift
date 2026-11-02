@@ -1,24 +1,33 @@
 import SwiftUI
 import UIKit
 
-// A swipe left on a row of a payment list (brief 44, Patrik: "like Mail", left only, no setting): the row slides and
-// shows its actions at its end (one, "All"; in a category's list two since brief 53, "Add up" or "Separate" before
-// "All"); a tap on one does it, a full swipe past the threshold does the last one at once, with a tap of the haptics as
-// the threshold is crossed. The lists are a `LazyVStack` in a `ScrollView`, not a `List`, so this is the
-// app's own gesture: a UIKit pan (`RowSwipeRecognizer`) that begins only for a clearly sideways drag, so vertical
-// scrolling never catches on it, and only to the left (a swipe right is the back swipe, `BackSwipe.swift`, also when it
-// starts on a row; on an open row it closes the row, and the back swipe waits for that). One row is open at a time (the list holds which); it closes on
-// scroll, on a tap anywhere on the list and when an action runs. VoiceOver: the same actions by name. Reduce Motion:
-// the row does not slide; the actions fade in over the row's end.
+// A swipe left on a row of a list (brief 44, Patrik: "like Mail", left only, no setting): the row slides and shows its
+// actions at its end (Aresium's payment lists: one, "All"; in a category's list two since brief 53, "Add up" or
+// "Separate" before "All"; Aresus's drops since brief 93: Delete); a tap on one does it, a full swipe past the threshold
+// does the last one at once, with a tap of the haptics as the threshold is crossed. The lists are a `LazyVStack` or a
+// `VStack` in a `ScrollView`, not a `List`, so this is the apps' own gesture: a UIKit pan (`RowSwipeRecognizer`) that
+// begins only for a clearly sideways drag, so vertical scrolling never catches on it, and only to the left (a swipe
+// right is the back swipe, `BackSwipe.swift`, also when it starts on a row; on an open row it closes the row, and the
+// back swipe waits for that). One row is open at a time (the list holds which); it closes on scroll, on a tap anywhere
+// on the list (and on the screen's other parts that call `closesRowSwipeOnTap`) and when an action runs. A destructive
+// action (Delete) does not slide the row back: as in Mail it slides the row away and the list takes it out. VoiceOver:
+// the same actions by name. Reduce Motion: the row does not slide; the actions fade in over the row's end.
+// In Shared since brief 93 (it was Aresium's `Screens/RowSwipe.swift`); it uses only `Ink`, `AppFont`, the danger pair of
+// `FormButtonStyle` and UIKit, never `UIApplication.shared` (the Aresium widget compiles Shared too).
 
 /// An action a row's swipe shows: an icon over a short word (Mail's), and its whole name for VoiceOver. `quiet`: drawn
 /// as a raised tile with an edge (Add up, Separate) beside the last action's grey fill ("All"), so two never look alike.
+/// `role: .destructive` (Aresus's Delete): drawn in the hub's soft red (`FormButtonStyle`'s danger pair, as Settings'
+/// Leave and Delete account), and done as Mail does: the row slides away before it goes.
 struct RowSwipeAction {
     let label: String
     let systemImage: String
     let accessibilityName: String
     var quiet = false
+    var role: ButtonRole? = nil
     let perform: () -> Void
+
+    var isDestructive: Bool { role == .destructive }
 }
 
 /// The swipe's numbers and decisions (pure, so tests pin them). `count` is how many actions the row shows (1 or 2).
@@ -96,6 +105,18 @@ extension View {
             withAnimation(RowSwipe.settle) { open.wrappedValue = nil }
         }
     }
+
+    /// A part of the screen beside the swiping rows (a header, rows of another kind): while a row is open, a tap here
+    /// only closes it, as a tap on another row does (Mail's), and opens nothing.
+    func closesRowSwipeOnTap(_ open: Binding<String?>) -> some View {
+        overlay {
+            if open.wrappedValue != nil {
+                Color.clear.contentShape(Rectangle())
+                    .onTapGesture { withAnimation(RowSwipe.settle) { open.wrappedValue = nil } }
+                    .accessibilityHidden(true)
+            }
+        }
+    }
 }
 
 private struct RowSwipe: ViewModifier {
@@ -107,6 +128,8 @@ private struct RowSwipe: ViewModifier {
     @State private var drag: CGFloat?
     @State private var width: CGFloat = 0
     @State private var armed = false
+    /// A destructive action ran: the row stands slid away until the list takes it out.
+    @State private var leaving = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     static let settle = Animation.snappy(duration: 0.3)
@@ -141,13 +164,21 @@ private struct RowSwipe: ViewModifier {
             .offset(x: offset)
             .overlay(alignment: .trailing) { if !actions.isEmpty { actionsView } }
             .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
-            .gesture(RowSwipePan(enabled: !actions.isEmpty, isOpen: isOpen, changed: changed, ended: ended))
+            .gesture(RowSwipePan(enabled: !actions.isEmpty && !leaving, isOpen: isOpen, changed: changed,
+                                 ended: ended))
             .accessibilityActions {
                 ForEach(actions.indices, id: \.self) { index in
                     Button(actions[index].accessibilityName) { perform(actions[index]) }
                 }
             }
             .sensoryFeedback(.impact(weight: .medium), trigger: armed) { old, new in new && !old }
+            // A row the list did not take out after its destructive action (it could not go): back in its place.
+            .task(id: leaving) {
+                guard leaving, (try? await Task.sleep(for: .seconds(1))) != nil else { return }
+                withAnimation(Self.settle) { drag = nil }
+                armed = false
+                leaving = false
+            }
             #if DEBUG
             .task(id: shownAt) {
                 if let shownAt, !actions.isEmpty {
@@ -195,10 +226,16 @@ private struct RowSwipe: ViewModifier {
             .frame(maxHeight: .infinity)
             // Mail's quiet grey action in Aresium's inks: the second ink with the wall's colour on it (at least 5.5:1
             // in light and dark; red mode holds dark). A quiet one (Add up, Separate) is a raised tile with an edge and
-            // the first ink, as the header's buttons, so the two actions never look alike.
-            .foregroundStyle(action.quiet ? Ink.primary : Ink.background)
-            .background(action.quiet ? Ink.card2 : Ink.secondary, in: shape)
-            .overlay { if action.quiet { shape.strokeBorder(Ink.edge) } }
+            // the first ink, as the header's buttons, so the two actions never look alike. A destructive one (Delete)
+            // is the destructive form button's soft red: its tint over a faint fill with an edge, never a loud red.
+            .foregroundStyle(action.isDestructive ? FormButtonStyle.dangerInk
+                             : action.quiet ? Ink.primary : Ink.background)
+            .background(action.isDestructive ? FormButtonStyle.dangerFill
+                        : action.quiet ? Ink.card2 : Ink.secondary, in: shape)
+            .overlay {
+                if action.isDestructive { shape.strokeBorder(FormButtonStyle.dangerEdge) }
+                else if action.quiet { shape.strokeBorder(Ink.edge) }
+            }
             .clipShape(shape)
             .contentShape(shape)
         }
@@ -225,6 +262,10 @@ private struct RowSwipe: ViewModifier {
         let result = RowSwipeRule.end(offset: RowSwipeRule.offset(translation: translation, wasOpen: isOpen, width: width,
                                                                   count: count),
                                       velocity: velocity, width: width, count: count)
+        if result == .perform, let last = actions.last, last.isDestructive {
+            leave(last)
+            return
+        }
         armed = false
         withAnimation(reduceMotion ? nil : Self.settle) {
             drag = nil
@@ -237,7 +278,23 @@ private struct RowSwipe: ViewModifier {
     }
 
     private func perform(_ action: RowSwipeAction) {
+        if action.isDestructive {
+            leave(action)
+            return
+        }
         withAnimation(reduceMotion ? nil : Self.settle) { if open == id { open = nil } }
+        action.perform()
+    }
+
+    /// A destructive action (Mail's Delete, from a full swipe or a tap): the row slides on to the left with the action
+    /// across it, and the action runs, which takes the row out of its list (the list's own animation). Reduce Motion:
+    /// it does not slide.
+    private func leave(_ action: RowSwipeAction) {
+        leaving = true
+        if open == id { open = nil }
+        if !reduceMotion {
+            withAnimation(.snappy(duration: 0.22)) { drag = -max(width, RowSwipeRule.openWidth(count: count)) }
+        }
         action.perform()
     }
 

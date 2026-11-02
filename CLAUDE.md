@@ -1374,7 +1374,7 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   tile** (brief 55, Patrik: "44×" next to "44" was confusing): every tile showing a date (a payment's row, the Cash
   page's movements, the receipt check's and the file check's payments) writes the day as the language writes it alone,
   German "4.", English "4" (`DayWording.alone`, one function; Foundation's lone day has no dot in German either); the
-  tile keeps its size and shrinks its words at the largest text sizes (`DayTile`, "31." included). **The swipe** (`Screens/RowSwipe.swift`: `RowSwipeRule`, tested, inside a `UIPanGestureRecognizer`
+  tile keeps its size and shrinks its words at the largest text sizes (`DayTile`, "31." included). **The swipe** (`Shared/Design/RowSwipe.swift` since brief 93, shared with Aresus's drops: `RowSwipeRule`, tested, inside a `UIPanGestureRecognizer`
   subclass, since a plain recognizer got no moves inside the scroll view): only a drag at least twice as sideways as
   vertical and leftward (rightward on an open row closes it); it opens at 84 pt and fires at 55 % of the row (at least
   168 pt) with a haptic at the threshold; one row open at a time, closed by a scroll or a tap elsewhere; the action is a

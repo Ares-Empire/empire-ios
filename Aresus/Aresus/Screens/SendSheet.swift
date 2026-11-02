@@ -11,10 +11,10 @@ enum SendRoute: Hashable {
 }
 
 /// Send to MacBook (brief 91; the Aresync tab's header): pick photos, a photo from the camera, or files; then, on the
-/// same sheet, where they go (a folder of the Mac, or Sort later), an optional new folder inside it, the name, and Send,
-/// the sheet's one accent. It opens at medium height for the three choices and grows to large once something is
-/// picked, staying large after that (also when the pick is changed). The work is `SendDraft`'s; the files go through `DropsStore.send`, which keeps them on the
-/// phone until the server has them.
+/// same sheet, where they go (a folder of the Mac, or Sort later; a new folder is made in the picker, brief 93), the
+/// name, and Send, the sheet's one accent. It has one height at a time, so one swipe down closes it (brief 93): medium
+/// for the three choices, large once something is picked (`SendDraft.height`). The work is `SendDraft`'s; the files go
+/// through `DropsStore.send`, which keeps them on the phone until the server has them.
 struct SendSheet: View {
     let drops: DropsStore
     @State private var draft = SendDraft()
@@ -24,12 +24,9 @@ struct SendSheet: View {
     @State private var picksFiles = false
     @State private var takesPhoto = false
     @State private var launched = false
-    @State private var detent: PresentationDetent = SendSheet.startDetent
-    @FocusState private var field: Field?
+    @FocusState private var typingName: Bool
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    private enum Field { case newFolder, name }
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -54,8 +51,7 @@ struct SendSheet: View {
         }
         .tint(Ink.primary)
         .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: draft.hasPicked)
-        .presentationDetents([.medium, .large], selection: $detent)
-        .onChange(of: draft.hasPicked) { _, picked in if picked { detent = .large } }
+        .presentationDetents([detent])
         .presentationBackground(Ink.background)
         .interactiveDismissDisabled(draft.isSending)
         .photosPicker(isPresented: $picksPhotos, selection: $photos, selectionBehavior: .ordered,
@@ -90,13 +86,8 @@ struct SendSheet: View {
         }
     }
 
-    /// Medium for the three choices; large when the sheet opens with a pick already there (the screenshots' `-samplePick`).
-    private static var startDetent: PresentationDetent {
-        #if DEBUG
-        if LaunchArguments.value("-samplePick") != nil { return .large }
-        #endif
-        return .medium
-    }
+    /// One height, never two, so a swipe down closes the sheet rather than shrinking it.
+    private var detent: PresentationDetent { draft.height == .large ? .large : .medium }
 
     private func choose(_ target: Target?) {
         draft.choose(target)
@@ -148,6 +139,7 @@ struct SendSheet: View {
 
                     SectionHeading(text: String(localized: "Folder")).padding(.leading, 4).padding(.top, 28)
                     folderCard.padding(.top, 10)
+                    // The picker checks a new folder as it is typed; this only shows if a kept one breaks a rule.
                     if let rule = draft.newFolderRule {
                         FormProblem(text: DropRuleWording.text(rule)).padding(.top, 10)
                     }
@@ -195,61 +187,41 @@ struct SendSheet: View {
         }
     }
 
-    /// Where it goes (a tap opens the folder picker) and, inside a chosen folder, a new one.
+    /// Where it goes; a tap opens the folder picker, where a new folder is made too.
     private var folderCard: some View {
-        VStack(spacing: 0) {
-            NavigationLink(value: SendRoute.folders) {
-                HStack(spacing: 12) {
-                    Image(systemName: draft.target == nil ? "tray" : "folder")
-                        .font(.system(size: 16, weight: .regular)).foregroundStyle(Ink.secondary).frame(width: 22)
-                    Text(folderText).font(AppFont.text(15, weight: .medium)).lineSpacing(2)
-                        .lineLimit(2).truncationMode(.head)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold)).foregroundStyle(Ink.muted)
-                }
-                .padding(.horizontal, 16).padding(.vertical, 12).frame(minHeight: 54)
-                .contentShape(Rectangle())
+        NavigationLink(value: SendRoute.folders) {
+            HStack(spacing: 12) {
+                Image(systemName: folderSymbol)
+                    .font(.system(size: 16, weight: .regular)).foregroundStyle(Ink.secondary).frame(width: 22)
+                Text(folderText).font(AppFont.text(15, weight: .medium)).lineSpacing(2)
+                    .lineLimit(2).truncationMode(.head)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold)).foregroundStyle(Ink.muted)
             }
-            .buttonStyle(PressedRow())
-            .accessibilityLabel(Text("Folder"))
-            .accessibilityValue(Text(folderText))
-            if draft.target != nil {
-                RowDivider()
-                HStack(spacing: 12) {
-                    Image(systemName: "folder.badge.plus").font(.system(size: 15, weight: .regular))
-                        .foregroundStyle(Ink.muted).frame(width: 22)
-                    TextField("", text: $draft.newFolder,
-                              prompt: Text("New folder inside (optional)").foregroundStyle(Ink.muted))
-                        .font(AppFont.text(15)).foregroundStyle(Ink.primary)
-                        .textInputAutocapitalization(.sentences).autocorrectionDisabled()
-                        .submitLabel(.done)
-                        .focused($field, equals: .newFolder)
-                }
-                .padding(.horizontal, 16).frame(minHeight: 52)
-            }
+            .padding(.horizontal, 16).padding(.vertical, 12).frame(minHeight: 54)
+            .contentShape(Rectangle())
         }
+        .buttonStyle(PressedRow())
+        .accessibilityLabel(Text("Folder"))
+        .accessibilityValue(Text(folderText))
         .glassCard()
-        .focusRing(field == .newFolder)
     }
 
-    /// "Documents › Studium › EIST" in ink, a new folder after it in the accent; "Sort later (Zu sortieren)".
+    /// Sort later's tray, a folder, or a folder with a plus while the Mac makes one as the files land.
+    private var folderSymbol: String {
+        guard let target = draft.sendTarget else { return "tray" }
+        return target.newFolder == nil ? "folder" : "folder.badge.plus"
+    }
+
+    /// "Documents › Studium › EIST" in ink; a quiet word after it in parentheses: "Sort later (Zu sortieren)",
+    /// "Documents › Studium › EIST › Blatt 3 (new)".
     private var folderText: AttributedString {
-        guard let target = draft.target else {
-            var text = AttributedString(String(localized: "Sort later"))
-            text.foregroundColor = Ink.primary
-            if let fallback = drops.folders?.fallback, !fallback.isEmpty {
-                var name = AttributedString(" (" + fallback + ")")
-                name.foregroundColor = Ink.muted
-                text += name
-            }
-            return text
-        }
-        var text = AttributedString(DropPathText.path(target))
+        let place = DropPathText.place(draft.sendTarget, fallback: drops.folders?.fallback)
+        var text = AttributedString(place.text)
         text.foregroundColor = Ink.primary
-        let new = draft.newFolder.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !new.isEmpty {
-            var part = AttributedString(DropPathText.separator + new)
-            part.foregroundColor = AppAccent.aresus.color
+        if let quiet = place.quiet {
+            var part = AttributedString(" (" + quiet + ")")
+            part.foregroundColor = Ink.muted
             text += part
         }
         return text
@@ -262,7 +234,7 @@ struct SendSheet: View {
                     .font(AppFont.text(15)).foregroundStyle(Ink.primary)
                     .textInputAutocapitalization(.never).autocorrectionDisabled()
                     .submitLabel(.done)
-                    .focused($field, equals: .name)
+                    .focused($typingName)
                 if !draft.name.ext.isEmpty {
                     Text(verbatim: "." + draft.name.ext).font(AppFont.text(15)).foregroundStyle(Ink.muted)
                         .lineLimit(1).fixedSize()
@@ -270,7 +242,7 @@ struct SendSheet: View {
             }
             .padding(.horizontal, 16).frame(minHeight: 52)
             .glassCard()
-            .focusRing(field == .name)
+            .focusRing(typingName)
         } else {
             VStack(spacing: 0) {
                 ForEach(Array(draft.names.enumerated()), id: \.offset) { index, name in
@@ -302,7 +274,7 @@ struct SendSheet: View {
     }
 
     private func send() {
-        field = nil
+        typingName = false
         Task { if await draft.send(with: drops) { dismiss() } }
     }
 }
@@ -446,9 +418,11 @@ struct CameraPicker: UIViewControllerRepresentable {
 #if DEBUG
 extension SendSheet {
     /// Screenshots (with `-sampleData -openSheet send`): `-samplePick photo|photos|file|files` (made-up pictures and
-    /// files, as if picked), `-sendFolder <root>/<path>` (`documents/Examples`), `-sendNewFolder <text>`,
-    /// `-sendName <text>`, `-sendNow` (Send at once), `-sampleRecents` (two recent folders), `-openFolders` (the folder picker), `-folderPath
-    /// <root>/<path>` (opened down to it), `-folderSearch <text>` (typed in the picker's search).
+    /// files, as if picked), `-sendFolder <root>/<path>` (`documents/Examples`), `-sendNewFolder <text>` (made in it, as
+    /// the picker's New folder does), `-sendName <text>`, `-sendNow` (Send at once), `-sampleRecents` (two recent
+    /// folders), `-openFolders` (the folder picker), `-folderPath <root>/<path>` (opened down to it; `-newFolderText
+    /// <text>` types in its New folder, `-newFolderKeyboardDown` without the keyboard), `-folderSearch <text>` (typed
+    /// in the picker's search).
     private func applyLaunchArguments() {
         guard !launched, drops.isSample else { return }
         launched = true
@@ -465,7 +439,9 @@ extension SendSheet {
             draft.tree = DropFolderTree(try? AresusSamples.launched()?.folders())
             draft.use(SampleSendPicks.make(kind), source: kind.hasPrefix("file") ? .file : .photo,
                       last: LaunchArguments.value("-sendFolder").flatMap(target))
-            if let new = LaunchArguments.value("-sendNewFolder") { draft.newFolder = new }
+            if let new = LaunchArguments.value("-sendNewFolder"), let folder = draft.target {
+                draft.choose(Target(root: folder.root, folder: folder.folder, newFolder: new))
+            }
             if let name = LaunchArguments.value("-sendName") { draft.name.stem = name }
             if LaunchArguments.current.contains("-sendNow") { send() }
         }

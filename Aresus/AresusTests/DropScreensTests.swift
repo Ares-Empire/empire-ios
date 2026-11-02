@@ -32,12 +32,11 @@ struct DropRowTests {
         let waiting = row(.phone(local(.onPhone)))
         #expect(waiting.line == "On the phone · waits for a connection" && waiting.tone == .normal)
         #expect(!waiting.canRetry && waiting.canRemove)
-        #expect(row(.phone(local(.uploading))).line == "Uploading …")
+        let uploading = row(.phone(local(.uploading)))
+        #expect(uploading.line == "Uploading …" && uploading.canRemove)
         let failed = row(.phone(local(.failed, error: "This file is too large.")))
         #expect(failed.line == "Not sent: This file is too large." && failed.tone == .warning)
         #expect(failed.canRetry && failed.canRemove)
-        let removing = row(.phone(local(.onPhone, cancelling: true)))
-        #expect(removing.line == "Removing …" && removing.tone == .muted && !removing.canRemove && !removing.canRetry)
         #expect(row(.phone(local(.onPhone))).name == "IMG_0001.heic")
         #expect(row(.phone(local(.onPhone))).kind == .photo)
     }
@@ -52,13 +51,23 @@ struct DropRowTests {
         #expect(row(.server(drop(.failed))).line == "The MacBook could not save it.")
         #expect(row(.server(drop(.failed, note: " "))).line == "The MacBook could not save it.")
         let cancelled = row(.server(drop(.cancelled)))
-        #expect(cancelled.line == "Cancelled" && cancelled.tone == .muted && cancelled.isQuiet && !cancelled.canRemove)
+        #expect(cancelled.line == "Cancelled" && cancelled.tone == .muted && cancelled.isQuiet && !cancelled.canRetry)
+    }
+
+    @Test func everyDropCanBeDeletedInEveryState() {
+        for state in DropState.allCases {
+            #expect(row(.server(drop(state, landed: "Documents/x.pdf"))).canRemove, "server: \(state)")
+        }
+        for state in [DropOutboxItem.State.onPhone, .uploading, .failed] {
+            #expect(row(.phone(local(state))).canRemove, "phone: \(state)")
+        }
+        #expect(row(.server(drop(.uploading)), local: local(.failed, serverID: 4)).canRemove)
     }
 
     @Test func landedSaysTheFolderAndTheTimeAndKeepsItsNote() {
         let landed = row(.server(drop(.landed, landed: "Documents/Receipts/sketch.pdf")))
         #expect(landed.line == "In Receipts · 16:07" && landed.note == nil)
-        #expect(!landed.canRemove && !landed.canRetry)
+        #expect(landed.canRemove && !landed.canRetry, "deleting only takes it off the list; the file stays on the Mac")
         let moved = row(.server(drop(.landed, note: "The folder EIST is gone, so it went to Zu sortieren.",
                                      landed: "Documents/Zu sortieren/sketch.pdf", fallback: true)))
         #expect(moved.line == "In Zu sortieren · 16:07")
@@ -106,6 +115,16 @@ struct DropRowTests {
         #expect(days.map(\.title) == ["Today", "Fri 30 Oct"])
         #expect(days[0].items.count == 6 && days[1].items == [.server(older)])
         #expect(DropDay.group([], now: now).isEmpty)
+        // A day keeps its id when its first drop is deleted, so only that row leaves its card.
+        let after = DropDay.group(Array(items.dropFirst()), now: now, calendar: berlin, language: .english)
+        #expect(after.map(\.id) == days.map(\.id))
+        // The phone's items stay on top: a day may come twice, each with its own id.
+        var stuck = local(.onPhone)
+        stuck.created = at("2026-10-30T09:00:00Z")
+        let twice = DropDay.group([.phone(stuck), .server(answer.drops[0]), .server(older)], now: now, calendar: berlin,
+                                  language: .english)
+        #expect(twice.map(\.title) == ["Fri 30 Oct", "Today", "Fri 30 Oct"])
+        #expect(Set(twice.map(\.id)).count == 3)
     }
 }
 
@@ -127,6 +146,20 @@ struct DropPathTextTests {
         #expect(DropPathText.lastFolder(ofLanded: "Documents/x.jpg", language: .german) == "Dokumente")
         #expect(DropPathText.lastFolder(ofLanded: "Downloads/x.jpg") == "Downloads")
         #expect(DropPathText.lastFolder(ofLanded: "x.jpg") == nil)
+    }
+
+    @Test func theSendSheetsFolderRowSaysWhatIsNew() {
+        let new = DropPathText.place(Target(root: .documents, folder: "Studium/EIST", newFolder: "Blatt 3"),
+                                     fallback: "Zu sortieren", language: .english)
+        #expect(new.text == "Documents › Studium › EIST › Blatt 3" && new.quiet == "new")
+        let german = DropPathText.place(Target(root: .documents, folder: "Studium", newFolder: "Blatt 3"),
+                                        fallback: nil, language: .german)
+        #expect(german.text == "Dokumente › Studium › Blatt 3" && german.quiet == "neu")
+        let listed = DropPathText.place(Target(root: .downloads, folder: "Examples"), fallback: nil, language: .english)
+        #expect(listed.text == "Downloads › Examples" && listed.quiet == nil)
+        let later = DropPathText.place(nil, fallback: "Zu sortieren", language: .english)
+        #expect(later.text == "Sort later" && later.quiet == "Zu sortieren")
+        #expect(DropPathText.place(nil, fallback: "", language: .english).quiet == nil)
     }
 
     @Test func rulesInPlainWords() {
@@ -201,8 +234,20 @@ struct DropFolderTreeTests {
         #expect(tree.search("e", limit: 2, language: .english).count == 2)
     }
 
+    @Test func aFolderIsFoundByNameIgnoringCaseAsTheMacsDisk() {
+        let tree = DropFolderTree(list(documents: ["Studium", "Studium/EIST", "Studium/Übungen"]))
+        #expect(tree.folder(named: "eist", in: .documents, under: "Studium")?.path == "Studium/EIST")
+        #expect(tree.folder(named: "ÜBUNGEN", in: .documents, under: "Studium")?.path == "Studium/Übungen")
+        #expect(tree.folder(named: "Ubungen", in: .documents, under: "Studium") == nil, "accents count")
+        #expect(tree.folder(named: "STUDIUM", in: .documents, under: "")?.path == "Studium")
+        #expect(tree.folder(named: "EIST", in: .documents, under: "") == nil, "only inside the folder asked about")
+        #expect(tree.folder(named: "studium", in: .downloads, under: "") == nil)
+    }
+
     @Test func aRecentNewFolderBecomesAFolderOnceTheMacListsIt() {
         let tree = DropFolderTree(list(documents: ["Studium", "Studium/EIST"]))
+        #expect(DropFolderTree.resolve(Target(root: .documents, folder: "Studium", newFolder: "eist"), in: tree)
+                == Target(root: .documents, folder: "Studium/EIST"), "the Mac used the folder of that name")
         let made = Target(root: .documents, folder: "Studium", newFolder: "EIST")
         #expect(DropFolderTree.resolve(made, in: tree) == Target(root: .documents, folder: "Studium/EIST"))
         #expect(DropFolderTree.start(from: made, in: tree) == (Target(root: .documents, folder: "Studium/EIST"), ""))
@@ -212,6 +257,82 @@ struct DropFolderTreeTests {
         #expect(DropFolderTree.start(from: nil, in: tree) == (nil, ""))
         #expect(DropFolderTree.resolve(Target(root: .downloads, folder: "", newFolder: ""), in: tree)
                 == Target(root: .downloads, folder: ""))
+    }
+}
+
+/// Brief 93: New folder in the picker, typed where the folders are.
+struct DropNewFolderTests {
+    private let tree = DropFolderTree(FolderList(updated: .now, documents: ["Studium", "Studium/EIST", "Studium/EIST/Blatt 1"],
+                                                 downloads: [], fallback: "Zu sortieren", fallbackCount: 0, receipts: nil))
+    private let eist = DropFolderTree.Folder(root: .documents, path: "Studium/EIST")
+
+    @Test func theNameIsCheckedAsItIsTyped() {
+        var entry = DropNewFolder(parent: eist)
+        #expect(entry.rule(in: tree) == nil && entry.target(in: tree) == nil, "nothing typed: no line, Create off")
+        entry.text = "   "
+        #expect(entry.rule(in: tree) == nil && entry.target(in: tree) == nil)
+        entry.text = ".notes"
+        #expect(entry.rule(in: tree) == .leadingDot && entry.target(in: tree) == nil)
+        entry.text = "Week 3: notes"
+        #expect(entry.rule(in: tree) == .forbiddenCharacter && entry.target(in: tree) == nil)
+        entry.text = String(repeating: "a", count: 201)
+        #expect(entry.rule(in: tree) == .tooLong)
+        entry.text = "Draft."
+        #expect(entry.rule(in: tree) == .trailingSpaceOrDot)
+        entry.text = "  Blatt 3  "
+        #expect(entry.name == "Blatt 3" && entry.rule(in: tree) == nil && entry.existing(in: tree) == nil)
+    }
+
+    @Test func createChoosesThisFolderWithTheNewOneInIt() {
+        let entry = DropNewFolder(parent: eist, text: "Blatt 3")
+        #expect(entry.target(in: tree) == Target(root: .documents, folder: "Studium/EIST", newFolder: "Blatt 3"))
+        let atTheRoot = DropNewFolder(parent: .init(root: .downloads, path: ""), text: "Scans")
+        #expect(atTheRoot.target(in: tree) == Target(root: .downloads, folder: "", newFolder: "Scans"),
+                "Downloads' own page makes one at its top")
+    }
+
+    @Test func aNameThatIsThereAlreadyChoosesThatFolder() {
+        let entry = DropNewFolder(parent: eist, text: "blatt 1")
+        #expect(entry.existing(in: tree)?.path == "Studium/EIST/Blatt 1")
+        #expect(entry.target(in: tree) == Target(root: .documents, folder: "Studium/EIST/Blatt 1"))
+        #expect(entry.rule(in: tree) == nil)
+        let deeper = DropNewFolder(parent: .init(root: .documents, path: "Studium"), text: "Blatt 1")
+        #expect(deeper.existing(in: tree) == nil, "only a folder right inside counts")
+    }
+}
+
+/// Brief 93: a folder's page in the picker.
+struct DropFolderPageTests {
+    @Test func everyFolderOpensItsPageLeavesToo() throws {
+        let list = try sample("drop-folders", as: FolderList.self)
+        let tree = DropFolderTree(list)
+        for (root, paths) in [(DropRoot.documents, list.documents), (.downloads, list.downloads)] {
+            for path in paths {
+                let parent = path.split(separator: "/").dropLast().joined(separator: "/")
+                let page = DropFolderPage(.init(root: root, path: parent), tree: tree, chosen: nil)
+                #expect(page.rows.map(\.folder.path).contains(path), "\(root): \(path) is a row on its parent's page")
+            }
+        }
+        let leaf = DropFolderPage(.init(root: .documents, path: "To sort"), tree: tree, chosen: nil)
+        #expect(leaf.isLeaf && leaf.rows.isEmpty, "a folder without folders inside has a page of its own")
+        #expect(!DropFolderPage(.init(root: .documents, path: ""), tree: tree, chosen: nil).isLeaf)
+    }
+
+    @Test func theMarksShowWhatIsChosen() throws {
+        let tree = DropFolderTree(try sample("drop-folders", as: FolderList.self))
+        let examples = DropFolderTree.Folder(root: .documents, path: "Examples")
+        let chosen = DropFolderPage(examples, tree: tree, chosen: Target(root: .documents, folder: "Examples"))
+        #expect(chosen.isChosen && chosen.newFolder == nil && chosen.rows.allSatisfy { !$0.isChosen })
+        let parent = DropFolderPage(.init(root: .documents, path: ""), tree: tree,
+                                    chosen: Target(root: .documents, folder: "Examples"))
+        #expect(parent.rows.filter(\.isChosen).map(\.folder.path) == ["Examples"] && !parent.isChosen)
+        let made = DropFolderPage(examples, tree: tree,
+                                  chosen: Target(root: .documents, folder: "Examples", newFolder: "Blatt 3"))
+        #expect(!made.isChosen && made.newFolder == "Blatt 3", "the new folder shows where it was made")
+        let elsewhere = DropFolderPage(.init(root: .documents, path: ""), tree: tree,
+                                       chosen: Target(root: .documents, folder: "Examples", newFolder: "Blatt 3"))
+        #expect(elsewhere.newFolder == nil && elsewhere.rows.allSatisfy { !$0.isChosen })
+        #expect(!DropFolderPage(examples, tree: tree, chosen: nil).isChosen, "Sort later")
     }
 }
 
@@ -252,15 +373,40 @@ struct SendDraftTests {
         draft.name.stem = ""
         #expect(draft.nameRule == .empty && !draft.canSend)
         draft.name.stem = "Lecture board"
-        draft.newFolder = ".notes"
-        #expect(draft.newFolderRule == .leadingDot && !draft.canSend)
-        draft.newFolder = "  Week 3  "
+        draft.choose(Target(root: .documents, folder: "Studium", newFolder: ".notes"))
+        #expect(draft.newFolderRule == .leadingDot && !draft.canSend, "a recent one sent before is checked again")
+        draft.choose(Target(root: .documents, folder: "Studium", newFolder: "Week 3"))
         #expect(draft.newFolderRule == nil && draft.canSend)
         #expect(draft.sendTarget == Target(root: .documents, folder: "Studium", newFolder: "Week 3"))
-        draft.newFolder = "   "
+        draft.choose(Target(root: .documents, folder: "Studium"))
         #expect(draft.sendTarget == Target(root: .documents, folder: "Studium", newFolder: nil))
         draft.choose(nil)
         #expect(draft.newFolder.isEmpty && draft.newFolderRule == nil && draft.sendTarget == nil)
+    }
+
+    @Test func thePickersNewFolderIsTheDraftsAndTheSheetShowsIt() {
+        let draft = draft()
+        draft.use([photo()], source: .photo, last: nil)
+        let entry = DropNewFolder(parent: .init(root: .documents, path: "Studium/EIST"), text: "Blatt 3")
+        draft.choose(entry.target(in: draft.tree))
+        #expect(draft.target == Target(root: .documents, folder: "Studium/EIST") && draft.newFolder == "Blatt 3")
+        #expect(draft.sendTarget == Target(root: .documents, folder: "Studium/EIST", newFolder: "Blatt 3"))
+        #expect(DropPathText.place(draft.sendTarget, fallback: nil, language: .english).text
+                == "Documents › Studium › EIST › Blatt 3")
+        // A name already there (any case) chooses that folder, without a new one.
+        draft.choose(DropNewFolder(parent: .init(root: .documents, path: "Studium"), text: "eist").target(in: draft.tree))
+        #expect(draft.sendTarget == Target(root: .documents, folder: "Studium/EIST"))
+        draft.startOver()
+        #expect(draft.newFolder.isEmpty)
+    }
+
+    @Test func oneHeightAtATimeSoOneSwipeCloses() {
+        let draft = draft()
+        #expect(draft.height == .medium, "the three choices")
+        draft.use([photo()], source: .photo, last: nil)
+        #expect(draft.height == .large, "something picked")
+        draft.startOver()
+        #expect(draft.height == .medium, "Change: the three choices again")
     }
 
     @Test func severalFilesGetUniqueNamesNotEdited() {
@@ -290,7 +436,7 @@ struct SendDraftTests {
         let before = store.items.count
         let draft = draft()
         draft.use([photo("a.heic"), photo("b.heic")], source: .photo, last: Target(root: .documents, folder: "Studium"))
-        draft.newFolder = "Board"
+        draft.choose(Target(root: .documents, folder: "Studium", newFolder: "Board"))
         #expect(await draft.send(with: store))
         #expect(!draft.hasPicked && draft.failure == nil)
         #expect(store.items.count == before + 2)
