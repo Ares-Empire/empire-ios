@@ -208,7 +208,8 @@ struct Hairline: View {
     var body: some View { Rectangle().fill(Ink.line).frame(height: 1) }
 }
 
-/// The hunt's status dot: accent with a soft pulse while hunting (still with Reduce Motion), grey when paused.
+/// The hunt's status dot: accent with a soft pulse while hunting (still with Reduce Motion), grey when paused. The ring
+/// stays close and faint (Patrik, 2026-11-02: at 2.6 times the dot it "gets quite big"; it should stay calm).
 struct StatusDot: View {
     let active: Bool
     var size: CGFloat = 8
@@ -220,9 +221,9 @@ struct StatusDot: View {
         Circle().fill(color).frame(width: size, height: size)
             .background {
                 if active && !reduceMotion {
-                    Circle().fill(color.opacity(0.55))
-                        .scaleEffect(pulsing ? 2.6 : 1)
-                        .opacity(pulsing ? 0 : 0.9)
+                    Circle().fill(color.opacity(0.45))
+                        .scaleEffect(pulsing ? 1.7 : 1)
+                        .opacity(pulsing ? 0 : 0.5)
                 }
             }
             .onAppear { updatePulse() }
@@ -234,7 +235,7 @@ struct StatusDot: View {
     private func updatePulse() {
         pulsing = false
         guard active && !reduceMotion else { return }
-        withAnimation(.easeOut(duration: 1.8).repeatForever(autoreverses: false)) { pulsing = true }
+        withAnimation(.easeOut(duration: 2.6).repeatForever(autoreverses: false)) { pulsing = true }
     }
 }
 
