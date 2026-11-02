@@ -165,7 +165,8 @@ struct FixedCostScreensTests {
         let before = FixedCostPage(list: list(.expenses), side: .expenses, today: today, language: .english)
         #expect(before.running[1].entry.id == out.entry.id && before.running[1].id != out.id)
         let income = FixedCostPage(list: list(.income), side: .income, today: today, language: .english)
-        #expect(income.running.first?.amount == "+2,450.00" && income.running.first?.line == "monthly · next 1 Nov")
+        // Brief 216: the salary is still running by the ledger reference, but 1 November is before today's 2nd.
+        #expect(income.running.first?.amount == "+2,450.00" && income.running.first?.line == "monthly · last 1 Oct")
         let empty = FixedCostPage(list: FixedCostList(running: [], ended: [], takenOut: []), side: .income)
         #expect(empty.isEmpty)
     }
@@ -182,6 +183,26 @@ struct FixedCostScreensTests {
         #expect(FixedCostWords.title(route.side, language: .english) == "Regular income")
     }
 
+    @Test func overdueRunningAndTakenOutRowsSayLastInBothLanguages() throws {
+        // The ledger reference keeps the rent running. The wall clock changes only the next/last wording.
+        for language in [AppLanguage.english, .german] {
+            let expectedLast = language == .english ? "monthly · last 3 Oct" : "monatlich · zuletzt am 3. Okt."
+            let running = FixedCostPage(list: list(.expenses), side: .expenses, today: "2026-11-04", language: language)
+            let rent = try #require(running.running.first)
+            #expect(rent.line == expectedLast && rent.entry.running && !rent.quiet)
+            #expect(rent.spoken.contains(language == .english ? "last 3 Oct" : "zuletzt am 3. Okt."))
+            let out = FixedCostPage(list: list(.expenses, takingOut: "Hausverwaltung Fiktiv"), side: .expenses,
+                                    today: "2026-11-04", language: language)
+            #expect(out.takenOut.first?.line == expectedLast)
+            let dueToday = FixedCostPage(list: list(.expenses), side: .expenses, today: "2026-11-03", language: language)
+            #expect(dueToday.running.first?.line == (language == .english
+                ? "monthly · next 3 Nov" : "monatlich · nächste am 3. Nov."))
+            let oldImport = FixedCostPage(list: list(.income), side: .income, today: "2027-01-01", language: language)
+            #expect(oldImport.running.first?.line == (language == .english
+                ? "monthly · last 1 Oct 2026" : "monatlich · zuletzt am 1. Okt. 2026"))
+        }
+    }
+
     @Test func theLineAndThePageFollowTheStoreThroughNotFixedAndUndo() async throws {
         let phone = try await PhoneCountingTests.backend()
         let account = "fictional-fixed"
@@ -196,8 +217,13 @@ struct FixedCostScreensTests {
             categories: [ChosenCategory(id: "household", order: 0)], learned: [], layouts: []),
             catalog: #require(phone.catalog))
         try await phone.refresh()
+        phone.today = { "2026-11-03" }
         let store = DashboardStore(session: await PhoneTest.session(nil, transport: RoutedTransport()), backend: phone)
         await store.reload()
+        #expect(store.fixedCostPage(side: .expenses, language: .english)?.running.first?.line == "monthly · next 3 Nov")
+        phone.today = { "2026-11-04" }
+        // No import or reference-day change: the page reads the dashboard clock when it builds its rows.
+        #expect(store.fixedCostPage(side: .expenses, language: .english)?.running.first?.line == "monthly · last 3 Oct")
         func line() -> AverageLine? {
             AverageLine(average: store.monthlyAverage(side: .expenses), fixedCosts: store.fixedCosts(side: .expenses),
                         side: .expenses, scope: .overview, language: .english)

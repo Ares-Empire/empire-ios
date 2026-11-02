@@ -154,11 +154,13 @@ nonisolated enum FixedCostWords {
     }
 
     /// A row's quiet line in two parts: how often, then the next day due ("monthly", "next 3 Dec"), or for one that
-    /// ended its last payment ("last 3 Aug"); the screen joins them with a middle dot, VoiceOver with a comma.
+    /// ended or whose next due day has passed, its last payment ("last 3 Aug"). The screen joins them with a middle
+    /// dot, VoiceOver with a comma. Running status still follows the ledger's reference day, independently of today.
     static func lineParts(_ entry: FixedCostEntry, today: String = ReceiptDay.day(.now),
                           language: AppLanguage = .current) -> [String] {
-        let when = entry.running ? FixedCostWording.nextDue(entry.nextDue, referenceDay: today, language: language)
-                                 : FixedCostWording.last(entry.last, referenceDay: today, language: language)
+        let when = entry.running && entry.nextDue >= today
+            ? FixedCostWording.nextDue(entry.nextDue, referenceDay: today, language: language)
+            : FixedCostWording.last(entry.last, referenceDay: today, language: language)
         return [FixedCostWording.cadence(entry.cadence, language: language), when]
     }
 
@@ -209,5 +211,13 @@ nonisolated enum FixedCostWords {
 
     private static func euros(_ cents: Int, _ language: AppLanguage) -> String {
         Money.total(Double(cents) / 100, language: language)
+    }
+}
+
+extension DashboardStore {
+    /// Use the phone dashboard's clock for row wording too, independently of the newest imported payment.
+    func fixedCostPage(side: DashboardSide, language: AppLanguage = .current) -> FixedCostPage? {
+        guard let list = fixedCosts(side: side) else { return nil }
+        return FixedCostPage(list: list, side: side, today: phone?.today() ?? ReceiptDay.day(.now), language: language)
     }
 }

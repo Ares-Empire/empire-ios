@@ -91,8 +91,7 @@ struct FixedCostsScreen: View {
     }
 
     @ViewBuilder private var content: some View {
-        if let list = store.fixedCosts(side: side) {
-            let page = FixedCostPage(list: list, side: side)
+        if let page = store.fixedCostPage(side: side) {
             if page.isEmpty {
                 Text(verbatim: FixedCostWords.empty(side)).font(AppFont.text(14)).foregroundStyle(palette.muted)
                     .multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
@@ -199,8 +198,7 @@ struct FixedCostsScreen: View {
         for _ in 0..<80 where store.fixedCosts(side: side) == nil { try? await Task.sleep(for: .milliseconds(100)) }
         try? await Task.sleep(for: .milliseconds(600))
         if LaunchArguments.current.contains("-scrollToEnd") { proxy.scrollToWordmark() }
-        guard let text = LaunchArguments.value("-fixedCostOut"), let list = store.fixedCosts(side: side) else { return }
-        let page = FixedCostPage(list: list, side: side)
+        guard let text = LaunchArguments.value("-fixedCostOut"), let page = store.fixedCostPage(side: side) else { return }
         if let row = (page.running + page.ended).first(where: { $0.name.localizedCaseInsensitiveContains(text) }) {
             change(row)
         }

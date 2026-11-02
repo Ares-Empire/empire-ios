@@ -78,12 +78,18 @@ nonisolated enum TourData {
             // A third grocer, twice a month (brief 59): the tour's list keeps two names with several payments after
             // its switch step moved the first shop out, so its icon of adding up has something to add. Fixed amounts,
             // so the seeded amounts of the other rows stay as they were.
-            add(8, "ALDI SUED", "Kartenzahlung", "ALDI SUED Fiktivstadt", -(1_640 + back * 37))
-            add(20, "ALDI SUED", "Kartenzahlung", "ALDI SUED Fiktivstadt", -(2_180 - back * 23))
+            // Shops are visited on other days each month (brief 216): on a steady day at a steady amount they would read
+            // as fixed costs, as a subscription does. The days come from fixed lists, so the seeded amounts stay as they were.
+            add([2, 12, 7, 16, 4, 14, 9, 18, 3][back], "ALDI SUED", "Kartenzahlung", "ALDI SUED Fiktivstadt",
+                -(1_640 + back * 37))
+            add([17, 27, 21, 15, 25, 19, 28, 16, 23][back], "ALDI SUED", "Kartenzahlung", "ALDI SUED Fiktivstadt",
+                -(2_180 - back * 23))
             add(12, "dm-drogerie markt", "Kartenzahlung", "dm Fiktivstadt", -(800 + next(2_200)))
-            add(15, "Restaurant Fiktiva", "Kartenzahlung", "Restaurant Fiktiva", -(1_800 + next(3_000)))
+            add([15, 5, 22, 11, 27, 8, 18, 25, 3][back], "Restaurant Fiktiva", "Kartenzahlung", "Restaurant Fiktiva",
+                -(1_800 + next(3_000)))
             add(18, "Geldautomat Fiktivbank", "Auszahlung", "Bargeldauszahlung", -10_000)
-            add(21, "Fiktiv Boulderhalle", "Kartenzahlung", "Eintritt", -(1_200 + next(500)))
+            add([21, 11, 26, 16, 6, 24, 13, 28, 9][back], "Fiktiv Boulderhalle", "Kartenzahlung", "Eintritt",
+                -(1_200 + next(500)))
             add(24, "Fiktiv Laden", "Kartenzahlung", "Einkauf", -(500 + next(4_000)))
             if back % 3 == 1 { add(26, "Zalando SE", "Lastschrift", "Bestellung", -(3_000 + next(6_000))) }
         }

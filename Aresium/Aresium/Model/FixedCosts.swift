@@ -106,22 +106,17 @@ nonisolated enum FixedCosts {
             groups[key] = series
         }
         return groups.keys.sorted().flatMap { key in
-            groups[key]!.compactMap { rows -> FixedCostEntry? in
-                let dates = rows.compactMap { date($0.date) }
-                guard dates.count == rows.count, rows.count >= 2 else { return nil }
-                let gaps = zip(dates, dates.dropFirst()).map { calendar.dateComponents([.day], from: $0, to: $1).day! }
-                let cadence = FixedCostCadence.allCases.first { cadence in
-                    let twice = cadence.days.lowerBound * 2...cadence.days.upperBound * 2
-                    let normalized = gaps.map { twice.contains($0) ? Double($0) / 2 : Double($0) }.sorted()
-                    let middle = normalized.count / 2
-                    let median = normalized.count.isMultiple(of: 2)
-                        ? (normalized[middle - 1] + normalized[middle]) / 2 : normalized[middle]
-                    return rows.count >= cadence.minimumCount && gaps.contains(where: cadence.days.contains)
-                        && median >= Double(cadence.days.lowerBound) && median <= Double(cadence.days.upperBound)
-                        && gaps.allSatisfy { Double($0) >= median / 2 }
-                        && gaps.filter { cadence.days.contains($0) || twice.contains($0) }.count * 4 >= gaps.count * 3
-                }
-                guard let cadence else { return nil }
+            let series = groups[key]!
+            // Decide regularity for every amount series before accepting a long cadence. Two similar purchases a
+            // year apart mean little when this same name also has ordinary, irregular visits in this direction.
+            let dates = series.map { $0.compactMap { date($0.date) } }
+            let cadences = series.indices.map { index in
+                dates[index].count == series[index].count ? cadence(for: dates[index]) : nil
+            }
+            let cleanName = cadences.allSatisfy { $0 != nil }
+            return series.indices.compactMap { index -> FixedCostEntry? in
+                let rows = series[index], dates = dates[index]
+                guard let cadence = cadences[index], cadence.months < 6 || cleanName else { return nil }
                 let newest = rows.last!, side: DashboardSide = newest.amount < 0 ? .expenses : .income
                 let names = side == .expenses ? newest.categoriesIn : newest.incomeBuckets
                 let name = names.contains(newest.categoryName) ? newest.categoryName : names.first
@@ -143,6 +138,42 @@ nonisolated enum FixedCosts {
                     notFixed: stored != nil, ids: rows.reversed().map(\.id))
             }
         }
+    }
+
+    private static func cadence(for dates: [Date]) -> FixedCostCadence? {
+        guard dates.count >= 2 else { return nil }
+        let gaps = zip(dates, dates.dropFirst()).map { calendar.dateComponents([.day], from: $0, to: $1).day! }
+        return FixedCostCadence.allCases.first { cadence in
+            guard dates.count >= cadence.minimumCount else { return false }
+            let twice = cadence.days.lowerBound * 2...cadence.days.upperBound * 2
+            let normalized = gaps.map { twice.contains($0) ? Double($0) / 2 : Double($0) }.sorted()
+            let middle = normalized.count / 2
+            let median = normalized.count.isMultiple(of: 2)
+                ? (normalized[middle - 1] + normalized[middle]) / 2 : normalized[middle]
+            return gaps.contains(where: cadence.days.contains)
+                && median >= Double(cadence.days.lowerBound) && median <= Double(cadence.days.upperBound)
+                && gaps.allSatisfy { Double($0) >= median / 2 }
+                && gaps.filter { cadence.days.contains($0) || twice.contains($0) }.count * 4 >= gaps.count * 3
+                && (cadence.months >= 6 || hasSteadyDay(dates))
+        }
+    }
+
+    /// The usual day is the circular median: the day that minimizes total distance on a 31-day month. Wrapping
+    /// keeps the 30th, 31st and 1st close, including February's clamped month end. A tie favors the larger cluster.
+    private static func hasSteadyDay(_ dates: [Date]) -> Bool {
+        let days = dates.map { calendar.component(.day, from: $0) }
+        let choices = (1...31).map { usual in
+            let distances = days.map { day in
+                let distance = abs(day - usual)
+                return min(distance, 31 - distance)
+            }
+            return (day: usual, total: distances.reduce(0, +), close: distances.filter { $0 <= 5 }.count)
+        }
+        let usual = choices.min {
+            if $0.total != $1.total { return $0.total < $1.total }
+            return $0.close == $1.close ? $0.day < $1.day : $0.close > $1.close
+        }!
+        return usual.close * 4 >= days.count * 3
     }
 
     static func list(_ entries: [FixedCostEntry], side: DashboardSide) -> FixedCostList {
