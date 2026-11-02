@@ -66,9 +66,9 @@ nonisolated enum BatchUndoOutcome: Equatable, Sendable {
 final class BatchUndo {
     fileprivate var token: BatchLedgerUndo?
     private let phone: PhoneBackend
-    fileprivate var afterChange: (@MainActor () async -> Void)?
+    var afterChange: (@MainActor () async -> Void)?
 
-    fileprivate init(token: BatchLedgerUndo, phone: PhoneBackend) {
+    init(token: BatchLedgerUndo, phone: PhoneBackend) {
         self.token = token
         self.phone = phone
     }
@@ -214,7 +214,7 @@ extension DashboardStore {
         }
         let sides = Set(rows.map { $0.amount > 0 ? DashboardSide.income : .expenses })
         let categories = Set(rows.map(\.categoryName))
-        let cents = rows.reduce(0) { $0 + Int((abs($1.amount) * 100).rounded()) }
+        let cents = rows.reduce(0) { $0 + Int((abs($1.countedAmount) * 100).rounded()) }
         return PaymentSelectionSummary(counts: counts, side: sides.count == 1 ? sides.first : nil,
                                        total: Double(cents) / 100,
                                        currentCategory: categories.count == 1 ? categories.first : nil,
@@ -317,7 +317,7 @@ extension PhoneBackend {
         try await batch(ids: ids, action: .rename(name, scope))
     }
 
-    private func batch(ids: Set<String>, action: BatchLedgerAction, span: BatchSpan = .oneMonth) async throws -> BatchChangeResult {
+    func batch(ids: Set<String>, action: BatchLedgerAction, span: BatchSpan = .oneMonth) async throws -> BatchChangeResult {
         // `load` normally fills this; querying the engine here also supports the tour's in-memory ledger.
         let catalog = try await engine.catalog()
         let saved = try await ledger.changeBatch(ids: ids, action: action, engine: engine, catalog: catalog, span: span)

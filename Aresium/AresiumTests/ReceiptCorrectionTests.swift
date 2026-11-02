@@ -346,7 +346,7 @@ struct ReceiptCorrectionTests {
         _ = try await phone.saveReceipt(draft("Mustermarkt Linde", shopAsRead: "MUSTERMARKT LINDE"))       // joins
         _ = try await phone.saveReceipt(draft("Cafe Fiktiva", total: 8.40, method: .cash, category: "eating-out"))
         let export = try await phone.export()
-        #expect(export.schema == 6 && LedgerExport.currentSchema == 6)
+        #expect(export.schema == 7 && LedgerExport.currentSchema == 7)
         #expect(export.shopNames == [ShopNameCorrection(read: "mustermarktlinde", name: "Mustermarkt Linde")])
         let file = try export.encoded()
         let text = String(decoding: file, as: UTF8.self)

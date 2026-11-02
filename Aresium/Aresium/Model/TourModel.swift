@@ -520,6 +520,7 @@ final class TourWorld {
             for id in TourData.chosen { try await ledger.choose(id) }
             try await phone.addCustom(named: TourData.customName(), side: .spend)
             _ = try await phone.importFiles([TourData.bankFile(now: now)], auth: BackendAuth(token: nil))
+            try await TourData.linkSamplePayback(in: phone)
             // Its own session, never logged in: the tour asks no server and follows no login.
             let session = EmpireSession(app: .aresium, storage: TourTokens(), restoreOnLaunch: false)
             let widgetFolder = root.appending(path: "widget", directoryHint: .isDirectory)

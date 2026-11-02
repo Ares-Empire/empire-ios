@@ -18,6 +18,7 @@ struct BackendAuth {
 struct SwitchResult {
     let detail: TransactionDetail
     var followUp: MerchantFollowUp?
+    var undo: BatchUndo? = nil
 }
 
 /// The shop's other payments after Switch or an extras change. Switch moves eligible non-manual rows; extras

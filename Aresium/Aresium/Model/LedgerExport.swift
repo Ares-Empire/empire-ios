@@ -4,13 +4,13 @@ import Foundation
 /// (`Aresium-<date>.json`, through the share sheet). Restoring reads it back into an empty store, checked first, all or
 /// nothing. Schema version 2 (brief 31) adds the receipts; version 3 (brief 33) the receipts' direction, kind, where
 /// cash was paid from and the shop as read, and the corrected shop names; version 4 adds payment names and name rules.
-/// Version 5 adds category sides and otherSide; version 6 allows personal names on defaults. Versions 1–5 still restore. A change to
+/// Version 5 adds category sides and otherSide; version 6 allows personal names on defaults. Version 7 adds payback links; versions 1–6 still restore. A change to
 /// these fields (or to `LedgerPayment`, `LedgerAccount`, `ChosenCategory`, `LearnedRule`, `CsvLayout`, `LedgerReceipt`,
 /// `ShopNameCorrection`, `PaymentNameRule`) is a new version, and `restore` keeps reading the older ones.
 nonisolated struct LedgerExport: Codable, Equatable, Sendable {
-    static let currentSchema = 6
+    static let currentSchema = 7
     /// The versions `decode` reads.
-    static let readableSchemas = 1...6
+    static let readableSchemas = 1...7
     static let appName = "Aresium"
 
     var app = Self.appName
@@ -83,6 +83,8 @@ nonisolated struct LedgerExport: Codable, Equatable, Sendable {
         else { throw LedgerError.invalidExport("schema 3 fields in schema \(export.schema)") }
         guard export.schema >= 4 || (export.nameRules.isEmpty && !export.payments.contains { $0.ownName != nil })
         else { throw LedgerError.invalidExport("schema 4 fields in schema \(export.schema)") }
+        guard export.schema >= 7 || !export.payments.contains(where: { !($0.paysBack ?? []).isEmpty })
+        else { throw LedgerError.invalidExport("paybacks before schema 7") }
         return export
     }
 
@@ -158,6 +160,7 @@ nonisolated struct LedgerExport: Codable, Equatable, Sendable {
                   !rule.name.isEmpty, PaymentNames.normalized(rule.name) == rule.name
             else { throw fail("payment name rule") }
         }
+        try Paybacks.validateStored(payments: payments, transferIDs: Set(list.sortingIDs.filter(list.isTransfer)))
         var merchants = Set<String>()
         for rule in learned {
             guard !rule.merchant.isEmpty, merchants.insert(rule.merchant).inserted, ruleCategories.contains(rule.category)

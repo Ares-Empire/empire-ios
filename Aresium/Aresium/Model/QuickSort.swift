@@ -58,7 +58,7 @@ nonisolated enum QuickSort {
             let rows = entries.sorted { $0.row.date == $1.row.date ? $0.offset > $1.offset : $0.row.date > $1.row.date }
                 .map(\.row)
             let newest = rows[0]
-            let cents = rows.reduce(0) { $0 + Int((abs($1.amount) * 100).rounded()) }
+            let cents = rows.reduce(0) { $0 + Int((abs($1.countedAmount) * 100).rounded()) }
             return QuickSortGroup(id: id, nameKey: newest.nameKey ?? "", side: CategorySide(amount: newest.amount),
                                   newest: newest, count: rows.count, cents: cents, first: rows[rows.count - 1].date,
                                   last: newest.date, examples: examples(rows, name: newest.place),
