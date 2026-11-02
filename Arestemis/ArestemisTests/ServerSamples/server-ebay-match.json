@@ -35,7 +35,8 @@
       "reserved": null,
       "bids": 3,
       "ends": "2026-11-02T14:00:00Z"
-    }
+    },
+    "page": null
   },
   "reason": "62 € current bid, good condition, ends in two hours — fits.",
   "warnings": [],

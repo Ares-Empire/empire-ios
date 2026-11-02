@@ -72,6 +72,9 @@ final class ArestemisStore {
     private(set) var settingsError: String?
     private(set) var isSavingSearch = false
     private(set) var searchError: String?
+    /// The field the server named with its refusal of a save ("search.url", `FieldRefusal`), so a form can show the
+    /// sentence at that field; nil for a refusal of the whole search.
+    private(set) var searchErrorField: String?
     private(set) var isParsing = false
     private(set) var parseError: String?
 
@@ -262,9 +265,12 @@ final class ArestemisStore {
         }
     }
 
-    /// A pending creation uses a temporary id; only the affected card is rolled back on refusal.
+    /// A pending creation uses a temporary id; only the affected card is rolled back on refusal. A refusal is shown as a
+    /// notice over the tabs, unless it names a field the calling form shows it at (`fieldsShown`, the watch form's
+    /// address and description): then the form alone says it.
     @discardableResult
-    func saveHunt(id: Int?, kind: HuntKind, name: String?, search: HuntSearch) async -> Hunt? {
+    func saveHunt(id: Int?, kind: HuntKind, name: String?, search: HuntSearch,
+                  fieldsShown: Set<String> = []) async -> Hunt? {
         guard canAct, search.kind == kind, !isSavingSearch else { return nil }
         let old = id.flatMap { id in hunts.first { $0.id == id } }
         guard id == nil || (old != nil && !changingHunts.contains(id!)) else { return nil }
@@ -272,7 +278,7 @@ final class ArestemisStore {
         if id == nil { nextTemporaryHuntID -= 1 }
         changingHunts.insert(actionID)
         isSavingSearch = true
-        searchError = nil
+        clearSearchError()
         let context = context
         defer { if isCurrent(context) { changingHunts.remove(actionID); isSavingSearch = false } }
         let now = ArestemisSamples.iso(.now)
@@ -298,7 +304,13 @@ final class ArestemisStore {
             overview?.hunts.removeAll { $0.id == actionID }
             if let old { restoreCard(old) }
             syncFlatHunt()
-            handle(error, context: context) { self.searchError = $0; self.show($0) }
+            handle(error, context: context) { message in
+                let field = (error as? FieldRefusal)?.field
+                self.searchError = message
+                self.searchErrorField = field
+                let shownAtField = field.map { fieldsShown.contains($0) } ?? false
+                if !shownAtField { self.show(message) }
+            }
             return nil
         }
     }
@@ -311,7 +323,7 @@ final class ArestemisStore {
     func deleteHunt(id: Int) async -> Bool {
         guard canAct, !changingHunts.contains(id), let card = hunts.first(where: { $0.id == id }) else { return false }
         changingHunts.insert(id)
-        searchError = nil
+        clearSearchError()
         let context = context
         defer { if isCurrent(context) { changingHunts.remove(id) } }
         overview?.hunts.removeAll { $0.id == id }
@@ -359,6 +371,28 @@ final class ArestemisStore {
         guard !isSample, canAct, let account = session.accountID else { return }
         keptDraft.keep(draft, baseline: baseline, account: account, huntID: huntID)
     }
+    /// The watch form's draft: the saved watch (its search and name), with the edits kept for it while it is unchanged.
+    func watchSearchDraft(huntID: Int? = nil) -> WatchSearchDraft {
+        let saved = savedWatchDraft(huntID: huntID)
+        guard !isSample, let account = session.accountID else { return saved ?? WatchSearchDraft() }
+        return keptDraft.restoreWatch(for: saved, account: account, huntID: huntID)
+    }
+    func keepWatchSearchDraft(_ draft: WatchSearchDraft, huntID: Int? = nil) {
+        guard !isSample, canAct, let account = session.accountID else { return }
+        keptDraft.keep(draft, baseline: savedWatchDraft(huntID: huntID), account: account, huntID: huntID)
+    }
+    /// The saved watch as the form shows it; nil for a new one.
+    func savedWatchDraft(huntID: Int?) -> WatchSearchDraft? {
+        guard let hunt = hunts.first(where: { $0.id == huntID })?.hunt, let search = hunt.search.watch else { return nil }
+        return WatchSearchDraft(search, name: hunt.name)
+    }
+
+    /// A refusal shown at its field goes once that field is changed (and before every save).
+    func clearSearchError() {
+        searchError = nil
+        searchErrorField = nil
+    }
+
     func flatSearchDraft(huntID: Int?) -> SearchDraft {
         let search = hunts.first { $0.id == huntID }?.hunt.search.flat
         #if DEBUG
@@ -425,10 +459,16 @@ final class ArestemisStore {
         }
     }
 
-    /// A thing for sale: its listing has a thing's details, or its hunt is a thing hunt (no application for it).
-    func isThing(_ match: Match) -> Bool {
-        match.isThing || card(match.huntID)?.hunt.kind == .item
+    /// What a match is: a change on a watched page, a thing for sale, or a flat; by its listing (the page's change, a
+    /// thing's details), else by its hunt's kind (a match loaded before its details), else a flat.
+    func kind(of match: Match) -> SearchKind {
+        if match.isPageChange { return .watch }
+        if match.isThing { return .item }
+        return card(match.huntID).flatMap { SearchKind($0.hunt.kind) } ?? .flat
     }
+
+    /// A thing for sale: its listing has a thing's details, or its hunt is a thing hunt (no application for it).
+    func isThing(_ match: Match) -> Bool { kind(of: match) == .item }
 
     func match(_ id: Int) -> Match? { matchesByID[id] ?? overview?.latest.first { $0.id == id } }
 
@@ -535,7 +575,7 @@ final class ArestemisStore {
     func loadApplication(for id: Int, regenerate: Bool = false) async {
         guard canAct, !(applications[id]?.isLoading ?? false) else { return }
         guard let loadedMatch = await loadMatch(id) else { return }
-        if isThing(loadedMatch) {
+        if kind(of: loadedMatch) != .flat {
             applications[id] = ApplicationState(error: String(localized: "Application texts are for flats."))
             return
         }
@@ -620,7 +660,7 @@ final class ArestemisStore {
         settingsError = nil
         isLoadingSettings = false
         isSavingSearch = false
-        searchError = nil
+        clearSearchError()
         isParsing = false
         parseError = nil
         notice = nil

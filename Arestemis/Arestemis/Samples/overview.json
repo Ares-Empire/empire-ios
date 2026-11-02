@@ -329,7 +329,8 @@
         "immowelt",
         "immoscout24"
       ],
-      "slowed": false
+      "slowed": false,
+      "page": null
     },
     {
       "hunt": {
@@ -383,7 +384,8 @@
         "kleinanzeigen",
         "ebay"
       ],
-      "slowed": false
+      "slowed": false,
+      "page": null
     },
     {
       "hunt": {
@@ -459,7 +461,8 @@
         "applied": 0
       },
       "sources": [],
-      "slowed": false
+      "slowed": false,
+      "page": null
     },
     {
       "hunt": {
@@ -513,7 +516,8 @@
         "kleinanzeigen",
         "ikea_preowned"
       ],
-      "slowed": false
+      "slowed": false,
+      "page": null
     },
     {
       "hunt": {
@@ -555,7 +559,110 @@
         "kleinanzeigen",
         "vinted"
       ],
-      "slowed": false
+      "slowed": false,
+      "page": null
+    },
+    {
+      "hunt": {
+        "id": 6,
+        "kind": "watch",
+        "name": null,
+        "active": true,
+        "search": {
+          "url": "https://www.ikea.com/de/de/p/kallax-regal-weiss-80275887/",
+          "change": "the price is under 45 €",
+          "every": 60
+        },
+        "created": "2026-10-22T18:30:00Z",
+        "updated": "2026-10-22T18:30:00Z",
+        "activated": "2026-10-22T18:31:00Z",
+        "last_scan": "2026-10-24T10:00:00Z"
+      },
+      "counts": {
+        "new": 1,
+        "today": 1,
+        "saved": 0,
+        "applied": 0
+      },
+      "sources": [],
+      "slowed": false,
+      "page": {
+        "page_title": "KALLAX Regal, weiß, 77x147 cm - IKEA Deutschland",
+        "host": "www.ikea.com",
+        "now": "KALLAX 44,99 €",
+        "read": "ok",
+        "checked": "2026-10-24T10:00:00Z",
+        "changed": "2026-10-24T09:00:00Z",
+        "note": null
+      }
+    },
+    {
+      "hunt": {
+        "id": 7,
+        "kind": "watch",
+        "name": "AirPods Pro 3",
+        "active": true,
+        "search": {
+          "url": "https://geizhals.de/?fs=airpods+pro+3",
+          "change": "the cheapest offer is under 190 €",
+          "every": 180
+        },
+        "created": "2026-10-23T12:00:00Z",
+        "updated": "2026-10-23T12:00:00Z",
+        "activated": "2026-10-23T12:01:00Z",
+        "last_scan": "2026-10-24T08:02:00Z"
+      },
+      "counts": {
+        "new": 0,
+        "today": 0,
+        "saved": 0,
+        "applied": 0
+      },
+      "sources": [],
+      "slowed": false,
+      "page": {
+        "page_title": null,
+        "host": "geizhals.de",
+        "now": null,
+        "read": "blocked",
+        "checked": "2026-10-24T08:02:00Z",
+        "changed": null,
+        "note": "Cloudflare refuses the server."
+      }
+    },
+    {
+      "hunt": {
+        "id": 8,
+        "kind": "watch",
+        "name": "Schnitzel at the Mensa",
+        "active": true,
+        "search": {
+          "url": "https://www.studierendenwerk-muenchen-oberbayern.de/mensa/speiseplan/speiseplan_422_-de.html",
+          "change": "there is Schnitzel this week",
+          "every": 720
+        },
+        "created": "2026-10-21T06:55:00Z",
+        "updated": "2026-10-21T06:55:00Z",
+        "activated": "2026-10-21T06:56:00Z",
+        "last_scan": "2026-10-24T07:00:00Z"
+      },
+      "counts": {
+        "new": 1,
+        "today": 0,
+        "saved": 0,
+        "applied": 0
+      },
+      "sources": [],
+      "slowed": false,
+      "page": {
+        "page_title": "Speiseplan Mensa Garching",
+        "host": "www.studierendenwerk-muenchen-oberbayern.de",
+        "now": "Tuesday: Schweineschnitzel with fries",
+        "read": "ok",
+        "checked": "2026-10-24T07:00:00Z",
+        "changed": "2026-10-21T07:00:00Z",
+        "note": null
+      }
     }
   ]
 }

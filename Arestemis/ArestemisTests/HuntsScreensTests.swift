@@ -12,14 +12,16 @@ struct HuntsScreensTests {
     // MARK: New search's kinds
 
     @Test(arguments: [AppLanguage.english, .german])
-    func theKindDialogOffersFlatThenThing(_ language: AppLanguage) {
+    func theKindDialogOffersFlatThenThingThenWatch(_ language: AppLanguage) {
         let de = language == .german
-        #expect(SearchKind.choices == [.flat, .item])
-        #expect(SearchKind.choices.map { $0.choiceTitle(language: language) }
-                == (de ? ["Wohnung oder Zimmer", "Etwas kaufen"] : ["Flat or room", "Something to buy"]))
-        #expect(SearchKind.choices.map(\.huntKind) == [.flat, .item])
+        let choices = SearchKind.choices(offered: nil)
+        #expect(choices == [.flat, .item, .watch])
+        #expect(choices.map { $0.choiceTitle(language: language) }
+                == (de ? ["Wohnung oder Zimmer", "Etwas kaufen", "Seite beobachten"]
+                       : ["Flat or room", "Something to buy", "Watch a page"]))
+        #expect(choices.map(\.huntKind) == [.flat, .item, .watch])
         #expect(SearchKind(.unknown("car")) == nil && SearchKind(.item) == .item)
-        #expect(SearchKind.flat.symbol == "house" && SearchKind.item.symbol == "tag")
+        #expect(SearchKind.flat.symbol == "house" && SearchKind.item.symbol == "tag" && SearchKind.watch.symbol == "eye")
     }
 
     // MARK: a hunt's lines
@@ -105,10 +107,12 @@ struct HuntsScreensTests {
         let de = language == .german
         let cards = try hunts()
         let chips = HuntChips.chips(cards, language: language)
-        #expect(chips.map(\.huntID) == [nil, 1, 2, 3, 4, 5])
+        #expect(chips.map(\.huntID) == [nil, 1, 2, 3, 4, 5, 6, 7, 8])
         #expect(chips.map(\.title) == [de ? "Alle" : "All", HuntText(cards[0].hunt, language: language).title,
-                                       "Herman Miller Aeron", "A quieter flat", "Bookcase", "Denimwerk jeans"])
-        #expect(chips.map(\.symbol) == [nil, "house", "tag", "house", "tag", "tag"])
+                                       "Herman Miller Aeron", "A quieter flat", "Bookcase", "Denimwerk jeans",
+                                       "KALLAX Regal, weiß, 77x147 cm - IKEA Deutschland", "AirPods Pro 3",
+                                       "Schnitzel at the Mensa"])
+        #expect(chips.map(\.symbol) == [nil, "house", "tag", "house", "tag", "tag", "eye", "eye", "eye"])
         #expect(Set(chips.map(\.id)).count == chips.count)
         // One hunt: no chips (All would be the same list).
         #expect(HuntChips.chips(Array(cards.prefix(1))).isEmpty && HuntChips.chips([]).isEmpty)
@@ -281,7 +285,7 @@ struct HuntsScreensTests {
         let store = ArestemisStore(session: session, backend: try SampleBackend(options: .init(slowed: true, newerKind: true)),
                                    sample: true, placeDelay: .zero)
         await store.reloadOverview()
-        #expect(store.hunts.map(\.slowed) == [false, true, false, true, true, false])
+        #expect(store.hunts.map(\.slowed) == [false, true, false, true, true, false, false, false, false])
         #expect(store.hunts.last?.hunt.kind == .unknown("car") && store.hunts.last?.hunt.search == .unsupported)
     }
 

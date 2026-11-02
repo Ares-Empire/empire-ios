@@ -122,7 +122,7 @@ struct ListingsScreen: View {
         } else {
             ForEach(matches) { match in
                 Button { navigation.listingsPath.append(match.id) } label: {
-                    MatchRow(match: match, thing: store.isThing(match), showsNewDot: store.showsNewDot(match),
+                    MatchRow(match: match, kind: store.kind(of: match), showsNewDot: store.showsNewDot(match),
                              showsState: filter == .all)
                 }
                 .buttonStyle(.plain)

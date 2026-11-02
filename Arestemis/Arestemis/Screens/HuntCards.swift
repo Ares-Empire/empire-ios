@@ -2,9 +2,11 @@ import SwiftUI
 
 /// One hunt on the Hunts tab: today's hunt card made compact. The kind's mark and the hunt's name with the new count
 /// beside it, what it looks for in one or two lines, "checked less often" when the server reads it less often, then the
-/// status line (the pulse while it runs, PAUSED otherwise) beside its Start / Pause, smaller. Tapping the card opens the
-/// hunt's page; the button is its own (beside the card's, not inside it). A hunt of a kind this build does not know shows
-/// its name and "Needs a newer app", nothing else.
+/// status line (the pulse while it runs, PAUSED otherwise) beside its Start / Pause, smaller. A watch shows its host under
+/// its name, then what the page says now as its main fact (or a quiet line: reading, or why the page cannot be read) and
+/// when it was checked and changed (`WatchLines`). Tapping the card opens the hunt's page; the button is its own (beside
+/// the card's, not inside it). A hunt of a kind this build does not know shows its name and "Needs a newer app", nothing
+/// else.
 struct HuntListCard: View {
     let card: HuntCard
     /// The server's names for a thing hunt's sites.
@@ -14,7 +16,7 @@ struct HuntListCard: View {
     let toggle: (Bool) -> Void
 
     var body: some View {
-        let text = HuntText(card.hunt, sites: sites)
+        let text = HuntText(card.hunt, page: card.page, sites: sites)
         let known = text.kind != nil
         ZStack(alignment: .bottomTrailing) {
             Button(action: open) {
@@ -26,15 +28,18 @@ struct HuntListCard: View {
                     }
                     if let line = text.details ?? text.newerApp {
                         Text(line).font(AppFont.text(13)).foregroundStyle(Ink.secondary).lineSpacing(2)
-                            .lineLimit(2).fixedSize(horizontal: false, vertical: true)
+                            .lineLimit(text.kind == .watch ? 1 : 2).fixedSize(horizontal: false, vertical: true)
                             .padding(.top, 5)
+                    }
+                    if text.kind == .watch {
+                        WatchLines(page: card.page, compact: true).padding(.top, 10)
                     }
                     if card.slowed && known {
                         SlowedLine().padding(.top, 6)
                     }
                     if known {
                         // The status line; its button sits on this row's right, outside this label.
-                        HuntStatus(active: card.hunt.active)
+                        HuntStatus(active: card.hunt.active, kind: text.kind, stopped: card.page?.read == .blocked)
                             .frame(maxWidth: .infinity, minHeight: 36, alignment: .leading)
                             .padding(.top, 12)
                     }
@@ -44,9 +49,9 @@ struct HuntListCard: View {
                 .contentShape(RoundedRectangle(cornerRadius: Ink.cardRadius, style: .continuous))
             }
             .buttonStyle(CardPressStyle())
-            .accessibilityHint("Opens the search")
+            .accessibilityHint(text.kind == .watch ? Text("Opens the watch") : Text("Opens the search"))
             if known {
-                StartPauseButton(active: card.hunt.active, busy: busy, height: 36, toggle: toggle)
+                StartPauseButton(active: card.hunt.active, kind: text.kind, busy: busy, height: 36, toggle: toggle)
                     .fixedSize()
                     .padding(18)
             }
@@ -56,8 +61,9 @@ struct HuntListCard: View {
     }
 }
 
-/// The hunt's card on its page: today's hunt card for any kind. Status, the name in big, what it looks for, and the one
-/// button (Start hunting / Pause); for a kind this build does not know only its name and "Needs a newer app".
+/// The hunt's card on its page: today's hunt card for any kind. Status, the name in big, what it looks for (a watch: its
+/// host, what the page says now and when it was checked and changed), and the one button (Start hunting / Start watching
+/// / Pause); for a kind this build does not know only its name and "Needs a newer app".
 struct HuntHeroCard: View {
     let card: HuntCard
     let sites: SiteNames
@@ -65,10 +71,10 @@ struct HuntHeroCard: View {
     let toggle: (Bool) -> Void
 
     var body: some View {
-        let text = HuntText(card.hunt, sites: sites)
+        let text = HuntText(card.hunt, page: card.page, sites: sites)
         VStack(alignment: .leading, spacing: 0) {
             if text.kind != nil {
-                HuntStatus(active: card.hunt.active).padding(.bottom, 14)
+                HuntStatus(active: card.hunt.active, kind: text.kind, stopped: card.page?.read == .blocked).padding(.bottom, 14)
             }
             HuntTitle(text: text, size: 20)
             if let line = text.details ?? text.newerApp {
@@ -76,11 +82,14 @@ struct HuntHeroCard: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 6)
             }
+            if text.kind == .watch {
+                WatchLines(page: card.page, compact: false).padding(.top, 14)
+            }
             if card.slowed && text.kind != nil {
                 SlowedLine().padding(.top, 8)
             }
             if text.kind != nil {
-                StartPauseButton(active: card.hunt.active, busy: busy, height: 50, toggle: toggle)
+                StartPauseButton(active: card.hunt.active, kind: text.kind, busy: busy, height: 50, toggle: toggle)
                     .padding(.top, 20)
             }
         }
@@ -91,17 +100,52 @@ struct HuntHeroCard: View {
     }
 }
 
-/// "● HUNTING" with the pulse, or "● PAUSED" in grey.
+/// "● HUNTING" (a watch: "● WATCHING") with the pulse, or "● PAUSED" in grey; a blocked watch "● STOPPED" in grey, as
+/// the server reads its page no more.
 struct HuntStatus: View {
     let active: Bool
+    var kind: SearchKind? = nil
+    var stopped = false
 
     var body: some View {
+        let running = active && !stopped
         HStack(spacing: 9) {
-            StatusDot(active: active)
-            StatusLabel(text: active ? String(localized: "Hunting") : String(localized: "Paused"),
-                        tone: active ? .accent : .inactive, accent: Look.accent)
+            StatusDot(active: running)
+            StatusLabel(text: HuntWords(kind).status(active: active, stopped: stopped), tone: running ? .accent : .inactive,
+                        accent: Look.accent)
         }
         .accessibilityElement(children: .combine)
+    }
+}
+
+/// A watch's lines under its name and host (`WatchCardText`): what the page says now about the change, the card's main
+/// fact in ink; or instead one quiet line in muted ink (reading the page, or the server's note on why it cannot be read,
+/// as the greyed sites say why: no alarm colour); then when it was checked and when the page last changed, following the
+/// clock. `compact` on the Hunts list, larger on the watch's page.
+struct WatchLines: View {
+    let page: PageState?
+    let compact: Bool
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 30)) { context in
+            let text = WatchCardText(page, now: context.date)
+            VStack(alignment: .leading, spacing: compact ? 6 : 8) {
+                if let fact = text.fact {
+                    Text(fact).font(AppFont.text(compact ? 15 : 17, weight: .medium)).foregroundStyle(Ink.primary)
+                        .lineSpacing(2).lineLimit(compact ? 2 : 4).fixedSize(horizontal: false, vertical: true)
+                }
+                if let note = text.note {
+                    Text(note).font(AppFont.text(compact ? 13 : 14)).foregroundStyle(Ink.muted).lineSpacing(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                if let times = text.times {
+                    Text(times).font(AppFont.text(12)).foregroundStyle(Ink.muted).lineLimit(1)
+                        .minimumScaleFactor(0.85)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityElement(children: .combine)
+        }
     }
 }
 
@@ -115,7 +159,7 @@ struct HuntTitle: View {
             if let kind = text.kind {
                 Image(systemName: kind.symbol).font(.system(size: size * 0.72, weight: .medium))
                     .foregroundStyle(Ink.muted)
-                    .accessibilityLabel(kind == .flat ? Text("Flat") : Text("Something to buy"))
+                    .accessibilityLabel(Text(verbatim: kind == .flat ? String(localized: "Flat") : kind.choiceTitle()))
             }
             Text(text.title).font(AppFont.text(size, weight: .semibold)).foregroundStyle(Ink.primary)
                 .lineLimit(2).fixedSize(horizontal: false, vertical: true)
@@ -147,9 +191,10 @@ struct NewCount: View {
     }
 }
 
-/// Start hunting (the accent, the one primary action) or Pause (glass).
+/// Start hunting / Start watching (the accent, the one primary action) or Pause (glass).
 struct StartPauseButton: View {
     let active: Bool
+    var kind: SearchKind? = nil
     let busy: Bool
     let height: CGFloat
     let toggle: (Bool) -> Void
@@ -159,7 +204,8 @@ struct StartPauseButton: View {
             if active {
                 Button("Pause") { toggle(false) }.buttonStyle(ProvinceButtonStyle(kind: .glass, height: height))
             } else {
-                Button("Start hunting") { toggle(true) }.buttonStyle(ProvinceButtonStyle(kind: .accent, height: height))
+                Button(HuntWords(kind).start) { toggle(true) }
+                    .buttonStyle(ProvinceButtonStyle(kind: .accent, height: height))
             }
         }
         .disabled(busy)
@@ -178,32 +224,34 @@ struct CardPressStyle: ButtonStyle {
     }
 }
 
-/// The figures under a hunt's card: New, Today, Applied (Asked for things); each opens those listings. Under them when
-/// the hunt was last read.
+/// The figures under a hunt's card (`HuntPageActions.figures`): New, Today, Applied (Asked for things, Saved for a
+/// watch); each opens those listings. Under them when the hunt was last read, unless the card says it (a watch's
+/// "Checked …": `showsLastScan` false).
 struct HuntFigures: View {
-    let counts: Overview.Counts
-    let labels: [String]
+    let figures: [HuntFigure]
     let lastScan: String?
+    var showsLastScan = true
     let show: (MatchFilter) -> Void
 
     var body: some View {
         VStack(spacing: 10) {
             HStack(spacing: 0) {
-                figure(labels[0], counts.new, highlight: counts.new > 0) { show(.new) }
-                divider
-                figure(labels[1], counts.today) { show(.all) }
-                divider
-                figure(labels[2], counts.applied) { show(.applied) }
+                ForEach(Array(figures.enumerated()), id: \.element.id) { index, item in
+                    if index > 0 { divider }
+                    figure(item.label, item.value, highlight: item.filter == .new && item.value > 0) { show(item.filter) }
+                }
             }
             .padding(.vertical, 16)
             .glassCard()
-            TimelineView(.periodic(from: .now, by: 5)) { context in
-                Text(lastScan.flatMap { Format.relative($0, now: context.date) }.map { String(localized: "Last scan \($0)") }
-                     ?? String(localized: "No scan yet"))
-                    .font(AppFont.number(11, weight: .regular)).foregroundStyle(Ink.muted)
-                    .contentTransition(.numericText())
+            if showsLastScan {
+                TimelineView(.periodic(from: .now, by: 5)) { context in
+                    Text(lastScan.flatMap { Format.relative($0, now: context.date) }.map { String(localized: "Last scan \($0)") }
+                         ?? String(localized: "No scan yet"))
+                        .font(AppFont.number(11, weight: .regular)).foregroundStyle(Ink.muted)
+                        .contentTransition(.numericText())
+                }
+                .frame(maxWidth: .infinity)
             }
-            .frame(maxWidth: .infinity)
         }
     }
 
@@ -292,7 +340,7 @@ struct LatestMatches: View {
             VStack(spacing: Look.rowGap) {
                 ForEach(matches) { match in
                     Button { open(match.id) } label: {
-                        MatchRow(match: match, thing: store.isThing(match), showsNewDot: store.showsNewDot(match),
+                        MatchRow(match: match, kind: store.kind(of: match), showsNewDot: store.showsNewDot(match),
                                  showsState: true)
                     }
                     .buttonStyle(.plain)

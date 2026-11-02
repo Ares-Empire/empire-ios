@@ -17,7 +17,8 @@ struct DescribeSheet: View {
     private var placeholder: String {
         switch kind {
         case .flat: String(localized: "e.g. WG or flat in Munich for two, up to €1,400 warm, from December, furnished")
-        case .item: String(localized: "e.g. a Herman Miller Aeron up to €450, pickup near Garching or shipped")
+        // A watch's form has no "Describe it": its description is the user's own words already.
+        case .item, .watch: String(localized: "e.g. a Herman Miller Aeron up to €450, pickup near Garching or shipped")
         }
     }
 

@@ -1,0 +1,87 @@
+{
+  "items": [
+    {
+      "id": 35,
+      "hunt_id": 6,
+      "state": "new",
+      "found": "2026-10-24T09:00:30Z",
+      "listing": {
+        "source": "page",
+        "source_name": "www.ikea.com",
+        "url": "https://www.ikea.com/de/de/p/kallax-regal-weiss-80275887/",
+        "title": "KALLAX Regal, weiß, 77x147 cm - IKEA Deutschland",
+        "kind": null,
+        "rent_warm": null,
+        "rent_cold": null,
+        "sqm": null,
+        "rooms": null,
+        "flatmates": null,
+        "city": null,
+        "district": null,
+        "address": null,
+        "available_from": null,
+        "available_until": null,
+        "furnished": null,
+        "posted": null,
+        "image_url": null,
+        "description": "+ Neuer niedrigerer Preis\n+ 44,99 €\n+ Gültig bis 15.11.2026\n− 49,99 €",
+        "item": null,
+        "page": {
+          "added": [
+            "Neuer niedrigerer Preis",
+            "44,99 €",
+            "Gültig bis 15.11.2026"
+          ],
+          "removed": [
+            "49,99 €"
+          ],
+          "now": "KALLAX 44,99 €"
+        }
+      },
+      "reason": "KALLAX now 44,99 € instead of 49,99 €",
+      "warnings": [],
+      "application": null,
+      "at_start": false,
+      "over_max": null
+    },
+    {
+      "id": 36,
+      "hunt_id": 8,
+      "state": "new",
+      "found": "2026-10-21T07:00:30Z",
+      "listing": {
+        "source": "page",
+        "source_name": "www.studierendenwerk-muenchen-oberbayern.de",
+        "url": "https://www.studierendenwerk-muenchen-oberbayern.de/mensa/speiseplan/speiseplan_422_-de.html",
+        "title": "Speiseplan Mensa Garching",
+        "kind": null,
+        "rent_warm": null,
+        "rent_cold": null,
+        "sqm": null,
+        "rooms": null,
+        "flatmates": null,
+        "city": null,
+        "district": null,
+        "address": null,
+        "available_from": null,
+        "available_until": null,
+        "furnished": null,
+        "posted": null,
+        "image_url": null,
+        "description": "",
+        "item": null,
+        "page": {
+          "added": [],
+          "removed": [],
+          "now": "Tuesday: Schweineschnitzel with fries"
+        }
+      },
+      "reason": "Schweineschnitzel with fries on Tuesday",
+      "warnings": [],
+      "application": null,
+      "at_start": true,
+      "over_max": null
+    }
+  ],
+  "more": false
+}

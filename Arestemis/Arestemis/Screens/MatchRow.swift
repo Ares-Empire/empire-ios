@@ -4,42 +4,24 @@ import SwiftUI
 /// chevron; the accent "new" dot in the corner until the match has been opened. A thing for sale shows its price big
 /// (with "VB" or how far it lies over the maximum beside it; an auction its current bid, "bid" and the time left), its
 /// title, one facts line (condition · shipping or pickup with the distance · place), and "Online at start" for one found
-/// when the hunt started.
+/// when the hunt started. A change on a watched page (brief 131) has no figure: the server's summary is its title, then
+/// the host and when it was found ("Already true when the watch started" for one the start read found).
 struct MatchRow: View {
     let match: Match
-    /// A thing for sale (`ArestemisStore.isThing`).
-    var thing = false
+    /// What the match is (`ArestemisStore.kind(of:)`): a flat, a thing for sale or a watched page's change.
+    var kind: SearchKind = .flat
     var showsNewDot = false
     /// Shows SAVED / APPLIED (the "All" list and the Hunt tab, where states mix).
     var showsState = false
 
+    private var thing: Bool { kind == .item }
+
     var body: some View {
         HStack(alignment: .center, spacing: 14) {
-            if let url = match.listing.imageURL.flatMap(URL.init(string:)) {
-                ListingPhoto(url: url).frame(width: 56, height: 56)
-                    .clipShape(RoundedRectangle(cornerRadius: Ink.rowRadius, style: .continuous))
-            }
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    if thing { price } else { rent }
-                    Spacer(minLength: 8)
-                    if showsState, let word = match.state.word(thing: thing) {
-                        CapsLabel(text: word, size: 9.5, color: Ink.secondary.opacity(0.8))
-                    }
-                }
-                .lineLimit(1)
-                if thing {
-                    Text(match.listing.title).font(AppFont.text(14, weight: .medium)).foregroundStyle(Ink.primary)
-                        .lineLimit(1)
-                }
-                let facts = thing ? match.listing.itemRowFacts() : match.listing.facts
-                if !facts.isEmpty {
-                    Text(facts).font(AppFont.text(13)).foregroundStyle(Ink.secondary).lineLimit(1)
-                }
-                TimelineView(.periodic(from: .now, by: 30)) { context in
-                    Text(thing ? match.itemSourceLine(now: context.date) : match.sourceLine(now: context.date))
-                        .font(AppFont.text(11)).foregroundStyle(Ink.muted).lineLimit(1)
-                }
+            if kind == .watch {
+                change
+            } else {
+                listing
             }
             Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold)).foregroundStyle(Ink.muted)
                 .accessibilityHidden(true)
@@ -59,6 +41,53 @@ struct MatchRow: View {
         .accessibilityElement(children: .combine)
         .accessibilityValue(showsNewDot ? "New" : "")
         .accessibilityAddTraits(.isButton)
+    }
+
+    /// A watched page's change: the summary, then the host and when.
+    private var change: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text(match.watchTitle).font(AppFont.text(16, weight: .semibold)).foregroundStyle(Ink.primary)
+                    .lineSpacing(2).lineLimit(2).fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 8)
+                if showsState, let word = match.state.word() {
+                    CapsLabel(text: word, size: 9.5, color: Ink.secondary.opacity(0.8))
+                }
+            }
+            TimelineView(.periodic(from: .now, by: 30)) { context in
+                Text(match.watchSourceLine(now: context.date))
+                    .font(AppFont.text(11)).foregroundStyle(Ink.muted).lineLimit(1)
+            }
+        }
+    }
+
+    @ViewBuilder private var listing: some View {
+        if let url = match.listing.imageURL.flatMap(URL.init(string:)) {
+            ListingPhoto(url: url).frame(width: 56, height: 56)
+                .clipShape(RoundedRectangle(cornerRadius: Ink.rowRadius, style: .continuous))
+        }
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                if thing { price } else { rent }
+                Spacer(minLength: 8)
+                if showsState, let word = match.state.word(thing: thing) {
+                    CapsLabel(text: word, size: 9.5, color: Ink.secondary.opacity(0.8))
+                }
+            }
+            .lineLimit(1)
+            if thing {
+                Text(match.listing.title).font(AppFont.text(14, weight: .medium)).foregroundStyle(Ink.primary)
+                    .lineLimit(1)
+            }
+            let facts = thing ? match.listing.itemRowFacts() : match.listing.facts
+            if !facts.isEmpty {
+                Text(facts).font(AppFont.text(13)).foregroundStyle(Ink.secondary).lineLimit(1)
+            }
+            TimelineView(.periodic(from: .now, by: 30)) { context in
+                Text(thing ? match.itemSourceLine(now: context.date) : match.sourceLine(now: context.date))
+                    .font(AppFont.text(11)).foregroundStyle(Ink.muted).lineLimit(1)
+            }
+        }
     }
 
     @ViewBuilder private var rent: some View {
@@ -115,7 +144,7 @@ struct ListingPhoto: View {
 }
 
 /// Shared by the Latest stack and the Listings list; the detail page uses these same state icons. A thing's seller is
-/// asked, not applied to.
+/// asked, not applied to; a watched page's change is only saved or dismissed.
 struct MatchRowActions: View {
     let match: Match
     let store: ArestemisStore
@@ -124,7 +153,7 @@ struct MatchRowActions: View {
         if match.state == .new {
             Button { change(.saved) } label: { Label("Save", systemImage: "bookmark") }
         }
-        if match.state != .applied && match.state != .dismissed {
+        if match.state != .applied && match.state != .dismissed && store.kind(of: match) != .watch {
             Button { change(.applied) } label: {
                 if store.isThing(match) { Label("Mark asked", systemImage: "checkmark.circle") }
                 else { Label("Mark applied", systemImage: "checkmark.circle") }

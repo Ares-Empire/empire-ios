@@ -33,7 +33,7 @@ struct SampleBackendTests {
     @Test func actionsWorkInMemory() async throws {
         let store = try await store()
         await store.setState(.saved, for: 41)
-        #expect(store.match(41)?.state == .saved && store.overview?.counts.new == 7 && store.overview?.counts.saved == 2)
+        #expect(store.match(41)?.state == .saved && store.overview?.counts.new == 9 && store.overview?.counts.saved == 2)
         await store.setActive(id: 1, active: false)
         #expect(store.card(1)?.hunt.active == false && store.overview?.sources.first?.state == .idle)
         await store.loadMatches(.saved)
