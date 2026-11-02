@@ -575,8 +575,8 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   (`HuntRoute.newSearch`, no tab bar): "What should Arestemis find for you?" / "Was soll Arestemis für dich finden?",
   then one glass card per kind this build can open, in `/kinds`' order with `/kinds`' names (`NewSearchCard.cards`;
   the kinds are Flat / Wohnung, Things / Dinge, Price monitor / Preismonitor, Watch a website / Webseite beobachten
-  since server brief 134; `price` has no card until brief 137, a kind of a newer server none; without an answer this
-  build's three with its own names, `SearchKind.choiceTitle`): the Hunts list's mark and the name, a chevron, one
+  since server brief 134; `price` has its card since brief 137, a kind of a newer server none; without an answer this
+  build's four with its own names, `SearchKind.choiceTitle`): the Hunts list's mark and the name, a chevron, one
   sentence (`SearchKind.pitch`), the examples as chips (`SearchExample`, laid over the card's button as
   `HuntListCard`'s Start / Pause is). A tap on the card opens the kind's form (empty, or the kept draft); an example
   opens it filled in (`.form(kind, hunt: nil, example:)`): flat, at least 2 rooms, up to €1,100 warm; a WG room;
@@ -606,6 +606,62 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   and left (Shared): a glass card lifted by a long press from a scroll view (these cards, and brief 49's match cards)
   shows a coarse band along its lower edge in the preview on the simulator; cards in a `List` (Searches) do not. Screenshots:
   `build/135-*.png`.
+  **Price monitors** (brief 137, Patrik 2026-11-02 on the sketch's section 3: the commonest page watch, "this product in
+  this shop", as a kind of its own that "should have the time change graph / data … like a toggle when creating the
+  search if data should be collected and if it should have an alarm (both choosable but one needs to be chosen) and
+  changeable anytime in the app"; server brief 134, `~/Arestemis/docs/API.md` → Price monitors): a fourth kind, `price`
+  ("Price monitor" / "Preismonitor"; `Model/PriceModels.swift`: `PriceSearch` (`url`, `history`, `alarm {below,
+  back_in_stock}`, `every`), `PriceState` on `HuntCard.price`, `PriceChange` on `Listing.price_change`, `PricePreview`,
+  `Prices`; read leniently: an unknown availability reads unknown, an unknown reader is kept (`PageReader`, on
+  `PageState` too since server brief 136), a product state that cannot be read leaves the card without it). New
+  search's card: "One product in one shop: its price history, and a word when it gets cheaper or is back in stock." /
+  "Ein Produkt in einem Shop: der Preisverlauf, und Bescheid, wenn es günstiger oder wieder lieferbar ist.", examples
+  "Price under € …" / "Preis unter … €" (the alarm on, its limit filled once the price is found) and "Back in stock" /
+  "Wieder lieferbar". **The form** (`Screens/PriceSearchScreen.swift`, `PriceSearchDraft`): Name (grey: the product
+  found, else the host), Product (the link; a pasted text keeps its first link) with the server's preview under it once
+  the link looks complete (a host with a dot and a path or query) and typing pauses (`PricePreviewModel`: one at a time,
+  never sooner than 5 s after the last, only the newest link, an answer for an older link dropped, a 429 waits its turn
+  quietly; "Found: NINTENDO Switch 2 · €483.99 · in stock" / "Gefunden: … · 483,99 € · lieferbar" in quiet type, the
+  server's refusal as a problem line), What it should do (`MonitorSwitchesCard`: Record the history "Price and
+  availability as a curve" / Verlauf aufzeichnen "Preis und Lieferbarkeit als Kurve", Alarm "A push when it happens" /
+  "Push, wenn es so weit ist"; the alarm opens Price under [ € ] (empty: no price condition) and Back in stock under it,
+  a little in; switched on without a condition, both come on with the limit a little under the price found,
+  `PriceLimit`: about 5 % under, rounded down to 1, 5, 10 or 50 €, 483.99 → 450; Save is off while both switches are off,
+  with one quiet line "At least one of the two." / "Mindestens eins von beiden.", an alarm without a condition says the
+  server's "Say when the alarm should ring."), How often (`ReadIntervalCard`, the watch form's, shared now). **The card**
+  (`PriceLines`, `PriceCardText`): the name (own, else the product, else the host), "host · Alarm under €450" or "· History
+  only" / "Nur Verlauf" (`PriceWords.mode`; under an own name the product first), the price large in the numbers' face
+  with the availability's word, the small 30-day line while the history is on (`PriceChartView(compact: true)`, loaded
+  per card and again after each new read, `ArestemisStore.loadPrices`, `MonitorRead`), "Checked …"; the read states as a
+  watch's (one quiet line instead of the price; blocked reads Stopped and adds "Saving it again tries again."; the
+  reader's note only on the page). **The page** (`Screens/MonitorPage.swift`, `MonitorSections`; Open in shop in
+  Listings' place beside Edit): Price history over 30 · 90 · 365 days (Swift Charts drawn as Aresium's `SeriesChart`: the
+  accent line 2.6 pt with round ends over a fainter area, as steps, `.stepEnd`, since a price holds until it changes; a
+  stretch out of stock dashed in muted ink over a faint band, with its key "- - - Out of stock"; the alarm's limit a
+  faint dashed rule; the newest point marked; "Lowest €449.00 · Highest €483.99" / "Tiefstpreis … · Höchstpreis …" from
+  the server; `PriceChart`), What it should do (the form's card, saved as it changes: `MonitorSwitches` refuses turning
+  off the last switch with the line, holds an alarm without a condition on the page until it has one, saves the limit
+  1 s after typing pauses; `ArestemisStore.saveMonitor`: shown at once, `PUT` with the whole search and the name as it is,
+  changes made meanwhile sent once it answers (the newest only), a refusal puts back what the server confirmed last with
+  a notice "Not saved. …"), Alarms (the newest three, while it has an alarm or found some; no figures). **An alarm**
+  (`Listing.price_change`, source `"page"`; `Match.isPriceChange`, `kind(of:)` asks it before a watch's change): its row
+  "Nintendo Switch 2: €449.00 (was €483.99)" / "… 449,00 € (vorher 483,99 €)" or "… is back in stock" / "… ist wieder
+  lieferbar" (`PriceWords.alarm`, the app's words from the change), the shop and when; its page the new price big with
+  "was €483.99" (or "back in stock") beside it, the product, the shop and when, Open in shop; Save and Dismiss only. Push
+  category `ARESTEMIS_PRICE` ("Open in shop" / "Im Shop öffnen"). **The watch form's examples** (`WatchChange`): chips
+  over "Tell me when": "a new version comes out", "a new entry appears", "a date changes", "own description" / "eine neue
+  Version erscheint", "ein neuer Eintrag dazukommt", "sich ein Datum ändert", "eigene Beschreibung"; a chip fills the
+  sentence and puts the cursor in it, the one tapped last shows chosen; "own description" empties an example's sentence
+  and keeps one's own words. The placeholder is now "3.4.0 is out, not a release candidate" and the caption "Pages behind
+  a login, or that need clicks (such as appointment bookings), can't be watched." (a browser reads JavaScript pages since
+  server brief 136). Sample monitors 9 (Nintendo Switch 2 on MediaMarkt, history and alarm under €450 or back in stock,
+  a year of history in `Samples/prices-9.json` with two stretches out of stock), 10 ("Headphones", history only, read
+  with a browser, `prices-10.json`) and 11 (LEGO Titanic, alarm when back in stock, no history, out of stock), with
+  alarms 39 (under the limit, new) and 37 (back in stock, saved) in `price-matches.json`; the server's own samples in
+  `ArestemisTests/ServerSamples/` (`server-prices.json` new). DEBUG `-openPriceForm`, `-newPriceForm` (`-priceURL
+  <text>`, `-priceSwitches both|history|alarm|none`, `-pricePreview reading|refused|failed`), `-newExample
+  priceBelow|backInStock`, `-openHunt <id>` with `-priceDays 30|90|365`, `-scrollTo history|switches|bottom` and
+  `-monitorLine refused|hold`. Tests: `PriceMonitorTests`. Screenshots: `build/137-*.png`.
 - **Arestoteles app** (2026-10-24, build R2): `Arestoteles/` (bundle id `de.ares-empire.arestoteles`, URL scheme
   `arestoteles`), Patrik's Weltbild vault on the Arestoteles API (`Arestoteles/docs/API.md`, decisions
   `ares-empire/docs/ARESTOTELES-APP.md`; samples in `Arestoteles/Arestoteles/Samples/`, copies of its `docs/samples/`).
