@@ -1,6 +1,6 @@
 # 215: Aresium's first run, fixed before testers come
 
-Status: running
+Status: merged 2026-11-02 (893 Aresium tests; the name search timing test failed under load and now takes the best of three rounds, 8 of 8 alone; real touches 6 of 6; Empire, Arestemis and Arestoteles build with the Settings change)
 Branch: `claude/215-first-run-fixes` · Worktree: `../empire-ios-215-first-run-fixes` · Built by: a Claude agent (the
 look and the flow) · Simulator: `claude-215` (create it: iPhone 17, iOS 27.0)
 
