@@ -241,33 +241,29 @@ struct NewSearchTests {
         #expect(fresh.hasChanges && fresh.name == "Desk chair")
     }
 
-    @Test func aRenameSendsTheSearchAsItIsWithTheNewName() async throws {
+    @Test func aRenameSendsTheNameAlone() async throws {
+        // PATCH /hunts/{id}: the server changes the name and nothing else (a PUT would start the search again).
         let (store, transport, _) = try await makeStore()
         await store.reloadOverview()
         let hunt = try #require(store.card(2)?.hunt)
         var renamed = hunt
         renamed.name = "Desk chair"
-        try transport.answer("PUT /hunts/2", encoding: renamed)
-        var overview = try sample(Overview.self, "overview")       // the server's overview after the rename
-        overview.hunts[1].hunt.name = "Desk chair"
-        try transport.answer("GET /overview", encoding: overview)
+        try transport.answer("PATCH /hunts/2", encoding: renamed)
         var edit = NameEdit(hunt)
         edit.text = "Desk chair"
         #expect(await store.renameHunt(id: 2, name: edit.name))
-        let sent = try #require(try body(transport.requests("PUT /hunts/2").last))
-        #expect(sent["name"] as? String == "Desk chair")
-        let search = try JSONSerialization.data(withJSONObject: try #require(sent["search"]))
-        #expect(try JSONDecoder().decode(ItemSearch.self, from: search) == hunt.search.item)
-        #expect(store.card(2)?.hunt.name == "Desk chair")
+        let sent = try #require(try body(transport.requests("PATCH /hunts/2").last))
+        #expect(Set(sent.keys) == ["name"] && sent["name"] as? String == "Desk chair")
+        #expect(transport.requests("PUT /hunts/2").isEmpty)
+        #expect(store.card(2)?.hunt.name == "Desk chair" && store.card(2)?.hunt.search == hunt.search)
         #expect(HuntText(try #require(store.card(2)?.hunt)).title == "Desk chair")
 
         // Emptied: null, the automatic name again.
-        try transport.answer("PUT /hunts/2", encoding: hunt)
-        try transport.answer("GET /overview", sample: "overview")
+        try transport.answer("PATCH /hunts/2", encoding: hunt)
         var back = NameEdit(renamed)
         back.text = ""
         #expect(await store.renameHunt(id: 2, name: back.name))
-        #expect(try body(transport.requests("PUT /hunts/2").last)?["name"] is NSNull)
+        #expect(try body(transport.requests("PATCH /hunts/2").last)?["name"] is NSNull)
         #expect(HuntText(try #require(store.card(2)?.hunt)).title == "Herman Miller Aeron")
     }
 

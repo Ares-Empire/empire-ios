@@ -322,9 +322,31 @@ final class ArestemisStore {
         }
     }
     @discardableResult
+    /// Renames through `PATCH /hunts/{id}`, which changes the name alone: saving the search again (`PUT`) would make the
+    /// server seed every feed again, drop listings waiting for the AI check and read a watched page anew.
     func renameHunt(id: Int, name: String?) async -> Bool {
-        guard let hunt = hunts.first(where: { $0.id == id })?.hunt else { return false }
-        return await saveHunt(id: id, kind: hunt.kind, name: name, search: hunt.search) != nil
+        guard canAct, let old = hunts.first(where: { $0.id == id }), !changingHunts.contains(id) else { return false }
+        changingHunts.insert(id)
+        clearSearchError()
+        let context = context
+        defer { if isCurrent(context) { changingHunts.remove(id) } }
+        var optimistic = old.hunt
+        optimistic.name = name
+        putHunt(optimistic)
+        do {
+            let saved = try await backend.renameHunt(id: id, name: name)
+            guard isCurrent(context) else { return false }
+            putHunt(saved)
+            // A kept draft's baseline holds the old name.
+            if !isSample, let account = session.accountID { keptDraft.drop(account: account, huntID: id, kind: saved.kind) }
+            return true
+        } catch {
+            guard isCurrent(context) else { return false }
+            restoreCard(old)
+            syncFlatHunt()
+            handle(error, context: context) { self.searchError = $0; self.show($0) }
+            return false
+        }
     }
     @discardableResult
     func deleteHunt(id: Int) async -> Bool {

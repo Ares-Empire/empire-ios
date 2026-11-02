@@ -591,13 +591,13 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   on the hunt's card is a button with a small pen (`PenButton`); a tap, the pen, the `…` menu's Rename or a card's long
   press turns it into a field in the same font and place (the mark stays, a well reaching into the margin), the name
   selected, the keyboard up; the bar shows Cancel (ink) and Save (the accent, muted while unchanged). Return, Save, a
-  tap anywhere else on the page or a scroll save a changed name (`PUT /hunts/{id}` with the search as it is; nothing is
-  sent when unchanged), Cancel leaves it (Escape on a hardware keyboard through Cancel's `.keyboardShortcut(.cancelAction)`;
+  tap anywhere else on the page or a scroll save a changed name (`PATCH /hunts/{id}` with the name alone, so the server
+  does not start the search again as a `PUT` would; nothing is sent when unchanged), Cancel leaves it (Escape on a hardware keyboard through Cancel's `.keyboardShortcut(.cancelAction)`;
   not checked: XCTest's `typeKey` reached no key of the field, Return neither); empty is the automatic name again. While it is open the rest of the
   page takes no taps (a tap there ends it). The Rename alert is gone. **A search card's long press** (`huntCardMenu`,
   the Hunts list and Listings → Searches): Rename (the search's page on the Hunts tab, its field open,
   `AppNavigation.rename`), Pause or Start, Delete (asks first, as on the page). A hunt this build cannot read offers
-  Delete only (`HuntPageActions.rename`: renaming sends its search, which this build cannot write). DEBUG `-newSearch`,
+  Delete only (`HuntPageActions.rename`: its page shows no name to edit). DEBUG `-newSearch`,
   `-newExample <example>` (`twoRooms`, `wgRoom`, `kallax`, `roadBike`, `newVersion`, `newJob`, `canteenMenu`),
   `-renameHunt <id>` (`-renameText <text>`). Tests: `NewSearchTests`. Real touches (a temporary UI test in
   `Aresus/AresusUITests` driving Arestemis, deleted): the long press's menu on both tabs and in German, Pause and Start

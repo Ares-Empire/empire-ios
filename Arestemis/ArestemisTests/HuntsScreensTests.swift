@@ -85,7 +85,7 @@ struct HuntsScreensTests {
         let newer = Hunt(id: 9, kind: .unknown("car"), name: nil, active: true, search: .unsupported,
                          created: "2026-10-24T08:12:00Z", updated: "2026-10-24T08:12:00Z", activated: nil)
         let actions = HuntPageActions(newer)
-        // Renaming sends the search again (`PUT /hunts/{id}`), which this build cannot write for a kind it cannot read.
+        // A kind this build cannot read shows no name to edit in place, so no Rename.
         #expect(!actions.startPause && !actions.editSearch && actions.listings && !actions.rename && actions.delete)
         #expect(HuntPageActions.figureLabels(.flat, language: language)
                 == (de ? ["Neu", "Heute", "Beworben"] : ["New", "Today", "Applied"]))

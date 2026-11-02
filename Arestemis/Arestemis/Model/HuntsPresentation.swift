@@ -174,8 +174,7 @@ struct HuntText: Equatable {
 }
 
 /// What a hunt's page and its card's long press offer. A hunt this build cannot show can still be listed and deleted,
-/// but not started, paused, edited or renamed (renaming sends its search again, `PUT /hunts/{id}`, which this build
-/// cannot write).
+/// but not started, paused, edited or renamed (its page shows no name to edit in place).
 struct HuntPageActions: Equatable {
     let startPause: Bool
     let editSearch: Bool
