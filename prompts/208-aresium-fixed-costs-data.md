@@ -1,6 +1,6 @@
 # 208: Monthly average and fixed costs: the data
 
-Status: running
+Status: merged 2026-11-02 (871 Aresium tests; 5 timing and import tests failed under load and passed alone, 44 of 44; detection 145 ms at 5,000 payments off the main thread; marks in ledger and export schema 8)
 Branch: `codex/208-fixed-costs-data` · Worktree: `../empire-ios-208-fixed-costs-data` · Model: `gpt-6.1-sol`, effort
 `high` · Simulator: `codex-208` (create it: iPhone 17, iOS 27.0) · The screens follow in brief 209 (a Claude agent) on
 this brief's API.
