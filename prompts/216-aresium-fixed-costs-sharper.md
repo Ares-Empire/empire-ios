@@ -1,6 +1,6 @@
 # 216: Fixed costs: fewer false finds
 
-Status: running
+Status: merged 2026-11-02 (908 Aresium tests with briefs 209 and 215; checked on Patrik's export locally; the tour's sample shops visited on other days each month)
 Branch: `codex/216-fixed-costs-sharper` (from `claude/209-fixed-costs-screens`, which holds briefs 208 and 209) ·
 Worktree: `../empire-ios-216-fixed-costs-sharper` · Model: `gpt-6.1-sol`, effort `high` · Simulator: `codex-216`
 (create it: iPhone 17, iOS 27.0)

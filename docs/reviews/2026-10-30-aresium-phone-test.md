@@ -327,3 +327,21 @@ stays income. "Verknüpfen" links them all, with one "Widerrufen". A payment's p
 one payment on each side still asks the amount ("Weiter"). Suggestions are the 8 nearest; anything older through the
 search. To try: select expenses a friend paid back and tick the payment(s) in; select several transfers that paid back
 one expense and pick it; the summary before linking.
+
+**After build 18** (Patrik, 2026-11-02): "the app is genuinely very good and useful." Asked whether links can be undone
+(they can: Undo right away, or the pen or a long press on a link's card, "Verknüpfung entfernen"), and for more testers:
+external TestFlight set up through the App Store Connect API (group "Tester"), build 18 sent to Beta App Review. Then
+two features he liked from Claude's ideas: the monthly average and the fixed costs. A Claude agent walked a fresh install
+as a tester would (`docs/reviews/2026-11-02-aresium-first-run.md`): the reviewer gets through; three small fixes before
+friends.
+
+**In build 19** (2026-11-02, briefs 208, 209, 215, 216): **Overview** says under its total what a finished month costs
+on average and how much of it is fixed ("Ø … im Monat · davon … fix"); a tap opens **Fixkosten**: rent, subscriptions,
+insurance, each with how often, the next one due and its share a month, then Beendet (stopped ones) and Nicht gezählt
+(the ones taken out with a long press, "Nicht fix"). On the income side the same for regular money in. Detection was
+checked on Patrik's own export locally (nothing of it in the repo): the subscriptions, the ticket and a membership found,
+the old rent ended, a supermarket no longer taken for a yearly cost. **The first run**: Done on the category list with
+nothing ticked asks to use the categories that fit (or a card leads back), the first days of a month open on last month
+(this month one tap away), the import notice's button says Schließen, Settings shows no Ares sign-in to testers, the
+running month on Overview's graph is dashed, cash "ohne Belege". To try: Overview → the line under the total → the
+fixed costs; take one out and put it back; open the app on the 1st–7th of a month.

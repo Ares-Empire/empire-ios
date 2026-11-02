@@ -1,6 +1,6 @@
 # 209: Monthly average and fixed costs: the screens
 
-Status: running
+Status: merged 2026-11-02 (with brief 216: 908 Aresium tests, the import timing tests passed on a rerun alone; real touches 3 of 3)
 Branch: `claude/209-fixed-costs-screens` · Worktree: `../empire-ios-209-fixed-costs-screens` · Built by: a Claude agent
 (the look and the flow) · Simulator: `claude-209` (create it: iPhone 17, iOS 27.0)
 
