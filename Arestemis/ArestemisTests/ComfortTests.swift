@@ -92,9 +92,9 @@ struct ComfortTests {
         draft.moveInFrom = Clock.now
         draft.extra = "  Fictional balcony preference  "
         let kept = KeptSearchDraft(defaults: defaults)
-        kept.keep(draft, baseline: search, account: "account-a")
+        kept.keep(draft, saved: SearchDraft(search), account: "account-a")
         let reopened = KeptSearchDraft(defaults: defaults)
-        #expect(reopened.restore(for: search, account: "account-a") == draft)
+        #expect(reopened.restore(saved: SearchDraft(search), account: "account-a") == draft)
         #expect(!draft.isValid)
     }
 
@@ -106,10 +106,15 @@ struct ComfortTests {
         var draft = SearchDraft(search)
         draft.extra = "Fictional draft"
         let kept = KeptSearchDraft(defaults: defaults)
-        kept.keep(draft, baseline: baseline, account: "account-a")
+        kept.keep(draft, saved: SearchDraft(baseline), account: "account-a")
         search.people = 3
-        #expect(kept.restore(for: search, account: "account-a") == SearchDraft(search))
-        #expect(kept.restore(for: baseline, account: "account-a") == SearchDraft(baseline))
+        #expect(kept.restore(saved: SearchDraft(search), account: "account-a") == SearchDraft(search))
+        #expect(kept.restore(saved: SearchDraft(baseline), account: "account-a") == SearchDraft(baseline))
+        // Renamed meanwhile (in place, or on another device): the kept edit goes too, so Save never brings back the old
+        // name.
+        kept.keep(draft, saved: SearchDraft(baseline), account: "account-a")
+        #expect(kept.restore(saved: SearchDraft(baseline, name: "Quiet flat"), account: "account-a")
+                == SearchDraft(baseline, name: "Quiet flat"))
     }
 
     @Test func anotherAccountsDraftIsNeverShown() throws {
@@ -119,9 +124,9 @@ struct ComfortTests {
         var draft = SearchDraft(search)
         draft.extra = "Fictional draft"
         let kept = KeptSearchDraft(defaults: defaults)
-        kept.keep(draft, baseline: search, account: "account-a")
-        #expect(kept.restore(for: search, account: "account-b") == SearchDraft(search))
-        #expect(kept.restore(for: search, account: "account-a") == draft)
+        kept.keep(draft, saved: SearchDraft(search), account: "account-a")
+        #expect(kept.restore(saved: SearchDraft(search), account: "account-b") == SearchDraft(search))
+        #expect(kept.restore(saved: SearchDraft(search), account: "account-a") == draft)
     }
 
     @Test(arguments: ["save", "delete", "logout"])
@@ -136,7 +141,7 @@ struct ComfortTests {
         let search = try #require(hunt.search.flat)
         var draft = SearchDraft(search)
         draft.extra = "Fictional draft"
-        store.keepFlatSearchDraft(draft, baseline: search, huntID: 1)
+        store.keepSearchDraft(draft, huntID: 1)
         #expect(store.flatSearchDraft(huntID: 1) == draft)
         switch action {
         case "save":
@@ -152,8 +157,8 @@ struct ComfortTests {
             #expect(await store.deleteHunt(id: 1))
         default: session.logOut()
         }
-        #expect(KeptSearchDraft(defaults: defaults).restore(for: search, account: "fictional-account", huntID: 1)
-                == SearchDraft(search))
+        #expect(KeptSearchDraft(defaults: defaults).restore(saved: SearchDraft(search), account: "fictional-account",
+                                                            huntID: 1) == SearchDraft(search))
     }
 
     @Test func unsavedNewSearchIsKeptAndReturningToBaselineDropsIt() {
@@ -162,9 +167,9 @@ struct ComfortTests {
         let kept = KeptSearchDraft(defaults: defaults)
         var draft = SearchDraft()
         draft.extra = "Fictional draft"
-        kept.keep(draft, baseline: nil, account: "account-a")
-        #expect(kept.restore(for: nil, account: "account-a") == draft)
-        kept.keep(SearchDraft(), baseline: nil, account: "account-a")
-        #expect(kept.restore(for: nil, account: "account-a") == SearchDraft())
+        kept.keep(draft, saved: nil, account: "account-a")
+        #expect(kept.restore(SearchDraft.self, saved: nil, account: "account-a") == draft)
+        kept.keep(SearchDraft(), saved: nil, account: "account-a")
+        #expect(kept.restore(SearchDraft.self, saved: nil, account: "account-a") == SearchDraft())
     }
 }

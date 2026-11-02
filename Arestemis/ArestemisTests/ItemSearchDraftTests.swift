@@ -95,22 +95,22 @@ struct ItemSearchDraftTests {
         defer { kept.clear() }
         var first = valid(); first.priceMin = "invalid"
         var second = valid(); second.query = "Desk"
-        kept.keep(first, baseline: nil, account: "a", huntID: 2)
-        kept.keep(second, baseline: nil, account: "a", huntID: 4)
-        kept.keep(second, baseline: nil, account: "a")
+        kept.keep(first, saved: nil, account: "a", huntID: 2)
+        kept.keep(second, saved: nil, account: "a", huntID: 4)
+        kept.keep(second, saved: nil, account: "a")
         var flat = SearchDraft(); flat.extra = "Flat edits"
-        kept.keep(flat, baseline: nil, account: "a")
-        #expect(kept.restoreItem(for: nil, account: "a", huntID: 2) == first)
-        #expect(kept.restoreItem(for: nil, account: "a", huntID: 4) == second)
-        #expect(kept.restoreItem(for: nil, account: "a") == second)
-        #expect(kept.restore(for: nil, account: "a") == flat)
-        #expect(kept.restoreItem(for: nil, account: "b", huntID: 2) == ItemSearchDraft())
+        kept.keep(flat, saved: nil, account: "a")
+        #expect(kept.restore(ItemSearchDraft.self, saved: nil, account: "a", huntID: 2) == first)
+        #expect(kept.restore(ItemSearchDraft.self, saved: nil, account: "a", huntID: 4) == second)
+        #expect(kept.restore(ItemSearchDraft.self, saved: nil, account: "a") == second)
+        #expect(kept.restore(SearchDraft.self, saved: nil, account: "a") == flat)
+        #expect(kept.restore(ItemSearchDraft.self, saved: nil, account: "b", huntID: 2) == ItemSearchDraft())
         kept.drop(account: "a", huntID: 2, kind: .item)
-        #expect(kept.restoreItem(for: nil, account: "a", huntID: 2) == ItemSearchDraft())
-        #expect(kept.restoreItem(for: nil, account: "a", huntID: 4) == second)
+        #expect(kept.restore(ItemSearchDraft.self, saved: nil, account: "a", huntID: 2) == ItemSearchDraft())
+        #expect(kept.restore(ItemSearchDraft.self, saved: nil, account: "a", huntID: 4) == second)
         let baseline = try #require(second.search())
-        kept.keep(first, baseline: baseline, account: "a", huntID: 4)
+        kept.keep(first, saved: ItemSearchDraft(baseline), account: "a", huntID: 4)
         var changed = baseline; changed.query = "Table"
-        #expect(kept.restoreItem(for: changed, account: "a", huntID: 4) == ItemSearchDraft(changed))
+        #expect(kept.restore(saved: ItemSearchDraft(changed), account: "a", huntID: 4) == ItemSearchDraft(changed))
     }
 }

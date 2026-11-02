@@ -61,14 +61,18 @@ struct HuntListCard: View {
     }
 }
 
-/// The hunt's card on its page: today's hunt card for any kind. Status, the name in big, what it looks for (a watch: its
-/// host, what the page says now and when it was checked and changed), and the one button (Start hunting / Start watching
-/// / Pause); for a kind this build does not know only its name and "Needs a newer app".
-struct HuntHeroCard: View {
+/// The hunt's card on its page: today's hunt card for any kind. Status, the name in big (the page puts it there: as a
+/// button that renames it in place, or its field, brief 135), what it looks for (a watch: its host, what the page says
+/// now and when it was checked and changed), and the one button (Start hunting / Start watching / Pause); for a kind this
+/// build does not know only its name and "Needs a newer app". While the name is edited the button takes no taps (a tap
+/// there ends the editing, `HuntPage`).
+struct HuntHeroCard<Title: View>: View {
     let card: HuntCard
     let sites: SiteNames
     let busy: Bool
+    var editing = false
     let toggle: (Bool) -> Void
+    @ViewBuilder let title: (HuntText) -> Title
 
     var body: some View {
         let text = HuntText(card.hunt, page: card.page, sites: sites)
@@ -76,7 +80,7 @@ struct HuntHeroCard: View {
             if text.kind != nil {
                 HuntStatus(active: card.hunt.active, kind: text.kind, stopped: card.page?.read == .blocked).padding(.bottom, 14)
             }
-            HuntTitle(text: text, size: 20)
+            title(text)
             if let line = text.details ?? text.newerApp {
                 Text(line).font(AppFont.text(14)).foregroundStyle(Ink.secondary).lineSpacing(3)
                     .fixedSize(horizontal: false, vertical: true)
@@ -90,6 +94,7 @@ struct HuntHeroCard: View {
             }
             if text.kind != nil {
                 StartPauseButton(active: card.hunt.active, kind: text.kind, busy: busy, height: 50, toggle: toggle)
+                    .allowsHitTesting(!editing)
                     .padding(.top, 20)
             }
         }
@@ -170,11 +175,81 @@ struct HuntTitle: View {
             if let kind {
                 Image(systemName: kind.symbol).font(.system(size: size * 0.72, weight: .medium))
                     .foregroundStyle(Ink.muted)
-                    .accessibilityLabel(Text(verbatim: kind == .flat ? String(localized: "Flat") : kind.choiceTitle()))
+                    .accessibilityLabel(Text(verbatim: kind.choiceTitle()))
             }
             Text(title).font(AppFont.text(size, weight: .semibold)).foregroundStyle(Ink.primary)
                 .lineLimit(2).fixedSize(horizontal: false, vertical: true)
         }
+    }
+}
+
+/// A small pen after a name that is edited where it stands (Aresium's `PenButton`): SF `pencil` in muted ink, growing
+/// with the text size, a 44 pt tap area.
+struct PenButton: View {
+    let label: Text
+    let action: () -> Void
+    @ScaledMetric(relativeTo: .body) private var size: CGFloat = 15
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "pencil").font(.system(size: size, weight: .medium)).foregroundStyle(Ink.muted)
+                .frame(width: 44, height: 44).contentShape(Rectangle())
+                .padding(-12)                   // the 44 pt area, drawn small beside the name
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
+    }
+}
+
+/// The long press on a search's card (the Hunts list, Listings → Searches; brief 135): Rename (the search's page on the
+/// Hunts tab, its name's field ready), Pause or Start, Delete (asks first, as on its page). A search this build cannot
+/// read offers Delete alone (`HuntPageActions`).
+private struct HuntCardMenu: ViewModifier {
+    let card: HuntCard
+    let store: ArestemisStore
+    let navigation: AppNavigation
+    @State private var confirmDelete = false
+
+    func body(content: Content) -> some View {
+        let actions = HuntPageActions(card.hunt)
+        let words = HuntWords(SearchKind(card.hunt.kind))
+        let busy = store.isChanging(hunt: card.id)
+        content
+            .contentShape(.contextMenuPreview, RoundedRectangle(cornerRadius: Ink.cardRadius, style: .continuous))
+            .contextMenu {
+                if actions.rename {
+                    Button { navigation.rename(card.id) } label: { Label("Rename", systemImage: "pencil") }
+                        .disabled(busy)
+                }
+                if actions.startPause {
+                    if card.hunt.active {
+                        Button { setActive(false) } label: { Label("Pause", systemImage: "pause") }.disabled(busy)
+                    } else {
+                        Button { setActive(true) } label: { Label("Start", systemImage: "play") }.disabled(busy)
+                    }
+                }
+                Button(role: .destructive) { confirmDelete = true } label: { Label("Delete", systemImage: "trash") }
+                    .disabled(busy)
+            }
+            .confirmationDialog(words.deleteQuestion, isPresented: $confirmDelete, titleVisibility: .visible) {
+                Button(words.delete, role: .destructive) {
+                    navigation.leaveDeleted(card.id)
+                    Task { await store.deleteHunt(id: card.id) }
+                }
+            } message: {
+                Text(words.deleteMessage)
+            }
+    }
+
+    private func setActive(_ active: Bool) {
+        Task { await store.setActive(id: card.id, active: active) }
+    }
+}
+
+extension View {
+    /// A search's card with its long press (`HuntCardMenu`).
+    func huntCardMenu(_ card: HuntCard, store: ArestemisStore, navigation: AppNavigation) -> some View {
+        modifier(HuntCardMenu(card: card, store: store, navigation: navigation))
     }
 }
 

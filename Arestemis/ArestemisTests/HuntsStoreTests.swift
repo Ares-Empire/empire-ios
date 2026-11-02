@@ -23,7 +23,7 @@ struct HuntsStoreTests {
         let (store, transport, _) = try await makeStore()
         await store.reloadOverview()
         let original = store.hunts
-        let route = operation == "delete" ? "DELETE /hunts/2" : "PUT /hunts/2"
+        let route = operation == "delete" ? "DELETE /hunts/2" : operation == "rename" ? "PATCH /hunts/2" : "PUT /hunts/2"
         transport.answer(route, 400, json: Data(#"{"error":"Fictional refusal"}"#.utf8))
         let gate = RequestGate(); transport.gates[route] = gate
         let action = Task {
@@ -62,6 +62,8 @@ struct HuntsStoreTests {
         #expect(await store.renameHunt(id: 2, name: "  Chair  "))
         #expect(store.hunts[1].hunt.name == "Chair" && store.card(1)?.hunt == originalFlat)
         #expect(await store.renameHunt(id: 2, name: nil) && store.hunts[1].hunt.name == nil)
+        // Renaming changes the name alone: the search is the one it was.
+        #expect(store.hunts[1].hunt.search == item.search)
         await store.setActive(id: 2, active: false)
         #expect(store.hunts[1].sources.isEmpty && !store.hunts[1].hunt.active)
         await store.setActive(id: 2, active: true)

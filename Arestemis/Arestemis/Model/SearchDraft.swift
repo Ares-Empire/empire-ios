@@ -48,11 +48,14 @@ struct SearchDraft: Codable, Equatable {
     var sublet: Sublet = .exclude
     var extra = ""
     var sources: Set<Source> = Set(Source.flatPortals)
+    /// The hunt's own name (brief 135); empty = named after what it looks for.
+    var name = ""
 
     /// A new search: flat or WG, one person, every portal, no temporary offers.
     init() {}
 
-    init(_ search: Search, calendar: Calendar = .app) {
+    init(_ search: Search, name: String? = nil, calendar: Calendar = .app) {
+        self.name = name ?? ""
         type = OfferType(search.kinds)
         people = min(max(search.people, Self.people.lowerBound), Self.people.upperBound)
         flatmatesMax = search.flatmatesMax
@@ -68,6 +71,15 @@ struct SearchDraft: Codable, Equatable {
         sublet = search.sublet
         extra = search.extra
         sources = Set(search.sources)
+    }
+
+    /// The name sent: trimmed and at most 60 characters; nil when empty, so the hunt is named after what it looks for.
+    var sentName: String? { HuntName.cleaned(name) }
+
+    /// The Name field's grey placeholder: what the hunt is called while the field stays empty, following the form
+    /// ("Flat or WG room", "WG room").
+    func namePlaceholder(language: AppLanguage = .current) -> String {
+        HuntName.placeholder(HuntText.automaticTitle(.flat(search()), language: language), language: language)
     }
 
     /// Flat offers are possible: their size and rooms apply.

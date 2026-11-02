@@ -20,6 +20,13 @@ struct HuntsAPITests {
         _ = try await api.updateHunt(id: 2, search: hunt.search, name: nil)
         let updated = try #require(try body(transport.requests.last))
         #expect(Set(updated.keys) == ["search", "name"] && updated["name"] is NSNull)
+        // Renaming sends the name alone (PATCH), so the server does not start the search again.
+        try transport.answer("PATCH /hunts/2", encoding: hunt)
+        _ = try await api.renameHunt(id: 2, name: "Chair")
+        let renamed = try #require(try body(transport.requests.last))
+        #expect(transport.requests.last?.httpMethod == "PATCH" && Set(renamed.keys) == ["name"] && renamed["name"] as? String == "Chair")
+        _ = try await api.renameHunt(id: 2, name: nil)
+        #expect(try body(transport.requests.last)?["name"] is NSNull)
         transport.answer("POST /search/parse", json: Data(#"{"search":{"query":"Chair","price_max":450},"unclear":["Which size?"]}"#.utf8))
         guard case .item(let parsed) = try await api.parse(text: "An office chair", kind: .item) else {
             Issue.record("Expected an item parse result"); return

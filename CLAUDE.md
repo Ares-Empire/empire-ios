@@ -500,7 +500,7 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   Data in `API/` + `Model/` (one `ArestemisStore`, optimistic changes with rollback), screens in `Screens/` on
   `Shared/Design`. Launch arguments (DEBUG): `-sampleData` (+ `-sampleNoHunt`, `-samplePaused`, `-sampleLoading`),
   `-tab hunt|listings|search` (`search`: the first hunt's form), `-filter new|saved|applied|all`, `-openMatch <id>`, brief 114's
-  `-openHunt <id>`, `-openForm <id>`, `-openItemForm`, `-newItemForm`, `-newFlatForm`, `-newSearch` (the kind dialog),
+  `-openHunt <id>`, `-openForm <id>`, `-openItemForm`, `-newItemForm`, `-newFlatForm`, `-newSearch` (New search's page),
   `-sampleSlowed`, `-sampleNewerKind`; brief 133's `-listings new|searches`, `-openSearch <id>`, `-search <words>`;
   `-openSheet settings|application|rejected|place|describe`, `-scrollBottom`, `-scrollTo size|rent|movein` (the thing form:
   `where`); Settings →
@@ -526,8 +526,9 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   (Bookcase, pickup, IKEA Preowned) and 5 (Denimwerk jeans, shipping, Vinted) with matches 33 and 34
   (`DeliverySitesTests`; DEBUG `-sampleDelivery pickup|shipping|either`, chosen in the thing form as a tap would).
   **Page watches** (brief 131, 2026-11-02; server brief 130, plan `ares-empire/docs/ARESTEMIS-ANYTHING.md` → Page watches):
-  a third kind, `watch` ("Watch a page" / "Seite beobachten", offered when `/kinds` lists it): an address, the change in
-  the user's words, how often (15 min to daily, default 1 h) and an optional name (`Model/WatchModels.swift`,
+  a third kind, `watch` ("Watch a website" / "Webseite beobachten" since brief 134, offered when `/kinds` lists it): an
+  optional name (first, since brief 135), an address, the change in the user's words, how often (15 min to daily,
+  default 1 h) (`Model/WatchModels.swift`,
   `WatchSearchDraft`, `Screens/WatchSearchScreen.swift`, in the thing form's style; a pasted text keeps its first link,
   `WatchAddress.fromField`). The server decides what can be watched: its refusals come as `400` with `field`
   (`FieldRefusal`, `ArestemisStore.searchErrorField`) and show under that field. The card (`WatchLines`,
@@ -568,6 +569,43 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   again. Sample mode imitates the server's search simply (`SampleBackend.findMatches`; the app never ranks). Tests:
   `ListingsTests`; the server's sample answer `ArestemisTests/ServerSamples/server-matches-search.json`. Screenshots:
   `build/133-*.png`.
+  **New search, names, renaming in place** (brief 135, Patrik 2026-11-02 on the sketch: the kind menu "is not pretty";
+  searches nameable and renameable, "only what's necessary"). **New search** (`Screens/NewSearchScreen.swift`, model
+  `Model/NewSearch.swift`): New search (the list's button, the empty states) pushes a page on the Hunts tab
+  (`HuntRoute.newSearch`, no tab bar): "What should Arestemis find for you?" / "Was soll Arestemis für dich finden?",
+  then one glass card per kind this build can open, in `/kinds`' order with `/kinds`' names (`NewSearchCard.cards`;
+  the kinds are Flat / Wohnung, Things / Dinge, Price monitor / Preismonitor, Watch a website / Webseite beobachten
+  since server brief 134; `price` has no card until brief 137, a kind of a newer server none; without an answer this
+  build's three with its own names, `SearchKind.choiceTitle`): the Hunts list's mark and the name, a chevron, one
+  sentence (`SearchKind.pitch`), the examples as chips (`SearchExample`, laid over the card's button as
+  `HuntListCard`'s Start / Pause is). A tap on the card opens the kind's form (empty, or the kept draft); an example
+  opens it filled in (`.form(kind, hunt: nil, example:)`): flat, at least 2 rooms, up to €1,100 warm; a WG room;
+  "Kallax" up to €40; "Road bike" / "Rennrad" with "Frame size 56" / "Rahmengröße 56" in Extras; the watch's "Tell me
+  when" sentence ("a new version comes out" / "eine neue Version erscheint", …). Places and addresses stay the user's.
+  Saving replaces the form and New search with the hunt's page (`showCreated`). **One Name field, first in every form**
+  (`NameField`): its grey placeholder is the automatic name, following the form (`HuntText.automaticTitle`: a flat's
+  kinds, a thing's words, a watch's page title or host; "Optional" while there is none), nothing else explains it; 60
+  characters, sent as `name` (`sentName`: kept, changed, or null to clear). The drafts carry the name, so a kept draft's
+  baseline is the saved hunt as a draft (`KeptDraft`, one generic `KeptSearchDraft` for the three kinds; a rename
+  elsewhere drops the kept edits). **Renaming in place** (`HuntPage`, `NameEdit`, as Aresium's payment page): the name
+  on the hunt's card is a button with a small pen (`PenButton`); a tap, the pen, the `…` menu's Rename or a card's long
+  press turns it into a field in the same font and place (the mark stays, a well reaching into the margin), the name
+  selected, the keyboard up; the bar shows Cancel (ink) and Save (the accent, muted while unchanged). Return, Save, a
+  tap anywhere else on the page or a scroll save a changed name (`PATCH /hunts/{id}` with the name alone, so the server
+  does not start the search again as a `PUT` would; nothing is sent when unchanged), Cancel leaves it (Escape on a hardware keyboard through Cancel's `.keyboardShortcut(.cancelAction)`;
+  not checked: XCTest's `typeKey` reached no key of the field, Return neither); empty is the automatic name again. While it is open the rest of the
+  page takes no taps (a tap there ends it). The Rename alert is gone. **A search card's long press** (`huntCardMenu`,
+  the Hunts list and Listings → Searches): Rename (the search's page on the Hunts tab, its field open,
+  `AppNavigation.rename`), Pause or Start, Delete (asks first, as on the page). A hunt this build cannot read offers
+  Delete only (`HuntPageActions.rename`: its page shows no name to edit). DEBUG `-newSearch`,
+  `-newExample <example>` (`twoRooms`, `wgRoom`, `kallax`, `roadBike`, `newVersion`, `newJob`, `canteenMenu`),
+  `-renameHunt <id>` (`-renameText <text>`). Tests: `NewSearchTests`. Real touches (a temporary UI test in
+  `Aresus/AresusUITests` driving Arestemis, deleted): the long press's menu on both tabs and in German, Pause and Start
+  from it, Rename opening the field with the keyboard, a tap elsewhere saving, Cancel restoring, the clear button
+  showing the automatic name, Return and Save saving, Delete asking first; the examples filling their forms. Found then
+  and left (Shared): a glass card lifted by a long press from a scroll view (these cards, and brief 49's match cards)
+  shows a coarse band along its lower edge in the preview on the simulator; cards in a `List` (Searches) do not. Screenshots:
+  `build/135-*.png`.
 - **Arestoteles app** (2026-10-24, build R2): `Arestoteles/` (bundle id `de.ares-empire.arestoteles`, URL scheme
   `arestoteles`), Patrik's Weltbild vault on the Arestoteles API (`Arestoteles/docs/API.md`, decisions
   `ares-empire/docs/ARESTOTELES-APP.md`; samples in `Arestoteles/Arestoteles/Samples/`, copies of its `docs/samples/`).

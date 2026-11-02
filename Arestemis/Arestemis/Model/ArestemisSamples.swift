@@ -207,6 +207,12 @@ final class SampleBackend: ArestemisBackend {
         huntValues[index].updated = ArestemisSamples.iso(.now)
         return huntValues[index]
     }
+    func renameHunt(id: Int, name: String?) async throws -> Hunt {
+        let index = try huntIndex(id)
+        huntValues[index].name = try Self.name(name)
+        huntValues[index].updated = ArestemisSamples.iso(.now)
+        return huntValues[index]
+    }
     func setActive(id: Int, active: Bool) async throws -> Hunt {
         let index = try huntIndex(id)
         if active, !huntValues[index].active, huntValues.count(where: { $0.active }) >= 10 {
