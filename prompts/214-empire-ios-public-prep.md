@@ -1,6 +1,6 @@
 # 214: empire-ios ready to be public: owner email, server name and Arestemis server briefs out
 
-Status: running
+Status: merged 2026-11-02
 Repo: `empire-ios` · Branch: `codex/214-public-prep` · Worktree: `../empire-ios-214-public-prep` · Model: `gpt-6.1-sol`, effort `high`
 
 ## Goal
