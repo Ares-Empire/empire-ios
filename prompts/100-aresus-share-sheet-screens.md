@@ -1,6 +1,6 @@
 # 100: Aresus: the send screen in the share sheet, dropping onto the tab, adding to a pick
 
-Status: open (starts after brief 94 is merged)
+Status: merged 2026-11-02 (190 tests; Claude: pictures keep a name a person chose, both tabs take drops)
 Branch: `claude/100-share-screens` · Worktree: `../empire-ios-100-share-screens` · Built by a **Claude agent** (design
 work, `CLAUDE.md` → Workflow) · Simulator: `claude-100` (create it: iPhone 17, iOS 27.0)
 

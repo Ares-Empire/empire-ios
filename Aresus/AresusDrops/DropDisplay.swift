@@ -1,4 +1,5 @@
 import Foundation
+import UniformTypeIdentifiers
 
 // How drops read on screen (brief 91): the rows on the Aresync tab, the folder paths, the name rules in plain words.
 // Kept out of the views so each state's line is tested; what a state means is aresus/docs/API.md → Drops.
@@ -142,10 +143,16 @@ nonisolated enum DropPathText {
     /// The send sheet's Folder row: the place, and a quiet word the row shows after it in parentheses: the fallback
     /// folder's own name after "Sort later" ("Sort later (Zu sortieren)"), "new" after a folder the Mac makes as the
     /// files land (brief 93: "Documents › Studium › EIST › Blatt 3 (new)").
+    /// Before the Mac's folder list is there (`fallback` nil: the share sheet before the app ever cached it), only "Sort
+    /// later"; a fallback folder named like the words themselves is not said twice (brief 100: the share sheet showed
+    /// "Sort later (Sort later)").
     static func place(_ target: Target?, fallback: String?,
                       language: AppLanguage = .current) -> (text: String, quiet: String?) {
         guard let target else {
-            return (language.string(LocalizedStringResource("Sort later", table: "AresusDrops")), fallback.flatMap { $0.isEmpty ? nil : $0 })
+            let words = language.string(LocalizedStringResource("Sort later", table: "AresusDrops"))
+            let folder = fallback?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            let same = folder.compare(words, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame
+            return (words, folder.isEmpty || same ? nil : folder)
         }
         let isNew = !(target.newFolder ?? "").isEmpty
         return (path(target, language: language),
@@ -177,6 +184,50 @@ extension DropRoot {
         case .documents: "Documents"
         case .downloads: "Downloads"
         }
+    }
+}
+
+/// The send sheet's words about what was picked (brief 100), kept here so both languages are tested.
+nonisolated enum SendPickText {
+    /// The picked row's heading: "Photo" / "Photos" while everything is a photo (the library's or the camera's), else
+    /// "File" / "Files": a photo is a file too, so a mix of both says Files.
+    static func heading(_ sources: [DropSource], language: AppLanguage = .current) -> String {
+        let photos = !sources.isEmpty && !sources.contains(.file)
+        switch (photos, sources.count == 1) {
+        case (true, true): return language.string(LocalizedStringResource("Photo", table: "AresusDrops"))
+        case (true, false): return language.string(LocalizedStringResource("Photos", table: "AresusDrops"))
+        case (false, true): return language.string(LocalizedStringResource("File", table: "AresusDrops"))
+        case (false, false): return language.string(LocalizedStringResource("Files", table: "AresusDrops"))
+        }
+    }
+
+    /// The quiet line under the picked row when the share sheet or a drop held items that could not be read.
+    static func unreadable(_ count: Int, language: AppLanguage = .current) -> String {
+        language.string(LocalizedStringResource("\(count) items could not be read.", table: "AresusDrops"))
+    }
+
+    /// The share sheet while it reads what was shared and restores the login.
+    static func preparing(language: AppLanguage = .current) -> String {
+        language.string(LocalizedStringResource("Preparing …", table: "AresusDrops"))
+    }
+}
+
+extension DropFileKind {
+    /// What a shared item will be on the picked row before it is read: photos and videos as pictures, else files.
+    nonisolated var source: DropSource {
+        switch self {
+        case .photo, .video: .photo
+        case .pdf, .other: .file
+        }
+    }
+
+    /// A shared item's kind from the types its provider offers (the share sheet's loading tiles).
+    nonisolated init(types: [String]) {
+        let known = types.compactMap(UTType.init)
+        if known.contains(where: { $0.conforms(to: .image) }) { self = .photo }
+        else if known.contains(where: { $0.conforms(to: .movie) }) { self = .video }
+        else if known.contains(where: { $0.conforms(to: .pdf) }) { self = .pdf }
+        else { self = .other }
     }
 }
 
