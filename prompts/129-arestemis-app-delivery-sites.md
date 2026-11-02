@@ -1,6 +1,6 @@
 # 129: Arestemis app: sites that only ship or only hand over, and the OpenStreetMap credit
 
-Status: open (after Arestemis brief 128: its samples carry Vinted)
+Status: running (Arestemis 128 merged)
 Branch: `claude/129-arestemis-delivery-sites` · Worktree: `../empire-ios-129-arestemis-delivery` · **For a Claude
 agent** (screens and their small data part)
 
