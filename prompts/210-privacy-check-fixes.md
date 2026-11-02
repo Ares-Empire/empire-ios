@@ -1,6 +1,6 @@
 # 210: Privacy check: scan only what a commit adds, and never choke on non-UTF-8 text
 
-Status: running
+Status: merged 2026-11-02
 Repo: `aresync` · Branch: `codex/210-privacy-check-fixes` · Worktree: `../aresync-210-privacy-check` · Model: `gpt-6.1-sol`, effort `high`
 
 ## Goal

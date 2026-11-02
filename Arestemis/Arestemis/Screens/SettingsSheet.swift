@@ -3,20 +3,23 @@ import SwiftUI
 /// Arestemis's Settings: the shared screen (Shared/Design/SettingsScreen) with the app's own sections on top: the hunts'
 /// notifications, then, under "Flat applications" (applications are only written for flats), the application (brief 61): a switch
 /// between automatic texts and the own text, the row that follows it (the own text, or the notes for automatic texts)
-/// and About you, each opening a page with its text field.
+/// and About you, each opening a page with its text field. Help starts with Tour of Arestemis (brief 139).
 /// Every change edits one draft, saved when the sheet closes (Done or swiping it away), also from a page.
 struct SettingsSheet: View {
     let store: ArestemisStore
     let logOut: () -> Void
+    /// Help → Tour of Arestemis (brief 139): closes Settings and starts the tour.
+    let startTour: () -> Void
     @State private var draft: Settings?
     /// The text page pushed over Settings.
     @State private var page: ApplicationPage?
 
     /// Starts with the settings the store already has (loaded with the home screen), so the sheet opens with its
     /// sections instead of "Loading settings…" swapped for them mid-animation.
-    init(store: ArestemisStore, logOut: @escaping () -> Void) {
+    init(store: ArestemisStore, logOut: @escaping () -> Void, startTour: @escaping () -> Void) {
         self.store = store
         self.logOut = logOut
+        self.startTour = startTour
         _draft = State(initialValue: store.settings)
     }
 
@@ -33,6 +36,12 @@ struct SettingsSheet: View {
             } else {
                 CalmMessage(text: String(localized: "Loading settings…"), loading: true).padding(.top, 26)
             }
+        } help: {
+            Button(action: startTour) {
+                SettingsRow(title: String(localized: "Tour of Arestemis"),
+                            subtitle: String(localized: "With sample searches"), trailing: .none)
+            }
+            .buttonStyle(SettingsRowStyle())
         }
         .task { await load() }
         .onDisappear {

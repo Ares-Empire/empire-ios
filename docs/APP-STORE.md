@@ -85,10 +85,10 @@ internal testers (App Store Connect users, up to 100) need no Beta App Review.
 
 | Field | Value |
 |---|---|
-| Feedback Email | `REDACTED-EMAIL` |
+| Feedback Email | the owner's email (the owner file, see ares-empire `docs/PRIVACY.md`) |
 | Privacy Policy URL | `https://www.ares-empire.de/privacy` |
 | Marketing URL | empty (the hub needs a login), or `https://www.ares-empire.de` |
-| Contact (Beta App Review) | Patrik Breeck, `REDACTED-EMAIL`, phone: **[Patrik]** (entered in App Store Connect only, never here) |
+| Contact (Beta App Review) | Patrik Breeck, the owner's email (the owner file, see ares-empire `docs/PRIVACY.md`), phone: **[Patrik]** (entered in App Store Connect only, never here) |
 | Sign-in required | **Yes**: the demo login below |
 | Review notes | "Every Ares Empire app needs an approved Ares account; accounts are created in any of the apps (Create account on the login screen) or on www.ares-empire.de and approved by the developer; Settings → Account deletes the account. The demo account is approved and has access to this app. Push notifications go through the developer's own push service." (+ the app's line below) |
 
@@ -102,16 +102,19 @@ Beta App Description (English; German in brackets for a German localization):
   Ausgaben nach Monat und Kategorie, Belege auf dem iPhone gelesen, Import über das Teilen-Menü, Widgets für den
   Home-Bildschirm.*)
 
-**Aresium's Test Information differs** (brief 22, 2026-10-27): *Sign-in required* **No**, no demo account. Review
-notes: "Aresium needs no account: it keeps your bank data on this iPhone and sorts it there; nothing about your money
-is sent anywhere. To try it: choose a few categories, then import the attached made-up bank file
-(Files → Aresium-Sample.csv, or share it to Aresium). Import → Scan receipt (or Choose photo) reads a shop receipt on
-the iPhone; the photo is not kept. Settings → Lock turns on Face ID or a code of Aresium's own. Settings → Ares account
-is only for the developer's own server and is not needed." Attach a made-up bank file to the
-review notes (App Store Connect takes an attachment): the richest is the nine-month VR Bank file the DEBUG phone sample
-builds (`PhoneSample.vrBankCSV` in `Aresium/Aresium/Model/PhoneSample.swift`, made-up shops and amounts), saved once
-as `Aresium-Sample.csv`; the engine's small made-up fixtures in `Aresium/AresiumTests/Engine/` (`vrbank.csv`,
-`dkb.csv`) work too. Never a real export.
+**Aresium's Test Information (set 2026-11-02 through the App Store Connect API, `scripts/asc.py`; the texts are in
+App Store Connect, this is a summary):** *Sign-in required* **No**, no demo account; feedback email and privacy policy
+as in the table above (German localization `https://www.ares-empire.de/datenschutz`); a description in de-DE and en-US
+(sorts the bank file's payments into categories and adds them up, everything stays on the iPhone, no account; CSV,
+CAMT and MT940 from Files, the share sheet or a drop; receipts read with the camera; money paid back linked). Review
+notes: no account and no sign-in, nothing about the money is sent; the quickest way to see every screen is **Start
+tour** on the first screen (made-up data, not saved); Import data reads a CSV, CAMT or MT940 export from a German bank or
+PayPal; Scan receipt reads on the iPhone and keeps no photo; Lock; Settings → Ares account is only for the developer;
+Contact & support works without an account; German and English. Beta App Review takes no attachment, so no sample
+file is sent (the tour replaces it). Each build's *What to Test* (de-DE, en-US): import your bank's file ("How do I get
+my file?"), check the categories, tell us what was unclear; feedback through TestFlight's screenshot or Settings →
+Contact & support; an unreadable bank file sends only the bank's name and header line. External group **"Tester"**
+(feedback on, public link off until the first approval). Build 18 submitted 2026-11-02.
 - **Arestemis:** "Flat hunting: set a search, start the hunt, and get every new listing from WG-Gesucht,
   Kleinanzeigen, Immowelt and ImmoScout24 that an AI checked against your whole search, with an application text ready to copy."
   (*Wohnungssuche: Filter festlegen, Suche starten und jedes neue Angebot von WG-Gesucht, Kleinanzeigen, Immowelt
@@ -129,7 +132,7 @@ Only needed once an app goes to other people (App Store or external testers): bu
 testing, which Apple does not review (Patrik, 2026-10-25). Never the existing test account (Claude's own).
 
 1. Sign up at `https://www.ares-empire.de/signup` with an extra address on Patrik's domain that forwards to him
-   (Patrik, 2026-10-25: e.g. `review@REDACTED-DOMAIN`; his own address is his own account).
+   (Patrik, 2026-10-25: e.g. `review@example.com`; his own address is his own account).
    Password from a generator, kept only in the Keychain item `empire-review-account` and in App Store Connect.
 2. Confirm the email, then approve the account (Empire app → Approvals, or the PocketBase admin UI). In the admin UI
    set `services` to `empire` plus the app under review (`arestemis`, `aresus`); nothing else.

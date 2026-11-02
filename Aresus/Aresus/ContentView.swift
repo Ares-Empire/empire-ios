@@ -5,8 +5,10 @@ import UIKit
 /// Links (`aresus://…`) and notification taps go through `AresusNavigation`.
 /// DEBUG launch arguments: `-sampleData` (`-sampleAllGood`), `-tab aresus|aresync`, `-openProvince <slug>`,
 /// `-openRun <id>`, `-sampleLogin` / `-sampleNoAccess` / `-sampleAccessAsked` (`SampleAccount`) / `-sampleLoading` for
-/// the login, no-access and loading screens, and
-/// `-widgetGallery good|issues|loggedout` for the widget's views.
+/// the login, no-access and loading screens,
+/// `-widgetGallery good|issues|loggedout` for the widget's views, `-sampleShareExtension` (with `-sampleData`; and
+/// `-sampleShareState loading|loggedOut|unreadable`) for the share extension's made-up login, and `-sampleDropHover
+/// <count or name>` for the Aresync tab's drop hover (`AresusTabs`).
 struct ContentView: View {
     @State private var store: AresusStore
     @State private var drops: DropsStore
@@ -26,7 +28,12 @@ struct ContentView: View {
         let samples = AresusSamples.launched(arguments: arguments)
         #if DEBUG
         if arguments.contains("-sampleShareExtension") {
-            UserDefaults(suiteName: DropContainer.appGroup)?.set(samples != nil, forKey: "aresus.drops.preview")
+            // The share extension's made-up login and folders, and with `-sampleShareState loading|loggedOut|unreadable`
+            // one of its other screens (ShareViewController's `SharePreview`).
+            let group = UserDefaults(suiteName: DropContainer.appGroup)
+            group?.set(samples != nil, forKey: "aresus.drops.preview")
+            let state = arguments.firstIndex(of: "-sampleShareState").flatMap { arguments.indices.contains($0 + 1) ? arguments[$0 + 1] : nil }
+            group?.set(state, forKey: "aresus.drops.preview.state")
         }
         #endif
         #if DEBUG

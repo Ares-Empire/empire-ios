@@ -13,12 +13,15 @@ struct ListingRow: View {
     var showsNewState = false
     /// The search it belongs to, over it (the search over every search's listings).
     var hunt: HuntText? = nil
+    /// What the tour may point at here (New's rows, brief 139).
+    var spot: TourSpot? = nil
     let open: () -> Void
 
     var body: some View {
         Button(action: open) {
             MatchRow(match: match, kind: store.kind(of: match), showsNewDot: store.showsNewDot(match),
                      showsState: showsState, showsNewState: showsNewState, hunt: hunt)
+                .tourAnchor(spot)
         }
         .buttonStyle(.plain)
         .contextMenu { MatchRowActions(match: match, store: store) }
@@ -147,6 +150,7 @@ struct FilteredOutButton: View {
             .padding(.horizontal, 16).frame(minHeight: 46)
             .overlay(RoundedRectangle(cornerRadius: Ink.cardRadius, style: .continuous).strokeBorder(Ink.line))
             .contentShape(Rectangle())
+            .tourAnchor(.filteredOut)
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Filtered out, \(count) listings")

@@ -50,27 +50,25 @@ rounds. Patrik's further notes go into build 3.
 2. **Settings → Application, compact** (brief 61, Claude agent): Notifications first, then Application as rows like
    General's: a switch "Automatisch schreiben", a row that opens either "Dein Text" or "Hinweise" (notes every
    automatic text includes), and "Über dich". The automatic text then uses the facts about you and the notes, not the
-   own text (brief 62, Codex, server field `application_notes`).
+   own text (the Arestemis repo, `docs/briefs/62-arestemis-application-notes.md`, Codex, server field `application_notes`).
 3. **The flicker** with a small black corner when Settings opens or closes (brief 61).
-4. **More portals** (brief 63, Codex, server): ImmoScout24, and Immowelt in every town it knows
-   instead of only München (`garching-b-muenchen` resolves; some towns, e.g. Freising, Immowelt does not know by
-   name). No proxies needed. The server with ImmoScout24 goes live only after build 3 is on the phone, since build 2
-   does not know the new portal.
+4. **More portals** (the Arestemis repo, `docs/briefs/63-arestemis-more-portals.md`, Codex, server): ImmoScout24
+   support and broader Immowelt coverage. The server change goes live only after build 3 is on the phone, since
+   build 2 does not know the new portal. Site access is handled by the server.
 
 **Build 0.1 (3)** (uploaded 2026-10-31 21:40, commit cd602f5) carries round 3's app side: "Suche läuft", Settings →
-Application as rows (briefs 61, 62 live on the server since 20:51), settings loaded with the home screen so the sheet
+Application as rows (brief 61; the Arestemis repo, `docs/briefs/62-arestemis-application-notes.md` live on the server since 20:51), settings loaded with the home screen so the sheet
 opens complete (the brief-61 agent could not reproduce the black corner on iOS 27.0; the "Loading settings…" swap was the
-visible jump it found), and ImmoScout24 known to the app. **Kleinanzeigen** changed its list layout on 2026-10-31 (no
-`aditem` classes): scans found none from about 20:50; brief 66 fixed it, live 21:32 (23 listed per scan again).
-**Brief 63** (ImmoScout24 in every town, Immowelt everywhere) waits on branch `codex/63-more-portals` until build 3 is on
+visible jump it found), and ImmoScout24 known to the app. A server listing-reader fix went live at 21:32
+(the Arestemis repo, `docs/briefs/66-arestemis-kleinanzeigen-cards.md`).
+**More portals** (the Arestemis repo, `docs/briefs/63-arestemis-more-portals.md`) waits on branch `codex/63-more-portals` until build 3 is on
 the phone; then merge, deploy, tell the Aresus session (it adds an ImmoScout24 check), and Patrik turns ImmoScout24 on in
 Suche → Portale.
 
 ## Round 4 (build 3, 2026-11-01 night)
 
-Build 3 installed. **Brief 63 live** (Arestemis 3c20edd, 00:36): Garching got its Immowelt page (the first scan seeded 8
-Immowelt listings) and its ImmoScout24 place `/de/bayern/muenchen-kreis/garching-bei-muenchen`; the Aresus session was
-told. ImmoScout24 scans once Patrik turns it on in the search's portals.
+Build 3 installed. **Server portal support live** (the Arestemis repo, `docs/briefs/63-arestemis-more-portals.md`,
+Arestemis 3c20edd, 00:36); the Aresus session was told. ImmoScout24 scans once Patrik turns it on in the search's portals.
 
 1. **The black corner is still there**, now "very frequently", in the "Suche läuft" card on the Hunt tab (Patrik: "The
    black field goes black in the corner. It needs fixing."). His hunt is active all the time since build 3, so the
@@ -82,11 +80,11 @@ told. ImmoScout24 scans once Patrik turns it on in the search's portals.
 **Build 0.1 (4)** (uploaded 2026-11-01, commit 1009513): the black corner (brief 67: the glass card's blur was drawn
 offscreen inside its shadow and the scroll fade's mask, and the pulsing dot redrew the corner through both every frame;
 now the blur draws straight onto the screen, the look unchanged; the simulator never showed it, so this build is the
-test) and the German tabs Suche / Angebote / Filter. Server since build 3: brief 63 live, a portal's 429 Retry-After
-waited out only up to 30 s (Arestemis 5f3ead4; found by the Aresus session). Evidence and before/after shots:
+test) and the German tabs Suche / Angebote / Filter. Server since build 3: portal support live (the Arestemis repo,
+`docs/briefs/63-arestemis-more-portals.md`) and site access improved (Arestemis 5f3ead4; found by the Aresus session).
+Evidence and before/after shots:
 `build/67/` (local, not in git).
-Patrik on build 4 (2026-11-01): "very nice, much better". ImmoScout24 is on in his search: scans list 46 listings
-(31 before), every portal ok.
+Patrik on build 4 (2026-11-01): "very nice, much better". The search's portals are enabled and working.
 
 ## Round 5 (build 4, 2026-11-01 evening)
 

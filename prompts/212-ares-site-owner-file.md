@@ -1,6 +1,6 @@
 # 212: patrikbreeck.com: owner details from the owner file
 
-Status: running
+Status: merged 2026-11-02
 Repo: `ares` · Branch: `codex/212-owner-file` · Worktree: `../ares-212-owner-file` · Model: `gpt-6.1-sol`, effort `high`
 
 ## Goal

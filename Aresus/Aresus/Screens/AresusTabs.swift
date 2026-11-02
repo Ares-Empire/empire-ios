@@ -15,15 +15,32 @@ struct AresusTabs: View {
     @State private var droppedUnreadable = 0
     @State private var hovering: ProviderFiles.Hover?
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// Files dropped on either tab go to the send sheet (brief 100; dropping has no other meaning in Aresus): the hover
+    /// over the tab while they hover, the tab bar left free; letting go opens the send sheet with them.
+    private func takingDrops(_ content: some View) -> some View {
+        content
+            .overlay {
+                if let hovering, !navigation.showsSend { DropHoverScreen(hover: hovering).transition(.opacity) }
+            }
+            .onDrop(of: [.item], delegate: ProviderDropTarget(enabled: !navigation.showsSend,
+                type: { $0.types.first }, copy: copyDropped, hovering: $hovering, reduceMotion: reduceMotion,
+                dropped: { urls, failed in
+                    droppedUnreadable = failed
+                    droppedFiles = urls.map { DropFile(content: .file($0), suggestedName: $0.lastPathComponent) }
+                    if !droppedFiles.isEmpty { navigation.showsSend = true }
+                }))
+    }
 
     var body: some View {
         TabView(selection: $navigation.tab) {
             Tab("Aresus", systemImage: "binoculars", value: AresusNavigation.Tab.aresus) {
-                WatchtowerTab(store: store, navigation: navigation, marks: marks)
-                    .tint(Ink.primary)
+                takingDrops(WatchtowerTab(store: store, navigation: navigation, marks: marks)
+                    .tint(Ink.primary))
             }
             Tab("Aresync", systemImage: "arrow.triangle.2.circlepath", value: AresusNavigation.Tab.aresync) {
-                NavigationStack(path: $navigation.syncPath) {
+                takingDrops(NavigationStack(path: $navigation.syncPath) {
                     SyncScreen(store: store, drops: drops, open: { navigation.openRun = RunRef(id: $0) },
                                openSettings: { navigation.showsSettings = true },
                                openSend: { navigation.showsSend = true },
@@ -34,14 +51,7 @@ struct AresusTabs: View {
                             }
                         }
                 }
-                .tint(Ink.primary)
-                .onDrop(of: [.item], delegate: ProviderDropTarget(enabled: !navigation.showsSend,
-                    type: { $0.types.first }, copy: copyDropped, hovering: $hovering, reduceMotion: true,
-                    dropped: { urls, failed in
-                        droppedUnreadable = failed
-                        droppedFiles = urls.map { DropFile(content: .file($0), suggestedName: $0.lastPathComponent) }
-                        if !droppedFiles.isEmpty { navigation.showsSend = true }
-                    }))
+                .tint(Ink.primary))
             }
         }
         .tint(AppAccent.aresus.color)
@@ -60,6 +70,9 @@ struct AresusTabs: View {
                 .presentationBackground { ProvinceWall(accent: .aresus) }
                 .tint(Ink.primary)
         }
+        #if DEBUG
+        .task { showsHoverFromLaunchArgument() }
+        #endif
         .task(id: Refresh(parts: navigation.visibleParts, active: scenePhase == .active)) {
             guard scenePhase == .active else { return }
             let parts = navigation.visibleParts
@@ -80,6 +93,15 @@ struct AresusTabs: View {
                                 type: { $0.types.first },
                                 name: { ShareItems.name(suggested: $1, loaded: $0, type: $2) }, done: done)
     }
+
+    #if DEBUG
+    /// Screenshots (with `-sampleData -tab aresync`): `-sampleDropHover <count or name>` shows the hover as if that many
+    /// files, or one so named, were held over the tab (the simulator's drop needs two fingers).
+    private func showsHoverFromLaunchArgument() {
+        guard store.isSample, let value = LaunchArguments.value("-sampleDropHover") else { return }
+        hovering = Int(value).map { ProviderFiles.Hover(count: $0, name: nil) } ?? ProviderFiles.Hover(count: 1, name: value)
+    }
+    #endif
 
     private struct Refresh: Equatable {
         let parts: [AresusStore.Part]

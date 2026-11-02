@@ -63,6 +63,8 @@ final class ArestemisStore {
     static let pageSize = 50
 
     let session: EmpireSession
+    /// The store runs on the samples in memory (DEBUG's `-sampleData`, the tour): it asks no server, keeps no drafts and
+    /// does not refresh with the login.
     let isSample: Bool
     let places: PlaceSearch
     private let backend: any ArestemisBackend
@@ -128,11 +130,8 @@ final class ArestemisStore {
         self.backend = backend
         self.findDelay = findDelay
         keptDraft = KeptSearchDraft(defaults: defaults)
-        #if DEBUG
+        // In memory on the samples: DEBUG's `-sampleData`, and the tour in every build (brief 139).
         isSample = sample
-        #else
-        isSample = false
-        #endif
         places = PlaceSearch(delay: placeDelay, fetch: { [backend] query in
             // The login this request goes with, so its refusal names it (`EmpireSession.handleAuthFailure`).
             let generation = session.generation

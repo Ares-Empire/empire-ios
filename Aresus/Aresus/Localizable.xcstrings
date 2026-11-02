@@ -80,6 +80,46 @@
         }
       }
     },
+    "%lld files" : {
+      "localizations" : {
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Datei"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Dateien"
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld file"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld files"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld lines" : {
       "localizations" : {
         "de" : {
@@ -322,6 +362,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Letztes Deploy"
+          }
+        }
+      }
+    },
+    "Let go to send to the MacBook" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zum Senden ans MacBook loslassen"
           }
         }
       }

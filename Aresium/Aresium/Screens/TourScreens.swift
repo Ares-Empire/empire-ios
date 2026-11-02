@@ -9,207 +9,28 @@ import UniformTypeIdentifiers
 
 // MARK: - the tour in the environment
 
-private struct TourKey: EnvironmentKey {
-    static let defaultValue: TourModel? = nil
-}
-
 extension EnvironmentValues {
-    /// The tour the screens run in; nil in the person's own app (the anchors, veil and card then do nothing).
+    /// The tour the screens run in; nil in the person's own app (the anchors, veil and card then do nothing). The shared
+    /// pieces (`Shared/Design/TourPieces.swift`) see it as the `tourGuide`.
     var tour: TourModel? {
-        get { self[TourKey.self] }
-        set { self[TourKey.self] = newValue }
+        get { tourGuide as? TourModel }
+        set { tourGuide = newValue }
     }
 }
 
-/// Where the real controls are, for the veil: each one the tour may point at marks itself.
-private struct TourAnchorKey: PreferenceKey {
-    static let defaultValue: [TourTarget: Anchor<CGRect>] = [:]
-    static func reduce(value: inout [TourTarget: Anchor<CGRect>], nextValue: () -> [TourTarget: Anchor<CGRect>]) {
-        value.merge(nextValue()) { _, new in new }
-    }
-}
-
-/// Which of those controls are on screen, so a scroll view can bring one into view once it appears.
-private struct TourPresentKey: PreferenceKey {
-    static let defaultValue: Set<TourTarget> = []
-    static func reduce(value: inout Set<TourTarget>, nextValue: () -> Set<TourTarget>) { value.formUnion(nextValue()) }
+/// What the shared veil, ring and scrolling read: the control the step points at, and whether taps off it stop.
+extension TourModel: TourGuide {
+    var spots: [AnyHashable] { target.map { [AnyHashable($0)] } ?? [] }
+    var holdsTheRest: Bool { step.holdsTheRest }
 }
 
 extension View {
     /// Marks a real control the tour may point at (nothing outside the tour). nil marks nothing: a control on a page
     /// out of sight (the start screen's other page, brief 56), so the ring finds the one in view.
-    func tourAnchor(_ target: TourTarget?) -> some View { modifier(TourAnchorMark(target: target)) }
-
-    /// The veil and ring over a screen, around the control the tour points at when it is on this screen. Put it on each
-    /// screen's root (pushed screens and sheets have their own).
-    func tourSpotlight() -> some View { modifier(TourSpotlight()) }
+    func tourAnchor(_ target: TourTarget?) -> some View { tourSpot(target.map(AnyHashable.init)) }
 
     /// The tour's card at the bottom of a screen or sheet; the content keeps the space above it.
     func tourCard() -> some View { modifier(TourCardInset()) }
-
-    /// On a scroll view: the control the tour points at scrolls into view above the card (the largest text sizes).
-    func tourScrollsToTarget() -> some View { modifier(TourScrollToTarget()) }
-}
-
-private struct TourAnchorMark: ViewModifier {
-    let target: TourTarget?
-    @Environment(\.tour) private var tour
-
-    func body(content: Content) -> some View {
-        if tour != nil, let target {
-            // The id lets a scroll view bring it into view (`tourScrollsToTarget`).
-            content.anchorPreference(key: TourAnchorKey.self, value: .bounds) { [target: $0] }
-                .preference(key: TourPresentKey.self, value: [target])
-                .id(target)
-        } else {
-            content
-        }
-    }
-}
-
-private struct TourScrollToTarget: ViewModifier {
-    @Environment(\.tour) private var tour
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    /// The tour's controls inside this scroll view now (a payment's Change appears once its detail has loaded).
-    @State private var present: Set<TourTarget> = []
-    /// Where the control pointed at is in the scroll view now, and the scroll view's height.
-    @State private var place: TourScrollPlace?
-
-    func body(content: Content) -> some View {
-        if let tour {
-            ScrollViewReader { proxy in
-                content
-                    .onPreferenceChange(TourPresentKey.self) { present = $0 }
-                    .overlayPreferenceValue(TourAnchorKey.self) { anchors in
-                        GeometryReader { geometry in
-                            let frame = tour.target.flatMap { anchors[$0] }.map { geometry[$0] }
-                            Color.clear
-                                .onChange(of: frame.map { TourScrollPlace(frame: $0, height: geometry.size.height) },
-                                          initial: true) { _, value in place = value }
-                                .allowsHitTesting(false)
-                        }
-                        .accessibilityHidden(true)
-                    }
-                    .task(id: tour.target.map { present.contains($0) ? $0 : nil }) {
-                        guard let target = tour.target, present.contains(target) else { return }
-                        // After the screen is laid out: as far as it takes to show the control above the card, and not
-                        // at all when it shows there already.
-                        try? await Task.sleep(for: .milliseconds(200))
-                        let anchor: UnitPoint
-                        if let place {
-                            guard let needed = place.scrollAnchor else { return }
-                            anchor = needed
-                        } else {
-                            anchor = TourScrollPlace.unknown
-                        }
-                        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.3)) {
-                            proxy.scrollTo(target, anchor: anchor)
-                        }
-                    }
-            }
-        } else {
-            content
-        }
-    }
-}
-
-/// Where a control the tour points at is in its scroll view, and how far to scroll to show it (brief 59: only as far
-/// as it takes, so a start page's moving graph does not go half away for a category row that nearly showed).
-nonisolated struct TourScrollPlace: Equatable {
-    let frame: CGRect
-    let height: CGFloat
-
-    /// The upper part of the scroll view, above where the tour's card lies: a control wholly inside it shows.
-    static let shownPart: CGFloat = 0.6
-    /// A control not laid out yet (far down a lazy list): a third of the way down, as before.
-    static let unknown = UnitPoint(x: 0.5, y: 0.3)
-
-    /// nil when the control shows already; else the anchor that brings its lower edge to the shown part's end (its top
-    /// edge to the top when it is taller than that).
-    var scrollAnchor: UnitPoint? {
-        let limit = height * Self.shownPart
-        if frame.minY >= 0 && frame.maxY <= limit { return nil }
-        guard height > frame.height else { return UnitPoint(x: 0.5, y: 0) }
-        let y = (limit - frame.height) / (height - frame.height)
-        return UnitPoint(x: 0.5, y: min(1, max(0, y)))
-    }
-}
-
-private struct TourSpotlight: ViewModifier {
-    @Environment(\.tour) private var tour
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    func body(content: Content) -> some View {
-        if let tour {
-            content.overlayPreferenceValue(TourAnchorKey.self) { anchors in
-                GeometryReader { proxy in
-                    if let target = tour.target, let anchor = anchors[target] {
-                        // The ring glides to the next control when the step changes (not with Reduce Motion); while
-                        // the screen scrolls it stays on its control without lagging.
-                        TourVeil(hole: proxy[anchor], bounds: CGRect(origin: .zero, size: proxy.size),
-                                 holdsTheRest: tour.step.holdsTheRest)
-                            .animation(reduceMotion ? nil : .easeInOut(duration: 0.3), value: target)
-                            .transition(.opacity)
-                    }
-                }
-                .ignoresSafeArea(edges: .top)
-                .animation(.easeInOut(duration: 0.2), value: tour.target)
-            }
-        } else {
-            content
-        }
-    }
-}
-
-/// The wall's colour laid lightly over the screen, with the control left clear and ringed in ink. Taps on the rest stop
-/// here (`holdsTheRest`), taps on the control go through.
-private struct TourVeil: View {
-    let hole: CGRect
-    /// The screen's frame: the ring stays a little inside it (a full-width row).
-    let bounds: CGRect
-    let holdsTheRest: Bool
-    private static let margin: CGFloat = 6
-    private static let radius: CGFloat = 14
-    /// How much of the wall lies over the rest of the screen: enough to set the control apart, little enough that the
-    /// app under it reads easily (brief 24 had 0.74; tuned by eye in light and dark, 2026-10-27).
-    static let veil: Double = 0.3
-
-    var body: some View {
-        let around = hole.insetBy(dx: -Self.margin, dy: -Self.margin)
-        let inside = around.intersection(bounds.insetBy(dx: 4, dy: 0))
-        let clear = inside.isNull ? around : inside
-        let shape = VeilShape(hole: clear, radius: Self.radius)
-        ZStack {
-            shape.fill(Ink.background.opacity(Self.veil), style: FillStyle(eoFill: true))
-            // With the lighter veil the ring does the setting apart: full ink, a little thicker.
-            RoundedRectangle(cornerRadius: Self.radius, style: .continuous)
-                .strokeBorder(Ink.primary, lineWidth: 2)
-                .frame(width: clear.width, height: clear.height)
-                .position(x: clear.midX, y: clear.midY)
-                .allowsHitTesting(false)
-        }
-        .contentShape(shape, eoFill: true)
-        .allowsHitTesting(holdsTheRest)
-        .accessibilityHidden(true)
-    }
-}
-
-/// The whole frame with a rounded hole.
-private nonisolated struct VeilShape: Shape {
-    var hole: CGRect
-    let radius: CGFloat
-
-    var animatableData: AnimatablePair<AnimatablePair<CGFloat, CGFloat>, AnimatablePair<CGFloat, CGFloat>> {
-        get { AnimatablePair(AnimatablePair(hole.origin.x, hole.origin.y), AnimatablePair(hole.width, hole.height)) }
-        set { hole = CGRect(x: newValue.first.first, y: newValue.first.second, width: newValue.second.first,
-                            height: newValue.second.second) }
-    }
-
-    func path(in rect: CGRect) -> Path {
-        var path = Path(rect.insetBy(dx: -400, dy: -400))
-        path.addRoundedRect(in: hole, cornerSize: CGSize(width: radius, height: radius), style: .continuous)
-        return path
-    }
 }
 
 private struct TourCardInset: ViewModifier {
@@ -217,7 +38,7 @@ private struct TourCardInset: ViewModifier {
 
     func body(content: Content) -> some View {
         if let tour, tour.phase == .running {
-            content.safeAreaInset(edge: .bottom, spacing: 0) { TourCard(tour: tour) }
+            content.safeAreaInset(edge: .bottom, spacing: 0) { AresiumTourCard(tour: tour) }
         } else {
             content
         }
@@ -226,86 +47,21 @@ private struct TourCardInset: ViewModifier {
 
 // MARK: - the card
 
-/// The step's card: "Tour · 3 of 18" (of the steps this tour shows), the sentence, Next (ink, the main button's look) and End tour; at the
-/// import step a link to the bank guide, at the last step one button that ends the tour.
-private struct TourCard: View {
+/// The step's card (`TourCard`, shared): "Tour · 3 of 18" (of the steps this tour shows), the sentence, Next (ink, the
+/// main button's look) and End tour; at the import step a link to the bank guide, at the last step one button that ends
+/// the tour.
+private struct AresiumTourCard: View {
     let tour: TourModel
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @AccessibilityFocusState private var focused: Bool
 
     var body: some View {
-        let step = tour.step
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .firstTextBaseline, spacing: 12) {
-                SectionHeading(text: String(localized: "Tour · \(tour.number) of \(tour.count)"))
-                    .fixedSize(horizontal: false, vertical: true)
-                Spacer(minLength: 8)
-                if tour.nextStep != nil {
-                    Button { tour.end() } label: {
-                        Text("End tour").font(AppFont.text(13.5, weight: .semibold)).foregroundStyle(Ink.secondary)
-                            .multilineTextAlignment(.trailing)
-                            .frame(minHeight: 32).contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            Text(tour.text)
-                .font(AppFont.text(16, weight: .semibold)).foregroundStyle(Ink.primary)
-                .lineSpacing(2).fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .accessibilityFocused($focused)
-                .id(step)
-                .transition(.opacity)
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 12) {
-                    link
-                    Spacer(minLength: 0)
-                    mainButton
-                }
-                VStack(alignment: .leading, spacing: 10) {
-                    link
-                    mainButton
-                }
+        TourCard(count: String(localized: "Tour · \(tour.number) of \(tour.count)"), text: Text(tour.text),
+                 step: tour.step, leave: tour.nextStep != nil ? Text("End tour") : nil,
+                 main: tour.nextStep == nil ? Text("End tour") : Text("Next"),
+                 onLeave: { tour.end() }, onMain: { tour.next() }) {
+            if tour.step == .importFiles {
+                GuideLink { tour.showsGuide = true }
             }
         }
-        .padding(16)
-        .glassCard(raised: true)
-        // The largest text sizes: the card grows up to the first accessibility size, so the control it points at
-        // keeps room above it.
-        .dynamicTypeSize(...DynamicTypeSize.accessibility1)
-        .padding(.horizontal, 12).padding(.top, 8).padding(.bottom, 6)
-        .background {
-            // The screen fades into the wall under the card, as under a bar, so no row shows half beneath it.
-            LinearGradient(stops: [.init(color: Ink.background.opacity(0), location: 0),
-                                   .init(color: Ink.background.opacity(0.9), location: 0.45)],
-                           startPoint: .top, endPoint: .bottom)
-                .ignoresSafeArea(edges: .bottom)
-                .allowsHitTesting(false)
-        }
-        .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: step)
-        .accessibilityElement(children: .contain)
-        .onChange(of: step, initial: true) { _, _ in focused = true }
-    }
-
-    @ViewBuilder private var link: some View {
-        if tour.step == .importFiles {
-            GuideLink { tour.showsGuide = true }
-        }
-    }
-
-    /// Next, or at the last step the one button that ends the tour. Ink filled, the words in the wall's colour (the
-    /// first screen's Import data).
-    private var mainButton: some View {
-        Button {
-            withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.3)) { tour.next() }
-        } label: {
-            (tour.nextStep == nil ? Text("End tour") : Text("Next"))
-                .font(AppFont.text(15, weight: .semibold)).foregroundStyle(Ink.background)
-                .padding(.horizontal, 22).frame(minHeight: 44)
-                .background(Ink.primary, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        }
-        .buttonStyle(.plain)
     }
 }
 

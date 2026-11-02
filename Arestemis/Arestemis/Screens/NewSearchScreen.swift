@@ -18,16 +18,20 @@ struct NewSearchScreen: View {
                     .accessibilityAddTraits(.isHeader)
                     .padding(.horizontal, 4).padding(.top, 10).padding(.bottom, 18)
                 VStack(spacing: Look.rowGap) {
-                    ForEach(NewSearchCard.cards(offered: store.kinds)) { card in
+                    let cards = NewSearchCard.cards(offered: store.kinds)
+                    ForEach(cards) { card in
                         NewSearchKindCard(card: card) { example in
                             navigation.openNewForm(card.kind, example: example)
                         }
+                        .tourAnchor(card.id == cards.first?.id ? .kindCard : nil)
                     }
                 }
             }
             .padding(.horizontal, Look.side).padding(.bottom, 30)
         }
         .scrollIndicators(.hidden)
+        .tourScrollsToTarget()
+        .tourSpotlight()
         .provinceWall()
         .navigationTitle("New search")
         .navigationBarTitleDisplayMode(.inline)

@@ -6,7 +6,7 @@ Branch: `claude/131-arestemis-page-watches` · Worktree: `../empire-ios-131-ares
 
 ## Goal
 
-The server learns a third kind of hunt in brief 130 (Codex, at the same time as this brief): **watching a web page for
+The server learns a third kind of hunt (the Arestemis repo, `docs/briefs/130-arestemis-page-watches.md`; Codex, at the same time as this brief): **watching a web page for
 a change the user describes** ("when KALLAX costs under 45 €", "when the Mensa Garching has Schnitzel"). After this
 brief the app can create, edit, pause and delete a watch, shows on its card what the page says now and whether it can
 be read, and shows a found change as a match with a push. Today a watch would show only "Needs a newer app".
@@ -14,9 +14,8 @@ be read, and shows a found change as a match with a push. Today a watch would sh
 ## Read first
 
 - `AGENTS.md`, `CLAUDE.md` (design rules, Languages, the Arestemis app entry, how strings and screenshots work)
-- The plan: `~/ares-empire/docs/ARESTEMIS-ANYTHING.md` → "Page watches" (what a watch is, the 17 test pages, what can
-  and cannot be read and why)
-- **The contract:** brief 130 → "Contract" (`prompts/130-arestemis-page-watches.md`, section 5). Codex is writing it
+- The plan: `~/Arestemis/docs/ARESTEMIS-ANYTHING.md` → "Page watches" (what a watch is and its supported pages)
+- **The contract:** the Arestemis repo, `docs/briefs/130-arestemis-page-watches.md` → "Contract", section 5. Codex is writing it
   into `/Users/pab/Arestemis-130-page-watch/docs/API.md` and `docs/samples/` while you work: read them there (never
   write there). If its final words differ from the brief, the server's `docs/API.md` wins; Claude reconciles at merge.
 - The app: `Model/ArestemisModels.swift` (`HuntKind` with `.unknown`, `Hunt`, `HuntCard`, `Listing`),
@@ -79,4 +78,4 @@ be read, and shows a found change as a match with a push. Today a watch would sh
 ## Final message
 
 Files changed; build and test summary lines; screenshots; strings added (English and German); where the contract in
-`docs/API.md` differed from brief 130, and anything doubtful.
+`docs/API.md` differed from the Arestemis repo, `docs/briefs/130-arestemis-page-watches.md`, and anything doubtful.

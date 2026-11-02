@@ -29,6 +29,7 @@ struct MatchDetailScreen: View {
             }
         }
         .frame(maxWidth: .infinity)
+        .tourSpotlight()
         .provinceWall()
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
@@ -71,7 +72,8 @@ struct MatchDetailScreen: View {
                     let facts = thing ? listing.itemDetailFacts() : listing.detailFacts()
                     if !facts.isEmpty { FactsGrid(facts: facts).padding(.top, 22) }
                     SectionHeading(text: String(localized: "Why it fits")).padding(.leading, 4).padding(.top, Look.sectionGap)
-                    WhyItFits(reason: match.reason, warnings: match.warnings).padding(.top, Look.headingGap)
+                    WhyItFits(reason: match.reason, warnings: match.warnings).tourAnchor(.whyItFits)
+                        .padding(.top, Look.headingGap)
                     if !listing.description.isEmpty {
                         SectionHeading(text: String(localized: "Description")).padding(.leading, 4).padding(.top, Look.sectionGap)
                         ExpandableText(text: listing.description).padding(.top, Look.headingGap).padding(.horizontal, 4)
@@ -81,7 +83,12 @@ struct MatchDetailScreen: View {
             .padding(.horizontal, Look.side).padding(.top, 6).padding(.bottom, 28)
         }
           .scrollIndicators(.hidden)
-          .edgeFade(bottom: 22)
+          .tourScrollsToTarget()
+          // Scrolled, the listing fades out under the bar with the back button and the menu (brief 139: its title ran
+          // on under them), as the tabs' lists do under their headers: the wall's fade, not iOS's own edge effect, which
+          // shows a blurred copy of the content in the bar that no wall covers.
+          .scrollEdgeEffectHidden(true, for: .top)
+          .edgeFade(top: 14, bottom: 22, underBar: true)
           actions(match)
         }
     }

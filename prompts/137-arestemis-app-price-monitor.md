@@ -12,7 +12,7 @@ the commonest page watch, "this product in this shop", becomes its own kind, the
 the time change graph / data … like a toggle when creating the search if data should be collected and if it should
 have an alarm (both choosable but one needs to be chosen) and changeable anytime in the app."
 
-The server is live (brief 134): kind `price`, `PriceSearch` (`url`, `history`, `alarm {below, back_in_stock}`,
+The server is live (the Arestemis repo, `docs/briefs/134-arestemis-price-monitor.md`): kind `price`, `PriceSearch` (`url`, `history`, `alarm {below, back_in_stock}`,
 `every`), `HuntCard.price` (`PriceState`), `POST /price/preview`, `GET /hunts/{id}/prices?days=30|90|365`,
 `Listing.price_change`, push category `ARESTEMIS_PRICE`. After this brief the app makes, shows, charts and edits
 monitors; the watch form gets its example chips.
@@ -31,8 +31,8 @@ monitors; the watch form gets its example chips.
 
 ## Build
 
-1. **Data:** `HuntKind.price`, `PriceSearch`, `PriceState` (with `reader` decoded leniently: brief 136 adds
-   `"plain" | "browser" | "browser_exit"`), `PriceChange`, `PricePreview`, `Prices`; the API calls; the store; push
+1. **Data:** `HuntKind.price`, `PriceSearch`, `PriceState` (decode `reader` leniently and preserve unknown values; see the Arestemis repo,
+   `docs/briefs/136-arestemis-browser-reader.md`), `PriceChange`, `PricePreview`, `Prices`; the API calls; the store; push
    category `ARESTEMIS_PRICE` opening the match; samples with a monitor on history and alarm, one history-only, a
    price match.
 2. **Neue Suche:** the Preismonitor card (sketch section 1): "Ein Produkt in einem Shop: der Preisverlauf, und
