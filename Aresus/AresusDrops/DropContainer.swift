@@ -25,3 +25,11 @@ nonisolated enum DropContainer {
         FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroup)
     }
 }
+
+extension ExtensionAppearance {
+    /// Where the share extension reads the app's appearance (Settings → Appearance): Aresus's own App Group. The language
+    /// comes from where the widget reads it (`WidgetLanguage.aresus`).
+    nonisolated static var aresus: ExtensionAppearance {
+        ExtensionAppearance(defaults: UserDefaults(suiteName: DropContainer.appGroup), app: "de.ares-empire.aresus")
+    }
+}

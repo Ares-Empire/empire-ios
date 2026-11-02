@@ -75,9 +75,20 @@ final class SendDraft {
         }
     }
 
+    /// Takes one picked item out (its badge on the picked row, brief 100). Removing the last goes back to the three
+    /// choices without a line left from an earlier pick; the copies stay until the sheet closes (a photo may still be
+    /// loading into the same folder).
     func remove(_ id: PickedFile.ID) {
         picked.removeAll { $0.id == id }
         if picked.count == 1 { name = DropNameParts(Self.defaultName(picked[0].file)) }
+        if picked.isEmpty { failure = nil }
+    }
+
+    /// Whether the picked items show their remove badges (brief 100): in the app always, since removing the last goes
+    /// back to the three choices; in the share sheet only while more than one is left, as it has no choices to go back
+    /// to (its close button cancels the share).
+    func canRemove(sharing: Bool) -> Bool {
+        hasPicked && !isSending && (!sharing || picked.count > 1)
     }
 
     /// Back to the three choices; the copies made for this pick go.
