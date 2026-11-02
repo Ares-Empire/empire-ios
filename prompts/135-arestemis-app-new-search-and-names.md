@@ -1,6 +1,6 @@
 # 135: Arestemis app: a "Neue Suche" screen, a name in every form, renaming in place
 
-Status: running (Claude agent, 2026-11-02)
+Status: merged 2026-11-02 (Claude agent; Claude: rename through PATCH, the name alone). Arestemis build 11.
 Branch: `claude/135-arestemis-new-search` · Worktree: `../empire-ios-135-arestemis-new-search` · **For a Claude agent**
 (screens and their data part)
 
