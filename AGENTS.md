@@ -5,7 +5,7 @@ a personal finance dashboard). Claude plans the work, writes your brief and chec
 
 ## Read first
 
-1. **`CLAUDE.md`** and **`README.md`**: what this repo is and its rules. They apply to you in full. The
+1. **`CLAUDE.md`**, **`README.md`** and **`docs/DEVELOPMENT.md`**: what this repo is and its rules. They apply to you in full. The
    section "Workflow" in `CLAUDE.md` is about how Claude runs you; you can skip it.
 2. **Your brief** (`prompts/NN-*.md`). It says what to build, what to read, what "done" means, and which
    questions are settled. Do not re-open settled questions; if you think one is wrong, say so in your
