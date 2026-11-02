@@ -1,6 +1,6 @@
 # 203: Money paid back: the screens and the tour
 
-Status: draft (waits for brief 202)
+Status: running
 Branch: `claude/203-paid-back` · Worktree: `../empire-ios-203-paid-back` · Built by: a Claude agent (the look and the
 flow) · Simulator: `claude-203` (create it: iPhone 17, iOS 27.0)
 
