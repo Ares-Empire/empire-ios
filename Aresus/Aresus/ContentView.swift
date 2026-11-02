@@ -25,6 +25,11 @@ struct ContentView: View {
     init(push: PushCenter? = nil, arguments: [String] = LaunchArguments.current) {
         let samples = AresusSamples.launched(arguments: arguments)
         #if DEBUG
+        if arguments.contains("-sampleShareExtension") {
+            UserDefaults(suiteName: DropContainer.appGroup)?.set(samples != nil, forKey: "aresus.drops.preview")
+        }
+        #endif
+        #if DEBUG
         // Tests (the app is their host), samples and the screenshot screens never touch the real login.
         let testing = NSClassFromString("XCTestCase") != nil
             || ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
@@ -53,8 +58,13 @@ struct ContentView: View {
         let widget = WidgetStatusPublisher.live()
         self.push = push
         #endif
+        let dropEnvironment = DropAppActivity.environment(enabled: restores)
         _store = State(initialValue: AresusStore(session: session, samples: samples, widget: widget))
-        _drops = State(initialValue: DropsStore(session: session, samples: samples, automatic: restores || samples != nil))
+        _drops = State(initialValue: DropsStore(session: session, samples: samples, automatic: restores || samples != nil,
+                                                activity: dropEnvironment.activity,
+                                                legacyDirectory: dropEnvironment.legacyDirectory,
+                                                legacyDefaults: dropEnvironment.legacyDefaults,
+                                                legacyCacheURL: dropEnvironment.legacyCacheURL))
         _navigation = State(initialValue: navigation)
         _marks = State(initialValue: ProvinceMarks(session: session, sample: samples != nil))
         restoresOnLaunch = restores
@@ -86,6 +96,8 @@ struct ContentView: View {
         .task {
             push?.start(app: "de.ares-empire.aresus", session: session)
             if restoresOnLaunch { await session.restore() }
+            await drops.outbox?.reconnect()
+            await drops.outbox?.recoverSharedUploads()
             drops.outbox?.start()
         }
         .onChange(of: push?.openedURL) { _, url in
@@ -94,6 +106,9 @@ struct ContentView: View {
         .onEmpireForeground(session: session) {
             await session.followSharedLogin()        // another Empire app may have logged in or out
             await store.refreshOnForeground(visible: navigation.visibleParts)
+            await drops.outbox?.reconnect()
+            await drops.outbox?.recoverSharedUploads()
+            drops.recentFolders.reload()
             drops.outbox?.start()
             if navigation.tab == .aresync { await drops.refresh(olderThan: 10) }
         }

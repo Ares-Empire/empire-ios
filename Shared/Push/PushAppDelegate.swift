@@ -11,7 +11,7 @@ import UserNotifications
 /// the registration failure, taps on notifications, and becoming active (each foreground refreshes the registration).
 /// It uses only the `application` UIKit hands it, never `UIApplication.shared`, because Shared is also compiled into
 /// widget extensions.
-final class PushAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
+class PushAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
     let push = PushCenter()
     private var activeObserver: NSObjectProtocol?
 

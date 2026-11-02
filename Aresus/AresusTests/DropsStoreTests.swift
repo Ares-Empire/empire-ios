@@ -13,7 +13,7 @@ struct DropsStoreTests {
         fake.responses = [.answer(200, try sampleData("drop-folders")), .answer(200, try sampleData("drops")),
                           .failure(URLError(.notConnectedToInternet)), .answer(503, Data(#"{"error":"Try later."}"#.utf8))]
         let store = DropsStore(session: session, client: AresusAPI(transport: fake), directory: directory.appendingPathComponent("outbox"),
-                               cacheURL: cache, defaults: nil, automatic: false)
+                               cacheURL: cache, defaults: nil, automatic: false, uploads: ImmediateDropUploads(fake))
         await store.refresh()
         let folders = try #require(store.folders)
         let drops = store.serverDrops
@@ -38,7 +38,7 @@ struct DropsStoreTests {
         fake.responses = [.answer(201, try dropAnswer()), .answer(200, try dropAnswer(state: .waiting)),
                           .answer(201, try dropAnswer()), .answer(200, try dropAnswer(state: .waiting))]
         let store = DropsStore(session: await signedInSession(), client: AresusAPI(transport: fake), directory: directory,
-                               cacheURL: nil, defaults: nil, automatic: false)
+                               cacheURL: nil, defaults: nil, automatic: false, uploads: ImmediateDropUploads(fake))
         let target = Target(root: .documents, folder: "House", newFolder: "Plans")
         let file = DropFile(content: .data(Data("abc".utf8)), suggestedName: "Sketch.pdf")
         try await store.send(files: [file, file], target: target)
@@ -55,7 +55,7 @@ struct DropsStoreTests {
         let directory = testDirectory()
         let fake = DropTransport()
         let store = DropsStore(session: session, client: AresusAPI(transport: fake), samples: AresusSamples(allGood: false),
-                               directory: directory, cacheURL: directory.appendingPathComponent("folders.json"), defaults: nil)
+                               directory: directory, cacheURL: directory.appendingPathComponent("folders.json"), defaults: nil, uploads: ImmediateDropUploads(fake))
         await store.refresh()
         #expect(store.serverDrops.count == 5 && store.folders?.fallbackCount == 2)
         #expect(store.outbox == nil && fake.requests.isEmpty && !FileManager.default.fileExists(atPath: directory.path))
@@ -85,7 +85,7 @@ struct DropsStoreTests {
 
     private func store(_ fake: DropTransport, directory: URL) async -> DropsStore {
         DropsStore(session: await signedInSession(), client: AresusAPI(transport: fake), directory: directory,
-                   cacheURL: nil, defaults: nil, automatic: false)
+                   cacheURL: nil, defaults: nil, automatic: false, uploads: ImmediateDropUploads(fake))
     }
 
     private func server(_ store: DropsStore, _ state: DropState) throws -> DropsItem {
@@ -212,7 +212,7 @@ struct DropsStoreTests {
         let session = await signedInSession()
         let cache = directory.appendingPathComponent("folders.json")
         let store = DropsStore(session: session, client: AresusAPI(transport: fake), directory: directory.appendingPathComponent("outbox"),
-                               cacheURL: cache, defaults: nil, automatic: false)
+                               cacheURL: cache, defaults: nil, automatic: false, uploads: ImmediateDropUploads(fake))
         let pending = Task { await store.load(.folders) }
         await gate.waitUntilPaused()
         session.logOut()

@@ -211,8 +211,3 @@ struct DropRowView: View {
         }
     }
 }
-
-/// The hairline between rows inside a card (`CardRows`'s).
-struct RowDivider: View {
-    var body: some View { Rectangle().fill(Ink.line).frame(height: 1).padding(.horizontal, 16) }
-}

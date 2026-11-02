@@ -1,4 +1,11 @@
 import Foundation
+
+/// Only the two drop answers are shared; the app's other sample models stay in the app.
+protocol DropSamples: Sendable {
+    func folders() throws -> FolderList
+    func drops() throws -> [Drop]
+}
+
 import Observation
 
 nonisolated enum DropsItem: Identifiable, Equatable, Sendable {
@@ -21,7 +28,7 @@ final class DropsStore {
     private(set) var loading: Set<Part> = []
     private(set) var loadedAt: [Part: Date] = [:]
     private(set) var cacheError: String?
-    private(set) var samples: AresusSamples?
+    private(set) var samples: (any DropSamples)?
     private(set) var outbox: DropOutbox?
     private(set) var recentFolders: DropRecentFolders
     /// Server drops deleted on this iPhone (brief 93): out of the list at once, while the DELETE runs and after it (a
@@ -34,24 +41,47 @@ final class DropsStore {
     private let directory: URL?
     private let defaults: UserDefaults?
     private let automatic: Bool
+    private let activity: (any DropActivity)?
+    private let legacyDirectory: URL?
+    private let legacyDefaults: UserDefaults?
+    private let uploads: (any DropUploading)?
     private var generation = 0
     var isSample: Bool { samples != nil }
 
     var items: [DropsItem] { Self.merge(outbox: outbox?.items ?? [], server: serverDrops, deleted: deleted) }
 
-    init(session: EmpireSession, client: AresusAPI = AresusAPI(), samples: AresusSamples? = nil,
-         directory: URL? = nil, cacheURL: URL? = URL.cachesDirectory.appendingPathComponent("drop-folders.json"),
-         defaults: UserDefaults? = .standard, automatic: Bool = true) {
+    init(session: EmpireSession, client: AresusAPI = AresusAPI(), samples: (any DropSamples)? = nil,
+         directory: URL? = nil, cacheURL: URL? = DropContainer.url?.appendingPathComponent("drop-folders.json"),
+         defaults: UserDefaults? = UserDefaults(suiteName: DropContainer.appGroup), automatic: Bool = true,
+         activity: (any DropActivity)? = nil, legacyDirectory: URL? = nil, legacyDefaults: UserDefaults? = nil,
+         uploads: (any DropUploading)? = nil, legacyCacheURL: URL? = nil) {
         self.session = session
         self.client = client
         self.samples = samples
         self.directory = directory
         self.defaults = defaults
         self.automatic = automatic
+        self.activity = activity
+        self.legacyDirectory = legacyDirectory
+        self.legacyDefaults = legacyDefaults
+        self.uploads = uploads
         configuredCacheURL = cacheURL
         self.cacheURL = samples == nil ? cacheURL : nil
-        recentFolders = DropRecentFolders(defaults: samples == nil ? defaults : nil)
-        outbox = samples == nil ? DropOutbox(session: session, client: client, directory: directory, automatic: automatic) : nil
+        recentFolders = DropRecentFolders(defaults: samples == nil ? defaults : nil, legacyDefaults: samples == nil ? legacyDefaults : nil)
+        outbox = samples == nil ? DropOutbox(session: session, client: client, directory: directory, automatic: automatic, activity: activity, legacyDirectory: legacyDirectory, uploads: uploads) : nil
+        if samples == nil, let cacheURL, let legacyCacheURL, cacheURL != legacyCacheURL,
+           FileManager.default.fileExists(atPath: legacyCacheURL.path) {
+            do {
+                try FileManager.default.createDirectory(at: cacheURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+                if FileManager.default.fileExists(atPath: cacheURL.path) {
+                    try FileManager.default.removeItem(at: legacyCacheURL)
+                } else {
+                    // Retire the old copy as it is published in the group. Leaving it in Caches would restore stale
+                    // folders after logout had deliberately removed the group's cache.
+                    try FileManager.default.moveItem(at: legacyCacheURL, to: cacheURL)
+                }
+            } catch { cacheError = error.localizedDescription }
+        }
         if samples == nil, let cacheURL, let data = try? Data(contentsOf: cacheURL) {
             folders = try? AresusJSON.decoder().decode(FolderList.self, from: data)
         }
@@ -78,6 +108,7 @@ final class DropsStore {
         for part in [Part.folders, .drops] where loadedAt[part].map({ now.timeIntervalSince($0) >= age }) ?? true {
             await load(part)
         }
+        outbox?.reload()
         outbox?.start()
     }
 
@@ -249,8 +280,8 @@ final class DropsStore {
         clear()
         samples = nil
         cacheURL = configuredCacheURL
-        recentFolders = DropRecentFolders(defaults: defaults)
-        outbox = DropOutbox(session: session, client: client, directory: directory, automatic: automatic)
+        recentFolders = DropRecentFolders(defaults: defaults, legacyDefaults: legacyDefaults)
+        outbox = DropOutbox(session: session, client: client, directory: directory, automatic: automatic, activity: activity, legacyDirectory: legacyDirectory, uploads: uploads)
         observeUploads()
     }
     #endif

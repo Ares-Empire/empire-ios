@@ -14,15 +14,28 @@ final class DropRecentFolders {
     }
 
     /// nil defaults keeps sample mode entirely in memory.
-    init(defaults: UserDefaults?) {
+    init(defaults: UserDefaults?, legacyDefaults: UserDefaults? = nil) {
         self.defaults = defaults
-        if let data = defaults?.data(forKey: key), let saved = try? JSONDecoder().decode(Saved.self, from: data) {
+        if let defaults, let legacyDefaults, !defaults.bool(forKey: key + ".migrated") {
+            if defaults.data(forKey: key) == nil, let old = legacyDefaults.data(forKey: key) {
+                defaults.set(old, forKey: key)
+            }
+            defaults.set(true, forKey: key + ".migrated")
+        }
+        reload()
+    }
+
+    func reload() {
+        guard let defaults else { return }
+        targets = []; lastBySource = [:]
+        if let data = defaults.data(forKey: key), let saved = try? JSONDecoder().decode(Saved.self, from: data) {
             targets = Array(saved.targets.prefix(8))
             lastBySource = saved.lastBySource
         }
     }
 
     func use(_ target: Target, source: DropSource) {
+        reload()
         targets.removeAll { $0 == target }
         targets.insert(target, at: 0)
         targets = Array(targets.prefix(8))

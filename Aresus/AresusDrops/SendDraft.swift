@@ -1,4 +1,5 @@
 import AVFoundation
+import CryptoKit
 import CoreTransferable
 import Foundation
 import ImageIO
@@ -37,8 +38,9 @@ final class SendDraft {
     private(set) var failure: String?
     private let temporary: SendTemporaryFiles
 
-    init(temporary: SendTemporaryFiles = SendTemporaryFiles()) {
+    init(files: [DropFile] = [], temporary: SendTemporaryFiles = SendTemporaryFiles()) {
         self.temporary = temporary
+        use(files.map { PickedFile(file: $0, displayName: $0.suggestedName) }, source: files.first?.source ?? .file, last: nil)
     }
 
     var hasPicked: Bool { !picked.isEmpty }
@@ -52,11 +54,30 @@ final class SendDraft {
     /// Sort later.
     func use(_ files: [PickedFile], source: DropSource, last: Target?) {
         guard !files.isEmpty else { return }
-        picked = files
-        self.source = source
+        let wasEmpty = picked.isEmpty
+        var identities = Set(picked.map { Self.identity($0.file) })
+        let added = files.filter { identities.insert(Self.identity($0.file)).inserted }
+        picked.append(contentsOf: added)
+        guard !added.isEmpty else { return }
         failure = nil
-        (target, newFolder) = DropFolderTree.start(from: last, in: tree)
-        name = DropNameParts(files.count == 1 ? Self.defaultName(files[0].file) : "")
+        if wasEmpty {
+            self.source = source
+            (target, newFolder) = DropFolderTree.start(from: last, in: tree)
+        }
+        if picked.count == 1 { name = DropNameParts(Self.defaultName(picked[0].file)) }
+    }
+
+    private static func identity(_ file: DropFile) -> String {
+        if let identity = file.identity { return identity }
+        switch file.content {
+        case .file(let url): return url.standardizedFileURL.absoluteString
+        case .data(let data): return SHA256.hash(data: data).description + file.suggestedName
+        }
+    }
+
+    func remove(_ id: PickedFile.ID) {
+        picked.removeAll { $0.id == id }
+        if picked.count == 1 { name = DropNameParts(Self.defaultName(picked[0].file)) }
     }
 
     /// Back to the three choices; the copies made for this pick go.
@@ -117,7 +138,7 @@ final class SendDraft {
 
     /// Hands each file to the store (which copies it into its outbox), one at a time, so a file that cannot be read
     /// leaves the others sent and stays on the sheet with its line. True when every file went.
-    func send(with store: DropsStore) async -> Bool {
+    func send(with store: DropsStore, prepareUploads: Bool = false) async -> Bool {
         guard canSend else { return false }
         isSending = true
         failure = nil
@@ -139,6 +160,7 @@ final class SendDraft {
                 return false
             }
         }
+        if prepareUploads { await store.outbox?.process() }
         temporary.clear()
         return true
     }
@@ -147,7 +169,7 @@ final class SendDraft {
 
     /// Photos from the library: each copied as it is (original data, its own extension) into a folder of the app's
     /// own (`PickedLibraryFile`), its capture date read for the default name.
-    func load<Item>(_ items: [Item], with load: (Item) async throws -> URL?, last: Target?) async {
+    func load<Item>(_ items: [Item], with load: (Item) async throws -> URL?, last: Target?, identity: (Item) -> String? = { _ in nil }) async {
         guard !items.isEmpty else { return }
         isLoading = true
         failure = nil
@@ -158,22 +180,26 @@ final class SendDraft {
             do {
                 guard let url = try await load(item) else { missing += 1; continue }
                 let date = await PhotoDate.captured(url) ?? .now
+                let photoIdentity: String?
+                if let known = identity(item) { photoIdentity = known }
+                else { photoIdentity = try? await DropFileIO.fingerprint(url).sha256 }
                 files.append(PickedFile(file: DropFile(content: .file(url), suggestedName: url.lastPathComponent,
-                                                       source: .photo, date: date),
+                                                       source: .photo, date: date,
+                                                       identity: photoIdentity),
                                         displayName: url.lastPathComponent))
             } catch { missing += 1 }
         }
         use(files, source: .photo, last: last)
         if missing > 0 {
-            failure = missing == 1 ? String(localized: "A photo could not be loaded.")
-                                   : String(localized: "\(missing) photos could not be loaded.")
+            failure = missing == 1 ? String(localized: LocalizedStringResource("A photo could not be loaded.", table: "AresusDrops", locale: .appLanguage))
+                                   : String(localized: LocalizedStringResource("\(missing) photos could not be loaded.", table: "AresusDrops", locale: .appLanguage))
         }
     }
 
     /// A photo just taken with the camera: kept as JPEG, named by the moment it was taken.
     func useCamera(_ image: UIImage, last: Target?, now: Date = .now) {
         guard let data = image.jpegData(compressionQuality: 0.9) else {
-            failure = String(localized: "The photo could not be kept.")
+            failure = String(localized: LocalizedStringResource("The photo could not be kept.", table: "AresusDrops", locale: .appLanguage))
             return
         }
         let file = DropFile(content: .data(data), suggestedName: "Photo.jpg", source: .camera, date: now)
@@ -248,7 +274,7 @@ nonisolated struct PickedLibraryFile: Transferable {
 /// When a photo was taken: the camera's own time in its EXIF (with its offset when the camera wrote one), a video's
 /// creation date; nil when the file has none.
 nonisolated enum PhotoDate {
-    static func captured(_ url: URL) async -> Date? {
+    @concurrent static func captured(_ url: URL) async -> Date? {
         if let source = CGImageSourceCreateWithURL(url as CFURL, nil),
            let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
            let exif = properties[kCGImagePropertyExifDictionary] as? [CFString: Any],
