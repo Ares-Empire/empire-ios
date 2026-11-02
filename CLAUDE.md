@@ -295,7 +295,8 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
    (the iPhone switching by itself in the evening while an app is open, the widgets on a light and a dark home screen).
 11. **Aresync file sharing from the phone** (Patrik, 2026-10-25; specified 2026-11-01): send any file or photo from
    Aresus's Aresync tab or the share button to a chosen folder on the MacBook, receipts into Rechnungen with their
-   inventory line. Plan: `ares-empire/docs/ARESYNC-DROP.md`. Not built yet.
+   inventory line. Plan: `ares-empire/docs/ARESYNC-DROP.md`. **Works on the phone since 2026-11-02** (Aresus builds
+   2–4; "Aresync drops" under the Aresus app below); receipts (the plan's step 2) are next.
 12. **Before anyone but Patrik gets an app** (council 2026-10-25): ~~log out centrally~~: merged 2026-10-26 (brief 09,
    "One login for all apps" below; on the phone: check a widget and a notification after logging out in another app).
    ~~A privacy cover in the app switcher~~: built 2026-10-26 ("App switcher cover" below; on the phone: check the
@@ -499,6 +500,22 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   loses its status colour. `Aresus/AresusShared/` is compiled into app and widget (overview types, API client core,
   widget status, store, loader, views). DEBUG `-widgetGallery good|issues|loggedout` shows the views for screenshots.
   `AresusUITests` (UI tests, in the scheme): Settings → Language switched both ways with the real taps, about a minute.
+  **Aresync drops** (briefs 88–94 and 100, plan `ares-empire/docs/ARESYNC-DROP.md`): files and photos from the iPhone to a
+  folder on the MacBook through the aresus server (`aresus/docs/API.md` → Drops; encrypted there with `age`, fetched by
+  the Mac's `com.aresync.drop` agent, which needs Full Disk Access for `/usr/bin/python3`). The drop code lives in
+  `Aresus/AresusDrops/` (models, `DropsStore`, `DropOutbox`, the API calls, `SendSheet`, `FolderPicker`), compiled into
+  the app and **`AresusShareExtension`** (`Aresus/AresusShare/`, `de.ares-empire.aresus.share`: Aresus in the share sheet
+  for photos, videos and files, up to 20, showing the send sheet itself, since an extension cannot open its app; it
+  follows the app's language and appearance through the App Groups). The queue, recent folders and the last folder list
+  live in Aresus's own App Group `group.de.ares-empire.aresus` (`DropContainer`); the bytes go up in a background
+  `URLSession` (one per share, `DropBackgroundUploads`; `AresusAppDelegate` reconnects it when iOS wakes the app), so an
+  upload goes on after the share sheet closes. The Aresync tab: the send button, the newest three drops and Show all,
+  each row deleted with the shared Mail-like swipe (`Shared/Design/RowSwipe.swift`, `DELETE` in any state). The picker:
+  every folder opens, New folder under Choose (one new folder per send; the Mac makes it on arrival). Files dropped on
+  either tab open the send sheet (`Shared/ProviderFiles.swift`, `ProviderDropTarget`, shared with Aresium's file drop).
+  Shared pictures keep a name a person chose; a camera's or the system's name becomes the capture time
+  (`DropNames.isCameraName`). DEBUG: `-tab aresync`, `-openSheet send`, `-samplePick photo|photos|file|files|mixed`,
+  `-sampleDropHover <count|name>`, `-sampleShareExtension`, `-sampleShareState loading|loggedOut|unreadable`.
 - **Arestemis app** (2026-10-24, build A1): `Arestemis/` (bundle id `de.ares-empire.arestemis`), the hunter for flats and, since
   build 6 (briefs 113, 114, 2026-11-02), things for sale: several hunts, two tabs Suche (the Hunts list, each hunt's page, the
   forms opened from a hunt) and Angebote (New | Searches since brief 133, below), on the Arestemis API (`~/Arestemis/docs/API.md`; samples in `Arestemis/Arestemis/Samples/`, copies of its `docs/samples/`).
