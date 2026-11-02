@@ -48,6 +48,25 @@ extension ItemDetails {
     func reservedLine(language: AppLanguage = .current) -> String? {
         reserved == true ? (language == .german ? "Reserviert" : "Reserved") : nil
     }
+
+    /// An auction's end; nil for a listing that is no auction or an end that cannot be read.
+    var auctionEnd: Date? {
+        priceKind == .auction ? ends.flatMap(Timestamp.parse) : nil
+    }
+
+    /// How long an auction still runs: "45 min left", "2 h left" (up to two days), "3 days left"; German "noch 45 Min.",
+    /// "noch 2 Std.", "noch 3 Tage"; "ended" / "beendet" once past. Whole units rounded down, so it never promises more
+    /// time than is left (under a minute is "1 min left"). Nil for a listing that is no auction or has no end.
+    func timeLeft(now: Date = .now, language: AppLanguage = .current) -> String? {
+        guard let end = auctionEnd else { return nil }
+        let seconds = end.timeIntervalSince(now)
+        guard seconds > 0 else { return language.string("ended") }
+        let minutes = Int(seconds / 60)
+        if minutes < 60 { return language.string("\(max(minutes, 1)) min left") }
+        let hours = minutes / 60
+        if hours < 48 { return language.string("\(hours) h left") }
+        return language.string("\(hours / 24) days left")
+    }
 }
 
 extension Listing {
@@ -58,12 +77,22 @@ extension Listing {
                 item.shippingLine(language: language), item.sellerLine(language: language), item.reservedLine(language: language)]
             .compactMap { $0 }.joined(separator: " · ")
     }
-    /// A thing's page, its facts grid: Condition (with the site's own word when it differs), Delivery (Shipping or
-    /// Pickup only), Shipping cost, Distance, Seller, Place, Posted, and Status while it is reserved; only the known ones.
+    /// A thing's page, its facts grid: an auction's Bids and Ends first, then Condition (with the site's own word when
+    /// it differs), Delivery (Shipping or Pickup only), Shipping cost, Distance, Seller, Place, Posted, and Status while
+    /// it is reserved; only the known ones.
     func itemDetailFacts(now: Date = .now, calendar: Calendar = .app, language: AppLanguage = .current) -> [ListingFact] {
         guard let item else { return [] }
         let l = language
         var facts: [ListingFact] = []
+        if item.priceKind == .auction {
+            if let bids = item.bids {
+                facts.append(ListingFact(label: l.string("Bids"), value: String(bids), numeric: true))
+            }
+            if let end = item.auctionEnd {
+                facts.append(ListingFact(label: l.string("Ends"),
+                                         value: Format.moment(end, now: now, calendar: calendar, language: l)))
+            }
+        }
         if let condition = item.condition {
             let title = condition.title(language: l)
             let site = item.conditionLabel?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
@@ -127,8 +156,9 @@ struct ItemPrice: Equatable {
 }
 
 extension Match {
-    /// The big figure of a thing's row and page; nil for a flat's match, or a thing without any price.
-    func itemPrice(language: AppLanguage = .current) -> ItemPrice? {
+    /// The big figure of a thing's row and page; nil for a flat's match, or a thing without any price. An auction's is
+    /// its current bid, with the time left beside the word ("€62", "bid · 2 h left").
+    func itemPrice(now: Date = .now, language: AppLanguage = .current) -> ItemPrice? {
         guard let item = listing.item else { return nil }
         let l = language
         let amount = item.price.map { Format.money($0, language: l) }
@@ -138,7 +168,9 @@ extension Match {
             let over = overMax.map { l.string("VB, \(Format.money($0, language: l)) over") }
             return ItemPrice(amount: amount, label: over ?? "VB")
         case .free: return ItemPrice(amount: nil, label: l.string("Free"))
-        case .auction: return ItemPrice(amount: amount, label: l.string("bid"))
+        case .auction:
+            let label = [l.string("bid"), item.timeLeft(now: now, language: l)].compactMap { $0 }.joined(separator: " · ")
+            return ItemPrice(amount: amount, label: label)
         case .onRequest: return ItemPrice(amount: nil, label: l.string("Price on request"))
         case nil: return amount.map { ItemPrice(amount: $0, label: nil) }
         }
@@ -163,7 +195,9 @@ struct HuntSummary: Equatable {
     let title: String
     let parts: [String]
     var line: String { ([title] + parts).joined(separator: " · ") }
-    init(_ hunt: Hunt, now: Date = .now, calendar: Calendar = .app, language: AppLanguage = .current) {
+    /// `sites` names a thing hunt's sites (the server's names).
+    init(_ hunt: Hunt, sites: SiteNames = SiteNames(), now: Date = .now, calendar: Calendar = .app,
+         language: AppLanguage = .current) {
         let de = language == .german
         switch hunt.search {
         case .flat(let search):
@@ -187,7 +221,7 @@ struct HuntSummary: Equatable {
             if search.delivery != .shipping, !search.places.isEmpty {
                 parts.append(search.places.map(\.shortName).joined(separator: ", ") + " (\(Format.number(search.radiusKm, language: language)) km)")
             }
-            parts.append(contentsOf: search.sources.map(\.name))
+            parts.append(contentsOf: search.sources.map(sites.name))
             self.parts = parts
         case .unsupported:
             title = de ? "Braucht eine neuere App-Version" : "Needs a newer app"

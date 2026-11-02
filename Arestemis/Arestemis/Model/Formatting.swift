@@ -61,6 +61,24 @@ enum Format {
         return day(date, now: now, calendar: calendar, language: language)
     }
 
+    /// A moment with its time, before or after now (an auction's end): "today 14:00", "tomorrow 09:30", "yesterday
+    /// 18:05", "Thu 14:00" (within six days), else the day ("12 Nov 14:00"); German "heute 14:00", "morgen 09:30",
+    /// "Do 14:00", "12. Nov. 14:00".
+    static func moment(_ date: Date, now: Date = .now, calendar: Calendar = .app,
+                       language: AppLanguage = .current) -> String {
+        let time = date.formatted(style(calendar, language).hour(.twoDigits(amPM: .omitted)).minute(.twoDigits))
+        func isDay(_ offset: Int) -> Bool {
+            calendar.date(byAdding: .day, value: offset, to: now).map { calendar.isDate(date, inSameDayAs: $0) } ?? false
+        }
+        if isDay(0) { return language.string("today \(time)") }
+        if isDay(1) { return language.string("tomorrow \(time)") }
+        if isDay(-1) { return language.string("yesterday \(time)") }
+        if abs(date.timeIntervalSince(now)) < 6 * 86_400 {
+            return date.formatted(style(calendar, language).weekday(.abbreviated)) + " " + time
+        }
+        return day(date, now: now, calendar: calendar, language: language) + " " + time
+    }
+
     /// An API timestamp, relative; nil if it cannot be read.
     static func relative(_ timestamp: String?, now: Date = .now, calendar: Calendar = .app,
                          language: AppLanguage = .current) -> String? {
@@ -138,18 +156,6 @@ extension Kind {
 
     /// On a listing row.
     var short: String { title }
-}
-
-extension Source {
-    /// The portal's name when the server's (`SourceStatus.name`, `Listing.source_name`) is not at hand.
-    var name: String {
-        switch self {
-        case .wgGesucht: "WG-Gesucht"
-        case .kleinanzeigen: "Kleinanzeigen"
-        case .immowelt: "Immowelt"
-        case .immoscout24: "ImmoScout24"
-        }
-    }
 }
 
 extension Place {

@@ -147,7 +147,8 @@
       "extra": "Armlehnen wären schön",
       "sources": [
         "kleinanzeigen"
-      ]
+      ],
+      "auctions": true
     },
     "id": 3,
     "name": "Office chair",

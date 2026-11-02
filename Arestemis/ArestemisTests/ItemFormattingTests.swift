@@ -54,7 +54,8 @@ struct ItemFormattingTests {
         let overview = try sample(Overview.self, "overview")
         var item = overview.hunts[1].hunt
         #expect(item.displayName(language: language) == "Herman Miller Aeron")
-        #expect(spaces(HuntSummary(item, language: language).line) == (de ? "Herman Miller Aeron · bis 450 € · Abholung oder Versand · Garching (20 km) · Kleinanzeigen" : "Herman Miller Aeron · up to €450 · Pickup or shipping · Garching (20 km) · Kleinanzeigen"))
+        let sites = SiteNames(statuses: overview.sources)
+        #expect(spaces(HuntSummary(item, sites: sites, language: language).line) == (de ? "Herman Miller Aeron · bis 450 € · Abholung oder Versand · Garching (20 km) · Kleinanzeigen · eBay" : "Herman Miller Aeron · up to €450 · Pickup or shipping · Garching (20 km) · Kleinanzeigen · eBay"))
         item.name = "Office chair"; #expect(item.displayName(language: language) == "Office chair")
         let flat = overview.hunts[0].hunt
         #expect(flat.displayName(language: language) == SearchSummary(try #require(flat.search.flat), language: language).kinds)

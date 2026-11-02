@@ -7,12 +7,12 @@ import Testing
 @MainActor
 struct APITests {
     enum Route: String, CaseIterable {
-        case overview, createHunt, updateHunt, startHunt, deleteHunt, parse, places, matches, match, state
+        case overview, kinds, createHunt, updateHunt, startHunt, deleteHunt, parse, places, matches, match, state
         case application, regenerate, rejected, settings, saveSettings
 
         var method: String {
             switch self {
-            case .overview, .places, .matches, .match, .rejected, .settings: "GET"
+            case .overview, .kinds, .places, .matches, .match, .rejected, .settings: "GET"
             case .updateHunt, .saveSettings: "PUT"
             case .deleteHunt: "DELETE"
             default: "POST"
@@ -22,6 +22,7 @@ struct APITests {
         var path: String {
             switch self {
             case .overview: "/overview"
+            case .kinds: "/kinds"
             case .createHunt: "/hunts"
             case .updateHunt, .deleteHunt: "/hunts/1"
             case .startHunt: "/hunts/1/active"
@@ -41,6 +42,7 @@ struct APITests {
             let hunt = try #require(try sample(Overview.self, "overview").hunt)
             switch self {
             case .overview: return (200, try ArestemisSamples.data("overview"))
+            case .kinds: return (200, try ArestemisSamples.data("kinds"))
             case .createHunt, .updateHunt, .startHunt: return (200, try JSONEncoder().encode(hunt))
             case .deleteHunt: return (204, Data())
             case .parse: return (200, Data(#"{"search":{"kinds":["flat"]},"unclear":[]}"#.utf8))
@@ -58,6 +60,7 @@ struct APITests {
             let search = try #require(try sample(Overview.self, "overview").hunt?.search.flat)
             switch self {
             case .overview: _ = try await api.overview()
+            case .kinds: _ = try await api.kinds()
             case .createHunt: _ = try await api.createHunt(search)
             case .updateHunt: _ = try await api.updateHunt(id: 1, search: .flat(search), name: nil)
             case .startHunt: _ = try await api.setHunt(id: 1, active: true)

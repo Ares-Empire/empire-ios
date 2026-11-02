@@ -164,7 +164,7 @@ struct PlaceSearchSheet: View {
                                         Text(region).font(AppFont.text(13)).foregroundStyle(Ink.secondary)
                                     }
                                 }
-                                Text(place.sources.map(\.name).joined(separator: " · "))
+                                Text(place.sources.map(store.siteNames.name).joined(separator: " · "))
                                     .font(AppFont.text(11)).foregroundStyle(Ink.muted)
                             }
                             Spacer(minLength: 8)

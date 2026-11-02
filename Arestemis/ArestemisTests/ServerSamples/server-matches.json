@@ -34,7 +34,9 @@
           "condition_label": "Gut",
           "seller": "private",
           "distance_km": 7,
-          "reserved": false
+          "reserved": false,
+          "bids": null,
+          "ends": null
         }
       },
       "reason": "Free office chair in good condition, Garching — fits.",
@@ -77,7 +79,9 @@
           "condition_label": "Sehr Gut",
           "seller": "private",
           "distance_km": null,
-          "reserved": false
+          "reserved": false,
+          "bids": null,
+          "ends": null
         }
       },
       "reason": "75 € plus shipping from 4.99 €, like new — fits.",
@@ -122,7 +126,9 @@
           "condition_label": "Sehr Gut",
           "seller": "private",
           "distance_km": 4,
-          "reserved": false
+          "reserved": false,
+          "bids": null,
+          "ends": null
         }
       },
       "reason": "110 € VB, like new, Garching — fits with negotiation.",
@@ -167,7 +173,9 @@
           "condition_label": "Sehr Gut",
           "seller": "private",
           "distance_km": 5,
-          "reserved": false
+          "reserved": false,
+          "bids": null,
+          "ends": null
         }
       },
       "reason": "80 €, like new, Garching (5 km) — fits.",

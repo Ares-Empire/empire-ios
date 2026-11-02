@@ -51,7 +51,7 @@ struct HuntsDecodingTests {
         search["sources"] = ["newportal", "kleinanzeigen"]
         object[1]["search"] = search
         let hunts = try JSONDecoder().decode([Hunt].self, from: JSONSerialization.data(withJSONObject: object))
-        #expect(hunts[1].search.item?.conditionMin == nil && hunts[1].search.item?.sources == [.kleinanzeigen])
+        #expect(hunts[1].search.item?.conditionMin == nil && hunts[1].search.item?.sources == [Source("newportal"), .kleinanzeigen])
     }
     @Test func missingAtStartMeansFalse() throws {
         var object = try #require(try JSONSerialization.jsonObject(with: ArestemisSamples.data("match")) as? [String: Any])

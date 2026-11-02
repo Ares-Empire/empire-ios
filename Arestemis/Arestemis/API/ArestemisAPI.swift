@@ -4,6 +4,7 @@ import Foundation
 /// answers from the bundled samples in memory. The store only knows this protocol.
 protocol ArestemisBackend {
     func overview() async throws -> Overview
+    func kinds() async throws -> [OfferedKind]
     func hunts() async throws -> [Hunt]
     func createHunt(kind: HuntKind, name: String?, search: HuntSearch) async throws -> Hunt
     func updateHunt(id: Int, search: HuntSearch, name: String?) async throws -> Hunt
@@ -35,6 +36,9 @@ struct ArestemisAPI: ArestemisBackend {
     let token: () -> String?
 
     func overview() async throws -> Overview { try await send(.get, "overview") }
+
+    /// `GET /kinds`: each kind of search and the sites it can use, set up or not, with or without auctions.
+    func kinds() async throws -> [OfferedKind] { try await send(.get, "kinds") }
 
     func hunts() async throws -> [Hunt] { try await send(.get, "hunts") }
 

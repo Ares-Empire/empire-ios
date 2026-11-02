@@ -65,10 +65,10 @@ struct HuntsStoreTests {
         await store.setActive(id: 2, active: false)
         #expect(store.hunts[1].sources.isEmpty && !store.hunts[1].hunt.active)
         await store.setActive(id: 2, active: true)
-        #expect(store.hunts[1].sources == [.kleinanzeigen])
+        #expect(store.hunts[1].sources == [.kleinanzeigen, .ebay])
         store.selectedHuntID = 2
         await store.loadMatches(.all)
-        #expect(store.matches(.all).map(\.id) == [31, 30, 29, 28])
+        #expect(store.matches(.all).map(\.id) == [32, 31, 30, 29, 28])
         await store.loadRejected(); #expect(store.rejected.isEmpty)
         await store.loadApplication(for: 31)
         #expect(store.application(31).error == "Application texts are for flats.")

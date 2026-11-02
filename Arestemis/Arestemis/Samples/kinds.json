@@ -1,0 +1,56 @@
+[
+  {
+    "kind": "flat",
+    "name": "Flat or room",
+    "sources": [
+      {
+        "source": "wg_gesucht",
+        "name": "WG-Gesucht",
+        "ready": true,
+        "auctions": false
+      },
+      {
+        "source": "kleinanzeigen",
+        "name": "Kleinanzeigen",
+        "ready": true,
+        "auctions": false
+      },
+      {
+        "source": "immowelt",
+        "name": "Immowelt",
+        "ready": true,
+        "auctions": false
+      },
+      {
+        "source": "immoscout24",
+        "name": "ImmoScout24",
+        "ready": true,
+        "auctions": false
+      }
+    ]
+  },
+  {
+    "kind": "item",
+    "name": "Something to buy",
+    "sources": [
+      {
+        "source": "kleinanzeigen",
+        "name": "Kleinanzeigen",
+        "ready": true,
+        "auctions": false
+      },
+      {
+        "source": "ebay",
+        "name": "eBay",
+        "ready": true,
+        "auctions": true
+      },
+      {
+        "source": "beispielmarkt",
+        "name": "Beispielmarkt",
+        "ready": false,
+        "auctions": false
+      }
+    ]
+  }
+]

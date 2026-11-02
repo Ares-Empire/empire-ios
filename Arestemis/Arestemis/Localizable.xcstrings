@@ -4,6 +4,26 @@
     "" : {
       "shouldTranslate" : false
     },
+    "%@ are not set up yet." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ sind noch nicht eingerichtet."
+          }
+        }
+      }
+    },
+    "%@ is not set up yet." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ist noch nicht eingerichtet."
+          }
+        }
+      }
+    },
     "%@ room" : {
       "localizations" : {
         "de" : {
@@ -52,6 +72,46 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$@, at most, in %2$@"
+          }
+        }
+      }
+    },
+    "%lld days left" : {
+      "localizations" : {
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "noch %lld Tag"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "noch %lld Tage"
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld day left"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld days left"
+                }
+              }
+            }
           }
         }
       }
@@ -106,12 +166,32 @@
         }
       }
     },
+    "%lld h left" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "noch %lld Std."
+          }
+        }
+      }
+    },
     "%lld min ago" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "vor %lld Min."
+          }
+        }
+      }
+    },
+    "%lld min left" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "noch %lld Min."
           }
         }
       }
@@ -382,6 +462,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Zwischen"
+          }
+        }
+      }
+    },
+    "Bids" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gebote"
           }
         }
       }
@@ -747,6 +837,16 @@
         }
       }
     },
+    "Ends" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Endet"
+          }
+        }
+      }
+    },
     "Every text written automatically includes these points. Only your notes and the facts about you are used, nothing is made up." : {
       "localizations" : {
         "de" : {
@@ -973,6 +1073,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "In m². Eine Wohnung nach ihrer ganzen Fläche, eine WG nach deinem Zimmer."
+          }
+        }
+      }
+    },
+    "Include auctions" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auktionen einbeziehen"
           }
         }
       }
@@ -2417,6 +2527,16 @@
         }
       }
     },
+    "ended" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "beendet"
+          }
+        }
+      }
+    },
     "euros" : {
       "localizations" : {
         "de" : {
@@ -2519,6 +2639,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Quadratmeter"
+          }
+        }
+      }
+    },
+    "today %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "heute %@"
+          }
+        }
+      }
+    },
+    "tomorrow %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "morgen %@"
           }
         }
       }

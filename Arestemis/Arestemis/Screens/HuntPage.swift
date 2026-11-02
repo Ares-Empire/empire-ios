@@ -58,7 +58,7 @@ struct HuntPage: View {
         let kind = SearchKind(card.hunt.kind)
         return ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                HuntHeroCard(card: card, busy: store.isChanging(hunt: id)) { active in
+                HuntHeroCard(card: card, sites: store.siteNames, busy: store.isChanging(hunt: id)) { active in
                     Task { await store.setActive(id: id, active: active) }
                 }
                 HStack(spacing: 10) {

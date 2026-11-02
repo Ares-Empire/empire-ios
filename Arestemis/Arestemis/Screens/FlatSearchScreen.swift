@@ -33,7 +33,8 @@ struct FlatSearchScreen: View {
                     FormSection(title: String(localized: "Rent")) { rent }.id("rent")
                     FormSection(title: String(localized: "Move-in")) { moveIn }.id("movein")
                     FormSection(title: String(localized: "Portals")) {
-                        PortalToggles(sources: Source.allCases, chosen: $draft.sources, statuses: store.overview?.sources ?? [])
+                        PortalToggles(choices: store.siteChoices(.flat, chosen: draft.sources), chosen: $draft.sources,
+                                      statuses: store.overview?.sources ?? [])
                     }
                     FormSection(title: String(localized: "Extras")) {
                         ExtrasField(placeholder: String(localized: "e.g. furnished, balcony, not on the ground floor"),
@@ -77,6 +78,7 @@ struct FlatSearchScreen: View {
             Text("The hunt stops and its listings are deleted.")
         }
         .onAppear { sync() }
+        .task { await store.loadKinds() }               // the sites as the server offers them now
         .onChange(of: hunt?.search.flat) { _, _ in sync() }
         .onChange(of: draft) { _, new in store.keepFlatSearchDraft(new, baseline: baseline, huntID: huntID) }
     }

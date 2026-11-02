@@ -16,6 +16,8 @@ struct DecodingTests {
         case "places": try roundTrip([Place].self, file)
         case "hunts": try roundTrip([Hunt].self, file)
         case "item-matches": try roundTrip(MatchPage.self, file)
+        case "ebay-match": try roundTrip(Match.self, file)
+        case "kinds": try roundTrip([OfferedKind].self, file)
         default: Issue.record("No model for \(file)")
         }
     }
@@ -38,8 +40,8 @@ struct DecodingTests {
         #expect(hunt.search.flat!.roomSqmMin == 14 && hunt.search.flat!.roomSqmMax == nil)
         #expect(hunt.search.flat!.flatmatesMax == 2 && hunt.search.flat!.sublet == .exclude)
         #expect(hunt.search.flat!.moveInFrom == "2026-12-01" && hunt.search.flat!.moveInUntil == "2027-02-01")
-        #expect(overview.sources.map(\.source) == [.wgGesucht, .kleinanzeigen, .immowelt, .immoscout24])
-        #expect(overview.sources.map(\.state) == [.ok, .ok, .ok, .ok])
+        #expect(overview.sources.map(\.source) == [.wgGesucht, .kleinanzeigen, .immowelt, .immoscout24, .ebay])
+        #expect(overview.sources.map(\.state) == [.ok, .ok, .ok, .ok, .ok])
         #expect(overview.sources.allSatisfy { $0.note == nil })
         #expect(overview.counts == .init(new: 5, today: 6, saved: 1, applied: 1))
         #expect(overview.latest.map(\.id) == [41, 40, 38])
@@ -108,25 +110,26 @@ struct DecodingTests {
         #expect(json["application_notes"] as? String == "")
     }
 
-    // MARK: portals the app does not know yet (brief 61)
+    // MARK: sites the app does not know yet (brief 61; kept since brief 119)
 
     @Test func immoScout24IsKnown() throws {
         let place = try JSONDecoder().decode(Place.self, from: Data("""
             {"id": "wg:90", "name": "München", "region": "Bayern", "sources": ["wg_gesucht", "immoscout24"]}
             """.utf8))
-        #expect(place.sources == [.wgGesucht, .immoscout24] && Source.immoscout24.name == "ImmoScout24")
+        #expect(place.sources == [.wgGesucht, .immoscout24] && SiteNames().name(.immoscout24) == "ImmoScout24")
     }
 
-    @Test func placesLeaveOutUnknownPortals() throws {
+    @Test func placesKeepUnknownSites() throws {
         let places = try JSONDecoder().decode([Place].self, from: Data("""
             [{"id": "wg:90", "name": "München", "region": null, "sources": ["wg_gesucht", "newportal", "immowelt"]},
              {"id": "wg:91", "name": "Nowhere", "region": null, "sources": ["newportal"]}]
             """.utf8))
-        #expect(places.map(\.sources) == [[.wgGesucht, .immowelt], []])
+        #expect(places.map(\.sources) == [[.wgGesucht, Source("newportal"), .immowelt], [Source("newportal")]])
     }
 
-    /// The hunt's search (in the overview), its portals and its places' portals; the overview's portal states.
-    @Test func theOverviewLeavesOutUnknownPortals() throws {
+    /// The hunt's search (in the overview), its sites and its places' sites; the overview's site states, which name
+    /// the new site for every list.
+    @Test func theOverviewKeepsUnknownSites() throws {
         var object = try #require(try JSONSerialization.jsonObject(with: ArestemisSamples.data("overview")) as? [String: Any])
         var hunt = try #require(object["hunt"] as? [String: Any])
         var search = try #require(hunt["search"] as? [String: Any])
@@ -140,13 +143,15 @@ struct DecodingTests {
         sources.append(["source": "newportal", "name": "New Portal", "state": "ok", "checked": NSNull(), "note": NSNull()])
         object["sources"] = sources
         let overview = try JSONDecoder().decode(Overview.self, from: JSONSerialization.data(withJSONObject: object))
-        #expect(overview.hunt?.search.flat?.sources == [.kleinanzeigen])
-        #expect(overview.hunt?.search.flat?.places.first?.sources == [.wgGesucht])
-        #expect(overview.sources.map(\.source) == [.wgGesucht, .kleinanzeigen, .immowelt, .immoscout24])
+        #expect(overview.hunt?.search.flat?.sources == [Source("newportal"), .kleinanzeigen])
+        #expect(overview.hunt?.search.flat?.places.first?.sources == [.wgGesucht, Source("newportal")])
+        #expect(overview.sources.map(\.source) == [.wgGesucht, .kleinanzeigen, .immowelt, .immoscout24, .ebay,
+                                                   Source("newportal")])
+        #expect(SiteNames(statuses: overview.sources).name(Source("newportal")) == "New Portal")
     }
 
-    /// Only the portal decides: a known portal's state the app does not know still fails, as before.
-    @Test func aBrokenPortalStateStillFails() throws {
+    /// Only the site's id is open: a state the app does not know still fails, as before.
+    @Test func aBrokenSiteStateStillFails() throws {
         var object = try #require(try JSONSerialization.jsonObject(with: ArestemisSamples.data("overview")) as? [String: Any])
         var sources = try #require(object["sources"] as? [[String: Any]])
         sources[0]["state"] = "melting"
@@ -156,25 +161,32 @@ struct DecodingTests {
         }
     }
 
-    @Test func describeItLeavesOutUnknownPortals() throws {
+    @Test func describeItKeepsUnknownSites() throws {
         let parsed = try JSONDecoder().decode(ParsedSearch.self, from: Data("""
             {"search": {"sources": ["newportal", "immoscout24"]}, "unclear": []}
             """.utf8))
-        #expect(parsed.search.sources == [.immoscout24])
+        #expect(parsed.search.sources == [Source("newportal"), .immoscout24])
         let none = try JSONDecoder().decode(ParsedSearch.self, from: Data(#"{"search": {}, "unclear": []}"#.utf8))
         #expect(none.search.sources == nil)
     }
 
-    /// A listing from a portal the app does not know still shows, named by the server.
-    @Test func aListingFromAnUnknownPortalDecodes() throws {
+    /// A listing from a site the app does not know shows, named by the server.
+    @Test func aListingFromAnUnknownSiteDecodes() throws {
         var object = try #require(try JSONSerialization.jsonObject(with: ArestemisSamples.data("match")) as? [String: Any])
         var listing = try #require(object["listing"] as? [String: Any])
         listing["source"] = "newportal"
         listing["source_name"] = "New Portal"
         object["listing"] = listing
         let match = try JSONDecoder().decode(Match.self, from: JSONSerialization.data(withJSONObject: object))
-        #expect(match.listing.source == nil && match.listing.sourceName == "New Portal")
+        #expect(match.listing.source == Source("newportal") && match.listing.sourceName == "New Portal")
         #expect(match.sourceLine(now: .now).hasPrefix("New Portal"))
+    }
+
+    /// A site the app does not know is sent back as it came, so saving a search keeps it.
+    @Test func anUnknownSiteRoundTrips() throws {
+        let place = Place(id: "wg:90", name: "München", region: nil, sources: [Source("newportal")])
+        let json = try #require(try JSONSerialization.jsonObject(with: JSONEncoder().encode(place)) as? [String: Any])
+        #expect(json["sources"] as? [String] == ["newportal"])
     }
 
     /// `Partial<Search>`: only what the sentence said; a null counts as not said.

@@ -78,6 +78,7 @@
       "vb_over_max": 45,
       "condition_min": null,
       "for_parts": false,
+      "auctions": true,
       "delivery": "either",
       "places": [
         {
@@ -96,7 +97,8 @@
       "seller": "any",
       "extra": "",
       "sources": [
-        "kleinanzeigen"
+        "kleinanzeigen",
+        "ebay"
       ]
     },
     "created": "2026-10-24T08:12:00Z",

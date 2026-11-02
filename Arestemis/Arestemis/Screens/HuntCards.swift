@@ -7,12 +7,14 @@ import SwiftUI
 /// its name and "Needs a newer app", nothing else.
 struct HuntListCard: View {
     let card: HuntCard
+    /// The server's names for a thing hunt's sites.
+    let sites: SiteNames
     let busy: Bool
     let open: () -> Void
     let toggle: (Bool) -> Void
 
     var body: some View {
-        let text = HuntText(card.hunt)
+        let text = HuntText(card.hunt, sites: sites)
         let known = text.kind != nil
         ZStack(alignment: .bottomTrailing) {
             Button(action: open) {
@@ -58,11 +60,12 @@ struct HuntListCard: View {
 /// button (Start hunting / Pause); for a kind this build does not know only its name and "Needs a newer app".
 struct HuntHeroCard: View {
     let card: HuntCard
+    let sites: SiteNames
     let busy: Bool
     let toggle: (Bool) -> Void
 
     var body: some View {
-        let text = HuntText(card.hunt)
+        let text = HuntText(card.hunt, sites: sites)
         VStack(alignment: .leading, spacing: 0) {
             if text.kind != nil {
                 HuntStatus(active: card.hunt.active).padding(.bottom, 14)

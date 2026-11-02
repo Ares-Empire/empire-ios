@@ -28,7 +28,8 @@ struct ItemSearchDraftTests {
         #expect(ItemSearchDraft(search).search() == search)
         let object = try #require(try JSONSerialization.jsonObject(with: JSONEncoder().encode(search)) as? [String: Any])
         #expect(Set(object.keys) == ["query", "exclude", "price_min", "price_max", "vb_over_max", "condition_min",
-                                     "for_parts", "delivery", "places", "radius_km", "seller", "extra", "sources"])
+                                     "for_parts", "auctions", "delivery", "places", "radius_km", "seller", "extra",
+                                     "sources"])
         draft.priceMin = ""
         draft.priceMax = ""
         draft.conditionMin = nil

@@ -151,6 +151,7 @@ final class AppNavigation {
 
 /// DEBUG launch arguments for screenshots: `-sampleData`, `-sampleNoHunt`, `-samplePaused`, `-sampleLoading`,
 /// `-sampleSlowed` (the thing hunt is checked less often), `-sampleNewerKind` (a hunt of a kind this build does not know),
+/// `-sampleEbayNotReady` (eBay not set up on the server: greyed in the thing form, read by no hunt),
 /// `-sampleHunt <id>` (Listings for that hunt), `-tab hunt|listings` (`search`: the first hunt's form),
 /// `-filter new|saved|applied|all`, `-openMatch <id>`, `-openHunt <id>` (a hunt's page), `-openForm <id>` (that hunt's
 /// form), `-openItemForm` (the first thing hunt's form), `-newItemForm` / `-newFlatForm` (an empty form), `-newSearch`
@@ -175,6 +176,7 @@ struct LaunchOptions {
     var loading = false
     var slowed = false
     var newerKind = false
+    var ebayNotReady = false
     var sampleUndo = false
     var moreLoading = false
     var moreFailure = false
@@ -204,6 +206,7 @@ struct LaunchOptions {
         loading = arguments.contains("-sampleLoading")
         slowed = arguments.contains("-sampleSlowed")
         newerKind = arguments.contains("-sampleNewerKind")
+        ebayNotReady = arguments.contains("-sampleEbayNotReady")
         sampleUndo = arguments.contains("-sampleUndo")
         moreLoading = arguments.contains("-sampleMoreLoading")
         moreFailure = arguments.contains("-sampleMoreFailure")

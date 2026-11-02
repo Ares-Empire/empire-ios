@@ -98,6 +98,13 @@
       "state": "ok",
       "checked": "2026-10-24T10:02:00Z",
       "note": null
+    },
+    {
+      "source": "ebay",
+      "name": "eBay",
+      "state": "idle",
+      "checked": null,
+      "note": null
     }
   ],
   "last_scan": "2026-11-01T09:05:00Z",
@@ -142,7 +149,9 @@
           "condition_label": "Gut",
           "seller": "private",
           "distance_km": 7,
-          "reserved": false
+          "reserved": false,
+          "bids": null,
+          "ends": null
         }
       },
       "reason": "Free office chair in good condition, Garching — fits.",
@@ -185,7 +194,9 @@
           "condition_label": "Sehr Gut",
           "seller": "private",
           "distance_km": null,
-          "reserved": false
+          "reserved": false,
+          "bids": null,
+          "ends": null
         }
       },
       "reason": "75 € plus shipping from 4.99 €, like new — fits.",
@@ -230,7 +241,9 @@
           "condition_label": "Sehr Gut",
           "seller": "private",
           "distance_km": 4,
-          "reserved": false
+          "reserved": false,
+          "bids": null,
+          "ends": null
         }
       },
       "reason": "110 € VB, like new, Garching — fits with negotiation.",
@@ -417,7 +430,8 @@
           "extra": "Armlehnen wären schön",
           "sources": [
             "kleinanzeigen"
-          ]
+          ],
+          "auctions": true
         },
         "id": 3,
         "name": "Office chair",

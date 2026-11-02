@@ -98,6 +98,13 @@
       "state": "ok",
       "checked": "2026-10-24T10:02:00Z",
       "note": null
+    },
+    {
+      "source": "ebay",
+      "name": "eBay",
+      "state": "ok",
+      "checked": "2026-10-24T10:02:00Z",
+      "note": null
     }
   ],
   "last_scan": "2026-10-24T10:02:00Z",
@@ -310,6 +317,7 @@
           "vb_over_max": 45,
           "condition_min": null,
           "for_parts": false,
+          "auctions": true,
           "delivery": "either",
           "places": [
             {
@@ -328,7 +336,8 @@
           "seller": "any",
           "extra": "",
           "sources": [
-            "kleinanzeigen"
+            "kleinanzeigen",
+            "ebay"
           ]
         },
         "created": "2026-10-24T08:12:00Z",
@@ -343,7 +352,8 @@
         "applied": 0
       },
       "sources": [
-        "kleinanzeigen"
+        "kleinanzeigen",
+        "ebay"
       ],
       "slowed": false
     },

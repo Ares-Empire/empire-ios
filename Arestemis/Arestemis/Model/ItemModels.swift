@@ -24,6 +24,7 @@ struct ItemSearch: Codable, Equatable, Sendable {
     var vbOverMax: Double
     var conditionMin: Condition?
     var forParts: Bool
+    var auctions: Bool = true      // auctions on sites that have them (eBay); kept when the search is edited
     var delivery: Delivery
     var places: [Place]
     var radiusKm: Double
@@ -32,7 +33,7 @@ struct ItemSearch: Codable, Equatable, Sendable {
     var sources: [Source]
 
     enum CodingKeys: String, CodingKey {
-        case query, exclude, delivery, places, seller, extra, sources
+        case query, exclude, auctions, delivery, places, seller, extra, sources
         case priceMin = "price_min", priceMax = "price_max", vbOverMax = "vb_over_max"
         case conditionMin = "condition_min", forParts = "for_parts", radiusKm = "radius_km"
     }
@@ -46,12 +47,34 @@ struct ItemSearch: Codable, Equatable, Sendable {
         try c.encode(vbOverMax, forKey: .vbOverMax)
         try c.encode(conditionMin, forKey: .conditionMin)
         try c.encode(forParts, forKey: .forParts)
+        try c.encode(auctions, forKey: .auctions)
         try c.encode(delivery, forKey: .delivery)
         try c.encode(places, forKey: .places)
         try c.encode(radiusKm, forKey: .radiusKm)
         try c.encode(seller, forKey: .seller)
         try c.encode(extra, forKey: .extra)
         try c.encode(sources, forKey: .sources)
+    }
+}
+
+extension ItemSearch {
+    /// A server from before eBay (brief 118) sends no `auctions`: the contract's default, on. Encoding always sends it.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        query = try c.decode(String.self, forKey: .query)
+        exclude = try c.decode([String].self, forKey: .exclude)
+        priceMin = try c.decodeIfPresent(Double.self, forKey: .priceMin)
+        priceMax = try c.decodeIfPresent(Double.self, forKey: .priceMax)
+        vbOverMax = try c.decode(Double.self, forKey: .vbOverMax)
+        conditionMin = try c.decodeIfPresent(Condition.self, forKey: .conditionMin)
+        forParts = try c.decode(Bool.self, forKey: .forParts)
+        auctions = try c.decodeIfPresent(Bool.self, forKey: .auctions) ?? true
+        delivery = try c.decode(Delivery.self, forKey: .delivery)
+        places = try c.decode([Place].self, forKey: .places)
+        radiusKm = try c.decode(Double.self, forKey: .radiusKm)
+        seller = try c.decode(SearchSeller.self, forKey: .seller)
+        extra = try c.decode(String.self, forKey: .extra)
+        sources = try c.decode([Source].self, forKey: .sources)
     }
 }
 
@@ -63,6 +86,7 @@ struct PartialItemSearch: Codable, Equatable, Sendable {
     var vbOverMax: Double?
     var conditionMin: Condition?
     var forParts: Bool?
+    var auctions: Bool?
     var delivery: Delivery?
     var places: [Place]?
     var radiusKm: Double?
@@ -91,9 +115,11 @@ struct ItemDetails: Codable, Equatable, Sendable {
     var seller: Seller?
     var distanceKm: Double?
     var reserved: Bool?
+    var bids: Int?                 // an auction's bid count
+    var ends: String?              // an auction's end, ISO 8601 UTC
 
     enum CodingKeys: String, CodingKey {
-        case price, shipping, condition, seller, reserved
+        case price, shipping, condition, seller, reserved, bids, ends
         case priceKind = "price_kind", shippingCost = "shipping_cost", conditionLabel = "condition_label"
         case distanceKm = "distance_km"
     }

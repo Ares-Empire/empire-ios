@@ -51,7 +51,9 @@ struct HuntText: Equatable {
     /// Instead of the details, for a hunt this build cannot show: "Needs a newer app".
     let newerApp: String?
 
-    init(_ hunt: Hunt, now: Date = .now, calendar: Calendar = .app, language: AppLanguage = .current) {
+    /// `sites`: the server's names for a thing hunt's sites (`ArestemisStore.siteNames`).
+    init(_ hunt: Hunt, sites: SiteNames = SiteNames(), now: Date = .now, calendar: Calendar = .app,
+         language: AppLanguage = .current) {
         let ownName = hunt.name.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.flatMap { $0.isEmpty ? nil : $0 }
         guard let kind = SearchKind(hunt.kind), hunt.search != .unsupported else {
             self.kind = nil
@@ -60,7 +62,7 @@ struct HuntText: Equatable {
             newerApp = language.string("Needs a newer app")
             return
         }
-        let summary = HuntSummary(hunt, now: now, calendar: calendar, language: language)
+        let summary = HuntSummary(hunt, sites: sites, now: now, calendar: calendar, language: language)
         let parts = (ownName == nil ? [] : [summary.title]) + summary.parts
         self.kind = kind
         title = ownName ?? summary.title

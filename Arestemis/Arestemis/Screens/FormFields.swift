@@ -322,31 +322,51 @@ struct WordChips: View {
     }
 }
 
-/// One switch per portal, with the portal's note from the server ("Blocked since 14:02").
-struct PortalToggles: View {
-    let sources: [Source]
+/// One switch per site, in the server's order (`SiteChoices`), with the site's note from the server ("Blocked since
+/// 14:02"). A site that is not set up is greyed and cannot be switched on (one that is on can still be switched off);
+/// one line under the card says so. `extra` follows under them (the thing form's "Include auctions", a card of its own,
+/// so it does not read as another site).
+struct PortalToggles<Extra: View>: View {
+    let choices: SiteChoices
     @Binding var chosen: Set<Source>
     let statuses: [SourceStatus]
+    @ViewBuilder let extra: Extra
 
     var body: some View {
-        FormCard {
-            ForEach(Array(sources.enumerated()), id: \.element) { index, source in
-                if index > 0 { Hairline() }
-                let status = statuses.first { $0.source == source }
-                Toggle(isOn: Binding(get: { chosen.contains(source) }, set: { on in
-                    if on { chosen.insert(source) } else { chosen.remove(source) }
-                })) {
-                    HStack(spacing: 10) {
-                        Text(status?.name ?? source.name).font(AppFont.text(15, weight: .medium)).foregroundStyle(Ink.primary)
-                        if let note = status?.note {
-                            Text(note).font(AppFont.text(12)).foregroundStyle(Ink.muted).lineLimit(1)
-                        }
-                    }
+        VStack(alignment: .leading, spacing: 8) {
+            FormCard {
+                ForEach(Array(choices.sites.enumerated()), id: \.element.id) { index, site in
+                    if index > 0 { Hairline() }
+                    row(site)
                 }
-                .tint(Look.accent.color)
-                .frame(minHeight: 50)
+            }
+            if let line = choices.notReadyLine() { Caption(text: line).padding(.leading, 4) }
+            extra
+        }
+    }
+
+    private func row(_ site: KindSource) -> some View {
+        let note = site.ready ? statuses.first { $0.source == site.source }?.note : nil
+        return Toggle(isOn: Binding(get: { chosen.contains(site.source) }, set: { on in
+            if on { chosen.insert(site.source) } else { chosen.remove(site.source) }
+        })) {
+            HStack(spacing: 10) {
+                Text(verbatim: site.name).font(AppFont.text(15, weight: .medium))
+                    .foregroundStyle(site.ready ? Ink.primary : Ink.muted)
+                if let note {
+                    Text(note).font(AppFont.text(12)).foregroundStyle(Ink.muted).lineLimit(1)
+                }
             }
         }
+        .tint(Look.accent.color)
+        .disabled(!choices.canSwitch(site, chosen: chosen))
+        .frame(minHeight: 50)
+    }
+}
+
+extension PortalToggles where Extra == EmptyView {
+    init(choices: SiteChoices, chosen: Binding<Set<Source>>, statuses: [SourceStatus]) {
+        self.init(choices: choices, chosen: chosen, statuses: statuses) { EmptyView() }
     }
 }
 

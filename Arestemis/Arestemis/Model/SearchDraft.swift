@@ -47,7 +47,7 @@ struct SearchDraft: Codable, Equatable {
     var moveInUntil: Date?
     var sublet: Sublet = .exclude
     var extra = ""
-    var sources: Set<Source> = Set(Source.allCases)
+    var sources: Set<Source> = Set(Source.flatPortals)
 
     /// A new search: flat or WG, one person, every portal, no temporary offers.
     init() {}
@@ -134,7 +134,7 @@ struct SearchDraft: Codable, Equatable {
                moveInUntil: moveInUntil.map { DateOnly.string($0, calendar: calendar) },
                sublet: sublet,
                extra: extra.trimmingCharacters(in: .whitespacesAndNewlines),
-               sources: Source.allCases.filter(sources.contains))
+               sources: Source.ordered(sources))
     }
 
     /// Fills in what a sentence said (`POST /search/parse`); everything it did not mention stays as it is.

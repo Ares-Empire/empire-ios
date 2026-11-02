@@ -16,6 +16,8 @@ struct ItemSearchDraft: Codable, Equatable {
     }
     var conditionMin: Condition?
     var forParts = false
+    /// Auctions on the sites that have them (eBay); the form's switch shows only while such a site is chosen.
+    var auctions = true
     var delivery: Delivery = .either
     var places: [Place] = []
     var radiusKm = "20"
@@ -34,6 +36,7 @@ struct ItemSearchDraft: Codable, Equatable {
         vbOverMaxTouched = true
         conditionMin = search.conditionMin
         forParts = search.forParts
+        auctions = search.auctions
         delivery = search.delivery
         places = search.places
         radiusKm = Self.text(search.radiusKm)
@@ -67,9 +70,9 @@ struct ItemSearchDraft: Codable, Equatable {
         guard isValid, let vb = Self.number(vbText), let radius = Self.number(radiusKm) else { return nil }
         return ItemSearch(query: query.trimmingCharacters(in: .whitespacesAndNewlines), exclude: exclude,
                           priceMin: Self.number(priceMin), priceMax: Self.number(priceMax), vbOverMax: vb,
-                          conditionMin: conditionMin, forParts: forParts, delivery: delivery, places: places,
-                          radiusKm: radius, seller: seller, extra: extra.trimmingCharacters(in: .whitespacesAndNewlines),
-                          sources: Source.allCases.filter(sources.contains))
+                          conditionMin: conditionMin, forParts: forParts, auctions: auctions, delivery: delivery,
+                          places: places, radiusKm: radius, seller: seller,
+                          extra: extra.trimmingCharacters(in: .whitespacesAndNewlines), sources: Source.ordered(sources))
     }
 
     /// Like the flat form: omitted/null fields stay; places and words merge; empty extra/sites do not erase edits.
@@ -83,6 +86,7 @@ struct ItemSearchDraft: Codable, Equatable {
         if let value = partial.vbOverMax { vbOverMax = Self.text(value) }
         if let value = partial.conditionMin { conditionMin = value }
         if let value = partial.forParts { forParts = value }
+        if let value = partial.auctions { auctions = value }
         if let value = partial.delivery { delivery = value }
         if let places = partial.places {
             for place in places where !self.places.contains(where: { $0.id == place.id }) { self.places.append(place) }
@@ -91,6 +95,31 @@ struct ItemSearchDraft: Codable, Equatable {
         if let value = partial.seller { seller = value }
         if let value = partial.extra, !value.isEmpty { extra = value }
         if let value = partial.sources, !value.isEmpty { sources = Set(value) }
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case query, exclude, priceMin, priceMax, vbText, vbOverMaxTouched, conditionMin, forParts, auctions, delivery
+        case places, radiusKm, seller, extra, sources
+    }
+
+    /// A draft kept by a build from before brief 119 has no `auctions`: on, as a new search.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        query = try c.decode(String.self, forKey: .query)
+        exclude = try c.decode([String].self, forKey: .exclude)
+        priceMin = try c.decode(String.self, forKey: .priceMin)
+        priceMax = try c.decode(String.self, forKey: .priceMax)
+        vbText = try c.decode(String.self, forKey: .vbText)
+        vbOverMaxTouched = try c.decode(Bool.self, forKey: .vbOverMaxTouched)
+        conditionMin = try c.decodeIfPresent(Condition.self, forKey: .conditionMin)
+        forParts = try c.decode(Bool.self, forKey: .forParts)
+        auctions = try c.decodeIfPresent(Bool.self, forKey: .auctions) ?? true
+        delivery = try c.decode(Delivery.self, forKey: .delivery)
+        places = try c.decode([Place].self, forKey: .places)
+        radiusKm = try c.decode(String.self, forKey: .radiusKm)
+        seller = try c.decode(SearchSeller.self, forKey: .seller)
+        extra = try c.decode(String.self, forKey: .extra)
+        sources = try c.decode(Set<Source>.self, forKey: .sources)
     }
 
     private mutating func updateVBDefault() {

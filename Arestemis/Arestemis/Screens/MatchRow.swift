@@ -2,8 +2,9 @@ import SwiftUI
 
 /// A match as a glass card: the photo if there is one, the rent big, the facts, where and when it was found, a
 /// chevron; the accent "new" dot in the corner until the match has been opened. A thing for sale shows its price big
-/// (with "VB" or how far it lies over the maximum beside it), its title, one facts line (condition · shipping or pickup
-/// with the distance · place), and "Online at start" for one found when the hunt started.
+/// (with "VB" or how far it lies over the maximum beside it; an auction its current bid, "bid" and the time left), its
+/// title, one facts line (condition · shipping or pickup with the distance · place), and "Online at start" for one found
+/// when the hunt started.
 struct MatchRow: View {
     let match: Match
     /// A thing for sale (`ArestemisStore.isThing`).
@@ -70,7 +71,18 @@ struct MatchRow: View {
     }
 
     @ViewBuilder private var price: some View {
-        if let price = match.itemPrice() {
+        if match.listing.item?.auctionEnd != nil {
+            // An auction's time left follows the clock.
+            TimelineView(.periodic(from: .now, by: 30)) { context in
+                HStack(alignment: .firstTextBaseline, spacing: 6) { price(now: context.date) }
+            }
+        } else {
+            price(now: .now)
+        }
+    }
+
+    @ViewBuilder private func price(now: Date) -> some View {
+        if let price = match.itemPrice(now: now) {
             if let amount = price.amount {
                 Text(amount).font(AppFont.number(20, weight: .bold)).foregroundStyle(Ink.primary)
                 if let label = price.label { Text(label).font(AppFont.text(11)).foregroundStyle(Ink.muted) }

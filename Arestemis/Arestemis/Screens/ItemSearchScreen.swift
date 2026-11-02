@@ -3,7 +3,7 @@ import SwiftUI
 /// A thing hunt's search ("Something to buy"), built from the flat form's pieces in the same order of habit: "Describe
 /// it" at the top, then what (the search words and words to leave out), price (with how far a negotiable price may lie
 /// over the maximum), condition, where (pickup, shipping or either; places and radius unless only shipped), seller,
-/// extras, portals; then save. Pushed on the Hunts tab for one hunt, or empty for a new one, which it creates paused.
+/// extras, portals (the server's sites for things, with "Include auctions" while a chosen one has auctions); then save. Pushed on the Hunts tab for one hunt, or empty for a new one, which it creates paused.
 /// What is wrong shows under its field (`ItemSearchDraft.fieldLine`); unsaved edits are kept per hunt.
 struct ItemSearchScreen: View {
     let store: ArestemisStore
@@ -39,15 +39,14 @@ struct ItemSearchScreen: View {
                         ExtrasField(placeholder: String(localized: "e.g. size B, black, with the original box"),
                                     text: $draft.extra, caption: String(localized: "Anything else: size, colour, with box …"))
                     }
-                    FormSection(title: String(localized: "Portals"), problems: lines(.sources)) {
-                        PortalToggles(sources: portals, chosen: $draft.sources, statuses: store.overview?.sources ?? [])
-                    }
+                    FormSection(title: String(localized: "Portals"), problems: lines(.sources)) { portals }
                     SearchSaveArea(creating: creating, canSave: canSave, saving: store.isSavingSearch, line: saveLine,
                                    save: saveSearch, delete: creating ? nil : { confirmDelete = true })
                     Color.clear.frame(height: 1).id("bottom")
                 }
                 .padding(.horizontal, Look.side).padding(.top, 4).padding(.bottom, 30)
                 .animation(.easeOut(duration: 0.2), value: draft.delivery)
+                .animation(.easeOut(duration: 0.2), value: showsAuctions)
             }
             .scrollIndicators(.hidden)
             .scrollDismissesKeyboard(.interactively)
@@ -80,6 +79,7 @@ struct ItemSearchScreen: View {
             Text("The hunt stops and its listings are deleted.")
         }
         .onAppear { sync() }
+        .task { await store.loadKinds() }               // the sites as the server offers them now
         .onChange(of: hunt?.search.item) { _, _ in sync() }
         .onChange(of: draft) { _, new in store.keepItemSearchDraft(new, baseline: baseline, huntID: huntID) }
     }
@@ -95,9 +95,26 @@ struct ItemSearchScreen: View {
         problems.compactMap { draft.fieldLine($0) }
     }
 
-    /// Kleinanzeigen (the only portal for things now), and any other the saved search names.
-    private var portals: [Source] {
-        Source.allCases.filter { $0 == .kleinanzeigen || draft.sources.contains($0) }
+    // MARK: portals
+
+    /// The server's sites for things (Kleinanzeigen alone until it answered), and any other the saved search names.
+    private var sites: SiteChoices { store.siteChoices(.item, chosen: draft.sources) }
+    private var showsAuctions: Bool { sites.showsAuctions(chosen: draft.sources) }
+
+    private var portals: some View {
+        PortalToggles(choices: sites, chosen: $draft.sources, statuses: store.overview?.sources ?? []) {
+            if showsAuctions {
+                FormCard {
+                    Toggle(isOn: $draft.auctions) {
+                        Text("Include auctions").font(AppFont.text(15, weight: .medium)).foregroundStyle(Ink.primary)
+                    }
+                    .tint(Look.accent.color)
+                    .frame(minHeight: 50)
+                }
+                .padding(.top, Look.rowGap - 8)
+                .transition(.opacity)
+            }
+        }
     }
 
     // MARK: what

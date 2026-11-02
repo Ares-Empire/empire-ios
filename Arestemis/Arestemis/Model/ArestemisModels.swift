@@ -11,63 +11,11 @@ enum Kind: String, Codable, CaseIterable, Identifiable, Sendable {
     var isWG: Bool { self == .wg }
 }
 
-/// The portals the app knows. A newer server may name one the app does not know yet (as "immoscout24" did before brief
-/// 63): every list of portals leaves it out and a listing from it still shows (below), so it never breaks the app.
-enum Source: String, Codable, CaseIterable, Identifiable, Sendable {
-    case wgGesucht = "wg_gesucht", kleinanzeigen, immowelt, immoscout24
-    var id: String { rawValue }
-}
-
-// Portals the app does not know yet, wherever the contract has them (brief 61). These overloads are picked by every
-// synthesized `init(from:)` in this module, so `Place.sources`, `Search.sources`, `PartialSearch.sources`,
-// `Overview.sources` and `Listing.source` all follow the same rule; `DecodingTests` pins each.
-extension KeyedDecodingContainer {
-    /// A list of portals without the ones the app does not know.
-    func decode(_ type: [Source].Type, forKey key: Key) throws -> [Source] {
-        try decode([KnownSource].self, forKey: key).compactMap(\.source)
-    }
-
-    func decodeIfPresent(_ type: [Source].Type, forKey key: Key) throws -> [Source]? {
-        try decodeIfPresent([KnownSource].self, forKey: key)?.compactMap(\.source)
-    }
-
-    /// The portals' states without the ones the app does not know (anything else wrong in an entry still fails).
-    func decode(_ type: [SourceStatus].Type, forKey key: Key) throws -> [SourceStatus] {
-        try decode([KnownStatus].self, forKey: key).compactMap(\.status)
-    }
-
-    /// One portal, nil when the app does not know it (a listing then shows the server's `source_name`).
-    func decodeIfPresent(_ type: Source.Type, forKey key: Key) throws -> Source? {
-        try decodeIfPresent(String.self, forKey: key).flatMap(Source.init(rawValue:))
-    }
-}
-
-/// One entry of a list of portals: nil for a portal the app does not know.
-private struct KnownSource: Decodable {
-    let source: Source?
-
-    init(from decoder: Decoder) throws {
-        source = Source(rawValue: try decoder.singleValueContainer().decode(String.self))
-    }
-}
-
-/// One portal's state: nil for a portal the app does not know.
-private struct KnownStatus: Decodable {
-    let status: SourceStatus?
-
-    private enum Keys: String, CodingKey { case source }
-
-    init(from decoder: Decoder) throws {
-        let source = try decoder.container(keyedBy: Keys.self).decode(String.self, forKey: .source)
-        status = Source(rawValue: source) == nil ? nil : try SourceStatus(from: decoder)
-    }
-}
-
 struct Place: Codable, Equatable, Hashable, Identifiable, Sendable {
     let id: String                 // stable server id, "wg:90"
     let name: String               // "München"
     let region: String?            // "Bayern"
-    let sources: [Source]          // portals that can search this place
+    let sources: [Source]          // sites that can search this place (any the server names, `Sites.swift`)
 
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
@@ -238,8 +186,8 @@ struct SourceStatus: Codable, Equatable, Identifiable, Sendable {
 }
 
 struct Listing: Codable, Equatable, Sendable {
-    let source: Source?            // nil: a portal the app does not know yet; `sourceName` still names it
-    let sourceName: String
+    let source: Source             // any site the server names, known to this build or not
+    let sourceName: String         // the server's name for it ("eBay")
     let url: String
     let title: String
     let kind: Kind?

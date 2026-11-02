@@ -76,7 +76,7 @@ struct HuntsScreen: View {
     private var hunts: some View {
         VStack(spacing: Look.rowGap) {
             ForEach(store.hunts) { card in
-                HuntListCard(card: card, busy: store.isChanging(hunt: card.id),
+                HuntListCard(card: card, sites: store.siteNames, busy: store.isChanging(hunt: card.id),
                              open: { navigation.huntPath.append(.hunt(card.id)) },
                              toggle: { active in Task { await store.setActive(id: card.id, active: active) } })
             }

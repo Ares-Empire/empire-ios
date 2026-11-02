@@ -44,7 +44,8 @@ struct ContentView: View {
                                                                              longDescription: options.longDescription,
                                                                              ownMode: options.ownMode, noTexts: options.noTexts,
                                                                              slowed: options.slowed,
-                                                                             newerKind: options.newerKind)) {
+                                                                             newerKind: options.newerKind,
+                                                                             ebayNotReady: options.ebayNotReady)) {
             let store = ArestemisStore(session: session, backend: sample, sample: true)
             store.selectedHuntID = options.sampleHunt
             return store

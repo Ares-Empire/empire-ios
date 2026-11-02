@@ -39,10 +39,12 @@ struct HuntsScreensTests {
         #expect(named.title == "A quieter flat")
         #expect(named.details?.hasPrefix(SearchSummary.unbreakable(summary.kinds)) == true)
 
-        let thing = HuntText(cards[1].hunt, language: language)
+        // A thing hunt's sites by the server's names (the overview's).
+        let sites = SiteNames(statuses: try sample(Overview.self, "overview").sources)
+        let thing = HuntText(cards[1].hunt, sites: sites, language: language)
         #expect(thing.kind == .item && thing.title == "Herman Miller Aeron")
-        #expect(spaces(thing.details) == (de ? "bis 450 € · Abholung oder Versand · Garching (20 km) · Kleinanzeigen"
-                                             : "up to €450 · Pickup or shipping · Garching (20 km) · Kleinanzeigen"))
+        #expect(spaces(thing.details) == (de ? "bis 450 € · Abholung oder Versand · Garching (20 km) · Kleinanzeigen · eBay"
+                                             : "up to €450 · Pickup or shipping · Garching (20 km) · Kleinanzeigen · eBay"))
 
         // Spaces only are no name.
         var blank = cards[1].hunt
@@ -249,14 +251,14 @@ struct HuntsScreensTests {
         await store.reloadOverview()
         #expect(store.latest(hunt: 2) == nil)
         await store.loadLatest(hunt: 2)
-        #expect(store.latest(hunt: 2)?.map(\.id) == [31, 30, 29])
+        #expect(store.latest(hunt: 2)?.map(\.id) == [32, 31, 30])
         #expect(store.latest(hunt: 2)?.allSatisfy { store.isThing($0) } == true)
         await store.loadLatest(hunt: 1)
         #expect(store.latest(hunt: 1)?.map(\.id) == [41, 40, 38])
         #expect(store.latest(hunt: 1)?.contains { store.isThing($0) } == false)
         // A dismissed match leaves the page; the Listings tab's choice is untouched.
         await store.setState(.dismissed, for: 31)
-        #expect(store.latest(hunt: 2)?.map(\.id) == [30, 29] && store.selectedHuntID == nil)
+        #expect(store.latest(hunt: 2)?.map(\.id) == [32, 30] && store.selectedHuntID == nil)
         // An unknown hunt is not remembered; a deleted one is forgotten.
         await store.loadLatest(hunt: 99)
         #expect(store.latest(hunt: 99) == nil)

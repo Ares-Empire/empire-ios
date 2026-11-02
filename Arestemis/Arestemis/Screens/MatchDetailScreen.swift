@@ -2,9 +2,9 @@ import SwiftUI
 
 /// One match: the rent big, the title, the facts grid, why the AI let it through (and what to check), the
 /// description; at the bottom "Open on <portal>" and "Application". The menu sets the state. A thing for sale: its
-/// price big (with "VB" or how far it lies over the maximum), its facts (condition, delivery, shipping cost, distance,
-/// seller, place, posted), and only "Open on Kleinanzeigen", as the one main button; its seller is "Asked", not
-/// applied to.
+/// price big (with "VB" or how far it lies over the maximum; an auction its current bid and the time left), its facts
+/// (an auction's bids and end, condition, delivery, shipping cost, distance, seller, place, posted), and only "Open on
+/// <site>" (the server's name: "Open on eBay"), as the one main button; its seller is "Asked", not applied to.
 struct MatchDetailScreen: View {
     let id: Int
     let store: ArestemisStore
@@ -73,18 +73,11 @@ struct MatchDetailScreen: View {
         let listing = match.listing
         return VStack(alignment: .leading, spacing: 0) {
             if thing {
-                if let price = match.itemPrice() {
-                    HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        if let amount = price.amount {
-                            Text(amount).font(AppFont.number(34, weight: .bold)).foregroundStyle(Ink.primary)
-                                .minimumScaleFactor(0.7)
-                            if let label = price.label { Text(label).font(AppFont.text(13)).foregroundStyle(Ink.muted) }
-                        } else if let label = price.label {
-                            Text(label).font(AppFont.text(28, weight: .bold)).foregroundStyle(Ink.primary)
-                                .minimumScaleFactor(0.7)
-                        }
-                    }
-                    .lineLimit(1)
+                if listing.item?.auctionEnd != nil {
+                    // An auction's time left follows the clock.
+                    TimelineView(.periodic(from: .now, by: 30)) { context in thingPrice(match, now: context.date) }
+                } else {
+                    thingPrice(match, now: .now)
                 }
             } else if let rent = listing.shownRent {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
@@ -118,6 +111,22 @@ struct MatchDetailScreen: View {
             .padding(.top, 6)
         }
         .accessibilityElement(children: .combine)
+    }
+
+    @ViewBuilder private func thingPrice(_ match: Match, now: Date) -> some View {
+        if let price = match.itemPrice(now: now) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                if let amount = price.amount {
+                    Text(amount).font(AppFont.number(34, weight: .bold)).foregroundStyle(Ink.primary)
+                        .minimumScaleFactor(0.7)
+                    if let label = price.label { Text(label).font(AppFont.text(13)).foregroundStyle(Ink.muted) }
+                } else if let label = price.label {
+                    Text(label).font(AppFont.text(28, weight: .bold)).foregroundStyle(Ink.primary)
+                        .minimumScaleFactor(0.7)
+                }
+            }
+            .lineLimit(1)
+        }
     }
 
     private func actions(_ match: Match) -> some View {

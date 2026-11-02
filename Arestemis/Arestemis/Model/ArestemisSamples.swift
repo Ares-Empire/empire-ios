@@ -3,7 +3,8 @@ import Foundation
 /// The contract's made-up sample answers (Samples/, copies of Arestemis/docs/samples/), for the tests and for
 /// `-sampleData`.
 enum ArestemisSamples {
-    nonisolated static let files = ["overview", "matches", "match", "rejected", "settings", "places", "hunts", "item-matches"]
+    nonisolated static let files = ["overview", "matches", "match", "rejected", "settings", "places", "hunts", "item-matches",
+                                    "ebay-match", "kinds"]
 
     static func data(_ name: String) throws -> Data {
         guard let url = Bundle.main.url(forResource: name, withExtension: "json") else {
@@ -56,6 +57,7 @@ final class SampleBackend: ArestemisBackend {
         var noTexts = false         // -sampleNoTexts: no own text, notes or facts about you yet
         var slowed = false          // -sampleSlowed: the thing hunt is read less often
         var newerKind = false       // -sampleNewerKind: a hunt of a kind this build does not know
+        var ebayNotReady = false    // -sampleEbayNotReady: eBay without its keys on the server (greyed in the form)
     }
 
     private var base: Overview
@@ -64,6 +66,7 @@ final class SampleBackend: ArestemisBackend {
     private var matches: [Match]
     private var rejectedItems: [Rejected]
     private var settingsValue: Settings
+    private var kindsValue: [OfferedKind]
     private let knownPlaces: [Place]
     private let options: Options
 
@@ -78,6 +81,7 @@ final class SampleBackend: ArestemisBackend {
         let single = try ArestemisSamples.decode(Match.self, from: "match", shift: shift)
         matches = page.items + (page.items.contains { $0.id == single.id } ? [] : [single])
             + (try ArestemisSamples.decode(MatchPage.self, from: "item-matches", shift: shift)).items
+            + [try ArestemisSamples.decode(Match.self, from: "ebay-match", shift: shift)]
         if options.longDescription {
             // Extend only the fictional listing description, leaving the contract's fields unchanged.
             matches = try matches.map { match in
@@ -90,6 +94,7 @@ final class SampleBackend: ArestemisBackend {
         }
         rejectedItems = try ArestemisSamples.decode(RejectedPage.self, from: "rejected", shift: shift).items
         settingsValue = try ArestemisSamples.decode(Settings.self, from: "settings")
+        kindsValue = try ArestemisSamples.decode([OfferedKind].self, from: "kinds")
         if options.ownMode { settingsValue.applicationMode = .own }
         if options.noTexts {
             settingsValue.ownText = ""
@@ -108,6 +113,21 @@ final class SampleBackend: ArestemisBackend {
             rejectedItems = []
         }
         if options.paused { for index in huntValues.indices { huntValues[index].active = false } }
+        if options.ebayNotReady {
+            // As the server without eBay's keys: eBay not set up, and no hunt reads it.
+            kindsValue = kindsValue.map { offered in
+                OfferedKind(kind: offered.kind, name: offered.name, sources: offered.sources.map { site in
+                    var site = site
+                    if site.source == .ebay { site.ready = false }
+                    return site
+                })
+            }
+            for index in huntValues.indices {
+                guard case .item(var search) = huntValues[index].search else { continue }
+                search.sources.removeAll { $0 == .ebay }
+                huntValues[index].search = .item(search)
+            }
+        }
         if options.newerKind {
             let created = ArestemisSamples.iso(now)
             huntValues.append(Hunt(id: nextHuntID, kind: .unknown("car"), name: "Camper van", active: true,
@@ -141,6 +161,8 @@ final class SampleBackend: ArestemisBackend {
         overview.latest = Array(visible.prefix(3))
         return overview
     }
+
+    func kinds() async throws -> [OfferedKind] { kindsValue }
 
     func hunts() async throws -> [Hunt] { huntValues }
 

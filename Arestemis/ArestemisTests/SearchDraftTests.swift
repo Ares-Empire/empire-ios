@@ -23,7 +23,7 @@ struct SearchDraftTests {
     /// Only a place and a portal are required; everything else starts as "any".
     @Test func aNewSearch() {
         var draft = SearchDraft()
-        #expect(draft.type == .any && draft.people == 1 && draft.sources == Set(Source.allCases) && draft.sublet == .exclude)
+        #expect(draft.type == .any && draft.people == 1 && draft.sources == Set(Source.flatPortals) && draft.sublet == .exclude)
         #expect(draft.problems == [.noPlace] && draft.hint == "Choose a place.")
         draft.add(munich)
         #expect(draft.isValid)

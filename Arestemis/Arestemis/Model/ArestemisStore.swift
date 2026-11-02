@@ -1,8 +1,8 @@
 import Foundation
 import Observation
 
-/// One store for the app: the overview (hunt, portals, counts), the matches by state, the filtered-out listings,
-/// applications, settings, and the search's helpers. Views read it and call its actions; nothing here knows about views.
+/// One store for the app: the overview (hunt, portals, counts), the sites each kind of search can use (`GET /kinds`),
+/// the matches by state, the filtered-out listings, applications, settings, and the search's helpers. Views read it and call its actions; nothing here knows about views.
 ///
 /// - Optimistic changes (a match's state, start/pause, settings) show at once and roll back with a notice on failure.
 /// - Every request remembers the login it started with (`Context`); answers that arrive after a logout or a switch of
@@ -43,6 +43,12 @@ final class ArestemisStore {
     private(set) var isLoadingOverview = false
     private(set) var overviewError: String?
     private(set) var lastOverviewLoad: Date?
+
+    // sites (brief 119)
+    /// The last `GET /kinds` answer: each kind of search and its sites. Nil until one arrived (offline, a server from
+    /// before it); the forms then show the lists of before (`SiteChoices`). A failed reload keeps the last answer.
+    private(set) var kinds: [OfferedKind]?
+    private var isLoadingKinds = false
 
     // matches
     private(set) var matchesByID: [Int: Match] = [:]
@@ -150,6 +156,9 @@ final class ArestemisStore {
             for match in loaded.latest { remember(match) }
             // Settings are fetched once, right after the first home screen, so the Settings sheet opens complete.
             if settings == nil { Task { await self.loadSettings() } }
+            // The sites come with the home screen: at launch and every pull to refresh, and with every reload until an
+            // answer came. A form asks again when it opens.
+            if !quiet || kinds == nil { Task { await self.loadKinds() } }
         } catch {
             guard isCurrent(context) else { return }
             if !quiet || overview == nil { handle(error, context: context) { self.overviewError = $0 } }
@@ -177,6 +186,33 @@ final class ArestemisStore {
         await reloadOverview(quiet: true)
         for filter in MatchFilter.allCases where lists[filter]?.loaded == true {
             await loadMatches(filter, quiet: true)
+        }
+    }
+
+    // MARK: - sites
+
+    /// The sites' names from the server: the overview's sites and `/kinds`.
+    var siteNames: SiteNames { SiteNames(statuses: overview?.sources ?? [], kinds: kinds) }
+
+    /// What a search form of this kind offers under Portals, with the sites its search has chosen.
+    func siteChoices(_ kind: SearchKind, chosen: Set<Source>) -> SiteChoices {
+        SiteChoices(kind: kind, kinds: kinds, chosen: chosen, names: siteNames)
+    }
+
+    /// `GET /kinds`, quietly: a failure (offline, a server from before it) keeps the last answer and says nothing; only
+    /// a refused login counts (401 logs out, 403 closes the app).
+    func loadKinds() async {
+        guard canAct, !isLoadingKinds else { return }
+        isLoadingKinds = true
+        let context = context
+        defer { if isCurrent(context) { isLoadingKinds = false } }
+        do {
+            let loaded = try await backend.kinds()
+            guard isCurrent(context) else { return }
+            kinds = loaded
+        } catch {
+            guard isCurrent(context) else { return }
+            session.handleAuthFailure(error, generation: context.session, token: context.token)
         }
     }
 
@@ -567,6 +603,8 @@ final class ArestemisStore {
         overviewError = nil
         lastOverviewLoad = nil
         isLoadingOverview = false
+        kinds = nil
+        isLoadingKinds = false
         forgetMatches()
         settings = nil
         settingsError = nil

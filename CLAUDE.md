@@ -510,8 +510,12 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   except a place and a portal. "Describe it" is a line at the top that opens a sheet (`SearchDraft`, `SearchScreen`).
   **Settings → Application** (brief 61, Patrik 2026-10-31): after Notifications, one card of rows like General's: the
   switch Write automatically (on = `ai`), the row it leads to (Your text, or Notes = `application_notes`, brief 62) and
-  About you, each opening a page with one text field (`ApplicationPage`); one draft, saved when the sheet closes. A portal
-  the app does not know yet is left out of every list and a listing from one still shows (`DecodingTests`).
+  About you, each opening a page with one text field (`ApplicationPage`); one draft, saved when the sheet closes. **Sites come from the server** (brief 119, 2026-11-02): `Source` is open (`Model/Sites.swift`), a site the
+  app does not know is kept and shown by the server's name (`SourceStatus.name`, `Listing.source_name`, `GET /kinds`);
+  the forms' site switches come from `GET /kinds` for their kind (`SiteChoices`; today's lists when there is no answer),
+  a site with `ready: false` is greyed with "<site> is not set up yet.", and the thing form's "Include auctions" shows
+  only while a chosen site has `auctions`. An eBay auction shows its bid and time left (`DecodingTests`, `SitesTests`;
+  DEBUG `-sampleEbayNotReady`).
 - **Arestoteles app** (2026-10-24, build R2): `Arestoteles/` (bundle id `de.ares-empire.arestoteles`, URL scheme
   `arestoteles`), Patrik's Weltbild vault on the Arestoteles API (`Arestoteles/docs/API.md`, decisions
   `ares-empire/docs/ARESTOTELES-APP.md`; samples in `Arestoteles/Arestoteles/Samples/`, copies of its `docs/samples/`).
