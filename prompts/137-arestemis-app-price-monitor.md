@@ -1,6 +1,6 @@
 # 137: Arestemis app: the Preismonitor, and examples in the watch form
 
-Status: running (Claude agent, 2026-11-02)
+Status: merged 2026-11-02 (Arestemis build 12)
 Branch: `claude/137-arestemis-price-monitor` · Worktree: `../empire-ios-137-arestemis-price` · **For a Claude agent**
 (screens and their data part)
 
