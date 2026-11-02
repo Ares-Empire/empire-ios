@@ -48,7 +48,7 @@ struct DropsTests {
         _ = try await api.folders(token: "fictional")
         _ = try await api.create(newDrop(), token: "fictional")
         let file = URL(fileURLWithPath: "/fictional/upload.file")
-        _ = try await api.upload(44, fileURL: file, token: "fictional")
+        _ = try await api.testedUpload(44, fileURL: file, token: "fictional")
         _ = try await api.drops(token: "fictional")
         try await api.delete(44, token: "fictional")
         #expect(fake.requests.map(\.httpMethod) == ["GET", "POST", "PUT", "GET", "DELETE"])
@@ -64,7 +64,7 @@ struct DropsTests {
         fake.responses = [.answer(413, Data(#"{"error":"This file is too large."}"#.utf8)), .answer(401, Data())]
         let api = AresusAPI(transport: fake)
         do {
-            _ = try await api.upload(44, fileURL: URL(fileURLWithPath: "/fictional"), token: "fictional")
+            _ = try await api.testedUpload(44, fileURL: URL(fileURLWithPath: "/fictional"), token: "fictional")
             Issue.record("Expected rejection")
         } catch { #expect(error.localizedDescription == "This file is too large.") }
         var unauthorized = false

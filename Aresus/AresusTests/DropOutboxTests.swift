@@ -10,7 +10,7 @@ struct DropOutboxTests {
         let session = await signedInSession()
         let fake = DropTransport()
         fake.responses = [.answer(201, try dropAnswer()), .answer(200, try dropAnswer(state: .waiting))]
-        let outbox = DropOutbox(session: session, client: AresusAPI(transport: fake), directory: directory, automatic: false)
+        let outbox = DropOutbox(session: session, client: AresusAPI(transport: fake), directory: directory, automatic: false, uploads: ImmediateDropUploads(fake))
         let source = directory.appendingPathComponent("source.pdf")
         try Data("abc".utf8).write(to: source)
         let id = try await outbox.enqueue(DropFile(content: .file(source), suggestedName: "Sample.pdf"), name: "Sample.pdf", target: nil)
@@ -36,7 +36,7 @@ struct DropOutboxTests {
         let session = await signedInSession()
         let fake = DropTransport()
         fake.responses = [.answer(201, try dropAnswer()), .failure(URLError(.notConnectedToInternet))]
-        let outbox = DropOutbox(session: session, client: AresusAPI(transport: fake), directory: directory, automatic: false)
+        let outbox = DropOutbox(session: session, client: AresusAPI(transport: fake), directory: directory, automatic: false, uploads: ImmediateDropUploads(fake))
         let id = try await enqueue(outbox)
         await outbox.process()
         let failed = try #require(outbox.items.only)
@@ -44,7 +44,7 @@ struct DropOutboxTests {
         #expect(failed.retryAt != nil && failed.attempts == 1)
         await outbox.process()
         #expect(fake.requests.count == 2) // The deadline prevents a busy retry loop.
-        let restored = DropOutbox(session: session, client: AresusAPI(transport: fake), directory: directory, automatic: false)
+        let restored = DropOutbox(session: session, client: AresusAPI(transport: fake), directory: directory, automatic: false, uploads: ImmediateDropUploads(fake))
         #expect(restored.items.only == failed)
         fake.responses = [.answer(200, try dropAnswer(state: .waiting))]
         await restored.retry(id)
@@ -58,7 +58,7 @@ struct DropOutboxTests {
         let fake = DropTransport()
         let sentence = Data(#"{"error":"The checksum does not match."}"#.utf8)
         fake.responses = [.answer(201, try dropAnswer()), .answer(400, sentence), .answer(400, sentence)]
-        let outbox = DropOutbox(session: await signedInSession(), client: AresusAPI(transport: fake), directory: directory, automatic: false)
+        let outbox = DropOutbox(session: await signedInSession(), client: AresusAPI(transport: fake), directory: directory, automatic: false, uploads: ImmediateDropUploads(fake))
         _ = try await enqueue(outbox)
         await outbox.process()
         let item = try #require(outbox.items.only)
@@ -76,7 +76,7 @@ struct DropOutboxTests {
         defer { try? FileManager.default.removeItem(at: directory) }
         let fake = DropTransport()
         fake.responses = [.answer(201, try dropAnswer()), .answer(400, Data()), .answer(200, try dropAnswer(state: .waiting))]
-        let outbox = DropOutbox(session: await signedInSession(), client: AresusAPI(transport: fake), directory: directory, automatic: false)
+        let outbox = DropOutbox(session: await signedInSession(), client: AresusAPI(transport: fake), directory: directory, automatic: false, uploads: ImmediateDropUploads(fake))
         _ = try await enqueue(outbox)
         await outbox.process()
         #expect(outbox.items.isEmpty && fake.files.count == 2)
@@ -88,7 +88,7 @@ struct DropOutboxTests {
         defer { try? FileManager.default.removeItem(at: directory) }
         let fake = DropTransport()
         fake.responses = [.answer(201, try dropAnswer()), .answer(status, Data(#"{"error":"This file cannot be accepted."}"#.utf8))]
-        let outbox = DropOutbox(session: await signedInSession(), client: AresusAPI(transport: fake), directory: directory, automatic: false)
+        let outbox = DropOutbox(session: await signedInSession(), client: AresusAPI(transport: fake), directory: directory, automatic: false, uploads: ImmediateDropUploads(fake))
         _ = try await enqueue(outbox)
         await outbox.process()
         #expect(outbox.items.only?.state == .failed)
@@ -102,7 +102,7 @@ struct DropOutboxTests {
         defer { try? FileManager.default.removeItem(at: directory) }
         let fake = DropTransport()
         fake.responses = [.answer(400, Data(#"{"error":"Bad name."}"#.utf8))]
-        let outbox = DropOutbox(session: await signedInSession(), client: AresusAPI(transport: fake), directory: directory, automatic: false)
+        let outbox = DropOutbox(session: await signedInSession(), client: AresusAPI(transport: fake), directory: directory, automatic: false, uploads: ImmediateDropUploads(fake))
         let id = try await enqueue(outbox)
         await outbox.process()
         #expect(outbox.items.only?.state == .failed && fake.files.isEmpty)
@@ -120,7 +120,7 @@ struct DropOutboxTests {
         let fake = DropTransport()
         fake.responses = [.answer(201, try dropAnswer()), .failure(URLError(.notConnectedToInternet)),
                           .failure(URLError(.notConnectedToInternet))]
-        let outbox = DropOutbox(session: await signedInSession(), client: AresusAPI(transport: fake), directory: directory, automatic: false)
+        let outbox = DropOutbox(session: await signedInSession(), client: AresusAPI(transport: fake), directory: directory, automatic: false, uploads: ImmediateDropUploads(fake))
         let id = try await enqueue(outbox)
         await outbox.process()
         await outbox.remove(id)
@@ -141,7 +141,7 @@ struct DropOutboxTests {
         fake.responses = [.answer(201, try dropAnswer())]
         let gate = RequestGate()
         fake.gate = gate
-        let outbox = DropOutbox(session: session, client: AresusAPI(transport: fake), directory: directory, automatic: false)
+        let outbox = DropOutbox(session: session, client: AresusAPI(transport: fake), directory: directory, automatic: false, uploads: ImmediateDropUploads(fake))
         _ = try await enqueue(outbox)
         let processing = Task { await outbox.process() }
         await gate.waitUntilPaused()
@@ -160,7 +160,7 @@ struct DropOutboxTests {
         fake.responses = [.answer(201, try dropAnswer()), .answer(204, Data())]
         let gate = RequestGate()
         fake.gate = gate
-        let outbox = DropOutbox(session: await signedInSession(), client: AresusAPI(transport: fake), directory: directory, automatic: false)
+        let outbox = DropOutbox(session: await signedInSession(), client: AresusAPI(transport: fake), directory: directory, automatic: false, uploads: ImmediateDropUploads(fake))
         let id = try await enqueue(outbox)
         let processing = Task { await outbox.process() }
         await gate.waitUntilPaused()
@@ -180,7 +180,7 @@ struct DropOutboxTests {
         let fake = DropTransport()
         fake.responses = [.answer(201, try dropAnswer()), .answer(200, try dropAnswer(state: .waiting)),
                           .answer(201, try dropAnswer()), .answer(200, try dropAnswer(state: .waiting))]
-        let outbox = DropOutbox(session: await signedInSession(), client: AresusAPI(transport: fake), directory: directory, automatic: false)
+        let outbox = DropOutbox(session: await signedInSession(), client: AresusAPI(transport: fake), directory: directory, automatic: false, uploads: ImmediateDropUploads(fake))
         _ = try await enqueue(outbox, name: "First.pdf")
         _ = try await enqueue(outbox, name: "Second.pdf")
         let gate = RequestGate()
@@ -217,7 +217,7 @@ struct DropOutboxTests {
         let directory = testDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
         let fake = DropTransport()
-        let outbox = DropOutbox(session: await signedInSession(), client: AresusAPI(transport: fake), directory: directory, automatic: false)
+        let outbox = DropOutbox(session: await signedInSession(), client: AresusAPI(transport: fake), directory: directory, automatic: false, uploads: ImmediateDropUploads(fake))
         await #expect(throws: DropLocalError.self) { try await enqueue(outbox, name: ".hidden") }
         await #expect(throws: DropLocalError.self) {
             try await outbox.enqueue(DropFile(content: .file(directory.appendingPathComponent("missing")), suggestedName: "Sample.pdf"), name: "Sample.pdf", target: nil)

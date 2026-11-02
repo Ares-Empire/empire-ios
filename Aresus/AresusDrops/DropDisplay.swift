@@ -76,30 +76,30 @@ nonisolated struct DropRow: Identifiable, Equatable, Sendable {
     /// A drop being deleted is not in the list at all (`DropsStore.merge`), so it has no line.
     private static func phone(_ item: DropOutboxItem, language: AppLanguage) -> (String, Tone, retry: Bool) {
         switch item.state {
-        case .onPhone: return (language.string("On the phone · waits for a connection"), .normal, false)
-        case .uploading: return (language.string("Uploading …"), .normal, false)
+        case .onPhone: return (language.string(LocalizedStringResource("On the phone · waits for a connection", table: "AresusDrops")), .normal, false)
+        case .uploading: return (language.string(LocalizedStringResource("Uploading …", table: "AresusDrops")), .normal, false)
         case .failed:
-            let error = item.lastError ?? language.string("The file could not be read.")
-            return (language.string("Not sent: \(error)"), .warning, true)
+            let error = item.lastError ?? language.string(LocalizedStringResource("The file could not be read.", table: "AresusDrops"))
+            return (language.string(LocalizedStringResource("Not sent: \(error)", table: "AresusDrops")), .warning, true)
         }
     }
 
     private static func server(_ drop: Drop, now: Date, calendar: Calendar, language: AppLanguage)
         -> (String, Tone, note: String?) {
         switch drop.state {
-        case .uploading: return (language.string("Uploading …"), .normal, nil)
-        case .waiting: return (language.string("Waiting for the MacBook"), .normal, nil)
+        case .uploading: return (language.string(LocalizedStringResource("Uploading …", table: "AresusDrops")), .normal, nil)
+        case .waiting: return (language.string(LocalizedStringResource("Waiting for the MacBook", table: "AresusDrops")), .normal, nil)
         case .failed:
             // The server's note is the whole reason in one sentence ("The MacBook could not write the file."), so it is
             // the line by itself; a prefix would say the same twice.
             let note = drop.note?.trimmingCharacters(in: .whitespacesAndNewlines)
-            return (note.flatMap { $0.isEmpty ? nil : $0 } ?? language.string("The MacBook could not save it."), .warning, nil)
+            return (note.flatMap { $0.isEmpty ? nil : $0 } ?? language.string(LocalizedStringResource("The MacBook could not save it.", table: "AresusDrops")), .warning, nil)
         case .landed:
             let folder = drop.landed.flatMap { DropPathText.lastFolder(ofLanded: $0, language: language) }
-            let place = folder.map { language.string("In \($0)") } ?? language.string("On the MacBook")
+            let place = folder.map { language.string(LocalizedStringResource("In \($0)", table: "AresusDrops")) } ?? language.string(LocalizedStringResource("On the MacBook", table: "AresusDrops"))
             return (place + " · " + DropPathText.when(drop.updated, now: now, calendar: calendar, language: language),
                     .normal, drop.note)
-        case .cancelled: return (language.string("Cancelled"), .muted, nil)
+        case .cancelled: return (language.string(LocalizedStringResource("Cancelled", table: "AresusDrops")), .muted, nil)
         }
     }
 }
@@ -111,8 +111,8 @@ nonisolated enum DropPathText {
     /// The root as Finder names it in the app's language ("Documents" / "Dokumente").
     static func root(_ root: DropRoot, language: AppLanguage = .current) -> String {
         switch root {
-        case .documents: language.string("Documents")
-        case .downloads: language.string("Downloads")
+        case .documents: language.string(LocalizedStringResource("Documents", table: "AresusDrops"))
+        case .downloads: language.string(LocalizedStringResource("Downloads", table: "AresusDrops"))
         }
     }
 
@@ -145,11 +145,11 @@ nonisolated enum DropPathText {
     static func place(_ target: Target?, fallback: String?,
                       language: AppLanguage = .current) -> (text: String, quiet: String?) {
         guard let target else {
-            return (language.string("Sort later"), fallback.flatMap { $0.isEmpty ? nil : $0 })
+            return (language.string(LocalizedStringResource("Sort later", table: "AresusDrops")), fallback.flatMap { $0.isEmpty ? nil : $0 })
         }
         let isNew = !(target.newFolder ?? "").isEmpty
         return (path(target, language: language),
-                isNew ? language.string("new") : nil)
+                isNew ? language.string(LocalizedStringResource("new", table: "AresusDrops")) : nil)
     }
 
     /// The folder a drop landed in, from the Mac's path relative to its home ("Documents/Receipts/x.pdf" → "Receipts";
@@ -184,13 +184,13 @@ extension DropRoot {
 nonisolated enum DropRuleWording {
     static func text(_ rule: DropNames.Rule, language: AppLanguage = .current) -> String {
         switch rule {
-        case .empty: language.string("Enter a name.")
-        case .tooLong: language.string("This name is too long.")
-        case .forbiddenCharacter: language.string("A name cannot contain a slash, a backslash or a colon.")
-        case .dot: language.string("A name cannot be only dots.")
-        case .leadingDot: language.string("A name cannot start with a dot.")
-        case .trailingSpaceOrDot: language.string("A name cannot end with a dot.")
-        case .tooManyParts: language.string("This folder lies too deep.")
+        case .empty: language.string(LocalizedStringResource("Enter a name.", table: "AresusDrops"))
+        case .tooLong: language.string(LocalizedStringResource("This name is too long.", table: "AresusDrops"))
+        case .forbiddenCharacter: language.string(LocalizedStringResource("A name cannot contain a slash, a backslash or a colon.", table: "AresusDrops"))
+        case .dot: language.string(LocalizedStringResource("A name cannot be only dots.", table: "AresusDrops"))
+        case .leadingDot: language.string(LocalizedStringResource("A name cannot start with a dot.", table: "AresusDrops"))
+        case .trailingSpaceOrDot: language.string(LocalizedStringResource("A name cannot end with a dot.", table: "AresusDrops"))
+        case .tooManyParts: language.string(LocalizedStringResource("This folder lies too deep.", table: "AresusDrops"))
         }
     }
 }

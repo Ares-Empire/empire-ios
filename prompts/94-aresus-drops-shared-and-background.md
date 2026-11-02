@@ -1,6 +1,6 @@
 # 94: Aresus: drops shared with the share extension, uploads in the background
 
-Status: open (starts after brief 93 is merged; it changes the same screens)
+Status: merged 2026-11-02 (Aresus 179 and Aresium 748 tests; Codex; Photos → Share → Aresus → Send checked by a UI test)
 Branch: `codex/94-drops-shared` · Worktree: `../empire-ios-94-drops-shared` · Model: `gpt-6.1-sol`, effort `xhigh`
 Simulator: `codex-94` (create it: iPhone 17, iOS 27.0)
 

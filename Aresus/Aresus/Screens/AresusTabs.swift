@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import UniformTypeIdentifiers
 
 /// The signed-in app: two tabs, Aresus (the watchtower) and Aresync (drops and sync runs), and the run sheet, Settings
 /// and the send sheet over both.
@@ -10,6 +11,9 @@ struct AresusTabs: View {
     @Bindable var navigation: AresusNavigation
     let marks: [String: UIImage]
     let logOut: () -> Void
+    @State private var droppedFiles: [DropFile] = []
+    @State private var droppedUnreadable = 0
+    @State private var hovering: ProviderFiles.Hover?
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
@@ -31,6 +35,13 @@ struct AresusTabs: View {
                         }
                 }
                 .tint(Ink.primary)
+                .onDrop(of: [.item], delegate: ProviderDropTarget(enabled: !navigation.showsSend,
+                    type: { $0.types.first }, copy: copyDropped, hovering: $hovering, reduceMotion: true,
+                    dropped: { urls, failed in
+                        droppedUnreadable = failed
+                        droppedFiles = urls.map { DropFile(content: .file($0), suggestedName: $0.lastPathComponent) }
+                        if !droppedFiles.isEmpty { navigation.showsSend = true }
+                    }))
             }
         }
         .tint(AppAccent.aresus.color)
@@ -39,8 +50,8 @@ struct AresusTabs: View {
                            session: store.session, sample: store.isSample, logOut: logOut)
         }
         // The copies of picked photos go with the sheet; what was sent has its own copy in the outbox.
-        .sheet(isPresented: $navigation.showsSend, onDismiss: { SendTemporaryFiles().clear() }) {
-            SendSheet(drops: drops)
+        .sheet(isPresented: $navigation.showsSend, onDismiss: { SendTemporaryFiles().clear(); droppedFiles = []; droppedUnreadable = 0 }) {
+            SendSheet(drops: drops, files: droppedFiles, unreadable: droppedUnreadable)
         }
         .sheet(item: $navigation.openRun) { run in
             RunSheet(id: run.id, store: store)
@@ -61,6 +72,13 @@ struct AresusTabs: View {
                 if navigation.tab == .aresync { await drops.refresh() }
             }
         }
+    }
+
+    private func copyDropped(_ providers: [NSItemProvider], done: @escaping @MainActor ([URL], Int) -> Void) {
+        // The draft owns these copies until Send has copied them into the durable queue.
+        ProviderFiles.copyTaken(providers, into: SendTemporaryFiles().base,
+                                type: { $0.types.first },
+                                name: { ShareItems.name(suggested: $1, loaded: $0, type: $2) }, done: done)
     }
 
     private struct Refresh: Equatable {

@@ -2,13 +2,6 @@ import SwiftUI
 
 /// Small pieces both tabs use, in the family look of Shared/Design (Aresium's header, the hub's quiet states).
 
-/// Aresus's own colours beside Shared/Design's, light/dark pairs like those.
-enum AresusInk {
-    /// Amber: something to look at that is not a failure (commits on GitHub not deployed yet). Deeper on the light
-    /// wall, so it reads on a light card (5:1).
-    static let warning = Color(light: Color(hex: 0x8F6210), dark: Color(hex: 0xE0B15A))
-}
-
 /// The tab header: the bust on the left (38 pt, like Aresium's Hermes), the title centred on the screen, optional
 /// buttons right (42 pt each, 8 pt apart: the Aresync tab has Send to MacBook beside the gear).
 struct AresusHeader<Trailing: View>: View {
@@ -58,38 +51,6 @@ struct SectionTitle: View {
     }
 }
 
-/// Empty, loading and error states: one calm sentence, centred, in muted ink, with one action if there is one.
-struct CalmMessage: View {
-    let text: String
-    var actionTitle: String? = nil
-    var action: (() -> Void)? = nil
-
-    var body: some View {
-        VStack(spacing: 16) {
-            Text(text).font(AppFont.text(14)).lineSpacing(5).foregroundStyle(Ink.muted)
-                .multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
-            if let actionTitle, let action {
-                Button(actionTitle, action: action)
-                    .font(AppFont.text(13, weight: .semibold)).foregroundStyle(Ink.primary)
-                    .padding(.horizontal, 22).frame(minHeight: 42)
-                    .background(Ink.card2, in: .capsule)
-                    .overlay(Capsule().strokeBorder(Ink.edge))
-                    .buttonStyle(.plain)
-            }
-        }
-        .padding(.horizontal, 36)
-        .frame(maxWidth: .infinity)
-    }
-}
-
-/// A quiet spinner where content is about to appear.
-struct CalmLoading: View {
-    var body: some View {
-        ProgressView().tint(Ink.muted).controlSize(.regular)
-            .frame(maxWidth: .infinity).accessibilityLabel("Loading")
-    }
-}
-
 /// "checked 12 s ago" that keeps itself current.
 struct LiveRelativeTime: View {
     let date: Date
@@ -120,14 +81,6 @@ struct ShareBar: View {
         }
         .frame(height: 3)
         .accessibilityHidden(true)
-    }
-}
-
-/// A row pressed inside a card: a faint tint behind it (`Ink.press`).
-struct PressedRow: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .background(configuration.isPressed ? Ink.press : .clear)
     }
 }
 

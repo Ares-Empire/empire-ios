@@ -17,6 +17,25 @@ enum SendRoute: Hashable {
 /// through `DropsStore.send`, which keeps them on the phone until the server has them.
 struct SendSheet: View {
     let drops: DropsStore
+    var sharing = false
+    var sent: (() -> Void)?
+    var cancelled: (() -> Void)?
+
+    init(drops: DropsStore, files: [DropFile] = [], unreadable: Int = 0, sharing: Bool = false, temporary: SendTemporaryFiles = SendTemporaryFiles(),
+         sent: (() -> Void)? = nil, cancelled: (() -> Void)? = nil) {
+        self.drops = drops
+        self.sharing = sharing
+        self.sent = sent
+        self.cancelled = cancelled
+        let draft = SendDraft(temporary: temporary)
+        draft.tree = DropFolderTree(drops.folders)
+        draft.use(files.map { PickedFile(file: $0, displayName: $0.suggestedName) },
+                  source: files.first?.source ?? .file, last: drops.recentFolders.lastBySource[files.first?.source ?? .file])
+        if unreadable > 0 {
+            draft.show(String(localized: LocalizedStringResource("\(unreadable) items could not be read.", table: "AresusDrops", locale: .appLanguage)))
+        }
+        _draft = State(initialValue: draft)
+    }
     @State private var draft = SendDraft()
     @State private var path: [SendRoute] = []
     @State private var photos: [PhotosPickerItem] = []
@@ -31,15 +50,15 @@ struct SendSheet: View {
     var body: some View {
         NavigationStack(path: $path) {
             Group {
-                if draft.hasPicked { form } else { start }
+                if draft.hasPicked || sharing { form } else { start }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .background { ProvinceWall(accent: .aresus) }
-            .navigationTitle(Text("Send to MacBook"))
+            .navigationTitle(Text("Send to MacBook", tableName: "AresusDrops"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button(role: .close) { dismiss() }.disabled(draft.isSending)
+                    Button(role: .close) { if let cancelled { cancelled() } else { dismiss() } }.disabled(draft.isSending)
                 }
             }
             .navigationDestination(for: SendRoute.self) { route in
@@ -61,7 +80,7 @@ struct SendSheet: View {
             photos = []
             Task {
                 await draft.load(items, with: { try await $0.loadTransferable(type: PickedLibraryFile.self)?.url },
-                                 last: drops.recentFolders.lastBySource[.photo])
+                                 last: drops.recentFolders.lastBySource[.photo], identity: { $0.itemIdentifier })
             }
         }
         .fileImporter(isPresented: $picksFiles, allowedContentTypes: [.item], allowsMultipleSelection: true) { result in
@@ -100,19 +119,19 @@ struct SendSheet: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: 10) {
-                    ChoiceTile(symbol: "photo.on.rectangle", title: String(localized: "Photos"), busy: draft.isLoading) {
+                    ChoiceTile(symbol: "photo.on.rectangle", title: String(localized: LocalizedStringResource("Photos", table: "AresusDrops", locale: .appLanguage)), busy: draft.isLoading) {
                         picksPhotos = true
                     }
                     if CameraPicker.isAvailable {
-                        ChoiceTile(symbol: "camera", title: String(localized: "Camera")) { Task { await openCamera() } }
+                        ChoiceTile(symbol: "camera", title: String(localized: LocalizedStringResource("Camera", table: "AresusDrops", locale: .appLanguage))) { Task { await openCamera() } }
                     }
-                    ChoiceTile(symbol: "folder", title: String(localized: "Files")) { picksFiles = true }
+                    ChoiceTile(symbol: "folder", title: String(localized: LocalizedStringResource("Files", table: "AresusDrops", locale: .appLanguage))) { picksFiles = true }
                 }
                 .disabled(draft.isLoading)
                 if let failure = draft.failure {
                     FormProblem(text: failure).padding(.top, 16)
                 } else {
-                    FormNote(text: String(localized: "Then choose the folder on the MacBook and the name."))
+                    FormNote(text: String(localized: LocalizedStringResource("Then choose the folder on the MacBook and the name.", table: "AresusDrops", locale: .appLanguage)))
                         .padding(.top, 14)
                 }
             }
@@ -124,7 +143,7 @@ struct SendSheet: View {
     private func openCamera() async {
         switch await CameraAccess.ask() {
         case .allowed: takesPhoto = true
-        case .refused: draft.show(String(localized: "Aresus may not use the camera. Allow it in Settings → Apps → Aresus."))
+        case .refused: draft.show(String(localized: LocalizedStringResource("Aresus may not use the camera. Allow it in Settings → Apps → Aresus.", table: "AresusDrops", locale: .appLanguage)))
         }
     }
 
@@ -137,14 +156,14 @@ struct SendSheet: View {
                     pickedHeader
                     PickedStrip(draft: draft).padding(.top, 12)
 
-                    SectionHeading(text: String(localized: "Folder")).padding(.leading, 4).padding(.top, 28)
+                    SectionHeading(text: String(localized: LocalizedStringResource("Folder", table: "AresusDrops", locale: .appLanguage))).padding(.leading, 4).padding(.top, 28)
                     folderCard.padding(.top, 10)
                     // The picker checks a new folder as it is typed; this only shows if a kept one breaks a rule.
                     if let rule = draft.newFolderRule {
                         FormProblem(text: DropRuleWording.text(rule)).padding(.top, 10)
                     }
 
-                    SectionHeading(text: draft.picked.count == 1 ? String(localized: "Name") : String(localized: "Names"))
+                    SectionHeading(text: draft.picked.count == 1 ? String(localized: LocalizedStringResource("Name", table: "AresusDrops", locale: .appLanguage)) : String(localized: LocalizedStringResource("Names", table: "AresusDrops", locale: .appLanguage)))
                         .padding(.leading, 4).padding(.top, 28)
                     nameCard.padding(.top, 10)
                     if let rule = draft.nameRule {
@@ -168,22 +187,27 @@ struct SendSheet: View {
                 Text(verbatim: "\(draft.picked.count)").font(AppFont.number(11, weight: .regular)).foregroundStyle(Ink.muted)
             }
             Spacer(minLength: 8)
-            Button { draft.startOver() } label: {
-                Text("Change").font(AppFont.text(13, weight: .medium)).foregroundStyle(Ink.secondary)
+            if !sharing { Menu {
+                Button { picksPhotos = true } label: { Text("Photos", tableName: "AresusDrops") }
+                Button { picksFiles = true } label: { Text("Files", tableName: "AresusDrops") }
+                if CameraPicker.isAvailable { Button { Task { await openCamera() } } label: { Text("Camera", tableName: "AresusDrops") } }
+            } label: {
+                Text("Add", tableName: "AresusDrops").font(AppFont.text(13, weight: .medium)).foregroundStyle(Ink.secondary)
                     .padding(.leading, 14).frame(minHeight: 32).contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .disabled(draft.isSending)
+            }
         }
         .padding(.leading, 4)
     }
 
     private var pickedTitle: String {
         switch (draft.source, draft.picked.count == 1) {
-        case (.file, true): String(localized: "File")
-        case (.file, false): String(localized: "Files")
-        case (_, true): String(localized: "Photo")
-        case (_, false): String(localized: "Photos")
+        case (.file, true): String(localized: LocalizedStringResource("File", table: "AresusDrops", locale: .appLanguage))
+        case (.file, false): String(localized: LocalizedStringResource("Files", table: "AresusDrops", locale: .appLanguage))
+        case (_, true): String(localized: LocalizedStringResource("Photo", table: "AresusDrops", locale: .appLanguage))
+        case (_, false): String(localized: LocalizedStringResource("Photos", table: "AresusDrops", locale: .appLanguage))
         }
     }
 
@@ -202,7 +226,7 @@ struct SendSheet: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(PressedRow())
-        .accessibilityLabel(Text("Folder"))
+        .accessibilityLabel(Text("Folder", tableName: "AresusDrops"))
         .accessibilityValue(Text(folderText))
         .glassCard()
     }
@@ -230,7 +254,7 @@ struct SendSheet: View {
     @ViewBuilder private var nameCard: some View {
         if draft.picked.count == 1 {
             HStack(spacing: 4) {
-                TextField("", text: $draft.name.stem, prompt: Text("Name").foregroundStyle(Ink.muted))
+                TextField("", text: $draft.name.stem, prompt: Text("Name", tableName: "AresusDrops").foregroundStyle(Ink.muted))
                     .font(AppFont.text(15)).foregroundStyle(Ink.primary)
                     .textInputAutocapitalization(.never).autocorrectionDisabled()
                     .submitLabel(.done)
@@ -275,7 +299,13 @@ struct SendSheet: View {
 
     private func send() {
         typingName = false
-        Task { if await draft.send(with: drops) { dismiss() } }
+        Task {
+            if await draft.send(with: drops, prepareUploads: sharing) {
+                // The share host may terminate immediately after completeRequest. Hand every eligible PUT to iOS
+                // before completing; if POST cannot run offline the durable queue waits for the app's next opening.
+                if let sent { sent() } else { dismiss() }
+            }
+        }
     }
 }
 
@@ -314,7 +344,7 @@ private struct PickedStrip: View {
         ScrollView(.horizontal) {
             HStack(spacing: 10) {
                 ForEach(draft.picked) { item in
-                    if draft.source == .file { FileTile(item: item) } else { PhotoTile(item: item, draft: draft) }
+                    if item.file.source == .file { FileTile(item: item) } else { PhotoTile(item: item, draft: draft) }
                 }
             }
             .padding(.horizontal, 18)
@@ -436,7 +466,7 @@ extension SendSheet {
             drops.recentFolders.use(Target(root: .documents, folder: "Receipts"), source: .file)
         }
         if let kind = LaunchArguments.value("-samplePick") {
-            draft.tree = DropFolderTree(try? AresusSamples.launched()?.folders())
+            draft.tree = DropFolderTree(drops.folders)
             draft.use(SampleSendPicks.make(kind), source: kind.hasPrefix("file") ? .file : .photo,
                       last: LaunchArguments.value("-sendFolder").flatMap(target))
             if let new = LaunchArguments.value("-sendNewFolder"), let folder = draft.target {

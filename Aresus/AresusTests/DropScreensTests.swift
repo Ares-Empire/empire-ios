@@ -363,6 +363,7 @@ struct SendDraftTests {
         #expect(draft.names == [DropNames.defaultName(suggested: "IMG_0412.HEIC", source: .photo,
                                                       date: at("2026-11-01T18:03:04Z"))])
         #expect(draft.canSend)
+        draft.startOver()
         draft.use([photo()], source: .photo, last: nil)
         #expect(draft.target == nil && draft.sendTarget == nil, "nothing used before: Sort later")
     }
@@ -412,7 +413,7 @@ struct SendDraftTests {
     @Test func severalFilesGetUniqueNamesNotEdited() {
         let draft = draft()
         let files = [PickedFile(file: DropFile(content: .data(Data()), suggestedName: "Plan.pdf"), displayName: "Plan.pdf"),
-                     PickedFile(file: DropFile(content: .data(Data()), suggestedName: "Plan.pdf"), displayName: "Plan.pdf")]
+                     PickedFile(file: DropFile(content: .data(Data([1])), suggestedName: "Plan.pdf"), displayName: "Plan.pdf")]
         draft.use(files, source: .file, last: nil)
         #expect(draft.names == ["Plan.pdf", "Plan (2).pdf"])
         #expect(draft.nameRule == nil && draft.canSend)

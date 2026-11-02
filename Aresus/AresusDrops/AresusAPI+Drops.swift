@@ -19,13 +19,11 @@ extension AresusAPI {
         return try AresusJSON.decoder().decode(Drop.self, from: data)
     }
 
-    func upload(_ id: Int, fileURL: URL, token: String, onUnauthorized: () -> Void = {}) async throws -> Drop {
+    func uploadRequest(_ id: Int, token: String) throws -> URLRequest {
         var request = try dropRequest(["drops", String(id), "file"], method: "PUT", token: token)
         request.setValue("application/octet-stream", forHTTPHeaderField: "Content-Type")
         request.timeoutInterval = 300
-        let (data, response) = try await transport.upload(request, fromFile: fileURL)
-        try checkResponse(response, data: data, onUnauthorized: onUnauthorized)
-        return try AresusJSON.decoder().decode(Drop.self, from: data)
+        return request.withLanguage()
     }
 
     /// Deletes a drop from the list, in any state (`DELETE /drops/{id}`, 2026-11-02): one not landed yet is cancelled
