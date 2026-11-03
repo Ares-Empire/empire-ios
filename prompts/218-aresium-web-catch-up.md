@@ -1,6 +1,6 @@
 # 218: The Aresium website catches up with the iPhone app
 
-Status: running (started 2026-11-03)
+Status: round 2 running (round 1 checked 2026-11-03: works, packed code, look fixes)
 Branch: `codex/218-web-catch-up` (repo `aresium`) · Worktree: `~/aresium-218-web-catch-up` · Model: `gpt-6.1-sol`,
 effort `high`
 
@@ -95,3 +95,28 @@ After this brief the website does the same things, so the owner can use either, 
 As in `AGENTS.md`: files changed, the exact check results (test counts), what Claude must run (migrations, copying
 the new sample into the app's fixtures `AresiumTests/server-dashboard.sample.json`, deploying), what is missing
 or doubtful, and which numbered steps are done.
+
+## Round 2 (Claude's check, 2026-11-03)
+
+Round 1 works (624 tests pass, typecheck and engine build pass, checked by Claude), but it cannot be merged yet:
+
+1. **Readable code in the existing style.** The new code is packed: `parity.jsx` averages 143 characters a line and
+   has whole dialogs on one line (up to 975 characters); `web-ledger.ts` and `ledger-dashboard.ts` have lines of
+   400–600 characters. The existing files average about 50, and `src/engine/paybacks.ts` / `src/data/dashboard.ts`
+   stay under 145. Rewrite every new and changed line in that style: one JSX element per line when they nest, one
+   statement per line, named handlers instead of long inline ones, lines under about 120 characters. No behaviour
+   change.
+2. **Files named after what they hold, not after this brief.** Split `parity.jsx` / `parity.css` into one file per
+   feature (for example fixed costs, money paid back, names and search, selecting many, quick sort, categories), and
+   update `index.html` and the demo. `scripts/check-web-parity.mjs` and `docs/WEB-PARITY.md` may keep their names.
+3. **The look, from the screenshots:**
+   - No browser-default controls anywhere: the blue tick boxes and the blue "Link" button on Money paid back must
+     become the website's own tick circles and buttons in Aresium's colours (as the existing recategorise and
+     settings controls).
+   - No dangling separators ("8 Jun ·" with nothing after the dot).
+   - Money paid back's heading "2 · €105.00" must say what the 2 is, worded as the app does.
+   - On Fixed costs, the "Not fixed" button sits between two rows; align it with the name and amount line.
+   - Then look at every screenshot yourself for the same kinds of problems (default controls, colours outside the
+     website's palette, loose separators, misaligned buttons, text that runs into another element) and fix them.
+4. Same checks as before; regenerate the screenshots. Final message as before, plus the before/after line-length
+   numbers for the new files.
