@@ -167,12 +167,28 @@ struct HuntText: Equatable {
             newerApp = nil
             return
         }
+        if case .price(let search) = hunt.search, search.mode == .everywhere {
+            // An everywhere monitor (brief 157) is named by its own name, else the product found, else the words; then
+            // the product (under an own name), "Everywhere", how many shops have it now, and what it does.
+            let title = ownName ?? Self.automaticTitle(hunt.search, price: price, language: language)
+                ?? language.string("Price monitor")
+            let product = Self.text(price?.product) ?? Self.text(search.identity?.name)
+            let parts = [product].compactMap { $0 }.filter { $0 != title }
+                + [EverywhereWords.mode(.everywhere, language: language)]
+                + [price?.offers.map { EverywhereWords.shops($0, language: language) }].compactMap { $0 }
+                + [PriceWords.mode(search, language: language)]
+            self.kind = kind
+            self.title = title
+            details = parts.joined(separator: " · ")
+            newerApp = nil
+            return
+        }
         if case .price(let search) = hunt.search {
             // A monitor is named by its own name, else the product once read, else the host; then the product (under an
             // own name), the host, and what it does: "Alarm under €450", or "History only".
             let product = Self.text(price?.product)
-            let host = Self.text(price?.host) ?? WatchAddress.host(search.url)
-            let title = ownName ?? Self.automaticTitle(hunt.search, price: price) ?? search.url
+            let host = Self.text(price?.host) ?? search.url.flatMap(WatchAddress.host)
+            let title = ownName ?? Self.automaticTitle(hunt.search, price: price) ?? search.url ?? ""
             let parts = [product, host].compactMap { $0 }.filter { $0 != title }
                 + [PriceWords.mode(search, language: language)]
             self.kind = kind
@@ -200,15 +216,17 @@ struct HuntText: Equatable {
 
     /// The title a search has without a name of its own (brief 135: the name fields' grey placeholder): what it looks
     /// for (a flat's kinds, a thing's words), a watch's page title once read, else its host, a monitor's product once
-    /// read, else its host; nil while there is nothing yet (a thing without words, a watch without an address) and for a
-    /// search this build cannot read.
+    /// read, else its host (an everywhere monitor: the product found, else its words; never its cheapest shop); nil while
+    /// there is nothing yet (a thing without words, a watch without an address) and for a search this build cannot read.
     static func automaticTitle(_ search: HuntSearch, page: PageState? = nil, price: PriceState? = nil,
                                language: AppLanguage = .current) -> String? {
         switch search {
         case .watch(let watch):
             text(page?.pageTitle) ?? text(page?.host) ?? WatchAddress.host(watch.url)
+        case .price(let monitor) where monitor.mode == .everywhere:
+            text(price?.product) ?? text(monitor.identity?.name) ?? text(monitor.product)
         case .price(let monitor):
-            text(price?.product) ?? text(price?.host) ?? WatchAddress.host(monitor.url)
+            text(price?.product) ?? text(price?.host) ?? monitor.url.flatMap(WatchAddress.host)
         case .flat, .item:
             text(HuntSummary(search, language: language).title)
         case .unsupported:

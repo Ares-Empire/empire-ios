@@ -25,9 +25,16 @@ final class SupportForm {
     @ObservationIgnored private let language: AppLanguage
     @ObservationIgnored private let sampleDelay: Duration
 
+    /// The text the form opened with (a place that opens it for one purpose starts it, "Suggest a shop: "); "" for an
+    /// empty box.
+    @ObservationIgnored let startText: String
+
     init(session: EmpireSession, sample: Bool = false, api: SupportAPI = SupportAPI(),
          device: @escaping () -> SupportDevice = { .current }, language: AppLanguage = .current,
-         sampleDelay: Duration = .seconds(1.2)) {
+         sampleDelay: Duration = .seconds(1.2), kind: SupportKind = .problem, text: String = "") {
+        self.kind = kind
+        self.text = text
+        startText = text
         self.session = session
         self.sample = sample
         self.api = api
@@ -52,15 +59,21 @@ final class SupportForm {
     var isTooLong: Bool { length > maxLength }
 
     /// Something written, within the limit (and an email to answer to, without a login), and not already on its way
-    /// or sent.
+    /// or sent. The text it opened with alone is nothing written yet.
     var canSend: Bool {
-        guard (1...maxLength).contains(length) else { return false }
+        guard (1...maxLength).contains(length), wroteSomething else { return false }
         if sendsWithoutLogin, AccountInput.trimmedEmail(email).isEmpty { return false }
         return phase != .sending && phase != .sent
     }
 
-    /// Closing would lose what was written (the form asks first).
-    var hasUnsentText: Bool { phase != .sent && !SupportMessage.trimmed(text).isEmpty }
+    /// Closing would lose what was written (the form asks first); the text it opened with alone is not.
+    var hasUnsentText: Bool { phase != .sent && !SupportMessage.trimmed(text).isEmpty && wroteSomething }
+
+    /// The form opened with its text started (the text box then has the keyboard).
+    var startsWithText: Bool { !startText.isEmpty }
+
+    /// Something beyond the text the form opened with.
+    private var wroteSomething: Bool { SupportMessage.trimmed(text) != SupportMessage.trimmed(startText) }
 
     var failure: SupportFailure? { if case .failed(let failure) = phase { failure } else { nil } }
 

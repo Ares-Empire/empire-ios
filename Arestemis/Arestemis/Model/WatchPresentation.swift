@@ -74,10 +74,10 @@ enum WatchInterval {
         }
     }
 
-    /// The menu's choices: the server's, and the watch's own value when it is none of them, so it can stay as it is.
-    static func choices(keeping value: Int) -> [Int] {
-        WatchSearch.everyChoices.contains(value) ? WatchSearch.everyChoices
-            : (WatchSearch.everyChoices + [value]).sorted()
+    /// The menu's choices: the server's (or those offered, `from`), and the watch's own value when it is none of them,
+    /// so it can stay as it is.
+    static func choices(keeping value: Int, from offered: [Int] = WatchSearch.everyChoices) -> [Int] {
+        offered.contains(value) ? offered : (offered + [value]).sorted()
     }
 }
 

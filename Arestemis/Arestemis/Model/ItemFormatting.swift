@@ -246,9 +246,13 @@ struct HuntSummary: Equatable {
             // A watch's own words for it are on its card (`HuntText`, with the page's title); here its address's host.
             title = WatchAddress.host(search.url) ?? search.url
             parts = []
+        case .price(let search) where search.mode == .everywhere:
+            // An everywhere monitor: the product found, else its words.
+            title = HuntText.text(search.identity?.name) ?? HuntText.text(search.product) ?? ""
+            parts = []
         case .price(let search):
             // A monitor's product is on its card (`HuntText`, with the product's name); here its link's host.
-            title = WatchAddress.host(search.url) ?? search.url
+            title = search.url.flatMap(WatchAddress.host) ?? search.url ?? ""
             parts = []
         case .unsupported:
             title = de ? "Braucht eine neuere App-Version" : "Needs a newer app"

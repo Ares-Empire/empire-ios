@@ -51,13 +51,25 @@ enum PriceWords {
 
     /// A price alarm's sentence (its row and the push say it): "Nintendo Switch 2: €449.00 (was €483.99)" /
     /// "Nintendo Switch 2: 449,00 € (vorher 483,99 €)", or "Nintendo Switch 2 is back in stock" / "… ist wieder
-    /// lieferbar".
-    static func alarm(product: String, change: PriceChange, language: AppLanguage = .current) -> String {
+    /// lieferbar". An everywhere monitor's names the shop of the cheapest offer (`shop`, brief 157): "AirPods Max:
+    /// €449.00 at MediaMarkt (was €483.99)" / "… 449,00 € bei MediaMarkt (vorher …)", "… is back in stock at
+    /// MediaMarkt" / "… ist bei MediaMarkt wieder lieferbar".
+    static func alarm(product: String, change: PriceChange, shop: String? = nil,
+                      language: AppLanguage = .current) -> String {
         let product = product.trimmingCharacters(in: .whitespacesAndNewlines)
-        if change.kind == .back { return language.string("\(product) is back in stock") }
+        let shop = HuntText.text(shop)
+        if change.kind == .back {
+            guard let shop else { return language.string("\(product) is back in stock") }
+            return language.string("\(product) is back in stock at \(shop)")
+        }
         let new = money(change.new, currency: change.currency, language: language)
-        guard let old = change.old else { return "\(product): \(new)" }
-        return language.string("\(product): \(new) (was \(money(old, currency: change.currency, language: language)))")
+        let old = change.old.map { money($0, currency: change.currency, language: language) }
+        switch (shop, old) {
+        case let (shop?, old?): return language.string("\(product): \(new) at \(shop) (was \(old))")
+        case let (shop?, nil): return language.string("\(product): \(new) at \(shop)")
+        case let (nil, old?): return language.string("\(product): \(new) (was \(old))")
+        case (nil, nil): return "\(product): \(new)"
+        }
     }
 
     /// Beside an alarm's new price on its page: "was €483.99" / "vorher 483,99 €", or "back in stock" / "wieder
@@ -90,10 +102,14 @@ enum PriceLimit {
 
 /// A monitor's lines on its card and its page (under its name and the quiet line): the price large and the
 /// availability's word while the page reads well; else one quiet line, as a watch's (reading, or the server's note on
-/// why it cannot be read), never an alarm colour; then when it was last checked.
+/// why it cannot be read), never an alarm colour; then when it was last checked. An everywhere monitor's (brief 157):
+/// the cheapest price with its shop beside it ("€215.00  at Amazon · in stock"), its own words while it looks or
+/// cannot read the sites, and "No shop offers it right now." when none does.
 struct PriceCardText: Equatable {
     /// "€449.00", while the page reads well.
     let price: String?
+    /// "at Amazon", beside the price: the shop of an everywhere monitor's cheapest offer.
+    let shop: String?
     /// "in stock", beside the price.
     let availability: String?
     /// A quiet line instead of the price: "Reading the page…", or the server's note (a blocked page adds that saving
@@ -104,37 +120,47 @@ struct PriceCardText: Equatable {
     let checked: String?
 
     /// `state`: the card's product state; nil for a monitor the overview has not sent yet (just made), read as waiting.
-    /// `compact`: the Hunts list's card, which leaves out a note while the page reads well.
-    init(_ state: PriceState?, compact: Bool, now: Date = .now, calendar: Calendar = .app,
+    /// `compact`: the Hunts list's card, which leaves out a note while the page reads well. `everywhere`: the monitor
+    /// looks for its product on every site (its price is the cheapest offer's, its host that offer's shop).
+    init(_ state: PriceState?, compact: Bool, everywhere: Bool = false, now: Date = .now, calendar: Calendar = .app,
          language: AppLanguage = .current) {
         let l = language
         let note = HuntText.text(state?.note)
+        let cannotRead = everywhere ? l.string("The shops can't be read right now.")
+            : l.string("The page can't be read right now.")
+        var shop: String?
         switch state?.read ?? .waiting {
         case .waiting:
             price = nil
             availability = nil
-            self.note = l.string("Reading the page…")
+            self.note = everywhere ? l.string("Looking in the shops…") : l.string("Reading the page…")
         case .ok:
             price = state?.price.map { PriceWords.money($0, currency: state?.currency, language: l) }
             availability = state.flatMap { PriceWords.availability($0.availability, language: l) }
-            self.note = compact ? nil : note
+            if everywhere, price != nil { shop = HuntText.text(state?.host).map { EverywhereWords.at($0, language: l) } }
+            if everywhere, price == nil {
+                self.note = l.string("No shop offers it right now.")
+            } else {
+                self.note = compact ? nil : note
+            }
         case .unreadable:
             price = nil
             availability = nil
-            self.note = note ?? l.string("This page shows no single product with a price.")
+            self.note = note ?? (everywhere ? cannotRead : l.string("This page shows no single product with a price."))
         case .failing:
             price = nil
             availability = nil
-            self.note = note ?? l.string("The page can't be read right now.")
+            self.note = note ?? cannotRead
         case .blocked:
             price = nil
             availability = nil
-            self.note = (note ?? l.string("The page can't be read right now.")) + " " + l.string("Saving it again tries again.")
+            self.note = (note ?? cannotRead) + " " + l.string("Saving it again tries again.")
         case .unknown:
             price = nil
             availability = nil
             self.note = note
         }
+        self.shop = shop
         checked = Format.relative(state?.checked, now: now, calendar: calendar, language: l).map { l.string("Checked \($0)") }
     }
 }
@@ -246,9 +272,10 @@ struct PriceChart: Equatable {
 
 extension Match {
     /// A price alarm's sentence, from its change (the server's own sentence, `reason`, only when there is none).
-    func priceTitle(language: AppLanguage = .current) -> String {
+    /// `shop`: the shop an everywhere monitor's alarm names (`ArestemisStore.alarmShop(of:)`).
+    func priceTitle(shop: String? = nil, language: AppLanguage = .current) -> String {
         guard let change = listing.priceChange else { return WatchText.keepingAmounts(reason) }
-        return PriceWords.alarm(product: listing.title, change: change, language: language)
+        return PriceWords.alarm(product: listing.title, change: change, shop: shop, language: language)
     }
 
     /// An alarm's small line: "www.mediamarkt.de · 4 min ago".

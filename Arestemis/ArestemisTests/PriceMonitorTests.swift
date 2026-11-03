@@ -221,6 +221,9 @@ struct PriceMonitorTests {
     func theFormNeedsOneOfTheTwo(_ language: AppLanguage) {
         let german = language == .german
         var draft = PriceSearchDraft()
+        // A new form opens on Everywhere (brief 157); One shop is brief 137's form, unchanged.
+        #expect(draft.mode == .everywhere)
+        draft.mode = .page
         // A new form: the history on, the alarm off; the link missing says so under Save only.
         #expect(draft.history && !draft.alarm && draft.problems == [.url])
         #expect(draft.hint(language: language) == (german ? "Füg den Link zum Produkt ein." : "Paste the product's link."))
@@ -264,7 +267,8 @@ struct PriceMonitorTests {
 
     @Test(arguments: [AppLanguage.english, .german])
     func thePageRefusesTurningOffTheLast(_ language: AppLanguage) {
-        let search = PriceSearch(url: "https://shop.example/p/1", history: true, alarm: nil)
+        let link = "https://shop.example/p/1"
+        let search = PriceSearch(url: link, history: true, alarm: nil)
         var switches = MonitorSwitches(search)
         // The history is the only one on: turning it off is refused, nothing changes.
         let refused = switches.setHistory(false, in: search)
@@ -273,11 +277,11 @@ struct PriceMonitorTests {
                 == (language == .german ? "Mindestens eins von beiden." : "At least one of the two."))
         // The alarm on: both conditions, the price a little under the price read; saved at once.
         let alarmOn = switches.setAlarm(true, in: search, price: 483.99, currency: "EUR")
-        let withAlarm = PriceSearch(url: search.url, history: true, alarm: .init(below: 450, backInStock: true))
+        let withAlarm = PriceSearch(url: link, history: true, alarm: .init(below: 450, backInStock: true))
         #expect(alarmOn == .save(withAlarm) && MonitorSwitches.line(alarmOn) == nil)
         // Now the history may go; then the alarm may not.
         let historyOff = switches.setHistory(false, in: withAlarm)
-        #expect(historyOff == .save(PriceSearch(url: search.url, history: false, alarm: withAlarm.alarm)))
+        #expect(historyOff == .save(PriceSearch(url: link, history: false, alarm: withAlarm.alarm)))
         let alarmOff = switches.setAlarm(false, in: withAlarm, price: nil, currency: nil)
         #expect(alarmOff == .refused && switches.alarm)
         // Every condition off: held on the page (not saved) with the server's words, until one is on again.
@@ -287,7 +291,7 @@ struct PriceMonitorTests {
         #expect(MonitorSwitches.line(held, language: language)
                 == (language == .german ? "Sag, wann der Alarm kommen soll." : "Say when the alarm should ring."))
         let limit = switches.setBelow(399, in: withAlarm)
-        #expect(limit == .save(PriceSearch(url: search.url, history: false, alarm: .init(below: 399, backInStock: false))))
+        #expect(limit == .save(PriceSearch(url: link, history: false, alarm: .init(below: 399, backInStock: false))))
         // A limit of 0 is no limit.
         let zero = switches.setBelow(0, in: withAlarm)
         #expect(zero == .hold(PriceSearch.Alarm()))
@@ -325,13 +329,15 @@ struct PriceMonitorTests {
         #expect(filled && waiting.below == 450)
         let again = waiting.prefillLimit(price: 200)
         #expect(!again && waiting.below == 450)
-        // The example (one per kind since brief 142): the price's limit once found.
-        var below = try #require(SearchExample.priceBelow.priceDraft)
-        #expect(below.alarm && below.history && below.below == nil && !below.backInStock && below.url.isEmpty)
-        #expect(below.problems.contains(.alarmCondition))
-        below.prefillLimit(price: 49.99)
-        #expect(below.below == 45)
-        #expect(SearchExample.examples(for: .price) == [.priceBelow])
+        // The example (one per kind since brief 142; Everywhere since brief 157): the product in words, the alarm's
+        // limit a little under the cheapest price once found.
+        var below = try #require(SearchExample.everywhere.priceDraft)
+        #expect(below.mode == .everywhere && below.product == "AirPods Max" && below.url.isEmpty)
+        #expect(below.alarm && below.history && below.below == nil && !below.backInStock)
+        #expect(below.problems.contains(.alarmCondition) && below.problems.contains(.unconfirmed))
+        below.prefillLimit(price: 529)
+        #expect(below.below == 500)
+        #expect(SearchExample.examples(for: .price) == [.everywhere])
         #expect(SearchExample.kallax.priceDraft == nil)
     }
 
@@ -385,7 +391,8 @@ struct PriceMonitorTests {
     @Test(arguments: [AppLanguage.english, .german])
     func theQuietLineSaysWhatItDoes(_ language: AppLanguage) throws {
         let german = language == .german
-        let cards = try sample(Overview.self, "overview").hunts.filter { $0.hunt.kind == .price }
+        // The page monitors (an everywhere monitor's lines: `PriceEverywhereTests`).
+        let cards = try sample(Overview.self, "overview").hunts.filter { $0.hunt.search.price?.mode == .page }
         #expect(cards.map(\.id) == [9, 10, 11])
         let lines = cards.map { HuntText($0, language: language) }
         #expect(lines.map(\.title) == ["Nintendo Switch 2", "Headphones", "LEGO Titanic"])
@@ -689,7 +696,7 @@ struct PriceMonitorTests {
 
     @Test func theSampleHasMonitors() async throws {
         let store = try await sampleStore()
-        let monitors = store.hunts.filter { $0.hunt.kind == .price }
+        let monitors = store.hunts.filter { $0.hunt.search.price?.mode == .page }
         #expect(monitors.map(\.id) == [9, 10, 11] && monitors.allSatisfy { $0.sources.isEmpty && $0.price?.read == .ok })
         #expect(monitors.map { $0.hunt.search.price?.history } == [true, true, false])
         #expect(monitors.map { $0.hunt.search.price?.alarm == nil } == [false, true, false])
@@ -730,7 +737,7 @@ struct PriceMonitorTests {
         }
         #expect(apply(["-openPriceForm"]).huntPath == [.form(.price, hunt: 9)])
         #expect(apply(["-newPriceForm"]).huntPath == [.form(.price, hunt: nil)])
-        #expect(apply(["-newExample", "priceBelow"]).huntPath == [.newSearch, .form(.price, hunt: nil, example: .priceBelow)])
+        #expect(apply(["-newExample", "everywhere"]).huntPath == [.newSearch, .form(.price, hunt: nil, example: .everywhere)])
         let page = apply(["-openHunt", "9", "-scrollTo", "switches"])
         #expect(page.huntPath == [.hunt(9)] && page.formScroll == "switches")
         #expect(LaunchOptions.route(.firstPrice, hunts: []) == .form(.price, hunt: nil))

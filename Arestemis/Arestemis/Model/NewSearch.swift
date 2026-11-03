@@ -40,18 +40,19 @@ extension SearchKind {
 }
 
 /// An example on New search, one per kind (brief 142; the WG room, the road bike, back in stock, a new job and the
-/// canteen menu went with it): a tap opens its kind's form filled in as its words say. Places and addresses stay for the
+/// canteen menu went with it; brief 157: the Preismonitor's is Patrik's own case, a product everywhere, in place of
+/// "Price under € …", whose link the person still had to find): a tap opens its kind's form filled in as its words say. Places and addresses stay for the
 /// user (a flat's town, a watched page's address); the name stays empty, so the form shows the automatic one. The
 /// tour's step 2 names these four (`TourStep.newSearch`).
 enum SearchExample: String, CaseIterable, Hashable, Identifiable, Sendable {
-    case twoRooms, kallax, priceBelow, newVersion
+    case twoRooms, kallax, everywhere, newVersion
     var id: String { rawValue }
 
     var kind: SearchKind {
         switch self {
         case .twoRooms: .flat
         case .kallax: .item
-        case .priceBelow: .price
+        case .everywhere: .price
         case .newVersion: .watch
         }
     }
@@ -66,7 +67,7 @@ enum SearchExample: String, CaseIterable, Hashable, Identifiable, Sendable {
         switch self {
         case .twoRooms: language.string("2 rooms up to €1,100 warm")
         case .kallax: language.string("Kallax up to €40")
-        case .priceBelow: language.string("Price under € …")
+        case .everywhere: language.string("AirPods Max everywhere")
         case .newVersion: language.string("New version")
         }
     }
@@ -90,11 +91,14 @@ enum SearchExample: String, CaseIterable, Hashable, Identifiable, Sendable {
         return draft
     }
 
-    /// A monitor example's form: the alarm on with its price condition (the limit fills in once the product's price is
-    /// found, `PriceSearchDraft.prefillLimit`), the history on as in every new monitor; the link is the user's.
+    /// A monitor example's form: Everywhere, the product "AirPods Max" (the server looks for it as the form opens), the
+    /// alarm on with its price condition (the limit fills in a little under the cheapest price found,
+    /// `PriceSearchDraft.prefillLimit`), the history on as in every new monitor.
     var priceDraft: PriceSearchDraft? {
-        guard self == .priceBelow else { return nil }
+        guard self == .everywhere else { return nil }
         var draft = PriceSearchDraft()
+        draft.mode = .everywhere
+        draft.product = "AirPods Max"
         draft.alarm = true
         return draft
     }

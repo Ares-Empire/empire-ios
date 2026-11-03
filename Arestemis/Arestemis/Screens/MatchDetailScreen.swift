@@ -172,7 +172,7 @@ struct MatchDetailScreen: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text(verbatim: match.priceTitle()))
+        .accessibilityLabel(Text(verbatim: match.priceTitle(shop: store.alarmShop(of: match))))
     }
 
     /// A watched page's change: the summary as the title, what the page says now, the host and when it was found.

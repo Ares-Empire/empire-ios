@@ -50,6 +50,15 @@ final class ArestemisStore {
         var error: String?
     }
 
+    /// An everywhere monitor's offers and sites (brief 157), as last loaded for its card's last read.
+    struct OffersState: Equatable {
+        var offers: PriceOffers?
+        /// The card's `checked` when they were loaded: a newer read loads them again.
+        var loadedFor: String?
+        var isLoading = false
+        var error: String?
+    }
+
     struct PriceHistoryKey: Hashable {
         let hunt: Int
         let days: Int
@@ -100,6 +109,8 @@ final class ArestemisStore {
     private(set) var savingMonitors: Set<Int> = []
     /// The newest switches asked for while a save of the same monitor was on its way: sent once it has answered.
     private var monitorWanted: [Int: PriceSearch] = [:]
+    /// Everywhere monitors' offers and sites, by hunt id (brief 157).
+    private(set) var priceOffers: [Int: OffersState] = [:]
 
     // applications, settings, search
     private(set) var applications: [Int: ApplicationState] = [:]
@@ -390,6 +401,7 @@ final class ArestemisStore {
             overview?.latest.removeAll { $0.huntID == id }
             huntLatest[id] = nil
             priceHistories = priceHistories.filter { $0.key.hunt != id }
+            priceOffers[id] = nil
             // Every list is asked again when it shows (the counts and pages of every search changed).
             listGeneration += 1
             lists = [:]
@@ -716,6 +728,73 @@ final class ArestemisStore {
         }
     }
 
+    /// `POST /price/preview` with the product's words (brief 157): the product the server finds on the sites now. A
+    /// refused login goes to the session first; an answer for a login that has ended meanwhile is dropped.
+    func productPreview(_ words: ProductWords) async throws -> ProductPreview {
+        guard canAct else { throw CancellationError() }
+        let context = context
+        do {
+            let preview = try await backend.productPreview(product: words.product, details: words.details)
+            guard isCurrent(context) else { throw CancellationError() }
+            return preview
+        } catch let error as CancellationError {
+            throw error
+        } catch {
+            guard isCurrent(context) else { throw CancellationError() }
+            session.handleAuthFailure(error, generation: context.session, token: context.token)
+            throw error
+        }
+    }
+
+    /// A new product preview for the monitor's form (Überall).
+    func productPreviewModel() -> ProductPreviewModel {
+        ProductPreviewModel(pause: PreviewPacing.productPause) { [weak self] words in
+            guard let self else { throw CancellationError() }
+            return try await self.productPreview(words)
+        }
+    }
+
+    /// An everywhere monitor's offers and sites, as last loaded.
+    func offers(hunt id: Int) -> OffersState { priceOffers[id] ?? OffersState() }
+
+    /// Loads an everywhere monitor's offers and sites, quietly: again only once its card shows a newer read, or when
+    /// `force`d (pull to refresh, Try again). A failure keeps what was shown; with nothing shown yet its sentence stays.
+    /// A page monitor has none (the server's 404).
+    func loadOffers(hunt id: Int, force: Bool = false) async {
+        guard canAct, id > 0, let card = card(id), card.hunt.search.price?.mode == .everywhere,
+              !(priceOffers[id]?.isLoading ?? false) else { return }
+        let checked = card.price?.checked
+        if !force, let known = priceOffers[id], known.offers != nil, known.loadedFor == checked { return }
+        priceOffers[id, default: OffersState()].isLoading = true
+        let context = context
+        defer { if isCurrent(context) { priceOffers[id]?.isLoading = false } }
+        do {
+            let loaded = try await backend.offers(hunt: id)
+            guard isCurrent(context), self.card(id) != nil else { return }
+            priceOffers[id]?.offers = loaded
+            priceOffers[id]?.loadedFor = checked
+            priceOffers[id]?.error = nil
+        } catch HTTPError.server(404, _) {
+            guard isCurrent(context) else { return }
+            priceOffers[id]?.offers = PriceOffers()
+            priceOffers[id]?.loadedFor = checked
+        } catch {
+            guard isCurrent(context) else { return }
+            if priceOffers[id]?.offers == nil {
+                handle(error, context: context) { self.priceOffers[id]?.error = $0 }
+            } else {
+                session.handleAuthFailure(error, generation: context.session, token: context.token)
+            }
+        }
+    }
+
+    /// The shop an alarm names: the cheapest offer's (`source_name`) for an everywhere monitor's alarm, nil otherwise
+    /// (a page monitor's alarm names nothing; its shop is the host under it).
+    func alarmShop(of match: Match) -> String? {
+        guard match.isPriceChange, card(match.huntID)?.hunt.search.price?.mode == .everywhere else { return nil }
+        return HuntText.text(match.listing.sourceName)
+    }
+
     /// A monitor's switches changed on its page (brief 137, "changeable anytime"): shown at once and saved with the whole
     /// search (`PUT`, the name as it is). Changes made while one is on its way are sent once it has answered, the newest
     /// only. A refusal puts back what the server last confirmed, with a notice. Only the switches and the conditions come
@@ -877,6 +956,7 @@ final class ArestemisStore {
         rejectedLists = [:]
         applications = [:]
         priceHistories = [:]
+        priceOffers = [:]
         savingMonitors = []
         monitorWanted = [:]
     }

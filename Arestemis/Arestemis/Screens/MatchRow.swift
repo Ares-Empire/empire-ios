@@ -20,6 +20,8 @@ struct MatchRow: View {
     var showsNewState = false
     /// The search the match belongs to, over it (the search over every search's listings).
     var hunt: HuntText? = nil
+    /// An everywhere monitor's alarm names the shop of the cheapest offer (`ArestemisStore.alarmShop(of:)`, brief 157).
+    var alarmShop: String? = nil
 
     private var thing: Bool { kind == .item }
     private var stateWord: String? {
@@ -91,7 +93,7 @@ struct MatchRow: View {
     private var alarm: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text(verbatim: match.priceTitle()).font(AppFont.text(16, weight: .semibold)).foregroundStyle(Ink.primary)
+                Text(verbatim: match.priceTitle(shop: alarmShop)).font(AppFont.text(16, weight: .semibold)).foregroundStyle(Ink.primary)
                     .lineSpacing(2).lineLimit(2).fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 8)
                 if let word = stateWord {

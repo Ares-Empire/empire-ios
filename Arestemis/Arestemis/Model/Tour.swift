@@ -48,7 +48,7 @@ nonisolated enum TourStep: Int, CaseIterable, Sendable {
         case .monitorsAndWatches:
             // The kinds' names as New search shows them (`SearchKind.choiceTitle`, the same words).
             [TourLine(label: language.string("Price monitor"),
-                      language.string("A push when a price falls or a product is back in stock, with its curve.")),
+                      language.string("A push when a product gets cheaper or is back in stock, in one shop or everywhere, with its curve.")),
              TourLine(label: language.string("Watch a website"),
                       language.string("A push when something new appears on a page: a version, a job, the menu."))]
         case .filteredOut:

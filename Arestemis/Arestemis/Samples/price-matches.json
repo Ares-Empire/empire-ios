@@ -1,6 +1,47 @@
 {
   "items": [
     {
+      "id": 42,
+      "hunt_id": 12,
+      "state": "new",
+      "found": "2026-10-24T09:58:50Z",
+      "listing": {
+        "source": "page",
+        "source_name": "Amazon",
+        "url": "https://www.billiger.de/products/123-orbital-headphones-2-blue#offers",
+        "title": "Orbital Headphones 2 Blue",
+        "kind": null,
+        "rent_warm": null,
+        "rent_cold": null,
+        "sqm": null,
+        "rooms": null,
+        "flatmates": null,
+        "city": null,
+        "district": null,
+        "address": null,
+        "available_from": null,
+        "available_until": null,
+        "furnished": null,
+        "posted": null,
+        "image_url": null,
+        "description": "",
+        "item": null,
+        "page": null,
+        "price_change": {
+          "old": 229.0,
+          "new": 215.0,
+          "currency": "EUR",
+          "availability": "in_stock",
+          "kind": "below"
+        }
+      },
+      "reason": "Orbital Headphones 2 Blue: €215.00 (was €229.00)",
+      "warnings": [],
+      "application": null,
+      "at_start": false,
+      "over_max": null
+    },
+    {
       "id": 39,
       "hunt_id": 9,
       "state": "new",

@@ -15,6 +15,11 @@ protocol ArestemisBackend {
     func parse(text: String, kind: HuntKind) async throws -> HuntParseResult
     /// `POST /price/preview`: the server reads a product page once now (nothing is saved; one per account every 5 s).
     func pricePreview(url: String) async throws -> PricePreview
+    /// `POST /price/preview` with `{product, details}` (brief 154): the server looks for the product on the sites once now
+    /// (nothing is saved; the same 5 s per account as a page's preview).
+    func productPreview(product: String, details: String) async throws -> ProductPreview
+    /// `GET /hunts/{id}/offers`: an everywhere monitor's offers now and every site it checks (404 for a page monitor).
+    func offers(hunt id: Int) async throws -> PriceOffers
     /// `GET /hunts/{id}/prices?days=`: a price monitor's history over 30, 90 or 365 days (404 while its history is off).
     func prices(hunt id: Int, days: Int) async throws -> Prices
     func places(query: String) async throws -> [Place]
@@ -38,6 +43,9 @@ struct ArestemisAPI: ArestemisBackend {
     static let accountDataURL = baseURL.appendingPathComponent("me")
     /// Routes where the server asks the AI (parse, application) may take longer than a plain read.
     static let aiTimeout: TimeInterval = 60
+    /// A product's preview reads each comparison site twice (its search, then the product's page), a minute apart as
+    /// the server paces every site, then asks the AI: well over a minute (brief 154's `preview`).
+    static let productPreviewTimeout: TimeInterval = 150
 
     var transport: any HTTPTransport = URLSessionTransport()
     /// The current Empire token, read when a request starts; nil = not signed in.
@@ -84,9 +92,17 @@ struct ArestemisAPI: ArestemisBackend {
         try await send(.post, "price/preview", body: ["url": url], timeout: Self.aiTimeout)
     }
 
+    func productPreview(product: String, details: String) async throws -> ProductPreview {
+        // A search on the comparison sites, then the shops; the server asks the AI which candidate is the product.
+        try await send(.post, "price/preview", body: ["product": product, "details": details],
+                       timeout: Self.productPreviewTimeout)
+    }
+
     func prices(hunt id: Int, days: Int) async throws -> Prices {
         try await send(.get, "hunts/\(id)/prices", query: [URLQueryItem(name: "days", value: String(days))])
     }
+
+    func offers(hunt id: Int) async throws -> PriceOffers { try await send(.get, "hunts/\(id)/offers") }
 
     func places(query: String) async throws -> [Place] {
         try await send(.get, "places", query: [URLQueryItem(name: "q", value: query)])

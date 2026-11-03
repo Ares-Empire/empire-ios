@@ -48,7 +48,7 @@ struct HuntsStoreTests {
         let gate = RequestGate(); transport.gates["POST /hunts"] = gate
         let action = Task { await store.saveHunt(id: nil, kind: .item, name: nil, search: original[1].hunt.search) }
         await gate.waitUntilPaused()
-        #expect(store.hunts.count == 12 && store.hunts.last?.id == -1)
+        #expect(store.hunts.count == 13 && store.hunts.last?.id == -1)
         gate.resume(); #expect(await action.value == nil)
         #expect(store.hunts == original && store.searchError == "This account has 30 hunts. Delete one first.")
     }
@@ -74,7 +74,7 @@ struct HuntsStoreTests {
         await store.loadApplication(for: 31)
         #expect(store.application(31).error == "Application texts are for flats.")
         let new = try #require(await store.saveHunt(id: nil, kind: .item, name: "Second chair", search: item.search))
-        #expect(new.id == 12 && !new.active && store.hunts.count == 12)
+        #expect(new.id == 13 && !new.active && store.hunts.count == 13)
         #expect(await store.deleteHunt(id: 2))
         #expect(store.card(1)?.hunt == originalFlat && !store.hunts.contains { $0.id == 2 })
         #expect(!store.list(.all, hunt: 2).loaded && !store.rejected(hunt: 2).loaded)     // forgotten, asked again

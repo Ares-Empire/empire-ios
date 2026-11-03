@@ -1,0 +1,59 @@
+{
+  "hunt": {
+    "kind": "price",
+    "search": {
+      "mode": "everywhere",
+      "url": null,
+      "product": "Orbital Headphones 2",
+      "details": "blue",
+      "identity": {
+        "name": "Orbital Headphones 2 Blue",
+        "eans": [
+          "4000000000013"
+        ],
+        "image_url": null
+      },
+      "sources_off": [
+        "mydealz"
+      ],
+      "history": true,
+      "alarm": {
+        "below": 220.0,
+        "back_in_stock": true
+      },
+      "every": 60
+    },
+    "id": 12,
+    "name": "Headphones",
+    "active": true,
+    "created": "2026-11-03T12:00:00Z",
+    "updated": "2026-11-03T12:00:00Z",
+    "activated": null,
+    "last_scan": null
+  },
+  "counts": {
+    "new": 0,
+    "today": 0,
+    "saved": 0,
+    "applied": 0
+  },
+  "sources": [],
+  "slowed": false,
+  "page": null,
+  "price": {
+    "reader": "plain",
+    "product": "Orbital Headphones 2 Blue",
+    "host": "Amazon",
+    "price": 215,
+    "currency": "EUR",
+    "availability": "in_stock",
+    "source": "shop",
+    "read": "ok",
+    "checked": "2026-11-03T12:01:00Z",
+    "note": null,
+    "low_30d": 215,
+    "high_30d": 229,
+    "since": "2026-11-03T12:00:00Z",
+    "offers": 2
+  }
+}

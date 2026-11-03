@@ -628,7 +628,7 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   the Hunts list and Listings → Searches): Rename (the search's page on the Hunts tab, its field open,
   `AppNavigation.rename`), Pause or Start, Delete (asks first, as on the page). A hunt this build cannot read offers
   Delete only (`HuntPageActions.rename`: its page shows no name to edit). DEBUG `-newSearch`,
-  `-newExample <example>` (`twoRooms`, `kallax`, `priceBelow`, `newVersion` since brief 142),
+  `-newExample <example>` (`twoRooms`, `kallax`, `everywhere` (brief 157; `priceBelow` before), `newVersion` since brief 142),
   `-renameHunt <id>` (`-renameText <text>`). Tests: `NewSearchTests`. Real touches (a temporary UI test in
   `Aresus/AresusUITests` driving Arestemis, deleted): the long press's menu on both tabs and in German, Pause and Start
   from it, Rename opening the field with the keyboard, a tap elsewhere saving, Cancel restoring, the clear button
@@ -691,6 +691,41 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   <text>`, `-priceSwitches both|history|alarm|none`, `-pricePreview reading|refused|failed`), `-newExample
   priceBelow|backInStock`, `-openHunt <id>` with `-priceDays 30|90|365`, `-scrollTo history|switches|bottom` and
   `-monitorLine refused|hold`. Tests: `PriceMonitorTests`. Screenshots: `build/137-*.png`.
+  **Price monitors everywhere ("Überall")** (brief 157, Patrik 2026-11-03: "I wanna search for new AirPods Max gen 2 price
+  monitor style but not on a specific page"; plan sections 3 and 4 with sketches; the server's brief 154,
+  `~/Arestemis/docs/API.md` → Price monitors everywhere). Part of the Preismonitor: `PriceSearch.mode` `page` | `everywhere`
+  (absent = page; a mode this build does not know makes the hunt unsupported, "Needs a newer app"; a page monitor is sent
+  as before, its four fields), `url` now optional, `product`, `details`, `identity` (`ProductIdentity`), `sources_off`;
+  `Offer`, `PriceSite` (kind and state kept when unknown), `ProductPreview`, `PriceOffers`, `PriceState.offers`
+  (`Model/PriceModels.swift`); `POST /price/preview {product, details}` (timeout 150 s: the server reads each comparison
+  site twice a minute apart) and `GET /hunts/{id}/offers` (`ArestemisStore.productPreview`, `loadOffers`, as the history:
+  again after each new read). **The form** (`PriceSearchScreen`): a segmented "One shop | Everywhere" / "Ein Shop |
+  Überall" at the top; a new form opens on Everywhere; each mode keeps its fields while the other shows
+  (`PriceSearchDraft.mode`, only the shown mode's fields compare and are sent; a kept draft without a mode is a page's).
+  Everywhere: Product (placeholder "z. B. AirPods Max 2"), the preview under it once typing pauses (1 s; the link's pacing
+  made generic, `PacedPreview` in `Model/PricePreviewModel.swift`, `ProductPreviewModel`): "Gefunden: <name>" over "in 2
+  Shops, ab 215,00 €" (sellers among its offers, the cheapest) or the server's refusal as a problem line; Details
+  (optional) ("z. B. Farbe Mitternacht oder Blau"); the quiet line "Sucht in 10 Shops · Ändern" (the sites on), opening
+  "Where it looks"; the switches; How often hourly or slower ("Shops prüfen"). Saving needs the product found for the
+  words as they are (`identity`/`identityWords`, `isConfirmed`; "Erst muss das Produkt gefunden werden."); a saved
+  monitor's own words take its saved product again without asking the server. **"Where it looks" / "Wo gesucht wird"**
+  (`Screens/PriceSitesScreen.swift`): the sites, those that have it first (`PriceSites.ordered`), each with a quiet state
+  ("hat es", "wird geprüft", "gerade nicht lesbar", "hat es nicht") and a switch making `sources_off` (the last one on
+  stays, "Mindestens eine Seite bleibt an."); "Shop vorschlagen" at the end opens the shared contact form as "Idea or
+  wish" with "Shop vorschlagen: " started (`SupportSheet(kind:text:)`, Shared: the start alone is nothing written).
+  From the form it edits the draft; from the page it saves at once (`MonitorSitesPage`, `saveMonitor`). **The card**: the
+  product as the name, "Überall · 6 Shops · Alarm unter 220 €…", the cheapest price large with "bei Amazon · lieferbar"
+  beside it (`PriceCardText.shop`), its own words while it looks ("Shops werden durchsucht…") or finds none. **The page**:
+  "Günstigster Preis" (the same chart), "Shops" (`OffersCard`: one row per shop, its cheapest, shop and price,
+  availability, shipping and "über idealo" in the quiet line, each opening its link; five, then "+ N weitere Shops"),
+  the switches, "Wo gesucht wird · 9 Shops", the alarms; Open in shop opens the cheapest offer. **An alarm** names the
+  shop ("… 449,00 € bei MediaMarkt (vorher …)", `ArestemisStore.alarmShop(of:)` by the hunt's mode; the server's push
+  title does not). New search's example is "AirPods Max überall" (`SearchExample.everywhere`). Sample hunt 12 (the
+  server's `price-everywhere.json`, its offers `Samples/price-offers.json` with more shops, `prices-12.json`, alarm 42),
+  the preview imitated from `product-preview.json`. DEBUG `-priceMode page|everywhere`, `-priceProduct`, `-priceDetails`,
+  `-sitesOff <id,id>`, `-priceSites` (the form's sites once known), `-openHunt 12` with `-openSites` or `-scrollTo
+  offers`, `-suggestShop`. Tests: `PriceEverywhereTests`, Shared's in `EmpireTests/SupportTests`. Screenshots:
+  `build/157-*.png`.
   **The tour** (brief 139, Patrik 2026-11-02: "it's not actually clear what Seite beobachten is for … add a tour to
   Arestemis (like Aresium has)"; eight steps from the sketch's section 6; `Model/Tour.swift`, `Screens/TourScreens.swift`
   on the shared pieces, below): the real tabs (`MainTabs`) on a world of its own, `TourWorld`: its own data in the app's

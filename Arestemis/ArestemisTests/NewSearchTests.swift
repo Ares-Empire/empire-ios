@@ -71,9 +71,9 @@ struct NewSearchTests {
         }
         // One example per kind.
         #expect(cards.map { $0.examples.map { $0.title(language: language) } } == (german ? [
-            ["2 Zimmer bis 1.100 € warm"], ["Kallax bis 40 €"], ["Preis unter … €"], ["Neue Version"],
+            ["2 Zimmer bis 1.100 € warm"], ["Kallax bis 40 €"], ["AirPods Max überall"], ["Neue Version"],
         ] : [
-            ["2 rooms up to €1,100 warm"], ["Kallax up to €40"], ["Price under € …"], ["New version"],
+            ["2 rooms up to €1,100 warm"], ["Kallax up to €40"], ["AirPods Max everywhere"], ["New version"],
         ]))
         #expect(language.string("e.g.") == (german ? "z. B." : "e.g."))
         #expect(language.string("What should Arestemis find for you?")
@@ -93,7 +93,7 @@ struct NewSearchTests {
             ? ["2 Zimmer bis 1.100 €", "Kallax bis 40 €", "Preis eines Produkts", "neue Version"]
             : ["2 rooms up to €1,100", "Kallax up to €40", "one product's price", "a new version"]
         for words in named { #expect(text.contains(words), "\(words)") }
-        #expect(SearchExample.allCases == [.twoRooms, .kallax, .priceBelow, .newVersion])
+        #expect(SearchExample.allCases == [.twoRooms, .kallax, .everywhere, .newVersion])
     }
 
     // MARK: the examples fill their forms

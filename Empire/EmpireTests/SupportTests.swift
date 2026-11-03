@@ -179,6 +179,26 @@ struct SupportTests {
         #expect(!form.canSend && !form.hasUnsentText)                // closing no longer asks
     }
 
+    /// Opened for one purpose (Arestemis's "Suggest a shop", brief 157): the kind and the text's start are set, the start
+    /// alone is nothing written (closing asks nothing, Send waits), and the message sent is the whole text.
+    @Test func opensWithAKindAndAStartedText() async throws {
+        let server = EmpireFakeTransport()
+        let (plain, session, _) = await form(server: server)
+        #expect(plain.kind == .problem && plain.text.isEmpty && !plain.startsWithText)
+        let form = SupportForm(session: session, api: SupportAPI(transport: server), device: { Self.device },
+                               language: .german, sampleDelay: .zero, kind: .idea, text: "Shop vorschlagen: ")
+        #expect(form.kind == .idea && form.text == "Shop vorschlagen: " && form.startsWithText)
+        #expect(!form.canSend && !form.hasUnsentText)
+        form.text += "  "
+        #expect(!form.canSend && !form.hasUnsentText)
+        form.text = "Shop vorschlagen: Otto"
+        #expect(form.canSend && form.hasUnsentText)
+        await form.send()
+        #expect(form.phase == .sent && server.requests.count == 1)
+        let sent = Self.json(server.requests.first?.httpBody)
+        #expect(sent?["kind"] == "idea" && sent?["message"] == "Shop vorschlagen: Otto")
+    }
+
     @Test func failuresReadAsOneOfTheFormsLines() {
         #expect(SupportFailure(HTTPError.server(429, nil)) == .tooMany)
         #expect(SupportFailure(HTTPError.unauthorized) == .loggedOut)

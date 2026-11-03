@@ -5,14 +5,32 @@ import Foundation
 /// or the product is back in stock, or both; at least one of the two is on. The server reads the shop's page (its
 /// product data first, the AI only where it has none) and decides; the app shows what it read and never parses a page.
 
-/// `PriceSearch`: the product page's address (the watch's rules), the history and the alarm switches, how often.
+/// `PriceSearch`: a monitor watches one shop's product page (`page`, brief 137: the page's address) or one product on
+/// every site that sells it (`everywhere`, brief 157 here, 154 on the server: the product in words, optional details,
+/// the product the preview found and the sites switched off); then the history and the alarm switches, how often.
 struct PriceSearch: Codable, Equatable, Sendable {
-    var url: String
-    /// Records the price and the availability at every read, for the curve.
+    /// Ein Shop (a link) or Überall (a product in words). A mode this build does not know makes the monitor one it
+    /// cannot read (`HuntSearch.unsupported`: "Needs a newer app"), never a page monitor without a page.
+    enum Mode: String, Codable, Equatable, Sendable {
+        case page, everywhere
+    }
+
+    var mode: Mode
+    /// `page`: the product page's address. Nil for `everywhere` (sent as null).
+    var url: String?
+    /// `everywhere`: the product in words as the user typed it, 2–100 characters ("AirPods Max 2").
+    var product: String?
+    /// `everywhere`: optional words for the variant ("Mitternacht oder Blau"), at most 300 characters; "" for none.
+    var details: String
+    /// `everywhere`: the product the preview found, which saving confirms.
+    var identity: ProductIdentity?
+    /// `everywhere`: the ids of the sites the user switched off (`PriceSite.id`).
+    var sourcesOff: [String]
+    /// Records the price and the availability at every read, for the curve (`everywhere`: the cheapest offer's).
     var history: Bool
     /// The alarm and its conditions; nil while the alarm is off.
     var alarm: Alarm?
-    /// Minutes between reads: one of `WatchSearch.everyChoices`.
+    /// Minutes between reads: one of `WatchSearch.everyChoices`; `everywhere` at least hourly (`everyChoices(for:)`).
     var every: Int
 
     struct Alarm: Codable, Equatable, Sendable {
@@ -49,41 +67,140 @@ struct PriceSearch: Codable, Equatable, Sendable {
         var isComplete: Bool { (below.map { $0 > 0 && $0.isFinite } ?? false) || backInStock }
     }
 
+    /// A monitor of one shop's page (`page`).
     init(url: String, history: Bool, alarm: Alarm?, every: Int = WatchSearch.defaultEvery) {
+        mode = .page
         self.url = url
+        product = nil
+        details = ""
+        identity = nil
+        sourcesOff = []
         self.history = history
         self.alarm = alarm
         self.every = every
     }
 
-    /// Lenient as the server's defaults: no history, no alarm, every hour.
+    /// A monitor of one product on every site that sells it (`everywhere`).
+    init(product: String, details: String = "", identity: ProductIdentity?, sourcesOff: [String] = [], history: Bool,
+         alarm: Alarm?, every: Int = WatchSearch.defaultEvery) {
+        mode = .everywhere
+        url = nil
+        self.product = product
+        self.details = details
+        self.identity = identity
+        self.sourcesOff = sourcesOff
+        self.history = history
+        self.alarm = alarm
+        self.every = every
+    }
+
+    /// Lenient as the server's defaults: no mode is a page (every monitor from before brief 154), no history, no alarm,
+    /// every hour, no details, no site switched off. A page monitor without an address, or a mode this build does not
+    /// know, cannot be read (the hunt then shows "Needs a newer app").
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        url = try c.decode(String.self, forKey: .url)
+        let rawMode = try c.decodeIfPresent(String.self, forKey: .mode) ?? Mode.page.rawValue
+        guard let mode = Mode(rawValue: rawMode) else {
+            throw DecodingError.dataCorruptedError(forKey: .mode, in: c, debugDescription: "Unknown mode \(rawMode)")
+        }
+        self.mode = mode
+        url = try c.decodeIfPresent(String.self, forKey: .url)
+        if mode == .page && url == nil {
+            throw DecodingError.keyNotFound(CodingKeys.url, .init(codingPath: c.codingPath,
+                                                                   debugDescription: "A page monitor needs its url"))
+        }
+        product = try c.decodeIfPresent(String.self, forKey: .product)
+        details = try c.decodeIfPresent(String.self, forKey: .details) ?? ""
+        identity = try c.decodeIfPresent(ProductIdentity.self, forKey: .identity)
+        sourcesOff = try c.decodeIfPresent([String].self, forKey: .sourcesOff) ?? []
         history = try c.decodeIfPresent(Bool.self, forKey: .history) ?? false
         alarm = try c.decodeIfPresent(Alarm.self, forKey: .alarm)
         every = try c.decodeIfPresent(Int.self, forKey: .every) ?? WatchSearch.defaultEvery
     }
 
-    /// The whole search, `alarm: null` included, as `PUT` replaces it.
+    /// The whole search, `alarm: null` included, as `PUT` replaces it. A page monitor is sent as before brief 154 (its
+    /// four fields; the server reads no mode as a page); an everywhere monitor with every field, `url: null`.
     func encode(to encoder: Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(url, forKey: .url)
+        if mode == .everywhere {
+            try c.encode(mode, forKey: .mode)
+            try c.encode(url, forKey: .url)
+            try c.encode(product, forKey: .product)
+            try c.encode(details, forKey: .details)
+            try c.encode(identity, forKey: .identity)
+            try c.encode(sourcesOff, forKey: .sourcesOff)
+        } else {
+            try c.encode(url ?? "", forKey: .url)
+        }
         try c.encode(history, forKey: .history)
         try c.encode(alarm, forKey: .alarm)
         try c.encode(every, forKey: .every)
     }
 
-    enum CodingKeys: String, CodingKey { case url, history, alarm, every }
+    enum CodingKeys: String, CodingKey {
+        case mode, url, product, details, identity, history, alarm, every
+        case sourcesOff = "sources_off"
+    }
 
     /// The server's rule: the history, the alarm or both; an alarm says when it rings.
     var isComplete: Bool { (history || alarm != nil) && (alarm?.isComplete ?? true) }
 
     /// The product's page to open in the browser ("Open in shop"): the link as saved, read as https without a scheme, as
-    /// the server reads it; nil for anything but a web address.
+    /// the server reads it; nil for anything but a web address, and for an everywhere monitor (it opens its cheapest
+    /// offer, `PriceOffers`).
     var shopURL: URL? {
-        let trimmed = url.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let url = URL(string: trimmed.contains("://") ? trimmed : "https://" + trimmed),
+        guard mode == .page, let url else { return nil }
+        return WebLink.url(url)
+    }
+
+    /// The fewest minutes between reads of an everywhere monitor (the server's "Check everywhere at most once an hour.").
+    static let everywhereEvery = 60
+
+    /// How often a monitor of this mode may read: every server interval for a page, hourly or slower everywhere.
+    static func everyChoices(for mode: Mode) -> [Int] {
+        mode == .everywhere ? WatchSearch.everyChoices.filter { $0 >= everywhereEvery } : WatchSearch.everyChoices
+    }
+}
+
+/// `ProductIdentity`: the product an everywhere monitor watches, as the preview found it ("Apple AirPods Max (2.
+/// Generation)"), with the EAN/GTIN numbers of the variants that fit the details (none when no site gives one).
+struct ProductIdentity: Codable, Equatable, Hashable, Sendable {
+    var name: String
+    var eans: [String]
+    var imageURL: String?
+
+    init(name: String, eans: [String] = [], imageURL: String? = nil) {
+        self.name = name
+        self.eans = eans
+        self.imageURL = imageURL
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case name, eans
+        case imageURL = "image_url"
+    }
+
+    /// Lenient: no numbers and no picture when missing.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        name = try c.decode(String.self, forKey: .name)
+        eans = try c.decodeIfPresent([String].self, forKey: .eans) ?? []
+        imageURL = try c.decodeIfPresent(String.self, forKey: .imageURL)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(name, forKey: .name)
+        try c.encode(eans, forKey: .eans)
+        try c.encode(imageURL, forKey: .imageURL)
+    }
+}
+
+/// A web address to open: as typed, read as https without a scheme; nil for anything but http(s) with a host.
+enum WebLink {
+    static func url(_ text: String) -> URL? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, let url = URL(string: trimmed.contains("://") ? trimmed : "https://" + trimmed),
               let scheme = url.scheme?.lowercased(), ["https", "http"].contains(scheme), url.host() != nil else { return nil }
         return url
     }
@@ -128,7 +245,9 @@ enum PageReader: Equatable, Sendable {
 }
 
 /// `HuntCard.price`: what the server last read of a monitor's product page. A failed read keeps the last good product
-/// and price; `read` and `note` say how the page reads now.
+/// and price; `read` and `note` say how the page reads now. For an everywhere monitor (brief 154) the price,
+/// currency, availability and host are the cheapest offer's (the host is its shop's name, "Amazon"), the product is
+/// the identity's name, and `offers` counts the sites with an offer now.
 struct PriceState: Codable, Equatable, Sendable {
     var reader: PageReader
     var product: String?
@@ -146,16 +265,18 @@ struct PriceState: Codable, Equatable, Sendable {
     var low30d: Double?
     var high30d: Double?
     var since: String?
+    /// An everywhere monitor's sites with an offer now; nil for a page monitor.
+    var offers: Int?
 
     enum CodingKeys: String, CodingKey {
-        case reader, product, host, price, currency, availability, source, read, checked, note, since
+        case reader, product, host, price, currency, availability, source, read, checked, note, since, offers
         case low30d = "low_30d", high30d = "high_30d"
     }
 
     init(reader: PageReader = .plain, product: String? = nil, host: String, price: Double? = nil,
          currency: String? = nil, availability: Availability = .unknown, source: String? = nil,
          read: PageState.Read, checked: String? = nil, note: String? = nil, low30d: Double? = nil,
-         high30d: Double? = nil, since: String? = nil) {
+         high30d: Double? = nil, since: String? = nil, offers: Int? = nil) {
         self.reader = reader
         self.product = product
         self.host = host
@@ -169,6 +290,7 @@ struct PriceState: Codable, Equatable, Sendable {
         self.low30d = low30d
         self.high30d = high30d
         self.since = since
+        self.offers = offers
     }
 
     /// Lenient, as `PageState`: a missing host is empty, a missing `read` is waiting, a missing reader plain.
@@ -187,6 +309,7 @@ struct PriceState: Codable, Equatable, Sendable {
         low30d = try c.decodeIfPresent(Double.self, forKey: .low30d)
         high30d = try c.decodeIfPresent(Double.self, forKey: .high30d)
         since = try c.decodeIfPresent(String.self, forKey: .since)
+        offers = try c.decodeIfPresent(Int.self, forKey: .offers)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -204,6 +327,7 @@ struct PriceState: Codable, Equatable, Sendable {
         try c.encode(low30d, forKey: .low30d)
         try c.encode(high30d, forKey: .high30d)
         try c.encode(since, forKey: .since)
+        try c.encodeIfPresent(offers, forKey: .offers)
     }
 }
 
@@ -303,4 +427,206 @@ struct Prices: Codable, Equatable, Sendable {
 
     /// The windows the server offers, in days.
     static let windows = [30, 90, 365]
+}
+
+// MARK: - everywhere (brief 154 on the server)
+
+/// `Offer`: one offer of an everywhere monitor's product, as a site showed it: the site read (`source`, its name
+/// `sourceName`), who sells it (`shop`: the site itself, or the shop a comparison site lists, "Amazon"), where to buy it
+/// (or the comparison site's offer link), the price, the shipping when known and the availability.
+struct Offer: Codable, Equatable, Identifiable, Sendable {
+    var source: String
+    var sourceName: String
+    var shop: String
+    var url: String
+    var price: Double?
+    var currency: String?
+    /// Shipping in euros, when the site says.
+    var shipping: Double?
+    var availability: Availability
+    /// The last successful read of this offer.
+    var checked: String?
+
+    /// One row per site and shop: a comparison site lists each shop once.
+    var id: String { source + "|" + shop + "|" + url }
+
+    init(source: String, sourceName: String, shop: String, url: String, price: Double?, currency: String? = "EUR",
+         shipping: Double? = nil, availability: Availability = .inStock, checked: String? = nil) {
+        self.source = source
+        self.sourceName = sourceName
+        self.shop = shop
+        self.url = url
+        self.price = price
+        self.currency = currency
+        self.shipping = shipping
+        self.availability = availability
+        self.checked = checked
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case source, shop, url, price, currency, shipping, availability, checked
+        case sourceName = "source_name"
+    }
+
+    /// Lenient: a missing shop is the site itself, a missing name the site's id, an unknown availability unknown.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        source = try c.decode(String.self, forKey: .source)
+        sourceName = try c.decodeIfPresent(String.self, forKey: .sourceName) ?? source
+        shop = try c.decodeIfPresent(String.self, forKey: .shop) ?? sourceName
+        url = try c.decode(String.self, forKey: .url)
+        price = try c.decodeIfPresent(Double.self, forKey: .price)
+        currency = try c.decodeIfPresent(String.self, forKey: .currency)
+        shipping = try c.decodeIfPresent(Double.self, forKey: .shipping)
+        availability = try c.decodeIfPresent(Availability.self, forKey: .availability) ?? .unknown
+        checked = try c.decodeIfPresent(String.self, forKey: .checked)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(source, forKey: .source)
+        try c.encode(sourceName, forKey: .sourceName)
+        try c.encode(shop, forKey: .shop)
+        try c.encode(url, forKey: .url)
+        try c.encode(price, forKey: .price)
+        try c.encode(currency, forKey: .currency)
+        try c.encode(shipping, forKey: .shipping)
+        try c.encode(availability, forKey: .availability)
+        try c.encode(checked, forKey: .checked)
+    }
+
+    /// Where a tap on the offer goes; nil for anything but a web address.
+    var link: URL? { WebLink.url(url) }
+}
+
+/// `PriceSite`: one site an everywhere monitor checks for its product: a shop, a price comparison site or a
+/// marketplace, whether it has the product, and whether the user left it on. A kind or a state this build does not know
+/// is kept (shown by name, without a state word).
+struct PriceSite: Codable, Equatable, Identifiable, Sendable {
+    enum Kind: Hashable, Sendable {
+        case shop, comparison, marketplace
+        case unknown(String)
+
+        init(rawValue: String) {
+            switch rawValue {
+            case "shop": self = .shop
+            case "comparison": self = .comparison
+            case "marketplace": self = .marketplace
+            default: self = .unknown(rawValue)
+            }
+        }
+
+        var rawValue: String {
+            switch self {
+            case .shop: "shop"
+            case .comparison: "comparison"
+            case .marketplace: "marketplace"
+            case .unknown(let value): value
+            }
+        }
+    }
+
+    enum State: Hashable, Sendable {
+        /// Not known yet: the finder has not looked, or a shop answered without a clear yes.
+        case checking
+        case hasIt
+        case notFound
+        /// The site could not be read just now.
+        case unreadable
+        case unknown(String)
+
+        init(rawValue: String) {
+            switch rawValue {
+            case "checking": self = .checking
+            case "has_it": self = .hasIt
+            case "not_found": self = .notFound
+            case "unreadable": self = .unreadable
+            default: self = .unknown(rawValue)
+            }
+        }
+
+        var rawValue: String {
+            switch self {
+            case .checking: "checking"
+            case .hasIt: "has_it"
+            case .notFound: "not_found"
+            case .unreadable: "unreadable"
+            case .unknown(let value): value
+            }
+        }
+    }
+
+    let id: String
+    var name: String
+    var kind: Kind
+    var state: State
+    /// False while the monitor's `sources_off` names it (a preview's sites are all on).
+    var on: Bool
+
+    init(id: String, name: String, kind: Kind = .shop, state: State = .checking, on: Bool = true) {
+        self.id = id
+        self.name = name
+        self.kind = kind
+        self.state = state
+        self.on = on
+    }
+
+    enum CodingKeys: String, CodingKey { case id, name, kind, state, on }
+
+    /// Lenient as the server's defaults: checking and on; a missing name is the id.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        name = try c.decodeIfPresent(String.self, forKey: .name) ?? id
+        kind = Kind(rawValue: try c.decodeIfPresent(String.self, forKey: .kind) ?? "")
+        state = try c.decodeIfPresent(String.self, forKey: .state).map(State.init(rawValue:)) ?? .checking
+        on = try c.decodeIfPresent(Bool.self, forKey: .on) ?? true
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(name, forKey: .name)
+        try c.encode(kind.rawValue, forKey: .kind)
+        try c.encode(state.rawValue, forKey: .state)
+        try c.encode(on, forKey: .on)
+    }
+}
+
+/// `GET /hunts/{id}/offers`: an everywhere monitor's offers now (cheapest first) and every site it checks.
+struct PriceOffers: Codable, Equatable, Sendable {
+    var offers: [Offer]
+    var sites: [PriceSite]
+
+    init(offers: [Offer] = [], sites: [PriceSite] = []) {
+        self.offers = offers
+        self.sites = sites
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        offers = try c.decodeIfPresent([Offer].self, forKey: .offers) ?? []
+        sites = try c.decodeIfPresent([PriceSite].self, forKey: .sites) ?? []
+    }
+}
+
+/// `POST /price/preview` with `{product, details}`: the product the server found for the words, what its first look
+/// found (cheapest first) and every site it would check. Nothing is saved.
+struct ProductPreview: Codable, Equatable, Sendable {
+    var identity: ProductIdentity
+    var offers: [Offer]
+    var sites: [PriceSite]
+
+    init(identity: ProductIdentity, offers: [Offer] = [], sites: [PriceSite] = []) {
+        self.identity = identity
+        self.offers = offers
+        self.sites = sites
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        identity = try c.decode(ProductIdentity.self, forKey: .identity)
+        offers = try c.decodeIfPresent([Offer].self, forKey: .offers) ?? []
+        sites = try c.decodeIfPresent([PriceSite].self, forKey: .sites) ?? []
+    }
 }

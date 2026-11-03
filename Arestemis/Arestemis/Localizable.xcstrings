@@ -34,6 +34,22 @@
         }
       }
     },
+    "%@ is back in stock at %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ist bei %@ wieder lieferbar"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ is back in stock at %2$@"
+          }
+        }
+      }
+    },
     "%@ is not set up yet." : {
       "localizations" : {
         "de" : {
@@ -138,6 +154,38 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$@: %2$@ (was %3$@)"
+          }
+        }
+      }
+    },
+    "%@: %@ at %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@: %@ bei %@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@: %2$@ at %3$@"
+          }
+        }
+      }
+    },
+    "%@: %@ at %@ (was %@)" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@: %@ bei %@ (vorher %@)"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@: %2$@ at %3$@ (was %4$@)"
           }
         }
       }
@@ -362,6 +410,86 @@
         }
       }
     },
+    "%lld shops" : {
+      "localizations" : {
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Shop"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Shops"
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld shop"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld shops"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "+ %lld more shops" : {
+      "localizations" : {
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "+ %lld weiterer Shop"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "+ %lld weitere Shops"
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "+ %lld more shop"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "+ %lld more shops"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "2 rooms up to €1,100 warm" : {
       "localizations" : {
         "de" : {
@@ -412,12 +540,12 @@
         }
       }
     },
-    "A push when a price falls or a product is back in stock, with its curve." : {
+    "A push when a product gets cheaper or is back in stock, in one shop or everywhere, with its curve." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ein Push, wenn ein Preis fällt oder ein Produkt wieder lieferbar ist, dazu die Kurve."
+            "value" : "Ein Push, wenn ein Produkt in einem Shop oder überall günstiger oder wieder lieferbar ist, dazu die Kurve."
           }
         }
       }
@@ -548,6 +676,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Alter, Studium oder Beruf, Nichtraucher, …"
+          }
+        }
+      }
+    },
+    "AirPods Max everywhere" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AirPods Max überall"
           }
         }
       }
@@ -822,6 +960,16 @@
         }
       }
     },
+    "At least one site stays on." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mindestens eine Seite bleibt an."
+          }
+        }
+      }
+    },
     "At most 1,000 characters." : {
       "localizations" : {
         "de" : {
@@ -848,6 +996,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Höchstens 2.000 Zeichen."
+          }
+        }
+      }
+    },
+    "At most 300 characters." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Höchstens 300 Zeichen."
           }
         }
       }
@@ -952,6 +1110,16 @@
         }
       }
     },
+    "Change" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ändern"
+          }
+        }
+      }
+    },
     "Changed %@" : {
       "localizations" : {
         "de" : {
@@ -968,6 +1136,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Änderungen gelten ab dem nächsten Scan."
+          }
+        }
+      }
+    },
+    "Cheapest price" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Günstigster Preis"
+          }
+        }
+      }
+    },
+    "Check the shops" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shops prüfen"
           }
         }
       }
@@ -1383,6 +1571,26 @@
         }
       }
     },
+    "Details" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Details"
+          }
+        }
+      }
+    },
+    "Details (optional)" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Details (optional)"
+          }
+        }
+      }
+    },
     "Dismiss" : {
       "localizations" : {
         "de" : {
@@ -1573,6 +1781,26 @@
         }
       }
     },
+    "Every site Arestemis checks for “%@”. Switch off any you would never buy from." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jede Seite, die Arestemis für „%@“ prüft. Schalte aus, wo du nie kaufen würdest."
+          }
+        }
+      }
+    },
+    "Every site Arestemis checks. Switch off any you would never buy from." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jede Seite, die Arestemis prüft. Schalte aus, wo du nie kaufen würdest."
+          }
+        }
+      }
+    },
     "Every text written automatically includes these points. Only your notes and the facts about you are used, nothing is made up." : {
       "localizations" : {
         "de" : {
@@ -1589,6 +1817,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Alles Neue, nach Suche geordnet. Wisch ein Angebot nach rechts zum Speichern, nach links zum Entfernen."
+          }
+        }
+      }
+    },
+    "Everywhere" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Überall"
           }
         }
       }
@@ -1689,6 +1927,16 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "First the product has to be found." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erst muss das Produkt gefunden werden."
           }
         }
       }
@@ -2129,6 +2377,66 @@
         }
       }
     },
+    "Looking for the product…" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Produkt wird gesucht…"
+          }
+        }
+      }
+    },
+    "Looking in the shops…" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shops werden durchsucht…"
+          }
+        }
+      }
+    },
+    "Looks in %lld shops" : {
+      "localizations" : {
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Sucht in %lld Shop"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Sucht in %lld Shops"
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Looks in %lld shop"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Looks in %lld shops"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "Lowest %@" : {
       "localizations" : {
         "de" : {
@@ -2439,6 +2747,16 @@
         }
       }
     },
+    "No shop offers it right now." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gerade bietet es kein Shop an."
+          }
+        }
+      }
+    },
     "None" : {
       "localizations" : {
         "de" : {
@@ -2555,6 +2873,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ein Produkt: ein Push, wenn es günstiger wird."
+          }
+        }
+      }
+    },
+    "One shop" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein Shop"
           }
         }
       }
@@ -2715,6 +3043,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Öffnet die Suche"
+          }
+        }
+      }
+    },
+    "Opens the shop" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öffnet den Shop"
           }
         }
       }
@@ -2985,16 +3323,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Preis unter"
-          }
-        }
-      }
-    },
-    "Price under € …" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Preis unter … €"
           }
         }
       }
@@ -3369,6 +3697,16 @@
         }
       }
     },
+    "Shops" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shops"
+          }
+        }
+      }
+    },
     "Show" : {
       "localizations" : {
         "de" : {
@@ -3499,6 +3837,26 @@
         }
       }
     },
+    "Suggest a shop" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shop vorschlagen"
+          }
+        }
+      }
+    },
+    "Suggest a shop: " : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shop vorschlagen: "
+          }
+        }
+      }
+    },
     "Swap: my 2 rooms in Schwabing for 3 rooms" : {
       "localizations" : {
         "de" : {
@@ -3555,6 +3913,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Die Felder werden automatisch ausgefüllt. Prüf sie, dann speichern."
+          }
+        }
+      }
+    },
+    "The first look in the shops takes a few minutes." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der erste Blick in die Shops dauert ein paar Minuten."
           }
         }
       }
@@ -3705,6 +4073,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Die Suche beginnt pausiert."
+          }
+        }
+      }
+    },
+    "The shops can't be read right now." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Shops sind gerade nicht lesbar."
           }
         }
       }
@@ -3909,6 +4287,16 @@
         }
       }
     },
+    "Type the product." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gib das Produkt ein."
+          }
+        }
+      }
+    },
     "Type what you look for." : {
       "localizations" : {
         "de" : {
@@ -4109,6 +4497,16 @@
         }
       }
     },
+    "Where it looks" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wo gesucht wird"
+          }
+        }
+      }
+    },
     "With sample searches" : {
       "localizations" : {
         "de" : {
@@ -4239,6 +4637,16 @@
         }
       }
     },
+    "at %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "bei %@"
+          }
+        }
+      }
+    },
     "back in stock" : {
       "localizations" : {
         "de" : {
@@ -4269,6 +4677,26 @@
         }
       }
     },
+    "can't be read now" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gerade nicht lesbar"
+          }
+        }
+      }
+    },
+    "checking" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "wird geprüft"
+          }
+        }
+      }
+    },
     "cold" : {
       "localizations" : {
         "de" : {
@@ -4279,12 +4707,32 @@
         }
       }
     },
+    "doesn't have it" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "hat es nicht"
+          }
+        }
+      }
+    },
     "e.g." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "z. B."
+          }
+        }
+      }
+    },
+    "e.g. AirPods Max 2" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "z. B. AirPods Max 2"
           }
         }
       }
@@ -4325,6 +4773,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "z. B. ein Herman Miller Aeron bis 450 €, Abholung bei Garching oder Versand"
+          }
+        }
+      }
+    },
+    "e.g. colour Midnight or Blue" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "z. B. Farbe Mitternacht oder Blau"
           }
         }
       }
@@ -4385,12 +4843,62 @@
         }
       }
     },
+    "has it" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "hat es"
+          }
+        }
+      }
+    },
     "idle" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "ruht"
+          }
+        }
+      }
+    },
+    "in %lld shops, from %@" : {
+      "localizations" : {
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "in %lld Shop, ab %@"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "in %lld Shops, ab %@"
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "in %lld shop, from %@"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "in %lld shops, from %@"
+                }
+              }
+            }
           }
         }
       }
@@ -4431,6 +4939,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "min"
+          }
+        }
+      }
+    },
+    "no offer yet" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "noch kein Angebot"
           }
         }
       }
@@ -4491,6 +5009,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "vorbestellbar"
+          }
+        }
+      }
+    },
+    "shipping %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Versand %@"
           }
         }
       }
@@ -4557,6 +5085,16 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "up to %1$@ %2$@"
+          }
+        }
+      }
+    },
+    "via %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "über %@"
           }
         }
       }

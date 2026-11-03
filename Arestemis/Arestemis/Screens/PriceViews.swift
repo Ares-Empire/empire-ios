@@ -112,25 +112,31 @@ struct PriceChartView: View {
 }
 
 /// A monitor's lines on its card (the Hunts list) and its page, under its name and quiet line (`PriceCardText`): the
-/// price large in the numbers' face with the availability's word beside it; on the card the small 30-day line under it
-/// while the history is on; else one quiet line (reading, or the server's note); then when it was last checked, following
-/// the clock.
+/// price large in the numbers' face with the availability's word beside it (an everywhere monitor's cheapest price with
+/// its shop first, "at Amazon · in stock", the sketch's card); on the card the small 30-day line under it while the
+/// history is on; else one quiet line (reading, or the server's note); then when it was last checked, following the
+/// clock.
 struct PriceLines: View {
     let state: PriceState?
     let compact: Bool
+    /// The monitor looks for its product on every site (brief 157).
+    var everywhere = false
     /// The card's 30-day line; nil without a history (or before it loaded).
     var chart: PriceChart? = nil
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 30)) { context in
-            let text = PriceCardText(state, compact: compact, now: context.date)
+            let text = PriceCardText(state, compact: compact, everywhere: everywhere, now: context.date)
             VStack(alignment: .leading, spacing: compact ? 6 : 8) {
                 if let price = text.price {
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
                         Text(verbatim: price).font(AppFont.number(compact ? 24 : 34, weight: .bold))
                             .foregroundStyle(Ink.primary).lineLimit(1).minimumScaleFactor(0.7)
-                        if let availability = text.availability {
-                            Text(availability).font(AppFont.text(13)).foregroundStyle(Ink.muted).lineLimit(1)
+                            .layoutPriority(1)
+                        if let beside = [text.shop, text.availability].compactMap({ $0 }).joined(separator: " · ")
+                            .nonEmpty {
+                            Text(verbatim: beside).font(AppFont.text(13)).foregroundStyle(Ink.muted).lineLimit(1)
+                                .minimumScaleFactor(0.9)
                         }
                     }
                     .accessibilityElement(children: .combine)
@@ -214,4 +220,9 @@ struct MonitorSwitchesCard: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
+}
+
+private extension String {
+    /// Nil for an empty string.
+    var nonEmpty: String? { isEmpty ? nil : self }
 }

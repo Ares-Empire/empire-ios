@@ -6,7 +6,7 @@ enum ArestemisSamples {
     nonisolated static let files = ["overview", "matches", "match", "rejected", "settings", "places", "hunts", "item-matches",
                                     "ebay-match", "ikea-match", "vinted-match", "immowelt-match", "kinds", "watch-matches",
                                     "price-matches",
-                                    "prices-9", "prices-10"]
+                                    "prices-9", "prices-10", "prices-12", "price-offers", "product-preview"]
 
     static func data(_ name: String) throws -> Data {
         guard let url = Bundle.main.url(forResource: name, withExtension: "json") else {
@@ -58,6 +58,10 @@ struct SampleContent {
     var histories: [Int: [PricePoint]]
     /// An application text for a listing, signed with the name; nil: the samples' German one.
     var application: ((Listing, String) -> String)? = nil
+    /// Each everywhere monitor's offers and sites, by hunt id (brief 157).
+    var offers: [Int: PriceOffers] = [:]
+    /// What a product's preview finds (the server's sample), named after the words asked.
+    var productPreview: ProductPreview? = nil
 
     /// The contract's sample files (copies of the server's `docs/samples`), their timestamps moved so the last scan was
     /// 40 s before `now`.
@@ -77,9 +81,14 @@ struct SampleContent {
             + (try ArestemisSamples.decode(MatchPage.self, from: "watch-matches", shift: shift)).items
             + (try ArestemisSamples.decode(MatchPage.self, from: "price-matches", shift: shift)).items
         var histories: [Int: [PricePoint]] = [:]
+        var offers: [Int: PriceOffers] = [:]
         for card in overview.hunts where card.hunt.kind == .price {
             if let prices = try? ArestemisSamples.decode(Prices.self, from: "prices-\(card.id)", shift: shift) {
                 histories[card.id] = prices.points
+            }
+            // The server's offers sample belongs to its everywhere monitor (hunt 12).
+            if card.hunt.search.price?.mode == .everywhere {
+                offers[card.id] = try ArestemisSamples.decode(PriceOffers.self, from: "price-offers", shift: shift)
             }
         }
         return SampleContent(overview: overview, matches: matches,
@@ -87,7 +96,9 @@ struct SampleContent {
                              settings: try ArestemisSamples.decode(Settings.self, from: "settings"),
                              kinds: try ArestemisSamples.decode([OfferedKind].self, from: "kinds"),
                              places: try ArestemisSamples.decode([Place].self, from: "places"),
-                             histories: histories)
+                             histories: histories, offers: offers,
+                             productPreview: try ArestemisSamples.decode(ProductPreview.self, from: "product-preview",
+                                                                         shift: shift))
     }
 }
 
@@ -120,6 +131,10 @@ final class SampleBackend: ArestemisBackend {
     private var products: [Int: PriceState]
     /// Each monitor's year of history (its sample file, timestamps moved to now), by hunt id.
     private var histories: [Int: [PricePoint]]
+    /// Each everywhere monitor's offers and sites, by hunt id.
+    private var offersByHunt: [Int: PriceOffers]
+    /// What a product's preview finds.
+    private let productFound: ProductPreview?
     private var nextHuntID: Int
     private var matches: [Match]
     private var rejectedItems: [Rejected]
@@ -165,6 +180,8 @@ final class SampleBackend: ArestemisBackend {
         pages = Dictionary(uniqueKeysWithValues: base.hunts.compactMap { card in card.page.map { (card.id, $0) } })
         products = Dictionary(uniqueKeysWithValues: base.hunts.compactMap { card in card.price.map { (card.id, $0) } })
         histories = content.histories
+        offersByHunt = content.offers
+        productFound = content.productPreview
         nextHuntID = (huntValues.map(\.id).max() ?? 0) + 1
         if let read = options.watchRead, let id = huntValues.filter({ $0.kind == .watch }).dropFirst().first?.id,
            let page = pages[id] {
@@ -244,6 +261,7 @@ final class SampleBackend: ArestemisBackend {
                            created: now, updated: now, activated: nil)
         if let watch = search.watch { pages[created.id] = Self.waiting(watch) }
         if let monitor = search.price { products[created.id] = Self.waiting(monitor) }
+        if search.price?.mode == .everywhere { offersByHunt[created.id] = nil }
         nextHuntID += 1
         huntValues.append(created)
         return created
@@ -262,10 +280,14 @@ final class SampleBackend: ArestemisBackend {
         }
         if let monitor = search.price {
             try Self.check(monitor)
-            // A new link is read again from the start, as on the server; the switches change nothing of the read.
-            if huntValues[index].search.price?.url != monitor.url || products[id]?.read == .blocked {
+            // A new link or product is read again from the start, as on the server; the switches and the sites switched
+            // off change nothing of the read.
+            let old = huntValues[index].search.price
+            let otherProduct = old?.mode != monitor.mode || old?.url != monitor.url || old?.identity != monitor.identity
+            if otherProduct || products[id]?.read == .blocked {
                 products[id] = Self.waiting(monitor)
                 histories[id] = nil
+                offersByHunt[id] = nil
             }
         }
         huntValues[index].name = try Self.name(name)
@@ -357,10 +379,24 @@ final class SampleBackend: ArestemisBackend {
         }
     }
 
-    /// The server's refusals of a monitor, in its words (English, as the samples): the watch's address rules, the switches'
-    /// rule and an alarm without a condition. Only an imitation.
+    /// The server's refusals of a monitor, in its words (English, as the samples): the watch's address rules (an everywhere
+    /// monitor: its words, the product found, at most hourly), the switches' rule and an alarm without a condition. Only
+    /// an imitation.
     private static func check(_ monitor: PriceSearch) throws {
-        try check(WatchSearch(url: monitor.url, change: "price", every: monitor.every))
+        if monitor.mode == .everywhere {
+            let words = ProductWords(product: monitor.product ?? "", details: monitor.details)
+            if !ProductWords.productLengths.contains(words.product.count) {
+                throw FieldRefusal(field: "search.product", message: "String should have at least 2 characters")
+            }
+            if monitor.every < PriceSearch.everywhereEvery {
+                throw FieldRefusal(field: "search.every", message: "Check everywhere at most once an hour.")
+            }
+            if monitor.identity == nil {
+                throw FieldRefusal(field: "search.identity", message: "Confirm the product found by the preview.")
+            }
+        } else {
+            try check(WatchSearch(url: monitor.url ?? "", change: "price", every: monitor.every))
+        }
         if !monitor.history && monitor.alarm == nil {
             throw FieldRefusal(field: "search.history", message: "Choose the history, the alarm or both.")
         }
@@ -369,9 +405,10 @@ final class SampleBackend: ArestemisBackend {
         }
     }
 
-    /// A monitor saved with a new link: not read yet.
+    /// A monitor saved with a new link or product: not read yet.
     private static func waiting(_ monitor: PriceSearch) -> PriceState {
-        PriceState(host: WatchAddress.host(monitor.url) ?? "", read: .waiting)
+        if monitor.mode == .everywhere { return PriceState(product: monitor.identity?.name, host: "", read: .waiting) }
+        return PriceState(host: monitor.url.flatMap(WatchAddress.host) ?? "", read: .waiting)
     }
 
     /// A watch saved with a new address or description: not read yet.
@@ -439,6 +476,51 @@ final class SampleBackend: ArestemisBackend {
         let product = words.prefix(4).map { $0.prefix(1).uppercased() + $0.dropFirst() }.joined(separator: " ")
         return PricePreview(product: product.isEmpty ? host : product, price: 129.0, currency: "EUR",
                             availability: .inStock, source: "shop")
+    }
+
+    /// An imitation of the server's product preview (brief 154) for screenshots: the words' rules, then the server's
+    /// sample with the product named after the words (its own name when they are its words). `-pricePreview
+    /// reading|refused|failed` makes it wait, refuse or fail, as for a link.
+    func productPreview(product: String, details: String) async throws -> ProductPreview {
+        switch options.preview {
+        case "reading": try await Task.sleep(for: .seconds(3600))
+        case "refused": throw FieldRefusal(field: "product", message: "Found no product with that name.")
+        case "failed": throw HTTPError.server(503, "Not available right now, try again in a minute.")
+        default: try await Task.sleep(for: .milliseconds(900))
+        }
+        let words = ProductWords(product: product, details: details)
+        guard ProductWords.productLengths.contains(words.product.count) else {
+            throw FieldRefusal(field: "product", message: "String should have at least 2 characters")
+        }
+        guard var found = productFound else { throw FieldRefusal(field: "product", message: "Found no product with that name.") }
+        let sample = Self.folded(found.identity.name)
+        if !Self.folded(words.product).allSatisfy({ word in sample.contains { $0.hasPrefix(word) } }) {
+            found.identity = ProductIdentity(name: ([words.product] + (words.details.isEmpty ? [] : [words.details]))
+                .joined(separator: " "))
+        }
+        found.sites = found.sites.map { site in
+            var site = site
+            site.on = true                          // a preview knows no monitor's switches
+            return site
+        }
+        return found
+    }
+
+    /// An everywhere monitor's offers now (those of the sites switched off left out, cheapest first) and its sites with
+    /// their switches; a monitor not read yet has none, its sites all being checked.
+    func offers(hunt id: Int) async throws -> PriceOffers {
+        let index = try huntIndex(id)
+        guard let monitor = huntValues[index].search.price, monitor.mode == .everywhere else {
+            throw HTTPError.server(404, nil)
+        }
+        let catalog = (productFound?.sites ?? []).map { PriceSite(id: $0.id, name: $0.name, kind: $0.kind) }
+        let known = offersByHunt[id] ?? PriceOffers(sites: catalog)
+        let sites = known.sites.map { site in
+            var site = site
+            site.on = !monitor.sourcesOff.contains(site.id)
+            return site
+        }
+        return PriceOffers(offers: OfferList.shown(known.offers, off: monitor.sourcesOff), sites: sites)
     }
 
     /// A monitor's history over the window, from its sample year; the lowest and highest in euros, as the server.

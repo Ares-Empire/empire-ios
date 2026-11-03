@@ -39,7 +39,9 @@ struct HuntListCard: View {
                         WatchLines(page: card.page, compact: true).padding(.top, 10)
                     }
                     if text.kind == .price {
-                        PriceLines(state: card.price, compact: true, chart: chart).padding(.top, 10)
+                        PriceLines(state: card.price, compact: true,
+                                   everywhere: card.hunt.search.price?.mode == .everywhere, chart: chart)
+                            .padding(.top, 10)
                     }
                     if card.slowed && known {
                         SlowedLine().padding(.top, 6)
@@ -99,7 +101,8 @@ struct HuntHeroCard<Title: View>: View {
                 WatchLines(page: card.page, compact: false).padding(.top, 14)
             }
             if text.kind == .price {
-                PriceLines(state: card.price, compact: false).padding(.top, 14)
+                PriceLines(state: card.price, compact: false, everywhere: card.hunt.search.price?.mode == .everywhere)
+                    .padding(.top, 14)
             }
             if card.slowed && text.kind != nil {
                 SlowedLine().padding(.top, 8)
@@ -440,7 +443,7 @@ struct LatestMatches: View {
                 ForEach(matches) { match in
                     Button { open(match.id) } label: {
                         MatchRow(match: match, kind: store.kind(of: match), showsNewDot: store.showsNewDot(match),
-                                 showsState: true)
+                                 showsState: true, alarmShop: store.alarmShop(of: match))
                     }
                     .buttonStyle(.plain)
                     .contextMenu { MatchRowActions(match: match, store: store) }

@@ -281,7 +281,10 @@ final class AppNavigation {
 /// with its name's field open; `-renameText <text>` types in it, read by `HuntPage`), brief 137's `-openPriceForm` (the
 /// first price monitor's form) and `-newPriceForm` (in the form `-priceURL <text>`, `-pricePreview reading|refused|failed`
 /// and `-priceSwitches history|alarm|none`, read by `PriceSearchScreen`), `-priceDays 30|90|365` (the chart on a
-/// monitor's page) and `-monitorLine refused|hold` (its switches' line, read by `MonitorPage`),
+/// monitor's page) and `-monitorLine refused|hold` (its switches' line, read by `MonitorPage`); brief 157's
+/// `-priceMode page|everywhere`, `-priceProduct <text>`, `-priceDetails <text>`, `-sitesOff <id,id>` and `-priceSites`
+/// (the form's "Where it looks" once its sites are known), `-openSites` (with `-openHunt <id>`, the page's), `-scrollTo
+/// offers` and `-suggestShop` (on "Where it looks", the contact form as "Suggest a shop" opens it),
 /// `-openSheet settings|application|rejected|place|describe` (place and describe over a form, the
 /// first hunt's unless another is asked for; rejected: of the search `-openSearch` opened, else of every search), `-scrollBottom` (Hunts and the forms), `-scrollTo size|rent|movein`
 /// (the flat form), `-scrollTo where` (the thing form), `-sampleUndo`, `-sampleSearchDraft`, `-sampleMoreLoading`,

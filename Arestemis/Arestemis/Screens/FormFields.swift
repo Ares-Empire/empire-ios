@@ -410,16 +410,20 @@ struct ExtrasField: View {
 }
 
 /// How often a watched page or a product's page is read (the watch form, the monitor's): Apple's menu in a quiet well, as
-/// the thing form's condition, the server's intervals (`WatchInterval`).
+/// the thing form's condition, the server's intervals (`WatchInterval`). An everywhere monitor (brief 157) offers hourly
+/// or slower (`choices`) and checks the shops rather than a page (`label`).
 struct ReadIntervalCard: View {
     @Binding var every: Int
+    /// The intervals offered; the server's all by default.
+    var choices = WatchSearch.everyChoices
+    var label = String(localized: "Read the page")
 
     var body: some View {
         FormCard {
-            FormRow(label: String(localized: "Read the page")) {
+            FormRow(label: label) {
                 Menu {
                     Picker("How often", selection: $every) {
-                        ForEach(WatchInterval.choices(keeping: every), id: \.self) { minutes in
+                        ForEach(WatchInterval.choices(keeping: every, from: choices), id: \.self) { minutes in
                             Text(verbatim: WatchInterval.title(minutes)).tag(minutes)
                         }
                     }

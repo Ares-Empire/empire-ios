@@ -1,0 +1,164 @@
+{
+  "offers": [
+    {
+      "source": "billiger",
+      "source_name": "billiger.de",
+      "shop": "Amazon",
+      "url": "https://www.billiger.de/products/123-orbital-headphones-2-blue#offers",
+      "price": 215,
+      "currency": "EUR",
+      "shipping": 0,
+      "availability": "in_stock",
+      "checked": "2026-10-24T09:58:40Z"
+    },
+    {
+      "source": "mediamarkt",
+      "source_name": "MediaMarkt",
+      "shop": "MediaMarkt",
+      "url": "https://www.mediamarkt.de/de/product/_orbital-2-blue-123.html",
+      "price": 229,
+      "currency": "EUR",
+      "shipping": 4.99,
+      "availability": "in_stock",
+      "checked": "2026-10-24T09:58:40Z"
+    },
+    {
+      "source": "idealo",
+      "source_name": "idealo",
+      "shop": "Otto",
+      "url": "https://www.idealo.de/preisvergleich/OffersOfProduct/123_-orbital-headphones-2-blue.html#otto",
+      "price": 219.0,
+      "currency": "EUR",
+      "shipping": 0,
+      "availability": "in_stock",
+      "checked": "2026-10-24T09:58:40Z"
+    },
+    {
+      "source": "geizhals",
+      "source_name": "Geizhals",
+      "shop": "Cyberport",
+      "url": "https://geizhals.de/orbital-headphones-2-blue-a123.html#cyberport",
+      "price": 224.9,
+      "currency": "EUR",
+      "shipping": 5.99,
+      "availability": "in_stock",
+      "checked": "2026-10-24T09:58:40Z"
+    },
+    {
+      "source": "ebay",
+      "source_name": "eBay",
+      "shop": "eBay",
+      "url": "https://www.ebay.de/itm/123",
+      "price": 226.0,
+      "currency": "EUR",
+      "shipping": 0,
+      "availability": "in_stock",
+      "checked": "2026-10-24T09:58:40Z"
+    },
+    {
+      "source": "idealo",
+      "source_name": "idealo",
+      "shop": "Amazon",
+      "url": "https://www.idealo.de/preisvergleich/OffersOfProduct/123_-orbital-headphones-2-blue.html#amazon",
+      "price": 215.0,
+      "currency": "EUR",
+      "shipping": 0,
+      "availability": "in_stock",
+      "checked": "2026-10-24T09:58:40Z"
+    },
+    {
+      "source": "billiger",
+      "source_name": "billiger.de",
+      "shop": "notebooksbilliger.de",
+      "url": "https://www.billiger.de/products/123-orbital-headphones-2-blue#nbb",
+      "price": 239.0,
+      "currency": "EUR",
+      "shipping": 4.99,
+      "availability": "out_of_stock",
+      "checked": "2026-10-24T09:58:40Z"
+    },
+    {
+      "source": "geizhals",
+      "source_name": "Geizhals",
+      "shop": "Galaxus",
+      "url": "https://geizhals.de/orbital-headphones-2-blue-a123.html#galaxus",
+      "price": 231.0,
+      "currency": "EUR",
+      "shipping": null,
+      "availability": "preorder",
+      "checked": "2026-10-24T09:58:40Z"
+    }
+  ],
+  "sites": [
+    {
+      "id": "mediamarkt",
+      "name": "MediaMarkt",
+      "kind": "shop",
+      "state": "has_it",
+      "on": true
+    },
+    {
+      "id": "saturn",
+      "name": "Saturn",
+      "kind": "shop",
+      "state": "not_found",
+      "on": true
+    },
+    {
+      "id": "alternate",
+      "name": "Alternate",
+      "kind": "shop",
+      "state": "unreadable",
+      "on": true
+    },
+    {
+      "id": "galaxus",
+      "name": "Galaxus",
+      "kind": "shop",
+      "state": "checking",
+      "on": true
+    },
+    {
+      "id": "cyberport",
+      "name": "Cyberport",
+      "kind": "shop",
+      "state": "checking",
+      "on": true
+    },
+    {
+      "id": "idealo",
+      "name": "idealo",
+      "kind": "comparison",
+      "state": "has_it",
+      "on": true
+    },
+    {
+      "id": "billiger",
+      "name": "billiger.de",
+      "kind": "comparison",
+      "state": "has_it",
+      "on": true
+    },
+    {
+      "id": "geizhals",
+      "name": "Geizhals",
+      "kind": "comparison",
+      "state": "has_it",
+      "on": true
+    },
+    {
+      "id": "ebay",
+      "name": "eBay",
+      "kind": "marketplace",
+      "state": "has_it",
+      "on": true
+    },
+    {
+      "id": "mydealz",
+      "name": "mydealz",
+      "kind": "marketplace",
+      "state": "checking",
+      "on": false
+    }
+  ]
+}

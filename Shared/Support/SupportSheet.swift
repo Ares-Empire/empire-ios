@@ -5,7 +5,9 @@ import SwiftUI
 /// Without a login (Aresium only, always: `EmpireAppIdentity.supportWithoutLogin`) the form also asks for the email to
 /// answer to and, optionally, a name.
 /// Present it as a sheet: `SupportSheet(session: session, accent: app.accent, sample: sample)`; it sets its own detent
-/// and background, and asks before closing over unsent text.
+/// and background, and asks before closing over unsent text. A place that opens it for one purpose passes the kind and
+/// the start of the text (Arestemis's "Suggest a shop": an idea, "Suggest a shop: "); the text box then has the
+/// keyboard, and closing over nothing but that start asks nothing.
 struct SupportSheet: View {
     let accent: AppAccent?
     @State private var form: SupportForm
@@ -18,9 +20,12 @@ struct SupportSheet: View {
     /// - Parameters:
     ///   - accent: the app's accent (the wall's light, the Send button); nil keeps to ink (Empire, Aresium).
     ///   - sample: sample mode: pretends to send, never calls the server.
-    init(session: EmpireSession, accent: AppAccent? = nil, sample: Bool = false) {
+    ///   - kind: what the message is about when it opens.
+    ///   - text: the message's start, for the person to go on from; "" for an empty box.
+    init(session: EmpireSession, accent: AppAccent? = nil, sample: Bool = false, kind: SupportKind = .problem,
+         text: String = "") {
         self.accent = accent
-        let form = SupportForm(session: session, sample: sample)
+        let form = SupportForm(session: session, sample: sample, kind: kind, text: text)
         #if DEBUG
         form.applyDebugArguments(LaunchArguments.current)
         #endif
@@ -57,6 +62,10 @@ struct SupportSheet: View {
         .presentationDetents([.large])
         .presentationBackground(Ink.background)
         .interactiveDismissDisabled(form.hasUnsentText || form.phase == .sending)
+        .onAppear {
+            // Opened with its text started: the person goes on typing right there.
+            if form.startsWithText { writing = true }
+        }
     }
 
     // MARK: writing

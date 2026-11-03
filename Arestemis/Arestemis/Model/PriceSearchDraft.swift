@@ -1,25 +1,48 @@
 import Foundation
 
-/// The Preismonitor's form as typed (brief 137, the sketch's mockup): its name, the product's link, what it should do
-/// (the history, the alarm with its two conditions; at least one of the two on) and how often. Only what the contract
-/// asks is checked here; whether a link can be read is the server's to say (its preview, its refusal on save).
-struct PriceSearchDraft: Codable {
-    /// The monitor's own name; empty = the product's name once read, else the host.
+/// The Preismonitor's form as typed (brief 137, the sketch's mockup; brief 157 "Ein Shop | Überall"): its mode, its
+/// name, the product's link (Ein Shop) or the product in words with optional details, the product the preview found for
+/// them and the sites switched off (Überall), what it should do (the history, the alarm with its two conditions; at least
+/// one of the two on) and how often. Each mode keeps its own fields while the other is shown, so switching back finds
+/// them as they were; the name, the switches and how often are the monitor's in both. Only what the contract asks is
+/// checked here; whether a link or a product can be read is the server's to say (its preview, its refusal on save).
+struct PriceSearchDraft {
+    /// Ein Shop or Überall; a new form opens on Überall (Patrik's case: a product in words, no link to find first).
+    var mode: PriceSearch.Mode = .everywhere
+    /// The monitor's own name; empty = the product's name once read, else the host (Ein Shop) or the words (Überall).
     var name = ""
+    /// Ein Shop: the product page's link.
     var url = ""
+    /// Überall: the product in words and the optional details (colour, size, variant).
+    var product = ""
+    var details = ""
+    /// Überall: the product the preview found, and the words it was found for: saving needs it found for the words as
+    /// they are now, and sends it as the confirmed identity.
+    var identity: ProductIdentity?
+    var identityWords: ProductWords?
+    /// Überall: the sites switched off on "Where it looks".
+    var sourcesOff: [String] = []
     /// Records the price and the availability as a curve. A new form starts with it on.
     var history = true
     var alarm = false
     /// The price condition's limit in euros; nil: no price condition.
     var below: Double?
     var backInStock = false
+    /// How often, as chosen; Überall reads at most hourly (`effectiveEvery`), so a page's 15 minutes come back when
+    /// switching back.
     var every = WatchSearch.defaultEvery
 
     init() {}
 
     init(_ search: PriceSearch, name: String?) {
         self.name = name ?? ""
-        url = search.url
+        mode = search.mode
+        url = search.url ?? ""
+        product = search.product ?? ""
+        details = search.details
+        identity = search.identity
+        identityWords = search.identity == nil ? nil : ProductWords(product: product, details: details)
+        sourcesOff = search.sourcesOff
         history = search.history
         alarm = search.alarm != nil
         below = search.alarm?.below
@@ -28,8 +51,14 @@ struct PriceSearchDraft: Codable {
     }
 
     enum Problem: Equatable {
-        /// No link, or one over 2,000 characters.
+        /// No link, or one over 2,000 characters (Ein Shop).
         case url
+        /// No product, or one under 2 or over 100 characters (Überall).
+        case product
+        /// Details over 300 characters (Überall).
+        case details
+        /// The product is not found yet for the words as they are now (Überall).
+        case unconfirmed
         /// Neither the history nor the alarm.
         case neither
         /// The alarm without a condition.
@@ -38,13 +67,37 @@ struct PriceSearchDraft: Codable {
 
     var problems: [Problem] {
         var result: [Problem] = []
-        let url = Self.trimmed(url)
-        if url.isEmpty || url.count > WatchSearchDraft.maxURL { result.append(.url) }
+        switch mode {
+        case .page:
+            let url = Self.trimmed(url)
+            if url.isEmpty || url.count > WatchSearchDraft.maxURL { result.append(.url) }
+        case .everywhere:
+            if !ProductWords.productLengths.contains(words.product.count) { result.append(.product) }
+            if words.details.count > ProductWords.maxDetails { result.append(.details) }
+            if result.isEmpty && !isConfirmed { result.append(.unconfirmed) }
+        }
         if !history && !alarm { result.append(.neither) }
         if alarm && !conditions.isComplete { result.append(.alarmCondition) }
         return result
     }
     var isValid: Bool { problems.isEmpty }
+
+    /// Überall: the words as typed, trimmed.
+    var words: ProductWords { ProductWords(product: product, details: details) }
+
+    /// Überall: the product was found for the words as they are now.
+    var isConfirmed: Bool { identity != nil && identityWords == words }
+
+    /// The preview found a product for these words: it becomes the one saving confirms (an answer for other words, an
+    /// older one, changes nothing).
+    mutating func confirm(_ found: ProductIdentity, for words: ProductWords) {
+        guard words == self.words else { return }
+        identity = found
+        identityWords = words
+    }
+
+    /// How often the monitor reads: as chosen, at least hourly for Überall.
+    var effectiveEvery: Int { mode == .everywhere ? max(every, PriceSearch.everywhereEvery) : every }
 
     /// The alarm's conditions as typed.
     private var conditions: PriceSearch.Alarm {
@@ -55,7 +108,14 @@ struct PriceSearchDraft: Codable {
     /// stay in the form meanwhile, so turning it on again brings them back).
     func search() -> PriceSearch? {
         guard isValid else { return nil }
-        return PriceSearch(url: Self.trimmed(url), history: history, alarm: alarm ? conditions : nil, every: every)
+        let alarm = alarm ? conditions : nil
+        switch mode {
+        case .page:
+            return PriceSearch(url: Self.trimmed(url), history: history, alarm: alarm, every: every)
+        case .everywhere:
+            return PriceSearch(product: words.product, details: words.details, identity: identity,
+                               sourcesOff: sourcesOff, history: history, alarm: alarm, every: effectiveEvery)
+        }
     }
 
     /// The name sent: trimmed and at most 60 characters; nil when empty, so the server names it.
@@ -78,8 +138,8 @@ struct PriceSearchDraft: Codable {
         return below == nil
     }
 
-    /// The price found later fills the limit when the alarm is on and it is still empty (the form's example "Price
-    /// under …", or an alarm switched on before the preview came). Returns whether it filled it.
+    /// The price found later fills the limit when the alarm is on and it is still empty (the form's example, or an alarm
+    /// switched on before the preview came). Returns whether it filled it.
     @discardableResult
     mutating func prefillLimit(price: Double?, currency: String? = "EUR") -> Bool {
         guard alarm, below == nil, let limit = PriceLimit.suggested(under: price, currency: currency) else { return false }
@@ -87,10 +147,13 @@ struct PriceSearchDraft: Codable {
         return true
     }
 
-    /// What the name field shows while it is empty: the product's name the server found, else the host of the link,
-    /// else "Optional".
-    func namePlaceholder(product: String?, language: AppLanguage = .current) -> String {
-        HuntName.placeholder(HuntText.text(product) ?? WatchAddress.host(url), language: language)
+    /// What the name field shows while it is empty: Ein Shop: the product's name the server found, else the host of the
+    /// link; Überall: the product found, else the words; else "Optional".
+    func namePlaceholder(product found: String?, language: AppLanguage = .current) -> String {
+        switch mode {
+        case .page: HuntName.placeholder(HuntText.text(found) ?? WatchAddress.host(url), language: language)
+        case .everywhere: HuntName.placeholder(HuntText.text(found) ?? HuntText.text(words.product), language: language)
+        }
     }
 
     /// What is wrong, in a sentence: the switches' rule in the sketch's words, an alarm without a condition in the
@@ -100,6 +163,12 @@ struct PriceSearchDraft: Codable {
         case .url:
             Self.trimmed(url).count > WatchSearchDraft.maxURL ? language.string("At most 2,000 characters.")
                 : language.string("Paste the product's link.")
+        case .product:
+            words.product.isEmpty ? language.string("Type the product.")
+                : words.product.count < ProductWords.productLengths.lowerBound ? language.string("At least 2 characters.")
+                : language.string("At most 100 characters.")
+        case .details: language.string("At most 300 characters.")
+        case .unconfirmed: language.string("First the product has to be found.")
         case .neither: language.string("At least one of the two.")
         case .alarmCondition: language.string("Say when the alarm should ring.")
         }
@@ -107,27 +176,78 @@ struct PriceSearchDraft: Codable {
 
     /// The one quiet line under the switches: the switches' rule, or an alarm without a condition.
     func switchesLine(language: AppLanguage = .current) -> String? {
-        problems.first { $0 != .url }.map { message($0, language: language) }
+        problems.first { $0 == .neither || $0 == .alarmCondition }.map { message($0, language: language) }
     }
 
     /// The line under the link: only a link that is too long (an empty one says so under Save).
     func urlLine(language: AppLanguage = .current) -> String? {
-        Self.trimmed(url).count > WatchSearchDraft.maxURL ? message(.url, language: language) : nil
+        mode == .page && Self.trimmed(url).count > WatchSearchDraft.maxURL ? message(.url, language: language) : nil
     }
 
-    /// One calm line under Save: a missing link (the switches say their own line where they are).
+    /// The line under the product: one too short or too long (an empty one says so under Save).
+    func productLine(language: AppLanguage = .current) -> String? {
+        guard mode == .everywhere, !words.product.isEmpty, problems.contains(.product) else { return nil }
+        return message(.product, language: language)
+    }
+
+    /// The line under the details: too long.
+    func detailsLine(language: AppLanguage = .current) -> String? {
+        mode == .everywhere && problems.contains(.details) ? message(.details, language: language) : nil
+    }
+
+    /// One calm line under Save: a missing link or product, or a product not found yet (the switches say their own line
+    /// where they are).
     func hint(language: AppLanguage = .current) -> String? {
-        Self.trimmed(url).isEmpty ? message(.url, language: language) : nil
+        switch mode {
+        case .page:
+            return Self.trimmed(url).isEmpty ? message(.url, language: language) : nil
+        case .everywhere:
+            if words.product.isEmpty { return message(.product, language: language) }
+            return problems.contains(.unconfirmed) ? message(.unconfirmed, language: language) : nil
+        }
     }
 
     private static func trimmed(_ text: String) -> String { text.trimmingCharacters(in: .whitespacesAndNewlines) }
 }
 
+extension PriceSearchDraft: Codable {
+    enum CodingKeys: String, CodingKey {
+        case mode, name, url, product, details, identity, identityWords, sourcesOff, history, alarm, below, backInStock
+        case every
+    }
+
+    /// A kept draft from a build before brief 157 has no mode: it was a page monitor's.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        mode = try c.decodeIfPresent(PriceSearch.Mode.self, forKey: .mode) ?? .page
+        name = try c.decodeIfPresent(String.self, forKey: .name) ?? ""
+        url = try c.decodeIfPresent(String.self, forKey: .url) ?? ""
+        product = try c.decodeIfPresent(String.self, forKey: .product) ?? ""
+        details = try c.decodeIfPresent(String.self, forKey: .details) ?? ""
+        identity = try c.decodeIfPresent(ProductIdentity.self, forKey: .identity)
+        identityWords = try c.decodeIfPresent(ProductWords.self, forKey: .identityWords)
+        sourcesOff = try c.decodeIfPresent([String].self, forKey: .sourcesOff) ?? []
+        history = try c.decodeIfPresent(Bool.self, forKey: .history) ?? true
+        alarm = try c.decodeIfPresent(Bool.self, forKey: .alarm) ?? false
+        below = try c.decodeIfPresent(Double.self, forKey: .below)
+        backInStock = try c.decodeIfPresent(Bool.self, forKey: .backInStock) ?? false
+        every = try c.decodeIfPresent(Int.self, forKey: .every) ?? WatchSearch.defaultEvery
+    }
+}
+
 extension PriceSearchDraft: Equatable {
-    /// Two drafts are the same monitor when they would send the same: the alarm's conditions count only while it is on.
+    /// Two drafts are the same monitor when they would send the same: the alarm's conditions count only while it is on,
+    /// and only the shown mode's own fields (the other mode's are kept, not sent).
     static func == (a: PriceSearchDraft, b: PriceSearchDraft) -> Bool {
-        a.name == b.name && a.url == b.url && a.history == b.history && a.alarm == b.alarm && a.every == b.every
-            && (!a.alarm || (a.below == b.below && a.backInStock == b.backInStock))
+        guard a.mode == b.mode, a.name == b.name, a.history == b.history, a.alarm == b.alarm,
+              a.effectiveEvery == b.effectiveEvery,
+              !a.alarm || (a.below == b.below && a.backInStock == b.backInStock) else { return false }
+        switch a.mode {
+        case .page: return a.url == b.url
+        case .everywhere:
+            return a.product == b.product && a.details == b.details && a.identity == b.identity
+                && Set(a.sourcesOff) == Set(b.sourcesOff)
+        }
     }
 }
 

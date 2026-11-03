@@ -324,7 +324,7 @@ struct TourTests {
         #expect(TourStep.monitorsAndWatches.lines(de).map(\.label)
                 == [SearchKind.price.choiceTitle(language: de), SearchKind.watch.choiceTitle(language: de)])
         #expect(TourStep.monitorsAndWatches.text(de) == """
-            Preismonitor: Ein Push, wenn ein Preis fällt oder ein Produkt wieder lieferbar ist, dazu die Kurve.
+            Preismonitor: Ein Push, wenn ein Produkt in einem Shop oder überall günstiger oder wieder lieferbar ist, dazu die Kurve.
             Webseite beobachten: Ein Push, wenn auf einer Seite etwas Neues erscheint: eine Version, eine Stelle, der Speiseplan.
             """)
         #expect(TourStep.newListings.text(de)

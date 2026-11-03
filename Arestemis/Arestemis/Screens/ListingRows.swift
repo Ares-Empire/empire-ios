@@ -20,7 +20,8 @@ struct ListingRow: View {
     var body: some View {
         Button(action: open) {
             MatchRow(match: match, kind: store.kind(of: match), showsNewDot: store.showsNewDot(match),
-                     showsState: showsState, showsNewState: showsNewState, hunt: hunt)
+                     showsState: showsState, showsNewState: showsNewState, hunt: hunt,
+                     alarmShop: store.alarmShop(of: match))
                 .tourAnchor(spot)
         }
         .buttonStyle(.plain)

@@ -17,6 +17,8 @@ struct HuntPage: View {
     let store: ArestemisStore
     @Bindable var navigation: AppNavigation
     @State private var confirmDelete = false
+    /// An everywhere monitor's "Where it looks" (brief 157), pushed from its row.
+    @State private var showsSites = false
     /// The name's field while it is open.
     @State private var edit: NameEdit?
     @State private var nameSelection: TextSelection?
@@ -40,6 +42,7 @@ struct HuntPage: View {
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(edit != nil)
         .toolbar { toolbar }
+        .navigationDestination(isPresented: $showsSites) { MonitorSitesPage(id: id, store: store) }
         .confirmationDialog(words.deleteQuestion, isPresented: $confirmDelete, titleVisibility: .visible) {
             Button(words.delete, role: .destructive) {
                 navigation.leaveDeleted(id)
@@ -87,11 +90,12 @@ struct HuntPage: View {
                                 .buttonStyle(ProvinceButtonStyle(kind: .glass, height: 46))
                             }
                             if let monitor = card.hunt.search.price {
-                                Button { if let url = monitor.shopURL { openURL(url) } } label: {
+                                let shop = shopURL(monitor)
+                                Button { if let shop { openURL(shop) } } label: {
                                     Label("Open in shop", systemImage: "safari")
                                 }
                                 .buttonStyle(ProvinceButtonStyle(kind: .glass, height: 46))
-                                .disabled(monitor.shopURL == nil)
+                                .disabled(shop == nil)
                             } else {
                                 Button { showListings(nil) } label: {
                                     Label("Listings", systemImage: "list.bullet.rectangle")
@@ -104,7 +108,7 @@ struct HuntPage: View {
                         if let monitor = card.hunt.search.price {
                             MonitorSections(card: card, search: monitor, store: store,
                                             open: { navigation.huntPath.append(.match($0)) },
-                                            showAll: { showListings(.all) })
+                                            showAll: { showListings(.all) }, showsSites: $showsSites)
                         } else {
                             figuresAndLatest(card, actions: actions, kind: kind)
                         }
@@ -297,6 +301,13 @@ struct HuntPage: View {
         .tint(Ink.primary)
         .disabled(store.isChanging(hunt: id))
         .accessibilityLabel("Search actions")
+    }
+
+    /// Where "Open in shop" goes: the product's page, or for an everywhere monitor its cheapest offer now (brief 157).
+    private func shopURL(_ monitor: PriceSearch) -> URL? {
+        guard monitor.mode == .everywhere else { return monitor.shopURL }
+        let offers = store.offers(hunt: id).offers?.offers ?? []
+        return OfferList.shown(offers, off: monitor.sourcesOff).first { $0.link != nil }?.link
     }
 
     /// This search's listings on the Listings tab at the filter asked for (Listings: New while it has new ones, else

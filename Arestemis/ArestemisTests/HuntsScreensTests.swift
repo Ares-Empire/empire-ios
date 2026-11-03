@@ -264,7 +264,8 @@ struct HuntsScreensTests {
         let store = ArestemisStore(session: session, backend: try SampleBackend(options: .init(slowed: true, newerKind: true)),
                                    sample: true, placeDelay: .zero)
         await store.reloadOverview()
-        #expect(store.hunts.map(\.slowed) == [false, true, false, true, true, false, false, false, false, false, false, false])
+        #expect(store.hunts.map(\.slowed) == [false, true, false, true, true, false, false, false, false, false, false, false,
+                                              false])
         #expect(store.hunts.last?.hunt.kind == .unknown("car") && store.hunts.last?.hunt.search == .unsupported)
     }
 
