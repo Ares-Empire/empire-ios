@@ -1,6 +1,6 @@
 # 228: Arestoteles app: every edit says which version it was made on
 
-Status: running (started 2026-11-03)
+Status: built 2026-11-03 (branch `codex/228-edit-versions` 1fb1204, 156 tests per Codex), not merged: ships after brief 225's server is live with versions optional.
 Branch: `codex/228-edit-versions` · Worktree: `../empire-ios-228-edit-versions` · Model: `gpt-6.1-sol`, effort `high` ·
 Simulator: `codex-228` (create it as `AGENTS.md` says)
 

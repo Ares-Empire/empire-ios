@@ -1,6 +1,6 @@
 # 223: A balance that matches the bank, account by account
 
-Status: merged + deployed 2026-11-03 (aresium aaf3443; 638 tests; real data: only balances changed, 0 uncertain account-days). Open: the app (copy dist/aresium-engine.js, pass accountId, balance decoders accept null), check against bank files on the Mac.
+Status: merged + deployed 2026-11-03 (aresium aaf3443; 638 tests; real data: only balances changed, 0 uncertain account-days); in the app with build 21 (brief 227). Open: a check against the bank files on the Mac.
 Branch: `codex/223-balance` (repo `aresium`) · Worktree: `~/aresium-223-balance` · Model: `gpt-6.1-sol`, effort `high`
 
 ## Goal
