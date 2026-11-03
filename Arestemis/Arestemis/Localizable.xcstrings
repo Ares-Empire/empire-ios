@@ -712,16 +712,6 @@
         }
       }
     },
-    "Application" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bewerbung"
-          }
-        }
-      }
-    },
     "Application text" : {
       "localizations" : {
         "de" : {

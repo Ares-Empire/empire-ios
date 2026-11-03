@@ -31,7 +31,7 @@ struct ArestemisLink: Equatable {
 }
 
 /// The push for a new match (Arestemis/docs/API.md → push), `url` = `arestemis://match/<id>`: a flat's in category
-/// `ARESTEMIS_MATCH` with the actions "Open listing" and "Application", a thing's in `ARESTEMIS_ITEM` with "Open
+/// `ARESTEMIS_MATCH` with the actions "Open listing" and "Application text", a thing's in `ARESTEMIS_ITEM` with "Open
 /// listing", a watch's change in `ARESTEMIS_WATCH` with "Open page" (the watched page; brief 131), a price monitor's
 /// alarm in `ARESTEMIS_PRICE` with "Open in shop" (the product's page; brief 137). Tapping any opens the match.
 ///
@@ -49,7 +49,7 @@ enum MatchNotification {
     static var categories: Set<UNNotificationCategory> {
         let open = UNNotificationAction(identifier: openListingAction, title: String(localized: "Open listing"),
                                         options: [.foreground], icon: UNNotificationActionIcon(systemImageName: "safari"))
-        let application = UNNotificationAction(identifier: applicationAction, title: String(localized: "Application"),
+        let application = UNNotificationAction(identifier: applicationAction, title: String(localized: "Application text"),
                                                options: [.foreground], icon: UNNotificationActionIcon(systemImageName: "text.quote"))
         // The watched page opens like a listing (`ArestemisLink.Then.openListing`: the match, then its address).
         let openPage = UNNotificationAction(identifier: openListingAction, title: String(localized: "Open page"),

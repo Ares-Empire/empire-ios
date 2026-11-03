@@ -3,7 +3,7 @@ import UserNotifications
 
 /// Arestemis: the shared Empire login, then two tabs (Hunts, Listings: New | Searches); a hunt's search opens from the hunt. Logged in once in any Empire app means
 /// logged in here. `-sampleData` shows the bundled samples (see `LaunchOptions` for the screenshot arguments).
-/// A new match arrives as a push (Shared/Push); tapping it, or its "Open listing" / "Application" action, opens the match.
+/// A new match arrives as a push (Shared/Push); tapping it, or its "Open listing" / "Application text" action, opens the match.
 /// The tour (brief 139, `Model/Tour.swift`) shows the same tabs on its own world in place of the account's, once by
 /// itself per account and again from Settings → Help; a notification, a link or logging out ends it first.
 struct ContentView: View {
