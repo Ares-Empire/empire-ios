@@ -58,3 +58,15 @@ enum ChartReading {
         }
     }
 }
+
+
+/// Keep unknown balances out of the plot, without joining the known stretches on either side.
+nonisolated enum ChartBalances {
+    static func points(_ values: [Double?], make: (Int, Double, Int) -> ChartPoint) -> [ChartPoint] {
+        var segment = 0
+        return values.enumerated().compactMap { index, value in
+            guard let value else { segment += 1; return nil }
+            return make(index, value, segment)
+        }
+    }
+}

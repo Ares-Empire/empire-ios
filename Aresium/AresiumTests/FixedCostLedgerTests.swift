@@ -52,6 +52,22 @@ struct FixedCostLedgerTests {
         #expect(store.fixedCosts(side: .expenses)?.takenOut.count == 1)
     }
 
+    @Test func preEngineSchemaEightMarkKeepsItsLiteralIDWithoutARewrite() async throws {
+        // Exactly the mark stored by the Swift detector before brief 227, with no engine-derived values.
+        let data = Data(#"{"key":"merchant:fictional rent","side":"expenses","cadence":"monthly","anchor":"rent0"}"#.utf8)
+        let mark = try JSONDecoder().decode(FixedCostMark.self, from: data)
+        let (phone, store) = try await setup(marks: [mark])
+        let entry = try #require(store.fixedCosts(side: .expenses)?.takenOut.first)
+        let expectedID = "merchant:fictional rent\u{1F}expenses\u{1F}monthly\u{1F}rent0"
+        #expect(mark.id == expectedID && entry.id == expectedID && entry.mark == mark)
+        #expect(entry.notFixed && store.fixedCosts(side: .expenses)?.monthlyCents == 0)
+        let observer = await phone.ledger.batchObserver(), saves = observer.value
+        await store.reload()
+        #expect(observer.value == saves)
+        #expect(try await phone.export().fixedCostMarks == [mark])
+        #expect(store.fixedCosts(side: .expenses)?.takenOut.first?.id == expectedID)
+    }
+
     @Test func newImportKeepsMarkAndInvalidatesUndoAndOldEntry() async throws {
         let (phone, store) = try await setup()
         let entry = try #require(store.fixedCosts(side: .expenses)?.running.first)
@@ -238,10 +254,10 @@ struct FixedCostTimingTests {
         var samples: [Double] = []
         for round in 0..<8 {
             let start = ProcessInfo.processInfo.systemUptime
-            let entries = await FixedCostsCache.build(dashboard, marks: [])
+            let analysis = try await FixedCostsCache.build(dashboard, marks: [], engine: phone.engine)
             let ms = (ProcessInfo.processInfo.systemUptime - start) * 1000
             if round > 0 { samples.append(ms) }
-            print("FIXED COST TIMING round=\(round) payments=5000 entries=\(entries.count) ms=\(ms)")
+            print("FIXED COST TIMING round=\(round) payments=5000 entries=\(analysis.entries.count) ms=\(ms)")
         }
         print("FIXED COST TIMING median-ms=\(samples.sorted()[3]) min-ms=\(samples.min()!) max-ms=\(samples.max()!)")
     }

@@ -715,6 +715,9 @@ struct AresiumTests {
         #expect(transport.requests.count == 1)
         let body = try JSONDecoder().decode([String: [ImportFile]].self, from: #require(transport.requests.first?.httpBody))
         #expect(body["files"]?.map(\.name) == ["bank.csv", "paypal.xml"])
+        // Receiving the request precedes the asynchronous engine average and dashboard publication.
+        let deadline = ContinuousClock.now + .seconds(5)
+        while imports.isBusy && ContinuousClock.now < deadline { try await Task.sleep(for: .milliseconds(5)) }
         #expect(dashboardTransport.requests.count == 1)
         #expect(!imports.isBusy)
     }
@@ -1388,7 +1391,7 @@ struct ServerSampleMatchesWebsiteTests {
                 }
             }
         }
-        #expect(compared == 488) // brief 71: money in leaves the spending lists
+        #expect(compared == 502) // brief 218: fixed costs, paybacks and unsorted demo names
     }
 }
 

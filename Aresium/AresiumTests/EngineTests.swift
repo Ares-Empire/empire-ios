@@ -16,8 +16,8 @@ struct EngineTests {
     @Test func dashboardMatchesServerExactlyAndDecodes() throws {
         let engine = try EngineHarness(bundle: appEngine())
         let result = try engine.dashboard(resourceText("dashboard.sample-source.json"))
-        // The server's own answer for the same sample (`npm run sample` in aresium, then `scripts/aresium-fixtures.mjs`).
-        let server = try Data(contentsOf: Self.directory.appendingPathComponent("server-dashboard.sample.json"))
+        // The server's own answer for the original source, separate from the web demo expanded in brief 218.
+        let server = try resourceData("dashboard.sample-expected.json")
         try expectSameJSON(Data(result.utf8), server)
         let dashboard = try Dashboard.decode(Data(result.utf8))
         #expect(dashboard.version == 2)

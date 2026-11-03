@@ -29,7 +29,7 @@ struct WidgetTests {
         #expect(month.days == 11)
         #expect(snapshot.daysInMonth == 30)
         #expect(snapshot.dayExpenseRunning == data.dayExpenseRunning)
-        #expect(snapshot.dayExpenseRunning == [600.32, 671.92, 770.12, 832.63, 908.63, 959.28, 981.35, 1015.15, 1066.06, 1115.44, 1187.09])
+        #expect(snapshot.dayExpenseRunning == [582.29, 653.89, 884.09, 946.6, 1067.6, 1178.25, 1200.32, 1224.13, 1296.04, 1369.42, 1459.1])
         #expect(snapshot.expense == data.expense)
         #expect(snapshot.newestTransactionDate == dashboard.transactions.map(\.date).max())
         #expect(snapshot.categories.map(\.name) == dashboard.categories.filter { $0.kind == .spend }.map(\.name))

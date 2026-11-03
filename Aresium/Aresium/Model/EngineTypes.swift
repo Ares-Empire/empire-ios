@@ -273,6 +273,10 @@ nonisolated struct SortResult: Codable, Equatable, Sendable {
 nonisolated struct SourcePayment: Codable, Equatable, Sendable {
     let id: String
     let externalId: String
+    /// Stable ledger account identity; never a display name or import sequence.
+    var accountId: String? = nil
+    /// Genuine bank order only. Existing imports do not store it, so phone mode omits it.
+    var statementOrder: Int? = nil
     /// `YYYY-MM-DD`.
     let date: String
     let amount: Double

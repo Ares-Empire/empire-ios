@@ -5,6 +5,8 @@ import Testing
 /// Brief 209: the Overview's line under a side's total and the fixed costs page, on brief 208's numbers. Made-up data.
 @MainActor
 struct FixedCostScreensTests {
+    private let engine: AresiumEngine
+    init() throws { engine = try PhoneTest.engine() }
     private let today = "2026-11-02"
 
     private func row(_ id: String, _ day: String, _ amount: Double, name: String, category: String = "Housing") -> Transaction {
@@ -42,15 +44,15 @@ struct FixedCostScreensTests {
         return dashboard(rent + insurance + gym + salary)
     }
 
-    private func list(_ side: DashboardSide, takingOut name: String? = nil) -> FixedCostList {
-        let entries = FixedCosts.entries(in: sample)
+    private func list(_ side: DashboardSide, takingOut name: String? = nil) async throws -> FixedCostList {
+        let entries = try await engine.fixedCostEntries(in: sample)
         let marks = entries.filter { $0.name == name }.map(\.mark)
-        return FixedCosts.list(FixedCosts.entries(in: sample, marks: marks), side: side)
+        return try await engine.fixedCostList(try await engine.fixedCostEntries(in: sample, marks: marks), side: side)
     }
 
     // MARK: the Overview's line
 
-    @Test func overviewLineWordsInBothLanguages() {
+    @Test func overviewLineWordsInBothLanguages() async throws {
         #expect(FixedCostWords.average(194_000, language: .english) == "Avg. €1,940 a month")
         #expect(FixedCostWords.average(194_000, language: .german) == "Ø 1.940\u{a0}€ im Monat")
         #expect(FixedCostWords.fixedPart(86_000, side: .expenses, language: .english) == "€860 fixed")
@@ -67,9 +69,9 @@ struct FixedCostScreensTests {
                 == "Regelmäßige Einnahmen: 1.300\u{a0}€ im Monat")
     }
 
-    @Test func overviewLineOnlyOnOverviewWithAnAverageAndAFixedPartOnlyWhileOneRuns() throws {
+    @Test func overviewLineOnlyOnOverviewWithAnAverageAndAFixedPartOnlyWhileOneRuns() async throws {
         let average = MonthlyAverage(cents: 152_900, count: 12, first: "2025-10", last: "2026-10")
-        let expenses = list(.expenses)
+        let expenses = try await list(.expenses)
         let line = try #require(AverageLine(average: average, fixedCosts: expenses, side: .expenses, scope: .overview,
                                             language: .english))
         #expect(line.average == "Avg. €1,529 a month")
@@ -82,22 +84,22 @@ struct FixedCostScreensTests {
         #expect(AverageLine(average: nil, fixedCosts: expenses, side: .expenses, scope: .overview) == nil)
         // Server mode (no fixed costs) and a side where none was found: the average alone.
         #expect(AverageLine(average: average, fixedCosts: nil, side: .expenses, scope: .overview)?.fixed == nil)
-        let none = FixedCostList(running: [], ended: expenses.ended, takenOut: [])
+        let none = try await engine.fixedCostList(expenses.ended, side: .expenses)
         #expect(AverageLine(average: average, fixedCosts: none, side: .expenses, scope: .overview)?.fixed == nil)
         // Every running one taken out: the part stays (at €0), the way back to the page.
-        let rentOut = list(.expenses, takingOut: "Hausverwaltung Fiktiv")
-        let allOut = FixedCostList(running: [], ended: rentOut.ended, takenOut: rentOut.takenOut)
+        let rentOut = try await list(.expenses, takingOut: "Hausverwaltung Fiktiv")
+        let allOut = try await engine.fixedCostList(rentOut.ended + rentOut.takenOut, side: .expenses)
         #expect(AverageLine(average: average, fixedCosts: allOut, side: .expenses, scope: .overview,
                             language: .english)?.fixed == "€0 fixed")
-        let income = try #require(AverageLine(average: average, fixedCosts: list(.income), side: .income,
+        let income = try #require(AverageLine(average: average, fixedCosts: try await list(.income), side: .income,
                                               scope: .overview, language: .german))
         #expect(income.fixed == "davon 2.450\u{a0}€ regelmäßig")
     }
 
     // MARK: the page
 
-    @Test func pageRowsSectionsTotalAndWordsInEnglish() throws {
-        let page = FixedCostPage(list: list(.expenses), side: .expenses, today: today, language: .english)
+    @Test func pageRowsSectionsTotalAndWordsInEnglish() async throws {
+        let page = FixedCostPage(list: try await list(.expenses), side: .expenses, today: today, language: .english)
         #expect(!page.isEmpty)
         #expect(page.total == "€842" && page.year == "€10,099 a year")
         #expect(page.running.map(\.name) == ["Hausverwaltung Fiktiv", "Fiktiv Versicherung"])
@@ -124,8 +126,8 @@ struct FixedCostScreensTests {
                 == "StreamFiktiv counted again.")
     }
 
-    @Test func pageWordsInGerman() throws {
-        let page = FixedCostPage(list: list(.expenses), side: .expenses, today: today, language: .german)
+    @Test func pageWordsInGerman() async throws {
+        let page = FixedCostPage(list: try await list(.expenses), side: .expenses, today: today, language: .german)
         #expect(page.total == "842\u{a0}€" && page.year == "10.099\u{a0}€ im Jahr")
         let insurance = page.running[1]
         #expect(insurance.amount == "−498,96" && insurance.line == "jährlich · nächste am 15. Okt. 2027")
@@ -154,26 +156,26 @@ struct FixedCostScreensTests {
         #expect(FixedCostWording.last("2025-08-03", referenceDay: today, language: .english) == "last 3 Aug 2025")
     }
 
-    @Test func takenOutRowsCountAgainIncomeSideAndEmptyPage() throws {
-        let page = FixedCostPage(list: list(.expenses, takingOut: "Fiktiv Versicherung"), side: .expenses, today: today,
+    @Test func takenOutRowsCountAgainIncomeSideAndEmptyPage() async throws {
+        let page = FixedCostPage(list: try await list(.expenses, takingOut: "Fiktiv Versicherung"), side: .expenses, today: today,
                                  language: .english)
         #expect(page.running.map(\.name) == ["Hausverwaltung Fiktiv"] && page.total == "€800")
         let out = try #require(page.takenOut.first)
         #expect(out.name == "Fiktiv Versicherung" && out.quiet && out.change == .countAgain)
         #expect(out.line == "yearly · next 15 Oct 2027")              // still running: its next day due
         // A row moved to another section is another row (its identity names the section).
-        let before = FixedCostPage(list: list(.expenses), side: .expenses, today: today, language: .english)
+        let before = FixedCostPage(list: try await list(.expenses), side: .expenses, today: today, language: .english)
         #expect(before.running[1].entry.id == out.entry.id && before.running[1].id != out.id)
-        let income = FixedCostPage(list: list(.income), side: .income, today: today, language: .english)
+        let income = FixedCostPage(list: try await list(.income), side: .income, today: today, language: .english)
         // Brief 216: the salary is still running by the ledger reference, but 1 November is before today's 2nd.
         #expect(income.running.first?.amount == "+2,450.00" && income.running.first?.line == "monthly · last 1 Oct")
-        let empty = FixedCostPage(list: FixedCostList(running: [], ended: [], takenOut: []), side: .income)
+        let empty = FixedCostPage(list: try await engine.fixedCostList([], side: .income), side: .income)
         #expect(empty.isEmpty)
     }
 
     // MARK: the route and the real store
 
-    @Test func routeOpensOnItsSideAndTheHeaderNamesIt() {
+    @Test func routeOpensOnItsSideAndTheHeaderNamesIt() async throws {
         let route = DashboardRoute.fixedCosts(.income)
         #expect(route.fixedCosts && route.side == .income && !route.search && route.month == nil && route.name == nil)
         #expect(route != .fixedCosts(.expenses))
@@ -183,21 +185,21 @@ struct FixedCostScreensTests {
         #expect(FixedCostWords.title(route.side, language: .english) == "Regular income")
     }
 
-    @Test func overdueRunningAndTakenOutRowsSayLastInBothLanguages() throws {
+    @Test func overdueRunningAndTakenOutRowsSayLastInBothLanguages() async throws {
         // The ledger reference keeps the rent running. The wall clock changes only the next/last wording.
         for language in [AppLanguage.english, .german] {
             let expectedLast = language == .english ? "monthly · last 3 Oct" : "monatlich · zuletzt am 3. Okt."
-            let running = FixedCostPage(list: list(.expenses), side: .expenses, today: "2026-11-04", language: language)
+            let running = FixedCostPage(list: try await list(.expenses), side: .expenses, today: "2026-11-04", language: language)
             let rent = try #require(running.running.first)
             #expect(rent.line == expectedLast && rent.entry.running && !rent.quiet)
             #expect(rent.spoken.contains(language == .english ? "last 3 Oct" : "zuletzt am 3. Okt."))
-            let out = FixedCostPage(list: list(.expenses, takingOut: "Hausverwaltung Fiktiv"), side: .expenses,
+            let out = FixedCostPage(list: try await list(.expenses, takingOut: "Hausverwaltung Fiktiv"), side: .expenses,
                                     today: "2026-11-04", language: language)
             #expect(out.takenOut.first?.line == expectedLast)
-            let dueToday = FixedCostPage(list: list(.expenses), side: .expenses, today: "2026-11-03", language: language)
+            let dueToday = FixedCostPage(list: try await list(.expenses), side: .expenses, today: "2026-11-03", language: language)
             #expect(dueToday.running.first?.line == (language == .english
                 ? "monthly · next 3 Nov" : "monatlich · nächste am 3. Nov."))
-            let oldImport = FixedCostPage(list: list(.income), side: .income, today: "2027-01-01", language: language)
+            let oldImport = FixedCostPage(list: try await list(.income), side: .income, today: "2027-01-01", language: language)
             #expect(oldImport.running.first?.line == (language == .english
                 ? "monthly · last 1 Oct 2026" : "monatlich · zuletzt am 1. Okt. 2026"))
         }

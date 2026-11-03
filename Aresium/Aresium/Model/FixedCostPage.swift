@@ -1,7 +1,7 @@
 import Foundation
 
 // Monthly average and fixed costs on screen (brief 209, Patrik 2026-11-02 after build 18: "lets do monthly and fixcost
-// screen feature first"). Brief 208 counts (`MonthlyAverage`, `FixedCosts`); this file decides what the Overview's
+// screen feature first"). The shared engine counts (`MonthlyAverage`, `FixedCostList`); this file decides what the Overview's
 // line under a side's total and the fixed costs page say, in both languages (pure, so tests pin them). The look is
 // `Screens/FixedCostScreens.swift`.
 

@@ -2131,22 +2131,32 @@ var __AresiumEngine = (() => {
     DEFAULT_CATEGORIES: () => DEFAULT_CATEGORIES,
     OWN_TRANSFERS: () => OWN_TRANSFERS,
     STARTER_RULES: () => STARTER_RULES,
+    applyPlan: () => applyPlan,
     buildDashboard: () => buildDashboard,
     buildDashboardSource: () => buildDashboardSource,
+    buildLedgerDashboard: () => buildLedgerDashboard,
     cardMerchant: () => cardMerchant,
     categoryLook: () => categoryLook,
     decodeBankFile: () => decodeBankFile,
     detectBankFile: () => detectBankFile,
+    emptyLedgerSettings: () => emptyLedgerSettings,
     findLocalPlace: () => findLocalPlace,
+    fixedCostEntries: () => fixedCostEntries,
+    fixedCostList: () => fixedCostList,
     guessCsvLayout: () => guessCsvLayout,
     indexLocalPlaces: () => indexLocalPlaces,
     learn: () => learn,
     matchReceipt: () => matchReceipt,
     merchantKey: () => merchantKey,
+    monthlyAverage: () => monthlyAverage,
+    nextFixedDay: () => nextFixedDay,
     ownTransfers: () => ownTransfers,
     parseCamt: () => parseCamt2,
     parsePaypalCsv: () => parsePaypalCsv3,
     parseVrBankCsv: () => parseVrBankCsv2,
+    paybackChoices: () => paybackChoices,
+    planPaybacks: () => planPaybacks,
+    quickSortGroups: () => quickSortGroups,
     readBankFile: () => readBankFile,
     readBankText: () => readBankText,
     readCamt: () => readCamt,
@@ -2154,6 +2164,7 @@ var __AresiumEngine = (() => {
     readMt940: () => readMt940,
     readReceipt: () => readReceipt,
     readingsOfUnknownFile: () => readingsOfUnknownFile,
+    selectionSummary: () => selectionSummary,
     setLocalPlaces: () => setLocalPlaces,
     shareableLayout: () => shareableLayout,
     shopIdentities: () => shopIdentities,
@@ -2864,13 +2875,13 @@ var __AresiumEngine = (() => {
   };
   function hexWrite(buf, string, offset, length) {
     offset = Number(offset) || 0;
-    var remaining = buf.length - offset;
+    var remaining2 = buf.length - offset;
     if (!length) {
-      length = remaining;
+      length = remaining2;
     } else {
       length = Number(length);
-      if (length > remaining) {
-        length = remaining;
+      if (length > remaining2) {
+        length = remaining2;
       }
     }
     var strLen = string.length;
@@ -2923,8 +2934,8 @@ var __AresiumEngine = (() => {
         "Buffer.write(string, encoding, offset[, length]) is no longer supported"
       );
     }
-    var remaining = this.length - offset;
-    if (length === void 0 || length > remaining) length = remaining;
+    var remaining2 = this.length - offset;
+    if (length === void 0 || length > remaining2) length = remaining2;
     if (string.length > 0 && (length < 0 || offset < 0) || offset > this.length) {
       throw new RangeError("Attempt to write outside buffer bounds");
     }
@@ -3883,8 +3894,8 @@ var __AresiumEngine = (() => {
       options.cast_date = false;
     } else if (options.cast_date === true) {
       options.cast_date = function(value) {
-        const date = Date.parse(value);
-        return !isNaN(date) ? new Date(date) : value;
+        const date2 = Date.parse(value);
+        return !isNaN(date2) ? new Date(date2) : value;
       };
     } else if (typeof options.cast_date !== "function") {
       throw new CsvError(
@@ -5493,13 +5504,13 @@ var __AresiumEngine = (() => {
     const incomeMonths = months.map(() => /* @__PURE__ */ new Map());
     const total = { expense: 0, income: 0, categories: [], incomeBuckets: [] };
     const byMonth = Object.fromEntries(months.map((mo) => {
-      const dayBalance = Array.from({ length: mo.days }, (_, i) => balanceByDay[`${mo.key}-${String(i + 1).padStart(2, "0")}`] ?? 0);
+      const dayBalance = Array.from({ length: mo.days }, (_, i) => balanceByDay[`${mo.key}-${String(i + 1).padStart(2, "0")}`] ?? null);
       return [mo.key, {
         expense: 0,
         income: 0,
         categories: [],
         incomeBuckets: [],
-        endBalance: balanceByDay[`${mo.key}-${String(mo.days).padStart(2, "0")}`],
+        endBalance: balanceByDay[`${mo.key}-${String(mo.days).padStart(2, "0")}`] ?? null,
         dayExpense: new Array(mo.days).fill(0),
         dayExpenseRunning: [],
         dayIncome: new Array(mo.days).fill(0),
@@ -5642,6 +5653,7 @@ var __AresiumEngine = (() => {
         income: months.map((m) => byMonth[m.key].income),
         balance: months.map((m) => byMonth[m.key].endBalance)
       },
+      ...source.balanceUncertainDays?.length ? { balanceUncertainDays: source.balanceUncertainDays.map((day2) => ({ ...day2 })) } : {},
       ...source.cash ? { cash: source.cash } : {},
       ...source.paybacksIgnored?.length ? { paybacksIgnored: source.paybacksIgnored.map((link) => ({ ...link })) } : {}
     };
@@ -10298,16 +10310,16 @@ var __AresiumEngine = (() => {
     const result = payments.map(() => null);
     let paypalStart = Infinity, paypalEnd = -Infinity;
     for (const p of payments) {
-      const date = p.source === "paypal" ? parseDay(p.date) : null;
-      if (!date) continue;
-      const day2 = dayNumber(date);
+      const date2 = p.source === "paypal" ? parseDay(p.date) : null;
+      if (!date2) continue;
+      const day2 = dayNumber(date2);
       paypalStart = Math.min(paypalStart, day2);
       paypalEnd = Math.max(paypalEnd, day2);
     }
     const conversions = paypalConversionRows(payments.filter((p) => !isPaypalBankFunding({ description: p.description ?? "", raw: p.raw })));
     payments.forEach((p, i) => {
-      const date = parseDay(p.date);
-      const day2 = date ? dayNumber(date) : NaN;
+      const date2 = parseDay(p.date);
+      const day2 = date2 ? dayNumber(date2) : NaN;
       const covered = day2 >= paypalStart - TRANSFER_DAYS && day2 <= paypalEnd + TRANSFER_DAYS;
       if (isPaypalFundingRow(p) || isPaypalWithdrawalRow(p) || covered && isPaypalBankLine(p)) result[i] = { rule: "paypal" };
       if (conversions.has(p)) result[i] = { rule: "paypal-conversion" };
@@ -10315,32 +10327,32 @@ var __AresiumEngine = (() => {
     const groups2 = /* @__PURE__ */ new Map();
     payments.forEach((p, index) => {
       if (result[index]?.rule === "paypal-conversion" || isPaypalWithdrawalRow(p)) return;
-      const date = parseDay(p.date);
+      const date2 = parseDay(p.date);
       const amount2 = p.amount;
-      if (!p.account || !date || typeof amount2 !== "number" || !Number.isFinite(amount2)) return;
-      const cents5 = Math.round(Math.abs(amount2) * 100);
-      if (cents5 === 0) return;
-      const group = groups2.get(cents5) ?? { out: [], in: [] };
+      if (!p.account || !date2 || typeof amount2 !== "number" || !Number.isFinite(amount2)) return;
+      const cents7 = Math.round(Math.abs(amount2) * 100);
+      if (cents7 === 0) return;
+      const group = groups2.get(cents7) ?? { out: [], in: [] };
       (amount2 < 0 ? group.out : group.in).push({
         index,
         account: p.account,
-        day: dayNumber(date),
+        day: dayNumber(date2),
         currency: p.currency || null,
         iban: ownIban(p),
         other: ibanKey(p.counterpartyIban),
         says: saysOwnTransfer(p)
       });
-      groups2.set(cents5, group);
+      groups2.set(cents7, group);
     });
     const candidates = [];
     for (const { out, in: incoming } of groups2.values()) {
       for (const o of out) {
         for (const i of incoming) {
-          const distance = Math.abs(o.day - i.day);
-          if (distance > TRANSFER_DAYS || o.account === i.account) continue;
+          const distance2 = Math.abs(o.day - i.day);
+          if (distance2 > TRANSFER_DAYS || o.account === i.account) continue;
           if (o.currency && i.currency && o.currency !== i.currency) continue;
           if (!proven(o, i)) continue;
-          candidates.push({ a: Math.min(o.index, i.index), b: Math.max(o.index, i.index), distance });
+          candidates.push({ a: Math.min(o.index, i.index), b: Math.max(o.index, i.index), distance: distance2 });
         }
       }
     }
@@ -10660,7 +10672,7 @@ var __AresiumEngine = (() => {
   var CASH_LOOKBACK_DAYS = 92;
   var COVERED_PLACE = "Covered by receipts";
   var cents = (n) => Math.round(n * 100);
-  var day = (date) => date.slice(0, 10);
+  var day = (date2) => date2.slice(0, 10);
   var byDay = (a, b) => day(a.date) < day(b.date) ? -1 : day(a.date) > day(b.date) ? 1 : 0;
   function checked2(receipts) {
     for (const r of receipts) {
@@ -10703,9 +10715,9 @@ var __AresiumEngine = (() => {
         spent.push(r);
       }
     }
-    const number = (date) => dayNumber(parseDay(date));
+    const number = (date2) => dayNumber(parseDay(date2));
     const withdrawals = payments.filter(isCashWithdrawal);
-    const source = (kind, id, date, euros2, place, category, payment) => ({ kind, id, date: day(date), day: number(date), place, category, amount: cents(euros2), left: cents(euros2), by: [], payment });
+    const source = (kind, id, date2, euros2, place, category, payment) => ({ kind, id, date: day(date2), day: number(date2), place, category, amount: cents(euros2), left: cents(euros2), by: [], payment });
     const sources = [
       ...withdrawals.map((p) => source("withdrawal", p.id, p.date, -p.amount, p.counterparty || p.description, p.category, p)),
       ...received.map((r) => source("received", r.id, r.date, r.total, r.shop ?? "", r.category, null))
@@ -10861,6 +10873,99 @@ var __AresiumEngine = (() => {
     return { marks, ignored };
   }
 
+  // src/engine/balances.ts
+  var cents3 = (amount2) => Math.round(amount2 * 100);
+  function chainClosing(rows) {
+    const degree = /* @__PURE__ */ new Map();
+    const neighbours = /* @__PURE__ */ new Map();
+    for (const row of rows) {
+      const after = cents3(row.balance);
+      const before = after - cents3(row.amount);
+      degree.set(before, (degree.get(before) ?? 0) + 1);
+      degree.set(after, (degree.get(after) ?? 0) - 1);
+      const outgoing = neighbours.get(before) ?? [];
+      outgoing.push(after);
+      neighbours.set(before, outgoing);
+      const incoming = neighbours.get(after) ?? [];
+      incoming.push(before);
+      neighbours.set(after, incoming);
+    }
+    const pending = [cents3(rows[0].balance)];
+    const visited = /* @__PURE__ */ new Set();
+    while (pending.length) {
+      const value = pending.pop();
+      if (visited.has(value)) continue;
+      visited.add(value);
+      for (const next of neighbours.get(value) ?? []) {
+        if (!visited.has(next)) pending.push(next);
+      }
+    }
+    if (visited.size !== degree.size) return null;
+    const starts = [...degree].filter(([, value]) => value === 1);
+    const ends = [...degree].filter(([, value]) => value === -1);
+    if ([...degree.values()].some((value) => Math.abs(value) > 1)) return null;
+    if (starts.length === 1 && ends.length === 1) return ends[0][0] / 100;
+    if (degree.size === 1) return rows[0].balance;
+    return null;
+  }
+  function closing(rows) {
+    const hasOrder = rows.every((row) => Number.isSafeInteger(row.statementOrder)) && new Set(rows.map((row) => row.statementOrder)).size === rows.length;
+    if (hasOrder) {
+      const ordered = rows.slice().sort((a, b) => a.statementOrder - b.statementOrder);
+      const uncertain = ordered.some((row, i) => i > 0 && cents3(row.balance) - cents3(row.amount) !== cents3(ordered[i - 1].balance));
+      return { balance: ordered[ordered.length - 1].balance, uncertain };
+    }
+    const derived = chainClosing(rows);
+    return {
+      balance: derived ?? rows[rows.length - 1].balance,
+      uncertain: derived === null
+    };
+  }
+  function accountDayClosings(payments) {
+    const accounts = /* @__PURE__ */ new Map();
+    for (const payment of payments) {
+      if (payment.balance == null) continue;
+      if (!Number.isFinite(payment.balance)) throw new Error(`Payment ${payment.id}: the balance is not a number`);
+      const accountId = payment.accountId ?? null;
+      const days = accounts.get(accountId) ?? /* @__PURE__ */ new Map();
+      const day2 = payment.date.slice(0, 10);
+      const rows = days.get(day2) ?? [];
+      rows.push(payment);
+      days.set(day2, rows);
+      accounts.set(accountId, days);
+    }
+    const result = [];
+    for (const [accountId, days] of accounts) {
+      for (const [date2, rows] of days) result.push({ accountId, date: date2, ...closing(rows) });
+    }
+    return result.sort((a, b) => a.date.localeCompare(b.date) || (a.accountId ?? "").localeCompare(b.accountId ?? ""));
+  }
+  function accountBalanceSeries(payments, months) {
+    const closings = accountDayClosings(payments);
+    const known = /* @__PURE__ */ new Map();
+    const sum = () => known.size ? [...known.values()].reduce((total, value) => total + value, 0) / 100 : null;
+    const balanceByDay = {};
+    let index = 0;
+    const firstDay = months.length ? `${months[0].key}-01` : "";
+    while (index < closings.length && closings[index].date < firstDay) {
+      const row = closings[index++];
+      known.set(row.accountId, cents3(row.balance));
+    }
+    const openingBalance = sum();
+    for (const month of months) {
+      for (let d = 1; d <= month.days; d++) {
+        const day2 = `${month.key}-${String(d).padStart(2, "0")}`;
+        while (index < closings.length && closings[index].date <= day2) {
+          const row = closings[index++];
+          known.set(row.accountId, cents3(row.balance));
+        }
+        balanceByDay[day2] = sum();
+      }
+    }
+    const uncertain = closings.filter((row) => row.uncertain).map(({ date: date2, accountId }) => ({ date: date2, accountId }));
+    return { balanceByDay, openingBalance, ...uncertain.length ? { balanceUncertainDays: uncertain } : {} };
+  }
+
   // src/engine/source.ts
   var UNCATEGORISED = Object.freeze({ name: "Uncategorised", icon: "CircleHelp", color: "#9ca3af", kind: "spend" });
   var MONTH_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -10877,7 +10982,8 @@ var __AresiumEngine = (() => {
   function buildDashboardSource(input) {
     const today = parseDay(input.today);
     if (!today) throw new Error("today is not an ISO date (YYYY-MM-DD)");
-    const stored = counted(checked3(input.transactions)).rows;
+    const ordered = checked3(input.transactions);
+    const stored = counted(ordered).rows;
     const paybacks = countPaybacks(input.transactions, stored, input.categories);
     const storedPayments = new Set(stored);
     const fromReceipts = input.receipts ? countReceipts(stored, input.receipts, new Set(input.transactions.map((p) => p.id))) : null;
@@ -10892,7 +10998,7 @@ var __AresiumEngine = (() => {
       if (category === null) hasUncategorised = true;
       const name = category ?? UNCATEGORISED.name;
       const amount2 = (storedPayments.has(p) ? paybacks.marks.get(p.id)?.counted : void 0) ?? p.amount;
-      net.set(name, (net.get(name) ?? 0) + amount2);
+      net.set(name, (net.get(name) ?? 0) + Math.round(amount2 * 100));
     }
     const categories = input.categories.map((c) => ({
       name: c.name,
@@ -10901,7 +11007,7 @@ var __AresiumEngine = (() => {
       kind: c.excludeFromTotals ? "transfer" : c.side ?? ((net.get(c.name) ?? 0) > 0 ? "income" : "spend"),
       ...c.otherSide && !c.excludeFromTotals ? { otherSide: true } : {}
     }));
-    if (hasUncategorised) categories.push({ ...UNCATEGORISED });
+    if (hasUncategorised && !known.has(UNCATEGORISED.name)) categories.push({ ...UNCATEGORISED });
     const transactions = payments.map((p) => ({
       id: p.id,
       date: p.date.slice(0, 10),
@@ -10942,28 +11048,12 @@ var __AresiumEngine = (() => {
         }
       }
     }
-    const balanceByDay = {};
-    let openingBalance = 0;
-    if (months.length) {
-      const balanceAt = /* @__PURE__ */ new Map();
-      for (const p of payments) if (p.balance != null) balanceAt.set(p.date.slice(0, 10), p.balance);
-      const firstKnown = payments.find((p) => p.balance != null);
-      openingBalance = firstKnown?.balance ?? 0;
-      let balance = openingBalance;
-      for (const mo of months) {
-        for (let d = 1; d <= mo.days; d++) {
-          const day2 = `${mo.key}-${pad(d)}`;
-          if (balanceAt.has(day2)) balance = balanceAt.get(day2);
-          balanceByDay[day2] = balance;
-        }
-      }
-    }
+    const balances2 = accountBalanceSeries(input.transactions, months);
     return {
       categories,
       months,
       transactions,
-      balanceByDay,
-      openingBalance,
+      ...balances2,
       databaseCategoryNames: input.categories.map((c) => c.name),
       // The Cash page (brief 32): a view, counted nowhere.
       ...fromReceipts ? { cash: cashView(fromReceipts, (category) => nameOf2(category) ?? UNCATEGORISED.name) } : {},
@@ -11430,13 +11520,13 @@ var __AresiumEngine = (() => {
       if (keys.some((k) => /^(date|bookingdate|buchungstag|buchungsdatum|buchung|umsatztag|belegdatum)$/.test(k)) && keys.some((k) => /^(amount|amounteur|betrag|betrageur|umsatzineur|debit|soll)$/.test(k))) {
         throw new BankFileError("unknown", "This file contains several payment tables or accounts. Export each account separately.");
       }
-      const date = parseDate(cell(row, c.date), layout.dateFormat);
+      const date2 = parseDate(cell(row, c.date), layout.dateFormat);
       const status = cell(row, c.status).toLowerCase();
       if (c.status !== void 0 && (skip.some((s) => status.includes(s)) || keep.length > 0 && !keep.some((s) => status.includes(s)))) {
         skipped++;
         continue;
       }
-      if (!date) {
+      if (!date2) {
         skipped++;
         const dateCell = cell(row, c.date);
         const notice = /^(offen|pending|vorgemerkt|--)$/.test(dateCell.toLowerCase()) || /^(summe|total|saldo|anfangssaldo|endsaldo|alter kontostand|neuer kontostand)\b/i.test(cleanText(...row));
@@ -11511,7 +11601,7 @@ var __AresiumEngine = (() => {
         raw[name2] = (row[i] ?? "").trim();
       });
       transactions.push({
-        bookingDate: `${date}T00:00:00.000Z`,
+        bookingDate: `${date2}T00:00:00.000Z`,
         ...c.valueDate !== void 0 ? { valueDate: valueDate ? `${valueDate}T00:00:00.000Z` : null } : {},
         amount: amount2,
         ...c.balance !== void 0 ? { balance: balance ?? null } : {},
@@ -11524,10 +11614,10 @@ var __AresiumEngine = (() => {
       if (layout.idStyle === "vrbank") {
         let legacy = parseAmount(cell(row, c.amount));
         if (/^(s|d|soll)/i.test(cell(row, c.sign)) && !legacy.startsWith("-")) legacy = `-${legacy}`;
-        idFields.push(`${date}T00:00:00.000Z|${legacy}|${description}|${counterparty}`);
+        idFields.push(`${date2}T00:00:00.000Z|${legacy}|${description}|${counterparty}`);
       } else {
         idFields.push([
-          date,
+          date2,
           amount2,
           ...[c.payer, c.payee, ...c.counterparty ?? [], ...c.text ?? []].map((i) => cleanText(cell(row, i))),
           cell(row, c.iban).replace(/\s/g, "")
@@ -11652,7 +11742,7 @@ var __AresiumEngine = (() => {
     }
     const vr = isVrBank(iban, bic);
     for (const stmt of statements) {
-      const { opening, closing } = balances(stmt);
+      const { opening, closing: closing2 } = balances(stmt);
       const start = transactions.length;
       for (const ntry of arr2(stmt.Ntry)) {
         const amount2 = signedAmount(ntry);
@@ -11700,7 +11790,7 @@ var __AresiumEngine = (() => {
       if (opening !== void 0 && own.length > 0 && own.every((t, i) => i === 0 || own[i - 1].bookingDate <= t.bookingDate)) {
         let running = opening;
         const after = own.map((t) => running = addAmounts(running, t.amount));
-        if (closing === void 0 || sameAmount(running, closing)) own.forEach((t, i) => {
+        if (closing2 === void 0 || sameAmount(running, closing2)) own.forEach((t, i) => {
           t.balance = after[i];
         });
       }
@@ -11890,13 +11980,13 @@ var __AresiumEngine = (() => {
       let dateFormat2, ambiguous = false;
       if (values.length === 0) kind = "empty";
       else {
-        const date = bestDateFormat(values);
+        const date2 = bestDateFormat(values);
         const amounts = values.filter((v) => parseAmountStrict(v, numberFormat) !== null).length / values.length;
         const decimals = values.filter((v) => decimalMark.test(v)).length / values.length;
-        if (date.share >= 0.9) {
+        if (date2.share >= 0.9) {
           kind = "date";
-          dateFormat2 = date.format;
-          ambiguous = date.ambiguous;
+          dateFormat2 = date2.format;
+          ambiguous = date2.ambiguous;
         } else if (values.filter((v) => normalizeIban(v)).length / values.length >= 0.8) kind = "iban";
         else if (amounts >= 0.9 && decimals >= 0.5) kind = "amount";
         else if (values.every((v) => SIGN_VALUE.test(v)) && new Set(values.map((v) => v.toLowerCase())).size <= 4) kind = "sign";
@@ -12216,8 +12306,8 @@ ${line}`;
       if (!own.every((t, i) => i === 0 || own[i - 1].bookingDate <= t.bookingDate)) continue;
       let running = opening;
       const after = own.map((t) => running = addAmounts(running, t.amount));
-      const closing = closings.get(index);
-      if (own.length > 0 && (closing === void 0 || sameAmount(running, closing))) own.forEach((t, i) => {
+      const closing2 = closings.get(index);
+      if (own.length > 0 && (closing2 === void 0 || sameAmount(running, closing2))) own.forEach((t, i) => {
         t.balance = after[i];
       });
     }
@@ -13976,7 +14066,7 @@ ${line}`;
   }
   var has = (line, ...kinds) => kinds.some((k) => line.kinds.has(k));
   var last = (line) => line.amounts.at(-1) ?? null;
-  var cents3 = (n) => Math.round(n * 100);
+  var cents4 = (n) => Math.round(n * 100);
   function readLine(text2, index, monthFirst) {
     const words2 = shopWords(text2);
     const hits = hitsIn(words2);
@@ -14045,19 +14135,19 @@ ${line}`;
     const paying = candidates.length ? lines.slice(candidates[0].line.index) : lines;
     const given = paying.find((l) => has(l, "given") && !has(l, "change", "card") && (last(l) ?? 0) > 0) ?? paying.find((l) => has(l, "cash") && !has(l, "card", "change", ...TOTAL_KINDS) && (last(l) ?? 0) > 0);
     const change = paying.find((l) => has(l, "change") && !has(l, "deposit") && last(l) !== null && last(l) >= 0);
-    const byChange = given && change ? (cents3(last(given)) - cents3(last(change))) / 100 : null;
+    const byChange = given && change ? (cents4(last(given)) - cents4(last(change))) / 100 : null;
     const tips = lines.filter((l) => has(l, "tip") && (last(l) ?? 0) > 0).map((l) => last(l));
     if (candidates.length) {
       const top = Math.max(...candidates.map((c) => c.strength));
       const best = candidates.filter((c) => c.strength === top);
-      const amounts = [...new Set(best.map((c) => cents3(c.amount)))];
-      const confirmed = (c) => byChange !== null && cents3(c.amount) === cents3(byChange);
+      const amounts = [...new Set(best.map((c) => cents4(c.amount)))];
+      const confirmed = (c) => byChange !== null && cents4(c.amount) === cents4(byChange);
       let pick2, sure;
       if (amounts.length === 1) {
         pick2 = best.find((c) => !c.fuzzy) ?? best[0];
         sure = !pick2.fuzzy || confirmed(pick2);
       } else {
-        const byTip = best.find((b) => best.some((a) => tips.some((t) => cents3(a.amount) + cents3(t) === cents3(b.amount))));
+        const byTip = best.find((b) => best.some((a) => tips.some((t) => cents4(a.amount) + cents4(t) === cents4(b.amount))));
         const explained = byTip ?? best.find(confirmed);
         pick2 = explained ?? best.at(-1);
         sure = !!explained && (!pick2.fuzzy || confirmed(pick2));
@@ -14066,7 +14156,7 @@ ${line}`;
       return { total: pick2.amount, sure, line: pick2.line, first: candidates[0].line };
     }
     const plain2 = lines.filter((l) => !has(l, "given", "change", "tax", "other", "deposit", "tip") && (last(l) ?? 0) > 0);
-    const confirmedLine = byChange !== null && byChange > 0 ? plain2.find((l) => l.amounts.some((a) => cents3(a) === cents3(byChange))) : void 0;
+    const confirmedLine = byChange !== null && byChange > 0 ? plain2.find((l) => l.amounts.some((a) => cents4(a) === cents4(byChange))) : void 0;
     if (confirmedLine) return { total: byChange, sure: false, line: confirmedLine, first: null };
     let largest = null;
     for (const l of plain2) if (!largest || last(l) > last(largest)) largest = l;
@@ -14150,20 +14240,20 @@ ${line}`;
     const itemsTo = total.first?.index ?? total.line?.index ?? lines.length;
     const payment = lines.slice(total.first?.index ?? 0);
     const method = methodOf(payment);
-    const date = dateOf(lines);
+    const date2 = dateOf(lines);
     const shop = shopOf(lines, itemsFrom, itemsTo);
     const reading = {
       shop: shop.shop,
       categoryId: shop.categoryId,
-      date: date.date,
-      time: date.time,
+      date: date2.date,
+      time: date2.time,
       total: total.total,
       currency,
       method,
       language: languageOf(lines, currency),
       from: "text",
       rows,
-      sure: { shop: shop.sure, date: date.sure, total: total.sure, method: method !== null }
+      sure: { shop: shop.sure, date: date2.sure, total: total.sure, method: method !== null }
     };
     const code = (input?.codes ?? []).map(readRegisterCode).find((c) => c !== null);
     if (!code) return reading;
@@ -14175,7 +14265,7 @@ ${line}`;
       method: code.method ?? reading.method,
       date: code.date ?? reading.date,
       time: code.date ? code.time : reading.time,
-      sure: { shop: shop.sure, date: code.date ? true : date.sure, total: true, method: code.method !== null }
+      sure: { shop: shop.sure, date: code.date ? true : date2.sure, total: true, method: code.method !== null }
     };
   }
 
@@ -14306,7 +14396,7 @@ ${line}`;
     if (!bankWords.length || !shop.words.length) return "unknown";
     return shop.words.every((w) => bankWords.some((b) => sameWord(w, b))) ? "similar" : "different";
   }
-  var cents4 = (n) => Math.round(n * 100);
+  var cents5 = (n) => Math.round(n * 100);
   var currencyOf2 = (code) => (code?.trim() || "EUR").toUpperCase();
   function matchReceipt(receipt, payments, taken = []) {
     const day2 = parseDay(receipt?.date);
@@ -14327,9 +14417,9 @@ ${line}`;
         if (shop === "similar") other.push({ id: payment.id, why: "otherCurrency", days, difference: null, shop });
         continue;
       }
-      const difference = cents4(-payment.amount) - cents4(total);
+      const difference = cents5(-payment.amount) - cents5(total);
       if (difference === 0) exact.push({ id: payment.id, why: "severalSame", days, difference: 0, shop });
-      else if (shop === "similar" && (difference > 0 ? difference <= MORE_AT_MOST : -difference < LESS_UNDER * cents4(total))) {
+      else if (shop === "similar" && (difference > 0 ? difference <= MORE_AT_MOST : -difference < LESS_UNDER * cents5(total))) {
         differs.push({ id: payment.id, why: "amountDiffers", days, difference: difference / 100, shop });
       }
     }
@@ -14340,6 +14430,794 @@ ${line}`;
     other.sort(nearer);
     const candidates = [...exact, ...differs, ...other].slice(0, MAX_CANDIDATES).map(({ shop: _shop, ...candidate }) => candidate);
     return { exact: null, candidates };
+  }
+
+  // src/engine/fixed-costs.ts
+  var CADENCES = {
+    monthly: {
+      months: 1,
+      min: 26,
+      max: 35,
+      grace: 45
+    },
+    quarterly: {
+      months: 3,
+      min: 85,
+      max: 98,
+      grace: 120
+    },
+    halfYearly: {
+      months: 6,
+      min: 175,
+      max: 190,
+      grace: 220
+    },
+    yearly: {
+      months: 12,
+      min: 355,
+      max: 375,
+      grace: 400
+    }
+  };
+  var markID = (mark) => [mark.key, mark.side, mark.cadence, mark.anchor].join("");
+  var date = (day2) => {
+    const time = /^\d{4}-\d{2}-\d{2}$/.test(day2) ? Date.parse(day2 + "T12:00:00Z") : NaN;
+    return Number.isFinite(time) && new Date(time).toISOString().slice(0, 10) === day2 ? time : NaN;
+  };
+  function nextFixedDay(day2, cadence) {
+    const d = new Date(date(day2));
+    const month = d.getUTCMonth() + CADENCES[cadence].months;
+    const start = new Date(Date.UTC(d.getUTCFullYear(), month, 1, 12));
+    const last2 = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 1, 0)).getUTCDate();
+    start.setUTCDate(Math.min(d.getUTCDate(), last2));
+    return start.toISOString().slice(0, 10);
+  }
+  var gap = (a, b) => (b - a) / 864e5;
+  var distance = (a, b) => Math.min(Math.abs(a - b), 31 - Math.abs(a - b));
+  var chronological = (a, b) => a.date - b.date || a.order - b.order;
+  function usualDay(dates) {
+    const days = dates.map((d) => new Date(d).getUTCDate());
+    return Array.from(
+      {
+        length: 31
+      },
+      (_, i) => {
+        const distances = days.map((d) => distance(d, i + 1));
+        return {
+          day: i + 1,
+          total: distances.reduce((a, b) => a + b, 0),
+          close: distances.filter((d) => d <= 5).length
+        };
+      }
+    ).sort((a, b) => a.total - b.total || b.close - a.close || a.day - b.day)[0];
+  }
+  var steady = (dates) => usualDay(dates).close * 4 >= dates.length * 3;
+  function cadenceFor(dates, short = false) {
+    if (dates.length < 2)
+      return;
+    const gaps = dates.slice(1).map((d, i) => gap(dates[i], d));
+    return Object.keys(CADENCES).find(
+      (key) => {
+        const c = CADENCES[key];
+        const within = (n) => n >= c.min && n <= c.max;
+        const twice = (n) => n >= c.min * 2 && n <= c.max * 2;
+        if (!short && dates.length < (c.months < 6 ? 3 : 2))
+          return false;
+        const normalized = gaps.map((n) => twice(n) ? n / 2 : n).sort((a, b) => a - b);
+        const middle = Math.floor(normalized.length / 2);
+        const median2 = normalized.length % 2 ? normalized[middle] : (normalized[middle - 1] + normalized[middle]) / 2;
+        return gaps.some(within) && within(median2) && gaps.every((n) => n >= median2 / 2) && gaps.filter((n) => within(n) || twice(n)).length * 4 >= gaps.length * 3 && (c.months >= 6 || steady(dates));
+      }
+    );
+  }
+  function period(time, usual) {
+    const d = new Date(time);
+    const nearest = [-1, 0, 1].map(
+      (offset) => {
+        const start = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + offset, 1));
+        const last2 = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 1, 0)).getUTCDate();
+        start.setUTCDate(Math.min(usual, last2));
+        return start;
+      }
+    ).sort((a, b) => Math.abs(a.getTime() - time) - Math.abs(b.getTime() - time))[0];
+    return nearest.getUTCFullYear() * 12 + nearest.getUTCMonth();
+  }
+  function amountSeries(payments) {
+    const result = [];
+    for (const payment of payments) {
+      const choices = result.map((s, i) => ({
+        i,
+        delta: Math.abs(s.at(-1).cents - payment.cents)
+      })).filter((s) => s.delta <= Math.max(300, Math.round(payment.cents * 0.1))).sort((a, b) => a.delta - b.delta || a.i - b.i);
+      if (choices.length)
+        result[choices[0].i].push(payment);
+      else
+        result.push([payment]);
+    }
+    return result;
+  }
+  function mergePriceSteps(amounts) {
+    const result = amounts.slice().sort((a, b) => chronological(a[0], b[0]));
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (let i = 0; i < result.length; i++) {
+        const previous = result[i];
+        const dates = previous.map((p) => p.date);
+        const cadence = cadenceFor(dates, true);
+        if (!cadence || !steady(dates))
+          continue;
+        const usual = usualDay(dates).day;
+        const j = result.findIndex(
+          (next, j2) => j2 !== i && previous.at(-1).date < next[0].date && cadenceFor(next.map((p) => p.date), true) === cadence && steady(next.map((p) => p.date)) && distance(usualDay(next.map((p) => p.date)).day, usual) <= 5 && period(next[0].date, usual) - period(previous.at(-1).date, usual) === CADENCES[cadence].months && cadenceFor([...dates, ...next.map((p) => p.date)]) === cadence
+        );
+        if (j < 0)
+          continue;
+        result[i] = previous.concat(result[j]);
+        result.splice(j, 1);
+        changed = true;
+        break;
+      }
+    }
+    return result;
+  }
+  function splitCombined(payments) {
+    let remaining2 = payments;
+    const result = [];
+    while (true) {
+      const seeds = mergePriceSteps(amountSeries(remaining2)).sort((a, b) => a.at(-1).cents - b.at(-1).cents);
+      const regular = seeds.flatMap(
+        (seed) => {
+          const cadence = cadenceFor(seed.map((p) => p.date));
+          return cadence ? [{
+            payments: seed,
+            anchors: seed,
+            cadence
+          }] : [];
+        }
+      );
+      let found;
+      for (const seed of seeds) {
+        if (seed.length < 2)
+          continue;
+        const dates = seed.map((p) => p.date);
+        const original = cadenceFor(dates);
+        if (!steady(dates) || original && CADENCES[original].months >= 6)
+          continue;
+        const gaps = dates.slice(1).map((d, i) => gap(dates[i], d));
+        const ownIDs = new Set(seed.map((p) => p.row.id));
+        const usual = usualDay(dates).day;
+        const phase = period(dates[0], usual);
+        for (const cadence of ["monthly", "quarterly"]) {
+          const c = CADENCES[cadence];
+          if (original && original !== cadence || !gaps.some((n) => n >= c.min && n <= c.max || n >= c.min * 2 && n <= c.max * 2))
+            continue;
+          const ownSlots = new Set(dates.map((d) => period(d, usual)));
+          const carriedCents = (p) => seed.filter((s) => s.row.date <= p.row.date).at(-1)?.cents ?? seed[0].cents;
+          const canCarry = (p) => (period(p.date, usual) - phase) % c.months === 0 && !ownSlots.has(
+            period(p.date, usual)
+          ) && distance(new Date(p.date).getUTCDate(), usual) <= 5 && p.cents > carriedCents(p);
+          const reserved = new Set(regular.flatMap((s) => s.payments.map((p) => p.row.id)));
+          const occupied = new Set(ownSlots);
+          const augmented = seed.slice();
+          for (const owner of regular) {
+            if (CADENCES[owner.cadence].months < 6 || CADENCES[owner.cadence].months <= c.months || !owner.payments.every((p) => canCarry(p) && !occupied.has(period(p.date, usual))))
+              continue;
+            const extras = owner.payments.map((p) => ({
+              ...p,
+              cents: p.cents - carriedCents(p)
+            }));
+            if (mergePriceSteps(amountSeries(extras)).some(
+              (s) => s.length === extras.length && cadenceFor(s.map((p) => p.date)) === owner.cadence
+            )) {
+              for (const p of owner.payments) {
+                occupied.add(period(p.date, usual));
+                augmented.push({
+                  ...p,
+                  cents: carriedCents(p)
+                });
+              }
+            }
+          }
+          for (const p of remaining2) {
+            const slot = period(p.date, usual);
+            if (ownIDs.has(p.row.id) || reserved.has(p.row.id) || !canCarry(p) || occupied.has(slot))
+              continue;
+            occupied.add(slot);
+            augmented.push({
+              ...p,
+              cents: carriedCents(p)
+            });
+          }
+          augmented.sort(chronological);
+          if (cadenceFor(augmented.map((p) => p.date)) !== cadence)
+            continue;
+          found = {
+            payments: augmented,
+            anchors: seed,
+            cadence
+          };
+          break;
+        }
+        if (found)
+          break;
+      }
+      if (!found)
+        break;
+      result.push(found);
+      const allocated = new Map(found.payments.map((p) => [p.row.id, p.cents]));
+      remaining2 = remaining2.map((p) => ({
+        ...p,
+        cents: p.cents - (allocated.get(p.row.id) ?? 0)
+      })).filter((p) => p.cents > 0);
+    }
+    return result.concat(
+      mergePriceSteps(amountSeries(remaining2)).map(
+        (p) => ({
+          payments: p,
+          anchors: p,
+          cadence: cadenceFor(p.map((p2) => p2.date))
+        })
+      )
+    );
+  }
+  function fixedCostEntries(dashboard, marks = []) {
+    const bank = dashboard.transactions.filter((t) => t.receiptId === void 0 && t.coveredBy === void 0);
+    const reference = bank.map((p) => p.date).sort().at(-1);
+    if (!reference)
+      return [];
+    const categories = new Map([...dashboard.categories, ...dashboard.incomeBuckets].map((c) => [c.name, c]));
+    const groups2 = /* @__PURE__ */ new Map();
+    bank.map((row, order) => ({
+      row,
+      order
+    })).filter(
+      ({ row }) => row.nameKey && !row.cashWithdrawal && (row.counted ?? row.amount) !== 0 && categories.get(row.categoryName)?.kind !== "transfer" && (row.categoriesIn.length || row.incomeBuckets.length) && Number.isFinite(date(row.date))
+    ).sort((a, b) => a.row.date.localeCompare(b.row.date) || a.order - b.order).forEach(
+      ({ row, order }) => {
+        const key = row.nameKey + "" + (row.amount < 0 ? "expenses" : "income");
+        const group = groups2.get(key) ?? [];
+        group.push(
+          {
+            row,
+            order,
+            cents: Math.round(Math.abs(row.counted ?? row.amount) * 100),
+            date: date(row.date)
+          }
+        );
+        groups2.set(key, group);
+      }
+    );
+    return [...groups2.keys()].sort().flatMap(
+      (key) => {
+        const series = splitCombined(groups2.get(key));
+        return series.flatMap(
+          (s) => {
+            const { cadence, payments, anchors } = s;
+            if (!cadence)
+              return [];
+            const newest = payments.at(-1).row;
+            const first = payments[0].row.date;
+            if (CADENCES[cadence].months >= 6 && series.some(
+              (other) => !other.cadence && other.payments.some((p) => p.row.date >= first && p.row.date <= newest.date)
+            ))
+              return [];
+            const side = newest.amount < 0 ? "expenses" : "income";
+            const names2 = side === "expenses" ? newest.categoriesIn : newest.incomeBuckets;
+            const category = categories.get(names2.includes(newest.categoryName) ? newest.categoryName : names2[0]);
+            if (!category)
+              return [];
+            const stored = marks.filter(
+              (m) => m.side === side && m.cadence === cadence && anchors.some((p) => p.row.id === m.anchor)
+            );
+            const anchor = anchors.slice().sort(
+              (a, b) => (a.row.ledgerSequence ?? Number.MAX_SAFE_INTEGER) - (b.row.ledgerSequence ?? Number.MAX_SAFE_INTEGER)
+            )[0].row;
+            const mark = stored[0] ?? {
+              key: anchor.fixedCostKey ?? anchor.nameKey,
+              side,
+              cadence,
+              anchor: anchor.id
+            };
+            const cents7 = payments.at(-1).cents;
+            const monthlyCents = Math.round(cents7 / CADENCES[cadence].months);
+            return [
+              {
+                id: markID(mark),
+                mark,
+                newest,
+                category,
+                name: newest.place,
+                side,
+                cadence,
+                cents: cents7,
+                monthlyCents,
+                amount: cents7 / 100,
+                monthlyEquivalent: monthlyCents / 100,
+                count: payments.length,
+                first,
+                last: newest.date,
+                nextDue: nextFixedDay(newest.date, cadence),
+                running: gap(date(newest.date), date(reference)) <= CADENCES[cadence].grace,
+                notFixed: !!stored.length,
+                exclusionIDs: stored.map(markID),
+                ids: payments.slice().reverse().map((p) => p.row.id)
+              }
+            ];
+          }
+        );
+      }
+    );
+  }
+  function fixedCostList(entries, side) {
+    const rows = entries.filter((e) => e.side === side);
+    const ranked = (a, b) => b.monthlyCents - a.monthlyCents || a.name.localeCompare(b.name) || a.id.localeCompare(b.id);
+    const running = rows.filter((e) => e.running && !e.notFixed).sort(ranked);
+    const monthlyCents = running.reduce((n, e) => n + e.monthlyCents, 0);
+    return {
+      running,
+      ended: rows.filter((e) => !e.running && !e.notFixed).sort((a, b) => b.last.localeCompare(a.last) || a.id.localeCompare(b.id)),
+      takenOut: rows.filter((e) => e.notFixed).sort(ranked),
+      monthlyCents,
+      monthlyTotal: monthlyCents / 100,
+      yearlyTotal: monthlyCents * 12 / 100
+    };
+  }
+  function monthlyAverage(dashboard, side) {
+    const earliest = dashboard.transactions.map((t) => t.date).sort()[0];
+    const late = Number(earliest?.slice(8)) > 7;
+    const months = dashboard.months.filter((m) => !m.partial && !(late && m.key === earliest.slice(0, 7))).sort((a, b) => a.key.localeCompare(b.key));
+    if (months.length < 2)
+      return null;
+    const cents7 = Math.round(
+      months.reduce(
+        (n, m) => n + Math.round((dashboard.byMonth[m.key]?.[side === "expenses" ? "expense" : "income"] ?? 0) * 100),
+        0
+      ) / months.length
+    );
+    return {
+      cents: cents7,
+      amount: cents7 / 100,
+      count: months.length,
+      first: months[0].key,
+      last: months.at(-1).key
+    };
+  }
+
+  // src/engine/quick-sort.ts
+  function quickSortGroups(transactions, descriptions = {}) {
+    const groups2 = /* @__PURE__ */ new Map();
+    for (const p of transactions) {
+      if (p.categoryName !== "Uncategorised" || !p.nameKey || p.coveredBy || !(p.categoriesIn.length || p.incomeBuckets.length))
+        continue;
+      const key = p.nameKey + "" + (p.amount > 0 ? "income" : "spend");
+      const group = groups2.get(key) ?? [];
+      group.push(p);
+      groups2.set(key, group);
+    }
+    return [...groups2].map(
+      ([key, rows]) => {
+        rows = rows.slice().sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
+        return {
+          key,
+          name: rows.at(-1).place,
+          ids: rows.map((p) => p.id),
+          count: rows.length,
+          side: rows[0].amount > 0 ? "income" : "spend",
+          total: rows.reduce((n, p) => n + Math.round(Math.abs(p.counted ?? p.amount) * 100), 0) / 100,
+          first: rows[0].date,
+          last: rows.at(-1).date,
+          examples: [...new Set(rows.map((p) => descriptions[p.id] || p.bankName || p.place))].slice(0, 3)
+        };
+      }
+    ).sort((a, b) => b.count - a.count || b.total - a.total || a.key.localeCompare(b.key));
+  }
+
+  // src/engine/ledger-dashboard.ts
+  var emptyLedgerSettings = () => ({
+    fixedCostMarks: [],
+    names: {},
+    links: {},
+    paymentNames: {},
+    ownNames: true,
+    revision: 0,
+    cashEntries: [],
+    learned: {}
+  });
+  function buildLedgerDashboard(source, payments, settings = emptyLedgerSettings(), today = "") {
+    const dashboard = buildDashboard(source);
+    const keys = payments.map(merchantKey);
+    const probes = payments.map((p) => merchantKey({
+      counterparty: p.counterparty || p.description
+    }));
+    const universe = [...keys, ...probes, ...Object.keys(settings.names), ...Object.keys(settings.learned)];
+    const resolved = shopIdentities(universe);
+    const identities = resolved.slice(0, keys.length);
+    const identityFor = new Map(universe.map((key, i) => [key, resolved[i]]));
+    const rules = /* @__PURE__ */ new Map();
+    for (const key of Object.keys(settings.names).sort()) {
+      const identity = identityFor.get(key);
+      if (!rules.has(identity))
+        rules.set(identity, settings.names[key]);
+    }
+    const byId = new Map(payments.map((p, i) => [p.id, {
+      p,
+      key: keys[i],
+      identity: identities[i]
+    }]));
+    const bankNames = /* @__PURE__ */ new Map();
+    for (const t of dashboard.transactions) {
+      const info = byId.get(t.id);
+      if (!info?.identity || t.receiptId || cardMerchant(t.place))
+        continue;
+      if (identityFor.get(merchantKey({
+        counterparty: t.place
+      })) === info.identity)
+        bankNames.set(info.identity, t.place);
+    }
+    const transactions = dashboard.transactions.map(
+      (t) => {
+        const info = byId.get(t.id);
+        if (!info)
+          return {
+            ...t,
+            merchant: void 0,
+            fixedCostKey: void 0,
+            categorySource: void 0,
+            isOwnName: false,
+            nameKey: void 0,
+            bankName: t.place,
+            ownName: null,
+            paymentOwnName: null,
+            shopOwnName: null,
+            ledgerSequence: void 0,
+            paybackEligible: false
+          };
+        const paymentName = (Object.hasOwn(settings.paymentNames, t.id) ? settings.paymentNames[t.id] : void 0) ?? info.p.ownName;
+        const shopName = Object.hasOwn(settings.names, info.key) ? settings.names[info.key] : rules.get(info.identity);
+        const effective = paymentName === t.place ? void 0 : paymentName ?? shopName;
+        const own = settings.ownNames ? effective : void 0;
+        const place = t.receiptId ? t.place : own || bankNames.get(info.identity) || t.place;
+        return {
+          ...t,
+          categorySource: info.p.categorySource,
+          paybackEligible: (info.p.currency ?? "EUR") === "EUR" && !isCashWithdrawal(
+            {
+              ...info.p,
+              description: info.p.description ?? "",
+              externalId: t.id,
+              category: t.categoryName,
+              date: t.date,
+              amount: t.amount,
+              currency: info.p.currency ?? "EUR"
+            }
+          ) && !t.receiptId && !t.coveredBy && (t.categoriesIn.length > 0 || t.incomeBuckets.length > 0) && t.amount !== 0,
+          place,
+          bankName: t.place,
+          merchant: info.identity,
+          nameKey: own ? "own:" + own.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().normalize("NFC") : info.identity ? "merchant:" + info.identity : "bank:" + t.place,
+          isOwnName: !!own,
+          ownName: effective ?? null,
+          paymentOwnName: paymentName ?? null,
+          shopOwnName: shopName ?? null,
+          fixedCostKey: info.key ? "merchant:" + info.key : "bank:" + t.place,
+          ledgerSequence: info.p.sequence
+        };
+      }
+    );
+    const named = {
+      ...dashboard,
+      transactions
+    };
+    const entries = fixedCostEntries(named, settings.fixedCostMarks);
+    const groups2 = /* @__PURE__ */ new Map();
+    for (const p of transactions) {
+      if (!p.nameKey || p.coveredBy || !(p.categoriesIn.length || p.incomeBuckets.length))
+        continue;
+      const rows = groups2.get(p.nameKey) ?? [];
+      rows.push(p);
+      groups2.set(p.nameKey, rows);
+    }
+    const nameGroups = Object.fromEntries(
+      [...groups2].map(
+        ([key, rows]) => {
+          const ordered = rows.slice().sort(
+            (a, b) => b.date.localeCompare(a.date) || (a.ledgerSequence ?? 0) - (b.ledgerSequence ?? 0)
+          );
+          const amounts = (payments2) => {
+            const cents7 = (total, payment) => total + Math.round(Math.abs(payment.counted ?? payment.amount) * 100);
+            return {
+              moneyOut: payments2.filter((payment) => payment.amount < 0).reduce(cents7, 0) / 100,
+              moneyIn: payments2.filter((payment) => payment.amount > 0).reduce(cents7, 0) / 100
+            };
+          };
+          const months = dashboard.months.map((month) => {
+            const payments2 = rows.filter((payment) => payment.month === month.key);
+            return [month.key, { ...amounts(payments2), count: payments2.length }];
+          });
+          const aliases2 = ordered.flatMap((payment) => [
+            payment.place,
+            payment.bankName,
+            payment.ownName,
+            payment.paymentOwnName,
+            payment.shopOwnName
+          ].filter((name) => !!name));
+          return [
+            key,
+            {
+              key,
+              name: ordered[0].place,
+              rows: ordered.map((p) => p.id),
+              count: rows.length,
+              ...amounts(rows),
+              months: Object.fromEntries(months),
+              names: [...new Set(aliases2)],
+              newestDate: ordered[0].date
+            }
+          ];
+        }
+      )
+    );
+    const summed = /* @__PURE__ */ new Map();
+    for (const row of transactions) {
+      if (!row.nameKey || row.coveredBy)
+        continue;
+      for (const [side, names2] of [["spend", row.categoriesIn], ["income", row.incomeBuckets]])
+        for (const category of names2) {
+          const listKey = JSON.stringify([category, row.month, side]);
+          const groups3 = summed.get(listKey) ?? /* @__PURE__ */ new Map();
+          const rows = groups3.get(row.nameKey) ?? [];
+          rows.push(row);
+          groups3.set(row.nameKey, rows);
+          summed.set(listKey, groups3);
+        }
+    }
+    const summedLists = Object.fromEntries(
+      [...summed].map(
+        ([listKey, groups3]) => {
+          const [category, month, side] = JSON.parse(listKey);
+          const rows = [...groups3].map(
+            ([key, rows2]) => ({
+              key,
+              name: rows2.at(-1).place,
+              ids: rows2.map((p) => p.id),
+              count: rows2.length,
+              amount: rows2.reduce((n, p) => n + Math.round((p.counted ?? p.amount) * 100), 0) / 100,
+              latest: rows2.at(-1).date,
+              covered: false
+            })
+          );
+          for (const row of transactions)
+            if (row.coveredBy && row.month === month && (side === "spend" ? row.categoriesIn : row.incomeBuckets).includes(category)) {
+              rows.push(
+                {
+                  key: "covered:" + row.id,
+                  name: row.place,
+                  ids: [],
+                  count: 1,
+                  amount: row.counted ?? row.amount,
+                  latest: row.date,
+                  covered: true
+                }
+              );
+            }
+          return [listKey, rows.sort((a, b) => b.latest.localeCompare(a.latest) || a.key.localeCompare(b.key))];
+        }
+      )
+    );
+    const latest = dashboard.months.at(-1);
+    const previous = dashboard.months.at(-2);
+    const currentMonth = latest?.partial && Number(today.slice(8)) <= 7 && previous ? previous.key : latest?.key ?? null;
+    return {
+      ...named,
+      today,
+      currentMonth,
+      nameGroups,
+      summedLists,
+      quickSort: quickSortGroups(transactions, Object.fromEntries(payments.map((p) => [p.id, p.description || ""]))),
+      ownNames: settings.ownNames,
+      monthlyAverage: {
+        expenses: monthlyAverage(named, "expenses"),
+        income: monthlyAverage(named, "income")
+      },
+      fixedCosts: {
+        expenses: fixedCostList(entries, "expenses"),
+        income: fixedCostList(entries, "income")
+      }
+    };
+  }
+
+  // src/engine/payback-plan.ts
+  var centAmount = (n) => typeof n === "number" && Number.isFinite(n) && Number.isSafeInteger(Math.round(n * 100)) && Math.abs(n * 100 - Math.round(n * 100)) < 1e-7;
+  var cents6 = (n) => Math.round(n * 100);
+  var remaining = (p) => Math.min(
+    cents6(Math.abs(p.amount)),
+    cents6(Math.abs(p.counted ?? p.amount))
+  );
+  var compare5 = (a, b) => a.date.localeCompare(b.date) || (a.ledgerSequence ?? 0) - (b.ledgerSequence ?? 0) || a.id.localeCompare(b.id);
+  function paybackChoices(dashboard, ids) {
+    const wanted = new Set(ids);
+    const selected = dashboard.transactions.filter((p) => wanted.has(p.id));
+    if (!ids.length || wanted.size !== ids.length || selected.length !== ids.length || new Set(selected.map((p) => Math.sign(p.amount))).size !== 1)
+      throw new Error("invalid-payment");
+    const group = selected.filter((p) => p.paybackEligible && remaining(p) > 0).sort(compare5);
+    if (!group.length)
+      throw new Error("invalid-payment");
+    const incoming = group[0].amount > 0;
+    const total = group.reduce((n, p) => n + remaining(p), 0);
+    const first = Date.parse(group[0].date);
+    const last2 = Date.parse(group.at(-1).date);
+    const candidates = dashboard.transactions.filter((p) => p.paybackEligible && remaining(p) > 0 && p.amount > 0 !== incoming).sort((a, b) => -compare5(a, b));
+    const suggestions = candidates.flatMap(
+      (candidate) => {
+        const days = (Date.parse(candidate.date) - last2) / 864e5;
+        const date2 = Date.parse(candidate.date);
+        if (date2 < first - (incoming ? 120 : 30) * 864e5 || date2 > last2 + (incoming ? 30 : 120) * 864e5)
+          return [];
+        let fits;
+        if (group.length === 1) {
+          const expense = incoming ? candidate : group[0];
+          const payer = incoming ? group[0] : candidate;
+          const rest = remaining(expense);
+          const original = cents6(Math.abs(expense.amount));
+          fits = [
+            ["whole", original],
+            ["half", Math.round(original / 2)],
+            ["third", Math.round(original / 3)],
+            ["quarter", Math.round(original / 4)],
+            ["rest", rest]
+          ];
+          const match2 = fits.find(([, n]) => n > 0 && n <= rest && Math.abs(remaining(payer) - n) <= 1);
+          return [
+            {
+              id: candidate.id,
+              fit: match2?.[0] ?? null,
+              amount: Math.min(remaining(payer), rest, match2?.[1] ?? Infinity) / 100,
+              distance: Math.abs(days)
+            }
+          ];
+        }
+        fits = incoming ? [["whole", total], ["half", total * 2]] : [
+          ["whole", total],
+          ["half", Math.round(total / 2)],
+          ["third", Math.round(total / 3)],
+          ["quarter", Math.round(total / 4)]
+        ];
+        const match = fits.find(([, n]) => n > 0 && Math.abs(remaining(candidate) - n) <= 1);
+        return [
+          {
+            id: candidate.id,
+            fit: match?.[0] ?? null,
+            amount: Math.min(remaining(candidate), total) / 100,
+            distance: Math.abs(days)
+          }
+        ];
+      }
+    ).sort(
+      (a, b) => Number(!!b.fit) - Number(!!a.fit) || a.distance - b.distance || dashboard.transactions.find((p) => p.id === b.id).date.localeCompare(
+        dashboard.transactions.find((p) => p.id === a.id).date
+      ) || a.id.localeCompare(b.id)
+    ).slice(0, 8);
+    return {
+      group,
+      candidates,
+      suggestions,
+      rest: total / 100,
+      skipped: selected.length - group.length
+    };
+  }
+  function planPaybacks(dashboard, ids, others, typedAmount) {
+    const choices = paybackChoices(dashboard, ids);
+    const selected = new Set(others);
+    if (selected.size !== others.length || !others.length)
+      throw new Error("invalid-payment");
+    const picked = choices.candidates.filter((p2) => selected.has(p2.id));
+    if (picked.length !== others.length)
+      throw new Error("invalid-payment");
+    const expenses = (choices.group[0].amount < 0 ? choices.group : picked).slice().sort(compare5);
+    const paymentsIn = (choices.group[0].amount > 0 ? choices.group : picked).slice().sort(compare5);
+    if (typedAmount !== void 0 && (expenses.length !== 1 || paymentsIn.length !== 1 || !centAmount(typedAmount) || typedAmount <= 0 || cents6(typedAmount) > Math.min(remaining(expenses[0]), remaining(paymentsIn[0]))))
+      throw new Error("invalid-amount");
+    const open = expenses.map(remaining);
+    const available = paymentsIn.map(remaining);
+    const originalOpen = open.slice();
+    const originalAvailable = available.slice();
+    const links = [];
+    let e = 0;
+    let p = 0;
+    while (e < expenses.length && p < paymentsIn.length) {
+      if (!open[e]) {
+        e++;
+        continue;
+      }
+      if (!available[p]) {
+        p++;
+        continue;
+      }
+      const amount2 = typedAmount === void 0 ? Math.min(open[e], available[p]) : cents6(typedAmount);
+      const from2 = paymentsIn[p];
+      const to = expenses[e];
+      const previous = from2.paysBack?.find((link) => link.payment === to.id)?.amount ?? 0;
+      links.push(
+        {
+          from: from2.id,
+          to: to.id,
+          amount: amount2 / 100,
+          totalAmount: (cents6(previous) + amount2) / 100
+        }
+      );
+      open[e] -= amount2;
+      available[p] -= amount2;
+      if (typedAmount !== void 0)
+        break;
+    }
+    return {
+      links,
+      expenses: expenses.map(
+        (p2, i) => ({
+          id: p2.id,
+          amount: (originalOpen[i] - open[i]) / 100,
+          rest: open[i] / 100
+        })
+      ),
+      paymentsIn: paymentsIn.map(
+        (p2, i) => ({
+          id: p2.id,
+          amount: (originalAvailable[i] - available[i]) / 100,
+          rest: available[i] / 100
+        })
+      ),
+      linked: links.reduce((n, l) => n + cents6(l.amount), 0) / 100,
+      stillOpen: open.reduce((a, b) => a + b, 0) / 100,
+      staysIncome: available.reduce((a, b) => a + b, 0) / 100
+    };
+  }
+  function applyPlan(links, plan) {
+    const result = JSON.parse(JSON.stringify(links));
+    for (const link of plan.links) {
+      if (!Object.hasOwn(result, link.from))
+        Object.defineProperty(
+          result,
+          link.from,
+          {
+            value: [],
+            enumerable: true,
+            configurable: true,
+            writable: true
+          }
+        );
+      const rows = result[link.from];
+      const i = rows.findIndex((l) => l.payment === link.to);
+      if (i < 0)
+        rows.push({
+          payment: link.to,
+          amount: link.totalAmount
+        });
+      else
+        rows[i].amount = link.totalAmount;
+    }
+    return result;
+  }
+
+  // src/engine/selection.ts
+  function selectionSummary(transactions, ids, target) {
+    const selected = new Set(ids);
+    const rows = transactions.filter((p) => selected.has(p.id) && !p.coveredBy);
+    if (rows.length !== selected.size || !rows.length || new Set(rows.map((p) => Math.sign(p.amount))).size !== 1)
+      throw new Error("invalid-selection");
+    const shops = new Set(rows.map((p) => p.merchant).filter(Boolean));
+    const others = transactions.filter(
+      (p) => !selected.has(p.id) && p.merchant && shops.has(p.merchant) && Math.sign(p.amount) === Math.sign(rows[0].amount) && !["manual", "structural", "receipt"].includes(p.categorySource || "") && (p.categoriesIn.length || p.incomeBuckets.length) && p.categoryName !== target
+    );
+    return {
+      ids: rows.map((p) => p.id),
+      count: rows.length,
+      side: rows[0].amount > 0 ? "income" : "spend",
+      total: rows.reduce((n, p) => n + Math.round(Math.abs(p.counted ?? p.amount) * 100), 0) / 100,
+      shops: shops.size,
+      otherCount: others.length,
+      otherIDs: others.map((p) => p.id)
+    };
   }
 
   // src/engine/index.ts

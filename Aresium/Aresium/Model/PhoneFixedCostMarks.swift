@@ -32,7 +32,9 @@ extension PhoneLedger {
         let dashboard = try await dashboard(engine: engine, catalog: catalog, language: .current, today: today, ownNames: ownNames)
         guard observer.value == revision else { throw BatchChangeError.changed }
         // Refuse a stale screen before any write, including an import that changed membership or cadence.
-        guard let live = FixedCosts.entries(in: dashboard, marks: before.fixedCostMarks).first(where: { $0.id == entry.id }),
+        let entries = try await engine.fixedCostEntries(in: dashboard, marks: before.fixedCostMarks)
+        guard observer.value == revision else { throw BatchChangeError.changed }
+        guard let live = entries.first(where: { $0.id == entry.id }),
               live.ids == entry.ids else { throw BatchChangeError.changed }
         do {
             let models = try modelContext.fetch(FetchDescriptor<StoredFixedCostExclusion>())

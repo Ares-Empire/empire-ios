@@ -226,6 +226,30 @@ actor AresiumEngine {
         return dashboard
     }
 
+    /// Detection, ordering and monthly averages are calculated by the bundled engine, after phone naming.
+    func fixedCostAnalysis(in dashboard: Dashboard, marks: [FixedCostMark] = [],
+                           includeFixedCosts: Bool = true) throws -> FixedCostAnalysis {
+        try call("fixedCostAnalysis",
+                 FixedCostInput(dashboard: dashboard, marks: marks, includeFixedCosts: includeFixedCosts),
+                 as: FixedCostAnalysis.self)
+    }
+
+    func fixedCostEntries(in dashboard: Dashboard, marks: [FixedCostMark] = []) throws -> [FixedCostEntry] {
+        try fixedCostAnalysis(in: dashboard, marks: marks).entries
+    }
+
+    func fixedCostList(_ entries: [FixedCostEntry], side: DashboardSide) throws -> FixedCostList {
+        try call("fixedCostList", FixedCostListInput(entries: entries, side: side), as: FixedCostList.self)
+    }
+
+    func monthlyAverage(in dashboard: Dashboard, side: DashboardSide) throws -> MonthlyAverage? {
+        try fixedCostAnalysis(in: dashboard, includeFixedCosts: false).averages[side.rawValue]
+    }
+
+    func nextFixedDay(after day: String, cadence: FixedCostCadence) throws -> String {
+        try call("nextFixedDay", NextFixedDayInput(day: day, cadence: cadence), as: String.self)
+    }
+
     /// `readReceipt`: what Vision read on a receipt (`ReceiptCapture`, the JSON the engine takes) → shop, date, total,
     /// currency, card or cash, the rows, and which of them it is sure of.
     func readReceipt(_ capture: ReceiptCapture) throws -> ReceiptReading {
@@ -263,6 +287,18 @@ actor AresiumEngine {
         catalog: () => ({ defaults: E.DEFAULT_CATEGORIES, builtIns: E.BUILT_IN_CATEGORIES,
                           looks: E.CATEGORY_LOOK, custom: E.CUSTOM_CATEGORY_LOOK }),
         dashboard: (input) => E.buildDashboard(E.buildDashboardSource(input)),
+        fixedCostAnalysis: (input) => {
+          const entries = input.includeFixedCosts ? E.fixedCostEntries(input.dashboard, input.marks) : [];
+          const lists = {}, averages = {};
+          for (const side of ["expenses", "income"]) {
+            lists[side] = E.fixedCostList(entries, side);
+            const average = E.monthlyAverage(input.dashboard, side);
+            if (average !== null) averages[side] = average;
+          }
+          return { entries, lists, averages };
+        },
+        fixedCostList: (input) => E.fixedCostList(input.entries, input.side),
+        nextFixedDay: (input) => E.nextFixedDay(input.day, input.cadence),
         sortPayments: (input) => E.sortPayments(input.payments, {
           categories: input.categories, learned: input.learned,
           ...(input.localPlaces === true ? { localPlaces: true } : {}),
@@ -370,6 +406,19 @@ actor AresiumEngine {
         let message: String
     }
 
+    private nonisolated struct FixedCostInput: Encodable {
+        let dashboard: Dashboard
+        let marks: [FixedCostMark]
+        let includeFixedCosts: Bool
+    }
+    private nonisolated struct FixedCostListInput: Encodable {
+        let entries: [FixedCostEntry]
+        let side: DashboardSide
+    }
+    private nonisolated struct NextFixedDayInput: Encodable {
+        let day: String
+        let cadence: FixedCostCadence
+    }
     private nonisolated struct Empty: Encodable {}
     private nonisolated struct PersonalCheck: Decodable { let reason: String? }
     private nonisolated struct CategoryID: Encodable { let id: String }
