@@ -55,6 +55,8 @@ adapted for Xcode on the MacBook. Codex's own rules: `AGENTS.md`.
 **Design stays with Claude** (Patrik, 2026-10-24, after the phone hub: Codex's screens looked generic and "cheap"
 twice; Claude's rebuild from the desktop's own components was approved at once). Codex may build a screen's
 structure and logic; Claude does the look, starting from the existing website/app components, not from new decoration.
+**Exception (Patrik, 2026-11-03):** where the look already exists in the website and the app (brief 218, the Aresium
+website catching up with the app), Codex builds the screens from the website's own components; Claude checks the look.
 
 **Delegate** when the task fits a brief with a clear "done" (it compiles, these tests pass, this screen
 shows this data) and the build is clearly bigger than the brief. Otherwise Claude does it.
