@@ -1,6 +1,6 @@
 # 227: The Aresium app on the shared engine: balances and fixed costs
 
-Status: running (started 2026-11-03)
+Status: merged 2026-11-03, build 21 (831 tests on Claude's run; the balance line Codex added was removed in round 2; engine a9e2cc6). On the phone: balances, fixed costs, marks.
 Branch: `codex/227-app-engine` · Worktree: `../empire-ios-227-app-engine` · Model: `gpt-6.1-sol`, effort `high` ·
 Simulator: `codex-227` (create it as `AGENTS.md` says)
 
