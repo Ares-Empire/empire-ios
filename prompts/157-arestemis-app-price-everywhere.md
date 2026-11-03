@@ -1,6 +1,6 @@
 # 157: Arestemis app: the Preismonitor "Überall"
 
-Status: done (merged 1f51c6b, 2026-11-04)
+Status: done (bc1b602, 2026-11-04)
 Branch: `claude/157-price-everywhere` · Worktree: `../empire-ios-157-price-everywhere` · **For a Claude agent** (design)
 
 ## Goal
