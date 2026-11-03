@@ -1,6 +1,6 @@
 # 142: Arestemis app: a listing reads like a listing, Open first, and a New search page that guides
 
-Status: running (Claude agent, 2026-11-03)
+Status: merged 2026-11-03 (Arestemis build 14)
 Branch: `claude/142-listing-page-new-search` · Worktree: `../empire-ios-142-listing-page` · **For a Claude agent**
 (design)
 
