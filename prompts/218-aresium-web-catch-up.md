@@ -1,6 +1,6 @@
 # 218: The Aresium website catches up with the iPhone app
 
-Status: round 2 running (round 1 checked 2026-11-03: works, packed code, look fixes)
+Status: merged 2026-11-03 (aresium c79cb57; 624 tests). NOT deployed: needs the Prisma baseline marked applied + migrate deploy on the server first (docs/DEVELOPMENT.md). Open: copy the new sample into the app's fixtures; quick sort's buttons sit tight under the grid and "3 Payments" is capitalised; a later brief moves the app onto the engine's fixed costs and deletes FixedCosts.swift after a same-results check.
 Branch: `codex/218-web-catch-up` (repo `aresium`) · Worktree: `~/aresium-218-web-catch-up` · Model: `gpt-6.1-sol`,
 effort `high`
 
