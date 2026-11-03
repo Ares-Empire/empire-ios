@@ -1,6 +1,6 @@
 # 224: Aresium's numbers: find and fix flaws like the balance bug
 
-Status: running (started 2026-11-03)
+Status: merged + deployed 2026-11-03 (aresium; 647 tests; real data: 1,246 payments, no field changed). Three fixes: one Uncategorised row, category sides in whole cents, today as Berlin's day. Open: PayPal cross-format duplicates (not proven).
 Branch: `codex/224-money-review` (repo `aresium`) · Worktree: `~/aresium-224-money-review` · Model: `gpt-6-astra`,
 effort `high`
 
