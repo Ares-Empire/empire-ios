@@ -4,6 +4,7 @@ import CoreTransferable
 import Foundation
 import ImageIO
 import Observation
+import QuickLookThumbnailing
 import UIKit
 import UniformTypeIdentifiers
 
@@ -315,20 +316,30 @@ nonisolated enum PhotoDate {
     }
 }
 
-/// A small picture of a photo for the strip (an 88 pt tile, so 264 pixels), read from the file without loading it whole.
-/// The share extension has little memory (iOS closes it at about 120 MB), and on the iPhone the photo decoder can hold a
-/// whole picture while it shrinks it, so the thumbnails are made one at a time and from the small picture a photo
-/// carries when it has one (measured with six 24-megapixel HEIC photos on the simulator, 2026-11-03: the peak rose by
-/// 19 MB made all at once from the full pictures, by 5 MB this way).
+/// A small picture of a photo for the strip (an 88 pt tile), never the photo itself in memory. The share extension may
+/// use 220 MB on Patrik's iPhone, and iOS ended it at 240 MB with six photos shared from Photos (its log, 2026-11-03:
+/// "exceeded mem limit: ActiveHard 220 MB (fatal)"), because every tile's thumbnail was made at once from the full
+/// picture. So QuickLook makes it, in its own process, whose memory never counts against the extension's; only when it
+/// cannot does ImageIO make it here, one at a time and from the small picture a photo carries.
 nonisolated enum DropThumbnail {
-    static func make(_ url: URL, pixels: Int = 264) async -> UIImage? {
-        if let image = await queue.run({ still(url, pixels: pixels) }) { return image }
+    /// The longer side in points: a 4:3 photo fitted into it still fills the 88 pt square without being enlarged.
+    static let side: CGFloat = 120
+
+    static func make(_ url: URL) async -> UIImage? {
+        if let image = await quickLook(url) { return image }
+        if let image = await queue.run({ still(url, pixels: Int(side * 3)) }) { return image }
         return await video(url)
+    }
+
+    private static func quickLook(_ url: URL) async -> UIImage? {
+        let request = QLThumbnailGenerator.Request(fileAt: url, size: CGSize(width: side, height: side), scale: 3,
+                                                   representationTypes: .thumbnail)
+        return try? await QLThumbnailGenerator.shared.generateBestRepresentation(for: request).uiImage
     }
 
     private static let queue = Queue()
 
-    /// Runs one thumbnail at a time, off the main actor.
+    /// Runs one ImageIO thumbnail at a time, off the main actor.
     private actor Queue {
         func run(_ work: @Sendable () -> UIImage?) -> UIImage? { work() }
     }
