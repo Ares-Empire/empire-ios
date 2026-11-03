@@ -119,7 +119,7 @@
   {
     "kind": "item",
     "search": {
-      "query": "Bürostuhl",
+      "query": "Herman Miller Aeron",
       "exclude": [
         "Hülle"
       ],
@@ -144,11 +144,15 @@
       ],
       "radius_km": 20,
       "seller": "any",
-      "extra": "Armlehnen wären schön",
+      "extra": "Aeron nur Größe B, Leap oder Gesture mit Armlehnen",
       "sources": [
         "kleinanzeigen"
       ],
-      "auctions": true
+      "auctions": true,
+      "more_queries": [
+        "Steelcase Leap",
+        "Steelcase Gesture"
+      ]
     },
     "id": 3,
     "name": "Office chair",

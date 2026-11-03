@@ -502,6 +502,16 @@
         }
       }
     },
+    "Add search word" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suchbegriff hinzufügen"
+          }
+        }
+      }
+    },
     "Add word" : {
       "localizations" : {
         "de" : {
@@ -682,6 +692,16 @@
         }
       }
     },
+    "Another search word" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch ein Suchbegriff"
+          }
+        }
+      }
+    },
     "Any" : {
       "localizations" : {
         "de" : {
@@ -698,16 +718,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Eine Seite: ein Push, wenn etwas Neues erscheint."
-          }
-        }
-      }
-    },
-    "Anything else: size, colour, with box …" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sonst noch etwas: Größe, Farbe, mit Karton …"
           }
         }
       }
@@ -782,6 +792,16 @@
         }
       }
     },
+    "At least 2 characters." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mindestens 2 Zeichen."
+          }
+        }
+      }
+    },
     "At least 3 characters." : {
       "localizations" : {
         "de" : {
@@ -838,6 +858,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Höchstens 5 Orte."
+          }
+        }
+      }
+    },
+    "At most 5 search words." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Höchstens 5 Suchbegriffe."
           }
         }
       }
@@ -1825,6 +1855,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Herman Miller Aeron, Größe B, wie neu"
+          }
+        }
+      }
+    },
+    "Hermès only in blue, Ferragamo red or burgundy. Silk, new or like new." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hermès nur in Blau, Ferragamo in Rot oder Bordeaux. Seide, neu oder wie neu."
           }
         }
       }
@@ -3249,6 +3289,16 @@
         }
       }
     },
+    "Search words" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suchbegriffe"
+          }
+        }
+      }
+    },
     "Searches" : {
       "localizations" : {
         "de" : {
@@ -3999,6 +4049,16 @@
         }
       }
     },
+    "What fits" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was passen soll"
+          }
+        }
+      }
+    },
     "What it should do" : {
       "localizations" : {
         "de" : {
@@ -4275,16 +4335,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "z. B. möbliert, Balkon, nicht im Erdgeschoss"
-          }
-        }
-      }
-    },
-    "e.g. size B, black, with the original box" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "z. B. Größe B, schwarz, mit Originalkarton"
           }
         }
       }
@@ -4566,6 +4616,16 @@
     },
     "–" : {
       "shouldTranslate" : false
+    },
+    "“%@” is there already." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "„%@“ ist schon dabei."
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

@@ -141,10 +141,12 @@ struct Chip: View {
     }
 }
 
-/// Lays out chips in rows, wrapping like text.
+/// Lays out chips in rows, wrapping like text. With `lastFills`, the last item (a text field after chips, as in Mail's
+/// address field) takes the rest of its row, at least that wide, else a row of its own.
 struct FlowLayout: Layout {
     var spacing: CGFloat = 8
     var lineSpacing: CGFloat = 8
+    var lastFills: CGFloat? = nil
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         let width = proposal.width ?? .infinity
@@ -159,10 +161,11 @@ struct FlowLayout: Layout {
         for row in arrange(subviews, width: bounds.width) {
             var x = bounds.minX
             for index in row.indices {
-                let size = subviews[index].sizeThatFits(.unspecified)
+                let size = itemSize(subviews, index, width: bounds.width)
+                let width = fills(subviews, index) ? max(bounds.maxX - x, size.width) : size.width
                 subviews[index].place(at: CGPoint(x: x, y: y + (row.height - size.height) / 2),
-                                      proposal: ProposedViewSize(width: min(size.width, bounds.width), height: size.height))
-                x += min(size.width, bounds.width) + spacing
+                                      proposal: ProposedViewSize(width: width, height: size.height))
+                x += width + spacing
             }
             y += row.height + lineSpacing
         }
@@ -170,17 +173,28 @@ struct FlowLayout: Layout {
 
     private struct Row { var indices: [Int] = []; var width: CGFloat = 0; var height: CGFloat = 0 }
 
+    private func fills(_ subviews: Subviews, _ index: Int) -> Bool {
+        lastFills != nil && index == subviews.count - 1
+    }
+
+    /// An item's size in a row of `width`: its own, or for the filling last item at least `lastFills` wide.
+    private func itemSize(_ subviews: Subviews, _ index: Int, width: CGFloat) -> CGSize {
+        let size = subviews[index].sizeThatFits(.unspecified)
+        guard fills(subviews, index), let least = lastFills else { return CGSize(width: min(size.width, width), height: size.height) }
+        let height = subviews[index].sizeThatFits(ProposedViewSize(width: least, height: nil)).height
+        return CGSize(width: min(least, width), height: height)
+    }
+
     private func arrange(_ subviews: Subviews, width: CGFloat) -> [Row] {
         var rows: [Row] = []
         var row = Row()
         for index in subviews.indices {
-            let size = subviews[index].sizeThatFits(.unspecified)
-            let itemWidth = min(size.width, width)
-            if !row.indices.isEmpty, row.width + spacing + itemWidth > width {
+            let size = itemSize(subviews, index, width: width)
+            if !row.indices.isEmpty, row.width + spacing + size.width > width {
                 rows.append(row)
                 row = Row()
             }
-            row.width += (row.indices.isEmpty ? 0 : spacing) + itemWidth
+            row.width += (row.indices.isEmpty ? 0 : spacing) + size.width
             row.height = max(row.height, size.height)
             row.indices.append(index)
         }

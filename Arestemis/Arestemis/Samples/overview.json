@@ -530,6 +530,7 @@
         "active": true,
         "search": {
           "query": "Denimwerk jeans",
+          "more_queries": ["Levi's 501", "Lee Rider"],
           "exclude": [],
           "price_min": null,
           "price_max": 40,
@@ -541,7 +542,7 @@
           "places": [],
           "radius_km": 20,
           "seller": "any",
-          "extra": "",
+          "extra": "Levi's and Lee only in dark blue, Denimwerk any colour. W32, L32 or L34.",
           "sources": [
             "kleinanzeigen",
             "vinted"

@@ -29,6 +29,17 @@ struct ServerSamplesTests {
         #expect(Set(hunts.map(\.kind)) == [.flat, .item])
     }
 
+    /// Brief 148: a thing search with several search words; the overview's one without them reads as none.
+    @Test func aThingSearchWithSeveralWords() throws {
+        let hunts = try JSONDecoder().decode([Hunt].self, from: data("hunts"))
+        let chairs = try #require(hunts.first { $0.kind == .item })
+        #expect(chairs.search.item?.words == ["Herman Miller Aeron", "Steelcase Leap", "Steelcase Gesture"])
+        #expect(HuntText.automaticTitle(chairs.search, language: .german) == "Herman Miller Aeron + 2")
+        #expect(HuntText(chairs).title == chairs.name)
+        let overview = try JSONDecoder().decode(Overview.self, from: data("overview"))
+        #expect(overview.hunts.compactMap(\.hunt.search.item).allSatisfy { $0.moreQueries.isEmpty })
+    }
+
     @Test func matchesWithThingDetails() throws {
         let page = try JSONDecoder().decode(MatchPage.self, from: data("matches"))
         let things = page.items.filter { $0.listing.item != nil }

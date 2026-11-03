@@ -1,12 +1,14 @@
 import SwiftUI
 
 /// A thing hunt's search ("Things"), built from the flat form's pieces in the same order of habit: its name and "Describe
-/// it" at the top, then what (the search words and words to leave out), price (with how far a negotiable price may lie
-/// over the maximum), condition, where (pickup, shipping or either; places and radius unless only shipped), seller,
-/// extras, portals (the server's sites for things, with "Include auctions" while a chosen one has auctions; a site that
-/// cannot serve the delivery greyed and switched off, brief 129); then save. Pushed on the Hunts tab for one hunt, or
-/// for a new one (empty, or from one of New search's examples), which it creates paused.
-/// What is wrong shows under its field (`ItemSearchDraft.fieldLine`); unsaved edits are kept per hunt.
+/// it" at the top, then the search words (up to five as chips, brief 149, `SearchWordsField`) with the words to leave
+/// out, what fits (the description the AI checks every listing against, per word: "Hermès only in blue, …"), price (with
+/// how far a negotiable price may lie over the maximum), condition, where (pickup, shipping or either; places and radius
+/// unless only shipped), seller, portals (the server's sites for things, with "Include auctions" while a chosen one has
+/// auctions; a site that cannot serve the delivery greyed and switched off, brief 129); then save. Pushed on the Hunts
+/// tab for one hunt, or for a new one (empty, or from one of New search's examples), which it creates paused.
+/// What is wrong shows under its field (`ItemSearchDraft.fieldLine`), and so does the server's refusal of a search word,
+/// led by that word (`SearchWords.refusalLine`); unsaved edits are kept per hunt.
 struct ItemSearchScreen: View {
     let store: ArestemisStore
     @Bindable var navigation: AppNavigation
@@ -21,7 +23,10 @@ struct ItemSearchScreen: View {
     @State private var exampleApplied = false
     @State private var description = ""
     @State private var confirmDelete = false
-    @FocusState private var queryFocused: Bool
+    @State private var launchDone = false
+    @FocusState private var wordFocused: Bool
+    /// Return or + found a word that cannot be added: its line shows although the field is still in use.
+    @State private var triedAdding = false
     @Environment(\.dismiss) private var dismiss
 
     private var hunt: Hunt? { huntID.flatMap { store.card($0)?.hunt } }
@@ -39,7 +44,13 @@ struct ItemSearchScreen: View {
                         NameField(text: $draft.name, placeholder: draft.namePlaceholder())
                     }
                     DescribeLine { navigation.showsDescribe = true }
-                    FormSection(title: String(localized: "What"), problems: lines(.query, .exclude)) { what }
+                    FormSection(title: String(localized: "Search words"), problems: lines(.exclude)) { what }
+                    FormSection(title: String(localized: "What fits"), problems: lines(.extra)) {
+                        TextArea(placeholder: String(localized: "Hermès only in blue, Ferragamo red or burgundy. Silk, new or like new."),
+                                 text: $draft.extra, minHeight: 84, inWell: false)
+                            .accessibilityLabel("What fits")
+                            .glassCard()
+                    }
                     FormSection(title: String(localized: "Price"), problems: lines(.priceMin, .priceMax, .priceOrder, .vbOverMax)) {
                         price
                     }
@@ -47,10 +58,6 @@ struct ItemSearchScreen: View {
                     FormSection(title: String(localized: "Where"), problems: lines(.places, .radius)) { place }
                         .id("where")                    // `-scrollTo where`: the delivery with the sites under it
                     FormSection(title: String(localized: "Seller")) { seller }
-                    FormSection(title: String(localized: "Extras"), problems: lines(.extra)) {
-                        ExtrasField(placeholder: String(localized: "e.g. size B, black, with the original box"),
-                                    text: $draft.extra, caption: String(localized: "Anything else: size, colour, with box …"))
-                    }
                     FormSection(title: String(localized: "Portals"), problems: lines(.sources)) { portals }
                     SearchSaveArea(creating: creating, canSave: canSave, saving: store.isSavingSearch, line: saveLine,
                                    save: saveSearch, delete: creating ? nil : { confirmDelete = true })
@@ -90,7 +97,11 @@ struct ItemSearchScreen: View {
         } message: {
             Text("The hunt stops and its listings are deleted.")
         }
-        .onAppear { sync() }
+        .onAppear {
+            sync()
+            store.clearSearchError()                    // an older form's refusal is not this one's
+            debugLaunch()
+        }
         .task { await store.loadKinds() }               // the sites as the server offers them now
         // The hunt changed elsewhere (another device, renamed): taken over while nothing is edited here.
         .onChange(of: store.savedDraft(ItemSearchDraft.self, huntID: huntID)) { _, _ in
@@ -100,6 +111,31 @@ struct ItemSearchScreen: View {
         .onChange(of: draft.delivery) { _, _ in withAnimation(.easeOut(duration: 0.2)) { switchOffUnservedSites() } }
         .onChange(of: store.kinds) { _, _ in switchOffUnservedSites() }
         .onChange(of: draft) { _, new in store.keepSearchDraft(new, huntID: huntID) }
+        // The server's refusal of a word goes once the words change (its place among them may be another's then).
+        .onChange(of: draft.sentWords) { _, _ in
+            if SearchWords.isWordsField(store.searchErrorField) { store.clearSearchError() }
+        }
+    }
+
+    /// Screenshots (sample mode, DEBUG): `-itemWords <a,b,c>` adds words as chips, `-itemTyped <text>` types into the
+    /// words' field, `-itemFits <text>` fills What fits, `-saveItem` then taps Save (with `-sampleWordRefusal <i>` the
+    /// sample refuses `search.more_queries[i]` as the server would).
+    private func debugLaunch() {
+        #if DEBUG
+        guard store.isSample, !launchDone else { return }
+        launchDone = true
+        if let words = LaunchArguments.value("-itemWords") {
+            for word in words.components(separatedBy: ",") { draft.add(word: word) }
+        }
+        if let typed = LaunchArguments.value("-itemTyped") { draft.type(typed) }
+        if let fits = LaunchArguments.value("-itemFits") { draft.extra = fits }
+        if LaunchArguments.current.contains("-saveItem") {
+            Task {
+                try? await Task.sleep(for: .milliseconds(600))
+                saveSearch()
+            }
+        }
+        #endif
     }
 
     /// The hunt as saved, with the edits kept for it while it is still current; a new form opened from an example
@@ -123,6 +159,19 @@ struct ItemSearchScreen: View {
     /// The lines under a section: what is wrong with its fields.
     private func lines(_ problems: ItemSearchDraft.Problem...) -> [String] {
         problems.compactMap { draft.fieldLine($0) }
+    }
+
+    /// Under the chips: what is wrong with the search words (a word still too short only once it was to be added or the
+    /// field is left, not while its first letter is typed), and the server's refusal of one, led by that word.
+    private var wordLines: [String] {
+        var lines: [String] = []
+        if let line = draft.fieldLine(.words), !(draft.typed == .tooShort && wordFocused && !triedAdding) {
+            lines.append(line)
+        }
+        if let field = store.searchErrorField, SearchWords.isWordsField(field), let error = store.searchError {
+            lines.append(SearchWords.refusalLine(error, field: field, words: draft.sentWords))
+        }
+        return lines
     }
 
     // MARK: portals
@@ -150,14 +199,19 @@ struct ItemSearchScreen: View {
 
     // MARK: what
 
+    /// The search words with their lines right under the chips (the quiet note, what is wrong, the server's refusal),
+    /// and the words to leave out under them.
     private var what: some View {
         VStack(alignment: .leading, spacing: 0) {
-            TextField("", text: $draft.query, prompt: Text("e.g. Herman Miller Aeron").foregroundStyle(Ink.muted))
-                .font(AppFont.text(16, weight: .medium)).foregroundStyle(Ink.primary)
-                .submitLabel(.done)
-                .focused($queryFocused)
-                .accessibilityLabel("What you look for")
-                .frame(minHeight: 52)
+            VStack(alignment: .leading, spacing: 8) {
+                SearchWordsField(draft: $draft, focus: $wordFocused, triedAdding: $triedAdding)
+                if let note = draft.wordsNote() {
+                    Caption(text: note).padding(.bottom, 2).transition(.opacity)
+                }
+                ForEach(wordLines, id: \.self) { ProblemLine(text: $0).padding(.bottom, 2) }
+            }
+            .padding(.vertical, 12)
+            .animation(.easeOut(duration: 0.2), value: draft.words)
             Hairline()
             VStack(alignment: .leading, spacing: 10) {
                 CapsLabel(text: String(localized: "Leave out"))
@@ -318,9 +372,9 @@ struct ItemSearchScreen: View {
 
     // MARK: save and delete
 
-    /// Under Save: the server's refusal, what is still missing, or what saving does.
+    /// Under Save: the server's refusal (unless its field shows it), what is still missing, or what saving does.
     private var saveLine: String? {
-        if let error = store.searchError { return error }
+        if let error = store.searchError, !SearchWords.isWordsField(store.searchErrorField) { return error }
         if let hint = draft.hint() { return hint }
         if creating { return String(localized: "The search starts paused.") }
         if hunt?.active == true && isDirty { return String(localized: "Changes apply from the next scan.") }
@@ -331,8 +385,8 @@ struct ItemSearchScreen: View {
         endTyping()
         guard let search = draft.search() else { return }
         Task {
-            guard let saved = await store.saveHunt(id: huntID, kind: .item, name: draft.sentName, search: .item(search))
-            else { return }
+            guard let saved = await store.saveHunt(id: huntID, kind: .item, name: draft.sentName, search: .item(search),
+                                                   fieldsShown: SearchWords.refusalFields) else { return }
             if creating { navigation.showCreated(saved.id) } else { dismiss() }
         }
     }

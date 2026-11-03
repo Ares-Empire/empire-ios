@@ -2,7 +2,11 @@ import Foundation
 
 /// Editable item filters. Number text remains intact until conversion, so malformed input cannot silently clear a filter.
 struct ItemSearchDraft: Codable, Equatable {
-    var query = ""
+    /// The search words added as chips (brief 149), in order: the first is sent as `query`, the rest as `more_queries`.
+    var words: [String] = []
+    /// What is typed in the words' field and not added yet. It counts as the next word (`sentWords`), so one word typed
+    /// without Return still saves.
+    private(set) var typedWord = ""
     var exclude: [String] = []
     var priceMin = ""
     var priceMax = "" {
@@ -30,7 +34,7 @@ struct ItemSearchDraft: Codable, Equatable {
     init() {}
     init(_ search: ItemSearch, name: String? = nil) {
         self.name = name ?? ""
-        query = search.query
+        words = search.words
         exclude = search.exclude
         priceMin = Self.text(search.priceMin)
         priceMax = Self.text(search.priceMax)
@@ -49,11 +53,11 @@ struct ItemSearchDraft: Codable, Equatable {
     }
 
     enum Problem: Equatable {
-        case query, exclude, priceMin, priceMax, priceOrder, vbOverMax, condition, radius, places, extra, sources
+        case words, exclude, priceMin, priceMax, priceOrder, vbOverMax, condition, radius, places, extra, sources
     }
     var problems: [Problem] {
         var result: [Problem] = []
-        if !(2...100).contains(query.trimmingCharacters(in: .whitespacesAndNewlines).count) { result.append(.query) }
+        if wordsProblem != nil { result.append(.words) }
         if exclude.count > 20 || exclude.contains(where: { $0.count > 40 }) { result.append(.exclude) }
         if !priceMin.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && Self.number(priceMin) == nil { result.append(.priceMin) }
         if !priceMax.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && Self.number(priceMax) == nil { result.append(.priceMax) }
@@ -70,17 +74,19 @@ struct ItemSearchDraft: Codable, Equatable {
 
     /// Invalid input has no contract value; the form can show `problems` without losing what was typed.
     func search() -> ItemSearch? {
-        guard isValid, let vb = Self.number(vbText), let radius = Self.number(radiusKm) else { return nil }
-        return ItemSearch(query: query.trimmingCharacters(in: .whitespacesAndNewlines), exclude: exclude,
+        guard isValid, let vb = Self.number(vbText), let radius = Self.number(radiusKm), let query = sentWords.first
+        else { return nil }
+        return ItemSearch(query: query, moreQueries: Array(sentWords.dropFirst()), exclude: exclude,
                           priceMin: Self.number(priceMin), priceMax: Self.number(priceMax), vbOverMax: vb,
                           conditionMin: conditionMin, forParts: forParts, auctions: auctions, delivery: delivery,
                           places: places, radiusKm: radius, seller: seller,
                           extra: extra.trimmingCharacters(in: .whitespacesAndNewlines), sources: Source.ordered(sources))
     }
 
-    /// Like the flat form: omitted/null fields stay; places and words merge; empty extra/sites do not erase edits.
+    /// Like the flat form: omitted/null fields stay; places and words merge (search words up to five, none repeated);
+    /// empty extra/sites do not erase edits.
     mutating func apply(_ partial: PartialItemSearch) {
-        if let query = partial.query, !query.isEmpty { self.query = query }
+        for word in [partial.query].compactMap({ $0 }) + (partial.moreQueries ?? []) { add(word: word) }
         if let exclude = partial.exclude {
             for word in exclude where !self.exclude.contains(word) { self.exclude.append(word) }
         }
@@ -101,15 +107,25 @@ struct ItemSearchDraft: Codable, Equatable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case query, exclude, priceMin, priceMax, vbText, vbOverMaxTouched, conditionMin, forParts, auctions, delivery
-        case places, radiusKm, seller, extra, sources, name
+        case words, typedWord, exclude, priceMin, priceMax, vbText, vbOverMaxTouched, conditionMin, forParts, auctions
+        case delivery, places, radiusKm, seller, extra, sources, name
     }
+    /// A kept draft from before brief 149: the one search field's text.
+    private enum EarlierKeys: String, CodingKey { case query }
 
     /// A draft kept by a build from before brief 119 has no `auctions`: on, as a new search; one from before brief 135
-    /// no `name`: none.
+    /// no `name`: none; one from before brief 149 its one field's text as `query`: a word when it is one, else still
+    /// typed.
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        query = try c.decode(String.self, forKey: .query)
+        if let words = try c.decodeIfPresent([String].self, forKey: .words) {
+            self.words = words
+            typedWord = try c.decodeIfPresent(String.self, forKey: .typedWord) ?? ""
+        } else {
+            let query = try decoder.container(keyedBy: EarlierKeys.self).decodeIfPresent(String.self, forKey: .query) ?? ""
+            let word = query.trimmingCharacters(in: .whitespacesAndNewlines)
+            if SearchWords.lengths.contains(word.count) { words = [word] } else { typedWord = query }
+        }
         exclude = try c.decode([String].self, forKey: .exclude)
         priceMin = try c.decode(String.self, forKey: .priceMin)
         priceMax = try c.decode(String.self, forKey: .priceMax)
@@ -154,6 +170,105 @@ extension ItemSearchDraft {
         return true
     }
 
+    // MARK: the search words (brief 149)
+
+    /// How the typed word stands: nothing typed, a word that can be added, one too short or too long, one that repeats a
+    /// chip (the chip as written), or no room left (five chips).
+    enum Typed: Equatable {
+        case empty, adds, tooShort, tooLong, repeats(String), full
+    }
+
+    var typed: Typed {
+        let word = typedWord.trimmingCharacters(in: .whitespacesAndNewlines)
+        if word.isEmpty { return .empty }
+        if words.count >= SearchWords.maxCount { return .full }
+        if let chip = SearchWords.repeated(word, in: words) { return .repeats(chip) }
+        if word.count < SearchWords.lengths.lowerBound { return .tooShort }
+        if word.count > SearchWords.lengths.upperBound { return .tooLong }
+        return .adds
+    }
+
+    /// The words the search is sent with: the chips, then the typed word unless it repeats one or there is no room
+    /// (one too short or too long is sent too, so the form says what is wrong instead of losing it).
+    var sentWords: [String] {
+        let word = typedWord.trimmingCharacters(in: .whitespacesAndNewlines)
+        switch typed {
+        case .adds, .tooShort, .tooLong: return words + [word]
+        case .empty, .repeats, .full: return words
+        }
+    }
+
+    /// Whether the field for another word shows: not once there are five.
+    var takesWords: Bool { words.count < SearchWords.maxCount }
+
+    /// Adds the typed word as a chip (Return, the field's +, leaving the field); false keeps it in the field (empty, too
+    /// short or too long, a repeat, five already).
+    @discardableResult
+    mutating func addTypedWord() -> Bool {
+        guard typed == .adds else { return false }
+        words.append(typedWord.trimmingCharacters(in: .whitespacesAndNewlines))
+        typedWord = ""
+        return true
+    }
+
+    /// Adds a word as a chip (an example, "Describe it", a kept draft); false for an empty, repeated or wrong-length one,
+    /// or when five are there.
+    @discardableResult
+    mutating func add(word text: String) -> Bool {
+        let word = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard words.count < SearchWords.maxCount, SearchWords.lengths.contains(word.count),
+              SearchWords.repeated(word, in: words) == nil else { return false }
+        words.append(word)
+        if words.count == SearchWords.maxCount { typedWord = "" }
+        return true
+    }
+
+    /// The field's text as typed or pasted: a comma ends a word, which becomes a chip ("Hermès tie, Kiton tie" two
+    /// chips, or one and the second still typed). The first ended word that cannot be added (a repeat, too short or
+    /// too long, no room) stays in the field without its comma, so the form can say why; then what follows the last
+    /// comma is added if it can be. At most 100 characters stay in the field.
+    mutating func type(_ text: String) {
+        var parts = text.components(separatedBy: ",")
+        // After a comma the next word starts at its first letter.
+        var field = parts.count > 1 ? String(parts.removeLast().drop(while: \.isWhitespace)) : parts.removeLast()
+        var refused: String?
+        for part in parts {
+            let word = part.trimmingCharacters(in: .whitespacesAndNewlines)
+            if word.isEmpty || add(word: word) { continue }
+            if refused == nil { refused = word }
+        }
+        if let refused {
+            add(word: field)
+            field = refused
+        }
+        typedWord = takesWords ? String(field.prefix(SearchWords.lengths.upperBound)) : ""
+    }
+
+    /// Removes the chip at `index`.
+    mutating func removeWord(at index: Int) {
+        guard words.indices.contains(index) else { return }
+        words.remove(at: index)
+    }
+
+    /// What is wrong with the words, if anything: none yet, one too short or too long, more than five (a search saved
+    /// by a newer server).
+    private var wordsProblem: LocalizedStringResource? {
+        let sent = sentWords
+        if sent.isEmpty { return "Type what you look for." }
+        if sent.count > SearchWords.maxCount { return "At most 5 search words." }
+        if sent.contains(where: { $0.count > SearchWords.lengths.upperBound }) { return "At most 100 characters." }
+        if sent.contains(where: { $0.count < SearchWords.lengths.lowerBound }) { return "At least 2 characters." }
+        return nil
+    }
+
+    /// The quiet line under the words: why the typed word is not added (it repeats a chip), or, at five, why the field
+    /// went (more than five is a problem, `fieldLine`, and says so there).
+    func wordsNote(language: AppLanguage = .current) -> String? {
+        if case .repeats(let chip) = typed { return language.string("“\(chip)” is there already.") }
+        if words.count == SearchWords.maxCount { return language.string("At most 5 search words.") }
+        return nil
+    }
+
     /// Adds a word to leave out; false for an empty or repeated one (any case).
     @discardableResult
     mutating func addExclude(_ text: String) -> Bool {
@@ -166,12 +281,11 @@ extension ItemSearchDraft {
     /// The name sent: trimmed and at most 60 characters; nil when empty, so the hunt is named after its words.
     var sentName: String? { HuntName.cleaned(name) }
 
-    /// The Name field's grey placeholder: what the hunt is called while the field stays empty, its words as typed (a
-    /// thing is named after its words, `HuntSummary`; read here from the field, since a draft still missing something
-    /// has no search yet), else "Optional".
+    /// The Name field's grey placeholder: what the hunt is called while the field stays empty, its words as typed, the
+    /// first and "+ 2" for two more (a thing is named after its words, `HuntSummary`; read here from the field, since a
+    /// draft still missing something has no search yet), else "Optional".
     func namePlaceholder(language: AppLanguage = .current) -> String {
-        let words = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        return HuntName.placeholder(words.isEmpty ? nil : words, language: language)
+        HuntName.placeholder(SearchWords.title(sentWords), language: language)
     }
 
     /// Places and the radius apply unless the thing is only to be shipped.
@@ -193,9 +307,7 @@ extension ItemSearchDraft {
     func message(_ problem: Problem, language: AppLanguage = .current) -> String {
         let l = language
         switch problem {
-        case .query:
-            return query.trimmingCharacters(in: .whitespacesAndNewlines).count > 100
-                ? l.string("At most 100 characters.") : l.string("Type what you look for.")
+        case .words: return l.string(wordsProblem ?? "Type what you look for.")
         case .exclude: return l.string("Up to 20 words, each at most 40 characters.")
         case .priceMin, .priceMax, .vbOverMax: return l.string("Type an amount in euros.")
         case .priceOrder: return l.string("The lowest price is above the highest.")
@@ -208,12 +320,12 @@ extension ItemSearchDraft {
         }
     }
 
-    /// The line under a field: what is wrong with what is there. A field that is simply still empty (what you look
-    /// for, the place) says so only under Save (`hint`), so a new form opens without warnings.
+    /// The line under a field: what is wrong with what is there. A field that is simply still empty (the search words,
+    /// the place) says so only under Save (`hint`), so a new form opens without warnings.
     func fieldLine(_ problem: Problem, language: AppLanguage = .current) -> String? {
         guard problems.contains(problem) else { return nil }
         switch problem {
-        case .query where query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty: return nil
+        case .words where sentWords.isEmpty: return nil
         case .places where places.isEmpty: return nil
         default: return message(problem, language: language)
         }
