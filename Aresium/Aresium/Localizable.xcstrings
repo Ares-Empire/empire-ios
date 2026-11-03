@@ -7858,6 +7858,16 @@
         }
       }
     },
+    "Your average month and its fixed costs. Tap to see rent, subscriptions and insurance, and when each is due." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein durchschnittlicher Monat und was davon fix ist. Tippe hier für Miete, Abos und Versicherungen und wann sie fällig sind."
+          }
+        }
+      }
+    },
     "Your bank" : {
       "localizations" : {
         "de" : {

@@ -2,11 +2,11 @@ import Foundation
 import Observation
 import os
 
-// The tour (briefs 24, 25, 42, 59, 77, 82, 99 and 203): the real dashboard on a made-up store of its own, twenty-two
-// steps (twenty-one while the graph is hidden in Settings), each pointing at one real control with one short sentence; it goes on
+// The tour (briefs 24, 25, 42, 59, 77, 82, 99, 203 and 229): the real dashboard on a made-up store of its own, twenty-three
+// steps (twenty-two while the graph is hidden in Settings), each pointing at one real control with one short sentence; it goes on
 // when the person does the thing or taps Next. One walk through what Aresium does (brief 59, Patrik 2026-10-31:
-// "explains everything and is coherent"): the start screen, its graph and its search, a category, a payment and what can
-// be done with it (money paid back too, brief 203), selecting several payments, a list's swipe and adding up, then Settings' places in their real order,
+// "explains everything and is coherent"): the start screen, its average and fixed costs, its graph and its search,
+// a category, a payment and what can be done with it (money paid back too, brief 203), selecting several payments, a list's swipe and adding up, then Settings' places in their real order,
 // the import button, going through what an import left Not sorted (brief 99), done. Everything the tour shows and
 // changes is in `TourWorld`, a store in a temporary folder that is deleted when the tour ends: the person's own store,
 // categories, learned shops, names and choices of adding up are never opened by it. Its Settings also point at Own
@@ -15,8 +15,8 @@ import os
 
 /// The tour's steps, in order. The raw value names a step (DEBUG `-tour <n>`); the card counts the steps a tour shows.
 nonisolated enum TourStep: Int, CaseIterable, Sendable {
-    case welcome = 1, income, overview, graph, search, category, payment, rename, switchCategory, payback, select, addUp,
-         sumIcon, allFrom, categories, messages, lock, dashboardSettings, contact, importFiles, quickSort, done
+    case welcome = 1, income, overview, fixedCosts, graph, search, category, payment, rename, switchCategory, payback,
+         select, addUp, sumIcon, allFrom, categories, messages, lock, dashboardSettings, contact, importFiles, quickSort, done
 
     /// The steps a tour shows: all of them, but the graph's only while the dashboard shows the graph (Settings →
     /// Dashboard → Graph, `GraphSetting`); without the graph that step would point at nothing.
@@ -30,6 +30,8 @@ nonisolated enum TourStep: Int, CaseIterable, Sendable {
         case .welcome: language.string("This is Aresium with made-up sample data.")
         case .income: language.string("Swipe sideways: your income.")
         case .overview: language.string("Overview shows all months.")
+        case .fixedCosts:
+            language.string("Your average month and its fixed costs. Tap to see rent, subscriptions and insurance, and when each is due.")
         case .graph:
             language.string("Hold the graph and slide to read each month. A tap opens the month, or the day where it shows days.")
         case .search: language.string("Search a name, your own or the bank's. A tap shows all its payments.")
@@ -72,6 +74,8 @@ nonisolated enum TourTarget: Hashable, Sendable {
     case pageDots, range, graph, importButton, settings
     /// The start screen's search, the magnifying glass in its header (brief 77).
     case search
+    /// Overview's line under the total: the average month and the fixed part (brief 229).
+    case averageLine
     /// A category's row on the start screen, by the name the dashboard shows.
     case category(String)
     /// A payment's row in a month's list, by its id.
@@ -275,6 +279,8 @@ final class TourModel {
         case .welcome, .done: return nil
         case .income: return .pageDots
         case .overview: return .range
+        // On the fixed costs page and the names it opens, nothing: free to try until Next, as at Search.
+        case .fixedCosts: return place.path.isEmpty && !place.current && place.side == .expenses ? .averageLine : nil
         case .graph: return .graph
         // The magnifying glass on the start screen; on the search's page and the names it opens, nothing: free to try.
         case .search: return place.path.isEmpty ? .search : nil
@@ -396,6 +402,11 @@ final class TourModel {
         case .overview:
             toStart()
             place.current = true
+        case .fixedCosts:
+            // The line describes spending, even when the swipe before Overview left the income side showing.
+            toStart()
+            place.current = false
+            place.side = .expenses
         case .graph:
             // Overview's months: the ones a hold reads and a tap opens.
             toStart()

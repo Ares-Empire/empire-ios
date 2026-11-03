@@ -575,6 +575,7 @@ private struct StartPage: View {
                 if scope == .overview, let line = AverageLine(average: store.monthlyAverage(side: side),
                                           fixedCosts: store.fixedCosts(side: side), side: side, scope: scope) {
                     AverageLineView(line: line, palette: palette) { pick(.fixedCosts(side)) }
+                        .tourAnchor(shown ? .averageLine : nil)
                 }
             }.padding(.horizontal, 18).padding(.top, 6).padding(.bottom, 8)
             LazyVStack(spacing: 0) {

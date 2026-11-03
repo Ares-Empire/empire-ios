@@ -6,7 +6,7 @@ import Foundation
 nonisolated enum TourData {
     /// The categories the made-up person ticked.
     static let chosen = ["groceries", "drugstore", "eating-out", "coffee-snacks", "rent", "utilities", "internet-phone",
-                         "bus-train", "subscriptions", "cash", "salary", "parents-family", "clothes", "other"]
+                         "bus-train", "subscriptions", "insurance", "cash", "salary", "parents-family", "clothes", "other"]
 
     /// Money paid back (briefs 202, 203): a made-up holiday flat paid in full and half of it paid back by a made-up
     /// friend a day later, linked. German-looking made-up names, as the sample's other shops.
@@ -70,21 +70,24 @@ nonisolated enum TourData {
             add(7, "MVG", "Lastschrift", "Deutschlandticket \(name)", -5_800)
             add(8, "Spotify", "Lastschrift", "Spotify Premium", -1_099)
             add(9, "Netflix", "Lastschrift", "Netflix Abo", -1_399)
+            add(14, "Fiktiv Versicherung AG", "Lastschrift", "Haftpflichtversicherung Monatsbeitrag", -849)
             for week in 0..<5 {
-                add(4 + week * 6, "REWE Markt GmbH", "Kartenzahlung", "REWE SAGT DANKE", -(2_000 + next(4_500)))
+                // Shopping days vary each month; these are purchases, not monthly contracts (brief 229).
+                let shoppingDay = 1 + (week * 6 + [10, 2, 17, 5, 22, 13, 7, 19, 0][back]) % days
+                add(shoppingDay, "REWE Markt GmbH", "Kartenzahlung", "REWE SAGT DANKE", -(2_000 + next(4_500)))
                 add(6 + week * 6, "LIDL DIENSTLEISTUNG", "Kartenzahlung", "Lidl sagt Danke", -(900 + next(2_500)))
                 add(5 + week * 6, "Baeckerei Fiktivmeister", "Kartenzahlung", "Bäckerei", -(250 + next(600)))
             }
             // A third grocer, twice a month (brief 59): the tour's list keeps two names with several payments after
-            // its switch step moved the first shop out, so its icon of adding up has something to add. Fixed amounts,
-            // so the seeded amounts of the other rows stay as they were.
+            // its switch step moved the first shop out, so its icon of adding up has something to add.
             // Shops are visited on other days each month (brief 216): on a steady day at a steady amount they would read
             // as fixed costs, as a subscription does. The days come from fixed lists, so the seeded amounts stay as they were.
             add([2, 12, 7, 16, 4, 14, 9, 18, 3][back], "ALDI SUED", "Kartenzahlung", "ALDI SUED Fiktivstadt",
                 -(1_640 + back * 37))
             add([17, 27, 21, 15, 25, 19, 28, 16, 23][back], "ALDI SUED", "Kartenzahlung", "ALDI SUED Fiktivstadt",
                 -(2_180 - back * 23))
-            add(12, "dm-drogerie markt", "Kartenzahlung", "dm Fiktivstadt", -(800 + next(2_200)))
+            add([23, 4, 17, 9, 26, 13, 6, 21, 15][back], "dm-drogerie markt", "Kartenzahlung", "dm Fiktivstadt",
+                -(800 + next(2_200)))
             add([15, 5, 22, 11, 27, 8, 18, 25, 3][back], "Restaurant Fiktiva", "Kartenzahlung", "Restaurant Fiktiva",
                 -(1_800 + next(3_000)))
             add(18, "Geldautomat Fiktivbank", "Auszahlung", "Bargeldauszahlung", -10_000)
