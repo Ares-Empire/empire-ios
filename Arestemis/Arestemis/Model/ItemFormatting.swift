@@ -77,11 +77,14 @@ extension Listing {
                 item.shippingLine(language: language), item.sellerLine(language: language), item.reservedLine(language: language)]
             .compactMap { $0 }.joined(separator: " · ")
     }
-    /// A thing's page, its facts grid: an auction's Bids and Ends first, then Condition (with the site's own word when
-    /// it differs), Delivery (Shipping or Pickup only), Shipping cost, Distance, Seller, Place, Posted, and Status while
-    /// it is reserved; only the known ones.
-    func itemDetailFacts(now: Date = .now, calendar: Calendar = .app, language: AppLanguage = .current) -> [ListingFact] {
-        guard let item else { return [] }
+    /// A thing's page, its facts as a portal lists them (brief 142): an auction's Bids and Ends first, then Condition
+    /// (with the site's own word when it differs), Delivery (Shipping or Pickup only), Shipping cost, Distance, Seller,
+    /// Place, Posted, and Status while it is reserved. The facts every thing search asks about are always there, unknown
+    /// ones without a value: Condition, Delivery and Seller, and Distance while the search includes pickup (`search`) and
+    /// the listing does not ship (for a parcel the distance answers nothing); the rest only when known.
+    func itemDetailFacts(search: ItemSearch? = nil, now: Date = .now, calendar: Calendar = .app,
+                         language: AppLanguage = .current) -> [ListingFact] {
+        let item = item ?? ItemDetails()
         let l = language
         var facts: [ListingFact] = []
         if item.priceKind == .auction {
@@ -93,25 +96,29 @@ extension Listing {
                                          value: Format.moment(end, now: now, calendar: calendar, language: l)))
             }
         }
-        if let condition = item.condition {
+        let condition = item.condition.map { condition in
             let title = condition.title(language: l)
             let site = item.conditionLabel?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             let differs = !site.isEmpty && site.compare(title, options: [.caseInsensitive, .diacriticInsensitive]) != .orderedSame
-            facts.append(ListingFact(label: l.string("Condition"), value: differs ? "\(title) (\(site))" : title))
+            return differs ? "\(title) (\(site))" : title
         }
-        switch item.shipping {
-        case .yes: facts.append(ListingFact(label: l.string("Delivery"), value: l.string("Shipping")))
-        case .pickupOnly: facts.append(ListingFact(label: l.string("Delivery"), value: l.string("Pickup only")))
-        case nil: break
+        facts.append(ListingFact(label: l.string("Condition"), value: condition))
+        let delivery: String? = switch item.shipping {
+        case .yes: l.string("Shipping")
+        case .pickupOnly: l.string("Pickup only")
+        case nil: nil
         }
+        facts.append(ListingFact(label: l.string("Delivery"), value: delivery))
         if item.shipping == .yes, let cost = item.shippingCost {
             facts.append(ListingFact(label: l.string("Shipping cost"), value: l.string("from \(Format.cents(cost, language: l))")))
         }
-        if let distance = item.distanceKm {
-            facts.append(ListingFact(label: l.string("Distance"), value: Format.number(distance, language: l), unit: "km",
+        let askedHowFar = (search.map { $0.delivery != .shipping } ?? false) && item.shipping != .yes
+        if item.distanceKm != nil || askedHowFar {
+            facts.append(ListingFact(label: l.string("Distance"),
+                                     value: item.distanceKm.map { Format.number($0, language: l) }, unit: "km",
                                      numeric: true))
         }
-        if let seller = item.sellerLine(language: l) { facts.append(ListingFact(label: l.string("Seller"), value: seller)) }
+        facts.append(ListingFact(label: l.string("Seller"), value: item.sellerLine(language: l)))
         if let place = district.map({ [city, $0].compactMap { $0 }.joined(separator: ", ") }) ?? city {
             facts.append(ListingFact(label: l.string("Place"), value: place))
         }

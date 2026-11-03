@@ -25,6 +25,7 @@
         "posted": "2026-10-24T09:58:00Z",
         "image_url": null,
         "description": "Wir vermieten ab 1. Dezember eine helle 2-Zimmer-Wohnung im 3. OG mit Südbalkon. Warmmiete 980 € inkl. Nebenkosten und Heizung. Einbauküche vorhanden, Keller, Fahrradkeller. U-Bahn Hohenzollernplatz 3 Minuten.",
+        "description_partial": false,
         "item": null
       },
       "reason": "€980 warm, 42 m² with a balcony in Schwabing, from 1 Dec — fits.",
@@ -58,6 +59,7 @@
         "posted": "2026-10-24T07:21:00Z",
         "image_url": null,
         "description": "Ruhige 2-Zimmer-Wohnung, 51 m², 2. OG, Balkon zum Hof. Gesamtmiete 1.150 €. Bezug ab Januar.",
+        "description_partial": false,
         "item": null
       },
       "reason": "51 m² for €1,150 warm in Freimann; the 40 m²+ limit of €1,200 applies.",
@@ -97,6 +99,7 @@
         "posted": "2026-10-23T18:05:00Z",
         "image_url": null,
         "description": "Wir ziehen beide aus, die ganze Wohnung (2 Zimmer) wird neu vermietet. Du ziehst mit einer Person deiner Wahl ein.",
+        "description_partial": false,
         "item": null
       },
       "reason": "Whole 2-person WG is re-let; you choose the flatmate. €610 warm.",

@@ -1,15 +1,15 @@
 import Foundation
 
 /// New search (brief 135, Patrik 2026-11-02: the kind menu "is not pretty"): a page of its own instead of iOS's action
-/// sheet, one card per kind this build can open, each with what it does in one sentence and examples that open its form
-/// filled in. Decided here, so the page only lays it out.
+/// sheet, one card per kind this build can open, each with what it does in one short line and an example that opens its
+/// form filled in (one per kind since brief 142: less to read). Decided here, so the page only lays it out.
 
 /// One kind's card on New search.
 struct NewSearchCard: Equatable, Identifiable {
     let kind: SearchKind
     /// `/kinds`' name ("Wohnung"), or this build's while the server has not answered.
     let name: String
-    /// What the kind does, in one sentence.
+    /// What the kind does, in one short line.
     let line: String
     let examples: [SearchExample]
     var id: SearchKind { kind }
@@ -27,33 +27,32 @@ struct NewSearchCard: Equatable, Identifiable {
 }
 
 extension SearchKind {
-    /// New search's sentence for the kind: what it finds, and where.
+    /// New search's line for the kind: what it does, in six to eight words (brief 142, Patrik 2026-11-03: "lots of
+    /// concentrated reading"); the sites are the form's to show.
     func pitch(language: AppLanguage = .current) -> String {
         switch self {
-        case .flat:
-            language.string("New listings from WG-Gesucht, Kleinanzeigen, Immowelt and ImmoScout24, minutes after they go online.")
-        case .item:
-            language.string("Used and cheap: Kleinanzeigen, eBay, Vinted, IKEA Preowned and more, with a price limit and pickup nearby.")
-        case .price:
-            language.string("One product in one shop: its price history, and a word when it gets cheaper or is back in stock.")
-        case .watch:
-            language.string("A page you know: a new version, a new job, tickets, the canteen menu.")
+        case .flat: language.string("New flats and WG rooms, minutes after posting.")
+        case .item: language.string("Used and cheap, under your price limit.")
+        case .price: language.string("One product: a push when it gets cheaper.")
+        case .watch: language.string("Any page: a push when something new appears.")
         }
     }
 }
 
-/// An example on New search: a tap opens its kind's form filled in as its words say. Places and addresses stay for the
-/// user (a flat's town, a watched page's address); the name stays empty, so the form shows the automatic one.
+/// An example on New search, one per kind (brief 142; the WG room, the road bike, back in stock, a new job and the
+/// canteen menu went with it): a tap opens its kind's form filled in as its words say. Places and addresses stay for the
+/// user (a flat's town, a watched page's address); the name stays empty, so the form shows the automatic one. The
+/// tour's step 2 names these four (`TourStep.newSearch`).
 enum SearchExample: String, CaseIterable, Hashable, Identifiable, Sendable {
-    case twoRooms, wgRoom, kallax, roadBike, priceBelow, backInStock, newVersion, newJob, canteenMenu
+    case twoRooms, kallax, priceBelow, newVersion
     var id: String { rawValue }
 
     var kind: SearchKind {
         switch self {
-        case .twoRooms, .wgRoom: .flat
-        case .kallax, .roadBike: .item
-        case .priceBelow, .backInStock: .price
-        case .newVersion, .newJob, .canteenMenu: .watch
+        case .twoRooms: .flat
+        case .kallax: .item
+        case .priceBelow: .price
+        case .newVersion: .watch
         }
     }
 
@@ -66,72 +65,45 @@ enum SearchExample: String, CaseIterable, Hashable, Identifiable, Sendable {
     func title(language: AppLanguage = .current) -> String {
         switch self {
         case .twoRooms: language.string("2 rooms up to €1,100 warm")
-        case .wgRoom: language.string("WG room")
         case .kallax: language.string("Kallax up to €40")
-        case .roadBike: language.string("Road bike size 56")
         case .priceBelow: language.string("Price under € …")
-        case .backInStock: language.string("Back in stock")
         case .newVersion: language.string("New version")
-        case .newJob: language.string("New job")
-        case .canteenMenu: language.string("Canteen menu")
         }
     }
 
-    /// A flat example's form: a whole flat with at least 2 rooms up to €1,100 warm, or a WG room.
+    /// A flat example's form: a whole flat with at least 2 rooms up to €1,100 warm.
     var flatDraft: SearchDraft? {
+        guard self == .twoRooms else { return nil }
         var draft = SearchDraft()
-        switch self {
-        case .twoRooms:
-            draft.type = .flat
-            draft.roomsMin = 2
-            draft.warmRent.max = 1100
-        case .wgRoom:
-            draft.type = .wg
-        default:
-            return nil
-        }
+        draft.type = .flat
+        draft.roomsMin = 2
+        draft.warmRent.max = 1100
         return draft
     }
 
-    /// A thing example's form: the words and the price; the size goes where the form asks for it (Extras).
+    /// A thing example's form: the words and the price.
     func itemDraft(language: AppLanguage = .current) -> ItemSearchDraft? {
+        guard self == .kallax else { return nil }
         var draft = ItemSearchDraft()
-        switch self {
-        case .kallax:
-            draft.query = "Kallax"
-            draft.priceMax = "40"
-        case .roadBike:
-            draft.query = language.string("Road bike")
-            draft.extra = language.string("Frame size 56")
-        default:
-            return nil
-        }
+        draft.query = "Kallax"
+        draft.priceMax = "40"
         return draft
     }
 
-    /// A monitor example's form: the alarm on with its one condition (the price's limit fills in once the product's price
-    /// is found, `PriceSearchDraft.prefillLimit`), the history on as in every new monitor; the link is the user's.
+    /// A monitor example's form: the alarm on with its price condition (the limit fills in once the product's price is
+    /// found, `PriceSearchDraft.prefillLimit`), the history on as in every new monitor; the link is the user's.
     var priceDraft: PriceSearchDraft? {
+        guard self == .priceBelow else { return nil }
         var draft = PriceSearchDraft()
-        switch self {
-        case .priceBelow: draft.alarm = true
-        case .backInStock:
-            draft.alarm = true
-            draft.backInStock = true
-        default: return nil
-        }
+        draft.alarm = true
         return draft
     }
 
     /// A watch example's form: the "Tell me when" sentence; the page's address is the user's.
     func watchDraft(language: AppLanguage = .current) -> WatchSearchDraft? {
+        guard self == .newVersion else { return nil }
         var draft = WatchSearchDraft()
-        switch self {
-        case .newVersion: draft.change = language.string("a new version comes out")
-        case .newJob: draft.change = language.string("a new job is posted")
-        case .canteenMenu: draft.change = language.string("the new menu is out")
-        default: return nil
-        }
+        draft.change = language.string("a new version comes out")
         return draft
     }
 }

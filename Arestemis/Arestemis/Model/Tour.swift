@@ -44,7 +44,7 @@ nonisolated enum TourStep: Int, CaseIterable, Sendable {
         case .searches:
             [TourLine(language.string("Each search with its listings. The magnifying glass searches all of them."))]
         case .listing:
-            [TourLine(language.string("“Why it fits” says what the check found and what to check yourself. For flats, “Application” writes the text you send."))]
+            [TourLine(language.string("The facts at a glance, “–” where the listing doesn't say, and what to check yourself. For flats, “Application text” gives you a text to send."))]
         case .monitorsAndWatches:
             // The kinds' names as New search shows them (`SearchKind.choiceTitle`, the same words).
             [TourLine(label: language.string("Price monitor"),
@@ -83,8 +83,8 @@ nonisolated enum TourSpot: Hashable, Sendable {
     case newListing(Int)
     /// The Listings tab's magnifying glass: the search over every search's listings.
     case findAll
-    /// "Why it fits" on a listing's page.
-    case whyItFits
+    /// A listing's facts on its page, with what to check at their foot.
+    case listingFacts
     /// "Filtered out" at the end of a list of listings.
     case filteredOut
 }
@@ -174,7 +174,7 @@ final class TourModel {
             // The newest listing of the search with the newest finding: the row its swipe works on.
             return NewListings.groups(world.store.matches(.new)).first?.matches.first.map { [.newListing($0.id)] } ?? []
         case .searches: return [.findAll]
-        case .listing: return [.whyItFits]
+        case .listing: return [.listingFacts]
         case .monitorsAndWatches: return world.monitorAndWatch.map(TourSpot.huntCard)
         case .filteredOut: return [.filteredOut]
         }

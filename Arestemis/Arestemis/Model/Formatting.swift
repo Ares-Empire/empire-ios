@@ -272,48 +272,81 @@ extension Listing {
     }
 }
 
-/// One label/value pair of a match's facts grid; `numeric` values are set in the number font.
+/// One label/value pair of a listing page's facts; `numeric` values are set in the number font. A fact the listing does
+/// not state has no value: the page shows a quiet "–" (`ListingFact.dash`) and VoiceOver says "not stated", so an
+/// unknown never reads like a value (brief 142).
 struct ListingFact: Equatable, Identifiable {
     let label: String
-    let value: String
+    /// nil: the listing does not state it.
+    let value: String?
     var unit: String? = nil        // "m²", set apart from the number
     var numeric = false            // a plain number (mono); dates and times read as words
     var id: String { label }
+
+    var isStated: Bool { value != nil }
+
+    /// What the page shows for a fact the listing does not state.
+    static let dash = "–"
+
+    /// What VoiceOver says for it.
+    static func notStated(language: AppLanguage = .current) -> String { language.string("not stated") }
 }
 
 extension Listing {
-    /// The match page's grid: Size, Rooms (a flat) or Flatmates (a WG), Kind, Move-in, Until, Furnished, District
-    /// (or City), Posted; only the known ones.
-    func detailFacts(now: Date = .now, calendar: Calendar = .app, language: AppLanguage = .current) -> [ListingFact] {
+    /// A flat's page, its facts as a portal lists them (brief 142, Patrik 2026-11-03: "make it look like a normal listing
+    /// with our metrics and just fill them in or have a '-' … if empty"): the rent the big figure does not show (cold
+    /// beside a warm figure, warm beside a cold one; none when the listing gives no rent, which the big figure says),
+    /// Size (the room's for a WG room), Rooms (a flat) or Flatmates (a WG room), Move-in, Until, Furnished, Location (the
+    /// address with the district, else the district or the city), Kind, Posted.
+    ///
+    /// The facts every flat search asks about are always there, unknown ones without a value: the rents, the size,
+    /// rooms or flatmates, move-in and the place, and Furnished, which every flat listing is judged by. Until shows
+    /// when the listing gives an end or the search wants only sublets (`search`; for any other flat an end that is not
+    /// given means none). Kind and Posted only when known: the title and the time found say them anyway.
+    func detailFacts(search: Search? = nil, now: Date = .now, calendar: Calendar = .app,
+                     language: AppLanguage = .current) -> [ListingFact] {
         let l = language
         var facts: [ListingFact] = []
-        if let sqm {
-            facts.append(ListingFact(label: l.string("Size"), value: Format.number(sqm, language: l), unit: "m²", numeric: true))
+        func money(_ label: String, _ euros: Double?) {
+            facts.append(ListingFact(label: label, value: euros.map { Format.money($0, language: l) }, numeric: true))
         }
-        if let kind, kind.isWG {
-            if let flatmates { facts.append(ListingFact(label: l.string("Flatmates"), value: String(flatmates), numeric: true)) }
-        } else if let rooms {
-            facts.append(ListingFact(label: l.string("Rooms"), value: Format.number(rooms, language: l), numeric: true))
+        if rentWarm != nil {
+            money(l.string("Cold rent"), rentCold)
+        } else if rentCold != nil {
+            money(l.string("Warm rent"), nil)
         }
-        if let kind { facts.append(ListingFact(label: l.string("Kind"), value: kind.title(in: l))) }
-        if let from = Format.day(availableFrom, now: now, calendar: calendar, language: l) {
-            facts.append(ListingFact(label: l.string("Move-in"), value: from))
+        let wg = kind?.isWG == true
+        facts.append(ListingFact(label: wg ? l.string("Room size") : l.string("Size"),
+                                 value: sqm.map { Format.number($0, language: l) }, unit: "m²", numeric: true))
+        if wg {
+            facts.append(ListingFact(label: l.string("Flatmates"), value: flatmates.map(String.init), numeric: true))
+        } else {
+            facts.append(ListingFact(label: l.string("Rooms"), value: rooms.map { Format.number($0, language: l) },
+                                     numeric: true))
         }
-        if let until = Format.day(availableUntil, now: now, calendar: calendar, language: l) {
+        facts.append(ListingFact(label: l.string("Move-in"),
+                                 value: Format.day(availableFrom, now: now, calendar: calendar, language: l)))
+        let until = Format.day(availableUntil, now: now, calendar: calendar, language: l)
+        if until != nil || search?.sublet == .only {
             facts.append(ListingFact(label: l.string("Until"), value: until))
         }
-        if let furnished {
-            facts.append(ListingFact(label: l.string("Furnished"), value: furnished ? l.string("Yes") : l.string("No")))
-        }
-        if let district {
-            facts.append(ListingFact(label: l.string("District"), value: district))
-        } else if let city {
-            facts.append(ListingFact(label: l.string("City"), value: city))
-        }
+        facts.append(ListingFact(label: l.string("Furnished"),
+                                 value: furnished.map { $0 ? l.string("Yes") : l.string("No") }))
+        facts.append(ListingFact(label: l.string("Location"), value: location))
+        if let kind { facts.append(ListingFact(label: l.string("Kind"), value: kind.title(in: l))) }
         if let posted = Format.relative(posted, now: now, calendar: calendar, language: l) {
             facts.append(ListingFact(label: l.string("Posted"), value: posted))
         }
         return facts
+    }
+
+    /// Where the flat is, as precisely as the listing says: "Hohenzollernstraße, Schwabing", "Schwabing", "München";
+    /// nil when it does not say.
+    var location: String? {
+        let near = [address, district].compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        if !near.isEmpty { return near.joined(separator: ", ") }
+        return city.flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 }
     }
 
     /// The portal page, only if it is a web address (never another app's scheme from a listing).

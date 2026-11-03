@@ -23,6 +23,7 @@
     "posted": "2026-10-24T09:50:00Z",
     "image_url": null,
     "description": "Fictional auction of an office chair for the sample app. Size B, original armrests, a few marks on the base.",
+    "description_partial": false,
     "item": {
       "price": 310,
       "price_kind": "auction",

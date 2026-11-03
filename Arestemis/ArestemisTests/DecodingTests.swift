@@ -17,7 +17,7 @@ struct DecodingTests {
         case "hunts": try roundTrip([Hunt].self, file)
         case "item-matches", "watch-matches", "price-matches": try roundTrip(MatchPage.self, file)
         case "prices-9", "prices-10": try roundTrip(Prices.self, file)
-        case "ebay-match", "ikea-match", "vinted-match": try roundTrip(Match.self, file)
+        case "ebay-match", "ikea-match", "vinted-match", "immowelt-match": try roundTrip(Match.self, file)
         case "kinds": try roundTrip([OfferedKind].self, file)
         default: Issue.record("No model for \(file)")
         }

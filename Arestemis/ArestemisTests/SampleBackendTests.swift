@@ -34,7 +34,8 @@ struct SampleBackendTests {
     @Test func actionsWorkInMemory() async throws {
         let store = try await store()
         await store.setState(.saved, for: 41)
-        #expect(store.match(41)?.state == .saved && store.overview?.counts.new == 10 && store.overview?.counts.saved == 3)
+        // 11 new: the server's Immowelt listing (27, brief 142) is new too.
+        #expect(store.match(41)?.state == .saved && store.overview?.counts.new == 11 && store.overview?.counts.saved == 3)
         await store.setActive(id: 1, active: false)
         #expect(store.card(1)?.hunt.active == false && store.overview?.sources.first?.state == .idle)
         await store.loadMatches(.saved)

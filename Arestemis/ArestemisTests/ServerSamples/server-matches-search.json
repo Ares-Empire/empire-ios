@@ -25,6 +25,7 @@
         "posted": null,
         "image_url": null,
         "description": "Erfundenes Angebot. Weißes Regal zur Abholung.",
+        "description_partial": false,
         "item": {
           "price": 45,
           "price_kind": "fixed",
@@ -72,6 +73,7 @@
         "posted": null,
         "image_url": null,
         "description": "Erfundenes Angebot. Stand neben einem Kallax.",
+        "description_partial": false,
         "item": {
           "price": 30,
           "price_kind": "fixed",

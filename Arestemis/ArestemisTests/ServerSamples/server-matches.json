@@ -25,6 +25,7 @@
         "posted": null,
         "image_url": null,
         "description": "",
+        "description_partial": false,
         "item": null,
         "page": null,
         "price_change": {
@@ -66,6 +67,7 @@
         "posted": null,
         "image_url": null,
         "description": "+ 44,99 €\n- 49,99 €",
+        "description_partial": false,
         "item": null,
         "page": {
           "added": [
@@ -109,6 +111,7 @@
         "posted": "2026-11-01T09:00:00Z",
         "image_url": "https://images.example.invalid/office-chair.jpg",
         "description": "Erfundenes Angebot eines Bürostuhls. Alle Angaben in diesem Beispiel sind fiktiv.",
+        "description_partial": false,
         "item": {
           "price": 0,
           "price_kind": "free",
@@ -156,6 +159,7 @@
         "posted": "2026-11-01T09:00:00Z",
         "image_url": "https://images.example.invalid/office-chair.jpg",
         "description": "Erfundenes Angebot eines Bürostuhls. Alle Angaben in diesem Beispiel sind fiktiv.",
+        "description_partial": false,
         "item": {
           "price": 75,
           "price_kind": "fixed",
@@ -205,6 +209,7 @@
         "posted": "2026-11-01T09:00:00Z",
         "image_url": "https://images.example.invalid/office-chair.jpg",
         "description": "Erfundenes Angebot eines Bürostuhls. Alle Angaben in diesem Beispiel sind fiktiv.",
+        "description_partial": false,
         "item": {
           "price": 110,
           "price_kind": "negotiable",
@@ -254,6 +259,7 @@
         "posted": "2026-11-01T09:00:00Z",
         "image_url": "https://images.example.invalid/office-chair.jpg",
         "description": "Erfundenes Angebot eines Bürostuhls. Alle Angaben in diesem Beispiel sind fiktiv.",
+        "description_partial": false,
         "item": {
           "price": 80,
           "price_kind": "fixed",
@@ -301,6 +307,7 @@
         "posted": "2026-10-24T09:58:00Z",
         "image_url": null,
         "description": "Wir vermieten ab 1. Dezember eine helle 2-Zimmer-Wohnung im 3. OG mit Südbalkon. Warmmiete 980 € inkl. Nebenkosten und Heizung. Einbauküche vorhanden, Keller, Fahrradkeller. U-Bahn Hohenzollernplatz 3 Minuten.",
+        "description_partial": false,
         "item": null,
         "page": null,
         "price_change": null
@@ -336,6 +343,7 @@
         "posted": "2026-10-24T07:21:00Z",
         "image_url": null,
         "description": "Ruhige 2-Zimmer-Wohnung, 51 m², 2. OG, Balkon zum Hof. Gesamtmiete 1.150 €. Bezug ab Januar.",
+        "description_partial": false,
         "item": null,
         "page": null,
         "price_change": null
@@ -349,6 +357,44 @@
         "mode": "ai",
         "created": "2026-10-24T07:25:00Z"
       },
+      "at_start": false,
+      "over_max": null
+    },
+    {
+      "id": 39,
+      "hunt_id": 1,
+      "state": "new",
+      "found": "2026-10-24T07:20:00Z",
+      "listing": {
+        "source": "immowelt",
+        "source_name": "Immowelt",
+        "url": "https://www.immowelt.de/expose/00000000-0000-4000-8000-000000000039",
+        "title": "Helle 2-Zimmer-Wohnung mit Balkon in Schwabing",
+        "kind": "flat",
+        "rent_warm": null,
+        "rent_cold": 820,
+        "sqm": 42,
+        "rooms": 2,
+        "flatmates": null,
+        "city": "München",
+        "district": "Schwabing",
+        "address": "Hohenzollernstraße",
+        "available_from": "2026-12-01",
+        "available_until": null,
+        "furnished": false,
+        "posted": "2026-10-24T09:58:00Z",
+        "image_url": null,
+        "description": "Erfundene helle Wohnung mit Balkon. Die Anzeige bietet noch weitere Angaben ...",
+        "description_partial": true,
+        "item": null,
+        "page": null,
+        "price_change": null
+      },
+      "reason": "42 m² with a balcony in Schwabing; €820 cold.",
+      "warnings": [
+        "Only the cold rent is known"
+      ],
+      "application": null,
       "at_start": false,
       "over_max": null
     },
@@ -377,6 +423,7 @@
         "posted": "2026-10-23T18:05:00Z",
         "image_url": null,
         "description": "Wir ziehen beide aus, die ganze Wohnung (2 Zimmer) wird neu vermietet. Du ziehst mit einer Person deiner Wahl ein.",
+        "description_partial": false,
         "item": null,
         "page": null,
         "price_change": null

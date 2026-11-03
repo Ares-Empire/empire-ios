@@ -311,7 +311,9 @@ struct HuntsScreensTests {
         #expect(apply(["-openHunt", "2", "-openItemForm"]).huntPath == [.hunt(2), .form(.item, hunt: 2)])
         #expect(apply(["-newSearch"]).huntPath == [.newSearch])
         #expect(apply(["-newExample", "kallax"]).huntPath == [.newSearch, .form(.item, hunt: nil, example: .kallax)])
-        #expect(apply(["-newExample", "newJob"]).huntPath == [.newSearch, .form(.watch, hunt: nil, example: .newJob)])
+        #expect(apply(["-newExample", "newVersion"]).huntPath == [.newSearch, .form(.watch, hunt: nil, example: .newVersion)])
+        // An example New search no longer offers (brief 142) opens nothing.
+        #expect(apply(["-newExample", "newJob"]).huntPath.isEmpty)
         let rename = apply(["-renameHunt", "2"])
         #expect(rename.huntPath == [.hunt(2)] && rename.renaming == 2 && rename.tab == .hunt)
         #expect(apply(["-openItemForm", "-openSheet", "describe"]).showsDescribe)

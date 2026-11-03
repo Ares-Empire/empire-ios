@@ -325,15 +325,13 @@ struct PriceMonitorTests {
         #expect(filled && waiting.below == 450)
         let again = waiting.prefillLimit(price: 200)
         #expect(!again && waiting.below == 450)
-        // The examples: the price's limit once found; back in stock alone.
+        // The example (one per kind since brief 142): the price's limit once found.
         var below = try #require(SearchExample.priceBelow.priceDraft)
         #expect(below.alarm && below.history && below.below == nil && !below.backInStock && below.url.isEmpty)
         #expect(below.problems.contains(.alarmCondition))
         below.prefillLimit(price: 49.99)
         #expect(below.below == 45)
-        let back = try #require(SearchExample.backInStock.priceDraft)
-        #expect(back.alarm && back.backInStock && back.below == nil && back.problems == [.url])
-        #expect(SearchExample.examples(for: .price) == [.priceBelow, .backInStock])
+        #expect(SearchExample.examples(for: .price) == [.priceBelow])
         #expect(SearchExample.kallax.priceDraft == nil)
     }
 
@@ -430,8 +428,8 @@ struct PriceMonitorTests {
         #expect(!SearchKind.price.appliesOrAsks && SearchKind.price.symbol == "chart.line.downtrend.xyaxis")
         #expect(SearchKind.price.choiceTitle(language: language) == (german ? "Preismonitor" : "Price monitor"))
         #expect(SearchKind.price.pitch(language: language) == (german
-            ? "Ein Produkt in einem Shop: der Preisverlauf, und Bescheid, wenn es günstiger oder wieder lieferbar ist."
-            : "One product in one shop: its price history, and a word when it gets cheaper or is back in stock."))
+            ? "Ein Produkt: ein Push, wenn es günstiger wird."
+            : "One product: a push when it gets cheaper."))
         #expect(SiteChoices.fallback(.price).isEmpty)
     }
 

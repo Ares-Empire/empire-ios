@@ -48,7 +48,7 @@ struct ApplicationSheet: View {
             if let application = state.application { buttons(application) }
           }
             .provinceWall()
-            .navigationTitle("Application")
+            .navigationTitle("Application text")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }

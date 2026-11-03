@@ -50,8 +50,11 @@ struct ListingsTests {
         #expect(groups.map(\.huntID) == [1, 2, 5, 4, 6, 9, 8])
         #expect(groups[1].matches.map(\.id) == [32, 31, 30, 29, 28])        // 31–28 found together: the higher id first
         #expect(groups.flatMap(\.matches).allSatisfy { $0.state == .new })
-        // A group goes with its last new listing.
+        // A group goes with its last new listing (the flat search's two: 41, and the Immowelt listing of brief 142).
+        #expect(groups[0].matches.map(\.id) == [41, 27])
         await store.setState(.saved, for: 41)
+        #expect(NewListings.groups(store.matches(.new)).contains { $0.huntID == 1 })      // 27 is still new
+        await store.setState(.saved, for: 27)
         #expect(NewListings.groups(store.matches(.new)).map(\.huntID) == [2, 5, 4, 6, 9, 8])
         for id in [32, 31, 30, 29, 28] { await store.setState(.dismissed, for: id) }
         #expect(NewListings.groups(store.matches(.new)).map(\.huntID) == [5, 4, 6, 9, 8])

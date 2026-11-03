@@ -23,6 +23,7 @@
     "posted": "2026-11-01T09:00:00Z",
     "image_url": "https://photos.example.test/ebay/auction.jpg",
     "description": "Invented chair, original armrests.",
+    "description_partial": false,
     "item": {
       "price": 62,
       "price_kind": "auction",

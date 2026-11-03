@@ -48,34 +48,52 @@ struct NewSearchTests {
     }
 
     @Test(arguments: [AppLanguage.english, .german])
-    func eachCardSaysWhatItDoesAndShowsItsExamples(_ language: AppLanguage) {
+    func eachCardSaysWhatItDoesInOneShortLineWithOneExample(_ language: AppLanguage) {
         let german = language == .german
         let cards = NewSearchCard.cards(offered: nil, language: language)
+        // Brief 142: one short line each (about six to eight words), no lists of sites (the form shows them).
         #expect(cards.map(\.line) == (german ? [
-            "Neue Angebote von WG-Gesucht, Kleinanzeigen, Immowelt und ImmoScout24, Minuten nachdem sie online sind.",
-            "Gebraucht und günstig: Kleinanzeigen, eBay, Vinted, IKEA Preowned und mehr, mit Preisgrenze und Abholung in der Nähe.",
-            "Ein Produkt in einem Shop: der Preisverlauf, und Bescheid, wenn es günstiger oder wieder lieferbar ist.",
-            "Eine Seite, die du kennst: neue Version, neue Stelle, Tickets, der Speiseplan.",
+            "Neue Wohnungen und WG-Zimmer, sobald sie online sind.",
+            "Gebraucht und günstig, unter deiner Preisgrenze.",
+            "Ein Produkt: ein Push, wenn es günstiger wird.",
+            "Eine Seite: ein Push, wenn etwas Neues erscheint.",
         ] : [
-            "New listings from WG-Gesucht, Kleinanzeigen, Immowelt and ImmoScout24, minutes after they go online.",
-            "Used and cheap: Kleinanzeigen, eBay, Vinted, IKEA Preowned and more, with a price limit and pickup nearby.",
-            "One product in one shop: its price history, and a word when it gets cheaper or is back in stock.",
-            "A page you know: a new version, a new job, tickets, the canteen menu.",
+            "New flats and WG rooms, minutes after posting.",
+            "Used and cheap, under your price limit.",
+            "One product: a push when it gets cheaper.",
+            "Any page: a push when something new appears.",
         ]))
+        for card in cards {
+            #expect(card.line.split(separator: " ").count <= 9, "\(card.line)")
+            for site in ["WG-Gesucht", "Kleinanzeigen", "Immowelt", "ImmoScout24", "eBay", "Vinted"] {
+                #expect(!card.line.contains(site))
+            }
+        }
+        // One example per kind.
         #expect(cards.map { $0.examples.map { $0.title(language: language) } } == (german ? [
-            ["2 Zimmer bis 1.100 € warm", "WG-Zimmer"],
-            ["Kallax bis 40 €", "Rennrad Größe 56"],
-            ["Preis unter … €", "Wieder lieferbar"],
-            ["Neue Version", "Neue Stelle", "Speiseplan"],
+            ["2 Zimmer bis 1.100 € warm"], ["Kallax bis 40 €"], ["Preis unter … €"], ["Neue Version"],
         ] : [
-            ["2 rooms up to €1,100 warm", "WG room"],
-            ["Kallax up to €40", "Road bike size 56"],
-            ["Price under € …", "Back in stock"],
-            ["New version", "New job", "Canteen menu"],
+            ["2 rooms up to €1,100 warm"], ["Kallax up to €40"], ["Price under € …"], ["New version"],
         ]))
+        #expect(language.string("e.g.") == (german ? "z. B." : "e.g."))
         #expect(language.string("What should Arestemis find for you?")
                 == (german ? "Was soll Arestemis für dich finden?" : "What should Arestemis find for you?"))
         #expect(language.string("New search") == (german ? "Neue Suche" : "New search"))
+    }
+
+    /// The tour's step 2 names New search's kinds and their examples; it stays true to the cards.
+    @Test(arguments: [AppLanguage.english, .german])
+    func theToursSecondStepNamesTheCardsAndTheirExamples(_ language: AppLanguage) {
+        let text = TourStep.newSearch.text(language)
+        let cards = NewSearchCard.cards(offered: nil, language: language)
+        #expect(cards.count == 4)
+        for card in cards { #expect(text.contains(card.name), "\(card.name)") }
+        // Each example's words, as the step writes them: the flat's rooms and rent, the Kallax, a price, a new version.
+        let named = language == .german
+            ? ["2 Zimmer bis 1.100 €", "Kallax bis 40 €", "Preis eines Produkts", "neue Version"]
+            : ["2 rooms up to €1,100", "Kallax up to €40", "one product's price", "a new version"]
+        for words in named { #expect(text.contains(words), "\(words)") }
+        #expect(SearchExample.allCases == [.twoRooms, .kallax, .priceBelow, .newVersion])
     }
 
     // MARK: the examples fill their forms
@@ -92,31 +110,18 @@ struct NewSearchTests {
         #expect(rooms == flat && rooms.places.isEmpty && rooms.name.isEmpty)
         #expect(rooms.search().kinds == [.flat] && rooms.search().roomsMin == 2 && rooms.search().rentWarmMax == 1100)
         #expect(rooms.problems == [.noPlace])
-        var wg = SearchDraft()
-        wg.type = .wg
-        #expect(SearchExample.wgRoom.flatDraft == wg)
 
-        // The words and the price; the size where the form asks for it (Extras); pickup places stay the user's.
+        // The words and the price; pickup places stay the user's.
         let kallax = try #require(SearchExample.kallax.itemDraft(language: language))
         #expect(kallax.query == "Kallax" && kallax.priceMax == "40" && kallax.priceMin.isEmpty)
         #expect(kallax.vbOverMax == "4")                // the form's usual default: a tenth of the maximum
         #expect(kallax.places.isEmpty && kallax.name.isEmpty && kallax.problems == [.places])
-        let bike = try #require(SearchExample.roadBike.itemDraft(language: language))
-        #expect(bike.query == (german ? "Rennrad" : "Road bike") && bike.priceMax.isEmpty)
-        #expect(bike.extra == (german ? "Rahmengröße 56" : "Frame size 56"))
 
         // The "Tell me when" sentence; the page's address is the user's.
-        let changes: [(SearchExample, String, String)] = [
-            (.newVersion, "a new version comes out", "eine neue Version erscheint"),
-            (.newJob, "a new job is posted", "eine neue Stelle ausgeschrieben wird"),
-            (.canteenMenu, "the new menu is out", "der neue Speiseplan online ist"),
-        ]
-        for (example, english, deutsch) in changes {
-            let watch = try #require(example.watchDraft(language: language))
-            #expect(watch.change == (german ? deutsch : english))
-            #expect(watch.url.isEmpty && watch.every == WatchSearch.defaultEvery && watch.name.isEmpty)
-            #expect(watch.problems == [.url])
-        }
+        let watch = try #require(SearchExample.newVersion.watchDraft(language: language))
+        #expect(watch.change == (german ? "eine neue Version erscheint" : "a new version comes out"))
+        #expect(watch.url.isEmpty && watch.every == WatchSearch.defaultEvery && watch.name.isEmpty)
+        #expect(watch.problems == [.url])
 
         // Each example fills its own kind's form, and only that.
         for example in SearchExample.allCases {
@@ -339,7 +344,7 @@ struct NewSearchTests {
             ("Clear", "Leeren"), ("Opens the form", "Öffnet das Formular"),
             ("Opens the form filled in", "Öffnet das Formular ausgefüllt"),
             ("Flat", "Wohnung"), ("Things", "Dinge"), ("Watch a website", "Webseite beobachten"),
-            ("Road bike", "Rennrad"), ("Frame size 56", "Rahmengröße 56"),
+            ("e.g.", "z. B."),
         ]
         for (english, german) in words {
             #expect(en.string(LocalizedStringResource(stringLiteral: english)) == english)

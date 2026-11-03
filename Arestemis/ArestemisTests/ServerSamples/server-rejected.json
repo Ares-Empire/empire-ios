@@ -24,6 +24,7 @@
         "posted": "2026-10-24T08:44:00Z",
         "image_url": null,
         "description": "Möbliert, befristet bis 31.03.2027. Warmmiete 950 €.",
+        "description_partial": false,
         "item": null,
         "page": null,
         "price_change": null
@@ -54,6 +55,7 @@
         "posted": "2026-10-24T06:10:00Z",
         "image_url": null,
         "description": "Wohnungstausch: Biete 2 Zimmer, suche 3 Zimmer.",
+        "description_partial": false,
         "item": null,
         "page": null,
         "price_change": null
