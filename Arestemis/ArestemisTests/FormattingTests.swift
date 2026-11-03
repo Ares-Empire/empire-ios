@@ -132,12 +132,16 @@ struct FormattingTests {
 
     @Test func detailFacts() throws {
         let page = try sample(MatchPage.self, "matches")
+        // Brief 142: the rent the big figure does not show first (cold beside warm), the place with its address.
         let flat = page.items[0].listing.detailFacts(now: now, calendar: calendar)
-        #expect(flat.map(\.label) == ["Size", "Rooms", "Kind", "Move-in", "Furnished", "District", "Posted"])
-        #expect(flat.map(\.value) == ["42", "2", "Flat", "1 Dec", "No", "Schwabing", "4 min ago"])
-        #expect(flat[0].unit == "m²" && flat[0].numeric && !flat[2].numeric)
+        #expect(flat.map(\.label) == ["Cold rent", "Size", "Rooms", "Move-in", "Furnished", "Location", "Kind", "Posted"])
+        #expect(flat.map(\.value) == ["€820", "42", "2", "1 Dec", "No", "Hohenzollernstraße, Schwabing", "Flat", "4 min ago"])
+        #expect(flat[0].numeric && flat[1].unit == "m²" && flat[1].numeric && !flat[3].numeric)
+        // A WG room: the room's size and the flatmates; its cold rent is not given, so it reads unknown.
         let wg = page.items[2].listing.detailFacts(now: now, calendar: calendar)
-        #expect(wg.map(\.label) == ["Size", "Flatmates", "Kind", "Move-in", "Furnished", "District", "Posted"])
+        #expect(wg.map(\.label) == ["Cold rent", "Room size", "Flatmates", "Move-in", "Furnished", "Location", "Kind",
+                                    "Posted"])
+        #expect(wg[0].value == nil && wg[1].value == "19" && wg[2].value == "1")
         let sublet = try sample(RejectedPage.self, "rejected").items[0].listing.detailFacts(now: now, calendar: calendar)
         #expect(sublet.first { $0.label == "Until" }?.value == "31 Mar")
     }

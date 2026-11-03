@@ -1,14 +1,17 @@
 import SwiftUI
 
-/// One match: the rent big, the title, the facts grid, why the AI let it through (and what to check), the
-/// description; at the bottom "Open on <portal>" and "Application". The menu sets the state. A thing for sale: its
-/// price big (with "VB" or how far it lies over the maximum; an auction its current bid and the time left), its facts
-/// (an auction's bids and end, condition, delivery, shipping cost, distance, seller, place, posted), and only "Open on
-/// <site>" (the server's name: "Open on eBay"), as the one main button; its seller is "Asked", not applied to. A change
-/// on a watched page (brief 131): the server's summary as the title, "Now: …", the host and when, then the lines that
-/// came and went (the removed ones labelled and struck through, not told apart by colour alone), and "Open page" (the
-/// watched address) as the one main button; its menu only saves or dismisses. A monitor's alarm (brief 137): the new price
-/// big with the old one beside it ("was €483.99"; "back in stock" when it came back), the product, the shop and when, and
+/// One match. A flat or a thing reads like a listing on its site (brief 142): the figure big (a flat's rent: warm, else
+/// cold; a thing's price with "VB" or how far it lies over the maximum, an auction's current bid and the time left), the
+/// title, the site and when it was found; then one card of facts as a portal lists them (`Listing.detailFacts`,
+/// `itemDetailFacts`: every fact the search asks about, a quiet "–" where the listing does not say) with the AI's
+/// warnings at its foot as short notes "To check"; then the description in full, and when it is only the site's preview
+/// one quiet line that opens the listing. At the bottom "Open on <site>" in the accent fill, the main button; a flat's
+/// application text under it as the quiet second one (`ListingButton`). Why the AI let it through is not on the page:
+/// it fits because of the search. The menu sets the state; a thing's seller is "Asked", not applied to. A change on a
+/// watched page (brief 131): the server's summary as the title, "Now: …", the host and when, then the lines that came
+/// and went (the removed ones labelled and struck through, not told apart by colour alone), and "Open page" (the watched
+/// address) as the one main button; its menu only saves or dismisses. A monitor's alarm (brief 137): the new price big
+/// with the old one beside it ("was €483.99"; "back in stock" when it came back), the product, the shop and when, and
 /// "Open in shop" as the one main button; its menu only saves or dismisses.
 struct MatchDetailScreen: View {
     let id: Int
@@ -69,14 +72,23 @@ struct MatchDetailScreen: View {
                 } else {
                     let thing = kind == .item
                     hero(match, thing: thing)
-                    let facts = thing ? listing.itemDetailFacts() : listing.detailFacts()
-                    if !facts.isEmpty { FactsGrid(facts: facts).padding(.top, 22) }
-                    SectionHeading(text: String(localized: "Why it fits")).padding(.leading, 4).padding(.top, Look.sectionGap)
-                    WhyItFits(reason: match.reason, warnings: match.warnings).tourAnchor(.whyItFits)
-                        .padding(.top, Look.headingGap)
+                    // The facts the listing's search asks about are always there (`detailFacts(search:)`).
+                    let search = store.card(match.huntID)?.hunt.search
+                    let facts = thing ? listing.itemDetailFacts(search: search?.item)
+                        : listing.detailFacts(search: search?.flat)
+                    FactsCard(facts: facts, checks: match.checks).tourAnchor(.listingFacts).padding(.top, 22)
                     if !listing.description.isEmpty {
                         SectionHeading(text: String(localized: "Description")).padding(.leading, 4).padding(.top, Look.sectionGap)
-                        ExpandableText(text: listing.description).padding(.top, Look.headingGap).padding(.horizontal, 4)
+                        // The whole text, never cut: what the site gave is all there is to read here.
+                        Text(listing.description).font(AppFont.text(14)).foregroundStyle(Ink.secondary).lineSpacing(4)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .textSelection(.enabled)
+                            .padding(.top, Look.headingGap).padding(.horizontal, 4)
+                        if let line = listing.previewLine() {
+                            PreviewLine(text: line) { if let url = listing.portalURL { openURL(url) } }
+                                .disabled(listing.portalURL == nil)
+                                .padding(.top, 6)
+                        }
                     }
                 }
             }
@@ -104,20 +116,15 @@ struct MatchDetailScreen: View {
                     thingPrice(match, now: .now)
                 }
             } else if let rent = listing.shownRent {
+                // The other rent is the first fact (`detailFacts`), with a dash when the listing does not give it.
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text(rent.amount).font(AppFont.number(34, weight: .bold)).foregroundStyle(Ink.primary)
                         .minimumScaleFactor(0.7)
                     Text(rent.label).font(AppFont.text(13)).foregroundStyle(Ink.muted)
                 }
                 .lineLimit(1)
-                if listing.rentWarm != nil, let cold = listing.rentCold {
-                    HStack(alignment: .firstTextBaseline, spacing: 5) {
-                        Text(Format.money(cold)).font(AppFont.number(13, weight: .regular))
-                        Text("cold").font(AppFont.text(13))
-                    }
-                    .foregroundStyle(Ink.muted)
-                    .padding(.top, 2)
-                }
+            } else {
+                Text("Rent not given").font(AppFont.text(22, weight: .semibold)).foregroundStyle(Ink.secondary)
             }
             Text(listing.title).font(AppFont.text(17, weight: .semibold)).foregroundStyle(Ink.primary)
                 .lineLimit(2).fixedSize(horizontal: false, vertical: true)
@@ -210,27 +217,26 @@ struct MatchDetailScreen: View {
         }
     }
 
+    /// "Open on <site>" (or the page, or the shop) in the accent fill, the main button; a flat's application text under
+    /// it as the quiet second one, named for what it gives.
     private func actions(_ match: Match) -> some View {
-        let kind = store.kind(of: match)
-        return HStack(spacing: 10) {
-            Group {
-                if kind == .watch {
-                    Button("Open page") { if let url = match.listing.portalURL { openURL(url) } }
-                } else if kind == .price {
-                    Button("Open in shop") { if let url = match.listing.portalURL { openURL(url) } }
+        let buttons = ListingButton.buttons(for: store.kind(of: match), site: match.listing.sourceName)
+        return VStack(spacing: 2) {
+            ForEach(buttons, id: \.self) { button in
+                if button.opensListing {
+                    Button(button.title()) { if let url = match.listing.portalURL { openURL(url) } }
+                        .buttonStyle(.accent)
+                        .disabled(match.listing.portalURL == nil)
                 } else {
-                    Button("Open on \(match.listing.sourceName)") { if let url = match.listing.portalURL { openURL(url) } }
+                    Button { navigation.sheet = .application(match.id) } label: {
+                        Label(button.title(), systemImage: button.symbol ?? "doc.text")
+                            .frame(minHeight: 44)
+                    }
+                    .buttonStyle(.quiet)
                 }
             }
-            .buttonStyle(ProvinceButtonStyle(kind: kind == .flat ? .glass : .accent))
-            .disabled(match.listing.portalURL == nil)
-            if kind == .flat {
-                Button("Application") { navigation.sheet = .application(match.id) }
-                    .buttonStyle(.accent)
-                    .frame(width: 142)
-            }
         }
-        .padding(.horizontal, Look.side).padding(.top, 4).padding(.bottom, 6)
+        .padding(.horizontal, Look.side).padding(.top, 4).padding(.bottom, 2)
     }
 
     private func stateMenu(_ match: Match) -> some View {
@@ -260,18 +266,19 @@ struct MatchDetailScreen: View {
     }
 }
 
-/// Two columns of label over value.
-private struct FactsGrid: View {
+/// The listing's facts as two columns of label over value, a quiet "–" for each the listing does not state; at the foot,
+/// after a hairline, what the check could not confirm ("To check"), each with a light question mark, never an alarm
+/// colour.
+private struct FactsCard: View {
     let facts: [ListingFact]
+    let checks: [String]
 
     var body: some View {
-        let rows = stride(from: 0, to: facts.count, by: 2).map { Array(facts[$0..<min($0 + 2, facts.count)]) }
-        Grid(alignment: .topLeading, horizontalSpacing: 16, verticalSpacing: 18) {
-            ForEach(rows, id: \.first?.id) { row in
-                GridRow {
-                    ForEach(row) { fact in cell(fact) }
-                    if row.count == 1 { Color.clear.gridCellUnsizedAxes([.horizontal, .vertical]) }
-                }
+        VStack(alignment: .leading, spacing: 0) {
+            if !facts.isEmpty { grid }
+            if !checks.isEmpty {
+                if !facts.isEmpty { Hairline().padding(.vertical, 18) }
+                toCheck
             }
         }
         .padding(18)
@@ -279,18 +286,73 @@ private struct FactsGrid: View {
         .glassCard()
     }
 
+    private var grid: some View {
+        let rows = stride(from: 0, to: facts.count, by: 2).map { Array(facts[$0..<min($0 + 2, facts.count)]) }
+        return Grid(alignment: .topLeading, horizontalSpacing: 16, verticalSpacing: 18) {
+            ForEach(rows, id: \.first?.id) { row in
+                GridRow {
+                    ForEach(row) { fact in cell(fact) }
+                    if row.count == 1 { Color.clear.gridCellUnsizedAxes([.horizontal, .vertical]) }
+                }
+            }
+        }
+    }
+
     private func cell(_ fact: ListingFact) -> some View {
         VStack(alignment: .leading, spacing: 5) {
             CapsLabel(text: fact.label)
-            HStack(alignment: .firstTextBaseline, spacing: 4) {
-                Text(fact.value)
-                    .font(fact.numeric ? AppFont.number(15, weight: .medium) : AppFont.text(15, weight: .medium))
-                if let unit = fact.unit { Text(unit).font(AppFont.text(14)).foregroundStyle(Ink.secondary) }
+            if let value = fact.value {
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    Text(value)
+                        .font(fact.numeric ? AppFont.number(15, weight: .medium) : AppFont.text(15, weight: .medium))
+                    if let unit = fact.unit { Text(unit).font(AppFont.text(14)).foregroundStyle(Ink.secondary) }
+                }
+                .foregroundStyle(Ink.primary).lineLimit(2)
+            } else {
+                Text(verbatim: ListingFact.dash).font(AppFont.text(15, weight: .medium)).foregroundStyle(Ink.muted)
+                    .accessibilityLabel(Text(verbatim: ListingFact.notStated()))
             }
-            .foregroundStyle(Ink.primary).lineLimit(2)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)
+    }
+
+    private var toCheck: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            CapsLabel(text: String(localized: "To check"))
+            ForEach(checks, id: \.self) { check in
+                HStack(alignment: .firstTextBaseline, spacing: 9) {
+                    Image(systemName: "questionmark.circle").font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(Ink.muted)
+                    Text(check).font(AppFont.text(14)).foregroundStyle(Ink.secondary).lineSpacing(3)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Check: \(check)")
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// Under a description that is only the site's preview: one quiet line, which opens the listing on the site.
+private struct PreviewLine: View {
+    let text: String
+    let open: () -> Void
+
+    var body: some View {
+        Button(action: open) {
+            HStack(alignment: .firstTextBaseline, spacing: 5) {
+                Text(text).multilineTextAlignment(.leading).fixedSize(horizontal: false, vertical: true)
+                Image(systemName: "arrow.up.right").font(.system(size: 10, weight: .semibold))
+            }
+            .font(AppFont.text(13)).foregroundStyle(Ink.muted)
+            .padding(.horizontal, 4).padding(.vertical, 8)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(.isLink)
     }
 }
 
@@ -328,63 +390,5 @@ private struct ChangedLines: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)
-    }
-}
-
-/// The AI's reason, and each thing to check with an amber triangle; the card has the accent edge.
-private struct WhyItFits: View {
-    let reason: String
-    let warnings: [String]
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(reason).font(AppFont.text(15)).foregroundStyle(Ink.primary).lineSpacing(4)
-                .fixedSize(horizontal: false, vertical: true)
-            ForEach(warnings, id: \.self) { warning in
-                HStack(alignment: .firstTextBaseline, spacing: 9) {
-                    Image(systemName: "exclamationmark.triangle").font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(Look.amber)
-                    Text(warning).font(AppFont.text(13)).foregroundStyle(Ink.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel("Check: \(warning)")
-            }
-        }
-        .padding(18)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .glassCard(accent: Look.accent)
-    }
-}
-
-/// Six lines of text; "More" shows the rest (only when there is more).
-struct ExpandableText: View {
-    let text: String
-    var lines = 6
-    @State private var expanded = false
-    @State private var fullHeight: CGFloat = 0
-    @State private var shortHeight: CGFloat = 0
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            styled(Text(text))
-                .lineLimit(expanded ? nil : lines)
-                .fixedSize(horizontal: false, vertical: true)
-                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { if !expanded { shortHeight = $0 } }
-                .background {
-                    // The whole text, measured off screen, tells whether there is more to show.
-                    styled(Text(text)).fixedSize(horizontal: false, vertical: true).hidden()
-                        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { fullHeight = $0 }
-                }
-                .textSelection(.enabled)
-            if !expanded && fullHeight > shortHeight + 1 {
-                Button("More") { withAnimation(.easeOut(duration: 0.25)) { expanded = true } }
-                    .buttonStyle(.quiet)
-            }
-        }
-    }
-
-    private func styled(_ text: Text) -> some View {
-        text.font(AppFont.text(14)).foregroundStyle(Ink.secondary).lineSpacing(4)
     }
 }

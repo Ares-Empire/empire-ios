@@ -46,7 +46,7 @@ struct LinkTests {
         #expect(categories.count == 4)
         let category = try #require(categories.first { $0.identifier == MatchNotification.category })
         #expect(category.identifier == "ARESTEMIS_MATCH")
-        #expect(category.actions.map(\.title) == ["Open listing", "Application"])
+        #expect(category.actions.map(\.title) == ["Open listing", "Application text"])
         #expect(category.actions.map(\.identifier) == [MatchNotification.openListingAction, MatchNotification.applicationAction])
         #expect(category.actions.allSatisfy { $0.options.contains(.foreground) })
     }

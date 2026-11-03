@@ -412,16 +412,6 @@
         }
       }
     },
-    "A page you know: a new version, a new job, tickets, the canteen menu." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Eine Seite, die du kennst: neue Version, neue Stelle, Tickets, der Speiseplan."
-          }
-        }
-      }
-    },
     "A push when a price falls or a product is back in stock, with its curve." : {
       "localizations" : {
         "de" : {
@@ -702,6 +692,16 @@
         }
       }
     },
+    "Any page: a push when something new appears." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eine Seite: ein Push, wenn etwas Neues erscheint."
+          }
+        }
+      }
+    },
     "Anything else: size, colour, with box …" : {
       "localizations" : {
         "de" : {
@@ -712,12 +712,12 @@
         }
       }
     },
-    "Application" : {
+    "Application text" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bewerbung"
+            "value" : "Bewerbungstext"
           }
         }
       }
@@ -922,16 +922,6 @@
         }
       }
     },
-    "Canteen menu" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Speiseplan"
-          }
-        }
-      }
-    },
     "Changed %@" : {
       "localizations" : {
         "de" : {
@@ -1042,16 +1032,6 @@
         }
       }
     },
-    "City" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Stadt"
-          }
-        }
-      }
-    },
     "Clear" : {
       "localizations" : {
         "de" : {
@@ -1088,6 +1068,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kalt"
+          }
+        }
+      }
+    },
+    "Cold rent" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kaltmiete"
           }
         }
       }
@@ -1379,16 +1369,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Entfernung"
-          }
-        }
-      }
-    },
-    "District" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Stadtteil"
           }
         }
       }
@@ -1753,16 +1733,6 @@
         }
       }
     },
-    "Frame size 56" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Rahmengröße 56"
-          }
-        }
-      }
-    },
     "Free" : {
       "localizations" : {
         "de" : {
@@ -2109,6 +2079,16 @@
         }
       }
     },
+    "Location" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lage"
+          }
+        }
+      }
+    },
     "Lowest %@" : {
       "localizations" : {
         "de" : {
@@ -2185,16 +2165,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Min. Zimmer"
-          }
-        }
-      }
-    },
-    "More" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mehr"
           }
         }
       }
@@ -2279,22 +2249,12 @@
         }
       }
     },
-    "New job" : {
+    "New flats and WG rooms, minutes after posting." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Neue Stelle"
-          }
-        }
-      }
-    },
-    "New listings from WG-Gesucht, Kleinanzeigen, Immowelt and ImmoScout24, minutes after they go online." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Neue Angebote von WG-Gesucht, Kleinanzeigen, Immowelt und ImmoScout24, Minuten nachdem sie online sind."
+            "value" : "Neue Wohnungen und WG-Zimmer, sobald sie online sind."
           }
         }
       }
@@ -2549,12 +2509,12 @@
         }
       }
     },
-    "One product in one shop: its price history, and a word when it gets cheaper or is back in stock." : {
+    "One product: a push when it gets cheaper." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ein Produkt in einem Shop: der Preisverlauf, und Bescheid, wenn es günstiger oder wieder lieferbar ist."
+            "value" : "Ein Produkt: ein Push, wenn es günstiger wird."
           }
         }
       }
@@ -2585,6 +2545,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nur"
+          }
+        }
+      }
+    },
+    "Only a preview. The whole text is on %@." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nur ein Auszug. Den ganzen Text zeigt %@."
           }
         }
       }
@@ -3129,22 +3099,12 @@
         }
       }
     },
-    "Road bike" : {
+    "Room size" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Rennrad"
-          }
-        }
-      }
-    },
-    "Road bike size 56" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Rennrad Größe 56"
+            "value" : "Zimmergröße"
           }
         }
       }
@@ -3529,6 +3489,16 @@
         }
       }
     },
+    "The facts at a glance, “–” where the listing doesn't say, and what to check yourself. For flats, “Application text” gives you a text to send." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Fakten auf einen Blick, „–“, wo die Anzeige nichts sagt, und was du selbst prüfen solltest. Bei Wohnungen gibt dir „Bewerbungstext“ einen Text zum Verschicken."
+          }
+        }
+      }
+    },
     "The fields are filled in automatically. Check them, then save." : {
       "localizations" : {
         "de" : {
@@ -3759,6 +3729,16 @@
         }
       }
     },
+    "To check" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zu prüfen"
+          }
+        }
+      }
+    },
     "Today" : {
       "localizations" : {
         "de" : {
@@ -3909,12 +3889,12 @@
         }
       }
     },
-    "Used and cheap: Kleinanzeigen, eBay, Vinted, IKEA Preowned and more, with a price limit and pickup nearby." : {
+    "Used and cheap, under your price limit." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gebraucht und günstig: Kleinanzeigen, eBay, Vinted, IKEA Preowned und mehr, mit Preisgrenze und Abholung in der Nähe."
+            "value" : "Gebraucht und günstig, unter deiner Preisgrenze."
           }
         }
       }
@@ -3965,6 +3945,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Warm"
+          }
+        }
+      }
+    },
+    "Warm rent" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Warmmiete"
           }
         }
       }
@@ -4055,16 +4045,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Wo"
-          }
-        }
-      }
-    },
-    "Why it fits" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Warum es passt"
           }
         }
       }
@@ -4189,16 +4169,6 @@
         }
       }
     },
-    "a new job is posted" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "eine neue Stelle ausgeschrieben wird"
-          }
-        }
-      }
-    },
     "a new version comes out" : {
       "localizations" : {
         "de" : {
@@ -4245,6 +4215,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "kalt"
+          }
+        }
+      }
+    },
+    "e.g." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "z. B."
           }
         }
       }
@@ -4415,6 +4395,16 @@
         }
       }
     },
+    "not stated" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nicht angegeben"
+          }
+        }
+      }
+    },
     "out of stock" : {
       "localizations" : {
         "de" : {
@@ -4461,16 +4451,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Quadratmeter"
-          }
-        }
-      }
-    },
-    "the new menu is out" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "der neue Speiseplan online ist"
           }
         }
       }
@@ -4586,16 +4566,6 @@
     },
     "–" : {
       "shouldTranslate" : false
-    },
-    "“Why it fits” says what the check found and what to check yourself. For flats, “Application” writes the text you send." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "„Warum es passt“ sagt, was die Prüfung gefunden hat und was du selbst prüfen solltest. Bei Wohnungen schreibt „Bewerbung“ den Text, den du schickst."
-          }
-        }
-      }
     }
   },
   "version" : "1.0"

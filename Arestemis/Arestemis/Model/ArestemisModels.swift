@@ -235,6 +235,9 @@ struct Listing: Codable, Equatable, Sendable {
     let posted: String?
     let imageURL: String?
     let description: String
+    /// The description is only the site's preview (a list card's snippet), so the whole text is on the site (server
+    /// brief 141). A server from before it sends nothing: read as the whole text.
+    var descriptionPartial = false
     var item: ItemDetails? = nil
     /// A watch's match: the lines that changed on the page and what it says now (brief 130); nil for the other kinds.
     var page: PageChange? = nil
@@ -247,6 +250,7 @@ struct Listing: Codable, Equatable, Sendable {
         case priceChange = "price_change"
         case sourceName = "source_name", rentWarm = "rent_warm", rentCold = "rent_cold"
         case availableFrom = "available_from", availableUntil = "available_until", imageURL = "image_url"
+        case descriptionPartial = "description_partial"
     }
 }
 
@@ -411,6 +415,37 @@ extension Hunt {
         updated = try c.decode(String.self, forKey: .updated)
         activated = try c.decodeIfPresent(String.self, forKey: .activated)
         lastScan = try c.decodeIfPresent(String.self, forKey: .lastScan)
+    }
+}
+
+extension Listing {
+    /// Read as the contract says; `description_partial` leniently: absent, null or not a boolean is the whole text
+    /// (a server from before brief 141).
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        source = try c.decode(Source.self, forKey: .source)
+        sourceName = try c.decode(String.self, forKey: .sourceName)
+        url = try c.decode(String.self, forKey: .url)
+        title = try c.decode(String.self, forKey: .title)
+        kind = try c.decodeIfPresent(Kind.self, forKey: .kind)
+        rentWarm = try c.decodeIfPresent(Double.self, forKey: .rentWarm)
+        rentCold = try c.decodeIfPresent(Double.self, forKey: .rentCold)
+        sqm = try c.decodeIfPresent(Double.self, forKey: .sqm)
+        rooms = try c.decodeIfPresent(Double.self, forKey: .rooms)
+        flatmates = try c.decodeIfPresent(Int.self, forKey: .flatmates)
+        city = try c.decodeIfPresent(String.self, forKey: .city)
+        district = try c.decodeIfPresent(String.self, forKey: .district)
+        address = try c.decodeIfPresent(String.self, forKey: .address)
+        availableFrom = try c.decodeIfPresent(String.self, forKey: .availableFrom)
+        availableUntil = try c.decodeIfPresent(String.self, forKey: .availableUntil)
+        furnished = try c.decodeIfPresent(Bool.self, forKey: .furnished)
+        posted = try c.decodeIfPresent(String.self, forKey: .posted)
+        imageURL = try c.decodeIfPresent(String.self, forKey: .imageURL)
+        description = try c.decode(String.self, forKey: .description)
+        descriptionPartial = ((try? c.decodeIfPresent(Bool.self, forKey: .descriptionPartial)) ?? nil) ?? false
+        item = try c.decodeIfPresent(ItemDetails.self, forKey: .item)
+        page = try c.decodeIfPresent(PageChange.self, forKey: .page)
+        priceChange = try c.decodeIfPresent(PriceChange.self, forKey: .priceChange)
     }
 }
 

@@ -61,8 +61,8 @@ struct TourTests {
                 #expect(tour.targets == [.findAll])
                 #expect(navigation.tab == .listings && navigation.part == .searches && navigation.listingsPath.isEmpty)
             case .listing:
-                // A flat's listing: why it fits, and its Application.
-                #expect(tour.targets == [.whyItFits])
+                // A flat's listing: its facts, with what to check at their foot (brief 142: no "Why it fits").
+                #expect(tour.targets == [.listingFacts])
                 let match = try #require(world.flatMatch)
                 #expect(world.store.kind(of: try #require(world.store.match(match))) == .flat)
                 #expect(navigation.tab == .listings && navigation.listingsPath == [.match(match)])

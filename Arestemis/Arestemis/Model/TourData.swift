@@ -160,8 +160,9 @@ enum TourData {
                 source: "immoscout24", title: words.string("Bright 2-room flat with balcony in Schwabing"),
                 url: "https://www.immobilienscout24.de/expose/90000101", city: "München",
                 description: words.string("Bright 2-room flat on the 3rd floor with a south-facing balcony. Fitted kitchen, cellar, bike room. Hohenzollernplatz underground station 3 minutes away."),
+                // Furnished is not stated, so step 6's "–" is on the page.
                 flat: ["kind": "flat", "rent_warm": 980, "rent_cold": 820, "sqm": 42, "rooms": 2, "district": "Schwabing",
-                       "address": "Hohenzollernstraße", "available_from": times.moveIn, "furnished": false],
+                       "address": "Hohenzollernstraße", "available_from": times.moveIn],
                 posted: times.ago(minutes: 4)),
                   reason: words.string("Two rooms with a balcony in Schwabing, under your warm rent limit and free when you want to move in."),
                   warnings: [words.string("The listing does not say how much the deposit is.")]),

@@ -1,10 +1,14 @@
 import SwiftUI
 
-/// New search (brief 135, Patrik 2026-11-02, from the sketch's section 1): pushed on the Hunts tab by New search, in the
-/// app's own pieces. The question, then one glass card per kind this build can open, in `/kinds`' order
-/// (`NewSearchCard.cards`): the kind's mark (as on the Hunts list) and the server's name for it, what it does in one
-/// sentence, and its examples as chips. A tap on the card opens the kind's form (empty, or as the user left it); a tap on
-/// an example opens it filled in (`SearchExample`). No tab bar, as in the forms it leads to.
+/// New search (brief 135, Patrik 2026-11-02, from the sketch's section 1; brief 142, 2026-11-03: "lots of concentrated
+/// reading because all text is in the same colour, small symbols and the screen is not really guiding"): pushed on the
+/// Hunts tab by New search, in the app's own pieces. The question, then one glass card per kind this build can open, in
+/// `/kinds`' order (`NewSearchCard.cards`), each read in one order: the kind's mark large in a calm tile, the server's
+/// name for it strong, what it does in one quiet line, and its example as a quiet chip after "e.g.". A tap on the card
+/// opens the kind's form (empty, or as the user left it); a tap on the example opens it filled in (`SearchExample`). No
+/// tab bar, as in the forms it leads to. Chosen from three drawn on the simulator (`build/142-variants/`): one list card
+/// and a grid of four tiles with the examples under them read less at a glance in German. The tiles stay calm, ink on
+/// the card's field, not the accent: four violet marks would spread the one accent over a page that has no main action.
 struct NewSearchScreen: View {
     let store: ArestemisStore
     let navigation: AppNavigation
@@ -40,29 +44,39 @@ struct NewSearchScreen: View {
     }
 }
 
-/// One kind on New search: a glass card that opens its form, with the examples laid over its lower part as buttons of
-/// their own (a hidden copy keeps their room inside the card's button, as `HuntListCard` keeps its Start / Pause's).
+/// One kind on New search: a glass card that opens its form, the kind's mark in a tile, its name and line beside it, the
+/// example laid over its lower part as a button of its own (a hidden copy keeps its room inside the card's button, as
+/// `HuntListCard` keeps its Start / Pause's).
 private struct NewSearchKindCard: View {
     let card: NewSearchCard
     /// nil: the empty form; an example: the form filled in.
     let open: (SearchExample?) -> Void
 
+    private static let tile: CGFloat = 44
+    private static let gap: CGFloat = 14
+    private static let inset: CGFloat = 16
+
     var body: some View {
         Button { open(nil) } label: {
             VStack(alignment: .leading, spacing: 0) {
-                HStack(alignment: .firstTextBaseline, spacing: 10) {
-                    HuntTitle(kind: card.kind, title: card.name, size: 17)
-                    Spacer(minLength: 8)
+                HStack(alignment: .center, spacing: Self.gap) {
+                    KindTile(kind: card.kind, size: Self.tile)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(card.name).font(AppFont.text(17, weight: .semibold)).foregroundStyle(Ink.primary)
+                        Text(card.line).font(AppFont.text(13.5)).foregroundStyle(Ink.muted)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .multilineTextAlignment(.leading)
+                    Spacer(minLength: 6)
                     Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(Ink.muted)
                 }
-                Text(card.line).font(AppFont.text(14)).foregroundStyle(Ink.secondary).lineSpacing(3)
-                    .multilineTextAlignment(.leading)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, 6)
-                examples.hidden().accessibilityHidden(true).padding(.top, 14)
+                if !card.examples.isEmpty {
+                    examples.hidden().accessibilityHidden(true)
+                        .padding(.top, 12).padding(.leading, Self.tile + Self.gap)
+                }
             }
-            .padding(18)
+            .padding(Self.inset)
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(RoundedRectangle(cornerRadius: Ink.cardRadius, style: .continuous))
         }
@@ -70,22 +84,47 @@ private struct NewSearchKindCard: View {
         .accessibilityElement(children: .combine)
         .accessibilityHint("Opens the form")
         .overlay(alignment: .bottomLeading) {
-            examples.padding([.horizontal, .bottom], 18)
+            if !card.examples.isEmpty {
+                examples.padding(.leading, Self.inset + Self.tile + Self.gap).padding([.trailing, .bottom], Self.inset)
+            }
         }
         .glassCard(raised: true)
     }
 
-    /// The kind's examples as chips, each opening the form filled in; at least 44 pt tall to the touch.
+    /// "e.g." and the kind's example in a quiet capsule: tappable, but under the card's own words. At least 44 pt tall to
+    /// the touch.
     private var examples: some View {
         FlowLayout(spacing: 8, lineSpacing: 8) {
+            Text("e.g.").font(AppFont.text(12.5)).foregroundStyle(Ink.muted).frame(minHeight: 32)
+                .accessibilityHidden(true)
             ForEach(card.examples) { example in
                 Button { open(example) } label: {
-                    Chip(text: example.title())
-                        .padding(.vertical, 5).contentShape(Rectangle()).padding(.vertical, -5)
+                    Text(example.title()).font(AppFont.text(13, weight: .medium)).foregroundStyle(Ink.secondary)
+                        .lineLimit(1)
+                        .padding(.horizontal, 12).frame(minHeight: 32)
+                        .background(Ink.field, in: Capsule())
+                        .overlay(Capsule().strokeBorder(Ink.line.opacity(1.6)))
+                        .padding(.vertical, 6).contentShape(Rectangle()).padding(.vertical, -6)
                 }
                 .buttonStyle(.plain)
                 .accessibilityHint("Opens the form filled in")
             }
         }
+    }
+}
+
+/// A kind's mark, large, in a calm tile: ink on the card's field with a hairline.
+private struct KindTile: View {
+    let kind: SearchKind
+    let size: CGFloat
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: size * 0.28, style: .continuous)
+        Image(systemName: kind.symbol).font(.system(size: size * 0.42, weight: .medium))
+            .foregroundStyle(Ink.primary)
+            .frame(width: size, height: size)
+            .background(Ink.field, in: shape)
+            .overlay(shape.strokeBorder(Ink.line))
+            .accessibilityHidden(true)
     }
 }

@@ -4,7 +4,8 @@ import Foundation
 /// `-sampleData`.
 enum ArestemisSamples {
     nonisolated static let files = ["overview", "matches", "match", "rejected", "settings", "places", "hunts", "item-matches",
-                                    "ebay-match", "ikea-match", "vinted-match", "kinds", "watch-matches", "price-matches",
+                                    "ebay-match", "ikea-match", "vinted-match", "immowelt-match", "kinds", "watch-matches",
+                                    "price-matches",
                                     "prices-9", "prices-10"]
 
     static func data(_ name: String) throws -> Data {
@@ -69,7 +70,8 @@ struct SampleContent {
         let single = try ArestemisSamples.decode(Match.self, from: "match", shift: shift)
         let matches = page.items + (page.items.contains { $0.id == single.id } ? [] : [single])
             + (try ArestemisSamples.decode(MatchPage.self, from: "item-matches", shift: shift)).items
-            + (try ["ebay-match", "ikea-match", "vinted-match"].map {
+            // The server's Immowelt listing (brief 141), whose description is only the site's preview.
+            + (try ["ebay-match", "ikea-match", "vinted-match", "immowelt-match"].map {
                 try ArestemisSamples.decode(Match.self, from: $0, shift: shift)
             })
             + (try ArestemisSamples.decode(MatchPage.self, from: "watch-matches", shift: shift)).items
@@ -99,7 +101,7 @@ final class SampleBackend: ArestemisBackend {
         var hangs = false           // -sampleLoading: the overview never arrives
         var moreLoading = false     // -sampleMoreLoading: pause the next listings page
         var moreFailure = false     // -sampleMoreFailure: fail the next listings page
-        var longDescription = false // -sampleLongDescription: a description with More
+        var longDescription = false // -sampleLongDescription: a long description (shown in full)
         var ownMode = false         // -sampleOwnMode: the own text instead of automatic texts
         var noTexts = false         // -sampleNoTexts: no own text, notes or facts about you yet
         var slowed = false          // -sampleSlowed: the thing hunt is read less often
