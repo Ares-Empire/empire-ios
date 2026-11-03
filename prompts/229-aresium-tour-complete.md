@@ -1,6 +1,6 @@
 # 229: The Aresium tour covers everything again
 
-Status: running (started 2026-11-03)
+Status: merged 2026-11-03, build 22 (833 tests on Claude's run): step 4 of 23, the average and fixed costs; tour groceries no longer fixed.
 Branch: `codex/229-tour-complete` · Worktree: `../empire-ios-229-tour-complete` · Model: `gpt-6.1-sol`, effort `high` ·
 Simulator: `codex-229` (create it as `AGENTS.md` says)
 

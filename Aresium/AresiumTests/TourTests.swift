@@ -70,7 +70,7 @@ struct TourTests {
         #expect(tour.phase == .running)
         #expect(tour.step == .welcome)
         #expect(tour.target == nil)
-        #expect(tour.count == 22)
+        #expect(tour.count == 23)
         let world = try #require(tour.world)
         #expect(world.root.deletingLastPathComponent().standardizedFileURL == parent.standardizedFileURL)
         #expect(world.phone.summary.payments > 100)
@@ -88,11 +88,16 @@ struct TourTests {
         place = tour.place
         place.current = false                                  // Overview
         tour.update(place)
+        #expect(tour.step == .fixedCosts)
+        #expect(tour.target == .averageLine && tour.holdsTheScreen)
+        #expect(!tour.place.current && tour.place.side == .expenses, "Overview's spending line")
+        #expect(tour.number == 4 && tour.count == 23)
+        tour.next()
         #expect(tour.step == .graph)
         #expect(tour.target == .graph, "the graph itself, on the start screen")
         #expect(tour.holdsTheScreen)
         #expect(!tour.place.current, "Overview stays for the graph")
-        #expect(tour.number == 4 && tour.count == 22)
+        #expect(tour.number == 5 && tour.count == 23)
 
         place = tour.place
         place.side = .expenses                                  // the person moves the page: the step asks nothing
@@ -112,7 +117,7 @@ struct TourTests {
         #expect(tour.step == .search)
         #expect(tour.place.path.isEmpty && tour.place.day == nil, "back on the start screen, the day's sheet closed")
         #expect(tour.target == .search && tour.holdsTheScreen)
-        #expect(tour.number == 5)
+        #expect(tour.number == 6)
         place = tour.place
         place.open(.search)                                                   // the magnifying glass
         tour.update(place)
@@ -297,6 +302,9 @@ struct TourTests {
         var seen: [TourStep] = [tour.step]
         while tour.phase == .running {
             switch tour.step {
+            case .fixedCosts:
+                #expect(!tour.place.current && tour.place.side == .expenses)
+                #expect(tour.place.path.isEmpty && tour.target == .averageLine)
             case .graph:
                 #expect(!tour.place.current, "Overview's months")
                 #expect(tour.target == .graph)
@@ -352,12 +360,12 @@ struct TourTests {
             if tour.phase == .running { seen.append(tour.step) }
         }
         #expect(seen == TourStep.allCases)
-        #expect(seen.count == 22)
+        #expect(seen.count == 23)
         #expect(Self.tourFolders(in: parent).isEmpty)
     }
 
-    /// With the graph hidden in Settings (brief 42), the tour has no graph step: twenty-one steps, counted 1 to 21 on the
-    /// card, Overview followed by the search (brief 77); a DEBUG start at the graph's step starts at the search; no card
+    /// With the graph hidden in Settings (brief 42), the tour has no graph step: twenty-two steps, counted 1 to 22 on the
+    /// card, fixed costs followed by the search (brief 77); a DEBUG start at the graph's step starts at the search; no card
     /// mentions the graph (brief 59).
     @Test func withTheGraphHiddenTheGraphStepIsLeftOut() async throws {
         #expect(TourStep.steps(showingGraph: true) == TourStep.allCases)
@@ -365,7 +373,7 @@ struct TourTests {
 
         let tour = Self.model(in: Self.parent(), showsGraph: false)
         await tour.start()
-        #expect(tour.count == 21)
+        #expect(tour.count == 22)
         var numbers: [Int] = []
         var seen: [TourStep] = []
         while tour.phase == .running {
@@ -373,11 +381,12 @@ struct TourTests {
             seen.append(tour.step)
             #expect(tour.target != .graph)
             #expect(!tour.text.localizedCaseInsensitiveContains("graph"), "\(tour.step)")
-            if tour.step == .overview { #expect(tour.nextStep == .search) }
+            if tour.step == .overview { #expect(tour.nextStep == .fixedCosts) }
+            if tour.step == .fixedCosts { #expect(tour.nextStep == .search) }
             if tour.step == .done { #expect(tour.nextStep == nil) }
             tour.next()
         }
-        #expect(numbers == Array(1...21))
+        #expect(numbers == Array(1...22))
         #expect(!seen.contains(.graph) && seen.first == .welcome && seen.last == .done)
         for step in TourStep.steps(showingGraph: false) {
             #expect(!step.text(.english, showingGraph: false).localizedCaseInsensitiveContains("graph"))
@@ -386,8 +395,65 @@ struct TourTests {
 
         let started = Self.model(in: Self.parent(), showsGraph: false)
         await started.start(at: .graph)
-        #expect(started.step == .search && started.number == 4)
+        #expect(started.step == .search && started.number == 5)
         started.end()
+    }
+
+    /// The fixed costs step follows Overview, frees the real page for exploration, and Next restores the graph.
+    @Test func fixedCostsCanBeExploredUntilNext() async throws {
+        let tour = Self.model(in: Self.parent())
+        await tour.start(at: .fixedCosts)
+        defer { tour.end() }
+        let dashboard = try #require(tour.world?.dashboard)
+        #expect(tour.number == 4 && tour.target == .averageLine && tour.holdsTheScreen)
+        let line = try #require(AverageLine(average: dashboard.monthlyAverage(side: .expenses),
+                                           fixedCosts: dashboard.fixedCosts(side: .expenses),
+                                           side: .expenses, scope: .overview))
+        #expect(line.fixed != nil, "the highlighted line includes the fixed costs button")
+        var place = tour.place
+        place.open(.fixedCosts(.expenses))
+        tour.update(place)
+        #expect(tour.step == .fixedCosts && tour.target == nil && !tour.holdsTheScreen)
+        let rent = try #require(dashboard.fixedCosts(side: .expenses)?.running.first { $0.cents == 78_000 })
+        place = tour.place
+        place.open(try #require(dashboard.nameRoute(for: rent.newest)))
+        tour.update(place)
+        #expect(tour.step == .fixedCosts && tour.target == nil && tour.rowShortcuts)
+        place = tour.place
+        place.path = []
+        tour.update(place)
+        #expect(tour.target == .averageLine && tour.holdsTheScreen, "the ring returns on Overview")
+        place = tour.place
+        place.open(.fixedCosts(.expenses))
+        tour.update(place)
+        tour.next()
+        #expect(tour.step == .graph && tour.target == .graph)
+        #expect(tour.place.path.isEmpty && !tour.place.current, "Next returns to Overview's graph")
+    }
+
+    /// The real engine finds the sample's contracts, while varying shopping trips do not look like fixed costs.
+    @Test(arguments: [(2026, 10, 27), (2026, 11, 1), (2026, 11, 3), (2027, 2, 28)])
+    func sampleHasBelievableFixedCosts(date: (Int, Int, Int)) async throws {
+        let now = try #require(Calendar.current.date(from: DateComponents(year: date.0, month: date.1,
+                                                                          day: date.2, hour: 12)))
+        let world = try await TourWorld.make(in: Self.parent(), now: now, makeEngine: { try PhoneTest.engine() })
+        defer { world.delete() }
+        let dashboard = world.dashboard
+        #expect(dashboard.monthlyAverage(side: .expenses) != nil)
+        let list = try #require(dashboard.fixedCosts(side: .expenses))
+        for name in ["Fiktiv Hausverwaltung", "Spotify", "Netflix", "Fiktiv Versicherung AG"] {
+            let entry = try #require(list.running.first { $0.name == name }, "\(name) is running")
+            #expect(entry.cadence == .monthly && entry.nextDue > entry.last)
+        }
+        let insurance = try #require(list.running.first { $0.name == "Fiktiv Versicherung AG" })
+        let insuranceCategory = try #require(try await world.phone.categories().name(of: "insurance"))
+        #expect(insurance.category.name == insuranceCategory)
+        let shopping = ["REWE", "LIDL", "ALDI", "dm", "Baeckerei"]
+        for entry in list.running + list.ended + list.takenOut {
+            #expect(!shopping.contains { entry.name.localizedCaseInsensitiveContains($0) }, "\(entry.name) is shopping")
+        }
+        let payments = try #require(dashboard.dashboard?.transactions)
+        #expect(payments.filter { $0.place.contains("REWE") }.count > 20, "enough repeat visits for adding up")
     }
 
     /// Every card has its German, and the cards about the new features say what they show, in both languages.
@@ -399,6 +465,10 @@ struct TourTests {
                 #expect(!english.contains("!") && !german.contains("!"), "no exclamation marks")
             }
         }
+        #expect(TourStep.fixedCosts.text(.english)
+                == "Your average month and its fixed costs. Tap to see rent, subscriptions and insurance, and when each is due.")
+        #expect(TourStep.fixedCosts.text(.german)
+                == "Dein durchschnittlicher Monat und was davon fix ist. Tippe hier für Miete, Abos und Versicherungen und wann sie fällig sind.")
         #expect(TourStep.graph.text(.english) == "Hold the graph and slide to read each month. A tap opens the month, or the day where it shows days.")
         #expect(TourStep.graph.text(.german) == "Halte den Finger auf dem Diagramm und zieh: jeder Monat mit seiner Zahl. Antippen öffnet den Monat, zeigt es Tage, den Tag.")
         #expect(TourStep.search.text(.english) == "Search a name, your own or the bank's. A tap shows all its payments.")
