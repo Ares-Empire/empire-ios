@@ -315,15 +315,32 @@ nonisolated enum PhotoDate {
     }
 }
 
-/// A small picture of a photo for the strip, read from the file without loading it whole.
+/// A small picture of a photo for the strip (an 88 pt tile, so 264 pixels), read from the file without loading it whole.
+/// The share extension has little memory (iOS closes it at about 120 MB), and on the iPhone the photo decoder can hold a
+/// whole picture while it shrinks it, so the thumbnails are made one at a time and from the small picture a photo
+/// carries when it has one (measured with six 24-megapixel HEIC photos on the simulator, 2026-11-03: the peak rose by
+/// 19 MB made all at once from the full pictures, by 5 MB this way).
 nonisolated enum DropThumbnail {
-    @concurrent static func make(_ url: URL, pixels: Int = 240) async -> UIImage? {
-        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else { return await video(url) }
-        let options: [CFString: Any] = [kCGImageSourceCreateThumbnailFromImageAlways: true,
+    static func make(_ url: URL, pixels: Int = 264) async -> UIImage? {
+        if let image = await queue.run({ still(url, pixels: pixels) }) { return image }
+        return await video(url)
+    }
+
+    private static let queue = Queue()
+
+    /// Runs one thumbnail at a time, off the main actor.
+    private actor Queue {
+        func run(_ work: @Sendable () -> UIImage?) -> UIImage? { work() }
+    }
+
+    private static func still(_ url: URL, pixels: Int) -> UIImage? {
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, [kCGImageSourceShouldCache: false] as CFDictionary)
+        else { return nil }
+        let options: [CFString: Any] = [kCGImageSourceCreateThumbnailFromImageIfAbsent: true,
                                         kCGImageSourceCreateThumbnailWithTransform: true,
+                                        kCGImageSourceShouldCacheImmediately: true,
                                         kCGImageSourceThumbnailMaxPixelSize: pixels]
-        guard let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else { return await video(url) }
-        return UIImage(cgImage: image)
+        return CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary).map(UIImage.init(cgImage:))
     }
 
     private static func video(_ url: URL) async -> UIImage? {
