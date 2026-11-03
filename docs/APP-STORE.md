@@ -114,7 +114,7 @@ Contact & support works without an account; German and English. Beta App Review 
 file is sent (the tour replaces it). Each build's *What to Test* (de-DE, en-US): import your bank's file ("How do I get
 my file?"), check the categories, tell us what was unclear; feedback through TestFlight's screenshot or Settings →
 Contact & support; an unreadable bank file sends only the bank's name and header line. External group **"Tester"**
-(feedback on, public link off until the first approval). Build 18 submitted 2026-11-02 and approved the same day. Build 21 submitted 2026-11-03 (its What to Test starts with the monthly average and the fixed costs, then the text above).
+(feedback on, public link off until the first approval). Build 18 submitted 2026-11-02 and approved the same day. Build 21 submitted 2026-11-03 (its What to Test starts with the monthly average and the fixed costs, then the text above). Build 22 submitted the same evening with the same text (the tour's new step for the fixed costs).
 - **Arestemis:** "Flat hunting: set a search, start the hunt, and get every new listing from WG-Gesucht,
   Kleinanzeigen, Immowelt and ImmoScout24 that an AI checked against your whole search, with an application text ready to copy."
   (*Wohnungssuche: Filter festlegen, Suche starten und jedes neue Angebot von WG-Gesucht, Kleinanzeigen, Immowelt
