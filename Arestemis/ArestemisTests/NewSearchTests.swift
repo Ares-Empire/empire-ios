@@ -113,7 +113,7 @@ struct NewSearchTests {
 
         // The words and the price; pickup places stay the user's.
         let kallax = try #require(SearchExample.kallax.itemDraft(language: language))
-        #expect(kallax.query == "Kallax" && kallax.priceMax == "40" && kallax.priceMin.isEmpty)
+        #expect(kallax.words == ["Kallax"] && kallax.priceMax == "40" && kallax.priceMin.isEmpty)
         #expect(kallax.vbOverMax == "4")                // the form's usual default: a tenth of the maximum
         #expect(kallax.places.isEmpty && kallax.name.isEmpty && kallax.problems == [.places])
 
@@ -149,8 +149,13 @@ struct NewSearchTests {
 
         var thing = ItemSearchDraft()
         #expect(thing.namePlaceholder(language: language) == "Optional")
-        thing.query = "  Kallax "
+        thing.type("  Kallax ")
         #expect(thing.namePlaceholder(language: language) == "Kallax")
+        // Several words: the first and how many more (brief 149), the same in both languages.
+        thing.addTypedWord()
+        thing.add(word: "Billy")
+        thing.type("Hemnes")
+        #expect(thing.namePlaceholder(language: language) == "Kallax + 2")
 
         // The placeholder is what the hunt's card shows while it has no name of its own.
         for card in try hunts() {

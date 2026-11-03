@@ -218,7 +218,7 @@ struct SitesTests {
     /// A draft kept by build 6 (no `auctions`) still opens, with auctions on; one kept now keeps its choice.
     @Test func aKeptDraftFromBeforeStillOpens() throws {
         var draft = ItemSearchDraft()
-        draft.query = "Made-up chair"
+        draft.words = ["Made-up chair"]
         draft.priceMax = "300"
         draft.sources = [.kleinanzeigen, .ebay]
         draft.auctions = false
@@ -227,7 +227,7 @@ struct SitesTests {
         var object = try #require(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         object.removeValue(forKey: "auctions")
         let older = try JSONDecoder().decode(ItemSearchDraft.self, from: JSONSerialization.data(withJSONObject: object))
-        #expect(older.auctions && older.query == "Made-up chair" && older.vbOverMax == "30" && older.sources == [.kleinanzeigen, .ebay])
+        #expect(older.auctions && older.words == ["Made-up chair"] && older.vbOverMax == "30" && older.sources == [.kleinanzeigen, .ebay])
     }
 
     // MARK: an auction on screen

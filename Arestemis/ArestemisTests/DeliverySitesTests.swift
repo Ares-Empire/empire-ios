@@ -135,7 +135,7 @@ struct DeliverySitesTests {
     @Test func changingTheDeliverySwitchesOffAndNeverBackOn() throws {
         let kinds = try kinds()
         var draft = ItemSearchDraft()
-        draft.query = "Made-up bookcase"
+        draft.words = ["Made-up bookcase"]
         draft.places = [Place(id: "wg:400", name: "Garching bei München", region: "Bayern", sources: [])]
         draft.sources = [.kleinanzeigen, ikea, vinted]
         switchOff(&draft, kinds: kinds)
@@ -217,7 +217,7 @@ struct DeliverySitesTests {
     @Test func theOnlySiteRuledOutLeavesTheFormAskingForOne() throws {
         var draft = ItemSearchDraft()
         draft.delivery = .shipping
-        draft.query = "Made-up bookcase"
+        draft.words = ["Made-up bookcase"]
         draft.sources = [ikea]
         switchOff(&draft, kinds: try kinds())
         #expect(draft.sources.isEmpty && draft.problems == [.sources] && draft.search() == nil)

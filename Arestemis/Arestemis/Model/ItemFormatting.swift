@@ -201,6 +201,9 @@ extension Match {
 struct HuntSummary: Equatable {
     let title: String
     let parts: [String]
+    /// A thing search's words when it has several (brief 149), each kept on one line, broken only after a comma
+    /// ("Hermès tie, Ferragamo tie, Kiton tie"); its title names only the first ("Hermès tie + 2"). Nil otherwise.
+    let wordList: String?
     var line: String { ([title] + parts).joined(separator: " · ") }
     /// `sites` names a thing hunt's sites (the server's names).
     init(_ hunt: Hunt, sites: SiteNames = SiteNames(), now: Date = .now, calendar: Calendar = .app,
@@ -211,13 +214,17 @@ struct HuntSummary: Equatable {
     init(_ search: HuntSearch, sites: SiteNames = SiteNames(), now: Date = .now, calendar: Calendar = .app,
          language: AppLanguage = .current) {
         let de = language == .german
+        var wordList: String?
         switch search {
         case .flat(let search):
             let flat = SearchSummary(search, now: now, calendar: calendar, language: language)
             title = flat.kinds
             parts = flat.parts
         case .item(let search):
-            title = search.query
+            title = SearchWords.title(search.words) ?? search.query
+            if search.words.count > 1 {
+                wordList = search.words.map(SearchSummary.unbreakable).joined(separator: ", ")
+            }
             var parts: [String] = []
             switch (search.priceMin, search.priceMax) {
             case let (min?, max?): parts.append(Format.moneyRange(min, max, language: language))
@@ -247,6 +254,7 @@ struct HuntSummary: Equatable {
             title = de ? "Braucht eine neuere App-Version" : "Needs a newer app"
             parts = []
         }
+        self.wordList = wordList
     }
 }
 

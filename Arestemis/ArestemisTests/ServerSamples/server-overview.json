@@ -177,7 +177,8 @@
           "currency": "EUR",
           "availability": "in_stock",
           "kind": "below"
-        }
+        },
+        "facts_from_text": []
       },
       "reason": "Nintendo Switch 2: €449.00 (was €483.99)",
       "warnings": [],
@@ -225,7 +226,8 @@
           "ends": null
         },
         "page": null,
-        "price_change": null
+        "price_change": null,
+        "facts_from_text": []
       },
       "reason": "Free office chair in good condition, Garching — fits.",
       "warnings": [],
@@ -273,7 +275,8 @@
           "ends": null
         },
         "page": null,
-        "price_change": null
+        "price_change": null,
+        "facts_from_text": []
       },
       "reason": "75 € plus shipping from 4.99 €, like new — fits.",
       "warnings": [
@@ -464,7 +467,8 @@
           "sources": [
             "kleinanzeigen"
           ],
-          "auctions": true
+          "auctions": true,
+          "more_queries": []
         },
         "id": 3,
         "name": "Office chair",

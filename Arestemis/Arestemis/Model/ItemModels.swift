@@ -17,7 +17,11 @@ extension KeyedDecodingContainer {
 }
 
 struct ItemSearch: Codable, Equatable, Sendable {
+    /// The first search word.
     var query: String
+    /// Up to four more search words (brief 149, server brief 148): every word is searched on every chosen site, and
+    /// `extra` says what fits per word. A server from before them sends none.
+    var moreQueries: [String] = []
     var exclude: [String]
     var priceMin: Double?
     var priceMax: Double?
@@ -34,6 +38,7 @@ struct ItemSearch: Codable, Equatable, Sendable {
 
     enum CodingKeys: String, CodingKey {
         case query, exclude, auctions, delivery, places, seller, extra, sources
+        case moreQueries = "more_queries"
         case priceMin = "price_min", priceMax = "price_max", vbOverMax = "vb_over_max"
         case conditionMin = "condition_min", forParts = "for_parts", radiusKm = "radius_km"
     }
@@ -41,6 +46,7 @@ struct ItemSearch: Codable, Equatable, Sendable {
     func encode(to encoder: Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
         try c.encode(query, forKey: .query)
+        try c.encode(moreQueries, forKey: .moreQueries)
         try c.encode(exclude, forKey: .exclude)
         try c.encode(priceMin, forKey: .priceMin)
         try c.encode(priceMax, forKey: .priceMax)
@@ -58,10 +64,12 @@ struct ItemSearch: Codable, Equatable, Sendable {
 }
 
 extension ItemSearch {
-    /// A server from before eBay (brief 118) sends no `auctions`: the contract's default, on. Encoding always sends it.
+    /// A server from before eBay (brief 118) sends no `auctions`: the contract's default, on; one from before several
+    /// search words (brief 148) no `more_queries`: none. Encoding always sends both.
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         query = try c.decode(String.self, forKey: .query)
+        moreQueries = try c.decodeIfPresent([String].self, forKey: .moreQueries) ?? []
         exclude = try c.decode([String].self, forKey: .exclude)
         priceMin = try c.decodeIfPresent(Double.self, forKey: .priceMin)
         priceMax = try c.decodeIfPresent(Double.self, forKey: .priceMax)
@@ -76,10 +84,14 @@ extension ItemSearch {
         extra = try c.decode(String.self, forKey: .extra)
         sources = try c.decode([Source].self, forKey: .sources)
     }
+
+    /// Every search word in order: `query`, then `more_queries`.
+    var words: [String] { [query] + moreQueries }
 }
 
 struct PartialItemSearch: Codable, Equatable, Sendable {
     var query: String?
+    var moreQueries: [String]?
     var exclude: [String]?
     var priceMin: Double?
     var priceMax: Double?

@@ -309,6 +309,8 @@ struct LaunchOptions {
     var ebayNotReady = false
     var watchRead: String?
     var pricePreview: String?
+    /// `-sampleWordRefusal <i>`: saving a thing search is refused at `search.more_queries[i]` (brief 149).
+    var wordRefusal: Int?
     var scrollToHunt: Int?
     var sampleUndo = false
     var moreLoading = false
@@ -347,6 +349,7 @@ struct LaunchOptions {
         ebayNotReady = arguments.contains("-sampleEbayNotReady")
         watchRead = value("-sampleWatchRead")
         pricePreview = value("-pricePreview")
+        wordRefusal = value("-sampleWordRefusal").flatMap(Int.init)
         scrollToHunt = value("-scrollToHunt").flatMap(Int.init)
         sampleUndo = arguments.contains("-sampleUndo")
         moreLoading = arguments.contains("-sampleMoreLoading")

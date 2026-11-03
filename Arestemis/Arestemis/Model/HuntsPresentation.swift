@@ -145,8 +145,10 @@ struct HuntText: Equatable {
 
     /// `page`: a watch's page as last read (`HuntCard.page`), for its title and host; `price`: a monitor's product as
     /// last read (`HuntCard.price`). `sites`: the server's names for a thing hunt's sites (`ArestemisStore.siteNames`).
+    /// `allWords`: a thing hunt's page lists every search word first in the details (brief 149), where the cards name
+    /// only the first and how many more ("Hermès tie + 2").
     init(_ hunt: Hunt, page: PageState? = nil, price: PriceState? = nil, sites: SiteNames = SiteNames(),
-         now: Date = .now, calendar: Calendar = .app, language: AppLanguage = .current) {
+         allWords: Bool = false, now: Date = .now, calendar: Calendar = .app, language: AppLanguage = .current) {
         let ownName = Self.text(hunt.name)
         guard let kind = SearchKind(hunt.kind), hunt.search != .unsupported else {
             self.kind = nil
@@ -180,18 +182,20 @@ struct HuntText: Equatable {
             return
         }
         let summary = HuntSummary(hunt.search, sites: sites, now: now, calendar: calendar, language: language)
-        let parts = (ownName == nil ? [] : [summary.title]) + summary.parts
+        // What it looks for leads the details under an own name; on the page every word when there are several.
+        let lead = (allWords ? summary.wordList : nil) ?? (ownName == nil ? nil : SearchSummary.unbreakable(summary.title))
+        let parts = [lead].compactMap { $0 } + summary.parts.map(SearchSummary.unbreakable)
         self.kind = kind
         title = ownName ?? summary.title
-        details = parts.isEmpty ? nil : parts.map(SearchSummary.unbreakable).joined(separator: " · ")
+        details = parts.isEmpty ? nil : parts.joined(separator: " · ")
         newerApp = nil
     }
 
     /// A card's lines: its hunt, with the page or the product the server last read for it.
-    init(_ card: HuntCard, sites: SiteNames = SiteNames(), now: Date = .now, calendar: Calendar = .app,
-         language: AppLanguage = .current) {
-        self.init(card.hunt, page: card.page, price: card.price, sites: sites, now: now, calendar: calendar,
-                  language: language)
+    init(_ card: HuntCard, sites: SiteNames = SiteNames(), allWords: Bool = false, now: Date = .now,
+         calendar: Calendar = .app, language: AppLanguage = .current) {
+        self.init(card.hunt, page: card.page, price: card.price, sites: sites, allWords: allWords, now: now,
+                  calendar: calendar, language: language)
     }
 
     /// The title a search has without a name of its own (brief 135: the name fields' grey placeholder): what it looks

@@ -109,6 +109,7 @@ final class SampleBackend: ArestemisBackend {
         var ebayNotReady = false    // -sampleEbayNotReady: eBay without its keys on the server (greyed in the form)
         var watchRead: String?      // -sampleWatchRead <read>: the second watch's page state (screenshots)
         var preview: String?        // -pricePreview reading|refused|failed: how the product's preview answers
+        var wordRefusal: Int?       // -sampleWordRefusal <i>: a thing search refused at search.more_queries[i]
     }
 
     private var base: Overview
@@ -235,6 +236,7 @@ final class SampleBackend: ArestemisBackend {
         guard huntValues.count < 30 else { throw HTTPError.server(409, "This account has 30 hunts. Delete one first.") }
         guard kind == search.kind else { throw HTTPError.server(400, "This hunt needs a newer app.") }
         let name = try Self.name(name)
+        if let item = search.item { try check(item) }
         if let watch = search.watch { try Self.check(watch) }
         if let monitor = search.price { try Self.check(monitor) }
         let now = ArestemisSamples.iso(.now)
@@ -249,6 +251,7 @@ final class SampleBackend: ArestemisBackend {
     func updateHunt(id: Int, search: HuntSearch, name: String?) async throws -> Hunt {
         let index = try huntIndex(id)
         guard huntValues[index].kind == search.kind else { throw HTTPError.server(400, "The hunt kind cannot change.") }
+        if let item = search.item { try check(item) }
         if let watch = search.watch {
             try Self.check(watch)
             // A new address or description is read again from the start, as on the server.
@@ -326,6 +329,34 @@ final class SampleBackend: ArestemisBackend {
         }
     }
 
+    /// The server's refusals of a thing search's words (brief 148), in its words (English, as the samples): too many,
+    /// a word of the wrong length, a repeat (`SearchWords.key`, the server's folding). Only an imitation;
+    /// `-sampleWordRefusal <i>` refuses `search.more_queries[i]` as a repeat, for the form's line at its word.
+    private func check(_ item: ItemSearch) throws {
+        if let index = options.wordRefusal, item.moreQueries.indices.contains(index) {
+            throw FieldRefusal(field: "search.more_queries[\(index)]", message: "Duplicate search words")
+        }
+        if item.moreQueries.count > SearchWords.maxCount - 1 {
+            throw FieldRefusal(field: "search.more_queries",
+                               message: "List should have at most \(SearchWords.maxCount - 1) items after validation, not \(item.moreQueries.count)")
+        }
+        var seen: [String] = []
+        for (index, word) in item.words.enumerated() {
+            let field = index == 0 ? "search.query" : "search.more_queries[\(index - 1)]"
+            let trimmed = word.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.count < SearchWords.lengths.lowerBound {
+                throw FieldRefusal(field: field, message: "String should have at least 2 characters")
+            }
+            if trimmed.count > SearchWords.lengths.upperBound {
+                throw FieldRefusal(field: field, message: "String should have at most 100 characters")
+            }
+            if SearchWords.repeated(trimmed, in: seen) != nil {
+                throw FieldRefusal(field: field, message: "Duplicate search words")
+            }
+            seen.append(trimmed)
+        }
+    }
+
     /// The server's refusals of a monitor, in its words (English, as the samples): the watch's address rules, the switches'
     /// rule and an alarm without a condition. Only an imitation.
     private static func check(_ monitor: PriceSearch) throws {
@@ -375,7 +406,8 @@ final class SampleBackend: ArestemisBackend {
         case .flat: return .flat(try await parseFlat(text))
         case .item:
             let search = base.hunts.first { $0.hunt.kind == .item }?.hunt.search.item
-            return .item(ParsedItemSearch(search: PartialItemSearch(query: search?.query, priceMax: search?.priceMax,
+            return .item(ParsedItemSearch(search: PartialItemSearch(query: search?.query, moreQueries: search?.moreQueries,
+                                                                   priceMax: search?.priceMax,
                                                                    delivery: search?.delivery, places: search?.places), unclear: []))
         case .price, .watch, .unknown: throw HTTPError.server(400, "This hunt needs a newer app.")
         }

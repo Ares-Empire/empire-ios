@@ -6,7 +6,7 @@ import Testing
 struct ItemSearchDraftTests {
     private func valid() -> ItemSearchDraft {
         var draft = ItemSearchDraft()
-        draft.query = "Office chair"
+        draft.words = ["Office chair"]
         draft.delivery = .shipping
         return draft
     }
@@ -27,7 +27,7 @@ struct ItemSearchDraftTests {
         #expect(search.seller == .private && search.extra == "size B" && search.sources == [.kleinanzeigen])
         #expect(ItemSearchDraft(search).search() == search)
         let object = try #require(try JSONSerialization.jsonObject(with: JSONEncoder().encode(search)) as? [String: Any])
-        #expect(Set(object.keys) == ["query", "exclude", "price_min", "price_max", "vb_over_max", "condition_min",
+        #expect(Set(object.keys) == ["query", "more_queries", "exclude", "price_min", "price_max", "vb_over_max", "condition_min",
                                      "for_parts", "auctions", "delivery", "places", "radius_km", "seller", "extra",
                                      "sources"])
         draft.priceMin = ""
@@ -40,9 +40,9 @@ struct ItemSearchDraftTests {
     @Test func limitsAndMalformedNumbers() throws {
         var d = valid()
         #expect(d.isValid)
-        d.query = "a"; #expect(d.problems.contains(.query))
-        d.query = String(repeating: "a", count: 100); #expect(d.isValid)
-        d.query += "a"; #expect(d.problems.contains(.query)); d.query = "Chair"
+        d.words = ["a"]; #expect(d.problems.contains(.words))
+        d.words = [String(repeating: "a", count: 100)]; #expect(d.isValid)
+        d.words[0] += "a"; #expect(d.problems.contains(.words)); d.words = ["Chair"]
         d.exclude = Array(repeating: "word", count: 21); #expect(d.problems.contains(.exclude))
         d.exclude = [String(repeating: "a", count: 41)]; #expect(d.problems.contains(.exclude)); d.exclude = []
         d.priceMin = "100"; d.priceMax = "90"; #expect(d.problems.contains(.priceOrder))
@@ -80,7 +80,7 @@ struct ItemSearchDraftTests {
         draft.apply(PartialItemSearch(query: "Aeron", exclude: ["broken", "replica"], priceMax: 450,
                                       conditionMin: .likeNew, forParts: false, delivery: .either, places: [place],
                                       radiusKm: 20, seller: .private, extra: "", sources: []))
-        #expect(draft.query == "Aeron" && draft.exclude == ["broken", "replica"] && draft.vbOverMax == "45")
+        #expect(draft.words == ["Office chair", "Aeron"] && draft.exclude == ["broken", "replica"] && draft.vbOverMax == "45")
         #expect(draft.extra == "Fictional preference" && draft.sources == [.kleinanzeigen] && draft.places == [place])
         draft.apply(PartialItemSearch(vbOverMax: 0, places: [place]))
         draft.apply(PartialItemSearch(priceMax: 500))
@@ -94,7 +94,7 @@ struct ItemSearchDraftTests {
         let kept = KeptSearchDraft(defaults: defaults)
         defer { kept.clear() }
         var first = valid(); first.priceMin = "invalid"
-        var second = valid(); second.query = "Desk"
+        var second = valid(); second.words = ["Desk"]
         kept.keep(first, saved: nil, account: "a", huntID: 2)
         kept.keep(second, saved: nil, account: "a", huntID: 4)
         kept.keep(second, saved: nil, account: "a")

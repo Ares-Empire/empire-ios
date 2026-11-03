@@ -51,7 +51,8 @@ struct ContentView: View {
                                                                              newerKind: options.newerKind,
                                                                              ebayNotReady: options.ebayNotReady,
                                                                              watchRead: options.watchRead,
-                                                                             preview: options.pricePreview)) {
+                                                                             preview: options.pricePreview,
+                                                                             wordRefusal: options.wordRefusal)) {
             return ArestemisStore(session: session, backend: sample, sample: true)
         }
         #endif

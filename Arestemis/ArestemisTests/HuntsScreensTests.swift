@@ -204,13 +204,14 @@ struct HuntsScreensTests {
         let de = language == .german
         var draft = ItemSearchDraft()
         // A new form: what is only still empty says so under Save, not under its field.
-        #expect(draft.fieldLine(.query, language: language) == nil && draft.fieldLine(.places, language: language) == nil)
+        #expect(draft.fieldLine(.words, language: language) == nil && draft.fieldLine(.places, language: language) == nil)
         #expect(draft.hint(language: language) == (de ? "Gib ein, was du suchst." : "Type what you look for."))
-        draft.query = "A"
-        #expect(draft.fieldLine(.query, language: language) == (de ? "Gib ein, was du suchst." : "Type what you look for."))
-        draft.query = String(repeating: "a", count: 101)
-        #expect(draft.fieldLine(.query, language: language) == (de ? "Höchstens 100 Zeichen." : "At most 100 characters."))
-        draft.query = "Aeron"
+        draft.type("A")
+        #expect(draft.fieldLine(.words, language: language) == (de ? "Mindestens 2 Zeichen." : "At least 2 characters."))
+        draft.type("")
+        draft.words = [String(repeating: "a", count: 101)]
+        #expect(draft.fieldLine(.words, language: language) == (de ? "Höchstens 100 Zeichen." : "At most 100 characters."))
+        draft.words = ["Aeron"]
         #expect(draft.hint(language: language) == (de ? "Wähle einen Ort oder Versand." : "Choose a place, or Shipping."))
         draft.priceMin = "500"
         draft.priceMax = "400"

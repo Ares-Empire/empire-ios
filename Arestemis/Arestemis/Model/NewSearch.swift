@@ -85,7 +85,7 @@ enum SearchExample: String, CaseIterable, Hashable, Identifiable, Sendable {
     func itemDraft(language: AppLanguage = .current) -> ItemSearchDraft? {
         guard self == .kallax else { return nil }
         var draft = ItemSearchDraft()
-        draft.query = "Kallax"
+        draft.words = ["Kallax"]
         draft.priceMax = "40"
         return draft
     }

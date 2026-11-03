@@ -70,7 +70,8 @@ struct HuntListCard: View {
 }
 
 /// The hunt's card on its page: today's hunt card for any kind. Status, the name in big (the page puts it there: as a
-/// button that renames it in place, or its field, brief 135), what it looks for (a watch: its host, what the page says
+/// button that renames it in place, or its field, brief 135), what it looks for (every search word of a thing hunt
+/// with several, brief 149; a watch: its host, what the page says
 /// now and when it was checked and changed), and the one button (Start hunting / Start watching / Pause); for a kind this
 /// build does not know only its name and "Needs a newer app". While the name is edited the button takes no taps (a tap
 /// there ends the editing, `HuntPage`).
@@ -83,7 +84,7 @@ struct HuntHeroCard<Title: View>: View {
     @ViewBuilder let title: (HuntText) -> Title
 
     var body: some View {
-        let text = HuntText(card, sites: sites)
+        let text = HuntText(card, sites: sites, allWords: true)
         VStack(alignment: .leading, spacing: 0) {
             if text.kind != nil {
                 HuntStatus(active: card.hunt.active, kind: text.kind, stopped: card.isStopped).padding(.bottom, 14)
