@@ -122,6 +122,7 @@ private struct ShareScreen: View {
         .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: model.phase)
         .foregroundStyle(Ink.primary)
         .environment(\.locale, AppLanguage.current.locale)
+        .environment(\.plainDrawing, true)
         .task { await model.load() }
     }
 }

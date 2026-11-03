@@ -109,21 +109,57 @@ struct SectionHeading: View {
 
 /// The wall with the app's accent as a faint light from the top and the far corner (Aresium's walls, `--glow1` /
 /// `--glow2`, in the accent colour; on the light wall about a third as strong, as Aresium's).
+extension EnvironmentValues {
+    /// Cheaper drawing for a share extension, which iOS ends at 220 MB on an iPhone 17 (Aresus's, 2026-11-03: killed at
+    /// 240 MB in the folder picker). SwiftUI draws a `Canvas` and a `drawingGroup` into Metal layers of their own, as big
+    /// as the view and kept two or three times over, so the wall's two glows cost a whole screen each and a glass card as
+    /// much as its height (a long list in one card, many screens). With this set, the wall draws its glows as gradients
+    /// and `GlassCard` leaves out its drawn inner shading and its blur (the wall's colour in its place). The apps keep
+    /// the full look; only `AresusShare` sets it.
+    @Entry var plainDrawing = false
+}
+
 struct ProvinceWall: View {
     let accent: AppAccent
     @Environment(\.colorScheme) private var scheme
+    @Environment(\.plainDrawing) private var plain
 
     var body: some View {
         let light = scheme == .light
         ZStack {
             Ink.background
-            Glow(color: accent.deep.opacity(light ? 0.11 : 0.30), center: UnitPoint(x: 0.5, y: -0.12),
+            glow(accent.deep.opacity(light ? 0.11 : 0.30), center: UnitPoint(x: 0.5, y: -0.12),
                  radius: CGSize(width: 0.72, height: 0.52))
-            Glow(color: accent.deep.opacity(light ? 0.05 : 0.16), center: UnitPoint(x: 0.9, y: 1.2),
+            glow(accent.deep.opacity(light ? 0.05 : 0.16), center: UnitPoint(x: 0.9, y: 1.2),
                  radius: CGSize(width: 0.58, height: 0.5))
         }
         .ignoresSafeArea()
         .accessibilityHidden(true)
+    }
+
+    @ViewBuilder private func glow(_ color: Color, center: UnitPoint, radius: CGSize) -> some View {
+        if plain { PlainGlow(color: color, center: center, radius: radius) }
+        else { Glow(color: color, center: center, radius: radius) }
+    }
+
+    /// The same glow as a gradient on a rectangle the size of its ellipse, drawn with the rest of the screen instead of
+    /// in a layer of its own (`plainDrawing`).
+    private struct PlainGlow: View {
+        let color: Color
+        let center: UnitPoint
+        let radius: CGSize
+
+        var body: some View {
+            GeometryReader { box in
+                let size = CGSize(width: box.size.width * radius.width * 2, height: box.size.height * radius.height * 2)
+                Rectangle()
+                    .fill(EllipticalGradient(stops: [.init(color: color, location: 0), .init(color: .clear, location: 0.6)],
+                                             center: .center, startRadiusFraction: 0, endRadiusFraction: 0.5))
+                    .frame(width: size.width, height: size.height)
+                    .position(x: box.size.width * center.x, y: box.size.height * center.y)
+            }
+            .allowsHitTesting(false)
+        }
     }
 
     /// A CSS-style radial gradient with separate horizontal and vertical radii.
@@ -175,6 +211,7 @@ struct GlassCard: ViewModifier {
     var blur = true
     @Environment(\.colorScheme) private var scheme
     @Environment(\.self) private var environment
+    @Environment(\.plainDrawing) private var plain
 
     func body(content: Content) -> some View {
         let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
@@ -188,29 +225,35 @@ struct GlassCard: ViewModifier {
         }
         content
             .background {
-                shape.fill(highlight(.white).shadow(shadow.drop))
+                if plain { shape.fill(highlight(.white)) } else { shape.fill(highlight(.white).shadow(shadow.drop)) }
             }
             .background {
-                ZStack {
+                if plain {
                     shape.fill(fill)
-                        .shadow(color: Ink.shadow, radius: shadow.radius, y: shadow.y)
-                    // The highlight's shadow alone: the highlight in the shadow's colour, moved and blurred as one.
-                    shape.fill(highlight(Ink.shadow))
-                        .offset(y: shadow.y)
-                        .blur(radius: shadow.radius)
+                } else {
+                    ZStack {
+                        shape.fill(fill)
+                            .shadow(color: Ink.shadow, radius: shadow.radius, y: shadow.y)
+                        // The highlight's shadow alone: the highlight in the shadow's colour, moved and blurred as one.
+                        shape.fill(highlight(Ink.shadow))
+                            .offset(y: shadow.y)
+                            .blur(radius: shadow.radius)
+                    }
+                    .clipShape(shape)
+                    .drawingGroup()
                 }
-                .clipShape(shape)
-                .drawingGroup()
             }
             .overlay {
                 if let edge {
-                    shape.strokeBorder(edge.shadow(shadow.drop), lineWidth: 1)
+                    if plain { shape.strokeBorder(edge, lineWidth: 1) } else { shape.strokeBorder(edge.shadow(shadow.drop), lineWidth: 1) }
                 } else {
                     glassEdge(shape, light: light, tint: tint, shadow: shadow)
                 }
             }
             .background {
-                if blur {
+                if plain {
+                    shape.fill(Ink.background)
+                } else if blur {
                     shape.fill(Material.ultraThinMaterial.shadow(shadow.outside(under: fill, in: environment)))
                 } else {
                     shape.fill(Ink.background.shadow(shadow.outside(under: fill, in: environment)))
@@ -220,7 +263,7 @@ struct GlassCard: ViewModifier {
 
     /// The bright edge that fades: white from the top left, the accent's tint lower down.
     private func glassEdge(_ shape: RoundedRectangle, light: Bool, tint: Color, shadow: CardShadow) -> some View {
-        shape.strokeBorder(LinearGradient(stops: light ? [
+        let gradient = LinearGradient(stops: light ? [
             .init(color: .white.opacity(0.95), location: 0),
             .init(color: .white.opacity(0.4), location: 0.35),
             .init(color: accent == nil ? .white.opacity(0.3) : tint.opacity(0.14), location: 0.74),
@@ -230,7 +273,10 @@ struct GlassCard: ViewModifier {
             .init(color: .white.opacity(0.04), location: 0.30),
             .init(color: accent == nil ? .white.opacity(0.03) : (accent?.color ?? .white).opacity(0.10), location: 0.68),
             .init(color: .white.opacity(0.03), location: 1)
-        ], startPoint: .topLeading, endPoint: .bottomTrailing).shadow(shadow.drop), lineWidth: 1)
+        ], startPoint: .topLeading, endPoint: .bottomTrailing)
+        return Group {
+            if plain { shape.strokeBorder(gradient, lineWidth: 1) } else { shape.strokeBorder(gradient.shadow(shadow.drop), lineWidth: 1) }
+        }
     }
 }
 
