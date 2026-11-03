@@ -8,7 +8,7 @@ nonisolated enum VaultFetch: Equatable, Sendable {
 
 /// The edit answers that are not a plain failure (API.md → Edits).
 nonisolated enum VaultAPIError: LocalizedError, Equatable {
-    /// 409: the note changed since the app loaded it, or the position no longer exists. `current` is the note as it is
+    /// 409/428: the version is stale or missing; the note changed since the app loaded it, or the position no longer exists. `current` is the note as it is
     /// now, when the server sent it.
     case conflict(message: String?, current: Note?)
     /// 422: the edit cannot apply (the vault's check refused it); the server's message says why.
@@ -32,7 +32,7 @@ protocol VaultBackend {
 }
 
 /// The Arestoteles API (Arestoteles/docs/API.md, version 1), with the Empire login's Bearer token. Statuses go through
-/// the shared `checkResponse` (401, 403, 503); 304 is a current vault, 409 and 422 are `VaultAPIError`s.
+/// the shared `checkResponse` (401, 403, 503); 304 is a current vault; 409, 428 and 422 are `VaultAPIError`s.
 struct ArestotelesAPI: VaultBackend {
     static let baseURL = URL(string: "https://www.ares-empire.de/api/arestoteles")!
 
@@ -73,7 +73,7 @@ struct ArestotelesAPI: VaultBackend {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         let (data, response) = try await transport.send(request)
         switch response.statusCode {
-        case 409:
+        case 409, 428:
             let body = try? await Self.decode(ConflictBody.self, from: data)
             throw VaultAPIError.conflict(message: body?.error, current: body?.current)
         case 422:
@@ -99,7 +99,7 @@ struct ArestotelesAPI: VaultBackend {
         try checkResponse(response, data: data, onUnauthorized: {})
     }
 
-    /// `{"error": "…", "current": Note}` of a 409.
+    /// `{"error": "…", "current"?: Note}` of a 409 or 428.
     nonisolated private struct ConflictBody: Decodable, Sendable {
         let error: String?
         let current: Note?

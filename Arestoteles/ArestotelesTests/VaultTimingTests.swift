@@ -37,7 +37,7 @@ struct VaultTimingTests {
             await fresh.spotlightSettled()
             report("first-download", round: round, names: ["api.decode", "vault.apply", "spotlight.make"], results: &results)
             VaultTiming.samples = []
-            await fresh.confirmPosition("Printing press#2")
+            await fresh.confirmPosition("Printing press#2", version: sampleVersion("Printing press#2"))
             await fresh.spotlightSettled()
             report("edit-answer", round: round, names: ["api.decode", "vault.apply", "spotlight.make"], results: &results)
         }

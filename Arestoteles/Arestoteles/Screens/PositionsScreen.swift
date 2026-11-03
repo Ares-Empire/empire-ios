@@ -201,8 +201,8 @@ struct PositionScreen: View {
     /// later), fixing the wording, and a note for later; a draft can be confirmed.
     private func actions(_ position: Position) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            if position.draft {
-                Button { Task { await store.confirmPosition(position.id) } } label: {
+            if position.draft, let version = store.index.note(Position.note(ofID: position.id))?.version {
+                Button { Task { await store.confirmPosition(position.id, version: version) } } label: {
                     Label("Confirm as mine", systemImage: "checkmark")
                 }
                 .buttonStyle(.primaryPill)

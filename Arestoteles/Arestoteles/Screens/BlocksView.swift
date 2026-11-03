@@ -177,6 +177,7 @@ struct CalloutView: View {
     let owner: Note
     @Environment(VaultStore.self) private var store
     @State private var confirmsDismiss = false
+    @State private var dismissVersion: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -185,11 +186,11 @@ struct CalloutView: View {
             InlineText(text, size: 14, color: Ink.secondary)
             if style == .claude {
                 HStack(spacing: 10) {
-                    Button { Task { await store.adoptCallout(index, of: owner.id) } } label: {
+                    Button { Task { await store.adoptCallout(index, of: owner.id, version: owner.version) } } label: {
                         Label("Adopt", systemImage: "checkmark")
                     }
                     .buttonStyle(.pill)
-                    Button("Dismiss") { confirmsDismiss = true }.buttonStyle(.destructivePill)
+                    Button("Dismiss") { dismissVersion = owner.version; confirmsDismiss = true }.buttonStyle(.destructivePill)
                 }
                 .disabled(store.isSending)
                 .padding(.top, 4)
@@ -199,7 +200,11 @@ struct CalloutView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .glassCard()
         .confirmationDialog("Dismiss Claude's note?", isPresented: $confirmsDismiss, titleVisibility: .visible) {
-            Button("Dismiss", role: .destructive) { Task { await store.dismissCallout(index, of: owner.id) } }
+            Button("Dismiss", role: .destructive) {
+                if let dismissVersion {
+                    Task { await store.dismissCallout(index, of: owner.id, version: dismissVersion) }
+                }
+            }
         } message: {
             Text("It is removed from the note.")
         }

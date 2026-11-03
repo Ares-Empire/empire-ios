@@ -202,3 +202,8 @@ func eventually(_ condition: () -> Bool) async -> Bool {
     }
     return condition()
 }
+
+@MainActor
+func sampleVersion(_ id: String) -> String {
+    (try? sampleIndex().note(Position.note(ofID: id))?.version) ?? "missing"
+}

@@ -153,7 +153,7 @@ struct NoteMenu: ToolbarContent {
     private var confidence: Binding<Confidence?> {
         Binding(get: { note.confidence }, set: { value in
             guard let value, value != note.confidence else { return }
-            Task { await store.setConfidence(value, of: note.id) }
+            Task { await store.setConfidence(value, of: note.id, version: note.version) }
         })
     }
 }

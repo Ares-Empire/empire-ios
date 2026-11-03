@@ -183,8 +183,8 @@ private struct MainTabs: View {
                 switch sheet {
                 case let .brief(note): BriefSheet(note: note)
                 case let .editor(note): EditorSheet(note: note, store: store)
-                case let .discuss(subject): DiscussSheet(subject: subject)
-                case let .quickNote(about): QuickNoteSheet(about: about)
+                case let .discuss(subject): DiscussSheet(subject: subject, index: store.index)
+                case let .quickNote(about): QuickNoteSheet(about: about, index: store.index)
                 case .discussions: DiscussionsSheet()
                 case .settings:
                     SettingsScreen(app: SettingsApp(name: "Arestoteles", accent: Look.accent), session: store.session,

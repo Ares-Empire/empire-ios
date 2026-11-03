@@ -12,7 +12,7 @@ struct VaultArrivalTests {
         let refresh = Task { await h.store.refresh() }
         await gate.waitUntilPaused()
         try h.transport.answer("POST /edits", sample: "edit-result")
-        #expect(await h.store.confirmPosition("Printing press#2") == .applied)
+        #expect(await h.store.confirmPosition("Printing press#2", version: sampleVersion("Printing press#2")) == .applied)
         gate.resume()
         await refresh.value
         #expect(h.store.vault?.commit == "b2c3d4e" && h.persistence.vault?.vault.commit == "b2c3d4e")
@@ -29,7 +29,7 @@ struct VaultArrivalTests {
         let refresh = Task { await h.store.refresh() }
         await gate.waitUntilPaused()
         try h.transport.answer("POST /edits", sample: "edit-result")
-        #expect(await h.store.confirmPosition("Printing press#2") == .applied)
+        #expect(await h.store.confirmPosition("Printing press#2", version: sampleVersion("Printing press#2")) == .applied)
         gate.resume()
         await refresh.value
         await h.store.persistenceSettled()
@@ -42,7 +42,7 @@ struct VaultArrivalTests {
         let refresh = Task { await h.store.refresh() }
         await preparation.gate.waitUntilPaused()
         try h.transport.answer("POST /edits", sample: "edit-result")
-        #expect(await h.store.confirmPosition("Printing press#2") == .applied)
+        #expect(await h.store.confirmPosition("Printing press#2", version: sampleVersion("Printing press#2")) == .applied)
         preparation.gate.resume()
         await refresh.value
         #expect(h.store.vault?.commit == "b2c3d4e" && h.persistence.vault?.vault.commit == "b2c3d4e")
@@ -56,7 +56,7 @@ struct VaultArrivalTests {
         let gate = RequestGate()
         h.transport.gates["POST /edits"] = gate
         try h.transport.answer("POST /edits", sample: "edit-result")
-        let edit = Task { await h.store.confirmPosition("Printing press#2") }
+        let edit = Task { await h.store.confirmPosition("Printing press#2", version: sampleVersion("Printing press#2")) }
         await gate.waitUntilPaused()
         await h.store.refresh()
         #expect(h.store.vault?.commit == "a1b2c3d")

@@ -408,17 +408,28 @@ nonisolated struct EditResult: Codable, Equatable, Sendable {
 
 /// One edit, as `POST /edits` takes it.
 nonisolated enum Edit: Equatable, Sendable {
-    case confirmPosition(position: String)
-    case rewordPosition(position: String, text: String)
-    case changePosition(position: String, text: String, why: String)
-    case dropPosition(position: String, why: String)
-    case addPosition(note: String, text: String, evidence: [String])
-    case setConfidence(note: String, confidence: Confidence)
+    case confirmPosition(position: String, version: String)
+    case rewordPosition(position: String, text: String, version: String)
+    case changePosition(position: String, text: String, why: String, version: String)
+    case dropPosition(position: String, why: String, version: String)
+    case addPosition(note: String, text: String, evidence: [String], version: String)
+    case setConfidence(note: String, confidence: Confidence, version: String)
     case adoptCallout(note: String, callout: Int, version: String)
     case dismissCallout(note: String, callout: Int, version: String)
     case editNote(note: String, version: String, markdown: String)
-    case quickNote(text: String, about: String? = nil, kind: QuickNoteKind = .note)
-    case setInboxStatus(note: String, status: String)
+    case quickNote(text: String, about: String? = nil, kind: QuickNoteKind = .note, version: String? = nil)
+    case setInboxStatus(note: String, status: String, version: String)
+
+    var version: String? {
+        switch self {
+        case let .confirmPosition(_, version), let .rewordPosition(_, _, version),
+             let .changePosition(_, _, _, version), let .dropPosition(_, _, version),
+             let .addPosition(_, _, _, version), let .setConfidence(_, _, version),
+             let .adoptCallout(_, _, version), let .dismissCallout(_, _, version),
+             let .editNote(_, version, _), let .setInboxStatus(_, _, version): version
+        case let .quickNote(_, _, _, version): version
+        }
+    }
 
     /// The contract's `op`.
     var op: String {
@@ -440,14 +451,14 @@ nonisolated enum Edit: Equatable, Sendable {
     /// The note the edit is about, when it names one (positions: the note they are written on).
     var note: String? {
         switch self {
-        case let .confirmPosition(position), let .rewordPosition(position, _), let .changePosition(position, _, _),
-             let .dropPosition(position, _):
+        case let .confirmPosition(position, _), let .rewordPosition(position, _, _), let .changePosition(position, _, _, _),
+             let .dropPosition(position, _, _):
             Position.note(ofID: position)
-        case let .addPosition(note, _, _), let .setConfidence(note, _), let .adoptCallout(note, _, _),
-             let .dismissCallout(note, _, _), let .editNote(note, _, _), let .setInboxStatus(note, _):
+        case let .addPosition(note, _, _, _), let .setConfidence(note, _, _), let .adoptCallout(note, _, _),
+             let .dismissCallout(note, _, _), let .editNote(note, _, _), let .setInboxStatus(note, _, _):
             note
-        case .quickNote:
-            nil
+        case let .quickNote(_, about, _, _):
+            about.map(Position.note(ofID:))
         }
     }
 }
@@ -460,40 +471,39 @@ nonisolated extension Edit: Encodable {
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(op, forKey: .op)
+        try container.encodeIfPresent(version, forKey: .version)
         switch self {
-        case let .confirmPosition(position):
+        case let .confirmPosition(position, _):
             try container.encode(position, forKey: .position)
-        case let .rewordPosition(position, text):
+        case let .rewordPosition(position, text, _):
             try container.encode(position, forKey: .position)
             try container.encode(text, forKey: .text)
-        case let .changePosition(position, text, why):
+        case let .changePosition(position, text, why, _):
             try container.encode(position, forKey: .position)
             try container.encode(text, forKey: .text)
             try container.encode(why, forKey: .why)
-        case let .dropPosition(position, why):
+        case let .dropPosition(position, why, _):
             try container.encode(position, forKey: .position)
             try container.encode(why, forKey: .why)
-        case let .addPosition(note, text, evidence):
+        case let .addPosition(note, text, evidence, _):
             try container.encode(note, forKey: .note)
             try container.encode(text, forKey: .text)
             try container.encode(evidence, forKey: .evidence)
-        case let .setConfidence(note, confidence):
+        case let .setConfidence(note, confidence, _):
             try container.encode(note, forKey: .note)
             try container.encode(confidence, forKey: .confidence)
-        case let .adoptCallout(note, callout, version), let .dismissCallout(note, callout, version):
+        case let .adoptCallout(note, callout, _), let .dismissCallout(note, callout, _):
             try container.encode(note, forKey: .note)
             try container.encode(callout, forKey: .callout)
-            try container.encode(version, forKey: .version)
-        case let .editNote(note, version, markdown):
+        case let .editNote(note, _, markdown):
             try container.encode(note, forKey: .note)
-            try container.encode(version, forKey: .version)
             try container.encode(markdown, forKey: .markdown)
-        case let .quickNote(text, about, kind):
+        case let .quickNote(text, about, kind, _):
             try container.encode(text, forKey: .text)
             // Only sent when set, so a plain quick note is exactly what the first version of the contract takes.
             try container.encodeIfPresent(about, forKey: .about)
             if kind != .note { try container.encode(kind, forKey: .kind) }
-        case let .setInboxStatus(note, status):
+        case let .setInboxStatus(note, status, _):
             try container.encode(note, forKey: .note)
             try container.encode(status, forKey: .status)
         }

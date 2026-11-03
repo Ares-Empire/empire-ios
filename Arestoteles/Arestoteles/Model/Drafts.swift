@@ -47,11 +47,14 @@ final class PositionDraft {
     private(set) var isSaving = false
     /// What the server said when it refused, or why sending failed.
     private(set) var problem: String?
+    private let openedIndex: VaultIndex
+    var version: String? { openedIndex.note(note)?.version }
     private let originalText: String
     private let originalNote: String
 
     init(_ kind: Kind, index: VaultIndex) {
         self.kind = kind
+        openedIndex = index
         let initialText: String
         let initialNote: String
         switch kind {
@@ -87,7 +90,7 @@ final class PositionDraft {
     private static func filled(_ text: String) -> Bool { !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
 
     var canSave: Bool {
-        !isSaving && (!needsText || Self.filled(text)) && (!needsWhy || Self.filled(why))
+        version != nil && !isSaving && (!needsText || Self.filled(text)) && (!needsWhy || Self.filled(why))
     }
 
     func toggleEvidence(_ id: String) {
@@ -100,20 +103,20 @@ final class PositionDraft {
 
     /// Sends the draft; true when the server saved it (the sheet closes).
     func save(with store: VaultStore) async -> Bool {
-        guard canSave else { return false }
+        guard canSave, let version else { return false }
         isSaving = true
         problem = nil
         defer { isSaving = false }
         let outcome: VaultStore.EditOutcome
         switch kind {
         case let .reword(position):
-            outcome = await store.rewordPosition(position, text: text, reportsFailure: false)
+            outcome = await store.rewordPosition(position, text: text, version: version, reportsFailure: false)
         case let .change(position):
-            outcome = await store.changePosition(position, text: text, why: why, reportsFailure: false)
+            outcome = await store.changePosition(position, text: text, why: why, version: version, reportsFailure: false)
         case let .drop(position):
-            outcome = await store.dropPosition(position, why: why, reportsFailure: false)
+            outcome = await store.dropPosition(position, why: why, version: version, reportsFailure: false)
         case .add:
-            outcome = await store.addPosition(to: note, text: text, evidence: evidence, reportsFailure: false)
+            outcome = await store.addPosition(to: note, text: text, evidence: evidence, version: version, reportsFailure: false)
         }
         switch outcome {
         case .applied: return true
@@ -191,4 +194,21 @@ final class NoteEditor {
 
     /// After a conflict: the current version replaces the typed text.
     func loadCurrentVersion() async { await load() }
+}
+
+/// A note or a discussion about what was on screen when its sheet opened.
+@MainActor @Observable
+final class QuickNoteDraft {
+    let about: String?
+    let version: String?
+    var text = ""
+
+    init(about: String?, index: VaultIndex) {
+        self.about = about
+        version = about.flatMap { index.note(Position.note(ofID: $0))?.version }
+    }
+
+    func save(with store: VaultStore, kind: QuickNoteKind = .note) -> VaultStore.QuickNoteOutcome {
+        store.queueQuickNote(text, about: about, kind: kind, version: version)
+    }
 }

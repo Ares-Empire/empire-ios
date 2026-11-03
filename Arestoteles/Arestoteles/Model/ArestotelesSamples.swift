@@ -88,7 +88,12 @@ final class SampleBackend: VaultBackend {
         if options.invalid {
             throw VaultAPIError.invalid(message: "A position must be one sentence.")
         }
-        if case let .setInboxStatus(note, status) = edit {
+        if let referenced = edit.note, let note = current.notes.first(where: { $0.id == referenced }) {
+            guard edit.version == note.version else {
+                throw VaultAPIError.conflict(message: "This changed elsewhere.", current: note)
+            }
+        }
+        if case let .setInboxStatus(note, status, _) = edit {
             // Keep this sample edit reversible, instead of always returning the fixture's original Inbox status.
             var json = try JSONSerialization.jsonObject(with: JSONEncoder().encode(current)) as! [String: Any]
             var notes = json["notes"] as! [[String: Any]]
@@ -96,6 +101,7 @@ final class SampleBackend: VaultBackend {
                var inbox = notes[index]["inbox"] as? [String: Any] {
                 inbox["status"] = status
                 notes[index]["inbox"] = inbox
+                notes[index]["version"] = UUID().uuidString
             }
             json["notes"] = notes
             current = try JSONDecoder().decode(Vault.self, from: JSONSerialization.data(withJSONObject: json))

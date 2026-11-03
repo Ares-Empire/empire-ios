@@ -1302,6 +1302,26 @@
         }
       }
     },
+    "Send" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Senden"
+          }
+        }
+      }
+    },
+    "Send this note about the current version?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Notiz zur aktuellen Version senden?"
+          }
+        }
+      }
+    },
     "Session" : {
       "localizations" : {
         "de" : {

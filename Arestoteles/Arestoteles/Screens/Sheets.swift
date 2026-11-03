@@ -211,18 +211,24 @@ struct EditorSheet: View {
 /// Claude opens.
 struct DiscussSheet: View {
     let subject: DiscussSubject
-    @State private var question = ""
+    @State private var draft: QuickNoteDraft
     @Environment(VaultStore.self) private var store
     @Environment(\.openURL) private var openURL
     @Environment(\.dismiss) private var dismiss
 
+    init(subject: DiscussSubject, index: VaultIndex) {
+        self.subject = subject
+        _draft = State(initialValue: QuickNoteDraft(about: subject.id, index: index))
+    }
+
     var body: some View {
-        let prompt = DiscussPrompt.make(subject, question: question, index: store.index)
+        @Bindable var draft = draft
+        let prompt = DiscussPrompt.make(subject, question: draft.text, index: store.index)
         SheetFrame(title: String(localized: "Discuss")) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     SubjectLine(subject: subject)
-                    TextField("What about it? (optional)", text: $question, axis: .vertical)
+                    TextField("What about it? (optional)", text: $draft.text, axis: .vertical)
                         .lineLimit(2...6)
                         .font(AppFont.text(15))
                         .padding(12).glassCard()
@@ -241,7 +247,7 @@ struct DiscussSheet: View {
                         }
                         VStack(alignment: .leading, spacing: 10) {
                             Button {
-                                if store.queueQuickNote(question, about: subject.id, kind: .discuss) == .queued {
+                                if draft.save(with: store, kind: .discuss) == .queued {
                                     dismiss()
                                 }
                             } label: {
@@ -295,18 +301,24 @@ extension DiscussSubject {
 /// Kept on the phone until the server has it; the waiting ones are listed.
 struct QuickNoteSheet: View {
     let about: DiscussSubject?
-    @State private var text = ""
+    @State private var draft: QuickNoteDraft
     @FocusState private var focused: Bool
     @Environment(VaultStore.self) private var store
     @Environment(\.dismiss) private var dismiss
 
+    init(about: DiscussSubject?, index: VaultIndex) {
+        self.about = about
+        _draft = State(initialValue: QuickNoteDraft(about: about?.id, index: index))
+    }
+
     var body: some View {
+        @Bindable var draft = draft
         SheetFrame(title: about == nil ? String(localized: "Quick note") : String(localized: "Note"),
-                   hasChanges: DraftChanges.hasChanges(text), discardQuestion: String(localized: "Discard this note?")) {
+                   hasChanges: DraftChanges.hasChanges(draft.text), discardQuestion: String(localized: "Discard this note?")) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
                     if let about { SubjectLine(subject: about) }
-                    TextField(about == nil ? "A thought for the Inbox" : "Your note", text: $text, axis: .vertical)
+                    TextField(about == nil ? "A thought for the Inbox" : "Your note", text: $draft.text, axis: .vertical)
                         .lineLimit(4...12)
                         .font(AppFont.text(16))
                         .focused($focused)
@@ -323,10 +335,10 @@ struct QuickNoteSheet: View {
         } actions: {
             ToolbarItem(placement: .confirmationAction) {
                 Button("Save", action: save)
-                    .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .disabled(draft.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
         }
-        .interactiveDismissDisabled(DraftChanges.hasChanges(text))
+        .interactiveDismissDisabled(DraftChanges.hasChanges(draft.text))
         .onAppear { focused = true }
         .task {
             #if DEBUG
@@ -334,7 +346,7 @@ struct QuickNoteSheet: View {
             let arguments = LaunchArguments.current
             if store.isSample, let index = arguments.firstIndex(of: "-quickNoteText"),
                arguments.indices.contains(index + 1) {
-                text = arguments[index + 1]
+                draft.text = arguments[index + 1]
                 if arguments.contains("-saveQuickNote") {
                     try? await Task.sleep(for: .seconds(2))
                     guard !Task.isCancelled else { return }
@@ -346,7 +358,7 @@ struct QuickNoteSheet: View {
     }
 
     private func save() {
-        if store.queueQuickNote(text, about: about?.id) == .queued { dismiss() }
+        if draft.save(with: store) == .queued { dismiss() }
     }
 }
 
@@ -388,7 +400,7 @@ struct DiscussionsSheet: View {
                     Button { navigation.sheet = .discuss(subject) } label: { Label("Now", systemImage: "bubble.left.and.text.bubble.right") }
                         .buttonStyle(.pill)
                 }
-                Button { Task { undoOffer = await store.markDiscussed(of: note.id) } } label: {
+                Button { Task { undoOffer = await store.markDiscussed(of: note.id, version: note.version) } } label: {
                     Label("Done", systemImage: "checkmark")
                 }
                 .buttonStyle(.pill)
@@ -478,14 +490,31 @@ struct PassageSheet: View {
 /// A quick note still on the phone: waiting, or refused by the server (with its reason, and Delete).
 struct PendingRow: View {
     let note: PendingQuickNote
+    @State private var confirmsSend = false
+    @State private var confirmationVersion: String?
     @Environment(VaultStore.self) private var store
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(note.text).font(AppFont.text(14)).foregroundStyle(Ink.primary).textSelection(.enabled)
+            if note.needsConfirmation, let about = note.about {
+                SubjectLine(subject: about.contains("#") ? .position(about) : .note(about))
+                Button("Send") {
+                    confirmationVersion = store.index.note(Position.note(ofID: about))?.version
+                    confirmsSend = true
+                }
+                .font(AppFont.text(12)).buttonStyle(.borderless)
+                .disabled(store.index.note(Position.note(ofID: about)) == nil)
+                .confirmationDialog("Send this note about the current version?", isPresented: $confirmsSend,
+                                    titleVisibility: .visible) {
+                    Button("Send") {
+                        if let confirmationVersion { store.confirmQuickNote(note.id, version: confirmationVersion) }
+                    }
+                }
+            }
             if let problem = note.problem {
                 Text(problem).font(AppFont.text(12)).foregroundStyle(StatusTone.issue.color(Look.accent))
-            } else {
+            } else if !note.needsConfirmation {
                 Text("Waiting to be sent").font(AppFont.text(12)).foregroundStyle(Ink.muted)
             }
             Button("Delete", role: .destructive) { store.deleteQuickNote(note.id) }

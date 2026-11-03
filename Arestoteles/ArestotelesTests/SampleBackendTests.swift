@@ -25,7 +25,7 @@ struct SampleBackendTests {
     @Test func editsAnswerWithTheSampleResult() async throws {
         let (store, _) = try store()
         await store.update()
-        #expect(await store.confirmPosition("Printing press#2") == .applied)
+        #expect(await store.confirmPosition("Printing press#2", version: sampleVersion("Printing press#2")) == .applied)
         #expect(store.vault?.commit == "b2c3d4e" && store.notice == nil)
         await store.update()
         #expect(store.vault?.commit == "b2c3d4e")                 // the sample server kept the edit
@@ -34,10 +34,10 @@ struct SampleBackendTests {
     @Test func conflictInvalidAndPushLater() async throws {
         let (conflict, _) = try store(.init(conflict: true))
         await conflict.update()
-        #expect(await conflict.confirmPosition("Printing press#2") == .conflict)
+        #expect(await conflict.confirmPosition("Printing press#2", version: sampleVersion("Printing press#2")) == .conflict)
         let (invalid, _) = try store(.init(invalid: true))
         await invalid.update()
-        #expect(await invalid.rewordPosition("Positions#1", text: "x") == .invalid("A position must be one sentence."))
+        #expect(await invalid.rewordPosition("Positions#1", text: "x", version: sampleVersion("Positions#1")) == .invalid("A position must be one sentence."))
         let (later, _) = try store(.init(pushLater: true))
         await later.update()
         #expect(later.queueQuickNote("a thought") == .queued)
@@ -59,9 +59,10 @@ struct SampleBackendTests {
         let (store, _) = try store()
         await store.update()
         let note = try #require(store.index.openDiscussions.first?.id)
-        let offer = try #require(await store.markDiscussed(of: note))
+        let offer = try #require(await store.markDiscussed(of: note, version: sampleVersion(note)))
         #expect(!store.index.openDiscussions.contains { $0.id == note })
-        await offer.undo()
+        let undo = try #require(offer.undo)
+        await undo()
         #expect(store.index.openDiscussions.contains { $0.id == note })
     }
 

@@ -40,18 +40,19 @@ struct APITests {
     @Test func editsArePostedAsJSON() async throws {
         let transport = FakeTransport()
         try transport.answer("POST /edits", sample: "edit-result")
-        let result = try await api(transport).send(.confirmPosition(position: "Printing press#2"))
+        let result = try await api(transport).send(.confirmPosition(position: "Printing press#2", version: "shown"))
         #expect(result.changed == ["Printing press"])
         let request = try #require(transport.requests.only)
         #expect(request.httpMethod == "POST" && request.value(forHTTPHeaderField: "Content-Type") == "application/json")
-        #expect(try body(request) as? [String: String] == ["op": "confirm_position", "position": "Printing press#2"])
+        #expect(try body(request) as? [String: String] == ["op": "confirm_position", "version": "shown", "position": "Printing press#2"])
     }
 
-    @Test func conflictCarriesTheCurrentNote() async throws {
+    @Test(arguments: [409, 428])
+    func conflictCarriesTheCurrentNote(status: Int) async throws {
         let transport = FakeTransport()
         let current = try #require(try sampleVault().notes.first { $0.id == "Printing press" })
         let json = try JSONSerialization.jsonObject(with: JSONEncoder().encode(current))
-        transport.answer("POST /edits", 409, json: try JSONSerialization.data(withJSONObject: [
+        transport.answer("POST /edits", status, json: try JSONSerialization.data(withJSONObject: [
             "error": "This note changed since you loaded it.", "current": json]))
         await #expect(throws: VaultAPIError.conflict(message: "This note changed since you loaded it.", current: current)) {
             try await api(transport).send(.adoptCallout(note: "Printing press", callout: 0, version: "old"))
@@ -59,7 +60,7 @@ struct APITests {
         // A position that no longer exists: 409 without a note.
         transport.answer("POST /edits", 409, json: Data(#"{"error":"This position no longer exists."}"#.utf8))
         await #expect(throws: VaultAPIError.conflict(message: "This position no longer exists.", current: nil)) {
-            try await api(transport).send(.confirmPosition(position: "Printing press#9"))
+            try await api(transport).send(.confirmPosition(position: "Printing press#9", version: "shown"))
         }
     }
 
@@ -67,7 +68,7 @@ struct APITests {
         let transport = FakeTransport()
         transport.answer("POST /edits", 422, json: Data(#"{"error":"A position must be one sentence."}"#.utf8))
         await #expect(throws: VaultAPIError.invalid(message: "A position must be one sentence.")) {
-            try await api(transport).send(.rewordPosition(position: "Positions#1", text: "Two. Sentences."))
+            try await api(transport).send(.rewordPosition(position: "Positions#1", text: "Two. Sentences.", version: "shown"))
         }
     }
 

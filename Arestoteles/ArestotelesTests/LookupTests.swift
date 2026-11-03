@@ -83,10 +83,10 @@ struct LookupTests {
         }
         // A plain quick note is exactly the first contract's.
         #expect(try body(.quickNote(text: "hello")) == ["op": "quick_note", "text": "hello"])
-        #expect(try body(.quickNote(text: "", about: "Colonialism#2", kind: .discuss))
-                == ["op": "quick_note", "text": "", "about": "Colonialism#2", "kind": "discuss"])
-        #expect(try body(.setInboxStatus(note: "x", status: "processed"))
-                == ["op": "set_inbox_status", "note": "x", "status": "processed"])
+        #expect(try body(.quickNote(text: "", about: "Colonialism#2", kind: .discuss, version: "shown"))
+                == ["op": "quick_note", "text": "", "about": "Colonialism#2", "kind": "discuss", "version": "shown"])
+        #expect(try body(.setInboxStatus(note: "x", status: "processed", version: "shown"))
+                == ["op": "set_inbox_status", "version": "shown", "note": "x", "status": "processed"])
     }
 }
 

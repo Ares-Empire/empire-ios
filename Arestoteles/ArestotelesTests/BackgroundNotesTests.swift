@@ -17,9 +17,11 @@ struct BackgroundNotesTests {
                                persistence: files, spotlight: NoSpotlight(), savedAccount: { "account-a" })
         await store.loadingSettled()
         let caller = Task {
-            let outcome = store.queueQuickNote("A fictional thought")
+            let outcome = store.queueQuickNote("A fictional thought", about: "Printing press#2",
+                                               version: sampleVersion("Printing press"))
             #expect(outcome == .queued)
             #expect(files.loadQuickNotes().only?.text == "A fictional thought")
+            #expect(FilePersistence(directory: directory).loadQuickNotes().only?.version == sampleVersion("Printing press"))
             #expect(transport.requests.isEmpty)
         }
         await caller.value                                    // the sheet's caller has finished
@@ -79,11 +81,11 @@ struct BackgroundNotesTests {
     @Test func laterWithNoWordsAlsoQueuesImmediately() async throws {
         let h = try await makeStore()
         try h.transport.answer("POST /edits", sample: "edit-result")
-        #expect(h.store.queueQuickNote("", about: "Printing press#2", kind: .discuss) == .queued)
+        #expect(h.store.queueQuickNote("", about: "Printing press#2", kind: .discuss, version: sampleVersion("Printing press")) == .queued)
         #expect(h.persistence.quickNotes.only?.kind == .discuss && h.transport.requests.isEmpty)
         await h.store.quickNotesSettled()
         #expect(try h.transport.edits().only as? [String: String]
-                == ["op": "quick_note", "text": "", "about": "Printing press#2", "kind": "discuss"])
+                == ["op": "quick_note", "text": "", "about": "Printing press#2", "kind": "discuss", "version": sampleVersion("Printing press")])
     }
 
     @Test func logoutDuringSendingDropsTheAnswerAndTheQueue() async throws {

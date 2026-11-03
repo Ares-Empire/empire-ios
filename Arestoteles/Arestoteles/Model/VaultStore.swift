@@ -72,7 +72,7 @@ final class VaultStore {
 
     private var failedQuickNotes: Set<UUID> = []
     var waitingQuickNoteCount: Int {
-        pendingQuickNotes.count { $0.problem == nil && failedQuickNotes.contains($0.id) }
+        pendingQuickNotes.count { $0.needsConfirmation || ($0.problem == nil && failedQuickNotes.contains($0.id)) }
     }
 
     /// True while the vault saved on the phone is read at launch, off the main thread (a moment). The screen shows the
@@ -251,50 +251,54 @@ final class VaultStore {
 
     /// Confirms a draft position (removes "(draft)").
     @discardableResult
-    func confirmPosition(_ id: String, reportsFailure: Bool = true) async -> EditOutcome {
-        await perform(.confirmPosition(position: id), reportsFailure: reportsFailure)
+    func confirmPosition(_ id: String, version: String, reportsFailure: Bool = true) async -> EditOutcome {
+        await perform(.confirmPosition(position: id, version: version), reportsFailure: reportsFailure)
     }
 
     /// Same view, better words: no history entry.
     @discardableResult
-    func rewordPosition(_ id: String, text: String, reportsFailure: Bool = true) async -> EditOutcome {
-        await perform(.rewordPosition(position: id, text: text), reportsFailure: reportsFailure)
+    func rewordPosition(_ id: String, text: String, version: String, reportsFailure: Bool = true) async -> EditOutcome {
+        await perform(.rewordPosition(position: id, text: text, version: version), reportsFailure: reportsFailure)
     }
 
     /// A changed view: the old sentence goes to "How my view changed" with why.
     @discardableResult
-    func changePosition(_ id: String, text: String, why: String, reportsFailure: Bool = true) async -> EditOutcome {
-        await perform(.changePosition(position: id, text: text, why: why), reportsFailure: reportsFailure)
+    func changePosition(_ id: String, text: String, why: String, version: String,
+                        reportsFailure: Bool = true) async -> EditOutcome {
+        await perform(.changePosition(position: id, text: text, why: why, version: version), reportsFailure: reportsFailure)
     }
 
     /// No longer held: into the history with why, removed from the list (the server renumbers the rest).
     @discardableResult
-    func dropPosition(_ id: String, why: String, reportsFailure: Bool = true) async -> EditOutcome {
-        await perform(.dropPosition(position: id, why: why), reportsFailure: reportsFailure)
+    func dropPosition(_ id: String, why: String, version: String,
+                        reportsFailure: Bool = true) async -> EditOutcome {
+        await perform(.dropPosition(position: id, why: why, version: version), reportsFailure: reportsFailure)
     }
 
     /// A new position on a topic overview, or on "Positions" (across topics).
     @discardableResult
-    func addPosition(to note: String, text: String, evidence: [String], reportsFailure: Bool = true) async -> EditOutcome {
-        await perform(.addPosition(note: note, text: text, evidence: evidence), reportsFailure: reportsFailure)
+    func addPosition(to note: String, text: String, evidence: [String], version: String,
+                     reportsFailure: Bool = true) async -> EditOutcome {
+        await perform(.addPosition(note: note, text: text, evidence: evidence, version: version), reportsFailure: reportsFailure)
     }
 
     @discardableResult
-    func setConfidence(_ confidence: Confidence, of note: String, reportsFailure: Bool = true) async -> EditOutcome {
-        await perform(.setConfidence(note: note, confidence: confidence), reportsFailure: reportsFailure)
+    func setConfidence(_ confidence: Confidence, of note: String, version: String,
+                       reportsFailure: Bool = true) async -> EditOutcome {
+        await perform(.setConfidence(note: note, confidence: confidence, version: version), reportsFailure: reportsFailure)
     }
 
     /// Patrik agrees with one of Claude's callouts: it becomes a normal paragraph. Names the note's version as shown.
     @discardableResult
-    func adoptCallout(_ callout: Int, of note: String, reportsFailure: Bool = true) async -> EditOutcome {
-        guard let version = index.note(note)?.version else { return .failed(Self.missingNote) }
-        return await perform(.adoptCallout(note: note, callout: callout, version: version), reportsFailure: reportsFailure)
+    func adoptCallout(_ callout: Int, of note: String, version: String,
+                       reportsFailure: Bool = true) async -> EditOutcome {
+        await perform(.adoptCallout(note: note, callout: callout, version: version), reportsFailure: reportsFailure)
     }
 
     @discardableResult
-    func dismissCallout(_ callout: Int, of note: String, reportsFailure: Bool = true) async -> EditOutcome {
-        guard let version = index.note(note)?.version else { return .failed(Self.missingNote) }
-        return await perform(.dismissCallout(note: note, callout: callout, version: version),
+    func dismissCallout(_ callout: Int, of note: String, version: String,
+                       reportsFailure: Bool = true) async -> EditOutcome {
+        await perform(.dismissCallout(note: note, callout: callout, version: version),
                              reportsFailure: reportsFailure)
     }
 
@@ -306,15 +310,22 @@ final class VaultStore {
 
     /// Ticks a "discuss later" mark (or any Inbox note) off, or opens it again.
     @discardableResult
-    func setInboxStatus(of note: String, processed: Bool, reportsFailure: Bool = true) async -> EditOutcome {
-        await perform(.setInboxStatus(note: note, status: processed ? "processed" : "new"), reportsFailure: reportsFailure)
+    func setInboxStatus(of note: String, processed: Bool, version: String,
+                        reportsFailure: Bool = true) async -> EditOutcome {
+        await perform(.setInboxStatus(note: note, status: processed ? "processed" : "new", version: version),
+                      reportsFailure: reportsFailure)
     }
 
     /// Offer the reverse edit only once the server has marked this very note as discussed.
-    func markDiscussed(of note: String) async -> UndoOffer? {
-        guard await setInboxStatus(of: note, processed: true) == .applied else { return nil }
+    func markDiscussed(of note: String, version: String) async -> UndoOffer? {
+        var savedVersion: String?
+        let outcome = await perform(.setInboxStatus(note: note, status: "processed", version: version),
+                                    reportsFailure: true) { result in
+            savedVersion = result.vault.notes.first { $0.id == note }?.version
+        }
+        guard outcome == .applied, let savedVersion else { return nil }
         return UndoOffer(message: String(localized: "Marked as discussed.")) { [self] in
-            await setInboxStatus(of: note, processed: false)
+            await setInboxStatus(of: note, processed: false, version: savedVersion)
         }
     }
 
@@ -382,13 +393,13 @@ final class VaultStore {
     /// Sends one edit (after any edit or quick note already on its way) and swaps in the vault it returns.
     /// `reportsFailure`: false when the caller (a sheet) shows the failure itself; what the server says about a saved
     /// edit (`pushed: false`, warnings) is always shown.
-    private func perform(_ edit: Edit, reportsFailure: Bool) async -> EditOutcome {
+    private func perform(_ edit: Edit, reportsFailure: Bool, onApplied: ((EditResult) -> Void)? = nil) async -> EditOutcome {
         guard canAct else {
             if reportsFailure { show(unavailableMessage, .problem) }
             return .failed(unavailableMessage)
         }
         let context = context
-        let outcome = await serially { await self.send(edit, context: context) }
+        let outcome = await serially { await self.send(edit, context: context, onApplied: onApplied) }
         guard isCurrent(context) else { return outcome }
         switch outcome {
         case .applied:
@@ -403,12 +414,13 @@ final class VaultStore {
         return outcome
     }
 
-    private func send(_ edit: Edit, context: Context) async -> EditOutcome {
+    private func send(_ edit: Edit, context: Context, onApplied: ((EditResult) -> Void)?) async -> EditOutcome {
         guard isCurrent(context) else { return .failed("") }
         let token = session.token           // sent now, maybe well after the edit was queued
         do {
             let result = try await backend.send(edit)
             guard isCurrent(context) else { return .failed("") }
+            onApplied?(result)
             await accept(result, context: context, revision: nextVaultRevision())
             return .applied
         } catch VaultAPIError.conflict {
@@ -451,11 +463,11 @@ final class VaultStore {
     /// A quick note for the Inbox, verbatim. Kept on the phone first, so nothing is lost offline; sent at once when the
     /// server is reachable.
     @discardableResult
-    func queueQuickNote(_ text: String, about: String? = nil, kind: QuickNoteKind = .note,
+    func queueQuickNote(_ text: String, about: String? = nil, kind: QuickNoteKind = .note, version: String? = nil,
                         now: Date = .now) -> QuickNoteOutcome {
         // A "discuss later" mark may come without words; a note needs some.
         guard kind == .discuss || !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return .empty }
-        let note = PendingQuickNote(text: text, created: now, about: about, kind: kind)
+        let note = PendingQuickNote(text: text, created: now, about: about, kind: kind, version: version)
         pendingQuickNotes.append(note)
         do {
             try persistence.saveQuickNotes(pendingQuickNotes)
@@ -466,6 +478,25 @@ final class VaultStore {
         }
         startQuickNotes()
         return .queued
+    }
+
+    /// The owner agreed to attach an older queued note to the version shown in the confirmation.
+    @discardableResult
+    func confirmQuickNote(_ id: UUID, version: String) -> Bool {
+        guard let index = pendingQuickNotes.firstIndex(where: { $0.id == id }),
+              pendingQuickNotes[index].needsConfirmation else { return false }
+        var confirmed = pendingQuickNotes
+        confirmed[index].version = version
+        confirmed[index].problem = nil
+        do {
+            try persistence.saveQuickNotes(confirmed)
+        } catch {
+            show(error.localizedDescription, .problem)
+            return false
+        }
+        pendingQuickNotes = confirmed
+        startQuickNotes()
+        return true
     }
 
     /// A quick note the server refused (or one Patrik no longer wants sent) is deleted from the phone.
@@ -481,7 +512,8 @@ final class VaultStore {
         let id = UUID()
         flushID = id
         // Ask synchronously, before Save returns and the user can leave the app.
-        let background = canAct && pendingQuickNotes.contains { $0.problem == nil } ? QuickNoteBackgroundTask() : nil
+        let hasReadyNotes = pendingQuickNotes.contains { $0.problem == nil && !$0.needsConfirmation }
+        let background = canAct && hasReadyNotes ? QuickNoteBackgroundTask() : nil
         backgroundTask = background
         quickNotesTask = Task {
             defer {
@@ -509,7 +541,7 @@ final class VaultStore {
     private func runQuickNotes() async {
         await loadingSettled()
         guard !Task.isCancelled, !isFlushing,
-              pendingQuickNotes.contains(where: { $0.problem == nil }) else { return }
+              pendingQuickNotes.contains(where: { $0.problem == nil && !$0.needsConfirmation }) else { return }
         guard canAct else {
             if session.needsRestoreRetry {
                 failedQuickNotes.formUnion(pendingQuickNotes.map(\.id))
@@ -521,7 +553,7 @@ final class VaultStore {
         let context = context
         defer { if isCurrent(context) { isFlushing = false } }
         while !Task.isCancelled, isCurrent(context), canAct,
-              let next = pendingQuickNotes.first(where: { $0.problem == nil }) {
+              let next = pendingQuickNotes.first(where: { $0.problem == nil && !$0.needsConfirmation }) {
             let done = await serially { await self.send(next, context: context) }
             if !done { break }
         }
@@ -532,12 +564,21 @@ final class VaultStore {
         guard isCurrent(context), canAct, pendingQuickNotes.contains(where: { $0.id == note.id }) else { return false }
         let token = session.token
         do {
-            let result = try await backend.send(.quickNote(text: note.text, about: note.about, kind: note.kind))
+            let result = try await backend.send(.quickNote(text: note.text, about: note.about, kind: note.kind,
+                                                          version: note.version))
             guard isCurrent(context) else { return false }
             pendingQuickNotes.removeAll { $0.id == note.id }
             failedQuickNotes.remove(note.id)
             saveQuickNotes()
             await accept(result, context: context, revision: nextVaultRevision())
+            return true
+        } catch VaultAPIError.conflict where note.about != nil {
+            guard isCurrent(context) else { return false }
+            if let index = pendingQuickNotes.firstIndex(where: { $0.id == note.id }) {
+                pendingQuickNotes[index].problem = String(localized: "This changed elsewhere.")
+            }
+            saveQuickNotes()
+            show(String(localized: "This changed elsewhere."), .problem)
             return true
         } catch let VaultAPIError.invalid(message) {
             guard isCurrent(context) else { return false }

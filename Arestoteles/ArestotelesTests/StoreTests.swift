@@ -150,7 +150,7 @@ struct StoreTests {
 
         await h.store.update()
         #expect(h.store.isOffline && h.transport.requests.isEmpty)
-        #expect(await h.store.confirmPosition("Printing press#2") == .failed(VaultStore.offlineMessage))
+        #expect(await h.store.confirmPosition("Printing press#2", version: sampleVersion("Printing press#2")) == .failed(VaultStore.offlineMessage))
 
         auth.failure = nil
         h.transport.answer("GET /vault", 304, json: Data())

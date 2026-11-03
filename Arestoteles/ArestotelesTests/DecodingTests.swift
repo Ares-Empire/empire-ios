@@ -102,18 +102,18 @@ struct DecodingTests {
     /// Every op, with exactly the contract's fields.
     @Test func editsEncodeAsTheContractSays() throws {
         let cases: [(Edit, [String: AnyHashable])] = [
-            (.confirmPosition(position: "Colonialism#2"), ["op": "confirm_position", "position": "Colonialism#2"]),
-            (.rewordPosition(position: "Colonialism#2", text: "New words."),
-             ["op": "reword_position", "position": "Colonialism#2", "text": "New words."]),
-            (.changePosition(position: "Positions#3", text: "A new view.", why: "A new book."),
-             ["op": "change_position", "position": "Positions#3", "text": "A new view.", "why": "A new book."]),
-            (.dropPosition(position: "Positions#3", why: "No longer true."),
-             ["op": "drop_position", "position": "Positions#3", "why": "No longer true."]),
-            (.addPosition(note: "Printing press", text: "One more.", evidence: ["Reformation", "Gutenberg Bible"]),
-             ["op": "add_position", "note": "Printing press", "text": "One more.",
+            (.confirmPosition(position: "Colonialism#2", version: "shown"), ["op": "confirm_position", "version": "shown", "position": "Colonialism#2"]),
+            (.rewordPosition(position: "Colonialism#2", text: "New words.", version: "shown"),
+             ["op": "reword_position", "version": "shown", "position": "Colonialism#2", "text": "New words."]),
+            (.changePosition(position: "Positions#3", text: "A new view.", why: "A new book.", version: "shown"),
+             ["op": "change_position", "version": "shown", "position": "Positions#3", "text": "A new view.", "why": "A new book."]),
+            (.dropPosition(position: "Positions#3", why: "No longer true.", version: "shown"),
+             ["op": "drop_position", "version": "shown", "position": "Positions#3", "why": "No longer true."]),
+            (.addPosition(note: "Printing press", text: "One more.", evidence: ["Reformation", "Gutenberg Bible"], version: "shown"),
+             ["op": "add_position", "version": "shown", "note": "Printing press", "text": "One more.",
               "evidence": ["Reformation", "Gutenberg Bible"] as [String]]),
-            (.setConfidence(note: "Reformation", confidence: .myRead),
-             ["op": "set_confidence", "note": "Reformation", "confidence": "my-read"]),
+            (.setConfidence(note: "Reformation", confidence: .myRead, version: "shown"),
+             ["op": "set_confidence", "version": "shown", "note": "Reformation", "confidence": "my-read"]),
             (.adoptCallout(note: "Printing press", callout: 0, version: "abc"),
              ["op": "adopt_callout", "note": "Printing press", "callout": 0, "version": "abc"]),
             (.dismissCallout(note: "Printing press", callout: 1, version: "abc"),
@@ -126,7 +126,7 @@ struct DecodingTests {
             let json = try #require(try JSONSerialization.jsonObject(with: JSONEncoder().encode(edit)) as? [String: AnyHashable])
             #expect(json == expected, "\(edit.op)")
         }
-        #expect(Edit.dropPosition(position: "Printing press#2", why: "x").note == "Printing press")
+        #expect(Edit.dropPosition(position: "Printing press#2", why: "x", version: "shown").note == "Printing press")
         #expect(Edit.quickNote(text: "x").note == nil)
     }
 
