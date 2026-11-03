@@ -472,7 +472,8 @@ nonisolated enum PhoneDashboard {
         let named = Dictionary(list.sortingIDs.compactMap { id in list.name(of: id).map { (id, $0) } },
                                uniquingKeysWith: { first, _ in first })
         let transactions = payments.map { payment in
-            SourcePayment(id: payment.id, externalId: payment.externalId, date: payment.bookingDate,
+            SourcePayment(id: payment.id, externalId: payment.externalId, accountId: payment.account,
+                          date: payment.bookingDate,
                           amount: payment.amountValue, currency: payment.currency,
                           balance: payment.balance.flatMap(Double.init), description: payment.text,
                           counterparty: payment.counterparty, city: nil, raw: payment.raw,

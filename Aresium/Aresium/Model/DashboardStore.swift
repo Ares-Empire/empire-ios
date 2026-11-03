@@ -67,14 +67,18 @@ struct ChartPoint: Identifiable {
     /// A month still running (`Month.partial`, brief 215): the month graphs draw the stretch to it dashed, as its amount
     /// is not final yet.
     let running: Bool
+    /// Lines with different segments never connect across an unknown balance.
+    let segment: Int
     var id: Int { index }
 
-    nonisolated init(index: Int, label: String, value: Double, title: String? = nil, running: Bool = false) {
+    nonisolated init(index: Int, label: String, value: Double, title: String? = nil, running: Bool = false,
+                     segment: Int = 0) {
         self.index = index
         self.label = label
         self.value = value
         self.title = title ?? label
         self.running = running
+        self.segment = segment
     }
 }
 
@@ -101,6 +105,7 @@ final class DashboardStore {
     /// card on Not sorted's list, the offer and the flow never read groups of another dashboard.
     private(set) var builtQuickSort = QuickSortCache()
     private(set) var builtFixedCosts = FixedCostsCache()
+    @ObservationIgnored private var averageEngine: AresiumEngine?
     /// Installed by the live app (`installMessages`); in DEBUG the phone sample gets a pretend one
     /// (`installSampleMessages`, brief 46); never a test store.
     var messages: AresiumMessages?
@@ -217,12 +222,20 @@ final class DashboardStore {
             // Brief 99: what is Not sorted, grouped by name, off the main thread before the dashboard shows.
             let groups = backend?.mode == .phone ? await QuickSortCache.build(loaded) : []
             let marks = try await (backend as? PhoneBackend)?.ledger.fixedCostMarks() ?? []
-            let fixed = backend?.mode == .phone ? await FixedCostsCache.build(loaded, marks: marks) : []
+            let engine: AresiumEngine
+            if let phone = backend as? PhoneBackend { engine = phone.engine }
+            else if let averageEngine { engine = averageEngine }
+            else {
+                engine = try await Task.detached(priority: .userInitiated) { try AresiumEngine.bundled() }.value
+                averageEngine = engine
+            }
+            let fixed = try await FixedCostsCache.build(loaded, marks: marks, engine: engine,
+                                                        includeFixedCosts: backend?.mode == .phone)
             guard current() else { return }
             try PickerTiming.measure("dashboard.publish") {
                 dashboard = loaded
                 builtQuickSort = QuickSortCache(revision: revision, groups: groups)
-                builtFixedCosts = FixedCostsCache(revision: revision, entries: fixed)
+                builtFixedCosts = FixedCostsCache(revision: revision, analysis: fixed)
                 builtChosen = chosen
                 lastSuccessfulLoad = .now
                 try publishWidget(loaded)
@@ -542,15 +555,27 @@ final class DashboardStore {
         }
     }
 
+    /// The engine's account balances, with their original indices and gaps before any account is known.
+    func balanceChart(_ scope: DashboardScope) -> [ChartPoint] {
+        guard let dashboard else { return [] }
+        guard scope.isMonth else { return monthPoints(dashboard.overview.balance) }
+        guard let key = monthKey(scope), let month = dashboard.byMonth[key] else { return [] }
+        let titles = ChartReading.dayTitles(month: key, count: month.dayBalance.count)
+        return ChartBalances.points(month.dayBalance) { index, value, segment in
+            ChartPoint(index: index, label: String(index + 1), value: value, title: titles[index], segment: segment)
+        }
+    }
+
     func categoryChart(_ name: String, side: DashboardSide) -> [ChartPoint] {
         monthPoints(series(name, side: side)?.months ?? [])
     }
 
-    private func monthPoints(_ values: [Double]) -> [ChartPoint] {
-        (dashboard?.months ?? []).enumerated().compactMap { index, month in
-            guard values.indices.contains(index) else { return nil }
-            return ChartPoint(index: index, label: month.shortTitle(), value: values[index], title: month.title(),
-                              running: month.partial)
+    private func monthPoints(_ values: [Double?]) -> [ChartPoint] {
+        let months = dashboard?.months ?? []
+        return ChartBalances.points(Array(values.prefix(months.count))) { index, value, segment in
+            let month = months[index]
+            return ChartPoint(index: index, label: month.shortTitle(), value: value, title: month.title(),
+                              running: month.partial, segment: segment)
         }
     }
 }

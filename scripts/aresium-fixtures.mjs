@@ -1,19 +1,30 @@
 // Refreshes the Aresium test fixtures from the aresium repo (run from anywhere):
 //   node ~/empire-ios/scripts/aresium-fixtures.mjs [path/to/aresium]
-// 1. copies the server's generated sample (aresium: `npm run sample` writes it),
+// 1. runs the same sample builder as `npm run sample`, without writing into the service checkout,
 // 2. writes the website's own answers for it (web/public/app/data.js), which
 //    ServerSampleMatchesWebsiteTests compares the app against.
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import vm from "node:vm";
-import { fileURLToPath } from "node:url";
+import { execFileSync } from "node:child_process";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const aresium = process.argv[2] ?? path.join(os.homedir(), "aresium");
 const tests = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "Aresium", "AresiumTests");
-const samplePath = path.join(aresium, "web/public/app/dashboard.sample.json");
-const sample = JSON.parse(fs.readFileSync(samplePath, "utf8"));
-fs.copyFileSync(samplePath, path.join(tests, "server-dashboard.sample.json"));
+// Use the service's existing TypeScript loader and functions; never rebuild or modify its checkout.
+const serviceURL = (relative) => pathToFileURL(path.join(aresium, relative)).href;
+const generated = JSON.parse(execFileSync(process.execPath, [
+  "--import", serviceURL("node_modules/tsx/dist/loader.mjs"), "--input-type=module", "-e",
+  `import { buildWebSample } from ${JSON.stringify(serviceURL("src/data/web-sample.ts"))};
+   import { buildSampleSource } from ${JSON.stringify(serviceURL("src/data/sample-source.ts"))};
+   import { buildDashboard } from ${JSON.stringify(serviceURL("src/data/dashboard.ts"))};
+   console.log(JSON.stringify({ web: buildWebSample(), engine: buildDashboard(buildSampleSource()) }));`,
+], { encoding: "utf8", maxBuffer: 16 * 1024 * 1024 }));
+const sample = generated.web;
+fs.writeFileSync(path.join(tests, "server-dashboard.sample.json"), JSON.stringify(sample) + "\n");
+// Brief 218 expanded the web demo. The original source remains a separate engine oracle.
+fs.writeFileSync(path.join(tests, "Engine/dashboard.sample-expected.json"), JSON.stringify(generated.engine) + "\n");
 
 const window = { AresiumSample: sample };
 const context = vm.createContext({ window, location: { protocol: "file:" }, fetch: async () => ({}) });

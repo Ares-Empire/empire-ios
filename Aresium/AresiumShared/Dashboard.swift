@@ -18,8 +18,15 @@ nonisolated struct Dashboard: Codable {
 
     var paybacksIgnored: [PaybackIgnored]? = nil
 
-    /// Phone mode: built once with the dashboard, over all its months.
+    /// Phone mode: built once with the dashboard, over all its months; an in-memory cache, not a wire field.
     var nameGroups: [String: PaymentNameGroup]? = nil
+
+    // The server now sends its own nameGroups (row ids and server aggregates). The phone's expanded-row cache
+    // is built by PaymentNames.apply and must never decode or encode under that API key.
+    private enum CodingKeys: String, CodingKey {
+        case version, months, categories, incomeBuckets, transactions, overview, total, byMonth, spend, income, pick
+        case cash, paybacksIgnored
+    }
 
     static func decode(_ data: Data) throws -> Dashboard {
         let dashboard = try JSONDecoder().decode(Dashboard.self, from: data)
@@ -193,7 +200,7 @@ nonisolated struct CashMovement: Codable, Equatable, Identifiable {
 nonisolated struct Overview: Codable {
     let expense: [Double]
     let income: [Double]
-    let balance: [Double]
+    let balance: [Double?]
 }
 
 nonisolated struct CategoryTotal: Codable, Identifiable {
@@ -214,11 +221,11 @@ nonisolated struct MonthData: Codable {
     let income: Double
     let categories: [CategoryTotal]
     let incomeBuckets: [CategoryTotal]
-    let endBalance: Double
+    let endBalance: Double?
     let dayExpense: [Double]
     let dayExpenseRunning: [Double]
     let dayIncome: [Double]
-    let dayBalance: [Double]
+    let dayBalance: [Double?]
 
     var totals: Totals {
         Totals(expense: expense, income: income, categories: categories, incomeBuckets: incomeBuckets)
