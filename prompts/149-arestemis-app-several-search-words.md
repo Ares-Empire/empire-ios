@@ -1,6 +1,6 @@
 # 149: Arestemis app: several search words in one thing search
 
-Status: running (Claude agent, 2026-11-03)
+Status: merged 2026-11-03 (Arestemis build 15)
 Branch: `claude/149-several-words` · Worktree: `../empire-ios-149-several-words` · **For a Claude agent** (design)
 
 ## Goal
