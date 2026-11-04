@@ -563,6 +563,8 @@ struct PriceSite: Codable, Equatable, Identifiable, Sendable {
     /// False while the monitor's `sources_off` names it (a preview's sites are all on).
     var on: Bool
 
+    var isComparison: Bool { kind == .comparison }
+
     init(id: String, name: String, kind: Kind = .shop, state: State = .checking, on: Bool = true) {
         self.id = id
         self.name = name

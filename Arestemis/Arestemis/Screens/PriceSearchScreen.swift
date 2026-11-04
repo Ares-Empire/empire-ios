@@ -35,6 +35,7 @@ struct PriceSearchScreen: View {
     @State private var showsSites = false
     /// Screenshots: "Where it looks" opens once its sites are known (`-priceSites`).
     @State private var opensSitesWhenKnown = false
+    @State private var sampleActionDone = false
     @FocusState private var focus: Field?
     @Environment(\.dismiss) private var dismiss
 
@@ -63,6 +64,8 @@ struct PriceSearchScreen: View {
         guard productPreview?.query == draft.words else { return nil }
         return productPreview?.answer
     }
+
+    private var suggestions: ProductSuggestions? { productPreview?.suggestions(for: draft.words) }
 
     /// The product as known now: One shop: the preview's, else the saved monitor's last read while its link is
     /// unchanged; Everywhere: the preview's (its cheapest offer), else the saved monitor's while its words are unchanged.
@@ -197,6 +200,7 @@ struct PriceSearchScreen: View {
                 showsSites = true
             }
         }
+        .onChange(of: suggestions) { _, choices in debugSuggestionAction(choices) }
         .onChange(of: draft.history) { _, _ in clearSwitchRefusal() }
         .onChange(of: draft.alarm) { _, _ in clearSwitchRefusal() }
     }
@@ -271,8 +275,54 @@ struct PriceSearchScreen: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .glassCard()
             productPreviewLine
+            if let suggestions {
+                productChoices(suggestions)
+            }
         }
         .animation(.easeOut(duration: 0.2), value: productPreview?.phase)
+    }
+
+    private func productChoices(_ choices: ProductSuggestions) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if !choices.names.isEmpty {
+                Text("Did you mean…").font(AppFont.text(12)).foregroundStyle(Ink.muted)
+                    .padding(.leading, 4)
+                ProductChoicesLayout {
+                    ForEach(Array(choices.names.enumerated()), id: \.offset) { _, name in
+                        Button { selectProduct(name) } label: {
+                            Text(verbatim: name).font(AppFont.text(13, weight: .medium)).foregroundStyle(Ink.secondary)
+                                .multilineTextAlignment(.leading)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .padding(.horizontal, 12).padding(.vertical, 7).frame(minHeight: 32)
+                                .background(Ink.field, in: Capsule())
+                                .overlay(Capsule().strokeBorder(Ink.line.opacity(1.6)))
+                                .padding(.vertical, 6).contentShape(Rectangle()).padding(.vertical, -6)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+            if let search = choices.itemSearch {
+                Button { openThings(search) } label: {
+                    Text(verbatim: search.title()).font(AppFont.text(12)).foregroundStyle(Ink.secondary)
+                        .fixedSize(horizontal: false, vertical: true).multilineTextAlignment(.leading)
+                        .frame(minHeight: 44, alignment: .leading).contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, 4)
+            }
+        }
+    }
+
+    private func selectProduct(_ name: String) {
+        endTyping()
+        productPreview?.select(name, in: &draft)
+    }
+
+    private func openThings(_ search: ProductItemSearch) {
+        endTyping()
+        store.keepSearchDraft(draft, huntID: huntID)
+        navigation.openItemSearch(search)
     }
 
     /// The server's look: "Looking for the product…", the product found over its shops and cheapest price, or the
@@ -285,6 +335,8 @@ struct PriceSearchScreen: View {
             let lines = EverywhereWords.found(found)
             PreviewLine(reading: false, title: lines.title, detail: lines.detail)
         case .failed(let message)?:
+            PreviewLine(reading: false, title: message)
+        case .refused(let message)? where suggestions?.names.isEmpty == true:
             PreviewLine(reading: false, title: message)
         default:
             EmptyView()
@@ -327,7 +379,7 @@ struct PriceSearchScreen: View {
     /// Under the product: one too short or too long, the preview's refusal, the server's refusal of the save.
     private var productProblems: [String] {
         let refusal = store.searchErrorField.map(Self.productFields.contains) == true ? store.searchError : nil
-        let previewRefusal = productPreview?.query == draft.words ? productPreview?.refusal : nil
+        let previewRefusal = productPreview?.query == draft.words && suggestions == nil ? productPreview?.refusal : nil
         return [draft.productLine(), previewRefusal, refusal].compactMap { $0 }
     }
 
@@ -446,6 +498,11 @@ struct PriceSearchScreen: View {
         if let url = LaunchArguments.value("-priceURL") { draft.url = url }
         if let product = LaunchArguments.value("-priceProduct") { draft.product = product }
         if let details = LaunchArguments.value("-priceDetails") { draft.details = details }
+        if let sample = LaunchArguments.value("-productSample"), ["family", "generic", "chip", "things"].contains(sample) {
+            draft.mode = .everywhere
+            draft.product = sample == "generic" ? ProductSuggestionSample.generic : ProductSuggestionSample.family
+            draft.details = ProductSuggestionSample.details
+        }
         if let off = LaunchArguments.value("-sitesOff") { draft.sourcesOff = off.components(separatedBy: ",") }
         if LaunchArguments.current.contains("-priceSites") { opensSitesWhenKnown = true }
         switch LaunchArguments.value("-priceSwitches") {
@@ -464,6 +521,58 @@ struct PriceSearchScreen: View {
         default: break
         }
         #endif
+    }
+
+    /// Exercises the same actions as a chip or the Things row after the sample refusal has arrived.
+    private func debugSuggestionAction(_ choices: ProductSuggestions?) {
+        #if DEBUG
+        guard store.isSample, !sampleActionDone, let choices else { return }
+        switch LaunchArguments.value("-productSample") {
+        case "chip":
+            guard let name = choices.names.first else { return }
+            sampleActionDone = true
+            selectProduct(name)
+        case "things":
+            guard let search = choices.itemSearch else { return }
+            sampleActionDone = true
+            openThings(search)
+        default: break
+        }
+        #endif
+    }
+}
+
+/// The example chips' spacing, measuring each constrained chip's full height so long product names can wrap.
+private struct ProductChoicesLayout: Layout {
+    private func positions(_ subviews: Subviews, width: CGFloat) -> [(CGPoint, CGSize)] {
+        var result: [(CGPoint, CGSize)] = []
+        var x: CGFloat = 0, y: CGFloat = 0, rowHeight: CGFloat = 0
+        for view in subviews {
+            let natural = view.sizeThatFits(.unspecified)
+            let size = view.sizeThatFits(ProposedViewSize(width: min(natural.width, width), height: nil))
+            if x > 0, x + size.width > width {
+                x = 0
+                y += rowHeight + 8
+                rowHeight = 0
+            }
+            result.append((CGPoint(x: x, y: y), size))
+            x += size.width + 8
+            rowHeight = max(rowHeight, size.height)
+        }
+        return result
+    }
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let positions = positions(subviews, width: proposal.width ?? .infinity)
+        return CGSize(width: proposal.width ?? positions.map { $0.0.x + $0.1.width }.max() ?? 0,
+                      height: positions.map { $0.0.y + $0.1.height }.max() ?? 0)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        for (view, placement) in zip(subviews, positions(subviews, width: bounds.width)) {
+            view.place(at: CGPoint(x: bounds.minX + placement.0.x, y: bounds.minY + placement.0.y),
+                       proposal: ProposedViewSize(placement.1))
+        }
     }
 }
 

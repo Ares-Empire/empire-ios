@@ -16,6 +16,7 @@ struct ItemSearchScreen: View {
     let huntID: Int?
     /// New search's example the new form opens with, filled in.
     var example: SearchExample? = nil
+    var prefill: ProductItemSearch? = nil
 
     @State private var draft = ItemSearchDraft()
     /// The saved hunt as this form shows it (search and name); nil for a new one.
@@ -142,8 +143,10 @@ struct ItemSearchScreen: View {
     /// starts filled in from it, once.
     private func sync() {
         saved = store.savedDraft(ItemSearchDraft.self, huntID: huntID)
+        // Returning from a child page keeps edits to this prefilled form, just as it keeps the Everywhere draft.
+        if creating, prefill != nil, exampleApplied { return }
         draft = store.itemSearchDraft(huntID: huntID)
-        if creating, !exampleApplied, let filled = example?.itemDraft() {
+        if creating, !exampleApplied, let filled = prefill?.draft ?? example?.itemDraft() {
             exampleApplied = true
             draft = filled
         }

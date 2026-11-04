@@ -234,23 +234,42 @@ struct ArestemisAPI: ArestemisBackend {
 struct FieldRefusal: LocalizedError, Equatable {
     let field: String
     let message: String
+    let productSuggestions: ProductSuggestions?
 
     var errorDescription: String? { message }
 
     /// Nil for any other answer: another status, no field or no sentence (those go on as `HTTPError`).
     init?(status: Int, data: Data) {
-        struct Body: Decodable { let error: String?; let message: String?; let field: String? }
+        struct Body: Decodable {
+            let error: String?; let message: String?; let field: String?
+            let suggestions: [String]?
+            let itemSearch: ProductItemSearch?
+            enum CodingKeys: String, CodingKey { case error, message, field, suggestions, itemSearch = "item_search" }
+
+            init(from decoder: Decoder) throws {
+                let c = try decoder.container(keyedBy: CodingKeys.self)
+                error = try c.decodeIfPresent(String.self, forKey: .error)
+                message = try c.decodeIfPresent(String.self, forKey: .message)
+                field = try c.decodeIfPresent(String.self, forKey: .field)
+                // Optional additions must never hide the refusal sentence from an older or newer server.
+                suggestions = try? c.decode([String].self, forKey: .suggestions)
+                itemSearch = try? c.decode(ProductItemSearch.self, forKey: .itemSearch)
+            }
+        }
         guard status == 400, let body = try? JSONDecoder().decode(Body.self, from: data),
               let field = body.field?.trimmingCharacters(in: .whitespaces), !field.isEmpty,
               let sentence = [body.error, body.message].compactMap({ $0?.trimmingCharacters(in: .whitespacesAndNewlines) })
                 .first(where: { !$0.isEmpty }) else { return nil }
         self.field = field
         message = sentence
+        productSuggestions = field == "product" && (body.suggestions != nil || body.itemSearch != nil)
+            ? ProductSuggestions(names: body.suggestions ?? [], itemSearch: body.itemSearch) : nil
     }
 
-    init(field: String, message: String) {
+    init(field: String, message: String, productSuggestions: ProductSuggestions? = nil) {
         self.field = field
         self.message = message
+        self.productSuggestions = field == "product" ? productSuggestions : nil
     }
 }
 

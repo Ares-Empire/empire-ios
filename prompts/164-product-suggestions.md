@@ -1,6 +1,6 @@
 # 164: Arestemis: product suggestions and the price comparison label
 
-Status: running (round 2, step 3)
+Status: merged; app ready for review (round 2, step 3)
 Branch: `codex/164-product-suggestions` · Worktree: `../empire-ios-164-product-suggestions` · Model: `gpt-6.1-sol`, effort `xhigh`
 
 ## Authorization
@@ -38,3 +38,7 @@ Server changes, site-reading implementation details, delivery, used listings, Te
 ## Done when
 
 Build/tests pass, strings check has 0 problems, screenshots complete and reviewed by you. No commit/push/merge, installs of tools/runtimes, server access or network except Xcode's existing build needs. Final message: changed files, exact test/build summary, strings and screenshots, any missing API or doubts.
+
+## Result (orchestrator review, 2026-11-04)
+
+Read every diff and independently ran the whole app test suite on a separate iPhone17/iOS27.0 simulator: **332tests/485parameterized runs/0failures**. Strings check0problems; sync preserved the legacy older-listings sentence and other apps’ catalogs. Independently captured and viewed20screens (5states×English/German×light/dark) from that build; copied to `~/Arestemis-orchestra/screens/164-*.png`. Own simulator shut down/deleted. Build number unchanged; Claude owns TestFlight. No API, login or token doubts.

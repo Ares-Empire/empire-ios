@@ -70,6 +70,9 @@ struct PriceSitesScreen: View {
         Toggle(isOn: Binding(get: { !off.contains(site.id) }, set: { on in switchSite(site.id, on: on, all: all) })) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(verbatim: site.name).font(AppFont.text(15, weight: .medium)).foregroundStyle(Ink.primary)
+                if site.isComparison {
+                    Text("Price comparison").font(AppFont.text(12)).foregroundStyle(Ink.muted)
+                }
                 if let state = EverywhereWords.state(site.state) {
                     Text(state).font(AppFont.text(12)).foregroundStyle(Ink.muted)
                 }
