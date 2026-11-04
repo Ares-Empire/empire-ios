@@ -1,0 +1,137 @@
+{
+  "identity": {
+    "name": "Meridian Desk Lamp 2",
+    "eans": [],
+    "image_url": null
+  },
+  "offers": [
+    {
+      "source": "lumen",
+      "source_name": "Lumen Home",
+      "shop": "Lumen Home",
+      "seller": null,
+      "title": "Meridian Desk Lamp 2",
+      "eans": [],
+      "marketplace": false,
+      "url": "https://shop.example/lumen/lumen-north",
+      "price": 209,
+      "currency": "EUR",
+      "shipping": null,
+      "availability": "in_stock",
+      "checked": "2026-10-24T09:58:40Z",
+      "fulfillment": "pickup",
+      "pickup_method": "click_collect",
+      "pickup_fee": 5,
+      "store": {
+        "id": "lumen-north",
+        "name": "Lumen North",
+        "city": "Lindenfeld",
+        "lat": 50.1,
+        "lon": 10.1,
+        "distance_km": 4.2
+      },
+      "total": 214
+    },
+    {
+      "source": "parcel",
+      "source_name": "Parcel Works",
+      "shop": "Parcel Works",
+      "seller": null,
+      "title": "Meridian Desk Lamp 2",
+      "eans": [],
+      "marketplace": false,
+      "url": "https://shop.example/parcel/lamp",
+      "price": 199,
+      "currency": "EUR",
+      "shipping": 25,
+      "availability": "in_stock",
+      "checked": "2026-10-24T09:58:40Z",
+      "fulfillment": "shipping",
+      "pickup_method": null,
+      "pickup_fee": null,
+      "store": null,
+      "total": 224
+    },
+    {
+      "source": "nearby",
+      "source_name": "Nearby Market",
+      "shop": "Nearby Market",
+      "seller": null,
+      "title": "Meridian Desk Lamp 2",
+      "eans": [],
+      "marketplace": false,
+      "url": "https://shop.example/nearby/nearby-west",
+      "price": 225,
+      "currency": "EUR",
+      "shipping": null,
+      "availability": "in_stock",
+      "checked": "2026-10-24T09:58:40Z",
+      "fulfillment": "pickup",
+      "pickup_method": "in_store",
+      "pickup_fee": 0,
+      "store": {
+        "id": "nearby-west",
+        "name": "Nearby West",
+        "city": "Lindenfeld",
+        "lat": 50.11,
+        "lon": 10.11,
+        "distance_km": 7.5
+      },
+      "total": 225
+    },
+    {
+      "source": "compare",
+      "source_name": "Prism Compare",
+      "shop": "Fable Shop",
+      "seller": null,
+      "title": "Meridian Desk Lamp 2",
+      "eans": [],
+      "marketplace": false,
+      "url": "https://shop.example/compare/lamp",
+      "price": 179,
+      "currency": "EUR",
+      "shipping": null,
+      "availability": "in_stock",
+      "checked": "2026-10-24T09:58:40Z",
+      "fulfillment": "shipping",
+      "pickup_method": null,
+      "pickup_fee": null,
+      "store": null,
+      "total": null
+    }
+  ],
+  "sites": [
+    {
+      "id": "lumen",
+      "name": "Lumen Home",
+      "kind": "shop",
+      "state": "has_it",
+      "on": true,
+      "delivery": "either"
+    },
+    {
+      "id": "parcel",
+      "name": "Parcel Works",
+      "kind": "shop",
+      "state": "has_it",
+      "on": true,
+      "delivery": "shipping"
+    },
+    {
+      "id": "nearby",
+      "name": "Nearby Market",
+      "kind": "shop",
+      "state": "has_it",
+      "on": true,
+      "delivery": "pickup"
+    },
+    {
+      "id": "compare",
+      "name": "Prism Compare",
+      "kind": "comparison",
+      "state": "has_it",
+      "on": true,
+      "delivery": "either"
+    }
+  ]
+}

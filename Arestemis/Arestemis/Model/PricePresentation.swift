@@ -7,6 +7,14 @@ import Foundation
 
 /// The words of a monitor and its alarms.
 enum PriceWords {
+    static func historyTitle(everywhere: Bool, language: AppLanguage = .current) -> String {
+        everywhere ? language.string("Lowest total price") : language.string("Price history")
+    }
+
+    static func curveLabel(everywhere: Bool, language: AppLanguage = .current) -> String {
+        everywhere ? language.string("Total price, last 30 days") : language.string("Last 30 days")
+    }
+
     /// A price to the cent in its currency: "€449.00" / "449,00 €"; another currency as the app's locale writes it
     /// ("US$12.99" / "12,99 $").
     static func money(_ amount: Double, currency: String? = "EUR", language: AppLanguage = .current) -> String {
@@ -122,7 +130,8 @@ struct PriceCardText: Equatable {
     /// `state`: the card's product state; nil for a monitor the overview has not sent yet (just made), read as waiting.
     /// `compact`: the Hunts list's card, which leaves out a note while the page reads well. `everywhere`: the monitor
     /// looks for its product on every site (its price is the cheapest offer's, its host that offer's shop).
-    init(_ state: PriceState?, compact: Bool, everywhere: Bool = false, now: Date = .now, calendar: Calendar = .app,
+    init(_ state: PriceState?, compact: Bool, everywhere: Bool = false, offer: Offer? = nil,
+         delivery: Delivery? = nil, now: Date = .now, calendar: Calendar = .app,
          language: AppLanguage = .current) {
         let l = language
         let note = HuntText.text(state?.note)
@@ -137,9 +146,19 @@ struct PriceCardText: Equatable {
         case .ok:
             price = state?.price.map { PriceWords.money($0, currency: state?.currency, language: l) }
             availability = state.flatMap { PriceWords.availability($0.availability, language: l) }
-            if everywhere, price != nil { shop = HuntText.text(state?.host).map { EverywhereWords.at($0, language: l) } }
+            if everywhere, price != nil {
+                let name = offer.map(OfferList.title) ?? HuntText.text(state?.host)
+                let handover = offer.flatMap { OfferList.handover($0, language: l) } ?? delivery.map {
+                    switch $0 {
+                    case .shipping: l.string("Shipping")
+                    case .pickup: l.string("Pickup")
+                    case .either: l.string("Either")
+                    }
+                }
+                shop = [name.map { EverywhereWords.at($0, language: l) }, handover].compactMap { $0 }.joined(separator: " · ")
+            }
             if everywhere, price == nil {
-                self.note = l.string("No shop offers it right now.")
+                self.note = l.string("No known total right now.")
             } else {
                 self.note = compact ? nil : note
             }
@@ -189,6 +208,7 @@ struct PriceChart: Equatable {
     let points: [Point]
     let stretches: [Stretch]
     let currency: String
+    let everywhere: Bool
     /// The alarm's limit, while it is in the chart's currency (euros).
     let limit: Double?
     /// The prices the plot spans: the points' and the limit, with a little room above and below.
@@ -204,7 +224,8 @@ struct PriceChart: Equatable {
 
     /// `limit`: the alarm's limit in euros. `days`: the window asked for (the plot starts there when the points reach
     /// back so far; a monitor younger than that starts at its first point).
-    init(_ prices: Prices, limit: Double? = nil, days: Int? = nil, now: Date = .now) {
+    init(_ prices: Prices, limit: Double? = nil, days: Int? = nil, now: Date = .now, everywhere: Bool = false) {
+        self.everywhere = everywhere
         let currency = prices.points.last?.currency ?? "EUR"
         var points: [Point] = []
         for point in prices.points where point.currency == currency {
@@ -264,7 +285,8 @@ struct PriceChart: Equatable {
 
     /// What VoiceOver says of a point: "€449.00, in stock".
     func spoken(_ point: Point, language: AppLanguage = .current) -> String {
-        ([PriceWords.money(point.price, currency: currency, language: language)]
+        ([everywhere ? language.string("Total price") : nil,
+          PriceWords.money(point.price, currency: currency, language: language)].compactMap { $0 }
             + [PriceWords.availability(point.availability, language: language)].compactMap { $0 })
             .joined(separator: ", ")
     }

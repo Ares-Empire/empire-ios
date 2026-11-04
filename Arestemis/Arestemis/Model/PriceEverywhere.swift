@@ -25,10 +25,11 @@ enum EverywhereWords {
     /// found none. The shops are the sellers among its offers (a comparison site lists several), counted once each.
     static func found(_ preview: ProductPreview, language: AppLanguage = .current) -> FoundLines {
         let name = WatchText.keepingAmounts(preview.identity.name.trimmingCharacters(in: .whitespacesAndNewlines))
-        let priced = OfferList.sorted(preview.offers).filter { $0.price != nil }
+        let priced = preview.offers.filter { $0.selectedTotal != nil }
         let found = language.string("Found: \(name)")
-        guard let cheapest = priced.first, let price = cheapest.price else {
-            return FoundLines(title: found, detail: language.string("no offer yet"))
+        guard let cheapest = priced.first, let price = cheapest.selectedTotal else {
+            return FoundLines(title: found, detail: preview.offers.isEmpty ? language.string("no offer yet")
+                : language.string("Total unknown"))
         }
         let sellers = Set(priced.map { $0.shop.trimmingCharacters(in: .whitespaces).lowercased() }).count
         let from = PriceWords.money(price, currency: cheapest.currency, language: language)
@@ -44,7 +45,7 @@ enum EverywhereWords {
 
     /// The cheapest price the preview found in euros, for the alarm's limit.
     static func cheapest(_ preview: ProductPreview) -> (price: Double, currency: String?)? {
-        OfferList.sorted(preview.offers).first { $0.price != nil }.flatMap { offer in offer.price.map { ($0, offer.currency) } }
+        preview.offers.first { $0.selectedTotal != nil }.flatMap { offer in offer.selectedTotal.map { ($0, offer.currency) } }
     }
 
     /// The quiet line under the product's preview: "Looks on 9 sites" / "Sucht auf 9 Seiten", the sites switched on
@@ -106,23 +107,38 @@ enum PriceSites {
     }
 
     /// How many of the sites are switched on.
-    static func onCount(_ sites: [PriceSite], off: [String]) -> Int {
-        sites.count { !off.contains($0.id) }
+    static func onCount(_ sites: [PriceSite], off: [String], delivery: Delivery = .shipping) -> Int {
+        sites.count { !off.contains($0.id) && $0.serves(delivery) }
     }
 
     /// A site switched on or off: the new `sources_off` (in the sites' order, ids no longer listed kept), or nil when it
     /// would switch off the last site that is on (a monitor that looks nowhere finds nothing).
-    static func switched(_ site: String, on: Bool, off: [String], sites: [PriceSite]) -> [String]? {
+    static func switched(_ site: String, on: Bool, off: [String], sites: [PriceSite],
+                         delivery: Delivery = .shipping) -> [String]? {
+        guard sites.first(where: { $0.id == site })?.serves(delivery) != false else { return nil }
         var off = off
         if on {
             off.removeAll { $0 == site }
             return off
         }
         guard !off.contains(site) else { return off }
-        guard onCount(sites, off: off) > 1 || !sites.contains(where: { $0.id == site }) else { return nil }
+        guard onCount(sites, off: off, delivery: delivery) > 1 || !sites.contains(where: { $0.id == site }) else { return nil }
         off.append(site)
         let order = sites.map(\.id)
         return off.sorted { (order.firstIndex(of: $0) ?? .max) < (order.firstIndex(of: $1) ?? .max) }
+    }
+
+    static func detail(_ site: PriceSite, delivery: Delivery, language: AppLanguage = .current) -> String? {
+        let state: String?
+        if site.serves(delivery) {
+            state = EverywhereWords.state(site.state, language: language)
+        } else if site.delivery == .pickup {
+            state = language.string("Pickup only")
+        } else {
+            state = language.string("Shipping only")
+        }
+        let parts = [site.isComparison ? language.string("Price comparison") : nil, state].compactMap { $0 }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
     /// The line when the last site is not let go.
@@ -139,26 +155,41 @@ enum PriceSites {
 
 /// An everywhere monitor's offers, as its page lists them.
 enum OfferList {
-    /// Cheapest first, as the server sorts them: euros before other currencies, priced before unpriced, then by price,
-    /// shop and site.
-    static func sorted(_ offers: [Offer]) -> [Offer] {
-        offers.sorted { a, b in
-            let aKey = (a.currency?.uppercased() ?? "EUR") != "EUR", bKey = (b.currency?.uppercased() ?? "EUR") != "EUR"
-            if aKey != bKey { return !aKey }
-            if (a.price == nil) != (b.price == nil) { return a.price != nil }
-            if let ap = a.price, let bp = b.price, ap != bp { return ap < bp }
-            if a.shop != b.shop { return a.shop.localizedStandardCompare(b.shop) == .orderedAscending }
-            return a.source < b.source
+    /// Keep the listing grouping, with distinct pickup stores and handovers visible for the same seller.
+    static func shown(_ offers: [Offer], off: [String]) -> [Offer] {
+        var seen: Set<String> = []
+        return offers.filter { !off.contains($0.source) }.filter { offer in
+            let key = offer.shop.trimmingCharacters(in: .whitespaces).lowercased()
+                + "|" + offer.fulfillment.rawValue + "|" + (offer.pickupMethod?.rawValue ?? "") + "|" + (offer.store?.id ?? "")
+            return seen.insert(key).inserted
         }
     }
 
-    /// What the page lists: the offers of the sites switched on, cheapest first, one per shop (its cheapest: a shop that
-    /// two comparison sites list shows once, as the sketch's list of shops).
-    static func shown(_ offers: [Offer], off: [String]) -> [Offer] {
-        var seen: Set<String> = []
-        return sorted(offers.filter { !off.contains($0.source) }).filter { offer in
-            seen.insert(offer.shop.trimmingCharacters(in: .whitespaces).lowercased()).inserted
+    /// Find the quote supplying PriceState, without independently choosing a cheapest price or another URL.
+    static func selected(_ offers: [Offer], state: PriceState?, off: [String]) -> Offer? {
+        guard let state, let price = state.price else { return nil }
+        return shown(offers, off: off).first {
+            $0.selectedTotal == price && $0.currency == state.currency
+                && ($0.shop == state.host || $0.store?.name == state.host || title($0) == state.host)
         }
+    }
+
+    static func title(_ offer: Offer) -> String {
+        guard offer.fulfillment == .pickup, let store = offer.store else { return offer.shop }
+        return [store.name, HuntText.text(store.city)].compactMap { $0 }.joined(separator: ", ")
+    }
+
+    static func handover(_ offer: Offer, language: AppLanguage = .current) -> String? {
+        switch offer.fulfillment {
+        case .shipping: language.string("Shipping")
+        case .pickup: language.string("Pickup")
+        case .unknown: nil
+        }
+    }
+
+    static func amount(_ offer: Offer, language: AppLanguage = .current) -> String {
+        offer.selectedTotal.map { PriceWords.money($0, currency: offer.currency, language: language) }
+            ?? language.string("Total unknown")
     }
 
     /// How many rows show before "+ N more shops".
@@ -169,10 +200,33 @@ enum OfferList {
     /// billiger.de").
     static func line(_ offer: Offer, language: AppLanguage = .current) -> String? {
         var parts: [String] = []
-        if let word = PriceWords.availability(offer.availability, language: language) { parts.append(word) }
-        if let shipping = offer.shipping, shipping >= 0, shipping.isFinite {
-            parts.append(language.string("shipping \(PriceWords.limit(shipping, language: language))"))
+        if let price = offer.price, price.isFinite {
+            parts.append(PriceWords.money(price, currency: offer.currency, language: language))
         }
+        switch offer.fulfillment {
+        case .shipping:
+            if let shipping = offer.shipping, shipping >= 0, shipping.isFinite {
+                parts.append(language.string("shipping \(PriceWords.limit(shipping, language: language))"))
+            } else {
+                parts.append(language.string("Shipping unknown"))
+            }
+        case .pickup:
+            switch offer.pickupMethod {
+            case .inStore?: parts.append(language.string("In store"))
+            case .clickCollect?: parts.append(language.string("Click & Collect"))
+            default: parts.append(language.string("Pickup"))
+            }
+            if let fee = offer.pickupFee, fee >= 0, fee.isFinite {
+                parts.append(language.string("fee \(PriceWords.limit(fee, language: language))"))
+            } else {
+                parts.append(language.string("Fee unknown"))
+            }
+            if let distance = offer.store?.distanceKm, distance.isFinite, distance >= 0 {
+                parts.append(Format.number(distance, language: language) + " km")
+            }
+        case .unknown: break
+        }
+        if let word = PriceWords.availability(offer.availability, language: language) { parts.append(word) }
         let site = offer.sourceName.trimmingCharacters(in: .whitespaces)
         if !site.isEmpty, site.lowercased() != offer.shop.trimmingCharacters(in: .whitespaces).lowercased() {
             parts.append(language.string("via \(site)"))

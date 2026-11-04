@@ -22,6 +22,9 @@ struct PriceSearchDraft {
     var identityWords: ProductWords?
     /// Überall: the sites switched off on "Where it looks".
     var sourcesOff: [String] = []
+    var delivery: Delivery = .shipping
+    var places: [Place] = []
+    var radiusKm: Double = 20
     /// Records the price and the availability as a curve. A new form starts with it on.
     var history = true
     var alarm = false
@@ -43,6 +46,9 @@ struct PriceSearchDraft {
         identity = search.identity
         identityWords = search.identity == nil ? nil : ProductWords(product: product, details: details)
         sourcesOff = search.sourcesOff
+        delivery = search.delivery
+        places = search.places
+        radiusKm = search.radiusKm
         history = search.history
         alarm = search.alarm != nil
         below = search.alarm?.below
@@ -59,6 +65,7 @@ struct PriceSearchDraft {
         case details
         /// The product is not found yet for the words as they are now (Überall).
         case unconfirmed
+        case places, radius
         /// Neither the history nor the alarm.
         case neither
         /// The alarm without a condition.
@@ -75,6 +82,8 @@ struct PriceSearchDraft {
             if !ProductWords.productLengths.contains(words.product.count) { result.append(.product) }
             if words.details.count > ProductWords.maxDetails { result.append(.details) }
             if result.isEmpty && !isConfirmed { result.append(.unconfirmed) }
+            if !validPlaces { result.append(.places) }
+            if !radiusKm.isFinite || !(0...200).contains(radiusKm) { result.append(.radius) }
         }
         if !history && !alarm { result.append(.neither) }
         if alarm && !conditions.isComplete { result.append(.alarmCondition) }
@@ -124,7 +133,8 @@ struct PriceSearchDraft {
             return PriceSearch(url: Self.trimmed(url), history: history, alarm: alarm, every: every)
         case .everywhere:
             return PriceSearch(product: words.product, details: words.details, identity: identity,
-                               sourcesOff: sourcesOff, history: history, alarm: alarm, every: effectiveEvery)
+                               sourcesOff: sourcesOff, history: history, alarm: alarm, every: effectiveEvery,
+                               delivery: delivery, places: places, radiusKm: radiusKm)
         }
     }
 
@@ -179,6 +189,9 @@ struct PriceSearchDraft {
                 : language.string("At most 100 characters.")
         case .details: language.string("At most 300 characters.")
         case .unconfirmed: language.string("First the product has to be found.")
+        case .places: places.count > ItemSearchDraft.maxPlaces ? language.string("At most 5 places.")
+            : language.string("Choose a place, or Shipping.")
+        case .radius: language.string("The radius goes up to 200 km.")
         case .neither: language.string("At least one of the two.")
         case .alarmCondition: language.string("Say when the alarm should ring.")
         }
@@ -213,7 +226,8 @@ struct PriceSearchDraft {
             return Self.trimmed(url).isEmpty ? message(.url, language: language) : nil
         case .everywhere:
             if words.product.isEmpty { return message(.product, language: language) }
-            return problems.contains(.unconfirmed) ? message(.unconfirmed, language: language) : nil
+            if problems.contains(.unconfirmed) { return message(.unconfirmed, language: language) }
+            return problems.contains(.places) ? message(.places, language: language) : nil
         }
     }
 
@@ -223,7 +237,7 @@ struct PriceSearchDraft {
 extension PriceSearchDraft: Codable {
     enum CodingKeys: String, CodingKey {
         case mode, name, url, product, details, identity, identityWords, sourcesOff, history, alarm, below, backInStock
-        case every
+        case every, delivery, places, radiusKm
     }
 
     /// A kept draft from a build before brief 157 has no mode: it was a page monitor's.
@@ -237,6 +251,9 @@ extension PriceSearchDraft: Codable {
         identity = try c.decodeIfPresent(ProductIdentity.self, forKey: .identity)
         identityWords = try c.decodeIfPresent(ProductWords.self, forKey: .identityWords)
         sourcesOff = try c.decodeIfPresent([String].self, forKey: .sourcesOff) ?? []
+        delivery = (try c.decodeIfPresent(String.self, forKey: .delivery)).flatMap(Delivery.init(rawValue:)) ?? .shipping
+        places = try c.decodeIfPresent([Place].self, forKey: .places) ?? []
+        radiusKm = try c.decodeIfPresent(Double.self, forKey: .radiusKm) ?? 20
         history = try c.decodeIfPresent(Bool.self, forKey: .history) ?? true
         alarm = try c.decodeIfPresent(Bool.self, forKey: .alarm) ?? false
         below = try c.decodeIfPresent(Double.self, forKey: .below)
@@ -257,6 +274,7 @@ extension PriceSearchDraft: Equatable {
         case .everywhere:
             return a.product == b.product && a.details == b.details && a.identity == b.identity
                 && Set(a.sourcesOff) == Set(b.sourcesOff)
+                && a.delivery == b.delivery && a.places == b.places && a.radiusKm == b.radiusKm
         }
     }
 }

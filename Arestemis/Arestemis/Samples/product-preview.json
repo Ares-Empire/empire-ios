@@ -9,7 +9,12 @@
       "currency": "EUR",
       "shipping": 0,
       "availability": "in_stock",
-      "checked": "2026-10-24T09:58:40Z"
+      "checked": "2026-10-24T09:58:40Z",
+      "fulfillment": "shipping",
+      "pickup_method": null,
+      "pickup_fee": null,
+      "store": null,
+      "total": 215
     },
     {
       "source": "mediamarkt",
@@ -20,7 +25,12 @@
       "currency": "EUR",
       "shipping": 4.99,
       "availability": "in_stock",
-      "checked": "2026-10-24T09:58:40Z"
+      "checked": "2026-10-24T09:58:40Z",
+      "fulfillment": "shipping",
+      "pickup_method": null,
+      "pickup_fee": null,
+      "store": null,
+      "total": 233.99
     }
   ],
   "sites": [

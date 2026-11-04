@@ -98,6 +98,8 @@ struct HuntsScreen: View {
         VStack(spacing: Look.rowGap) {
             ForEach(store.hunts) { card in
                 HuntListCard(card: card, sites: store.siteNames, chart: monitorChart(card),
+                             offer: OfferList.selected(store.offers(hunt: card.id).offers?.offers ?? [],
+                                                       state: card.price, off: card.hunt.search.price?.sourcesOff ?? []),
                              busy: store.isChanging(hunt: card.id),
                              open: { navigation.huntPath.append(.hunt(card.id)) },
                              toggle: { active in Task { await store.setActive(id: card.id, active: active) } })
@@ -105,7 +107,10 @@ struct HuntsScreen: View {
                     .id(Self.cardID(card.id))
                     .tourAnchor(.huntCard(card.id))
                     // A monitor's 30-day line, asked again after each new read (a new point).
-                    .task(id: MonitorRead(card)) { await store.loadPrices(hunt: card.id, days: 30) }
+                    .task(id: MonitorRead(card)) {
+                        await store.loadPrices(hunt: card.id, days: 30)
+                        if card.hunt.search.price?.mode == .everywhere { await store.loadOffers(hunt: card.id) }
+                    }
             }
             NewSearchButton { navigation.startNewSearch() }
         }
@@ -117,7 +122,7 @@ struct HuntsScreen: View {
     private func monitorChart(_ card: HuntCard) -> PriceChart? {
         guard let search = card.hunt.search.price, search.history,
               let prices = store.prices(hunt: card.id, days: 30).prices else { return nil }
-        return PriceChart(prices, limit: search.alarm?.below, days: 30)
+        return PriceChart(prices, limit: search.alarm?.below, days: 30, everywhere: search.mode == .everywhere)
     }
 
     /// While the tab is on screen and the app is active, the cards and figures follow the server every minute.

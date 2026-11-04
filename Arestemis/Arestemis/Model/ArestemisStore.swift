@@ -730,11 +730,11 @@ final class ArestemisStore {
 
     /// `POST /price/preview` with the product's words (brief 157): the product the server finds on the sites now. A
     /// refused login goes to the session first; an answer for a login that has ended meanwhile is dropped.
-    func productPreview(_ words: ProductWords) async throws -> ProductPreview {
+    func productPreview(_ words: ProductPreviewQuery) async throws -> ProductPreview {
         guard canAct else { throw CancellationError() }
         let context = context
         do {
-            let preview = try await backend.productPreview(product: words.product, details: words.details)
+            let preview = try await backend.productPreview(words)
             guard isCurrent(context) else { throw CancellationError() }
             return preview
         } catch let error as CancellationError {

@@ -9,51 +9,12 @@
       "currency": "EUR",
       "shipping": 0,
       "availability": "in_stock",
-      "checked": "2026-10-24T09:58:40Z"
-    },
-    {
-      "source": "mediamarkt",
-      "source_name": "MediaMarkt",
-      "shop": "MediaMarkt",
-      "url": "https://www.mediamarkt.de/de/product/_orbital-2-blue-123.html",
-      "price": 229,
-      "currency": "EUR",
-      "shipping": 4.99,
-      "availability": "in_stock",
-      "checked": "2026-10-24T09:58:40Z"
-    },
-    {
-      "source": "idealo",
-      "source_name": "idealo",
-      "shop": "Otto",
-      "url": "https://www.idealo.de/preisvergleich/OffersOfProduct/123_-orbital-headphones-2-blue.html#otto",
-      "price": 219.0,
-      "currency": "EUR",
-      "shipping": 0,
-      "availability": "in_stock",
-      "checked": "2026-10-24T09:58:40Z"
-    },
-    {
-      "source": "geizhals",
-      "source_name": "Geizhals",
-      "shop": "Cyberport",
-      "url": "https://geizhals.de/orbital-headphones-2-blue-a123.html#cyberport",
-      "price": 224.9,
-      "currency": "EUR",
-      "shipping": 5.99,
-      "availability": "in_stock",
-      "checked": "2026-10-24T09:58:40Z"
-    },
-    {
-      "source": "ebay",
-      "source_name": "eBay",
-      "shop": "eBay",
-      "url": "https://www.ebay.de/itm/123",
-      "price": 226.0,
-      "currency": "EUR",
-      "shipping": 0,
-      "availability": "in_stock",
-      "checked": "2026-10-24T09:58:40Z"
+      "checked": "2026-10-24T09:58:40Z",
+      "fulfillment": "shipping",
+      "pickup_method": null,
+      "pickup_fee": null,
+      "store": null,
+      "total": 215
     },
     {
       "source": "idealo",
@@ -64,7 +25,76 @@
       "currency": "EUR",
       "shipping": 0,
       "availability": "in_stock",
-      "checked": "2026-10-24T09:58:40Z"
+      "checked": "2026-10-24T09:58:40Z",
+      "fulfillment": "shipping",
+      "pickup_method": null,
+      "pickup_fee": null,
+      "store": null,
+      "total": 215.0
+    },
+    {
+      "source": "idealo",
+      "source_name": "idealo",
+      "shop": "Otto",
+      "url": "https://www.idealo.de/preisvergleich/OffersOfProduct/123_-orbital-headphones-2-blue.html#otto",
+      "price": 219.0,
+      "currency": "EUR",
+      "shipping": 0,
+      "availability": "in_stock",
+      "checked": "2026-10-24T09:58:40Z",
+      "fulfillment": "shipping",
+      "pickup_method": null,
+      "pickup_fee": null,
+      "store": null,
+      "total": 219.0
+    },
+    {
+      "source": "ebay",
+      "source_name": "eBay",
+      "shop": "eBay",
+      "url": "https://www.ebay.de/itm/123",
+      "price": 226.0,
+      "currency": "EUR",
+      "shipping": 0,
+      "availability": "in_stock",
+      "checked": "2026-10-24T09:58:40Z",
+      "fulfillment": "shipping",
+      "pickup_method": null,
+      "pickup_fee": null,
+      "store": null,
+      "total": 226.0
+    },
+    {
+      "source": "geizhals",
+      "source_name": "Geizhals",
+      "shop": "Cyberport",
+      "url": "https://geizhals.de/orbital-headphones-2-blue-a123.html#cyberport",
+      "price": 224.9,
+      "currency": "EUR",
+      "shipping": 5.99,
+      "availability": "in_stock",
+      "checked": "2026-10-24T09:58:40Z",
+      "fulfillment": "shipping",
+      "pickup_method": null,
+      "pickup_fee": null,
+      "store": null,
+      "total": 230.89
+    },
+    {
+      "source": "mediamarkt",
+      "source_name": "MediaMarkt",
+      "shop": "MediaMarkt",
+      "url": "https://www.mediamarkt.de/de/product/_orbital-2-blue-123.html",
+      "price": 229,
+      "currency": "EUR",
+      "shipping": 4.99,
+      "availability": "in_stock",
+      "checked": "2026-10-24T09:58:40Z",
+      "fulfillment": "shipping",
+      "pickup_method": null,
+      "pickup_fee": null,
+      "store": null,
+      "total": 233.99
     },
     {
       "source": "billiger",
@@ -75,7 +105,12 @@
       "currency": "EUR",
       "shipping": 4.99,
       "availability": "out_of_stock",
-      "checked": "2026-10-24T09:58:40Z"
+      "checked": "2026-10-24T09:58:40Z",
+      "fulfillment": "shipping",
+      "pickup_method": null,
+      "pickup_fee": null,
+      "store": null,
+      "total": null
     },
     {
       "source": "geizhals",
@@ -86,7 +121,12 @@
       "currency": "EUR",
       "shipping": null,
       "availability": "preorder",
-      "checked": "2026-10-24T09:58:40Z"
+      "checked": "2026-10-24T09:58:40Z",
+      "fulfillment": "shipping",
+      "pickup_method": null,
+      "pickup_fee": null,
+      "store": null,
+      "total": null
     }
   ],
   "sites": [

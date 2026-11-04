@@ -48,7 +48,7 @@ struct MonitorSections: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             if search.history {
-                HuntSection(title: everywhere ? String(localized: "Cheapest price") : String(localized: "Price history")) {
+                HuntSection(title: PriceWords.historyTitle(everywhere: everywhere)) {
                     history
                 }
                 .id(MonitorSections.historyID)
@@ -122,7 +122,7 @@ struct MonitorSections: View {
     /// "Where it looks" with the sites switched on; it opens them.
     private var sitesRow: some View {
         let sites = store.offers(hunt: card.id).offers?.sites
-        let value = sites.map { EverywhereWords.sites(PriceSites.onCount($0, off: search.sourcesOff)) }
+        let value = sites.map { EverywhereWords.sites(PriceSites.onCount($0, off: search.sourcesOff, delivery: search.delivery)) }
         return Button { showsSites = true } label: {
             SettingsRow(title: String(localized: "Where it looks"), value: value)
         }
@@ -149,7 +149,7 @@ struct MonitorSections: View {
             }
             .pickerStyle(.segmented)
             if let prices = loaded.prices {
-                let chart = PriceChart(prices, limit: search.alarm?.below, days: days)
+                let chart = PriceChart(prices, limit: search.alarm?.below, days: days, everywhere: everywhere)
                 if chart.isEmpty {
                     Text("The curve starts with the next read.")
                         .font(AppFont.text(13)).foregroundStyle(Ink.muted)
@@ -297,25 +297,27 @@ struct OffersCard: View {
     private func row(_ offer: Offer) -> some View {
         HStack(alignment: .center, spacing: 10) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(verbatim: offer.shop).font(AppFont.text(15, weight: .medium)).foregroundStyle(Ink.primary)
-                    .lineLimit(1)
+                Text(verbatim: OfferList.title(offer)).font(AppFont.text(15, weight: .medium)).foregroundStyle(Ink.primary)
+                    .fixedSize(horizontal: false, vertical: true)
                 if let line = OfferList.line(offer) {
-                    Text(verbatim: line).font(AppFont.text(12)).foregroundStyle(Ink.muted).lineLimit(1)
-                        .minimumScaleFactor(0.85)
+                    Text(verbatim: line).font(AppFont.text(12)).foregroundStyle(Ink.muted)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
             Spacer(minLength: 10)
-            if let price = offer.price {
-                Text(verbatim: PriceWords.money(price, currency: offer.currency))
+            if offer.selectedTotal != nil {
+                Text(verbatim: OfferList.amount(offer))
                     .font(AppFont.number(15, weight: .semibold)).foregroundStyle(Ink.primary).lineLimit(1)
                     .fixedSize()
             } else {
-                Text(verbatim: "–").font(AppFont.number(15)).foregroundStyle(Ink.muted)
+                Text(verbatim: OfferList.amount(offer)).font(AppFont.text(12)).foregroundStyle(Ink.muted)
+                    .multilineTextAlignment(.trailing).frame(maxWidth: 86)
             }
             Image(systemName: "arrow.up.right").font(.system(size: 11, weight: .semibold)).foregroundStyle(Ink.muted)
                 .accessibilityHidden(true)
         }
         .padding(.horizontal, 16)
+        .padding(.vertical, 12)
         .frame(minHeight: 58)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
@@ -333,7 +335,7 @@ struct MonitorSitesPage: View {
     var body: some View {
         let monitor = store.card(id)?.hunt.search.price
         PriceSitesScreen(product: store.card(id)?.price?.product ?? monitor?.identity?.name,
-                         sites: store.offers(hunt: id).offers?.sites, off: off, store: store)
+                         sites: store.offers(hunt: id).offers?.sites, off: off, store: store, delivery: monitor?.delivery ?? .shipping)
             .task { await store.loadOffers(hunt: id) }
     }
 

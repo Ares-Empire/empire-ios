@@ -123,20 +123,26 @@ struct PriceLines: View {
     var everywhere = false
     /// The card's 30-day line; nil without a history (or before it loaded).
     var chart: PriceChart? = nil
+    var offer: Offer? = nil
+    var delivery: Delivery? = nil
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 30)) { context in
-            let text = PriceCardText(state, compact: compact, everywhere: everywhere, now: context.date)
+            let text = PriceCardText(state, compact: compact, everywhere: everywhere, offer: offer,
+                                     delivery: delivery, now: context.date)
             VStack(alignment: .leading, spacing: compact ? 6 : 8) {
                 if let price = text.price {
+                    if everywhere {
+                        Text("Total price").font(AppFont.text(12)).foregroundStyle(Ink.muted)
+                    }
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
                         Text(verbatim: price).font(AppFont.number(compact ? 24 : 34, weight: .bold))
                             .foregroundStyle(Ink.primary).lineLimit(1).minimumScaleFactor(0.7)
                             .layoutPriority(1)
                         if let beside = [text.shop, text.availability].compactMap({ $0 }).joined(separator: " · ")
                             .nonEmpty {
-                            Text(verbatim: beside).font(AppFont.text(13)).foregroundStyle(Ink.muted).lineLimit(1)
-                                .minimumScaleFactor(0.9)
+                            Text(verbatim: beside).font(AppFont.text(13)).foregroundStyle(Ink.muted)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                     }
                     .accessibilityElement(children: .combine)
@@ -146,7 +152,7 @@ struct PriceLines: View {
                         .frame(height: 44)
                         .padding(.vertical, 4)
                         .accessibilityElement(children: .ignore)
-                        .accessibilityLabel(Text("Last 30 days"))
+                        .accessibilityLabel(Text(verbatim: PriceWords.curveLabel(everywhere: everywhere)))
                         .accessibilityValue(Text(verbatim: chart.extremes() ?? ""))
                 }
                 if let note = text.note {

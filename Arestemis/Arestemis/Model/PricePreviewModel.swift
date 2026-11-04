@@ -40,6 +40,8 @@ final class PacedPreview<Query: Equatable, Answer: Equatable> {
     private(set) var phase: Phase = .idle
     /// What the phase is about.
     private(set) var query: Query?
+    /// Retain capability metadata while a new selection is paced; displayed prices still use only the current answer.
+    private(set) var lastFound: (query: Query, answer: Answer)?
     /// Kept only for the current refusal, so optional product choices follow the same lifetime as its words.
     private(set) var fieldRefusal: FieldRefusal?
 
@@ -141,6 +143,7 @@ final class PacedPreview<Query: Equatable, Answer: Equatable> {
         // An answer for words no longer in the field is dropped.
         guard self.revision == revision else { return }
         self.fieldRefusal = fieldRefusal
+        if case .found(let answer) = outcome { lastFound = (target, answer) }
         phase = outcome
     }
 
@@ -222,25 +225,28 @@ struct ProductWords: Codable, Equatable, Hashable, Sendable {
 }
 
 /// The product's preview: once the product has two letters and typing pauses, the server looks for it on the sites.
-typealias ProductPreviewModel = PacedPreview<ProductWords, ProductPreview>
+typealias ProductPreviewModel = PacedPreview<ProductPreviewQuery, ProductPreview>
 
-extension PacedPreview where Query == ProductWords, Answer == ProductPreview {
+extension PacedPreview where Query == ProductPreviewQuery, Answer == ProductPreview {
     func suggestions(for words: ProductWords) -> ProductSuggestions? {
-        query == words ? fieldRefusal?.productSuggestions : nil
+        query?.words == words ? fieldRefusal?.productSuggestions : nil
     }
 
     /// A choice is a new request, even if these words have been asked before. The old identity cannot be saved.
     func select(_ suggestion: String, in draft: inout PriceSearchDraft) {
         draft.selectProduct(suggestion)
         ask(nil)
-        update(product: draft.product, details: draft.details)
+        update(draft.previewQuery)
     }
 
     /// The product or its details changed: words the server would look for are asked once typing pauses (unless they
     /// are the ones asked already); anything else clears the line.
     func update(product: String, details: String) {
-        let words = ProductWords(product: product, details: details)
-        ask(words.canBeAsked ? words : nil)
+        update(ProductPreviewQuery(product: product, details: details))
+    }
+
+    func update(_ selection: ProductPreviewQuery) {
+        ask(selection.words.canBeAsked ? selection : nil)
     }
 
     /// The line under the product: "Looking for the product…", "Found: … · in 2 shops, from €215.00", or the failure;
