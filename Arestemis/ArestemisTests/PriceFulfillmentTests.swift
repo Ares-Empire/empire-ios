@@ -153,7 +153,7 @@ struct PriceFulfillmentTests {
         #expect(OfferList.title(offers[0]) == "Lumen North, Lindenfeld")
         let line = try #require(OfferList.line(offers[0], language: .english))
         #expect(line.contains("€209.00") && line.contains("Click & Collect") && line.contains("fee €5") && line.contains("4.2 km"))
-        #expect(OfferList.line(offers[2], language: .german)?.contains("Im Einrichtungshaus") == true)
+        #expect(OfferList.line(offers[2], language: .german)?.contains("Im Geschäft") == true)
         #expect(OfferList.line(offers[3], language: .english)?.contains("Shipping unknown") == true)
         #expect(OfferList.line(offers[3], language: .german)?.contains("Versandkosten unbekannt") == true)
         let state = PriceState(host: "Lumen North", price: 214, currency: "EUR", read: .ok)

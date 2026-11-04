@@ -850,6 +850,16 @@
         }
       }
     },
+    "Also used" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auch gebraucht"
+          }
+        }
+      }
+    },
     "An Aeron in size B under your price limit, 5 km away." : {
       "localizations" : {
         "de" : {
@@ -2272,7 +2282,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Im Einrichtungshaus"
+            "value" : "Im Geschäft"
           }
         }
       }
@@ -2323,6 +2333,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Letzte 30 Tage"
+          }
+        }
+      }
+    },
+    "Last confirmed" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zuletzt bestätigt"
+          }
+        }
+      }
+    },
+    "Last confirmed · %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zuletzt bestätigt · %@"
           }
         }
       }
@@ -2703,6 +2733,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Neue Wohnungen und WG-Zimmer, sobald sie online sind."
+          }
+        }
+      }
+    },
+    "New goods · %lld sites" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neuware · %lld Seiten"
           }
         }
       }
@@ -3857,6 +3897,16 @@
         }
       }
     },
+    "Show all" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alle anzeigen"
+          }
+        }
+      }
+    },
     "Shows even in Focus" : {
       "localizations" : {
         "de" : {
@@ -4493,6 +4543,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Bis zu 20 Wörter mit je höchstens 40 Zeichen."
+          }
+        }
+      }
+    },
+    "Used" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gebraucht"
           }
         }
       }
@@ -5179,6 +5239,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "eigene Beschreibung"
+          }
+        }
+      }
+    },
+    "pickup.in_stock" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "vorrätig"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "in stock"
           }
         }
       }

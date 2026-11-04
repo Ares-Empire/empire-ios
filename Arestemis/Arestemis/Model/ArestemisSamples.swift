@@ -6,7 +6,7 @@ enum ArestemisSamples {
     nonisolated static let files = ["overview", "matches", "match", "rejected", "settings", "places", "hunts", "item-matches",
                                     "ebay-match", "ikea-match", "vinted-match", "immowelt-match", "kinds", "watch-matches",
                                     "price-matches",
-                                    "prices-9", "prices-10", "prices-12", "price-offers", "product-preview"]
+                                    "used-matches", "prices-9", "prices-10", "prices-12", "price-offers", "product-preview"]
 
     static func data(_ name: String) throws -> Data {
         guard let url = Bundle.main.url(forResource: name, withExtension: "json") else {
@@ -60,6 +60,8 @@ struct SampleContent {
     var application: ((Listing, String) -> String)? = nil
     /// Each everywhere monitor's offers and sites, by hunt id (brief 157).
     var offers: [Int: PriceOffers] = [:]
+    /// Explicit membership of the sample server's Used endpoint, separate from ordinary price alarms.
+    var used: [Int: Set<Int>] = [:]
     /// What a product's preview finds (the server's sample), named after the words asked.
     var productPreview: ProductPreview? = nil
 
@@ -133,6 +135,7 @@ final class SampleBackend: ArestemisBackend {
     private var histories: [Int: [PricePoint]]
     /// Each everywhere monitor's offers and sites, by hunt id.
     private var offersByHunt: [Int: PriceOffers]
+    private let usedIDs: [Int: Set<Int>]
     /// What a product's preview finds.
     private let productFound: ProductPreview?
     private var nextHuntID: Int
@@ -151,12 +154,19 @@ final class SampleBackend: ArestemisBackend {
         if let state = LaunchArguments.value("-fulfillmentSample") {
             content = try FulfillmentSample.content(content, state: state, now: now)
         }
+        if let state = LaunchArguments.value("-usedSample") {
+            content = try UsedSample.content(content, state: state, now: now)
+        }
+        if LaunchArguments.current.contains("-longStore") || LaunchArguments.current.contains("-retainedOffer") {
+            content = UsedSample.quotes(content, now: now)
+        }
         #endif
         try self.init(content: content, options: options, now: now)
     }
 
     init(content: SampleContent, options: Options = Options(), now: Date = .now) throws {
         self.options = options
+        usedIDs = content.used
         base = content.overview
         matches = content.matches
         application = content.application
@@ -570,14 +580,42 @@ final class SampleBackend: ArestemisBackend {
         }.prefix(10))
     }
 
+    func used(hunt: Int, state: [MatchState]?, limit: Int, before: Int?) async throws -> MatchPage {
+        let index = try huntIndex(hunt)
+        guard huntValues[index].search.price?.mode == .everywhere else { throw HTTPError.server(404, nil) }
+        #if DEBUG
+        if LaunchArguments.value("-usedSample") == "error" { throw HTTPError.server(500, String(localized: "Could not load listings.")) }
+        if LaunchArguments.value("-usedSample") == "loading" { try await Task.sleep(for: .seconds(3600)) }
+        #endif
+        if before != nil {
+            if options.moreLoading { try await Task.sleep(for: .seconds(3600)) }
+            if options.moreFailure { throw HTTPError.server(500, String(localized: "Could not load older listings.")) }
+        }
+        let wanted = matches.filter { match in
+            usedIDs[hunt]?.contains(match.id) == true && (state?.contains(match.state) ?? (match.state != .dismissed))
+                && match.id < (before ?? .max)
+        }.sorted { $0.id > $1.id }
+        return MatchPage(items: Array(wanted.prefix(limit)), more: wanted.count > limit)
+    }
+
     func matches(hunt: Int?, state states: [MatchState]?, limit: Int, before: Int?) async throws -> MatchPage {
+        try await matchPage(hunt: hunt, states: states, limit: limit, before: before)
+    }
+
+    func priceAlarms(hunt: Int, state: [MatchState]?, limit: Int, before: Int?) async throws -> MatchPage {
+        try await matchPage(hunt: hunt, states: state, limit: limit, before: before, alarmsOnly: true)
+    }
+
+    private func matchPage(hunt: Int?, states: [MatchState]?, limit: Int, before: Int?,
+                           alarmsOnly: Bool = false) async throws -> MatchPage {
         if let hunt { _ = try huntIndex(hunt) }
         if before != nil {
             if options.moreLoading { try await Task.sleep(for: .seconds(3600)) }
             if options.moreFailure { throw HTTPError.server(500, String(localized: "Could not load older listings.")) }
         }
         let wanted = matches.filter { match in
-            (hunt == nil || match.huntID == hunt) && (states?.contains(match.state) ?? (match.state != .dismissed)) && match.id < (before ?? .max)
+            (!alarmsOnly || match.isPriceChange) && (hunt == nil || match.huntID == hunt)
+                && (states?.contains(match.state) ?? (match.state != .dismissed)) && match.id < (before ?? .max)
         }.sorted { $0.id > $1.id }
         return MatchPage(items: Array(wanted.prefix(limit)), more: wanted.count > limit || (before == nil && (options.moreLoading || options.moreFailure)))
     }

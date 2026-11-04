@@ -52,11 +52,29 @@ struct ListingsPartMemory {
 /// What the Hunts tab pushes: a hunt's page, a match's page, New search (the kinds to choose from, brief 135), or a
 /// search form (a hunt's search, or a new one, empty or filled in from one of New search's examples).
 enum HuntRoute: Hashable {
+    case monitorListings(Int, MonitorListingKind)
     case hunt(Int)
     case match(Int)
     case newSearch
     case form(SearchKind, hunt: Int?, example: SearchExample? = nil)
     case itemSearch(ProductItemSearch)
+}
+
+/// The monitor's two listing feeds; both keep ordinary match identity and actions.
+enum MonitorListingKind: String, Hashable, CaseIterable {
+    case used, alarms
+
+    var title: String {
+        switch self {
+        case .used: String(localized: "Used")
+        case .alarms: String(localized: "Alarms")
+        }
+    }
+
+    func supports(_ search: PriceSearch?) -> Bool {
+        guard let search else { return false }
+        return self == .alarms || search.mode == .everywhere
+    }
 }
 
 /// The filter of one search's listings: New · Saved · Applied · All (all = every state but dismissed, the API's default).
@@ -340,6 +358,8 @@ struct LaunchOptions {
     var openMatch: Int?
     var openHunt: Int?
     var form: Form?
+    var argumentsOpenUsed = false
+    var argumentsOpenAlarms = false
     var newSearch = false
     var renameHunt: Int?
     var openSheet: String?
@@ -354,6 +374,8 @@ struct LaunchOptions {
             guard let index = arguments.firstIndex(of: name), arguments.indices.contains(index + 1) else { return nil }
             return arguments[index + 1]
         }
+        argumentsOpenUsed = arguments.contains("-openUsed")
+        argumentsOpenAlarms = arguments.contains("-openAlarms")
         sample = arguments.contains("-sampleData")
         noHunt = arguments.contains("-sampleNoHunt")
         paused = arguments.contains("-samplePaused")
@@ -420,6 +442,12 @@ struct LaunchOptions {
             navigation.huntPath = [.hunt(openHunt)]
             navigation.formScroll = scrollTo
         }
+        #if DEBUG
+        if argumentsOpenUsed || argumentsOpenAlarms {
+            navigation.tab = .hunt
+            navigation.huntPath = [.hunt(openHunt ?? 12), .monitorListings(openHunt ?? 12, argumentsOpenAlarms ? .alarms : .used)]
+        }
+        #endif
         if newSearch { navigation.startNewSearch() }
         if let route = form.flatMap({ Self.route($0, hunts: hunts) }) {
             navigation.tab = .hunt

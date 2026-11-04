@@ -1,6 +1,6 @@
 # 168: Arestemis: also used in Everywhere
 
-Status: review follow-up queued; server contract fd5d19e, first builder handoff pending
+Status: root reviewed; full simulator suite and localization passed; 104 screenshots ready for Claude
 Branch: `codex/168-used` · Worktree: `../empire-ios-168-used` · Model: `gpt-6.1-sol`, effort `xhigh`
 
 ## Goal and read first
@@ -131,3 +131,25 @@ After this follow-up, run the whole simulator suite and strings check0; keep the
 and add or regenerate changed ones. Inspect every final screenshot, copy remains with orchestrator. No commit,
 push, live/network/Keychain/server, Shared/project/buildnumber changes or TestFlight. First builder's other fixes,
 all handover/preview/source wording and Claude's layout/stock wording are retained.
+
+## Result (2026-11-04)
+
+Implemented the Everywhere used switch, explicit persisted requests, separate Used and price-only Alarms
+sections/pages with shared normal listing details/actions and fenced pagination. New goods source counts and
+preview exclusions are respected. Pickup stock wording, the general German “Im Geschäft”, the long shop line
+below the price, and original-time Last confirmed rows are included. Existing comparison labels and Things
+routing remain. Server API contract and fictional samples are current.
+
+The builder's final full simulator suite passed374tests (554 expanded cases), zero failures/skips. The
+orchestrator independently ran `xcodebuild test -project Arestemis/Arestemis.xcodeproj -scheme Arestemis
+-destination id=E1C33E33-65B4-43E3-959F-B19A4A87D8E1 -derivedDataPath build/RootReviewDerived` on its own iPhone17,
+iOS27.0:374tests in31suites, zero failures,28.954s. Root read every feature/test/sample diff. Runtime/test/sample
+bytes stayed unchanged after that run; the catalog sync only removed an unused newly added key.
+
+Root ran `scripts/strings.py sync`, restored other catalogs and “Could not load older listings.”, checked German
+translations and `scripts/strings.py check`:0problems. No Shared, project, login or build number changes. Root
+visually inspected all104 final screenshots (26states × DE/EN × light/dark), including both monitor sections,
+full Alarms filters, Used retained while off, auction/detail, source exclusion, retained date and long store.
+Original PNGs and their launch/readiness manifest were copied to the orchestra screens/runs directories for
+Claude; own simulator was deleted. No TestFlight upload. Server matching is being verified live separately;
+this app adds no local matching rule.

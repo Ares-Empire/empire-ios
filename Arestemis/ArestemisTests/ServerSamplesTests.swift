@@ -47,6 +47,22 @@ struct ServerSamplesTests {
         #expect(things.contains { $0.atStart })
     }
 
+    /// Brief 167: used matches keep normal Item details and the public monitor as parent, beside new-goods prices.
+    @Test func everywhereWithUsedMatchesKeepsTheServerContract() throws {
+        let card = try JSONDecoder().decode(HuntCard.self, from: data("price-everywhere-used"))
+        let search = try #require(card.hunt.search.price)
+        #expect(search.mode == .everywhere && search.includeUsed && search.sourcesOff == ["mydealz"])
+        #expect(search.delivery == .shipping && search.radiusKm == 20 && search.places.isEmpty)
+        let draft = PriceSearchDraft(search, name: card.hunt.name)
+        #expect(draft.search() == search && draft.isConfirmed)
+        let page = try JSONDecoder().decode(MatchPage.self, from: data("price-used"))
+        let match = try #require(page.items.only)
+        #expect(match.huntID == card.id && match.isThing && !match.isPriceChange)
+        #expect(match.listing.item?.priceKind == .auction && match.listing.item?.price == 62)
+        #expect(match.listing.item?.bids == 3 && match.listing.item?.shippingCost == 4.99)
+        #expect(card.price?.price == 215 && search.alarm?.below == 220)
+    }
+
     /// `GET /kinds`: the three kinds with their sites in the server's order; eBay offered for things, not set up (no
     /// keys in the sample), with auctions; mydealz and Vinted not set up either (no exit in the sample) and shipping
     /// only, IKEA Preowned pickup only (brief 129); the flat portals set up, without auctions, both ways; a page watch

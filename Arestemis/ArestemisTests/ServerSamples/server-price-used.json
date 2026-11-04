@@ -1,0 +1,56 @@
+{
+  "items": [
+    {
+      "id": 84,
+      "hunt_id": 12,
+      "state": "new",
+      "found": "2026-11-01T09:04:00Z",
+      "listing": {
+        "source": "ebay",
+        "source_name": "eBay",
+        "url": "https://www.ebay.de/itm/118000002",
+        "title": "Orbital Headphones 2 Blue, gebraucht",
+        "kind": null,
+        "rent_warm": null,
+        "rent_cold": null,
+        "sqm": null,
+        "rooms": null,
+        "flatmates": null,
+        "city": "Beispielstadt",
+        "district": null,
+        "address": "12345",
+        "available_from": null,
+        "available_until": null,
+        "furnished": null,
+        "posted": "2026-11-01T09:00:00Z",
+        "image_url": "https://photos.example.test/ebay/headphones.jpg",
+        "description": "Invented used headphones, working normally.",
+        "description_partial": false,
+        "item": {
+          "price": 62,
+          "price_kind": "auction",
+          "shipping": "yes",
+          "shipping_cost": 4.99,
+          "condition": "good",
+          "condition_label": null,
+          "seller": "private",
+          "distance_km": null,
+          "reserved": null,
+          "bids": 3,
+          "ends": "2026-11-02T14:00:00Z"
+        },
+        "page": null,
+        "price_change": null,
+        "facts_from_text": [
+          "condition"
+        ]
+      },
+      "reason": "Used headphones; current auction bid.",
+      "warnings": [],
+      "application": null,
+      "at_start": false,
+      "over_max": null
+    }
+  ],
+  "more": false
+}
