@@ -1,6 +1,6 @@
 # 166: Arestemis: delivery and pickup in Everywhere
 
-Status: reviewed and tested; ready to merge (round2step4)
+Status: done; merged; app ready for review: 166 (round2step4)
 Branch: `codex/166-fulfillment` · Worktree: `../empire-ios-166-fulfillment` · Model: `gpt-6.1-sol`, effort `xhigh`
 
 ## Goal
