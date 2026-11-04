@@ -377,6 +377,154 @@
       "notes": "About 700 banks on one platform (Atruvia); the labels come from one bank's guide (Fulda) and match a 2023 third-party guide, but a bank may still show the older design (three dots above the amounts → „Export“). The app export is new (VR Banking 9.2, Aug 2026): only „Exportieren“ in the „Umsatzübersicht“ is quoted by a bank; the other taps and the app CSV's columns are not confirmed. CAMT appears only when the bank switched it on for the account; MT940 may save as .mta, which Aresium's file picker and share sheet do not list (only .sta, .mt940, .txt). The web export takes the dates from the search filter („aus Suche“) unless „eigener Zeitraum“ is picked. File: the CSV carries the other party's IBAN."
     },
     {
+      "id": "sparda",
+      "title": "Sparda-Bank",
+      "profiles": [
+        "volksbank"
+      ],
+      "names": [
+        "Sparda-Bank",
+        "Sparda",
+        "Spardabank",
+        "SpardaGiro",
+        "SpardaBanking",
+        "Sparda-NetKey",
+        "Sparda-Bank Augsburg",
+        "Sparda-Bank Baden-Württemberg",
+        "Sparda-Bank BW",
+        "Sparda-Bank Berlin",
+        "Sparda-Bank Hamburg",
+        "Sparda-Bank Hannover",
+        "Sparda-Bank Hessen",
+        "Sparda-Bank München",
+        "Sparda-Bank Nürnberg",
+        "Sparda-Bank Ostbayern",
+        "Sparda-Bank Südwest",
+        "Sparda-Bank West"
+      ],
+      "website": {
+        "status": "found",
+        "englishSite": "unsure",
+        "de": [
+          "Melde dich im Online-Banking deiner Sparda-Bank an (Sparda-NetKey, PIN).",
+          "Klicke in der Kontenübersicht auf dein Girokonto („Umsatzanzeige“).",
+          "Stell über die „Lupe“ den Zeitraum ein; über 90 Tage mit TAN.",
+          "Klicke auf „Export“ bzw. „Exportieren“ (neben „Drucken“).",
+          "Wähle als Format „CSV“.",
+          "Bestätige mit „Exportieren“ und speichere die Datei."
+        ],
+        "en": [
+          "Log in to your Sparda-Bank's online banking (Sparda-NetKey, PIN).",
+          "In the account overview, click your current account (“Umsatzanzeige”, transactions).",
+          "Set the period with the “Lupe” (magnifier); over 90 days needs a TAN.",
+          "Click “Export” or “Exportieren” (next to “Drucken”, print).",
+          "As the format, pick “CSV”.",
+          "Confirm with “Exportieren” (export) and save the file."
+        ]
+      },
+      "app": {
+        "status": "unsure"
+      },
+      "toAresium": [
+        "safari",
+        "computer"
+      ],
+      "fileType": {
+        "pick": [
+          "CSV"
+        ],
+        "de": "Sie hat alles, was Aresium braucht, in einer Datei.",
+        "en": "It has everything Aresium needs, in one file.",
+        "offered": [
+          "PDF",
+          "CSV",
+          "MT940",
+          "CAMT.052 (named by Sparda-Bank Südwest)"
+        ]
+      },
+      "limits": {
+        "de": "Bis 2 Jahre zurück, bis 13 Monate pro Datei; mehr als 90 Tage nur mit TAN.",
+        "en": "Up to 2 years back, up to 13 months per file; more than 90 days only with a TAN."
+      },
+      "confidence": {
+        "website": "medium",
+        "app": "low"
+      },
+      "sources": [
+        {
+          "url": "https://www.sparda-sw.de/privatkunden/service/fragen-und-antworten/sparda-online-banking.html",
+          "checked": "2026-11-04",
+          "supports": "Sparda-Bank Südwest's FAQ: transactions of the last two years; the period with the „Lupe“; export as PDF, CSV, MT940 or CAMT.052, at most 13 months per export; a TAN for searches older than 90 days; the „Drucken“ symbol."
+        },
+        {
+          "url": "https://www.sparda-hessen.de/hilfe-und-service/fragen-und-antworten.html",
+          "checked": "2026-11-04",
+          "supports": "Sparda-Bank Hessen's FAQ (online banking): download or export with „Drucken“ bzw. „Exportieren“ in the Umsatzübersicht."
+        },
+        {
+          "url": "https://www.sparda-a.de/banking-und-vertraege/digitales-banking/faq-online-banking.html",
+          "checked": "2026-11-04",
+          "supports": "Sparda-Bank Augsburg's FAQ: the Umsatzanzeige opens with a click on the account in the Kontenübersicht; two years back; Sparda-NetKey, PIN and TAN for transactions older than 90 days; the app is the SpardaBanking App."
+        },
+        {
+          "url": "https://www.sparda-ostbayern.de/services/fragen-und-antworten/online-banking.html",
+          "checked": "2026-11-04",
+          "supports": "Sparda-Bank Ostbayern's FAQ: the same Umsatzanzeige path and „Lupe“; export as PDF, Excel file or MT940 (CSV and CAMT not named)."
+        },
+        {
+          "url": "https://www.sparda-h.de/service/faq-fragen-und-antworten/online--und-mobile-banking.html",
+          "checked": "2026-11-04",
+          "supports": "Sparda-Bank Hannover's FAQ: two years, „Lupe“, PDF, Excel file or MT940, a TAN over 90 days, a PDF via the „3-Punkte-Symbol“; the SpardaBanking App shows accounts and transactions (no export described)."
+        },
+        {
+          "url": "https://www.sparda-n.de/kontakt-und-service/faq-haeufig-gestellte-fragen.html",
+          "checked": "2026-11-04",
+          "supports": "Sparda-Bank Nürnberg's FAQ: after its IT switch in July 2025 the Umsatzanzeige reaches back only to July 2024; two-factor authentication over 90 days."
+        },
+        {
+          "url": "https://atruvia.scene7.com/is/content/atruvia/OnlineBanking%20Ums%C3%A4tze%20exportieren%20(MT940,%20CSV%20oder%20PDF)pdf",
+          "checked": "2026-11-04",
+          "supports": "The same platform's export dialog (a VR bank's guide): Umsätze → „Export“ → the format (CSV, MT940, PDF) → the period → „Exportieren“; a TAN over 90 days."
+        },
+        {
+          "url": "https://www.it-finanzmagazin.de/systemumstellung-abgeschlossen-sparda-bank-west-vollendet-migration-auf-atruvia-kernbankverfahren-234291/",
+          "checked": "2026-11-04",
+          "supports": "Sparda-Bank West finished its move to Atruvia's core banking and online banking in October 2025, the last of the eleven Sparda-Banks (2025-10-14)."
+        },
+        {
+          "url": "https://www.it-finanzmagazin.de/?p=155436",
+          "checked": "2026-11-04",
+          "supports": "Hamburg, Berlin, Hannover and Südwest already use Atruvia; Augsburg, Baden-Württemberg, Hessen, München, Nürnberg, Ostbayern and West follow from spring 2024, done by autumn 2025 (2023-07-19)."
+        },
+        {
+          "url": "https://github.com/nicolettas-muggelbude/RechnungsFee/blob/dd3db03ab5525a99651a09869754eba189286b42/vorlagen/bank-csv/sparda-bank-west.csv",
+          "checked": "2026-11-04",
+          "supports": "A Sparda-Bank West CSV from December 2025 (anonymised): the VR banks' Atruvia layout, „;“, UTF-8 with BOM, header on line 1; the repository's README names its columns."
+        },
+        {
+          "url": "https://www.lexware.de/support/faq/faq-beitrag/000035896/",
+          "checked": "2026-11-04",
+          "supports": "Sparda's move to Atruvia: banking software logs in with the new Sparda-NetKey and an 8-digit PIN."
+        },
+        {
+          "url": "https://apps.apple.com/de/app/id1579021169",
+          "checked": "2026-11-04",
+          "supports": "SpardaBanking App 9.4.1 (Verband der Sparda-Banken, © Atruvia AG), German and English: accounts and transactions; no release note mentions an export."
+        },
+        {
+          "url": "https://www.boersen-zeitung.de/banken-finanzen/corona-bremst-kreditwachstum-bei-sparda-hamburg-83278540-9922-11eb-a22c-78cbf20135b9",
+          "checked": "2026-11-04",
+          "supports": "Sparda-Bank Hamburg moved its IT to Fiducia & GAD (now Atruvia) in autumn 2020 (article 2021-04-09)."
+        },
+        {
+          "url": "https://github.com/bank2ynab/bank2ynab/blob/fcb9be80b4eceaacab411c891f4227028a3b8a1f/bank2ynab/data/bank2ynab.conf",
+          "checked": "2026-11-04",
+          "supports": "The VR banks' older CSV (13 lines above the table, S/H column) „only tested with Sparda-Bank Südwest“."
+        }
+      ],
+      "notes": "All eleven Sparda-Banks run on Atruvia, the VR banks' platform, since their move (Hamburg, Berlin, Hannover and Südwest before 2023, Hamburg in autumn 2020; the other seven 2024–2025, Sparda-Bank West last, in October 2025); online banking and CSV are the VR banks', and Aresium reads the CSV with the VR profile, naming the account after the Sparda-Bank. Sparda pages quote only „Lupe“, „Drucken“ and „Exportieren“; the dialog's format and period fields come from a VR bank's guide on the same platform, so the website's labels may differ a little. Sparda-Bank Südwest lists CSV, MT940 and CAMT.052; Ostbayern's and Hannover's FAQs say PDF, Excel file or MT940 (whether their „Excel“ is the CSV is not confirmed). 13 months per file is Südwest's figure. At Sparda-Bank Nürnberg the online banking reaches back only to July 2024, a year before its switch. Files saved before the switch have older layouts: SpardaOnline-Banking's own CSV („Kontoumsätze SpardaGiro Online“), which Aresium does not read yet, and at the four early banks the VR banks' older CSV (seen for Südwest in an importer's settings), read as a VR bank's file. MT940 from Atruvia may save as .mta, which Aresium's file picker does not list. File: the CSV carries the other party's name and IBAN. App: the SpardaBanking App (built by Atruvia) shows transactions; no source describes a file export. Use the website."
+    },
+    {
       "id": "ing",
       "title": "ING",
       "profiles": [

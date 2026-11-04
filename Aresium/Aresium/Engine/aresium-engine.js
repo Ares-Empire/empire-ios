@@ -12405,6 +12405,8 @@ ${line}`;
       skipStatus: ["vorgemerkt"]
     },
     {
+      // The eleven Sparda-Banks run on the same platform (Atruvia) since their move, the last in October 2025, and
+      // export this layout too, with their own name in "Bankname Auftragskonto" ("Sparda-Bank West eG").
       id: "volksbank",
       bank: "VR Bank",
       // Volksbanken and Raiffeisenbanken, named as the server names them
@@ -12413,10 +12415,15 @@ ${line}`;
         `${GH}sercxanto/go-homebank-csv/blob/HEAD/pkg/parser/testfiles/volksbank/Umsaetze_DE12345678901234567890_2023.10.04.csv`,
         `${GH}nicolettas-muggelbude/RechnungsFee/blob/main/vorlagen/bank-csv/vr-teilhaberbank.csv`,
         `${GH}Fjanks/beancount-importer-volksbank/blob/HEAD/beancount_importer_volksbank/__init__.py`,
-        `${GH}firefly-iii/import-configurations/blob/main/de/raiffeisenbank/bonn-rhein-sieg/csv-giro.json`
+        `${GH}firefly-iii/import-configurations/blob/main/de/raiffeisenbank/bonn-rhein-sieg/csv-giro.json`,
+        `${GH}nicolettas-muggelbude/RechnungsFee/blob/dd3db03ab5525a99651a09869754eba189286b42/vorlagen/bank-csv/sparda-bank-west.csv`,
+        `${GH}nicolettas-muggelbude/RechnungsFee/blob/dd3db03ab5525a99651a09869754eba189286b42/vorlagen/bank-csv/README.md`,
+        "https://www.it-finanzmagazin.de/systemumstellung-abgeschlossen-sparda-bank-west-vollendet-migration-auf-atruvia-kernbankverfahren-234291/"
       ],
+      unconfirmed: "Sparda-Banks: one bank's export is public (Sparda-Bank West, December 2025); the other ten are taken to export the same, on the same platform.",
       separator: ";",
       match: ["IBAN Auftragskonto", "Buchungstag", "Name Zahlungsbeteiligter", "Betrag"],
+      bankInColumn: { column: "Bankname Auftragskonto", names: ["Sparda-Bank"] },
       dateFormat: "DD.MM.YYYY",
       numberFormat: "de",
       columns: {
@@ -13045,13 +13052,26 @@ ${line}`;
     const choices = columnDateFormats(rows.slice(headerRow + 1).map((r) => r[layout.columns.date] ?? ""));
     return choices.includes("DD/MM/YYYY") && choices.includes("MM/DD/YYYY");
   }
+  function fileBank(profile, rows, headerRow) {
+    const above = rows.slice(0, Math.max(headerRow, 0)).map((r) => r.join(" ").toLowerCase());
+    const inPreamble = profile.bankInPreamble?.find((n) => above.some((line) => line.includes(n.toLowerCase())));
+    if (inPreamble) return inPreamble;
+    const named = profile.bankInColumn;
+    if (named && headerRow >= 0) {
+      const column = rows[headerRow].findIndex((h) => headerKey(h) === headerKey(named.column));
+      const cells = column < 0 ? [] : rows.slice(headerRow + 1).map((r) => (r[column] ?? "").toLowerCase());
+      const inColumn = named.names.find((n) => cells.some((cell2) => cell2.includes(n.toLowerCase())));
+      if (inColumn) return inColumn;
+    }
+    return profile.bank;
+  }
   function profileLayout(profile, rows, headerRow, separator) {
     const header = headerRow >= 0 ? trimRow(rows[headerRow]) : [];
     const keys = uniqueHeader(headerRow >= 0 ? rows[headerRow].map((h) => h.trim()) : []).map(headerKey);
     const at = (column) => {
-      for (const name2 of column === void 0 ? [] : names(column)) {
-        if (typeof name2 === "number") return name2;
-        const i = keys.indexOf(headerKey(name2));
+      for (const name of column === void 0 ? [] : names(column)) {
+        if (typeof name === "number") return name;
+        const i = keys.indexOf(headerKey(name));
         if (i >= 0) return i;
       }
       return void 0;
@@ -13086,11 +13106,9 @@ ${line}`;
     const amountColumns = [columns.amount, columns.debit, columns.credit].filter((i) => i !== void 0);
     const data = rows.slice(headerRow + 1).filter((r) => r.some((v) => v.trim() !== ""));
     const dateFormat = columnDateFormats(data.map((r) => r[columns.date] ?? ""), formats(profile))[0] ?? formats(profile)[0];
-    const above = rows.slice(0, Math.max(headerRow, 0)).map((r) => r.join(" ").toLowerCase());
-    const name = profile.bankInPreamble?.find((n) => above.some((line) => line.includes(n.toLowerCase()))) ?? profile.bank;
     return {
       version: 1,
-      name,
+      name: fileBank(profile, rows, headerRow),
       profile: profile.id,
       separator,
       header,
@@ -13195,7 +13213,7 @@ ${line}`;
     }
     return void 0;
   }
-  function readVrBank(text2, profile) {
+  function readVrBank(text2, profile, bank = profile.bank) {
     const parsed = parseVrBankCsv(text2);
     const dateColumns = ["Buchungstag", "Buchung", "Buchungsdatum"];
     const kept = parsed.transactions.filter((t) => {
@@ -13218,7 +13236,8 @@ ${line}`;
         ...counterpartyIban ? { counterpartyIban } : {}
       };
     });
-    const account = { name: parsed.account.name, currency: parsed.account.currency, ...parsed.account.iban ? { iban: parsed.account.iban } : {} };
+    const name = bank === profile.bank ? parsed.account.name : accountName(bank, parsed.account.iban);
+    const account = { name, currency: parsed.account.currency, ...parsed.account.iban ? { iban: parsed.account.iban } : {} };
     return {
       format: "csv",
       bank: { id: profile.id, name: bankName(profile) },
@@ -13275,7 +13294,7 @@ ${line}`;
             }
           }
           const compatible = changedDates || kept.length !== rows.length || detected.separator === "	" || detected.separator === "|" ? kept.map((row) => row.map((v) => `"${v.replace(/"/g, '""')}"`).join(";")).join("\n") : text2;
-          return { ...readVrBank(compatible, known), skipped: checked4.skipped };
+          return { ...readVrBank(compatible, known, layout.name), skipped: checked4.skipped };
         }
         if (layout) {
           const file = readTable(rows, detected.headerRow, layout);
