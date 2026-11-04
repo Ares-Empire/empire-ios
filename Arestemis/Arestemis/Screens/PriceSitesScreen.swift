@@ -65,16 +65,16 @@ struct PriceSitesScreen: View {
         .onAppear(perform: debugLaunch)
     }
 
-    /// A site's name with its state under it, and its switch.
+    /// A site's name with one small line under it, "Price comparison · has it" for idealo, billiger.de and Geizhals
+    /// ("Preisvergleich · hat es"), else the state alone, so every row keeps the same height; and its switch.
     private func row(_ site: PriceSite, all: [PriceSite]) -> some View {
         Toggle(isOn: Binding(get: { !off.contains(site.id) }, set: { on in switchSite(site.id, on: on, all: all) })) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(verbatim: site.name).font(AppFont.text(15, weight: .medium)).foregroundStyle(Ink.primary)
-                if site.isComparison {
-                    Text("Price comparison").font(AppFont.text(12)).foregroundStyle(Ink.muted)
-                }
-                if let state = EverywhereWords.state(site.state) {
-                    Text(state).font(AppFont.text(12)).foregroundStyle(Ink.muted)
+                let detail = [site.isComparison ? String(localized: "Price comparison") : nil,
+                              EverywhereWords.state(site.state)].compactMap { $0 }.joined(separator: " · ")
+                if !detail.isEmpty {
+                    Text(verbatim: detail).font(AppFont.text(12)).foregroundStyle(Ink.muted)
                 }
             }
         }

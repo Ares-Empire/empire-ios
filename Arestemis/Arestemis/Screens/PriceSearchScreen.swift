@@ -304,7 +304,8 @@ struct PriceSearchScreen: View {
             }
             if let search = choices.itemSearch {
                 Button { openThings(search) } label: {
-                    Text(verbatim: search.title()).font(AppFont.text(12)).foregroundStyle(Ink.secondary)
+                    // In the accent, as "Change" beside the sites: it reads as the way on, not as a note.
+                    Text(verbatim: search.title()).font(AppFont.text(13, weight: .medium)).foregroundStyle(Look.accent.color)
                         .fixedSize(horizontal: false, vertical: true).multilineTextAlignment(.leading)
                         .frame(minHeight: 44, alignment: .leading).contentShape(Rectangle())
                 }
