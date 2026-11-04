@@ -450,6 +450,46 @@
         }
       }
     },
+    "%lld sites" : {
+      "localizations" : {
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Seite"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Seiten"
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld site"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld sites"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "+ %lld more shops" : {
       "localizations" : {
         "de" : {
@@ -2397,7 +2437,7 @@
         }
       }
     },
-    "Looks in %lld shops" : {
+    "Looks on %lld sites" : {
       "localizations" : {
         "de" : {
           "variations" : {
@@ -2405,13 +2445,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Sucht in %lld Shop"
+                  "value" : "Sucht auf %lld Seite"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Sucht in %lld Shops"
+                  "value" : "Sucht auf %lld Seiten"
                 }
               }
             }
@@ -2423,13 +2463,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Looks in %lld shop"
+                  "value" : "Looks on %lld site"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Looks in %lld shops"
+                  "value" : "Looks on %lld sites"
                 }
               }
             }

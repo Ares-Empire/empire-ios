@@ -122,7 +122,7 @@ struct MonitorSections: View {
     /// "Where it looks" with the sites switched on; it opens them.
     private var sitesRow: some View {
         let sites = store.offers(hunt: card.id).offers?.sites
-        let value = sites.map { EverywhereWords.shops(PriceSites.onCount($0, off: search.sourcesOff)) }
+        let value = sites.map { EverywhereWords.sites(PriceSites.onCount($0, off: search.sourcesOff)) }
         return Button { showsSites = true } label: {
             SettingsRow(title: String(localized: "Where it looks"), value: value)
         }

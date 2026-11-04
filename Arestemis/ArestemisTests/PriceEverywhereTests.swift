@@ -254,8 +254,9 @@ struct PriceEverywhereTests {
         off = try #require(PriceSites.switched("mediamarkt", on: false, off: off, sites: sites))
         off = try #require(PriceSites.switched("otto", on: false, off: off, sites: sites))
         #expect(off == ["otto", "mediamarkt"] && PriceSites.onCount(sites, off: off) == 3)
-        #expect(spaces(EverywhereWords.looksIn(3, language: language)) == (german ? "Sucht in 3 Shops" : "Looks in 3 shops"))
-        #expect(EverywhereWords.looksIn(1, language: language) == (german ? "Sucht in 1 Shop" : "Looks in 1 shop"))
+        #expect(spaces(EverywhereWords.looksIn(3, language: language)) == (german ? "Sucht auf 3 Seiten" : "Looks on 3 sites"))
+        #expect(EverywhereWords.looksIn(1, language: language) == (german ? "Sucht auf 1 Seite" : "Looks on 1 site"))
+        #expect(spaces(EverywhereWords.sites(9, language: language)) == (german ? "9 Seiten" : "9 sites"))
         off = try #require(PriceSites.switched("otto", on: true, off: off, sites: sites))
         #expect(off == ["mediamarkt"])
         // The last site on stays on, with its line.

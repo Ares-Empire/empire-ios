@@ -8,7 +8,7 @@ import SwiftUI
 /// **Everywhere**: the product in words and its details in one optional line (colour, size or variant; no menu, Patrik:
 /// "the search could just as well be a microphone, bike, helmet"), the server's look under the product once typing
 /// pauses ("Found: Apple AirPods Max (2nd gen.)" over "in 11 shops, from €529.00", `ProductPreviewModel`), then the
-/// quiet line "Looks in 11 shops · Change", which opens "Where it looks" (`PriceSitesScreen`). Then, in both, what it
+/// quiet line "Looks on 11 sites · Change", which opens "Where it looks" (`PriceSitesScreen`). Then, in both, what it
 /// should do (`MonitorSwitchesCard`: the history, the alarm with its two conditions; Save is off while both are off,
 /// with one quiet line) and how often (Everywhere hourly or slower); then save. The alarm's price starts a little under
 /// the price found (Everywhere: the cheapest). Each mode keeps its fields while the other shows. Pushed on the Hunts tab
@@ -303,7 +303,7 @@ struct PriceSearchScreen: View {
             .glassCard()
     }
 
-    /// "Looks in 11 shops · Change": one quiet line, the whole of it opening "Where it looks".
+    /// "Looks on 11 sites · Change": one quiet line, the whole of it opening "Where it looks".
     private func sitesLine(_ sites: [PriceSite]) -> some View {
         Button {
             endTyping()

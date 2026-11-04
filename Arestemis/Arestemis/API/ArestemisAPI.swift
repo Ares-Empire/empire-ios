@@ -43,9 +43,9 @@ struct ArestemisAPI: ArestemisBackend {
     static let accountDataURL = baseURL.appendingPathComponent("me")
     /// Routes where the server asks the AI (parse, application) may take longer than a plain read.
     static let aiTimeout: TimeInterval = 60
-    /// A product's preview reads each comparison site twice (its search, then the product's page), a minute apart as
-    /// the server paces every site, then asks the AI: well over a minute (brief 154's `preview`).
-    static let productPreviewTimeout: TimeInterval = 150
+    /// A product's preview reads each comparison site's search and one product page, then asks the AI; the server
+    /// answers within 44 s (brief 159; 4 to 7 s measured live, 2026-11-04).
+    static let productPreviewTimeout: TimeInterval = 60
 
     var transport: any HTTPTransport = URLSessionTransport()
     /// The current Empire token, read when a request starts; nil = not signed in.

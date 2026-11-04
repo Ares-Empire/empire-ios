@@ -15,7 +15,7 @@ enum EverywhereWords {
         }
     }
 
-    /// "11 shops" / "11 Shops".
+    /// "16 shops" / "16 Shops": sellers with an offer (the card's count, `PriceState.offers`).
     static func shops(_ count: Int, language: AppLanguage = .current) -> String {
         language.string("\(count) shops")
     }
@@ -47,11 +47,16 @@ enum EverywhereWords {
         OfferList.sorted(preview.offers).first { $0.price != nil }.flatMap { offer in offer.price.map { ($0, offer.currency) } }
     }
 
-    /// The quiet line under the product's preview and on the monitor's page: "Looks in 9 shops" / "Sucht in 9 Shops";
-    /// the sites switched on, which include price comparison sites and marketplaces (Patrik's sketch counts them as
-    /// shops).
+    /// The quiet line under the product's preview: "Looks on 9 sites" / "Sucht auf 9 Seiten", the sites switched on
+    /// (shops, price comparison sites and marketplaces). "Shops" always means sellers with an offer (the preview's
+    /// "in 16 Shops", the card, the offers list); the places it looks are sites, as "Where it looks" calls them.
     static func looksIn(_ count: Int, language: AppLanguage = .current) -> String {
-        language.string("Looks in \(count) shops")
+        language.string("Looks on \(count) sites")
+    }
+
+    /// "9 sites" / "9 Seiten": how many sites it looks on, beside "Where it looks" on the monitor's page.
+    static func sites(_ count: Int, language: AppLanguage = .current) -> String {
+        language.string("\(count) sites")
     }
 
     /// The card's word for the cheapest offer's shop, beside its price: "at Amazon" / "bei Amazon".
