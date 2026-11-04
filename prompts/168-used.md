@@ -1,6 +1,6 @@
 # 168: Arestemis: also used in Everywhere
 
-Status: running; server167 contract committed eb91f7a
+Status: review follow-up queued; server contract fd5d19e, first builder handoff pending
 Branch: `codex/168-used` · Worktree: `../empire-ios-168-used` · Model: `gpt-6.1-sol`, effort `xhigh`
 
 ## Goal and read first
@@ -94,3 +94,40 @@ No private source findings or personal/seller data in this public repo. Fixtures
 
 All checks pass, all screens readable and use existing components, API/samples current, report exact
 files/commands/results/gaps. Claude reviews screenshots and uploads later.
+
+
+## Root review follow-up: price alarms beside used listings
+
+The server contract in `~/Arestemis/docs/API.md` now settles optional `GET /matches?kind=price`, selecting listing
+kind before pagination/search/limit. Missing kind still returns mixed parent/global results. Other allowed kinds
+are flat/item/watch; invalid or empty kind is400. The Used endpoint and mixed overview/counts stay as above.
+
+The first implementation filters mixed latest results; newer used listings can hide an older price alarm.
+A client cursor scan has been added during its review; complete the integration with the server's explicit kind
+filter and a true paginated Alarms page. No new wire fields or local kind inference beyond Listing's existing data.
+
+Add backend `priceAlarms(hunt:state:limit:before:) -> MatchPage`, using the existing GET/matches route with kind=price.
+Filter sample data before pagination. Preserve unrelated test fakes through protocol defaults where suitable,
+while live API and focused tests prove the actual kind query. All price monitors load their latest three actual
+alarms through this request, including used-off monitors retaining matches. Alarms/Show all opens a price-only
+page with ordinary New/Saved/All rows, detail/actions and cursor/retry behavior. Generic parent/global lists stay
+mixed; Used stays item-only and calls its existing endpoint.
+
+Reuse the new used page and loading machinery with a typed Used/Alarms scope whose cache key includes hunt,
+filter and kind. Keep shared match IDs/actions, account and hunt/edit fences, deduplication and preserved rows on
+retry; avoid a third duplicated pager. Keep ordinary Item/Watch/Flat navigation and every original168deliverable.
+User-facing copy stays the existing Used/Alarms words and listing components, without explaining API internals.
+
+Meaningful regressions: an older alarm behind more than three newer used matches, more than one interleaved
+page, both latest and Alarms/Show all retain the alarm and exclude used rows; Used excludes alarms, mixed parent
+results include both. Pin the wire kind query, distinct scope cursors, stale edit/signout replies and shared saved
+state actions. Add a monitor fixture showing both sections and full Alarms page, DE/EN in light/dark.
+
+The retained-offer screenshot currently has an eligible amount but a confirmation date more than24hours before
+the screenshot. Use a plausible2hour-old timestamp or an injected coherent fixture clock for that scenario and
+regenerate its four looks. Server remains responsible for eligibility; no app-side price/age calculation.
+
+After this follow-up, run the whole simulator suite and strings check0; keep the original screenshots/manifest
+and add or regenerate changed ones. Inspect every final screenshot, copy remains with orchestrator. No commit,
+push, live/network/Keychain/server, Shared/project/buildnumber changes or TestFlight. First builder's other fixes,
+all handover/preview/source wording and Claude's layout/stock wording are retained.
