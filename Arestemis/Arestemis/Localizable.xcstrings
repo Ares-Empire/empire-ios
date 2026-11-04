@@ -1190,16 +1190,6 @@
         }
       }
     },
-    "Cheapest price" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Günstigster Preis"
-          }
-        }
-      }
-    },
     "Check the shops" : {
       "localizations" : {
         "de" : {
@@ -1316,6 +1306,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Text löschen"
+          }
+        }
+      }
+    },
+    "Click & Collect" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Click & Collect"
           }
         }
       }
@@ -1901,6 +1901,16 @@
         }
       }
     },
+    "Fee unknown" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gebühr unbekannt"
+          }
+        }
+      }
+    },
     "Fill in" : {
       "localizations" : {
         "de" : {
@@ -2131,6 +2141,16 @@
         }
       }
     },
+    "Handover" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Übergabe"
+          }
+        }
+      }
+    },
     "Hello,\n\nI read your listing “%@” with great interest. I live quietly and tidily, I don't smoke, and the rent is secure.\n\nI would be glad to come to a viewing; my times are flexible.\n\nBest regards\n%@" : {
       "localizations" : {
         "de" : {
@@ -2243,6 +2263,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "In m². Eine Wohnung nach ihrer ganzen Fläche, eine WG nach deinem Zimmer."
+          }
+        }
+      }
+    },
+    "In store" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Im Einrichtungshaus"
           }
         }
       }
@@ -2507,6 +2537,16 @@
         }
       }
     },
+    "Lowest total price" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Günstigster Gesamtpreis"
+          }
+        }
+      }
+    },
     "Mark applied" : {
       "localizations" : {
         "de" : {
@@ -2743,6 +2783,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Noch keine Bewerbungen."
+          }
+        }
+      }
+    },
+    "No known total right now." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gerade kein bekannter Gesamtpreis."
           }
         }
       }
@@ -3767,6 +3817,26 @@
         }
       }
     },
+    "Shipping only" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nur Versand"
+          }
+        }
+      }
+    },
+    "Shipping unknown" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Versandkosten unbekannt"
+          }
+        }
+      }
+    },
     "Shops" : {
       "localizations" : {
         "de" : {
@@ -4243,6 +4313,36 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Heute"
+          }
+        }
+      }
+    },
+    "Total price" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gesamtpreis"
+          }
+        }
+      }
+    },
+    "Total price, last 30 days" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gesamtpreis, letzte 30 Tage"
+          }
+        }
+      }
+    },
+    "Total unknown" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gesamtpreis unbekannt"
           }
         }
       }
@@ -4883,6 +4983,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Euro"
+          }
+        }
+      }
+    },
+    "fee %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gebühr %@"
           }
         }
       }

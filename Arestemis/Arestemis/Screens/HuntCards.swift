@@ -15,6 +15,7 @@ struct HuntListCard: View {
     let sites: SiteNames
     /// A monitor's 30-day line; nil without a history (or before it loaded).
     var chart: PriceChart? = nil
+    var offer: Offer? = nil
     let busy: Bool
     let open: () -> Void
     let toggle: (Bool) -> Void
@@ -40,7 +41,8 @@ struct HuntListCard: View {
                     }
                     if text.kind == .price {
                         PriceLines(state: card.price, compact: true,
-                                   everywhere: card.hunt.search.price?.mode == .everywhere, chart: chart)
+                                   everywhere: card.hunt.search.price?.mode == .everywhere, chart: chart,
+                                   offer: offer, delivery: card.hunt.search.price?.delivery)
                             .padding(.top, 10)
                     }
                     if card.slowed && known {
@@ -82,6 +84,7 @@ struct HuntHeroCard<Title: View>: View {
     let sites: SiteNames
     let busy: Bool
     var editing = false
+    var offer: Offer? = nil
     let toggle: (Bool) -> Void
     @ViewBuilder let title: (HuntText) -> Title
 
@@ -101,7 +104,8 @@ struct HuntHeroCard<Title: View>: View {
                 WatchLines(page: card.page, compact: false).padding(.top, 14)
             }
             if text.kind == .price {
-                PriceLines(state: card.price, compact: false, everywhere: card.hunt.search.price?.mode == .everywhere)
+                PriceLines(state: card.price, compact: false, everywhere: card.hunt.search.price?.mode == .everywhere,
+                           offer: offer, delivery: card.hunt.search.price?.delivery)
                     .padding(.top, 14)
             }
             if card.slowed && text.kind != nil {

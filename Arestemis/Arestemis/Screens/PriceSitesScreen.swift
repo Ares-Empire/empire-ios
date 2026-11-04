@@ -14,6 +14,7 @@ struct PriceSitesScreen: View {
     /// The ids switched off.
     @Binding var off: [String]
     let store: ArestemisStore
+    var delivery: Delivery = .shipping
 
     @State private var line: String?
     /// Counts the refusals, so a switch turned off against the rule is drawn on again.
@@ -68,22 +69,22 @@ struct PriceSitesScreen: View {
     /// A site's name with one small line under it, "Price comparison · has it" for idealo, billiger.de and Geizhals
     /// ("Preisvergleich · hat es"), else the state alone, so every row keeps the same height; and its switch.
     private func row(_ site: PriceSite, all: [PriceSite]) -> some View {
-        Toggle(isOn: Binding(get: { !off.contains(site.id) }, set: { on in switchSite(site.id, on: on, all: all) })) {
+        Toggle(isOn: Binding(get: { !off.contains(site.id) && site.serves(delivery) }, set: { on in switchSite(site.id, on: on, all: all) })) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(verbatim: site.name).font(AppFont.text(15, weight: .medium)).foregroundStyle(Ink.primary)
-                let detail = [site.isComparison ? String(localized: "Price comparison") : nil,
-                              EverywhereWords.state(site.state)].compactMap { $0 }.joined(separator: " · ")
-                if !detail.isEmpty {
+                if let detail = PriceSites.detail(site, delivery: delivery) {
                     Text(verbatim: detail).font(AppFont.text(12)).foregroundStyle(Ink.muted)
                 }
             }
         }
+        .disabled(!site.serves(delivery))
+        .opacity(site.serves(delivery) ? 1 : 0.45)
         .toggleStyle(EmpireSwitchStyle(accent: Look.accent))
         .frame(minHeight: 56)
     }
 
     private func switchSite(_ id: String, on: Bool, all: [PriceSite]) {
-        guard let changed = PriceSites.switched(id, on: on, off: off, sites: all) else {
+        guard let changed = PriceSites.switched(id, on: on, off: off, sites: all, delivery: delivery) else {
             line = PriceSites.lastSiteLine()
             refusals += 1
             return

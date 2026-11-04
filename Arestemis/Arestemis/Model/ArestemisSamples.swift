@@ -146,7 +146,13 @@ final class SampleBackend: ArestemisBackend {
 
     /// The contract's sample files (`-sampleData`), the last scan 40 s before `now`.
     convenience init(options: Options = Options(), now: Date = .now) throws {
-        try self.init(content: .contract(now: now), options: options, now: now)
+        var content = try SampleContent.contract(now: now)
+        #if DEBUG
+        if let state = LaunchArguments.value("-fulfillmentSample") {
+            content = try FulfillmentSample.content(content, state: state, now: now)
+        }
+        #endif
+        try self.init(content: content, options: options, now: now)
     }
 
     init(content: SampleContent, options: Options = Options(), now: Date = .now) throws {
@@ -481,7 +487,8 @@ final class SampleBackend: ArestemisBackend {
     /// An imitation of the server's product preview (brief 154) for screenshots: the words' rules, then the server's
     /// sample with the product named after the words (its own name when they are its words). `-pricePreview
     /// reading|refused|failed` makes it wait, refuse or fail, as for a link.
-    func productPreview(product: String, details: String) async throws -> ProductPreview {
+    func productPreview(_ selection: ProductPreviewQuery) async throws -> ProductPreview {
+        let product = selection.product, details = selection.details
         switch options.preview {
         case "reading": try await Task.sleep(for: .seconds(3600))
         case "refused": throw FieldRefusal(field: "product", message: "Found no product with that name.")
@@ -490,13 +497,15 @@ final class SampleBackend: ArestemisBackend {
         }
         let words = ProductWords(product: product, details: details)
         #if DEBUG
+        if LaunchArguments.value("-fulfillmentSample") != nil { return try FulfillmentSample.preview(selection) }
+
         if ["family", "generic", "chip", "things"].contains(options.preview ?? "") {
             if [ProductSuggestionSample.family, ProductSuggestionSample.generic].contains(words.product) {
                 throw ProductSuggestionSample.refusal(product: words.product, details: words.details)
             }
             return ProductPreview(identity: ProductIdentity(name: words.product), offers: [
                 Offer(source: "idealo", sourceName: "idealo", shop: "Example Tech",
-                      url: "https://shop.example/meridian", price: 749, availability: .inStock)
+                      url: "https://shop.example/meridian", price: 749, shipping: 0, availability: .inStock, total: 749)
             ], sites: productFound?.sites ?? [])
         }
         #endif
@@ -524,11 +533,11 @@ final class SampleBackend: ArestemisBackend {
         guard let monitor = huntValues[index].search.price, monitor.mode == .everywhere else {
             throw HTTPError.server(404, nil)
         }
-        let catalog = (productFound?.sites ?? []).map { PriceSite(id: $0.id, name: $0.name, kind: $0.kind) }
+        let catalog = (productFound?.sites ?? []).map { PriceSite(id: $0.id, name: $0.name, kind: $0.kind, delivery: $0.delivery) }
         let known = offersByHunt[id] ?? PriceOffers(sites: catalog)
         let sites = known.sites.map { site in
             var site = site
-            site.on = !monitor.sourcesOff.contains(site.id)
+            site.on = !monitor.sourcesOff.contains(site.id) && site.serves(monitor.delivery)
             return site
         }
         return PriceOffers(offers: OfferList.shown(known.offers, off: monitor.sourcesOff), sites: sites)

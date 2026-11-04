@@ -76,7 +76,9 @@ struct HuntPage: View {
         return ScrollViewReader { reader in
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    HuntHeroCard(card: card, sites: store.siteNames, busy: store.isChanging(hunt: id), editing: editing) { active in
+                    HuntHeroCard(card: card, sites: store.siteNames, busy: store.isChanging(hunt: id), editing: editing,
+                                 offer: OfferList.selected(store.offers(hunt: id).offers?.offers ?? [], state: card.price,
+                                                           off: card.hunt.search.price?.sourcesOff ?? [])) { active in
                         Task { await store.setActive(id: id, active: active) }
                     } title: { text in
                         name(card, text: text, renames: actions.rename)
@@ -307,7 +309,7 @@ struct HuntPage: View {
     private func shopURL(_ monitor: PriceSearch) -> URL? {
         guard monitor.mode == .everywhere else { return monitor.shopURL }
         let offers = store.offers(hunt: id).offers?.offers ?? []
-        return OfferList.shown(offers, off: monitor.sourcesOff).first { $0.link != nil }?.link
+        return OfferList.selected(offers, state: store.card(id)?.price, off: monitor.sourcesOff)?.link
     }
 
     /// This search's listings on the Listings tab at the filter asked for (Listings: New while it has new ones, else

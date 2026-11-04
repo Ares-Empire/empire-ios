@@ -68,7 +68,7 @@ struct ProductSuggestionsTests {
     }
 
     @Test func aChipKeepsDetailsClearsConfirmationAndAsksAgain() async throws {
-        var asked: [ProductWords] = []
+        var asked: [ProductPreviewQuery] = []
         let model = ProductPreviewModel(pause: .zero, spacing: .zero) { words in
             asked.append(words)
             return ProductPreview(identity: ProductIdentity(name: words.product))
@@ -109,11 +109,11 @@ struct ProductSuggestionsTests {
 
     /// A held request lets the test change the fields before returning any kind of old answer.
     private final class Gate {
-        var requests: [ProductWords] = []
+        var requests: [ProductPreviewQuery] = []
         var replies: [CheckedContinuation<ProductPreview, any Error>] = []
         var listener: (Int, CheckedContinuation<Void, Never>)?
 
-        func fetch(_ words: ProductWords) async throws -> ProductPreview {
+        func fetch(_ words: ProductPreviewQuery) async throws -> ProductPreview {
             try await withCheckedThrowingContinuation { continuation in
                 requests.append(words)
                 replies.append(continuation)
@@ -154,7 +154,7 @@ struct ProductSuggestionsTests {
     }
 
     @Test func a429RetriesAtThePacedIntervalWithoutOldChoices() async throws {
-        var calls: [(ProductWords, ContinuousClock.Instant)] = []
+        var calls: [(ProductPreviewQuery, ContinuousClock.Instant)] = []
         let model = ProductPreviewModel(pause: .zero, spacing: .milliseconds(40)) { words in
             calls.append((words, ContinuousClock().now))
             if words.product == "Family" { throw refusal() }

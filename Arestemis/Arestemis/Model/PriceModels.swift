@@ -26,6 +26,9 @@ struct PriceSearch: Codable, Equatable, Sendable {
     var identity: ProductIdentity?
     /// `everywhere`: the ids of the sites the user switched off (`PriceSite.id`).
     var sourcesOff: [String]
+    var delivery: Delivery = .shipping
+    var places: [Place] = []
+    var radiusKm: Double = 20
     /// Records the price and the availability at every read, for the curve (`everywhere`: the cheapest offer's).
     var history: Bool
     /// The alarm and its conditions; nil while the alarm is off.
@@ -82,13 +85,17 @@ struct PriceSearch: Codable, Equatable, Sendable {
 
     /// A monitor of one product on every site that sells it (`everywhere`).
     init(product: String, details: String = "", identity: ProductIdentity?, sourcesOff: [String] = [], history: Bool,
-         alarm: Alarm?, every: Int = WatchSearch.defaultEvery) {
+         alarm: Alarm?, every: Int = WatchSearch.defaultEvery, delivery: Delivery = .shipping,
+         places: [Place] = [], radiusKm: Double = 20) {
         mode = .everywhere
         url = nil
         self.product = product
         self.details = details
         self.identity = identity
         self.sourcesOff = sourcesOff
+        self.delivery = delivery
+        self.places = places
+        self.radiusKm = radiusKm
         self.history = history
         self.alarm = alarm
         self.every = every
@@ -113,6 +120,14 @@ struct PriceSearch: Codable, Equatable, Sendable {
         details = try c.decodeIfPresent(String.self, forKey: .details) ?? ""
         identity = try c.decodeIfPresent(ProductIdentity.self, forKey: .identity)
         sourcesOff = try c.decodeIfPresent([String].self, forKey: .sourcesOff) ?? []
+        let rawDelivery = try c.decodeIfPresent(String.self, forKey: .delivery) ?? Delivery.shipping.rawValue
+        guard let delivery = Delivery(rawValue: rawDelivery) else {
+            throw DecodingError.dataCorruptedError(forKey: .delivery, in: c,
+                                                   debugDescription: "Unknown delivery \(rawDelivery)")
+        }
+        self.delivery = delivery
+        places = try c.decodeIfPresent([Place].self, forKey: .places) ?? []
+        radiusKm = try c.decodeIfPresent(Double.self, forKey: .radiusKm) ?? 20
         history = try c.decodeIfPresent(Bool.self, forKey: .history) ?? false
         alarm = try c.decodeIfPresent(Alarm.self, forKey: .alarm)
         every = try c.decodeIfPresent(Int.self, forKey: .every) ?? WatchSearch.defaultEvery
@@ -129,6 +144,9 @@ struct PriceSearch: Codable, Equatable, Sendable {
             try c.encode(details, forKey: .details)
             try c.encode(identity, forKey: .identity)
             try c.encode(sourcesOff, forKey: .sourcesOff)
+            try c.encode(delivery, forKey: .delivery)
+            try c.encode(places, forKey: .places)
+            try c.encode(radiusKm, forKey: .radiusKm)
         } else {
             try c.encode(url ?? "", forKey: .url)
         }
@@ -139,6 +157,8 @@ struct PriceSearch: Codable, Equatable, Sendable {
 
     enum CodingKeys: String, CodingKey {
         case mode, url, product, details, identity, history, alarm, every
+        case delivery, places
+        case radiusKm = "radius_km"
         case sourcesOff = "sources_off"
     }
 
@@ -447,11 +467,19 @@ struct Offer: Codable, Equatable, Identifiable, Sendable {
     /// The last successful read of this offer.
     var checked: String?
 
-    /// One row per site and shop: a comparison site lists each shop once.
-    var id: String { source + "|" + shop + "|" + url }
+    var fulfillment: Fulfillment = .shipping
+    var pickupMethod: PickupMethod?
+    var pickupFee: Double?
+    var store: OfferStore?
+    /// The server's eligible selected total. Missing on older payloads means unknown, never product price alone.
+    var total: Double?
+
+    var id: String { source + "|" + shop + "|" + url + "|" + fulfillment.rawValue + "|" + (pickupMethod?.rawValue ?? "") + "|" + (store?.id ?? "") }
 
     init(source: String, sourceName: String, shop: String, url: String, price: Double?, currency: String? = "EUR",
-         shipping: Double? = nil, availability: Availability = .inStock, checked: String? = nil) {
+         shipping: Double? = nil, availability: Availability = .inStock, checked: String? = nil,
+         fulfillment: Fulfillment = .shipping, pickupMethod: PickupMethod? = nil, pickupFee: Double? = nil,
+         store: OfferStore? = nil, total: Double? = nil) {
         self.source = source
         self.sourceName = sourceName
         self.shop = shop
@@ -461,9 +489,16 @@ struct Offer: Codable, Equatable, Identifiable, Sendable {
         self.shipping = shipping
         self.availability = availability
         self.checked = checked
+        self.fulfillment = fulfillment
+        self.pickupMethod = pickupMethod
+        self.pickupFee = pickupFee
+        self.store = store
+        self.total = total
     }
 
     enum CodingKeys: String, CodingKey {
+        case fulfillment, store, total
+        case pickupMethod = "pickup_method", pickupFee = "pickup_fee"
         case source, shop, url, price, currency, shipping, availability, checked
         case sourceName = "source_name"
     }
@@ -480,6 +515,15 @@ struct Offer: Codable, Equatable, Identifiable, Sendable {
         shipping = try c.decodeIfPresent(Double.self, forKey: .shipping)
         availability = try c.decodeIfPresent(Availability.self, forKey: .availability) ?? .unknown
         checked = try c.decodeIfPresent(String.self, forKey: .checked)
+        fulfillment = (try c.decodeIfPresent(String.self, forKey: .fulfillment)).map {
+            Fulfillment(rawValue: $0) ?? .unknown
+        } ?? .shipping
+        pickupMethod = (try c.decodeIfPresent(String.self, forKey: .pickupMethod)).map {
+            PickupMethod(rawValue: $0) ?? .unknown
+        }
+        pickupFee = try c.decodeIfPresent(Double.self, forKey: .pickupFee)
+        store = try c.decodeIfPresent(OfferStore.self, forKey: .store)
+        total = try c.decodeIfPresent(Double.self, forKey: .total)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -493,6 +537,11 @@ struct Offer: Codable, Equatable, Identifiable, Sendable {
         try c.encode(shipping, forKey: .shipping)
         try c.encode(availability, forKey: .availability)
         try c.encode(checked, forKey: .checked)
+        try c.encode(fulfillment, forKey: .fulfillment)
+        try c.encode(pickupMethod, forKey: .pickupMethod)
+        try c.encode(pickupFee, forKey: .pickupFee)
+        try c.encode(store, forKey: .store)
+        try c.encode(total, forKey: .total)
     }
 
     /// Where a tap on the offer goes; nil for anything but a web address.
@@ -562,18 +611,21 @@ struct PriceSite: Codable, Equatable, Identifiable, Sendable {
     var state: State
     /// False while the monitor's `sources_off` names it (a preview's sites are all on).
     var on: Bool
+    /// Absent or future capabilities leave the site available, as in Things.
+    var delivery: Delivery?
 
     var isComparison: Bool { kind == .comparison }
 
-    init(id: String, name: String, kind: Kind = .shop, state: State = .checking, on: Bool = true) {
+    init(id: String, name: String, kind: Kind = .shop, state: State = .checking, on: Bool = true, delivery: Delivery? = nil) {
         self.id = id
         self.name = name
         self.kind = kind
         self.state = state
         self.on = on
+        self.delivery = delivery
     }
 
-    enum CodingKeys: String, CodingKey { case id, name, kind, state, on }
+    enum CodingKeys: String, CodingKey { case id, name, kind, state, on, delivery }
 
     /// Lenient as the server's defaults: checking and on; a missing name is the id.
     init(from decoder: Decoder) throws {
@@ -583,6 +635,7 @@ struct PriceSite: Codable, Equatable, Identifiable, Sendable {
         kind = Kind(rawValue: try c.decodeIfPresent(String.self, forKey: .kind) ?? "")
         state = try c.decodeIfPresent(String.self, forKey: .state).map(State.init(rawValue:)) ?? .checking
         on = try c.decodeIfPresent(Bool.self, forKey: .on) ?? true
+        delivery = (try c.decodeIfPresent(String.self, forKey: .delivery)).flatMap(Delivery.init(rawValue:))
     }
 
     func encode(to encoder: Encoder) throws {
@@ -592,6 +645,7 @@ struct PriceSite: Codable, Equatable, Identifiable, Sendable {
         try c.encode(kind.rawValue, forKey: .kind)
         try c.encode(state.rawValue, forKey: .state)
         try c.encode(on, forKey: .on)
+        try c.encodeIfPresent(delivery, forKey: .delivery)
     }
 }
 

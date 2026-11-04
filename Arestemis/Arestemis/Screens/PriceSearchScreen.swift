@@ -50,7 +50,10 @@ struct PriceSearchScreen: View {
     private var card: HuntCard? { huntID.flatMap { store.card($0) } }
     private var creating: Bool { huntID == nil }
     private var isDirty: Bool { draft != (saved ?? PriceSearchDraft()) }
-    private var canSave: Bool { draft.isValid && (creating || isDirty) }
+    private var canSave: Bool { draft.isValid && hasCompatibleSite && (creating || isDirty) }
+    private var hasCompatibleSite: Bool {
+        draft.mode == .page || sites.map { PriceSites.onCount($0, off: draft.sourcesOff, delivery: draft.delivery) > 0 } ?? true
+    }
     private var words: HuntWords { HuntWords(.price) }
 
     /// The saved monitor's words, while the form still shows them: its card, offers and sites are then this product's.
@@ -61,7 +64,7 @@ struct PriceSearchScreen: View {
 
     /// The product's preview, when it is for the words in the fields.
     private var productFound: ProductPreview? {
-        guard productPreview?.query == draft.words else { return nil }
+        guard productPreview?.query == draft.previewQuery else { return nil }
         return productPreview?.answer
     }
 
@@ -80,7 +83,7 @@ struct PriceSearchScreen: View {
                 let cheapest = EverywhereWords.cheapest(found)
                 return (found.identity.name, cheapest?.price, cheapest?.currency)
             }
-            guard showsSavedProduct else { return (draft.isConfirmed ? draft.identity?.name : nil, nil, nil) }
+            guard showsSavedProduct, saved?.previewQuery == draft.previewQuery else { return (draft.isConfirmed ? draft.identity?.name : nil, nil, nil) }
             return (card?.price?.product ?? draft.identity?.name, card?.price?.price, card?.price?.currency)
         }
     }
@@ -89,6 +92,9 @@ struct PriceSearchScreen: View {
     /// while none are known.
     private var sites: [PriceSite]? {
         if let found = productFound { return found.sites.isEmpty ? nil : found.sites }
+        if let last = productPreview?.lastFound, last.query.words == draft.words, !last.answer.sites.isEmpty {
+            return last.answer.sites
+        }
         guard showsSavedProduct, let huntID, let loaded = store.offers(hunt: huntID).offers?.sites,
               !loaded.isEmpty else { return nil }
         return loaded
@@ -111,6 +117,13 @@ struct PriceSearchScreen: View {
                         FormSection(title: String(localized: "Details (optional)"), problems: detailsProblems) {
                             detailsField
                         }
+                        FormSection(title: String(localized: "Handover"), problems: handoverProblems) {
+                            PriceHandoverCard(delivery: $draft.delivery, places: $draft.places, radiusKm: $draft.radiusKm) {
+                                endTyping()
+                                navigation.showsPlaceSearch = true
+                            }
+                        }
+                        .id("handover")
                         if let sites { sitesLine(sites).transition(.opacity) }
                     }
                     FormSection(title: String(localized: "What it should do"), problems: switchRefusal) {
@@ -128,6 +141,7 @@ struct PriceSearchScreen: View {
                 }
                 .padding(.horizontal, Look.side).padding(.top, 4).padding(.bottom, 30)
                 .animation(.easeOut(duration: 0.2), value: sites != nil)
+                .animation(.easeOut(duration: 0.2), value: draft.delivery)
             }
             .scrollIndicators(.hidden)
             .scrollDismissesKeyboard(.interactively)
@@ -141,7 +155,12 @@ struct PriceSearchScreen: View {
                           showsSave: canSave, saving: store.isSavingSearch, save: saveMonitor)
         .navigationDestination(isPresented: $showsSites) {
             PriceSitesScreen(product: known.product ?? HuntText.text(draft.words.product), sites: sites,
-                             off: $draft.sourcesOff, store: store)
+                             off: $draft.sourcesOff, store: store, delivery: draft.delivery)
+        }
+        .sheet(isPresented: $navigation.showsPlaceSearch) {
+            PlaceSearchSheet(store: store, chosen: draft.places, initialQuery: navigation.placeQuery) { draft.add($0) }
+                .presentationDetents([.large])
+                .presentationBackground(Ink.background)
         }
         .confirmationDialog(words.deleteQuestion, isPresented: $confirmDelete, titleVisibility: .visible) {
             Button(words.delete, role: .destructive, action: deleteMonitor)
@@ -169,9 +188,10 @@ struct PriceSearchScreen: View {
             if new != saved?.url || preview?.phase != .idle { preview?.update(draft.url) }
             if store.searchErrorField == Self.urlField { store.clearSearchError() }
         }
-        .onChange(of: draft.words) { _, _ in
+        .onChange(of: draft.previewQuery) { _, _ in
             askForProduct()
-            if let field = store.searchErrorField, Self.productFields.contains(field) || field == Self.detailsField {
+            if let field = store.searchErrorField, Self.productFields.contains(field) || field == Self.detailsField
+                || field.hasPrefix("search.places") || field == "search.radius_km" || field == "search.delivery" {
                 store.clearSearchError()
             }
         }
@@ -329,7 +349,7 @@ struct PriceSearchScreen: View {
     /// The server's look: "Looking for the product…", the product found over its shops and cheapest price, or the
     /// preview's failure. A saved monitor whose words are unchanged shows nothing here: its page says the rest.
     @ViewBuilder private var productPreviewLine: some View {
-        switch productPreview?.query == draft.words ? productPreview?.phase : nil {
+        switch productPreview?.query == draft.previewQuery ? productPreview?.phase : nil {
         case .reading?:
             PreviewLine(reading: true, title: String(localized: "Looking for the product…"))
         case .found(let found)?:
@@ -363,7 +383,7 @@ struct PriceSearchScreen: View {
             showsSites = true
         } label: {
             HStack(spacing: 8) {
-                Text(verbatim: EverywhereWords.looksIn(PriceSites.onCount(sites, off: draft.sourcesOff)))
+                Text(verbatim: EverywhereWords.looksIn(PriceSites.onCount(sites, off: draft.sourcesOff, delivery: draft.delivery)))
                     .foregroundStyle(Ink.secondary)
                 Spacer(minLength: 8)
                 Text("Change").fontWeight(.semibold).foregroundStyle(Look.accent.color)
@@ -380,8 +400,18 @@ struct PriceSearchScreen: View {
     /// Under the product: one too short or too long, the preview's refusal, the server's refusal of the save.
     private var productProblems: [String] {
         let refusal = store.searchErrorField.map(Self.productFields.contains) == true ? store.searchError : nil
-        let previewRefusal = productPreview?.query == draft.words && suggestions == nil ? productPreview?.refusal : nil
+        let previewRefusal = productPreview?.query == draft.previewQuery && suggestions == nil ? productPreview?.refusal : nil
         return [draft.productLine(), previewRefusal, refusal].compactMap { $0 }
+    }
+
+    private var handoverProblems: [String] {
+        var lines = draft.problems.filter { $0 == .radius || ($0 == .places && !draft.places.isEmpty) }
+            .map { draft.message($0) }
+        if let field = store.searchErrorField,
+           field.hasPrefix("search.places") || field == "search.radius_km" || field == "search.delivery",
+           let error = store.searchError { lines.append(error) }
+        if !hasCompatibleSite { lines.append(PriceSites.lastSiteLine()) }
+        return lines
     }
 
     private var detailsProblems: [String] {
@@ -394,12 +424,12 @@ struct PriceSearchScreen: View {
     /// also a kept draft's found before (its sites and prices are asked anew; words asked already are not asked again).
     private func askForProduct() {
         guard draft.mode == .everywhere else { return }
-        if showsSavedProduct, let identity = saved?.identity {
+        if showsSavedProduct, saved?.previewQuery == draft.previewQuery, let identity = saved?.identity {
             draft.confirm(identity, for: draft.words)
             productPreview?.ask(nil)
             return
         }
-        productPreview?.update(product: draft.product, details: draft.details)
+        productPreview?.update(draft.previewQuery)
     }
 
     // MARK: the switches and how often
@@ -468,7 +498,7 @@ struct PriceSearchScreen: View {
     /// The fields whose refusals show where they are.
     private var fieldsShown: Set<String> {
         draft.mode == .page ? Self.switchFields.union([Self.urlField])
-            : Self.switchFields.union(Self.productFields).union([Self.detailsField])
+            : Self.switchFields.union(Self.productFields).union([Self.detailsField, "search.places", "search.radius_km", "search.delivery"])
     }
 
     private func saveMonitor() {
@@ -490,7 +520,9 @@ struct PriceSearchScreen: View {
     /// Screenshots (sample mode, DEBUG): `-priceMode page|everywhere` picks the mode, `-priceURL <text>` types (or
     /// pastes) a link, `-priceProduct <text>` and `-priceDetails <text>` type the product and its details,
     /// `-sitesOff <id,id>` switches sites off, `-priceSites` opens "Where it looks" once its sites are known,
-    /// `-priceSwitches both|history|alarm|none` sets the switches.
+    /// `-priceSwitches both|history|alarm|none` sets the switches. With `-fulfillmentSample shipping|pickup|either`,
+    /// `-priceDelivery shipping|pickup|either` selects the handover; `-priceNoPlace` clears places and `-pricePlace` opens
+    /// the existing place picker. All selections use the regular preview and draft paths.
     private func debugLaunch() {
         #if DEBUG
         guard store.isSample, !launchDone else { return }
@@ -503,6 +535,16 @@ struct PriceSearchScreen: View {
             draft.mode = .everywhere
             draft.product = sample == "generic" ? ProductSuggestionSample.generic : ProductSuggestionSample.family
             draft.details = ProductSuggestionSample.details
+        }
+        if let selection = LaunchArguments.value("-priceDelivery").flatMap(Delivery.init(rawValue:)) {
+            draft.delivery = selection
+            draft.places = selection == .shipping ? [] : [FulfillmentSample.place]
+            draft.radiusKm = 20
+        }
+        if LaunchArguments.current.contains("-priceNoPlace") { draft.places = [] }
+        if LaunchArguments.current.contains("-pricePlace") {
+            navigation.placeQuery = FulfillmentSample.place.name
+            navigation.showsPlaceSearch = true
         }
         if let off = LaunchArguments.value("-sitesOff") { draft.sourcesOff = off.components(separatedBy: ",") }
         if LaunchArguments.current.contains("-priceSites") { opensSitesWhenKnown = true }

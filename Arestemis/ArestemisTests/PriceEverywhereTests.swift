@@ -198,7 +198,7 @@ struct PriceEverywhereTests {
     @Test(arguments: [AppLanguage.english, .german])
     func thePreviewsStates(_ language: AppLanguage) async throws {
         let german = language == .german
-        final class Asked { var words: [ProductWords] = [] }
+        final class Asked { var words: [ProductPreviewQuery] = [] }
         let asked = Asked()
         let found = try JSONDecoder().decode(ProductPreview.self, from: server("product-preview"))
         let preview = ProductPreviewModel(pause: .milliseconds(20), spacing: .zero) { words in
@@ -218,11 +218,11 @@ struct PriceEverywhereTests {
         #expect(preview.phase == .reading
                 && preview.line(language: language) == (german ? "Produkt wird gesucht…" : "Looking for the product…"))
         await preview.settle()
-        #expect(asked.words == [ProductWords(product: "Orbital Headphones 2", details: "blue")])
+        #expect(asked.words == [ProductPreviewQuery(product: "Orbital Headphones 2", details: "blue")])
         #expect(spaces(preview.line(language: language)) == (german
-            ? "Gefunden: Orbital Headphones 2 Blue · in 2 Shops, ab 215,00 €"
-            : "Found: Orbital Headphones 2 Blue · in 2 shops, from €215.00"))
-        #expect(EverywhereWords.cheapest(try #require(preview.answer))?.price == 215)
+            ? "Gefunden: Orbital Headphones 2 Blue · Gesamtpreis unbekannt"
+            : "Found: Orbital Headphones 2 Blue · Total unknown"))
+        #expect(EverywhereWords.cheapest(try #require(preview.answer)) == nil)
         // The server's refusal under the product; a failure as a calm line.
         preview.update(product: "Nothing", details: "")
         await preview.settle()
@@ -319,7 +319,7 @@ struct PriceEverywhereTests {
         #expect(waiting.note == (german ? "Shops werden durchsucht…" : "Looking in the shops…") && waiting.price == nil)
         let none = PriceCardText(PriceState(host: "", read: .ok, offers: 0), compact: true, everywhere: true,
                                  language: language)
-        #expect(none.note == (german ? "Gerade bietet es kein Shop an." : "No shop offers it right now.") && none.shop == nil)
+        #expect(none.note == (german ? "Gerade kein bekannter Gesamtpreis." : "No known total right now.") && none.shop == nil)
         let failing = PriceCardText(PriceState(host: "", read: .failing), compact: true, everywhere: true, language: language)
         #expect(failing.note == (german ? "Die Shops sind gerade nicht lesbar." : "The shops can't be read right now."))
         // A page monitor's lines name no shop.
@@ -339,15 +339,15 @@ struct PriceEverywhereTests {
                   shipping: 4.99, availability: .preorder),
             Offer(source: "mydealz", sourceName: "mydealz", shop: "Saturn", url: "https://mydealz.de/s", price: 499),
         ]
-        // Euros first, priced first, by price; one row per shop (its cheapest); a site switched off left out.
-        #expect(OfferList.sorted(offers).map(\.price) == [499, 529, 545, 549, nil, 10])
+        // The server owns the order, including legacy quotes without totals. Keep one row per shop and handover.
         let shown = OfferList.shown(offers, off: ["mydealz"])
-        #expect(shown.map(\.shop) == ["Amazon", "Otto", "Nobody", "Abroad"] && shown.first?.source == "billiger")
-        #expect(spaces(OfferList.line(shown[0], language: language)) == (german
-            ? "vorbestellbar · Versand 4,99 € · über billiger.de" : "preorder · shipping €4.99 · via billiger.de"))
-        #expect(OfferList.line(offers[0], language: language) == (german ? "lieferbar" : "in stock"))
+        #expect(shown.map(\.shop) == ["Otto", "Abroad", "Amazon", "Nobody"] && shown[2].source == "idealo")
+        #expect(spaces(OfferList.line(offers[4], language: language)) == (german
+            ? "529,00 € · Versand 4,99 € · vorbestellbar · über billiger.de" : "€529.00 · shipping €4.99 · preorder · via billiger.de"))
+        #expect(spaces(OfferList.line(offers[0], language: language)) == (german
+            ? "549,00 € · Versandkosten unbekannt · lieferbar" : "€549.00 · Shipping unknown · in stock"))
         #expect(spaces(OfferList.line(offers[2], language: language)) == (german
-            ? "lieferbar · Versand 0 € · über idealo" : "in stock · shipping €0 · via idealo"))
+            ? "545,00 € · Versand 0 € · lieferbar · über idealo" : "€545.00 · shipping €0 · in stock · via idealo"))
         #expect(OfferList.more(6, language: language) == (german ? "+ 6 weitere Shops" : "+ 6 more shops"))
         #expect(offers[0].link?.host() == "otto.de")
     }
@@ -386,7 +386,7 @@ struct PriceEverywhereTests {
         await store.loadOffers(hunt: 9)
         #expect(transport.requests("GET /hunts/9/offers").isEmpty)
         // The preview sends the words, product and details.
-        let found = try await store.productPreview(ProductWords(product: " Orbital Headphones 2", details: "blue "))
+        let found = try await store.productPreview(ProductPreviewQuery(product: " Orbital Headphones 2", details: "blue "))
         #expect(found.identity.name == "Orbital Headphones 2 Blue")
         let sent = try body(transport.requests("POST /price/preview").first)
         #expect(sent?["product"] as? String == "Orbital Headphones 2" && sent?["details"] as? String == "blue")
@@ -419,7 +419,7 @@ struct PriceEverywhereTests {
         await store.loadPrices(hunt: 12, days: 30)
         #expect(store.prices(hunt: 12, days: 30).prices?.low == 215)
         // Its preview: the words found, every site on.
-        let found = try await store.productPreview(ProductWords(product: "AirPods Max 2", details: "Blau"))
+        let found = try await store.productPreview(ProductPreviewQuery(product: "AirPods Max 2", details: "Blau"))
         #expect(found.identity.name == "AirPods Max 2 Blau" && found.sites.allSatisfy(\.on))
         // Saving needs the product found, at most hourly; then it waits for its first look.
         let unconfirmed = PriceSearch(product: "AirPods Max 2", identity: nil, history: true, alarm: nil)

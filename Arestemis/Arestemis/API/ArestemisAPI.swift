@@ -17,7 +17,7 @@ protocol ArestemisBackend {
     func pricePreview(url: String) async throws -> PricePreview
     /// `POST /price/preview` with `{product, details}` (brief 154): the server looks for the product on the sites once now
     /// (nothing is saved; the same 5 s per account as a page's preview).
-    func productPreview(product: String, details: String) async throws -> ProductPreview
+    func productPreview(_ selection: ProductPreviewQuery) async throws -> ProductPreview
     /// `GET /hunts/{id}/offers`: an everywhere monitor's offers now and every site it checks (404 for a page monitor).
     func offers(hunt id: Int) async throws -> PriceOffers
     /// `GET /hunts/{id}/prices?days=`: a price monitor's history over 30, 90 or 365 days (404 while its history is off).
@@ -92,9 +92,9 @@ struct ArestemisAPI: ArestemisBackend {
         try await send(.post, "price/preview", body: ["url": url], timeout: Self.aiTimeout)
     }
 
-    func productPreview(product: String, details: String) async throws -> ProductPreview {
+    func productPreview(_ selection: ProductPreviewQuery) async throws -> ProductPreview {
         // A search on the comparison sites, then the shops; the server asks the AI which candidate is the product.
-        try await send(.post, "price/preview", body: ["product": product, "details": details],
+        try await send(.post, "price/preview", body: selection,
                        timeout: Self.productPreviewTimeout)
     }
 
@@ -292,4 +292,11 @@ extension ArestemisBackend {
         try await matches(hunt: nil, state: states, limit: limit, before: before)
     }
     func rejected(limit: Int) async throws -> RejectedPage { try await rejected(hunt: nil, limit: limit) }
+}
+
+// Convenience for callers without a pickup selection; still sends explicit shipping defaults.
+extension ArestemisBackend {
+    func productPreview(product: String, details: String) async throws -> ProductPreview {
+        try await productPreview(ProductPreviewQuery(product: product, details: details))
+    }
 }
