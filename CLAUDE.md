@@ -88,6 +88,10 @@ worktree, never commit or push, no installs. Council seats and reviews still run
 - Read the diff: quickly for layout, carefully for anything near login, tokens, the Keychain, or API calls.
 - Run the app on the simulator and look at each screen the brief touched
   (`xcrun simctl io booted screenshot <file>`).
+- Tap through it with **AXe** (installed 2026-11-04), while building or checking, usually instead of a temporary UI
+  test: `axe describe-ui` lists every button and label, `axe tap --label "…" --tap-style physical` taps (the default
+  style does nothing in these apps), `axe swipe`/`touch`/`type`/`screenshot`; all take `--udid`, none needs the
+  DeviceHub window. Steps and catches: `~/.claude/skills/ios-simulator/SKILL.md`; Codex's line is in `AGENTS.md`.
 
 **Council** (`docs/REVIEW.md`): a few blind reviewers with distinct focuses, for hard-to-undo choices,
 milestones, a bug that comes back, and every 2–3 weeks over merged Codex work.

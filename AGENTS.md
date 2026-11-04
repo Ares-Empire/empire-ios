@@ -53,6 +53,10 @@ Use your own simulator, never a shared one:
 number; the iOS 27.1 runtime only supports the foldable iPhone Duo), and `xcrun simctl delete codex-NN` at
 the end. Fix your own compile errors and failing tests before you report.
 To look at a screen: `xcrun simctl io codex-NN screenshot build/NN-<screen>.png`.
+To use a screen while you build (tap, type, read what it shows), use AXe, which is installed: `axe describe-ui --udid
+<udid>` lists every element with its label, `axe tap --label "<label>" --tap-style physical --udid <udid>` taps (always
+`--tap-style physical`: the default does nothing in these apps), `axe type '<text>' --udid <udid>`, `axe --help` for
+swipes and long presses. The udid: `xcrun simctl list devices | grep -m1 'codex-NN (' | grep -oE '[0-9A-F-]{36}'`.
 
 ## Your final message
 
