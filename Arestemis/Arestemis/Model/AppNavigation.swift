@@ -56,6 +56,7 @@ enum HuntRoute: Hashable {
     case match(Int)
     case newSearch
     case form(SearchKind, hunt: Int?, example: SearchExample? = nil)
+    case itemSearch(ProductItemSearch)
 }
 
 /// The filter of one search's listings: New · Saved · Applied · All (all = every state but dismissed, the API's default).
@@ -221,9 +222,19 @@ final class AppNavigation {
         huntPath.append(.form(kind, hunt: nil, example: example))
     }
 
+    /// The normal Things form over the intact Everywhere form; only its initial words travel with the route.
+    func openItemSearch(_ search: ProductItemSearch) {
+        tab = .hunt
+        huntPath.append(.itemSearch(search))
+    }
+
     /// A new hunt was saved: its page replaces the form it was made in and New search under it, so back leads to the
     /// list of hunts.
     func showCreated(_ id: Int) {
+        if case .itemSearch? = huntPath.last {
+            huntPath.removeLast()
+            if case .form(.price, nil, _)? = huntPath.last { huntPath.removeLast() }
+        }
         if case .form(_, nil, _)? = huntPath.last { huntPath.removeLast() }
         if huntPath.last == .newSearch { huntPath.removeLast() }
         huntPath.append(.hunt(id))
@@ -351,7 +362,7 @@ struct LaunchOptions {
         newerKind = arguments.contains("-sampleNewerKind")
         ebayNotReady = arguments.contains("-sampleEbayNotReady")
         watchRead = value("-sampleWatchRead")
-        pricePreview = value("-pricePreview")
+        pricePreview = value("-pricePreview") ?? value("-productSample")
         wordRefusal = value("-sampleWordRefusal").flatMap(Int.init)
         scrollToHunt = value("-scrollToHunt").flatMap(Int.init)
         sampleUndo = arguments.contains("-sampleUndo")

@@ -810,6 +810,16 @@
         }
       }
     },
+    "All offers for ‘%@’ → Things search" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alle Angebote zu „%@“ → Dinge-Suche"
+          }
+        }
+      }
+    },
     "All searches" : {
       "localizations" : {
         "de" : {
@@ -1627,6 +1637,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Details (optional)"
+          }
+        }
+      }
+    },
+    "Did you mean…" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Meintest du …"
           }
         }
       }
@@ -3303,6 +3323,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Preis und Lieferbarkeit als Kurve"
+          }
+        }
+      }
+    },
+    "Price comparison" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preisvergleich"
           }
         }
       }

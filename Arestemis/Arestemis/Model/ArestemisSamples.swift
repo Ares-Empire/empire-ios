@@ -489,6 +489,17 @@ final class SampleBackend: ArestemisBackend {
         default: try await Task.sleep(for: .milliseconds(900))
         }
         let words = ProductWords(product: product, details: details)
+        #if DEBUG
+        if ["family", "generic", "chip", "things"].contains(options.preview ?? "") {
+            if [ProductSuggestionSample.family, ProductSuggestionSample.generic].contains(words.product) {
+                throw ProductSuggestionSample.refusal(product: words.product, details: words.details)
+            }
+            return ProductPreview(identity: ProductIdentity(name: words.product), offers: [
+                Offer(source: "idealo", sourceName: "idealo", shop: "Example Tech",
+                      url: "https://shop.example/meridian", price: 749, availability: .inStock)
+            ], sites: productFound?.sites ?? [])
+        }
+        #endif
         guard ProductWords.productLengths.contains(words.product.count) else {
             throw FieldRefusal(field: "product", message: "String should have at least 2 characters")
         }

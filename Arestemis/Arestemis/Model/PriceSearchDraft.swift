@@ -14,8 +14,8 @@ struct PriceSearchDraft {
     /// Ein Shop: the product page's link.
     var url = ""
     /// Überall: the product in words and the optional details (colour, size, variant).
-    var product = ""
-    var details = ""
+    var product = "" { didSet { if Self.trimmed(product) != Self.trimmed(oldValue) { clearConfirmation() } } }
+    var details = "" { didSet { if Self.trimmed(details) != Self.trimmed(oldValue) { clearConfirmation() } } }
     /// Überall: the product the preview found, and the words it was found for: saving needs it found for the words as
     /// they are now, and sends it as the confirmed identity.
     var identity: ProductIdentity?
@@ -87,6 +87,16 @@ struct PriceSearchDraft {
 
     /// Überall: the product was found for the words as they are now.
     var isConfirmed: Bool { identity != nil && identityWords == words }
+
+    mutating func clearConfirmation() {
+        identity = nil
+        identityWords = nil
+    }
+
+    mutating func selectProduct(_ suggestion: String) {
+        product = suggestion
+        clearConfirmation()
+    }
 
     /// The preview found a product for these words: it becomes the one saving confirms (an answer for other words, an
     /// older one, changes nothing).

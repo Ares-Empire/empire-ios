@@ -40,13 +40,16 @@ final class PacedPreview<Query: Equatable, Answer: Equatable> {
     private(set) var phase: Phase = .idle
     /// What the phase is about.
     private(set) var query: Query?
+    /// Kept only for the current refusal, so optional product choices follow the same lifetime as its words.
+    private(set) var fieldRefusal: FieldRefusal?
 
     /// The pause after the last keystroke, before the query is handed to the worker.
     @ObservationIgnored private var waiting: Task<Void, Never>?
     /// The one worker asking, one query after the other.
     @ObservationIgnored private var worker: Task<Void, Never>?
     /// The newest query the worker should ask; nil when there is none (or it was taken).
-    @ObservationIgnored private var wanted: Query?
+    @ObservationIgnored private var wanted: (query: Query, revision: Int)?
+    @ObservationIgnored private var revision = 0
     @ObservationIgnored private var lastAsked: ContinuousClock.Instant?
     @ObservationIgnored private let clock = ContinuousClock()
     private let pause: Duration
@@ -63,6 +66,8 @@ final class PacedPreview<Query: Equatable, Answer: Equatable> {
     /// What is typed now: asked once typing pauses (unless it is what was asked already); nil clears the line.
     func ask(_ query: Query?) {
         guard let query else {
+            revision += 1
+            fieldRefusal = nil
             waiting?.cancel()
             waiting = nil
             wanted = nil
@@ -71,13 +76,17 @@ final class PacedPreview<Query: Equatable, Answer: Equatable> {
             return
         }
         guard query != self.query || phase == .idle else { return }
+        revision += 1
+        let revision = revision
+        fieldRefusal = nil
+        wanted = nil
         waiting?.cancel()
         self.query = query
         phase = .reading
         waiting = Task { [pause] in
             try? await Task.sleep(for: pause)
             guard !Task.isCancelled else { return }
-            self.wanted = query
+            self.wanted = (query, revision)
             self.startWorker()
         }
     }
@@ -103,32 +112,35 @@ final class PacedPreview<Query: Equatable, Answer: Equatable> {
             // The newest query after the wait: one typed meanwhile replaces the one that waited.
             guard let target = wanted else { break }
             wanted = nil
-            guard target == query else { continue }
+            guard target.query == query, target.revision == revision else { continue }
             lastAsked = clock.now
-            await read(target)
+            await read(target.query, revision: target.revision)
         }
         worker = nil
     }
 
-    private func read(_ target: Query) async {
+    private func read(_ target: Query, revision: Int) async {
         let outcome: Phase
+        var fieldRefusal: FieldRefusal?
         do {
             outcome = .found(try await fetch(target))
         } catch is CancellationError {
             // Dropped (a login that ended meanwhile).
-            if query == target { phase = .idle }
+            if self.revision == revision { phase = .idle }
             return
         } catch let refusal as FieldRefusal {
             outcome = .refused(refusal.message)
+            fieldRefusal = refusal
         } catch HTTPError.server(429, _) {
             // Another device asked just now: this query waits its turn again, quietly.
-            if query == target, wanted == nil { wanted = target }
+            if self.revision == revision, wanted == nil { wanted = (target, revision) }
             return
         } catch {
             outcome = .failed(error.localizedDescription)
         }
         // An answer for words no longer in the field is dropped.
-        guard query == target else { return }
+        guard self.revision == revision else { return }
+        self.fieldRefusal = fieldRefusal
         phase = outcome
     }
 
@@ -213,6 +225,17 @@ struct ProductWords: Codable, Equatable, Hashable, Sendable {
 typealias ProductPreviewModel = PacedPreview<ProductWords, ProductPreview>
 
 extension PacedPreview where Query == ProductWords, Answer == ProductPreview {
+    func suggestions(for words: ProductWords) -> ProductSuggestions? {
+        query == words ? fieldRefusal?.productSuggestions : nil
+    }
+
+    /// A choice is a new request, even if these words have been asked before. The old identity cannot be saved.
+    func select(_ suggestion: String, in draft: inout PriceSearchDraft) {
+        draft.selectProduct(suggestion)
+        ask(nil)
+        update(product: draft.product, details: draft.details)
+    }
+
     /// The product or its details changed: words the server would look for are asked once typing pauses (unless they
     /// are the ones asked already); anything else clears the line.
     func update(product: String, details: String) {

@@ -69,6 +69,8 @@ struct HuntsScreen: View {
                         FlatSearchScreen(store: store, navigation: navigation, huntID: id, example: example)
                     case .form(.item, let id, let example):
                         ItemSearchScreen(store: store, navigation: navigation, huntID: id, example: example)
+                    case .itemSearch(let search):
+                        ItemSearchScreen(store: store, navigation: navigation, huntID: nil, prefill: search)
                     case .form(.price, let id, let example):
                         PriceSearchScreen(store: store, navigation: navigation, huntID: id, example: example)
                     case .form(.watch, let id, let example):
