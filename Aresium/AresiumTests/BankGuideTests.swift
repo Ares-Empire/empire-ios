@@ -9,7 +9,7 @@ struct BankGuideTests {
 
     @Test func everyBankDecodesWithStepsOrAnExplicitNone() throws {
         let guide = try guide()
-        #expect(guide.banks.count == 18)
+        #expect(guide.banks.count == 19)
         #expect(Set(guide.banks.map(\.id)).count == guide.banks.count, "bank ids are unique")
         for bank in guide.banks {
             // The website: German and English steps, or explicitly no export there.
@@ -93,6 +93,14 @@ struct BankGuideTests {
         #expect(!commerzbank.mayDiffer(.website))
         #expect(volksbank.mayDiffer(.app))
 
+        // Sparda-Bank (brief 231): the website's steps, a line for its app, whose export no source describes.
+        let sparda = try #require(guide.bank("sparda"))
+        #expect(sparda.placesWithSteps == [.website])
+        #expect(sparda.otherPlaceLine(.german) == "Einen Weg in der App der Bank kennt Aresium nicht; auf der Website geht es.")
+        #expect(sparda.ways(for: .website) == [.safari, .computer])
+        #expect(sparda.fileType.pick(.german) == ["CSV"])
+        #expect(sparda.mayDiffer(.website))
+
         let other = try #require(guide.bank(BankGuide.Bank.otherID))
         #expect(other.title(.german) == "Andere Bank")
         #expect(other.title(.english) == "Another bank")
@@ -103,7 +111,7 @@ struct BankGuideTests {
         func ids(_ query: String) -> [String] { guide.search(query).map(\.id) }
 
         #expect(ids("") == guide.banks.filter { !$0.isOther }.map(\.id) + ["other"])
-        #expect(ids("").count == 18)
+        #expect(ids("").count == 19)
         #expect(ids("spark") == ["sparkasse-camt", "other"])
         #expect(ids("Kreissparkasse Heilbronn") == ["sparkasse-camt", "other"])     // a name among the words
         #expect(ids("sparkasse köln") == ["sparkasse-camt", "other"])
@@ -116,7 +124,10 @@ struct BankGuideTests {
         #expect(ids("barclaycard") == ["barclays", "other"])
         #expect(ids("easybank") == ["barclays", "other"])
         #expect(ids("deutsche") == ["dkb", "deutsche-bank", "postbank", "other"])    // Deutsche Kreditbank too
-        #expect(ids("Sparda-Bank") == ["other"])                                   // not in the list: Another bank
+        #expect(ids("Sparda-Bank") == ["sparda", "other"])                         // brief 231
+        #expect(ids("Sparda-Bank Hamburg eG") == ["sparda", "other"])              // a regional Sparda-Bank's full name
+        #expect(ids("spardabank") == ["sparda", "other"])
+        #expect(ids("Musterbank Nord") == ["other"])                               // not in the list: Another bank
         #expect(ids("   ") == ids(""))
     }
 
@@ -130,7 +141,7 @@ struct BankGuideTests {
         func listed(_ query: String) -> [String]? {
             if case let .banks(banks) = guide.results(query) { banks.map(\.id) } else { nil }
         }
-        #expect(unknown("Sparda-Bank") == BankGuide.Bank.otherID)
+        #expect(unknown("Musterbank Nord") == BankGuide.Bank.otherID)
         #expect(unknown("Fiktivbank Süd") == BankGuide.Bank.otherID)
         #expect(listed("") == guide.search("").map(\.id))
         #expect(listed("   ") == guide.search("").map(\.id), "only spaces: nothing typed")

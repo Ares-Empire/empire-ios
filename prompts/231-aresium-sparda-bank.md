@@ -1,6 +1,6 @@
 # 231: Aresium reads Sparda-Bank exports
 
-Status: running (started 2026-11-04, a Claude agent)
+Status: merged 2026-11-04, Aresium build 23 (aresium 08da16c deployed; 649 engine tests, 833 app tests on Claude's run). Open: CSVs saved from the old Sparda online banking before the Atruvia switch are not read (not built).
 Worktrees: `~/aresium-231-sparda` (repo `aresium`, branch `claude/231-sparda`) and `~/empire-ios-231-sparda` (repo
 `empire-ios`, branch `claude/231-sparda`) · Simulator: `claude-231` (create it as `AGENTS.md` says)
 

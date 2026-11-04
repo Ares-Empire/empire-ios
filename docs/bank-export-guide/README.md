@@ -44,6 +44,7 @@ steps name the guide's „Datei auswählen“ button. To change a bank's steps, 
 |---|---|---|---|---|
 | Sparkasse | found | website only | „Excel (CSV-CAMT V8)“ or „V2“ | medium / high |
 | Volksbank, Raiffeisenbank (VR) | found | found, taps unsure (VR Banking 9.2+) | „CSV“ | medium / low |
+| Sparda-Bank (added 2026-11-04, brief 231) | found (VR banks' platform) | unsure (no export described) | „CSV“ | medium / low |
 | ING | found | website only | „CSV (Excel)“ | medium / medium |
 | DKB (Girokonto and Visa) | found | website only (app: PDF) | „CSV“ | medium / high |
 | comdirect | found | unsure (no export described) | „Export als csv“ | medium / low |
@@ -121,6 +122,16 @@ Fulda, current design) and match a 2023 guide; a bank can still show the older d
 app export is new (VR Banking 9.2, Aug 2026): only „Exportieren“ in the „Umsatzübersicht“ is quoted. Check: the
 labels at their own bank; whether „CAMT“ appears under „Format“; how many months fit in one file; the app's taps and
 whether its CSV has the same columns as the website's; whether the site or app has English labels.
+
+**Sparda-Bank** (website medium, app low; checked 2026-11-04 for brief 231). All eleven Sparda-Banks run on
+Atruvia, the VR banks' platform (Hamburg, Berlin, Hannover and Südwest before 2023, the other seven 2024–2025, Sparda-Bank
+West last in October 2025), so the online banking and its CSV are the VR banks'; the engine reads the CSV with the
+`volksbank` profile and names the account after the Sparda-Bank (from „Bankname Auftragskonto“). Sparda pages quote
+„Lupe“, „Drucken“ and „Exportieren“; the dialog's fields come from a VR bank's guide. Check: the export button's
+text („Export“ or „Exportieren“) and the format names (Südwest lists CSV, MT940, CAMT.052; Ostbayern and Hannover say
+„Excel“: is that the CSV?); 13 months per file; how far back after the switch (Nürnberg: July 2024); whether the
+SpardaBanking App exports anything; that the CSV's header is the VR banks' 18 columns. Not read yet: files saved from
+SpardaOnline-Banking before the switch („Kontoumsätze SpardaGiro Online“).
 
 **ING** (medium). ING's help confirms „Exportieren“ at the page bottom and 390 days; „CSV (Excel)“ and „Jetzt
 exportieren“ come from two guides (2023, 2026) that agree. Check: the date filter's label; whether „CSV (Excel)“ is
