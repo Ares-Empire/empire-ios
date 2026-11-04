@@ -15,6 +15,7 @@ struct MonitorSections: View {
     let store: ArestemisStore
     let open: (Int) -> Void
     let showAll: () -> Void
+    let showUsed: () -> Void
     /// "Where it looks", pushed from its row (the page holds it: a destination inside the scroll view is not found).
     @Binding var showsSites: Bool
 
@@ -35,12 +36,13 @@ struct MonitorSections: View {
     private var everywhere: Bool { search.mode == .everywhere }
 
     init(card: HuntCard, search: PriceSearch, store: ArestemisStore, open: @escaping (Int) -> Void,
-         showAll: @escaping () -> Void, showsSites: Binding<Bool>) {
+         showAll: @escaping () -> Void, showUsed: @escaping () -> Void, showsSites: Binding<Bool>) {
         self.card = card
         self.search = search
         self.store = store
         self.open = open
         self.showAll = showAll
+        self.showUsed = showUsed
         _showsSites = showsSites
         _switches = State(initialValue: MonitorSwitches(search))
     }
@@ -57,6 +59,12 @@ struct MonitorSections: View {
                 HuntSection(title: String(localized: "Shops")) { offers }
                     .id(MonitorSections.offersID)
             }
+            if everywhere, store.showsUsed(hunt: card.id) {
+                HuntSection(title: String(localized: "Used")) {
+                    MonitorMatchesSection(id: card.id, kind: .used, store: store, open: open, showAll: showUsed)
+                }
+                .id("used")
+            }
             HuntSection(title: String(localized: "What it should do")) {
                 MonitorSwitchesCard(history: historyBinding, alarm: alarmBinding, below: belowBinding,
                                     backInStock: backBinding, line: line)
@@ -66,14 +74,8 @@ struct MonitorSections: View {
             if everywhere { sitesRow }
             if showsAlarms {
                 HuntSection(title: String(localized: "Alarms")) {
-                    if let matches = store.latest(hunt: card.id) {
-                        LatestMatches(matches: matches, store: store,
-                                      empty: "No alarm yet. It comes as a push the moment it rings.",
-                                      open: open, showAll: showAll)
-                    } else {
-                        ProgressView().controlSize(.small).tint(Ink.muted).frame(maxWidth: .infinity, minHeight: 44)
-                    }
-                }
+                    MonitorMatchesSection(id: card.id, kind: .alarms, store: store, open: open, showAll: showAll)
+                }.id("alarms")
             }
         }
         // The monitor changed elsewhere (its form, another device, the save's answer): the switches follow, unless an
@@ -89,6 +91,7 @@ struct MonitorSections: View {
         }
         // An everywhere monitor's offers and sites, asked again after each new read.
         .task(id: MonitorRead(card)) { if everywhere { await store.loadOffers(hunt: card.id) } }
+        .task(id: MonitorListingsRead(card)) { if everywhere { await store.loadUsed(hunt: card.id) } }
         .onAppear(perform: debugLaunch)
     }
 
@@ -108,7 +111,7 @@ struct MonitorSections: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.leading, 4)
             } else {
-                OffersCard(offers: shown)
+                OffersCard(offers: shown, sites: loaded.sites)
             }
         } else if let error = state.error {
             CalmMessage(text: error, action: (String(localized: "Try again"), {
@@ -122,7 +125,7 @@ struct MonitorSections: View {
     /// "Where it looks" with the sites switched on; it opens them.
     private var sitesRow: some View {
         let sites = store.offers(hunt: card.id).offers?.sites
-        let value = sites.map { EverywhereWords.sites(PriceSites.onCount($0, off: search.sourcesOff, delivery: search.delivery)) }
+        let value = sites.map { EverywhereWords.sites(PriceSites.onCount($0, off: search.sourcesOff, delivery: search.delivery), includeUsed: search.includeUsed) }
         return Button { showsSites = true } label: {
             SettingsRow(title: String(localized: "Where it looks"), value: value)
         }
@@ -134,9 +137,7 @@ struct MonitorSections: View {
 
     /// The alarms show while the alarm is on, or once it found some (a history alone never finds any).
     private var showsAlarms: Bool {
-        let counts = card.counts
-        return search.alarm != nil || counts.new + counts.saved + counts.today > 0
-            || !(store.latest(hunt: card.id) ?? []).isEmpty
+        search.alarm != nil || (store.latest(hunt: card.id) ?? []).contains(where: \.isPriceChange)
     }
 
     // MARK: the chart
@@ -267,6 +268,7 @@ private struct MonitorWindow: Hashable {
 /// the offer's link (the external mark, as Settings' links); the first five, then "+ N more shops", which shows the rest.
 struct OffersCard: View {
     let offers: [Offer]
+    var sites: [PriceSite] = []
     @State private var showsAll = false
     @Environment(\.openURL) private var openURL
 
@@ -301,6 +303,10 @@ struct OffersCard: View {
                     .fixedSize(horizontal: false, vertical: true)
                 if let line = OfferList.line(offer) {
                     Text(verbatim: line).font(AppFont.text(12)).foregroundStyle(Ink.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                if let retained = OfferList.lastConfirmed(offer, sites: sites) {
+                    Text(verbatim: retained).font(AppFont.text(12)).foregroundStyle(Ink.muted)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }

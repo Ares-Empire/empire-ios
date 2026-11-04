@@ -26,6 +26,8 @@ struct PriceSearch: Codable, Equatable, Sendable {
     var identity: ProductIdentity?
     /// `everywhere`: the ids of the sites the user switched off (`PriceSite.id`).
     var sourcesOff: [String]
+    /// Separate ordinary used listings; previews, shop totals and history remain new goods.
+    var includeUsed = false
     var delivery: Delivery = .shipping
     var places: [Place] = []
     var radiusKm: Double = 20
@@ -86,13 +88,14 @@ struct PriceSearch: Codable, Equatable, Sendable {
     /// A monitor of one product on every site that sells it (`everywhere`).
     init(product: String, details: String = "", identity: ProductIdentity?, sourcesOff: [String] = [], history: Bool,
          alarm: Alarm?, every: Int = WatchSearch.defaultEvery, delivery: Delivery = .shipping,
-         places: [Place] = [], radiusKm: Double = 20) {
+         places: [Place] = [], radiusKm: Double = 20, includeUsed: Bool = false) {
         mode = .everywhere
         url = nil
         self.product = product
         self.details = details
         self.identity = identity
         self.sourcesOff = sourcesOff
+        self.includeUsed = includeUsed
         self.delivery = delivery
         self.places = places
         self.radiusKm = radiusKm
@@ -120,6 +123,7 @@ struct PriceSearch: Codable, Equatable, Sendable {
         details = try c.decodeIfPresent(String.self, forKey: .details) ?? ""
         identity = try c.decodeIfPresent(ProductIdentity.self, forKey: .identity)
         sourcesOff = try c.decodeIfPresent([String].self, forKey: .sourcesOff) ?? []
+        includeUsed = mode == .everywhere ? try c.decodeIfPresent(Bool.self, forKey: .includeUsed) ?? false : false
         let rawDelivery = try c.decodeIfPresent(String.self, forKey: .delivery) ?? Delivery.shipping.rawValue
         guard let delivery = Delivery(rawValue: rawDelivery) else {
             throw DecodingError.dataCorruptedError(forKey: .delivery, in: c,
@@ -144,6 +148,7 @@ struct PriceSearch: Codable, Equatable, Sendable {
             try c.encode(details, forKey: .details)
             try c.encode(identity, forKey: .identity)
             try c.encode(sourcesOff, forKey: .sourcesOff)
+            try c.encode(includeUsed, forKey: .includeUsed)
             try c.encode(delivery, forKey: .delivery)
             try c.encode(places, forKey: .places)
             try c.encode(radiusKm, forKey: .radiusKm)
@@ -160,6 +165,7 @@ struct PriceSearch: Codable, Equatable, Sendable {
         case delivery, places
         case radiusKm = "radius_km"
         case sourcesOff = "sources_off"
+        case includeUsed = "include_used"
     }
 
     /// The server's rule: the history, the alarm or both; an alarm says when it rings.

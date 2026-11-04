@@ -23,12 +23,13 @@ enum EverywhereWords {
     /// The lines under the product once the server found it, as the sketch's two: "Found: Apple AirPods Max (2nd gen.)"
     /// over "in 2 shops, from €215.00" ("Gefunden: …", "in 2 Shops, ab 215,00 €"), or "no offer yet" when its first look
     /// found none. The shops are the sellers among its offers (a comparison site lists several), counted once each.
-    static func found(_ preview: ProductPreview, language: AppLanguage = .current) -> FoundLines {
+    static func found(_ preview: ProductPreview, off: [String] = [], language: AppLanguage = .current) -> FoundLines {
         let name = WatchText.keepingAmounts(preview.identity.name.trimmingCharacters(in: .whitespacesAndNewlines))
-        let priced = preview.offers.filter { $0.selectedTotal != nil }
+        let offers = preview.offers.filter { !off.contains($0.source) }
+        let priced = offers.filter { $0.selectedTotal != nil }
         let found = language.string("Found: \(name)")
         guard let cheapest = priced.first, let price = cheapest.selectedTotal else {
-            return FoundLines(title: found, detail: preview.offers.isEmpty ? language.string("no offer yet")
+            return FoundLines(title: found, detail: offers.isEmpty ? language.string("no offer yet")
                 : language.string("Total unknown"))
         }
         let sellers = Set(priced.map { $0.shop.trimmingCharacters(in: .whitespaces).lowercased() }).count
@@ -44,20 +45,25 @@ enum EverywhereWords {
     }
 
     /// The cheapest price the preview found in euros, for the alarm's limit.
-    static func cheapest(_ preview: ProductPreview) -> (price: Double, currency: String?)? {
-        preview.offers.first { $0.selectedTotal != nil }.flatMap { offer in offer.selectedTotal.map { ($0, offer.currency) } }
+    static func cheapest(_ preview: ProductPreview, off: [String] = []) -> (price: Double, currency: String?)? {
+        cheapest(preview.offers, off: off)
+    }
+
+    static func cheapest(_ offers: [Offer], off: [String]) -> (price: Double, currency: String?)? {
+        offers.first { !off.contains($0.source) && $0.selectedTotal != nil }
+            .flatMap { offer in offer.selectedTotal.map { ($0, offer.currency) } }
     }
 
     /// The quiet line under the product's preview: "Looks on 9 sites" / "Sucht auf 9 Seiten", the sites switched on
     /// (shops, price comparison sites and marketplaces). "Shops" always means sellers with an offer (the preview's
     /// "in 16 Shops", the card, the offers list); the places it looks are sites, as "Where it looks" calls them.
-    static func looksIn(_ count: Int, language: AppLanguage = .current) -> String {
-        language.string("Looks on \(count) sites")
+    static func looksIn(_ count: Int, includeUsed: Bool = false, language: AppLanguage = .current) -> String {
+        includeUsed ? language.string("New goods · \(count) sites") : language.string("Looks on \(count) sites")
     }
 
     /// "9 sites" / "9 Seiten": how many sites it looks on, beside "Where it looks" on the monitor's page.
-    static func sites(_ count: Int, language: AppLanguage = .current) -> String {
-        language.string("\(count) sites")
+    static func sites(_ count: Int, includeUsed: Bool = false, language: AppLanguage = .current) -> String {
+        includeUsed ? language.string("New goods · \(count) sites") : language.string("\(count) sites")
     }
 
     /// The card's word for the cheapest offer's shop, beside its price: "at Amazon" / "bei Amazon".
@@ -226,12 +232,27 @@ enum OfferList {
             }
         case .unknown: break
         }
-        if let word = PriceWords.availability(offer.availability, language: language) { parts.append(word) }
+        if let word = availability(offer.availability, fulfillment: offer.fulfillment, language: language) { parts.append(word) }
         let site = offer.sourceName.trimmingCharacters(in: .whitespaces)
         if !site.isEmpty, site.lowercased() != offer.shop.trimmingCharacters(in: .whitespaces).lowercased() {
             parts.append(language.string("via \(site)"))
         }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
+    /// Pickup stock uses a separate translation from shipping availability.
+    static func availability(_ value: Availability, fulfillment: Fulfillment?, language: AppLanguage = .current) -> String? {
+        if fulfillment == .pickup && value == .inStock { return language.string(LocalizedStringResource("pickup.in_stock", defaultValue: "in stock")) }
+        return PriceWords.availability(value, language: language)
+    }
+
+    /// An unreadable source may retain its last successful quote. Only that quote's real timestamp belongs here.
+    static func lastConfirmed(_ offer: Offer, sites: [PriceSite], timeZone: TimeZone = .current, language: AppLanguage = .current) -> String? {
+        guard sites.contains(where: { $0.id == offer.source && $0.state == .unreadable }) else { return nil }
+        guard let checked = offer.checked.flatMap(Timestamp.parse) else { return language.string("Last confirmed") }
+        let style = Date.FormatStyle(date: .abbreviated, time: .shortened, locale: language.locale, timeZone: timeZone)
+        let time = checked.formatted(style)
+        return language.string("Last confirmed · \(time)")
     }
 
     /// "+ 6 more shops" / "+ 6 weitere Shops".

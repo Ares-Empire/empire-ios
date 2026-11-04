@@ -80,11 +80,17 @@ struct PriceSearchScreen: View {
             return (state.product, state.price, state.currency)
         case .everywhere:
             if let found = productFound {
-                let cheapest = EverywhereWords.cheapest(found)
+                let cheapest = EverywhereWords.cheapest(found, off: draft.sourcesOff)
                 return (found.identity.name, cheapest?.price, cheapest?.currency)
             }
             guard showsSavedProduct, saved?.previewQuery == draft.previewQuery else { return (draft.isConfirmed ? draft.identity?.name : nil, nil, nil) }
-            return (card?.price?.product ?? draft.identity?.name, card?.price?.price, card?.price?.currency)
+            let name = card?.price?.product ?? draft.identity?.name
+            if let huntID, let offers = store.offers(hunt: huntID).offers {
+                let eligible = EverywhereWords.cheapest(offers.offers, off: draft.sourcesOff)
+                return (name, eligible?.price, eligible?.currency)
+            }
+            guard draft.sourcesOff == saved?.sourcesOff else { return (name, nil, nil) }
+            return (name, card?.price?.price, card?.price?.currency)
         }
     }
 
@@ -124,6 +130,13 @@ struct PriceSearchScreen: View {
                             }
                         }
                         .id("handover")
+                        FormCard {
+                            Toggle("Also used", isOn: $draft.includeUsed)
+                                .font(AppFont.text(15, weight: .medium)).foregroundStyle(Ink.primary)
+                                .toggleStyle(EmpireSwitchStyle(accent: Look.accent))
+                                .frame(minHeight: 50)
+                        }
+                        .padding(.top, Look.rowGap).id("used")
                         if let sites { sitesLine(sites).transition(.opacity) }
                     }
                     FormSection(title: String(localized: "What it should do"), problems: switchRefusal) {
@@ -209,7 +222,7 @@ struct PriceSearchScreen: View {
         .onChange(of: productFound) { _, found in
             guard let found, let words = productPreview?.query else { return }
             draft.confirm(found.identity, for: words)
-            if limitWaits, draft.mode == .everywhere, let cheapest = EverywhereWords.cheapest(found),
+            if limitWaits, draft.mode == .everywhere, let cheapest = EverywhereWords.cheapest(found, off: draft.sourcesOff),
                draft.prefillLimit(price: cheapest.price, currency: cheapest.currency) {
                 limitWaits = false
             }
@@ -353,7 +366,7 @@ struct PriceSearchScreen: View {
         case .reading?:
             PreviewLine(reading: true, title: String(localized: "Looking for the product…"))
         case .found(let found)?:
-            let lines = EverywhereWords.found(found)
+            let lines = EverywhereWords.found(found, off: draft.sourcesOff)
             PreviewLine(reading: false, title: lines.title, detail: lines.detail)
         case .failed(let message)?:
             PreviewLine(reading: false, title: message)
@@ -383,7 +396,7 @@ struct PriceSearchScreen: View {
             showsSites = true
         } label: {
             HStack(spacing: 8) {
-                Text(verbatim: EverywhereWords.looksIn(PriceSites.onCount(sites, off: draft.sourcesOff, delivery: draft.delivery)))
+                Text(verbatim: EverywhereWords.looksIn(PriceSites.onCount(sites, off: draft.sourcesOff, delivery: draft.delivery), includeUsed: draft.includeUsed))
                     .foregroundStyle(Ink.secondary)
                 Spacer(minLength: 8)
                 Text("Change").fontWeight(.semibold).foregroundStyle(Look.accent.color)
@@ -546,6 +559,7 @@ struct PriceSearchScreen: View {
             navigation.placeQuery = FulfillmentSample.place.name
             navigation.showsPlaceSearch = true
         }
+        if let used = LaunchArguments.value("-priceUsed") { draft.includeUsed = used == "on" }
         if let off = LaunchArguments.value("-sitesOff") { draft.sourcesOff = off.components(separatedBy: ",") }
         if LaunchArguments.current.contains("-priceSites") { opensSitesWhenKnown = true }
         switch LaunchArguments.value("-priceSwitches") {

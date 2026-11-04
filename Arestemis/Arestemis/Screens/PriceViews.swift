@@ -135,14 +135,21 @@ struct PriceLines: View {
                     if everywhere {
                         Text("Total price").font(AppFont.text(12)).foregroundStyle(Ink.muted)
                     }
-                    HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        Text(verbatim: price).font(AppFont.number(compact ? 24 : 34, weight: .bold))
-                            .foregroundStyle(Ink.primary).lineLimit(1).minimumScaleFactor(0.7)
-                            .layoutPriority(1)
-                        if let beside = [text.shop, text.availability].compactMap({ $0 }).joined(separator: " · ")
-                            .nonEmpty {
-                            Text(verbatim: beside).font(AppFont.text(13)).foregroundStyle(Ink.muted)
-                                .fixedSize(horizontal: false, vertical: true)
+                    let beside = [text.shop, text.availability].compactMap { $0 }.joined(separator: " · ")
+                    ViewThatFits(in: .horizontal) {
+                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                            amount(price).fixedSize()
+                            if !beside.isEmpty {
+                                Text(verbatim: beside).font(AppFont.text(13)).foregroundStyle(Ink.muted)
+                                    .fixedSize()
+                            }
+                        }
+                        VStack(alignment: .leading, spacing: 6) {
+                            amount(price)
+                            if !beside.isEmpty {
+                                Text(verbatim: beside).font(AppFont.text(13)).foregroundStyle(Ink.muted)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
                         }
                     }
                     .accessibilityElement(children: .combine)
@@ -167,6 +174,11 @@ struct PriceLines: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
+    private func amount(_ price: String) -> some View {
+        Text(verbatim: price).font(AppFont.number(compact ? 24 : 34, weight: .bold))
+            .foregroundStyle(Ink.primary).lineLimit(1).minimumScaleFactor(0.7)
+    }
+
 }
 
 /// What a monitor should do (the sketch's form, "Was er tun soll"), in the form and on its page: two switches, Record

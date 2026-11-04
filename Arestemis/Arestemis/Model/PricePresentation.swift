@@ -145,7 +145,8 @@ struct PriceCardText: Equatable {
             self.note = everywhere ? l.string("Looking in the shops…") : l.string("Reading the page…")
         case .ok:
             price = state?.price.map { PriceWords.money($0, currency: state?.currency, language: l) }
-            availability = state.flatMap { PriceWords.availability($0.availability, language: l) }
+            availability = state.flatMap { OfferList.availability($0.availability,
+                fulfillment: offer?.fulfillment ?? (delivery == .pickup ? .pickup : nil), language: l) }
             if everywhere, price != nil {
                 let name = offer.map(OfferList.title) ?? HuntText.text(state?.host)
                 let handover = offer.flatMap { OfferList.handover($0, language: l) } ?? delivery.map {
@@ -304,5 +305,18 @@ extension Match {
     func priceSourceLine(now: Date = .now, calendar: Calendar = .app, language: AppLanguage = .current) -> String {
         [listing.sourceName, Format.relative(found, now: now, calendar: calendar, language: language)]
             .compactMap { $0 }.joined(separator: " · ")
+    }
+}
+
+/// A monitor listing request belongs to this exact saved search and last read, including changes without a new price read.
+struct MonitorListingsRead: Equatable {
+    let hunt: Int
+    let search: PriceSearch?
+    let checked: String?
+
+    init(_ card: HuntCard) {
+        hunt = card.id
+        search = card.hunt.search.price
+        checked = card.price?.checked
     }
 }

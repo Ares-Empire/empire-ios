@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 import Observation
 
 /// One store for the app: the overview (hunt, portals, counts), the sites each kind of search can use (`GET /kinds`),
@@ -174,6 +175,39 @@ final class ArestemisStore {
     private var nextTemporaryHuntID = -1
     /// Counts every time the lists are forgotten (a hunt deleted, a logout), so a page asked for before is dropped.
     private var listGeneration = 0
+    private var deletedHunts: Set<Int> = []
+    struct MonitorListScope: Hashable {
+        let hunt: Int
+        let filter: MatchFilter
+        let kind: MonitorListingKind
+    }
+
+    private struct MonitorFeed: Hashable {
+        let hunt: Int
+        let kind: MonitorListingKind
+    }
+
+    /// Used and Alarms share the pager and match values, with separate membership, filters and cursors.
+    private(set) var monitorLists: [MonitorListScope: MatchList] = [:]
+    private var monitorIDs: [MonitorFeed: Set<Int>] = [:]
+    private var monitorGeneration: [Int: Int] = [:]
+    private var monitorLoadedFor: [MonitorListScope: MonitorListingsRead] = [:]
+    private var monitorLimits: [MonitorListScope: Int] = [:]
+    private var monitorRequests: [MonitorListScope: MonitorRequest] = [:]
+    /// Cancellation is recorded synchronously, so returning to a filter can start a new request before an older
+    /// transport finishes cancelling. Its late defer/result may only touch its own request.
+    private nonisolated final class MonitorRequest: Sendable {
+        private let cancelled = Mutex(false)
+        private let wantedLimit = Mutex(0)
+        var isCancelled: Bool { cancelled.withLock { $0 } }
+        var limit: Int { wantedLimit.withLock { $0 } }
+        func require(_ limit: Int) { wantedLimit.withLock { $0 = max($0, limit) } }
+        func cancel() { cancelled.withLock { $0 = true } }
+    }
+    /// A read begun before a state action must not undo that action even after it has completed.
+    private var stateRevision = 0
+    private var matchStateRevision: [Int: Int] = [:]
+
 
     /// Loads the home screen. `quiet` keeps the current one on screen and reports nothing (refreshes after actions).
     func reloadOverview(quiet: Bool = false) async {
@@ -181,24 +215,29 @@ final class ArestemisStore {
         isLoadingOverview = true
         if !quiet { overviewError = nil }
         let context = context
+        let revision = stateRevision
         defer { if isCurrent(context) { isLoadingOverview = false } }
         do {
             var loaded = try await backend.overview()
             guard isCurrent(context) else { return }
             // An overview arriving during an action must keep its pending card (or pending deletion).
             let pending = hunts.filter { changingHunts.contains($0.id) }
-            loaded.hunts.removeAll { changingHunts.contains($0.id) }
+            loaded.hunts.removeAll { changingHunts.contains($0.id) || deletedHunts.contains($0.id) }
             loaded.hunts.append(contentsOf: pending)
             loaded.hunts.sort { $0.id < $1.id }
             // A monitor whose switches are being saved keeps them as shown until the server answered.
             for index in loaded.hunts.indices where savingMonitors.contains(loaded.hunts[index].id) {
                 if let shown = card(loaded.hunts[index].id) { loaded.hunts[index].hunt.search = shown.hunt.search }
             }
+            for old in hunts where !loaded.hunts.contains(where: { $0.id == old.id && $0.hunt.search == old.hunt.search }) {
+                invalidateMonitorListings(old.id)
+            }
+            loaded.latest.removeAll { deletedHunts.contains($0.huntID) }
             overview = loaded
             syncFlatHunt()
             overviewError = nil
             lastOverviewLoad = .now
-            for match in loaded.latest { remember(match) }
+            for match in loaded.latest { remember(match, since: revision) }
             // Settings are fetched once, right after the first home screen, so the Settings sheet opens complete.
             if settings == nil { Task { await self.loadSettings() } }
             // The sites come with the home screen: at launch and every pull to refresh, and with every reload until an
@@ -231,6 +270,12 @@ final class ArestemisStore {
         await reloadOverview(quiet: true)
         for scope in lists.keys.sorted(by: Self.loadOrder) where lists[scope]?.loaded == true {
             await loadMatches(scope.filter, hunt: scope.hunt, quiet: true)
+        }
+        let scopes = monitorLists.keys.sorted {
+            ($0.hunt, $0.kind.rawValue, $0.filter.rawValue) < ($1.hunt, $1.kind.rawValue, $1.filter.rawValue)
+        }
+        for scope in scopes where monitorLists[scope]?.loaded == true {
+            await loadMonitorListings(scope.kind, hunt: scope.hunt, filter: scope.filter, force: true)
         }
     }
 
@@ -265,6 +310,7 @@ final class ArestemisStore {
     // MARK: - hunts
 
     private func putHunt(_ hunt: Hunt) {
+        if let old = card(hunt.id), old.hunt.search != hunt.search { invalidateMonitorListings(hunt.id) }
         if let index = overview?.hunts.firstIndex(where: { $0.id == hunt.id }) {
             overview?.hunts[index].hunt = hunt
             if !hunt.active { overview?.hunts[index].sources = [] }
@@ -279,6 +325,7 @@ final class ArestemisStore {
         overview?.hunt = flat
     }
     private func restoreCard(_ card: HuntCard) {
+        if let old = self.card(card.id), old.hunt.search != card.hunt.search { invalidateMonitorListings(card.id) }
         overview?.hunts.removeAll { $0.id == card.id }
         overview?.hunts.append(card)
         overview?.hunts.sort { $0.id < $1.id }
@@ -395,6 +442,7 @@ final class ArestemisStore {
         do {
             try await backend.deleteHunt(id: id)
             guard isCurrent(context) else { return false }
+            deletedHunts.insert(id)
             if !isSample, let account = session.accountID { keptDraft.drop(account: account, huntID: id, kind: card.hunt.kind) }
             let removed = Set(matchesByID.values.filter { $0.huntID == id }.map(\.id))
             for match in removed { matchesByID[match] = nil; applications[match] = nil; seen.remove(match) }
@@ -402,6 +450,8 @@ final class ArestemisStore {
             huntLatest[id] = nil
             priceHistories = priceHistories.filter { $0.key.hunt != id }
             priceOffers[id] = nil
+            invalidateMonitorListings(id)
+            monitorIDs = monitorIDs.filter { $0.key.hunt != id }
             // Every list is asked again when it shows (the counts and pages of every search changed).
             listGeneration += 1
             lists = [:]
@@ -505,17 +555,25 @@ final class ArestemisStore {
 
     /// A hunt's newest matches for its page, as known now; nil until they were loaded (`loadLatest(hunt:)`).
     func latest(hunt id: Int) -> [Match]? {
-        huntLatest[id].map { ids in ids.compactMap { matchesByID[$0] }.filter { $0.state != .dismissed } }
+        if card(id)?.hunt.search.price != nil {
+            return monitorList(.alarms, hunt: id).loaded ? Array(monitorMatches(.alarms, hunt: id).prefix(3)) : nil
+        }
+        return huntLatest[id].map { ids in ids.compactMap { matchesByID[$0] }.filter { $0.state != .dismissed } }
     }
 
-    /// The hunt's three newest matches (every state but dismissed), for its page. Quiet: a failure keeps what was shown.
-    func loadLatest(hunt id: Int) async {
-        guard canAct, id > 0 else { return }
+    /// Price monitors request actual alarms before the server applies the limit; ordinary hunt feeds stay mixed.
+    func loadLatest(hunt id: Int, force: Bool = false) async {
+        guard canAct, id > 0, let search = card(id)?.hunt.search else { return }
+        if search.price != nil {
+            await loadMonitorListings(.alarms, hunt: id, force: force, limit: 3)
+            return
+        }
         let context = context
+        let revision = stateRevision
         do {
             let page = try await backend.matches(hunt: id, state: nil, limit: 3, before: nil)
-            guard isCurrent(context), card(id) != nil else { return }
-            for match in page.items { remember(match) }
+            guard !Task.isCancelled, isCurrent(context), card(id)?.hunt.search == search else { return }
+            for match in page.items { remember(match, since: revision) }
             huntLatest[id] = page.items.map(\.id)
         } catch {
             guard isCurrent(context) else { return }
@@ -548,11 +606,12 @@ final class ArestemisStore {
         if !quiet { lists[scope]?.error = nil }
         let generation = listGeneration
         let context = context
+        let revision = stateRevision
         defer { if isCurrent(context) && generation == listGeneration { lists[scope]?.isLoading = false } }
         do {
             let page = try await backend.matches(hunt: hunt, state: filter.states, limit: Self.pageSize, before: before)
             guard isCurrent(context) && generation == listGeneration else { return }
-            merge(page, scope: scope, appending: more)
+            merge(page, scope: scope, appending: more, since: revision)
         } catch {
             guard isCurrent(context) && generation == listGeneration else { return }
             if quiet { session.handleAuthFailure(error, generation: context.session, token: context.token) }
@@ -566,6 +625,7 @@ final class ArestemisStore {
     func findMatches(_ words: String, hunt: Int?, limit: Int = ListingSearch.limit) async throws -> MatchPage {
         guard canAct else { throw CancellationError() }
         let context = context
+        let revision = stateRevision
         let page: MatchPage
         do {
             page = try await backend.findMatches(words, hunt: hunt, limit: limit)
@@ -575,7 +635,7 @@ final class ArestemisStore {
             throw error
         }
         guard isCurrent(context) else { throw CancellationError() }
-        for match in page.items { remember(match) }
+        for match in page.items { remember(match, since: revision) }
         return page
     }
 
@@ -594,11 +654,12 @@ final class ArestemisStore {
         guard canAct else { return nil }
         matchErrors[id] = nil
         let context = context
+        let revision = stateRevision
         do {
             let loaded = try await backend.match(id: id)
             guard isCurrent(context) else { return nil }
-            remember(loaded)
-            return loaded
+            remember(loaded, since: revision)
+            return match(id)
         } catch {
             guard isCurrent(context) else { return nil }
             handle(error, context: context) { self.matchErrors[id] = $0 }
@@ -610,6 +671,8 @@ final class ArestemisStore {
     func setState(_ state: MatchState, for id: Int) async {
         guard canAct, !changingState.contains(id), let current = match(id), current.state != state else { return }
         if state == .dismissed { undo = nil }
+        stateRevision += 1
+        matchStateRevision[id] = stateRevision
         changingState.insert(id)
         var changed = current
         changed.state = state
@@ -618,7 +681,9 @@ final class ArestemisStore {
         defer { if isCurrent(context) { changingState.remove(id) } }
         do {
             let returned = try await backend.setState(state, match: id)
-            guard isCurrent(context) else { return }
+            guard isCurrent(context), !deletedHunts.contains(current.huntID) else { return }
+            stateRevision += 1
+            matchStateRevision[id] = stateRevision
             matchesByID[id] = returned
             // Offered as soon as the server confirmed, before the counts reload, so it follows the swipe at once.
             if state == .dismissed, returned.state == .dismissed {
@@ -629,7 +694,9 @@ final class ArestemisStore {
             }
             await reloadOverview(quiet: true)          // the counts are the server's
         } catch {
-            guard isCurrent(context) else { return }
+            guard isCurrent(context), !deletedHunts.contains(current.huntID) else { return }
+            stateRevision += 1
+            matchStateRevision[id] = stateRevision
             matchesByID[id] = current
             handle(error, context: context) { self.show("\(state.failure) \($0)") }
         }
@@ -660,6 +727,116 @@ final class ArestemisStore {
         } catch {
             guard isCurrent(context) && generation == listGeneration else { return }
             handle(error, context: context) { self.rejectedLists[hunt]?.error = $0 }
+        }
+    }
+
+    // MARK: - monitor listings (Used and Alarms)
+
+    func usedList(_ filter: MatchFilter = .all, hunt: Int) -> MatchList {
+        monitorList(.used, hunt: hunt, filter: filter)
+    }
+
+    func usedMatches(_ filter: MatchFilter = .all, hunt: Int) -> [Match] {
+        monitorMatches(.used, hunt: hunt, filter: filter)
+    }
+
+    func loadUsed(_ filter: MatchFilter = .all, hunt: Int, more: Bool = false, force: Bool = false) async {
+        await loadMonitorListings(.used, hunt: hunt, filter: filter, more: more, force: force)
+    }
+
+    func monitorList(_ kind: MonitorListingKind, hunt: Int, filter: MatchFilter = .all) -> MatchList {
+        monitorLists[MonitorListScope(hunt: hunt, filter: filter, kind: kind)] ?? MatchList()
+    }
+
+    func monitorMatches(_ kind: MonitorListingKind, hunt: Int, filter: MatchFilter = .all) -> [Match] {
+        (monitorIDs[MonitorFeed(hunt: hunt, kind: kind)] ?? []).compactMap { matchesByID[$0] }
+            .filter { $0.huntID == hunt && filter.includes($0.state) }.sorted { $0.id > $1.id }
+    }
+
+    func showsUsed(hunt: Int) -> Bool {
+        card(hunt)?.hunt.search.price?.mode == .everywhere
+            && (card(hunt)?.hunt.search.price?.includeUsed == true || !usedMatches(hunt: hunt).isEmpty)
+    }
+
+    private func invalidateMonitorListings(_ hunt: Int) {
+        monitorGeneration[hunt, default: 0] += 1
+        monitorLists = monitorLists.filter { $0.key.hunt != hunt }
+        monitorLoadedFor = monitorLoadedFor.filter { $0.key.hunt != hunt }
+        monitorRequests = monitorRequests.filter { $0.key.hunt != hunt }
+        monitorLimits = monitorLimits.filter { $0.key.hunt != hunt }
+    }
+
+    /// Endpoints own feed membership. Known records keep shared state, including Used with its switch off.
+    /// The inline Alarms read asks for three; opening its page expands that cached first page to the ordinary limit.
+    func loadMonitorListings(_ kind: MonitorListingKind, hunt: Int, filter: MatchFilter = .all,
+                             more: Bool = false, force: Bool = false, limit: Int = pageSize) async {
+        let scope = MonitorListScope(hunt: hunt, filter: filter, kind: kind)
+        let feed = MonitorFeed(hunt: hunt, kind: kind)
+        guard canAct, hunt > 0, let card = card(hunt), kind.supports(card.hunt.search.price) else { return }
+        if let pending = monitorRequests[scope], !pending.isCancelled {
+            pending.require(limit)
+            return
+        }
+        let read = MonitorListingsRead(card)
+        if !more, !force, monitorLists[scope]?.loaded == true, monitorLoadedFor[scope] == read,
+           (monitorLimits[scope] ?? 0) >= limit { return }
+        let before = more ? monitorLists[scope]?.ids.min() : nil
+        if more && (before == nil || monitorLists[scope]?.more != true) { return }
+        let generation = monitorGeneration[hunt, default: 0]
+        let context = context
+        let revision = stateRevision
+        let request = MonitorRequest()
+        request.require(limit)
+        monitorRequests[scope] = request
+        monitorLists[scope, default: MatchList()].isLoading = true
+        monitorLists[scope]?.error = nil
+        defer {
+            if isCurrent(context), monitorRequests[scope] === request {
+                monitorLists[scope]?.isLoading = false
+                monitorRequests[scope] = nil
+            }
+        }
+        do {
+            let page = try await withTaskCancellationHandler {
+                switch kind {
+                case .used: try await backend.used(hunt: hunt, state: filter.states, limit: limit, before: before)
+                case .alarms: try await backend.priceAlarms(hunt: hunt, state: filter.states, limit: limit, before: before)
+                }
+            } onCancel: {
+                request.cancel()
+            }
+            guard !Task.isCancelled, monitorRequests[scope] === request, isCurrent(context),
+                  self.card(hunt)?.hunt.search == card.hunt.search,
+                  monitorGeneration[hunt, default: 0] == generation else { return }
+            let returned = Set(page.items.map(\.id))
+            let lowest = page.items.map(\.id).min() ?? 0
+            let upper = before ?? Int.max
+            // Refresh removes records only from this feed's covered range, keeping unrelated feeds intact.
+            for id in monitorIDs[feed] ?? [] {
+                guard let known = matchesByID[id], filter.includes(known.state), !returned.contains(id),
+                      !changingState.contains(id), (matchStateRevision[id] ?? 0) <= revision,
+                      id < upper, !page.more || id >= lowest else { continue }
+                monitorIDs[feed]?.remove(id)
+            }
+            for match in page.items { remember(match, since: revision) }
+            monitorIDs[feed, default: []].formUnion(returned)
+            let ids = (more ? monitorLists[scope]?.ids ?? [] : []) + page.items.map(\.id)
+            monitorLists[scope]?.ids = Array(Set(ids)).sorted(by: >)
+            monitorLists[scope]?.loaded = true
+            monitorLists[scope]?.more = page.more
+            monitorLoadedFor[scope] = read
+            monitorLimits[scope] = more ? max(monitorLimits[scope] ?? 0, limit) : limit
+        } catch {
+            guard !Task.isCancelled, monitorRequests[scope] === request, isCurrent(context),
+                  monitorGeneration[hunt, default: 0] == generation, self.card(hunt) != nil else { return }
+            handle(error, context: context) { self.monitorLists[scope]?.error = $0 }
+        }
+        // Show all may open while the inline request is pending. Expand it once that request completes.
+        if request.limit > limit, !Task.isCancelled, !request.isCancelled, isCurrent(context),
+           monitorRequests[scope] === request, monitorLoadedFor[scope] == read {
+            monitorRequests[scope] = nil
+            monitorLists[scope]?.isLoading = false
+            await loadMonitorListings(kind, hunt: hunt, filter: filter, limit: request.limit)
         }
     }
 
@@ -947,6 +1124,7 @@ final class ArestemisStore {
     private func forgetMatches() {
         undo = nil
         listGeneration += 1
+        deletedHunts = []
         matchesByID = [:]
         huntLatest = [:]
         lists = [:]
@@ -957,6 +1135,13 @@ final class ArestemisStore {
         applications = [:]
         priceHistories = [:]
         priceOffers = [:]
+        monitorLists = [:]
+        monitorIDs = [:]
+        monitorGeneration = [:]
+        monitorLoadedFor = [:]
+        monitorLimits = [:]
+        monitorRequests = [:]
+        matchStateRevision = [:]
         savingMonitors = []
         monitorWanted = [:]
     }
@@ -977,24 +1162,25 @@ final class ArestemisStore {
         report(failure.localizedDescription)
     }
 
-    private func remember(_ match: Match) {
+    private func remember(_ match: Match, since revision: Int? = nil) {
         // A match whose state is being changed here keeps the state shown until the server answers.
-        guard !changingState.contains(match.id) else { return }
+        guard !deletedHunts.contains(match.huntID), !changingState.contains(match.id),
+              revision.map({ (matchStateRevision[match.id] ?? 0) <= $0 }) ?? true else { return }
         matchesByID[match.id] = match
     }
 
     /// A page from the server is the truth for its scope: matches of that filter (and search) it no longer lists are
     /// gone (changed or removed elsewhere), within the range the page covers.
-    private func merge(_ page: MatchPage, scope: ListScope, appending: Bool) {
+    private func merge(_ page: MatchPage, scope: ListScope, appending: Bool, since revision: Int) {
         let returned = Set(page.items.map(\.id))
         let lowest = page.items.map(\.id).min() ?? 0
         let upper = appending ? (lists[scope]?.ids.min() ?? Int.max) : Int.max
         for (id, match) in matchesByID where (scope.hunt == nil || match.huntID == scope.hunt)
             && scope.filter.includes(match.state) && !returned.contains(id)
-            && !changingState.contains(id) && id < upper && (!page.more || id >= lowest) {
+            && !changingState.contains(id) && (matchStateRevision[id] ?? 0) <= revision && id < upper && (!page.more || id >= lowest) {
             matchesByID[id] = nil
         }
-        for match in page.items { remember(match) }
+        for match in page.items { remember(match, since: revision) }
         let ids = page.items.map(\.id)
         lists[scope, default: MatchList()].ids = appending ? (lists[scope]?.ids ?? []) + ids : ids
         lists[scope]?.more = page.more

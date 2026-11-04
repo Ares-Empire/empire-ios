@@ -15,7 +15,7 @@ struct DecodingTests {
         case "settings": try roundTrip(Settings.self, file)
         case "places": try roundTrip([Place].self, file)
         case "hunts": try roundTrip([Hunt].self, file)
-        case "item-matches", "watch-matches", "price-matches": try roundTrip(MatchPage.self, file)
+        case "item-matches", "watch-matches", "price-matches", "used-matches": try roundTrip(MatchPage.self, file)
         case "prices-9", "prices-10", "prices-12": try roundTrip(Prices.self, file)
         case "price-offers": try roundTrip(PriceOffers.self, file)
         case "product-preview": try roundTrip(ProductPreview.self, file)

@@ -62,6 +62,7 @@ struct HuntsScreen: View {
             .navigationDestination(for: HuntRoute.self) { route in
                 Group {
                     switch route {
+                    case .monitorListings(let id, let kind): MonitorListingsPage(id: id, kind: kind, store: store, navigation: navigation)
                     case .hunt(let id): HuntPage(id: id, store: store, navigation: navigation)
                     case .match(let id): MatchDetailScreen(id: id, store: store, navigation: navigation)
                     case .newSearch: NewSearchScreen(store: store, navigation: navigation)

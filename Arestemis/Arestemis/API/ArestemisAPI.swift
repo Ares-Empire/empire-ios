@@ -23,6 +23,9 @@ protocol ArestemisBackend {
     /// `GET /hunts/{id}/prices?days=`: a price monitor's history over 30, 90 or 365 days (404 while its history is off).
     func prices(hunt id: Int, days: Int) async throws -> Prices
     func places(query: String) async throws -> [Place]
+    func used(hunt: Int, state: [MatchState]?, limit: Int, before: Int?) async throws -> MatchPage
+    /// `GET /matches?kind=price`: listing kind is selected by the server before pagination.
+    func priceAlarms(hunt: Int, state: [MatchState]?, limit: Int, before: Int?) async throws -> MatchPage
     func matches(hunt: Int?, state: [MatchState]?, limit: Int, before: Int?) async throws -> MatchPage
     /// `GET /matches?q=`: every state but dismissed, best match first (brief 132).
     func findMatches(_ words: String, hunt: Int?, limit: Int) async throws -> MatchPage
@@ -104,13 +107,32 @@ struct ArestemisAPI: ArestemisBackend {
 
     func offers(hunt id: Int) async throws -> PriceOffers { try await send(.get, "hunts/\(id)/offers") }
 
+    func used(hunt: Int, state: [MatchState]?, limit: Int, before: Int?) async throws -> MatchPage {
+        var query = [URLQueryItem(name: "limit", value: String(limit))]
+        if let state, !state.isEmpty {
+            query.append(URLQueryItem(name: "state", value: state.map(\.rawValue).joined(separator: ",")))
+        }
+        if let before { query.append(URLQueryItem(name: "before", value: String(before))) }
+        return try await send(.get, "hunts/\(hunt)/used", query: query)
+    }
+
     func places(query: String) async throws -> [Place] {
         try await send(.get, "places", query: [URLQueryItem(name: "q", value: query)])
     }
 
     func matches(hunt: Int?, state states: [MatchState]?, limit: Int, before: Int?) async throws -> MatchPage {
+        try await matchPage(hunt: hunt, state: states, limit: limit, before: before)
+    }
+
+    func priceAlarms(hunt: Int, state: [MatchState]?, limit: Int, before: Int?) async throws -> MatchPage {
+        try await matchPage(hunt: hunt, state: state, limit: limit, before: before, kind: "price")
+    }
+
+    private func matchPage(hunt: Int?, state states: [MatchState]?, limit: Int, before: Int?,
+                           kind: String? = nil) async throws -> MatchPage {
         var query: [URLQueryItem] = []
         if let hunt { query.append(URLQueryItem(name: "hunt", value: String(hunt))) }
+        if let kind { query.append(URLQueryItem(name: "kind", value: kind)) }
         if let states, !states.isEmpty {
             query.append(URLQueryItem(name: "state", value: states.map(\.rawValue).joined(separator: ",")))
         }

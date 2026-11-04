@@ -22,6 +22,7 @@ struct PriceSearchDraft {
     var identityWords: ProductWords?
     /// Überall: the sites switched off on "Where it looks".
     var sourcesOff: [String] = []
+    var includeUsed = false
     var delivery: Delivery = .shipping
     var places: [Place] = []
     var radiusKm: Double = 20
@@ -46,6 +47,7 @@ struct PriceSearchDraft {
         identity = search.identity
         identityWords = search.identity == nil ? nil : ProductWords(product: product, details: details)
         sourcesOff = search.sourcesOff
+        includeUsed = search.includeUsed
         delivery = search.delivery
         places = search.places
         radiusKm = search.radiusKm
@@ -134,7 +136,7 @@ struct PriceSearchDraft {
         case .everywhere:
             return PriceSearch(product: words.product, details: words.details, identity: identity,
                                sourcesOff: sourcesOff, history: history, alarm: alarm, every: effectiveEvery,
-                               delivery: delivery, places: places, radiusKm: radiusKm)
+                               delivery: delivery, places: places, radiusKm: radiusKm, includeUsed: includeUsed)
         }
     }
 
@@ -237,7 +239,7 @@ struct PriceSearchDraft {
 extension PriceSearchDraft: Codable {
     enum CodingKeys: String, CodingKey {
         case mode, name, url, product, details, identity, identityWords, sourcesOff, history, alarm, below, backInStock
-        case every, delivery, places, radiusKm
+        case every, delivery, places, radiusKm, includeUsed
     }
 
     /// A kept draft from a build before brief 157 has no mode: it was a page monitor's.
@@ -251,6 +253,7 @@ extension PriceSearchDraft: Codable {
         identity = try c.decodeIfPresent(ProductIdentity.self, forKey: .identity)
         identityWords = try c.decodeIfPresent(ProductWords.self, forKey: .identityWords)
         sourcesOff = try c.decodeIfPresent([String].self, forKey: .sourcesOff) ?? []
+        includeUsed = try c.decodeIfPresent(Bool.self, forKey: .includeUsed) ?? false
         delivery = (try c.decodeIfPresent(String.self, forKey: .delivery)).flatMap(Delivery.init(rawValue:)) ?? .shipping
         places = try c.decodeIfPresent([Place].self, forKey: .places) ?? []
         radiusKm = try c.decodeIfPresent(Double.self, forKey: .radiusKm) ?? 20
@@ -273,7 +276,7 @@ extension PriceSearchDraft: Equatable {
         case .page: return a.url == b.url
         case .everywhere:
             return a.product == b.product && a.details == b.details && a.identity == b.identity
-                && Set(a.sourcesOff) == Set(b.sourcesOff)
+                && Set(a.sourcesOff) == Set(b.sourcesOff) && a.includeUsed == b.includeUsed
                 && a.delivery == b.delivery && a.places == b.places && a.radiusKm == b.radiusKm
         }
     }

@@ -51,7 +51,7 @@ struct HuntPage: View {
         } message: {
             Text(words.deleteMessage)
         }
-        .task { await store.loadLatest(hunt: id) }
+        .task(id: store.card(id).map(MonitorListingsRead.init)) { await store.loadLatest(hunt: id) }
         // A card's long press asked for Rename: the field opens once the page is there.
         .onChange(of: navigation.renaming, initial: true) { _, asked in
             guard asked == id else { return }
@@ -110,7 +110,8 @@ struct HuntPage: View {
                         if let monitor = card.hunt.search.price {
                             MonitorSections(card: card, search: monitor, store: store,
                                             open: { navigation.huntPath.append(.match($0)) },
-                                            showAll: { showListings(.all) }, showsSites: $showsSites)
+                                            showAll: { navigation.huntPath.append(.monitorListings(id, .alarms)) },
+                                            showUsed: { navigation.huntPath.append(.monitorListings(id, .used)) }, showsSites: $showsSites)
                         } else {
                             figuresAndLatest(card, actions: actions, kind: kind)
                         }
@@ -127,7 +128,8 @@ struct HuntPage: View {
             .scrollDismissesKeyboard(.interactively)
             .refreshable {
                 await store.reloadOverview()
-                await store.loadLatest(hunt: id)
+                await store.loadLatest(hunt: id, force: true)
+                await store.loadUsed(hunt: id, force: true)
             }
             .onAppear {
                 // Screenshots: `-openHunt <id> -scrollTo history|switches|bottom` (a monitor's sections).
@@ -135,7 +137,7 @@ struct HuntPage: View {
                 navigation.formScroll = nil
                 Task {
                     try? await Task.sleep(for: .milliseconds(400))
-                    reader.scrollTo(target, anchor: target == "bottom" ? .bottom : .top)
+                    reader.scrollTo(target, anchor: target == "bottom" ? .bottom : target == "usedAll" ? .center : .top)
                 }
             }
         }
