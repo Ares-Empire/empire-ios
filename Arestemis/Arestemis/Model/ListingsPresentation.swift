@@ -6,9 +6,11 @@ import Foundation
 /// One search's new listings in New.
 struct NewGroup: Equatable, Identifiable {
     let huntID: Int
-    /// Newest first.
+    /// Newest first, read ones too (they stay until they are a favorite, applied or dismissed, brief 180).
     let matches: [Match]
     var id: Int { huntID }
+    /// The heading's "● 2 NEW": the listings not opened yet.
+    var unread: Int { matches.count { !$0.seen } }
 }
 
 enum NewListings {
@@ -37,9 +39,10 @@ enum NewListings {
     static func showsHeadings(searches: Int) -> Bool { searches > 1 }
 }
 
-/// One row of Searches: the search's kind and name, its new count, and what was kept from it in a quiet line ("2 saved ·
-/// 1 applied"; a thing's seller is asked; a watch's changes are only saved; "Paused" first while it is paused). Counts of
-/// zero are left out, so a search with nothing kept has no line (eight cards of "0 saved · 0 asked" said nothing).
+/// One row of Searches: the search's kind and name, its new (unread) count, and what was kept from it in a quiet line
+/// ("2 favorites · 1 applied"; a thing's seller is asked; a watch's changes are only kept as favorites; "Paused" first
+/// while it is paused). Counts of zero are left out, so a search with nothing kept has no line (eight cards of "0 saved ·
+/// 0 asked" said nothing).
 /// A search of a kind this build does not know shows its name only.
 struct SearchRow: Equatable, Identifiable {
     let huntID: Int
@@ -60,7 +63,7 @@ struct SearchRow: Equatable, Identifiable {
         newCount = card.counts.new
         var parts: [String] = []
         if !card.hunt.active { parts.append(language.string("Paused")) }
-        if card.counts.saved > 0 { parts.append(language.string("\(card.counts.saved) saved")) }
+        if card.counts.saved > 0 { parts.append(language.string("\(card.counts.saved) favorites")) }
         if card.counts.applied > 0 {
             switch kind {
             case .flat: parts.append(language.string("\(card.counts.applied) applied"))
@@ -71,7 +74,7 @@ struct SearchRow: Equatable, Identifiable {
         line = parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
-    /// VoiceOver reads the row as one: "Herman Miller Aeron, 4 new, 1 saved".
+    /// VoiceOver reads the row as one: "Herman Miller Aeron, 4 new, 1 favorite".
     func spoken(language: AppLanguage = .current) -> String {
         [text.title, newCount.map { language.string("\($0) new") }, line].compactMap { $0 }.joined(separator: ", ")
     }

@@ -1,6 +1,6 @@
 # 180: Arestemis app: Überall saves at once, Favoriten with a star, a listing is read when opened
 
-Status: draft
+Status: merged (Claude agent build, Claude review; tests passed on Claude's simulator; Arestemis build 20)
 Branch: `claude/180-save-favorites-read` · Worktree: `../empire-ios-180-save` · Builder: Claude agent (design)
 
 ## Goal

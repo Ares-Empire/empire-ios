@@ -40,7 +40,7 @@ nonisolated enum TourStep: Int, CaseIterable, Sendable {
         case .search:
             [TourLine(language.string("It runs until you pause it; the number shows the new listings you haven't seen yet. Tap the card for its page."))]
         case .newListings:
-            [TourLine(language.string("Everything new, grouped by search. Swipe right to save a listing, left to dismiss it."))]
+            [TourLine(language.string("Everything new, grouped by search. Swipe right to make a listing a favorite, left to dismiss it."))]
         case .searches:
             [TourLine(language.string("Each search with its listings. The magnifying glass searches all of them."))]
         case .listing:

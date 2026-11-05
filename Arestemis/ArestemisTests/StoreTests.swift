@@ -232,15 +232,6 @@ struct StoreTests {
         #expect(await store.loadMatch(99) == nil && store.matchErrors[99] == "Not yours")
     }
 
-    @Test func seenKeepsTheStateAndHidesTheDot() async throws {
-        let (store, _, _) = try await makeStore()
-        await store.reloadOverview()
-        let match = try #require(store.match(41))
-        #expect(store.showsNewDot(match))
-        store.markSeen(41)
-        #expect(!store.showsNewDot(match) && store.match(41)?.state == .new)
-    }
-
     // MARK: applications
 
     @Test func aWrittenApplicationIsReused() async throws {

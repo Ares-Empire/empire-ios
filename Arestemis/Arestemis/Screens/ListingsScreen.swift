@@ -2,12 +2,13 @@ import SwiftUI
 
 /// The Listings tab ("Angebote", brief 133, Patrik's choice of 2026-11-02): the header with the search over listings
 /// (the magnifying glass), then two parts, New | Searches, the user's choice remembered across launches.
-/// - **New:** every search's new listings, grouped under each search's name with its new count (no headings while
-///   there is one search), the search with the newest finding first, newest first within it; swipe right to save, left
-///   to dismiss; a group goes with its last new listing. Then "Filtered out" for every search. A notification's match
+/// - **New:** every search's new listings, grouped under each search's name with its unread count (no headings while
+///   there is one search), the search with the newest finding first, newest first within it; a listing opened stays,
+///   without its dot, until it is a favorite, applied or dismissed (brief 180); swipe right for a favorite, left to
+///   dismiss; a group goes with its last new listing. Then "Filtered out" for every search. A notification's match
 ///   opens over it.
 /// - **Searches:** one card per search, in the Hunts tab's order (paused ones too): its kind and name, the new count,
-///   saved and applied (asked) in a quiet line; a tap opens that search's listings (`SearchListingsPage`), the long
+///   favorites and applied (asked) in a quiet line; a tap opens that search's listings (`SearchListingsPage`), the long
 ///   press offers Rename, Pause or Start and Delete (`huntCardMenu`).
 /// The stack also holds the search over listings (`ListingSearchPage`) and the matches' pages.
 struct ListingsScreen: View {
@@ -135,7 +136,7 @@ private struct NewPart: View {
     private func heading(_ group: NewGroup, first: Bool) -> some View {
         let text = store.card(group.huntID).map { HuntText($0, sites: store.siteNames) }
         return NewGroupHeading(kind: text?.kind, title: text?.title ?? String(localized: "Search"),
-                               count: group.matches.count) {
+                               count: group.unread) {
             navigation.openSearch(group.huntID, filter: .new)
         }
         .listRowInsets(EdgeInsets(top: first ? 0 : 16, leading: Look.side, bottom: 0, trailing: Look.side))

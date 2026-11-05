@@ -124,7 +124,10 @@ struct PriceEverywhereTests {
         #expect(draft.mode == .everywhere && draft.problems == [.product])
         draft.product = "  AirPods Max 2 "
         draft.details = "Blau"
-        #expect(draft.problems == [.unconfirmed] && draft.search() == nil)
+        // Saving never waits for the preview (brief 180): without the product found, no identity is sent.
+        #expect(draft.problems.isEmpty
+                && draft.search() == PriceSearch(product: "AirPods Max 2", details: "Blau", identity: nil, history: true,
+                                                 alarm: nil, every: 60))
         // One shop: its own link; the product stays.
         draft.mode = .page
         #expect(draft.problems == [.url])
@@ -160,17 +163,16 @@ struct PriceEverywhereTests {
         #expect(draft.productLine(language: language) == (german ? "Mindestens 2 Zeichen." : "At least 2 characters."))
         draft.product = "AirPods Max"
         #expect(draft.productLine(language: language) == nil)
-        #expect(draft.hint(language: language)
-                == (german ? "Erst muss das Produkt gefunden werden." : "First the product has to be found."))
+        #expect(draft.hint(language: language) == nil && draft.isValid)
         // An answer for older words changes nothing; one for the words in the fields confirms them.
         let found = ProductIdentity(name: "Apple AirPods Max")
         draft.confirm(found, for: ProductWords(product: "AirPods"))
         #expect(!draft.isConfirmed)
         draft.confirm(found, for: ProductWords(product: " AirPods Max "))
         #expect(draft.isConfirmed && draft.isValid && draft.hint(language: language) == nil)
-        // Other words want it found again; the details count too.
+        // Other words want it found again (the details count too); until then none is sent.
         draft.details = "Silber"
-        #expect(!draft.isConfirmed && draft.problems == [.unconfirmed])
+        #expect(!draft.isConfirmed && draft.problems.isEmpty && draft.search()?.identity == nil)
         draft.details = String(repeating: "x", count: 301)
         #expect(draft.detailsLine(language: language) == (german ? "Höchstens 300 Zeichen." : "At most 300 characters."))
         // The name's placeholder: the product found, else the words.
@@ -216,7 +218,7 @@ struct PriceEverywhereTests {
         preview.update(product: "Orbital", details: "")
         preview.update(product: "Orbital Headphones 2 ", details: " blue")
         #expect(preview.phase == .reading
-                && preview.line(language: language) == (german ? "Produkt wird gesucht…" : "Looking for the product…"))
+                && preview.line(language: language) == (german ? "Sucht das Produkt …" : "Looking for the product…"))
         await preview.settle()
         #expect(asked.words == [ProductPreviewQuery(product: "Orbital Headphones 2", details: "blue")])
         #expect(spaces(preview.line(language: language)) == (german
@@ -421,10 +423,12 @@ struct PriceEverywhereTests {
         // Its preview: the words found, every site on.
         let found = try await store.productPreview(ProductPreviewQuery(product: "AirPods Max 2", details: "Blau"))
         #expect(found.identity.name == "AirPods Max 2 Blau" && found.sites.allSatisfy(\.on))
-        // Saving needs the product found, at most hourly; then it waits for its first look.
+        // Saving without the product found is fine (brief 180): the server finds it, under the words meanwhile.
         let unconfirmed = PriceSearch(product: "AirPods Max 2", identity: nil, history: true, alarm: nil)
-        #expect(await store.saveHunt(id: nil, kind: .price, name: nil, search: .price(unconfirmed)) == nil)
-        #expect(store.searchErrorField == "search.identity")
+        let finding = try #require(await store.saveHunt(id: nil, kind: .price, name: nil, search: .price(unconfirmed)))
+        #expect(store.card(finding.id)?.price?.productState == .finding
+                && store.card(finding.id)?.price?.product == "AirPods Max 2")
+        // At most hourly; then it waits for its first look.
         let often = PriceSearch(product: "AirPods Max 2", identity: found.identity, history: true, alarm: nil, every: 15)
         #expect(await store.saveHunt(id: nil, kind: .price, name: nil, search: .price(often)) == nil)
         #expect(store.searchErrorField == "search.every")

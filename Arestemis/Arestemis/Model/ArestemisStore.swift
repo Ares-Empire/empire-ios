@@ -97,7 +97,6 @@ final class ArestemisStore {
     /// Each hunt's newest matches for its page (ids, newest first), loaded when the page opens.
     private(set) var huntLatest: [Int: [Int]] = [:]
     private(set) var lists: [ListScope: MatchList] = [:]
-    private(set) var seen: Set<Int> = []
     private(set) var changingState: Set<Int> = []
     private(set) var matchErrors: [Int: String] = [:]
 
@@ -208,6 +207,16 @@ final class ArestemisStore {
     private var stateRevision = 0
     private var matchStateRevision: [Int: Int] = [:]
 
+    // reading (brief 180)
+    /// Listings opened here whose read the server has not confirmed: on their way, or failed (sent again at the next
+    /// opening). They stay read here whatever a list or overview says meanwhile.
+    private var unconfirmedReads: Set<Int> = []
+    private var sendingReads: Set<Int> = []
+    /// Counts the listings read here; each unread new one's hunt, by the count it was read at, until an overview asked
+    /// for after it arrived (an older answer still counts it as unread).
+    private var readRevision = 0
+    private var countedReads: [Int: (hunt: Int, revision: Int)] = [:]
+
 
     /// Loads the home screen. `quiet` keeps the current one on screen and reports nothing (refreshes after actions).
     func reloadOverview(quiet: Bool = false) async {
@@ -216,10 +225,12 @@ final class ArestemisStore {
         if !quiet { overviewError = nil }
         let context = context
         let revision = stateRevision
+        let reads = readRevision
         defer { if isCurrent(context) { isLoadingOverview = false } }
         do {
             var loaded = try await backend.overview()
             guard isCurrent(context) else { return }
+            uncount(readsAfter: reads, in: &loaded)
             // An overview arriving during an action must keep its pending card (or pending deletion).
             let pending = hunts.filter { changingHunts.contains($0.id) }
             loaded.hunts.removeAll { changingHunts.contains($0.id) || deletedHunts.contains($0.id) }
@@ -445,7 +456,12 @@ final class ArestemisStore {
             deletedHunts.insert(id)
             if !isSample, let account = session.accountID { keptDraft.drop(account: account, huntID: id, kind: card.hunt.kind) }
             let removed = Set(matchesByID.values.filter { $0.huntID == id }.map(\.id))
-            for match in removed { matchesByID[match] = nil; applications[match] = nil; seen.remove(match) }
+            for match in removed {
+                matchesByID[match] = nil
+                applications[match] = nil
+                unconfirmedReads.remove(match)
+                countedReads[match] = nil
+            }
             overview?.latest.removeAll { $0.huntID == id }
             huntLatest[id] = nil
             priceHistories = priceHistories.filter { $0.key.hunt != id }
@@ -542,7 +558,7 @@ final class ArestemisStore {
     /// The matches of a filter, of every search or of one, newest first, as known now (including changes made here since
     /// the last load).
     func matches(_ filter: MatchFilter, hunt: Int? = nil) -> [Match] {
-        matchesByID.values.filter { filter.includes($0.state) && (hunt == nil || $0.huntID == hunt) }.sorted { $0.id > $1.id }
+        matchesByID.values.filter { filter.includes($0) && (hunt == nil || $0.huntID == hunt) }.sorted { $0.id > $1.id }
     }
 
     func list(_ filter: MatchFilter, hunt: Int? = nil) -> MatchList { lists[ListScope(hunt: hunt, filter: filter)] ?? MatchList() }
@@ -609,7 +625,8 @@ final class ArestemisStore {
         let revision = stateRevision
         defer { if isCurrent(context) && generation == listGeneration { lists[scope]?.isLoading = false } }
         do {
-            let page = try await backend.matches(hunt: hunt, state: filter.states, limit: Self.pageSize, before: before)
+            let page = try await backend.matches(hunt: hunt, state: filter.states, seen: filter.seen, limit: Self.pageSize,
+                                                 before: before)
             guard isCurrent(context) && generation == listGeneration else { return }
             merge(page, scope: scope, appending: more, since: revision)
         } catch {
@@ -684,7 +701,7 @@ final class ArestemisStore {
             guard isCurrent(context), !deletedHunts.contains(current.huntID) else { return }
             stateRevision += 1
             matchStateRevision[id] = stateRevision
-            matchesByID[id] = returned
+            matchesByID[id] = keepingRead(returned)
             // Offered as soon as the server confirmed, before the counts reload, so it follows the swipe at once.
             if state == .dismissed, returned.state == .dismissed {
                 undo = UndoOffer(message: String(localized: "Listing dismissed.")) { [weak self] in
@@ -697,15 +714,70 @@ final class ArestemisStore {
             guard isCurrent(context), !deletedHunts.contains(current.huntID) else { return }
             stateRevision += 1
             matchStateRevision[id] = stateRevision
-            matchesByID[id] = current
+            matchesByID[id] = keepingRead(current)
             handle(error, context: context) { self.show("\(state.failure) \($0)") }
         }
     }
 
-    /// Opening a new match keeps it `new` (only the user's actions change states); its "new" dot fades.
-    func markSeen(_ id: Int) { seen.insert(id) }
+    /// A listing's page opened (brief 180): it is read at once, here and on the server (`POST /matches/{id}/seen`), and
+    /// keeps its state (only the user's actions change states). A new one loses its dot and leaves the "● 3 NEW" counts
+    /// of its search and the account at once; the next overview confirms them. Sent once per listing; a failure keeps it
+    /// read here, says nothing, and is sent again at the next opening.
+    func markRead(_ id: Int) async {
+        guard canAct, let current = match(id) else { return }
+        if !current.seen {
+            var read = current
+            read.seen = true
+            matchesByID[id] = read
+            if read.state == .new { uncount(read) }
+            unconfirmedReads.insert(id)
+        }
+        guard unconfirmedReads.contains(id), !sendingReads.contains(id) else { return }
+        sendingReads.insert(id)
+        let context = context
+        defer { if isCurrent(context) { sendingReads.remove(id) } }
+        do {
+            _ = try await backend.markSeen(match: id)
+            guard isCurrent(context) else { return }
+            unconfirmedReads.remove(id)
+        } catch {
+            guard isCurrent(context) else { return }
+            // Quietly: a refused login still counts (401 logs out, 403 closes the app); anything else waits for the
+            // next opening.
+            session.handleAuthFailure(error, generation: context.session, token: context.token)
+        }
+    }
 
-    func showsNewDot(_ match: Match) -> Bool { match.state == .new && !seen.contains(match.id) }
+    /// The accent dot: a new listing not opened yet.
+    func showsNewDot(_ match: Match) -> Bool { match.state == .new && !match.seen }
+
+    /// An unread new listing just read: one less in its search's and the account's new count.
+    private func uncount(_ match: Match) {
+        readRevision += 1
+        countedReads[match.id] = (match.huntID, readRevision)
+        guard var overview else { return }
+        overview.counts.new = max(0, overview.counts.new - 1)
+        if let index = overview.hunts.firstIndex(where: { $0.id == match.huntID }) {
+            overview.hunts[index].counts.new = max(0, overview.hunts[index].counts.new - 1)
+        }
+        self.overview = overview
+    }
+
+    /// An overview asked for before some listings were read still counts them as unread new ones (they were new when
+    /// read; a state changed since is not in it either): they are taken out again. The ones read before it was asked for
+    /// are in its counts, and forgotten.
+    private func uncount(readsAfter revision: Int, in overview: inout Overview) {
+        for (id, read) in countedReads {
+            guard read.revision > revision else {
+                countedReads[id] = nil
+                continue
+            }
+            overview.counts.new = max(0, overview.counts.new - 1)
+            if let index = overview.hunts.firstIndex(where: { $0.id == read.hunt }) {
+                overview.hunts[index].counts.new = max(0, overview.hunts[index].counts.new - 1)
+            }
+        }
+    }
 
     // MARK: - filtered out
 
@@ -1146,7 +1218,9 @@ final class ArestemisStore {
         matchesByID = [:]
         huntLatest = [:]
         lists = [:]
-        seen = []
+        unconfirmedReads = []
+        sendingReads = []
+        countedReads = [:]
         changingState = []
         matchErrors = [:]
         rejectedLists = [:]
@@ -1184,7 +1258,15 @@ final class ArestemisStore {
         // A match whose state is being changed here keeps the state shown until the server answers.
         guard !deletedHunts.contains(match.huntID), !changingState.contains(match.id),
               revision.map({ (matchStateRevision[match.id] ?? 0) <= $0 }) ?? true else { return }
-        matchesByID[match.id] = match
+        matchesByID[match.id] = keepingRead(match)
+    }
+
+    /// Read here stays read, whatever an answer from before the server knew it says (the server never unreads one).
+    private func keepingRead(_ match: Match) -> Match {
+        guard !match.seen, unconfirmedReads.contains(match.id) || matchesByID[match.id]?.seen == true else { return match }
+        var read = match
+        read.seen = true
+        return read
     }
 
     /// A page from the server is the truth for its scope: matches of that filter (and search) it no longer lists are
@@ -1194,7 +1276,7 @@ final class ArestemisStore {
         let lowest = page.items.map(\.id).min() ?? 0
         let upper = appending ? (lists[scope]?.ids.min() ?? Int.max) : Int.max
         for (id, match) in matchesByID where (scope.hunt == nil || match.huntID == scope.hunt)
-            && scope.filter.includes(match.state) && !returned.contains(id)
+            && scope.filter.includes(match) && !returned.contains(id)
             && !changingState.contains(id) && (matchStateRevision[id] ?? 0) <= revision && id < upper && (!page.more || id >= lowest) {
             matchesByID[id] = nil
         }
@@ -1208,11 +1290,11 @@ final class ArestemisStore {
 }
 
 extension MatchState {
-    /// "Could not save the listing."
+    /// "Could not make the listing a favorite."
     var failure: String {
         switch self {
         case .new: String(localized: "Could not reset the listing.")
-        case .saved: String(localized: "Could not save the listing.")
+        case .saved: String(localized: "Could not make the listing a favorite.")
         case .applied: String(localized: "Could not mark the listing as applied.")
         case .dismissed: String(localized: "Could not dismiss the listing.")
         }

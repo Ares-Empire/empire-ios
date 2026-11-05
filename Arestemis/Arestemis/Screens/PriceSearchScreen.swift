@@ -14,6 +14,11 @@ import SwiftUI
 /// the price found (Everywhere: the cheapest). Each mode keeps its fields while the other shows. Pushed on the Hunts tab
 /// for one monitor, or a new one (empty, or from one of New search's examples), which it creates paused. Unsaved edits
 /// are kept per monitor.
+///
+/// **Saving never waits for the preview** (brief 180, Patrik 2026-11-05: "allow the user to save it asap and then send a
+/// msg if not found"): the product the preview found for the words as they are is sent as the confirmed identity, else
+/// none, and the server finds it in the background (the card says "Looking for the product…" meanwhile, the server's
+/// refusal when none fits). The preview stays the quick hint while typing.
 struct PriceSearchScreen: View {
     let store: ArestemisStore
     @Bindable var navigation: AppNavigation
@@ -21,6 +26,9 @@ struct PriceSearchScreen: View {
     let huntID: Int?
     /// New search's example the new form opens with, filled in.
     var example: SearchExample? = nil
+    /// One of the server's names a tap on the monitor's page chose (its product not found, brief 180): the form opens
+    /// with it in Product, and looks for it as usual.
+    var suggestedProduct: String? = nil
 
     @State private var draft = PriceSearchDraft()
     @State private var saved: PriceSearchDraft?
@@ -29,6 +37,7 @@ struct PriceSearchScreen: View {
     /// The alarm's price waits for the product's price to be found (an example, or the alarm switched on before).
     @State private var limitWaits = false
     @State private var exampleApplied = false
+    @State private var productApplied = false
     @State private var confirmDelete = false
     @State private var launchDone = false
     /// "Where it looks", pushed from the sites' line.
@@ -239,14 +248,20 @@ struct PriceSearchScreen: View {
     }
 
     /// The monitor as saved, with the edits kept for it while it is still current; a new form opened from an example
-    /// starts filled in from it, once.
+    /// starts filled in from it, once; one opened with a product chosen on the monitor's page takes it, once.
     private func sync() {
         saved = store.savedDraft(PriceSearchDraft.self, huntID: huntID)
+        if suggestedProduct != nil, productApplied { return }
         draft = store.searchDraft(PriceSearchDraft.self, huntID: huntID)
         if creating, !exampleApplied, let filled = example?.priceDraft {
             exampleApplied = true
             draft = filled
             limitWaits = filled.alarm && filled.below == nil
+        }
+        if let suggestedProduct, !productApplied {
+            productApplied = true
+            draft.mode = .everywhere
+            draft.selectProduct(suggestedProduct)
         }
     }
 
@@ -309,28 +324,10 @@ struct PriceSearchScreen: View {
                 .glassCard()
             productPreviewLine
             if let suggestions {
-                productChoices(suggestions)
+                ProductChoices(choices: suggestions, select: selectProduct, openThings: openThings)
             }
         }
         .animation(.easeOut(duration: 0.2), value: productPreview?.phase)
-    }
-
-    private func productChoices(_ choices: ProductSuggestions) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            if !choices.names.isEmpty {
-                DidYouMeanChips(names: choices.names) { selectProduct(choices.names[$0]) }
-            }
-            if let search = choices.itemSearch {
-                Button { openThings(search) } label: {
-                    // In the accent, as "Change" beside the sites: it reads as the way on, not as a note.
-                    Text(verbatim: search.title()).font(AppFont.text(13, weight: .medium)).foregroundStyle(Look.accent.color)
-                        .fixedSize(horizontal: false, vertical: true).multilineTextAlignment(.leading)
-                        .frame(minHeight: 44, alignment: .leading).contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .padding(.horizontal, 4)
-            }
-        }
     }
 
     private func selectProduct(_ name: String) {
@@ -481,7 +478,8 @@ struct PriceSearchScreen: View {
 
     // MARK: save and delete
 
-    /// Under Save: the server's refusal (unless a field shows it), a missing link or product, or what saving does.
+    /// Under Save: the server's refusal (unless a field shows it), a missing link or product, or what saving does. A
+    /// product not found yet is no reason to wait (brief 180).
     private var saveLine: String? {
         if let error = store.searchError {
             let field = store.searchErrorField ?? ""

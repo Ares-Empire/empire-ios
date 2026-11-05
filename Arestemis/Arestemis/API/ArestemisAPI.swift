@@ -29,11 +29,15 @@ protocol ArestemisBackend {
     func used(hunt: Int, state: [MatchState]?, limit: Int, before: Int?) async throws -> MatchPage
     /// `GET /matches?kind=price`: listing kind is selected by the server before pagination.
     func priceAlarms(hunt: Int, state: [MatchState]?, limit: Int, before: Int?) async throws -> MatchPage
-    func matches(hunt: Int?, state: [MatchState]?, limit: Int, before: Int?) async throws -> MatchPage
+    /// `GET /matches`: `seen` false or true limits it to unread or read listings (brief 179 on the server); nil, both.
+    func matches(hunt: Int?, state: [MatchState]?, seen: Bool?, limit: Int, before: Int?) async throws -> MatchPage
     /// `GET /matches?q=`: every state but dismissed, best match first (brief 132).
     func findMatches(_ words: String, hunt: Int?, limit: Int) async throws -> MatchPage
     func match(id: Int) async throws -> Match
     func setState(_ state: MatchState, match id: Int) async throws -> Match
+    /// `POST /matches/{id}/seen` (brief 179 on the server): the listing was opened in the app. Idempotent; it changes no
+    /// state, and a later state change keeps it read.
+    func markSeen(match id: Int) async throws -> Match
     func application(match id: Int, regenerate: Bool) async throws -> Application
     func rejected(hunt: Int?, limit: Int) async throws -> RejectedPage
     func settings() async throws -> Settings
@@ -130,15 +134,15 @@ struct ArestemisAPI: ArestemisBackend {
         try await send(.get, "places", query: [URLQueryItem(name: "q", value: query)])
     }
 
-    func matches(hunt: Int?, state states: [MatchState]?, limit: Int, before: Int?) async throws -> MatchPage {
-        try await matchPage(hunt: hunt, state: states, limit: limit, before: before)
+    func matches(hunt: Int?, state states: [MatchState]?, seen: Bool?, limit: Int, before: Int?) async throws -> MatchPage {
+        try await matchPage(hunt: hunt, state: states, seen: seen, limit: limit, before: before)
     }
 
     func priceAlarms(hunt: Int, state: [MatchState]?, limit: Int, before: Int?) async throws -> MatchPage {
         try await matchPage(hunt: hunt, state: state, limit: limit, before: before, kind: "price")
     }
 
-    private func matchPage(hunt: Int?, state states: [MatchState]?, limit: Int, before: Int?,
+    private func matchPage(hunt: Int?, state states: [MatchState]?, seen: Bool? = nil, limit: Int, before: Int?,
                            kind: String? = nil) async throws -> MatchPage {
         var query: [URLQueryItem] = []
         if let hunt { query.append(URLQueryItem(name: "hunt", value: String(hunt))) }
@@ -146,6 +150,7 @@ struct ArestemisAPI: ArestemisBackend {
         if let states, !states.isEmpty {
             query.append(URLQueryItem(name: "state", value: states.map(\.rawValue).joined(separator: ",")))
         }
+        if let seen { query.append(URLQueryItem(name: "seen", value: seen ? "true" : "false")) }
         query.append(URLQueryItem(name: "limit", value: String(limit)))
         if let before { query.append(URLQueryItem(name: "before", value: String(before))) }
         return try await send(.get, "matches", query: query)
@@ -164,6 +169,10 @@ struct ArestemisAPI: ArestemisBackend {
 
     func setState(_ state: MatchState, match id: Int) async throws -> Match {
         try await send(.post, "matches/\(id)/state", body: ["state": state.rawValue])
+    }
+
+    func markSeen(match id: Int) async throws -> Match {
+        try await send(.post, "matches/\(id)/seen", body: [String: Bool]())
     }
 
     func application(match id: Int, regenerate: Bool) async throws -> Application {
@@ -322,6 +331,10 @@ extension ArestemisBackend {
     }
     func matches(states: [MatchState]?, limit: Int, before: Int?) async throws -> MatchPage {
         try await matches(hunt: nil, state: states, limit: limit, before: before)
+    }
+    /// Read and unread alike (no `seen=`).
+    func matches(hunt: Int?, state: [MatchState]?, limit: Int, before: Int?) async throws -> MatchPage {
+        try await matches(hunt: hunt, state: state, seen: nil, limit: limit, before: before)
     }
     func rejected(limit: Int) async throws -> RejectedPage { try await rejected(hunt: nil, limit: limit) }
 }

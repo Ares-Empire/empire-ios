@@ -84,7 +84,8 @@ struct ProductSuggestionsTests {
         model.select("Meridian Air 14", in: &draft)
         #expect(draft.product == "Meridian Air 14" && draft.details == route.extra && draft.name == "Laptop prices")
         #expect(draft.sourcesOff == ["example"] && draft.identity == nil && draft.identityWords == nil)
-        #expect(!draft.isValid && draft.search() == nil && model.phase == .reading && model.answer == nil)
+        // It may be saved at once (brief 180), but never with the old product.
+        #expect(draft.isValid && draft.search()?.identity == nil && model.phase == .reading && model.answer == nil)
         await model.settle()
         draft.confirm(try #require(model.answer).identity, for: try #require(model.query))
         #expect(draft.isValid && draft.search()?.identity?.name == "Meridian Air 14")

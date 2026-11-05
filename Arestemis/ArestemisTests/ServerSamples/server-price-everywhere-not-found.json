@@ -1,0 +1,67 @@
+{
+  "hunt": {
+    "kind": "price",
+    "search": {
+      "mode": "everywhere",
+      "url": null,
+      "product": "Orbital Headphones 2",
+      "details": "blue",
+      "identity": null,
+      "sources_off": [
+        "mydealz"
+      ],
+      "history": true,
+      "alarm": {
+        "below": 220.0,
+        "back_in_stock": true
+      },
+      "every": 60,
+      "delivery": "shipping",
+      "places": [],
+      "radius_km": 20,
+      "include_used": false
+    },
+    "id": 12,
+    "name": null,
+    "active": true,
+    "created": "2026-11-03T12:00:00Z",
+    "updated": "2026-11-03T12:00:00Z",
+    "activated": null,
+    "last_scan": null
+  },
+  "counts": {
+    "new": 0,
+    "today": 0,
+    "saved": 0,
+    "applied": 0
+  },
+  "sources": [],
+  "slowed": false,
+  "page": null,
+  "price": {
+    "reader": "plain",
+    "product": "Orbital Headphones 2",
+    "host": "",
+    "price": null,
+    "currency": null,
+    "availability": "unknown",
+    "source": null,
+    "read": "waiting",
+    "checked": null,
+    "note": null,
+    "low_30d": null,
+    "high_30d": null,
+    "since": null,
+    "offers": 0,
+    "product_state": "not_found",
+    "refusal": {
+      "error": "Found no product with that name.",
+      "field": "product",
+      "suggestions": [],
+      "item_search": {
+        "query": "Orbital Headphones 2",
+        "extra": "blue"
+      }
+    }
+  }
+}

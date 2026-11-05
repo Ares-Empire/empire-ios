@@ -260,6 +260,46 @@
         }
       }
     },
+    "%lld favorites" : {
+      "localizations" : {
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Favorit"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Favoriten"
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld favorite"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld favorites"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld flatmates" : {
       "localizations" : {
         "de" : {
@@ -396,16 +436,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "vor %lld s"
-          }
-        }
-      }
-    },
-    "%lld saved" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld gespeichert"
           }
         }
       }
@@ -1441,6 +1471,16 @@
         }
       }
     },
+    "Could not make the listing a favorite." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das Angebot konnte nicht als Favorit markiert werden."
+          }
+        }
+      }
+    },
     "Could not mark the listing as applied." : {
       "localizations" : {
         "de" : {
@@ -1457,16 +1497,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Das Angebot konnte nicht zurückgesetzt werden."
-          }
-        }
-      }
-    },
-    "Could not save the listing." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Das Angebot konnte nicht gespeichert werden."
           }
         }
       }
@@ -1891,12 +1921,12 @@
         }
       }
     },
-    "Everything new, grouped by search. Swipe right to save a listing, left to dismiss it." : {
+    "Everything new, grouped by search. Swipe right to make a listing a favorite, left to dismiss it." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Alles Neue, nach Suche geordnet. Wisch ein Angebot nach rechts zum Speichern, nach links zum Entfernen."
+            "value" : "Alles Neue, nach Suche geordnet. Wisch ein Angebot nach rechts für deine Favoriten, nach links zum Entfernen."
           }
         }
       }
@@ -1917,6 +1947,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Extras"
+          }
+        }
+      }
+    },
+    "Favorite" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Favorit"
+          }
+        }
+      }
+    },
+    "Favorites" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Favoriten"
           }
         }
       }
@@ -2021,16 +2071,6 @@
         }
       }
     },
-    "First the product has to be found." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Erst muss das Produkt gefunden werden."
-          }
-        }
-      }
-    },
     "Flat" : {
       "localizations" : {
         "de" : {
@@ -2077,6 +2117,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Mitbewohner"
+          }
+        }
+      }
+    },
+    "Found no product with that name." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kein Produkt mit diesem Namen gefunden."
           }
         }
       }
@@ -2512,7 +2562,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Produkt wird gesucht…"
+            "value" : "Sucht das Produkt …"
           }
         }
       }
@@ -2837,6 +2887,16 @@
         }
       }
     },
+    "No favorites yet. Swipe right on a listing to keep it here." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch keine Favoriten. Wisch ein Angebot nach rechts, um es hier zu behalten."
+          }
+        }
+      }
+    },
     "No known total right now." : {
       "localizations" : {
         "de" : {
@@ -2973,16 +3033,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nichts Neues. Neue Angebote erscheinen hier, sobald sie gefunden werden."
-          }
-        }
-      }
-    },
-    "Nothing saved. Swipe right on a listing to keep it here." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nichts gespeichert. Wisch ein Angebot nach rechts, um es hier zu behalten."
           }
         }
       }
@@ -3587,6 +3637,16 @@
         }
       }
     },
+    "Remove from favorites" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kein Favorit mehr"
+          }
+        }
+      }
+    },
     "Removed" : {
       "localizations" : {
         "de" : {
@@ -3693,16 +3753,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Beobachtung speichern"
-          }
-        }
-      }
-    },
-    "Saved" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gespeichert"
           }
         }
       }

@@ -2,8 +2,8 @@ import SwiftUI
 
 /// One search's listings (brief 133), pushed from Searches, a group's heading in New, or the search's page on the Hunts
 /// tab (Listings and its figures): the search's name as the title, the magnifying glass searching only its listings,
-/// then New · Saved · Applied · All ("Asked" for a thing's seller; a watch's changes are only saved, so it has no
-/// Applied) and the list, as glass cards: swipe right to save, left to dismiss, tap for the match. At the end, the
+/// then New · Favorites · Applied · All ("Asked" for a thing's seller; a watch's changes are only kept as favorites, so it
+/// has no Applied) and the list, as glass cards: swipe right for a favorite, left to dismiss, tap for the match. At the end, the
 /// listings the AI filtered out of this search.
 struct SearchListingsPage: View {
     let id: Int
@@ -104,7 +104,7 @@ struct SearchListingsPage: View {
     private func emptyText(_ filter: MatchFilter, kind: SearchKind?) -> String {
         switch filter {
         case .new: String(localized: "Nothing new. New listings appear here the moment they're found.")
-        case .saved: String(localized: "Nothing saved. Swipe right on a listing to keep it here.")
+        case .saved: String(localized: "No favorites yet. Swipe right on a listing to keep it here.")
         case .applied:
             kind == .item ? String(localized: "No sellers asked yet.") : String(localized: "No applications yet.")
         case .all: String(localized: "No listings yet. They appear here the moment they're found.")

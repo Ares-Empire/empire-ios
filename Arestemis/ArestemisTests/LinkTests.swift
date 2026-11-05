@@ -20,7 +20,8 @@ struct LinkTests {
     }
 
     @Test(arguments: ["arestemis://", "arestemis://match", "arestemis://match/abc", "arestemis://match/0",
-                      "arestemis://match/-3", "arestemis://match/41/extra", "arestemis://hunt/1",
+                      "arestemis://match/-3", "arestemis://match/41/extra", "arestemis://hunt", "arestemis://hunt/abc",
+                      "arestemis://hunt/0", "arestemis://hunt/12/extra", "arestemis://search/12",
                       "https://www.ares-empire.de/match/41", "aresium://match/41"])
     func otherURLsAreNotLinks(url: String) throws {
         let parsed = try #require(URL(string: url))

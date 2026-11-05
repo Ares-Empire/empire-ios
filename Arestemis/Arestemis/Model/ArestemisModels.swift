@@ -275,9 +275,12 @@ struct Match: Codable, Equatable, Identifiable, Sendable {
     var application: Application?
     var atStart: Bool = false
     var overMax: Double? = nil
+    /// Opened in the app (brief 179 on the server, 180 here): a new listing that was read keeps its state but shows no
+    /// dot and no longer counts in "● 3 NEW". Missing or unreadable (a server from before it) is unread.
+    var seen: Bool = false
 
     enum CodingKeys: String, CodingKey {
-        case id, state, found, listing, reason, warnings, application
+        case id, state, found, listing, reason, warnings, application, seen
         case huntID = "hunt_id", atStart = "at_start", overMax = "over_max"
     }
 }
@@ -462,5 +465,6 @@ extension Match {
         application = try c.decodeIfPresent(Application.self, forKey: .application)
         atStart = try c.decodeIfPresent(Bool.self, forKey: .atStart) ?? false
         overMax = try c.decodeIfPresent(Double.self, forKey: .overMax)
+        seen = ((try? c.decodeIfPresent(Bool.self, forKey: .seen)) ?? nil) ?? false
     }
 }

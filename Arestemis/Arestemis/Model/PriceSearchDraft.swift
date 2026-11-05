@@ -16,8 +16,9 @@ struct PriceSearchDraft {
     /// Überall: the product in words and the optional details (colour, size, variant).
     var product = "" { didSet { if Self.trimmed(product) != Self.trimmed(oldValue) { clearConfirmation() } } }
     var details = "" { didSet { if Self.trimmed(details) != Self.trimmed(oldValue) { clearConfirmation() } } }
-    /// Überall: the product the preview found, and the words it was found for: saving needs it found for the words as
-    /// they are now, and sends it as the confirmed identity.
+    /// Überall: the product the preview found, and the words it was found for: saving sends it as the confirmed identity
+    /// while it was found for the words as they are now, else none (brief 180: saving never waits for the preview; the
+    /// server finds the product and says when none fits).
     var identity: ProductIdentity?
     var identityWords: ProductWords?
     /// Überall: the sites switched off on "Where it looks".
@@ -65,8 +66,6 @@ struct PriceSearchDraft {
         case product
         /// Details over 300 characters (Überall).
         case details
-        /// The product is not found yet for the words as they are now (Überall).
-        case unconfirmed
         case places, radius
         /// Neither the history nor the alarm.
         case neither
@@ -83,7 +82,6 @@ struct PriceSearchDraft {
         case .everywhere:
             if !ProductWords.productLengths.contains(words.product.count) { result.append(.product) }
             if words.details.count > ProductWords.maxDetails { result.append(.details) }
-            if result.isEmpty && !isConfirmed { result.append(.unconfirmed) }
             if !validPlaces { result.append(.places) }
             if !radiusKm.isFinite || !(0...200).contains(radiusKm) { result.append(.radius) }
         }
@@ -134,7 +132,7 @@ struct PriceSearchDraft {
         case .page:
             return PriceSearch(url: Self.trimmed(url), history: history, alarm: alarm, every: every)
         case .everywhere:
-            return PriceSearch(product: words.product, details: words.details, identity: identity,
+            return PriceSearch(product: words.product, details: words.details, identity: isConfirmed ? identity : nil,
                                sourcesOff: sourcesOff, history: history, alarm: alarm, every: effectiveEvery,
                                delivery: delivery, places: places, radiusKm: radiusKm, includeUsed: includeUsed)
         }
@@ -190,7 +188,6 @@ struct PriceSearchDraft {
                 : words.product.count < ProductWords.productLengths.lowerBound ? language.string("At least 2 characters.")
                 : language.string("At most 100 characters.")
         case .details: language.string("At most 300 characters.")
-        case .unconfirmed: language.string("First the product has to be found.")
         case .places: places.count > ItemSearchDraft.maxPlaces ? language.string("At most 5 places.")
             : language.string("Choose a place, or Shipping.")
         case .radius: language.string("The radius goes up to 200 km.")
@@ -220,15 +217,14 @@ struct PriceSearchDraft {
         mode == .everywhere && problems.contains(.details) ? message(.details, language: language) : nil
     }
 
-    /// One calm line under Save: a missing link or product, or a product not found yet (the switches say their own line
-    /// where they are).
+    /// One calm line under Save: a missing link or product, or a place missing for pickup (the switches say their own
+    /// line where they are).
     func hint(language: AppLanguage = .current) -> String? {
         switch mode {
         case .page:
             return Self.trimmed(url).isEmpty ? message(.url, language: language) : nil
         case .everywhere:
             if words.product.isEmpty { return message(.product, language: language) }
-            if problems.contains(.unconfirmed) { return message(.unconfirmed, language: language) }
             return problems.contains(.places) ? message(.places, language: language) : nil
         }
     }

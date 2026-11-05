@@ -328,7 +328,7 @@ struct TourTests {
             Webseite beobachten: Ein Push, wenn auf einer Seite etwas Neues erscheint: eine Version, eine Stelle, der Speiseplan.
             """)
         #expect(TourStep.newListings.text(de)
-                == "Alles Neue, nach Suche geordnet. Wisch ein Angebot nach rechts zum Speichern, nach links zum Entfernen.")
+                == "Alles Neue, nach Suche geordnet. Wisch ein Angebot nach rechts für deine Favoriten, nach links zum Entfernen.")
         // "du", never "Sie" as the address.
         for step in TourStep.allCases {
             #expect(!step.text(de).contains(" Ihr") && !step.text(de).contains("Ihnen"))

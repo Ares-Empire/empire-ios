@@ -34,6 +34,10 @@ struct MonitorSections: View {
     static let switchesID = "switches"
 
     private var everywhere: Bool { search.mode == .everywhere }
+    /// An everywhere monitor whose product the server is still finding, or found none for (brief 180): no curve, no
+    /// shops and no used listings can come until it is found (the card above says why); the switches and where it looks
+    /// stay.
+    private var awaitsProduct: Bool { everywhere && (card.price?.productState ?? .found) != .found }
 
     init(card: HuntCard, search: PriceSearch, store: ArestemisStore, open: @escaping (Int) -> Void,
          showAll: @escaping () -> Void, showUsed: @escaping () -> Void, showsSites: Binding<Bool>) {
@@ -49,17 +53,17 @@ struct MonitorSections: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if search.history {
+            if search.history && !awaitsProduct {
                 HuntSection(title: PriceWords.historyTitle(everywhere: everywhere)) {
                     history
                 }
                 .id(MonitorSections.historyID)
             }
-            if everywhere {
+            if everywhere && !awaitsProduct {
                 HuntSection(title: String(localized: "Shops")) { offers }
                     .id(MonitorSections.offersID)
             }
-            if everywhere, store.showsUsed(hunt: card.id) {
+            if everywhere, !awaitsProduct, store.showsUsed(hunt: card.id) {
                 HuntSection(title: String(localized: "Used")) {
                     MonitorMatchesSection(id: card.id, kind: .used, store: store, open: open, showAll: showUsed)
                 }

@@ -118,7 +118,9 @@ enum PriceLimit {
 /// availability's word while the page reads well; else one quiet line, as a watch's (reading, or the server's note on
 /// why it cannot be read), never an alarm colour; then when it was last checked. An everywhere monitor's (brief 157):
 /// the cheapest price with its shop beside it ("€215.00  at Amazon · in stock"), its own words while it looks or
-/// cannot read the sites, and "No shop offers it right now." when none does.
+/// cannot read the sites, and "No shop offers it right now." when none does. While the server still looks for the
+/// product itself (saved without it, brief 180) the quiet line says so ("Looking for the product…"); when none fits it
+/// is the server's sentence ("Found no product with that name."), never an alarm colour.
 struct PriceCardText: Equatable {
     /// "€449.00", while the page reads well.
     let price: String?
@@ -145,6 +147,16 @@ struct PriceCardText: Equatable {
         let note = HuntText.text(state?.note)
         let cannotRead = everywhere ? l.string("The shops can't be read right now.")
             : l.string("The page can't be read right now.")
+        checked = Format.relative(state?.checked, now: now, calendar: calendar, language: l).map { l.string("Checked \($0)") }
+        if everywhere, let line = Self.productLine(state, language: l) {
+            // No product yet: nothing to price, one quiet line in its place.
+            price = nil
+            shippingNote = nil
+            self.shop = nil
+            availability = nil
+            self.note = line
+            return
+        }
         var shop: String?
         switch state?.read ?? .waiting {
         case .waiting:
@@ -191,7 +203,17 @@ struct PriceCardText: Equatable {
         self.shop = shop
         shippingNote = everywhere && price != nil && state?.shippingUnknown == true
             ? PriceWords.shippingUnknown(language: l) : nil
-        checked = Format.relative(state?.checked, now: now, calendar: calendar, language: l).map { l.string("Checked \($0)") }
+    }
+
+    /// An everywhere monitor without its product (brief 180): "Looking for the product…" while the server finds it, the
+    /// server's refusal once none fits (its own words in the app's language; a missing one in the server's words); nil
+    /// once it is found.
+    static func productLine(_ state: PriceState?, language: AppLanguage = .current) -> String? {
+        switch state?.productState ?? .found {
+        case .found: nil
+        case .finding: language.string("Looking for the product…")
+        case .notFound: HuntText.text(state?.refusal?.error) ?? language.string("Found no product with that name.")
+        }
     }
 }
 
