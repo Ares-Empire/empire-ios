@@ -138,6 +138,22 @@ struct ServerSamplesTests {
         #expect(page.items.filter { $0.listing.page == nil && $0.listing.source == .page }.allSatisfy { $0.isPriceChange })
     }
 
+    /// Brief 178 (the server's brief 177): the spelling check's answer and a watch's suggested page.
+    @Test func spellingAndASuggestedPage() throws {
+        let spelling = try JSONDecoder().decode(Spelling.self, from: data("spelling"))
+        #expect(spelling.checked && spelling.suggestions == [Spelling.Suggestion(word: "Zenga Krawatte",
+                                                                                 suggestion: "Zegna Krawatte")])
+        let overview = try JSONDecoder().decode(Overview.self, from: data("overview"))
+        let watches = overview.hunts.filter { $0.hunt.kind == .watch }
+        let suggested = try #require(watches.first?.page?.suggested)
+        #expect(!suggested.url.isEmpty && !suggested.title.isEmpty && suggested.url != watches.first?.hunt.search.watch?.url)
+        #expect(SuggestedPageText(watches[0], language: .english)?.quotedTitle == "“\(suggested.title)”")
+        #expect(watches[1].page?.suggested == nil && SuggestedPageText(watches[1]) == nil)
+        // Überall: a corrected product comes as the first of the refusal's choices, which the form shows as it is.
+        let refusal = try #require(FieldRefusal(status: 400, data: data("product-refusal-spelling")))
+        #expect(refusal.field == "product" && refusal.productSuggestions?.names.first == "Zegna Krawatte")
+    }
+
     @Test func theOtherAnswers() throws {
         _ = try JSONDecoder().decode(Match.self, from: data("match"))
         _ = try JSONDecoder().decode(RejectedPage.self, from: data("rejected"))

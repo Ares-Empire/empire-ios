@@ -250,6 +250,27 @@ extension ItemSearchDraft {
         words.remove(at: index)
     }
 
+    /// A spelling suggestion taken (brief 178): the entry written exactly `word` (a chip, or the word still typed, as
+    /// `sentWords` sends it) becomes `replacement` in its place; nothing else changes. When the replacement repeats
+    /// another entry, this entry goes instead, since the other one is there already. False when no entry is written so,
+    /// or the replacement is not a word the search can take.
+    @discardableResult
+    mutating func replace(word: String, with replacement: String) -> Bool {
+        let new = replacement.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard SearchWords.lengths.contains(new.count) else { return false }
+        let sent = sentWords
+        guard let index = sent.firstIndex(of: word) else { return false }
+        var others = sent
+        others.remove(at: index)
+        let repeats = SearchWords.repeated(new, in: others) != nil
+        if index < words.count {
+            if repeats { words.remove(at: index) } else { words[index] = new }
+        } else {
+            typedWord = repeats ? "" : new
+        }
+        return true
+    }
+
     /// What is wrong with the words, if anything: none yet, one too short or too long, more than five (a search saved
     /// by a newer server).
     private var wordsProblem: LocalizedStringResource? {

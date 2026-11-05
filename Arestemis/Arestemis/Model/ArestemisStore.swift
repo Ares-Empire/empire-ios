@@ -879,6 +879,24 @@ final class ArestemisStore {
         }
     }
 
+    /// `POST /search/spelling` (brief 178): the server's suggestions for misspelled words of a thing search. A refused
+    /// login goes to the session first; an answer for a login that has ended meanwhile is dropped (`CancellationError`).
+    func spelling(_ words: [String]) async throws -> Spelling {
+        guard canAct else { throw CancellationError() }
+        let context = context
+        do {
+            let answer = try await backend.spelling(words: words)
+            guard isCurrent(context) else { throw CancellationError() }
+            return answer
+        } catch let error as CancellationError {
+            throw error
+        } catch {
+            guard isCurrent(context) else { throw CancellationError() }
+            session.handleAuthFailure(error, generation: context.session, token: context.token)
+            throw error
+        }
+    }
+
     /// `POST /price/preview`: what the server reads on a product page now. A refused login goes to the session first;
     /// an answer for a login that has ended meanwhile is dropped (`CancellationError`).
     func pricePreview(url: String) async throws -> PricePreview {

@@ -60,14 +60,17 @@ struct PageState: Codable, Equatable, Sendable {
     var checked: String?           // the last read attempt
     var changed: String?           // the last time the page's text changed
     var note: String?              // one short line from the server, in the app's language
+    /// The thing's own page, when the page watched only names or links to it (brief 178; the server's brief 177); nil
+    /// when there is none.
+    var suggested: SuggestedPage?
 
     enum CodingKeys: String, CodingKey {
-        case reader, host, now, read, checked, changed, note
+        case reader, host, now, read, checked, changed, note, suggested
         case pageTitle = "page_title"
     }
 
     init(reader: PageReader = .plain, pageTitle: String? = nil, host: String, now: String? = nil, read: Read,
-         checked: String? = nil, changed: String? = nil, note: String? = nil) {
+         checked: String? = nil, changed: String? = nil, note: String? = nil, suggested: SuggestedPage? = nil) {
         self.reader = reader
         self.pageTitle = pageTitle
         self.host = host
@@ -76,10 +79,11 @@ struct PageState: Codable, Equatable, Sendable {
         self.checked = checked
         self.changed = changed
         self.note = note
+        self.suggested = suggested
     }
 
     /// Lenient: a missing host is empty (the card then names the address's host), a missing `read` is `waiting`, a missing
-    /// reader plain.
+    /// reader plain, a missing or unreadable suggestion none (it never costs the page's state).
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         reader = try c.decodeIfPresent(String.self, forKey: .reader).map(PageReader.init(rawValue:)) ?? .plain
@@ -90,6 +94,7 @@ struct PageState: Codable, Equatable, Sendable {
         checked = try c.decodeIfPresent(String.self, forKey: .checked)
         changed = try c.decodeIfPresent(String.self, forKey: .changed)
         note = try c.decodeIfPresent(String.self, forKey: .note)
+        suggested = try? c.decodeIfPresent(SuggestedPage.self, forKey: .suggested)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -102,6 +107,27 @@ struct PageState: Codable, Equatable, Sendable {
         try c.encode(checked, forKey: .checked)
         try c.encode(changed, forKey: .changed)
         try c.encode(note, forKey: .note)
+        try c.encode(suggested, forKey: .suggested)
+    }
+}
+
+/// `PageState.suggested` (brief 178): a page watched only names or links to the thing described (a shop's homepage with a
+/// teaser), and the server found the thing's own page among its links, where the change would show. Its address, and
+/// the link's text as the title (page content: shown as it is).
+struct SuggestedPage: Codable, Equatable, Hashable, Sendable {
+    var url: String
+    var title: String
+
+    init(url: String, title: String) {
+        self.url = url
+        self.title = title
+    }
+
+    /// Lenient: a missing title is empty (the app then names the address); no address is no suggestion.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        url = try c.decode(String.self, forKey: .url)
+        title = try c.decodeIfPresent(String.self, forKey: .title) ?? ""
     }
 }
 

@@ -50,7 +50,8 @@ struct ListingsPartMemory {
 }
 
 /// What the Hunts tab pushes: a hunt's page, a match's page, New search (the kinds to choose from, brief 135), or a
-/// search form (a hunt's search, or a new one, empty or filled in from one of New search's examples).
+/// search form (a hunt's search, or a new one, empty or filled in from one of New search's examples; a watch's own form
+/// with its suggested page's address, brief 178).
 enum HuntRoute: Hashable {
     case monitorListings(Int, MonitorListingKind)
     case hunt(Int)
@@ -58,6 +59,7 @@ enum HuntRoute: Hashable {
     case newSearch
     case form(SearchKind, hunt: Int?, example: SearchExample? = nil)
     case itemSearch(ProductItemSearch)
+    case watchAddress(hunt: Int, address: String)
 }
 
 /// The monitor's two listing feeds; both keep ordinary match identity and actions.
@@ -246,6 +248,13 @@ final class AppNavigation {
         huntPath.append(.itemSearch(search))
     }
 
+    /// "Watch this page" under a watch's suggested page (brief 178): the watch's own form, pushed over its page, with
+    /// that address in place of its own. Nothing is saved until the user saves there.
+    func watchSuggestedPage(_ hunt: Int, address: String) {
+        tab = .hunt
+        huntPath.append(.watchAddress(hunt: hunt, address: address))
+    }
+
     /// A new hunt was saved: its page replaces the form it was made in and New search under it, so back leads to the
     /// list of hunts.
     func showCreated(_ id: Int) {
@@ -300,7 +309,8 @@ final class AppNavigation {
 /// `-tab hunt|listings` (`search`: the first hunt's form), brief 133's `-listings new|searches` (the Listings tab's part),
 /// `-openSearch <id>` (that search's listings, over Searches), `-search <words>` (the search over listings with the words
 /// typed, the keyboard down; within the search `-openSearch` opened), `-filter new|saved|applied|all` (a search's
-/// listings), `-openMatch <id>`, `-openHunt <id>` (a hunt's page), `-openForm <id>` (that hunt's
+/// listings), brief 178's `-sampleSpelling unchecked|failed|slow` (the thing form's spelling check) and `-sampleSuggestedPage
+/// short|long` (a watch with a suggested page, hunt 13), `-openMatch <id>`, `-openHunt <id>` (a hunt's page), `-openForm <id>` (that hunt's
 /// form), `-openItemForm` (the first thing hunt's form), `-newItemForm` / `-newFlatForm` (an empty form), brief 131's
 /// `-openWatchForm` (the first watch's form) and `-newWatchForm` (in the form `-watchURL <text>`, `-watchChange <text>`
 /// and `-saveWatch`, read by `WatchSearchScreen`), `-sampleWatchRead <read>` (the second watch's page
@@ -343,6 +353,12 @@ struct LaunchOptions {
     var pricePreview: String?
     /// `-sampleWordRefusal <i>`: saving a thing search is refused at `search.more_queries[i]` (brief 149).
     var wordRefusal: Int?
+    /// `-sampleSpelling unchecked|failed|slow`: the spelling check could not check, fails, or answers after the form's
+    /// limit (brief 178).
+    var spelling: String?
+    /// `-sampleSuggestedPage short|long`: a watch (hunt 13) whose page has a suggested page, its title short or long
+    /// (brief 178).
+    var suggestedPage: String?
     var scrollToHunt: Int?
     var sampleUndo = false
     var moreLoading = false
@@ -386,6 +402,8 @@ struct LaunchOptions {
         watchRead = value("-sampleWatchRead")
         pricePreview = value("-pricePreview") ?? value("-productSample")
         wordRefusal = value("-sampleWordRefusal").flatMap(Int.init)
+        spelling = value("-sampleSpelling")
+        suggestedPage = value("-sampleSuggestedPage")
         scrollToHunt = value("-scrollToHunt").flatMap(Int.init)
         sampleUndo = arguments.contains("-sampleUndo")
         moreLoading = arguments.contains("-sampleMoreLoading")

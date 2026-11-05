@@ -7,7 +7,8 @@ import SwiftUI
 /// `WatchChange`), and how often the page is read; one line on what a watch cannot read; then save. Pushed on
 /// the Hunts tab for one watch, or for a new one (empty, or from one of New search's examples), which it creates paused. What is wrong shows under its field (`WatchSearchDraft.fieldLine`), and
 /// so does the server's refusal of the address or the description (`ArestemisStore.searchErrorField`); unsaved edits
-/// are kept per watch.
+/// are kept per watch. Opened from a watch's suggested page (brief 178, "Watch this page") it shows the watch with that
+/// address in place of its own; saving it reads the new page from the start, as any change of the address does.
 struct WatchSearchScreen: View {
     let store: ArestemisStore
     @Bindable var navigation: AppNavigation
@@ -15,10 +16,13 @@ struct WatchSearchScreen: View {
     let huntID: Int?
     /// New search's example the new form opens with, filled in.
     var example: SearchExample? = nil
+    /// The watch's suggested page (brief 178): the form opens with this address in place of the watch's own.
+    var suggestedAddress: String? = nil
 
     @State private var draft = WatchSearchDraft()
     @State private var saved: WatchSearchDraft?
     @State private var exampleApplied = false
+    @State private var addressApplied = false
     @State private var confirmDelete = false
     @State private var launchDone = false
     /// The example chip tapped last, shown chosen while its sentence is sharpened; at first the one whose sentence the
@@ -121,13 +125,19 @@ struct WatchSearchScreen: View {
     }
 
     /// The watch as saved, with the edits kept for it while it is still current; a new form opened from an example
-    /// starts filled in from it, once.
+    /// starts filled in from it, once, and one opened from the suggested page takes its address, once (edits made
+    /// after it stay when the form appears again).
     private func sync() {
         saved = store.savedDraft(WatchSearchDraft.self, huntID: huntID)
+        if suggestedAddress != nil, addressApplied { return }
         draft = store.searchDraft(WatchSearchDraft.self, huntID: huntID)
         if creating, !exampleApplied, let filled = example?.watchDraft() {
             exampleApplied = true
             draft = filled
+        }
+        if let suggestedAddress, !addressApplied {
+            addressApplied = true
+            draft = draft.adopting(address: suggestedAddress)
         }
         if chosenChange == nil { chosenChange = WatchChange.example(in: draft.change) }
     }

@@ -8,7 +8,9 @@ import SwiftUI
 /// auctions; a site that cannot serve the delivery greyed and switched off, brief 129); then save. Pushed on the Hunts
 /// tab for one hunt, or for a new one (empty, or from one of New search's examples), which it creates paused.
 /// What is wrong shows under its field (`ItemSearchDraft.fieldLine`), and so does the server's refusal of a search word,
-/// led by that word (`SearchWords.refusalLine`); unsaved edits are kept per hunt.
+/// led by that word (`SearchWords.refusalLine`); unsaved edits are kept per hunt. Saving first asks the server about the
+/// words' spelling (brief 178, `SpellingCheck`): a likely misspelled brand or model word holds the save and shows
+/// "Did you mean…" with the corrected entries as chips under the words; Save again saves the words as they are then.
 struct ItemSearchScreen: View {
     let store: ArestemisStore
     @Bindable var navigation: AppNavigation
@@ -28,6 +30,8 @@ struct ItemSearchScreen: View {
     @FocusState private var wordFocused: Bool
     /// Return or + found a word that cannot be added: its line shows although the field is still in use.
     @State private var triedAdding = false
+    /// The words' spelling, asked about when saving (brief 178), for as long as the form is open.
+    @State private var spelling = SpellingCheck()
     @Environment(\.dismiss) private var dismiss
 
     private var hunt: Hunt? { huntID.flatMap { store.card($0)?.hunt } }
@@ -46,6 +50,7 @@ struct ItemSearchScreen: View {
                     }
                     DescribeLine { navigation.showsDescribe = true }
                     FormSection(title: String(localized: "Search words"), problems: lines(.exclude)) { what }
+                        .id("words")
                     FormSection(title: String(localized: "What fits"), problems: lines(.extra)) {
                         TextArea(placeholder: String(localized: "Hermès only in blue, Ferragamo red or burgundy. Silk, new or like new."),
                                  text: $draft.extra, minHeight: 84, inWell: false)
@@ -60,7 +65,7 @@ struct ItemSearchScreen: View {
                         .id("where")                    // `-scrollTo where`: the delivery with the sites under it
                     FormSection(title: String(localized: "Seller")) { seller }
                     FormSection(title: String(localized: "Portals"), problems: lines(.sources)) { portals }
-                    SearchSaveArea(creating: creating, canSave: canSave, saving: store.isSavingSearch, line: saveLine,
+                    SearchSaveArea(creating: creating, canSave: canSave, saving: saving, line: saveLine,
                                    save: saveSearch, delete: creating ? nil : { confirmDelete = true })
                     Color.clear.frame(height: 1).id("bottom")
                 }
@@ -75,9 +80,15 @@ struct ItemSearchScreen: View {
                 navigation.formScroll = nil
                 DispatchQueue.main.async { reader.scrollTo(target, anchor: target == "bottom" ? .bottom : .top) }
             }
+            // A suggestion held the save (Save sits at the form's end): the words come into view with their chips, as
+            // little scrolled as that takes.
+            .onChange(of: spelling.suggestions.isEmpty) { _, empty in
+                guard !empty else { return }
+                withAnimation(.easeOut(duration: 0.3)) { reader.scrollTo("words") }
+            }
         }
         .searchFormChrome(title: creating ? String(localized: "New search") : String(localized: "Edit search"),
-                          showsSave: canSave, saving: store.isSavingSearch, save: saveSearch)
+                          showsSave: canSave, saving: saving, save: saveSearch)
         .sheet(isPresented: $navigation.showsPlaceSearch) {
             PlaceSearchSheet(store: store, chosen: draft.places, initialQuery: navigation.placeQuery) { place in
                 draft.add(place)
@@ -112,15 +123,18 @@ struct ItemSearchScreen: View {
         .onChange(of: draft.delivery) { _, _ in withAnimation(.easeOut(duration: 0.2)) { switchOffUnservedSites() } }
         .onChange(of: store.kinds) { _, _ in switchOffUnservedSites() }
         .onChange(of: draft) { _, new in store.keepSearchDraft(new, huntID: huntID) }
-        // The server's refusal of a word goes once the words change (its place among them may be another's then).
-        .onChange(of: draft.sentWords) { _, _ in
+        // The server's refusal of a word goes once the words change (its place among them may be another's then), and so
+        // do the spelling's chips, unless a chip's own tap changed them.
+        .onChange(of: draft.sentWords) { _, words in
             if SearchWords.isWordsField(store.searchErrorField) { store.clearSearchError() }
+            spelling.wordsChanged(words)
         }
     }
 
     /// Screenshots (sample mode, DEBUG): `-itemWords <a,b,c>` adds words as chips, `-itemTyped <text>` types into the
     /// words' field, `-itemFits <text>` fills What fits, `-saveItem` then taps Save (with `-sampleWordRefusal <i>` the
-    /// sample refuses `search.more_queries[i]` as the server would).
+    /// sample refuses `search.more_queries[i]` as the server would; the sample's spelling check suggests Zegna for
+    /// "Zenga" and the like, `-sampleSpelling unchecked|failed|slow` makes it not check, fail or take too long).
     private func debugLaunch() {
         #if DEBUG
         guard store.isSample, !launchDone else { return }
@@ -212,9 +226,15 @@ struct ItemSearchScreen: View {
                     Caption(text: note).padding(.bottom, 2).transition(.opacity)
                 }
                 ForEach(wordLines, id: \.self) { ProblemLine(text: $0).padding(.bottom, 2) }
+                if !spelling.suggestions.isEmpty {
+                    DidYouMeanChips(names: spelling.suggestions.map(\.suggestion), headingInset: 0, choose: takeSuggestion)
+                        .padding(.top, 4).padding(.bottom, 2)
+                        .transition(.opacity)
+                }
             }
             .padding(.vertical, 12)
             .animation(.easeOut(duration: 0.2), value: draft.words)
+            .animation(.easeOut(duration: 0.2), value: spelling.suggestions)
             Hairline()
             VStack(alignment: .leading, spacing: 10) {
                 CapsLabel(text: String(localized: "Leave out"))
@@ -375,6 +395,16 @@ struct ItemSearchScreen: View {
 
     // MARK: save and delete
 
+    /// Saving, or asking about the words' spelling first: the save buttons' busy state.
+    private var saving: Bool { store.isSavingSearch || spelling.isChecking }
+
+    /// A chip's tap: its entry takes the suggestion (the main words, or that one more word), and its chip goes.
+    private func takeSuggestion(_ index: Int) {
+        guard spelling.suggestions.indices.contains(index) else { return }
+        let suggestion = spelling.suggestions[index]
+        withAnimation(.easeOut(duration: 0.2)) { spelling.take(suggestion, in: &draft) }
+    }
+
     /// Under Save: the server's refusal (unless its field shows it), what is still missing, or what saving does.
     private var saveLine: String? {
         if let error = store.searchError, !SearchWords.isWordsField(store.searchErrorField) { return error }
@@ -384,10 +414,13 @@ struct ItemSearchScreen: View {
         return nil
     }
 
+    /// Save: the words' spelling first, once per word (a suggestion holds the save), then the search as it is now.
     private func saveSearch() {
         endTyping()
-        guard let search = draft.search() else { return }
+        guard draft.search() != nil, !saving else { return }
         Task {
+            guard await spelling.beforeSaving(draft.sentWords, ask: { [store] in try await store.spelling($0) }),
+                  let search = draft.search() else { return }
             guard let saved = await store.saveHunt(id: huntID, kind: .item, name: draft.sentName, search: .item(search),
                                                    fieldsShown: SearchWords.refusalFields) else { return }
             if creating { navigation.showCreated(saved.id) } else { dismiss() }

@@ -523,7 +523,11 @@
         "checked": "2026-11-02T12:00:00Z",
         "changed": "2026-11-02T10:00:00Z",
         "note": null,
-        "reader": "plain"
+        "reader": "plain",
+        "suggested": {
+          "url": "https://shop.example/shelf/fjord",
+          "title": "Fjord shelf"
+        }
       },
       "price": null
     },
@@ -559,7 +563,8 @@
         "checked": "2026-11-02T12:00:00Z",
         "changed": "2026-11-02T10:00:00Z",
         "note": "Cloudflare refuses the server, also with a browser.",
-        "reader": "browser"
+        "reader": "browser",
+        "suggested": null
       },
       "price": null
     },

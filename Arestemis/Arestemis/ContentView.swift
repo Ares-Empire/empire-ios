@@ -52,7 +52,9 @@ struct ContentView: View {
                                                                              ebayNotReady: options.ebayNotReady,
                                                                              watchRead: options.watchRead,
                                                                              preview: options.pricePreview,
-                                                                             wordRefusal: options.wordRefusal)) {
+                                                                             wordRefusal: options.wordRefusal,
+                                                                             spelling: options.spelling,
+                                                                             suggestedPage: options.suggestedPage)) {
             return ArestemisStore(session: session, backend: sample, sample: true)
         }
         #endif

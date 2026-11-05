@@ -1,6 +1,6 @@
 # 178: Arestemis app: "Meintest du …" for misspelled search words, and a better page for a watch
 
-Status: draft
+Status: merged (Claude agent build, Claude review; 397 tests passed on Claude's simulator; Arestemis build 19)
 Branch: `claude/178-spelling-better-page` · Worktree: `../empire-ios-178-spelling` · Builder: Claude agent (design)
 
 ## Goal
