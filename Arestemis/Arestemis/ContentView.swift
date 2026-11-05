@@ -4,6 +4,7 @@ import UserNotifications
 /// Arestemis: the shared Empire login, then two tabs (Hunts, Listings: New | Searches); a hunt's search opens from the hunt. Logged in once in any Empire app means
 /// logged in here. `-sampleData` shows the bundled samples (see `LaunchOptions` for the screenshot arguments).
 /// A new match arrives as a push (Shared/Push); tapping it, or its "Open listing" / "Application text" action, opens the match.
+/// A monitor's "No matching product" push opens the monitor's page (`arestemis://hunt/<id>`, brief 180).
 /// The tour (brief 139, `Model/Tour.swift`) shows the same tabs on its own world in place of the account's, once by
 /// itself per account and again from Settings → Help; a notification, a link or logging out ends it first.
 struct ContentView: View {
@@ -54,7 +55,9 @@ struct ContentView: View {
                                                                              preview: options.pricePreview,
                                                                              wordRefusal: options.wordRefusal,
                                                                              spelling: options.spelling,
-                                                                             suggestedPage: options.suggestedPage)) {
+                                                                             suggestedPage: options.suggestedPage,
+                                                                             productState: options.productState,
+                                                                             read: options.read)) {
             return ArestemisStore(session: session, backend: sample, sample: true)
         }
         #endif
@@ -95,10 +98,7 @@ struct ContentView: View {
         .onChange(of: push?.openedURL) { _, url in
             guard url != nil, let push else { return }
             let action = push.lastActionIdentifier ?? UNNotificationDefaultActionIdentifier
-            if let link = MatchNotification.link(url: push.takeOpenedURL(), action: action) {
-                tours.end()                         // the account's own listing, never the tour's
-                navigation.follow(link)
-            }
+            if let link = MatchNotification.link(url: push.takeOpenedURL(), action: action) { follow(link) }
         }
         // Once per account, when its main screen first shows (`TourOffer`); a moment later, so a notification that
         // opened the app is seen first.
@@ -145,11 +145,16 @@ struct ContentView: View {
             }
         }
         .onOpenURL { url in
-            if let link = ArestemisLink(url: url) {
-                tours.end()
-                navigation.follow(link)
-            }
+            if let link = ArestemisLink(url: url) { follow(link) }
         }
+    }
+
+    /// A link or a tapped notification: the account's own listing or search, never the tour's. A search's link (the
+    /// server's "No matching product for …" push) asks for the cards again, so its page shows what the server found.
+    private func follow(_ link: ArestemisLink) {
+        tours.end()
+        navigation.follow(link)
+        if link.hunt != nil { Task { await store.reloadOverview(quiet: true) } }
     }
 
     /// What the moment is like for the tour to start by itself: the account, its main screen, and whether a

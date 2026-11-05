@@ -169,13 +169,15 @@ struct HuntText: Equatable {
         }
         if case .price(let search) = hunt.search, search.mode == .everywhere {
             // An everywhere monitor (brief 157) is named by its own name, else the product found, else the words; then
-            // the product (under an own name), "Everywhere", how many shops have it now, and what it does.
+            // the product (under an own name), "Everywhere", how many shops have it now (once the product is found,
+            // brief 180: "0 shops" while it is being found said nothing), and what it does.
             let title = ownName ?? Self.automaticTitle(hunt.search, price: price, language: language)
                 ?? language.string("Price monitor")
             let product = Self.text(price?.product) ?? Self.text(search.identity?.name)
             let parts = [product].compactMap { $0 }.filter { $0 != title }
                 + [EverywhereWords.mode(.everywhere, language: language)]
-                + [price?.offers.map { EverywhereWords.shops($0, language: language) }].compactMap { $0 }
+                + [price.flatMap { $0.productState == .found ? $0.offers : nil }
+                    .map { EverywhereWords.shops($0, language: language) }].compactMap { $0 }
                 + [PriceWords.mode(search, language: language)]
             self.kind = kind
             self.title = title
@@ -256,11 +258,12 @@ struct HuntPageActions: Equatable {
         rename = known
     }
 
-    /// The figures under the hunt's card, each opening those listings: New, Today, and Applied (flats) or Asked
-    /// (things); a watch's changes and a monitor's alarms are never applied for, so their third figure is Saved.
+    /// The figures under the hunt's card, each opening those listings: New (unread, brief 180), Today, and Applied
+    /// (flats) or Asked (things); a watch's changes and a monitor's alarms are never applied for, so their third figure is
+    /// Favorites (the state `saved`).
     static func figures(_ kind: SearchKind?, counts: Overview.Counts, language: AppLanguage = .current) -> [HuntFigure] {
         let third = kind == .watch || kind == .price
-            ? HuntFigure(label: language.string("Saved"), value: counts.saved, filter: .saved)
+            ? HuntFigure(label: MatchFilter.saved.title(language: language), value: counts.saved, filter: .saved)
             : HuntFigure(label: (kind ?? .flat).appliedWord(language: language), value: counts.applied, filter: .applied)
         return [HuntFigure(label: language.string("New"), value: counts.new, filter: .new),
                 HuntFigure(label: language.string("Today"), value: counts.today, filter: .all),
@@ -343,11 +346,12 @@ enum RadiusSteps {
 
 extension MatchState {
     /// The word a row shows for a state that is not obvious from the list it is in; a thing's seller is "Asked". New
-    /// only where every state shows (the search over listings).
+    /// only where every state shows (the search over listings). `saved` is one listing among the Favorites: "Favorite" /
+    /// "Favorit" (brief 180).
     func word(thing: Bool = false, includingNew: Bool = false, language: AppLanguage = .current) -> String? {
         switch self {
         case .new: includingNew ? language.string("New") : nil
-        case .saved: language.string("Saved")
+        case .saved: language.string("Favorite")
         case .applied: (thing ? SearchKind.item : .flat).appliedWord(language: language)
         case .dismissed: nil
         }

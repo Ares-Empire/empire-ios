@@ -81,6 +81,42 @@ enum ArestemisSamples {
     }
 }
 
+extension ArestemisSamples {
+    /// An Überall monitor saved before its product was found (brief 180; made up, as the server's
+    /// `price-everywhere-finding.json` and `-not-found.json`): `finding` it, or found none for its misspelled words, with
+    /// the server's sentence (in the app's language, as the server sends it), two names to choose from and the Dinge
+    /// route.
+    static func productStateMonitor(id: Int, state: ProductState, created: String) throws -> HuntCard {
+        let product = state == .notFound ? "Orbitel Headphones 2" : "Nimbus Earbuds 3"
+        let refusal: Any = state == .notFound ? [
+            "error": String(localized: "Found no product with that name."), "field": "product",
+            "suggestions": ["Orbital Headphones 2", "Orbital Headphones 2 Pro"],
+            "item_search": ["query": product, "extra": "blue"],
+        ] as [String: Any] : NSNull()
+        let card: [String: Any] = [
+            "hunt": [
+                "id": id, "kind": "price", "name": NSNull(), "active": true,
+                "search": [
+                    "mode": "everywhere", "url": NSNull(), "product": product,
+                    "details": state == .notFound ? "blue" : "midnight or navy", "identity": NSNull(),
+                    "sources_off": [String](), "history": true, "alarm": ["below": 220.0, "back_in_stock": true],
+                    "every": 60, "delivery": "shipping", "places": [Any](), "radius_km": 20, "include_used": false,
+                ] as [String: Any],
+                "created": created, "updated": created, "activated": created, "last_scan": NSNull(),
+            ] as [String: Any],
+            "counts": ["new": 0, "today": 0, "saved": 0, "applied": 0],
+            "sources": [Any](), "slowed": false, "page": NSNull(),
+            "price": [
+                "reader": "plain", "product": product, "host": "", "price": NSNull(), "currency": NSNull(),
+                "availability": "unknown", "source": NSNull(), "read": "waiting", "checked": NSNull(), "note": NSNull(),
+                "low_30d": NSNull(), "high_30d": NSNull(), "since": NSNull(), "offers": 0,
+                "product_state": state.rawValue, "refusal": refusal,
+            ] as [String: Any],
+        ]
+        return try JSONDecoder().decode(HuntCard.self, from: JSONSerialization.data(withJSONObject: card))
+    }
+}
+
 /// What a sample server holds: the contract's files (`contract`, `-sampleData` and the tests) or the tour's own, in the
 /// app's language (`TourData`, brief 139).
 struct SampleContent {
@@ -162,6 +198,8 @@ final class SampleBackend: ArestemisBackend {
         var wordRefusal: Int?       // -sampleWordRefusal <i>: a thing search refused at search.more_queries[i]
         var spelling: String?       // -sampleSpelling unchecked|failed|slow: how the spelling check answers
         var suggestedPage: String?  // -sampleSuggestedPage short|long: a watch with a suggested page (its title)
+        var productState: ProductState? // -sampleProductState finding|not_found: an Überall monitor without its product
+        var read: Set<Int> = []     // -sampleRead <id,id>: listings already opened (read, no dot, not in "● 3 NEW")
     }
 
     private var base: Overview
@@ -222,6 +260,7 @@ final class SampleBackend: ArestemisBackend {
                 return try JSONDecoder().decode(Match.self, from: JSONSerialization.data(withJSONObject: object))
             }
         }
+        for index in matches.indices where options.read.contains(matches[index].id) { matches[index].seen = true }
         rejectedItems = content.rejected
         settingsValue = content.settings
         kindsValue = content.kinds
@@ -274,6 +313,13 @@ final class SampleBackend: ArestemisBackend {
             pages[card.id] = card.page
             nextHuntID += 1
         }
+        if let state = options.productState {
+            let card = try ArestemisSamples.productStateMonitor(id: nextHuntID, state: state,
+                                                               created: base.lastScan ?? ArestemisSamples.iso(now))
+            huntValues.append(card.hunt)
+            products[card.id] = card.price
+            nextHuntID += 1
+        }
         if options.newerKind {
             let created = ArestemisSamples.iso(now)
             huntValues.append(Hunt(id: nextHuntID, kind: .unknown("car"), name: "Camper van", active: true,
@@ -297,7 +343,7 @@ final class SampleBackend: ArestemisBackend {
         let today = visible.filter { match in
             Timestamp.parse(match.found).map { Calendar.app.isDateInToday($0) } ?? false
         }
-        overview.counts = .init(new: visible.count { $0.state == .new }, today: today.count,
+        overview.counts = .init(new: visible.count { $0.state == .new && !$0.seen }, today: today.count,
                                 saved: visible.count { $0.state == .saved }, applied: visible.count { $0.state == .applied })
         overview.hunts = huntValues.map { hunt in
             HuntCard(hunt: hunt, counts: Self.counts(matches.filter { $0.huntID == hunt.id }),
@@ -349,6 +395,7 @@ final class SampleBackend: ArestemisBackend {
             // off change nothing of the read.
             let old = huntValues[index].search.price
             let otherProduct = old?.mode != monitor.mode || old?.url != monitor.url || old?.identity != monitor.identity
+                || old?.product != monitor.product || old?.details != monitor.details
             if otherProduct || products[id]?.read == .blocked {
                 products[id] = Self.waiting(monitor)
                 histories[id] = nil
@@ -456,9 +503,6 @@ final class SampleBackend: ArestemisBackend {
             if monitor.every < PriceSearch.everywhereEvery {
                 throw FieldRefusal(field: "search.every", message: "Check everywhere at most once an hour.")
             }
-            if monitor.identity == nil {
-                throw FieldRefusal(field: "search.identity", message: "Confirm the product found by the preview.")
-            }
         } else {
             try check(WatchSearch(url: monitor.url ?? "", change: "price", every: monitor.every))
         }
@@ -470,9 +514,15 @@ final class SampleBackend: ArestemisBackend {
         }
     }
 
-    /// A monitor saved with a new link or product: not read yet.
+    /// A monitor saved with a new link or product: not read yet; an everywhere monitor saved without the product found
+    /// (brief 179) looks for it first, under its words.
     private static func waiting(_ monitor: PriceSearch) -> PriceState {
-        if monitor.mode == .everywhere { return PriceState(product: monitor.identity?.name, host: "", read: .waiting) }
+        if monitor.mode == .everywhere {
+            guard let identity = monitor.identity else {
+                return PriceState(product: monitor.product, host: "", read: .waiting, offers: 0, productState: .finding)
+            }
+            return PriceState(product: identity.name, host: "", read: .waiting)
+        }
         return PriceState(host: monitor.url.flatMap(WatchAddress.host) ?? "", read: .waiting)
     }
 
@@ -498,7 +548,7 @@ final class SampleBackend: ArestemisBackend {
     }
     private static func counts(_ matches: [Match]) -> Overview.Counts {
         let visible = matches.filter { $0.state != .dismissed }
-        return .init(new: visible.count { $0.state == .new },
+        return .init(new: visible.count { $0.state == .new && !$0.seen },
                      today: visible.count { Timestamp.parse($0.found).map { Calendar.app.isDateInToday($0) } ?? false },
                      saved: visible.count { $0.state == .saved }, applied: visible.count { $0.state == .applied })
     }
@@ -670,15 +720,15 @@ final class SampleBackend: ArestemisBackend {
         return MatchPage(items: Array(wanted.prefix(limit)), more: wanted.count > limit)
     }
 
-    func matches(hunt: Int?, state states: [MatchState]?, limit: Int, before: Int?) async throws -> MatchPage {
-        try await matchPage(hunt: hunt, states: states, limit: limit, before: before)
+    func matches(hunt: Int?, state states: [MatchState]?, seen: Bool?, limit: Int, before: Int?) async throws -> MatchPage {
+        try await matchPage(hunt: hunt, states: states, seen: seen, limit: limit, before: before)
     }
 
     func priceAlarms(hunt: Int, state: [MatchState]?, limit: Int, before: Int?) async throws -> MatchPage {
         try await matchPage(hunt: hunt, states: state, limit: limit, before: before, alarmsOnly: true)
     }
 
-    private func matchPage(hunt: Int?, states: [MatchState]?, limit: Int, before: Int?,
+    private func matchPage(hunt: Int?, states: [MatchState]?, seen: Bool? = nil, limit: Int, before: Int?,
                            alarmsOnly: Bool = false) async throws -> MatchPage {
         if let hunt { _ = try huntIndex(hunt) }
         if before != nil {
@@ -688,6 +738,7 @@ final class SampleBackend: ArestemisBackend {
         let wanted = matches.filter { match in
             (!alarmsOnly || match.isPriceChange) && (hunt == nil || match.huntID == hunt)
                 && (states?.contains(match.state) ?? (match.state != .dismissed)) && match.id < (before ?? .max)
+                && (seen == nil || match.seen == seen)
         }.sorted { $0.id > $1.id }
         return MatchPage(items: Array(wanted.prefix(limit)), more: wanted.count > limit || (before == nil && (options.moreLoading || options.moreFailure)))
     }
@@ -740,6 +791,13 @@ final class SampleBackend: ArestemisBackend {
     func setState(_ state: MatchState, match id: Int) async throws -> Match {
         guard let index = matches.firstIndex(where: { $0.id == id }) else { throw HTTPError.server(404, nil) }
         matches[index].state = state
+        return matches[index]
+    }
+
+    /// Read, as the server: idempotent, no state changed.
+    func markSeen(match id: Int) async throws -> Match {
+        guard let index = matches.firstIndex(where: { $0.id == id }) else { throw HTTPError.server(404, nil) }
+        matches[index].seen = true
         return matches[index]
     }
 

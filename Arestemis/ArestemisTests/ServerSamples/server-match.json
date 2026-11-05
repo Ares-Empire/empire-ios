@@ -26,11 +26,15 @@
     "description_partial": false,
     "item": null,
     "page": null,
-    "price_change": null
+    "price_change": null,
+    "facts_from_text": [
+      "rent_warm"
+    ]
   },
   "reason": "€980 warm, 42 m² with a balcony in Schwabing, from 1 Dec — fits.",
   "warnings": [],
   "application": null,
   "at_start": false,
-  "over_max": null
+  "over_max": null,
+  "seen": false
 }

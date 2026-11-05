@@ -8,7 +8,7 @@ struct LanguageSwitchTests {
     @Test(arguments: [AppLanguage.english, .german]) func modelTextsFollowTheLanguageShown(language: AppLanguage) {
         AppLanguage.$scoped.withValue(language) {
             let german = language == .german
-            #expect(MatchFilter.saved.title == (german ? "Gespeichert" : "Saved"))
+            #expect(MatchFilter.saved.title == (german ? "Favoriten" : "Favorites"))
             // The notification actions' titles, set again when the app restarts in the other language.
             // (The categories are a set: the flat's is picked by its name.)
             let categories = MatchNotification.categories

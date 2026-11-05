@@ -70,3 +70,30 @@ enum ListingButton: Equatable, Hashable {
         }
     }
 }
+
+/// The star in a listing's top bar, beside its state menu (brief 180, Patrik 2026-11-05: "add a little star to each
+/// findings page so it's easy to favorite them"): off while the listing is new, on (filled, in the accent) while it is a
+/// favorite, the state `saved`; a tap turns one into the other. An applied or dismissed listing has none: it is dealt
+/// with, and the state menu still offers everything.
+enum FavoriteStar: Equatable {
+    case off, on
+
+    /// Nil for a state that shows no star.
+    init?(_ state: MatchState) {
+        switch state {
+        case .new: self = .off
+        case .saved: self = .on
+        case .applied, .dismissed: return nil
+        }
+    }
+
+    var symbol: String { self == .on ? "star.fill" : "star" }
+
+    /// The state a tap sets: a favorite, or new again (read stays read).
+    var next: MatchState { self == .on ? .new : .saved }
+
+    /// What VoiceOver says a tap does: "Favorite" / "Favorit", "Remove from favorites" / "Kein Favorit mehr".
+    func action(language: AppLanguage = .current) -> String {
+        self == .on ? language.string("Remove from favorites") : language.string("Favorite")
+    }
+}

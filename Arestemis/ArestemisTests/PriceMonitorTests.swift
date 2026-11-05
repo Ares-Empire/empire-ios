@@ -334,7 +334,7 @@ struct PriceMonitorTests {
         var below = try #require(SearchExample.everywhere.priceDraft)
         #expect(below.mode == .everywhere && below.product == "AirPods Max" && below.url.isEmpty)
         #expect(below.alarm && below.history && below.below == nil && !below.backInStock)
-        #expect(below.problems.contains(.alarmCondition) && below.problems.contains(.unconfirmed))
+        #expect(below.problems == [.alarmCondition])
         below.prefillLimit(price: 529)
         #expect(below.below == 500)
         #expect(SearchExample.examples(for: .price) == [.everywhere])
@@ -413,8 +413,8 @@ struct PriceMonitorTests {
         #expect(HuntText.automaticTitle(hunt.search, price: cards[0].price) == "Nintendo Switch 2")
         hunt.name = "Console"
         #expect(HuntText(hunt, price: cards[0].price, language: language).details?.hasPrefix("Nintendo Switch 2 · ") == true)
-        // Listings → Searches: saved only, never applied.
-        #expect(SearchRow(cards[0], language: language).line == (german ? "1 gespeichert" : "1 saved"))
+        // Listings → Searches: favorites only, never applied.
+        #expect(SearchRow(cards[0], language: language).line == (german ? "1 Favorit" : "1 favorite"))
     }
 
     @Test(arguments: [AppLanguage.english, .german])
@@ -430,7 +430,7 @@ struct PriceMonitorTests {
         #expect(words.startsPaused == (german ? "Der Preismonitor beginnt pausiert." : "The price monitor starts paused."))
         #expect(words.deleteQuestion == (german ? "Preismonitor löschen?" : "Delete the price monitor?"))
         #expect(HuntPageActions.figureLabels(.price, language: language)
-                == (german ? ["Neu", "Heute", "Gespeichert"] : ["New", "Today", "Saved"]))
+                == (german ? ["Neu", "Heute", "Favoriten"] : ["New", "Today", "Favorites"]))
         #expect(MatchFilter.choices(for: .price) == [.new, .saved, .all])
         #expect(!SearchKind.price.appliesOrAsks && SearchKind.price.symbol == "chart.line.downtrend.xyaxis")
         #expect(SearchKind.price.choiceTitle(language: language) == (german ? "Preismonitor" : "Price monitor"))

@@ -285,9 +285,9 @@ struct WatchTests {
         #expect(search.status(active: true) == (german ? "Suche läuft" : "Hunting"))
         #expect(search.start == (german ? "Suche starten" : "Start hunting"))
         #expect(HuntWords(nil, language: language).delete == (german ? "Suche löschen" : "Delete search"))
-        // A watch's third figure is Saved (its changes are never applied for).
+        // A watch's third figure is Favorites (its changes are never applied for).
         let figures = HuntPageActions.figures(.watch, counts: .init(new: 1, today: 2, saved: 3, applied: 4), language: language)
-        #expect(figures.map(\.label) == (german ? ["Neu", "Heute", "Gespeichert"] : ["New", "Today", "Saved"]))
+        #expect(figures.map(\.label) == (german ? ["Neu", "Heute", "Favoriten"] : ["New", "Today", "Favorites"]))
         #expect(figures.map(\.value) == [1, 2, 3] && figures.map(\.filter) == [.new, .all, .saved])
         #expect(HuntPageActions.figures(.flat, counts: .init(new: 1, today: 2, saved: 3, applied: 4)).map(\.value) == [1, 2, 4])
     }

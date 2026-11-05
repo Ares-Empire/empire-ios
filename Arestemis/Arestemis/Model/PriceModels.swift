@@ -270,10 +270,66 @@ enum PageReader: Equatable, Sendable {
     }
 }
 
+/// `PriceState.product_state` (the server's brief 179, 180 here): an everywhere monitor saved without a confirmed
+/// product is `finding` it in the background, and once the search is complete has `found` it or `notFound` it (then
+/// it reads nothing more until its words are edited). Missing (older monitors, page monitors) and a value this build
+/// does not know read as found, so such a card shows what it showed before.
+enum ProductState: String, Equatable, Sendable {
+    case finding, found
+    case notFound = "not_found"
+
+    init(serverValue: String?) {
+        self = serverValue.flatMap(Self.init(rawValue:)) ?? .found
+    }
+}
+
+/// `PriceState.refusal` (the server's brief 179): why no product fits an everywhere monitor's words, in the body a
+/// refused preview gives (`FieldRefusal`, brief 163): the server's sentence in the app's language, up to four concrete
+/// names to choose from and the words for a Dinge search.
+struct ProductRefusal: Codable, Equatable, Sendable {
+    var error: String
+    var suggestions: [String]
+    var itemSearch: ProductItemSearch?
+
+    init(error: String, suggestions: [String] = [], itemSearch: ProductItemSearch? = nil) {
+        self.error = error
+        self.suggestions = suggestions
+        self.itemSearch = itemSearch
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case error, suggestions, field
+        case itemSearch = "item_search"
+    }
+
+    /// Lenient as `FieldRefusal`: the optional choices never hide the sentence.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        error = try c.decode(String.self, forKey: .error)
+        suggestions = (try? c.decodeIfPresent([String].self, forKey: .suggestions)) ?? []
+        itemSearch = (try? c.decodeIfPresent(ProductItemSearch.self, forKey: .itemSearch)) ?? nil
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(error, forKey: .error)
+        try c.encode("product", forKey: .field)
+        try c.encode(suggestions, forKey: .suggestions)
+        try c.encodeIfPresent(itemSearch, forKey: .itemSearch)
+    }
+
+    /// What the form and the monitor's page offer under the sentence ("Did you mean…" and the Dinge route); nil when the
+    /// server named neither.
+    var choices: ProductSuggestions? {
+        suggestions.isEmpty && itemSearch == nil ? nil : ProductSuggestions(names: suggestions, itemSearch: itemSearch)
+    }
+}
+
 /// `HuntCard.price`: what the server last read of a monitor's product page. A failed read keeps the last good product
 /// and price; `read` and `note` say how the page reads now. For an everywhere monitor (brief 154) the price,
 /// currency, availability and host are the cheapest offer's (the host is its shop's name, "Amazon"), the product is
-/// the identity's name, and `offers` counts the sites with an offer now.
+/// the identity's name, and `offers` counts the sites with an offer now. An everywhere monitor saved without a confirmed
+/// product (brief 179) is `finding` it first, its product the words as typed; `notFound` carries the server's refusal.
 struct PriceState: Codable, Equatable, Sendable {
     var reader: PageReader
     var product: String?
@@ -295,17 +351,23 @@ struct PriceState: Codable, Equatable, Sendable {
     var offers: Int?
     /// The everywhere price excludes shipping because its cost is unknown.
     var shippingUnknown: Bool
+    /// An everywhere monitor's product: being found, found, or none fits its words (brief 179).
+    var productState: ProductState
+    /// Why none fits, while `productState` is `notFound`.
+    var refusal: ProductRefusal?
 
     enum CodingKeys: String, CodingKey {
-        case reader, product, host, price, currency, availability, source, read, checked, note, since, offers
+        case reader, product, host, price, currency, availability, source, read, checked, note, since, offers, refusal
         case low30d = "low_30d", high30d = "high_30d"
         case shippingUnknown = "shipping_unknown"
+        case productState = "product_state"
     }
 
     init(reader: PageReader = .plain, product: String? = nil, host: String, price: Double? = nil,
          currency: String? = nil, availability: Availability = .unknown, source: String? = nil,
          read: PageState.Read, checked: String? = nil, note: String? = nil, low30d: Double? = nil,
-         high30d: Double? = nil, since: String? = nil, offers: Int? = nil, shippingUnknown: Bool = false) {
+         high30d: Double? = nil, since: String? = nil, offers: Int? = nil, shippingUnknown: Bool = false,
+         productState: ProductState = .found, refusal: ProductRefusal? = nil) {
         self.reader = reader
         self.product = product
         self.host = host
@@ -321,9 +383,12 @@ struct PriceState: Codable, Equatable, Sendable {
         self.since = since
         self.offers = offers
         self.shippingUnknown = shippingUnknown
+        self.productState = productState
+        self.refusal = refusal
     }
 
-    /// Lenient, as `PageState`: a missing host is empty, a missing `read` is waiting, a missing reader plain.
+    /// Lenient, as `PageState`: a missing host is empty, a missing `read` is waiting, a missing reader plain; a missing or
+    /// unknown product state is found, a refusal that cannot be read is none.
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         reader = try c.decodeIfPresent(String.self, forKey: .reader).map(PageReader.init(rawValue:)) ?? .plain
@@ -341,10 +406,14 @@ struct PriceState: Codable, Equatable, Sendable {
         since = try c.decodeIfPresent(String.self, forKey: .since)
         offers = try c.decodeIfPresent(Int.self, forKey: .offers)
         shippingUnknown = try c.decodeIfPresent(Bool.self, forKey: .shippingUnknown) ?? false
+        productState = ProductState(serverValue: (try? c.decodeIfPresent(String.self, forKey: .productState)) ?? nil)
+        refusal = (try? c.decodeIfPresent(ProductRefusal.self, forKey: .refusal)) ?? nil
     }
 
     func encode(to encoder: Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(productState.rawValue, forKey: .productState)
+        try c.encodeIfPresent(refusal, forKey: .refusal)
         try c.encode(reader.rawValue, forKey: .reader)
         try c.encode(product, forKey: .product)
         try c.encode(host, forKey: .host)

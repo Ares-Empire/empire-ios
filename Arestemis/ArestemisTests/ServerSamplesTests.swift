@@ -154,6 +154,31 @@ struct ServerSamplesTests {
         #expect(refusal.field == "product" && refusal.productSuggestions?.names.first == "Zegna Krawatte")
     }
 
+    /// Brief 180 (the server's brief 179): an Überall monitor saved without its product, still finding it and found none
+    /// for (the refusal with the Dinge route, no names); the matches with `seen`.
+    @Test func aMonitorWithoutItsProductAndReadListings() throws {
+        let finding = try JSONDecoder().decode(HuntCard.self, from: data("price-everywhere-finding"))
+        let search = try #require(finding.hunt.search.price)
+        #expect(search.mode == .everywhere && search.identity == nil && search.product == "Orbital Headphones 2")
+        #expect(finding.price?.productState == .finding && finding.price?.refusal == nil && finding.price?.offers == 0)
+        #expect(PriceCardText(finding.price, compact: true, everywhere: true, language: .english).note
+                == "Looking for the product…")
+        #expect(HuntText(finding, language: .english).title == "Orbital Headphones 2")
+        let notFound = try JSONDecoder().decode(HuntCard.self, from: data("price-everywhere-not-found"))
+        let refusal = try #require(notFound.price?.refusal)
+        #expect(notFound.price?.productState == .notFound && refusal.error == "Found no product with that name.")
+        #expect(refusal.choices == ProductSuggestions(names: [],
+                                                      itemSearch: ProductItemSearch(query: "Orbital Headphones 2", extra: "blue")))
+        #expect(PriceCardText(notFound.price, compact: false, everywhere: true, language: .english).note == refusal.error)
+        // A monitor saved with the product found reads as found (no product state).
+        let found = try JSONDecoder().decode(HuntCard.self, from: data("price-everywhere"))
+        #expect(found.price?.productState == .found && found.price?.refusal == nil)
+        // Every listing says whether it was opened.
+        let page = try JSONDecoder().decode(MatchPage.self, from: data("matches"))
+        #expect(!page.items.isEmpty && page.items.allSatisfy { !$0.seen })
+        #expect(try !JSONDecoder().decode(Match.self, from: data("match")).seen)
+    }
+
     @Test func theOtherAnswers() throws {
         _ = try JSONDecoder().decode(Match.self, from: data("match"))
         _ = try JSONDecoder().decode(RejectedPage.self, from: data("rejected"))

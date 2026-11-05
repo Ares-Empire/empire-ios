@@ -37,8 +37,9 @@ enum ProductSuggestionSample {
     static let names = ["Meridian Air 14", "Meridian Pro 16", "Meridian Studio 16 with OLED display, 16 GB memory and 1 TB storage in silver",
                         "Meridian Flex 13"]
 
+    /// The server's family and generic refusal, in its English as the samples (`docs/samples/product-refusal*.json`).
     static func refusal(product: String, details: String) -> FieldRefusal {
-        FieldRefusal(field: "product", message: String(localized: "First the product has to be found."),
+        FieldRefusal(field: "product", message: "Name one specific product.",
                      productSuggestions: ProductSuggestions(names: product == family ? names : [],
                          itemSearch: ProductItemSearch(query: product, extra: details)))
     }

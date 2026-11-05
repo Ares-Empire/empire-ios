@@ -85,7 +85,7 @@ struct ListingsTests {
         #expect(rows.map(\.newCount) == [1, 4, 0, 1, 1, 1, 0, 1, 1, 0, 0, 1])
         #expect(rows.map(\.text.kind) == [.flat, .item, .flat, .item, .item, .watch, .watch, .watch, .price, .price, .price,
                                           .price])
-        #expect(rows[0].line == (de ? "1 gespeichert · 1 beworben" : "1 saved · 1 applied"))
+        #expect(rows[0].line == (de ? "1 Favorit · 1 beworben" : "1 favorite · 1 applied"))
         // Counts of zero are left out: nothing kept, no line; paused alone says so.
         #expect(rows[1].line == nil)
         #expect(rows[2].line == (de ? "Pausiert" : "Paused"))
@@ -106,7 +106,7 @@ struct ListingsTests {
         await store.loadMatches(.new)
         await store.setState(.saved, for: 31)
         let row = try #require(store.card(2).map { SearchRow($0, language: .english) })
-        #expect(row.newCount == 4 && row.line == "1 saved")
+        #expect(row.newCount == 4 && row.line == "1 favorite")
     }
 
     // MARK: one search's listings
@@ -135,7 +135,7 @@ struct ListingsTests {
         let de = language == .german
         #expect(MatchFilter.choices(for: .flat) == [.new, .saved, .applied, .all])
         #expect(MatchFilter.choices(for: .item).map { $0.title(asked: true, language: language) }
-                == (de ? ["Neu", "Gespeichert", "Angefragt", "Alle"] : ["New", "Saved", "Asked", "All"]))
+                == (de ? ["Neu", "Favoriten", "Angefragt", "Alle"] : ["New", "Favorites", "Asked", "All"]))
         #expect(MatchFilter.choices(for: .watch) == [.new, .saved, .all])           // a watch's change is never applied for
         #expect(MatchFilter.choices(for: nil) == MatchFilter.allCases)
         #expect(MatchFilter.opening(.init(new: 2, today: 0, saved: 0, applied: 0)) == .new)

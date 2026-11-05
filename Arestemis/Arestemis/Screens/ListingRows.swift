@@ -2,12 +2,12 @@ import SwiftUI
 
 /// The rows the Listings tab's lists share (brief 133): New, one search's listings and the search over listings.
 
-/// A match as a row of a list: a tap opens its page, a swipe right saves a new one, a swipe left dismisses it (with Undo
-/// in the bar), the long press offers the same.
+/// A match as a row of a list: a tap opens its page, a swipe right makes a new one a favorite (the state `saved`, brief
+/// 180), a swipe left dismisses it (with Undo in the bar), the long press offers the same.
 struct ListingRow: View {
     let match: Match
     let store: ArestemisStore
-    /// SAVED / APPLIED on the row (lists where states mix).
+    /// FAVORITE / APPLIED on the row (lists where states mix).
     var showsState = false
     /// NEW too (the search over listings).
     var showsNewState = false
@@ -30,7 +30,7 @@ struct ListingRow: View {
         .swipeActions(edge: .leading, allowsFullSwipe: true) {
             if match.state == .new {
                 Button { Task { await store.setState(.saved, for: match.id) } } label: {
-                    Label("Save", systemImage: "bookmark")
+                    Label("Favorite", systemImage: "star")
                 }
                 .tint(Look.accent.deep)
             }
@@ -41,13 +41,14 @@ struct ListingRow: View {
             }
             .tint(Color(hex: 0x4B4E58))
         }
-        .accessibilityAction(named: "Save") { Task { await store.setState(.saved, for: match.id) } }
+        .accessibilityAction(named: "Favorite") { Task { await store.setState(.saved, for: match.id) } }
         .accessibilityAction(named: "Dismiss") { Task { await store.setState(.dismissed, for: match.id) } }
     }
 }
 
-/// The heading over one search's new listings in New: its kind's mark and name, its new count, a chevron; a tap opens
-/// that search's listings at New. At the accessibility text sizes the count goes under the name, which keeps the width.
+/// The heading over one search's new listings in New: its kind's mark and name, how many of them are unread (brief 180:
+/// a listing opened stays in the group without its dot, and leaves the count), a chevron; a tap opens that search's
+/// listings at New. At the accessibility text sizes the count goes under the name, which keeps the width.
 struct NewGroupHeading: View {
     let kind: SearchKind?
     let title: String
@@ -82,7 +83,8 @@ struct NewGroupHeading: View {
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text(verbatim: "\(title), \(String(localized: "\(count) new"))"))
+        // Every listing of the group read: its name alone, as the count shows nothing then.
+        .accessibilityLabel(Text(verbatim: count > 0 ? "\(title), \(String(localized: "\(count) new"))" : title))
         .accessibilityAddTraits([.isHeader, .isButton])
         .accessibilityHint("Shows these listings")
     }
@@ -93,7 +95,7 @@ struct NewGroupHeading: View {
 }
 
 /// One search in Searches, as a glass card: its kind's mark and name with the new count beside it (under it at the
-/// accessibility text sizes), saved and applied (asked) in a quiet line, a chevron. A tap opens its listings.
+/// accessibility text sizes), favorites and applied (asked) in a quiet line, a chevron. A tap opens its listings.
 struct SearchRowCard: View {
     let row: SearchRow
     let open: () -> Void

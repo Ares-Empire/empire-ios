@@ -65,3 +65,32 @@ private struct ChoiceChipsLayout: Layout {
         }
     }
 }
+
+/// What the server offers when no product fits an Überall monitor's words (brief 164's `ProductSuggestions`): "Did you
+/// mean…" over its concrete names, then the way to a Dinge search for the words, in the accent as "Change" beside the
+/// sites (it reads as the way on, not as a note). One look in the form, under the product's field (brief 164), and on
+/// the monitor's page, inside its card when the server found none (brief 180).
+struct ProductChoices: View {
+    let choices: ProductSuggestions
+    /// 4 under a field's card, 0 inside a card (as `DidYouMeanChips`).
+    var inset: CGFloat = 4
+    let select: (String) -> Void
+    let openThings: (ProductItemSearch) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if !choices.names.isEmpty {
+                DidYouMeanChips(names: choices.names, headingInset: inset) { select(choices.names[$0]) }
+            }
+            if let search = choices.itemSearch {
+                Button { openThings(search) } label: {
+                    Text(verbatim: search.title()).font(AppFont.text(13, weight: .medium)).foregroundStyle(Look.accent.color)
+                        .fixedSize(horizontal: false, vertical: true).multilineTextAlignment(.leading)
+                        .frame(minHeight: 44, alignment: .leading).contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, inset)
+            }
+        }
+    }
+}

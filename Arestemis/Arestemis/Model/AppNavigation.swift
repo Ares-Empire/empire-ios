@@ -51,7 +51,8 @@ struct ListingsPartMemory {
 
 /// What the Hunts tab pushes: a hunt's page, a match's page, New search (the kinds to choose from, brief 135), or a
 /// search form (a hunt's search, or a new one, empty or filled in from one of New search's examples; a watch's own form
-/// with its suggested page's address, brief 178).
+/// with its suggested page's address, brief 178; a monitor's own form with one of the server's names for a product it
+/// found none for, brief 180).
 enum HuntRoute: Hashable {
     case monitorListings(Int, MonitorListingKind)
     case hunt(Int)
@@ -60,6 +61,7 @@ enum HuntRoute: Hashable {
     case form(SearchKind, hunt: Int?, example: SearchExample? = nil)
     case itemSearch(ProductItemSearch)
     case watchAddress(hunt: Int, address: String)
+    case monitorProduct(hunt: Int, product: String)
 }
 
 /// The monitor's two listing feeds; both keep ordinary match identity and actions.
@@ -79,7 +81,8 @@ enum MonitorListingKind: String, Hashable, CaseIterable {
     }
 }
 
-/// The filter of one search's listings: New · Saved · Applied · All (all = every state but dismissed, the API's default).
+/// The filter of one search's listings: New · Favorites · Applied · All (all = every state but dismissed, the API's
+/// default). Favorites are the state `saved` (brief 180: only the words changed).
 enum MatchFilter: String, CaseIterable, Hashable, Identifiable {
     case new, saved, applied, all
     var id: String { rawValue }
@@ -90,7 +93,7 @@ enum MatchFilter: String, CaseIterable, Hashable, Identifiable {
     func title(asked: Bool = false, language: AppLanguage = .current) -> String {
         switch self {
         case .new: language.string("New")
-        case .saved: language.string("Saved")
+        case .saved: language.string("Favorites")
         case .applied: asked ? language.string("Asked") : language.string("Applied")
         case .all: language.string("All")
         }
@@ -106,8 +109,18 @@ enum MatchFilter: String, CaseIterable, Hashable, Identifiable {
         }
     }
 
+    /// The `seen=` query: read listings stay in New without their dot until they are favourited, applied or dismissed,
+    /// like read mail in an inbox (brief 180, Claude's recommendation). Should Patrik choose that a listing leaves New
+    /// once it is opened, this is the one line to change: `self == .new ? false : nil`.
+    var seen: Bool? { nil }
+
     func includes(_ state: MatchState) -> Bool {
         states?.contains(state) ?? (state != .dismissed)
+    }
+
+    /// Whether a listing belongs in this filter's list: its state, and whether it was read where the filter asks.
+    func includes(_ match: Match) -> Bool {
+        includes(match.state) && (seen.map { $0 == match.seen } ?? true)
     }
 
     /// The filters a search's page offers: a watch's changes and a monitor's alarms are only saved or dismissed, never
@@ -184,15 +197,25 @@ final class AppNavigation {
         open(link)
     }
 
-    /// The match on the Listings tab over New (where a notification leads), then what the link asked for.
+    /// The match on the Listings tab over New (where a notification leads), then what the link asked for; a search's
+    /// page on the Hunts tab, over the list of hunts (a monitor's page for a monitor). An id the app does not know shows
+    /// the page's own "This search is gone." / "Loading the listing…".
     func open(_ link: ArestemisLink) {
-        tab = .listings
-        part = .new
-        listingsPath = [.match(link.match)]
         showsPlaceSearch = false
         showsDescribe = false
-        sheet = link.then == .application ? .application(link.match) : nil
-        pendingListing = link.then == .openListing ? link.match : nil
+        switch link.target {
+        case .match(let id):
+            tab = .listings
+            part = .new
+            listingsPath = [.match(id)]
+            sheet = link.then == .application ? .application(id) : nil
+            pendingListing = link.then == .openListing ? id : nil
+        case .hunt(let id):
+            tab = .hunt
+            huntPath = [.hunt(id)]
+            sheet = nil
+            pendingListing = nil
+        }
     }
 
     /// A match's page on the tab it was tapped on (the Hunts tab keeps it in its own stack).
@@ -255,6 +278,13 @@ final class AppNavigation {
         huntPath.append(.watchAddress(hunt: hunt, address: address))
     }
 
+    /// A chip under an Überall monitor's "no product" (brief 180): the monitor's own form, pushed over its page, with that
+    /// name in Product; the preview looks for it as usual, and saving starts the server's search again.
+    func monitorProduct(_ hunt: Int, product: String) {
+        tab = .hunt
+        huntPath.append(.monitorProduct(hunt: hunt, product: product))
+    }
+
     /// A new hunt was saved: its page replaces the form it was made in and New search under it, so back leads to the
     /// list of hunts.
     func showCreated(_ id: Int) {
@@ -310,7 +340,8 @@ final class AppNavigation {
 /// `-openSearch <id>` (that search's listings, over Searches), `-search <words>` (the search over listings with the words
 /// typed, the keyboard down; within the search `-openSearch` opened), `-filter new|saved|applied|all` (a search's
 /// listings), brief 178's `-sampleSpelling unchecked|failed|slow` (the thing form's spelling check) and `-sampleSuggestedPage
-/// short|long` (a watch with a suggested page, hunt 13), `-openMatch <id>`, `-openHunt <id>` (a hunt's page), `-openForm <id>` (that hunt's
+/// short|long` (a watch with a suggested page, hunt 13), brief 180's `-sampleProductState finding|not_found` (an Überall
+/// monitor without its product, the next hunt id) and `-sampleRead <id,id>` (listings already opened), `-openMatch <id>`, `-openHunt <id>` (a hunt's page), `-openForm <id>` (that hunt's
 /// form), `-openItemForm` (the first thing hunt's form), `-newItemForm` / `-newFlatForm` (an empty form), brief 131's
 /// `-openWatchForm` (the first watch's form) and `-newWatchForm` (in the form `-watchURL <text>`, `-watchChange <text>`
 /// and `-saveWatch`, read by `WatchSearchScreen`), `-sampleWatchRead <read>` (the second watch's page
@@ -359,6 +390,11 @@ struct LaunchOptions {
     /// `-sampleSuggestedPage short|long`: a watch (hunt 13) whose page has a suggested page, its title short or long
     /// (brief 178).
     var suggestedPage: String?
+    /// `-sampleProductState finding|not_found`: an Überall monitor (hunt 13, or 14 after a suggested page's watch) whose
+    /// product the server is still finding, or found none for, with two names and the Dinge route (brief 180).
+    var productState: ProductState?
+    /// `-sampleRead <id,id>`: those listings already opened (brief 180).
+    var read: Set<Int> = []
     var scrollToHunt: Int?
     var sampleUndo = false
     var moreLoading = false
@@ -404,6 +440,8 @@ struct LaunchOptions {
         wordRefusal = value("-sampleWordRefusal").flatMap(Int.init)
         spelling = value("-sampleSpelling")
         suggestedPage = value("-sampleSuggestedPage")
+        productState = value("-sampleProductState").flatMap(ProductState.init(rawValue:))
+        read = Set((value("-sampleRead") ?? "").split(separator: ",").compactMap { Int($0) })
         scrollToHunt = value("-scrollToHunt").flatMap(Int.init)
         sampleUndo = arguments.contains("-sampleUndo")
         moreLoading = arguments.contains("-sampleMoreLoading")

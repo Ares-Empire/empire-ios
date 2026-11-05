@@ -108,11 +108,11 @@ struct HuntsScreensTests {
     func appliedOrAsked(_ language: AppLanguage) {
         let de = language == .german
         #expect(MatchFilter.allCases.map { $0.title(asked: false, language: language) }
-                == (de ? ["Neu", "Gespeichert", "Beworben", "Alle"] : ["New", "Saved", "Applied", "All"]))
+                == (de ? ["Neu", "Favoriten", "Beworben", "Alle"] : ["New", "Favorites", "Applied", "All"]))
         #expect(MatchFilter.applied.title(asked: true, language: language) == (de ? "Angefragt" : "Asked"))
         #expect(MatchState.applied.word(thing: true, language: language) == (de ? "Angefragt" : "Asked"))
         #expect(MatchState.applied.word(thing: false, language: language) == (de ? "Beworben" : "Applied"))
-        #expect(MatchState.saved.word(thing: true, language: language) == (de ? "Gespeichert" : "Saved"))
+        #expect(MatchState.saved.word(thing: true, language: language) == (de ? "Favorit" : "Favorite"))
         #expect(MatchState.new.word(language: language) == nil && MatchState.dismissed.word(language: language) == nil)
         #expect(MatchState.new.word(includingNew: true, language: language) == (de ? "Neu" : "New"))
         #expect(MatchState.dismissed.word(includingNew: true, language: language) == nil)

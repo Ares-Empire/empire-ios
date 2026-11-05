@@ -136,7 +136,7 @@ private struct MonitorListMessage: View {
         }
         return switch filter {
         case .new: String(localized: "Nothing new. New listings appear here the moment they're found.")
-        case .saved: String(localized: "Nothing saved. Swipe right on a listing to keep it here.")
+        case .saved: String(localized: "No favorites yet. Swipe right on a listing to keep it here.")
         case .all, .applied: String(localized: "No listings yet. They appear here the moment they're found.")
         }
     }

@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// A match as a glass card: the photo if there is one, the rent big, the facts, where and when it was found, a
-/// chevron; the accent "new" dot in the corner until the match has been opened. A thing for sale shows its price big
+/// chevron; the accent "new" dot in the corner until the match has been opened (read on the server since brief 180). A thing for sale shows its price big
 /// (with "VB" or how far it lies over the maximum beside it; an auction its current bid, "bid" and the time left), its
 /// title, one facts line (condition · shipping or pickup with the distance · place), and "Online at start" for one found
 /// when the hunt started. A change on a watched page (brief 131) has no figure: the server's summary is its title, then
@@ -14,7 +14,7 @@ struct MatchRow: View {
     /// What the match is (`ArestemisStore.kind(of:)`): a flat, a thing for sale or a watched page's change.
     var kind: SearchKind = .flat
     var showsNewDot = false
-    /// Shows SAVED / APPLIED (the "All" list and the Hunt tab, where states mix).
+    /// Shows FAVORITE / APPLIED (the "All" list and the Hunt tab, where states mix).
     var showsState = false
     /// With `showsState`, NEW too (the search over listings, where every state shows).
     var showsNewState = false
@@ -198,15 +198,16 @@ struct ListingPhoto: View {
     }
 }
 
-/// Shared by the Latest stack and the Listings tab's lists; the detail page uses these same state icons. A thing's seller is
-/// asked, not applied to; a watched page's change and a monitor's alarm are only saved or dismissed.
+/// Shared by the Latest stack and the Listings tab's lists; the detail page uses these same state icons. A new listing
+/// becomes a favorite (the state `saved`, a star, brief 180). A thing's seller is asked, not applied to; a watched page's
+/// change and a monitor's alarm are only kept as favorites or dismissed.
 struct MatchRowActions: View {
     let match: Match
     let store: ArestemisStore
 
     var body: some View {
         if match.state == .new {
-            Button { change(.saved) } label: { Label("Save", systemImage: "bookmark") }
+            Button { change(.saved) } label: { Label("Favorite", systemImage: "star") }
         }
         if match.state != .applied && match.state != .dismissed && store.kind(of: match).appliesOrAsks {
             Button { change(.applied) } label: {

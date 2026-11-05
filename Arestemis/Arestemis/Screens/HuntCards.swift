@@ -81,7 +81,8 @@ struct HuntListCard: View {
 /// with several, brief 149; a watch: its host, what the page says
 /// now and when it was checked and changed), and the one button (Start hunting / Start watching / Pause); for a kind this
 /// build does not know only its name and "Needs a newer app". While the name is edited the button takes no taps (a tap
-/// there ends the editing, `HuntPage`).
+/// there ends the editing, `HuntPage`). An Überall monitor whose product the server found none for (brief 180) shows,
+/// under the server's sentence, its "Did you mean…" names and the way to a Dinge search (`ProductChoices`).
 struct HuntHeroCard<Title: View>: View {
     let card: HuntCard
     let sites: SiteNames
@@ -90,6 +91,10 @@ struct HuntHeroCard<Title: View>: View {
     var offer: Offer? = nil
     /// "Watch this page" under a watch's suggested page (brief 178): opens its form with that address.
     var watchSuggested: ((SuggestedPage) -> Void)? = nil
+    /// A name chosen under a monitor's "no product" (brief 180): opens its form with it in Product.
+    var chooseProduct: ((String) -> Void)? = nil
+    /// The Dinge route under a monitor's "no product": a new Dinge search with its words.
+    var openThings: ((ProductItemSearch) -> Void)? = nil
     let toggle: (Bool) -> Void
     @ViewBuilder let title: (HuntText) -> Title
 
@@ -117,6 +122,12 @@ struct HuntHeroCard<Title: View>: View {
                 PriceLines(state: card.price, compact: false, everywhere: card.hunt.search.price?.mode == .everywhere,
                            offer: offer, delivery: card.hunt.search.price?.delivery)
                     .padding(.top, 14)
+                if card.price?.productState == .notFound, let choices = card.price?.refusal?.choices,
+                   let chooseProduct, let openThings {
+                    ProductChoices(choices: choices, inset: 0, select: chooseProduct, openThings: openThings)
+                        .allowsHitTesting(!editing)
+                        .padding(.top, 12)
+                }
             }
             if card.slowed && text.kind != nil {
                 SlowedLine().padding(.top, 8)

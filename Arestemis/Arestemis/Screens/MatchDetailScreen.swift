@@ -13,10 +13,17 @@ import SwiftUI
 /// address) as the one main button; its menu only saves or dismisses. A monitor's alarm (brief 137): the new price big
 /// with the old one beside it ("was €483.99"; "back in stock" when it came back), the product, the shop and when, and
 /// "Open in shop" as the one main button; its menu only saves or dismisses.
+///
+/// Brief 180: opening the page reads the listing (`ArestemisStore.markRead`: its dot and its place in "● 3 NEW" go at
+/// once, the server keeps it); the top bar has a star beside the state menu, in the bar's own look: `star` while the
+/// listing is new, `star.fill` in the accent while it is a favorite (the state `saved`), a tap turning one into the other
+/// with a light tap felt (`FavoriteStar`); none once it is applied or dismissed.
 struct MatchDetailScreen: View {
     let id: Int
     let store: ArestemisStore
     let navigation: AppNavigation
+    /// Counts the star's taps, for the light tap felt with each.
+    @State private var starTaps = 0
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
 
@@ -38,13 +45,17 @@ struct MatchDetailScreen: View {
         .toolbar(.hidden, for: .tabBar)
         .toolbar {
             if let match = store.match(id), match.state != .dismissed {
-                ToolbarItem(placement: .topBarTrailing) { stateMenu(match) }
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    if let star = FavoriteStar(match.state) { starButton(match, star) }
+                    stateMenu(match)
+                }
             }
         }
+        .sensoryFeedback(.impact(weight: .light), trigger: starTaps)
         .task {
+            // Read as it opens (brief 180): a listing opened from a link is loaded first.
             await store.loadMatch(id)
-            try? await Task.sleep(for: .milliseconds(400))
-            store.markSeen(id)
+            await store.markRead(id)
         }
     }
 
@@ -250,9 +261,25 @@ struct MatchDetailScreen: View {
         .padding(.horizontal, Look.side).padding(.top, 4).padding(.bottom, 2)
     }
 
+    /// The star: the listing as a favorite, or new again. Shown at once, as every state change (`setState`).
+    private func starButton(_ match: Match, _ star: FavoriteStar) -> some View {
+        Button {
+            starTaps += 1
+            Task { await store.setState(star.next, for: match.id) }
+        } label: {
+            Image(systemName: star.symbol)
+                .foregroundStyle(star == .on ? Look.accent.color : Ink.primary)
+                .contentTransition(.symbolEffect(.replace))
+        }
+        .accessibilityLabel(Text(verbatim: star.action()))
+        .accessibilityAddTraits(star == .on ? .isSelected : [])
+    }
+
     private func stateMenu(_ match: Match) -> some View {
         Menu {
-            Toggle(isOn: stateBinding(match, .saved)) { Label("Save", systemImage: "bookmark") }
+            Toggle(isOn: stateBinding(match, .saved)) {
+                Label("Favorite", systemImage: match.state == .saved ? "star.fill" : "star")
+            }
             if store.kind(of: match).appliesOrAsks {
                 Toggle(isOn: stateBinding(match, .applied)) {
                     if store.isThing(match) { Label("Mark asked", systemImage: "checkmark.circle") }
