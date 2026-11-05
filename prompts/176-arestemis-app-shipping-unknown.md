@@ -1,6 +1,6 @@
 # 176: Arestemis app: "+ Versand unbekannt" where the cheapest price has no known shipping
 
-Status: draft
+Status: merged (d0ed172; 564 test cases passed on Claude's simulator, 40 screenshots reviewed)
 Branch: `codex/176-shipping-unknown` · Worktree: `../empire-ios-176-shipping-unknown` · Model: `gpt-6.1-sol`, effort `xhigh`
 
 ## Goal
