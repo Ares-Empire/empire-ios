@@ -42,6 +42,14 @@ struct WatchSearchDraft: Codable, Equatable {
     /// The name sent: trimmed and at most 60 characters (as Rename); nil when empty, so the server names it.
     var sentName: String? { HuntName.cleaned(name) }
 
+    /// The watch with its suggested page's address in place of its own (brief 178, "Watch this page"); its name, the
+    /// change it waits for and how often stay. Unsaved: the form shows it, and Save sends it as any changed address.
+    func adopting(address: String) -> WatchSearchDraft {
+        var draft = self
+        draft.url = address.trimmingCharacters(in: .whitespacesAndNewlines)
+        return draft
+    }
+
     /// The address field after a change: a whole shared text pasted into it keeps only its first link
     /// (`WatchAddress.fromField`).
     mutating func takeAddress(_ text: String) {

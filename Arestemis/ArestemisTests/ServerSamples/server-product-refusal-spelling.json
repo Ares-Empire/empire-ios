@@ -1,0 +1,6 @@
+{
+  "error": "Kein Produkt mit diesem Namen gefunden.",
+  "field": "product",
+  "suggestions": ["Zegna Krawatte"],
+  "item_search": { "query": "Zenga Krawatte", "extra": "blau" }
+}

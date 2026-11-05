@@ -38,6 +38,9 @@ struct HuntListCard: View {
                     }
                     if text.kind == .watch {
                         WatchLines(page: card.page, compact: true).padding(.top, 10)
+                        if let suggested = SuggestedPageText(card) {
+                            SuggestedPageLine(text: suggested, compact: true).padding(.top, 6)
+                        }
                     }
                     if text.kind == .price {
                         PriceLines(state: card.price, compact: true,
@@ -85,6 +88,8 @@ struct HuntHeroCard<Title: View>: View {
     let busy: Bool
     var editing = false
     var offer: Offer? = nil
+    /// "Watch this page" under a watch's suggested page (brief 178): opens its form with that address.
+    var watchSuggested: ((SuggestedPage) -> Void)? = nil
     let toggle: (Bool) -> Void
     @ViewBuilder let title: (HuntText) -> Title
 
@@ -102,6 +107,11 @@ struct HuntHeroCard<Title: View>: View {
             }
             if text.kind == .watch {
                 WatchLines(page: card.page, compact: false).padding(.top, 14)
+                if let suggested = SuggestedPageText(card) {
+                    SuggestedPageLine(text: suggested, watch: watchSuggested.map { watch in { watch(suggested.page) } })
+                        .allowsHitTesting(!editing)
+                        .padding(.top, 14)
+                }
             }
             if text.kind == .price {
                 PriceLines(state: card.price, compact: false, everywhere: card.hunt.search.price?.mode == .everywhere,
@@ -170,6 +180,61 @@ struct WatchLines: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .accessibilityElement(children: .combine)
         }
+    }
+}
+
+/// A watch's better page (brief 178) under the page's state: "“Adventskalender 2026” has its own page" in the secondary
+/// ink, the title as the page has it on one line, cut in the middle when long (the rest of the sentence follows it on the
+/// same line while the whole title fits, else on the next), and "Watch this page" in the accent under it, which opens the
+/// watch's form with that address. `compact` (the Hunts list's card): the sentence alone, small and muted on one line,
+/// the title cut to make room; the card's tap opens the watch's page, where the action is.
+struct SuggestedPageLine: View {
+    let text: SuggestedPageText
+    var compact = false
+    var watch: (() -> Void)? = nil
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            sentence
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(Text(verbatim: text.sentence))
+            if let watch {
+                Button(action: watch) {
+                    Text(verbatim: text.action).font(AppFont.text(14, weight: .semibold)).foregroundStyle(Look.accent.color)
+                        .frame(minHeight: 44, alignment: .leading).contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .padding(.vertical, -8)             // a 44 pt button, set as a line close under the sentence
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder private var sentence: some View {
+        let font = AppFont.text(compact ? 12 : 14)
+        if compact {
+            HStack(alignment: .firstTextBaseline, spacing: 0) {
+                title.layoutPriority(-1)
+                Text(verbatim: " " + text.rest).lineLimit(1).fixedSize()
+            }
+            .font(font).foregroundStyle(Ink.muted)
+        } else {
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .firstTextBaseline, spacing: 0) {
+                    Text(verbatim: text.quotedTitle).fixedSize()
+                    Text(verbatim: " " + text.rest).fixedSize()
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    title
+                    Text(verbatim: text.rest).lineLimit(1)
+                }
+            }
+            .font(font).foregroundStyle(Ink.secondary)
+        }
+    }
+
+    private var title: some View {
+        Text(verbatim: text.quotedTitle).lineLimit(1).truncationMode(.middle)
     }
 }
 

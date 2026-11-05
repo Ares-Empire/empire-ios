@@ -13,6 +13,9 @@ protocol ArestemisBackend {
     func setActive(id: Int, active: Bool) async throws -> Hunt
     func deleteHunt(id: Int) async throws
     func parse(text: String, kind: HuntKind) async throws -> HuntParseResult
+    /// `POST /search/spelling` (brief 178; the server's brief 177): likely misspelled brand or model words among a thing
+    /// search's words (1–5, each 2–100 characters). Always 200 for such words, also when the check could not run.
+    func spelling(words: [String]) async throws -> Spelling
     /// `POST /price/preview`: the server reads a product page once now (nothing is saved; one per account every 5 s).
     func pricePreview(url: String) async throws -> PricePreview
     /// `POST /price/preview` with `{product, details}` (brief 154): the server looks for the product on the sites once now
@@ -46,6 +49,9 @@ struct ArestemisAPI: ArestemisBackend {
     static let accountDataURL = baseURL.appendingPathComponent("me")
     /// Routes where the server asks the AI (parse, application) may take longer than a plain read.
     static let aiTimeout: TimeInterval = 60
+    /// The spelling check answers within about 4 s (the server gives up rather than retry); the form waits at most 5 s
+    /// (`SpellingCheck.limit`) and saves without it.
+    static let spellingTimeout: TimeInterval = 5
     /// A product's preview reads each comparison site's search and one product page, then asks the AI; the server
     /// answers within 44 s (brief 159; 4 to 7 s measured live, 2026-11-04).
     static let productPreviewTimeout: TimeInterval = 60
@@ -88,6 +94,10 @@ struct ArestemisAPI: ArestemisBackend {
         case .item: return .item(try await send(.post, "search/parse", body: body, timeout: Self.aiTimeout))
         case .price, .watch, .unknown: throw HTTPError.server(400, "This hunt needs a newer app.")
         }
+    }
+
+    func spelling(words: [String]) async throws -> Spelling {
+        try await send(.post, "search/spelling", body: ["words": words], timeout: Self.spellingTimeout)
     }
 
     func pricePreview(url: String) async throws -> PricePreview {

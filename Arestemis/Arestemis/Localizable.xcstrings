@@ -4647,6 +4647,16 @@
         }
       }
     },
+    "Watch this page" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Seite beobachten"
+          }
+        }
+      }
+    },
     "Watching" : {
       "localizations" : {
         "de" : {
@@ -5099,6 +5109,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "hat es"
+          }
+        }
+      }
+    },
+    "has its own page" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "hat eine eigene Seite"
           }
         }
       }

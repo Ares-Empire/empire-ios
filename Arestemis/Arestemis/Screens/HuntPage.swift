@@ -78,7 +78,8 @@ struct HuntPage: View {
                 VStack(alignment: .leading, spacing: 0) {
                     HuntHeroCard(card: card, sites: store.siteNames, busy: store.isChanging(hunt: id), editing: editing,
                                  offer: OfferList.selected(store.offers(hunt: id).offers?.offers ?? [], state: card.price,
-                                                           off: card.hunt.search.price?.sourcesOff ?? [])) { active in
+                                                           off: card.hunt.search.price?.sourcesOff ?? []),
+                                 watchSuggested: { navigation.watchSuggestedPage(id, address: $0.url) }) { active in
                         Task { await store.setActive(id: id, active: active) }
                     } title: { text in
                         name(card, text: text, renames: actions.rename)

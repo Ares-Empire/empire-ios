@@ -46,6 +46,46 @@ struct WatchCardText: Equatable {
     }
 }
 
+/// A watch's better page (brief 178; the server's brief 177): the page watched only names or links to the thing (a shop's
+/// homepage with a teaser), so its own page is offered: "“Adventskalender 2026” has its own page" / „Adventskalender
+/// 2026“ hat eine eigene Seite, with "Watch this page" / "Diese Seite beobachten", which opens the watch's form with that
+/// address. The title is the link's text as the page has it (page content: never translated or corrected).
+struct SuggestedPageText: Equatable {
+    let page: SuggestedPage
+    /// The title in the language's quotes: “…” / „…“. The screen keeps it on one line, cut in the middle when long.
+    let quotedTitle: String
+    /// What follows the title: "has its own page" / "hat eine eigene Seite".
+    let rest: String
+    /// The action: "Watch this page" / "Diese Seite beobachten".
+    let action: String
+
+    /// Nil without a suggestion, for a hunt that is no watch, and for the address the watch reads already.
+    init?(_ card: HuntCard, language: AppLanguage = .current) {
+        guard let watch = card.hunt.search.watch, let page = card.page?.suggested else { return nil }
+        let url = page.url.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !url.isEmpty, url != watch.url.trimmingCharacters(in: .whitespacesAndNewlines) else { return nil }
+        self.page = SuggestedPage(url: url, title: page.title)
+        let title = Self.title(page.title, url: url)
+        quotedTitle = language == .german ? "„\(title)“" : "“\(title)”"
+        rest = language.string("has its own page")
+        action = language.string("Watch this page")
+    }
+
+    /// The whole sentence, as VoiceOver reads it.
+    var sentence: String { quotedTitle + " " + rest }
+
+    /// The link's text with its spaces folded; without one, the address's last part ("adventskalender-2026.html"), else
+    /// its host.
+    static func title(_ text: String, url: String) -> String {
+        let folded = text.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+        if !folded.isEmpty { return folded }
+        let parts = URLComponents(string: url.contains("://") ? url : "https://" + url)
+        if let last = parts?.path.split(separator: "/").last, let name = String(last).removingPercentEncoding,
+           !name.isEmpty { return name }
+        return WatchAddress.host(url) ?? url
+    }
+}
+
 /// The server's lines about a page as the app sets them.
 enum WatchText {
     /// A number and its currency kept on one line ("49,99 €", "€ 45", "45 EUR"), so a wrapped line never leaves the sign

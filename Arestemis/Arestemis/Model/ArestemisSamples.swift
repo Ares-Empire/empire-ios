@@ -42,6 +42,43 @@ enum ArestemisSamples {
         formatter.formatOptions = [.withInternetDateTime]
         return formatter.string(from: date)
     }
+
+    // MARK: brief 178 (the server's brief 177), as the server sends them; made up
+
+    /// `POST /search/spelling` with a suggestion for the main words.
+    static let spellingSuggestion = Data(#"""
+        {"suggestions": [{"word": "Zenga Krawatte", "suggestion": "Zegna Krawatte"}], "checked": true}
+        """#.utf8)
+    /// `POST /search/spelling` when the check could not run (the AI unavailable, limited or too slow).
+    static let spellingUnchecked = Data(#"{"suggestions": [], "checked": false}"#.utf8)
+
+    /// The invented band shop's shop and its Advent calendar's own page.
+    static let suggestedPageShop = "https://shop.example.com/"
+    static let suggestedPageURL = "https://shop.example.com/catalog/adventskalender-2026.html"
+
+    /// A watch on the invented "Beispiel Bandshop"'s homepage, which only shows a teaser of its Advent calendar, with the
+    /// calendar's own page suggested (`HuntCard.page.suggested`); `long`: a long link text.
+    static func suggestedPageWatch(id: Int, long: Bool = false, checked: String = "2026-11-05T09:00:00Z") throws -> HuntCard {
+        let title = long ? "Adventskalender 2026 – limitierte Sonderedition mit 24 Überraschungen, Poster und Tour-Pass"
+            : "Adventskalender 2026"
+        let card: [String: Any] = [
+            "hunt": [
+                "id": id, "kind": "watch", "name": NSNull(), "active": true,
+                "search": ["url": suggestedPageShop, "change": "the Advent calendar can be ordered", "every": 60],
+                "created": "2026-11-04T18:30:00Z", "updated": "2026-11-04T18:30:00Z",
+                "activated": "2026-11-04T18:31:00Z", "last_scan": checked,
+            ],
+            "counts": ["new": 0, "today": 0, "saved": 0, "applied": 0],
+            "sources": [], "slowed": false,
+            "page": [
+                "reader": "plain", "page_title": "Beispiel Bandshop – Merch, Vinyl & Tickets", "host": "shop.example.com",
+                "now": "Advent calendar 2026 shown as “coming soon”, no order button", "read": "ok",
+                "checked": checked, "changed": "2026-11-04T18:31:00Z", "note": NSNull(),
+                "suggested": ["url": suggestedPageURL, "title": title],
+            ],
+        ]
+        return try JSONDecoder().decode(HuntCard.self, from: JSONSerialization.data(withJSONObject: card))
+    }
 }
 
 /// What a sample server holds: the contract's files (`contract`, `-sampleData` and the tests) or the tour's own, in the
@@ -123,6 +160,8 @@ final class SampleBackend: ArestemisBackend {
         var watchRead: String?      // -sampleWatchRead <read>: the second watch's page state (screenshots)
         var preview: String?        // -pricePreview reading|refused|failed: how the product's preview answers
         var wordRefusal: Int?       // -sampleWordRefusal <i>: a thing search refused at search.more_queries[i]
+        var spelling: String?       // -sampleSpelling unchecked|failed|slow: how the spelling check answers
+        var suggestedPage: String?  // -sampleSuggestedPage short|long: a watch with a suggested page (its title)
     }
 
     private var base: Overview
@@ -227,6 +266,13 @@ final class SampleBackend: ArestemisBackend {
                 search.sources.removeAll { $0 == .ebay }
                 huntValues[index].search = .item(search)
             }
+        }
+        if let title = options.suggestedPage {
+            let card = try ArestemisSamples.suggestedPageWatch(id: nextHuntID, long: title == "long",
+                                                               checked: base.lastScan ?? ArestemisSamples.iso(now))
+            huntValues.append(card.hunt)
+            pages[card.id] = card.page
+            nextHuntID += 1
         }
         if options.newerKind {
             let created = ArestemisSamples.iso(now)
@@ -455,6 +501,29 @@ final class SampleBackend: ArestemisBackend {
         return .init(new: visible.count { $0.state == .new },
                      today: visible.count { Timestamp.parse($0.found).map { Calendar.app.isDateInToday($0) } ?? false },
                      saved: visible.count { $0.state == .saved }, applied: visible.count { $0.state == .applied })
+    }
+
+    /// An imitation of the server's spelling check (brief 178) for screenshots: a few made-up misspellings of brands and
+    /// products, each corrected in its entry, the rest of the entry as sent. `-sampleSpelling unchecked|failed|slow`
+    /// makes it not check, fail or answer after the form's limit.
+    func spelling(words: [String]) async throws -> Spelling {
+        switch options.spelling {
+        case "unchecked": return try JSONDecoder().decode(Spelling.self, from: ArestemisSamples.spellingUnchecked)
+        case "failed": throw HTTPError.server(503, "Not available right now, try again in a minute.")
+        case "slow": try await Task.sleep(for: .seconds(3600))
+        default: try await Task.sleep(for: .milliseconds(400))
+        }
+        let known = ["zenga": "Zegna", "ferragammo": "Ferragamo", "adiddas": "Adidas", "kalax": "Kallax"]
+        let suggestions = words.compactMap { word -> Spelling.Suggestion? in
+            var changed = false
+            let tokens = word.split(separator: " ", omittingEmptySubsequences: false).map { token -> String in
+                guard let fixed = known[token.lowercased()] else { return String(token) }
+                changed = true
+                return fixed
+            }
+            return changed ? Spelling.Suggestion(word: word, suggestion: tokens.joined(separator: " ")) : nil
+        }
+        return Spelling(suggestions: suggestions, checked: true)
     }
 
     func parse(text: String, kind: HuntKind) async throws -> HuntParseResult {

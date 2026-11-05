@@ -76,6 +76,8 @@ struct HuntsScreen: View {
                         PriceSearchScreen(store: store, navigation: navigation, huntID: id, example: example)
                     case .form(.watch, let id, let example):
                         WatchSearchScreen(store: store, navigation: navigation, huntID: id, example: example)
+                    case .watchAddress(let id, let address):
+                        WatchSearchScreen(store: store, navigation: navigation, huntID: id, suggestedAddress: address)
                     }
                 }
                 .tourCardRoom()
