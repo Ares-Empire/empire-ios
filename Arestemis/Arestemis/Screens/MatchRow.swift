@@ -93,8 +93,17 @@ struct MatchRow: View {
     private var alarm: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text(verbatim: match.priceTitle(shop: alarmShop)).font(AppFont.text(16, weight: .semibold)).foregroundStyle(Ink.primary)
-                    .lineSpacing(2).lineLimit(2).fixedSize(horizontal: false, vertical: true)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(verbatim: match.priceTitle(shop: alarmShop, includingShippingNote: false))
+                        .font(AppFont.text(16, weight: .semibold)).foregroundStyle(Ink.primary)
+                        .lineSpacing(2).lineLimit(2).fixedSize(horizontal: false, vertical: true)
+                    if match.listing.priceChange?.shippingUnknown == true {
+                        Text(verbatim: PriceWords.shippingUnknown()).font(AppFont.text(13)).foregroundStyle(Ink.muted)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(Text(verbatim: match.priceTitle(shop: alarmShop)))
                 Spacer(minLength: 8)
                 if let word = stateWord {
                     CapsLabel(text: word, size: 9.5, color: Ink.secondary.opacity(0.8))

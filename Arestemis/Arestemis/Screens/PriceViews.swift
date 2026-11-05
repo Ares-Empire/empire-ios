@@ -138,14 +138,14 @@ struct PriceLines: View {
                     let beside = [text.shop, text.availability].compactMap { $0 }.joined(separator: " · ")
                     ViewThatFits(in: .horizontal) {
                         HStack(alignment: .firstTextBaseline, spacing: 8) {
-                            amount(price).fixedSize()
+                            amount(price, shippingNote: text.shippingNote).fixedSize()
                             if !beside.isEmpty {
                                 Text(verbatim: beside).font(AppFont.text(13)).foregroundStyle(Ink.muted)
                                     .fixedSize()
                             }
                         }
                         VStack(alignment: .leading, spacing: 6) {
-                            amount(price)
+                            amount(price, shippingNote: text.shippingNote)
                             if !beside.isEmpty {
                                 Text(verbatim: beside).font(AppFont.text(13)).foregroundStyle(Ink.muted)
                                     .fixedSize(horizontal: false, vertical: true)
@@ -174,9 +174,15 @@ struct PriceLines: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
-    private func amount(_ price: String) -> some View {
-        Text(verbatim: price).font(AppFont.number(compact ? 24 : 34, weight: .bold))
-            .foregroundStyle(Ink.primary).lineLimit(1).minimumScaleFactor(0.7)
+    private func amount(_ price: String, shippingNote: String?) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(verbatim: price).font(AppFont.number(compact ? 24 : 34, weight: .bold))
+                .foregroundStyle(Ink.primary).lineLimit(1).minimumScaleFactor(0.7)
+            if let shippingNote {
+                Text(verbatim: shippingNote).font(AppFont.text(13)).foregroundStyle(Ink.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
     }
 
 }

@@ -149,12 +149,23 @@ struct MatchDetailScreen: View {
         let change = match.listing.priceChange
         return VStack(alignment: .leading, spacing: 0) {
             if let change {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                let amount = VStack(alignment: .leading, spacing: 4) {
                     Text(verbatim: PriceWords.money(change.new, currency: change.currency))
-                        .font(AppFont.number(34, weight: .bold)).foregroundStyle(Ink.primary).minimumScaleFactor(0.7)
-                    Text(verbatim: PriceWords.alarmLabel(change)).font(AppFont.text(13)).foregroundStyle(Ink.muted)
+                        .font(AppFont.number(34, weight: .bold)).foregroundStyle(Ink.primary).lineLimit(1).minimumScaleFactor(0.7)
+                    if change.shippingUnknown {
+                        Text(verbatim: PriceWords.shippingUnknown()).font(AppFont.text(13)).foregroundStyle(Ink.muted)
+                    }
                 }
-                .lineLimit(1)
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        amount.fixedSize()
+                        Text(verbatim: PriceWords.alarmLabel(change)).font(AppFont.text(13)).foregroundStyle(Ink.muted).fixedSize()
+                    }
+                    VStack(alignment: .leading, spacing: 6) {
+                        amount
+                        Text(verbatim: PriceWords.alarmLabel(change)).font(AppFont.text(13)).foregroundStyle(Ink.muted)
+                    }
+                }
             }
             Text(match.listing.title).font(AppFont.text(17, weight: .semibold)).foregroundStyle(Ink.primary)
                 .lineLimit(2).fixedSize(horizontal: false, vertical: true)

@@ -26,32 +26,34 @@ enum EverywhereWords {
     static func found(_ preview: ProductPreview, off: [String] = [], language: AppLanguage = .current) -> FoundLines {
         let name = WatchText.keepingAmounts(preview.identity.name.trimmingCharacters(in: .whitespacesAndNewlines))
         let offers = preview.offers.filter { !off.contains($0.source) }
-        let priced = offers.filter { $0.selectedTotal != nil }
+        let priced = offers.filter { $0.comparable != nil }
         let found = language.string("Found: \(name)")
-        guard let cheapest = priced.first, let price = cheapest.selectedTotal else {
+        guard let cheapest = cheapest(offers, off: []) else {
             return FoundLines(title: found, detail: offers.isEmpty ? language.string("no offer yet")
-                : language.string("Total unknown"))
+                : language.string("Total unknown"), shippingNote: nil)
         }
         let sellers = Set(priced.map { $0.shop.trimmingCharacters(in: .whitespaces).lowercased() }).count
-        let from = PriceWords.money(price, currency: cheapest.currency, language: language)
-        return FoundLines(title: found, detail: language.string("in \(sellers) shops, from \(from)"))
+        let from = PriceWords.money(cheapest.price, currency: cheapest.currency, language: language)
+        return FoundLines(title: found, detail: language.string("in \(sellers) shops, from \(from)"),
+                          shippingNote: cheapest.shippingUnknown ? PriceWords.shippingUnknown(language: language) : nil)
     }
 
     /// The preview's two lines; `text` both in one ("Found: … · in 2 shops, from €215.00"), as VoiceOver reads them.
     struct FoundLines: Equatable {
         let title: String
         let detail: String
-        var text: String { title + " · " + detail }
+        let shippingNote: String?
+        var text: String { [title, detail, shippingNote].compactMap { $0 }.joined(separator: " · ") }
     }
 
     /// The cheapest price the preview found in euros, for the alarm's limit.
-    static func cheapest(_ preview: ProductPreview, off: [String] = []) -> (price: Double, currency: String?)? {
+    static func cheapest(_ preview: ProductPreview, off: [String] = []) -> (price: Double, currency: String?, shippingUnknown: Bool)? {
         cheapest(preview.offers, off: off)
     }
 
-    static func cheapest(_ offers: [Offer], off: [String]) -> (price: Double, currency: String?)? {
-        offers.first { !off.contains($0.source) && $0.selectedTotal != nil }
-            .flatMap { offer in offer.selectedTotal.map { ($0, offer.currency) } }
+    static func cheapest(_ offers: [Offer], off: [String]) -> (price: Double, currency: String?, shippingUnknown: Bool)? {
+        offers.first { !off.contains($0.source) && $0.comparable != nil }
+            .flatMap { offer in offer.comparable.map { ($0, offer.currency, offer.shippingUnknown) } }
     }
 
     /// The quiet line under the product's preview: "Looks on 9 sites" / "Sucht auf 9 Seiten", the sites switched on
@@ -175,7 +177,7 @@ enum OfferList {
     static func selected(_ offers: [Offer], state: PriceState?, off: [String]) -> Offer? {
         guard let state, let price = state.price else { return nil }
         return shown(offers, off: off).first {
-            $0.selectedTotal == price && $0.currency == state.currency
+            $0.comparable == price && $0.shippingUnknown == state.shippingUnknown && $0.currency == state.currency
                 && ($0.shop == state.host || $0.store?.name == state.host || title($0) == state.host)
         }
     }
@@ -194,8 +196,12 @@ enum OfferList {
     }
 
     static func amount(_ offer: Offer, language: AppLanguage = .current) -> String {
-        offer.selectedTotal.map { PriceWords.money($0, currency: offer.currency, language: language) }
+        (offer.selectedTotal ?? offer.comparable).map { PriceWords.money($0, currency: offer.currency, language: language) }
             ?? language.string("Total unknown")
+    }
+
+    static func shippingNote(_ offer: Offer, language: AppLanguage = .current) -> String? {
+        offer.shippingUnknown && offer.comparable != nil ? PriceWords.shippingUnknown(language: language) : nil
     }
 
     /// How many rows show before "+ N more shops".
@@ -206,14 +212,15 @@ enum OfferList {
     /// billiger.de").
     static func line(_ offer: Offer, language: AppLanguage = .current) -> String? {
         var parts: [String] = []
-        if let price = offer.price, price.isFinite {
+        let marksUnknownShipping = shippingNote(offer, language: language) != nil
+        if !marksUnknownShipping, let price = offer.price, price.isFinite {
             parts.append(PriceWords.money(price, currency: offer.currency, language: language))
         }
         switch offer.fulfillment {
         case .shipping:
             if let shipping = offer.shipping, shipping >= 0, shipping.isFinite {
                 parts.append(language.string("shipping \(PriceWords.limit(shipping, language: language))"))
-            } else {
+            } else if !marksUnknownShipping {
                 parts.append(language.string("Shipping unknown"))
             }
         case .pickup:

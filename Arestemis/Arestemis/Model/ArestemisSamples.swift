@@ -160,6 +160,9 @@ final class SampleBackend: ArestemisBackend {
         if LaunchArguments.current.contains("-longStore") || LaunchArguments.current.contains("-retainedOffer") {
             content = UsedSample.quotes(content, now: now)
         }
+        if LaunchArguments.current.contains("-shippingUnknownSample") {
+            content = try FulfillmentSample.unknownShipping(content, now: now)
+        }
         #endif
         try self.init(content: content, options: options, now: now)
     }

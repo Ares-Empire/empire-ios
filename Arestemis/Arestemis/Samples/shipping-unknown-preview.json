@@ -1,0 +1,36 @@
+{
+  "identity": {"name": "Meridian Lounge Chair 2", "eans": [], "image_url": null},
+  "offers": [
+    {
+      "source": "prism", "source_name": "Prism Compare",
+      "shop": "Morgenlicht Möbel und Wohnideen Versandhaus",
+      "url": "https://shop.example/morgenlicht/chair", "price": 1179, "currency": "EUR",
+      "shipping": null, "total": null, "total_from": 1179,
+      "fulfillment": "shipping", "availability": "in_stock", "checked": "2026-11-05T10:00:00Z"
+    },
+    {
+      "source": "parcel", "source_name": "Parcel Works", "shop": "Parcel Works",
+      "url": "https://shop.example/parcel/chair", "price": 1199, "currency": "EUR",
+      "shipping": 25, "total": 1224, "total_from": 1224,
+      "fulfillment": "shipping", "availability": "in_stock", "checked": "2026-11-05T10:00:00Z"
+    },
+    {
+      "source": "lumen", "source_name": "Lumen Home", "shop": "Lumen Home",
+      "url": "https://shop.example/lumen/chair", "price": 1249, "currency": "EUR",
+      "shipping": 0, "total": 1249, "total_from": 1249,
+      "fulfillment": "shipping", "availability": "in_stock", "checked": "2026-11-05T10:00:00Z"
+    },
+    {
+      "source": "fable", "source_name": "Fable Shop", "shop": "Fable Shop",
+      "url": "https://shop.example/fable/chair", "price": 1289, "currency": "EUR",
+      "shipping": null, "total": null, "total_from": 1289,
+      "fulfillment": "shipping", "availability": "in_stock", "checked": "2026-11-05T10:00:00Z"
+    }
+  ],
+  "sites": [
+    {"id": "prism", "name": "Prism Compare", "kind": "comparison", "state": "has_it", "on": true},
+    {"id": "parcel", "name": "Parcel Works", "kind": "shop", "state": "has_it", "on": true},
+    {"id": "lumen", "name": "Lumen Home", "kind": "shop", "state": "has_it", "on": true},
+    {"id": "fable", "name": "Fable Shop", "kind": "shop", "state": "has_it", "on": true}
+  ]
+}

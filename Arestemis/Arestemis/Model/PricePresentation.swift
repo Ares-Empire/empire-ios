@@ -7,6 +7,10 @@ import Foundation
 
 /// The words of a monitor and its alarms.
 enum PriceWords {
+    static func shippingUnknown(language: AppLanguage = .current) -> String {
+        language.string("+ shipping unknown")
+    }
+
     static func historyTitle(everywhere: Bool, language: AppLanguage = .current) -> String {
         everywhere ? language.string("Lowest total price") : language.string("Price history")
     }
@@ -62,15 +66,17 @@ enum PriceWords {
     /// lieferbar". An everywhere monitor's names the shop of the cheapest offer (`shop`, brief 157): "AirPods Max:
     /// €449.00 at MediaMarkt (was €483.99)" / "… 449,00 € bei MediaMarkt (vorher …)", "… is back in stock at
     /// MediaMarkt" / "… ist bei MediaMarkt wieder lieferbar".
-    static func alarm(product: String, change: PriceChange, shop: String? = nil,
+    static func alarm(product: String, change: PriceChange, shop: String? = nil, includingShippingNote: Bool = true,
                       language: AppLanguage = .current) -> String {
         let product = product.trimmingCharacters(in: .whitespacesAndNewlines)
         let shop = HuntText.text(shop)
         if change.kind == .back {
-            guard let shop else { return language.string("\(product) is back in stock") }
-            return language.string("\(product) is back in stock at \(shop)")
+            let sentence = shop.map { language.string("\(product) is back in stock at \($0)") }
+                ?? language.string("\(product) is back in stock")
+            return sentence + (change.shippingUnknown && includingShippingNote ? " " + shippingUnknown(language: language) : "")
         }
         let new = money(change.new, currency: change.currency, language: language)
+            + (change.shippingUnknown && includingShippingNote ? " " + shippingUnknown(language: language) : "")
         let old = change.old.map { money($0, currency: change.currency, language: language) }
         switch (shop, old) {
         case let (shop?, old?): return language.string("\(product): \(new) at \(shop) (was \(old))")
@@ -116,6 +122,8 @@ enum PriceLimit {
 struct PriceCardText: Equatable {
     /// "€449.00", while the page reads well.
     let price: String?
+    /// Under the price when it excludes unknown shipping, in the existing quiet style.
+    let shippingNote: String?
     /// "at Amazon", beside the price: the shop of an everywhere monitor's cheapest offer.
     let shop: String?
     /// "in stock", beside the price.
@@ -181,6 +189,8 @@ struct PriceCardText: Equatable {
             self.note = note
         }
         self.shop = shop
+        shippingNote = everywhere && price != nil && state?.shippingUnknown == true
+            ? PriceWords.shippingUnknown(language: l) : nil
         checked = Format.relative(state?.checked, now: now, calendar: calendar, language: l).map { l.string("Checked \($0)") }
     }
 }
@@ -296,9 +306,10 @@ struct PriceChart: Equatable {
 extension Match {
     /// A price alarm's sentence, from its change (the server's own sentence, `reason`, only when there is none).
     /// `shop`: the shop an everywhere monitor's alarm names (`ArestemisStore.alarmShop(of:)`).
-    func priceTitle(shop: String? = nil, language: AppLanguage = .current) -> String {
+    func priceTitle(shop: String? = nil, includingShippingNote: Bool = true, language: AppLanguage = .current) -> String {
         guard let change = listing.priceChange else { return WatchText.keepingAmounts(reason) }
-        return PriceWords.alarm(product: listing.title, change: change, shop: shop, language: language)
+        return PriceWords.alarm(product: listing.title, change: change, shop: shop,
+                                includingShippingNote: includingShippingNote, language: language)
     }
 
     /// An alarm's small line: "www.mediamarkt.de · 4 min ago".
