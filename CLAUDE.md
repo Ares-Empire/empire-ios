@@ -93,8 +93,9 @@ worktree, never commit or push, no installs. Council seats and reviews still run
   style does nothing in these apps), `axe swipe`/`touch`/`type`/`screenshot`; all take `--udid`, none needs the
   DeviceHub window. Steps and catches: `~/.claude/skills/ios-simulator/SKILL.md`; Codex's line is in `AGENTS.md`.
 
-**Council** (`docs/REVIEW.md`): a few blind reviewers with distinct focuses, for hard-to-undo choices,
-milestones, a bug that comes back, and every 2–3 weeks over merged Codex work.
+**Council** (method: `ares-empire/docs/COUNCIL.md`; iPhone specifics: `docs/REVIEW.md`): a few seats with their own
+roles, blind first, then checking each other's answers, for hard-to-undo choices, milestones, a bug that comes back,
+and every 2–3 weeks over merged Codex work.
 
 **Allowance:** `/status` in an interactive `codex`, or the `rate_limits` line in the newest
 `~/.codex/sessions/**/*.jsonl` (`used_percent`; window 10080 min = weekly).
