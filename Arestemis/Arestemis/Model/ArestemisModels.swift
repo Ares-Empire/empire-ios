@@ -276,12 +276,16 @@ struct Match: Codable, Equatable, Identifiable, Sendable {
     var atStart: Bool = false
     var overMax: Double? = nil
     /// Opened in the app (brief 179 on the server, 180 here): a new listing that was read keeps its state but shows no
-    /// dot and no longer counts in "● 3 NEW". Missing or unreadable (a server from before it) is unread.
+    /// dot and no longer counts in "● 3 NEW"; since brief 182 it leaves New. Missing or unreadable (a server from before
+    /// it) is unread.
     var seen: Bool = false
+    /// When it was first opened (brief 181 on the server, 182 here), an ISO 8601 time; nil while unread, and from a server
+    /// before it. Recently viewed is ordered by it (the server's order; one opened here goes on top).
+    var seenAt: String? = nil
 
     enum CodingKeys: String, CodingKey {
         case id, state, found, listing, reason, warnings, application, seen
-        case huntID = "hunt_id", atStart = "at_start", overMax = "over_max"
+        case huntID = "hunt_id", atStart = "at_start", overMax = "over_max", seenAt = "seen_at"
     }
 }
 
@@ -466,5 +470,6 @@ extension Match {
         atStart = try c.decodeIfPresent(Bool.self, forKey: .atStart) ?? false
         overMax = try c.decodeIfPresent(Double.self, forKey: .overMax)
         seen = ((try? c.decodeIfPresent(Bool.self, forKey: .seen)) ?? nil) ?? false
+        seenAt = (try? c.decodeIfPresent(String.self, forKey: .seenAt)) ?? nil
     }
 }

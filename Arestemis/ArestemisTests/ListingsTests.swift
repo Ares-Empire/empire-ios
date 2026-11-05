@@ -125,7 +125,7 @@ struct ListingsTests {
         // New of every search, without a hunt.
         try transport.answer("GET /matches", sample: "matches")
         await store.loadMatches(.new)
-        #expect(query(transport.requests("GET /matches").last) == ["state": "new", "limit": "50"])
+        #expect(query(transport.requests("GET /matches").last) == ["state": "new", "seen": "false", "limit": "50"])
         // Only its own matches show on its page.
         #expect(store.matches(.all, hunt: 1).allSatisfy { $0.huntID == 1 } && !store.matches(.all, hunt: 1).isEmpty)
     }

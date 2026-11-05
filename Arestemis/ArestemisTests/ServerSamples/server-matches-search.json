@@ -40,13 +40,16 @@
           "ends": null
         },
         "page": null,
-        "price_change": null
+        "price_change": null,
+        "facts_from_text": []
       },
       "reason": "White shelf for pickup in Garching — fits.",
       "warnings": [],
       "application": null,
       "at_start": false,
-      "over_max": null
+      "over_max": null,
+      "seen": false,
+      "seen_at": null
     },
     {
       "id": 302,
@@ -88,13 +91,16 @@
           "ends": null
         },
         "page": null,
-        "price_change": null
+        "price_change": null,
+        "facts_from_text": []
       },
       "reason": "White bookcase for pickup in Munich — fits.",
       "warnings": [],
       "application": null,
       "at_start": false,
-      "over_max": null
+      "over_max": null,
+      "seen": false,
+      "seen_at": null
     }
   ],
   "more": true

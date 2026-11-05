@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// The rows the Listings tab's lists share (brief 133): New, one search's listings and the search over listings.
+/// The rows the Listings tab's lists share (brief 133): New, one search's listings, Recently viewed and the search over
+/// listings.
 
 /// A match as a row of a list: a tap opens its page, a swipe right makes a new one a favorite (the state `saved`, brief
 /// 180), a swipe left dismisses it (with Undo in the bar), the long press offers the same.
@@ -135,17 +136,21 @@ struct SearchRowCard: View {
     }
 }
 
-/// The listings the AI filtered out (of every search, or of one), at the end of a list: a quiet outlined row with their
-/// count, opening the sheet that lists them.
-struct FilteredOutButton: View {
-    let count: Int
+/// The quiet row at the end of a list (`QuietLink`, brief 182): Recently viewed and Filtered out, of every search or of
+/// one, in one look: an outline, the symbol, the words and the count in muted ink, a chevron; a tap opens those listings.
+struct QuietLinkRow: View {
+    let link: QuietLink
+    /// What the tour may point at here (Filtered out, brief 139).
+    var spot: TourSpot? = nil
     let open: () -> Void
 
     var body: some View {
         Button(action: open) {
             HStack(spacing: 6) {
-                Text("Filtered out ·")
-                Text(verbatim: "\(count)").font(AppFont.number(13, weight: .regular))
+                Image(systemName: link.symbol).font(.system(size: 12, weight: .medium))
+                    .frame(width: 18, alignment: .leading)
+                Text(verbatim: "\(link.title()) ·")
+                Text(verbatim: link.countText).font(AppFont.number(13, weight: .regular))
                 Spacer()
                 Image(systemName: "chevron.right").font(.system(size: 11, weight: .semibold))
             }
@@ -153,11 +158,12 @@ struct FilteredOutButton: View {
             .padding(.horizontal, 16).frame(minHeight: 46)
             .overlay(RoundedRectangle(cornerRadius: Ink.cardRadius, style: .continuous).strokeBorder(Ink.line))
             .contentShape(Rectangle())
-            .tourAnchor(.filteredOut)
+            .tourAnchor(spot)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Filtered out, \(count) listings")
-        .plainRow(vertical: 10)
+        .accessibilityLabel(Text(verbatim: link.spoken()))
+        // Room above each, none under: two of them stand together as a pair at the list's end.
+        .plainRow(top: 10, bottom: 0)
     }
 }
 
@@ -189,9 +195,16 @@ struct MoreRow: View {
 extension View {
     /// A list row without the list's look: no background, no separator, the app's side margins.
     func plainRow(vertical: CGFloat = 0) -> some View {
-        listRowInsets(EdgeInsets(top: vertical, leading: Look.side, bottom: vertical, trailing: Look.side))
+        plainRow(top: vertical, bottom: vertical)
+    }
+
+    /// The same with its own room above and under. The section's separator goes too: a plain list draws one under its
+    /// last row (brief 182: a line under Filtered out at the end of New).
+    func plainRow(top: CGFloat, bottom: CGFloat) -> some View {
+        listRowInsets(EdgeInsets(top: top, leading: Look.side, bottom: bottom, trailing: Look.side))
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
+            .listSectionSeparator(.hidden)
     }
 
     /// The Listings tab's lists: plain, on the wall, their top fading under what stands above them.

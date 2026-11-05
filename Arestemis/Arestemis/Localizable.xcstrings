@@ -110,6 +110,46 @@
         }
       }
     },
+    "%@, %lld listings" : {
+      "localizations" : {
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%@, %lld Angebot"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%@, %lld Angebote"
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%@, %lld listing"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%@, %lld listings"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%@, at least, in %@" : {
       "localizations" : {
         "de" : {
@@ -2021,56 +2061,6 @@
         }
       }
     },
-    "Filtered out ·" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aussortiert ·"
-          }
-        }
-      }
-    },
-    "Filtered out, %lld listings" : {
-      "localizations" : {
-        "de" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "Aussortiert, %lld Angebot"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "Aussortiert, %lld Angebote"
-                }
-              }
-            }
-          }
-        },
-        "en" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "Filtered out, %lld listing"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "Filtered out, %lld listings"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "Flat" : {
       "localizations" : {
         "de" : {
@@ -2497,6 +2487,16 @@
         }
       }
     },
+    "Listings you opened in the last 7 days. To keep one, make it a favorite." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Angebote, die du in den letzten 7 Tagen geöffnet hast. Um eins zu behalten, markiere es als Favorit."
+          }
+        }
+      }
+    },
     "Listings → New" : {
       "localizations" : {
         "de" : {
@@ -2903,6 +2903,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Gerade kein bekannter Gesamtpreis."
+          }
+        }
+      }
+    },
+    "No listings here right now." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gerade keine Angebote hier."
           }
         }
       }
@@ -3613,6 +3623,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Liest…"
+          }
+        }
+      }
+    },
+    "Recently viewed" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zuletzt angesehen"
           }
         }
       }

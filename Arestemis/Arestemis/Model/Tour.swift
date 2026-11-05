@@ -263,9 +263,11 @@ final class TourWorld {
         let defaults = UserDefaults(suiteName: suite) ?? UserDefaults()
         defaults.removePersistentDomain(forName: suite)
         let backend = try SampleBackend(content: TourData.content(now: now, language: language), now: now)
-        // Its own session, never logged in: the tour asks no server and follows no login.
+        // Its own session, never logged in: the tour asks no server and follows no login. Opening a listing reads none:
+        // the steps find the new listings in New whatever the person opened on the way (brief 182).
         let session = EmpireSession(app: .arestemis, storage: TourTokens(), restoreOnLaunch: false)
-        let store = ArestemisStore(session: session, backend: backend, sample: true, defaults: defaults)
+        let store = ArestemisStore(session: session, backend: backend, sample: true, readsListings: false,
+                                   defaults: defaults)
         await store.reloadOverview()
         guard store.overview != nil else { throw TourError.noSample(store.overviewError) }
         await store.loadKinds()

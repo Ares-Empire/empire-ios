@@ -49,7 +49,9 @@
       "warnings": [],
       "application": null,
       "at_start": false,
-      "over_max": null
+      "over_max": null,
+      "seen": false,
+      "seen_at": null
     }
   ],
   "more": false

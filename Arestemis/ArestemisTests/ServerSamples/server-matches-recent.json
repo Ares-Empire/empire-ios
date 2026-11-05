@@ -1,0 +1,146 @@
+{
+  "items": [
+    {
+      "id": 41,
+      "hunt_id": 1,
+      "state": "new",
+      "found": "2026-10-24T09:59:10Z",
+      "listing": {
+        "source": "immoscout24",
+        "source_name": "ImmoScout24",
+        "url": "https://www.immobilienscout24.de/expose/90000002",
+        "title": "Helle 2-Zimmer-Wohnung mit Balkon in Schwabing",
+        "kind": "flat",
+        "rent_warm": 980,
+        "rent_cold": 820,
+        "sqm": 42,
+        "rooms": 2,
+        "flatmates": null,
+        "city": "München",
+        "district": "Schwabing",
+        "address": "Hohenzollernstraße",
+        "available_from": "2026-12-01",
+        "available_until": null,
+        "furnished": false,
+        "posted": "2026-10-24T09:58:00Z",
+        "image_url": null,
+        "description": "Wir vermieten ab 1. Dezember eine helle 2-Zimmer-Wohnung im 3. OG mit Südbalkon. Warmmiete 980 € inkl. Nebenkosten und Heizung. Einbauküche vorhanden, Keller, Fahrradkeller. U-Bahn Hohenzollernplatz 3 Minuten.",
+        "description_partial": false,
+        "item": null,
+        "page": null,
+        "price_change": null,
+        "facts_from_text": [
+          "rent_warm"
+        ]
+      },
+      "reason": "€980 warm, 42 m² with a balcony in Schwabing, from 1 Dec — fits.",
+      "warnings": [],
+      "application": null,
+      "at_start": false,
+      "over_max": null,
+      "seen": true,
+      "seen_at": "2026-11-05T14:20:00Z"
+    },
+    {
+      "id": 103,
+      "hunt_id": 3,
+      "state": "new",
+      "found": "2026-11-01T09:03:00Z",
+      "listing": {
+        "source": "kleinanzeigen",
+        "source_name": "Kleinanzeigen",
+        "url": "https://www.kleinanzeigen.de/s-anzeige/erfundener-buerostuhl/9900000203-93-9999",
+        "title": "Erfundener Bürostuhl mit Armlehnen",
+        "kind": null,
+        "rent_warm": null,
+        "rent_cold": null,
+        "sqm": null,
+        "rooms": null,
+        "flatmates": null,
+        "city": "Beispielstadt",
+        "district": null,
+        "address": null,
+        "available_from": null,
+        "available_until": null,
+        "furnished": null,
+        "posted": "2026-11-01T09:00:00Z",
+        "image_url": "https://images.example.invalid/office-chair.jpg",
+        "description": "Erfundenes Angebot eines Bürostuhls. Alle Angaben in diesem Beispiel sind fiktiv.",
+        "description_partial": false,
+        "item": {
+          "price": 75,
+          "price_kind": "fixed",
+          "shipping": "yes",
+          "shipping_cost": 4.99,
+          "condition": "like_new",
+          "condition_label": "Sehr Gut",
+          "seller": "private",
+          "distance_km": null,
+          "reserved": false,
+          "bids": null,
+          "ends": null
+        },
+        "page": null,
+        "price_change": null,
+        "facts_from_text": []
+      },
+      "reason": "75 € plus shipping from 4.99 €, like new — fits.",
+      "warnings": [
+        "Shipping cost is a lower bound"
+      ],
+      "application": null,
+      "at_start": false,
+      "over_max": null,
+      "seen": true,
+      "seen_at": "2026-11-05T09:05:00Z"
+    },
+    {
+      "id": 400,
+      "hunt_id": 40,
+      "state": "new",
+      "found": "2026-11-01T09:04:00Z",
+      "listing": {
+        "source": "page",
+        "source_name": "shop.example",
+        "url": "https://shop.example/shelf/",
+        "title": "Fjord shelf",
+        "kind": null,
+        "rent_warm": null,
+        "rent_cold": null,
+        "sqm": null,
+        "rooms": null,
+        "flatmates": null,
+        "city": null,
+        "district": null,
+        "address": null,
+        "available_from": null,
+        "available_until": null,
+        "furnished": null,
+        "posted": null,
+        "image_url": null,
+        "description": "+ 44,99 €\n- 49,99 €",
+        "description_partial": false,
+        "item": null,
+        "page": {
+          "added": [
+            "44,99 €"
+          ],
+          "removed": [
+            "49,99 €"
+          ],
+          "now": "FJORD 44,99 €"
+        },
+        "price_change": null,
+        "facts_from_text": []
+      },
+      "reason": "FJORD now 44,99 € instead of 49,99 €.",
+      "warnings": [],
+      "application": null,
+      "at_start": false,
+      "over_max": null,
+      "seen": true,
+      "seen_at": "2026-11-04T18:40:00Z"
+    }
+  ],
+  "more": false
+}

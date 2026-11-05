@@ -1,6 +1,6 @@
 # 182: Arestemis app: an opened listing leaves New, "Zuletzt angesehen" keeps it for a week
 
-Status: open
+Status: merged (Claude agent build, Claude review; 429 tests passed; Arestemis build 22)
 Branch: `claude/182-recently-viewed` · Worktree: `../empire-ios-182-recent` · Builder: Claude agent (design)
 
 ## Goal

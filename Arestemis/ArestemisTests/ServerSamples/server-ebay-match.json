@@ -22,7 +22,7 @@
     "furnished": null,
     "posted": "2026-11-01T09:00:00Z",
     "image_url": "https://photos.example.test/ebay/auction.jpg",
-    "description": "Invented chair, original armrests.",
+    "description": "Invented chair, original armrests. Zustand: gut.",
     "description_partial": false,
     "item": {
       "price": 62,
@@ -30,7 +30,7 @@
       "shipping": "yes",
       "shipping_cost": 4.99,
       "condition": "good",
-      "condition_label": "Gut",
+      "condition_label": null,
       "seller": "private",
       "distance_km": null,
       "reserved": null,
@@ -38,11 +38,16 @@
       "ends": "2026-11-02T14:00:00Z"
     },
     "page": null,
-    "price_change": null
+    "price_change": null,
+    "facts_from_text": [
+      "condition"
+    ]
   },
   "reason": "62 € current bid, good condition, ends in two hours — fits.",
   "warnings": [],
   "application": null,
   "at_start": false,
-  "over_max": null
+  "over_max": null,
+  "seen": false,
+  "seen_at": null
 }

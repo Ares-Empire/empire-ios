@@ -1,12 +1,14 @@
 import Foundation
 
 /// What the Listings tab shows (brief 133, Patrik's choice of 2026-11-02: "New | Searches"), decided here so the screens
-/// only lay it out: New's groups and their order, the rows of Searches, and the words of the search over listings.
+/// only lay it out: New's groups and their order, the rows of Searches, the quiet rows at a list's end (Recently viewed
+/// and Filtered out), and the words of the search over listings and of Recently viewed.
 
 /// One search's new listings in New.
 struct NewGroup: Equatable, Identifiable {
     let huntID: Int
-    /// Newest first, read ones too (they stay until they are a favorite, applied or dismissed, brief 180).
+    /// Newest first: the unread ones (brief 182: an opened one leaves New for Recently viewed), and one read on its page
+    /// that is still open (`ArestemisStore.heldInNew`).
     let matches: [Match]
     var id: Int { huntID }
     /// The heading's "● 2 NEW": the listings not opened yet.
@@ -77,6 +79,66 @@ struct SearchRow: Equatable, Identifiable {
     /// VoiceOver reads the row as one: "Herman Miller Aeron, 4 new, 1 favorite".
     func spoken(language: AppLanguage = .current) -> String {
         [text.title, newCount.map { language.string("\($0) new") }, line].compactMap { $0 }.joined(separator: ", ")
+    }
+}
+
+/// A quiet outlined row at the end of a list that opens more listings of the same searches (brief 182): Recently viewed
+/// and Filtered out, each with its symbol, its words and its count, in one look (`QuietLinkRow`). There is none while
+/// it would open an empty list.
+struct QuietLink: Equatable {
+    enum Kind: Equatable {
+        case recentlyViewed, filteredOut
+    }
+
+    let kind: Kind
+    let count: Int
+    /// The server has more than it sent (Recently viewed has one page): the count reads "200+".
+    let more: Bool
+
+    init?(_ kind: Kind, count: Int, more: Bool = false) {
+        guard count > 0 else { return nil }
+        self.kind = kind
+        self.count = count
+        self.more = more
+    }
+
+    /// A clock going back for what was opened, the filter's lines for what the check took out.
+    var symbol: String {
+        switch kind {
+        case .recentlyViewed: "clock.arrow.circlepath"
+        case .filteredOut: "line.3.horizontal.decrease"
+        }
+    }
+
+    func title(language: AppLanguage = .current) -> String {
+        switch kind {
+        case .recentlyViewed: RecentlyViewedWords.title(language: language)
+        case .filteredOut: language.string("Filtered out")
+        }
+    }
+
+    /// "12", or "200+" when the server has more.
+    var countText: String { more ? "\(count)+" : "\(count)" }
+
+    /// VoiceOver reads the row as one: "Recently viewed, 3 listings".
+    func spoken(language: AppLanguage = .current) -> String {
+        language.string("\(title(language: language)), \(count) listings")
+    }
+}
+
+/// The words of Recently viewed (brief 182): the listings opened in the last 7 days that are still new.
+enum RecentlyViewedWords {
+    /// The row's words and the page's title: "Recently viewed" / "Zuletzt angesehen".
+    static func title(language: AppLanguage = .current) -> String { language.string("Recently viewed") }
+
+    /// The quiet line at the top of the page: what it holds, and how to keep one.
+    static func line(language: AppLanguage = .current) -> String {
+        language.string("Listings you opened in the last 7 days. To keep one, make it a favorite.")
+    }
+
+    /// The page once nothing is left (each one made a favorite, applied or dismissed while it was open).
+    static func empty(language: AppLanguage = .current) -> String {
+        language.string("No listings here right now.")
     }
 }
 

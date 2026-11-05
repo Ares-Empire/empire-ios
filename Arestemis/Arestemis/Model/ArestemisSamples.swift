@@ -199,7 +199,9 @@ final class SampleBackend: ArestemisBackend {
         var spelling: String?       // -sampleSpelling unchecked|failed|slow: how the spelling check answers
         var suggestedPage: String?  // -sampleSuggestedPage short|long: a watch with a suggested page (its title)
         var productState: ProductState? // -sampleProductState finding|not_found: an Überall monitor without its product
-        var read: Set<Int> = []     // -sampleRead <id,id>: listings already opened (read, no dot, not in "● 3 NEW")
+        /// -sampleRead <id,id>: listings already opened (read, no dot, not in "● 3 NEW", out of New), the latest opened
+        /// first: the first an hour before `now`, each next one three hours earlier (Recently viewed's order, brief 182).
+        var read: [Int] = []
     }
 
     private var base: Overview
@@ -260,7 +262,11 @@ final class SampleBackend: ArestemisBackend {
                 return try JSONDecoder().decode(Match.self, from: JSONSerialization.data(withJSONObject: object))
             }
         }
-        for index in matches.indices where options.read.contains(matches[index].id) { matches[index].seen = true }
+        for (order, id) in options.read.enumerated() {
+            guard let index = matches.firstIndex(where: { $0.id == id }) else { continue }
+            matches[index].seen = true
+            matches[index].seenAt = ArestemisSamples.iso(now.addingTimeInterval(-Double(1 + 3 * order) * 3600))
+        }
         rejectedItems = content.rejected
         settingsValue = content.settings
         kindsValue = content.kinds
@@ -743,6 +749,20 @@ final class SampleBackend: ArestemisBackend {
         return MatchPage(items: Array(wanted.prefix(limit)), more: wanted.count > limit || (before == nil && (options.moreLoading || options.moreFailure)))
     }
 
+    /// Recently viewed as the server lists it (brief 181): still new, first opened within the last 7 days, the latest
+    /// opened first (ties: the higher id). The 7 days are the server's; the sample only imitates them.
+    func recent(hunt: Int?, limit: Int) async throws -> MatchPage {
+        if let hunt { _ = try huntIndex(hunt) }
+        let since = Date.now.addingTimeInterval(-7 * 24 * 3600)
+        let opened: [(match: Match, at: Date)] = matches.compactMap { match in
+            guard match.state == .new, match.seen, hunt == nil || match.huntID == hunt,
+                  let at = match.seenAt.flatMap(Timestamp.parse), at >= since else { return nil }
+            return (match, at)
+        }
+        let wanted = opened.sorted { $0.at != $1.at ? $0.at > $1.at : $0.match.id > $1.match.id }.map(\.match)
+        return MatchPage(items: Array(wanted.prefix(limit)), more: wanted.count > limit)
+    }
+
     /// An imitation of the server's search (brief 132) for screenshots, much simpler than the server's: every word must
     /// begin a word of the listing; a title counts most, then the place, then the description and a page's lines; ties
     /// newest first. The real app never ranks: it shows the server's order.
@@ -794,10 +814,11 @@ final class SampleBackend: ArestemisBackend {
         return matches[index]
     }
 
-    /// Read, as the server: idempotent, no state changed.
+    /// Read, as the server: idempotent, no state changed; the first opening's time is kept.
     func markSeen(match id: Int) async throws -> Match {
         guard let index = matches.firstIndex(where: { $0.id == id }) else { throw HTTPError.server(404, nil) }
         matches[index].seen = true
+        if matches[index].seenAt == nil { matches[index].seenAt = ArestemisSamples.iso(.now) }
         return matches[index]
     }
 

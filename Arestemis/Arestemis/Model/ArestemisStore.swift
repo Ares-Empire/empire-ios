@@ -3,9 +3,9 @@ import Synchronization
 import Observation
 
 /// One store for the app: the overview (hunt, portals, counts), the sites each kind of search can use (`GET /kinds`),
-/// the matches by state (of every search or of one), the filtered-out listings, the search over found listings (`GET
-/// /matches?q=`), applications, settings, and the search's helpers. Views read it and call its actions; nothing here
-/// knows about views.
+/// the matches by state (of every search or of one), Recently viewed (`GET /matches?recent=true`), the filtered-out
+/// listings, the search over found listings (`GET /matches?q=`), applications, settings, and the search's helpers. Views
+/// read it and call its actions; nothing here knows about views.
 ///
 /// - Optimistic changes (a match's state, start/pause, settings) show at once and roll back with a notice on failure.
 /// - Every request remembers the login it started with (`Context`); answers that arrive after a logout or a switch of
@@ -71,11 +71,16 @@ final class ArestemisStore {
     }
 
     static let pageSize = 50
+    /// Recently viewed has one page (the server takes no `before` with it), so it asks for the server's most.
+    static let recentLimit = 200
 
     let session: EmpireSession
     /// The store runs on the samples in memory (DEBUG's `-sampleData`, the tour): it asks no server, keeps no drafts and
     /// does not refresh with the login.
     let isSample: Bool
+    /// Opening a listing reads it (brief 180). The tour's store does not: its listings stay unread and in New, so its
+    /// steps find them there whatever the person opened on the way (brief 182).
+    let readsListings: Bool
     let places: PlaceSearch
     private let backend: any ArestemisBackend
     private let keptDraft: KeptSearchDraft
@@ -102,6 +107,17 @@ final class ArestemisStore {
 
     // filtered out, of every search (nil) and of single ones
     private(set) var rejectedLists: [Int?: RejectedList] = [:]
+
+    // recently viewed, of every search (nil) and of single ones (brief 182)
+    /// The server's listings in its order (the latest opened first), under the ones opened here since.
+    private(set) var recentLists: [Int?: MatchList] = [:]
+    /// Listings read here while new, by the count of such reads at that moment (`readSerial`): a Recently viewed asked
+    /// for before one was read, or before its read reached the server, keeps it on top.
+    private var openedHere: [Int: Int] = [:]
+    private var readSerial = 0
+    /// New listings read while their page is open: they stay in New's lists, and out of Recently viewed, until the page
+    /// closes (`pageClosed`), so nothing moves under the page.
+    private(set) var heldInNew: Set<Int> = []
 
     // price monitors (brief 137)
     private(set) var priceHistories: [PriceHistoryKey: PriceHistory] = [:]
@@ -134,11 +150,12 @@ final class ArestemisStore {
     /// How long the search over listings waits for typing to pause.
     private let findDelay: Duration
 
-    init(session: EmpireSession, backend: any ArestemisBackend, sample: Bool = false,
+    init(session: EmpireSession, backend: any ArestemisBackend, sample: Bool = false, readsListings: Bool = true,
          placeDelay: Duration = .milliseconds(300), findDelay: Duration = ListingSearch.delay,
          defaults: UserDefaults = .standard) {
         self.session = session
         self.backend = backend
+        self.readsListings = readsListings
         self.findDelay = findDelay
         keptDraft = KeptSearchDraft(defaults: defaults)
         // In memory on the samples: DEBUG's `-sampleData`, and the tour in every build (brief 139).
@@ -281,6 +298,9 @@ final class ArestemisStore {
         await reloadOverview(quiet: true)
         for scope in lists.keys.sorted(by: Self.loadOrder) where lists[scope]?.loaded == true {
             await loadMatches(scope.filter, hunt: scope.hunt, quiet: true)
+        }
+        for hunt in recentLists.keys.sorted(by: { ($0 ?? 0) < ($1 ?? 0) }) where recentLists[hunt]?.loaded == true {
+            await loadRecent(hunt: hunt, quiet: true)
         }
         let scopes = monitorLists.keys.sorted {
             ($0.hunt, $0.kind.rawValue, $0.filter.rawValue) < ($1.hunt, $1.kind.rawValue, $1.filter.rawValue)
@@ -461,6 +481,8 @@ final class ArestemisStore {
                 applications[match] = nil
                 unconfirmedReads.remove(match)
                 countedReads[match] = nil
+                openedHere[match] = nil
+                heldInNew.remove(match)
             }
             overview?.latest.removeAll { $0.huntID == id }
             huntLatest[id] = nil
@@ -472,6 +494,7 @@ final class ArestemisStore {
             listGeneration += 1
             lists = [:]
             rejectedLists = [:]
+            recentLists = [:]
             changingHunts.remove(id)
             await reloadOverview(quiet: true)
             return true
@@ -556,9 +579,12 @@ final class ArestemisStore {
     // MARK: - matches
 
     /// The matches of a filter, of every search or of one, newest first, as known now (including changes made here since
-    /// the last load).
+    /// the last load). New keeps a listing read on its page that is still open (`heldInNew`).
     func matches(_ filter: MatchFilter, hunt: Int? = nil) -> [Match] {
-        matchesByID.values.filter { filter.includes($0) && (hunt == nil || $0.huntID == hunt) }.sorted { $0.id > $1.id }
+        matchesByID.values.filter { match in
+            (filter.includes(match) || (filter == .new && match.state == .new && heldInNew.contains(match.id)))
+                && (hunt == nil || match.huntID == hunt)
+        }.sorted { $0.id > $1.id }
     }
 
     func list(_ filter: MatchFilter, hunt: Int? = nil) -> MatchList { lists[ListScope(hunt: hunt, filter: filter)] ?? MatchList() }
@@ -719,17 +745,35 @@ final class ArestemisStore {
         }
     }
 
-    /// A listing's page opened (brief 180): it is read at once, here and on the server (`POST /matches/{id}/seen`), and
-    /// keeps its state (only the user's actions change states). A new one loses its dot and leaves the "● 3 NEW" counts
-    /// of its search and the account at once; the next overview confirms them. Sent once per listing; a failure keeps it
-    /// read here, says nothing, and is sent again at the next opening.
-    func markRead(_ id: Int) async {
-        guard canAct, let current = match(id) else { return }
+    /// A listing's page opened (brief 182): it is read (`markRead`); a new one read now stays in New's lists, and out of
+    /// Recently viewed, until its page closes (`pageClosed`). So it is gone from New when the person comes back, and
+    /// nothing moves under the page.
+    func pageOpened(_ id: Int) async {
+        await markRead(id, holding: true)
+    }
+
+    /// A listing's page closed: a new one read on it leaves New and shows in Recently viewed now.
+    func pageClosed(_ id: Int) {
+        heldInNew.remove(id)
+    }
+
+    /// A listing read (brief 180): at once, here and on the server (`POST /matches/{id}/seen`), keeping its state (only
+    /// the user's actions change states). A new one loses its dot, leaves the "● 3 NEW" counts of its search and the
+    /// account (the next overview confirms them) and New, and goes on top of Recently viewed with `seen_at` now (brief
+    /// 182; `holding`: New keeps it until `pageClosed`). Sent once per listing; a failure keeps it read here, says
+    /// nothing, and is sent again at the next opening.
+    func markRead(_ id: Int, holding: Bool = false) async {
+        guard canAct, readsListings, let current = match(id) else { return }
         if !current.seen {
             var read = current
             read.seen = true
+            read.seenAt = read.seenAt ?? ArestemisSamples.iso(.now)
             matchesByID[id] = read
-            if read.state == .new { uncount(read) }
+            if read.state == .new {
+                uncount(read)
+                if holding { heldInNew.insert(id) }
+                putOnTopOfRecent(read)
+            }
             unconfirmedReads.insert(id)
         }
         guard unconfirmedReads.contains(id), !sendingReads.contains(id) else { return }
@@ -776,6 +820,63 @@ final class ArestemisStore {
             if let index = overview.hunts.firstIndex(where: { $0.id == read.hunt }) {
                 overview.hunts[index].counts.new = max(0, overview.hunts[index].counts.new - 1)
             }
+        }
+    }
+
+    // MARK: - recently viewed (brief 182)
+
+    /// Recently viewed of every search (nil) or of one, as last loaded.
+    func recentList(hunt: Int? = nil) -> MatchList { recentLists[hunt] ?? MatchList() }
+
+    /// Recently viewed as it is now, the latest opened first: the listings still new (one made a favorite, applied or
+    /// dismissed leaves at once and comes back when it is new again), without one still held in New under its open page.
+    func recentMatches(hunt: Int? = nil) -> [Match] {
+        recentList(hunt: hunt).ids.compactMap { matchesByID[$0] }.filter { match in
+            match.state == .new && match.seen && !heldInNew.contains(match.id) && (hunt == nil || match.huntID == hunt)
+        }
+    }
+
+    /// `GET /matches?recent=true[&hunt=]`, loaded with New and on pull to refresh: the server's listings in its order (it
+    /// decides the 7 days), under the ones opened here that it may not know yet (read after the request was sent, or
+    /// whose read had not gone through).
+    func loadRecent(hunt: Int? = nil, quiet: Bool = false) async {
+        guard canAct, !(recentLists[hunt]?.isLoading ?? false) else { return }
+        recentLists[hunt, default: MatchList()].isLoading = true
+        if !quiet { recentLists[hunt]?.error = nil }
+        let generation = listGeneration
+        let context = context
+        let revision = stateRevision
+        let reads = readSerial
+        let unsent = unconfirmedReads
+        defer { if isCurrent(context) && generation == listGeneration { recentLists[hunt]?.isLoading = false } }
+        do {
+            let page = try await backend.recent(hunt: hunt, limit: Self.recentLimit)
+            guard isCurrent(context) && generation == listGeneration else { return }
+            for match in page.items { remember(match, since: revision) }
+            let returned = page.items.map(\.id)
+            let openedSince = openedHere.filter { id, serial in
+                (serial > reads || unsent.contains(id)) && !returned.contains(id)
+                    && (hunt == nil || matchesByID[id]?.huntID == hunt)
+            }.sorted { $0.value > $1.value }.map(\.key)
+            recentLists[hunt]?.ids = openedSince + returned
+            recentLists[hunt]?.more = page.more
+            recentLists[hunt]?.loaded = true
+            recentLists[hunt]?.error = nil
+        } catch {
+            guard isCurrent(context) && generation == listGeneration else { return }
+            if quiet { session.handleAuthFailure(error, generation: context.session, token: context.token) }
+            else { handle(error, context: context) { self.recentLists[hunt]?.error = $0 } }
+        }
+    }
+
+    /// A new listing read here: on top of Recently viewed of every search and of its own, where those lists are kept
+    /// (a list asked for later keeps it until the server knows it).
+    private func putOnTopOfRecent(_ match: Match) {
+        readSerial += 1
+        openedHere[match.id] = readSerial
+        for hunt in [nil, match.huntID] as [Int?] where recentLists[hunt] != nil {
+            recentLists[hunt]?.ids.removeAll { $0 == match.id }
+            recentLists[hunt]?.ids.insert(match.id, at: 0)
         }
     }
 
@@ -1221,6 +1322,9 @@ final class ArestemisStore {
         unconfirmedReads = []
         sendingReads = []
         countedReads = [:]
+        recentLists = [:]
+        openedHere = [:]
+        heldInNew = []
         changingState = []
         matchErrors = [:]
         rejectedLists = [:]
@@ -1261,11 +1365,15 @@ final class ArestemisStore {
         matchesByID[match.id] = keepingRead(match)
     }
 
-    /// Read here stays read, whatever an answer from before the server knew it says (the server never unreads one).
+    /// Read here stays read, with the time it was first opened, whatever an answer from before the server knew it says
+    /// (the server never unreads one).
     private func keepingRead(_ match: Match) -> Match {
-        guard !match.seen, unconfirmedReads.contains(match.id) || matchesByID[match.id]?.seen == true else { return match }
+        let known = matchesByID[match.id]
+        let readHere = unconfirmedReads.contains(match.id) || known?.seen == true
+        guard (readHere && !match.seen) || (match.seenAt == nil && known?.seenAt != nil) else { return match }
         var read = match
         read.seen = true
+        read.seenAt = match.seenAt ?? known?.seenAt
         return read
     }
 

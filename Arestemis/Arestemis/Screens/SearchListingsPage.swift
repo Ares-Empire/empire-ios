@@ -4,7 +4,8 @@ import SwiftUI
 /// tab (Listings and its figures): the search's name as the title, the magnifying glass searching only its listings,
 /// then New · Favorites · Applied · All ("Asked" for a thing's seller; a watch's changes are only kept as favorites, so it
 /// has no Applied) and the list, as glass cards: swipe right for a favorite, left to dismiss, tap for the match. At the end, the
-/// listings the AI filtered out of this search.
+/// search's own Recently viewed (brief 182) and the listings the AI filtered out of this search, each a quiet row shown
+/// while it has listings.
 struct SearchListingsPage: View {
     let id: Int
     let store: ArestemisStore
@@ -41,9 +42,10 @@ struct SearchListingsPage: View {
             .listingsList()
             .refreshable {
                 async let matches: Void = store.loadMatches(filter, hunt: id)
+                async let recent: Void = store.loadRecent(hunt: id)
                 async let rejected: Void = store.loadRejected(hunt: id)
                 async let overview: Void = store.reloadOverview(quiet: true)
-                _ = await (matches, rejected, overview)
+                _ = await (matches, recent, rejected, overview)
             }
         }
         .navigationTitle(text.title)
@@ -57,6 +59,10 @@ struct SearchListingsPage: View {
         // Asked when the filter shows first, and again whenever the list was forgotten; never in a loop after a failure.
         .task(id: ListKey(filter: filter, loaded: list.loaded)) {
             if !store.list(filter, hunt: id).loaded { await store.loadMatches(filter, hunt: id) }
+        }
+        .task(id: store.recentList(hunt: id).loaded) {
+            let recent = store.recentList(hunt: id)
+            if !recent.loaded && recent.error == nil { await store.loadRecent(hunt: id) }
         }
         .task(id: store.rejected(hunt: id).loaded) {
             let rejected = store.rejected(hunt: id)
@@ -95,9 +101,12 @@ struct SearchListingsPage: View {
         if list.more {
             MoreRow(error: list.error, last: list.ids.last) { await store.loadMatches(filter, hunt: id, more: true) }
         }
-        let rejected = store.rejected(hunt: id)
-        if !rejected.items.isEmpty {
-            FilteredOutButton(count: rejected.items.count) { navigation.sheet = .rejected(id) }
+        let recent = store.recentList(hunt: id)
+        if let link = QuietLink(.recentlyViewed, count: store.recentMatches(hunt: id).count, more: recent.more) {
+            QuietLinkRow(link: link) { navigation.showRecent(hunt: id) }
+        }
+        if let filtered = QuietLink(.filteredOut, count: store.rejected(hunt: id).items.count) {
+            QuietLinkRow(link: filtered, spot: .filteredOut) { navigation.sheet = .rejected(id) }
         }
     }
 

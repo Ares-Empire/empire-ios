@@ -31,6 +31,9 @@ protocol ArestemisBackend {
     func priceAlarms(hunt: Int, state: [MatchState]?, limit: Int, before: Int?) async throws -> MatchPage
     /// `GET /matches`: `seen` false or true limits it to unread or read listings (brief 179 on the server); nil, both.
     func matches(hunt: Int?, state: [MatchState]?, seen: Bool?, limit: Int, before: Int?) async throws -> MatchPage
+    /// `GET /matches?recent=true` (brief 181 on the server): Recently viewed, the listings of every search (or of one)
+    /// that are still new and were first opened in the last 7 days, the latest opened first. No `before`: it has one page.
+    func recent(hunt: Int?, limit: Int) async throws -> MatchPage
     /// `GET /matches?q=`: every state but dismissed, best match first (brief 132).
     func findMatches(_ words: String, hunt: Int?, limit: Int) async throws -> MatchPage
     func match(id: Int) async throws -> Match
@@ -153,6 +156,13 @@ struct ArestemisAPI: ArestemisBackend {
         if let seen { query.append(URLQueryItem(name: "seen", value: seen ? "true" : "false")) }
         query.append(URLQueryItem(name: "limit", value: String(limit)))
         if let before { query.append(URLQueryItem(name: "before", value: String(before))) }
+        return try await send(.get, "matches", query: query)
+    }
+
+    func recent(hunt: Int?, limit: Int) async throws -> MatchPage {
+        var query = [URLQueryItem(name: "recent", value: "true")]
+        if let hunt { query.append(URLQueryItem(name: "hunt", value: String(hunt))) }
+        query.append(URLQueryItem(name: "limit", value: String(limit)))
         return try await send(.get, "matches", query: query)
     }
 

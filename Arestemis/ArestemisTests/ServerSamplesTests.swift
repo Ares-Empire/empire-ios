@@ -179,6 +179,25 @@ struct ServerSamplesTests {
         #expect(try !JSONDecoder().decode(Match.self, from: data("match")).seen)
     }
 
+    /// Brief 182 (the server's brief 181): Recently viewed's answer, still new and read, the latest opened first, each
+    /// with when it was first opened; a flat, a thing and a watch's change. Unread listings elsewhere carry `seen_at: null`.
+    @Test func recentlyViewed() throws {
+        let page = try JSONDecoder().decode(MatchPage.self, from: data("matches-recent"))
+        #expect(page.items.map(\.id) == [41, 103, 400] && !page.more)
+        #expect(page.items.allSatisfy { $0.state == .new && $0.seen })
+        let opened = page.items.compactMap { $0.seenAt.flatMap(Timestamp.parse) }
+        #expect(opened.count == 3 && opened == opened.sorted(by: >))
+        #expect(page.items.first?.seenAt == "2026-11-05T14:20:00Z")
+        #expect(!page.items[0].isThing && page.items[1].isThing && page.items[2].isPageChange)
+        for name in ["matches", "matches-search", "price-used"] {
+            let items = try JSONDecoder().decode(MatchPage.self, from: data(name)).items
+            #expect(!items.isEmpty && items.allSatisfy { !$0.seen && $0.seenAt == nil })
+        }
+        #expect(try JSONDecoder().decode(Match.self, from: data("match")).seenAt == nil)
+        #expect(try JSONDecoder().decode(Match.self, from: data("ebay-match")).seenAt == nil)
+        #expect(try JSONDecoder().decode(Overview.self, from: data("overview")).latest.allSatisfy { $0.seenAt == nil })
+    }
+
     @Test func theOtherAnswers() throws {
         _ = try JSONDecoder().decode(Match.self, from: data("match"))
         _ = try JSONDecoder().decode(RejectedPage.self, from: data("rejected"))

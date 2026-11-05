@@ -288,10 +288,10 @@ struct SaveFavoritesReadTests {
         await store.markRead(40)
         #expect(store.match(40)?.seen == true && store.overview?.counts.new == 6
                 && transport.requests("POST /matches/40/seen").count == 1)
-        // New keeps it, without its dot (the list's query asks for read and unread alike).
-        #expect(store.matches(.new).map(\.id).contains(41))
-        #expect(MatchFilter.allCases.allSatisfy { $0.seen == nil } && MatchFilter.new.includes(read))
-        #expect(NewListings.groups(store.matches(.new)).first { $0.huntID == 1 }?.unread == 0)
+        // Brief 182: it leaves New (which asks for unread listings only); the other filters keep it.
+        #expect(!store.matches(.new).map(\.id).contains(41) && !MatchFilter.new.includes(read))
+        #expect(MatchFilter.all.includes(read) && MatchFilter.all.seen == nil)
+        #expect(NewListings.groups(store.matches(.new)).first { $0.huntID == 1 } == nil)
     }
 
     @Test func aFailedReadStaysReadAndIsSentAgainAtTheNextOpening() async throws {
@@ -337,7 +337,9 @@ struct SaveFavoritesReadTests {
         let store = try await sampleStore(SampleBackend.Options(read: [31]))
         #expect(store.card(2)?.counts.new == things - 1 && store.overview?.counts.new == total - 1)
         await store.loadMatches(.new)
-        #expect(store.match(31)?.seen == true && store.matches(.new).contains { $0.id == 31 })
+        // Read, so not in New (brief 182; New asks for unread ones), but read when it is loaded.
+        #expect(!store.matches(.new).contains { $0.id == 31 })
+        #expect(await store.loadMatch(31)?.seen == true)
         await store.markRead(30)
         await store.reloadOverview()
         #expect(store.card(2)?.counts.new == things - 2 && store.overview?.counts.new == total - 2)

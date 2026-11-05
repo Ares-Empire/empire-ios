@@ -42,7 +42,8 @@
       "application": null,
       "at_start": false,
       "over_max": null,
-      "seen": false
+      "seen": false,
+      "seen_at": null
     },
     {
       "id": 400,
@@ -88,7 +89,8 @@
       "application": null,
       "at_start": false,
       "over_max": null,
-      "seen": false
+      "seen": false,
+      "seen_at": null
     },
     {
       "id": 104,
@@ -138,7 +140,8 @@
       "application": null,
       "at_start": false,
       "over_max": null,
-      "seen": false
+      "seen": false,
+      "seen_at": null
     },
     {
       "id": 103,
@@ -190,7 +193,8 @@
       "application": null,
       "at_start": false,
       "over_max": null,
-      "seen": false
+      "seen": false,
+      "seen_at": null
     },
     {
       "id": 102,
@@ -242,7 +246,8 @@
       "application": null,
       "at_start": false,
       "over_max": 10,
-      "seen": false
+      "seen": false,
+      "seen_at": null
     },
     {
       "id": 101,
@@ -292,7 +297,8 @@
       "application": null,
       "at_start": true,
       "over_max": null,
-      "seen": false
+      "seen": false,
+      "seen_at": null
     },
     {
       "id": 41,
@@ -332,7 +338,8 @@
       "application": null,
       "at_start": false,
       "over_max": null,
-      "seen": false
+      "seen": false,
+      "seen_at": null
     },
     {
       "id": 40,
@@ -376,7 +383,8 @@
       },
       "at_start": false,
       "over_max": null,
-      "seen": false
+      "seen": false,
+      "seen_at": null
     },
     {
       "id": 39,
@@ -416,7 +424,8 @@
       "application": null,
       "at_start": false,
       "over_max": null,
-      "seen": false
+      "seen": false,
+      "seen_at": null
     },
     {
       "id": 38,
@@ -454,7 +463,8 @@
       "application": null,
       "at_start": false,
       "over_max": null,
-      "seen": false
+      "seen": false,
+      "seen_at": null
     }
   ],
   "more": false

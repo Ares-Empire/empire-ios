@@ -2,15 +2,16 @@ import SwiftUI
 
 /// The Listings tab ("Angebote", brief 133, Patrik's choice of 2026-11-02): the header with the search over listings
 /// (the magnifying glass), then two parts, New | Searches, the user's choice remembered across launches.
-/// - **New:** every search's new listings, grouped under each search's name with its unread count (no headings while
-///   there is one search), the search with the newest finding first, newest first within it; a listing opened stays,
-///   without its dot, until it is a favorite, applied or dismissed (brief 180); swipe right for a favorite, left to
-///   dismiss; a group goes with its last new listing. Then "Filtered out" for every search. A notification's match
-///   opens over it.
+/// - **New:** every search's unread new listings, grouped under each search's name with its count (no headings while
+///   there is one search), the search with the newest finding first, newest first within it; a listing opened leaves
+///   New when its page closes (brief 182; brief 180 kept it without its dot); swipe right for a favorite, left to
+///   dismiss; a group goes with its last new listing. Then "Recently viewed" (the listings opened in the last 7 days
+///   that are still new, `RecentlyViewedPage`) and "Filtered out" for every search, each a quiet row shown while it
+///   has listings (`QuietLinkRow`). A notification's match opens over it.
 /// - **Searches:** one card per search, in the Hunts tab's order (paused ones too): its kind and name, the new count,
 ///   favorites and applied (asked) in a quiet line; a tap opens that search's listings (`SearchListingsPage`), the long
 ///   press offers Rename, Pause or Start and Delete (`huntCardMenu`).
-/// The stack also holds the search over listings (`ListingSearchPage`) and the matches' pages.
+/// The stack also holds the search over listings (`ListingSearchPage`), Recently viewed and the matches' pages.
 struct ListingsScreen: View {
     @Bindable var store: ArestemisStore
     @Bindable var navigation: AppNavigation
@@ -33,6 +34,7 @@ struct ListingsScreen: View {
                     switch route {
                     case .hunt(let id): SearchListingsPage(id: id, store: store, navigation: navigation)
                     case .find(let hunt): ListingSearchPage(hunt: hunt, store: store, navigation: navigation)
+                    case .recent(let hunt): RecentlyViewedPage(hunt: hunt, store: store, navigation: navigation)
                     case .match(let id): MatchDetailScreen(id: id, store: store, navigation: navigation)
                     }
                 }
@@ -72,7 +74,7 @@ struct ListingsScreen: View {
     }
 }
 
-/// New: every search's new listings, grouped by search.
+/// New: every search's unread new listings, grouped by search, then Recently viewed and Filtered out.
 private struct NewPart: View {
     let store: ArestemisStore
     let navigation: AppNavigation
@@ -84,12 +86,16 @@ private struct NewPart: View {
         .listingsList()
         .refreshable {
             async let matches: Void = store.loadMatches(.new)
+            async let recent: Void = store.loadRecent()
             async let rejected: Void = store.loadRejected()
             async let overview: Void = store.reloadOverview(quiet: true)
-            _ = await (matches, rejected, overview)
+            _ = await (matches, recent, rejected, overview)
         }
         // Asked again whenever the list was forgotten (a hunt deleted), never in a loop after a failure.
         .task(id: store.list(.new).loaded) { if !store.list(.new).loaded { await store.loadMatches(.new) } }
+        .task(id: store.recentList().loaded) {
+            if !store.recentList().loaded && store.recentList().error == nil { await store.loadRecent() }
+        }
         .task(id: store.rejected().loaded) {
             if !store.rejected().loaded && store.rejected().error == nil { await store.loadRejected() }
         }
@@ -127,9 +133,11 @@ private struct NewPart: View {
         if list.more {
             MoreRow(error: list.error, last: list.ids.last) { await store.loadMatches(.new, more: true) }
         }
-        let rejected = store.rejected()
-        if !rejected.items.isEmpty {
-            FilteredOutButton(count: rejected.items.count) { navigation.sheet = .rejected(nil) }
+        if let recent = QuietLink(.recentlyViewed, count: store.recentMatches().count, more: store.recentList().more) {
+            QuietLinkRow(link: recent) { navigation.showRecent(hunt: nil) }
+        }
+        if let filtered = QuietLink(.filteredOut, count: store.rejected().items.count) {
+            QuietLinkRow(link: filtered, spot: .filteredOut) { navigation.sheet = .rejected(nil) }
         }
     }
 

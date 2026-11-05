@@ -15,7 +15,8 @@ import SwiftUI
 /// "Open in shop" as the one main button; its menu only saves or dismisses.
 ///
 /// Brief 180: opening the page reads the listing (`ArestemisStore.markRead`: its dot and its place in "● 3 NEW" go at
-/// once, the server keeps it); the top bar has a star beside the state menu, in the bar's own look: `star` while the
+/// once, the server keeps it); brief 182: a new one leaves New for Recently viewed as the page closes
+/// (`pageOpened`/`pageClosed`), so the list under the page stays as it was; the top bar has a star beside the state menu, in the bar's own look: `star` while the
 /// listing is new, `star.fill` in the accent while it is a favorite (the state `saved`), a tap turning one into the other
 /// with a light tap felt (`FavoriteStar`); none once it is applied or dismissed.
 struct MatchDetailScreen: View {
@@ -53,9 +54,14 @@ struct MatchDetailScreen: View {
         }
         .sensoryFeedback(.impact(weight: .light), trigger: starTaps)
         .task {
-            // Read as it opens (brief 180): a listing opened from a link is loaded first.
+            // Read as it opens (brief 180): a listing opened from a link is loaded first. Not once the page has gone.
             await store.loadMatch(id)
-            await store.markRead(id)
+            guard !Task.isCancelled else { return }
+            await store.pageOpened(id)
+        }
+        .onDisappear {
+            // Back on the list, a new listing read here leaves New with a short removal (brief 182).
+            withAnimation(.easeOut(duration: 0.3)) { store.pageClosed(id) }
         }
     }
 

@@ -22,17 +22,19 @@ enum ListingsPart: String, CaseIterable, Hashable, Identifiable {
 }
 
 /// What the Listings tab pushes: one search's listings (its page), the search over the found listings (of every search,
-/// or of one), and a match's page.
+/// or of one), Recently viewed (of every search, or of one, brief 182), and a match's page.
 enum ListingsRoute: Hashable {
     case hunt(Int)
     case find(hunt: Int?)
+    case recent(hunt: Int?)
     case match(Int)
 
-    /// The search this route belongs to, if it is one search's page or its search over listings.
+    /// The search this route belongs to, if it is one search's page, its search over listings or its Recently viewed.
     var hunt: Int? {
         switch self {
         case .hunt(let id): id
         case .find(let id): id
+        case .recent(let id): id
         case .match: nil
         }
     }
@@ -109,10 +111,10 @@ enum MatchFilter: String, CaseIterable, Hashable, Identifiable {
         }
     }
 
-    /// The `seen=` query: read listings stay in New without their dot until they are favourited, applied or dismissed,
-    /// like read mail in an inbox (brief 180, Claude's recommendation). Should Patrik choose that a listing leaves New
-    /// once it is opened, this is the one line to change: `self == .new ? false : nil`.
-    var seen: Bool? { nil }
+    /// The `seen=` query: New holds only unread listings; one opened leaves it for Recently viewed (Patrik, 2026-11-05:
+    /// "It should leave neu", brief 182; build 20 kept read ones in New without their dot). The other filters hold read
+    /// and unread alike.
+    var seen: Bool? { self == .new ? false : nil }
 
     func includes(_ state: MatchState) -> Bool {
         states?.contains(state) ?? (state != .dismissed)
@@ -252,6 +254,11 @@ final class AppNavigation {
         listingsPath.append(.find(hunt: hunt))
     }
 
+    /// Recently viewed, of every search (nil, from New) or of one (from its listings), pushed on the Listings tab.
+    func showRecent(hunt: Int?) {
+        listingsPath.append(.recent(hunt: hunt))
+    }
+
     /// New search from anywhere: its page on the Hunts tab, over the list of hunts.
     func startNewSearch() {
         tab = .hunt
@@ -341,7 +348,8 @@ final class AppNavigation {
 /// typed, the keyboard down; within the search `-openSearch` opened), `-filter new|saved|applied|all` (a search's
 /// listings), brief 178's `-sampleSpelling unchecked|failed|slow` (the thing form's spelling check) and `-sampleSuggestedPage
 /// short|long` (a watch with a suggested page, hunt 13), brief 180's `-sampleProductState finding|not_found` (an Überall
-/// monitor without its product, the next hunt id) and `-sampleRead <id,id>` (listings already opened), `-openMatch <id>`, `-openHunt <id>` (a hunt's page), `-openForm <id>` (that hunt's
+/// monitor without its product, the next hunt id) and `-sampleRead <id,id>` (listings already opened, the latest
+/// first), brief 182's `-openRecent` (Recently viewed: of every search, or with `-openSearch <id>` that search's), `-openMatch <id>`, `-openHunt <id>` (a hunt's page), `-openForm <id>` (that hunt's
 /// form), `-openItemForm` (the first thing hunt's form), `-newItemForm` / `-newFlatForm` (an empty form), brief 131's
 /// `-openWatchForm` (the first watch's form) and `-newWatchForm` (in the form `-watchURL <text>`, `-watchChange <text>`
 /// and `-saveWatch`, read by `WatchSearchScreen`), `-sampleWatchRead <read>` (the second watch's page
@@ -393,8 +401,10 @@ struct LaunchOptions {
     /// `-sampleProductState finding|not_found`: an Überall monitor (hunt 13, or 14 after a suggested page's watch) whose
     /// product the server is still finding, or found none for, with two names and the Dinge route (brief 180).
     var productState: ProductState?
-    /// `-sampleRead <id,id>`: those listings already opened (brief 180).
-    var read: Set<Int> = []
+    /// `-sampleRead <id,id>`: those listings already opened (brief 180), the latest opened first (brief 182).
+    var read: [Int] = []
+    /// `-openRecent`: Recently viewed, of every search or of the search `-openSearch` opened (brief 182).
+    var openRecent = false
     var scrollToHunt: Int?
     var sampleUndo = false
     var moreLoading = false
@@ -441,7 +451,8 @@ struct LaunchOptions {
         spelling = value("-sampleSpelling")
         suggestedPage = value("-sampleSuggestedPage")
         productState = value("-sampleProductState").flatMap(ProductState.init(rawValue:))
-        read = Set((value("-sampleRead") ?? "").split(separator: ",").compactMap { Int($0) })
+        read = (value("-sampleRead") ?? "").split(separator: ",").compactMap { Int($0) }
+        openRecent = arguments.contains("-openRecent")
         scrollToHunt = value("-scrollToHunt").flatMap(Int.init)
         sampleUndo = arguments.contains("-sampleUndo")
         moreLoading = arguments.contains("-sampleMoreLoading")
@@ -453,7 +464,7 @@ struct LaunchOptions {
         openSearch = value("-openSearch").flatMap(Int.init)
         search = value("-search")
         let tabValue = value("-tab")
-        let listingsAsked = listings != nil || openSearch != nil || search != nil
+        let listingsAsked = listings != nil || openSearch != nil || search != nil || openRecent
         tab = tabValue == "search" ? .hunt : tabValue.flatMap(AppTab.init(rawValue:)) ?? (listingsAsked ? .listings : nil)
         filter = value("-filter").flatMap(MatchFilter.init(rawValue:))
         openMatch = value("-openMatch").flatMap(Int.init)
@@ -491,6 +502,12 @@ struct LaunchOptions {
             navigation.tab = .listings
             navigation.findQuery = search
             navigation.find(hunt: openSearch)
+        }
+        if openRecent {
+            // Over New (its row's place), or over the search's own listings.
+            navigation.tab = .listings
+            if openSearch == nil && listings == nil { navigation.part = .new }
+            navigation.showRecent(hunt: openSearch)
         }
         if let openMatch { navigation.follow(ArestemisLink(match: openMatch)) }
         if let openHunt {
