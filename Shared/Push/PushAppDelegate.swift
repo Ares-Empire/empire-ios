@@ -38,15 +38,37 @@ class PushAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenter
 
     /// Banners also while the app is open.
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter,
-                                            willPresent notification: UNNotification) async
-        -> UNNotificationPresentationOptions {
-        [.banner, .sound, .list]
+                                            willPresent notification: UNNotification,
+                                            withCompletionHandler completionHandler:
+                                                @escaping (UNNotificationPresentationOptions) -> Void) {
+        completionHandler([.banner, .sound, .list])
     }
 
+    /// A tap on a notification or one of its actions (`NotificationTap` says why not the `async` form).
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter,
-                                            didReceive response: UNNotificationResponse) async {
+                                            didReceive response: UNNotificationResponse,
+                                            withCompletionHandler completionHandler: @escaping () -> Void) {
         let action = response.actionIdentifier
         let url = PushCenter.url(from: response.notification.request.content.userInfo)
-        await push.open(action: action, url: url)
+        NotificationTap.answer(completionHandler) { [push] in push.open(action: action, url: url) }
+    }
+}
+
+/// How every app's notification delegate answers a tap: UIKit's completion handler must be called on the main thread,
+/// or UIKit aborts the app. The `async` form of `userNotificationCenter(_:didReceive:)` finished on a background thread
+/// and so crashed every tap (Arestemis builds up to 20, Patrik's crash reports of 2026-11-05); its compiler-made bridge
+/// calls the handler wherever the method ends. So the completion-handler form, with both steps on the main actor.
+nonisolated enum NotificationTap {
+    static func answer(_ completionHandler: @escaping () -> Void, open: @escaping @MainActor () -> Void) {
+        let done = MainThreadCompletion(call: completionHandler)
+        Task { @MainActor in
+            open()
+            done.call()
+        }
+    }
+
+    /// UIKit's handler is not marked Sendable; it is called once, on the main actor, as UIKit requires.
+    private struct MainThreadCompletion: @unchecked Sendable {
+        let call: () -> Void
     }
 }

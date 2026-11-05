@@ -500,6 +500,55 @@ struct PushCenterTests {
         #expect(push.openedURL == nil && push.lastActionIdentifier == "APPLY")
     }
 
+    /// iOS calls the delegate through its Objective-C method and hands it UIKit's completion handler, which aborts the
+    /// app when called off the main thread (Patrik's crash reports of 2026-11-05: every tap on a notification crashed
+    /// Arestemis builds up to 20, as the `async` form of this method finished on a background thread).
+    @Test func aTapFinishesOnTheMainThreadAfterTheURLIsOpened() async throws {
+        let delegate = PushAppDelegate()
+        let url = try #require(URL(string: "arestemis://match/7"))
+        let response = try Self.response(url: url, action: UNNotificationDefaultActionIdentifier)
+        let center: any UNUserNotificationCenterDelegate = delegate
+
+        let finishedOnMain = await withCheckedContinuation { (done: CheckedContinuation<Bool, Never>) in
+            center.userNotificationCenter?(UNUserNotificationCenter.current(), didReceive: response,
+                                           withCompletionHandler: { @Sendable in done.resume(returning: Thread.isMainThread) })
+        }
+        #expect(finishedOnMain)
+        #expect(delegate.push.takeOpenedURL() == url)
+    }
+
+    @MainActor final class Opened { var count = 0 }
+
+    @Test func aTapAnsweredFromABackgroundThreadStillFinishesOnTheMainThread() async {
+        let opened = Opened()
+        let finishedOnMain = await withCheckedContinuation { (done: CheckedContinuation<Bool, Never>) in
+            DispatchQueue.global().async {
+                NotificationTap.answer({ @Sendable in done.resume(returning: Thread.isMainThread) }) { opened.count += 1 }
+            }
+        }
+        #expect(finishedOnMain)
+        #expect(opened.count == 1)
+    }
+
+    /// A notification response as iOS would deliver it (neither class has a public initializer).
+    nonisolated static func response(url: URL, action: String) throws -> UNNotificationResponse {
+        let content = UNMutableNotificationContent()
+        content.title = "Kallax 30 € Kleinanzeigen"
+        content.userInfo = ["url": url.absoluteString]
+        let request = UNNotificationRequest(identifier: "test", content: content, trigger: nil)
+
+        func decoded<T>(_ values: [String: Any], _ make: (NSCoder) -> T?) throws -> T {
+            let archiver = NSKeyedArchiver(requiringSecureCoding: false)
+            for (key, value) in values { archiver.encode(value, forKey: key) }
+            archiver.finishEncoding()
+            let unarchiver = try NSKeyedUnarchiver(forReadingFrom: archiver.encodedData)
+            unarchiver.requiresSecureCoding = false
+            return try #require(make(unarchiver))
+        }
+        let notification = try decoded(["request": request, "date": Date()]) { UNNotification(coder: $0) }
+        return try decoded(["notification": notification, "actionIdentifier": action]) { UNNotificationResponse(coder: $0) }
+    }
+
     @Test func deviceTokensAreLowercaseHex() {
         #expect(PushCenter.hex(Data([0x00, 0xAB, 0x0F, 0xFF])) == "00ab0fff")
         #expect(PushCenter.hex(Self.device) == Self.deviceHex)

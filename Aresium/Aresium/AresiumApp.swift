@@ -27,14 +27,19 @@ final class InboxLaunchDelegate: NSObject, UIApplicationDelegate, UNUserNotifica
     }
 
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter,
-                                            willPresent notification: UNNotification) async
-        -> UNNotificationPresentationOptions { [.banner, .sound, .list] }
+                                            willPresent notification: UNNotification,
+                                            withCompletionHandler completionHandler:
+                                                @escaping (UNNotificationPresentationOptions) -> Void) {
+        completionHandler([.banner, .sound, .list])
+    }
 
+    /// The completion-handler form, answered on the main thread (`NotificationTap`; the `async` form crashed taps).
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter,
-                                            didReceive response: UNNotificationResponse) async {
+                                            didReceive response: UNNotificationResponse,
+                                            withCompletionHandler completionHandler: @escaping () -> Void) {
         let action = response.actionIdentifier
         let url = PushCenter.url(from: response.notification.request.content.userInfo)
-        await MessageTapRouter.shared.open(action: action, url: url)
+        NotificationTap.answer(completionHandler) { MessageTapRouter.shared.open(action: action, url: url) }
     }
 
     func application(_ application: UIApplication, configurationForConnecting connectingSceneSession: UISceneSession,

@@ -496,7 +496,14 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   + routing of `openedURL` in ContentView, never in samples/tests); each needs the Push Notifications capability (paid
   team; `aps-environment` is in their entitlements) and, for time-sensitive notifications, the
   `com.apple.developer.usernotifications.time-sensitive` entitlement (Arestemis, Aresus). Nothing in Shared may use
-  `UIApplication.shared` (the Aresium widget compiles Shared too).
+  `UIApplication.shared` (the Aresium widget compiles Shared too). **A tap is answered on the main thread**
+  (2026-11-05, Patrik's TestFlight crash reports, read with `scripts/asc.py get
+  /v1/apps/<id>/betaFeedbackCrashSubmissions` and `…/<submission>/crashLog`): every tap on a notification crashed
+  Arestemis up to build 20, because the `async` form of `userNotificationCenter(_:didReceive:)` ends on a background
+  thread and its compiler-made bridge calls UIKit's completion handler there, which aborts the app. Every delegate
+  (`PushAppDelegate`, Aresium's `InboxLaunchDelegate`) uses the completion-handler form through
+  `NotificationTap.answer`, which runs the routing and the handler on the main actor; never the `async` forms.
+  `PushCenterTests` calls the delegate through its Objective-C method, as iOS does, and checks the thread.
 - **Aresus app** (2026-10-24, `Aresus/`): two tabs, Aresus (summary, server card, province boxes, province page) and
   Aresync (machines, runs by day, run sheet), on the Aresus API (`aresus/docs/API.md`, samples in
   `Aresus/Aresus/Samples/` = copies of `aresus/docs/samples/`). Data in `Model/` + `API/`, look in `Screens/` (Shared/Design).
