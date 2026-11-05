@@ -104,11 +104,22 @@ extension PriceSite {
 }
 
 extension Offer {
-    /// Only a server-provided eligible EUR total can win. No local sum or stock inference.
+    /// A known server total, kept separate from the comparison amount for offers with unknown shipping.
     var selectedTotal: Double? {
+        eligibleAmount(total)
+    }
+
+    /// Compare the server's lower bound under the same guards as a known total. Older servers supply only `total`.
+    var comparable: Double? {
+        eligibleAmount(totalFrom ?? total)
+    }
+
+    var shippingUnknown: Bool { total == nil && totalFrom != nil }
+
+    private func eligibleAmount(_ amount: Double?) -> Double? {
         guard currency?.uppercased() == "EUR", fulfillment != .unknown,
               fulfillment == .shipping || availability == .inStock || availability == .preorder,
-              let total, total.isFinite, total >= 0 else { return nil }
-        return total
+              let amount, amount.isFinite, amount >= 0 else { return nil }
+        return amount
     }
 }

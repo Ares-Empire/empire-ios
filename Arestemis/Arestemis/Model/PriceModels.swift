@@ -293,16 +293,19 @@ struct PriceState: Codable, Equatable, Sendable {
     var since: String?
     /// An everywhere monitor's sites with an offer now; nil for a page monitor.
     var offers: Int?
+    /// The everywhere price excludes shipping because its cost is unknown.
+    var shippingUnknown: Bool
 
     enum CodingKeys: String, CodingKey {
         case reader, product, host, price, currency, availability, source, read, checked, note, since, offers
         case low30d = "low_30d", high30d = "high_30d"
+        case shippingUnknown = "shipping_unknown"
     }
 
     init(reader: PageReader = .plain, product: String? = nil, host: String, price: Double? = nil,
          currency: String? = nil, availability: Availability = .unknown, source: String? = nil,
          read: PageState.Read, checked: String? = nil, note: String? = nil, low30d: Double? = nil,
-         high30d: Double? = nil, since: String? = nil, offers: Int? = nil) {
+         high30d: Double? = nil, since: String? = nil, offers: Int? = nil, shippingUnknown: Bool = false) {
         self.reader = reader
         self.product = product
         self.host = host
@@ -317,6 +320,7 @@ struct PriceState: Codable, Equatable, Sendable {
         self.high30d = high30d
         self.since = since
         self.offers = offers
+        self.shippingUnknown = shippingUnknown
     }
 
     /// Lenient, as `PageState`: a missing host is empty, a missing `read` is waiting, a missing reader plain.
@@ -336,6 +340,7 @@ struct PriceState: Codable, Equatable, Sendable {
         high30d = try c.decodeIfPresent(Double.self, forKey: .high30d)
         since = try c.decodeIfPresent(String.self, forKey: .since)
         offers = try c.decodeIfPresent(Int.self, forKey: .offers)
+        shippingUnknown = try c.decodeIfPresent(Bool.self, forKey: .shippingUnknown) ?? false
     }
 
     func encode(to encoder: Encoder) throws {
@@ -354,6 +359,7 @@ struct PriceState: Codable, Equatable, Sendable {
         try c.encode(high30d, forKey: .high30d)
         try c.encode(since, forKey: .since)
         try c.encodeIfPresent(offers, forKey: .offers)
+        try c.encode(shippingUnknown, forKey: .shippingUnknown)
     }
 }
 
@@ -379,13 +385,16 @@ struct PriceChange: Codable, Equatable, Sendable {
     var currency: String
     var availability: Availability
     var kind: Kind
+    var shippingUnknown: Bool
 
-    init(old: Double?, new: Double, currency: String = "EUR", availability: Availability = .inStock, kind: Kind) {
+    init(old: Double?, new: Double, currency: String = "EUR", availability: Availability = .inStock, kind: Kind,
+         shippingUnknown: Bool = false) {
         self.old = old
         self.new = new
         self.currency = currency
         self.availability = availability
         self.kind = kind
+        self.shippingUnknown = shippingUnknown
     }
 
     /// Lenient: a missing currency is euros, an unknown availability or kind reads as unknown.
@@ -396,6 +405,7 @@ struct PriceChange: Codable, Equatable, Sendable {
         currency = try c.decodeIfPresent(String.self, forKey: .currency) ?? "EUR"
         availability = try c.decodeIfPresent(Availability.self, forKey: .availability) ?? .unknown
         kind = try c.decodeIfPresent(Kind.self, forKey: .kind) ?? .unknown
+        shippingUnknown = try c.decodeIfPresent(Bool.self, forKey: .shippingUnknown) ?? false
     }
 
     func encode(to encoder: Encoder) throws {
@@ -405,9 +415,13 @@ struct PriceChange: Codable, Equatable, Sendable {
         try c.encode(currency, forKey: .currency)
         try c.encode(availability, forKey: .availability)
         try c.encode(kind, forKey: .kind)
+        try c.encode(shippingUnknown, forKey: .shippingUnknown)
     }
 
-    private enum CodingKeys: String, CodingKey { case old, new, currency, availability, kind }
+    private enum CodingKeys: String, CodingKey {
+        case old, new, currency, availability, kind
+        case shippingUnknown = "shipping_unknown"
+    }
 }
 
 /// `POST /price/preview`: what the server read on the product page just now (nothing is saved).
@@ -479,13 +493,15 @@ struct Offer: Codable, Equatable, Identifiable, Sendable {
     var store: OfferStore?
     /// The server's eligible selected total. Missing on older payloads means unknown, never product price alone.
     var total: Double?
+    /// The server's comparison amount: known total, or item price with unknown shipping. Never a local sum.
+    var totalFrom: Double?
 
     var id: String { source + "|" + shop + "|" + url + "|" + fulfillment.rawValue + "|" + (pickupMethod?.rawValue ?? "") + "|" + (store?.id ?? "") }
 
     init(source: String, sourceName: String, shop: String, url: String, price: Double?, currency: String? = "EUR",
          shipping: Double? = nil, availability: Availability = .inStock, checked: String? = nil,
          fulfillment: Fulfillment = .shipping, pickupMethod: PickupMethod? = nil, pickupFee: Double? = nil,
-         store: OfferStore? = nil, total: Double? = nil) {
+         store: OfferStore? = nil, total: Double? = nil, totalFrom: Double? = nil) {
         self.source = source
         self.sourceName = sourceName
         self.shop = shop
@@ -500,10 +516,12 @@ struct Offer: Codable, Equatable, Identifiable, Sendable {
         self.pickupFee = pickupFee
         self.store = store
         self.total = total
+        self.totalFrom = totalFrom
     }
 
     enum CodingKeys: String, CodingKey {
         case fulfillment, store, total
+        case totalFrom = "total_from"
         case pickupMethod = "pickup_method", pickupFee = "pickup_fee"
         case source, shop, url, price, currency, shipping, availability, checked
         case sourceName = "source_name"
@@ -530,6 +548,7 @@ struct Offer: Codable, Equatable, Identifiable, Sendable {
         pickupFee = try c.decodeIfPresent(Double.self, forKey: .pickupFee)
         store = try c.decodeIfPresent(OfferStore.self, forKey: .store)
         total = try c.decodeIfPresent(Double.self, forKey: .total)
+        totalFrom = try c.decodeIfPresent(Double.self, forKey: .totalFrom)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -548,6 +567,7 @@ struct Offer: Codable, Equatable, Identifiable, Sendable {
         try c.encode(pickupFee, forKey: .pickupFee)
         try c.encode(store, forKey: .store)
         try c.encode(total, forKey: .total)
+        try c.encode(totalFrom, forKey: .totalFrom)
     }
 
     /// Where a tap on the offer goes; nil for anything but a web address.

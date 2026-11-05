@@ -72,25 +72,25 @@ struct PriceSearchScreen: View {
 
     /// The product as known now: One shop: the preview's, else the saved monitor's last read while its link is
     /// unchanged; Everywhere: the preview's (its cheapest offer), else the saved monitor's while its words are unchanged.
-    private var known: (product: String?, price: Double?, currency: String?) {
+    private var known: (product: String?, price: Double?, currency: String?, shippingUnknown: Bool) {
         switch draft.mode {
         case .page:
-            if let found = preview?.preview { return (found.product, found.price, found.currency) }
-            guard let state = card?.price, let saved, saved.mode == .page, saved.url == draft.url else { return (nil, nil, nil) }
-            return (state.product, state.price, state.currency)
+            if let found = preview?.preview { return (found.product, found.price, found.currency, false) }
+            guard let state = card?.price, let saved, saved.mode == .page, saved.url == draft.url else { return (nil, nil, nil, false) }
+            return (state.product, state.price, state.currency, false)
         case .everywhere:
             if let found = productFound {
                 let cheapest = EverywhereWords.cheapest(found, off: draft.sourcesOff)
-                return (found.identity.name, cheapest?.price, cheapest?.currency)
+                return (found.identity.name, cheapest?.price, cheapest?.currency, cheapest?.shippingUnknown ?? false)
             }
-            guard showsSavedProduct, saved?.previewQuery == draft.previewQuery else { return (draft.isConfirmed ? draft.identity?.name : nil, nil, nil) }
+            guard showsSavedProduct, saved?.previewQuery == draft.previewQuery else { return (draft.isConfirmed ? draft.identity?.name : nil, nil, nil, false) }
             let name = card?.price?.product ?? draft.identity?.name
             if let huntID, let offers = store.offers(hunt: huntID).offers {
                 let eligible = EverywhereWords.cheapest(offers.offers, off: draft.sourcesOff)
-                return (name, eligible?.price, eligible?.currency)
+                return (name, eligible?.price, eligible?.currency, eligible?.shippingUnknown ?? false)
             }
-            guard draft.sourcesOff == saved?.sourcesOff else { return (name, nil, nil) }
-            return (name, card?.price?.price, card?.price?.currency)
+            guard draft.sourcesOff == saved?.sourcesOff else { return (name, nil, nil, false) }
+            return (name, card?.price?.price, card?.price?.currency, card?.price?.shippingUnknown ?? false)
         }
     }
 
@@ -367,7 +367,7 @@ struct PriceSearchScreen: View {
             PreviewLine(reading: true, title: String(localized: "Looking for the product…"))
         case .found(let found)?:
             let lines = EverywhereWords.found(found, off: draft.sourcesOff)
-            PreviewLine(reading: false, title: lines.title, detail: lines.detail)
+            PreviewLine(reading: false, title: lines.title, detail: lines.detail, shippingNote: lines.shippingNote)
         case .failed(let message)?:
             PreviewLine(reading: false, title: message)
         case .refused(let message)? where suggestions?.names.isEmpty == true:
@@ -639,6 +639,7 @@ private struct PreviewLine: View {
     let reading: Bool
     let title: String
     var detail: String? = nil
+    var shippingNote: String? = nil
 
     var body: some View {
         HStack(alignment: .center, spacing: 7) {
@@ -650,6 +651,9 @@ private struct PreviewLine: View {
                     .foregroundStyle(detail == nil ? Ink.muted : Ink.secondary)
                 if let detail {
                     Text(verbatim: detail).font(AppFont.text(12)).foregroundStyle(Ink.muted)
+                }
+                if let shippingNote {
+                    Text(verbatim: shippingNote).font(AppFont.text(12)).foregroundStyle(Ink.muted)
                 }
             }
             .lineSpacing(2)

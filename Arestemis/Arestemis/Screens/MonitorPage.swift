@@ -311,10 +311,18 @@ struct OffersCard: View {
                 }
             }
             Spacer(minLength: 10)
-            if offer.selectedTotal != nil {
-                Text(verbatim: OfferList.amount(offer))
-                    .font(AppFont.number(15, weight: .semibold)).foregroundStyle(Ink.primary).lineLimit(1)
-                    .fixedSize()
+            if offer.comparable != nil {
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(verbatim: OfferList.amount(offer))
+                        .font(AppFont.number(15, weight: .semibold)).foregroundStyle(Ink.primary).lineLimit(1)
+                        .fixedSize()
+                    if let note = OfferList.shippingNote(offer) {
+                        Text(verbatim: note).font(AppFont.text(12)).foregroundStyle(Ink.muted)
+                            .multilineTextAlignment(.trailing).fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .frame(maxWidth: 130, alignment: .trailing)
+                .layoutPriority(1)
             } else {
                 Text(verbatim: OfferList.amount(offer)).font(AppFont.text(12)).foregroundStyle(Ink.muted)
                     .multilineTextAlignment(.trailing).frame(maxWidth: 86)
