@@ -13,13 +13,16 @@
       "logo": "brand/artemis.webp",
       "status": "CONQUERED",
       "domain": "",
-      "blurb": "Apartment sniper — claims new flat listings the moment they post.",
+      "blurb": "Searches that run for you — flats, things for sale, prices and web pages.",
       "detail": {
-        "about": "The huntress. Arestemis watches the Munich housing portals and pounces on a new listing the instant it appears — first to the viewing, first to apply. Runs 24/7 as a Telegram bot in the empire (formerly the FlatSniper project).",
+        "about": "The huntress. Arestemis runs searches from the iPhone: flats and WG rooms on the housing portals, things for sale on marketplaces such as Kleinanzeigen, Vinted and eBay, a product's price in one shop or across shops, and any web page, watched for a change described in words. Every new find is checked against the whole search, first by its fields and then by an AI reading its full text, and a push arrives when one fits. It began as FlatSniper, a Telegram bot for flats.",
         "features": [
-          "Real-time listing watch",
-          "Instant alerts",
-          "Fast-track applying"
+          "Flats and WG rooms on WG-Gesucht, Kleinanzeigen, Immowelt and ImmoScout24",
+          "Things for sale on Kleinanzeigen, Vinted, eBay and more, with what must be and what would be nice",
+          "Preismonitor: a product's price in one shop or across shops, with a push under a chosen price",
+          "Page watch: any web page, for a change described in words",
+          "An AI check of every new find, and a push when one fits",
+          "Application texts for flats"
         ],
         "setup": "",
         "wip": [],
@@ -62,6 +65,71 @@
     }
   ],
   "chronicle": [
+    {
+      "at": "2026-11-06",
+      "project": "arestemis",
+      "text": "A search for things now asks what must be and what would be nice: “Muss sein” sorts out listings that clearly break it, “Wäre schön” never does. Sizes, colours and materials come from the sites' own fields, so a size-41 shoe no longer reaches a size-43 search, and clear cases are decided at once without the slower text check. Listings that could not be checked in time no longer vanish: they stay seven days under “Nicht rechtzeitig geprüft”. App build 23."
+    },
+    {
+      "at": "2026-11-05",
+      "project": "arestemis",
+      "text": "Arestemis's Preismonitor reads shipping costs on more sites now, so most offers compare by their real total; a price that only holds with a coupon counts at its normal price; and an offer whose shipping a shop does not state is no longer hidden: it shows in price order with “+ Versand unbekannt”, and its alarm says so, while the price curve keeps only known totals. App build 18."
+    },
+    {
+      "at": "2026-11-04",
+      "project": "arestemis",
+      "text": "Arestemis's Preismonitor “Überall” got its second round: every offer is checked to be the product itself, so a case never counts as the headphones' price; words that name a family or a kind of product get up to four concrete suggestions or a way to a search for things; the monitor compares the price including shipping, or finds stores near a chosen place for pickup; and “Auch gebraucht” adds used listings from marketplaces to the same page. A Codex orchestrator built and tested every step live on the real sites, the app's screens included. App build 17."
+    },
+    {
+      "at": "2026-11-04",
+      "project": "arestemis",
+      "text": "The Preismonitor can watch a product everywhere now (“Überall”): type a product such as AirPods Max 2, and optionally a colour or size in words, and within seconds Arestemis finds it on price comparison sites, shops and marketplaces, shows the cheapest offer with its shop and every shop's price, keeps the cheapest price as a curve and sends a push when it falls under a chosen price. A list shows every site it checks, each with a switch, and a button suggests a shop that is missing. Thing searches also got more accurate after a check of 747 real listings: a complete article sold with extras, another name or language for the same thing, and a shipped offer from far away are no longer turned down by mistake. App build 16."
+    },
+    {
+      "at": "2026-11-03",
+      "project": "arestemis",
+      "text": "One Arestemis search can now look for several similar things: up to five search words, such as ties from three makers, each read on every chosen site, with one description of what fits per word and one list of results. Behind it, every site is now read three ways (the page's own data, its layout, its plain text), so a site that changes its layout no longer silently loses a listing's facts; a check per site alerts within the hour if it does, and an AI fills in facts that only the ad's text states. App build 15."
+    },
+    {
+      "at": "2026-11-03",
+      "project": "arestemis",
+      "text": "Arestemis's listing pages read like listings now: the numbers a search asks about in one card, a dash where the listing does not say, a few short notes on what to check, and the site's button first, while the application text moved to a quiet button. Where a site shows only a preview of the text, the page says so instead of looking cut off. New search lost most of its words: one line and one example per kind. Underneath, the AI was measured on 168 hand-labelled cases from real hunts, so things are now checked by a smaller model, and page watches on shop lists no longer take another product's price for the watched one. App build 14."
+    },
+    {
+      "at": "2026-11-02",
+      "project": "arestemis",
+      "text": "Arestemis explains itself now: a tour of eight steps, shown once after the first login and again from Settings, walks through sample searches in the app's own language, from starting a search to what a Preismonitor and a page watch are for. Patrik asked for it when \"Webseite beobachten\" read as too vague; the tour's frame is shared with Aresium's, whose tour looks exactly as before. App build 13."
+    },
+    {
+      "at": "2026-11-02",
+      "project": "arestemis",
+      "text": "Arestemis has a fourth kind of search, the Preismonitor: one product in one shop, its price kept as a curve over 30, 90 or 365 days, a push when it falls under a chosen price or is back in stock, or both, switchable at any time on the monitor's page. It reads the shop's own product data first and asks the AI only where a page has none. New search became a page of four cards with examples, and every search can be renamed in place without starting it again. App builds 11 and 12."
+    },
+    {
+      "at": "2026-11-02",
+      "project": "arestemis",
+      "text": "Arestemis can watch a web page now: give it an address and say in your own words what to look for (\"when KALLAX costs under 45 €\", \"when the Mensa has Schnitzel\"), and it reads the page every 15 minutes to once a day and tells you when it happens. Only a change goes to the AI, a list that merely reorders is no change, and a page that refuses the server is shown as stopped rather than knocked on again; pages of the sites it hunts and anything inside the server's own network are refused. It was tried on 17 real pages first. eBay went live the same afternoon with its own keys, and the app's Angebote tab now shows what is new grouped by search, and each search's listings on their own, with a search over all found listings, best match first. App builds 9 and 10."
+    },
+    {
+      "at": "2026-11-02",
+      "project": "arestemis",
+      "text": "Arestemis hunts on five sites for things now: besides Kleinanzeigen and MTB-News Bikemarkt it reads mydealz's deals, IKEA Preowned (used IKEA furniture near the search's towns, which OpenStreetMap now gives coordinates) and Vinted. Each was tested with a real hunt: Kallax shelves near Garching with the accessories filtered out, Levi's 501 on Vinted with brand, size and the buyer-protection fee. The app greys a site that cannot serve the chosen delivery (IKEA only for pickup, Vinted and mydealz only shipped). App build 8."
+    },
+    {
+      "at": "2026-11-02",
+      "project": "arestemis",
+      "text": "Arestemis became a hunter for more than flats: an account can run several hunts, and a new kind of hunt looks for things for sale on Kleinanzeigen (search words, words to leave out, a price with an allowance for negotiable prices, condition, pickup near a place or shipping, private sellers). The AI check filters out spare parts and accessories and warns of signs of a scam; a new hunt checks what is online once, quietly. Things are read every 3 minutes and each site has an hourly budget, so the flat hunt keeps its pace. Underneath, the server was split into a shared hunting core and one search type per kind, proven to find exactly the same flats before and after. App build 6."
+    },
+    {
+      "at": "2026-11-01",
+      "project": "arestemis",
+      "text": "Arestemis now searches ImmoScout24, Germany's biggest flat portal, in every town, and Immowelt in every town it knows instead of only München. Kleinanzeigen changed its list pages on the evening of 31 October; Arestemis missed its new listings for part of the evening until the fix went live. In Settings, Bewerbung became three rows like the others: a switch for automatic texts, a page with one's own text or with notes every automatic text includes, and About you; the automatic text is now written from the facts about the person and those notes. Build 3 went to the phone through TestFlight."
+    },
+    {
+      "at": "2026-10-31",
+      "project": "arestemis",
+      "text": "Arestemis is on Patrik's iPhone, and its notifications arrive by push, so its Telegram copy is switched off. After his first look its sentences no longer mention the AI (the search fields are “filled in automatically”), and the hunt's start button says “Suche starten”; both reached the phone with build 2."
+    },
     {
       "at": "2026-10-24",
       "project": "arestemis",
