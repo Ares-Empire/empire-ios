@@ -1,6 +1,6 @@
 # 232: Aresus server: the board (asks for Patrik, work for a topic's session, scans, brief numbers)
 
-Status: running 2026-11-06
+Status: merged 2026-11-06 (aresus 5a5e4ff, 816 tests; Claude: the scan text cut to 400 written into the contract)
 Branch: `codex/232-board` · Worktree: `../aresus-232-board` (a worktree of **`~/aresus`**, the server repo, not of
 empire-ios) · Model: `gpt-6.1-sol`, effort `high`
 
