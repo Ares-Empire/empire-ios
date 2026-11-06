@@ -39,7 +39,8 @@
     "new": 1,
     "today": 1,
     "saved": 0,
-    "applied": 0
+    "applied": 0,
+    "not_checked": 0
   },
   "sources": [],
   "slowed": false,
@@ -58,6 +59,7 @@
     "low_30d": 215,
     "high_30d": 229,
     "since": "2026-11-03T12:00:00Z",
-    "offers": 2
+    "offers": 2,
+    "product_state": "found"
   }
 }

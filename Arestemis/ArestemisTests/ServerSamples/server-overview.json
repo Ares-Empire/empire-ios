@@ -140,7 +140,8 @@
     "new": 6,
     "today": 5,
     "saved": 1,
-    "applied": 1
+    "applied": 1,
+    "not_checked": 4
   },
   "latest": [
     {
@@ -365,7 +366,8 @@
         "new": 1,
         "today": 0,
         "saved": 1,
-        "applied": 1
+        "applied": 1,
+        "not_checked": 0
       },
       "sources": [
         "wg_gesucht",
@@ -433,7 +435,8 @@
         "new": 0,
         "today": 0,
         "saved": 0,
-        "applied": 0
+        "applied": 0,
+        "not_checked": 0
       },
       "sources": [],
       "slowed": false,
@@ -474,7 +477,8 @@
             "kleinanzeigen"
           ],
           "auctions": true,
-          "more_queries": []
+          "more_queries": [],
+          "nice": ""
         },
         "id": 3,
         "name": "Office chair",
@@ -488,7 +492,8 @@
         "new": 4,
         "today": 4,
         "saved": 0,
-        "applied": 0
+        "applied": 0,
+        "not_checked": 4
       },
       "sources": [
         "kleinanzeigen"
@@ -517,7 +522,8 @@
         "new": 0,
         "today": 0,
         "saved": 0,
-        "applied": 0
+        "applied": 0,
+        "not_checked": 0
       },
       "sources": [],
       "slowed": false,
@@ -557,7 +563,8 @@
         "new": 0,
         "today": 0,
         "saved": 0,
-        "applied": 0
+        "applied": 0,
+        "not_checked": 0
       },
       "sources": [],
       "slowed": false,
@@ -603,7 +610,8 @@
         "new": 1,
         "today": 1,
         "saved": 0,
-        "applied": 0
+        "applied": 0,
+        "not_checked": 0
       },
       "sources": [],
       "slowed": false,
@@ -650,7 +658,8 @@
         "new": 0,
         "today": 0,
         "saved": 0,
-        "applied": 0
+        "applied": 0,
+        "not_checked": 0
       },
       "sources": [],
       "slowed": false,

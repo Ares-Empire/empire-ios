@@ -4,7 +4,8 @@ import Observation
 
 /// One store for the app: the overview (hunt, portals, counts), the sites each kind of search can use (`GET /kinds`),
 /// the matches by state (of every search or of one), Recently viewed (`GET /matches?recent=true`), the filtered-out
-/// listings, the search over found listings (`GET /matches?q=`), applications, settings, and the search's helpers. Views
+/// listings and those not checked in time (`GET /not-checked`), the search over found listings (`GET /matches?q=`),
+/// applications, settings, and the search's helpers. Views
 /// read it and call its actions; nothing here knows about views.
 ///
 /// - Optimistic changes (a match's state, start/pause, settings) show at once and roll back with a notice on failure.
@@ -28,13 +29,16 @@ final class ArestemisStore {
         let filter: MatchFilter
     }
 
-    /// The listings filtered out of every search (`GET /rejected`), or of one.
-    struct RejectedList: Equatable {
-        var items: [Rejected] = []
+    /// A list the server sends in one page, of every search or of one: Filtered out (`GET /rejected`) and Not checked
+    /// in time (`GET /not-checked`, brief 187).
+    struct OnePageList<Item: Equatable>: Equatable {
+        var items: [Item] = []
         var loaded = false
         var isLoading = false
         var error: String?
     }
+    typealias RejectedList = OnePageList<Rejected>
+    typealias NotCheckedList = OnePageList<NotChecked>
 
     struct ApplicationState: Equatable {
         var application: Application?
@@ -73,6 +77,8 @@ final class ArestemisStore {
     static let pageSize = 50
     /// Recently viewed has one page (the server takes no `before` with it), so it asks for the server's most.
     static let recentLimit = 200
+    /// Not checked in time has one page too (no `before`): the server's most.
+    static let notCheckedLimit = 200
 
     let session: EmpireSession
     /// The store runs on the samples in memory (DEBUG's `-sampleData`, the tour): it asks no server, keeps no drafts and
@@ -107,6 +113,8 @@ final class ArestemisStore {
 
     // filtered out, of every search (nil) and of single ones
     private(set) var rejectedLists: [Int?: RejectedList] = [:]
+    // not checked in time, of every search (nil) and of single ones (brief 187)
+    private(set) var notCheckedLists: [Int?: NotCheckedList] = [:]
 
     // recently viewed, of every search (nil) and of single ones (brief 182)
     /// The server's listings in its order (the latest opened first), under the ones opened here since.
@@ -494,6 +502,7 @@ final class ArestemisStore {
             listGeneration += 1
             lists = [:]
             rejectedLists = [:]
+            notCheckedLists = [:]
             recentLists = [:]
             changingHunts.remove(id)
             await reloadOverview(quiet: true)
@@ -886,20 +895,49 @@ final class ArestemisStore {
     func rejected(hunt: Int? = nil) -> RejectedList { rejectedLists[hunt] ?? RejectedList() }
 
     func loadRejected(hunt: Int? = nil) async {
-        guard canAct, !(rejectedLists[hunt]?.isLoading ?? false) else { return }
-        rejectedLists[hunt, default: RejectedList()].isLoading = true
-        rejectedLists[hunt]?.error = nil
+        await loadOnePage(\.rejectedLists, hunt: hunt) { [backend] in
+            try await backend.rejected(hunt: hunt, limit: Self.pageSize).items
+        }
+    }
+
+    // MARK: - not checked in time (brief 187)
+
+    /// The listings of every search (nil) or of one that could not be checked in time, as last loaded.
+    func notChecked(hunt: Int? = nil) -> NotCheckedList { notCheckedLists[hunt] ?? NotCheckedList() }
+
+    /// How many listings of every search (nil) or of one were not checked in time in the last 7 days: the server's
+    /// count (`Counts.not_checked`) from the overview, which the row at the end of a list shows.
+    func notCheckedCount(hunt: Int? = nil) -> Int {
+        guard let hunt else { return overview?.counts.notChecked ?? 0 }
+        return card(hunt)?.counts.notChecked ?? 0
+    }
+
+    /// `GET /not-checked[?hunt=]`, loaded with New (or a search's listings), when its page opens and on pull to refresh;
+    /// the server's order, the newest first.
+    func loadNotChecked(hunt: Int? = nil) async {
+        await loadOnePage(\.notCheckedLists, hunt: hunt) { [backend] in
+            try await backend.notChecked(hunt: hunt, limit: Self.notCheckedLimit).items
+        }
+    }
+
+    /// Loads one of the one-page lists (Filtered out, Not checked in time) of every search (nil) or of one; an answer
+    /// that arrives after a logout, a switch of account or a deleted hunt is dropped.
+    private func loadOnePage<Item: Equatable>(_ lists: ReferenceWritableKeyPath<ArestemisStore, [Int?: OnePageList<Item>]>,
+                                              hunt: Int?, fetch: () async throws -> [Item]) async {
+        guard canAct, !(self[keyPath: lists][hunt]?.isLoading ?? false) else { return }
+        self[keyPath: lists][hunt, default: OnePageList()].isLoading = true
+        self[keyPath: lists][hunt]?.error = nil
         let generation = listGeneration
         let context = context
-        defer { if isCurrent(context) && generation == listGeneration { rejectedLists[hunt]?.isLoading = false } }
+        defer { if isCurrent(context) && generation == listGeneration { self[keyPath: lists][hunt]?.isLoading = false } }
         do {
-            let page = try await backend.rejected(hunt: hunt, limit: Self.pageSize)
+            let items = try await fetch()
             guard isCurrent(context) && generation == listGeneration else { return }
-            rejectedLists[hunt]?.items = page.items
-            rejectedLists[hunt]?.loaded = true
+            self[keyPath: lists][hunt]?.items = items
+            self[keyPath: lists][hunt]?.loaded = true
         } catch {
             guard isCurrent(context) && generation == listGeneration else { return }
-            handle(error, context: context) { self.rejectedLists[hunt]?.error = $0 }
+            handle(error, context: context) { self[keyPath: lists][hunt]?.error = $0 }
         }
     }
 
@@ -1328,6 +1366,7 @@ final class ArestemisStore {
         changingState = []
         matchErrors = [:]
         rejectedLists = [:]
+        notCheckedLists = [:]
         applications = [:]
         priceHistories = [:]
         priceOffers = [:]

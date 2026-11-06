@@ -302,6 +302,33 @@ struct Rejected: Codable, Equatable, Identifiable, Sendable {
     }
 }
 
+/// A thing listing the server could not check in time (server brief 186): when more arrived than its free checking
+/// capacity could take, a listing still unchecked 24 hours after its search first saw it is kept here for 7 days. It is
+/// not a match and was not filtered out: only a list for the person to look through (no state, nothing to dismiss).
+struct NotChecked: Codable, Equatable, Identifiable, Sendable {
+    let id: Int
+    let huntID: Int
+    /// When it was put here (the server's order: the newest first).
+    let found: String
+    /// When its search first saw it.
+    let firstSeen: String
+    let source: Source
+    let sourceName: String
+    /// The site's title, when it was read.
+    let title: String?
+    /// The listing on its site, when known.
+    let url: String?
+    /// € when known.
+    let price: Double?
+    /// The server's words for what this is ("Not checked in time"), in the app's language.
+    let note: String
+
+    enum CodingKeys: String, CodingKey {
+        case id, found, source, title, url, price, note
+        case huntID = "hunt_id", firstSeen = "first_seen", sourceName = "source_name"
+    }
+}
+
 struct Settings: Codable, Equatable, Sendable {
     var applicationMode: ApplicationMode   // own: the own text; ai: written for each listing
     var ownText: String                    // used as it is in own mode; kept while ai is on
@@ -354,6 +381,14 @@ struct Overview: Codable, Equatable, Sendable {
         var today: Int
         var saved: Int
         var applied: Int
+        /// Listings the server could not check in time, kept 7 days (server brief 186, `GET /not-checked`); a server
+        /// from before them sends none: 0.
+        var notChecked: Int = 0
+
+        enum CodingKeys: String, CodingKey {
+            case new, today, saved, applied
+            case notChecked = "not_checked"
+        }
     }
 
     enum CodingKeys: String, CodingKey {
@@ -371,6 +406,22 @@ struct MatchPage: Codable, Equatable, Sendable {
 /// `GET /rejected`
 struct RejectedPage: Codable, Equatable, Sendable {
     let items: [Rejected]
+}
+
+/// `GET /not-checked` (server brief 186)
+struct NotCheckedPage: Codable, Equatable, Sendable {
+    let items: [NotChecked]
+}
+
+extension Overview.Counts {
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        new = try c.decode(Int.self, forKey: .new)
+        today = try c.decode(Int.self, forKey: .today)
+        saved = try c.decode(Int.self, forKey: .saved)
+        applied = try c.decode(Int.self, forKey: .applied)
+        notChecked = try c.decodeIfPresent(Int.self, forKey: .notChecked) ?? 0
+    }
 }
 
 extension Overview {

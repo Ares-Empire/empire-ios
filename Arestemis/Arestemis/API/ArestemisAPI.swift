@@ -43,6 +43,9 @@ protocol ArestemisBackend {
     func markSeen(match id: Int) async throws -> Match
     func application(match id: Int, regenerate: Bool) async throws -> Application
     func rejected(hunt: Int?, limit: Int) async throws -> RejectedPage
+    /// `GET /not-checked` (server brief 186): the listings of every search (or of one) that could not be checked in time,
+    /// from the last 7 days, the newest first; one page.
+    func notChecked(hunt: Int?, limit: Int) async throws -> NotCheckedPage
     func settings() async throws -> Settings
     func saveSettings(_ settings: Settings) async throws -> Settings
 }
@@ -194,6 +197,12 @@ struct ArestemisAPI: ArestemisBackend {
         var query = [URLQueryItem(name: "limit", value: String(limit))]
         if let hunt { query.append(URLQueryItem(name: "hunt", value: String(hunt))) }
         return try await send(.get, "rejected", query: query)
+    }
+
+    func notChecked(hunt: Int?, limit: Int) async throws -> NotCheckedPage {
+        var query = [URLQueryItem(name: "limit", value: String(limit))]
+        if let hunt { query.append(URLQueryItem(name: "hunt", value: String(hunt))) }
+        return try await send(.get, "not-checked", query: query)
     }
 
     func settings() async throws -> Settings { try await send(.get, "settings") }

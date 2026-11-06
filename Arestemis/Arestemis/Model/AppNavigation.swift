@@ -22,19 +22,23 @@ enum ListingsPart: String, CaseIterable, Hashable, Identifiable {
 }
 
 /// What the Listings tab pushes: one search's listings (its page), the search over the found listings (of every search,
-/// or of one), Recently viewed (of every search, or of one, brief 182), and a match's page.
+/// or of one), Recently viewed (of every search, or of one, brief 182), Not checked in time (the same, brief 187), and a
+/// match's page.
 enum ListingsRoute: Hashable {
     case hunt(Int)
     case find(hunt: Int?)
     case recent(hunt: Int?)
+    case notChecked(hunt: Int?)
     case match(Int)
 
-    /// The search this route belongs to, if it is one search's page, its search over listings or its Recently viewed.
+    /// The search this route belongs to, if it is one search's page, its search over listings, its Recently viewed or
+    /// its Not checked in time.
     var hunt: Int? {
         switch self {
         case .hunt(let id): id
         case .find(let id): id
         case .recent(let id): id
+        case .notChecked(let id): id
         case .match: nil
         }
     }
@@ -259,6 +263,11 @@ final class AppNavigation {
         listingsPath.append(.recent(hunt: hunt))
     }
 
+    /// Not checked in time, of every search (nil, from New) or of one (from its listings), pushed on the Listings tab.
+    func showNotChecked(hunt: Int?) {
+        listingsPath.append(.notChecked(hunt: hunt))
+    }
+
     /// New search from anywhere: its page on the Hunts tab, over the list of hunts.
     func startNewSearch() {
         tab = .hunt
@@ -349,7 +358,8 @@ final class AppNavigation {
 /// listings), brief 178's `-sampleSpelling unchecked|failed|slow` (the thing form's spelling check) and `-sampleSuggestedPage
 /// short|long` (a watch with a suggested page, hunt 13), brief 180's `-sampleProductState finding|not_found` (an Überall
 /// monitor without its product, the next hunt id) and `-sampleRead <id,id>` (listings already opened, the latest
-/// first), brief 182's `-openRecent` (Recently viewed: of every search, or with `-openSearch <id>` that search's), `-openMatch <id>`, `-openHunt <id>` (a hunt's page), `-openForm <id>` (that hunt's
+/// first), brief 182's `-openRecent` (Recently viewed: of every search, or with `-openSearch <id>` that search's), brief
+/// 187's `-openNotChecked` (Not checked in time, the same way), `-openMatch <id>`, `-openHunt <id>` (a hunt's page), `-openForm <id>` (that hunt's
 /// form), `-openItemForm` (the first thing hunt's form), `-newItemForm` / `-newFlatForm` (an empty form), brief 131's
 /// `-openWatchForm` (the first watch's form) and `-newWatchForm` (in the form `-watchURL <text>`, `-watchChange <text>`
 /// and `-saveWatch`, read by `WatchSearchScreen`), `-sampleWatchRead <read>` (the second watch's page
@@ -405,6 +415,8 @@ struct LaunchOptions {
     var read: [Int] = []
     /// `-openRecent`: Recently viewed, of every search or of the search `-openSearch` opened (brief 182).
     var openRecent = false
+    /// `-openNotChecked`: Not checked in time, of every search or of the search `-openSearch` opened (brief 187).
+    var openNotChecked = false
     var scrollToHunt: Int?
     var sampleUndo = false
     var moreLoading = false
@@ -453,6 +465,7 @@ struct LaunchOptions {
         productState = value("-sampleProductState").flatMap(ProductState.init(rawValue:))
         read = (value("-sampleRead") ?? "").split(separator: ",").compactMap { Int($0) }
         openRecent = arguments.contains("-openRecent")
+        openNotChecked = arguments.contains("-openNotChecked")
         scrollToHunt = value("-scrollToHunt").flatMap(Int.init)
         sampleUndo = arguments.contains("-sampleUndo")
         moreLoading = arguments.contains("-sampleMoreLoading")
@@ -464,7 +477,7 @@ struct LaunchOptions {
         openSearch = value("-openSearch").flatMap(Int.init)
         search = value("-search")
         let tabValue = value("-tab")
-        let listingsAsked = listings != nil || openSearch != nil || search != nil || openRecent
+        let listingsAsked = listings != nil || openSearch != nil || search != nil || openRecent || openNotChecked
         tab = tabValue == "search" ? .hunt : tabValue.flatMap(AppTab.init(rawValue:)) ?? (listingsAsked ? .listings : nil)
         filter = value("-filter").flatMap(MatchFilter.init(rawValue:))
         openMatch = value("-openMatch").flatMap(Int.init)
@@ -508,6 +521,12 @@ struct LaunchOptions {
             navigation.tab = .listings
             if openSearch == nil && listings == nil { navigation.part = .new }
             navigation.showRecent(hunt: openSearch)
+        }
+        if openNotChecked {
+            // Over New (its row's place), or over the search's own listings.
+            navigation.tab = .listings
+            if openSearch == nil && listings == nil { navigation.part = .new }
+            navigation.showNotChecked(hunt: openSearch)
         }
         if let openMatch { navigation.follow(ArestemisLink(match: openMatch)) }
         if let openHunt {

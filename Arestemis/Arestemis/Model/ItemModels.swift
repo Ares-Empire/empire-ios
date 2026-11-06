@@ -33,11 +33,15 @@ struct ItemSearch: Codable, Equatable, Sendable {
     var places: [Place]
     var radiusKm: Double
     var seller: SearchSeller
+    /// Must have ("Muss sein", server brief 185): a listing that clearly breaks one of these wishes is filtered out.
     var extra: String
+    /// Nice to have ("Wäre schön", server brief 185): never filters a listing out. A server or a search from before it
+    /// has none (""); the app always sends it.
+    var nice: String = ""
     var sources: [Source]
 
     enum CodingKeys: String, CodingKey {
-        case query, exclude, auctions, delivery, places, seller, extra, sources
+        case query, exclude, auctions, delivery, places, seller, extra, nice, sources
         case moreQueries = "more_queries"
         case priceMin = "price_min", priceMax = "price_max", vbOverMax = "vb_over_max"
         case conditionMin = "condition_min", forParts = "for_parts", radiusKm = "radius_km"
@@ -59,13 +63,15 @@ struct ItemSearch: Codable, Equatable, Sendable {
         try c.encode(radiusKm, forKey: .radiusKm)
         try c.encode(seller, forKey: .seller)
         try c.encode(extra, forKey: .extra)
+        try c.encode(nice, forKey: .nice)
         try c.encode(sources, forKey: .sources)
     }
 }
 
 extension ItemSearch {
     /// A server from before eBay (brief 118) sends no `auctions`: the contract's default, on; one from before several
-    /// search words (brief 148) no `more_queries`: none. Encoding always sends both.
+    /// search words (brief 148) no `more_queries`: none; one from before must and nice wishes (brief 185) no `nice`:
+    /// none, its old text stays under Must have. Encoding always sends all three.
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         query = try c.decode(String.self, forKey: .query)
@@ -82,6 +88,7 @@ extension ItemSearch {
         radiusKm = try c.decode(Double.self, forKey: .radiusKm)
         seller = try c.decode(SearchSeller.self, forKey: .seller)
         extra = try c.decode(String.self, forKey: .extra)
+        nice = try c.decodeIfPresent(String.self, forKey: .nice) ?? ""
         sources = try c.decode([Source].self, forKey: .sources)
     }
 
@@ -103,7 +110,10 @@ struct PartialItemSearch: Codable, Equatable, Sendable {
     var places: [Place]?
     var radiusKm: Double?
     var seller: SearchSeller?
+    /// "Describe it" (server brief 185): the hard wishes it read, for Must have …
     var extra: String?
+    /// … and the soft ones, for Nice to have.
+    var nice: String?
     var sources: [Source]?
     typealias CodingKeys = ItemSearch.CodingKeys
 }

@@ -4,8 +4,8 @@ import SwiftUI
 /// tab (Listings and its figures): the search's name as the title, the magnifying glass searching only its listings,
 /// then New · Favorites · Applied · All ("Asked" for a thing's seller; a watch's changes are only kept as favorites, so it
 /// has no Applied) and the list, as glass cards: swipe right for a favorite, left to dismiss, tap for the match. At the end, the
-/// search's own Recently viewed (brief 182) and the listings the AI filtered out of this search, each a quiet row shown
-/// while it has listings.
+/// search's own Recently viewed (brief 182), the listings the AI filtered out of this search and those it could not check
+/// in time (brief 187), each a quiet row shown while it has listings.
 struct SearchListingsPage: View {
     let id: Int
     let store: ArestemisStore
@@ -44,8 +44,9 @@ struct SearchListingsPage: View {
                 async let matches: Void = store.loadMatches(filter, hunt: id)
                 async let recent: Void = store.loadRecent(hunt: id)
                 async let rejected: Void = store.loadRejected(hunt: id)
+                async let notChecked: Void = store.loadNotChecked(hunt: id)
                 async let overview: Void = store.reloadOverview(quiet: true)
-                _ = await (matches, recent, rejected, overview)
+                _ = await (matches, recent, rejected, notChecked, overview)
             }
         }
         .navigationTitle(text.title)
@@ -67,6 +68,10 @@ struct SearchListingsPage: View {
         .task(id: store.rejected(hunt: id).loaded) {
             let rejected = store.rejected(hunt: id)
             if !rejected.loaded && rejected.error == nil { await store.loadRejected(hunt: id) }
+        }
+        .task(id: store.notChecked(hunt: id).loaded) {
+            let notChecked = store.notChecked(hunt: id)
+            if !notChecked.loaded && notChecked.error == nil { await store.loadNotChecked(hunt: id) }
         }
     }
 
@@ -107,6 +112,9 @@ struct SearchListingsPage: View {
         }
         if let filtered = QuietLink(.filteredOut, count: store.rejected(hunt: id).items.count) {
             QuietLinkRow(link: filtered, spot: .filteredOut) { navigation.sheet = .rejected(id) }
+        }
+        if let notChecked = QuietLink(.notChecked, count: store.notCheckedCount(hunt: id)) {
+            QuietLinkRow(link: notChecked) { navigation.showNotChecked(hunt: id) }
         }
     }
 
