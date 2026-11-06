@@ -104,13 +104,13 @@ SHOTS = [
          "dark", 10, ("-sampleData", "-tab", "hunt")),
     Shot("arestemis", "02-listings-light", "New listings from every search, grouped by search",
          "light", 7, ("-sampleData", "-tab", "listings", "-listings", "new")),
-    Shot("arestemis", "03-listing-dark", "One listing: the facts, why it fits the search, the ad's own text",
+    Shot("arestemis", "03-listing-dark", "One listing: the facts, the ad's own text, a star to keep it in Favoriten",
          "dark", 7, ("-sampleData", "-openMatch", "41")),
     Shot("arestemis", "04-search-light", "A flat search, set in fields",
          "light", 7, ("-sampleData", "-tab", "search")),
     Shot("arestemis", "05-price-monitor-light", "A price monitor: the price over 90 days, the alarm's limit and the lowest and highest",
          "light", 8, ("-sampleData", "-openHunt", "9", "-priceDays", "90")),
-    Shot("arestemis", "06-new-search-dark", "New search: four kinds, each with examples to start from",
+    Shot("arestemis", "06-new-search-dark", "New search: four kinds, each with an example to start from",
          "dark", 7, ("-sampleData", "-newSearch")),
 
     Shot("aresus", "01-watchtower-dark", "The watchtower: the server, then every province by state",
@@ -492,7 +492,7 @@ def contact_sheet() -> Path | None:
 
 FULL_RUN_MINUTES = 6          # measured 2026-10-26 on the MacBook (5.9 min from a clean build folder)
 
-README_TITLES = {"aresium": "Aresium (finance)", "empire": "Empire (the hub)", "arestemis": "Arestemis (flat hunter)",
+README_TITLES = {"aresium": "Aresium (finance)", "empire": "Empire (the hub)", "arestemis": "Arestemis (searches)",
                  "aresus": "Aresus (watchtower and Aresync)", "arestoteles": "Arestoteles (knowledge vault)"}
 
 

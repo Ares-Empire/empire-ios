@@ -24,16 +24,16 @@ Made by `scripts/showcase.py`, which also writes this file; change a shot or cap
 | <a href="empire/04-approvals-dark.png"><img src="empire/04-approvals-dark.png" width="220" alt="Approvals: new sign-ups and requests for more apps"></a> | **04-approvals-dark.png**<br>Approvals: new sign-ups and requests for more apps |
 | <a href="empire/05-more-apps-dark.png"><img src="empire/05-more-apps-dark.png" width="220" alt="More apps: ask for another app; it joins your ring once approved"></a> | **05-more-apps-dark.png**<br>More apps: ask for another app; it joins your ring once approved |
 
-## Arestemis (flat hunter)
+## Arestemis (searches)
 
 | Image | What it shows |
 |---|---|
 | <a href="arestemis/01-hunt-dark.png"><img src="arestemis/01-hunt-dark.png" width="220" alt="Every search at a glance: flats, things for sale, a price monitor and page watches"></a> | **01-hunt-dark.png**<br>Every search at a glance: flats, things for sale, a price monitor and page watches |
 | <a href="arestemis/02-listings-light.png"><img src="arestemis/02-listings-light.png" width="220" alt="New listings from every search, grouped by search"></a> | **02-listings-light.png**<br>New listings from every search, grouped by search |
-| <a href="arestemis/03-listing-dark.png"><img src="arestemis/03-listing-dark.png" width="220" alt="One listing: the facts, why it fits the search, the ad's own text"></a> | **03-listing-dark.png**<br>One listing: the facts, why it fits the search, the ad's own text |
+| <a href="arestemis/03-listing-dark.png"><img src="arestemis/03-listing-dark.png" width="220" alt="One listing: the facts, the ad's own text, a star to keep it in Favoriten"></a> | **03-listing-dark.png**<br>One listing: the facts, the ad's own text, a star to keep it in Favoriten |
 | <a href="arestemis/04-search-light.png"><img src="arestemis/04-search-light.png" width="220" alt="A flat search, set in fields"></a> | **04-search-light.png**<br>A flat search, set in fields |
 | <a href="arestemis/05-price-monitor-light.png"><img src="arestemis/05-price-monitor-light.png" width="220" alt="A price monitor: the price over 90 days, the alarm's limit and the lowest and highest"></a> | **05-price-monitor-light.png**<br>A price monitor: the price over 90 days, the alarm's limit and the lowest and highest |
-| <a href="arestemis/06-new-search-dark.png"><img src="arestemis/06-new-search-dark.png" width="220" alt="New search: four kinds, each with examples to start from"></a> | **06-new-search-dark.png**<br>New search: four kinds, each with examples to start from |
+| <a href="arestemis/06-new-search-dark.png"><img src="arestemis/06-new-search-dark.png" width="220" alt="New search: four kinds, each with an example to start from"></a> | **06-new-search-dark.png**<br>New search: four kinds, each with an example to start from |
 
 ## Aresus (watchtower and Aresync)
 
