@@ -1,6 +1,6 @@
 # 234: Aresus app: the "Waiting on you" tab (the board's asks on Patrik's phone)
 
-Status: running 2026-11-06
+Status: merged 2026-11-06 (empire-ios 6b9382c + 2b81cbf, Aresus tests green on Claude's run; Claude: the card's look, FormButtonStyle secondary, the German), Aresus build 9 uploaded
 Branch: `codex/234-waiting-tab` · Worktree: `../empire-ios-234-waiting-tab` · Model: `gpt-6.1-sol`, effort `high`
 
 ## Goal

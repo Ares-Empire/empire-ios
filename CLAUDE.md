@@ -520,6 +520,19 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   loses its status colour. `Aresus/AresusShared/` is compiled into app and widget (overview types, API client core,
   widget status, store, loader, views). DEBUG `-widgetGallery good|issues|loggedout` shows the views for screenshots.
   `AresusUITests` (UI tests, in the scheme): Settings → Language switched both ways with the real taps, about a minute.
+  **For you** / "Für dich" (brief 234, build 9, 2026-11-06; the board, `aresus/docs/API.md` → Board, plan
+  `ares-empire/docs/reviews/2026-11-05-work-board.md`): the third tab, `tray`, badge = open asks. Only the asks Claude
+  sessions put to Patrik (`board ask` in aresync); work for sessions never shows, only the line "N open items have no
+  session". A card: the question, why, "topic · age · due …" (the due day in the issue red once reached), the answers
+  (up to three side by side when they fit, the first `FormButtonStyle` primary, the others its `secondary` kind,
+  outlined; an action has Done / Erledigt), then one quiet line Own answer… / Not needed / Ask in Claude ("Claude
+  fragen", `https://claude.ai/code/<session>` through iOS's `openURL`); long press: Not needed, Ask in Claude. Answered
+  in one card below. **An answer waits for the undo bar** (the server cannot take one back): `BoardStore.perform`
+  hides the card and offers Undo (`UndoOffer(message:onDismiss:undoImmediately:)`); it is sent when the bar times
+  out, when another answer replaces it, when the tab is left or the app leaves the foreground; a failed send puts the
+  card back with "Not sent. Try again."; 409 refreshes ("Already answered elsewhere."), 404 drops it.
+  `aresus://board` opens the tab (the daily board push). DEBUG `-tab board`, `-sampleBoardEmpty`,
+  `-sampleBoardManyAsks`, `-openOwnAnswer <id>`, `-sampleBoardFailed`. Tests: `BoardTests`.
   **Aresync drops** (briefs 88–94 and 100, plan `ares-empire/docs/ARESYNC-DROP.md`): files and photos from the iPhone to a
   folder on the MacBook through the aresus server (`aresus/docs/API.md` → Drops; encrypted there with `age`, fetched by
   the Mac's `com.aresync.drop` agent, which needs Full Disk Access for `/usr/bin/python3`). The drop code lives in
