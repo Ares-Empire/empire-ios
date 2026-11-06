@@ -1,6 +1,6 @@
 # 233: Aresync: the `board` command, the repo scan and the session hooks
 
-Status: running 2026-11-06
+Status: merged 2026-11-06 (aresync 9f2c379 + 550dd75, 15 board tests; Claude: unusable repo names skipped, worktrees only through their repo, system certificates for python.org Python); installed on the MacBook and the server
 Branch: `codex/233-board` · Worktree: `../aresync-233-board` (a worktree of **`~/aresync`**, not of empire-ios) ·
 Model: `gpt-6.1-sol`, effort `high`
 
