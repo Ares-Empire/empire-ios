@@ -3,7 +3,7 @@ import Observation
 
 /// The app's links (aresus/docs/API.md → Pushes; the Empire app opens `aresus://`):
 /// `aresus://province/<slug>`, `aresus://sync/run/<id>`, `aresus://server`, `aresus://sync`, `aresus://drops` (the drop
-/// pushes: the Aresync tab, where the drops are), `aresus://`.
+/// pushes: the Aresync tab, where the drops are), `aresus://board` (the daily board push), `aresus://`.
 nonisolated enum AresusLink: Equatable, Sendable {
     case home
     case server
@@ -11,6 +11,7 @@ nonisolated enum AresusLink: Equatable, Sendable {
     case sync
     case run(Int)
     case drops
+    case board
 
     init?(url: URL) {
         guard url.scheme?.lowercased() == "aresus" else { return nil }
@@ -21,6 +22,7 @@ nonisolated enum AresusLink: Equatable, Sendable {
         case ("server", 0): self = .server
         case ("sync", 0): self = .sync
         case ("drops", 0): self = .drops
+        case ("board", 0): self = .board
         case ("province", 1) where Self.isSlug(path[0]): self = .province(path[0])
         case ("sync", 2) where path[0] == "run":
             guard let id = Int(path[1]), id > 0, String(id) == path[1] else { return nil }
@@ -50,7 +52,7 @@ nonisolated enum SyncRoute: Hashable, Sendable {
 /// notification taps change it here; the views only follow it.
 @MainActor @Observable
 final class AresusNavigation {
-    enum Tab: String, Hashable, CaseIterable { case aresus, aresync }
+    enum Tab: String, Hashable, CaseIterable { case aresus, aresync, board }
 
     var tab: Tab
     var provincePath: [String]            // slugs pushed on the Aresus tab
@@ -95,6 +97,11 @@ final class AresusNavigation {
         case .run(let id):
             tab = .aresync
             openRun = RunRef(id: id)
+        case .board:
+            openRun = nil
+            showsSettings = false
+            showsSend = false
+            tab = .board
         case .drops:
             openRun = nil
             tab = .aresync
@@ -107,6 +114,7 @@ final class AresusNavigation {
         switch tab {
         case .aresus: provincePath.last.map { [.province($0)] } ?? [.overview]
         case .aresync: [.sync]
+        case .board: []
         }
     }
 
@@ -123,7 +131,7 @@ final class AresusNavigation {
 
 #if DEBUG
 extension AresusNavigation {
-    /// Screenshots: `-tab aresus|aresync`, `-openProvince <slug>`, `-openRun <id>`, `-openSheet settings|send`,
+    /// Screenshots: `-tab aresus|aresync|board`, `-openProvince <slug>`, `-openRun <id>`, `-openSheet settings|send`,
     /// `-openDrops` (every drop, pushed on the Aresync tab).
     static func launched(arguments: [String]) -> AresusNavigation {
         func value(_ flag: String) -> String? {

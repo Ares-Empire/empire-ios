@@ -1,0 +1,77 @@
+{
+  "asks": [
+    {
+      "kind": "ask",
+      "topic": "orchard",
+      "text": "Ship the new harvest view?",
+      "why": "The view is ready for review.",
+      "options": [
+        "Ship it",
+        "Wait"
+      ],
+      "due": "2026-11-07",
+      "source": "session:mac-orchard",
+      "session": "session_demo01",
+      "id": 1,
+      "key": null,
+      "since": null,
+      "state": "open",
+      "answer": null,
+      "sent_to": null,
+      "sent": null,
+      "created": "2026-11-06T10:00:00Z",
+      "updated": "2026-11-06T10:00:00Z"
+    },
+    {
+      "kind": "ask",
+      "topic": "lantern",
+      "text": "Enable the test notification key.",
+      "why": "The device check is waiting.",
+      "options": [],
+      "due": null,
+      "source": "session:mac-lantern",
+      "session": "session_demo01",
+      "id": 2,
+      "key": null,
+      "since": null,
+      "state": "open",
+      "answer": null,
+      "sent_to": null,
+      "sent": null,
+      "created": "2026-11-06T10:00:00Z",
+      "updated": "2026-11-06T10:00:00Z"
+    }
+  ],
+  "answered": [
+    {
+      "kind": "ask",
+      "topic": "orchard",
+      "text": "Use amber for ripe fruit?",
+      "why": "The palette needs a decision.",
+      "options": [
+        "Amber",
+        "Green"
+      ],
+      "due": null,
+      "source": "session:mac-orchard",
+      "session": "session_demo01",
+      "id": 3,
+      "key": null,
+      "since": null,
+      "state": "answered",
+      "answer": "Amber",
+      "sent_to": null,
+      "sent": null,
+      "created": "2026-11-06T10:00:00Z",
+      "updated": "2026-11-06T10:00:00Z"
+    }
+  ],
+  "unowned": {
+    "count": 3,
+    "oldest": "2026-11-03T10:00:00Z",
+    "topics": [
+      "orchard",
+      "lantern"
+    ]
+  }
+}

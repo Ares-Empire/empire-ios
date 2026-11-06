@@ -2,12 +2,13 @@ import SwiftUI
 import UIKit
 import UniformTypeIdentifiers
 
-/// The signed-in app: two tabs, Aresus (the watchtower) and Aresync (drops and sync runs), and the run sheet, Settings
+/// The signed-in app: Aresus (the watchtower), Aresync (drops and sync runs), For you (the board), and Settings
 /// and the send sheet over both.
 /// What is on screen refreshes every minute while the app is open (`AresusStore.interval`).
 struct AresusTabs: View {
     let store: AresusStore
     let drops: DropsStore
+    @Bindable var board: BoardStore
     @Bindable var navigation: AresusNavigation
     let marks: [String: UIImage]
     let logOut: () -> Void
@@ -53,7 +54,17 @@ struct AresusTabs: View {
                 }
                 .tint(Ink.primary))
             }
+            Tab("For you", systemImage: "tray", value: AresusNavigation.Tab.board) {
+                takingDrops(NavigationStack {
+                    BoardScreen(board: board, openSettings: { navigation.showsSettings = true })
+                }.tint(Ink.primary).undoBar($board.undoOffer, accent: .aresus))
+            }
+            .badge(board.badgeCount)
         }
+        .onChange(of: navigation.tab) { old, new in
+            if old == .board, new != .board { Task { await board.commitPending() } }
+        }
+        .task { await board.refresh(olderThan: AresusStore.interval) }
         .tint(AppAccent.aresus.color)
         .sheet(isPresented: $navigation.showsSettings) {
             SettingsScreen(app: SettingsApp(name: "Aresus", accent: .aresus, sendsNotifications: true),
@@ -76,12 +87,14 @@ struct AresusTabs: View {
         .task(id: Refresh(parts: navigation.visibleParts, active: scenePhase == .active)) {
             guard scenePhase == .active else { return }
             let parts = navigation.visibleParts
+            if navigation.tab == .board { await board.refresh(olderThan: AresusStore.interval) }
             await store.refresh(parts, olderThan: AresusStore.interval)
             if navigation.tab == .aresync { await drops.refresh(olderThan: AresusStore.interval) }
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(AresusStore.interval))
                 guard !Task.isCancelled else { return }
                 await store.refresh(parts)
+                if navigation.tab == .board { await board.refresh() }
                 if navigation.tab == .aresync { await drops.refresh() }
             }
         }

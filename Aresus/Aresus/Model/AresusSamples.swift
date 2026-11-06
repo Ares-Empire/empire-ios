@@ -10,13 +10,16 @@ nonisolated struct AresusSamples: DropSamples {
     var emptySync = false
     /// `-sampleNoFolders`: the drops' folder list as the server sends it before the Mac's first list.
     var noFolders = false
+    var emptyBoard = false
+    var manyAsks = false
 
     /// The sample source when the app was launched with `-sampleData` (DEBUG only).
     static func launched(arguments: [String] = LaunchArguments.current) -> AresusSamples? {
         #if DEBUG
         guard arguments.contains("-sampleData") else { return nil }
         return AresusSamples(allGood: arguments.contains("-sampleAllGood"), emptySync: arguments.contains("-sampleEmpty"),
-                             noFolders: arguments.contains("-sampleNoFolders"))
+                             noFolders: arguments.contains("-sampleNoFolders"),
+                             emptyBoard: arguments.contains("-sampleBoardEmpty"), manyAsks: arguments.contains("-sampleBoardManyAsks"))
         #else
         return nil
         #endif
@@ -67,6 +70,21 @@ nonisolated struct AresusSamples: DropSamples {
         if emptySync { return [] }
         let answer: DropsAnswer = try Self.load("drops")
         return answer.drops
+    }
+
+    func boardWaiting() throws -> BoardWaiting {
+        if emptyBoard { return .empty }
+        var board: BoardWaiting = try Self.load("board-waiting")
+        if manyAsks, let first = board.asks.first {
+            board.asks = (0..<8).map { index in
+                var item = first
+                item.id = index == 0 ? first.id : index + 3
+                item.text = "Review harvest view \(index + 1) before the next release? The orchard team has finished a longer preview with several changes to check."
+                item.why = "The new view is ready for review. The next session is waiting for a decision before it can finish the release and check the remaining screens."
+                return item
+            }
+        }
+        return board
     }
 
     // MARK: loading

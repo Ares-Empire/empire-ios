@@ -2,7 +2,8 @@ import SwiftUI
 
 /// Something done with a single tap that can be taken back for a few seconds: "Listing dismissed · Undo" (Arestemis),
 /// "Marked as discussed · Undo" (Arestoteles), "10 payments moved to Groceries · Undo" (Aresium). The action itself has
-/// already happened when the offer appears; `undo` puts it back. A line without Undo says what could not be done (an
+/// usually happened when the offer appears; `undo` puts it back. Queued actions use `onDismiss` to wait. A line without
+/// Undo says what could not be done (an
 /// undo refused because the data changed since).
 struct UndoOffer: Identifiable {
     let id = UUID()
@@ -10,15 +11,36 @@ struct UndoOffer: Identifiable {
     /// Nil: the line alone, no Undo.
     let undo: (@MainActor () async -> Void)?
 
-    init(message: String, undo: @escaping @MainActor () async -> Void) {
+    /// For actions that must wait until Undo expires (the board has no server-side undo).
+    let onDismiss: (@MainActor () -> Void)?
+    private let immediateUndo: (@MainActor () -> Void)?
+
+    init(message: String, onDismiss: (@MainActor () -> Void)? = nil, undo: @escaping @MainActor () async -> Void) {
         self.message = message
         self.undo = undo
+        self.onDismiss = onDismiss
+        immediateUndo = nil
+    }
+
+    /// A queued action must be cancelled inside the tap itself, before a foreground change can commit it.
+    init(message: String, onDismiss: @escaping @MainActor () -> Void, undoImmediately: @escaping @MainActor () -> Void) {
+        self.message = message
+        self.onDismiss = onDismiss
+        immediateUndo = undoImmediately
+        undo = { undoImmediately() }
+    }
+
+    @MainActor func performUndo() {
+        if let immediateUndo { immediateUndo() }
+        else if let undo { Task { await undo() } }
     }
 
     /// A line alone, in the bar's place: what could not be done.
     init(message: String) {
         self.message = message
         undo = nil
+        onDismiss = nil
+        immediateUndo = nil
     }
 
     /// How long the bar stays: longer while VoiceOver reads, so the Undo can still be reached after the message.
@@ -45,16 +67,19 @@ private struct UndoBarModifier: ViewModifier {
         content
             .overlay(alignment: .bottom) {
                 if let shown = offer {
-                    UndoBar(message: shown.message, accent: accent, undo: shown.undo.map { undo in {
+                    UndoBar(message: shown.message, accent: accent, undo: shown.undo.map { _ in {
+                        shown.performUndo()
                         offer = nil
-                        Task { await undo() }
                     } })
                     .id(shown.id)
                     .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
                     .task(id: shown.id) {
                         AccessibilityNotification.Announcement(shown.message).post()
                         try? await Task.sleep(for: UndoOffer.shownFor(voiceOver: voiceOver))
-                        if offer?.id == shown.id { offer = nil }
+                        if !Task.isCancelled, offer?.id == shown.id {
+                            shown.onDismiss?()
+                            offer = nil
+                        }
                     }
                 }
             }

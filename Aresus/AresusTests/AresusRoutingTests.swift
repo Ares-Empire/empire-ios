@@ -12,6 +12,7 @@ struct AresusRoutingTests {
         ("ARESUS://Server", .server),
         ("aresus://sync", .sync),
         ("aresus://drops", .drops),
+        ("aresus://board", .board),
         ("aresus://province/aresium", .province("aresium")),
         ("aresus://province/aresium/", .province("aresium")),
         ("aresus://province/ares-empire_2", .province("ares-empire_2")),
@@ -38,6 +39,7 @@ struct AresusRoutingTests {
         "aresus://sync/runs/612",
         "aresus://server/disk",
         "aresus://drops/5",
+        "aresus://board/5",
         "aresus://overview"
     ])
     func otherLinksAreIgnored(url: String) throws {
@@ -77,6 +79,16 @@ struct AresusRoutingTests {
         navigation.showsSend = true
         navigation.reset()
         #expect(!navigation.showsSend && navigation.syncPath.isEmpty)
+    }
+
+    @Test func boardPushOpensTheThirdTabAndClosesSheets() throws {
+        let navigation = AresusNavigation(openRun: RunRef(id: 3))
+        navigation.showsSettings = true
+        navigation.showsSend = true
+        #expect(navigation.open(try #require(URL(string: "aresus://board"))))
+        #expect(navigation.tab == .board && navigation.visibleParts.isEmpty)
+        #expect(navigation.openRun == nil && !navigation.showsSettings && !navigation.showsSend)
+        #expect(AresusNavigation.launched(arguments: ["-tab", "board"]).tab == .board)
     }
 
     @Test func openingTheAppKeepsItsPlace() throws {

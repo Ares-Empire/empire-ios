@@ -1,9 +1,9 @@
 import SwiftUI
 import UIKit
 
-/// The Aresus app: the shared Empire login, then the two tabs. Logged in once in any Empire app means logged in here.
+/// The Aresus app: the shared Empire login, then the three tabs. Logged in once in any Empire app means logged in here.
 /// Links (`aresus://…`) and notification taps go through `AresusNavigation`.
-/// DEBUG launch arguments: `-sampleData` (`-sampleAllGood`), `-tab aresus|aresync`, `-openProvince <slug>`,
+/// DEBUG launch arguments: `-sampleData` (`-sampleAllGood`), `-tab aresus|aresync|board`, `-openProvince <slug>`,
 /// `-openRun <id>`, `-sampleLogin` / `-sampleNoAccess` / `-sampleAccessAsked` (`SampleAccount`) / `-sampleLoading` for
 /// the login, no-access and loading screens,
 /// `-widgetGallery good|issues|loggedout` for the widget's views, `-sampleShareExtension` (with `-sampleData`; and
@@ -11,6 +11,7 @@ import UIKit
 /// <count or name>` for the Aresync tab's drop hover (`AresusTabs`).
 struct ContentView: View {
     @State private var store: AresusStore
+    @State private var board: BoardStore
     @State private var drops: DropsStore
     @State private var navigation: AresusNavigation
     @State private var markImages: [String: UIImage] = [:]
@@ -22,6 +23,7 @@ struct ContentView: View {
     #if DEBUG
     private let widgetGallery: WidgetGallery.Page?
     #endif
+    @Environment(\.scenePhase) private var scenePhase
     private var session: EmpireSession { store.session }
 
     init(push: PushCenter? = nil, arguments: [String] = LaunchArguments.current) {
@@ -72,6 +74,8 @@ struct ContentView: View {
                                                 legacyDirectory: dropEnvironment.legacyDirectory,
                                                 legacyDefaults: dropEnvironment.legacyDefaults,
                                                 legacyCacheURL: dropEnvironment.legacyCacheURL))
+        _board = State(initialValue: BoardStore(session: session, samples: samples,
+                                               failNextSend: arguments.contains("-sampleBoardFailed")))
         _navigation = State(initialValue: navigation)
         _marks = State(initialValue: ProvinceMarks(session: session, sample: samples != nil))
         restoresOnLaunch = restores
@@ -92,7 +96,7 @@ struct ContentView: View {
     private var app: some View {
         Group {
             if store.isSample || session.isSignedIn {
-                AresusTabs(store: store, drops: drops, navigation: navigation, marks: markImages, logOut: logOut)
+                AresusTabs(store: store, drops: drops, board: board, navigation: navigation, marks: markImages, logOut: logOut)
                     .task(id: logos) { await loadMarks() }
             } else if session.isRestoring {
                 ProvinceLoading(name: "Aresus", bust: Image("Bust"), accent: .aresus)
@@ -118,6 +122,10 @@ struct ContentView: View {
             drops.recentFolders.reload()
             drops.outbox?.start()
             if navigation.tab == .aresync { await drops.refresh(olderThan: 10) }
+            await board.refresh(olderThan: 10)
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase != .active { Task { await board.leavingForeground() } }
         }
         .onChange(of: session.generation) { _, _ in
             markImages = [:]
@@ -131,6 +139,7 @@ struct ContentView: View {
         if store.isSample {
             store.leaveSample()
             drops.leaveSample()
+            board.leaveSample()
             navigation.reset()
             return
         }

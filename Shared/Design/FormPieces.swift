@@ -7,7 +7,8 @@ import SwiftUI
 /// wall), a quiet glass outline while it cannot be pressed. `destructive` (leaving an app, deleting the account) is the
 /// hub's soft red (mobile.css `.em-danger`), never a loud one.
 struct FormButtonStyle: ButtonStyle {
-    enum Kind { case primary, destructive }
+    /// secondary: an answer beside the main one (the board's other options): the main button's shape, outlined.
+    enum Kind { case primary, secondary, destructive }
 
     var kind: Kind = .primary
     let accent: AppAccent?
@@ -37,12 +38,14 @@ struct FormButtonStyle: ButtonStyle {
             .background {
                 switch (kind, isEnabled) {
                 case (.primary, true): shape.fill(accent?.color ?? Self.ivory).opacity(busy ? 0.75 : 1)
+                case (.secondary, true): Color.clear
                 case (.destructive, true): shape.fill(Self.dangerFill).opacity(busy ? 0.75 : 1)
                 case (_, false): shape.fill(Self.offFill)
                 }
             }
             .overlay {
                 switch (kind, isEnabled) {
+                case (.secondary, true): shape.strokeBorder(Ink.edge)
                 case (.destructive, true): shape.strokeBorder(Self.dangerEdge)
                 case (_, false): shape.strokeBorder(Ink.edge)
                 default: EmptyView()
@@ -55,7 +58,11 @@ struct FormButtonStyle: ButtonStyle {
 
     private var foreground: Color {
         guard isEnabled else { return Ink.muted }
-        return kind == .destructive ? Self.dangerInk : Self.ink
+        switch kind {
+        case .primary: return Self.ink
+        case .secondary: return Ink.primary
+        case .destructive: return Self.dangerInk
+        }
     }
 }
 

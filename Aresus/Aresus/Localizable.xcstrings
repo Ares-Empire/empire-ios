@@ -17,6 +17,9 @@
         }
       }
     },
+    "%@%@" : {
+      "shouldTranslate" : false
+    },
     "%@, %@" : {
       "shouldTranslate" : false
     },
@@ -176,6 +179,46 @@
         }
       }
     },
+    "%lld open items have no session" : {
+      "localizations" : {
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld offener Punkt hat keine Sitzung"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld offene Punkte haben keine Sitzung"
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld open item has no session"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld open items have no session"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld quiet runs" : {
       "localizations" : {
         "de" : {
@@ -236,6 +279,36 @@
         }
       }
     },
+    "Already answered elsewhere." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schon anderswo beantwortet."
+          }
+        }
+      }
+    },
+    "Answered" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beantwortet"
+          }
+        }
+      }
+    },
+    "Answered: %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beantwortet: %@"
+          }
+        }
+      }
+    },
     "Aresus" : {
       "localizations" : {
         "de" : {
@@ -276,6 +349,26 @@
         }
       }
     },
+    "Ask in Claude" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Claude fragen"
+          }
+        }
+      }
+    },
+    "Cancel" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abbrechen"
+          }
+        }
+      }
+    },
     "Checks" : {
       "localizations" : {
         "de" : {
@@ -306,12 +399,42 @@
         }
       }
     },
+    "Done" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erledigt"
+          }
+        }
+      }
+    },
+    "Each session gets its answer the next time it runs." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jede Sitzung bekommt ihre Antwort, wenn sie das nächste Mal läuft."
+          }
+        }
+      }
+    },
     "Failed" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Fehler"
+          }
+        }
+      }
+    },
+    "For you" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Für dich"
           }
         }
       }
@@ -436,6 +559,16 @@
         }
       }
     },
+    "Not needed" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nicht nötig"
+          }
+        }
+      }
+    },
     "Not refreshed: %@" : {
       "localizations" : {
         "de" : {
@@ -446,12 +579,32 @@
         }
       }
     },
+    "Not sent. Try again." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nicht gesendet. Versuch es noch mal."
+          }
+        }
+      }
+    },
     "Nothing sent to the MacBook yet." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Noch nichts an das MacBook gesendet."
+          }
+        }
+      }
+    },
+    "Nothing waits on you." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nichts wartet auf dich."
           }
         }
       }
@@ -476,12 +629,32 @@
         }
       }
     },
+    "Own answer…" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eigene Antwort …"
+          }
+        }
+      }
+    },
     "Problems" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Probleme"
+          }
+        }
+      }
+    },
+    "Send" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Senden"
           }
         }
       }
@@ -512,6 +685,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Server"
+          }
+        }
+      }
+    },
+    "Set aside" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beiseitegelegt"
           }
         }
       }
@@ -606,6 +789,26 @@
         }
       }
     },
+    "Waiting on you" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wartet auf dich"
+          }
+        }
+      }
+    },
+    "Your answer" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Antwort"
+          }
+        }
+      }
+    },
     "all %lld ok" : {
       "localizations" : {
         "de" : {
@@ -642,6 +845,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "committet"
+          }
+        }
+      }
+    },
+    "due %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "bis %@"
           }
         }
       }
