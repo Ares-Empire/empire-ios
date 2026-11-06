@@ -2,7 +2,8 @@ import SwiftUI
 
 /// A thing hunt's search ("Things"), built from the flat form's pieces in the same order of habit: its name and "Describe
 /// it" at the top, then the search words (up to five as chips, brief 149, `SearchWordsField`) with the words to leave
-/// out, what fits (the description the AI checks every listing against, per word: "Hermès only in blue, …"), price (with
+/// out, the wishes every listing is checked against (brief 187: Must have, which filters out a listing that clearly
+/// does not match, and Nice to have, which never does, `WishField`), price (with
 /// how far a negotiable price may lie over the maximum), condition, where (pickup, shipping or either; places and radius
 /// unless only shipped), seller, portals (the server's sites for things, with "Include auctions" while a chosen one has
 /// auctions; a site that cannot serve the delivery greyed and switched off, brief 129); then save. Pushed on the Hunts
@@ -36,9 +37,7 @@ struct ItemSearchScreen: View {
 
     private var hunt: Hunt? { huntID.flatMap { store.card($0)?.hunt } }
     private var creating: Bool { huntID == nil }
-    private var isDirty: Bool {
-        creating ? draft != ItemSearchDraft() : draft.search() != hunt?.search.item || draft.sentName != saved?.sentName
-    }
+    private var isDirty: Bool { draft.isChanged(from: creating ? nil : hunt) }
     private var canSave: Bool { draft.isValid && (creating || isDirty) }
 
     var body: some View {
@@ -51,12 +50,8 @@ struct ItemSearchScreen: View {
                     DescribeLine { navigation.showsDescribe = true }
                     FormSection(title: String(localized: "Search words"), problems: lines(.exclude)) { what }
                         .id("words")
-                    FormSection(title: String(localized: "What fits"), problems: lines(.extra)) {
-                        TextArea(placeholder: String(localized: "Hermès only in blue, Ferragamo red or burgundy. Silk, new or like new."),
-                                 text: $draft.extra, minHeight: 84, inWell: false)
-                            .accessibilityLabel("What fits")
-                            .glassCard()
-                    }
+                    FormSection(title: Wish.heading()) { wishes }
+                        .id("wishes")                   // `-scrollTo wishes`
                     FormSection(title: String(localized: "Price"), problems: lines(.priceMin, .priceMax, .priceOrder, .vbOverMax)) {
                         price
                     }
@@ -132,7 +127,8 @@ struct ItemSearchScreen: View {
     }
 
     /// Screenshots (sample mode, DEBUG): `-itemWords <a,b,c>` adds words as chips, `-itemTyped <text>` types into the
-    /// words' field, `-itemFits <text>` fills What fits, `-saveItem` then taps Save (with `-sampleWordRefusal <i>` the
+    /// words' field, `-itemFits <text>` fills Must have and `-itemNice <text>` Nice to have (brief 187), `-saveItem` then
+    /// taps Save (with `-sampleWordRefusal <i>` the
     /// sample refuses `search.more_queries[i]` as the server would; the sample's spelling check suggests Zegna for
     /// "Zenga" and the like, `-sampleSpelling unchecked|failed|slow` makes it not check, fail or take too long).
     private func debugLaunch() {
@@ -144,6 +140,7 @@ struct ItemSearchScreen: View {
         }
         if let typed = LaunchArguments.value("-itemTyped") { draft.type(typed) }
         if let fits = LaunchArguments.value("-itemFits") { draft.extra = fits }
+        if let nice = LaunchArguments.value("-itemNice") { draft.nice = nice }
         if LaunchArguments.current.contains("-saveItem") {
             Task {
                 try? await Task.sleep(for: .milliseconds(600))
@@ -244,6 +241,23 @@ struct ItemSearchScreen: View {
                 Caption(text: String(localized: "Listings with one of these words in the title don't show."))
             }
             .padding(.vertical, 14)
+        }
+        .padding(.horizontal, 14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassCard()
+    }
+
+    // MARK: wishes
+
+    /// The two places for wishes (brief 187; Patrik: the app asks whether a wish must be or would be nice), in one card
+    /// as the search words and the words to leave out: Must have (`extra`), then Nice to have (`nice`), each with the
+    /// line that says what it does and what is wrong with it under that.
+    private var wishes: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(Wish.allCases, id: \.self) { wish in
+                if wish != Wish.allCases.first { Hairline() }
+                WishField(wish: wish, problem: draft.fieldLine(wish.problem), text: $draft[dynamicMember: wish.text])
+            }
         }
         .padding(.horizontal, 14)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -431,5 +445,44 @@ struct ItemSearchScreen: View {
         guard let huntID else { return }
         navigation.leaveDeleted(huntID)
         Task { await store.deleteHunt(id: huntID) }
+    }
+}
+
+/// One of the thing form's two wishes (brief 187): its name in small capitals, the text (one line, growing with what is
+/// typed, as the search words' field above it), the line that says what it does, and what is wrong with it. A tap on
+/// the name or the line starts typing too; the field keeps its own taps (the cursor goes where the finger is).
+private struct WishField: View {
+    let wish: Wish
+    let problem: String?
+    @Binding var text: String
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            CapsLabel(text: wish.title())
+                .startsTyping($focused)
+            TextField("", text: $text, prompt: Text(verbatim: wish.placeholder()).foregroundStyle(Ink.muted), axis: .vertical)
+                .font(AppFont.text(15)).foregroundStyle(Ink.primary).lineSpacing(3)
+                .lineLimit(1...)
+                .focused($focused)
+                .accessibilityLabel(Text(verbatim: wish.title()))
+                .accessibilityHint(Text(verbatim: wish.caption()))
+            Caption(text: wish.caption())
+                .startsTyping($focused)
+            if let problem { ProblemLine(text: problem).padding(.top, 2) }
+        }
+        .padding(.vertical, 14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private extension View {
+    /// A wish's name or line: a tap there puts the cursor in its field. Hidden from VoiceOver, which reads both with
+    /// the field.
+    func startsTyping(_ focused: FocusState<Bool>.Binding) -> some View {
+        frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+            .onTapGesture { focused.wrappedValue = true }
+            .accessibilityHidden(true)
     }
 }

@@ -1,0 +1,52 @@
+{
+  "items": [
+    {
+      "id": 24,
+      "hunt_id": 2,
+      "found": "2026-10-24T09:41:00Z",
+      "first_seen": "2026-10-23T09:12:00Z",
+      "source": "kleinanzeigen",
+      "source_name": "Kleinanzeigen",
+      "title": "Herman Miller Aeron, size C, graphite",
+      "url": "https://www.kleinanzeigen.de/s-anzeige/sample-chair/9000000044",
+      "price": 420,
+      "note": "Not checked in time"
+    },
+    {
+      "id": 23,
+      "hunt_id": 5,
+      "found": "2026-10-24T07:16:00Z",
+      "first_seen": "2026-10-23T06:58:00Z",
+      "source": "vinted",
+      "source_name": "Vinted",
+      "title": "Denimwerk selvedge jeans W32 L34, dark rinse",
+      "url": "https://www.vinted.de/items/9000000043-sample-jeans",
+      "price": 65,
+      "note": "Not checked in time"
+    },
+    {
+      "id": 22,
+      "hunt_id": 2,
+      "found": "2026-10-24T05:03:00Z",
+      "first_seen": "2026-10-23T04:40:00Z",
+      "source": "ebay",
+      "source_name": "eBay",
+      "title": null,
+      "url": null,
+      "price": null,
+      "note": "Not checked in time"
+    },
+    {
+      "id": 21,
+      "hunt_id": 4,
+      "found": "2026-10-23T21:32:00Z",
+      "first_seen": "2026-10-22T21:05:00Z",
+      "source": "kleinanzeigen",
+      "source_name": "Kleinanzeigen",
+      "title": "Bookcase, solid oak, 80 cm wide",
+      "url": "https://www.kleinanzeigen.de/s-anzeige/sample-bookcase/9000000041",
+      "price": 35,
+      "note": "Not checked in time"
+    }
+  ]
+}

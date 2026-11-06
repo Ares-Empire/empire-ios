@@ -12,6 +12,7 @@ struct DecodingTests {
         case "matches": try roundTrip(MatchPage.self, file)
         case "match": try roundTrip(Match.self, file)
         case "rejected": try roundTrip(RejectedPage.self, file)
+        case "not-checked": try roundTrip(NotCheckedPage.self, file)
         case "settings": try roundTrip(Settings.self, file)
         case "places": try roundTrip([Place].self, file)
         case "hunts": try roundTrip([Hunt].self, file)

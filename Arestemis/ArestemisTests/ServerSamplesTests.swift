@@ -40,6 +40,24 @@ struct ServerSamplesTests {
         #expect(overview.hunts.compactMap(\.hunt.search.item).allSatisfy { $0.moreQueries.isEmpty })
     }
 
+    /// Brief 186 on the server (the app's brief 187): `GET /not-checked`'s answer, and the counts on the overview, its
+    /// cards and the price monitors' cards; brief 185: the thing search's `nice`.
+    @Test func notCheckedListingsAndTheirCounts() throws {
+        let page = try JSONDecoder().decode(NotCheckedPage.self, from: data("not-checked"))
+        let item = try #require(page.items.only)
+        #expect(item.id == 12 && item.huntID == 3 && item.source == .kleinanzeigen && item.sourceName == "Kleinanzeigen")
+        #expect(item.found == "2026-11-06T10:30:00Z" && item.firstSeen == "2026-11-05T10:30:00Z")
+        #expect(item.title == "Invented office chair" && item.price == 80 && item.note == "Not checked in time")
+        #expect(item.link != nil)
+        #expect(try JSONDecoder().decode(NotCheckedPage.self, from: JSONEncoder().encode(page)) == page)
+        let overview = try JSONDecoder().decode(Overview.self, from: data("overview"))
+        #expect(overview.counts.notChecked == 4 && overview.hunts.first { $0.id == item.huntID }?.counts.notChecked == 4)
+        #expect(overview.hunts.compactMap(\.hunt.search.item).allSatisfy { $0.nice == "" })
+        for name in ["price-everywhere", "price-everywhere-finding", "price-everywhere-not-found", "price-everywhere-used"] {
+            #expect(try JSONDecoder().decode(HuntCard.self, from: data(name)).counts.notChecked == 0)
+        }
+    }
+
     @Test func matchesWithThingDetails() throws {
         let page = try JSONDecoder().decode(MatchPage.self, from: data("matches"))
         let things = page.items.filter { $0.listing.item != nil }

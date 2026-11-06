@@ -1,0 +1,16 @@
+{
+  "items": [
+    {
+      "id": 12,
+      "hunt_id": 3,
+      "found": "2026-11-06T10:30:00Z",
+      "first_seen": "2026-11-05T10:30:00Z",
+      "source": "kleinanzeigen",
+      "source_name": "Kleinanzeigen",
+      "title": "Invented office chair",
+      "url": "https://www.kleinanzeigen.de/s-anzeige/invented-chair/1234567890",
+      "price": 80,
+      "note": "Not checked in time"
+    }
+  ]
+}

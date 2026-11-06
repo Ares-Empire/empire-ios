@@ -6,12 +6,14 @@ import SwiftUI
 ///   there is one search), the search with the newest finding first, newest first within it; a listing opened leaves
 ///   New when its page closes (brief 182; brief 180 kept it without its dot); swipe right for a favorite, left to
 ///   dismiss; a group goes with its last new listing. Then "Recently viewed" (the listings opened in the last 7 days
-///   that are still new, `RecentlyViewedPage`) and "Filtered out" for every search, each a quiet row shown while it
-///   has listings (`QuietLinkRow`). A notification's match opens over it.
+///   that are still new, `RecentlyViewedPage`), "Filtered out" and "Not checked in time" (brief 187, `NotCheckedListingsPage`)
+///   for every search, each a quiet row shown while it has listings (`QuietLinkRow`). A notification's match opens over
+///   it.
 /// - **Searches:** one card per search, in the Hunts tab's order (paused ones too): its kind and name, the new count,
 ///   favorites and applied (asked) in a quiet line; a tap opens that search's listings (`SearchListingsPage`), the long
 ///   press offers Rename, Pause or Start and Delete (`huntCardMenu`).
-/// The stack also holds the search over listings (`ListingSearchPage`), Recently viewed and the matches' pages.
+/// The stack also holds the search over listings (`ListingSearchPage`), Recently viewed, Not checked in time and the
+/// matches' pages.
 struct ListingsScreen: View {
     @Bindable var store: ArestemisStore
     @Bindable var navigation: AppNavigation
@@ -35,6 +37,7 @@ struct ListingsScreen: View {
                     case .hunt(let id): SearchListingsPage(id: id, store: store, navigation: navigation)
                     case .find(let hunt): ListingSearchPage(hunt: hunt, store: store, navigation: navigation)
                     case .recent(let hunt): RecentlyViewedPage(hunt: hunt, store: store, navigation: navigation)
+                    case .notChecked(let hunt): NotCheckedListingsPage(hunt: hunt, store: store, navigation: navigation)
                     case .match(let id): MatchDetailScreen(id: id, store: store, navigation: navigation)
                     }
                 }
@@ -74,7 +77,7 @@ struct ListingsScreen: View {
     }
 }
 
-/// New: every search's unread new listings, grouped by search, then Recently viewed and Filtered out.
+/// New: every search's unread new listings, grouped by search, then Recently viewed, Filtered out and Not checked in time.
 private struct NewPart: View {
     let store: ArestemisStore
     let navigation: AppNavigation
@@ -88,8 +91,9 @@ private struct NewPart: View {
             async let matches: Void = store.loadMatches(.new)
             async let recent: Void = store.loadRecent()
             async let rejected: Void = store.loadRejected()
+            async let notChecked: Void = store.loadNotChecked()
             async let overview: Void = store.reloadOverview(quiet: true)
-            _ = await (matches, recent, rejected, overview)
+            _ = await (matches, recent, rejected, notChecked, overview)
         }
         // Asked again whenever the list was forgotten (a hunt deleted), never in a loop after a failure.
         .task(id: store.list(.new).loaded) { if !store.list(.new).loaded { await store.loadMatches(.new) } }
@@ -98,6 +102,9 @@ private struct NewPart: View {
         }
         .task(id: store.rejected().loaded) {
             if !store.rejected().loaded && store.rejected().error == nil { await store.loadRejected() }
+        }
+        .task(id: store.notChecked().loaded) {
+            if !store.notChecked().loaded && store.notChecked().error == nil { await store.loadNotChecked() }
         }
     }
 
@@ -138,6 +145,9 @@ private struct NewPart: View {
         }
         if let filtered = QuietLink(.filteredOut, count: store.rejected().items.count) {
             QuietLinkRow(link: filtered, spot: .filteredOut) { navigation.sheet = .rejected(nil) }
+        }
+        if let notChecked = QuietLink(.notChecked, count: store.notCheckedCount()) {
+            QuietLinkRow(link: notChecked) { navigation.showNotChecked(hunt: nil) }
         }
     }
 

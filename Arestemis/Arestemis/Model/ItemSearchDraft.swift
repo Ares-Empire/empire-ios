@@ -26,7 +26,10 @@ struct ItemSearchDraft: Codable, Equatable {
     var places: [Place] = []
     var radiusKm = "20"
     var seller: SearchSeller = .any
+    /// Must have ("Muss sein", sent as `extra`): a listing that clearly breaks one is filtered out.
     var extra = ""
+    /// Nice to have ("Wäre schön", sent as `nice`, brief 187): never filters a listing out.
+    var nice = ""
     var sources: Set<Source> = [.kleinanzeigen]
     /// The hunt's own name (brief 135); empty = named after its words.
     var name = ""
@@ -49,12 +52,15 @@ struct ItemSearchDraft: Codable, Equatable {
         radiusKm = Self.text(search.radiusKm)
         seller = search.seller
         extra = search.extra
+        nice = search.nice
         sources = Set(search.sources)
     }
 
     enum Problem: Equatable {
-        case words, exclude, priceMin, priceMax, priceOrder, vbOverMax, condition, radius, places, extra, sources
+        case words, exclude, priceMin, priceMax, priceOrder, vbOverMax, condition, radius, places, extra, nice, sources
     }
+    /// The most either wish may hold (the server's limit for `extra` and `nice`).
+    static let maxWishLength = 1000
     var problems: [Problem] {
         var result: [Problem] = []
         if wordsProblem != nil { result.append(.words) }
@@ -66,7 +72,8 @@ struct ItemSearchDraft: Codable, Equatable {
         if conditionMin == .forParts { result.append(.condition) }
         if Self.number(radiusKm).map({ (0...200).contains($0) }) != true { result.append(.radius) }
         if places.count > 5 || (delivery != .shipping && places.isEmpty) { result.append(.places) }
-        if extra.count > 1000 { result.append(.extra) }
+        if extra.count > Self.maxWishLength { result.append(.extra) }
+        if nice.count > Self.maxWishLength { result.append(.nice) }
         if sources.isEmpty { result.append(.sources) }
         return result
     }
@@ -80,11 +87,13 @@ struct ItemSearchDraft: Codable, Equatable {
                           priceMin: Self.number(priceMin), priceMax: Self.number(priceMax), vbOverMax: vb,
                           conditionMin: conditionMin, forParts: forParts, auctions: auctions, delivery: delivery,
                           places: places, radiusKm: radius, seller: seller,
-                          extra: extra.trimmingCharacters(in: .whitespacesAndNewlines), sources: Source.ordered(sources))
+                          extra: extra.trimmingCharacters(in: .whitespacesAndNewlines),
+                          nice: nice.trimmingCharacters(in: .whitespacesAndNewlines), sources: Source.ordered(sources))
     }
 
     /// Like the flat form: omitted/null fields stay; places and words merge (search words up to five, none repeated);
-    /// empty extra/sites do not erase edits.
+    /// empty wishes/sites do not erase edits. "Describe it" fills both wishes (server brief 185): the hard ones under
+    /// Must have, the soft ones under Nice to have.
     mutating func apply(_ partial: PartialItemSearch) {
         for word in [partial.query].compactMap({ $0 }) + (partial.moreQueries ?? []) { add(word: word) }
         if let exclude = partial.exclude {
@@ -103,19 +112,20 @@ struct ItemSearchDraft: Codable, Equatable {
         if let value = partial.radiusKm { radiusKm = Self.text(value) }
         if let value = partial.seller { seller = value }
         if let value = partial.extra, !value.isEmpty { extra = value }
+        if let value = partial.nice, !value.isEmpty { nice = value }
         if let value = partial.sources, !value.isEmpty { sources = Set(value) }
     }
 
     private enum CodingKeys: String, CodingKey {
         case words, typedWord, exclude, priceMin, priceMax, vbText, vbOverMaxTouched, conditionMin, forParts, auctions
-        case delivery, places, radiusKm, seller, extra, sources, name
+        case delivery, places, radiusKm, seller, extra, nice, sources, name
     }
     /// A kept draft from before brief 149: the one search field's text.
     private enum EarlierKeys: String, CodingKey { case query }
 
     /// A draft kept by a build from before brief 119 has no `auctions`: on, as a new search; one from before brief 135
     /// no `name`: none; one from before brief 149 its one field's text as `query`: a word when it is one, else still
-    /// typed.
+    /// typed; one from before brief 187 no `nice`: none (its text stays under Must have).
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         if let words = try c.decodeIfPresent([String].self, forKey: .words) {
@@ -139,6 +149,7 @@ struct ItemSearchDraft: Codable, Equatable {
         radiusKm = try c.decode(String.self, forKey: .radiusKm)
         seller = try c.decode(SearchSeller.self, forKey: .seller)
         extra = try c.decode(String.self, forKey: .extra)
+        nice = try c.decodeIfPresent(String.self, forKey: .nice) ?? ""
         sources = try c.decode(Set<Source>.self, forKey: .sources)
         name = try c.decodeIfPresent(String.self, forKey: .name) ?? ""
     }
@@ -302,6 +313,13 @@ extension ItemSearchDraft {
     /// The name sent: trimmed and at most 60 characters; nil when empty, so the hunt is named after its words.
     var sentName: String? { HuntName.cleaned(name) }
 
+    /// Whether Save has something to save: for a new search (`saved` nil) anything filled in; for a saved one a search
+    /// or name, as they would be sent, that differs from the saved hunt's. Each wish counts like every other field.
+    func isChanged(from saved: Hunt?) -> Bool {
+        guard let saved else { return self != ItemSearchDraft() }
+        return search() != saved.search.item || sentName != HuntName.cleaned(saved.name ?? "")
+    }
+
     /// The Name field's grey placeholder: what the hunt is called while the field stays empty, its words as typed, the
     /// first and "+ 2" for two more (a thing is named after its words, `HuntSummary`; read here from the field, since a
     /// draft still missing something has no search yet), else "Optional".
@@ -336,7 +354,7 @@ extension ItemSearchDraft {
         case .radius: return l.string("The radius goes up to 200 km.")
         case .places:
             return places.count > Self.maxPlaces ? l.string("At most 5 places.") : l.string("Choose a place, or Shipping.")
-        case .extra: return l.string("At most 1,000 characters.")
+        case .extra, .nice: return l.string("At most 1,000 characters.")
         case .sources: return l.string("Choose at least one portal.")
         }
     }
@@ -355,5 +373,56 @@ extension ItemSearchDraft {
     /// One calm line under Save: the first thing still missing or wrong.
     func hint(language: AppLanguage = .current) -> String? {
         problems.first.map { message($0, language: language) }
+    }
+}
+
+/// The thing form's two wishes (brief 187; Patrik, asked whether a wish like "Rot" must be or would be nice: the app
+/// should ask the person). Must have is sent as `extra`: a listing that clearly breaks one is filtered out; Nice to have
+/// as `nice`: it never filters one out (the server decides what each does, server brief 185). Their words are here, so
+/// the form only lays them out, Must have first.
+enum Wish: CaseIterable {
+    case must, nice
+
+    /// The draft's text for it.
+    var text: WritableKeyPath<ItemSearchDraft, String> {
+        switch self {
+        case .must: \.extra
+        case .nice: \.nice
+        }
+    }
+
+    /// What is wrong with it (more than 1,000 characters).
+    var problem: ItemSearchDraft.Problem {
+        switch self {
+        case .must: .extra
+        case .nice: .nice
+        }
+    }
+
+    /// The section's heading over both: "Wishes" / "Wünsche".
+    static func heading(language: AppLanguage = .current) -> String { language.string("Wishes") }
+
+    /// "Must have" / "Muss sein", "Nice to have" / "Wäre schön".
+    func title(language: AppLanguage = .current) -> String {
+        switch self {
+        case .must: language.string("Must have")
+        case .nice: language.string("Nice to have")
+        }
+    }
+
+    /// The grey example, both from one search (a silk shirt): what must be, and what would be nice.
+    func placeholder(language: AppLanguage = .current) -> String {
+        switch self {
+        case .must: language.string("Size 43, 100% silk")
+        case .nice: language.string("Red or burgundy")
+        }
+    }
+
+    /// The line under it: what it does.
+    func caption(language: AppLanguage = .current) -> String {
+        switch self {
+        case .must: language.string("Listings that clearly don't match are filtered out.")
+        case .nice: language.string("Never filters a listing out.")
+        }
     }
 }

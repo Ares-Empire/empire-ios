@@ -1,6 +1,6 @@
 # 187: Arestemis app: "Muss sein" and "Wäre schön" in the Dinge form; listings not checked in time
 
-Status: open.
+Status: merged (Claude agent build, Claude review; 445 tests passed; Arestemis build 23)
 Branch: `claude/187-wishes` · Worktree: `../empire-ios-187-wishes` · Builder: Claude agent (design)
 
 ## Goal

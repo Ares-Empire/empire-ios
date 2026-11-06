@@ -2247,16 +2247,6 @@
         }
       }
     },
-    "Hermès only in blue, Ferragamo red or burgundy. Silk, new or like new." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hermès nur in Blau, Ferragamo in Rot oder Bordeaux. Seide, neu oder wie neu."
-          }
-        }
-      }
-    },
     "Highest %@" : {
       "localizations" : {
         "de" : {
@@ -2463,6 +2453,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Angebote"
+          }
+        }
+      }
+    },
+    "Listings that clearly don't match are filtered out." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Angebote, die klar nicht passen, werden aussortiert."
           }
         }
       }
@@ -2737,6 +2737,16 @@
         }
       }
     },
+    "Must have" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Muss sein"
+          }
+        }
+      }
+    },
     "Name" : {
       "localizations" : {
         "de" : {
@@ -2773,6 +2783,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Verhandelbar, höchstens so viel über deinem Maximum, in Euro"
+          }
+        }
+      }
+    },
+    "Never filters a listing out." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sortiert nie ein Angebot aus."
           }
         }
       }
@@ -2853,6 +2873,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Weiter"
+          }
+        }
+      }
+    },
+    "Nice to have" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wäre schön"
           }
         }
       }
@@ -2993,6 +3023,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Keine"
+          }
+        }
+      }
+    },
+    "Not checked in time" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nicht rechtzeitig geprüft"
           }
         }
       }
@@ -3647,6 +3687,16 @@
         }
       }
     },
+    "Red or burgundy" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rot oder Bordeaux"
+          }
+        }
+      }
+    },
     "Remove %@" : {
       "localizations" : {
         "de" : {
@@ -4017,6 +4067,16 @@
         }
       }
     },
+    "Size 43, 100% silk" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Größe 43, 100 % Seide"
+          }
+        }
+      }
+    },
     "Size B, black. Shipping possible." : {
       "localizations" : {
         "de" : {
@@ -4377,6 +4437,16 @@
         }
       }
     },
+    "These listings couldn't be checked in time. Have a look yourself; they stay here for 7 days." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Angebote konnten nicht rechtzeitig geprüft werden. Schau sie dir selbst an; sie bleiben 7 Tage hier."
+          }
+        }
+      }
+    },
     "Things" : {
       "localizations" : {
         "de" : {
@@ -4617,6 +4687,16 @@
         }
       }
     },
+    "Untitled" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ohne Titel"
+          }
+        }
+      }
+    },
     "Up to 20 words, each at most 40 characters." : {
       "localizations" : {
         "de" : {
@@ -4757,16 +4837,6 @@
         }
       }
     },
-    "What fits" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Was passen soll"
-          }
-        }
-      }
-    },
     "What it should do" : {
       "localizations" : {
         "de" : {
@@ -4823,6 +4893,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Wo gesucht wird"
+          }
+        }
+      }
+    },
+    "Wishes" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wünsche"
           }
         }
       }

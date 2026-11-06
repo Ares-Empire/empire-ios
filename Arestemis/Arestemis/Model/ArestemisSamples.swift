@@ -6,7 +6,8 @@ enum ArestemisSamples {
     nonisolated static let files = ["overview", "matches", "match", "rejected", "settings", "places", "hunts", "item-matches",
                                     "ebay-match", "ikea-match", "vinted-match", "immowelt-match", "kinds", "watch-matches",
                                     "price-matches",
-                                    "used-matches", "prices-9", "prices-10", "prices-12", "price-offers", "product-preview"]
+                                    "used-matches", "prices-9", "prices-10", "prices-12", "price-offers", "product-preview",
+                                    "not-checked"]
 
     static func data(_ name: String) throws -> Data {
         guard let url = Bundle.main.url(forResource: name, withExtension: "json") else {
@@ -123,6 +124,8 @@ struct SampleContent {
     var overview: Overview
     var matches: [Match]
     var rejected: [Rejected]
+    /// The listings not checked in time (brief 187); the tour has none.
+    var notChecked: [NotChecked] = []
     var settings: Settings
     var kinds: [OfferedKind]
     /// The places the place search knows besides the flat hunt's own.
@@ -168,6 +171,8 @@ struct SampleContent {
         }
         return SampleContent(overview: overview, matches: matches,
                              rejected: try ArestemisSamples.decode(RejectedPage.self, from: "rejected", shift: shift).items,
+                             notChecked: try ArestemisSamples.decode(NotCheckedPage.self, from: "not-checked",
+                                                                     shift: shift).items,
                              settings: try ArestemisSamples.decode(Settings.self, from: "settings"),
                              kinds: try ArestemisSamples.decode([OfferedKind].self, from: "kinds"),
                              places: try ArestemisSamples.decode([Place].self, from: "places"),
@@ -220,6 +225,7 @@ final class SampleBackend: ArestemisBackend {
     private var nextHuntID: Int
     private var matches: [Match]
     private var rejectedItems: [Rejected]
+    private var notCheckedItems: [NotChecked]
     private var settingsValue: Settings
     private var kindsValue: [OfferedKind]
     private let knownPlaces: [Place]
@@ -268,6 +274,7 @@ final class SampleBackend: ArestemisBackend {
             matches[index].seenAt = ArestemisSamples.iso(now.addingTimeInterval(-Double(1 + 3 * order) * 3600))
         }
         rejectedItems = content.rejected
+        notCheckedItems = content.notChecked
         settingsValue = content.settings
         kindsValue = content.kinds
         if options.ownMode { settingsValue.applicationMode = .own }
@@ -295,6 +302,7 @@ final class SampleBackend: ArestemisBackend {
             nextHuntID = 1
             matches = []
             rejectedItems = []
+            notCheckedItems = []
         }
         if options.paused { for index in huntValues.indices { huntValues[index].active = false } }
         if options.ebayNotReady {
@@ -350,9 +358,11 @@ final class SampleBackend: ArestemisBackend {
             Timestamp.parse(match.found).map { Calendar.app.isDateInToday($0) } ?? false
         }
         overview.counts = .init(new: visible.count { $0.state == .new && !$0.seen }, today: today.count,
-                                saved: visible.count { $0.state == .saved }, applied: visible.count { $0.state == .applied })
+                                saved: visible.count { $0.state == .saved }, applied: visible.count { $0.state == .applied },
+                                notChecked: notCheckedItems.count { item in huntValues.contains { $0.id == item.huntID } })
         overview.hunts = huntValues.map { hunt in
-            HuntCard(hunt: hunt, counts: Self.counts(matches.filter { $0.huntID == hunt.id }),
+            HuntCard(hunt: hunt, counts: Self.counts(matches.filter { $0.huntID == hunt.id },
+                                                     notChecked: notCheckedItems.count { $0.huntID == hunt.id }),
                      sources: hunt.active ? Self.sources(hunt.search) : [],
                      slowed: options.slowed && hunt.active && hunt.kind == .item,
                      page: hunt.kind == .watch ? pages[hunt.id] : nil,
@@ -433,6 +443,7 @@ final class SampleBackend: ArestemisBackend {
         huntValues.remove(at: index)
         matches.removeAll { $0.huntID == id }
         rejectedItems.removeAll { $0.huntID == id }
+        notCheckedItems.removeAll { $0.huntID == id }
     }
     private func huntIndex(_ id: Int) throws -> Int {
         guard let index = huntValues.firstIndex(where: { $0.id == id }) else { throw HTTPError.server(404, nil) }
@@ -552,11 +563,12 @@ final class SampleBackend: ArestemisBackend {
         }
         return page
     }
-    private static func counts(_ matches: [Match]) -> Overview.Counts {
+    private static func counts(_ matches: [Match], notChecked: Int) -> Overview.Counts {
         let visible = matches.filter { $0.state != .dismissed }
         return .init(new: visible.count { $0.state == .new && !$0.seen },
                      today: visible.count { Timestamp.parse($0.found).map { Calendar.app.isDateInToday($0) } ?? false },
-                     saved: visible.count { $0.state == .saved }, applied: visible.count { $0.state == .applied })
+                     saved: visible.count { $0.state == .saved }, applied: visible.count { $0.state == .applied },
+                     notChecked: notChecked)
     }
 
     /// An imitation of the server's spelling check (brief 178) for screenshots: a few made-up misspellings of brands and
@@ -840,6 +852,17 @@ final class SampleBackend: ArestemisBackend {
     func rejected(hunt: Int?, limit: Int) async throws -> RejectedPage {
         if let hunt { _ = try huntIndex(hunt) }
         return RejectedPage(items: Array(rejectedItems.filter { hunt == nil || $0.huntID == hunt }.prefix(limit)))
+    }
+
+    /// Not checked in time as the server lists it (brief 186 on the server): of every search or of one (an unknown one
+    /// is 404), the newest put here first. The 7 days are the server's; the sample keeps what its file holds.
+    func notChecked(hunt: Int?, limit: Int) async throws -> NotCheckedPage {
+        if let hunt { _ = try huntIndex(hunt) }
+        let wanted = notCheckedItems.filter { hunt == nil || $0.huntID == hunt }.sorted { a, b in
+            a.found != b.found ? (Timestamp.parse(a.found) ?? .distantPast) > (Timestamp.parse(b.found) ?? .distantPast)
+                : a.id > b.id
+        }
+        return NotCheckedPage(items: Array(wanted.prefix(limit)))
     }
 
     func settings() async throws -> Settings { settingsValue }

@@ -1,8 +1,9 @@
 import Foundation
 
 /// What the Listings tab shows (brief 133, Patrik's choice of 2026-11-02: "New | Searches"), decided here so the screens
-/// only lay it out: New's groups and their order, the rows of Searches, the quiet rows at a list's end (Recently viewed
-/// and Filtered out), and the words of the search over listings and of Recently viewed.
+/// only lay it out: New's groups and their order, the rows of Searches, the quiet rows at a list's end (Recently viewed,
+/// Filtered out and Not checked in time), and the words of the search over listings, of Recently viewed and of Not
+/// checked in time.
 
 /// One search's new listings in New.
 struct NewGroup: Equatable, Identifiable {
@@ -82,12 +83,12 @@ struct SearchRow: Equatable, Identifiable {
     }
 }
 
-/// A quiet outlined row at the end of a list that opens more listings of the same searches (brief 182): Recently viewed
-/// and Filtered out, each with its symbol, its words and its count, in one look (`QuietLinkRow`). There is none while
-/// it would open an empty list.
+/// A quiet outlined row at the end of a list that opens more listings of the same searches (brief 182): Recently viewed,
+/// Filtered out and Not checked in time (brief 187), each with its symbol, its words and its count, in one look
+/// (`QuietLinkRow`). There is none while it would open an empty list.
 struct QuietLink: Equatable {
     enum Kind: Equatable {
-        case recentlyViewed, filteredOut
+        case recentlyViewed, filteredOut, notChecked
     }
 
     let kind: Kind
@@ -102,11 +103,13 @@ struct QuietLink: Equatable {
         self.more = more
     }
 
-    /// A clock going back for what was opened, the filter's lines for what the check took out.
+    /// A clock going back for what was opened, the filter's lines for what the check took out, an hourglass for what it
+    /// had no time for (time ran out; not a warning).
     var symbol: String {
         switch kind {
         case .recentlyViewed: "clock.arrow.circlepath"
         case .filteredOut: "line.3.horizontal.decrease"
+        case .notChecked: "hourglass"
         }
     }
 
@@ -114,6 +117,7 @@ struct QuietLink: Equatable {
         switch kind {
         case .recentlyViewed: RecentlyViewedWords.title(language: language)
         case .filteredOut: language.string("Filtered out")
+        case .notChecked: NotCheckedWords.title(language: language)
         }
     }
 
@@ -139,6 +143,51 @@ enum RecentlyViewedWords {
     /// The page once nothing is left (each one made a favorite, applied or dismissed while it was open).
     static func empty(language: AppLanguage = .current) -> String {
         language.string("No listings here right now.")
+    }
+}
+
+/// The words of Not checked in time (brief 187): the listings the server could not check in time, kept 7 days for the
+/// person to look at. Never a list of misfits, so nothing here says they do not fit.
+enum NotCheckedWords {
+    /// The row's words and the page's title: "Not checked in time" / "Nicht rechtzeitig geprüft".
+    static func title(language: AppLanguage = .current) -> String { language.string("Not checked in time") }
+
+    /// The quiet line at the top of the page: what these are, what to do, how long they stay.
+    static func line(language: AppLanguage = .current) -> String {
+        language.string("These listings couldn't be checked in time. Have a look yourself; they stay here for 7 days.")
+    }
+
+    /// The page with nothing (left) in it: Recently viewed's words.
+    static func empty(language: AppLanguage = .current) -> String { RecentlyViewedWords.empty(language: language) }
+
+    /// A listing whose title the site did not give.
+    static func untitled(language: AppLanguage = .current) -> String { language.string("Untitled") }
+}
+
+extension NotChecked {
+    /// The title, or "Untitled" when the site gave none (`hasTitle` false).
+    func shownTitle(language: AppLanguage = .current) -> String {
+        hasTitle ? (title ?? "").trimmingCharacters(in: .whitespacesAndNewlines) : NotCheckedWords.untitled(language: language)
+    }
+
+    var hasTitle: Bool { !(title ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+
+    /// The listing on its site, only a web address; nil when the server has none, so the row opens nothing.
+    var link: URL? { url.flatMap(WebLink.url) }
+
+    /// The quiet line under the title: the price when known, the site, and when its search first saw it ("€420 ·
+    /// Kleinanzeigen · yesterday 10:12").
+    func line(now: Date = .now, calendar: Calendar = .app, language: AppLanguage = .current) -> String {
+        let arrived = Format.relative(firstSeen, now: now, calendar: calendar, language: language)
+            ?? Format.relative(found, now: now, calendar: calendar, language: language)
+        return [price.map { Format.money($0, language: language) }, sourceName, arrived].compactMap { $0 }
+            .joined(separator: " · ")
+    }
+
+    /// VoiceOver reads the row as one: "Herman Miller Aeron, size C, €420, Kleinanzeigen, yesterday 10:12".
+    func spoken(now: Date = .now, calendar: Calendar = .app, language: AppLanguage = .current) -> String {
+        [shownTitle(language: language), line(now: now, calendar: calendar, language: language)
+            .replacingOccurrences(of: " · ", with: ", ")].joined(separator: ", ")
     }
 }
 
