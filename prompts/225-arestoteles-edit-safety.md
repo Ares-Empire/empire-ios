@@ -1,6 +1,6 @@
 # 225: Arestoteles: can an edit get lost?
 
-Status: built 2026-11-03 (rounds 1–2, branch `codex/225-edit-safety` f3dc6ce in Arestoteles, 345 tests per Codex), not deployed. Rollout: server with versions optional → app (brief 228) installed → ARESTOTELES_REQUIRE_VERSIONS=1.
+Status: deployed 2026-11-06 (Arestoteles 5b803d1; 345 tests on Claude's run; vault backup before it in /root/backups) with ARESTOTELES_REQUIRE_VERSIONS=0. Last step: set it to 1 once Patrik's iPhone runs Arestoteles build 3 (brief 228; board item for arestoteles).
 Branch: `codex/225-edit-safety` (repo `Arestoteles`) · Worktree: `~/Arestoteles-225-edit-safety` · Model:
 `gpt-6-astra`, effort `high`
 
