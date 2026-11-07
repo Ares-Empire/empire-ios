@@ -59,6 +59,8 @@ final class DropOutbox {
     private var wakeup: Task<Void, Never>?
     private var removing = false
     private var recovered: [String: DropOutbox] = [:]
+    // An inline completion may reuse the operation lease held while submit is handing over its task.
+    private var submissions: [UUID: DropLease] = [:]
     private let activity: (any DropActivity)?
     private let uploads: any DropUploading
     private var journal: DropJournal { DropJournal(directory: directory) }
@@ -120,41 +122,82 @@ final class DropOutbox {
         } catch { storageError = error.localizedDescription }
     }
 
-    /// Reconcile only this driver's tasks. An upload owned by the other process stays uploading until that process
-    /// (or the app woken for its session) handles it. A crash between saving the intent and task creation is retried.
     func restoreForEvents() async {
         while session.isBusy { try? await Task.sleep(for: .milliseconds(50)) }
         if !session.isSignedIn { await session.restore() }
     }
 
+    /// Reconcile this driver's missing tasks and idle records, including old failures with a saved server id.
+    /// An upload owned by another process stays with that process (or the app woken for its session).
     func reconnect() async {
+        let epoch = generation
         reload()
         let active = await uploads.activeIDs()
-        for item in items where item.uploadSession == uploads.identifier && !active.contains(item.id) {
-            guard let lease = journal.claim(item.id) else { continue }
-            defer { withExtendedLifetime(lease) {} }
-            let epoch = generation
-            let login = session.generation
-            let token = session.token
-            if let token, let serverID = item.serverID, !item.cancellationRequested {
-                do {
-                    // The server may have accepted the bytes just before a force quit. Do not turn that into a
-                    // second PUT (409); the existing list tells us whether the upload already reached the server.
-                    let server = try await client.drops(token: token)
-                    guard epoch == generation else { continue }
-                    if let accepted = server.first(where: { $0.id == serverID && $0.state != .uploading }) {
-                        try discard(item.id)
-                        onUploaded?(accepted)
-                        continue
-                    }
-                } catch {
-                    session.handleAuthFailure(error, generation: login, token: token)
+        guard epoch == generation else { return }
+        reload()
+        var leases: [DropLease] = []
+        var candidates: [DropOutboxItem] = []
+        var idle = Set<UUID>()
+        for item in items {
+            let interrupted = item.uploadSession == uploads.identifier && !active.contains(item.id)
+            let waiting = item.uploadSession == nil && (item.state == .failed || item.state == .onPhone)
+            guard interrupted || waiting, let lease = journal.claim(item.id) else { continue }
+            leases.append(lease)
+            if waiting { idle.insert(item.id) }
+            // Active foreign sessions are recovered by their own driver; cancellations keep their DELETE path.
+            if item.cancellationRequested || item.serverID == nil {
+                if interrupted { try? update(item.id) { $0.uploadSession = nil; $0.state = .onPhone } }
+            } else { candidates.append(item) }
+        }
+        defer { withExtendedLifetime(leases) {} }
+        guard let token = session.token else { return }
+        // Idle records are only checked here: one the server already has goes, every other one stays exactly as it
+        // was. A failed record (too large, quota) must never be sent again behind the person's back, and an offline
+        // check must not turn it into a retry.
+        let remaining = await reconcile(candidates, epoch: epoch, login: session.generation, token: token,
+                                        checkingOnly: idle)
+        guard epoch == generation else { return }
+        for id in remaining.subtracting(idle) {
+            try? update(id) { $0.uploadSession = nil; $0.state = .onPhone }
+        }
+        if automatic { scheduleWakeup() }
+    }
+
+    /// The caller holds each record's operation lease. One list settles the whole batch before any bytes are retried.
+    /// Returned ids still need bytes; a failed check never authorizes an upload. A failed check fails the records
+    /// about to be sent, never those in `checkingOnly`.
+    private func reconcile(_ records: [DropOutboxItem], epoch: Int, login: Int, token: String,
+                           checkingOnly: Set<UUID> = []) async -> Set<UUID> {
+        guard !records.isEmpty, epoch == generation else { return [] }
+        do {
+            let server = try await client.drops(token: token)
+            guard epoch == generation, login == session.generation, token == session.token else { return [] }
+            reload()
+            var remaining = Set<UUID>()
+            for record in records {
+                guard let current = item(record.id), !current.cancellationRequested,
+                      current.uploadAttempt == record.uploadAttempt, let serverID = current.serverID else { continue }
+                guard let drop = server.first(where: { $0.id == serverID }) else {
+                    // The list is bounded; an absent row keeps the existing PUT/404 behavior, never a new POST.
+                    remaining.insert(record.id)
+                    continue
+                }
+                switch drop.state {
+                case .uploading: remaining.insert(record.id)
+                case .waiting, .failed, .landed:
+                    try discard(record.id)
+                    onUploaded?(drop)
+                case .cancelled: try discard(record.id)
                 }
             }
-            guard epoch == generation else { continue }
-            withExtendedLifetime(lease) {
-                try? update(item.id) { $0.uploadSession = nil; $0.state = .onPhone }
+            return remaining
+        } catch {
+            guard epoch == generation else { return [] }
+            session.handleAuthFailure(error, generation: login, token: token)
+            for record in records where !checkingOnly.contains(record.id) && item(record.id)?.cancellationRequested == false {
+                fail(record.id, error: error, login: login, token: token)
             }
+            return []
         }
     }
 
@@ -322,7 +365,7 @@ final class DropOutbox {
             guard let lease = journal.claim(item.id) else { continue }
             reload()
             if let current = self.item(item.id), current.uploadSession == nil {
-                await attempt(item.id, epoch: epoch)
+                await attempt(item.id, epoch: epoch, lease: lease)
             }
             withExtendedLifetime(lease) {}
             reload()
@@ -332,7 +375,7 @@ final class DropOutbox {
         }
     }
 
-    private func attempt(_ id: UUID, epoch: Int) async {
+    private func attempt(_ id: UUID, epoch: Int, lease: DropLease) async {
         session.followMarker()
         guard let token = session.token, let initial = item(id) else { return }
         let login = session.generation
@@ -343,6 +386,10 @@ final class DropOutbox {
                 guard epoch == generation else { return }
                 try discard(id)
                 return
+            }
+            if initial.serverID != nil {
+                let remaining = await reconcile([initial], epoch: epoch, login: login, token: token)
+                guard remaining.contains(id), epoch == generation else { return }
             }
             let url = directory.appendingPathComponent(initial.localFile)
             let fingerprint = try await DropFileIO.fingerprint(url)
@@ -367,6 +414,8 @@ final class DropOutbox {
             // hand-over. No bytes go until the durable server id is present.
             let upload = DropUploadID(record: id)
             try update(id) { $0.uploadSession = uploads.identifier; $0.uploadAttempt = upload.attempt }
+            submissions[id] = lease
+            defer { submissions[id] = nil }
             try await uploads.submit(upload, request: request, file: url, earliestBeginDate: nil)
         } catch {
             guard epoch == generation, item(id) != nil else { return }
@@ -395,7 +444,17 @@ final class DropOutbox {
             do { try discard(id); onUploaded?(drop) }
             catch { storageError = error.localizedDescription }
         case .failure(let error):
-            if case HTTPError.server(400, _) = error, pending.checksumRetries == 0 {
+            if case HTTPError.server(409, _) = error {
+                guard let lease = submissions[id] ?? journal.claim(id), let currentToken = session.token else { return }
+                let epoch = generation
+                let login = session.generation
+                let remaining = await reconcile([pending], epoch: epoch, login: login, token: currentToken)
+                withExtendedLifetime(lease) {}
+                if remaining.contains(id), epoch == generation {
+                    // Another stream can cause 409 even while the server still says uploading.
+                    fail(id, error: error, login: login, token: currentToken, retryable: true)
+                }
+            } else if case HTTPError.server(400, _) = error, pending.checksumRetries == 0 {
                 do {
                     let checked = try await DropFileIO.fingerprint(directory.appendingPathComponent(pending.localFile))
                     try update(id) {
@@ -425,12 +484,17 @@ final class DropOutbox {
               pending.uploadSession == nil, let deadline = pending.retryAt, let serverID = pending.serverID,
               let token = session.token, session.isSignedIn, let lease = journal.claim(id) else { return }
         defer { withExtendedLifetime(lease) {} }
+        let epoch = generation
+        let remaining = await reconcile([pending], epoch: epoch, login: session.generation, token: token)
+        guard remaining.contains(id), epoch == generation, item(id)?.cancellationRequested == false else { return }
         do {
             let ticket = DropUploadID(record: id)
             let request = try client.uploadRequest(serverID, token: token)
             try update(id) {
                 $0.uploadSession = uploads.identifier; $0.uploadAttempt = ticket.attempt; $0.attempts += 1
             }
+            submissions[id] = lease
+            defer { submissions[id] = nil }
             try await uploads.submit(ticket, request: request, file: directory.appendingPathComponent(pending.localFile),
                                      earliestBeginDate: deadline)
         } catch {
@@ -439,14 +503,14 @@ final class DropOutbox {
         }
     }
 
-    private func fail(_ id: UUID, error: Error, login: Int, token: String?) {
+    private func fail(_ id: UUID, error: Error, login: Int, token: String?, retryable: Bool = false) {
         session.handleAuthFailure(error, generation: login, token: token)
         guard item(id) != nil else { return }
         do {
             try update(id) {
                 $0.uploadSession = nil
                 $0.lastError = Self.message(error)
-                if Self.canRetry(error) || (error as? URLError)?.code == .cancelled
+                if retryable || Self.canRetry(error) || (error as? URLError)?.code == .cancelled
                     || (session.isSignedIn && session.token != token && Self.isUnauthorized(error)) {
                     $0.state = .onPhone
                     $0.retryAt = Date.now.addingTimeInterval(Self.retryDelay(attempts: $0.attempts))

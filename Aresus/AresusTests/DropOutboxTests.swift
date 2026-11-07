@@ -46,10 +46,10 @@ struct DropOutboxTests {
         #expect(fake.requests.count == 2) // The deadline prevents a busy retry loop.
         let restored = DropOutbox(session: session, client: AresusAPI(transport: fake), directory: directory, automatic: false, uploads: ImmediateDropUploads(fake))
         #expect(restored.items.only == failed)
-        fake.responses = [.answer(200, try dropAnswer(state: .waiting))]
+        fake.responses = [.answer(200, try dropListAnswer()), .answer(200, try dropAnswer(state: .waiting))]
         await restored.retry(id)
         #expect(restored.items.isEmpty)
-        #expect(fake.requests.map(\.httpMethod) == ["POST", "PUT", "PUT"])
+        #expect(fake.requests.map(\.httpMethod) == ["POST", "PUT", "GET", "PUT"])
     }
 
     @Test func checksum400IsRecomputedAndRetriedOnlyOnce() async throws {
@@ -57,7 +57,7 @@ struct DropOutboxTests {
         defer { try? FileManager.default.removeItem(at: directory) }
         let fake = DropTransport()
         let sentence = Data(#"{"error":"The checksum does not match."}"#.utf8)
-        fake.responses = [.answer(201, try dropAnswer()), .answer(400, sentence), .answer(400, sentence)]
+        fake.responses = [.answer(201, try dropAnswer()), .answer(400, sentence), .answer(200, try dropListAnswer()), .answer(400, sentence)]
         let outbox = DropOutbox(session: await signedInSession(), client: AresusAPI(transport: fake), directory: directory, automatic: false, uploads: ImmediateDropUploads(fake))
         _ = try await enqueue(outbox)
         await outbox.process()
@@ -65,9 +65,9 @@ struct DropOutboxTests {
         #expect(item.state == .failed && item.checksumRetries == 1 && item.retryAt == nil)
         #expect(item.lastError == "The checksum does not match.")
         #expect(item.drop.sha256 == newDrop().sha256)
-        #expect(fake.requests.map(\.httpMethod) == ["POST", "PUT", "PUT"])
+        #expect(fake.requests.map(\.httpMethod) == ["POST", "PUT", "GET", "PUT"])
         await outbox.process()
-        #expect(fake.requests.count == 3)
+        #expect(fake.requests.count == 4)
         #expect(FileManager.default.fileExists(atPath: directory.appendingPathComponent(item.localFile).path))
     }
 
@@ -75,14 +75,14 @@ struct DropOutboxTests {
         let directory = testDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
         let fake = DropTransport()
-        fake.responses = [.answer(201, try dropAnswer()), .answer(400, Data()), .answer(200, try dropAnswer(state: .waiting))]
+        fake.responses = [.answer(201, try dropAnswer()), .answer(400, Data()), .answer(200, try dropListAnswer()), .answer(200, try dropAnswer(state: .waiting))]
         let outbox = DropOutbox(session: await signedInSession(), client: AresusAPI(transport: fake), directory: directory, automatic: false, uploads: ImmediateDropUploads(fake))
         _ = try await enqueue(outbox)
         await outbox.process()
         #expect(outbox.items.isEmpty && fake.files.count == 2)
     }
 
-    @Test(arguments: [413, 507, 404, 409])
+    @Test(arguments: [413, 507, 404])
     func permanentErrorsKeepTheFileAndServerSentence(status: Int) async throws {
         let directory = testDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -95,6 +95,84 @@ struct DropOutboxTests {
         #expect(outbox.items.only?.lastError == "This file cannot be accepted.")
         await outbox.process()
         #expect(fake.requests.count == 2)
+    }
+
+    @Test(arguments: [DropState.landed, .waiting, .failed, .cancelled])
+    func resendDiscardsBytesAlreadyOnTheServer(state: DropState) async throws {
+        let directory = testDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let fake = DropTransport()
+        fake.responses = [.answer(200, try dropListAnswer(state: state))]
+        let outbox = DropOutbox(session: await signedInSession(), client: AresusAPI(transport: fake),
+                                directory: directory, automatic: false, uploads: ImmediateDropUploads(fake))
+        let id = try await enqueue(outbox)
+        var record = try #require(outbox.items.only)
+        record.serverID = 44
+        try DropJournal(directory: directory).save(record)
+        var uploaded: [Drop] = []
+        outbox.onUploaded = { uploaded.append($0) }
+        await outbox.process()
+        #expect(outbox.items.isEmpty && fake.files.isEmpty)
+        #expect(fake.requests.map(\.httpMethod) == ["GET"])
+        #expect(uploaded == (state == .cancelled ? [] : [try AresusJSON.decoder().decode(Drop.self, from: dropAnswer(state: state))]))
+        #expect(!FileManager.default.fileExists(atPath: directory.appendingPathComponent(record.localFile).path))
+        #expect(try DropJournal(directory: directory).read(id) == nil)
+    }
+
+    @Test func offlineReconcileBeforeResendNeverUploadsBlindly() async throws {
+        let directory = testDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let fake = DropTransport(); fake.responses = [.failure(URLError(.notConnectedToInternet))]
+        let outbox = DropOutbox(session: await signedInSession(), client: AresusAPI(transport: fake),
+                                directory: directory, automatic: false, uploads: ImmediateDropUploads(fake))
+        _ = try await enqueue(outbox)
+        var record = try #require(outbox.items.only); record.serverID = 44
+        try DropJournal(directory: directory).save(record)
+        await outbox.process()
+        let pending = try #require(outbox.items.only)
+        #expect(pending.state == .onPhone && pending.retryAt != nil && pending.uploadSession == nil)
+        #expect(pending.lastError == "No connection." && pending.attempts == 1)
+        #expect(fake.requests.map(\.httpMethod) == ["GET"] && fake.files.isEmpty)
+        #expect(FileManager.default.fileExists(atPath: directory.appendingPathComponent(record.localFile).path))
+    }
+
+    @Test(arguments: [DropState.waiting, .uploading])
+    func upload409ReconcilesInsteadOfPermanentlyFailing(state: DropState) async throws {
+        let directory = testDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let fake = DropTransport()
+        fake.responses = [.answer(201, try dropAnswer()), .answer(409, Data(#"{"error":"This drop cannot be changed in its current state."}"#.utf8)),
+                          .answer(200, try dropListAnswer(state: state))]
+        let outbox = DropOutbox(session: await signedInSession(), client: AresusAPI(transport: fake),
+                                directory: directory, automatic: false, uploads: ImmediateDropUploads(fake))
+        _ = try await enqueue(outbox)
+        let record = try #require(outbox.items.only)
+        var uploaded: [Drop] = []; outbox.onUploaded = { uploaded.append($0) }
+        await outbox.process()
+        #expect(fake.requests.map(\.httpMethod) == ["POST", "PUT", "GET"])
+        if state == .waiting {
+            #expect(outbox.items.isEmpty && uploaded.only?.state == .waiting)
+            #expect(!FileManager.default.fileExists(atPath: directory.appendingPathComponent(record.localFile).path))
+        } else {
+            let pending = try #require(outbox.items.only)
+            #expect(pending.state == .onPhone && pending.retryAt != nil && pending.uploadSession == nil)
+            #expect(uploaded.isEmpty)
+        }
+    }
+
+    @Test func absentDropStillUsesPutAndKeepsThe404Sentence() async throws {
+        let directory = testDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let fake = DropTransport()
+        fake.responses = [.answer(200, Data(#"{"drops":[]}"#.utf8)), .answer(404, Data(#"{"error":"Unknown drop."}"#.utf8))]
+        let outbox = DropOutbox(session: await signedInSession(), client: AresusAPI(transport: fake),
+                                directory: directory, automatic: false, uploads: ImmediateDropUploads(fake))
+        _ = try await enqueue(outbox)
+        var record = try #require(outbox.items.only); record.serverID = 44
+        try DropJournal(directory: directory).save(record)
+        await outbox.process()
+        #expect(fake.requests.map(\.httpMethod) == ["GET", "PUT"])
+        #expect(outbox.items.only?.state == .failed && outbox.items.only?.lastError == "Unknown drop.")
     }
 
     @Test func create400StopsAnd503WaitsWithCappedBackoff() async throws {

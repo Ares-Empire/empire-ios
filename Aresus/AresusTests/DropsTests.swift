@@ -85,6 +85,26 @@ struct DropsTests {
         #expect(fake.requests.map(\.httpMethod) == ["DELETE", "DELETE"])
     }
 
+    @Test(arguments: DropState.allCases)
+    func serverStateWinsOverAFailedPhoneCopyAfterUpload(state: DropState) throws {
+        var drop = try AresusJSON.decoder().decode(Drop.self, from: dropAnswer(state: state))
+        drop.landed = "Documents/Receipts/Sample.pdf"
+        var local = localItem(serverID: drop.id)
+        local.state = .failed
+        local.lastError = "This drop cannot be changed in its current state."
+        let item = DropsItem.server(drop)
+        let hidden = DropRow.hidden(for: item, in: [local])
+        let row = DropRow(item, local: hidden, language: .english)
+        if state == .uploading {
+            #expect(hidden == local && row.line == "Not sent: This drop cannot be changed in its current state." && row.canRetry)
+        } else {
+            #expect(hidden == nil && !row.canRetry)
+            #expect(row == DropRow(item, language: .english))
+            #expect(DropRow(item, local: local, language: .english) == row)
+            if state == .landed { #expect(row.line.hasPrefix("In Receipts · ")) }
+        }
+    }
+
     @Test func mergedListHidesLocalDuplicatesAndOrdersBothGroups() throws {
         let server: DropsAnswer = try sample("drops")
         let first = localItem(serverID: nil, created: at("2026-11-01T17:00:00Z"))
@@ -170,4 +190,8 @@ func dropAnswer(state: DropState = .uploading) throws -> Data {
 func localItem(serverID: Int?, created: Date = .now) -> DropOutboxItem {
     let id = UUID()
     return DropOutboxItem(id: id, drop: newDrop(), localFile: id.uuidString + ".file", serverID: serverID, created: created)
+}
+
+func dropListAnswer(state: DropState = .uploading) throws -> Data {
+    Data(#"{"drops":["#.utf8) + (try dropAnswer(state: state)) + Data("]}".utf8)
 }

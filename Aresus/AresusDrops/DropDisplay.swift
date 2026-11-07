@@ -57,7 +57,7 @@ nonisolated struct DropRow: Identifiable, Equatable, Sendable {
             note = nil
         case .server(let drop):
             name = drop.name
-            if let local {
+            if drop.state == .uploading, let local {
                 (line, tone, canRetry) = Self.phone(local, language: language)
                 note = nil
             } else {
@@ -70,7 +70,7 @@ nonisolated struct DropRow: Identifiable, Equatable, Sendable {
 
     /// The outbox's copy a server row stands for, while it is still uploading from this iPhone.
     static func hidden(for item: DropsItem, in outbox: [DropOutboxItem]) -> DropOutboxItem? {
-        guard case .server(let drop) = item else { return nil }
+        guard case .server(let drop) = item, drop.state == .uploading else { return nil }
         return outbox.first { $0.serverID == drop.id }
     }
 
