@@ -196,7 +196,11 @@ final class AppNavigation {
 /// `-openBestMatch <n>` (taps the search's n-th best match once it is there), `-openNote <id>[#<heading>]`,
 /// `-openPosition <id>`, `-openSheet brief|edit|quicknote|discuss|discussions|reword|change|drop|add|evidence|settings`,
 /// `-quickNoteText <text>` (fills a sample quick-note sheet), `-saveQuickNote` (saves it after two seconds).
+/// `-failQueueWrites` (sample only: starts with a waiting note and refuses every queue write).
 struct LaunchOptions {
+    #if DEBUG
+    var failQueueWrites = false
+    #endif
     var sample = false
     var editConflict = false
     var editInvalid = false
@@ -219,6 +223,7 @@ struct LaunchOptions {
             return arguments[index + 1]
         }
         sample = arguments.contains("-sampleData")
+        failQueueWrites = arguments.contains("-failQueueWrites")
         editConflict = arguments.contains("-sampleEditConflict")
         editInvalid = arguments.contains("-sampleEditInvalid")
         pushLater = arguments.contains("-samplePushLater")

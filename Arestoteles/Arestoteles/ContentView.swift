@@ -43,7 +43,9 @@ struct ContentView: View {
             conflict: options.editConflict, invalid: options.editInvalid, pushLater: options.pushLater,
             offline: options.offline, slowSearch: options.slowSearch)) {
             let saved = options.offline ? try? SampleBackend.savedVault() : nil
-            return VaultStore(session: session, backend: backend, persistence: MemoryPersistence(vault: saved),
+            let persistence: any VaultPersistence = options.failQueueWrites
+                ? UnwritableSampleQueue(vault: saved) : MemoryPersistence(vault: saved)
+            return VaultStore(session: session, backend: backend, persistence: persistence,
                               spotlight: DeviceSpotlight(), savedAccount: { nil }, sample: true)
         }
         if testing {

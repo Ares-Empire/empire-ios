@@ -152,3 +152,23 @@ nonisolated final class MemoryPersistence: VaultPersistence {
     func deleteVault() throws { vault = nil }
     func deleteAll() throws { state.withLock { $0.vault = nil; $0.quickNotes = [] } }
 }
+
+#if DEBUG
+/// Sample-only write failure hook. An older note needs confirmation, so it stays listed even with an online sample.
+nonisolated struct UnwritableSampleQueue: VaultPersistence {
+    private let memory: MemoryPersistence
+
+    init(vault: CachedVault?) {
+        memory = MemoryPersistence(vault: vault, quickNotes: [
+            PendingQuickNote(text: "A sample thought waiting to be sent", about: "Printing press")
+        ])
+    }
+
+    func loadVault() -> CachedVault? { memory.loadVault() }
+    func saveVault(_ cached: CachedVault) throws { try memory.saveVault(cached) }
+    func loadQuickNotes() -> [PendingQuickNote] { memory.loadQuickNotes() }
+    func saveQuickNotes(_ notes: [PendingQuickNote]) throws { throw CocoaError(.fileWriteNoPermission) }
+    func deleteVault() throws { try memory.deleteVault() }
+    func deleteAll() throws { try memory.deleteAll() }
+}
+#endif

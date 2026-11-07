@@ -1,5 +1,6 @@
 import CoreSpotlight
 import Foundation
+import Synchronization
 @testable import Arestoteles
 
 /// A server in memory: answers by "METHOD /path" (the path below /api/arestoteles, still percent-encoded), records every
@@ -191,6 +192,35 @@ extension Array {
 extension BestMatches.Timing {
     /// The search's waits, short enough for tests and long enough to tell apart.
     static let quick = BestMatches.Timing(pause: .milliseconds(20), slow: .milliseconds(80), timeout: .seconds(1))
+}
+
+/// Keeps the last successful queue snapshot while writes can be disabled and enabled across store restarts.
+nonisolated final class SwitchableQueuePersistence: VaultPersistence {
+    private struct State: Sendable {
+        var vault: CachedVault?
+        var notes: [PendingQuickNote]
+        var failsWrites = false
+    }
+    private let state: Mutex<State>
+
+    init(notes: [PendingQuickNote]) { state = Mutex(State(notes: notes)) }
+
+    var failsWrites: Bool {
+        get { state.withLock { $0.failsWrites } }
+        set { state.withLock { $0.failsWrites = newValue } }
+    }
+
+    func loadVault() -> CachedVault? { state.withLock { $0.vault } }
+    func saveVault(_ cached: CachedVault) throws { state.withLock { $0.vault = cached } }
+    func loadQuickNotes() -> [PendingQuickNote] { state.withLock { $0.notes } }
+    func saveQuickNotes(_ notes: [PendingQuickNote]) throws {
+        try state.withLock {
+            if $0.failsWrites { throw CocoaError(.fileWriteNoPermission) }
+            $0.notes = notes
+        }
+    }
+    func deleteVault() throws { state.withLock { $0.vault = nil } }
+    func deleteAll() throws { state.withLock { $0.vault = nil; $0.notes = [] } }
 }
 
 /// Waits until `condition` holds (at most two seconds), for state that changes after a timed wait.
