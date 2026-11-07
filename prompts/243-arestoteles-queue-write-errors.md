@@ -1,6 +1,6 @@
 # 243: Arestoteles: every quick-note queue write that fails is reported
 
-Status: running (Codex, started 2026-11-07)
+Status: merged 2026-11-07 (164 Arestoteles tests on Claude's run; German by Claude)
 Branch: `codex/243-queue-write-errors` · Worktree: `../empire-ios-243-queue-write-errors` · Model: `gpt-6.1-sol`, effort
 `high` (a small, focused persistence change whose restart cases must be thought through; no frontier reasoning needed)
 
