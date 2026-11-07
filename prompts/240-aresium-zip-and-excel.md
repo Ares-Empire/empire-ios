@@ -1,6 +1,6 @@
 # 240: Reading ZIP and Excel bank files
 
-Status: running
+Status: merged 2026-11-07 (aresium 5a4fb3c; files 231 -> 246, read right 215 -> 223, nothing wrong; app: .xlsx type and new codes in the app)
 Repo: **aresium** · Worktree: `../aresium-240-zip-and-excel` (branch `codex/240-zip-and-excel`) · Model: `gpt-6.1-sol`,
 effort `high` (picked 2026-11-07: well-defined format work with clear tests; the frontier model is not needed) · Runs
 beside brief 239 (sorting, `src/engine/sorting/`); you own `src/engine/readers/` and `eval/files/`.

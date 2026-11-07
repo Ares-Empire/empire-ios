@@ -1,6 +1,6 @@
 # 239: Sorting, improvement round 4
 
-Status: running
+Status: merged 2026-11-07 (aresium 3bfc3f5; worked-on missed 100 -> 90, held back 73 -> 72, wrong unchanged; Patrik own-data unchanged)
 Repo: **aresium** · Worktree: `../aresium-239-sorting-round-4` (branch `codex/239-sorting-round-4`) · Model:
 `gpt-6-astra`, effort `high` (picked 2026-11-07: what is left is the long tail, where telling a general rule from one
 that only fits the test set takes judgment, and wrong must not rise; the weekly allowance is 28% used and the Codex
