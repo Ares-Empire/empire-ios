@@ -1,7 +1,7 @@
 # NN: <short title>
 
 Status: draft | running | merged | partly merged | dropped (one line, updated when it lands)
-Branch: `codex/NN-slug` · Worktree: `../empire-ios-NN-slug` · Model: `gpt-6.1-sol`, effort `high`
+Branch: `codex/NN-slug` · Worktree: `../empire-ios-NN-slug` · Model: `<model>`, effort `<effort>` (picked for this job, with the reason)
 
 ## Goal
 

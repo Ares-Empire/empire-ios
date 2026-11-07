@@ -69,11 +69,13 @@ shows this data) and the build is clearly bigger than the brief. Otherwise Claud
    uncommitted work) sit in `~/empire-ios` itself: aresync auto-commits and pushes that checkout.
 3. **Run** in the background (Claude is notified when it ends):
    ```
-   codex exec --dangerously-bypass-approvals-and-sandbox -m gpt-6.1-sol -c model_reasoning_effort=high \
+   codex exec --dangerously-bypass-approvals-and-sandbox -m <model> -c model_reasoning_effort=high \
      -C ../empire-ios-NN-slug -o codex-runs/NN-slug.md - < prompts/NN-slug.md
    ```
-   Models: `gpt-6.1-sol` builds (`xhigh` for tricky ones), `gpt-6-astra` council seats (uses the allowance
-   about 3× faster), `gpt-6-luna` trivial jobs. `-o` goes to `codex-runs/` (gitignored).
+   Model: pick per job (global CLAUDE.md → "Codex models: pick per task", Patrik 2026-11-07) and say which and why
+   in the brief. Always pass `-m`: the Mac's Codex default is not kept current. Past picks: `gpt-6.1-sol` for builds
+   (`xhigh` for tricky ones), `gpt-6-astra` for council seats (uses the allowance about 3× faster), `gpt-6-luna` for
+   trivial jobs. `-o` goes to `codex-runs/` (gitignored).
 4. **Check** (below), commit in the worktree, merge to `main` and push it, remove the worktree, set the brief's
    status line. Push as soon as work is merged, in every Empire repo; aresync's daily run is only the backstop
    (Patrik, 2026-10-25).
