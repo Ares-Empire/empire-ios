@@ -534,7 +534,8 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   (up to three side by side when they fit, the first `FormButtonStyle` primary, the others its `secondary` kind,
   outlined; an action has Done / Erledigt), a field for his own words on every card ("Or answer in your own words" /
   "Oder in eigenen Worten antworten", up to five lines, the send arrow once something is typed; Patrik 2026-11-07: "each
-  question should have a way for me to enter free text"; it replaced "Own answer…" and its sheet), then one quiet line
+  question should have a way for me to enter free text"; it replaced "Own answer…" and its sheet; build 11,
+  2026-11-07), then one quiet line
   Not needed / Ask in Claude ("Claude fragen", `https://claude.ai/code/<session>` through iOS's `openURL`); long press:
   Not needed, Ask in Claude. A typed answer stays in its field until the ask leaves the server's list, so Undo brings
   the card back with it. **Blocking asks** (`BoardItem.blocking`, `board ask --blocking`: the session cannot go on
