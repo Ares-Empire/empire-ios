@@ -31,7 +31,7 @@ struct EngineHostTests {
     @Test func bankFileErrorsKeepTheirCodeAndAreWorded() async throws {
         let engine = try PhoneTest.engine()
         let zip = Data([0x50, 0x4B, 0x03, 0x04, 0x00, 0x00])
-        await #expect(throws: EngineError.bankFile(code: "zip", message: "This is a ZIP archive; open it and import the files inside.")) {
+        await #expect(throws: EngineError.bankFile(code: "zip", message: "This ZIP archive is damaged or uses an unsupported ZIP format.")) {
             try await engine.readBankFile(zip, layouts: [])
         }
         await #expect(throws: EngineError.self) { try await engine.readBankFile(Data(), layouts: []) }
@@ -42,8 +42,9 @@ struct EngineHostTests {
             #expect(error.localizedDescription == "The file is empty.")
         }
         #expect(EngineError.bankFile(code: "zip", message: "").localizedDescription
-                == "Unzip the file first, then import what is inside.")
-        for code in ["empty", "noTable", "headerMismatch", "camt", "mt940", "unknown", "new-code"] {
+                == "This ZIP file is damaged or packed in a way Aresium can't read.")
+        for code in ["empty", "noTable", "headerMismatch", "camt", "mt940", "unknown", "new-code", "zipLimit", "zipEncrypted",
+                     "zipAccounts", "zipNoBankFile", "zipLayout", "xlsx", "xls"] {
             #expect(!ImportWording.bankFileProblem(code).isEmpty)
         }
     }

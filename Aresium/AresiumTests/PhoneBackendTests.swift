@@ -101,8 +101,21 @@ struct PhoneBackendTests {
         let zip = ImportFile(name: "Sparkasse.zip", data: Data([0x50, 0x4B, 0x03, 0x04, 1, 2, 3]))
         let results = try await phone.importFiles([zip, PhoneTest.fixture("dkb.csv")], auth: none)
         #expect(results.map(\.failed) == [true, false])
-        #expect(results.first?.displayMessage == "Sparkasse.zip: Unzip the file first, then import what is inside.")
+        #expect(results.first?.displayMessage == "Sparkasse.zip: This ZIP file is damaged or packed in a way Aresium can't read.")
         #expect(phone.importSummary(results).hasSuffix(" · 1 file failed"))
+    }
+
+    /// A Sparkasse-style ZIP of daily CAMT statements and a DKB export saved as Excel import like any bank file
+    /// (aresium brief 240; the made-up files are the engine's test set's `zip-camt.zip` and `xlsx-dkb.xlsx`).
+    @Test func zipAndExcelBankFilesImport() async throws {
+        let phone = try await PhoneTest.backend(chosen: ["groceries"])
+        let results = PhoneTest.phoneResults(try await phone.importFiles(
+            [PhoneTest.fixture("zip-camt.zip"), PhoneTest.fixture("xlsx-dkb.xlsx")], auth: none))
+        #expect(results.allSatisfy { $0.error == nil })
+        #expect(results.map(\.added) == [3, 3])
+        let again = PhoneTest.phoneResults(try await phone.importFiles([PhoneTest.fixture("xlsx-dkb.xlsx")], auth: none))
+        #expect(again.first?.added == 0 && again.first?.already == 3)
+        #expect(ImportWording.bankFileProblem("xls", language: .english).contains(".xlsx"))
     }
 
     // MARK: sorting and learning
@@ -285,7 +298,7 @@ struct PhoneBackendTests {
 
     @Test func importWordingSaysWhatHappened() {
         let results = [PhoneImportResult(name: "a.csv", added: 12, already: 3, sorted: 10, waiting: 2),
-                       PhoneImportResult(name: "b.zip", error: "Unzip the file first, then import what is inside.")]
+                       PhoneImportResult(name: "b.zip", error: "This ZIP file is damaged or packed in a way Aresium can't read.")]
         #expect(ImportWording.summary(results)
                 == "12 new · 3 already there · 10 sorted · 2 not sorted · 1 file failed")
         #expect(ImportWording.bankFileProblem("noTable") == "No table of payments was found in this file.")

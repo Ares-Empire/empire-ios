@@ -1203,6 +1203,16 @@
         }
       }
     },
+    "A file in this ZIP needs its columns checked. Unzip it and import that file on its own." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bei einer Datei in dieser ZIP müssen die Spalten geprüft werden. Entpacke sie und importiere diese Datei einzeln."
+          }
+        }
+      }
+    },
     "A file you exported from Aresium before" : {
       "localizations" : {
         "de" : {
@@ -5166,6 +5176,16 @@
         }
       }
     },
+    "Old Excel files (.xls) can't be read. Export as CSV, or save it as .xlsx." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alte Excel-Dateien (.xls) können nicht gelesen werden. Exportiere als CSV oder speichere sie als .xlsx."
+          }
+        }
+      }
+    },
     "On" : {
       "localizations" : {
         "de" : {
@@ -6832,12 +6852,32 @@
         }
       }
     },
+    "There is no bank file in this ZIP file." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In dieser ZIP-Datei ist keine Bankdatei."
+          }
+        }
+      }
+    },
     "These messages are made on this iPhone. Nothing is sent anywhere." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Diese Mitteilungen entstehen auf diesem iPhone. Nichts wird irgendwohin gesendet."
+          }
+        }
+      }
+    },
+    "This Excel file could not be read. Export it as CSV, or save it again as .xlsx." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Excel-Datei konnte nicht gelesen werden. Exportiere sie als CSV oder speichere sie neu als .xlsx."
           }
         }
       }
@@ -6858,6 +6898,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Diese XML-Datei ist kein Kontoauszug, den Aresium lesen kann."
+          }
+        }
+      }
+    },
+    "This ZIP file holds more than one account. Export one account at a time." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese ZIP-Datei enthält mehr als ein Konto. Exportiere ein Konto nach dem anderen."
+          }
+        }
+      }
+    },
+    "This ZIP file is damaged or packed in a way Aresium can't read." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese ZIP-Datei ist beschädigt oder so gepackt, dass Aresium sie nicht lesen kann."
+          }
+        }
+      }
+    },
+    "This ZIP file is protected with a password. Export the bank file without one." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese ZIP-Datei ist mit einem Passwort geschützt. Exportiere die Bankdatei ohne Passwort."
+          }
+        }
+      }
+    },
+    "This ZIP file is too big: over 50 MB unpacked or 2,000 files." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese ZIP-Datei ist zu groß: über 50 MB entpackt oder 2.000 Dateien."
           }
         }
       }
@@ -7294,16 +7374,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ abwählen?"
-          }
-        }
-      }
-    },
-    "Unzip the file first, then import what is inside." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Entpack die Datei zuerst und importier dann, was darin ist."
           }
         }
       }

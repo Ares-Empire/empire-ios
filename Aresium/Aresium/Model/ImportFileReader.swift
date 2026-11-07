@@ -26,8 +26,9 @@ enum ImportFileReader {
     nonisolated static let maximumBytes = 25 * 1024 * 1024
     /// Server mode: bank and PayPal CSVs and CAMT XML, as the server reads them.
     nonisolated static let serverExtensions: Set<String> = ["csv", "xml"]
-    /// Phone mode: also MT940 (`.sta`, `.mt940`, `.txt`) and ZIP, which the engine refuses with "unzip it first".
-    nonisolated static let phoneExtensions: Set<String> = ["csv", "xml", "sta", "mt940", "txt", "zip"]
+    /// Phone mode: also MT940 (`.sta`, `.mt940`, `.txt`), ZIP and Excel, which the engine reads (`.xls` it refuses with
+    /// its own words).
+    nonisolated static let phoneExtensions: Set<String> = ["csv", "xml", "sta", "mt940", "txt", "zip", "xlsx", "xls"]
 
     nonisolated static func read(_ urls: [URL], source: ImportFileSource = .picker,
                                  extensions: Set<String> = serverExtensions,

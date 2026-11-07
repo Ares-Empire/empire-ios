@@ -8,16 +8,20 @@ import UniformTypeIdentifiers
 // Ink only: the colours are the categories' own and the dashboard's expense and income. The logic is in Model/
 // (ModeStore, CategoryPickerModel, PhoneDataModel). An unknown bank's file has its own window (FileCheck*.swift).
 
-/// The file types phone mode imports: bank CSVs, CAMT XML, MT940 (`.sta`, `.mt940`, `.txt`) and ZIP (which gets "unzip
-/// it first").
+/// The file types phone mode imports: bank CSVs, CAMT XML, MT940 (`.sta`, `.mt940`, `.txt`), ZIP (a bank's statements
+/// packed together, as Sparkassen send CAMT) and Excel (`.xlsx`; an old `.xls` is taken so the engine can say to save it
+/// as `.xlsx` or CSV, rather than the picker greying it out).
 enum PhoneImportTypes {
-    static var all: [UTType] { [.commaSeparatedText, .xml, .mt940, .plainText, .zip] }
+    static var all: [UTType] { [.commaSeparatedText, .xml, .mt940, .plainText, .zip, .xlsx, .xls] }
 }
 
 extension UTType {
     /// MT940 statements (`.sta`, `.mt940`), declared in Info.plist (`UTImportedTypeDeclarations`), so the share sheet
     /// offers Aresium for them.
     static let mt940 = UTType(importedAs: "de.ares-empire.aresium.mt940", conformingTo: .plainText)
+    /// Excel workbooks: the system's own types (`UTType` has no named constants for them).
+    static let xlsx = UTType("org.openxmlformats.spreadsheetml.sheet") ?? UTType(filenameExtension: "xlsx") ?? .data
+    static let xls = UTType("com.microsoft.excel.xls") ?? UTType(filenameExtension: "xls") ?? .data
 }
 
 /// The line between rows that start with a 38 pt tile: it begins under the row's words, as iOS's own lists do.
