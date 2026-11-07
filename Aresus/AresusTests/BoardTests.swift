@@ -6,7 +6,9 @@ import Testing
 struct BoardTests {
     @Test func decodesContractSample() throws {
         let board: BoardWaiting = try sample("board-waiting")
+        // The server lists a blocking ask (the session waits for it) first, then by due date.
         #expect(board.asks.map(\.id) == [1, 2])
+        #expect(board.asks.map(\.blocking) == [true, false])
         #expect(board.asks[0].options == ["Ship it", "Wait"])
         #expect(board.asks[0].due == "2026-11-07")
         #expect(board.asks[1].options.isEmpty)
@@ -25,13 +27,17 @@ struct BoardTests {
         var closed = original[0]; closed["id"] = 13; closed["state"] = "done"
         var sparse = original[0]
         sparse["id"] = 14
-        for key in ["why", "session", "due", "since", "sent_to", "sent", "answer", "key"] { sparse.removeValue(forKey: key) }
+        for key in ["why", "session", "due", "since", "sent_to", "sent", "answer", "key", "blocking"] {
+            sparse.removeValue(forKey: key)
+        }
         json["asks"] = [unknownKind, unknownState, work, closed] + original + [sparse]
         json["answered"] = [unknownKind, unknownState, work, closed]
         let decoded = try AresusJSON.decoder().decode(BoardWaiting.self, from: JSONSerialization.data(withJSONObject: json))
         #expect(decoded.asks.map(\.id) == [1, 2, 14])
         #expect(decoded.answered.isEmpty)
         #expect(decoded.asks.last?.why == nil)
+        // An older server sends no `blocking`: not blocking.
+        #expect(decoded.asks.last?.blocking == false)
     }
 
     @Test func answeredSortNewestFirstButAsksKeepServerOrder() throws {

@@ -4,7 +4,9 @@ import SwiftUI
 struct BoardScreen: View {
     let board: BoardStore
     let openSettings: () -> Void
-    @State private var ownAnswer: BoardItem?
+    /// What Patrik typed per ask. Kept until the ask leaves the server's list, so Undo brings it back with the card.
+    @State private var drafts: [Int: String] = [:]
+    @FocusState private var focused: Int?
     @Environment(\.openURL) private var openURL
 
     var body: some View {
@@ -41,7 +43,7 @@ struct BoardScreen: View {
                         if !waiting.answered.isEmpty {
                             SectionTitle(text: String(localized: "Answered")).padding(.top, 12)
                             answeredCard(waiting.answered)
-                            quiet(String(localized: "Each session gets its answer the next time it runs."))
+                            quiet(String(localized: "Sessions that are running get their answer right away; the others the next time they run."))
                         }
                         if waiting.unowned.count > 0 { quiet(waiting.unowned.line()).padding(.top, 12) }
                     } else if board.error == nil {
@@ -52,25 +54,30 @@ struct BoardScreen: View {
             }
         }
         .scrollIndicators(.hidden)
+        .scrollDismissesKeyboard(.interactively)
         .refreshable { await board.refresh() }
         .background { ProvinceWall(accent: .aresus) }
         .toolbar(.hidden, for: .navigationBar)
-        .sheet(item: $ownAnswer) { item in
-            BoardOwnAnswerSheet(item: item) { answer in board.perform(.answer(answer), on: item) }
+        .onChange(of: board.waiting?.asks.map(\.id)) { _, ids in
+            let open = Set(ids ?? [])
+            drafts = drafts.filter { open.contains($0.key) }
         }
         #if DEBUG
         .task(id: board.waiting != nil) {
-            guard ownAnswer == nil, let id = LaunchArguments.value("-openOwnAnswer").flatMap(Int.init),
-                  let item = board.asks.first(where: { $0.id == id }) else { return }
-            ownAnswer = item
+            // `-boardOwnWords <text>` fills the first ask's field, for screenshots (the field keeps room for more
+            // lines than it shows when filled before its first layout; typed text sizes it exactly).
+            guard let text = LaunchArguments.value("-boardOwnWords"), let first = board.asks.first else { return }
+            drafts[first.id] = text
         }
         #endif
     }
 
-    /// One ask: the question, why, how long it waited; the answers (two or three short ones side by side, the first
-    /// filled, the others outlined; else one under the other); then one quiet line of the rarer actions.
+    /// One ask: "Claude is waiting" when the session stopped for it; the question, why, how long it waited; the
+    /// answers (two or three short ones side by side, the first filled, the others outlined; else one under the
+    /// other); a field for his own words; then one quiet line of the rarer actions.
     private func askCard(_ item: BoardItem) -> some View {
         VStack(alignment: .leading, spacing: 0) {
+            if item.blocking { waitingLabel.padding(.bottom, 8) }
             Text(verbatim: item.text).font(AppFont.text(17, weight: .semibold)).foregroundStyle(Ink.primary)
                 .fixedSize(horizontal: false, vertical: true)
             if let why = item.why, !why.isEmpty {
@@ -83,6 +90,7 @@ struct BoardScreen: View {
                     .foregroundStyle(StatusTone.issue.color(.aresus)).padding(.top, 8)
             }
             answers(item).padding(.top, 14)
+            ownWords(item).padding(.top, 10)
             footer(item).padding(.top, 2)
         }
         .padding(.horizontal, 16).padding(.top, 16).padding(.bottom, 4)
@@ -113,6 +121,51 @@ struct BoardScreen: View {
         }
     }
 
+    /// A session that cannot go on without the answer (`board ask --blocking`): a small caps line in the accent, as
+    /// the section headings, not the issue red: it asks for attention, nothing is wrong.
+    private var waitingLabel: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "hourglass").font(.system(size: 11, weight: .semibold))
+            Text(verbatim: String(localized: "Claude is waiting").uppercased())
+                .font(AppFont.text(11, weight: .semibold)).tracking(1.3)
+        }
+        .foregroundStyle(AppAccent.aresus.color)
+        .accessibilityElement(children: .combine)
+    }
+
+    /// Patrik's own words, on every ask (Patrik, 2026-11-07: "a way for me to enter free text"): a field that grows to
+    /// five lines; the send arrow shows once there is something to send. It goes the way a tapped answer goes (the undo
+    /// bar first), and the session gets the words exactly as typed, trimmed.
+    private func ownWords(_ item: BoardItem) -> some View {
+        let draft = Binding(get: { drafts[item.id] ?? "" }, set: { drafts[item.id] = $0 })
+        let answer = BoardWords.ownAnswer(draft.wrappedValue)
+        return HStack(alignment: .bottom, spacing: 6) {
+            TextField("", text: draft, prompt: Text("Or answer in your own words").foregroundStyle(Ink.muted),
+                      axis: .vertical)
+                .lineLimit(1...5)
+                .font(AppFont.text(15)).foregroundStyle(Ink.primary)
+                .focused($focused, equals: item.id)
+                .padding(.vertical, 12)
+                .accessibilityIdentifier("board-own-answer-\(item.id)")
+            if let answer {
+                Button {
+                    focused = nil
+                    board.perform(.answer(answer), on: item)
+                } label: {
+                    Image(systemName: "arrow.up.circle.fill").font(.system(size: 28))
+                        .foregroundStyle(AppAccent.aresus.color)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text("Send"))
+                .padding(.bottom, 6)
+                .transition(.scale(scale: 0.6).combined(with: .opacity))
+            }
+        }
+        .padding(.leading, 14).padding(.trailing, answer == nil ? 14 : 6)
+        .background(Ink.field, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .animation(.easeOut(duration: 0.15), value: answer == nil)
+    }
+
     private func optionButtons(_ item: BoardItem) -> some View {
         ForEach(Array(item.options.enumerated()), id: \.offset) { index, option in
             Button { board.perform(.answer(option), on: item) } label: { Text(verbatim: option) }
@@ -137,7 +190,6 @@ struct BoardScreen: View {
     }
 
     @ViewBuilder private func footerActions(_ item: BoardItem) -> some View {
-        Button { ownAnswer = item } label: { Text("Own answer…").lineLimit(1).fixedSize() }.foregroundStyle(Ink.muted).frame(minHeight: 40).contentShape(Rectangle())
         Button { board.perform(.drop, on: item) } label: { Text("Not needed").lineLimit(1).fixedSize() }
             .foregroundStyle(Ink.muted).frame(minHeight: 40)
             .contentShape(Rectangle())
@@ -178,38 +230,5 @@ struct BoardScreen: View {
     private func quiet(_ text: String) -> some View {
         Text(verbatim: text).font(AppFont.text(12)).foregroundStyle(Ink.muted)
             .fixedSize(horizontal: false, vertical: true)
-    }
-}
-
-private struct BoardOwnAnswerSheet: View {
-    let item: BoardItem
-    let send: (String) -> Void
-    @State private var text = ""
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        NavigationStack {
-            VStack(alignment: .leading, spacing: 18) {
-                Text(verbatim: item.text).font(AppFont.text(17, weight: .semibold)).foregroundStyle(Ink.primary)
-                TextField("Your answer", text: $text, axis: .vertical)
-                    .lineLimit(5...12).font(AppFont.text(16)).foregroundStyle(Ink.primary)
-                    .padding(14).background(Ink.field, in: RoundedRectangle(cornerRadius: 12))
-                    .accessibilityIdentifier("board-own-answer")
-                Button("Send") {
-                    guard let answer = BoardWords.ownAnswer(text) else { return }
-                    send(answer)
-                    dismiss()
-                }
-                .buttonStyle(FormButtonStyle(accent: .aresus)).disabled(BoardWords.ownAnswer(text) == nil)
-                Spacer(minLength: 0)
-            }
-            .padding(18)
-            .background { ProvinceWall(accent: .aresus) }
-            .navigationTitle(Text("Own answer…"))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
-        }
-        .tint(Ink.primary)
-        .presentationBackground(Ink.background)
     }
 }

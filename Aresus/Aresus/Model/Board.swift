@@ -14,6 +14,8 @@ nonisolated struct BoardItem: Codable, Equatable, Identifiable, Sendable {
     var due: String?
     var source: String
     var session: String?
+    /// The session cannot go on until Patrik answers (since 2026-11-07; absent from an older server: false).
+    var blocking: Bool
     var key: String?
     var since: Date?
     var state: State
@@ -24,7 +26,8 @@ nonisolated struct BoardItem: Codable, Equatable, Identifiable, Sendable {
     var updated: Date
 
     enum CodingKeys: String, CodingKey {
-        case id, kind, topic, text, why, options, due, source, session, key, since, state, answer, sent, created, updated
+        case id, kind, topic, text, why, options, due, source, session, blocking, key, since, state, answer, sent, created
+        case updated
         case sentTo = "sent_to"
     }
 
@@ -40,6 +43,7 @@ nonisolated struct BoardItem: Codable, Equatable, Identifiable, Sendable {
         due = try? c.decodeIfPresent(String.self, forKey: .due)
         source = try c.decode(String.self, forKey: .source)
         session = try? c.decodeIfPresent(String.self, forKey: .session)
+        blocking = (try? c.decodeIfPresent(Bool.self, forKey: .blocking)) ?? false
         key = try? c.decodeIfPresent(String.self, forKey: .key)
         since = try? c.decodeIfPresent(Date.self, forKey: .since)
         answer = try? c.decodeIfPresent(String.self, forKey: .answer)
