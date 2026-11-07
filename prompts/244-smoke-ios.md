@@ -1,6 +1,6 @@
 # 244: Tap-through smoke tests for all five apps (AXe, sample data)
 
-Status: running (Codex, started 2026-11-07)
+Status: merged 2026-11-07 (Claude's runs: 5/5 de/dark 496 s, 5/5 en/light 457 s)
 Branch: `codex/244-smoke-ios` · Worktree: `../empire-ios-244-smoke-ios` · Model: `gpt-6.1-sol`, effort `high` (bounded
 automation on a known tool; the care goes into waits and assertions that really prove a tap worked, not into hard
 reasoning)
