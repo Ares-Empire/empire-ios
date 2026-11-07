@@ -325,6 +325,9 @@ struct QuickNoteSheet: View {
                         .padding(12).glassCard()
                     Text("Goes to the vault's Inbox as you write it; Claude works it in later.")
                         .font(AppFont.text(12)).foregroundStyle(Ink.muted)
+                    if let problem = store.quickNoteQueueProblem {
+                        Text(problem).font(AppFont.text(12)).foregroundStyle(StatusTone.issue.color(Look.accent))
+                    }
                     if !store.pendingQuickNotes.isEmpty {
                         SectionHeading(text: String(localized: "Not sent yet")).padding(.top, 10)
                         ForEach(store.pendingQuickNotes) { note in PendingRow(note: note) }

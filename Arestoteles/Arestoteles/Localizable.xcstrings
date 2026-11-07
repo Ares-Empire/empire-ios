@@ -1322,6 +1322,22 @@
         }
       }
     },
+    "Sent, but this iPhone could not update its list; the note may be sent again after a restart: %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gesendet, aber dieses iPhone konnte seine Liste nicht aktualisieren; nach einem Neustart wird die Notiz vielleicht noch einmal gesendet: %@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sent, but this iPhone could not update its list; the note may be sent again after a restart: %@"
+          }
+        }
+      }
+    },
     "Session" : {
       "localizations" : {
         "de" : {
@@ -1452,6 +1468,22 @@
         }
       }
     },
+    "This iPhone could not update its list of notes: %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieses iPhone konnte seine Liste der Notizen nicht aktualisieren: %@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This iPhone could not update its list of notes: %@"
+          }
+        }
+      }
+    },
     "This is no longer in the vault." : {
       "localizations" : {
         "de" : {
@@ -1468,6 +1500,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Diese Notiz wurde woanders geändert, seit du sie geöffnet hast. Dein Text ist noch da: Kopier ihn, wenn du ihn brauchst, dann lade die aktuelle Version."
+          }
+        }
+      }
+    },
+    "This note could not be deleted on this iPhone: %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Notiz konnte auf diesem iPhone nicht gelöscht werden: %@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This note could not be deleted on this iPhone: %@"
           }
         }
       }

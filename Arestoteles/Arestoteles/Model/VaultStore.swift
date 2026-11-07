@@ -66,6 +66,12 @@ final class VaultStore {
     private(set) var operationsRunning = 0
     private(set) var pendingQuickNotes: [PendingQuickNote] = []
     private(set) var isFlushing = false
+    /// Also shown inside the quick-note sheet, which covers the tabs' notice.
+    private(set) var quickNoteQueueProblem: String?
+    private var quickNotesNeedSave = false
+    // If the app is killed after the server accepts a note but before this queue is saved, it can be replayed on
+    // restart. Exactly-once delivery would need the server to accept a note id.
+    private var quickNotesMayReplay = false
 
     /// The last thing worth saying about an edit, shown briefly over the tabs.
     private(set) var notice: Notice?
@@ -208,6 +214,7 @@ final class VaultStore {
                 renewsLogin: Bool = true) async {
         await loadingSettled()
         guard !foregroundUpdating else { return }
+        retryQuickNotesSave()
         foregroundUpdating = true
         // Not tied to the login it started with: renewing a waiting login starts a new session on purpose.
         defer { foregroundUpdating = false }
@@ -470,10 +477,10 @@ final class VaultStore {
         let note = PendingQuickNote(text: text, created: now, about: about, kind: kind, version: version)
         pendingQuickNotes.append(note)
         do {
-            try persistence.saveQuickNotes(pendingQuickNotes)
+            try persistQuickNotes(pendingQuickNotes)
         } catch {
             pendingQuickNotes.removeAll { $0.id == note.id }
-            show(error.localizedDescription, .problem)
+            reportQueueWriteFailure(error.localizedDescription)
             return .failed(error.localizedDescription)
         }
         startQuickNotes()
@@ -489,9 +496,9 @@ final class VaultStore {
         confirmed[index].version = version
         confirmed[index].problem = nil
         do {
-            try persistence.saveQuickNotes(confirmed)
+            try persistQuickNotes(confirmed)
         } catch {
-            show(error.localizedDescription, .problem)
+            reportQueueWriteFailure(String(localized: "This iPhone could not update its list of notes: \(error.localizedDescription)"))
             return false
         }
         pendingQuickNotes = confirmed
@@ -500,10 +507,18 @@ final class VaultStore {
     }
 
     /// A quick note the server refused (or one Patrik no longer wants sent) is deleted from the phone.
-    func deleteQuickNote(_ id: UUID) {
+    @discardableResult
+    func deleteQuickNote(_ id: UUID) -> Bool {
+        let remaining = pendingQuickNotes.filter { $0.id != id }
+        do {
+            try persistQuickNotes(remaining)
+        } catch {
+            reportQueueWriteFailure(String(localized: "This note could not be deleted on this iPhone: \(error.localizedDescription)"))
+            return false
+        }
         failedQuickNotes.remove(id)
-        pendingQuickNotes.removeAll { $0.id == id }
-        saveQuickNotes()
+        pendingQuickNotes = remaining
+        return true
     }
 
     /// Starts a store-owned task. Its lifetime is independent of the sheet's task or dismissal.
@@ -540,6 +555,8 @@ final class VaultStore {
     /// Sends in order, stopping at a connection/server failure. Refused notes stay aside.
     private func runQuickNotes() async {
         await loadingSettled()
+        guard !Task.isCancelled else { return }
+        retryQuickNotesSave()
         guard !Task.isCancelled, !isFlushing,
               pendingQuickNotes.contains(where: { $0.problem == nil && !$0.needsConfirmation }) else { return }
         guard canAct else {
@@ -569,16 +586,18 @@ final class VaultStore {
             guard isCurrent(context) else { return false }
             pendingQuickNotes.removeAll { $0.id == note.id }
             failedQuickNotes.remove(note.id)
+            quickNotesMayReplay = true
             saveQuickNotes()
             await accept(result, context: context, revision: nextVaultRevision())
+            if isCurrent(context), let problem = quickNoteQueueProblem { show(problem, .problem) }
             return true
         } catch VaultAPIError.conflict where note.about != nil {
             guard isCurrent(context) else { return false }
             if let index = pendingQuickNotes.firstIndex(where: { $0.id == note.id }) {
                 pendingQuickNotes[index].problem = String(localized: "This changed elsewhere.")
             }
-            saveQuickNotes()
             show(String(localized: "This changed elsewhere."), .problem)
+            saveQuickNotes()
             return true
         } catch let VaultAPIError.invalid(message) {
             guard isCurrent(context) else { return false }
@@ -586,8 +605,8 @@ final class VaultStore {
             if let index = pendingQuickNotes.firstIndex(where: { $0.id == note.id }) {
                 pendingQuickNotes[index].problem = message
             }
-            saveQuickNotes()
             show(String(localized: "A quick note was not saved: \(message)"), .problem)
+            saveQuickNotes()
             return true
         } catch {
             session.handleAuthFailure(error, generation: context.session, token: token)
@@ -599,8 +618,33 @@ final class VaultStore {
     }
 
     private func saveQuickNotes() {
-        // Kept in memory regardless; a failed write only loses the queue if the app is closed before it is sent.
-        try? persistence.saveQuickNotes(pendingQuickNotes)
+        // Server outcomes and account resets take effect in memory even when the disk must catch up later.
+        quickNotesNeedSave = true
+        do {
+            try persistQuickNotes(pendingQuickNotes)
+        } catch {
+            let message = quickNotesMayReplay
+                ? String(localized: "Sent, but this iPhone could not update its list; the note may be sent again after a restart: \(error.localizedDescription)")
+                : String(localized: "This iPhone could not update its list of notes: \(error.localizedDescription)")
+            reportQueueWriteFailure(message)
+        }
+    }
+
+    private func retryQuickNotesSave() {
+        if quickNotesNeedSave { saveQuickNotes() }
+    }
+
+    /// Every successful queue write includes any earlier server outcomes, so it also finishes their retry.
+    private func persistQuickNotes(_ notes: [PendingQuickNote]) throws {
+        try persistence.saveQuickNotes(notes)
+        quickNotesNeedSave = false
+        quickNotesMayReplay = false
+        quickNoteQueueProblem = nil
+    }
+
+    private func reportQueueWriteFailure(_ message: String) {
+        quickNoteQueueProblem = message
+        show(message, .problem)
     }
 
     // MARK: - notices
@@ -647,6 +691,7 @@ final class VaultStore {
         isOffline = false
         lastRefresh = nil
         pendingQuickNotes = []
+        quickNotesMayReplay = false
         isFlushing = false
         foregroundUpdating = false
         notice = nil
