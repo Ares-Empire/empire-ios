@@ -1,6 +1,6 @@
 # 242: iPhone unit tests reliable enough for CI, one command, and a GitHub workflow
 
-Status: draft
+Status: running (Codex, started 2026-11-07)
 Branch: `codex/242-unit-ci` · Worktree: `../empire-ios-242-unit-ci` · Model: `gpt-6-astra`, effort `high` (the core is
 diagnosing tests that fail only under load and telling a slow machine from a real ordering bug; that is the hardest
 diagnostic work in this series and worth Astra's higher allowance use; the script and workflow are routine)
