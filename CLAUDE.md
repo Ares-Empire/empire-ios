@@ -842,7 +842,7 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   €400–450, Kleinanzeigen and eBay), 31 cheap, 30 expensive, an invented 43 at €95 unusually cheap; hunt 5 few; hunt 4
   none. DEBUG `-sampleNoPrices` (as a server from before it), `-openHunt <id> -scrollTo prices`. Tests:
   `AskingPricesTests`, `ServerSamplesTests` (the server's four `item-price-*` samples). Screenshots:
-  `docs/build-2026-11-07/256/`.
+  `build/256-*.png`.
   **The shared tour pieces** (`Shared/Design/TourPieces.swift`, moved from Aresium's `TourScreens.swift` in brief 139,
   Aresium's look unchanged): `TourGuide` (what a tour points at, `\.tourGuide`), `tourSpot` (each app wraps it as
   `tourAnchor` with its own spots), `tourSpotlight` (the veil and ring, around several spots together when a step names
