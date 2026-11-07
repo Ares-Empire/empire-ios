@@ -140,6 +140,9 @@ struct SampleContent {
     var used: [Int: Set<Int>] = [:]
     /// What a product's preview finds (the server's sample), named after the words asked.
     var productPreview: ProductPreview? = nil
+    /// Thing searches' asking prices, by hunt id (brief 256); a thing search without one answers 404, as a server from
+    /// before them.
+    var priceRecords: [Int: ItemPriceSummary] = [:]
 
     /// The contract's sample files (copies of the server's `docs/samples`), their timestamps moved so the last scan was
     /// 40 s before `now`.
@@ -207,6 +210,9 @@ final class SampleBackend: ArestemisBackend {
         /// -sampleRead <id,id>: listings already opened (read, no dot, not in "● 3 NEW", out of New), the latest opened
         /// first: the first an hour before `now`, each next one three hours earlier (Recently viewed's order, brief 182).
         var read: [Int] = []
+        /// Invented asking prices and verdicts (`PriceRecordSample`, brief 256): on with `-sampleData` unless
+        /// `-sampleNoPrices`; off in the tests unless asked.
+        var priceRecords = false
     }
 
     private var base: Overview
@@ -222,6 +228,8 @@ final class SampleBackend: ArestemisBackend {
     private let usedIDs: [Int: Set<Int>]
     /// What a product's preview finds.
     private let productFound: ProductPreview?
+    /// Thing searches' asking prices, by hunt id.
+    private let priceRecordsByHunt: [Int: ItemPriceSummary]
     private var nextHuntID: Int
     private var matches: [Match]
     private var rejectedItems: [Rejected]
@@ -247,6 +255,9 @@ final class SampleBackend: ArestemisBackend {
         }
         if LaunchArguments.current.contains("-shippingUnknownSample") {
             content = try FulfillmentSample.unknownShipping(content, now: now)
+        }
+        if options.priceRecords {
+            content = try PriceRecordSample.content(content, now: now)
         }
         #endif
         try self.init(content: content, options: options, now: now)
@@ -292,6 +303,7 @@ final class SampleBackend: ArestemisBackend {
         histories = content.histories
         offersByHunt = content.offers
         productFound = content.productPreview
+        priceRecordsByHunt = content.priceRecords
         nextHuntID = (huntValues.map(\.id).max() ?? 0) + 1
         if let read = options.watchRead, let id = huntValues.filter({ $0.kind == .watch }).dropFirst().first?.id,
            let page = pages[id] {
@@ -694,6 +706,14 @@ final class SampleBackend: ArestemisBackend {
     }
 
     /// A monitor's history over the window, from its sample year; the lowest and highest in euros, as the server.
+    /// A thing search's asking prices; 404 for any other hunt, and for a thing search without a record (the samples of a
+    /// server from before them).
+    func priceRecord(hunt id: Int) async throws -> ItemPriceSummary {
+        let index = try huntIndex(id)
+        guard huntValues[index].kind == .item, let record = priceRecordsByHunt[id] else { throw HTTPError.server(404, nil) }
+        return record
+    }
+
     func prices(hunt id: Int, days: Int) async throws -> Prices {
         let index = try huntIndex(id)
         guard huntValues[index].search.price?.history == true else { throw HTTPError.server(404, nil) }

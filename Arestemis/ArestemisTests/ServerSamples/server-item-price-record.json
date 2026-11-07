@@ -1,0 +1,66 @@
+{
+  "hunt_id": 12,
+  "currency": "EUR",
+  "days": 30,
+  "since": "2026-10-08T12:00:00Z",
+  "until": "2026-11-07T12:00:00Z",
+  "overall": {
+    "source": null,
+    "count": 16,
+    "median": 26,
+    "q25": 23.5,
+    "q75": 30,
+    "cheapest_7d": 22,
+    "weekly_medians": [
+      {
+        "week_start": "2026-10-19T00:00:00Z",
+        "count": 8,
+        "median": 25
+      },
+      {
+        "week_start": "2026-11-02T00:00:00Z",
+        "count": 8,
+        "median": 27
+      }
+    ],
+    "trend": "up",
+    "display": {
+      "en": "16 fitting listings · Usually €23.50–€30.00 asked · Cheapest in the last 7 days: €22.00 · Weekly median rising",
+      "de": "16 passende Angebote · Üblicher Angebotspreis 23,50 €–30,00 € · Günstigstes Angebot der letzten 7 Tage: 22,00 € · Wöchentlicher Median steigt"
+    }
+  },
+  "sites": [
+    {
+      "source": "kleinanzeigen",
+      "count": 8,
+      "median": 25,
+      "q25": 21.5,
+      "q75": 28.5,
+      "cheapest_7d": null,
+      "weekly_medians": [],
+      "trend": null,
+      "display": {
+        "en": "8 fitting listings · Usually €21.50–€28.50 asked",
+        "de": "8 passende Angebote · Üblicher Angebotspreis 21,50 €–28,50 €"
+      }
+    },
+    {
+      "source": "ebay",
+      "count": 8,
+      "median": 27,
+      "q25": 24,
+      "q75": 30.5,
+      "cheapest_7d": 22,
+      "weekly_medians": [],
+      "trend": null,
+      "display": {
+        "en": "8 fitting listings · Usually €24.00–€30.50 asked · Cheapest in the last 7 days: €22.00",
+        "de": "8 passende Angebote · Üblicher Angebotspreis 24,00 €–30,50 € · Günstigstes Angebot der letzten 7 Tage: 22,00 €"
+      }
+    }
+  ],
+  "note": {
+    "en": "Asking prices of fitting listings within this search’s price limits (including VB allowance), without shipping or buyer protection. These are not sale prices.",
+    "de": "Angebotspreise passender Angebote innerhalb der Preisgrenzen dieser Suche (einschließlich VB-Spielraum), ohne Versand oder Käuferschutz. Das sind keine Verkaufspreise."
+  }
+}

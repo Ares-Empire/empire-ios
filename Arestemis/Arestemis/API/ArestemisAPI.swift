@@ -25,6 +25,9 @@ protocol ArestemisBackend {
     func offers(hunt id: Int) async throws -> PriceOffers
     /// `GET /hunts/{id}/prices?days=`: a price monitor's history over 30, 90 or 365 days (404 while its history is off).
     func prices(hunt id: Int, days: Int) async throws -> Prices
+    /// `GET /hunts/{id}/price-record` (brief 256; the server's brief 254): a thing search's asking prices of the last 30
+    /// days, from what the server stored (no site is read). 404 for other kinds and on a server from before it.
+    func priceRecord(hunt id: Int) async throws -> ItemPriceSummary
     func places(query: String) async throws -> [Place]
     func used(hunt: Int, state: [MatchState]?, limit: Int, before: Int?) async throws -> MatchPage
     /// `GET /matches?kind=price`: listing kind is selected by the server before pagination.
@@ -126,6 +129,8 @@ struct ArestemisAPI: ArestemisBackend {
     }
 
     func offers(hunt id: Int) async throws -> PriceOffers { try await send(.get, "hunts/\(id)/offers") }
+
+    func priceRecord(hunt id: Int) async throws -> ItemPriceSummary { try await send(.get, "hunts/\(id)/price-record") }
 
     func used(hunt: Int, state: [MatchState]?, limit: Int, before: Int?) async throws -> MatchPage {
         var query = [URLQueryItem(name: "limit", value: String(limit))]

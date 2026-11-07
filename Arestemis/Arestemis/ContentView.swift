@@ -57,7 +57,8 @@ struct ContentView: View {
                                                                              spelling: options.spelling,
                                                                              suggestedPage: options.suggestedPage,
                                                                              productState: options.productState,
-                                                                             read: options.read)) {
+                                                                             read: options.read,
+                                                                             priceRecords: !options.noPrices)) {
             return ArestemisStore(session: session, backend: sample, sample: true)
         }
         #endif

@@ -400,6 +400,46 @@
         }
       }
     },
+    "%lld listings" : {
+      "localizations" : {
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Angebot"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Angebote"
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld listing"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld listings"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld min ago" : {
       "localizations" : {
         "de" : {
@@ -1056,6 +1096,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Angefragt"
+          }
+        }
+      }
+    },
+    "Asking prices" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Angebotspreise"
           }
         }
       }
@@ -2367,6 +2417,16 @@
         }
       }
     },
+    "Last %lld days" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Letzte %lld Tage"
+          }
+        }
+      }
+    },
     "Last 30 days" : {
       "localizations" : {
         "de" : {
@@ -2963,6 +3023,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kein Ort gefunden."
+          }
+        }
+      }
+    },
+    "No prices yet. They come with the first fitting listings." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch keine Preise. Sie kommen mit den ersten passenden Angeboten."
           }
         }
       }

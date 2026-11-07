@@ -4,7 +4,8 @@ import SwiftUI
 /// chevron; the accent "new" dot in the corner until the match has been opened (read on the server since brief 180). A thing for sale shows its price big
 /// (with "VB" or how far it lies over the maximum beside it; an auction its current bid, "bid" and the time left), its
 /// title, one facts line (condition · shipping or pickup with the distance · place), and "Online at start" for one found
-/// when the hunt started. A change on a watched page (brief 131) has no figure: the server's summary is its title, then
+/// when the hunt started; under its price, when the server has one, how that price compares with the search's other
+/// fitting offers ("Cheap", "Expensive", "Unusually cheap – check carefully", brief 256). A change on a watched page (brief 131) has no figure: the server's summary is its title, then
 /// the host and when it was found ("Already true when the watch started" for one the start read found). A price
 /// monitor's alarm (brief 137) is its sentence, "Nintendo Switch 2: €449.00 (was €483.99)" or "… is back in stock", then
 /// the shop and when. In the search
@@ -130,6 +131,10 @@ struct MatchRow: View {
                 }
             }
             .lineLimit(1)
+            // How its asking price compares with the search's other fitting offers (brief 256); most have none.
+            if let verdict = PriceVerdictWords.shown(for: match, kind: kind) {
+                PriceVerdictLabel(words: verdict).padding(.bottom, 1)
+            }
             if thing {
                 Text(match.listing.title).font(AppFont.text(14, weight: .medium)).foregroundStyle(Ink.primary)
                     .lineLimit(1)
