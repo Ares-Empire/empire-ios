@@ -5,7 +5,7 @@ Branch: `claude/157-price-everywhere` · Worktree: `../empire-ios-157-price-ever
 
 ## Goal
 
-Patrik (2026-11-03): "I wanna search for new AirPods Max gen 2 price monitor style but not on a specific page. …
+Patrik (2026-11-03) wants a price monitor for one product that is not tied to a specific page: "…
 Pick an item and it monitors multiple pages that either all have it or all could have it for either alerts or simply
 monitors." His decisions on the plan (https://claude.ai/artifact/FBXeut5PmPNm3JqTeu38F1, sections 3, 4 and 6, with
 phone sketches):

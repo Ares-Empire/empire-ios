@@ -11,7 +11,7 @@ delivered file marked as failed (below); after this brief, the app cleans such a
 
 ## What happened (2026-11-05/06, from the server log and database)
 
-- 2026-11-05 16:12:58 `POST /drops` → 201 (drop 4, "AirPods Max 2.pdf", into Documents/Patrik Breeck/Rechnungen),
+- 2026-11-05 16:12:58 `POST /drops` → 201 (drop 4, a receipt PDF, into the receipts folder),
   16:12:59 `PUT /drops/4/file` → **200**. The Mac fetched it and reported `done` at 16:13:21; the file is on the Mac and
   drop 4 is `landed` on the server. The phone made no other drop request until the next day.
 - 2026-11-06 19:36:59, when Aresus was opened: `PUT /drops/4/file` → **409** (`drop_state`, "This drop cannot be

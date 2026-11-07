@@ -553,7 +553,7 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   Shared pictures keep a name a person chose; a camera's or the system's name becomes the capture time
   (`DropNames.isCameraName`). DEBUG: `-tab aresync`, `-openSheet send`, `-samplePick photo|photos|file|files|mixed`,
   `-sampleDropHover <count|name>`, `-sampleShareExtension`, `-sampleShareState loading|loggedOut|unreadable`.
-  **Never resend blind** (brief 238, 2026-11-07: "AirPods Max 2.pdf" landed on the Mac on 2026-11-05, the phone lost the
+  **Never resend blind** (brief 238, 2026-11-07: a receipt PDF landed on the Mac on 2026-11-05, the phone lost the
   upload's 200, sent the bytes again the next day, got `409` and showed the landed file as "Not sent" with Retry):
   before the bytes of a record that already has a server id go again (a retry, a launch, Retry, a deferred retry), and
   after any `409` on the upload, `DropOutbox.reconcile` asks `GET /drops` once: `waiting`/`failed`/`landed` discards the
@@ -728,8 +728,8 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   <text>`, `-priceSwitches both|history|alarm|none`, `-pricePreview reading|refused|failed`), `-newExample
   priceBelow|backInStock`, `-openHunt <id>` with `-priceDays 30|90|365`, `-scrollTo history|switches|bottom` and
   `-monitorLine refused|hold`. Tests: `PriceMonitorTests`. Screenshots: `build/137-*.png`.
-  **Price monitors everywhere ("Überall")** (brief 157, Patrik 2026-11-03: "I wanna search for new AirPods Max gen 2 price
-  monitor style but not on a specific page"; plan sections 3 and 4 with sketches; the server's brief 154,
+  **Price monitors everywhere ("Überall")** (brief 157, Patrik 2026-11-03: a price monitor for one product across shops, not on
+  one page; plan sections 3 and 4 with sketches; the server's brief 154,
   `~/Arestemis/docs/API.md` → Price monitors everywhere). Part of the Preismonitor: `PriceSearch.mode` `page` | `everywhere`
   (absent = page; a mode this build does not know makes the hunt unsupported, "Needs a newer app"; a page monitor is sent
   as before, its four fields), `url` now optional, `product`, `details`, `identity` (`ProductIdentity`), `sources_off`;
