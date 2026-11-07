@@ -106,6 +106,9 @@ needs no Apple account. `--keep-simulator` keeps that simulator for inspection. 
 run only with `--timing`; correctness tests run by default. Different apps can run concurrently; two runs of the same
 app cannot share its output directory.
 
+On GitHub the workflow adds `--ci`, which also leaves out the six receipt tests that read the made-up receipt's code:
+Vision's barcode detection finds nothing on GitHub's virtual Macs. They run on this Mac.
+
 The shared-login probe (`scripts/check-shared-login.sh`), UI tests, AXe screen checks and device-only checks (Face ID,
 push delivery, camera and rendering on a phone) stay manual. CI uploads no artifacts.
 

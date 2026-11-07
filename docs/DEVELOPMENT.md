@@ -55,7 +55,9 @@ it on success, failure or interruption; `--keep-simulator` retains it. It builds
 Apple account, serializes test execution, selects only the app's unit-test target and never retries. Logs, derived
 data and `.xcresult` bundles stay in `build/test-unit/`. Each app's result is replaced on its next run; simultaneous
 runs of the same app are refused. A failure prints test names from the result bundle; build/launch failures point to
-the local log. GitHub runs a separate job per app and uploads no artifacts.
+the local log, with each failure's first line. GitHub runs a separate job per app with `--ci` and uploads no
+artifacts. `--ci` leaves out the receipt tests listed in the script's `ci_skips` (Vision's barcode detection finds
+nothing on GitHub's virtual Macs, 2026-11-07); run them locally before merging receipt work.
 
 For a build or an AXe screen check, create your own simulator as described in [AGENTS.md](../AGENTS.md) and keep derived
 data inside `build/`. Shared-login probes, UI tests, AXe checks, notifications delivered to a phone, camera, Face ID

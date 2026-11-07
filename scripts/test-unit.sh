@@ -4,15 +4,16 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 usage() {
-    echo 'Usage: bash scripts/test-unit.sh [--all | <App> ...] [--timing] [--keep-simulator]'
+    echo 'Usage: bash scripts/test-unit.sh [--all | <App> ...] [--timing] [--ci] [--keep-simulator]'
 }
 apps=()
-all=0 timing=0 keep=0
+all=0 timing=0 keep=0 ci=0
 for argument in "$@"; do
     case "$argument" in
         --all) all=1 ;;
         --timing) timing=1 ;;
         --keep-simulator) keep=1 ;;
+        --ci) ci=1 ;;
         -h|--help) usage; exit 0 ;;
         Aresium|Empire|Arestemis|Aresus|Arestoteles) apps+=("$argument") ;;
         *) usage >&2; exit 2 ;;
@@ -35,6 +36,21 @@ timing_tests() {
         Arestemis) printf '%s\n' 'ArestemisTests/SpellingTests/timeoutReturnsWithinBudget()' ;;
         Arestoteles) printf '%s\n' 'ArestotelesTests/VaultTimingTests' \
             'ArestotelesTests/BestMatchesTests/noAnswerInTimeShowsNothingAndCancelsTheRequest()' ;;
+    esac
+}
+
+# Tests GitHub's virtual Macs cannot run (--ci, the workflow): Vision's barcode detection finds nothing there, so the
+# receipt tests that read the made-up receipt's code fail on every run (2026-11-07, runs 42335907317 and 42337157408).
+# They still run on this Mac.
+ci_skips() {
+    case "$1" in
+        Aresium) printf '%s\n' \
+            'AresiumTests/ReceiptBookTests/theMadeUpReceiptIsReadByTheEngine()' \
+            'AresiumTests/ReceiptCaptureTests/aLongReceiptInTwoPagesContinuesBelowTheFirst()' \
+            'AresiumTests/ReceiptCaptureTests/readsAPickedPhoto()' \
+            'AresiumTests/ReceiptCaptureTests/readsTheMadeUpReceipt()' \
+            'AresiumTests/ReceiptCaptureTests/theSheetShowsTheReadingThenTheCheckWindow()' \
+            'AresiumTests/ReceiptCaptureTests/turnsAPhotoUprightBeforeReading()' ;;
     esac
 }
 
@@ -99,6 +115,13 @@ for app in "${apps[@]}"; do
             filters+=("-skip-testing:$test")
         fi
     done < <(timing_tests "$app")
+    if (( ci && ! timing )); then
+        while IFS= read -r test; do
+            [[ -n "$test" ]] || continue
+            echo "Skipping $test: needs Vision's barcode detection, which GitHub's virtual Macs lack (--ci)."
+            filters+=("-skip-testing:$test")
+        done < <(ci_skips "$app")
+    fi
     if (( timing && ${#filters[@]} == 0 )); then
         echo "$app: 0 tests, 0 failures, 0.00s (no timing tests)"
         continue

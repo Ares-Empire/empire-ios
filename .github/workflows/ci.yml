@@ -30,7 +30,7 @@ jobs:
           xcodebuild -version
           xcrun simctl list runtimes
       - name: Unit tests
-        run: bash scripts/test-unit.sh "${{ matrix.app }}"
+        run: bash scripts/test-unit.sh --ci "${{ matrix.app }}"
   strings:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
