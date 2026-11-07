@@ -20,7 +20,8 @@
       "sent_to": null,
       "sent": null,
       "created": "2026-11-06T10:00:00Z",
-      "updated": "2026-11-06T10:00:00Z"
+      "updated": "2026-11-06T10:00:00Z",
+      "blocking": true
     },
     {
       "kind": "ask",
@@ -39,7 +40,8 @@
       "sent_to": null,
       "sent": null,
       "created": "2026-11-06T10:00:00Z",
-      "updated": "2026-11-06T10:00:00Z"
+      "updated": "2026-11-06T10:00:00Z",
+      "blocking": false
     }
   ],
   "answered": [
@@ -63,7 +65,8 @@
       "sent_to": null,
       "sent": null,
       "created": "2026-11-06T10:00:00Z",
-      "updated": "2026-11-06T10:00:00Z"
+      "updated": "2026-11-06T10:00:00Z",
+      "blocking": false
     }
   ],
   "unowned": {

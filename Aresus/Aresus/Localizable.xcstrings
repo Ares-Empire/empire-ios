@@ -359,22 +359,22 @@
         }
       }
     },
-    "Cancel" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Abbrechen"
-          }
-        }
-      }
-    },
     "Checks" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Prüfungen"
+          }
+        }
+      }
+    },
+    "Claude is waiting" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Claude wartet"
           }
         }
       }
@@ -405,16 +405,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Erledigt"
-          }
-        }
-      }
-    },
-    "Each session gets its answer the next time it runs." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Jede Sitzung bekommt ihre Antwort, wenn sie das nächste Mal läuft."
           }
         }
       }
@@ -629,12 +619,12 @@
         }
       }
     },
-    "Own answer…" : {
+    "Or answer in your own words" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Eigene Antwort …"
+            "value" : "Oder in eigenen Worten antworten"
           }
         }
       }
@@ -645,6 +635,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Probleme"
+          }
+        }
+      }
+    },
+    "Running sessions get their answer right away, the others the next time they run." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Laufende Sitzungen bekommen ihre Antwort sofort, die anderen beim nächsten Start."
           }
         }
       }

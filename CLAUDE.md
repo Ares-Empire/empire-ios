@@ -532,14 +532,20 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   sessions put to Patrik (`board ask` in aresync); work for sessions never shows, only the line "N open items have no
   session". A card: the question, why, "topic · age · due …" (the due day in the issue red once reached), the answers
   (up to three side by side when they fit, the first `FormButtonStyle` primary, the others its `secondary` kind,
-  outlined; an action has Done / Erledigt), then one quiet line Own answer… / Not needed / Ask in Claude ("Claude
-  fragen", `https://claude.ai/code/<session>` through iOS's `openURL`); long press: Not needed, Ask in Claude. Answered
+  outlined; an action has Done / Erledigt), a field for his own words on every card ("Or answer in your own words" /
+  "Oder in eigenen Worten antworten", up to five lines, the send arrow once something is typed; Patrik 2026-11-07: "each
+  question should have a way for me to enter free text"; it replaced "Own answer…" and its sheet), then one quiet line
+  Not needed / Ask in Claude ("Claude fragen", `https://claude.ai/code/<session>` through iOS's `openURL`); long press:
+  Not needed, Ask in Claude. A typed answer stays in its field until the ask leaves the server's list, so Undo brings
+  the card back with it. **Blocking asks** (`BoardItem.blocking`, `board ask --blocking`: the session cannot go on
+  without the answer; the server lists them first and pushes "Claude is waiting for you"): "CLAUDE IS WAITING" /
+  "CLAUDE WARTET" with an hourglass above the question, small caps in the accent, not the issue red. Answered
   in one card below. **An answer waits for the undo bar** (the server cannot take one back): `BoardStore.perform`
   hides the card and offers Undo (`UndoOffer(message:onDismiss:undoImmediately:)`); it is sent when the bar times
   out, when another answer replaces it, when the tab is left or the app leaves the foreground; a failed send puts the
   card back with "Not sent. Try again."; 409 refreshes ("Already answered elsewhere."), 404 drops it.
   `aresus://board` opens the tab (the daily board push). DEBUG `-tab board`, `-sampleBoardEmpty`,
-  `-sampleBoardManyAsks`, `-openOwnAnswer <id>`, `-sampleBoardFailed`. Tests: `BoardTests`.
+  `-sampleBoardManyAsks`, `-boardOwnWords <text>` (fills the first ask's field), `-sampleBoardFailed`. Tests: `BoardTests`.
   **Aresync drops** (briefs 88–94 and 100, plan `ares-empire/docs/ARESYNC-DROP.md`): files and photos from the iPhone to a
   folder on the MacBook through the aresus server (`aresus/docs/API.md` → Drops; encrypted there with `age`, fetched by
   the Mac's `com.aresync.drop` agent, which needs Full Disk Access for `/usr/bin/python3`). The drop code lives in

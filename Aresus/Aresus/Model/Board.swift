@@ -14,6 +14,8 @@ nonisolated struct BoardItem: Codable, Equatable, Identifiable, Sendable {
     var due: String?
     var source: String
     var session: String?
+    /// The session cannot go on until Patrik answers (since 2026-11-07; absent from an older server: false).
+    var blocking: Bool
     var key: String?
     var since: Date?
     var state: State
@@ -24,7 +26,8 @@ nonisolated struct BoardItem: Codable, Equatable, Identifiable, Sendable {
     var updated: Date
 
     enum CodingKeys: String, CodingKey {
-        case id, kind, topic, text, why, options, due, source, session, key, since, state, answer, sent, created, updated
+        case id, kind, topic, text, why, options, due, source, session, blocking, key, since, state, answer, sent, created
+        case updated
         case sentTo = "sent_to"
     }
 
@@ -40,6 +43,7 @@ nonisolated struct BoardItem: Codable, Equatable, Identifiable, Sendable {
         due = try? c.decodeIfPresent(String.self, forKey: .due)
         source = try c.decode(String.self, forKey: .source)
         session = try? c.decodeIfPresent(String.self, forKey: .session)
+        blocking = (try? c.decodeIfPresent(Bool.self, forKey: .blocking)) ?? false
         key = try? c.decodeIfPresent(String.self, forKey: .key)
         since = try? c.decodeIfPresent(Date.self, forKey: .since)
         answer = try? c.decodeIfPresent(String.self, forKey: .answer)
@@ -130,8 +134,23 @@ nonisolated enum BoardWords {
         return date <= calendar.startOfDay(for: now)
     }
 
+    /// The server takes 1–1000 characters of Patrik's own words.
+    static let ownAnswerLimit = 1000
+    /// From here the field shows how many characters are left.
+    static let ownAnswerWarning = 900
+
     static func ownAnswer(_ text: String) -> String? {
         let answer = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        return (1...1000).contains(answer.count) ? answer : nil
+        return (1...ownAnswerLimit).contains(answer.count) ? answer : nil
+    }
+
+    static func ownAnswerLength(_ text: String) -> Int {
+        text.trimmingCharacters(in: .whitespacesAndNewlines).count
+    }
+
+    /// "950 / 1000": the count the server checks, written the language's way.
+    static func ownAnswerCount(_ length: Int, language: AppLanguage = .current) -> String {
+        let format = IntegerFormatStyle<Int>().locale(language.locale)
+        return length.formatted(format) + " / " + ownAnswerLimit.formatted(format)
     }
 }
