@@ -188,7 +188,7 @@ struct PhoneModeTests {
         let s = await setup(account: "fictionalA")
         let imports = ImportStore(dashboard: s.dashboard, background: PhoneActivity())
         imports.debugImport([PhoneTest.vrBank([("01.10.2026", "REWE Markt GmbH", "REWE", -2000)])])
-        await imports.importPendingFiles()
+        await imports.importAndWait()
         #expect(imports.waitingCount == 1 && s.transport.requests(to: "POST /api/import").isEmpty)
         await launch(s)
         await imports.sessionChanged()

@@ -67,9 +67,12 @@ final class SpellingCheck {
     /// The words the chips belong to, as they are now (a chip's tap changes one of them, a change by hand clears them).
     @ObservationIgnored private var shownFor: [String] = []
     @ObservationIgnored private let limit: Duration
+    @ObservationIgnored private let sleep: @Sendable (Duration) async throws -> Void
 
-    init(limit: Duration = SpellingCheck.limit) {
+    init(limit: Duration = SpellingCheck.limit,
+         sleep: @escaping @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) }) {
         self.limit = limit
+        self.sleep = sleep
     }
 
     /// Before saving `words` (the search's `query` and `more_queries`, as they will be sent): true when the save goes
@@ -81,7 +84,7 @@ final class SpellingCheck {
         let new = unasked(words)
         guard !new.isEmpty else { return true }
         isChecking = true
-        let answer = await Self.answer(new, within: limit, ask: ask)
+        let answer = await Self.answer(new, within: limit, sleep: sleep, ask: ask)
         isChecking = false
         asked.formUnion(new.map(SearchWords.key))
         let found = answer?.applicable(to: words) ?? []
@@ -117,11 +120,12 @@ final class SpellingCheck {
 
     /// The server's answer, or nil after `limit`, a failure or a cancelled save.
     private nonisolated static func answer(_ words: [String], within limit: Duration,
+                                          sleep: @escaping @Sendable (Duration) async throws -> Void,
                                            ask: @escaping @Sendable ([String]) async throws -> Spelling) async -> Spelling? {
         await withTaskGroup(of: Spelling?.self) { group in
             group.addTask { try? await ask(words) }
             group.addTask {
-                try? await Task.sleep(for: limit)
+                try? await sleep(limit)
                 return nil
             }
             let first = await group.next() ?? nil

@@ -36,7 +36,6 @@ struct PhoneStoreTests {
             if !rows.isEmpty { _ = try await backend.importFiles([PhoneTest.vrBank(rows)], auth: BackendAuth(token: nil)) }
         }
         try await fill()
-        try await Task.sleep(for: .milliseconds(100))
         try FileManager.default.createDirectory(at: storage.root, withIntermediateDirectories: true)
         try FileManager.default.moveItem(at: old.directory, to: folder)
         try? FileManager.default.removeItem(at: old.root)

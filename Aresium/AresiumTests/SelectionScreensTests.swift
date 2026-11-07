@@ -243,7 +243,8 @@ struct SelectionScreensTests {
         let (phone, store) = try await setup()
         let before = try await phone.ledger.export(on: Date(timeIntervalSince1970: 0))
         var outcomes: [SelectionOutcome] = []
-        let window = SelectionCategoryChange(ids: ["p1", "p2"], route: groceries, store: store) { outcomes.append($0) }
+        let completed = TestSignal()
+        let window = SelectionCategoryChange(ids: ["p1", "p2"], route: groceries, store: store) { outcomes.append($0); completed.send() }
         window.select("Household")
         await window.save()
         #expect(window.saveError == nil)
@@ -252,7 +253,7 @@ struct SelectionScreensTests {
         #expect(wording.allTitle() == "Move 1 more" && wording.onlyTitle() == "Only these")
         #expect(outcomes.isEmpty, "the window waits for the answer")
         window.answer(moveOthers: true)
-        for _ in 0..<100 where outcomes.isEmpty { try await Task.sleep(for: .milliseconds(20)) }
+        await completed.wait()
         guard case let .done(message, undo)? = outcomes.first else { Issue.record("not done"); return }
         #expect(message == "3 payments moved to Household", "the selection and the shop's other payment")
         #expect(try await phone.ledger.payments().filter { ["p1", "p2", "p3"].contains($0.id) }

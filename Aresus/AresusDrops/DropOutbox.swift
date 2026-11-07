@@ -63,12 +63,15 @@ final class DropOutbox {
     private var submissions: [UUID: DropLease] = [:]
     private let activity: (any DropActivity)?
     private let uploads: any DropUploading
+    private let now: () -> Date
     private var journal: DropJournal { DropJournal(directory: directory) }
     private let hasContainer: Bool
     @ObservationIgnored private var monitor: NWPathMonitor?
 
     init(session: EmpireSession, client: AresusAPI = AresusAPI(), directory: URL? = nil, automatic: Bool = true,
-         activity: (any DropActivity)? = nil, legacyDirectory: URL? = nil, uploads: (any DropUploading)? = nil) {
+         activity: (any DropActivity)? = nil, legacyDirectory: URL? = nil, uploads: (any DropUploading)? = nil,
+         now: @escaping () -> Date = { .now }) {
+        self.now = now
         self.session = session
         self.client = client
         hasContainer = directory != nil || DropContainer.url != nil
@@ -211,7 +214,7 @@ final class DropOutbox {
         for identifier in identifiers {
             let driver = DropBackgroundUploads.driver(identifier: identifier)
             let recovery = driver.outbox ?? DropOutbox(session: session, client: client, directory: directory,
-                                                       automatic: false, uploads: driver)
+                                                       automatic: false, uploads: driver, now: now)
             recovered[identifier] = recovery
             recovery.onUploaded = { [weak self] drop in self?.onUploaded?(drop) }
             driver.completed = { [weak self, recovery] id, result, token in
@@ -258,7 +261,7 @@ final class DropOutbox {
         }
         let item = DropOutboxItem(id: id, drop: NewDrop(kind: .file, name: DropNames.normalized(name), size: 0,
                                                        sha256: "", target: normalizedTarget, receipt: nil),
-                                 localFile: destination.lastPathComponent, created: .now)
+                                 localFile: destination.lastPathComponent, created: now())
         do { try save(item) }
         catch {
             try? FileManager.default.removeItem(at: destination)
@@ -360,7 +363,7 @@ final class DropOutbox {
         var visited = Set<UUID>()
         while !Task.isCancelled, epoch == generation, session.isSignedIn,
               let item = items.first(where: { !visited.contains($0.id) && $0.state != .failed && $0.uploadSession == nil
-                  && ($0.retryAt.map { $0 <= .now } ?? true) }) {
+                  && ($0.retryAt.map { $0 <= now() } ?? true) }) {
             visited.insert(item.id)
             guard let lease = journal.claim(item.id) else { continue }
             reload()
@@ -513,7 +516,7 @@ final class DropOutbox {
                 if retryable || Self.canRetry(error) || (error as? URLError)?.code == .cancelled
                     || (session.isSignedIn && session.token != token && Self.isUnauthorized(error)) {
                     $0.state = .onPhone
-                    $0.retryAt = Date.now.addingTimeInterval(Self.retryDelay(attempts: $0.attempts))
+                    $0.retryAt = now().addingTimeInterval(Self.retryDelay(attempts: $0.attempts))
                 } else {
                     $0.state = .failed; $0.retryAt = nil
                     if $0.cancellationRequested { $0.cancellationRequested = false }
@@ -582,9 +585,9 @@ final class DropOutbox {
     private func scheduleWakeup() {
         wakeup?.cancel()
         guard !removing, session.isSignedIn,
-              let next = items.filter({ $0.state != .failed && $0.uploadSession == nil }).map({ $0.retryAt ?? .now }).min() else { return }
-        wakeup = Task { [weak self] in
-            do { try await Task.sleep(for: .seconds(max(0.1, next.timeIntervalSinceNow))) } catch { return }
+              let next = items.filter({ $0.state != .failed && $0.uploadSession == nil }).map({ $0.retryAt ?? now() }).min() else { return }
+        wakeup = Task { [weak self, now] in
+            do { try await Task.sleep(for: .seconds(max(0.1, next.timeIntervalSince(now())))) } catch { return }
             self?.start()
         }
     }

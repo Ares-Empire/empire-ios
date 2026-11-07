@@ -75,16 +75,16 @@ struct BankFormatTests {
         let phone = try await PhoneTest.backend(chosen: ["groceries"])
         let formats = outbox(transport: transport)
         let imports = ImportStore(dashboard: DashboardStore(session: session, backend: phone), background: PhoneActivity(),
-                                  outbox: formats)
+                                  outbox: formats, bannerScheduler: ImportTestTimer().schedule)
         imports.debugImport([PhoneTest.vrBank([("01.10.2026", "REWE Markt GmbH", "REWE SAGT DANKE", -2345)])])
-        await imports.importPendingFiles()
+        await imports.importAndWait()
         #expect(imports.banner?.share == nil)
 
         imports.debugImport([try PhoneTest.fixture("unknown-fiktivbank.csv")])
-        await imports.importPendingFiles()
+        await imports.importAndWait()
         let check = FileCheckModel(request: try #require(imports.layoutRequest), phone: phone, imports: imports)
         #expect(await check.yes())
-        await imports.importPendingFiles()
+        await imports.importAndWait()
         let card = try #require(imports.banner?.share)
         #expect(card.shown == .asking && !card.canSend)              // nothing typed yet
         #expect(transport.requests.isEmpty)                           // nothing goes out without Send
@@ -93,7 +93,7 @@ struct BankFormatTests {
         imports.close()
         #expect(imports.banner == nil && formats.hasAsked(card.format.key))
         imports.debugImport([ImportFile(name: "again.csv", data: try PhoneTest.fixture("unknown-fiktivbank.csv").data)])
-        await imports.importPendingFiles()
+        await imports.importAndWait()
         #expect(imports.banner != nil && imports.banner?.share == nil)
         #expect(transport.requests.isEmpty)
     }

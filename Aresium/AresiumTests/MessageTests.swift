@@ -280,7 +280,7 @@ struct MessageTests {
         let url = directory.appending(path: "made-up.csv")
         try file.data.write(to: url)
         await imports.receive([url])
-        await imports.importPendingFiles()
+        await imports.importAndWait()
         await model.idle()
         let accounts = try await phone.ledger.messageAccountsByMonth()
         #expect(accounts["2026-10"]?.count == 1)

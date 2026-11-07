@@ -21,6 +21,7 @@ struct ImportThenCategoriesTests {
         let phone: PhoneBackend
         let dashboard: DashboardStore
         let imports: ImportStore
+        let timer: ImportTestTimer
     }
 
     /// The person's phone store (these categories chosen), its dashboard and imports, nobody logged in.
@@ -28,7 +29,10 @@ struct ImportThenCategoriesTests {
         let session = await PhoneTest.session(nil, transport: RoutedTransport())
         let phone = try await PhoneTest.backend(chosen: chosen)
         let dashboard = DashboardStore(session: session, backend: phone)
-        return Setup(phone: phone, dashboard: dashboard, imports: ImportStore(dashboard: dashboard, background: PhoneActivity()))
+        let timer = ImportTestTimer()
+        return Setup(phone: phone, dashboard: dashboard,
+                     imports: ImportStore(dashboard: dashboard, background: PhoneActivity(), bannerScheduler: timer.schedule),
+                     timer: timer)
     }
 
     /// Files written to a folder of the worktree's build folder, as the file picker hands them over.
@@ -45,7 +49,7 @@ struct ImportThenCategoriesTests {
     /// The files as the file picker gives them, imported to the end.
     private func pick(_ files: [ImportFile], into s: Setup, source: ImportFileSource = .picker) async throws {
         await s.imports.receive(try urls(files), source: source)
-        await s.imports.importPendingFiles()
+        await s.imports.importAndWait()
     }
 
     private func sortedInStore(_ phone: PhoneBackend) async throws -> Int {
@@ -60,7 +64,7 @@ struct ImportThenCategoriesTests {
         let s = try await setup()
         #expect(!s.phone.hasChosenCategories && !s.imports.asksForCategories)
         await s.imports.receive([])
-        await s.imports.importPendingFiles()
+        await s.imports.importAndWait()
         #expect(!s.imports.asksForCategories && s.phone.summary.payments == 0)
         // The server sorts by itself: its imports never ask.
         #expect(!ServerBackend().waitsForCategories)
@@ -75,6 +79,8 @@ struct ImportThenCategoriesTests {
         #expect(s.imports.asksForCategories)
         #expect(s.dashboard.dashboard?.transactions.count == 4, "the payments are in before the picker shows")
         #expect(s.imports.banner?.message == "4 new · 0 already there · 0 sorted · 4 not sorted")
+        s.timer.advance(by: .seconds(100))
+        #expect(s.imports.banner != nil, "the category picker cancelled dismissal")
     }
 
     @Test func aFileSharedIntoAresiumOpensItToo() async throws {
@@ -89,7 +95,7 @@ struct ImportThenCategoriesTests {
         let request = try #require(s.imports.layoutRequest)
         #expect(!s.imports.asksForCategories, "nothing is in while the file check asks")
         #expect(await FileCheckModel(request: request, phone: s.phone, imports: s.imports).yes())
-        await s.imports.importPendingFiles()
+        await s.imports.importAndWait()
         #expect(s.phone.summary.payments == 4 && s.imports.asksForCategories)
     }
 
@@ -102,11 +108,11 @@ struct ImportThenCategoriesTests {
 
         let request = try #require(s.imports.layoutRequest)
         #expect(await FileCheckModel(request: request, phone: s.phone, imports: s.imports).yes())
-        await s.imports.importPendingFiles()
+        await s.imports.importAndWait()
         #expect(s.phone.summary.payments == 8 && s.imports.asksForCategories)
 
         s.imports.categoriesClosed()
-        await s.imports.importPendingFiles()                    // nothing left: it does not ask a second time
+        await s.imports.importAndWait()                    // nothing left: it does not ask a second time
         #expect(!s.imports.asksForCategories)
     }
 
@@ -164,7 +170,7 @@ struct ImportThenCategoriesTests {
                               defaults: PhoneTest.defaults(), markerDefaults: PhoneTest.defaults(),
                               storage: PhoneTest.storage(), makeEngine: { try PhoneTest.engine() })
         await modes.start()
-        let imports = ImportStore(dashboard: dashboard, background: PhoneActivity())
+        let imports = ImportStore(dashboard: dashboard, background: PhoneActivity(), bannerScheduler: ImportTestTimer().schedule)
         await PhoneDataModel(modes: modes).restore(from: export)
         let phone = try #require(modes.phone)
         #expect(phone.summary.payments == 4 && !phone.hasChosenCategories)
@@ -227,7 +233,7 @@ struct ImportThenCategoriesTests {
         try await pick([Self.bankFile, PhoneTest.fixture("unknown-fiktivbank.csv")], into: s)
         let request = try #require(s.imports.layoutRequest)
         #expect(await FileCheckModel(request: request, phone: s.phone, imports: s.imports).yes())
-        await s.imports.importPendingFiles()
+        await s.imports.importAndWait()
         let before = try #require(s.imports.banner?.message)
         #expect(before.hasPrefix("4 new · 0 already there · "))
 

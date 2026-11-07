@@ -285,6 +285,16 @@ struct BatchChangesTests {
     }
 
     @Test func fiveHundredRowsFromSixtyShopsInOneLedgerOperation() async throws {
+        _ = try await changeFiveHundredRowsFromSixtyShops()
+    }
+
+    @Test func fiveHundredRowsFromSixtyShopsStaysWithinBudget() async throws {
+        let ms = try await changeFiveHundredRowsFromSixtyShops()
+        #expect(ms < 300)
+    }
+
+    /// Both runs keep the data, batching and undo assertions; only the timing run asserts machine speed.
+    private func changeFiveHundredRowsFromSixtyShops() async throws -> Double {
         let payments = (0..<500).map { payment("p\($0)", "Batchshop\(Self.letters($0 % 60))fictive") }
         let engine = try await countingEngine()
         let (phone, _) = try await setup(payments, engine: engine)
@@ -304,9 +314,9 @@ struct BatchChangesTests {
         #expect(result.changed.bankPayments == 500 && result.followUp == nil && result.undo.revision == 1)
         #expect(try await phone.ledger.learned().count == 60)
         #expect(try await engine.version() == sorts.replacingOccurrences(of: "learn=0", with: "learn=500"))
-        #expect(ms < 300)
         #expect(try await phone.ledger.undoBatch(result.undo))
         #expect(try await snapshot(phone) == before)
+        return ms
     }
 
     private func countingEngine(failLearning: Bool = false) async throws -> AresiumEngine {

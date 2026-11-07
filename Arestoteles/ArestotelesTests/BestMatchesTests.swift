@@ -1,5 +1,7 @@
 import Foundation
 import Testing
+import Observation
+import Synchronization
 @testable import Arestoteles
 
 /// The Search tab's best matches: asked once typing pauses, a newer query cancels the older request, failures and
@@ -9,17 +11,21 @@ import Testing
 @MainActor
 struct BestMatchesTests {
     /// A server in memory for `BestMatches`: records the queries, answers the sample, can take its time or fail.
-    @MainActor
+    @MainActor @Observable
     final class FakeServer {
         var asked: [String] = []
         var cancelled: [String] = []
         var delay: [String: Duration] = [:]
         var failing: Set<String> = []
+        var clock: TestClock?
 
         func search(_ query: String) async throws -> SearchAnswer {
             asked.append(query)
             if let delay = delay[query] {
-                do { try await Task.sleep(for: delay) } catch {
+                do {
+                    if let clock { try await clock.sleep(for: delay) }
+                    else { try await Task.sleep(for: delay) }
+                } catch {
                     cancelled.append(query)
                     throw error
                 }
@@ -49,7 +55,11 @@ struct BestMatchesTests {
     ])
 
     private func matches(_ server: FakeServer) -> BestMatches {
-        BestMatches(timing: .quick) { query in try await server.search(query) }
+        let clock = TestClock()
+        server.clock = clock
+        return BestMatches(timing: .init(pause: .zero), sleep: { try await clock.sleep(for: $0) }) {
+            try await server.search($0)
+        }
     }
 
     // MARK: - asking
@@ -75,13 +85,19 @@ struct BestMatchesTests {
     @Test func aNewerQueryCancelsTheRequestInFlight() async throws {
         let server = FakeServer()
         server.delay["print"] = .seconds(30)
-        let matches = matches(server)
+        let clock = TestClock()
+        server.clock = clock
+        let matches = BestMatches(timing: .init(pause: .zero), sleep: { try await clock.sleep(for: $0) }) {
+            try await server.search($0)
+        }
         matches.update("print")
-        #expect(await eventually { server.asked == ["print"] })
+        await clock.sleeping(for: .seconds(30))
+        #expect(server.asked == ["print"])
         matches.update("printers")
         await matches.settle()
         #expect(server.asked == ["print", "printers"])
-        #expect(await eventually { server.cancelled == ["print"] })
+        await waitForState { server.cancelled == ["print"] }
+        #expect(server.cancelled == ["print"])
         #expect(matches.query == "printers" && matches.answer != nil && !matches.isWaiting)
     }
 
@@ -120,6 +136,9 @@ struct BestMatchesTests {
         await matches.settle()
         matches.update("printers")
         #expect(matches.answer != nil && matches.isWaiting)
+        let clock = try #require(server.clock)
+        await clock.sleeping(for: .milliseconds(200))
+        clock.advance(by: .milliseconds(200))
         await matches.settle()
         #expect(matches.answer != nil && !matches.isWaiting)
     }
@@ -141,7 +160,7 @@ struct BestMatchesTests {
     @Test func noAnswerInTimeShowsNothingAndCancelsTheRequest() async throws {
         let server = FakeServer()
         server.delay["print"] = .seconds(30)
-        let matches = matches(server)
+        let matches = BestMatches(timing: .quick) { try await server.search($0) }
         let start = ContinuousClock.now
         matches.update("print")
         await matches.settle()
@@ -150,25 +169,55 @@ struct BestMatchesTests {
         #expect(server.cancelled == ["print"])
     }
 
-    @Test func thePlaceholderOnlyForASlowServer() async throws {
+    @Test func timeoutCancelsTheRequestWithoutAnAnswer() async throws {
+        let clock = TestClock()
         let server = FakeServer()
-        server.delay["print"] = .milliseconds(250)
-        let matches = matches(server)
+        server.clock = clock
+        server.delay["print"] = .seconds(30)
+        let matches = BestMatches(timing: .init(pause: .zero), sleep: { try await clock.sleep(for: $0) }) {
+            try await server.search($0)
+        }
         matches.update("print")
+        await clock.sleeping(for: .seconds(30))
+        await clock.sleeping(for: .seconds(5))
+        clock.advance(by: .seconds(5))
+        await matches.settle()
+        #expect(matches.answer == nil && !matches.isWaiting && !matches.isSlow)
+        #expect(server.cancelled == ["print"])
+    }
+
+    @Test func thePlaceholderOnlyForASlowServer() async throws {
+        let clock = TestClock()
+        let server = FakeServer()
+        server.clock = clock
+        server.delay["print"] = .seconds(1)
+        let timing = BestMatches.Timing(pause: .zero)
+        let matches = BestMatches(timing: timing, sleep: { try await clock.sleep(for: $0) }) {
+            try await server.search($0)
+        }
+        matches.update("print")
+        await clock.sleeping(for: .seconds(1))
+        await clock.sleeping(for: timing.slow)
         #expect(!matches.isSlow)
-        #expect(await eventually { matches.isSlow })
+        clock.advance(by: timing.slow)
+        await waitForState { matches.isSlow }
+        #expect(matches.isSlow)
+        clock.advance(by: .seconds(1))
         await matches.settle()
         #expect(!matches.isSlow && matches.answer != nil)
 
-        // A quick answer never shows it.
-        let quick = self.matches(FakeServer())
-        var everSlow = false
-        quick.update("print")
-        while quick.isWaiting {
-            everSlow = everSlow || quick.isSlow
-            try await Task.sleep(for: .milliseconds(2))
+        // A quick answer completes before the slow clock is released; advancing it later cannot show a placeholder.
+        let quick = BestMatches(timing: timing, sleep: { try await clock.sleep(for: $0) }) {
+            try await FakeServer().search($0)
         }
-        #expect(!everSlow && quick.answer != nil)
+        let everSlow = Mutex(false)
+        withObservationTracking { _ = quick.isSlow } onChange: {
+            everSlow.withLock { $0 = true }
+        }
+        quick.update("print")
+        await quick.settle()
+        clock.advance(by: timing.slow)
+        #expect(!everSlow.withLock { $0 } && !quick.isSlow && quick.answer != nil)
     }
 
     @Test func resetForgetsEverything() async throws {

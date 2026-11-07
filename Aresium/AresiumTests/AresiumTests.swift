@@ -598,13 +598,13 @@ struct AresiumTests {
         let store = DashboardStore(session: session, client: APIClient(transport: dashboardTransport))
         let text = status == 409 ? "an import is already running" : "no .csv/.xml files in request"
         let transport = FakeTransport(status: status, data: try JSONEncoder().encode(["error": text]))
-        let imports = ImportStore(dashboard: store, client: APIClient(transport: transport))
+        let imports = ImportStore(dashboard: store, client: APIClient(transport: transport), bannerScheduler: ImportTestTimer().schedule)
         let directory = try importDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
         let url = directory.appendingPathComponent("bank.csv")
         try Data("fictional".utf8).write(to: url)
         await imports.receive([url])
-        await imports.importPendingFiles()
+        await imports.importAndWait()
         #expect(imports.banner?.message == text)
         #expect(imports.banner?.success == false)
         #expect(session.token != nil)
@@ -632,13 +632,13 @@ struct AresiumTests {
         let dashboardTransport = FakeTransport(data: try JSONEncoder().encode(Dashboard.sample()))
         let store = DashboardStore(session: session, client: APIClient(transport: dashboardTransport))
         let response = Data(#"{"results":[{"name":"bank.csv","added":3,"total":3,"account":"Fictional bank","skipped":false},{"name":"bad.xml","added":0,"total":0,"account":null,"skipped":false,"error":"Unknown format"}]}"#.utf8)
-        let imports = ImportStore(dashboard: store, client: APIClient(transport: FakeTransport(data: response)))
+        let imports = ImportStore(dashboard: store, client: APIClient(transport: FakeTransport(data: response)), bannerScheduler: ImportTestTimer().schedule)
         let directory = try importDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
         let url = directory.appendingPathComponent("bank.csv")
         try Data("fictional".utf8).write(to: url)
         await imports.receive([url])
-        await imports.importPendingFiles()
+        await imports.importAndWait()
         #expect(dashboardTransport.requests.map { $0.url?.path } == ["/api/data"])
         #expect(store.dashboard?.transactions.count == 25)
         #expect(imports.banner?.message == "3 added · 1 file failed")
@@ -651,7 +651,7 @@ struct AresiumTests {
         let dashboardTransport = FakeTransport(data: try JSONEncoder().encode(Dashboard.sample()))
         let store = DashboardStore(session: session, client: APIClient(transport: dashboardTransport))
         let transport = FakeTransport(data: importResponse(includingPayPal: true))
-        let imports = ImportStore(dashboard: store, client: APIClient(transport: transport))
+        let imports = ImportStore(dashboard: store, client: APIClient(transport: transport), bannerScheduler: ImportTestTimer().schedule)
         let directory = try importDirectory()
         let csv = directory.appendingPathComponent("bank.csv")
         let xml = directory.appendingPathComponent("paypal.xml")
@@ -680,13 +680,13 @@ struct AresiumTests {
         let store = DashboardStore(session: session, client: APIClient(transport: dashboardTransport))
         let oldReload = Task { await store.reload() }
         await dashboardTransport.waitForFirstRequest()
-        let imports = ImportStore(dashboard: store, client: APIClient(transport: FakeTransport(data: importResponse())))
+        let imports = ImportStore(dashboard: store, client: APIClient(transport: FakeTransport(data: importResponse())), bannerScheduler: ImportTestTimer().schedule)
         let directory = try importDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
         let url = directory.appendingPathComponent("bank.csv")
         try Data("fictional".utf8).write(to: url)
         await imports.receive([url])
-        await imports.importPendingFiles()
+        await imports.importAndWait()
         #expect(store.dashboard?.transactions.count == 25)
         dashboardTransport.finishFirstRequest(status: 401)
         await oldReload.value
@@ -700,7 +700,8 @@ struct AresiumTests {
         let dashboardTransport = FakeTransport(data: try JSONEncoder().encode(Dashboard.sample()))
         let store = DashboardStore(session: session, client: APIClient(transport: dashboardTransport))
         let transport = FakeTransport(data: importResponse(includingPayPal: true))
-        let imports = ImportStore(dashboard: store, client: APIClient(transport: transport))
+        let batch = TestSignal()
+        let imports = ImportStore(dashboard: store, client: APIClient(transport: transport), bannerScheduler: ImportTestTimer().schedule, batchSleep: { await batch.wait() })
         let directory = try importDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
         let csv = directory.appendingPathComponent("bank.csv")
@@ -711,20 +712,20 @@ struct AresiumTests {
         await imports.receive([xml])
         #expect(imports.isBusy)
         #expect(transport.requests.isEmpty)
+        batch.send()
         await transport.waitForRequest()
         #expect(transport.requests.count == 1)
         let body = try JSONDecoder().decode([String: [ImportFile]].self, from: #require(transport.requests.first?.httpBody))
         #expect(body["files"]?.map(\.name) == ["bank.csv", "paypal.xml"])
-        // Receiving the request precedes the asynchronous engine average and dashboard publication.
-        let deadline = ContinuousClock.now + .seconds(5)
-        while imports.isBusy && ContinuousClock.now < deadline { try await Task.sleep(for: .milliseconds(5)) }
+        // The request precedes the asynchronous engine average and dashboard publication.
+        await imports.pendingImportsFinished()
         #expect(dashboardTransport.requests.count == 1)
         #expect(!imports.isBusy)
     }
 
     @Test func sampleImportButtonAndSharedFilesShowUnavailableWithoutReading() async {
         let transport = FakeTransport()
-        let imports = ImportStore(dashboard: sampleStore(), client: APIClient(transport: transport))
+        let imports = ImportStore(dashboard: sampleStore(), client: APIClient(transport: transport), bannerScheduler: ImportTestTimer().schedule)
         imports.showSampleUnavailable()
         #expect(imports.banner?.message == "Not available with sample data")
         await imports.receive([URL(fileURLWithPath: "/nonexistent/bank.csv")])
@@ -733,11 +734,76 @@ struct AresiumTests {
         #expect(!imports.isBusy)
     }
 
+    @Test func anAlreadyStartedImportMustBeAwaitedSeparately() async throws {
+        let transport = PendingAPITransport(data: importResponse())
+        let dashboard = DashboardStore(session: await importSession(),
+            client: APIClient(transport: FakeTransport(data: try JSONEncoder().encode(Dashboard.sample()))))
+        let imports = ImportStore(dashboard: dashboard, client: APIClient(transport: transport),
+                                  bannerScheduler: ImportTestTimer().schedule)
+        let directory = try importDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("bank.csv")
+        try Data("fictional".utf8).write(to: url)
+        await imports.receive([url])
+        let first = Task { await imports.importPendingFiles() }
+        await transport.waitForFirstRequest()
+        // The same situation as a batch that started before the test's explicit trigger got the main actor.
+        await imports.importPendingFiles()
+        #expect(imports.isBusy && imports.banner == nil)
+        transport.finishFirstRequest(status: 200)
+        await imports.pendingImportsFinished()
+        await first.value
+        #expect(!imports.isBusy && imports.banner?.success == true)
+    }
+
+    /// Reproduces the load failure without a slow machine: the banner's clock can expire while reload is suspended.
+    /// Import completion waits for reload; it does not promise that the earlier banner is still showing.
+    @Test(arguments: [false, true])
+    func bannerTimeIsIndependentOfImportCompletion(expireDuringReload: Bool) async throws {
+        let session = await importSession()
+        let transport = PendingAPITransport(data: try JSONEncoder().encode(Dashboard.sample()))
+        let dashboard = DashboardStore(session: session, client: APIClient(transport: transport))
+        let timer = ImportTestTimer()
+        let imports = ImportStore(dashboard: dashboard, client: APIClient(transport: FakeTransport(data: importResponse())),
+                                  bannerScheduler: timer.schedule)
+        let directory = try importDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("bank.csv")
+        try Data("fictional".utf8).write(to: url)
+        await imports.receive([url])
+        let importing = Task { await imports.importAndWait() }
+        await transport.waitForFirstRequest()
+        #expect(imports.isBusy && imports.banner?.success == true)
+        #expect(timer.delays == [.milliseconds(4500)])
+        if expireDuringReload { timer.advance(by: .milliseconds(4500)) }
+        #expect((imports.banner == nil) == expireDuringReload)
+        transport.finishFirstRequest(status: 200)
+        await importing.value
+        #expect(!imports.isBusy)
+        #expect((imports.banner == nil) == expireDuringReload)
+        imports.dismiss()
+    }
+
+    @Test func successfulBannerDismissesAtItsDeadlineAndReplacementCancelsTheOldOne() {
+        let timer = ImportTestTimer()
+        let imports = ImportStore(dashboard: sampleStore(), bannerScheduler: timer.schedule)
+        imports.show("First", success: true)
+        timer.advance(by: .milliseconds(4499))
+        #expect(imports.banner?.message == "First")
+        imports.show("Second", success: true)
+        timer.advance(by: .milliseconds(1))
+        #expect(imports.banner?.message == "Second")
+        timer.advance(by: .milliseconds(4499))
+        #expect(imports.banner == nil)
+    }
+
     @Test func failedImportBannerPersistsUntilDismissed() async throws {
-        let imports = ImportStore(dashboard: sampleStore())
+        let timer = ImportTestTimer()
+        let imports = ImportStore(dashboard: sampleStore(), bannerScheduler: timer.schedule)
         imports.showSampleUnavailable()
         #expect(imports.banner != nil)
-        try await Task.sleep(for: .seconds(4.7))
+        #expect(timer.delays.isEmpty)
+        timer.advance(by: .seconds(4.7))
         #expect(imports.banner != nil)
         imports.dismiss()
         #expect(imports.banner == nil)
@@ -904,13 +970,13 @@ struct AresiumTests {
             else { await detail.load() }
         }
         await gate.waitUntilPaused()
-        let imports = ImportStore(dashboard: dashboard, client: APIClient(transport: FakeTransport(data: importResponse())))
+        let imports = ImportStore(dashboard: dashboard, client: APIClient(transport: FakeTransport(data: importResponse())), bannerScheduler: ImportTestTimer().schedule)
         let directory = try importDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
         let url = directory.appendingPathComponent("bank.csv")
         try Data("fictional".utf8).write(to: url)
         await imports.receive([url])
-        await imports.importPendingFiles()
+        await imports.importAndWait()
         #expect(imports.banner?.success == true)
         gate.resume()
         await task.value
@@ -990,18 +1056,18 @@ struct AresiumTests {
         let session = await importSession()
         let dashboard = DashboardStore(session: session, client: APIClient(transport: FakeTransport(data: try JSONEncoder().encode(Dashboard.sample()))))
         let transport = FakeTransport(status: 409, data: Data(#"{"error":"Import already running"}"#.utf8))
-        let imports = ImportStore(dashboard: dashboard, client: APIClient(transport: transport))
+        let imports = ImportStore(dashboard: dashboard, client: APIClient(transport: transport), bannerScheduler: ImportTestTimer().schedule)
         let directory = try importDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
         let file = directory.appendingPathComponent("bank.csv")
         try Data("fictional".utf8).write(to: file)
         await imports.receive([file])
-        await imports.importPendingFiles()
+        await imports.importAndWait()
         #expect(imports.waitingCount == 1 && imports.canRetry)
         #expect(imports.banner?.files.first == "bank.csv: Import already running")
         transport.status = 200
         transport.data = importResponse()
-        await imports.importPendingFiles()
+        await imports.importAndWait()
         #expect(transport.requests.count == 2 && imports.waitingCount == 0 && !imports.canRetry)
         await imports.receive([file])
         imports.discard()
@@ -1019,13 +1085,13 @@ struct AresiumTests {
         let session = await importSession()
         let dashboard = DashboardStore(session: session)
         let imports = ImportStore(dashboard: dashboard, client: APIClient(transport: FakeTransport(status: status,
-            data: Data(#"{"error":"Request refused"}"#.utf8))))
+            data: Data(#"{"error":"Request refused"}"#.utf8))), bannerScheduler: ImportTestTimer().schedule)
         let directory = try importDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
         let file = directory.appendingPathComponent("bank.csv")
         try Data("fictional".utf8).write(to: file)
         await imports.receive([file])
-        await imports.importPendingFiles()
+        await imports.importAndWait()
         let retained = status == 413 || status == 503
         // 401 ends the login everywhere; 403 closes only Aresium (the shared login stays); both drop the batch.
         #expect((session.token != nil) == (status != 401))
@@ -1039,17 +1105,17 @@ struct AresiumTests {
         let dashboard = DashboardStore(session: session, client: APIClient(transport: FakeTransport(data: try JSONEncoder().encode(Dashboard.sample()))))
         let response = Data(#"{"results":[{"name":"bank.csv","added":3,"total":3,"skipped":false},{"name":"bad.xml","added":0,"total":0,"skipped":false,"error":"Unknown format"}]}"#.utf8)
         let transport = FakeTransport(data: response)
-        let imports = ImportStore(dashboard: dashboard, client: APIClient(transport: transport))
+        let imports = ImportStore(dashboard: dashboard, client: APIClient(transport: transport), bannerScheduler: ImportTestTimer().schedule)
         let directory = try importDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
         let urls = [directory.appendingPathComponent("bank.csv"), directory.appendingPathComponent("bad.xml")]
         for url in urls { try Data("fictional".utf8).write(to: url) }
         await imports.receive(urls)
-        await imports.importPendingFiles()
+        await imports.importAndWait()
         #expect(imports.waitingCount == 1)
         #expect(imports.banner?.files == ["bank.csv: 3 added", "bad.xml: Unknown format"])
         transport.data = Data(#"{"results":[{"name":"bad.xml","added":1,"total":1,"skipped":false}]}"#.utf8)
-        await imports.importPendingFiles()
+        await imports.importAndWait()
         let body = try JSONDecoder().decode([String: [ImportFile]].self, from: #require(transport.requests.last?.httpBody))
         #expect(body["files"]?.map(\.name) == ["bad.xml"])
         #expect(imports.waitingCount == 0 && imports.banner?.success == true)
@@ -1072,13 +1138,13 @@ struct AresiumTests {
     @Test func oversizedEncodedFileIsRefusedWithNameBeforeNetwork() async throws {
         let session = await importSession()
         let transport = FakeTransport()
-        let imports = ImportStore(dashboard: DashboardStore(session: session), client: APIClient(transport: transport))
+        let imports = ImportStore(dashboard: DashboardStore(session: session), client: APIClient(transport: transport), bannerScheduler: ImportTestTimer().schedule)
         let directory = try importDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
         let file = directory.appendingPathComponent("escaped.csv")
         try Data(repeating: 34, count: 13 * 1024 * 1024).write(to: file)
         await imports.receive([file])
-        await imports.importPendingFiles()
+        await imports.importAndWait()
         #expect(transport.requests.isEmpty)
         #expect(imports.banner?.files == ["escaped.csv: Too large for a 25 MB import request"])
         #expect(imports.canRetry)
@@ -1091,13 +1157,13 @@ struct AresiumTests {
         let transport = FakeTransport(data: importResponse())
         let gate = RequestGate()
         transport.nextGate = gate
-        let imports = ImportStore(dashboard: DashboardStore(session: session), client: APIClient(transport: transport), background: activity)
+        let imports = ImportStore(dashboard: DashboardStore(session: session), client: APIClient(transport: transport), background: activity, bannerScheduler: ImportTestTimer().schedule)
         let directory = try importDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
         let file = directory.appendingPathComponent("bank.csv")
         try Data("fictional".utf8).write(to: file)
         await imports.receive([file])
-        let task = Task { await imports.importPendingFiles() }
+        let task = Task { await imports.importAndWait() }
         await gate.waitUntilPaused()
         #expect(activity.begins == 1)
         activity.expiration?()
@@ -1169,20 +1235,20 @@ struct AresiumTests {
                      ImportFile(name: "second.xml", content: String(repeating: "y", count: 80))]
         let limit = try max(ImportRequestPlan.encode([files[0]]).count, ImportRequestPlan.encode([files[1]]).count)
         let activity = TestImportActivity()
-        let imports = ImportStore(dashboard: dashboard, client: APIClient(transport: transport), background: activity, maximumRequestBytes: limit)
+        let imports = ImportStore(dashboard: dashboard, client: APIClient(transport: transport), background: activity, maximumRequestBytes: limit, bannerScheduler: ImportTestTimer().schedule)
         let directory = try importDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
         for file in files { try Data(file.content.utf8).write(to: directory.appendingPathComponent(file.name)) }
         transport.responses = [(200, importResponse()), (503, Data())]
         await imports.receive(files.map { directory.appendingPathComponent($0.name) })
-        await imports.importPendingFiles()
+        await imports.importAndWait()
         #expect(transport.requests.count == 2)
         #expect(imports.waitingCount == 1 && imports.canRetry)
         #expect(activity.begins == 1 && activity.ends == 1)
         #expect(dashboard.dashboard != nil)
         for request in transport.requests { #expect(try #require(request.httpBody).count <= limit) }
         transport.data = Data(#"{"results":[{"name":"second.xml","added":1,"total":1,"skipped":false}]}"#.utf8)
-        await imports.importPendingFiles()
+        await imports.importAndWait()
         let body = try JSONDecoder().decode([String: [ImportFile]].self, from: #require(transport.requests.last?.httpBody))
         #expect(body["files"] == [files[1]])
         #expect(imports.waitingCount == 0 && imports.banner?.success == true)
@@ -1342,7 +1408,7 @@ private final class PendingAPITransport: HTTPTransport {
         await withCheckedContinuation { waiter = $0 }
     }
     func finishFirstRequest(status: Int) {
-        pending?.resume(returning: (Data(), response(status: status)))
+        pending?.resume(returning: (status == 200 ? data : Data(), response(status: status)))
         pending = nil
     }
     private func response(status: Int) -> HTTPURLResponse {

@@ -49,6 +49,16 @@ final class ApplicationImportActivity: ImportBackgroundActivity {
 
 @MainActor @Observable
 final class ImportStore {
+    /// Tests control the banner's time independently of engine/dashboard work.
+    typealias BannerScheduler = @MainActor (Duration, @escaping @MainActor () -> Void) -> Task<Void, Never>
+    static func scheduleBanner(after delay: Duration, action: @escaping @MainActor () -> Void) -> Task<Void, Never> {
+        Task {
+            do { try await Task.sleep(for: delay) } catch { return }
+            action()
+        }
+    }
+    private let bannerScheduler: BannerScheduler
+    private let batchSleep: @MainActor () async throws -> Void
     private(set) var banner: ImportBanner?
     private(set) var isImporting = false
     private var readingCount = 0
@@ -99,7 +109,11 @@ final class ImportStore {
 
     /// Imports go where the dashboard's data comes from (`DashboardStore.backend`).
     init(dashboard: DashboardStore, background: any ImportBackgroundActivity = ApplicationImportActivity(),
-         maximumRequestBytes: Int = ImportRequestPlan.maximumBytes, outbox: BankOutbox? = nil) {
+         maximumRequestBytes: Int = ImportRequestPlan.maximumBytes, outbox: BankOutbox? = nil,
+         bannerScheduler: @escaping BannerScheduler = ImportStore.scheduleBanner,
+         batchSleep: @escaping @MainActor () async throws -> Void = { try await Task.sleep(for: .milliseconds(250)) }) {
+        self.bannerScheduler = bannerScheduler
+        self.batchSleep = batchSleep
         self.dashboard = dashboard
         fixedBackend = nil
         self.background = background
@@ -114,7 +128,11 @@ final class ImportStore {
     /// Imports to this server (tests).
     init(dashboard: DashboardStore, client: APIClient,
          background: any ImportBackgroundActivity = ApplicationImportActivity(),
-         maximumRequestBytes: Int = ImportRequestPlan.maximumBytes) {
+         maximumRequestBytes: Int = ImportRequestPlan.maximumBytes,
+         bannerScheduler: @escaping BannerScheduler = ImportStore.scheduleBanner,
+         batchSleep: @escaping @MainActor () async throws -> Void = { try await Task.sleep(for: .milliseconds(250)) }) {
+        self.bannerScheduler = bannerScheduler
+        self.batchSleep = batchSleep
         self.dashboard = dashboard
         fixedBackend = ServerBackend(client: client)
         self.background = background
@@ -147,8 +165,7 @@ final class ImportStore {
 
     private func dismissLater(_ id: UUID) {
         bannerTask?.cancel()
-        bannerTask = Task { [weak self] in
-            do { try await Task.sleep(for: .milliseconds(4500)) } catch { return }
+        bannerTask = bannerScheduler(.milliseconds(4500)) { [weak self] in
             if self?.banner?.id == id { self?.banner = nil }
         }
     }
@@ -242,6 +259,14 @@ final class ImportStore {
         uploadTask = task
         background.begin { [weak self] in self?.uploadTask?.cancel() }
         await task.value
+    }
+
+    /// Waits for automatic batching and its upload/reload to finish without starting another import (tests).
+    func pendingImportsFinished() async {
+        while batchTask != nil || uploadTask != nil {
+            await batchTask?.value
+            await uploadTask?.value
+        }
     }
 
     private func upload(backend: any AresiumBackend, token: String?, generation: Int, sessionGeneration: Int) async {
@@ -366,8 +391,9 @@ final class ImportStore {
         guard attempted.isEmpty, !pending.isEmpty, readingCount == 0, !isImporting, isReady else { return }
         batchTask?.cancel()
         batchScheduled = true
-        batchTask = Task { [weak self] in
-            do { try await Task.sleep(for: .milliseconds(250)) } catch { return }
+        batchTask = Task { [weak self, batchSleep] in
+            do { try await batchSleep() } catch { return }
+            guard !Task.isCancelled else { return }
             guard let self else { return }
             self.batchTask = nil
             await self.importPendingFiles()

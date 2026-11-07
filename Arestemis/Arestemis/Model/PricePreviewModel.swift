@@ -53,13 +53,18 @@ final class PacedPreview<Query: Equatable, Answer: Equatable> {
     @ObservationIgnored private var wanted: (query: Query, revision: Int)?
     @ObservationIgnored private var revision = 0
     @ObservationIgnored private var lastAsked: ContinuousClock.Instant?
-    @ObservationIgnored private let clock = ContinuousClock()
+    @ObservationIgnored private let now: () -> ContinuousClock.Instant
+    @ObservationIgnored private let sleep: (Duration) async throws -> Void
     private let pause: Duration
     private let spacing: Duration
     private let fetch: (Query) async throws -> Answer
 
     init(pause: Duration = PreviewPacing.pause, spacing: Duration = PreviewPacing.spacing,
+         now: @escaping () -> ContinuousClock.Instant = { ContinuousClock.now },
+         sleep: @escaping (Duration) async throws -> Void = { try await Task.sleep(for: $0) },
          fetch: @escaping (Query) async throws -> Answer) {
+        self.now = now
+        self.sleep = sleep
         self.pause = pause
         self.spacing = spacing
         self.fetch = fetch
@@ -86,7 +91,7 @@ final class PacedPreview<Query: Equatable, Answer: Equatable> {
         self.query = query
         phase = .reading
         waiting = Task { [pause] in
-            try? await Task.sleep(for: pause)
+            try? await sleep(pause)
             guard !Task.isCancelled else { return }
             self.wanted = (query, revision)
             self.startWorker()
@@ -99,6 +104,9 @@ final class PacedPreview<Query: Equatable, Answer: Equatable> {
         while let worker { await worker.value }
     }
 
+    /// Waits for the latest typing pause to hand its query to the worker (tests).
+    func typingSettled() async { await waiting?.value }
+
     private func startWorker() {
         guard worker == nil else { return }
         worker = Task { await self.work() }
@@ -109,13 +117,14 @@ final class PacedPreview<Query: Equatable, Answer: Equatable> {
         while wanted != nil {
             if let lastAsked {
                 let ready = lastAsked.advanced(by: spacing)
-                if clock.now < ready { try? await clock.sleep(until: ready) }
+                let remaining = now().duration(to: ready)
+                if remaining > .zero { try? await sleep(remaining) }
             }
             // The newest query after the wait: one typed meanwhile replaces the one that waited.
             guard let target = wanted else { break }
             wanted = nil
             guard target.query == query, target.revision == revision else { continue }
-            lastAsked = clock.now
+            lastAsked = now()
             await read(target.query, revision: target.revision)
         }
         worker = nil

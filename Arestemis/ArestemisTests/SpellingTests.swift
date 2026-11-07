@@ -25,11 +25,12 @@ struct SpellingTests {
         var answer = Spelling(suggestions: [], checked: true)
         var failure: Error?
         var delay: Duration = .zero
+        var sleep: @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) }
 
         var ask: @Sendable ([String]) async throws -> Spelling {
             { words in
                 self.asked.append(words)
-                if self.delay > .zero { try await Task.sleep(for: self.delay) }
+                if self.delay > .zero { try await self.sleep(self.delay) }
                 if let failure = self.failure { throw failure }
                 return self.answer
             }
@@ -37,6 +38,11 @@ struct SpellingTests {
     }
 
     // MARK: the contract
+
+    private func untimedCheck() -> SpellingCheck {
+        let clock = TestClock()
+        return SpellingCheck(sleep: { try await clock.sleep(for: $0) })
+    }
 
     @Test func theAnswersDecode() throws {
         let found = try JSONDecoder().decode(Spelling.self, from: ArestemisSamples.spellingSuggestion)
@@ -109,7 +115,7 @@ struct SpellingTests {
     // MARK: the save's flow
 
     @Test func aSuggestionHoldsTheSave() async {
-        let check = SpellingCheck()
+        let check = untimedCheck()
         let server = FakeCheck()
         server.answer = Spelling(suggestions: [zegna], checked: true)
         let words = ["Zenga Krawatte", "Kiton Krawatte"]
@@ -122,7 +128,7 @@ struct SpellingTests {
     }
 
     @Test func aTapReplacesExactlyOneEntryAndASecondSaveSaves() async {
-        let check = SpellingCheck()
+        let check = untimedCheck()
         let server = FakeCheck()
         server.answer = Spelling(suggestions: [zegna, ferragamo], checked: true)
         var form = draft(["Zenga Krawatte", "Kiton Krawatte", "Ferragammo Krawatte"])
@@ -154,18 +160,23 @@ struct SpellingTests {
         for answer in [Spelling(suggestions: [], checked: true), Spelling(suggestions: [zegna], checked: false)] {
             let server = FakeCheck()
             server.answer = answer
-            let check = SpellingCheck()
+            let check = untimedCheck()
             #expect(await check.beforeSaving(words, ask: server.ask))
             #expect(check.suggestions.isEmpty && server.asked == [words])
         }
         // A failure: saved, and not asked again in this form.
         let failing = FakeCheck()
         failing.failure = HTTPError.server(503, nil)
-        let check = SpellingCheck()
+        let check = untimedCheck()
         #expect(await check.beforeSaving(words, ask: failing.ask))
         #expect(await check.beforeSaving(words, ask: failing.ask))
         #expect(failing.asked == [words] && check.suggestions.isEmpty)
 
+        #expect(SpellingCheck.limit == .seconds(5))
+    }
+
+    @Test func timeoutReturnsWithinBudget() async {
+        let words = ["Zenga Krawatte"]
         // Too slow: saved once the limit has passed, without its answer.
         let slow = FakeCheck()
         slow.answer = Spelling(suggestions: [zegna], checked: true)
@@ -179,8 +190,25 @@ struct SpellingTests {
         #expect(SpellingCheck.limit == .seconds(5))
     }
 
+    @Test func timeoutCancelsTheCheckWithoutItsSuggestions() async {
+        let clock = TestClock()
+        let slow = FakeCheck()
+        slow.answer = Spelling(suggestions: [zegna], checked: true)
+        slow.delay = .seconds(30)
+        slow.sleep = { try await clock.sleep(for: $0) }
+        let limited = SpellingCheck(limit: .milliseconds(50), sleep: { try await clock.sleep(for: $0) })
+        let saving = Task { await limited.beforeSaving(["Zenga Krawatte"], ask: slow.ask) }
+        await clock.sleeping(for: .seconds(30))
+        await clock.sleeping(for: .milliseconds(50))
+        #expect(limited.isChecking)
+        clock.advance(by: .milliseconds(50))
+        #expect(await saving.value)
+        #expect(limited.suggestions.isEmpty && !limited.isChecking)
+        #expect(SpellingCheck.limit == .seconds(5))
+    }
+
     @Test func aChangeByHandClearsTheChipsAndItsWordsAreAskedNext() async {
-        let check = SpellingCheck()
+        let check = untimedCheck()
         let server = FakeCheck()
         server.answer = Spelling(suggestions: [zegna], checked: true)
         var form = draft(["Zenga Krawatte", "Kiton Krawatte"])
@@ -209,7 +237,7 @@ struct SpellingTests {
         let gate = RequestGate()
         transport.gates["POST /search/spelling"] = gate
         let (store, _, _) = try await makeStore(transport: transport)
-        let check = SpellingCheck()
+        let check = untimedCheck()
         let ask: @Sendable ([String]) async throws -> Spelling = { [store] words in try await store.spelling(words) }
         let saving = Task { await check.beforeSaving(["Zenga Krawatte"], ask: ask) }
         await gate.waitUntilPaused()

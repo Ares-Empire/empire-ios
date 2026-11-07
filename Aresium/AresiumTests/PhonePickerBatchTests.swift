@@ -27,22 +27,22 @@ struct PhonePickerBatchTests {
         return try AresiumEngine(script: script)
     }
 
-    private func setup(settle: Duration = .milliseconds(500)) async throws -> (PhoneBackend, CategoryPickerModel, ChangeCounter) {
+    private func setup() async throws -> (PhoneBackend, CategoryPickerModel, ChangeCounter) {
         let phone = try await PhoneCountingTests.backend(engine: Self.countingEngine(paymentCount: 2))
         _ = try await phone.importFiles([PhoneTest.vrBank([
             ("01.10.2026", "REWE", "REWE", -2000),
             ("02.10.2026", "Fictional Landlord", "Miete", -80000),
         ])], auth: auth)
         let changes = ChangeCounter()
-        let picker = CategoryPickerModel(phone: phone, settle: settle) { changes.count += 1 }
+        let pause = TestSuspension()
+        let picker = CategoryPickerModel(phone: phone, sleep: { _ in try await pause.sleep() }) { changes.count += 1 }
         await picker.load()
         return (phone, picker, changes)
     }
 
-    /// Timing-free: the wait is far longer than the test, so taps never reach it; the flushes stand for the taps
-    /// stopping. (With the real half second, a busy machine let the wait run out between two taps.)
+    /// The debounce stays suspended until cancelled by a flush; machine speed cannot separate the taps.
     @Test func fiveQuickTogglesSortOnceAndEqualFiveSlowToggles() async throws {
-        let (quick, picker, changes) = try await setup(settle: .seconds(3600))
+        let (quick, picker, changes) = try await setup()
         let start = Int(try await quick.engine.version())!
         for id in choices {
             await picker.toggle(id)
@@ -54,7 +54,7 @@ struct PhonePickerBatchTests {
         #expect(changes.count == 1)
         #expect(Int(try await quick.engine.version()) == start + 1)
 
-        let (slow, slowPicker, slowChanges) = try await setup(settle: .seconds(3600))
+        let (slow, slowPicker, slowChanges) = try await setup()
         let slowStart = Int(try await slow.engine.version())!
         for id in choices {
             await slowPicker.toggle(id)
@@ -75,9 +75,11 @@ struct PhonePickerBatchTests {
         let (phone, picker, changes) = try await setup()
         await picker.toggle("groceries")
         await picker.toggle("rent")
+        let scheduled = picker.scheduledSettle
         #expect(await picker.flush()) // Both Done and Back use this.
         #expect(phone.summary.unsorted == 0 && changes.count == 1)
-        try await Task.sleep(for: .milliseconds(650))
+        await scheduled?.value
+        #expect(scheduled?.isCancelled == true)
         #expect(changes.count == 1)
     }
 

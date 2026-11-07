@@ -65,10 +65,10 @@ struct BackSwipeTests {
         }
 
         probe.enabled = false                                  // the screen turns it off (the tour holds the screen)
-        await Self.settle()
+        await shown.markUpdated(enabled: false)
         for recognizer in recognizers { #expect(!Self.begins(recognizer), "off while the screen says so") }
         probe.enabled = true
-        await Self.settle()
+        await shown.markUpdated(enabled: true)
         for recognizer in recognizers { #expect(Self.begins(recognizer)) }
 
         probe.path = [1, 100]                                  // an unmarked screen on top: the system's own delegate
@@ -95,7 +95,7 @@ struct BackSwipeTests {
         #expect(Self.begins(try Self.recognizers(of: navigation)[0]))
         // The swipe ends in the navigation controller's own pop, which SwiftUI writes back to the path.
         navigation.popViewController(animated: false)
-        for _ in 0..<100 where probe.path != [1] { try await Task.sleep(for: .milliseconds(20)) }
+        await waitForState { probe.path == [1] }
         #expect(probe.path == [1], "the last screen is gone, as with the header's arrow")
     }
 
@@ -157,11 +157,6 @@ struct BackSwipeTests {
     private static func begins(_ recognizer: UIGestureRecognizer) -> Bool {
         recognizer.delegate?.gestureRecognizerShouldBegin?(recognizer) ?? true
     }
-
-    /// Lets SwiftUI apply a change and the marks follow it.
-    private static func settle() async {
-        try? await Task.sleep(for: .milliseconds(150))
-    }
 }
 
 @MainActor @Observable
@@ -193,27 +188,39 @@ private struct ProbeStack: View {
 @MainActor
 private final class Shown {
     let window: UIWindow
+    let probe: Probe
 
     init(_ probe: Probe) async throws {
+        self.probe = probe
         let scene = try #require(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
         window = UIWindow(windowScene: scene)
         window.rootViewController = UIHostingController(rootView: ProbeStack(probe: probe))
         window.isHidden = false
-        try await Task.sleep(for: .milliseconds(100))
+        await waitForViewState { Self.find(in: self.window.rootViewController) != nil }
     }
 
     /// The stack's navigation controller once it holds `screens` and no push or pop is under way.
     func navigation(screens: Int) async throws -> UINavigationController {
-        for _ in 0..<150 {
-            if let navigation = Self.find(in: window.rootViewController), navigation.viewControllers.count == screens,
-               navigation.transitionCoordinator == nil {
-                try await Task.sleep(for: .milliseconds(100))      // the pushed screen's mark has found its stack
-                return navigation
-            }
-            try await Task.sleep(for: .milliseconds(20))
+        await waitForViewState {
+            guard let navigation = Self.find(in: self.window.rootViewController),
+                  navigation.viewControllers.count == screens, navigation.transitionCoordinator == nil else { return false }
+            let marked = self.probe.path.last.map { $0 < 100 } ?? false
+            let delegates = [navigation.interactivePopGestureRecognizer, navigation.interactiveContentPopGestureRecognizer]
+                .compactMap { $0 }.map { $0.delegate is BackSwipeDelegate }
+            return !delegates.isEmpty && delegates.allSatisfy { $0 == marked }
         }
-        Issue.record("the stack never held \(screens) screens")
-        throw CancellationError()
+        return try #require(Self.find(in: window.rootViewController))
+    }
+
+    func markUpdated(enabled: Bool) async {
+        await waitForViewState {
+            guard let top = Self.find(in: self.window.rootViewController)?.topViewController else { return false }
+            return Self.marks(in: top.view).contains { $0.screen === top && $0.enabled == enabled }
+        }
+    }
+
+    private static func marks(in view: UIView) -> [BackSwipeMarkView] {
+        (view as? BackSwipeMarkView).map { [$0] } ?? view.subviews.flatMap { marks(in: $0) }
     }
 
     func close() {

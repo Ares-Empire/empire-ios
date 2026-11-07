@@ -132,7 +132,7 @@ struct MessageScreensTests {
         let messages = model(center: center)
         messages.setPhoneMode(true, ledger: phone.ledger)
         dashboard.messages = messages
-        let imports = ImportStore(dashboard: dashboard, background: PhoneActivity(), outbox: outbox)
+        let imports = ImportStore(dashboard: dashboard, background: PhoneActivity(), outbox: outbox, bannerScheduler: ImportTestTimer().schedule)
         return Setup(phone: phone, dashboard: dashboard, imports: imports, messages: messages, center: center)
     }
 
@@ -140,7 +140,7 @@ struct MessageScreensTests {
         let s = try await setup()
         #expect(!s.offers, "nothing imported yet")
         s.imports.debugImport([ImportThenCategoriesTests.bankFile])
-        await s.imports.importPendingFiles()
+        await s.imports.importAndWait()
         #expect(s.messages.shouldOfferReminder)
         // The category picker after the first import, with the result waiting under it: not now.
         #expect(s.imports.asksForCategories && !s.offers)
@@ -158,7 +158,7 @@ struct MessageScreensTests {
         #expect(!s.offers && !s.messages.preferences.enabled)
         s.imports.debugImport([PhoneTest.vrBank([("09.10.2026", "REWE Markt GmbH", "REWE SAGT DANKE", -990)],
                                                 name: "more.csv")])
-        await s.imports.importPendingFiles()
+        await s.imports.importAndWait()
         s.imports.categoriesClosed()
         s.imports.dismiss()
         #expect(s.phone.summary.payments == 5 && !s.offers)
@@ -171,10 +171,10 @@ struct MessageScreensTests {
         let s = try await setup(chosen: ["groceries"], outbox: formats)
         // An unknown bank's file, confirmed in the file check window: the result offers to send its format.
         s.imports.debugImport([try PhoneTest.fixture("unknown-fiktivbank.csv")])
-        await s.imports.importPendingFiles()
+        await s.imports.importAndWait()
         let check = FileCheckModel(request: try #require(s.imports.layoutRequest), phone: s.phone, imports: s.imports)
         #expect(await check.yes())
-        await s.imports.importPendingFiles()
+        await s.imports.importAndWait()
         #expect(s.imports.banner?.share != nil && !s.imports.asksForCategories)
         #expect(s.messages.shouldOfferReminder && !s.offers, "the send card first")
         // Its Not now closes the result: the offer follows in its place, the next time Aresium is opened (brief 215
@@ -195,7 +195,7 @@ struct MessageScreensTests {
         earlier.minute = 30
         s.messages.setPreferences(earlier)
         s.imports.debugImport([ImportThenCategoriesTests.bankFile])
-        await s.imports.importPendingFiles()
+        await s.imports.importAndWait()
         await s.imports.categoriesClosed()?.value
         s.imports.close()
         s.messages.appOpenedAgain()          // brief 215: the offer waits for the next opening of the app
@@ -214,7 +214,7 @@ struct MessageScreensTests {
         s.messages.setEnabled(false)
         s.imports.debugImport([PhoneTest.vrBank([("10.10.2026", "REWE Markt GmbH", "REWE SAGT DANKE", -455)],
                                                 name: "later.csv")])
-        await s.imports.importPendingFiles()
+        await s.imports.importAndWait()
         s.imports.categoriesClosed()
         s.imports.dismiss()
         #expect(!s.messages.shouldOfferReminder && !s.offers)

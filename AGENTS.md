@@ -45,10 +45,13 @@ a personal finance dashboard). Claude plans the work, writes your brief and chec
 
 From the worktree, with build output kept inside it:
 ```
+bash scripts/test-unit.sh <App>
+bash scripts/test-unit.sh --all
 xcodebuild build -scheme <App> -destination 'platform=iOS Simulator,name=codex-NN' -derivedDataPath build/DerivedData
-xcodebuild test  -scheme <App> -destination 'platform=iOS Simulator,name=codex-NN' -derivedDataPath build/DerivedData
 ```
-Use your own simulator, never a shared one:
+The test script creates and cleans up its own simulator; `--timing` runs only speed/measurement tests, and
+`--keep-simulator` retains the owned simulator for inspection. Build and screen checks use your own simulator too,
+never a shared one:
 `xcrun simctl create codex-NN "iPhone 17" com.apple.CoreSimulator.SimRuntime.iOS-27-0` (NN = your brief's
 number; the iOS 27.1 runtime only supports the foldable iPhone Duo), and `xcrun simctl delete codex-NN` at
 the end. Fix your own compile errors and failing tests before you report.
