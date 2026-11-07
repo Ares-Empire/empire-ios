@@ -1,6 +1,6 @@
 # 241: CI for the public server repos and a local runner for the private ones
 
-Status: running (Codex, started 2026-11-07)
+Status: merged 2026-11-07 (aresium ff1f096, ares-empire 83497c3, Arestoteles eda940c, ares 7deb029, aresync f9068ff; all four public CIs green on main)
 Branch: `codex/241-ci` in each of the five repos · Worktrees: `~/ci-241/<repo>` (aresium, ares-empire, Arestoteles,
 ares, aresync); Codex works in `~/ci-241` · Model: `gpt-6.1-sol`, effort `high` (established tooling across five repos:
 careful setup, fresh-clone debugging and failure handling, but no hard design; Astra's 3× allowance is not needed)
