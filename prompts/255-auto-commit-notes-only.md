@@ -1,6 +1,6 @@
 # 255: Aresync auto-commits only the notes repo
 
-Status: open
+Status: merged 2026-11-07 (aresync 33219cd; Mac suites and the laptop's Windows tests, 92 passed, green)
 Repo: `aresync` (private) · Branch: `codex/255-auto-commit` · Worktree: `~/aresync-255-auto-commit` · Model:
 `gpt-6.1-sol`, effort `high` (a careful change mirrored in two scripts with tests, design settled below; no hard
 reasoning that needs Astra's 3× allowance)
