@@ -1,4 +1,5 @@
-"""Print counts and failing names only; keep diagnostics in the local result bundle."""
+"""Print counts, failing names and each failure's first line (tests use invented data only); the rest stays in
+the local result bundle."""
 import json
 import subprocess
 import sys
@@ -14,13 +15,17 @@ try:
     failures = data["failedTests"]
     duration = data.get("finishTime", 0) - data.get("startTime", 0)
     ok = status == "0" and failures == 0 and tests > 0 and data["result"] == "Passed"
-    names = sorted({f.get("testIdentifierString") or f.get("testName", "Unknown test")
-                    for f in data["testFailures"]})
+    failed = {}
+    for failure in data["testFailures"]:
+        name = failure.get("testIdentifierString") or failure.get("testName", "Unknown test")
+        text = (failure.get("failureText") or "").strip().splitlines()
+        failed.setdefault(name, text[0][:300] if text else "")
+    names = sorted(failed)
 except (ValueError, KeyError):
-    tests, failures, duration, ok, names = 0, 0, float(elapsed), False, []
+    tests, failures, duration, ok, names, failed = 0, 0, float(elapsed), False, [], {}
 print(f"{app}: {tests} tests, {failures} failures, {duration:.2f}s" + ("" if ok else " (FAILED)"))
 for name in names:
-    print(f"  {name}")
+    print(f"  {name}" + (f": {failed[name]}" if failed[name] else ""))
 if not ok and not names:
     print(f"  No failing test names available (build/launch/result failure; see build/test-unit/{app}.log).")
 with open(output, "a") as file:
