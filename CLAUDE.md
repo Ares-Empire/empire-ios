@@ -549,6 +549,14 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   Shared pictures keep a name a person chose; a camera's or the system's name becomes the capture time
   (`DropNames.isCameraName`). DEBUG: `-tab aresync`, `-openSheet send`, `-samplePick photo|photos|file|files|mixed`,
   `-sampleDropHover <count|name>`, `-sampleShareExtension`, `-sampleShareState loading|loggedOut|unreadable`.
+  **Never resend blind** (brief 238, 2026-11-07: "AirPods Max 2.pdf" landed on the Mac on 2026-11-05, the phone lost the
+  upload's 200, sent the bytes again the next day, got `409` and showed the landed file as "Not sent" with Retry):
+  before the bytes of a record that already has a server id go again (a retry, a launch, Retry, a deferred retry), and
+  after any `409` on the upload, `DropOutbox.reconcile` asks `GET /drops` once: `waiting`/`failed`/`landed` discards the
+  phone's copy (`onUploaded`), `cancelled` discards it, `uploading` sends; a failed check never sends. At launch and on
+  coming to the foreground `reconnect()` checks every idle record with a server id in the same one request, but only
+  removes those the server has: a record that failed for good (413, 507) or waits for its retry stays as it was. A
+  server row past `uploading` always shows the server's line, never the phone's copy (`DropRow.hidden(for:in:)`).
 - **Arestemis app** (2026-10-24, build A1): `Arestemis/` (bundle id `de.ares-empire.arestemis`), the hunter for flats and, since
   build 6 (briefs 113, 114, 2026-11-02), things for sale: several hunts, two tabs Suche (the Hunts list, each hunt's page, the
   forms opened from a hunt) and Angebote (New | Searches since brief 133, below), on the Arestemis API (`~/Arestemis/docs/API.md`; samples in `Arestemis/Arestemis/Samples/`, copies of its `docs/samples/`).

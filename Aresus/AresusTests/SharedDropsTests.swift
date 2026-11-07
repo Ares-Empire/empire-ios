@@ -105,7 +105,7 @@ struct SharedDropsTests {
     @Test func backgroundFailureRetryCancellationAndStaleCompletion() async throws {
         let directory = testDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
-        let api = DropTransport(); api.responses = [.answer(201, try dropAnswer()), .answer(204, Data())]
+        let api = DropTransport(); api.responses = [.answer(201, try dropAnswer()), .answer(200, try dropListAnswer()), .answer(204, Data())]
         let uploads = HeldDropUploads()
         let outbox = DropOutbox(session: await signedInSession(), client: AresusAPI(transport: api), directory: directory,
                                 automatic: false, uploads: uploads)
@@ -115,19 +115,19 @@ struct SharedDropsTests {
         try await uploads.finish(.failure(URLError(.networkConnectionLost)))
         #expect(outbox.items.only?.state == .onPhone && outbox.items.only?.retryAt != nil)
         await outbox.retry(id)
-        #expect(uploads.tasks.count == 1 && api.requests.count == 1)
+        #expect(uploads.tasks.count == 1 && api.requests.count == 2)
         let waiting = try AresusJSON.decoder().decode(Drop.self, from: dropAnswer(state: .waiting))
         await outbox.finished(oldTicket, result: .success(waiting), token: "fictional-empire-token")
         #expect(outbox.items.count == 1, "late completion of an older attempt cannot finish the retry")
         await outbox.remove(id)
         #expect(uploads.cancelled == [id] && outbox.items.isEmpty)
-        #expect(api.requests.map(\.httpMethod) == ["POST", "DELETE"])
+        #expect(api.requests.map(\.httpMethod) == ["POST", "GET", "DELETE"])
     }
 
     @Test func retryDeadlineIsHandedToBackgroundSessionBeforeClosing() async throws {
         let directory = testDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
-        let api = DropTransport(); api.responses = [.answer(201, try dropAnswer())]
+        let api = DropTransport(); api.responses = [.answer(201, try dropAnswer()), .answer(200, try dropListAnswer())]
         let uploads = HeldDropUploads(); uploads.supportsDeferredRetry = true
         let outbox = DropOutbox(session: await signedInSession(), client: AresusAPI(transport: api), directory: directory,
                                 automatic: false, uploads: uploads)
@@ -136,7 +136,33 @@ struct SharedDropsTests {
         let item = try #require(outbox.items.only)
         #expect(item.uploadSession == uploads.identifier && item.state == .onPhone && item.attempts == 2)
         #expect(uploads.tasks.count == 1 && uploads.deadlines.last! == item.retryAt)
-        #expect(api.requests.count == 1, "retrying bytes never creates another server drop")
+        #expect(api.requests.map(\.httpMethod) == ["POST", "GET"], "retrying bytes never creates another server drop")
+    }
+
+    @Test(arguments: [DropState.waiting, .uploading])
+    func deferredRetry409CompletionReconcilesBeforeAnotherSubmission(state: DropState) async throws {
+        let directory = testDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let api = DropTransport()
+        api.responses = [.answer(201, try dropAnswer()), .answer(200, try dropListAnswer()),
+                         .answer(200, try dropListAnswer(state: state)), .answer(200, try dropListAnswer())]
+        let uploads = HeldDropUploads(); uploads.supportsDeferredRetry = true
+        let outbox = DropOutbox(session: await signedInSession(), client: AresusAPI(transport: api), directory: directory,
+                                automatic: false, uploads: uploads)
+        _ = try await enqueue(outbox); await outbox.process()
+        try await uploads.finish(.failure(URLError(.cancelled)))
+        #expect(uploads.deadlines.last! != nil)
+        var uploaded: [Drop] = []; outbox.onUploaded = { uploaded.append($0) }
+        try await uploads.finish(.failure(HTTPError.server(409, "This drop cannot be changed in its current state.")))
+        if state == .waiting {
+            #expect(outbox.items.isEmpty && uploads.tasks.isEmpty && uploaded.only?.state == .waiting)
+            #expect(api.requests.map(\.httpMethod) == ["POST", "GET", "GET"])
+        } else {
+            let pending = try #require(outbox.items.only)
+            #expect(pending.state == .onPhone && pending.retryAt != nil && pending.uploadSession == uploads.identifier)
+            #expect(uploads.tasks.count == 1 && uploads.deadlines.last! == pending.retryAt && pending.attempts == 3)
+            #expect(api.requests.map(\.httpMethod) == ["POST", "GET", "GET", "GET"])
+        }
     }
 
     @Test func background401EndsSharedSessionAndClearsQueue() async throws {
@@ -167,6 +193,7 @@ struct SharedDropsTests {
         api.responses = [.answer(200, Data("{\"drops\":[".utf8) + (try dropAnswer()) + Data("]}".utf8))]
         await outbox.reconnect()
         #expect(outbox.items.only?.uploadSession == nil && outbox.items.only?.state == .onPhone)
+        api.responses = [.answer(200, try dropListAnswer())]
         await outbox.process()
         #expect(uploads.tasks.count == 1 && api.requests.filter { $0.httpMethod == "POST" }.count == 1)
     }
@@ -186,6 +213,184 @@ struct SharedDropsTests {
         await outbox.reconnect()
         #expect(outbox.items.isEmpty && handedOver)
         #expect(api.requests.map(\.httpMethod) == ["POST", "GET"])
+    }
+
+    @Test func reconnectCleansStaleFailedAndIdleRecordsWithOneList() async throws {
+        let directory = testDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let api = DropTransport()
+        let outbox = DropOutbox(session: await signedInSession(), client: AresusAPI(transport: api), directory: directory,
+                                automatic: false, uploads: HeldDropUploads())
+        var records: [DropOutboxItem] = []
+        var server: [Drop] = []
+        for (index, state) in [DropOutboxItem.State.failed, .onPhone, .uploading].enumerated() {
+            _ = try await enqueue(outbox)
+            var record = try #require(outbox.items.last)
+            record.serverID = 44 + index
+            record.state = state
+            record.lastError = "This drop cannot be changed in its current state."
+            if state == .uploading { record.uploadSession = "test-held-upload" }
+            try DropJournal(directory: directory).save(record)
+            records.append(record)
+            var drop = try AresusJSON.decoder().decode(Drop.self, from: dropAnswer(state: .landed))
+            drop.id = 44 + index; server.append(drop)
+        }
+        api.responses = [.answer(200, try AresusJSON.encoder().encode(DropsAnswer(drops: server)))]
+        var uploaded: [Drop] = []; outbox.onUploaded = { uploaded.append($0) }
+        await outbox.reconnect()
+        #expect(outbox.items.isEmpty && uploaded == server)
+        #expect(api.requests.map(\.httpMethod) == ["GET"])
+        for record in records {
+            #expect(try DropJournal(directory: directory).read(record.id) == nil)
+            #expect(!FileManager.default.fileExists(atPath: directory.appendingPathComponent(record.localFile).path))
+        }
+    }
+
+    @Test func reconnectOfflineBacksOffWithoutResettingToABlindRetry() async throws {
+        let directory = testDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let api = DropTransport(); api.responses = [.failure(URLError(.notConnectedToInternet))]
+        let uploads = HeldDropUploads()
+        let outbox = DropOutbox(session: await signedInSession(), client: AresusAPI(transport: api), directory: directory,
+                                automatic: false, uploads: uploads)
+        _ = try await enqueue(outbox)
+        var record = try #require(outbox.items.only)
+        record.serverID = 44; record.state = .uploading; record.uploadSession = uploads.identifier; record.attempts = 3
+        try DropJournal(directory: directory).save(record)
+        await outbox.reconnect()
+        let pending = try #require(outbox.items.only)
+        #expect(pending.state == .onPhone && pending.uploadSession == nil && pending.lastError == "No connection.")
+        #expect(try #require(pending.retryAt).timeIntervalSinceNow > 15)
+        await outbox.process()
+        #expect(api.requests.map(\.httpMethod) == ["GET"] && uploads.tasks.isEmpty)
+    }
+
+    /// A record that failed for good (too large, quota) and one waiting for its retry are only checked at launch: they
+    /// go when the server has the file, and otherwise stay exactly as they were, also when the check itself fails.
+    @Test(arguments: [false, true])
+    func reconnectOnlyChecksIdleRecordsTheServerStillWaitsFor(offline: Bool) async throws {
+        let directory = testDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let api = DropTransport()
+        let uploads = HeldDropUploads()
+        let outbox = DropOutbox(session: await signedInSession(), client: AresusAPI(transport: api), directory: directory,
+                                automatic: false, uploads: uploads)
+        let failedID = try await enqueue(outbox), waitingID = try await enqueue(outbox, name: "Other.pdf")
+        var failed = try #require(outbox.items.first { $0.id == failedID })
+        failed.serverID = 44; failed.state = .failed; failed.lastError = "This file is too large."; failed.attempts = 1
+        try DropJournal(directory: directory).save(failed)
+        var waiting = try #require(outbox.items.first { $0.id == waitingID })
+        waiting.serverID = 45; waiting.state = .onPhone; waiting.attempts = 2
+        waiting.retryAt = Date.now.addingTimeInterval(600); waiting.lastError = "No connection."
+        try DropJournal(directory: directory).save(waiting)
+        var first = try AresusJSON.decoder().decode(Drop.self, from: dropAnswer(state: .uploading))
+        var second = first
+        first.id = 44; second.id = 45
+        api.responses = [offline ? .failure(URLError(.notConnectedToInternet))
+            : .answer(200, try AresusJSON.encoder().encode(DropsAnswer(drops: [first, second])))]
+        await outbox.reconnect()
+        #expect(api.requests.map(\.httpMethod) == ["GET"] && uploads.tasks.isEmpty)
+        #expect(outbox.items.first { $0.id == failedID } == failed)
+        #expect(outbox.items.first { $0.id == waitingID } == waiting)
+    }
+
+    @Test func reconnectLeavesForeignUploadsAndLeasedRecordsAlone() async throws {
+        let directory = testDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let api = DropTransport()
+        let outbox = DropOutbox(session: await signedInSession(), client: AresusAPI(transport: api), directory: directory,
+                                automatic: false, uploads: HeldDropUploads())
+        let foreignID = try await enqueue(outbox), leasedID = try await enqueue(outbox, name: "Other.pdf")
+        var foreign = try #require(outbox.items.first { $0.id == foreignID })
+        foreign.serverID = 44; foreign.uploadSession = "another-process"; foreign.state = .uploading
+        try DropJournal(directory: directory).save(foreign)
+        var leased = try #require(outbox.items.first { $0.id == leasedID })
+        leased.serverID = 45; leased.state = .failed
+        try DropJournal(directory: directory).save(leased)
+        let lease = try #require(DropJournal(directory: directory).claim(leasedID))
+        await outbox.reconnect()
+        withExtendedLifetime(lease) {}
+        #expect(api.requests.isEmpty && outbox.items == [foreign, leased])
+    }
+
+    @Test(arguments: [DropState.waiting, .uploading])
+    func background409DeliveryReconcilesAndFinishesEventsAfterward(state: DropState) async throws {
+        let directory = testDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let session = await signedInSession()
+        let api = DropTransport()
+        let driver = DropBackgroundUploads(identifier: "test-conflict-\(UUID())")
+        defer { driver.invalidate() }
+        let outbox = DropOutbox(session: session, client: AresusAPI(transport: api), directory: directory,
+                                automatic: false, uploads: driver)
+        _ = try await enqueue(outbox)
+        var record = try #require(outbox.items.only)
+        let ticket = DropUploadID(record: record.id)
+        record.serverID = 44; record.state = .uploading
+        record.uploadSession = driver.identifier; record.uploadAttempt = ticket.attempt
+        try DropJournal(directory: directory).save(record)
+        // If it is still streaming, a failed follow-up GET prevents submitting any real network task in this test.
+        api.responses = [.answer(200, try dropListAnswer(state: state)), .failure(URLError(.notConnectedToInternet))]
+        await withCheckedContinuation { continuation in
+            driver.finishedEvents = { continuation.resume() }
+            driver.deliver(ticket, result: .failure(HTTPError.server(409, "This drop cannot be changed in its current state.")), token: session.token)
+            driver.finishEvents()
+        }
+        if state == .waiting {
+            #expect(outbox.items.isEmpty && api.requests.count == 1)
+            #expect(!FileManager.default.fileExists(atPath: directory.appendingPathComponent(record.localFile).path))
+        } else {
+            let pending = try #require(outbox.items.only)
+            #expect(pending.state == .onPhone && pending.retryAt != nil && pending.uploadSession == nil)
+            #expect(api.requests.map(\.httpMethod) == ["GET", "GET"])
+        }
+    }
+
+    @Test func deferredRetryChecksAgainAndDiscardsAcceptedBytes() async throws {
+        let directory = testDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let api = DropTransport()
+        api.responses = [.answer(201, try dropAnswer()), .answer(200, try dropListAnswer(state: .waiting))]
+        let uploads = HeldDropUploads(); uploads.supportsDeferredRetry = true
+        let outbox = DropOutbox(session: await signedInSession(), client: AresusAPI(transport: api), directory: directory,
+                                automatic: false, uploads: uploads)
+        _ = try await enqueue(outbox); await outbox.process()
+        var uploaded: [Drop] = []; outbox.onUploaded = { uploaded.append($0) }
+        try await uploads.finish(.failure(URLError(.cancelled)))
+        #expect(outbox.items.isEmpty && uploads.tasks.isEmpty && uploaded.only?.state == .waiting)
+        #expect(api.requests.map(\.httpMethod) == ["POST", "GET"])
+    }
+
+    @Test func logoutDuringReconcileDiscardsItsLateAnswer() async throws {
+        let directory = testDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let session = await signedInSession()
+        let api = DropTransport(); api.responses = [.answer(200, try dropListAnswer(state: .landed))]
+        let outbox = DropOutbox(session: session, client: AresusAPI(transport: api), directory: directory,
+                                automatic: false, uploads: HeldDropUploads())
+        _ = try await enqueue(outbox)
+        var record = try #require(outbox.items.only); record.serverID = 44; record.state = .failed
+        try DropJournal(directory: directory).save(record)
+        let gate = RequestGate(); api.gate = gate
+        var uploaded = false; outbox.onUploaded = { _ in uploaded = true }
+        let reconnect = Task { await outbox.reconnect() }
+        await gate.waitUntilPaused()
+        session.logOut(); gate.resume(); await reconnect.value
+        #expect(outbox.items.isEmpty && !uploaded && !FileManager.default.fileExists(atPath: directory.path))
+    }
+
+    @Test func unauthorizedReconcileClearsQueueWithoutUploading() async throws {
+        let directory = testDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let session = await signedInSession()
+        let api = DropTransport(); api.responses = [.answer(401, Data())]
+        let outbox = DropOutbox(session: session, client: AresusAPI(transport: api), directory: directory,
+                                automatic: false, uploads: HeldDropUploads())
+        _ = try await enqueue(outbox)
+        var record = try #require(outbox.items.only); record.serverID = 44
+        try DropJournal(directory: directory).save(record)
+        await outbox.process()
+        #expect(!session.isSignedIn && outbox.items.isEmpty && api.requests.map(\.httpMethod) == ["GET"])
     }
 
     @Test func delegateParsesResponsesAndFinishesEventsAfterRecordUpdate() async throws {

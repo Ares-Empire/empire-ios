@@ -1,6 +1,6 @@
 # 238: Aresus drops: a delivered file never shows as "Not sent" (409 after a lost upload answer)
 
-Status: running (Codex, 2026-11-07)
+Status: merged 2026-11-07 (Claude: idle records are only checked at launch, never retried; a failed check leaves them as they were)
 Branch: `codex/238-drop-resend-409` · Worktree: `../empire-ios-238-drop-resend-409` · Model: `gpt-6.1-sol`, effort `high`
 
 ## Goal
