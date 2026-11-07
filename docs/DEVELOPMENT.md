@@ -104,3 +104,13 @@ Later: automate step 1 (Xcode Cloud or a script with an App Store Connect API ke
 
 What App Store Connect asks (App Privacy, TestFlight test information, demo login) and what is still missing before
 the App Store: [`docs/APP-STORE.md`](APP-STORE.md).
+
+Release configurations exclude `Preview Content/` (Aresium, Empire) and `Samples/` (Arestemis, Aresus,
+Arestoteles), plus the shared `sample-push.apns` simulator fixture; Debug keeps them. Arestemis's shipping tour
+history lives in `Resources/prices-9.json`, and Aresium keeps `AresiumShared/dashboard.sample.json` for its shipping widget placeholders and gallery.
+Before uploading, run `python3 scripts/check-release-resources.py --app <App> --bundle <path/to/App.app>` on the
+archive's `.app` under `Products/Applications/` (the same command accepts a Release simulator `.app`).
+The audit checks forbidden fixtures recursively, including extensions, and required runtime resources at their
+loader's bundle paths. When adding a sample, trace its Release callers and update `scripts/release-resources.json`
+with its classification and reason; put shipping resources outside excluded folders and add their required bundle
+paths. Classify unused files too, retaining them in source for review. Unclassified samples fail the audit.

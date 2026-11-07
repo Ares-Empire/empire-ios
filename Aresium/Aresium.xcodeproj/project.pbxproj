@@ -394,6 +394,14 @@
 		6A069D23C48EDDDC8F0180A5 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				EXCLUDED_SOURCE_FILE_NAMES = (
+					"$(inherited)",
+					"sample-push.apns",
+					/* Match the space without build-setting word splitting. */
+					"Preview?Content",
+					"*/Preview?Content/*",
+					"*/Preview?Content/**/*",
+				);
 				DEVELOPMENT_TEAM = WQN8SHAH9B;
 				CURRENT_PROJECT_VERSION = 26;
 				MARKETING_VERSION = 0.1;

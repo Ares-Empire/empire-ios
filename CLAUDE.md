@@ -86,6 +86,7 @@ fix its own compile errors. The limits the sandbox used to enforce are now rules
 worktree, never commit or push, no installs. Council seats and reviews still run with `-s read-only`.
 
 **Checks are light, but never skipped:**
+- Before a TestFlight upload, run `python3 scripts/check-release-resources.py --app <App> --bundle <archive>.xcarchive/Products/Applications/<App>.app`; the Release resource audit must pass.
 - Build and run the tests yourself on the simulator. Never take Codex's "build succeeded" as evidence.
 - Read the diff: quickly for layout, carefully for anything near login, tokens, the Keychain, or API calls.
 - Run the app on the simulator and look at each screen the brief touched
@@ -722,7 +723,7 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   and keeps one's own words. The placeholder is now "3.4.0 is out, not a release candidate" and the caption "Pages behind
   a login, or that need clicks (such as appointment bookings), can't be watched." (page reading improved on the server;
   the Arestemis repo, `docs/briefs/136-arestemis-browser-reader.md`). Sample monitors 9 (Nintendo Switch 2 on MediaMarkt, history and alarm under €450 or back in stock,
-  a year of history in `Samples/prices-9.json` with two stretches out of stock), 10 ("Headphones", history only, `prices-10.json`) and 11 (LEGO Titanic, alarm when back in stock, no history, out of stock), with
+  a year of history in `Resources/prices-9.json` with two stretches out of stock; moved out of `Samples/` by brief 245 because the shipping tour reads it, so a fresh copy of the server's samples puts it there, not in `Samples/`), 10 ("Headphones", history only, `prices-10.json`) and 11 (LEGO Titanic, alarm when back in stock, no history, out of stock), with
   alarms 39 (under the limit, new) and 37 (back in stock, saved) in `price-matches.json`; the server's own samples in
   `ArestemisTests/ServerSamples/` (`server-prices.json` new). DEBUG `-openPriceForm`, `-newPriceForm` (`-priceURL
   <text>`, `-priceSwitches both|history|alarm|none`, `-pricePreview reading|refused|failed`), `-newExample
