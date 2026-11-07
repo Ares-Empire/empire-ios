@@ -639,6 +639,16 @@
         }
       }
     },
+    "Running sessions get their answer right away, the others the next time they run." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Laufende Sitzungen bekommen ihre Antwort sofort, die anderen beim nächsten Start."
+          }
+        }
+      }
+    },
     "Send" : {
       "localizations" : {
         "de" : {
@@ -675,16 +685,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Server"
-          }
-        }
-      }
-    },
-    "Sessions that are running get their answer right away; the others the next time they run." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Laufende Sitzungen bekommen ihre Antwort sofort, die anderen beim nächsten Start."
           }
         }
       }
@@ -795,6 +795,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Wartet auf dich"
+          }
+        }
+      }
+    },
+    "Your answer" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Antwort"
           }
         }
       }

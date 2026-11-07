@@ -87,6 +87,10 @@ struct BoardTests {
         #expect(BoardWords.ownAnswer(" \nShip it\nTomorrow.  ") == "Ship it\nTomorrow.")
         #expect(BoardWords.ownAnswer(String(repeating: "a", count: 1000)) != nil)
         #expect(BoardWords.ownAnswer(String(repeating: "a", count: 1001)) == nil)
+        // Near the limit the field counts what the server checks: the trimmed text.
+        #expect(BoardWords.ownAnswerLength("  " + String(repeating: "a", count: 950) + "\n") == 950)
+        #expect(BoardWords.ownAnswerCount(950, language: .english) == "950 / 1,000")
+        #expect(BoardWords.ownAnswerCount(1012, language: .german) == "1.012 / 1.000")
         var item = board.asks[0]
         item.session = "bad/session"
         #expect(item.claudeURL == nil)

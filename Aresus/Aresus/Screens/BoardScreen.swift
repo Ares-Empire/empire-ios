@@ -31,19 +31,11 @@ struct BoardScreen: View {
                             CalmMessage(text: String(localized: "Nothing waits on you."))
                                 .padding(.vertical, waiting.answered.isEmpty && waiting.unowned.count == 0 ? 150 : 40)
                         }
-                        ForEach(board.asks) { item in
-                            askCard(item)
-                                .contextMenu {
-                                    Button("Not needed", systemImage: "xmark") { board.perform(.drop, on: item) }
-                                    if let url = item.claudeURL {
-                                        Button("Ask in Claude", systemImage: "arrow.up.forward.app") { openURL(url) }
-                                    }
-                                }
-                        }
+                        ForEach(board.asks) { item in askCard(item) }
                         if !waiting.answered.isEmpty {
                             SectionTitle(text: String(localized: "Answered")).padding(.top, 12)
                             answeredCard(waiting.answered)
-                            quiet(String(localized: "Sessions that are running get their answer right away; the others the next time they run."))
+                            quiet(String(localized: "Running sessions get their answer right away, the others the next time they run."))
                         }
                         if waiting.unowned.count > 0 { quiet(waiting.unowned.line()).padding(.top, 12) }
                     } else if board.error == nil {
@@ -77,14 +69,26 @@ struct BoardScreen: View {
     /// other); a field for his own words; then one quiet line of the rarer actions.
     private func askCard(_ item: BoardItem) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            if item.blocking { waitingLabel.padding(.bottom, 8) }
-            Text(verbatim: item.text).font(AppFont.text(17, weight: .semibold)).foregroundStyle(Ink.primary)
-                .fixedSize(horizontal: false, vertical: true)
-            if let why = item.why, !why.isEmpty {
-                Text(verbatim: why).font(AppFont.text(14)).foregroundStyle(Ink.secondary).lineSpacing(2)
-                    .fixedSize(horizontal: false, vertical: true).padding(.top, 6)
+            // The long-press menu sits on the question, not the whole card: a long press in the field places the
+            // cursor or pastes.
+            VStack(alignment: .leading, spacing: 0) {
+                if item.blocking { waitingLabel.padding(.bottom, 8) }
+                Text(verbatim: item.text).font(AppFont.text(17, weight: .semibold)).foregroundStyle(Ink.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+                if let why = item.why, !why.isEmpty {
+                    Text(verbatim: why).font(AppFont.text(14)).foregroundStyle(Ink.secondary).lineSpacing(2)
+                        .fixedSize(horizontal: false, vertical: true).padding(.top, 6)
+                }
+                meta(item).padding(.top, 10)
             }
-            meta(item).padding(.top, 10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+            .contextMenu {
+                Button("Not needed", systemImage: "xmark") { board.perform(.drop, on: item) }
+                if let url = item.claudeURL {
+                    Button("Ask in Claude", systemImage: "arrow.up.forward.app") { openURL(url) }
+                }
+            }
             if board.failed.contains(item.id) {
                 Text("Not sent. Try again.").font(AppFont.text(12, weight: .medium))
                     .foregroundStyle(StatusTone.issue.color(.aresus)).padding(.top, 8)
@@ -121,16 +125,17 @@ struct BoardScreen: View {
         }
     }
 
-    /// A session that cannot go on without the answer (`board ask --blocking`): a small caps line in the accent, as
-    /// the section headings, not the issue red: it asks for attention, nothing is wrong.
+    /// A session that cannot go on without the answer (`board ask --blocking`): small caps styled like the section
+    /// headings, in the accent, not the issue red: it asks for attention, nothing is wrong.
     private var waitingLabel: some View {
         HStack(spacing: 6) {
-            Image(systemName: "hourglass").font(.system(size: 11, weight: .semibold))
+            Image(systemName: "hourglass").font(.system(size: 11, weight: .semibold)).accessibilityHidden(true)
             Text(verbatim: String(localized: "Claude is waiting").uppercased())
                 .font(AppFont.text(11, weight: .semibold)).tracking(1.3)
         }
         .foregroundStyle(AppAccent.aresus.color)
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("Claude is waiting"))
     }
 
     /// Patrik's own words, on every ask (Patrik, 2026-11-07: "a way for me to enter free text"): a field that grows to
@@ -139,31 +144,43 @@ struct BoardScreen: View {
     private func ownWords(_ item: BoardItem) -> some View {
         let draft = Binding(get: { drafts[item.id] ?? "" }, set: { drafts[item.id] = $0 })
         let answer = BoardWords.ownAnswer(draft.wrappedValue)
-        return HStack(alignment: .bottom, spacing: 6) {
-            TextField("", text: draft, prompt: Text("Or answer in your own words").foregroundStyle(Ink.muted),
-                      axis: .vertical)
-                .lineLimit(1...5)
-                .font(AppFont.text(15)).foregroundStyle(Ink.primary)
-                .focused($focused, equals: item.id)
-                .padding(.vertical, 12)
-                .accessibilityIdentifier("board-own-answer-\(item.id)")
-            if let answer {
-                Button {
-                    focused = nil
-                    board.perform(.answer(answer), on: item)
-                } label: {
-                    Image(systemName: "arrow.up.circle.fill").font(.system(size: 28))
-                        .foregroundStyle(AppAccent.aresus.color)
+        let length = BoardWords.ownAnswerLength(draft.wrappedValue)
+        let field = RoundedRectangle(cornerRadius: 14, style: .continuous)
+        return VStack(alignment: .trailing, spacing: 4) {
+            HStack(alignment: .bottom, spacing: 0) {
+                TextField("", text: draft, prompt: Text("Or answer in your own words").foregroundStyle(Ink.muted),
+                          axis: .vertical)
+                    .lineLimit(1...5)
+                    .font(AppFont.text(15)).foregroundStyle(Ink.primary)
+                    .focused($focused, equals: item.id)
+                    .padding(.vertical, 12)
+                    .accessibilityLabel(Text("Your answer"))
+                    .accessibilityIdentifier("board-own-answer-\(item.id)")
+                if let answer {
+                    Button {
+                        focused = nil
+                        board.perform(.answer(answer), on: item)
+                    } label: {
+                        Image(systemName: "arrow.up.circle.fill").font(.system(size: 28))
+                            .foregroundStyle(AppAccent.aresus.color)
+                            .frame(width: 44, height: 44).contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(Text("Send"))
+                    .transition(.scale(scale: 0.6).combined(with: .opacity))
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel(Text("Send"))
-                .padding(.bottom, 6)
-                .transition(.scale(scale: 0.6).combined(with: .opacity))
+            }
+            .padding(.leading, 14).padding(.trailing, answer == nil ? 14 : 0)
+            .background(Ink.field, in: field)
+            .overlay(field.strokeBorder(Ink.line))
+            .animation(.easeOut(duration: 0.15), value: answer == nil)
+            // Near the server's limit a quiet count, so a missing arrow is never a mystery.
+            if length > BoardWords.ownAnswerWarning {
+                Text(verbatim: BoardWords.ownAnswerCount(length))
+                    .font(AppFont.number(11, weight: .regular))
+                    .foregroundStyle(length > BoardWords.ownAnswerLimit ? StatusTone.issue.color(.aresus) : Ink.muted)
             }
         }
-        .padding(.leading, 14).padding(.trailing, answer == nil ? 14 : 6)
-        .background(Ink.field, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .animation(.easeOut(duration: 0.15), value: answer == nil)
     }
 
     private func optionButtons(_ item: BoardItem) -> some View {
@@ -217,7 +234,7 @@ struct BoardScreen: View {
                         Image(systemName: "arrow.turn.down.right").font(.system(size: 11, weight: .semibold))
                             .foregroundStyle(Ink.muted)
                         Text(verbatim: item.answer ?? "").font(AppFont.text(15, weight: .medium))
-                            .foregroundStyle(Ink.primary).fixedSize(horizontal: false, vertical: true)
+                            .foregroundStyle(Ink.primary).lineLimit(4).fixedSize(horizontal: false, vertical: true)
                     }
                 }
                 .padding(.vertical, 12).frame(maxWidth: .infinity, alignment: .leading)

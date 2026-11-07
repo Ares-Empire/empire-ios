@@ -134,8 +134,23 @@ nonisolated enum BoardWords {
         return date <= calendar.startOfDay(for: now)
     }
 
+    /// The server takes 1–1000 characters of Patrik's own words.
+    static let ownAnswerLimit = 1000
+    /// From here the field shows how many characters are left.
+    static let ownAnswerWarning = 900
+
     static func ownAnswer(_ text: String) -> String? {
         let answer = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        return (1...1000).contains(answer.count) ? answer : nil
+        return (1...ownAnswerLimit).contains(answer.count) ? answer : nil
+    }
+
+    static func ownAnswerLength(_ text: String) -> Int {
+        text.trimmingCharacters(in: .whitespacesAndNewlines).count
+    }
+
+    /// "950 / 1000": the count the server checks, written the language's way.
+    static func ownAnswerCount(_ length: Int, language: AppLanguage = .current) -> String {
+        let format = IntegerFormatStyle<Int>().locale(language.locale)
+        return length.formatted(format) + " / " + ownAnswerLimit.formatted(format)
     }
 }
