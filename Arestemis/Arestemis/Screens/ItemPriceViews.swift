@@ -106,14 +106,10 @@ struct PriceVerdictLine: View {
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 7) {
             Image(systemName: words.symbol).font(.system(size: 11, weight: .bold)).foregroundStyle(words.tone.color)
-            VStack(alignment: .leading, spacing: 6) {
-                Text(line).font(AppFont.text(14)).foregroundStyle(Ink.secondary)
-                    .lineSpacing(3).fixedSize(horizontal: false, vertical: true)
-                if !words.note.isEmpty {
-                    Text(words.note).font(AppFont.text(11.5)).foregroundStyle(Ink.muted).lineSpacing(2)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
+            // The note (asking prices, not sale prices) stays with the search's card: a listing reads like a
+            // listing (brief 142), so its page carries the verdict's one line only.
+            Text(line).font(AppFont.text(14)).foregroundStyle(Ink.secondary)
+                .lineSpacing(3).fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)

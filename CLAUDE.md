@@ -837,8 +837,8 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   print; no offers yet: one quiet line "Noch keine Preise. Sie kommen mit den ersten passenden Angeboten.". **A row**
   (`MatchRow`, things only): under the price a small label, text only like the row's other labels, mark + the server's
   label: ↓ Günstig in the accent, ↑ Teuer in ink, (!) Ungewöhnlich günstig – genau prüfen (`exclamationmark.circle`) in the warnings' amber. **A
-  listing's page**: under the price, title and site, the server's line with its label in that tone and the rest quiet,
-  the note under it (`PriceVerdictLine`). No verdict, nothing. Sample mode (`PriceRecordSample`): hunt 2 rich (23 offers,
+  listing's page**: under the price, title and site, the server's line with its label in that tone and the rest quiet
+  (`PriceVerdictLine`; the note stays with the search's card, Claude's review). No verdict, nothing. Sample mode (`PriceRecordSample`): hunt 2 rich (23 offers,
   €400–450, Kleinanzeigen and eBay), 31 cheap, 30 expensive, an invented 43 at €95 unusually cheap; hunt 5 few; hunt 4
   none. DEBUG `-sampleNoPrices` (as a server from before it), `-openHunt <id> -scrollTo prices`. Tests:
   `AskingPricesTests`, `ServerSamplesTests` (the server's four `item-price-*` samples). Screenshots:
