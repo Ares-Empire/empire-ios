@@ -170,7 +170,7 @@ struct FileDropTests {
         let session = await PhoneTest.session(nil, transport: RoutedTransport())
         let phone = try await PhoneTest.backend()
         let dashboard = DashboardStore(session: session, backend: phone)
-        let imports = ImportStore(dashboard: dashboard, background: PhoneActivity())
+        let imports = ImportStore(dashboard: dashboard, background: PhoneActivity(), bannerScheduler: ImportTestTimer().schedule)
         let root = try Self.folder()
         defer { try? FileManager.default.removeItem(at: root) }
         let file = ImportThenCategoriesTests.bankFile
@@ -180,7 +180,7 @@ struct FileDropTests {
         let copy = try FileDrop.copy(original, name: "Umsaetze.csv")
         await imports.receive([copy], source: .shared)
         #expect(!FileManager.default.fileExists(atPath: copy.deletingLastPathComponent().path), "the copy went once read")
-        await imports.importPendingFiles()
+        await imports.importAndWait()
         #expect(phone.summary.payments == 4 && imports.asksForCategories)
         #expect(imports.banner?.message == "4 new · 0 already there · 0 sorted · 4 not sorted")
         #expect(FileManager.default.fileExists(atPath: original.path))

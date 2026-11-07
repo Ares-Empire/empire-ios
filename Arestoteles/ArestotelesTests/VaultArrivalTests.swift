@@ -81,12 +81,14 @@ struct VaultArrivalTests {
     }
 
     @Test func aLateSavedVaultCannotOutliveLogout() async throws {
+        let arrived = TestSignal()
         let persistence = BlockingVaultFiles(cached: CachedVault(vault: try sampleVault(), etag: nil, account: "account-a"),
-                                             blocksLoad: true)
+                                             blocksLoad: true, onEntry: { Task { @MainActor in arrived.send() } })
         let session = await signedInSession()
         let store = VaultStore(session: session, backend: ArestotelesAPI(token: { session.token }),
                                persistence: persistence, spotlight: NoSpotlight(), savedAccount: { "account-a" })
-        #expect(await eventually { persistence.entered.withLock { $0 } })
+        await arrived.wait()
+        #expect(persistence.entered.withLock { $0 })
         session.logOut()
         persistence.release.signal()
         await store.loadingSettled()
@@ -95,8 +97,9 @@ struct VaultArrivalTests {
     }
 
     @Test func startupLoadsTheCacheBeforeRenewingTheLogin() async throws {
+        let arrived = TestSignal()
         let persistence = BlockingVaultFiles(cached: CachedVault(vault: try sampleVault(), etag: nil, account: "account-a"),
-                                             blocksLoad: true)
+                                             blocksLoad: true, onEntry: { Task { @MainActor in arrived.send() } })
         let auth = authServer()
         let session = EmpireSession(app: .arestoteles, storage: MemoryTokens(token: fakeToken(account: "account-a")),
                                     client: EmpireAuthClient(transport: auth), restoreOnLaunch: false)
@@ -108,10 +111,11 @@ struct VaultArrivalTests {
         transport.failure = URLError(.notConnectedToInternet)
         let store = VaultStore(session: session, backend: ArestotelesAPI(transport: transport, token: { session.token }),
                                persistence: persistence, spotlight: NoSpotlight(), savedAccount: { "account-a" })
-        #expect(await eventually { persistence.entered.withLock { $0 } })
-        var started = false
-        let update = Task { started = true; await store.update() }
-        #expect(await eventually { started })
+        await arrived.wait()
+        #expect(persistence.entered.withLock { $0 })
+        let started = TestSignal()
+        let update = Task { started.send(); await store.update() }
+        await started.wait()
         #expect(auth.requests.count == renewalsBeforeLoad)
         persistence.release.signal()
         await update.value
@@ -136,7 +140,8 @@ struct VaultArrivalTests {
     }
 
     @Test func logoutDeletionFollowsAnAlreadyWritingVault() async throws {
-        let persistence = BlockingVaultFiles(blocksLoad: false)
+        let arrived = TestSignal()
+        let persistence = BlockingVaultFiles(blocksLoad: false, onEntry: { Task { @MainActor in arrived.send() } })
         let session = await signedInSession()
         let transport = FakeTransport()
         try transport.answer("GET /vault", sample: "vault")
@@ -144,7 +149,8 @@ struct VaultArrivalTests {
         let store = VaultStore(session: session, backend: ArestotelesAPI(transport: transport, token: { session.token }),
                                persistence: persistence, spotlight: spotlight, savedAccount: { "account-a" })
         let refresh = Task { await store.refresh() }
-        #expect(await eventually { persistence.entered.withLock { $0 } })
+        await arrived.wait()
+        #expect(persistence.entered.withLock { $0 })
         #expect(store.vault != nil)                            // assignment is independent of the ongoing write
         session.logOut()
         persistence.release.signal()
@@ -176,7 +182,9 @@ nonisolated private final class BlockingVaultFiles: VaultPersistence {
     let blocksLoad: Bool
     let entered = Mutex(false)
     let release = DispatchSemaphore(value: 0)
-    init(cached: CachedVault? = nil, blocksLoad: Bool) {
+    private let onEntry: @Sendable () -> Void
+    init(cached: CachedVault? = nil, blocksLoad: Bool, onEntry: @escaping @Sendable () -> Void = {}) {
+        self.onEntry = onEntry
         memory = MemoryPersistence(vault: cached)
         self.blocksLoad = blocksLoad
     }
@@ -189,7 +197,7 @@ nonisolated private final class BlockingVaultFiles: VaultPersistence {
         if !blocksLoad { block() }
         try memory.saveVault(cached)
     }
-    private func block() { entered.withLock { $0 = true }; release.wait() }
+    private func block() { entered.withLock { $0 = true }; onEntry(); release.wait() }
     func deleteVault() throws { try memory.deleteVault() }
     func loadQuickNotes() -> [PendingQuickNote] { memory.loadQuickNotes() }
     func saveQuickNotes(_ notes: [PendingQuickNote]) throws { try memory.saveQuickNotes(notes) }

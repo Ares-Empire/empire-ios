@@ -141,7 +141,7 @@ struct EditTests {
         await gate.waitUntilPaused()
         #expect(h.store.isSending)
         let second = Task { await h.store.setConfidence(.solid, of: "Reformation", version: sampleVersion("Reformation")) }
-        try await Task.sleep(for: .milliseconds(50))
+        await waitForState { h.store.operationsRunning == 2 }
         #expect(h.transport.requests("POST /edits").count == 1)    // the second waits for the first
         gate.resume()
         let outcomes = (await first.value, await second.value)

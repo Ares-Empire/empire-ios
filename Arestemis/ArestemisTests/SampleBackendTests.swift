@@ -5,18 +5,19 @@ import Testing
 /// `-sampleData`: the samples behave like a server in memory, so every screen's actions can be tried without one.
 @MainActor
 struct SampleBackendTests {
-    private func store(_ options: SampleBackend.Options = .init()) async throws -> ArestemisStore {
+    private func store(_ options: SampleBackend.Options = .init(), now: Date = .now) async throws -> ArestemisStore {
         let session = EmpireSession(app: .arestemis, storage: MemoryTokens(), restoreOnLaunch: false)
-        let store = ArestemisStore(session: session, backend: try SampleBackend(options: options), sample: true,
+        let store = ArestemisStore(session: session, backend: try SampleBackend(options: options, now: now), sample: true,
                                    placeDelay: .zero)
         await store.reloadOverview()
         return store
     }
 
     @Test func theSampleIsFresh() async throws {
-        let store = try await store()
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        let store = try await store(now: now)
         let lastScan = try #require(store.overview?.lastScan.flatMap(Timestamp.parse))
-        #expect(abs(Date.now.timeIntervalSince(lastScan) - 40) < 5)
+        #expect(abs(now.timeIntervalSince(lastScan) - 40) < 5)
         // The three newest across every search: the everywhere monitor's alarm (42, brief 157), then the flat's.
         #expect(store.card(1)?.hunt.active == true && store.latest.map(\.id) == [42, 41, 40])
         // Every site an active hunt reads answered; mydealz and MTB-News Bikemarkt, which none reads, are idle.

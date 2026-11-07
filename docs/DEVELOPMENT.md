@@ -39,6 +39,54 @@ Empire app). A new province app: `python3 scripts/new-app-project.py <Name> <bun
 - The services themselves (Aresium server, Empire login) are changed in their own repos on the server.
 - **Never commit secrets:** no API keys, no App Store Connect keys, no passwords. Server URLs are fine.
 
+## Tests
+
+Use the same runner as CI, from the worktree:
+
+```sh
+bash scripts/test-unit.sh --all
+bash scripts/test-unit.sh Aresium Empire
+bash scripts/test-unit.sh --timing Aresium
+python3 scripts/strings.py check
+```
+
+The runner needs Xcode 27.1 and the iOS 27.0 iPhone 17 runtime. It creates a unique `test-unit-…` simulator and deletes
+it on success, failure or interruption; `--keep-simulator` retains it. It builds Debug with ad-hoc signing, without an
+Apple account, serializes test execution, selects only the app's unit-test target and never retries. Logs, derived
+data and `.xcresult` bundles stay in `build/test-unit/`. Each app's result is replaced on its next run; simultaneous
+runs of the same app are refused. A failure prints test names from the result bundle; build/launch failures point to
+the local log. GitHub runs a separate job per app and uploads no artifacts.
+
+For a build or an AXe screen check, create your own simulator as described in [AGENTS.md](../AGENTS.md) and keep derived
+data inside `build/`. Shared-login probes, UI tests, AXe checks, notifications delivered to a phone, camera, Face ID
+and device rendering remain manual.
+
+The timing inventory is explicit in `scripts/test-unit.sh`. `--timing` runs only that inventory, including enabling
+the previously opt-in measurement suites. Local-places measurements use the shipped engine and packed list; these
+Debug simulator measurements do not replace the Release/device memory gates recorded in `CLAUDE.md`.
+
+The wall-clock audit (brief 242):
+
+| Tests | Correctness run |
+| --- | --- |
+| Aresium import batching and result/banner tests (including FileDrop, ImportThenCategories, MessageScreens) | Await batching/upload/reload completion even when an automatic import already started; explicitly control the banner timer. Production still dismisses successes after 4.5 seconds. A held reload and advanced timer reproduce the vanished-banner failure; a held request also proves that the explicit trigger can return before an existing import finishes. |
+| Aresium PhonePickerBatch | Suspend debounce and await its cancellation/flush; no 650 ms sleep or one-hour substitute. |
+| Aresium WindowComfort, SelectionScreens, Tour | Await receipt tasks, completion callbacks and observed state. |
+| Aresium BackSwipe | Wait for UIKit state on run-loop events and Observation publications, including mark attachment and transition completion. |
+| Aresium PhoneStore | Remove the unnecessary 100 ms pause after the awaited fixture write. |
+| Aresium NameSearch, PickerTiming, LocalPlacesMeasurement, Engine timings, 5,000-payment sort, FixedCostTiming | Only `--timing`; existing assertions and budgets unchanged. Measurement/GC/layout sampling pauses remain in these experiments. |
+| Aresium BatchChanges (500 rows from 60 shops) | Keep all data, worker/call-count and undo assertions in correctness; the unchanged 300 ms budget runs separately with `--timing`. The loaded validation run demonstrated 321.453 ms with all data assertions passing. |
+| Aresium PackedLocalPlaces, SettingsWork | Keep in correctness: identity, call counts and worker placement, with no speed budget. |
+| Arestemis PriceMonitor | Manual pacing clock and a held server answer replace sleeps and request polling. Existing minimum intervals are checked on that clock. |
+| Arestemis ProductSuggestions | Await the completed retry; its minimum pacing interval remains a correctness check, with no maximum speed assumption. |
+| Arestemis SampleBackend | Use its existing injected date instead of comparing sample creation with the wall clock after reload. |
+| Arestemis Spelling; Arestoteles BestMatches | Manual timeout/placeholder clocks and observed cancellation; the original five-second response budgets run only with `--timing`. |
+| Arestoteles Edit, Version, non-queue VaultArrival tests | Await operation publication or worker-entry callbacks. |
+| Arestoteles quick-note queue | Unchanged per brief 243's ownership, including its remaining `eventually` polling helper in TestSupport and VaultArrival queue test. |
+| Arestoteles VaultTiming | Only `--timing`, with its measurement flag enabled. |
+| Empire PrivacyCover | Already passes explicit instants; no wall-clock wait or speed budget. |
+| Aresus SharedDrops | Inject the retry date; preserve the deadline assertion and check that processing cannot retry before it. Other drop tests already use explicit dates or await work. |
+
 ## Releasing to the phone (TestFlight)
 
 1. Bump `CURRENT_PROJECT_VERSION` (project-level build settings, the one place for app and widget), commit, then

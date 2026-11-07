@@ -38,10 +38,14 @@ final class BestMatches {
     @ObservationIgnored private var answered: String?
     @ObservationIgnored private var task: Task<Void, Never>?
     private let timing: Timing
+    private let sleep: @Sendable (Duration) async throws -> Void
     private let fetch: @MainActor (String) async throws -> SearchAnswer
 
-    init(timing: Timing = Timing(), fetch: @escaping @MainActor (String) async throws -> SearchAnswer) {
+    init(timing: Timing = Timing(),
+         sleep: @escaping @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) },
+         fetch: @escaping @MainActor (String) async throws -> SearchAnswer) {
         self.timing = timing
+        self.sleep = sleep
         self.fetch = fetch
     }
 
@@ -61,12 +65,12 @@ final class BestMatches {
         }
         isWaiting = true
         task = Task { [timing, fetch] in
-            do { try await Task.sleep(for: timing.pause) } catch { return }
+            do { try await sleep(timing.pause) } catch { return }
             let slow = Task {
-                do { try await Task.sleep(for: timing.slow) } catch { return }
+                do { try await sleep(timing.slow) } catch { return }
                 if query == next, isWaiting { isSlow = true }
             }
-            let found = await Self.first(within: timing.timeout) { try await fetch(next) }
+            let found = await Self.first(within: timing.timeout, sleep: sleep) { try await fetch(next) }
             slow.cancel()
             guard !Task.isCancelled, query == next else { return }
             isWaiting = false
@@ -150,11 +154,12 @@ final class BestMatches {
 
     /// The operation's answer, or nil when it fails or takes longer than `limit` (it is then cancelled).
     private static func first(within limit: Duration,
+                              sleep: @escaping @Sendable (Duration) async throws -> Void,
                               _ operation: @escaping @MainActor () async throws -> SearchAnswer) async -> SearchAnswer? {
         await withTaskGroup(of: SearchAnswer?.self) { group in
             group.addTask { try? await operation() }
             group.addTask {
-                try? await Task.sleep(for: limit)
+                try? await sleep(limit)
                 return nil
             }
             let first = await group.next() ?? nil

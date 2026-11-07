@@ -25,7 +25,7 @@ struct FileCheckTests {
         let phone = try await PhoneTest.backend(chosen: ["groceries", "eating-out"])
         let imports = ImportStore(dashboard: DashboardStore(session: session, backend: phone), background: PhoneActivity())
         imports.debugImport([file])
-        await imports.importPendingFiles()
+        await imports.importAndWait()
         let request = try #require(imports.layoutRequest)
         return (phone, imports, FileCheckModel(request: request, phone: phone, imports: imports))
     }
@@ -46,7 +46,7 @@ struct FileCheckTests {
         #expect(await model.yes())
         #expect(imports.layoutRequest == nil)
         #expect(try await phone.ledger.layouts() == [model.readings[0].layout])
-        await imports.importPendingFiles()
+        await imports.importAndWait()
         let payments = try await phone.ledger.payments()
         #expect(payments.count == 3 && Set(payments.map(\.bookingDate)).contains("2026-04-03"))
     }
@@ -64,7 +64,7 @@ struct FileCheckTests {
         // Yes on the third: that reading is the one saved, and the file reads with it.
         #expect(await model.yes())
         #expect(try await phone.ledger.layouts() == [model.readings[2].layout])
-        await imports.importPendingFiles()
+        await imports.importAndWait()
         #expect(Set(try await phone.ledger.payments().map(\.amount)) == ["-12.00", "-3.50", "-9.00"])
     }
 

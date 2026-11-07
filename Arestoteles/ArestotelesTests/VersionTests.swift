@@ -145,7 +145,8 @@ struct VersionTests {
         let first = Task { await h.store.confirmPosition("Printing press#2", version: version) }
         await gate.waitUntilPaused()
         let second = Task { await h.store.setConfidence(.solid, of: topic, version: version) }
-        #expect(await eventually { h.store.operationsRunning == 2 })
+        await waitForState { h.store.operationsRunning == 2 }
+        #expect(h.store.operationsRunning == 2)
         gate.resume()
         #expect(await first.value == .applied)
         #expect(await second.value == .applied)

@@ -217,7 +217,7 @@ struct PaymentRowMenuTests {
 struct ImportBannerSwipeTests {
     private func sampleImports() -> ImportStore {
         let dashboard = DashboardStore(session: EmpireSession(app: .aresium, storage: PhoneTokens()), sample: true)
-        return ImportStore(dashboard: dashboard, background: PhoneActivity())
+        return ImportStore(dashboard: dashboard, background: PhoneActivity(), bannerScheduler: ImportTestTimer().schedule)
     }
 
     @Test func aResultGoesWithASwipeAsWithDismiss() {

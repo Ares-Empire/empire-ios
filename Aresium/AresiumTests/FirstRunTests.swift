@@ -236,7 +236,7 @@ struct FirstRunTests {
             QuickSortOffer.Moment(imports: imports, store: store, tour: false, locked: false, window: false)
         }
         imports.debugImport([Self.threeMonths])
-        await imports.importPendingFiles()
+        await imports.importAndWait()
         await imports.categoriesClosed()?.value
         imports.close()
         // Not now on the question: the import's offer is pending, but waits while no category is chosen.

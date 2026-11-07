@@ -251,8 +251,9 @@ struct SharedDropsTests {
         defer { try? FileManager.default.removeItem(at: directory) }
         let api = DropTransport(); api.responses = [.failure(URLError(.notConnectedToInternet))]
         let uploads = HeldDropUploads()
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
         let outbox = DropOutbox(session: await signedInSession(), client: AresusAPI(transport: api), directory: directory,
-                                automatic: false, uploads: uploads)
+                                automatic: false, uploads: uploads, now: { now })
         _ = try await enqueue(outbox)
         var record = try #require(outbox.items.only)
         record.serverID = 44; record.state = .uploading; record.uploadSession = uploads.identifier; record.attempts = 3
@@ -260,7 +261,7 @@ struct SharedDropsTests {
         await outbox.reconnect()
         let pending = try #require(outbox.items.only)
         #expect(pending.state == .onPhone && pending.uploadSession == nil && pending.lastError == "No connection.")
-        #expect(try #require(pending.retryAt).timeIntervalSinceNow > 15)
+        #expect(try #require(pending.retryAt).timeIntervalSince(now) > 15)
         await outbox.process()
         #expect(api.requests.map(\.httpMethod) == ["GET"] && uploads.tasks.isEmpty)
     }

@@ -121,11 +121,12 @@ struct PriceMonitorTests {
     private final class PreviewServer {
         var asked: [(link: String, at: ContinuousClock.Instant)] = []
         var answers: [String: Result<PricePreview, Error>] = [:]
-        var delay: Duration = .zero
+        var clock: TestClock?
+        var gate: RequestGate?
 
         func fetch(_ link: String) async throws -> PricePreview {
-            asked.append((link, ContinuousClock.now))
-            if delay > .zero { try await Task.sleep(for: delay) }
+            asked.append((link, clock?.now ?? ContinuousClock.now))
+            if let gate { self.gate = nil; await gate.pause() }
             return try (answers[link] ?? .success(PricePreview(product: "Product \(link.suffix(1))", price: 100,
                                                                currency: "EUR", availability: .inStock))).get()
         }
@@ -157,13 +158,18 @@ struct PriceMonitorTests {
 
     @Test func neverTwoPreviewsWithinTheSpacing() async throws {
         let server = PreviewServer()
-        let preview = model(server, spacing: .milliseconds(300))
+        let clock = TestClock()
+        server.clock = clock
+        let preview = PricePreviewModel(pause: .zero, spacing: .milliseconds(300),
+                                        now: { clock.now }, sleep: clock.sleep) { try await server.fetch($0) }
         preview.update("shop.example/p/1")
         await preview.settle()
         // A second link right after: it waits its turn; a third typed meanwhile replaces it.
         preview.update("shop.example/p/2")
-        try? await Task.sleep(for: .milliseconds(60))
+        await clock.sleeping(for: .milliseconds(300))
         preview.update("shop.example/p/3")
+        await preview.typingSettled()
+        clock.advance(by: .milliseconds(300))
         await preview.settle()
         try #require(server.asked.map(\.link) == ["shop.example/p/1", "shop.example/p/3"])
         let gap = server.asked[0].at.duration(to: server.asked[1].at)
@@ -173,12 +179,19 @@ struct PriceMonitorTests {
 
     @Test func oneAtATimeAndAnOldAnswerIsDropped() async throws {
         let server = PreviewServer()
-        server.delay = .milliseconds(150)
+        let clock = TestClock()
+        let gate = RequestGate()
+        server.clock = clock
+        server.gate = gate
         let preview = model(server, spacing: .zero)
         preview.update("shop.example/p/1")
         // Asked, not answered yet.
-        while server.asked.isEmpty { try await Task.sleep(for: .milliseconds(5)) }
+        await gate.waitUntilPaused()
         preview.update("shop.example/p/2")
+        await preview.typingSettled()
+        #expect(server.asked.count == 1, "the old request is still held")
+        clock.advance(by: .milliseconds(150))
+        gate.resume()
         await preview.settle()
         // The second waited for the first; the first's answer was dropped, as its link was no longer in the field.
         try #require(server.asked.map(\.link) == ["shop.example/p/1", "shop.example/p/2"])

@@ -260,11 +260,13 @@ final class ReceiptPageModel: Identifiable {
     }
 
     /// Edit's sheet closed (Cancel, or the question swiped away: the receipt waits). Anything saved already stays.
-    func endEdit() {
-        guard let editing else { return }
+    @discardableResult
+    func endEdit() -> Task<Void, Never>? {
+        guard let editing else { return nil }
         self.editing = nil
         // The corrected values were kept before the question: the page and the dashboard show them.
-        if case .asking = editing.phase { Task { await changed(); await load() } }
+        if case .asking = editing.phase { return Task { await changed(); await load() } }
+        return nil
     }
 
     #if DEBUG

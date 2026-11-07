@@ -109,13 +109,20 @@ final class CategoryPickerModel {
     @ObservationIgnored let phone: PhoneBackend
     /// At closing, after all changes: the dashboard is built again before it is shown.
     @ObservationIgnored private let changed: () async -> Void
-    /// How long the taps must stop before the sort runs. Tests that check the batching pass a long one and flush
-    /// themselves, so a busy machine never decides the result.
+    /// How long the taps must stop before the sort runs. Batching tests suspend the injected sleep and flush
+    /// explicitly, so a busy machine never decides the result.
     @ObservationIgnored private let settle: Duration
+    @ObservationIgnored private let sleep: @MainActor (Duration) async throws -> Void
 
-    init(phone: PhoneBackend, settle: Duration = .milliseconds(500), changed: @escaping () async -> Void) {
+    /// The scheduled settle, so cancellation can be awaited independently of a sort (tests).
+    var scheduledSettle: Task<Void, Never>? { debounce }
+
+    init(phone: PhoneBackend, settle: Duration = .milliseconds(500),
+         sleep: @escaping @MainActor (Duration) async throws -> Void = { try await Task.sleep(for: $0) },
+         changed: @escaping () async -> Void) {
         self.phone = phone
         self.settle = settle
+        self.sleep = sleep
         self.changed = changed
     }
 
@@ -325,8 +332,8 @@ final class CategoryPickerModel {
         pendingSort = true
         pendingDashboard = true
         debounce?.cancel()
-        debounce = Task { [weak self] in
-            do { try await Task.sleep(for: self?.settle ?? .milliseconds(500)) }
+        debounce = Task { [weak self, sleep, settle] in
+            do { try await sleep(settle) }
             catch { return }
             guard let self else { return }
             await self.settleSelection()

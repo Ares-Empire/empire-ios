@@ -87,10 +87,26 @@ More pictures with captions: [showcase/](showcase/README.md).
 ## Run it
 
 Open an app's project in Xcode 27 (for example `Aresium/Aresium.xcodeproj`), choose an iOS 26 simulator, and add
-`-sampleData` to the scheme's launch arguments to look around without an account. Tests:
+`-sampleData` to the scheme's launch arguments to look around without an account.
+
+## Tests
+
+GitHub runs all five apps' unit tests on every push and pull request, using Xcode 27.1 and an iPhone 17 on iOS 27.0.
+The String Catalog check runs once too. On a Mac with that Xcode and runtime:
 
 ```sh
-xcodebuild test -project Aresium/Aresium.xcodeproj -scheme Aresium -destination 'platform=iOS Simulator,name=iPhone 17'
+bash scripts/test-unit.sh --all
+bash scripts/test-unit.sh Aresium Empire
+bash scripts/test-unit.sh --timing Aresium
+python3 scripts/strings.py check
 ```
+
+The script creates and deletes its own simulator, keeps build output and result bundles in `build/test-unit/`, and
+needs no Apple account. `--keep-simulator` keeps that simulator for inspection. Speed budgets and measurement suites
+run only with `--timing`; correctness tests run by default. Different apps can run concurrently; two runs of the same
+app cannot share its output directory.
+
+The shared-login probe (`scripts/check-shared-login.sh`), UI tests, AXe screen checks and device-only checks (Face ID,
+push delivery, camera and rendering on a phone) stay manual. CI uploads no artifacts.
 
 The layout, push and releasing to TestFlight: [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).

@@ -58,14 +58,14 @@ struct PhoneBackendTests {
         let session = await PhoneTest.session(transport: transport)
         let phone = try await PhoneTest.backend(chosen: ["groceries"])
         let dashboard = DashboardStore(session: session, backend: phone)
-        let imports = ImportStore(dashboard: dashboard, background: PhoneActivity())
+        let imports = ImportStore(dashboard: dashboard, background: PhoneActivity(), bannerScheduler: ImportTestTimer().schedule)
         let directory = PhoneTest.storage().root
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let url = directory.appending(path: "Fiktivbank.csv")
         try PhoneTest.fixture("unknown-fiktivbank.csv").data.write(to: url)
 
         await imports.receive([url])
-        await imports.importPendingFiles()
+        await imports.importAndWait()
         let request = try #require(imports.layoutRequest)
         #expect(request.file.name == "Fiktivbank.csv" && phone.summary.payments == 0)
         #expect(transport.requests.allSatisfy { $0.url?.host != "aresium.de" })   // nothing left the phone
@@ -74,7 +74,7 @@ struct PhoneBackendTests {
         #expect(model.canConfirm)
         #expect(await model.confirm())
         #expect(imports.layoutRequest == nil)
-        await imports.importPendingFiles()
+        await imports.importAndWait()
         #expect(phone.summary.payments == 4)
         // How many the shop rules sort depends on the engine's shop list; the counts add up either way.
         let line = try #require(imports.banner?.message)
@@ -87,9 +87,9 @@ struct PhoneBackendTests {
         let transport = RoutedTransport()
         let session = await PhoneTest.session(transport: transport)
         let phone = try await PhoneTest.backend(chosen: ["groceries"])
-        let imports = ImportStore(dashboard: DashboardStore(session: session, backend: phone), background: PhoneActivity())
+        let imports = ImportStore(dashboard: DashboardStore(session: session, backend: phone), background: PhoneActivity(), bannerScheduler: ImportTestTimer().schedule)
         imports.debugImport([try PhoneTest.fixture("unknown-fiktivbank.csv")])
-        await imports.importPendingFiles()
+        await imports.importAndWait()
         let request = try #require(imports.layoutRequest)
         ColumnCheckModel(request: request, phone: phone, imports: imports).cancel()
         #expect(imports.layoutRequest == nil && imports.waitingCount == 0)

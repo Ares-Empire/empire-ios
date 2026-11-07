@@ -36,11 +36,6 @@ struct WindowComfortTests {
     private static let twoOfItsAmount = [("26.10.2026", "MUSTERMARKT LINDE", "Kartenzahlung", -2765),
                                          ("27.10.2026", "MUSTERMARKT LINDE", "Kartenzahlung", -2765)]
 
-    /// Waits a moment for work started without waiting (Later's banner line).
-    private func settle(until done: () -> Bool) async throws {
-        for _ in 0..<100 where !done() { try await Task.sleep(for: .milliseconds(20)) }
-    }
-
     // MARK: Later
 
     /// The question inside the receipt window after Save: Later closes it, the receipt was kept and waits, nothing is
@@ -57,9 +52,9 @@ struct WindowComfortTests {
         await model.save(check)
         guard case .asking(let question)? = model.reading?.phase else { Issue.record("not asked"); return }
 
-        model.later()
+        let completion = model.later()
         #expect(model.reading == nil)
-        try await settle { !lines.isEmpty }
+        await completion?.value
         #expect(lines == ["Receipt saved. It waits for the bank statement."])
         let stored = try #require(try await phone.receipt(question.receipt.id))
         #expect(stored.state == .waiting && stored.paymentID == nil && stored.declined.isEmpty, "nothing declined")
@@ -75,9 +70,9 @@ struct WindowComfortTests {
         var lines: [String] = []
         model.saved = { lines.append($0) }
         model.read([ReceiptPage(image: ReceiptSample.image())])
-        model.swipedAway()
+        let cancelled = model.swipedAway()
         #expect(model.reading == nil)
-        try await Task.sleep(for: .milliseconds(100))
+        await cancelled?.value
         #expect(lines.isEmpty, "a reading swiped away keeps nothing")
 
         model.read([ReceiptPage(image: ReceiptSample.image())])
@@ -86,8 +81,7 @@ struct WindowComfortTests {
         check.method = .card
         await model.save(check)
         guard case .asking(let question)? = model.reading?.phase else { Issue.record("not asked"); return }
-        model.swipedAway()
-        try await settle { !lines.isEmpty }
+        await model.swipedAway()?.value
         #expect(model.reading == nil && lines == ["Receipt saved. It waits for the bank statement."])
         #expect(try await phone.receipt(question.receipt.id)?.declined.isEmpty == true)
     }
@@ -133,9 +127,9 @@ struct WindowComfortTests {
         await page.saveEdit(check)
         guard case .asking? = page.editing?.phase else { Issue.record("not asked"); return }
 
-        page.endEdit()
+        let completion = page.endEdit()
         #expect(page.editing == nil)
-        try await settle { changes > 0 }
+        await completion?.value
         let stored = try #require(try await phone.receipt(id))
         #expect(stored.total == "31.20" && stored.state == .waiting && stored.declined.isEmpty)
     }
@@ -148,7 +142,7 @@ struct WindowComfortTests {
         let phone = try await PhoneTest.backend(chosen: ["groceries", "eating-out"])
         let imports = ImportStore(dashboard: DashboardStore(session: session, backend: phone), background: PhoneActivity())
         imports.debugImport([FileCheckTests.cardFile])
-        await imports.importPendingFiles()
+        await imports.importAndWait()
         let request = try #require(imports.layoutRequest)
         return (phone, FileCheckModel(request: request, phone: phone, imports: imports))
     }

@@ -49,11 +49,6 @@ struct TourTests {
         return values
     }
 
-    /// Waits (up to 10 s) until `condition` holds; the follow-up question's answer finishes in a task of its own.
-    private func eventually(_ condition: () -> Bool) async {
-        for _ in 0..<200 where !condition() { try? await Task.sleep(for: .milliseconds(50)) }
-    }
-
     /// The category list on top of the tour's dashboard, as its rows show.
     private func shownList(_ tour: TourModel) throws -> PaymentList {
         let world = try #require(tour.world)
@@ -169,7 +164,7 @@ struct TourTests {
         #expect(question.count > 3)
         #expect(tour.step == .switchCategory, "still waiting for the answer")
         detail.answer(moveOthers: true)
-        await eventually { tour.step == .payback }
+        await waitForState { tour.step == .payback }
 
         // Brief 203: the made-up trip's page, half paid back, its link ringed; only Next goes on (optional).
         #expect(tour.step == .payback)
