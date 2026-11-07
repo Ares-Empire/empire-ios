@@ -87,7 +87,9 @@ worktree, never commit or push, no installs. Council seats and reviews still run
 
 **Checks are light, but never skipped:**
 - Before a TestFlight upload, run `python3 scripts/check-release-resources.py --app <App> --bundle <archive>.xcarchive/Products/Applications/<App>.app`; the Release resource audit must pass.
-- Build and run the tests yourself on the simulator. Never take Codex's "build succeeded" as evidence.
+- After shared changes, run the five-app sample tap-through in both languages/appearances: [Smoke tests](scripts/smoke-ios/README.md).
+- Build and run the tests yourself on the simulator (`bash scripts/test-unit.sh <App>`, the same run as GitHub's).
+  Never take Codex's "build succeeded" as evidence.
 - Read the diff: quickly for layout, carefully for anything near login, tokens, the Keychain, or API calls.
 - Run the app on the simulator and look at each screen the brief touched
   (`xcrun simctl io booted screenshot <file>`).

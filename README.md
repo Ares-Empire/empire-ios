@@ -113,3 +113,7 @@ The shared-login probe (`scripts/check-shared-login.sh`), UI tests, AXe screen c
 push delivery, camera and rendering on a phone) stay manual. CI uploads no artifacts.
 
 The layout, push and releasing to TestFlight: [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
+
+## Smoke tests
+
+`python3 scripts/smoke-ios/run.py --all --language en --appearance light` taps through all five apps on invented sample data on a fresh, disposable simulator. Run again with `--language de --appearance dark` for German and dark mode. Requirements, scenarios and failure artifacts: [scripts/smoke-ios/README.md](scripts/smoke-ios/README.md).

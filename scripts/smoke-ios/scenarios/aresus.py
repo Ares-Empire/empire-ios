@@ -1,0 +1,30 @@
+"""Visit Drops and a sync report; answer an invented board question."""
+
+
+def run(r):
+    r.wait_for(id='gearshape', type='Button')
+    r.tap('Aresync', literal=True, type='RadioButton')
+    r.wait_for('Send to MacBook', type='Button')
+    r.tap('Show all', contains=True, type='Button')
+    r.wait_for(id='BackButton', type='Button')
+    r.expect('diagram.png', literal=True, contains=True)
+    r.screenshot('all-drops')
+    r.tap(id='BackButton', type='Button')
+    r.expect(id='BackButton', type='Button', present=False)
+    r.swipe()
+    r.expect('Send to MacBook', type='Button', present=False)
+    r.tap('pulled ares-empire · deployed', literal=True, contains=True, type='Button')
+    r.wait_for('Log', ignore_case=True, contains=True, type='Heading')
+    r.screenshot('sync-report')
+    # This report opens at the medium detent; dismiss by dragging its top edge.
+    r.swipe(start=(200, 445), end=(200, 850))
+    r.expect('Log', ignore_case=True, contains=True, type='Heading', present=False)
+    r.tap('For you', contains=True, type='RadioButton')
+    r.wait_for('Ship it', literal=True, type='Button')
+    r.tap('Ship it', literal=True, type='Button')
+    r.wait_for('Ship it', literal=True, type='Button', present=False)
+    r.wait_for('Ship it', literal=True, type='StaticText')
+    r.screenshot('board-answer')
+    r.tap(id='gearshape', type='Button')
+    r.wait_for('Language', contains=True, type='Button', table='Shared')
+    r.screenshot('settings')
