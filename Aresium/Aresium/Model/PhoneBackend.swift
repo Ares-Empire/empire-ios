@@ -39,7 +39,14 @@ nonisolated enum ImportWording {
     /// The engine's bank-file error codes (aresium/src/engine/readers/table.ts → `BankFileErrorCode`), in plain words.
     static func bankFileProblem(_ code: String, language: AppLanguage = .current) -> String {
         switch code {
-        case "zip": language.string("Unzip the file first, then import what is inside.")
+        case "zip": language.string("This ZIP file is damaged or packed in a way Aresium can't read.")
+        case "zipLimit": language.string("This ZIP file is too big: over 50 MB unpacked or 2,000 files.")
+        case "zipEncrypted": language.string("This ZIP file is protected with a password. Export the bank file without one.")
+        case "zipAccounts": language.string("This ZIP file holds more than one account. Export one account at a time.")
+        case "zipNoBankFile": language.string("There is no bank file in this ZIP file.")
+        case "zipLayout": language.string("A file in this ZIP needs its columns checked. Unzip it and import that file on its own.")
+        case "xlsx": language.string("This Excel file could not be read. Export it as CSV, or save it again as .xlsx.")
+        case "xls": language.string("Old Excel files (.xls) can't be read. Export as CSV, or save it as .xlsx.")
         case "empty": language.string("The file is empty.")
         case "noTable": language.string("No table of payments was found in this file.")
         case "headerMismatch": language.string("The columns of this file don't match its saved layout.")

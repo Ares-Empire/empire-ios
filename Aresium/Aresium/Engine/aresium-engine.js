@@ -74,11 +74,11 @@ var __AresiumEngine = (() => {
         if (a) {
           const keys = Object.keys(a);
           const len = keys.length;
-          for (let i = 0; i < len; i++) {
+          for (let i2 = 0; i2 < len; i2++) {
             if (arrayMode === "strict") {
-              target[keys[i]] = [a[keys[i]]];
+              target[keys[i2]] = [a[keys[i2]]];
             } else {
-              target[keys[i]] = a[keys[i]];
+              target[keys[i2]] = a[keys[i2]];
             }
           }
         }
@@ -129,31 +129,31 @@ var __AresiumEngine = (() => {
         if (xmlData[0] === "\uFEFF") {
           xmlData = xmlData.substr(1);
         }
-        for (let i = 0; i < xmlData.length; i++) {
-          if (xmlData[i] === "<" && xmlData[i + 1] === "?") {
-            i += 2;
-            i = readPI(xmlData, i);
-            if (i.err) return i;
-          } else if (xmlData[i] === "<") {
-            let tagStartPos = i;
-            i++;
-            if (xmlData[i] === "!") {
-              i = readCommentAndCDATA(xmlData, i);
+        for (let i2 = 0; i2 < xmlData.length; i2++) {
+          if (xmlData[i2] === "<" && xmlData[i2 + 1] === "?") {
+            i2 += 2;
+            i2 = readPI(xmlData, i2);
+            if (i2.err) return i2;
+          } else if (xmlData[i2] === "<") {
+            let tagStartPos = i2;
+            i2++;
+            if (xmlData[i2] === "!") {
+              i2 = readCommentAndCDATA(xmlData, i2);
               continue;
             } else {
               let closingTag = false;
-              if (xmlData[i] === "/") {
+              if (xmlData[i2] === "/") {
                 closingTag = true;
-                i++;
+                i2++;
               }
               let tagName = "";
-              for (; i < xmlData.length && xmlData[i] !== ">" && xmlData[i] !== " " && xmlData[i] !== "	" && xmlData[i] !== "\n" && xmlData[i] !== "\r"; i++) {
-                tagName += xmlData[i];
+              for (; i2 < xmlData.length && xmlData[i2] !== ">" && xmlData[i2] !== " " && xmlData[i2] !== "	" && xmlData[i2] !== "\n" && xmlData[i2] !== "\r"; i2++) {
+                tagName += xmlData[i2];
               }
               tagName = tagName.trim();
               if (tagName[tagName.length - 1] === "/") {
                 tagName = tagName.substring(0, tagName.length - 1);
-                i--;
+                i2--;
               }
               if (!validateTagName(tagName)) {
                 let msg;
@@ -162,16 +162,16 @@ var __AresiumEngine = (() => {
                 } else {
                   msg = "Tag '" + tagName + "' is an invalid name.";
                 }
-                return getErrorObject("InvalidTag", msg, getLineNumberForPosition(xmlData, i));
+                return getErrorObject("InvalidTag", msg, getLineNumberForPosition(xmlData, i2));
               }
-              const result = readAttributeStr(xmlData, i);
+              const result = readAttributeStr(xmlData, i2);
               if (result === false) {
-                return getErrorObject("InvalidAttr", "Attributes for '" + tagName + "' have open quote.", getLineNumberForPosition(xmlData, i));
+                return getErrorObject("InvalidAttr", "Attributes for '" + tagName + "' have open quote.", getLineNumberForPosition(xmlData, i2));
               }
               let attrStr = result.value;
-              i = result.index;
+              i2 = result.index;
               if (attrStr[attrStr.length - 1] === "/") {
-                const attrStrStart = i - attrStr.length;
+                const attrStrStart = i2 - attrStr.length;
                 attrStr = attrStr.substring(0, attrStr.length - 1);
                 const isValid = validateAttributeString(attrStr, options);
                 if (isValid === true) {
@@ -181,7 +181,7 @@ var __AresiumEngine = (() => {
                 }
               } else if (closingTag) {
                 if (!result.tagClosed) {
-                  return getErrorObject("InvalidTag", "Closing tag '" + tagName + "' doesn't have proper closing.", getLineNumberForPosition(xmlData, i));
+                  return getErrorObject("InvalidTag", "Closing tag '" + tagName + "' doesn't have proper closing.", getLineNumberForPosition(xmlData, i2));
                 } else if (attrStr.trim().length > 0) {
                   return getErrorObject("InvalidTag", "Closing tag '" + tagName + "' can't have attributes or invalid starting.", getLineNumberForPosition(xmlData, tagStartPos));
                 } else if (tags.length === 0) {
@@ -203,48 +203,48 @@ var __AresiumEngine = (() => {
               } else {
                 const isValid = validateAttributeString(attrStr, options);
                 if (isValid !== true) {
-                  return getErrorObject(isValid.err.code, isValid.err.msg, getLineNumberForPosition(xmlData, i - attrStr.length + isValid.err.line));
+                  return getErrorObject(isValid.err.code, isValid.err.msg, getLineNumberForPosition(xmlData, i2 - attrStr.length + isValid.err.line));
                 }
                 if (reachedRoot === true) {
-                  return getErrorObject("InvalidXml", "Multiple possible root nodes found.", getLineNumberForPosition(xmlData, i));
+                  return getErrorObject("InvalidXml", "Multiple possible root nodes found.", getLineNumberForPosition(xmlData, i2));
                 } else if (options.unpairedTags.indexOf(tagName) !== -1) {
                 } else {
                   tags.push({ tagName, tagStartPos });
                 }
                 tagFound = true;
               }
-              for (i++; i < xmlData.length; i++) {
-                if (xmlData[i] === "<") {
-                  if (xmlData[i + 1] === "!") {
-                    i++;
-                    i = readCommentAndCDATA(xmlData, i);
+              for (i2++; i2 < xmlData.length; i2++) {
+                if (xmlData[i2] === "<") {
+                  if (xmlData[i2 + 1] === "!") {
+                    i2++;
+                    i2 = readCommentAndCDATA(xmlData, i2);
                     continue;
-                  } else if (xmlData[i + 1] === "?") {
-                    i = readPI(xmlData, ++i);
-                    if (i.err) return i;
+                  } else if (xmlData[i2 + 1] === "?") {
+                    i2 = readPI(xmlData, ++i2);
+                    if (i2.err) return i2;
                   } else {
                     break;
                   }
-                } else if (xmlData[i] === "&") {
-                  const afterAmp = validateAmpersand(xmlData, i);
+                } else if (xmlData[i2] === "&") {
+                  const afterAmp = validateAmpersand(xmlData, i2);
                   if (afterAmp == -1)
-                    return getErrorObject("InvalidChar", "char '&' is not expected.", getLineNumberForPosition(xmlData, i));
-                  i = afterAmp;
+                    return getErrorObject("InvalidChar", "char '&' is not expected.", getLineNumberForPosition(xmlData, i2));
+                  i2 = afterAmp;
                 } else {
-                  if (reachedRoot === true && !isWhiteSpace(xmlData[i])) {
-                    return getErrorObject("InvalidXml", "Extra text at the end", getLineNumberForPosition(xmlData, i));
+                  if (reachedRoot === true && !isWhiteSpace(xmlData[i2])) {
+                    return getErrorObject("InvalidXml", "Extra text at the end", getLineNumberForPosition(xmlData, i2));
                   }
                 }
               }
-              if (xmlData[i] === "<") {
-                i--;
+              if (xmlData[i2] === "<") {
+                i2--;
               }
             }
           } else {
-            if (isWhiteSpace(xmlData[i])) {
+            if (isWhiteSpace(xmlData[i2])) {
               continue;
             }
-            return getErrorObject("InvalidChar", "char '" + xmlData[i] + "' is not expected.", getLineNumberForPosition(xmlData, i));
+            return getErrorObject("InvalidChar", "char '" + xmlData[i2] + "' is not expected.", getLineNumberForPosition(xmlData, i2));
           }
         }
         if (!tagFound) {
@@ -259,81 +259,81 @@ var __AresiumEngine = (() => {
       function isWhiteSpace(char) {
         return char === " " || char === "	" || char === "\n" || char === "\r";
       }
-      function readPI(xmlData, i) {
-        const start = i;
-        for (; i < xmlData.length; i++) {
-          if (xmlData[i] == "?" || xmlData[i] == " ") {
-            const tagname = xmlData.substr(start, i - start);
-            if (i > 5 && tagname === "xml") {
-              return getErrorObject("InvalidXml", "XML declaration allowed only at the start of the document.", getLineNumberForPosition(xmlData, i));
-            } else if (xmlData[i] == "?" && xmlData[i + 1] == ">") {
-              i++;
+      function readPI(xmlData, i2) {
+        const start = i2;
+        for (; i2 < xmlData.length; i2++) {
+          if (xmlData[i2] == "?" || xmlData[i2] == " ") {
+            const tagname = xmlData.substr(start, i2 - start);
+            if (i2 > 5 && tagname === "xml") {
+              return getErrorObject("InvalidXml", "XML declaration allowed only at the start of the document.", getLineNumberForPosition(xmlData, i2));
+            } else if (xmlData[i2] == "?" && xmlData[i2 + 1] == ">") {
+              i2++;
               break;
             } else {
               continue;
             }
           }
         }
-        return i;
+        return i2;
       }
-      function readCommentAndCDATA(xmlData, i) {
-        if (xmlData.length > i + 5 && xmlData[i + 1] === "-" && xmlData[i + 2] === "-") {
-          for (i += 3; i < xmlData.length; i++) {
-            if (xmlData[i] === "-" && xmlData[i + 1] === "-" && xmlData[i + 2] === ">") {
-              i += 2;
+      function readCommentAndCDATA(xmlData, i2) {
+        if (xmlData.length > i2 + 5 && xmlData[i2 + 1] === "-" && xmlData[i2 + 2] === "-") {
+          for (i2 += 3; i2 < xmlData.length; i2++) {
+            if (xmlData[i2] === "-" && xmlData[i2 + 1] === "-" && xmlData[i2 + 2] === ">") {
+              i2 += 2;
               break;
             }
           }
-        } else if (xmlData.length > i + 8 && xmlData[i + 1] === "D" && xmlData[i + 2] === "O" && xmlData[i + 3] === "C" && xmlData[i + 4] === "T" && xmlData[i + 5] === "Y" && xmlData[i + 6] === "P" && xmlData[i + 7] === "E") {
+        } else if (xmlData.length > i2 + 8 && xmlData[i2 + 1] === "D" && xmlData[i2 + 2] === "O" && xmlData[i2 + 3] === "C" && xmlData[i2 + 4] === "T" && xmlData[i2 + 5] === "Y" && xmlData[i2 + 6] === "P" && xmlData[i2 + 7] === "E") {
           let angleBracketsCount = 1;
-          for (i += 8; i < xmlData.length; i++) {
-            if (xmlData[i] === "<") {
+          for (i2 += 8; i2 < xmlData.length; i2++) {
+            if (xmlData[i2] === "<") {
               angleBracketsCount++;
-            } else if (xmlData[i] === ">") {
+            } else if (xmlData[i2] === ">") {
               angleBracketsCount--;
               if (angleBracketsCount === 0) {
                 break;
               }
             }
           }
-        } else if (xmlData.length > i + 9 && xmlData[i + 1] === "[" && xmlData[i + 2] === "C" && xmlData[i + 3] === "D" && xmlData[i + 4] === "A" && xmlData[i + 5] === "T" && xmlData[i + 6] === "A" && xmlData[i + 7] === "[") {
-          for (i += 8; i < xmlData.length; i++) {
-            if (xmlData[i] === "]" && xmlData[i + 1] === "]" && xmlData[i + 2] === ">") {
-              i += 2;
+        } else if (xmlData.length > i2 + 9 && xmlData[i2 + 1] === "[" && xmlData[i2 + 2] === "C" && xmlData[i2 + 3] === "D" && xmlData[i2 + 4] === "A" && xmlData[i2 + 5] === "T" && xmlData[i2 + 6] === "A" && xmlData[i2 + 7] === "[") {
+          for (i2 += 8; i2 < xmlData.length; i2++) {
+            if (xmlData[i2] === "]" && xmlData[i2 + 1] === "]" && xmlData[i2 + 2] === ">") {
+              i2 += 2;
               break;
             }
           }
         }
-        return i;
+        return i2;
       }
       var doubleQuote = '"';
       var singleQuote = "'";
-      function readAttributeStr(xmlData, i) {
+      function readAttributeStr(xmlData, i2) {
         let attrStr = "";
         let startChar = "";
         let tagClosed = false;
-        for (; i < xmlData.length; i++) {
-          if (xmlData[i] === doubleQuote || xmlData[i] === singleQuote) {
+        for (; i2 < xmlData.length; i2++) {
+          if (xmlData[i2] === doubleQuote || xmlData[i2] === singleQuote) {
             if (startChar === "") {
-              startChar = xmlData[i];
-            } else if (startChar !== xmlData[i]) {
+              startChar = xmlData[i2];
+            } else if (startChar !== xmlData[i2]) {
             } else {
               startChar = "";
             }
-          } else if (xmlData[i] === ">") {
+          } else if (xmlData[i2] === ">") {
             if (startChar === "") {
               tagClosed = true;
               break;
             }
           }
-          attrStr += xmlData[i];
+          attrStr += xmlData[i2];
         }
         if (startChar !== "") {
           return false;
         }
         return {
           value: attrStr,
-          index: i,
+          index: i2,
           tagClosed
         };
       }
@@ -341,57 +341,57 @@ var __AresiumEngine = (() => {
       function validateAttributeString(attrStr, options) {
         const matches = util.getAllMatches(attrStr, validAttrStrRegxp);
         const attrNames = {};
-        for (let i = 0; i < matches.length; i++) {
-          if (matches[i][1].length === 0) {
-            return getErrorObject("InvalidAttr", "Attribute '" + matches[i][2] + "' has no space in starting.", getPositionFromMatch(matches[i]));
-          } else if (matches[i][3] !== void 0 && matches[i][4] === void 0) {
-            return getErrorObject("InvalidAttr", "Attribute '" + matches[i][2] + "' is without value.", getPositionFromMatch(matches[i]));
-          } else if (matches[i][3] === void 0 && !options.allowBooleanAttributes) {
-            return getErrorObject("InvalidAttr", "boolean attribute '" + matches[i][2] + "' is not allowed.", getPositionFromMatch(matches[i]));
+        for (let i2 = 0; i2 < matches.length; i2++) {
+          if (matches[i2][1].length === 0) {
+            return getErrorObject("InvalidAttr", "Attribute '" + matches[i2][2] + "' has no space in starting.", getPositionFromMatch(matches[i2]));
+          } else if (matches[i2][3] !== void 0 && matches[i2][4] === void 0) {
+            return getErrorObject("InvalidAttr", "Attribute '" + matches[i2][2] + "' is without value.", getPositionFromMatch(matches[i2]));
+          } else if (matches[i2][3] === void 0 && !options.allowBooleanAttributes) {
+            return getErrorObject("InvalidAttr", "boolean attribute '" + matches[i2][2] + "' is not allowed.", getPositionFromMatch(matches[i2]));
           }
-          const attrName = matches[i][2];
+          const attrName = matches[i2][2];
           if (!validateAttrName(attrName)) {
-            return getErrorObject("InvalidAttr", "Attribute '" + attrName + "' is an invalid name.", getPositionFromMatch(matches[i]));
+            return getErrorObject("InvalidAttr", "Attribute '" + attrName + "' is an invalid name.", getPositionFromMatch(matches[i2]));
           }
           if (!attrNames.hasOwnProperty(attrName)) {
             attrNames[attrName] = 1;
           } else {
-            return getErrorObject("InvalidAttr", "Attribute '" + attrName + "' is repeated.", getPositionFromMatch(matches[i]));
+            return getErrorObject("InvalidAttr", "Attribute '" + attrName + "' is repeated.", getPositionFromMatch(matches[i2]));
           }
         }
         return true;
       }
-      function validateNumberAmpersand(xmlData, i) {
+      function validateNumberAmpersand(xmlData, i2) {
         let re = /\d/;
-        if (xmlData[i] === "x") {
-          i++;
+        if (xmlData[i2] === "x") {
+          i2++;
           re = /[\da-fA-F]/;
         }
-        for (; i < xmlData.length; i++) {
-          if (xmlData[i] === ";")
-            return i;
-          if (!xmlData[i].match(re))
+        for (; i2 < xmlData.length; i2++) {
+          if (xmlData[i2] === ";")
+            return i2;
+          if (!xmlData[i2].match(re))
             break;
         }
         return -1;
       }
-      function validateAmpersand(xmlData, i) {
-        i++;
-        if (xmlData[i] === ";")
+      function validateAmpersand(xmlData, i2) {
+        i2++;
+        if (xmlData[i2] === ";")
           return -1;
-        if (xmlData[i] === "#") {
-          i++;
-          return validateNumberAmpersand(xmlData, i);
+        if (xmlData[i2] === "#") {
+          i2++;
+          return validateNumberAmpersand(xmlData, i2);
         }
         let count = 0;
-        for (; i < xmlData.length; i++, count++) {
-          if (xmlData[i].match(/\w/) && count < 20)
+        for (; i2 < xmlData.length; i2++, count++) {
+          if (xmlData[i2].match(/\w/) && count < 20)
             continue;
-          if (xmlData[i] === ";")
+          if (xmlData[i2] === ";")
             break;
           return -1;
         }
-        return i;
+        return i2;
       }
       function getErrorObject(code, message, lineNumber) {
         return {
@@ -585,20 +585,20 @@ var __AresiumEngine = (() => {
           this.suppressValidationErr = !options;
           this.options = options || {};
         }
-        readDocType(xmlData, i) {
+        readDocType(xmlData, i2) {
           const entities = /* @__PURE__ */ Object.create(null);
           let entityCount = 0;
-          if (xmlData[i + 3] === "O" && xmlData[i + 4] === "C" && xmlData[i + 5] === "T" && xmlData[i + 6] === "Y" && xmlData[i + 7] === "P" && xmlData[i + 8] === "E") {
-            i = i + 9;
+          if (xmlData[i2 + 3] === "O" && xmlData[i2 + 4] === "C" && xmlData[i2 + 5] === "T" && xmlData[i2 + 6] === "Y" && xmlData[i2 + 7] === "P" && xmlData[i2 + 8] === "E") {
+            i2 = i2 + 9;
             let angleBracketsCount = 1;
             let hasBody = false, comment = false;
             let exp = "";
-            for (; i < xmlData.length; i++) {
-              if (xmlData[i] === "<" && !comment) {
-                if (hasBody && hasSeq(xmlData, "!ENTITY", i)) {
-                  i += 7;
+            for (; i2 < xmlData.length; i2++) {
+              if (xmlData[i2] === "<" && !comment) {
+                if (hasBody && hasSeq(xmlData, "!ENTITY", i2)) {
+                  i2 += 7;
                   let entityName, val;
-                  [entityName, val, i] = this.readEntityExp(xmlData, i + 1, this.suppressValidationErr);
+                  [entityName, val, i2] = this.readEntityExp(xmlData, i2 + 1, this.suppressValidationErr);
                   if (val.indexOf("&") === -1) {
                     if (this.options.enabled !== false && this.options.maxEntityCount != null && entityCount >= this.options.maxEntityCount) {
                       throw new Error(
@@ -612,26 +612,26 @@ var __AresiumEngine = (() => {
                     };
                     entityCount++;
                   }
-                } else if (hasBody && hasSeq(xmlData, "!ELEMENT", i)) {
-                  i += 8;
-                  const { index } = this.readElementExp(xmlData, i + 1);
-                  i = index;
-                } else if (hasBody && hasSeq(xmlData, "!ATTLIST", i)) {
-                  i += 8;
-                } else if (hasBody && hasSeq(xmlData, "!NOTATION", i)) {
-                  i += 9;
-                  const { index } = this.readNotationExp(xmlData, i + 1, this.suppressValidationErr);
-                  i = index;
-                } else if (hasSeq(xmlData, "!--", i)) {
+                } else if (hasBody && hasSeq(xmlData, "!ELEMENT", i2)) {
+                  i2 += 8;
+                  const { index } = this.readElementExp(xmlData, i2 + 1);
+                  i2 = index;
+                } else if (hasBody && hasSeq(xmlData, "!ATTLIST", i2)) {
+                  i2 += 8;
+                } else if (hasBody && hasSeq(xmlData, "!NOTATION", i2)) {
+                  i2 += 9;
+                  const { index } = this.readNotationExp(xmlData, i2 + 1, this.suppressValidationErr);
+                  i2 = index;
+                } else if (hasSeq(xmlData, "!--", i2)) {
                   comment = true;
                 } else {
                   throw new Error(`Invalid DOCTYPE`);
                 }
                 angleBracketsCount++;
                 exp = "";
-              } else if (xmlData[i] === ">") {
+              } else if (xmlData[i2] === ">") {
                 if (comment) {
-                  if (xmlData[i - 1] === "-" && xmlData[i - 2] === "-") {
+                  if (xmlData[i2 - 1] === "-" && xmlData[i2 - 2] === "-") {
                     comment = false;
                     angleBracketsCount--;
                   }
@@ -641,10 +641,10 @@ var __AresiumEngine = (() => {
                 if (angleBracketsCount === 0) {
                   break;
                 }
-              } else if (xmlData[i] === "[") {
+              } else if (xmlData[i2] === "[") {
                 hasBody = true;
               } else {
-                exp += xmlData[i];
+                exp += xmlData[i2];
               }
             }
             if (angleBracketsCount !== 0) {
@@ -653,192 +653,192 @@ var __AresiumEngine = (() => {
           } else {
             throw new Error(`Invalid Tag instead of DOCTYPE`);
           }
-          return { entities, i };
+          return { entities, i: i2 };
         }
-        readEntityExp(xmlData, i) {
-          i = skipWhitespace(xmlData, i);
+        readEntityExp(xmlData, i2) {
+          i2 = skipWhitespace(xmlData, i2);
           let entityName = "";
-          while (i < xmlData.length && !/\s/.test(xmlData[i]) && xmlData[i] !== '"' && xmlData[i] !== "'") {
-            entityName += xmlData[i];
-            i++;
+          while (i2 < xmlData.length && !/\s/.test(xmlData[i2]) && xmlData[i2] !== '"' && xmlData[i2] !== "'") {
+            entityName += xmlData[i2];
+            i2++;
           }
           validateEntityName(entityName);
-          i = skipWhitespace(xmlData, i);
+          i2 = skipWhitespace(xmlData, i2);
           if (!this.suppressValidationErr) {
-            if (xmlData.substring(i, i + 6).toUpperCase() === "SYSTEM") {
+            if (xmlData.substring(i2, i2 + 6).toUpperCase() === "SYSTEM") {
               throw new Error("External entities are not supported");
-            } else if (xmlData[i] === "%") {
+            } else if (xmlData[i2] === "%") {
               throw new Error("Parameter entities are not supported");
             }
           }
           let entityValue = "";
-          [i, entityValue] = this.readIdentifierVal(xmlData, i, "entity");
+          [i2, entityValue] = this.readIdentifierVal(xmlData, i2, "entity");
           if (this.options.enabled !== false && this.options.maxEntitySize != null && entityValue.length > this.options.maxEntitySize) {
             throw new Error(
               `Entity "${entityName}" size (${entityValue.length}) exceeds maximum allowed size (${this.options.maxEntitySize})`
             );
           }
-          i--;
-          return [entityName, entityValue, i];
+          i2--;
+          return [entityName, entityValue, i2];
         }
-        readNotationExp(xmlData, i) {
-          i = skipWhitespace(xmlData, i);
+        readNotationExp(xmlData, i2) {
+          i2 = skipWhitespace(xmlData, i2);
           let notationName = "";
-          while (i < xmlData.length && !/\s/.test(xmlData[i])) {
-            notationName += xmlData[i];
-            i++;
+          while (i2 < xmlData.length && !/\s/.test(xmlData[i2])) {
+            notationName += xmlData[i2];
+            i2++;
           }
           !this.suppressValidationErr && validateEntityName(notationName);
-          i = skipWhitespace(xmlData, i);
-          const identifierType = xmlData.substring(i, i + 6).toUpperCase();
+          i2 = skipWhitespace(xmlData, i2);
+          const identifierType = xmlData.substring(i2, i2 + 6).toUpperCase();
           if (!this.suppressValidationErr && identifierType !== "SYSTEM" && identifierType !== "PUBLIC") {
             throw new Error(`Expected SYSTEM or PUBLIC, found "${identifierType}"`);
           }
-          i += identifierType.length;
-          i = skipWhitespace(xmlData, i);
+          i2 += identifierType.length;
+          i2 = skipWhitespace(xmlData, i2);
           let publicIdentifier = null;
           let systemIdentifier = null;
           if (identifierType === "PUBLIC") {
-            [i, publicIdentifier] = this.readIdentifierVal(xmlData, i, "publicIdentifier");
-            i = skipWhitespace(xmlData, i);
-            if (xmlData[i] === '"' || xmlData[i] === "'") {
-              [i, systemIdentifier] = this.readIdentifierVal(xmlData, i, "systemIdentifier");
+            [i2, publicIdentifier] = this.readIdentifierVal(xmlData, i2, "publicIdentifier");
+            i2 = skipWhitespace(xmlData, i2);
+            if (xmlData[i2] === '"' || xmlData[i2] === "'") {
+              [i2, systemIdentifier] = this.readIdentifierVal(xmlData, i2, "systemIdentifier");
             }
           } else if (identifierType === "SYSTEM") {
-            [i, systemIdentifier] = this.readIdentifierVal(xmlData, i, "systemIdentifier");
+            [i2, systemIdentifier] = this.readIdentifierVal(xmlData, i2, "systemIdentifier");
             if (!this.suppressValidationErr && !systemIdentifier) {
               throw new Error("Missing mandatory system identifier for SYSTEM notation");
             }
           }
-          return { notationName, publicIdentifier, systemIdentifier, index: --i };
+          return { notationName, publicIdentifier, systemIdentifier, index: --i2 };
         }
-        readIdentifierVal(xmlData, i, type) {
+        readIdentifierVal(xmlData, i2, type) {
           let identifierVal = "";
-          const startChar = xmlData[i];
+          const startChar = xmlData[i2];
           if (startChar !== '"' && startChar !== "'") {
             throw new Error(`Expected quoted string, found "${startChar}"`);
           }
-          i++;
-          while (i < xmlData.length && xmlData[i] !== startChar) {
-            identifierVal += xmlData[i];
-            i++;
+          i2++;
+          while (i2 < xmlData.length && xmlData[i2] !== startChar) {
+            identifierVal += xmlData[i2];
+            i2++;
           }
-          if (xmlData[i] !== startChar) {
+          if (xmlData[i2] !== startChar) {
             throw new Error(`Unterminated ${type} value`);
           }
-          i++;
-          return [i, identifierVal];
+          i2++;
+          return [i2, identifierVal];
         }
-        readElementExp(xmlData, i) {
-          i = skipWhitespace(xmlData, i);
+        readElementExp(xmlData, i2) {
+          i2 = skipWhitespace(xmlData, i2);
           let elementName = "";
-          while (i < xmlData.length && !/\s/.test(xmlData[i])) {
-            elementName += xmlData[i];
-            i++;
+          while (i2 < xmlData.length && !/\s/.test(xmlData[i2])) {
+            elementName += xmlData[i2];
+            i2++;
           }
           if (!this.suppressValidationErr && !util.isName(elementName)) {
             throw new Error(`Invalid element name: "${elementName}"`);
           }
-          i = skipWhitespace(xmlData, i);
+          i2 = skipWhitespace(xmlData, i2);
           let contentModel = "";
-          if (xmlData[i] === "E" && hasSeq(xmlData, "MPTY", i)) {
-            i += 4;
-          } else if (xmlData[i] === "A" && hasSeq(xmlData, "NY", i)) {
-            i += 2;
-          } else if (xmlData[i] === "(") {
-            i++;
-            while (i < xmlData.length && xmlData[i] !== ")") {
-              contentModel += xmlData[i];
-              i++;
+          if (xmlData[i2] === "E" && hasSeq(xmlData, "MPTY", i2)) {
+            i2 += 4;
+          } else if (xmlData[i2] === "A" && hasSeq(xmlData, "NY", i2)) {
+            i2 += 2;
+          } else if (xmlData[i2] === "(") {
+            i2++;
+            while (i2 < xmlData.length && xmlData[i2] !== ")") {
+              contentModel += xmlData[i2];
+              i2++;
             }
-            if (xmlData[i] !== ")") {
+            if (xmlData[i2] !== ")") {
               throw new Error("Unterminated content model");
             }
           } else if (!this.suppressValidationErr) {
-            throw new Error(`Invalid Element Expression, found "${xmlData[i]}"`);
+            throw new Error(`Invalid Element Expression, found "${xmlData[i2]}"`);
           }
           return {
             elementName,
             contentModel: contentModel.trim(),
-            index: i
+            index: i2
           };
         }
-        readAttlistExp(xmlData, i) {
-          i = skipWhitespace(xmlData, i);
+        readAttlistExp(xmlData, i2) {
+          i2 = skipWhitespace(xmlData, i2);
           let elementName = "";
-          while (i < xmlData.length && !/\s/.test(xmlData[i])) {
-            elementName += xmlData[i];
-            i++;
+          while (i2 < xmlData.length && !/\s/.test(xmlData[i2])) {
+            elementName += xmlData[i2];
+            i2++;
           }
           validateEntityName(elementName);
-          i = skipWhitespace(xmlData, i);
+          i2 = skipWhitespace(xmlData, i2);
           let attributeName = "";
-          while (i < xmlData.length && !/\s/.test(xmlData[i])) {
-            attributeName += xmlData[i];
-            i++;
+          while (i2 < xmlData.length && !/\s/.test(xmlData[i2])) {
+            attributeName += xmlData[i2];
+            i2++;
           }
           if (!validateEntityName(attributeName)) {
             throw new Error(`Invalid attribute name: "${attributeName}"`);
           }
-          i = skipWhitespace(xmlData, i);
+          i2 = skipWhitespace(xmlData, i2);
           let attributeType = "";
-          if (xmlData.substring(i, i + 8).toUpperCase() === "NOTATION") {
+          if (xmlData.substring(i2, i2 + 8).toUpperCase() === "NOTATION") {
             attributeType = "NOTATION";
-            i += 8;
-            i = skipWhitespace(xmlData, i);
-            if (xmlData[i] !== "(") {
-              throw new Error(`Expected '(', found "${xmlData[i]}"`);
+            i2 += 8;
+            i2 = skipWhitespace(xmlData, i2);
+            if (xmlData[i2] !== "(") {
+              throw new Error(`Expected '(', found "${xmlData[i2]}"`);
             }
-            i++;
+            i2++;
             let allowedNotations = [];
-            while (i < xmlData.length && xmlData[i] !== ")") {
+            while (i2 < xmlData.length && xmlData[i2] !== ")") {
               let notation = "";
-              while (i < xmlData.length && xmlData[i] !== "|" && xmlData[i] !== ")") {
-                notation += xmlData[i];
-                i++;
+              while (i2 < xmlData.length && xmlData[i2] !== "|" && xmlData[i2] !== ")") {
+                notation += xmlData[i2];
+                i2++;
               }
               notation = notation.trim();
               if (!validateEntityName(notation)) {
                 throw new Error(`Invalid notation name: "${notation}"`);
               }
               allowedNotations.push(notation);
-              if (xmlData[i] === "|") {
-                i++;
-                i = skipWhitespace(xmlData, i);
+              if (xmlData[i2] === "|") {
+                i2++;
+                i2 = skipWhitespace(xmlData, i2);
               }
             }
-            if (xmlData[i] !== ")") {
+            if (xmlData[i2] !== ")") {
               throw new Error("Unterminated list of notations");
             }
-            i++;
+            i2++;
             attributeType += " (" + allowedNotations.join("|") + ")";
           } else {
-            while (i < xmlData.length && !/\s/.test(xmlData[i])) {
-              attributeType += xmlData[i];
-              i++;
+            while (i2 < xmlData.length && !/\s/.test(xmlData[i2])) {
+              attributeType += xmlData[i2];
+              i2++;
             }
             const validTypes = ["CDATA", "ID", "IDREF", "IDREFS", "ENTITY", "ENTITIES", "NMTOKEN", "NMTOKENS"];
             if (!this.suppressValidationErr && !validTypes.includes(attributeType.toUpperCase())) {
               throw new Error(`Invalid attribute type: "${attributeType}"`);
             }
           }
-          i = skipWhitespace(xmlData, i);
+          i2 = skipWhitespace(xmlData, i2);
           let defaultValue = "";
-          if (xmlData.substring(i, i + 8).toUpperCase() === "#REQUIRED") {
+          if (xmlData.substring(i2, i2 + 8).toUpperCase() === "#REQUIRED") {
             defaultValue = "#REQUIRED";
-            i += 8;
-          } else if (xmlData.substring(i, i + 7).toUpperCase() === "#IMPLIED") {
+            i2 += 8;
+          } else if (xmlData.substring(i2, i2 + 7).toUpperCase() === "#IMPLIED") {
             defaultValue = "#IMPLIED";
-            i += 7;
+            i2 += 7;
           } else {
-            [i, defaultValue] = this.readIdentifierVal(xmlData, i, "ATTLIST");
+            [i2, defaultValue] = this.readIdentifierVal(xmlData, i2, "ATTLIST");
           }
           return {
             elementName,
             attributeName,
             attributeType,
             defaultValue,
-            index: i
+            index: i2
           };
         }
       };
@@ -848,9 +848,9 @@ var __AresiumEngine = (() => {
         }
         return index;
       };
-      function hasSeq(data, seq, i) {
+      function hasSeq(data, seq, i2) {
         for (let j = 0; j < seq.length; j++) {
-          if (seq[j] !== data[i + j + 1]) return false;
+          if (seq[j] !== data[i2 + j + 1]) return false;
         }
         return true;
       }
@@ -1032,8 +1032,8 @@ var __AresiumEngine = (() => {
           if (this.options.stopNodes && this.options.stopNodes.length > 0) {
             this.stopNodesExact = /* @__PURE__ */ new Set();
             this.stopNodesWildcard = /* @__PURE__ */ new Set();
-            for (let i = 0; i < this.options.stopNodes.length; i++) {
-              const stopNodeExp = this.options.stopNodes[i];
+            for (let i2 = 0; i2 < this.options.stopNodes.length; i2++) {
+              const stopNodeExp = this.options.stopNodes[i2];
               if (typeof stopNodeExp !== "string") continue;
               if (stopNodeExp.startsWith("*.")) {
                 this.stopNodesWildcard.add(stopNodeExp.substring(2));
@@ -1046,8 +1046,8 @@ var __AresiumEngine = (() => {
       };
       function addExternalEntities(externalEntities) {
         const entKeys = Object.keys(externalEntities);
-        for (let i = 0; i < entKeys.length; i++) {
-          const ent = entKeys[i];
+        for (let i2 = 0; i2 < entKeys.length; i2++) {
+          const ent = entKeys[i2];
           const escaped = ent.replace(/[.\-+*:]/g, "\\.");
           this.lastEntities[ent] = {
             regex: new RegExp("&" + escaped + ";", "g"),
@@ -1099,12 +1099,12 @@ var __AresiumEngine = (() => {
           const matches = util.getAllMatches(attrStr, attrsRegx);
           const len = matches.length;
           const attrs = {};
-          for (let i = 0; i < len; i++) {
-            const attrName = this.resolveNameSpace(matches[i][1]);
+          for (let i2 = 0; i2 < len; i2++) {
+            const attrName = this.resolveNameSpace(matches[i2][1]);
             if (this.ignoreAttributesFn(attrName, jPath)) {
               continue;
             }
-            let oldVal = matches[i][4];
+            let oldVal = matches[i2][4];
             let aName = this.options.attributeNamePrefix + attrName;
             if (attrName.length) {
               if (this.options.transformAttributeName) {
@@ -1153,12 +1153,12 @@ var __AresiumEngine = (() => {
         this.entityExpansionCount = 0;
         this.currentExpandedLength = 0;
         const docTypeReader = new DocTypeReader(this.options.processEntities);
-        for (let i = 0; i < xmlData.length; i++) {
-          const ch = xmlData[i];
+        for (let i2 = 0; i2 < xmlData.length; i2++) {
+          const ch = xmlData[i2];
           if (ch === "<") {
-            if (xmlData[i + 1] === "/") {
-              const closeIndex = findClosingIndex(xmlData, ">", i, "Closing Tag is not closed.");
-              let tagName = xmlData.substring(i + 2, closeIndex).trim();
+            if (xmlData[i2 + 1] === "/") {
+              const closeIndex = findClosingIndex(xmlData, ">", i2, "Closing Tag is not closed.");
+              let tagName = xmlData.substring(i2 + 2, closeIndex).trim();
               if (this.options.removeNSPrefix) {
                 const colonIndex = tagName.indexOf(":");
                 if (colonIndex !== -1) {
@@ -1185,9 +1185,9 @@ var __AresiumEngine = (() => {
               jPath = jPath.substring(0, propIndex);
               currentNode = this.tagsNodeStack.pop();
               textData = "";
-              i = closeIndex;
-            } else if (xmlData[i + 1] === "?") {
-              let tagData = readTagExp(xmlData, i, false, "?>");
+              i2 = closeIndex;
+            } else if (xmlData[i2 + 1] === "?") {
+              let tagData = readTagExp(xmlData, i2, false, "?>");
               if (!tagData) throw new Error("Pi Tag is not closed.");
               textData = this.saveTextToParentTag(textData, currentNode, jPath);
               if (this.options.ignoreDeclaration && tagData.tagName === "?xml" || this.options.ignorePiTags) {
@@ -1197,24 +1197,24 @@ var __AresiumEngine = (() => {
                 if (tagData.tagName !== tagData.tagExp && tagData.attrExpPresent) {
                   childNode[":@"] = this.buildAttributesMap(tagData.tagExp, jPath, tagData.tagName);
                 }
-                this.addChild(currentNode, childNode, jPath, i);
+                this.addChild(currentNode, childNode, jPath, i2);
               }
-              i = tagData.closeIndex + 1;
-            } else if (xmlData.substr(i + 1, 3) === "!--") {
-              const endIndex = findClosingIndex(xmlData, "-->", i + 4, "Comment is not closed.");
+              i2 = tagData.closeIndex + 1;
+            } else if (xmlData.substr(i2 + 1, 3) === "!--") {
+              const endIndex = findClosingIndex(xmlData, "-->", i2 + 4, "Comment is not closed.");
               if (this.options.commentPropName) {
-                const comment = xmlData.substring(i + 4, endIndex - 2);
+                const comment = xmlData.substring(i2 + 4, endIndex - 2);
                 textData = this.saveTextToParentTag(textData, currentNode, jPath);
                 currentNode.add(this.options.commentPropName, [{ [this.options.textNodeName]: comment }]);
               }
-              i = endIndex;
-            } else if (xmlData.substr(i + 1, 2) === "!D") {
-              const result = docTypeReader.readDocType(xmlData, i);
+              i2 = endIndex;
+            } else if (xmlData.substr(i2 + 1, 2) === "!D") {
+              const result = docTypeReader.readDocType(xmlData, i2);
               this.docTypeEntities = result.entities;
-              i = result.i;
-            } else if (xmlData.substr(i + 1, 2) === "![") {
-              const closeIndex = findClosingIndex(xmlData, "]]>", i, "CDATA is not closed.") - 2;
-              const tagExp = xmlData.substring(i + 9, closeIndex);
+              i2 = result.i;
+            } else if (xmlData.substr(i2 + 1, 2) === "![") {
+              const closeIndex = findClosingIndex(xmlData, "]]>", i2, "CDATA is not closed.") - 2;
+              const tagExp = xmlData.substring(i2 + 9, closeIndex);
               textData = this.saveTextToParentTag(textData, currentNode, jPath);
               let val = this.parseTextData(tagExp, currentNode.tagname, jPath, true, false, true, true);
               if (val == void 0) val = "";
@@ -1223,9 +1223,9 @@ var __AresiumEngine = (() => {
               } else {
                 currentNode.add(this.options.textNodeName, val);
               }
-              i = closeIndex + 2;
+              i2 = closeIndex + 2;
             } else {
-              let result = readTagExp(xmlData, i, this.options.removeNSPrefix);
+              let result = readTagExp(xmlData, i2, this.options.removeNSPrefix);
               let tagName = result.tagName;
               const rawTagName = result.rawTagName;
               let tagExp = result.tagExp;
@@ -1254,7 +1254,7 @@ var __AresiumEngine = (() => {
               if (tagName !== xmlObj.tagname) {
                 jPath += jPath ? "." + tagName : tagName;
               }
-              const startIndex = i;
+              const startIndex = i2;
               if (this.isItStopNode(this.stopNodesExact, this.stopNodesWildcard, jPath, tagName)) {
                 let tagContent = "";
                 if (tagExp.length > 0 && tagExp.lastIndexOf("/") === tagExp.length - 1) {
@@ -1265,13 +1265,13 @@ var __AresiumEngine = (() => {
                   } else {
                     tagExp = tagExp.substr(0, tagExp.length - 1);
                   }
-                  i = result.closeIndex;
+                  i2 = result.closeIndex;
                 } else if (this.options.unpairedTags.indexOf(tagName) !== -1) {
-                  i = result.closeIndex;
+                  i2 = result.closeIndex;
                 } else {
                   const result2 = this.readStopNodeData(xmlData, rawTagName, closeIndex + 1);
                   if (!result2) throw new Error(`Unexpected end of ${rawTagName}`);
-                  i = result2.i;
+                  i2 = result2.i;
                   tagContent = result2.tagContent;
                 }
                 const childNode = new xmlNode(tagName);
@@ -1313,7 +1313,7 @@ var __AresiumEngine = (() => {
                   }
                   this.addChild(currentNode, childNode, jPath, startIndex);
                   jPath = jPath.substr(0, jPath.lastIndexOf("."));
-                  i = result.closeIndex;
+                  i2 = result.closeIndex;
                   continue;
                 } else {
                   const childNode = new xmlNode(tagName);
@@ -1328,11 +1328,11 @@ var __AresiumEngine = (() => {
                   currentNode = childNode;
                 }
                 textData = "";
-                i = closeIndex;
+                i2 = closeIndex;
               }
             }
           } else {
-            textData += xmlData[i];
+            textData += xmlData[i2];
           }
         }
         return xmlObj.child;
@@ -1443,10 +1443,10 @@ var __AresiumEngine = (() => {
         if (stopNodesExact && stopNodesExact.has(jPath)) return true;
         return false;
       }
-      function tagExpWithClosingIndex(xmlData, i, closingChar = ">") {
+      function tagExpWithClosingIndex(xmlData, i2, closingChar = ">") {
         let attrBoundary;
         let tagExp = "";
-        for (let index = i; index < xmlData.length; index++) {
+        for (let index = i2; index < xmlData.length; index++) {
           let ch = xmlData[index];
           if (attrBoundary) {
             if (ch === attrBoundary) attrBoundary = "";
@@ -1472,16 +1472,16 @@ var __AresiumEngine = (() => {
           tagExp += ch;
         }
       }
-      function findClosingIndex(xmlData, str, i, errMsg) {
-        const closingIndex = xmlData.indexOf(str, i);
+      function findClosingIndex(xmlData, str, i2, errMsg) {
+        const closingIndex = xmlData.indexOf(str, i2);
         if (closingIndex === -1) {
           throw new Error(errMsg);
         } else {
           return closingIndex + str.length - 1;
         }
       }
-      function readTagExp(xmlData, i, removeNSPrefix, closingChar = ">") {
-        const result = tagExpWithClosingIndex(xmlData, i + 1, closingChar);
+      function readTagExp(xmlData, i2, removeNSPrefix, closingChar = ">") {
+        const result = tagExpWithClosingIndex(xmlData, i2 + 1, closingChar);
         if (!result) return;
         let tagExp = result.data;
         const closeIndex = result.index;
@@ -1508,41 +1508,41 @@ var __AresiumEngine = (() => {
           rawTagName
         };
       }
-      function readStopNodeData(xmlData, tagName, i) {
-        const startIndex = i;
+      function readStopNodeData(xmlData, tagName, i2) {
+        const startIndex = i2;
         let openTagCount = 1;
-        for (; i < xmlData.length; i++) {
-          if (xmlData[i] === "<") {
-            if (xmlData[i + 1] === "/") {
-              const closeIndex = findClosingIndex(xmlData, ">", i, `${tagName} is not closed`);
-              let closeTagName = xmlData.substring(i + 2, closeIndex).trim();
+        for (; i2 < xmlData.length; i2++) {
+          if (xmlData[i2] === "<") {
+            if (xmlData[i2 + 1] === "/") {
+              const closeIndex = findClosingIndex(xmlData, ">", i2, `${tagName} is not closed`);
+              let closeTagName = xmlData.substring(i2 + 2, closeIndex).trim();
               if (closeTagName === tagName) {
                 openTagCount--;
                 if (openTagCount === 0) {
                   return {
-                    tagContent: xmlData.substring(startIndex, i),
+                    tagContent: xmlData.substring(startIndex, i2),
                     i: closeIndex
                   };
                 }
               }
-              i = closeIndex;
-            } else if (xmlData[i + 1] === "?") {
-              const closeIndex = findClosingIndex(xmlData, "?>", i + 1, "StopNode is not closed.");
-              i = closeIndex;
-            } else if (xmlData.substr(i + 1, 3) === "!--") {
-              const closeIndex = findClosingIndex(xmlData, "-->", i + 3, "StopNode is not closed.");
-              i = closeIndex;
-            } else if (xmlData.substr(i + 1, 2) === "![") {
-              const closeIndex = findClosingIndex(xmlData, "]]>", i, "StopNode is not closed.") - 2;
-              i = closeIndex;
+              i2 = closeIndex;
+            } else if (xmlData[i2 + 1] === "?") {
+              const closeIndex = findClosingIndex(xmlData, "?>", i2 + 1, "StopNode is not closed.");
+              i2 = closeIndex;
+            } else if (xmlData.substr(i2 + 1, 3) === "!--") {
+              const closeIndex = findClosingIndex(xmlData, "-->", i2 + 3, "StopNode is not closed.");
+              i2 = closeIndex;
+            } else if (xmlData.substr(i2 + 1, 2) === "![") {
+              const closeIndex = findClosingIndex(xmlData, "]]>", i2, "StopNode is not closed.") - 2;
+              i2 = closeIndex;
             } else {
-              const tagData = readTagExp(xmlData, i, ">");
+              const tagData = readTagExp(xmlData, i2, ">");
               if (tagData) {
                 const openTagName = tagData && tagData.tagName;
                 if (openTagName === tagName && tagData.tagExp[tagData.tagExp.length - 1] !== "/") {
                   openTagCount++;
                 }
-                i = tagData.closeIndex;
+                i2 = tagData.closeIndex;
               }
             }
           }
@@ -1589,18 +1589,18 @@ var __AresiumEngine = (() => {
       function prettify(node2, options) {
         return compress(node2, options);
       }
-      function compress(arr3, options, jPath) {
-        let text2;
+      function compress(arr4, options, jPath) {
+        let text3;
         const compressedObj = {};
-        for (let i = 0; i < arr3.length; i++) {
-          const tagObj = arr3[i];
+        for (let i2 = 0; i2 < arr4.length; i2++) {
+          const tagObj = arr4[i2];
           const property = propName(tagObj);
           let newJpath = "";
           if (jPath === void 0) newJpath = property;
           else newJpath = jPath + "." + property;
           if (property === options.textNodeName) {
-            if (text2 === void 0) text2 = tagObj[property];
-            else text2 += "" + tagObj[property];
+            if (text3 === void 0) text3 = tagObj[property];
+            else text3 += "" + tagObj[property];
           } else if (property === void 0) {
             continue;
           } else if (tagObj[property]) {
@@ -1628,15 +1628,15 @@ var __AresiumEngine = (() => {
             }
           }
         }
-        if (typeof text2 === "string") {
-          if (text2.length > 0) compressedObj[options.textNodeName] = text2;
-        } else if (text2 !== void 0) compressedObj[options.textNodeName] = text2;
+        if (typeof text3 === "string") {
+          if (text3.length > 0) compressedObj[options.textNodeName] = text3;
+        } else if (text3 !== void 0) compressedObj[options.textNodeName] = text3;
         return compressedObj;
       }
       function propName(obj) {
         const keys = Object.keys(obj);
-        for (let i = 0; i < keys.length; i++) {
-          const key = keys[i];
+        for (let i2 = 0; i2 < keys.length; i2++) {
+          const key = keys[i2];
           if (key !== ":@") return key;
         }
       }
@@ -1644,8 +1644,8 @@ var __AresiumEngine = (() => {
         if (attrMap) {
           const keys = Object.keys(attrMap);
           const len = keys.length;
-          for (let i = 0; i < len; i++) {
-            const atrrName = keys[i];
+          for (let i2 = 0; i2 < len; i2++) {
+            const atrrName = keys[i2];
             if (options.isArray(atrrName, jpath + "." + atrrName, true, true)) {
               obj[atrrName] = [attrMap[atrrName]];
             } else {
@@ -1676,7 +1676,7 @@ var __AresiumEngine = (() => {
       var OrderedObjParser = require_OrderedObjParser();
       var { prettify } = require_node2json();
       var validator = require_validator();
-      var XMLParser3 = class {
+      var XMLParser5 = class {
         constructor(options) {
           this.externalEntities = {};
           this.options = buildOptions(options);
@@ -1723,7 +1723,7 @@ var __AresiumEngine = (() => {
           }
         }
       };
-      module.exports = XMLParser3;
+      module.exports = XMLParser5;
     }
   });
 
@@ -1738,19 +1738,19 @@ var __AresiumEngine = (() => {
         }
         return arrToStr(jArray, options, "", indentation);
       }
-      function arrToStr(arr3, options, jPath, indentation) {
+      function arrToStr(arr4, options, jPath, indentation) {
         let xmlStr = "";
         let isPreviousElementTag = false;
-        if (!Array.isArray(arr3)) {
-          if (arr3 !== void 0 && arr3 !== null) {
-            let text2 = arr3.toString();
-            text2 = replaceEntitiesValue(text2, options);
-            return text2;
+        if (!Array.isArray(arr4)) {
+          if (arr4 !== void 0 && arr4 !== null) {
+            let text3 = arr4.toString();
+            text3 = replaceEntitiesValue(text3, options);
+            return text3;
           }
           return "";
         }
-        for (let i = 0; i < arr3.length; i++) {
-          const tagObj = arr3[i];
+        for (let i2 = 0; i2 < arr4.length; i2++) {
+          const tagObj = arr4[i2];
           const tagName = propName(tagObj);
           if (tagName === void 0) continue;
           let newJPath = "";
@@ -1817,8 +1817,8 @@ var __AresiumEngine = (() => {
       }
       function propName(obj) {
         const keys = Object.keys(obj);
-        for (let i = 0; i < keys.length; i++) {
-          const key = keys[i];
+        for (let i2 = 0; i2 < keys.length; i2++) {
+          const key = keys[i2];
           if (!Object.prototype.hasOwnProperty.call(obj, key)) continue;
           if (key !== ":@") return key;
         }
@@ -1849,8 +1849,8 @@ var __AresiumEngine = (() => {
       }
       function replaceEntitiesValue(textValue, options) {
         if (textValue && textValue.length > 0 && options.processEntities) {
-          for (let i = 0; i < options.entities.length; i++) {
-            const entity = options.entities[i];
+          for (let i2 = 0; i2 < options.entities.length; i2++) {
+            const entity = options.entities[i2];
             textValue = textValue.replace(entity.regex, entity.val);
           }
         }
@@ -2085,8 +2085,8 @@ var __AresiumEngine = (() => {
       };
       Builder.prototype.replaceEntitiesValue = function(textValue) {
         if (textValue && textValue.length > 0 && this.options.processEntities) {
-          for (let i = 0; i < this.options.entities.length; i++) {
-            const entity = this.options.entities[i];
+          for (let i2 = 0; i2 < this.options.entities.length; i2++) {
+            const entity = this.options.entities[i2];
             textValue = textValue.replace(entity.regex, entity.val);
           }
         }
@@ -2111,10 +2111,10 @@ var __AresiumEngine = (() => {
     "node_modules/fast-xml-parser/src/fxp.js"(exports, module) {
       "use strict";
       var validator = require_validator();
-      var XMLParser3 = require_XMLParser();
+      var XMLParser5 = require_XMLParser();
       var XMLBuilder = require_json2xml();
       module.exports = {
-        XMLParser: XMLParser3,
+        XMLParser: XMLParser5,
         XMLValidator: validator,
         XMLBuilder
       };
@@ -2182,9 +2182,9 @@ var __AresiumEngine = (() => {
   function init() {
     inited = true;
     var code = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    for (var i = 0, len = code.length; i < len; ++i) {
-      lookup[i] = code[i];
-      revLookup[code.charCodeAt(i)] = i;
+    for (var i2 = 0, len = code.length; i2 < len; ++i2) {
+      lookup[i2] = code[i2];
+      revLookup[code.charCodeAt(i2)] = i2;
     }
     revLookup["-".charCodeAt(0)] = 62;
     revLookup["_".charCodeAt(0)] = 63;
@@ -2193,30 +2193,30 @@ var __AresiumEngine = (() => {
     if (!inited) {
       init();
     }
-    var i, j, l, tmp, placeHolders, arr3;
+    var i2, j, l, tmp, placeHolders, arr4;
     var len = b64.length;
     if (len % 4 > 0) {
       throw new Error("Invalid string. Length must be a multiple of 4");
     }
     placeHolders = b64[len - 2] === "=" ? 2 : b64[len - 1] === "=" ? 1 : 0;
-    arr3 = new Arr(len * 3 / 4 - placeHolders);
+    arr4 = new Arr(len * 3 / 4 - placeHolders);
     l = placeHolders > 0 ? len - 4 : len;
     var L = 0;
-    for (i = 0, j = 0; i < l; i += 4, j += 3) {
-      tmp = revLookup[b64.charCodeAt(i)] << 18 | revLookup[b64.charCodeAt(i + 1)] << 12 | revLookup[b64.charCodeAt(i + 2)] << 6 | revLookup[b64.charCodeAt(i + 3)];
-      arr3[L++] = tmp >> 16 & 255;
-      arr3[L++] = tmp >> 8 & 255;
-      arr3[L++] = tmp & 255;
+    for (i2 = 0, j = 0; i2 < l; i2 += 4, j += 3) {
+      tmp = revLookup[b64.charCodeAt(i2)] << 18 | revLookup[b64.charCodeAt(i2 + 1)] << 12 | revLookup[b64.charCodeAt(i2 + 2)] << 6 | revLookup[b64.charCodeAt(i2 + 3)];
+      arr4[L++] = tmp >> 16 & 255;
+      arr4[L++] = tmp >> 8 & 255;
+      arr4[L++] = tmp & 255;
     }
     if (placeHolders === 2) {
-      tmp = revLookup[b64.charCodeAt(i)] << 2 | revLookup[b64.charCodeAt(i + 1)] >> 4;
-      arr3[L++] = tmp & 255;
+      tmp = revLookup[b64.charCodeAt(i2)] << 2 | revLookup[b64.charCodeAt(i2 + 1)] >> 4;
+      arr4[L++] = tmp & 255;
     } else if (placeHolders === 1) {
-      tmp = revLookup[b64.charCodeAt(i)] << 10 | revLookup[b64.charCodeAt(i + 1)] << 4 | revLookup[b64.charCodeAt(i + 2)] >> 2;
-      arr3[L++] = tmp >> 8 & 255;
-      arr3[L++] = tmp & 255;
+      tmp = revLookup[b64.charCodeAt(i2)] << 10 | revLookup[b64.charCodeAt(i2 + 1)] << 4 | revLookup[b64.charCodeAt(i2 + 2)] >> 2;
+      arr4[L++] = tmp >> 8 & 255;
+      arr4[L++] = tmp & 255;
     }
-    return arr3;
+    return arr4;
   }
   function tripletToBase64(num) {
     return lookup[num >> 18 & 63] + lookup[num >> 12 & 63] + lookup[num >> 6 & 63] + lookup[num & 63];
@@ -2224,8 +2224,8 @@ var __AresiumEngine = (() => {
   function encodeChunk(uint8, start, end) {
     var tmp;
     var output = [];
-    for (var i = start; i < end; i += 3) {
-      tmp = (uint8[i] << 16) + (uint8[i + 1] << 8) + uint8[i + 2];
+    for (var i2 = start; i2 < end; i2 += 3) {
+      tmp = (uint8[i2] << 16) + (uint8[i2 + 1] << 8) + uint8[i2 + 2];
       output.push(tripletToBase64(tmp));
     }
     return output.join("");
@@ -2240,8 +2240,8 @@ var __AresiumEngine = (() => {
     var output = "";
     var parts = [];
     var maxChunkLength = 16383;
-    for (var i = 0, len2 = len - extraBytes; i < len2; i += maxChunkLength) {
-      parts.push(encodeChunk(uint8, i, i + maxChunkLength > len2 ? len2 : i + maxChunkLength));
+    for (var i2 = 0, len2 = len - extraBytes; i2 < len2; i2 += maxChunkLength) {
+      parts.push(encodeChunk(uint8, i2, i2 + maxChunkLength > len2 ? len2 : i2 + maxChunkLength));
     }
     if (extraBytes === 1) {
       tmp = uint8[len - 1];
@@ -2264,19 +2264,19 @@ var __AresiumEngine = (() => {
     var eMax = (1 << eLen) - 1;
     var eBias = eMax >> 1;
     var nBits = -7;
-    var i = isLE ? nBytes - 1 : 0;
+    var i2 = isLE ? nBytes - 1 : 0;
     var d = isLE ? -1 : 1;
-    var s = buffer[offset + i];
-    i += d;
+    var s = buffer[offset + i2];
+    i2 += d;
     e = s & (1 << -nBits) - 1;
     s >>= -nBits;
     nBits += eLen;
-    for (; nBits > 0; e = e * 256 + buffer[offset + i], i += d, nBits -= 8) {
+    for (; nBits > 0; e = e * 256 + buffer[offset + i2], i2 += d, nBits -= 8) {
     }
     m = e & (1 << -nBits) - 1;
     e >>= -nBits;
     nBits += mLen;
-    for (; nBits > 0; m = m * 256 + buffer[offset + i], i += d, nBits -= 8) {
+    for (; nBits > 0; m = m * 256 + buffer[offset + i2], i2 += d, nBits -= 8) {
     }
     if (e === 0) {
       e = 1 - eBias;
@@ -2294,7 +2294,7 @@ var __AresiumEngine = (() => {
     var eMax = (1 << eLen) - 1;
     var eBias = eMax >> 1;
     var rt = mLen === 23 ? Math.pow(2, -24) - Math.pow(2, -77) : 0;
-    var i = isLE ? 0 : nBytes - 1;
+    var i2 = isLE ? 0 : nBytes - 1;
     var d = isLE ? 1 : -1;
     var s = value < 0 || value === 0 && 1 / value < 0 ? 1 : 0;
     value = Math.abs(value);
@@ -2327,17 +2327,17 @@ var __AresiumEngine = (() => {
         e = 0;
       }
     }
-    for (; mLen >= 8; buffer[offset + i] = m & 255, i += d, m /= 256, mLen -= 8) {
+    for (; mLen >= 8; buffer[offset + i2] = m & 255, i2 += d, m /= 256, mLen -= 8) {
     }
     e = e << mLen | m;
     eLen += mLen;
-    for (; eLen > 0; buffer[offset + i] = e & 255, i += d, e /= 256, eLen -= 8) {
+    for (; eLen > 0; buffer[offset + i2] = e & 255, i2 += d, e /= 256, eLen -= 8) {
     }
-    buffer[offset + i - d] |= s * 128;
+    buffer[offset + i2 - d] |= s * 128;
   }
   var toString = {}.toString;
-  var isArray = Array.isArray || function(arr3) {
-    return toString.call(arr3) == "[object Array]";
+  var isArray = Array.isArray || function(arr4) {
+    return toString.call(arr4) == "[object Array]";
   };
   var INSPECT_MAX_BYTES = 50;
   Buffer2.TYPED_ARRAY_SUPPORT = global$1.TYPED_ARRAY_SUPPORT !== void 0 ? global$1.TYPED_ARRAY_SUPPORT : true;
@@ -2375,9 +2375,9 @@ var __AresiumEngine = (() => {
     return from(this, arg, encodingOrOffset, length);
   }
   Buffer2.poolSize = 8192;
-  Buffer2._augment = function(arr3) {
-    arr3.__proto__ = Buffer2.prototype;
-    return arr3;
+  Buffer2._augment = function(arr4) {
+    arr4.__proto__ = Buffer2.prototype;
+    return arr4;
   };
   function from(that, value, encodingOrOffset, length) {
     if (typeof value === "number") {
@@ -2423,8 +2423,8 @@ var __AresiumEngine = (() => {
     assertSize(size);
     that = createBuffer(that, size < 0 ? 0 : checked(size) | 0);
     if (!Buffer2.TYPED_ARRAY_SUPPORT) {
-      for (var i = 0; i < size; ++i) {
-        that[i] = 0;
+      for (var i2 = 0; i2 < size; ++i2) {
+        that[i2] = 0;
       }
     }
     return that;
@@ -2453,8 +2453,8 @@ var __AresiumEngine = (() => {
   function fromArrayLike(that, array) {
     var length = array.length < 0 ? 0 : checked(array.length) | 0;
     that = createBuffer(that, length);
-    for (var i = 0; i < length; i += 1) {
-      that[i] = array[i] & 255;
+    for (var i2 = 0; i2 < length; i2 += 1) {
+      that[i2] = array[i2] & 255;
     }
     return that;
   }
@@ -2519,17 +2519,17 @@ var __AresiumEngine = (() => {
       throw new TypeError("Arguments must be Buffers");
     }
     if (a === b) return 0;
-    var x = a.length;
+    var x2 = a.length;
     var y = b.length;
-    for (var i = 0, len = Math.min(x, y); i < len; ++i) {
-      if (a[i] !== b[i]) {
-        x = a[i];
-        y = b[i];
+    for (var i2 = 0, len = Math.min(x2, y); i2 < len; ++i2) {
+      if (a[i2] !== b[i2]) {
+        x2 = a[i2];
+        y = b[i2];
         break;
       }
     }
-    if (x < y) return -1;
-    if (y < x) return 1;
+    if (x2 < y) return -1;
+    if (y < x2) return 1;
     return 0;
   };
   Buffer2.isEncoding = function isEncoding(encoding) {
@@ -2557,17 +2557,17 @@ var __AresiumEngine = (() => {
     if (list2.length === 0) {
       return Buffer2.alloc(0);
     }
-    var i;
+    var i2;
     if (length === void 0) {
       length = 0;
-      for (i = 0; i < list2.length; ++i) {
-        length += list2[i].length;
+      for (i2 = 0; i2 < list2.length; ++i2) {
+        length += list2[i2].length;
       }
     }
     var buffer = Buffer2.allocUnsafe(length);
     var pos = 0;
-    for (i = 0; i < list2.length; ++i) {
-      var buf = list2[i];
+    for (i2 = 0; i2 < list2.length; ++i2) {
+      var buf = list2[i2];
       if (!internalIsBuffer(buf)) {
         throw new TypeError('"list" argument must be an Array of Buffers');
       }
@@ -2664,17 +2664,17 @@ var __AresiumEngine = (() => {
   }
   Buffer2.prototype._isBuffer = true;
   function swap(b, n, m) {
-    var i = b[n];
+    var i2 = b[n];
     b[n] = b[m];
-    b[m] = i;
+    b[m] = i2;
   }
   Buffer2.prototype.swap16 = function swap16() {
     var len = this.length;
     if (len % 2 !== 0) {
       throw new RangeError("Buffer size must be a multiple of 16-bits");
     }
-    for (var i = 0; i < len; i += 2) {
-      swap(this, i, i + 1);
+    for (var i2 = 0; i2 < len; i2 += 2) {
+      swap(this, i2, i2 + 1);
     }
     return this;
   };
@@ -2683,9 +2683,9 @@ var __AresiumEngine = (() => {
     if (len % 4 !== 0) {
       throw new RangeError("Buffer size must be a multiple of 32-bits");
     }
-    for (var i = 0; i < len; i += 4) {
-      swap(this, i, i + 3);
-      swap(this, i + 1, i + 2);
+    for (var i2 = 0; i2 < len; i2 += 4) {
+      swap(this, i2, i2 + 3);
+      swap(this, i2 + 1, i2 + 2);
     }
     return this;
   };
@@ -2694,11 +2694,11 @@ var __AresiumEngine = (() => {
     if (len % 8 !== 0) {
       throw new RangeError("Buffer size must be a multiple of 64-bits");
     }
-    for (var i = 0; i < len; i += 8) {
-      swap(this, i, i + 7);
-      swap(this, i + 1, i + 6);
-      swap(this, i + 2, i + 5);
-      swap(this, i + 3, i + 4);
+    for (var i2 = 0; i2 < len; i2 += 8) {
+      swap(this, i2, i2 + 7);
+      swap(this, i2 + 1, i2 + 6);
+      swap(this, i2 + 2, i2 + 5);
+      swap(this, i2 + 3, i2 + 4);
     }
     return this;
   };
@@ -2715,10 +2715,10 @@ var __AresiumEngine = (() => {
   };
   Buffer2.prototype.inspect = function inspect() {
     var str = "";
-    var max = INSPECT_MAX_BYTES;
+    var max2 = INSPECT_MAX_BYTES;
     if (this.length > 0) {
-      str = this.toString("hex", 0, max).match(/.{2}/g).join(" ");
-      if (this.length > max) str += " ... ";
+      str = this.toString("hex", 0, max2).match(/.{2}/g).join(" ");
+      if (this.length > max2) str += " ... ";
     }
     return "<Buffer " + str + ">";
   };
@@ -2755,20 +2755,20 @@ var __AresiumEngine = (() => {
     thisStart >>>= 0;
     thisEnd >>>= 0;
     if (this === target) return 0;
-    var x = thisEnd - thisStart;
+    var x2 = thisEnd - thisStart;
     var y = end - start;
-    var len = Math.min(x, y);
+    var len = Math.min(x2, y);
     var thisCopy = this.slice(thisStart, thisEnd);
     var targetCopy = target.slice(start, end);
-    for (var i = 0; i < len; ++i) {
-      if (thisCopy[i] !== targetCopy[i]) {
-        x = thisCopy[i];
-        y = targetCopy[i];
+    for (var i2 = 0; i2 < len; ++i2) {
+      if (thisCopy[i2] !== targetCopy[i2]) {
+        x2 = thisCopy[i2];
+        y = targetCopy[i2];
         break;
       }
     }
-    if (x < y) return -1;
-    if (y < x) return 1;
+    if (x2 < y) return -1;
+    if (y < x2) return 1;
     return 0;
   };
   function bidirectionalIndexOf(buffer, val, byteOffset, encoding, dir) {
@@ -2814,14 +2814,14 @@ var __AresiumEngine = (() => {
     }
     throw new TypeError("val must be string, number or Buffer");
   }
-  function arrayIndexOf(arr3, val, byteOffset, encoding, dir) {
+  function arrayIndexOf(arr4, val, byteOffset, encoding, dir) {
     var indexSize = 1;
-    var arrLength = arr3.length;
+    var arrLength = arr4.length;
     var valLength = val.length;
     if (encoding !== void 0) {
       encoding = String(encoding).toLowerCase();
       if (encoding === "ucs2" || encoding === "ucs-2" || encoding === "utf16le" || encoding === "utf-16le") {
-        if (arr3.length < 2 || val.length < 2) {
+        if (arr4.length < 2 || val.length < 2) {
           return -1;
         }
         indexSize = 2;
@@ -2830,36 +2830,36 @@ var __AresiumEngine = (() => {
         byteOffset /= 2;
       }
     }
-    function read2(buf, i2) {
+    function read2(buf, i3) {
       if (indexSize === 1) {
-        return buf[i2];
+        return buf[i3];
       } else {
-        return buf.readUInt16BE(i2 * indexSize);
+        return buf.readUInt16BE(i3 * indexSize);
       }
     }
-    var i;
+    var i2;
     if (dir) {
       var foundIndex = -1;
-      for (i = byteOffset; i < arrLength; i++) {
-        if (read2(arr3, i) === read2(val, foundIndex === -1 ? 0 : i - foundIndex)) {
-          if (foundIndex === -1) foundIndex = i;
-          if (i - foundIndex + 1 === valLength) return foundIndex * indexSize;
+      for (i2 = byteOffset; i2 < arrLength; i2++) {
+        if (read2(arr4, i2) === read2(val, foundIndex === -1 ? 0 : i2 - foundIndex)) {
+          if (foundIndex === -1) foundIndex = i2;
+          if (i2 - foundIndex + 1 === valLength) return foundIndex * indexSize;
         } else {
-          if (foundIndex !== -1) i -= i - foundIndex;
+          if (foundIndex !== -1) i2 -= i2 - foundIndex;
           foundIndex = -1;
         }
       }
     } else {
       if (byteOffset + valLength > arrLength) byteOffset = arrLength - valLength;
-      for (i = byteOffset; i >= 0; i--) {
+      for (i2 = byteOffset; i2 >= 0; i2--) {
         var found = true;
         for (var j = 0; j < valLength; j++) {
-          if (read2(arr3, i + j) !== read2(val, j)) {
+          if (read2(arr4, i2 + j) !== read2(val, j)) {
             found = false;
             break;
           }
         }
-        if (found) return i;
+        if (found) return i2;
       }
     }
     return -1;
@@ -2889,12 +2889,12 @@ var __AresiumEngine = (() => {
     if (length > strLen / 2) {
       length = strLen / 2;
     }
-    for (var i = 0; i < length; ++i) {
-      var parsed = parseInt(string.substr(i * 2, 2), 16);
-      if (isNaN(parsed)) return i;
-      buf[offset + i] = parsed;
+    for (var i2 = 0; i2 < length; ++i2) {
+      var parsed = parseInt(string.substr(i2 * 2, 2), 16);
+      if (isNaN(parsed)) return i2;
+      buf[offset + i2] = parsed;
     }
-    return i;
+    return i2;
   }
   function utf8Write(buf, string, offset, length) {
     return blitBuffer(utf8ToBytes(string, buf.length - offset), buf, offset, length);
@@ -2983,12 +2983,12 @@ var __AresiumEngine = (() => {
   function utf8Slice(buf, start, end) {
     end = Math.min(buf.length, end);
     var res = [];
-    var i = start;
-    while (i < end) {
-      var firstByte = buf[i];
+    var i2 = start;
+    while (i2 < end) {
+      var firstByte = buf[i2];
       var codePoint = null;
       var bytesPerSequence = firstByte > 239 ? 4 : firstByte > 223 ? 3 : firstByte > 191 ? 2 : 1;
-      if (i + bytesPerSequence <= end) {
+      if (i2 + bytesPerSequence <= end) {
         var secondByte, thirdByte, fourthByte, tempCodePoint;
         switch (bytesPerSequence) {
           case 1:
@@ -2997,7 +2997,7 @@ var __AresiumEngine = (() => {
             }
             break;
           case 2:
-            secondByte = buf[i + 1];
+            secondByte = buf[i2 + 1];
             if ((secondByte & 192) === 128) {
               tempCodePoint = (firstByte & 31) << 6 | secondByte & 63;
               if (tempCodePoint > 127) {
@@ -3006,8 +3006,8 @@ var __AresiumEngine = (() => {
             }
             break;
           case 3:
-            secondByte = buf[i + 1];
-            thirdByte = buf[i + 2];
+            secondByte = buf[i2 + 1];
+            thirdByte = buf[i2 + 2];
             if ((secondByte & 192) === 128 && (thirdByte & 192) === 128) {
               tempCodePoint = (firstByte & 15) << 12 | (secondByte & 63) << 6 | thirdByte & 63;
               if (tempCodePoint > 2047 && (tempCodePoint < 55296 || tempCodePoint > 57343)) {
@@ -3016,9 +3016,9 @@ var __AresiumEngine = (() => {
             }
             break;
           case 4:
-            secondByte = buf[i + 1];
-            thirdByte = buf[i + 2];
-            fourthByte = buf[i + 3];
+            secondByte = buf[i2 + 1];
+            thirdByte = buf[i2 + 2];
+            fourthByte = buf[i2 + 3];
             if ((secondByte & 192) === 128 && (thirdByte & 192) === 128 && (fourthByte & 192) === 128) {
               tempCodePoint = (firstByte & 15) << 18 | (secondByte & 63) << 12 | (thirdByte & 63) << 6 | fourthByte & 63;
               if (tempCodePoint > 65535 && tempCodePoint < 1114112) {
@@ -3036,7 +3036,7 @@ var __AresiumEngine = (() => {
         codePoint = 56320 | codePoint & 1023;
       }
       res.push(codePoint);
-      i += bytesPerSequence;
+      i2 += bytesPerSequence;
     }
     return decodeCodePointsArray(res);
   }
@@ -3047,11 +3047,11 @@ var __AresiumEngine = (() => {
       return String.fromCharCode.apply(String, codePoints);
     }
     var res = "";
-    var i = 0;
-    while (i < len) {
+    var i2 = 0;
+    while (i2 < len) {
       res += String.fromCharCode.apply(
         String,
-        codePoints.slice(i, i += MAX_ARGUMENTS_LENGTH)
+        codePoints.slice(i2, i2 += MAX_ARGUMENTS_LENGTH)
       );
     }
     return res;
@@ -3059,16 +3059,16 @@ var __AresiumEngine = (() => {
   function asciiSlice(buf, start, end) {
     var ret = "";
     end = Math.min(buf.length, end);
-    for (var i = start; i < end; ++i) {
-      ret += String.fromCharCode(buf[i] & 127);
+    for (var i2 = start; i2 < end; ++i2) {
+      ret += String.fromCharCode(buf[i2] & 127);
     }
     return ret;
   }
   function latin1Slice(buf, start, end) {
     var ret = "";
     end = Math.min(buf.length, end);
-    for (var i = start; i < end; ++i) {
-      ret += String.fromCharCode(buf[i]);
+    for (var i2 = start; i2 < end; ++i2) {
+      ret += String.fromCharCode(buf[i2]);
     }
     return ret;
   }
@@ -3077,16 +3077,16 @@ var __AresiumEngine = (() => {
     if (!start || start < 0) start = 0;
     if (!end || end < 0 || end > len) end = len;
     var out = "";
-    for (var i = start; i < end; ++i) {
-      out += toHex(buf[i]);
+    for (var i2 = start; i2 < end; ++i2) {
+      out += toHex(buf[i2]);
     }
     return out;
   }
   function utf16leSlice(buf, start, end) {
     var bytes = buf.slice(start, end);
     var res = "";
-    for (var i = 0; i < bytes.length; i += 2) {
-      res += String.fromCharCode(bytes[i] + bytes[i + 1] * 256);
+    for (var i2 = 0; i2 < bytes.length; i2 += 2) {
+      res += String.fromCharCode(bytes[i2] + bytes[i2 + 1] * 256);
     }
     return res;
   }
@@ -3114,8 +3114,8 @@ var __AresiumEngine = (() => {
     } else {
       var sliceLen = end - start;
       newBuf = new Buffer2(sliceLen, void 0);
-      for (var i = 0; i < sliceLen; ++i) {
-        newBuf[i] = this[i + start];
+      for (var i2 = 0; i2 < sliceLen; ++i2) {
+        newBuf[i2] = this[i2 + start];
       }
     }
     return newBuf;
@@ -3130,9 +3130,9 @@ var __AresiumEngine = (() => {
     if (!noAssert) checkOffset(offset, byteLength2, this.length);
     var val = this[offset];
     var mul = 1;
-    var i = 0;
-    while (++i < byteLength2 && (mul *= 256)) {
-      val += this[offset + i] * mul;
+    var i2 = 0;
+    while (++i2 < byteLength2 && (mul *= 256)) {
+      val += this[offset + i2] * mul;
     }
     return val;
   };
@@ -3175,9 +3175,9 @@ var __AresiumEngine = (() => {
     if (!noAssert) checkOffset(offset, byteLength2, this.length);
     var val = this[offset];
     var mul = 1;
-    var i = 0;
-    while (++i < byteLength2 && (mul *= 256)) {
-      val += this[offset + i] * mul;
+    var i2 = 0;
+    while (++i2 < byteLength2 && (mul *= 256)) {
+      val += this[offset + i2] * mul;
     }
     mul *= 128;
     if (val >= mul) val -= Math.pow(2, 8 * byteLength2);
@@ -3187,11 +3187,11 @@ var __AresiumEngine = (() => {
     offset = offset | 0;
     byteLength2 = byteLength2 | 0;
     if (!noAssert) checkOffset(offset, byteLength2, this.length);
-    var i = byteLength2;
+    var i2 = byteLength2;
     var mul = 1;
-    var val = this[offset + --i];
-    while (i > 0 && (mul *= 256)) {
-      val += this[offset + --i] * mul;
+    var val = this[offset + --i2];
+    while (i2 > 0 && (mul *= 256)) {
+      val += this[offset + --i2] * mul;
     }
     mul *= 128;
     if (val >= mul) val -= Math.pow(2, 8 * byteLength2);
@@ -3236,9 +3236,9 @@ var __AresiumEngine = (() => {
     if (!noAssert) checkOffset(offset, 8, this.length);
     return read(this, offset, false, 52, 8);
   };
-  function checkInt(buf, value, offset, ext, max, min) {
+  function checkInt(buf, value, offset, ext, max2, min) {
     if (!internalIsBuffer(buf)) throw new TypeError('"buffer" argument must be a Buffer instance');
-    if (value > max || value < min) throw new RangeError('"value" argument is out of bounds');
+    if (value > max2 || value < min) throw new RangeError('"value" argument is out of bounds');
     if (offset + ext > buf.length) throw new RangeError("Index out of range");
   }
   Buffer2.prototype.writeUIntLE = function writeUIntLE(value, offset, byteLength2, noAssert) {
@@ -3250,10 +3250,10 @@ var __AresiumEngine = (() => {
       checkInt(this, value, offset, byteLength2, maxBytes, 0);
     }
     var mul = 1;
-    var i = 0;
+    var i2 = 0;
     this[offset] = value & 255;
-    while (++i < byteLength2 && (mul *= 256)) {
-      this[offset + i] = value / mul & 255;
+    while (++i2 < byteLength2 && (mul *= 256)) {
+      this[offset + i2] = value / mul & 255;
     }
     return offset + byteLength2;
   };
@@ -3265,11 +3265,11 @@ var __AresiumEngine = (() => {
       var maxBytes = Math.pow(2, 8 * byteLength2) - 1;
       checkInt(this, value, offset, byteLength2, maxBytes, 0);
     }
-    var i = byteLength2 - 1;
+    var i2 = byteLength2 - 1;
     var mul = 1;
-    this[offset + i] = value & 255;
-    while (--i >= 0 && (mul *= 256)) {
-      this[offset + i] = value / mul & 255;
+    this[offset + i2] = value & 255;
+    while (--i2 >= 0 && (mul *= 256)) {
+      this[offset + i2] = value / mul & 255;
     }
     return offset + byteLength2;
   };
@@ -3283,8 +3283,8 @@ var __AresiumEngine = (() => {
   };
   function objectWriteUInt16(buf, value, offset, littleEndian) {
     if (value < 0) value = 65535 + value + 1;
-    for (var i = 0, j = Math.min(buf.length - offset, 2); i < j; ++i) {
-      buf[offset + i] = (value & 255 << 8 * (littleEndian ? i : 1 - i)) >>> (littleEndian ? i : 1 - i) * 8;
+    for (var i2 = 0, j = Math.min(buf.length - offset, 2); i2 < j; ++i2) {
+      buf[offset + i2] = (value & 255 << 8 * (littleEndian ? i2 : 1 - i2)) >>> (littleEndian ? i2 : 1 - i2) * 8;
     }
   }
   Buffer2.prototype.writeUInt16LE = function writeUInt16LE(value, offset, noAssert) {
@@ -3313,8 +3313,8 @@ var __AresiumEngine = (() => {
   };
   function objectWriteUInt32(buf, value, offset, littleEndian) {
     if (value < 0) value = 4294967295 + value + 1;
-    for (var i = 0, j = Math.min(buf.length - offset, 4); i < j; ++i) {
-      buf[offset + i] = value >>> (littleEndian ? i : 3 - i) * 8 & 255;
+    for (var i2 = 0, j = Math.min(buf.length - offset, 4); i2 < j; ++i2) {
+      buf[offset + i2] = value >>> (littleEndian ? i2 : 3 - i2) * 8 & 255;
     }
   }
   Buffer2.prototype.writeUInt32LE = function writeUInt32LE(value, offset, noAssert) {
@@ -3349,18 +3349,18 @@ var __AresiumEngine = (() => {
     value = +value;
     offset = offset | 0;
     if (!noAssert) {
-      var limit = Math.pow(2, 8 * byteLength2 - 1);
-      checkInt(this, value, offset, byteLength2, limit - 1, -limit);
+      var limit2 = Math.pow(2, 8 * byteLength2 - 1);
+      checkInt(this, value, offset, byteLength2, limit2 - 1, -limit2);
     }
-    var i = 0;
+    var i2 = 0;
     var mul = 1;
     var sub = 0;
     this[offset] = value & 255;
-    while (++i < byteLength2 && (mul *= 256)) {
-      if (value < 0 && sub === 0 && this[offset + i - 1] !== 0) {
+    while (++i2 < byteLength2 && (mul *= 256)) {
+      if (value < 0 && sub === 0 && this[offset + i2 - 1] !== 0) {
         sub = 1;
       }
-      this[offset + i] = (value / mul >> 0) - sub & 255;
+      this[offset + i2] = (value / mul >> 0) - sub & 255;
     }
     return offset + byteLength2;
   };
@@ -3368,18 +3368,18 @@ var __AresiumEngine = (() => {
     value = +value;
     offset = offset | 0;
     if (!noAssert) {
-      var limit = Math.pow(2, 8 * byteLength2 - 1);
-      checkInt(this, value, offset, byteLength2, limit - 1, -limit);
+      var limit2 = Math.pow(2, 8 * byteLength2 - 1);
+      checkInt(this, value, offset, byteLength2, limit2 - 1, -limit2);
     }
-    var i = byteLength2 - 1;
+    var i2 = byteLength2 - 1;
     var mul = 1;
     var sub = 0;
-    this[offset + i] = value & 255;
-    while (--i >= 0 && (mul *= 256)) {
-      if (value < 0 && sub === 0 && this[offset + i + 1] !== 0) {
+    this[offset + i2] = value & 255;
+    while (--i2 >= 0 && (mul *= 256)) {
+      if (value < 0 && sub === 0 && this[offset + i2 + 1] !== 0) {
         sub = 1;
       }
-      this[offset + i] = (value / mul >> 0) - sub & 255;
+      this[offset + i2] = (value / mul >> 0) - sub & 255;
     }
     return offset + byteLength2;
   };
@@ -3445,7 +3445,7 @@ var __AresiumEngine = (() => {
     }
     return offset + 4;
   };
-  function checkIEEE754(buf, value, offset, ext, max, min) {
+  function checkIEEE754(buf, value, offset, ext, max2, min) {
     if (offset + ext > buf.length) throw new RangeError("Index out of range");
     if (offset < 0) throw new RangeError("Index out of range");
   }
@@ -3493,14 +3493,14 @@ var __AresiumEngine = (() => {
       end = target.length - targetStart + start;
     }
     var len = end - start;
-    var i;
+    var i2;
     if (this === target && start < targetStart && targetStart < end) {
-      for (i = len - 1; i >= 0; --i) {
-        target[i + targetStart] = this[i + start];
+      for (i2 = len - 1; i2 >= 0; --i2) {
+        target[i2 + targetStart] = this[i2 + start];
       }
     } else if (len < 1e3 || !Buffer2.TYPED_ARRAY_SUPPORT) {
-      for (i = 0; i < len; ++i) {
-        target[i + targetStart] = this[i + start];
+      for (i2 = 0; i2 < len; ++i2) {
+        target[i2 + targetStart] = this[i2 + start];
       }
     } else {
       Uint8Array.prototype.set.call(
@@ -3545,16 +3545,16 @@ var __AresiumEngine = (() => {
     start = start >>> 0;
     end = end === void 0 ? this.length : end >>> 0;
     if (!val) val = 0;
-    var i;
+    var i2;
     if (typeof val === "number") {
-      for (i = start; i < end; ++i) {
-        this[i] = val;
+      for (i2 = start; i2 < end; ++i2) {
+        this[i2] = val;
       }
     } else {
       var bytes = internalIsBuffer(val) ? val : utf8ToBytes(new Buffer2(val, encoding).toString());
       var len = bytes.length;
-      for (i = 0; i < end - start; ++i) {
-        this[i + start] = bytes[i % len];
+      for (i2 = 0; i2 < end - start; ++i2) {
+        this[i2 + start] = bytes[i2 % len];
       }
     }
     return this;
@@ -3582,14 +3582,14 @@ var __AresiumEngine = (() => {
     var length = string.length;
     var leadSurrogate = null;
     var bytes = [];
-    for (var i = 0; i < length; ++i) {
-      codePoint = string.charCodeAt(i);
+    for (var i2 = 0; i2 < length; ++i2) {
+      codePoint = string.charCodeAt(i2);
       if (codePoint > 55295 && codePoint < 57344) {
         if (!leadSurrogate) {
           if (codePoint > 56319) {
             if ((units -= 3) > -1) bytes.push(239, 191, 189);
             continue;
-          } else if (i + 1 === length) {
+          } else if (i2 + 1 === length) {
             if ((units -= 3) > -1) bytes.push(239, 191, 189);
             continue;
           }
@@ -3638,17 +3638,17 @@ var __AresiumEngine = (() => {
   }
   function asciiToBytes(str) {
     var byteArray = [];
-    for (var i = 0; i < str.length; ++i) {
-      byteArray.push(str.charCodeAt(i) & 255);
+    for (var i2 = 0; i2 < str.length; ++i2) {
+      byteArray.push(str.charCodeAt(i2) & 255);
     }
     return byteArray;
   }
   function utf16leToBytes(str, units) {
     var c, hi, lo;
     var byteArray = [];
-    for (var i = 0; i < str.length; ++i) {
+    for (var i2 = 0; i2 < str.length; ++i2) {
       if ((units -= 2) < 0) break;
-      c = str.charCodeAt(i);
+      c = str.charCodeAt(i2);
       hi = c >> 8;
       lo = c % 256;
       byteArray.push(lo);
@@ -3660,11 +3660,11 @@ var __AresiumEngine = (() => {
     return toByteArray(base64clean(str));
   }
   function blitBuffer(src, dst, offset, length) {
-    for (var i = 0; i < length; ++i) {
-      if (i + offset >= dst.length || i >= src.length) break;
-      dst[i + offset] = src[i];
+    for (var i2 = 0; i2 < length; ++i2) {
+      if (i2 + offset >= dst.length || i2 >= src.length) break;
+      dst[i2 + offset] = src[i2];
     }
-    return i;
+    return i2;
   }
   function isnan(val) {
     return val !== val;
@@ -3699,26 +3699,26 @@ var __AresiumEngine = (() => {
   };
   var normalize_columns_array = function(columns) {
     const normalizedColumns = [];
-    for (let i = 0, l = columns.length; i < l; i++) {
-      const column = columns[i];
+    for (let i2 = 0, l = columns.length; i2 < l; i2++) {
+      const column = columns[i2];
       if (column === void 0 || column === null || column === false) {
-        normalizedColumns[i] = { disabled: true };
+        normalizedColumns[i2] = { disabled: true };
       } else if (typeof column === "string") {
-        normalizedColumns[i] = { name: column };
+        normalizedColumns[i2] = { name: column };
       } else if (is_object(column)) {
         if (typeof column.name !== "string") {
           throw new CsvError("CSV_OPTION_COLUMNS_MISSING_NAME", [
             "Option columns missing name:",
-            `property "name" is required at position ${i}`,
+            `property "name" is required at position ${i2}`,
             "when column is an object literal"
           ]);
         }
-        normalizedColumns[i] = column;
+        normalizedColumns[i2] = column;
       } else {
         throw new CsvError("CSV_INVALID_COLUMN_DEFINITION", [
           "Invalid column definition:",
           "expect a string or a literal object,",
-          `got ${JSON.stringify(column)} at position ${i}`
+          `got ${JSON.stringify(column)} at position ${i2}`
         ]);
       }
     }
@@ -4211,14 +4211,14 @@ var __AresiumEngine = (() => {
         options
       );
     }
-    options.record_delimiter = options.record_delimiter.map(function(rd, i) {
+    options.record_delimiter = options.record_delimiter.map(function(rd, i2) {
       if (typeof rd !== "string" && !isBuffer(rd)) {
         throw new CsvError(
           "CSV_INVALID_OPTION_RECORD_DELIMITER",
           [
             "Invalid option `record_delimiter`:",
             "value must be a string, a buffer or array of string|buffer",
-            `at index ${i},`,
+            `at index ${i2},`,
             `got ${JSON.stringify(rd)}`
           ],
           options
@@ -4229,7 +4229,7 @@ var __AresiumEngine = (() => {
           [
             "Invalid option `record_delimiter`:",
             "value must be a non empty string or buffer",
-            `at index ${i},`,
+            `at index ${i2},`,
             `got ${JSON.stringify(rd)}`
           ],
           options
@@ -4398,11 +4398,11 @@ var __AresiumEngine = (() => {
       original_options,
       options,
       state: init_state(options),
-      __needMoreData: function(i, bufLen, end) {
+      __needMoreData: function(i2, bufLen, end) {
         if (end) return false;
         const { encoding, escape, quote } = this.options;
         const { quoting, needMoreDataSize, recordDelimiterMaxLength } = this.state;
-        const numOfCharLeft = bufLen - i - 1;
+        const numOfCharLeft = bufLen - i2 - 1;
         const requiredLength = Math.max(
           needMoreDataSize,
           // Skip if the remaining buffer smaller than record delimiter
@@ -4541,7 +4541,7 @@ var __AresiumEngine = (() => {
                   pos += quote.length - 1;
                   continue;
                 } else if (relax_quotes === false) {
-                  const err = this.__error(
+                  const err2 = this.__error(
                     new CsvError(
                       "CSV_INVALID_CLOSING_QUOTE",
                       [
@@ -4555,7 +4555,7 @@ var __AresiumEngine = (() => {
                       this.__infoField()
                     )
                   );
-                  if (err !== void 0) return err;
+                  if (err2 !== void 0) return err2;
                 } else {
                   this.state.quoting = false;
                   this.state.wasQuoting = true;
@@ -4569,7 +4569,7 @@ var __AresiumEngine = (() => {
                     const bom2 = Object.keys(boms).map(
                       (b) => boms[b].equals(this.state.field.toString()) ? b : false
                     ).filter(Boolean)[0];
-                    const err = this.__error(
+                    const err2 = this.__error(
                       new CsvError(
                         "INVALID_OPENING_QUOTE",
                         [
@@ -4584,7 +4584,7 @@ var __AresiumEngine = (() => {
                         }
                       )
                     );
-                    if (err !== void 0) return err;
+                    if (err2 !== void 0) return err2;
                   }
                 } else {
                   this.state.quoting = true;
@@ -4695,7 +4695,7 @@ var __AresiumEngine = (() => {
         }
         if (end === true) {
           if (this.state.quoting === true) {
-            const err = this.__error(
+            const err2 = this.__error(
               new CsvError(
                 "CSV_QUOTE_NOT_CLOSED",
                 [
@@ -4706,7 +4706,7 @@ var __AresiumEngine = (() => {
                 this.__infoField()
               )
             );
-            if (err !== void 0) return err;
+            if (err2 !== void 0) return err2;
           } else {
             if (this.state.wasQuoting === true || this.state.record.length !== 0 || this.state.field.length !== 0) {
               this.info.bytes = this.state.bufBytesStart + pos;
@@ -4758,7 +4758,7 @@ var __AresiumEngine = (() => {
           this.state.expectedRecordLength = recordLength;
         }
         if (recordLength !== this.state.expectedRecordLength) {
-          const err = columns === false ? new CsvError(
+          const err2 = columns === false ? new CsvError(
             "CSV_RECORD_INCONSISTENT_FIELDS_LENGTH",
             [
               "Invalid Record Length:",
@@ -4786,9 +4786,9 @@ var __AresiumEngine = (() => {
           );
           if (relax_column_count === true || relax_column_count_less === true && recordLength < this.state.expectedRecordLength || relax_column_count_more === true && recordLength > this.state.expectedRecordLength) {
             this.info.invalid_field_length++;
-            this.state.error = err;
+            this.state.error = err2;
           } else {
-            const finalErr = this.__error(err);
+            const finalErr = this.__error(err2);
             if (finalErr) return finalErr;
           }
         }
@@ -4806,16 +4806,16 @@ var __AresiumEngine = (() => {
           const { objname } = this.options;
           if (columns !== false) {
             const obj = {};
-            for (let i = 0, l = record.length; i < l; i++) {
-              if (columns[i] === void 0 || columns[i].disabled) continue;
-              if (group_columns_by_name === true && obj[columns[i].name] !== void 0) {
-                if (Array.isArray(obj[columns[i].name])) {
-                  obj[columns[i].name] = obj[columns[i].name].concat(record[i]);
+            for (let i2 = 0, l = record.length; i2 < l; i2++) {
+              if (columns[i2] === void 0 || columns[i2].disabled) continue;
+              if (group_columns_by_name === true && obj[columns[i2].name] !== void 0) {
+                if (Array.isArray(obj[columns[i2].name])) {
+                  obj[columns[i2].name] = obj[columns[i2].name].concat(record[i2]);
                 } else {
-                  obj[columns[i].name] = [obj[columns[i].name], record[i]];
+                  obj[columns[i2].name] = [obj[columns[i2].name], record[i2]];
                 }
               } else {
-                obj[columns[i].name] = record[i];
+                obj[columns[i2].name] = record[i2];
               }
             }
             if (raw === true || info2 === true) {
@@ -4824,20 +4824,20 @@ var __AresiumEngine = (() => {
                 raw === true ? { raw: this.state.rawBuffer.toString(encoding) } : {},
                 info2 === true ? { info: this.__infoRecord() } : {}
               );
-              const err = this.__push(
+              const err2 = this.__push(
                 objname === void 0 ? extRecord : [obj[objname], extRecord],
                 push
               );
-              if (err) {
-                return err;
+              if (err2) {
+                return err2;
               }
             } else {
-              const err = this.__push(
+              const err2 = this.__push(
                 objname === void 0 ? obj : [obj[objname], obj],
                 push
               );
-              if (err) {
-                return err;
+              if (err2) {
+                return err2;
               }
             }
           } else {
@@ -4847,20 +4847,20 @@ var __AresiumEngine = (() => {
                 raw === true ? { raw: this.state.rawBuffer.toString(encoding) } : {},
                 info2 === true ? { info: this.__infoRecord() } : {}
               );
-              const err = this.__push(
+              const err2 = this.__push(
                 objname === void 0 ? extRecord : [record[objname], extRecord],
                 push
               );
-              if (err) {
-                return err;
+              if (err2) {
+                return err2;
               }
             } else {
-              const err = this.__push(
+              const err2 = this.__push(
                 objname === void 0 ? record : [record[objname], record],
                 push
               );
-              if (err) {
-                return err;
+              if (err2) {
+                return err2;
               }
             }
           }
@@ -4893,8 +4893,8 @@ var __AresiumEngine = (() => {
           this.options.columns = normalizedHeaders;
           this.__resetRecord();
           return;
-        } catch (err) {
-          return err;
+        } catch (err2) {
+          return err2;
         }
       },
       __resetRecord: function() {
@@ -4916,8 +4916,8 @@ var __AresiumEngine = (() => {
           field2 = field2.trimRight();
         }
         if (cast === true) {
-          const [err, f] = this.__cast(field2);
-          if (err !== void 0) return err;
+          const [err2, f] = this.__cast(field2);
+          if (err2 !== void 0) return err2;
           field2 = f;
         }
         this.state.record.push(field2);
@@ -4936,8 +4936,8 @@ var __AresiumEngine = (() => {
           const info2 = this.__infoRecord();
           try {
             record = on_record.call(null, record, info2);
-          } catch (err) {
-            return err;
+          } catch (err2) {
+            return err2;
           }
           if (record === void 0 || record === null) {
             return;
@@ -4956,8 +4956,8 @@ var __AresiumEngine = (() => {
           try {
             const info2 = this.__infoField();
             return [void 0, this.state.castField.call(null, field2, info2)];
-          } catch (err) {
-            return [err];
+          } catch (err2) {
+            return [err2];
           }
         }
         if (this.__isFloat(field2)) {
@@ -4972,8 +4972,8 @@ var __AresiumEngine = (() => {
       __isCharTrimable: function(buf, pos) {
         const isTrim = (buf2, pos2) => {
           const { timchars } = this.state;
-          loop1: for (let i = 0; i < timchars.length; i++) {
-            const timchar = timchars[i];
+          loop1: for (let i2 = 0; i2 < timchars.length; i2++) {
+            const timchar = timchars[i2];
             for (let j = 0; j < timchar.length; j++) {
               if (timchar[j] !== buf2[pos2 + j]) continue loop1;
             }
@@ -4995,8 +4995,8 @@ var __AresiumEngine = (() => {
       __compareBytes: function(sourceBuf, targetBuf, targetPos, firstByte) {
         if (sourceBuf[0] !== firstByte) return 0;
         const sourceLength = sourceBuf.length;
-        for (let i = 1; i < sourceLength; i++) {
-          if (sourceBuf[i] !== targetBuf[targetPos + i]) return 0;
+        for (let i2 = 1; i2 < sourceLength; i2++) {
+          if (sourceBuf[i2] !== targetBuf[targetPos + i2]) return 0;
         }
         return sourceLength;
       },
@@ -5007,8 +5007,8 @@ var __AresiumEngine = (() => {
         } else if (ignore_last_delimiters !== false && typeof ignore_last_delimiters === "number" && this.state.record.length === ignore_last_delimiters - 1) {
           return 0;
         }
-        loop1: for (let i = 0; i < delimiter.length; i++) {
-          const del = delimiter[i];
+        loop1: for (let i2 = 0; i2 < delimiter.length; i2++) {
+          const del = delimiter[i2];
           if (del[0] === chr) {
             for (let j = 1; j < del.length; j++) {
               if (del[j] !== buf[pos + j]) continue loop1;
@@ -5021,8 +5021,8 @@ var __AresiumEngine = (() => {
       __isRecordDelimiter: function(chr, buf, pos) {
         const { record_delimiter } = this.options;
         const recordDelimiterLength = record_delimiter.length;
-        loop1: for (let i = 0; i < recordDelimiterLength; i++) {
-          const rd = record_delimiter[i];
+        loop1: for (let i2 = 0; i2 < recordDelimiterLength; i2++) {
+          const rd = record_delimiter[i2];
           const rdLength = rd.length;
           if (rd[0] !== chr) {
             continue;
@@ -5041,8 +5041,8 @@ var __AresiumEngine = (() => {
         if (escape === null) return false;
         const l = escape.length;
         if (escape[0] === chr) {
-          for (let i = 0; i < l; i++) {
-            if (escape[i] !== buf[pos + i]) {
+          for (let i2 = 0; i2 < l; i2++) {
+            if (escape[i2] !== buf[pos + i2]) {
               return false;
             }
           }
@@ -5054,8 +5054,8 @@ var __AresiumEngine = (() => {
         const { quote } = this.options;
         if (quote === null) return false;
         const l = quote.length;
-        for (let i = 0; i < l; i++) {
-          if (quote[i] !== buf[pos + i]) {
+        for (let i2 = 0; i2 < l; i2++) {
+          if (quote[i2] !== buf[pos + i2]) {
             return false;
           }
         }
@@ -5069,33 +5069,33 @@ var __AresiumEngine = (() => {
           Buffer2.from("\n", encoding),
           Buffer2.from("\r", encoding)
         ];
-        loop: for (let i = 0; i < rds.length; i++) {
-          const l = rds[i].length;
+        loop: for (let i2 = 0; i2 < rds.length; i2++) {
+          const l = rds[i2].length;
           for (let j = 0; j < l; j++) {
-            if (rds[i][j] !== buf[pos + j]) {
+            if (rds[i2][j] !== buf[pos + j]) {
               continue loop;
             }
           }
-          this.options.record_delimiter.push(rds[i]);
-          this.state.recordDelimiterMaxLength = rds[i].length;
-          return rds[i].length;
+          this.options.record_delimiter.push(rds[i2]);
+          this.state.recordDelimiterMaxLength = rds[i2].length;
+          return rds[i2].length;
         }
         return 0;
       },
       __error: function(msg) {
         const { encoding, raw, skip_records_with_error } = this.options;
-        const err = typeof msg === "string" ? new Error(msg) : msg;
+        const err2 = typeof msg === "string" ? new Error(msg) : msg;
         if (skip_records_with_error) {
           this.state.recordHasError = true;
           if (this.options.on_skip !== void 0) {
             this.options.on_skip(
-              err,
+              err2,
               raw ? this.state.rawBuffer.toString(encoding) : void 0
             );
           }
           return void 0;
         } else {
-          return err;
+          return err2;
         }
       },
       __infoDataSet: function() {
@@ -5130,26 +5130,26 @@ var __AresiumEngine = (() => {
       data = Buffer2.from(data);
     }
     const records = opts && opts.objname ? {} : [];
-    const parser3 = transform(opts);
+    const parser4 = transform(opts);
     const push = (record) => {
-      if (parser3.options.objname === void 0) records.push(record);
+      if (parser4.options.objname === void 0) records.push(record);
       else {
         records[record[0]] = record[1];
       }
     };
     const close = () => {
     };
-    const err1 = parser3.parse(data, false, push, close);
+    const err1 = parser4.parse(data, false, push, close);
     if (err1 !== void 0) throw err1;
-    const err2 = parser3.parse(void 0, true, push, close);
+    const err2 = parser4.parse(void 0, true, push, close);
     if (err2 !== void 0) throw err2;
     return records;
   };
 
   // src/import/sha1.ts
-  function sha1(text2) {
+  function sha1(text3) {
     const bytes = [];
-    for (const char of text2) {
+    for (const char of text3) {
       let cp = char.codePointAt(0);
       if (cp >= 55296 && cp <= 57343) cp = 65533;
       if (cp < 128) bytes.push(cp);
@@ -5164,20 +5164,20 @@ var __AresiumEngine = (() => {
     for (const word of [high, low]) {
       bytes.push(word >>> 24 & 255, word >>> 16 & 255, word >>> 8 & 255, word & 255);
     }
-    const rotate = (n, bits) => n << bits | n >>> 32 - bits;
+    const rotate = (n, bits2) => n << bits2 | n >>> 32 - bits2;
     let h0 = 1732584193, h1 = 4023233417, h2 = 2562383102, h3 = 271733878, h4 = 3285377520;
     const words2 = new Int32Array(80);
     for (let offset = 0; offset < bytes.length; offset += 64) {
-      for (let i = 0; i < 16; i++) {
-        const p = offset + i * 4;
-        words2[i] = bytes[p] << 24 | bytes[p + 1] << 16 | bytes[p + 2] << 8 | bytes[p + 3];
+      for (let i2 = 0; i2 < 16; i2++) {
+        const p = offset + i2 * 4;
+        words2[i2] = bytes[p] << 24 | bytes[p + 1] << 16 | bytes[p + 2] << 8 | bytes[p + 3];
       }
-      for (let i = 16; i < 80; i++) words2[i] = rotate(words2[i - 3] ^ words2[i - 8] ^ words2[i - 14] ^ words2[i - 16], 1);
+      for (let i2 = 16; i2 < 80; i2++) words2[i2] = rotate(words2[i2 - 3] ^ words2[i2 - 8] ^ words2[i2 - 14] ^ words2[i2 - 16], 1);
       let a = h0, b = h1, c = h2, d = h3, e = h4;
-      for (let i = 0; i < 80; i++) {
-        const f = i < 20 ? b & c | ~b & d : i < 40 ? b ^ c ^ d : i < 60 ? b & c | b & d | c & d : b ^ c ^ d;
-        const k = i < 20 ? 1518500249 : i < 40 ? 1859775393 : i < 60 ? 2400959708 : 3395469782;
-        const next = rotate(a, 5) + f + e + k + words2[i] | 0;
+      for (let i2 = 0; i2 < 80; i2++) {
+        const f = i2 < 20 ? b & c | ~b & d : i2 < 40 ? b ^ c ^ d : i2 < 60 ? b & c | b & d | c & d : b ^ c ^ d;
+        const k = i2 < 20 ? 1518500249 : i2 < 40 ? 1859775393 : i2 < 60 ? 2400959708 : 3395469782;
+        const next = rotate(a, 5) + f + e + k + words2[i2] | 0;
         e = d;
         d = c;
         c = rotate(b, 30);
@@ -5349,9 +5349,9 @@ var __AresiumEngine = (() => {
     parseTagValue: false
     // keep IBANs / amounts as strings
   });
-  function arr(x) {
-    if (x === void 0 || x === null) return [];
-    return Array.isArray(x) ? x : [x];
+  function arr(x2) {
+    if (x2 === void 0 || x2 === null) return [];
+    return Array.isArray(x2) ? x2 : [x2];
   }
   function textOf(node2) {
     if (node2 && typeof node2 === "object" && "#text" in node2) {
@@ -5359,8 +5359,8 @@ var __AresiumEngine = (() => {
     }
     return node2 == null ? "" : String(node2);
   }
-  function parseCamt(xml) {
-    const doc = parser.parse(xml);
+  function parseCamt(xml2) {
+    const doc = parser.parse(xml2);
     const root = doc.Document;
     if (!root) throw new ImportFileError("camtDocument");
     const container = root.BkToCstmrStmt || root.BkToCstmrAcctRpt;
@@ -5470,8 +5470,8 @@ var __AresiumEngine = (() => {
   }
 
   // src/engine/readers/paypal.ts
-  function parsePaypalCsv2(text2) {
-    const file = parsePaypalCsv(text2);
+  function parsePaypalCsv2(text3) {
+    const file = parsePaypalCsv(text3);
     return {
       ...file,
       transactions: file.transactions.map((payment) => {
@@ -5491,7 +5491,7 @@ var __AresiumEngine = (() => {
     const { months, categories, balanceByDay } = source;
     const catByName = new Map(categories.map((c) => [c.name, c]));
     const incomeKeep = /* @__PURE__ */ new Set(["Tax", ...categories.filter((c) => c.kind !== "spend").map((c) => c.name)]);
-    const monthIndex = new Map(months.map((m, i) => [m.key, i]));
+    const monthIndex = new Map(months.map((m, i2) => [m.key, i2]));
     const makeSeries = () => ({
       months: months.map(() => 0),
       days: Object.fromEntries(months.map((m) => [m.key, new Array(m.days).fill(0)]))
@@ -5504,7 +5504,7 @@ var __AresiumEngine = (() => {
     const incomeMonths = months.map(() => /* @__PURE__ */ new Map());
     const total = { expense: 0, income: 0, categories: [], incomeBuckets: [] };
     const byMonth = Object.fromEntries(months.map((mo) => {
-      const dayBalance = Array.from({ length: mo.days }, (_, i) => balanceByDay[`${mo.key}-${String(i + 1).padStart(2, "0")}`] ?? null);
+      const dayBalance = Array.from({ length: mo.days }, (_, i2) => balanceByDay[`${mo.key}-${String(i2 + 1).padStart(2, "0")}`] ?? null);
       return [mo.key, {
         expense: 0,
         income: 0,
@@ -5597,7 +5597,7 @@ var __AresiumEngine = (() => {
     total.income = money(total.income);
     total.categories = categoryRows(categoryAll);
     total.incomeBuckets = incomeRows(incomeAll);
-    months.forEach((m, i) => {
+    months.forEach((m, i2) => {
       const mo = byMonth[m.key];
       mo.expense = money(mo.expense);
       mo.income = money(mo.income);
@@ -5605,8 +5605,8 @@ var __AresiumEngine = (() => {
       mo.dayExpenseRunning = mo.dayExpense.map((v) => money(running += v));
       mo.dayExpense = mo.dayExpense.map(money);
       mo.dayIncome = mo.dayIncome.map(money);
-      mo.categories = categoryRows(categoryMonths[i]);
-      mo.incomeBuckets = incomeRows(incomeMonths[i]);
+      mo.categories = categoryRows(categoryMonths[i2]);
+      mo.incomeBuckets = incomeRows(incomeMonths[i2]);
     });
     const roundSeries = (n) => money(Math.max(0, n));
     for (const map of [spend, income]) {
@@ -5623,7 +5623,7 @@ var __AresiumEngine = (() => {
       return a.localeCompare(b);
     });
     const databaseNames = new Set(source.databaseCategoryNames);
-    const choices = categories.filter((c, i) => databaseNames.has(c.name) && categories.findIndex((other) => other.name === c.name) === i);
+    const choices = categories.filter((c, i2) => databaseNames.has(c.name) && categories.findIndex((other) => other.name === c.name) === i2);
     const spendOrder = total.categories.map((r) => r.name);
     const incomeOrder = total.incomeBuckets.map((r) => r.name);
     const pick2 = {
@@ -5779,8 +5779,8 @@ var __AresiumEngine = (() => {
   function payeeText(payment) {
     return (payment.counterparty?.trim() || payment.description || payment.bookingText || "").toLowerCase().normalize("NFC");
   }
-  function cardMerchant(text2) {
-    const head = text2.toLowerCase().normalize("NFC").trim().match(
+  function cardMerchant(text3) {
+    const head = text3.toLowerCase().normalize("NFC").trim().match(
       /^(.+?)\s+[a-z]{3}\s+(?:\d{1,3}(?:\.\d{3})+|\d+),\d{2}\s+(?:(?:kurs\s*:?\s*\d|\d{1,3},\d{2}\s*%\s*auslandsums)[^\r\n]*?)?umsatz vom\s+\d{2}\.\d{2}\.\d{4}(?:\s+.*)?$/u
     )?.[1];
     if (!head) return null;
@@ -5789,45 +5789,50 @@ var __AresiumEngine = (() => {
   }
   var BOOKING_TYPE = /^(?:(?:sepa[ -])?(?:basis[ -]?)?lastschrift|kartenzahlung|debitkartenzahlung|kaufumsatz|sepa überweisung)\s*[:/-]?\s*/u;
   var SHOP_PROCESSOR_PREFIX = /^(?:paypal|sumup|spc|sq|iz|izettle|zettle|stripe|adyen|klarna|nexi|worldline)\s*[*_]\s*/iu;
+  function sortingPayee(payment) {
+    return payment.counterparty?.trim() || (payment.description || payment.bookingText || "").match(
+      /^\s*empfänger:\s*(\S[^\r\n]*?)\s+kto\/iban:\s*[a-z]{2}\d{2}[a-z0-9]+\s+buchungstext:/iu
+    )?.[1] || payeeText(payment);
+  }
   function merchantKey(payment) {
-    let text2 = payeeText(payment);
-    text2 = cardMerchant(text2)?.merchant ?? text2;
+    let text3 = payeeText(payment);
+    text3 = cardMerchant(text3)?.merchant ?? text3;
     const processor = /^paypal(?:\s|$|\()/u;
-    if (processor.test(text2)) {
+    if (processor.test(text3)) {
       const details = (payment.description ?? payment.bookingText ?? "").toLowerCase().normalize("NFC");
-      const seller = text2.match(/ihr einkauf bei\s+(.+?)(?:\.\s|$)/u)?.[1] ?? details.match(/ihr einkauf bei\s+(.+?)(?:\.\s|$)/u)?.[1] ?? text2.match(/^paypal\s*\*\s*(.+)/u)?.[1] ?? details.match(/^paypal\s*\*\s*(.+)/u)?.[1];
+      const seller = text3.match(/ihr einkauf bei\s+(.+?)(?:\.\s|$)/u)?.[1] ?? details.match(/ihr einkauf bei\s+(.+?)(?:\.\s|$)/u)?.[1] ?? text3.match(/^paypal\s*\*\s*(.+)/u)?.[1] ?? details.match(/^paypal\s*\*\s*(.+)/u)?.[1];
       if (!seller) return "";
-      text2 = seller;
+      text3 = seller;
     }
-    text2 = text2.replace(/^paypal\s*\*\s*/u, "");
-    text2 = text2.replace(BOOKING_TYPE, "");
-    text2 = text2.split(/\b(?:eref|mref|cred|iban|bic|mandatsreferenz|gläubiger-id|glaeubiger-id|kundenreferenz)\s*[:+]/u)[0];
-    text2 = text2.replace(/\b(?:karte(?:nnr|nnummer)?|karten-nr|card(?: number)?|terminal|beleg|trace|folge-nr)\.?\s*[:#-]?\s*[\d*x.-]+/gu, " ");
-    text2 = text2.replace(/\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}[./-]\d{1,2}[./-]\d{2,4}\b|\b\d{1,2}:\d{2}(?::\d{2})?\b/gu, " ");
-    text2 = text2.replace(/\b(?:filiale|fil\.?|markt-nr\.?|branch)\s*[:#-]?\s*\d+\b/gu, " ");
-    text2 = text2.replace(/\d{5,}|\b\d{3,}\b|\bx{2,}\d*\b|\*{2,}\d*/gu, " ");
-    text2 = text2.replace(/^((?:rewe(?:\s+markt)?|dm(?:-drogerie\s*markt)?))\s+\d+\b/u, "$1 ");
-    text2 = text2.replace(/\bsagt\s+danke\b|\bdankt\b/gu, " ");
-    text2 = text2.replace(/\bgmbh\s*(?:&|\+|und)\s*co\.?\s*kg\b/gu, " ");
-    text2 = text2.replace(/\b(?:gmbh|aktiengesellschaft|ag|se|kg|ohg)\b|\be\s*\.\s*k\b\s*\.?/gu, " ");
-    text2 = text2.replace(/\b(?:und\s+)?co\b/gu, " ").replace(/&/gu, " ");
-    text2 = text2.replace(/[\/;,|]+/gu, " ").replace(/\s+/gu, " ").replace(/[\s.*#-]+$/gu, "").trim();
-    text2 = text2.replace(citySuffix, "").replace(/[\s.*#-]+$/gu, "").trim();
-    return text2;
+    text3 = text3.replace(/^paypal\s*\*\s*/u, "");
+    text3 = text3.replace(BOOKING_TYPE, "");
+    text3 = text3.split(/\b(?:eref|mref|cred|iban|bic|mandatsreferenz|gläubiger-id|glaeubiger-id|kundenreferenz)\s*[:+]/u)[0];
+    text3 = text3.replace(/\b(?:karte(?:nnr|nnummer)?|karten-nr|card(?: number)?|terminal|beleg|trace|folge-nr)\.?\s*[:#-]?\s*[\d*x.-]+/gu, " ");
+    text3 = text3.replace(/\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}[./-]\d{1,2}[./-]\d{2,4}\b|\b\d{1,2}:\d{2}(?::\d{2})?\b/gu, " ");
+    text3 = text3.replace(/\b(?:filiale|fil\.?|markt-nr\.?|branch)\s*[:#-]?\s*\d+\b/gu, " ");
+    text3 = text3.replace(/\d{5,}|\b\d{3,}\b|\bx{2,}\d*\b|\*{2,}\d*/gu, " ");
+    text3 = text3.replace(/^((?:rewe(?:\s+markt)?|dm(?:-drogerie\s*markt)?))\s+\d+\b/u, "$1 ");
+    text3 = text3.replace(/\bsagt\s+danke\b|\bdankt\b/gu, " ");
+    text3 = text3.replace(/\bgmbh\s*(?:&|\+|und)\s*co\.?\s*kg\b/gu, " ");
+    text3 = text3.replace(/\b(?:gmbh|aktiengesellschaft|ag|se|kg|ohg)\b|\be\s*\.\s*k\b\s*\.?/gu, " ");
+    text3 = text3.replace(/\b(?:und\s+)?co\b/gu, " ").replace(/&/gu, " ");
+    text3 = text3.replace(/[\/;,|]+/gu, " ").replace(/\s+/gu, " ").replace(/[\s.*#-]+$/gu, "").trim();
+    text3 = text3.replace(citySuffix, "").replace(/[\s.*#-]+$/gu, "").trim();
+    return text3;
   }
 
   // src/engine/sorting/shop-words.ts
   var umlauts = { \u00E4: "ae", \u00F6: "oe", \u00FC: "ue", \u00DF: "ss" };
   var bareVowels = { \u00E4: "a", \u00F6: "o", \u00FC: "u", \u00DF: "ss" };
-  function words(text2, letters) {
-    const plain2 = text2.normalize("NFC").toLowerCase().replace(/[äöüß]/gu, (c) => letters[c]).normalize("NFD").replace(/\p{M}+/gu, "").replace(/ø/gu, "o").replace(/['’‘`´]/gu, "");
+  function words(text3, letters) {
+    const plain2 = text3.normalize("NFC").toLowerCase().replace(/[äöüß]/gu, (c) => letters[c]).normalize("NFD").replace(/\p{M}+/gu, "").replace(/ø/gu, "o").replace(/['’‘`´]/gu, "");
     return plain2.match(/[\p{L}\p{N}]+|[&+]/gu) ?? [];
   }
-  function shopWords(text2) {
-    return words(text2, umlauts);
+  function shopWords(text3) {
+    return words(text3, umlauts);
   }
-  function withoutShopReferences(text2) {
-    return text2.replace(/\b(?:eref|mref|cred|kref|iban|bic|mandatsreferenz|mandatsref|gläubiger-id|glaeubiger-id|kundenreferenz)\s*[:+]\s*\S+/giu, " ");
+  function withoutShopReferences(text3) {
+    return text3.replace(/\b(?:eref|mref|cred|kref|iban|bic|mandatsreferenz|mandatsref|gläubiger-id|glaeubiger-id|kundenreferenz)\s*[:+]\s*\S+/giu, " ");
   }
   var foodEndings = ["restaurant", "imbiss", "baeckerei", "cafe", "backstube", "hofladen"];
   function foodBusinessWord(word) {
@@ -5841,11 +5846,11 @@ var __AresiumEngine = (() => {
     if (word === "baumkuchenhaus") return "konditorei";
     return foodBusinessWord(word);
   }
-  function businessFieldWords(text2) {
-    const cleaned2 = withoutShopReferences(text2.trimEnd());
+  function businessFieldWords(text3) {
+    const cleaned2 = withoutShopReferences(text3.trimEnd());
     const words2 = shopWords(cleaned2);
     const tail = words2.at(-1);
-    if (cleaned2.endsWith(" ") || !tail || !/[\p{L}.…]\s*$/u.test(text2)) return words2;
+    if (cleaned2.endsWith(" ") || !tail || !/[\p{L}.…]\s*$/u.test(text3)) return words2;
     if (/^lebensmit(?:t(?:e(?:l)?)?)?$/u.test(tail)) words2[words2.length - 1] = "lebensmittel";
     if (/^hairst(?:y(?:l(?:e)?)?)?$/u.test(tail)) words2[words2.length - 1] = "hairstyle";
     if (/^podo(?:l(?:o(?:g(?:i(?:e)?)?)?)?)?$/u.test(tail) && /(?:^| )praxis (?:fuer|fur) podo[a-z]*$/u.test(words2.join(" "))) words2[words2.length - 1] = "podolog";
@@ -5903,10 +5908,11 @@ var __AresiumEngine = (() => {
   var applies = (direction, money2) => money2 === null || direction === "both" || direction === money2;
   var branchNumber = /^(.+?[^\p{L}\p{N}])\d{2,6}(?![\p{L}\p{N}]|[.,:]\d)/u;
   function shopPayment(payment) {
-    const clean2 = (text2) => text2.toLowerCase().trim().replace(BOOKING_TYPE, "").replace(SHOP_PROCESSOR_PREFIX, "");
+    const clean2 = (text3) => text3.toLowerCase().trim().replace(BOOKING_TYPE, "").replace(SHOP_PROCESSOR_PREFIX, "");
+    const recipient = sortingPayee(payment);
     return {
       ...payment,
-      counterparty: payment.counterparty ? clean2(payment.counterparty) : payment.counterparty,
+      counterparty: recipient ? clean2(recipient) : payment.counterparty,
       description: payment.description ? clean2(payment.description) : payment.description,
       bookingText: payment.bookingText ? clean2(payment.bookingText) : payment.bookingText
     };
@@ -6476,7 +6482,12 @@ var __AresiumEngine = (() => {
           "hot dog",
           "ocakba\u015F\u0131",
           "ocakbasi",
-          "banh mi"
+          "banh mi",
+          "kitchen & wine",
+          "kitchen and wine",
+          "wine & dine",
+          "wine and dine",
+          "plat du jour"
         ],
         "out"
       ],
@@ -7633,6 +7644,29 @@ var __AresiumEngine = (() => {
           "lensbest"
         ],
         "both"
+      ],
+      [
+        "health",
+        [
+          "agaplesion",
+          "ameos",
+          "asklepios kliniken",
+          "atos kliniken",
+          "bg kliniken",
+          "celenus kliniken",
+          "gesundheitszentren rhein-neckar",
+          "helios kliniken",
+          "kmg kliniken",
+          "median kliniken",
+          "medical park",
+          "mediclin",
+          "paracelsus-kliniken",
+          "rh\xF6n-klinikum",
+          "sana kliniken",
+          "sch\xF6n klinik",
+          "vivantes"
+        ],
+        "out"
       ],
       [
         "health",
@@ -9460,17 +9494,22 @@ var __AresiumEngine = (() => {
         [
           "boesner",
           "b\xFCcher pustet",
+          "fahrrad xxl",
           "games workshop",
           "hugendubel",
+          "little john bikes",
           "lumas",
           "mayersche",
           "osiander",
           "readshop",
+          "tokyobike",
+          "trek bicycle",
           "tsutaya",
           "warhammer",
           "whsmith",
           "wolle r\xF6del",
-          "yellowkorner"
+          "yellowkorner",
+          "zweirad-center stadler"
         ]
       ],
       [
@@ -10030,18 +10069,18 @@ var __AresiumEngine = (() => {
   ]);
   var legalSuffix = /(?:^| )(?:ug haftungsbeschraenkt|gmbh (?:und )?co kg|pte ltd|sp z o o|s a r l|s r l|s p a|s l|s a|b v|n v|e v|e k|uab|aps|ltd|limited|sas|sarl|ab|as|oy|inc|llc|corp|plc|pty|ohg|mbh|ug|ggmbh|kgaa|aktiengesellschaft|gmbh|ag|se|kg)$/u;
   function cleaned(key) {
-    let text2 = shopWords(key.replace(/['’‘`´]/gu, " ")).filter((word) => word !== "&" && word !== "+").join(" ").replace(/\bsagt danke\b|\bdankt\b/gu, " ").replace(/\s+/gu, " ").trim();
+    let text3 = shopWords(key.replace(/['’‘`´]/gu, " ")).filter((word) => word !== "&" && word !== "+").join(" ").replace(/\bsagt danke\b|\bdankt\b/gu, " ").replace(/\s+/gu, " ").trim();
     let previous;
     do {
-      previous = text2;
-      text2 = text2.replace(legalSuffix, "").trim();
-    } while (text2 !== previous);
-    return text2;
+      previous = text3;
+      text3 = text3.replace(legalSuffix, "").trim();
+    } while (text3 !== previous);
+    return text3;
   }
-  function knownShop(key, text2) {
-    const alias = aliases.get(text2);
+  function knownShop(key, text3) {
+    const alias = aliases.get(text3);
     if (alias) return alias;
-    const found = matcher.find({ counterparty: key }) ?? matcher.find({ counterparty: text2 });
+    const found = matcher.find({ counterparty: key }) ?? matcher.find({ counterparty: text3 });
     return found ? aliases.get(found.name) ?? found.name : null;
   }
   function longer(a, b) {
@@ -10052,11 +10091,11 @@ var __AresiumEngine = (() => {
     const forms = /* @__PURE__ */ new Map();
     const known = /* @__PURE__ */ new Map();
     for (const key of new Set(keys)) {
-      const text2 = cleaned(key);
-      forms.set(key, text2);
-      if (!text2) continue;
-      const shop = knownShop(key, text2);
-      if (shop && (!known.has(text2) || shop < known.get(text2))) known.set(text2, shop);
+      const text3 = cleaned(key);
+      forms.set(key, text3);
+      if (!text3) continue;
+      const shop = knownShop(key, text3);
+      if (shop && (!known.has(text3) || shop < known.get(text3))) known.set(text3, shop);
     }
     const names2 = [...new Set(forms.values())].filter(Boolean).sort();
     const parent = new Map(names2.map((name) => [name, name]));
@@ -10154,8 +10193,8 @@ var __AresiumEngine = (() => {
       for (const item of path) identities.set(item, identity);
     }
     return keys.map((key) => {
-      const text2 = forms.get(key);
-      return text2 ? identities.get(root(text2)) : "";
+      const text3 = forms.get(key);
+      return text3 ? identities.get(root(text3)) : "";
     });
   }
 
@@ -10180,12 +10219,27 @@ var __AresiumEngine = (() => {
     const payee = withoutShopReferences(payment.counterparty?.trim() || payment.description || payment.bookingText || "");
     return /\be\s*\.\s*v\.?(?=[^.\p{L}\p{N}]|$)/iu.test(payee) || /(?:^| )eingetragener verein(?: |$)/u.test(shopWords(payee).join(" ")) ? "memberships" : null;
   }
+  var nonVenueBarWords = new Set(`cash bezahlt zahlung zahlen bezahlen gezahlt bez einzahlung auszahlung abhebung
+  erstattung rueckzahlung rechnung betrag geld nail nails brow brows lash lashes beauty juice saft smoothie salat salad
+  sushi snack snacks coffee kaffee espresso protein chocolate schoko schokolade riegel equipment zubehoer technik
+  druck pressure consulting beratung association code codes de deu eur`.split(/\s+/u));
+  function cardVenuePurpose(payment) {
+    if (!(typeof payment.amount === "number" && Number.isFinite(payment.amount) && payment.amount < 0)) return null;
+    const raw = sortingPayee(payment).toLowerCase().normalize("NFC").replace(BOOKING_TYPE, "");
+    const card = cardMerchant(raw);
+    if (!card && !SHOP_PROCESSOR_PREFIX.test(raw)) return null;
+    const merchant = (card?.merchant ?? raw).replace(SHOP_PROCESSOR_PREFIX, "");
+    const words2 = shopWords(merchantKey({ counterparty: merchant }));
+    if (!words2.includes("bar")) return null;
+    if (words2.some((word) => nonVenueBarWords.has(word))) return null;
+    return words2.some((word) => word !== "bar" && /^\p{L}{3,}$/u.test(word)) ? "going-out" : null;
+  }
 
   // src/engine/sorting/starter-rules.ts
   var matcher2 = compileShopList(shops_de_default);
   var STARTER_RULES = matcher2.rules;
   function starterCategory(payment, categories, towns) {
-    const categoryId = paymentPurpose(payment) ?? matcher2.match(payment, towns) ?? associationPurpose(payment);
+    const categoryId = paymentPurpose(payment) ?? matcher2.match(payment, towns) ?? cardVenuePurpose(payment) ?? associationPurpose(payment);
     return categoryId !== null && categories.some((c) => c.id === categoryId) ? categoryId : null;
   }
   var findShop = (payment, towns) => matcher2.find(payment, towns);
@@ -10285,7 +10339,7 @@ var __AresiumEngine = (() => {
     if (payment.source === "paypal") return false;
     const who = (payment.counterparty?.trim() || payment.description || payment.bookingText || "").trim();
     if (PAYPAL_NAME.test(who)) return true;
-    return [payment.counterparty, payment.description, payment.bookingText].some((text2) => typeof text2 === "string" && PAYPAL_IN_TEXT.test(text2));
+    return [payment.counterparty, payment.description, payment.bookingText].some((text3) => typeof text3 === "string" && PAYPAL_IN_TEXT.test(text3));
   }
   function isPaypalFundingRow(payment) {
     return payment.source === "paypal" && isPaypalBankFunding({ description: payment.description ?? "", raw: payment.raw });
@@ -10295,7 +10349,7 @@ var __AresiumEngine = (() => {
   }
   var OWN_TRANSFER_WORDS = /(?<![\p{L}\p{N}])(?:umbuchung|(?:eigen|konto)?(?:übertrag|uebertrag)|eigene[ns]?\s+konto|own\s+account)(?![\p{L}\p{N}])/iu;
   function saysOwnTransfer(payment) {
-    return [payment.counterparty, payment.description, payment.bookingText].some((text2) => typeof text2 === "string" && OWN_TRANSFER_WORDS.test(text2.normalize("NFC")));
+    return [payment.counterparty, payment.description, payment.bookingText].some((text3) => typeof text3 === "string" && OWN_TRANSFER_WORDS.test(text3.normalize("NFC")));
   }
   var ibanKey = (value) => (value ?? "").replace(/\s/g, "").toUpperCase();
   var IBAN_SHAPE = /^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/;
@@ -10317,12 +10371,12 @@ var __AresiumEngine = (() => {
       paypalEnd = Math.max(paypalEnd, day2);
     }
     const conversions = paypalConversionRows(payments.filter((p) => !isPaypalBankFunding({ description: p.description ?? "", raw: p.raw })));
-    payments.forEach((p, i) => {
+    payments.forEach((p, i2) => {
       const date2 = parseDay(p.date);
       const day2 = date2 ? dayNumber(date2) : NaN;
       const covered = day2 >= paypalStart - TRANSFER_DAYS && day2 <= paypalEnd + TRANSFER_DAYS;
-      if (isPaypalFundingRow(p) || isPaypalWithdrawalRow(p) || covered && isPaypalBankLine(p)) result[i] = { rule: "paypal" };
-      if (conversions.has(p)) result[i] = { rule: "paypal-conversion" };
+      if (isPaypalFundingRow(p) || isPaypalWithdrawalRow(p) || covered && isPaypalBankLine(p)) result[i2] = { rule: "paypal" };
+      if (conversions.has(p)) result[i2] = { rule: "paypal-conversion" };
     });
     const groups2 = /* @__PURE__ */ new Map();
     payments.forEach((p, index) => {
@@ -10347,16 +10401,16 @@ var __AresiumEngine = (() => {
     const candidates = [];
     for (const { out, in: incoming } of groups2.values()) {
       for (const o of out) {
-        for (const i of incoming) {
-          const distance2 = Math.abs(o.day - i.day);
-          if (distance2 > TRANSFER_DAYS || o.account === i.account) continue;
-          if (o.currency && i.currency && o.currency !== i.currency) continue;
-          if (!proven(o, i)) continue;
-          candidates.push({ a: Math.min(o.index, i.index), b: Math.max(o.index, i.index), distance: distance2 });
+        for (const i2 of incoming) {
+          const distance2 = Math.abs(o.day - i2.day);
+          if (distance2 > TRANSFER_DAYS || o.account === i2.account) continue;
+          if (o.currency && i2.currency && o.currency !== i2.currency) continue;
+          if (!proven(o, i2)) continue;
+          candidates.push({ a: Math.min(o.index, i2.index), b: Math.max(o.index, i2.index), distance: distance2 });
         }
       }
     }
-    candidates.sort((x, y) => x.distance - y.distance || x.a - y.a || x.b - y.b);
+    candidates.sort((x2, y) => x2.distance - y.distance || x2.a - y.a || x2.b - y.b);
     const paired = /* @__PURE__ */ new Set();
     for (const { a, b } of candidates) {
       if (paired.has(a) || paired.has(b)) continue;
@@ -10378,12 +10432,12 @@ var __AresiumEngine = (() => {
   var aligned = (size) => Math.ceil(size / 4) * 4;
   function placesChecksum(bytes) {
     let hash = 2166136261;
-    for (let i = 0; i < bytes.length; i++) hash = Math.imul(hash ^ (i >= 88 && i < 92 ? 0 : bytes[i]), 16777619);
+    for (let i2 = 0; i2 < bytes.length; i2++) hash = Math.imul(hash ^ (i2 >= 88 && i2 < 92 ? 0 : bytes[i2]), 16777619);
     return hash >>> 0;
   }
-  function localUtf8(text2) {
+  function localUtf8(text3) {
     const bytes = [];
-    for (const char of text2) {
+    for (const char of text3) {
       let cp = char.codePointAt(0);
       if (cp >= 55296 && cp <= 57343) cp = 65533;
       if (cp < 128) bytes.push(cp);
@@ -10394,18 +10448,18 @@ var __AresiumEngine = (() => {
     return new Uint8Array(bytes);
   }
   function textAt(bytes, offsets, row) {
-    let text2 = "";
-    for (let i = offsets[row]; i < offsets[row + 1]; ) {
-      const b = bytes[i++];
+    let text3 = "";
+    for (let i2 = offsets[row]; i2 < offsets[row + 1]; ) {
+      const b = bytes[i2++];
       let cp = b;
       if (b >= 192) {
         const need = b < 224 ? 1 : b < 240 ? 2 : 3;
         cp = b & (need === 1 ? 31 : need === 2 ? 15 : 7);
-        for (let n = 0; n < need; n++) cp = cp << 6 | bytes[i++] & 63;
+        for (let n = 0; n < need; n++) cp = cp << 6 | bytes[i2++] & 63;
       }
-      text2 += String.fromCodePoint(cp);
+      text3 += String.fromCodePoint(cp);
     }
-    return text2;
+    return text3;
   }
   function compare3(bytes, start, end, other, from2 = 0, to = other.length) {
     while (start < end && from2 < to) {
@@ -10420,14 +10474,14 @@ var __AresiumEngine = (() => {
       const start = offsets[row], end = offsets[row + 1];
       if (end < start || end > bytes.length || sorted && end === start) fail("string range");
       if (sorted && row && compare3(bytes, offsets[row - 1], start, bytes, start, end) >= 0) fail("name ordering");
-      for (let i = start; i < end; ) {
-        const b = bytes[i++];
+      for (let i2 = start; i2 < end; ) {
+        const b = bytes[i2++];
         if (b < 128) continue;
         const need = b >= 194 && b <= 223 ? 1 : b >= 224 && b <= 239 ? 2 : b >= 240 && b <= 244 ? 3 : 0;
-        if (!need || i + need > end) fail("UTF-8");
+        if (!need || i2 + need > end) fail("UTF-8");
         let cp = b & (need === 1 ? 31 : need === 2 ? 15 : 7);
         for (let n = 0; n < need; n++) {
-          const next = bytes[i++];
+          const next = bytes[i2++];
           if ((next & 192) !== 128) fail("UTF-8");
           cp = cp << 6 | next & 63;
         }
@@ -10467,7 +10521,7 @@ var __AresiumEngine = (() => {
         if (h[word] !== next || next + count * width > bytes.length) fail("section bounds or alignment");
         const start = next;
         next += aligned(count * width);
-        for (let i = start + count * width; i < next; i++) if (bytes[i]) fail("section padding");
+        for (let i2 = start + count * width; i2 < next; i2++) if (bytes[i2]) fail("section padding");
         return base + start;
       };
       const blob = (word, offsets) => {
@@ -10498,9 +10552,9 @@ var __AresiumEngine = (() => {
         if (category !== NO_LOCAL_CATEGORY && category >= h[6]) fail("national category code");
         const start = this.matchOffsets[row], end = this.matchOffsets[row + 1];
         if (end < start || end > h[7]) fail("match range");
-        for (let i = start; i < end; i++) {
-          if (this.matchTowns[i] >= h[5] || this.matchCategories[i] >= h[6]) fail("town/category code");
-          if (i > start && (this.matchTowns[i] < this.matchTowns[i - 1] || this.matchTowns[i] === this.matchTowns[i - 1] && this.matchCategories[i] < this.matchCategories[i - 1])) fail("town match ordering");
+        for (let i2 = start; i2 < end; i2++) {
+          if (this.matchTowns[i2] >= h[5] || this.matchCategories[i2] >= h[6]) fail("town/category code");
+          if (i2 > start && (this.matchTowns[i2] < this.matchTowns[i2 - 1] || this.matchTowns[i2] === this.matchTowns[i2 - 1] && this.matchCategories[i2] < this.matchCategories[i2 - 1])) fail("town match ordering");
         }
       }
     }
@@ -10553,7 +10607,7 @@ var __AresiumEngine = (() => {
   function resolveLocalPlaces(option) {
     return option === true ? installed : option ? indexLocalPlaces(option) : void 0;
   }
-  var localName = (text2) => shopWords(text2).join(" ");
+  var localName = (text3) => shopWords(text3).join(" ");
   var ordinary = new Set(`lieblingsstueck lieblingsplatz glueck gluecklich zuhause daheim heimat freiheit liebe leben
   sonne mond stern himmel erde wasser feuer luft zeit raum mitte zentral central royal international express
   mueller muller schmidt schneider fischer weber meyer wagner becker schulz hoffmann schaefer koch richter klein wolf
@@ -10585,7 +10639,7 @@ var __AresiumEngine = (() => {
     const raw = payeeText(payment);
     const card = cardMerchant(raw);
     if (card && !/^deu\b/u.test(raw.slice(card.merchant.length).trim())) return null;
-    const clean2 = (text2) => localName(text2.toLowerCase().replace(BOOKING_TYPE, "").replace(SHOP_PROCESSOR_PREFIX, "").split(/\b(?:eref|mref|cred|iban|bic|mandatsreferenz|glaeubiger-id|gläubiger-id)\s*[:+]/iu)[0]);
+    const clean2 = (text3) => localName(text3.toLowerCase().replace(BOOKING_TYPE, "").replace(SHOP_PROCESSOR_PREFIX, "").split(/\b(?:eref|mref|cred|iban|bic|mandatsreferenz|glaeubiger-id|gläubiger-id)\s*[:+]/iu)[0]);
     const head = clean2(card?.merchant ?? raw);
     const details = clean2(payment.description ?? payment.bookingText ?? "");
     const explicitTown = card ? localName(card.town) : "";
@@ -10596,19 +10650,19 @@ var __AresiumEngine = (() => {
       const row = packed ? void 0 : rowFor(data, name);
       const index = packed ? packed.rowFor(name) : -1;
       if (packed ? index < 0 : !row) return;
-      const located = (text2, town) => {
-        const country = / (?:de|deu)$/u.test(text2);
-        return townMatches(text2.replace(/ (?:de|deu)$/u, ""), town, country);
+      const located = (text3, town) => {
+        const country = / (?:de|deu)$/u.test(text3);
+        return townMatches(text3.replace(/ (?:de|deu)$/u, ""), town, country);
       };
       const location = (town) => !tail && townMatches(explicitTown, town, true) || located(tail, town) || !tail && details.startsWith(`${name} `) && located(details.slice(name.length + 1), town);
       const categories = /* @__PURE__ */ new Set();
       if (packed) {
-        for (let i = packed.matchOffsets[index]; i < packed.matchOffsets[index + 1]; i++) {
-          if (location(packed.town(packed.matchTowns[i]))) categories.add(packed.matchCategories[i]);
+        for (let i2 = packed.matchOffsets[index]; i2 < packed.matchOffsets[index + 1]; i2++) {
+          if (location(packed.town(packed.matchTowns[i2]))) categories.add(packed.matchCategories[i2]);
         }
       } else {
         const json = data;
-        for (let i = 0; i < row[2].length; i += 2) if (location(json.towns[row[2][i]])) categories.add(row[2][i + 1]);
+        for (let i2 = 0; i2 < row[2].length; i2 += 2) if (location(json.towns[row[2][i2]])) categories.add(row[2][i2 + 1]);
       }
       if (categories.size > 1) {
         found.push({ categoryId: "", name, town: true });
@@ -10633,8 +10687,8 @@ var __AresiumEngine = (() => {
     const starterCategories = localPlaces ? [...DEFAULT_CATEGORIES, ...BUILT_IN_CATEGORIES, ...options.categories] : options.categories;
     const transfers = ownTransfers(payments);
     const provenTowns = /* @__PURE__ */ new Set();
-    for (const payment of payments) for (const text2 of [payment.counterparty, payment.description, payment.bookingText]) {
-      const card = text2 ? cardMerchant(text2) : null;
+    for (const payment of payments) for (const text3 of [payment.counterparty, payment.description, payment.bookingText]) {
+      const card = text3 ? cardMerchant(text3) : null;
       const words2 = card ? shopWords(card.town) : [];
       if (words2.length === 1) provenTowns.add(words2[0]);
     }
@@ -10912,7 +10966,7 @@ var __AresiumEngine = (() => {
     const hasOrder = rows.every((row) => Number.isSafeInteger(row.statementOrder)) && new Set(rows.map((row) => row.statementOrder)).size === rows.length;
     if (hasOrder) {
       const ordered = rows.slice().sort((a, b) => a.statementOrder - b.statementOrder);
-      const uncertain = ordered.some((row, i) => i > 0 && cents3(row.balance) - cents3(row.amount) !== cents3(ordered[i - 1].balance));
+      const uncertain = ordered.some((row, i2) => i2 > 0 && cents3(row.balance) - cents3(row.amount) !== cents3(ordered[i2 - 1].balance));
       return { balance: ordered[ordered.length - 1].balance, uncertain };
     }
     const derived = chainClosing(rows);
@@ -10922,20 +10976,20 @@ var __AresiumEngine = (() => {
     };
   }
   function accountDayClosings(payments) {
-    const accounts = /* @__PURE__ */ new Map();
+    const accounts2 = /* @__PURE__ */ new Map();
     for (const payment of payments) {
       if (payment.balance == null) continue;
       if (!Number.isFinite(payment.balance)) throw new Error(`Payment ${payment.id}: the balance is not a number`);
       const accountId = payment.accountId ?? null;
-      const days = accounts.get(accountId) ?? /* @__PURE__ */ new Map();
+      const days = accounts2.get(accountId) ?? /* @__PURE__ */ new Map();
       const day2 = payment.date.slice(0, 10);
       const rows = days.get(day2) ?? [];
       rows.push(payment);
       days.set(day2, rows);
-      accounts.set(accountId, days);
+      accounts2.set(accountId, days);
     }
     const result = [];
-    for (const [accountId, days] of accounts) {
+    for (const [accountId, days] of accounts2) {
       for (const [date2, rows] of days) result.push({ accountId, date: date2, ...closing(rows) });
     }
     return result.sort((a, b) => a.date.localeCompare(b.date) || (a.accountId ?? "").localeCompare(b.accountId ?? ""));
@@ -11097,17 +11151,17 @@ var __AresiumEngine = (() => {
     376
   ];
   function fromCodePoints(points) {
-    let text2 = "";
-    for (let i = 0; i < points.length; i += 8192) text2 += String.fromCodePoint(...points.slice(i, i + 8192));
-    return text2;
+    let text3 = "";
+    for (let i2 = 0; i2 < points.length; i2 += 8192) text3 += String.fromCodePoint(...points.slice(i2, i2 + 8192));
+    return text3;
   }
   function utf8(bytes, start) {
     const points = [];
-    for (let i = start; i < bytes.length; ) {
-      const b = bytes[i];
+    for (let i2 = start; i2 < bytes.length; ) {
+      const b = bytes[i2];
       if (b < 128) {
         points.push(b);
-        i++;
+        i2++;
         continue;
       }
       let need, cp, min;
@@ -11125,21 +11179,21 @@ var __AresiumEngine = (() => {
         min = 65536;
       } else return null;
       for (let k = 1; k <= need; k++) {
-        const c = bytes[i + k];
+        const c = bytes[i2 + k];
         if (c === void 0 || (c & 192) !== 128) return null;
         cp = cp << 6 | c & 63;
       }
       if (cp < min || cp > 1114111 || cp >= 55296 && cp <= 57343) return null;
       points.push(cp);
-      i += need + 1;
+      i2 += need + 1;
     }
     return fromCodePoints(points);
   }
   function windows1252(bytes) {
     const points = new Array(bytes.length);
-    for (let i = 0; i < bytes.length; i++) {
-      const b = bytes[i];
-      points[i] = b >= 128 && b <= 159 ? WINDOWS_1252_HIGH[b - 128] : b;
+    for (let i2 = 0; i2 < bytes.length; i2++) {
+      const b = bytes[i2];
+      points[i2] = b >= 128 && b <= 159 ? WINDOWS_1252_HIGH[b - 128] : b;
     }
     return fromCodePoints(points);
   }
@@ -11155,30 +11209,30 @@ var __AresiumEngine = (() => {
   };
   function latin15(bytes) {
     let euro = false;
-    for (let i = 0; i < bytes.length; i++) {
-      if (bytes[i] >= 128 && bytes[i] <= 159) return null;
-      if (bytes[i] === 164) euro = true;
+    for (let i2 = 0; i2 < bytes.length; i2++) {
+      if (bytes[i2] >= 128 && bytes[i2] <= 159) return null;
+      if (bytes[i2] === 164) euro = true;
     }
     if (!euro) return null;
     const points = new Array(bytes.length);
-    for (let i = 0; i < bytes.length; i++) points[i] = LATIN_15[bytes[i]] ?? bytes[i];
+    for (let i2 = 0; i2 < bytes.length; i2++) points[i2] = LATIN_15[bytes[i2]] ?? bytes[i2];
     return fromCodePoints(points);
   }
   function utf16(bytes, littleEndian) {
     const units = [];
-    for (let i = 2; i + 1 < bytes.length; i += 2) {
-      units.push(littleEndian ? bytes[i] | bytes[i + 1] << 8 : bytes[i] << 8 | bytes[i + 1]);
+    for (let i2 = 2; i2 + 1 < bytes.length; i2 += 2) {
+      units.push(littleEndian ? bytes[i2] | bytes[i2 + 1] << 8 : bytes[i2] << 8 | bytes[i2 + 1]);
     }
-    let text2 = "";
-    for (let i = 0; i < units.length; i += 8192) text2 += String.fromCharCode(...units.slice(i, i + 8192));
-    return text2;
+    let text3 = "";
+    for (let i2 = 0; i2 < units.length; i2 += 8192) text3 += String.fromCharCode(...units.slice(i2, i2 + 8192));
+    return text3;
   }
   function decodeBankFileWithEncoding(bytes) {
     if (bytes[0] === 255 && bytes[1] === 254) return { text: utf16(bytes, true), encoding: "utf-16le" };
     if (bytes[0] === 254 && bytes[1] === 255) return { text: utf16(bytes, false), encoding: "utf-16be" };
     const bom = bytes[0] === 239 && bytes[1] === 187 && bytes[2] === 191;
-    const text2 = utf8(bytes, bom ? 3 : 0);
-    if (text2 !== null) return { text: text2, encoding: "utf-8" };
+    const text3 = utf8(bytes, bom ? 3 : 0);
+    if (text3 !== null) return { text: text3, encoding: "utf-8" };
     const latin = latin15(bytes);
     if (latin !== null) return { text: latin, encoding: "iso-8859-15" };
     return { text: windows1252(bytes), encoding: "windows-1252" };
@@ -11187,40 +11241,28 @@ var __AresiumEngine = (() => {
     return decodeBankFileWithEncoding(bytes).text;
   }
 
-  // src/engine/readers/camt.ts
+  // src/engine/readers/archive.ts
   var import_fast_xml_parser2 = __toESM(require_fxp(), 1);
-
-  // src/engine/readers/ids.ts
-  var hashId = (fields2) => sha1(fields2).slice(0, 24);
-  function withOccurrences(candidates) {
-    const seen = /* @__PURE__ */ new Map();
-    return candidates.map(({ id, fields: fields2 }) => {
-      const occurrence = (seen.get(id) ?? 0) + 1;
-      seen.set(id, occurrence);
-      return occurrence === 1 ? id : hashId(`${fields2}|${occurrence}`);
-    });
-  }
-  var bookingIds = (fields2) => withOccurrences(fields2.map((f) => ({ id: hashId(f), fields: f })));
 
   // src/engine/readers/csv.ts
   var SEPARATORS = [";", ",", "	", "|"];
-  function splitCsv(text2, separator) {
-    return inspectCsv(text2, separator).rows;
+  function splitCsv(text3, separator) {
+    return inspectCsv(text3, separator).rows;
   }
-  function inspectCsv(text2, separator) {
+  function inspectCsv(text3, separator) {
     const rows = [];
     let row = [];
     let field2 = "";
     let quoted = false;
     let fieldStarted = false;
     let closed = false, damaged = false;
-    for (let i = 0; i < text2.length; i++) {
-      const ch = text2[i];
+    for (let i2 = 0; i2 < text3.length; i2++) {
+      const ch = text3[i2];
       if (quoted) {
         if (ch === '"') {
-          if (text2[i + 1] === '"') {
+          if (text3[i2 + 1] === '"') {
             field2 += '"';
-            i++;
+            i2++;
           } else {
             quoted = false;
             closed = true;
@@ -11241,7 +11283,7 @@ var __AresiumEngine = (() => {
         continue;
       }
       if (ch === "\n" || ch === "\r") {
-        if (ch === "\r" && text2[i + 1] === "\n") i++;
+        if (ch === "\r" && text3[i2 + 1] === "\n") i2++;
         row.push(field2);
         rows.push(row);
         row = [];
@@ -11260,15 +11302,15 @@ var __AresiumEngine = (() => {
     }
     return { rows, damaged: damaged || quoted };
   }
-  function countsPerLine(text2, separator, maxLines) {
+  function countsPerLine(text3, separator, maxLines) {
     const counts = [];
     let count = 0, quoted = false;
-    for (let i = 0; i < text2.length && counts.length < maxLines; i++) {
-      const ch = text2[i];
+    for (let i2 = 0; i2 < text3.length && counts.length < maxLines; i2++) {
+      const ch = text3[i2];
       if (ch === '"') quoted = !quoted;
       else if (!quoted && ch === separator) count++;
       else if (!quoted && (ch === "\n" || ch === "\r")) {
-        if (ch === "\r" && text2[i + 1] === "\n") i++;
+        if (ch === "\r" && text3[i2 + 1] === "\n") i2++;
         counts.push(count);
         count = 0;
       }
@@ -11276,10 +11318,10 @@ var __AresiumEngine = (() => {
     if (counts.length < maxLines && count > 0) counts.push(count);
     return counts;
   }
-  function detectSeparator(text2) {
+  function detectSeparator(text3) {
     let best = ";", bestScore = -1;
     for (const separator of SEPARATORS) {
-      const counts = countsPerLine(text2, separator, 200).filter((n) => n > 0);
+      const counts = countsPerLine(text3, separator, 200).filter((n) => n > 0);
       const frequency = /* @__PURE__ */ new Map();
       for (const n of counts) frequency.set(n, (frequency.get(n) ?? 0) + 1);
       let score = 0;
@@ -11291,6 +11333,18 @@ var __AresiumEngine = (() => {
     }
     return best;
   }
+
+  // src/engine/readers/ids.ts
+  var hashId = (fields2) => sha1(fields2).slice(0, 24);
+  function withOccurrences(candidates) {
+    const seen = /* @__PURE__ */ new Map();
+    return candidates.map(({ id, fields: fields2 }) => {
+      const occurrence = (seen.get(id) ?? 0) + 1;
+      seen.set(id, occurrence);
+      return occurrence === 1 ? id : hashId(`${fields2}|${occurrence}`);
+    });
+  }
+  var bookingIds = (fields2) => withOccurrences(fields2.map((f) => ({ id: hashId(f), fields: f })));
 
   // src/engine/readers/values.ts
   var DATE_FORMATS = ["DD.MM.YYYY", "DD.MM.YY", "YYYY-MM-DD", "DD/MM/YYYY", "MM/DD/YYYY", "DD-MM-YYYY", "YYYYMMDD"];
@@ -11319,7 +11373,7 @@ var __AresiumEngine = (() => {
     const order = [.../* @__PURE__ */ new Set([...preferred, "MM/DD/YYYY", ...DATE_FORMATS])];
     const counts = order.map((format) => values.filter((value) => parseDate(value, format) !== null).length);
     const most = Math.max(...counts);
-    return most === 0 ? [] : order.filter((_, i) => counts[i] === most);
+    return most === 0 ? [] : order.filter((_, i2) => counts[i2] === most);
   }
   function canonicalAmount(negative, whole, fraction) {
     const intPart = whole.replace(/^0+(?=\d)/, "") || "0";
@@ -11389,13 +11443,13 @@ var __AresiumEngine = (() => {
     return parts.map((p) => (p ?? "").replace(/\s+/g, " ").trim()).filter(Boolean).join(" ");
   }
   var SEPA_KEYS = /(EREF|KREF|MREF|CRED|DEBT|SVWZ|ABWA|ABWE|COAM|OAMT|IBAN|BIC)\+/g;
-  function sepaPaymentText(text2) {
-    const keys = [...text2.matchAll(SEPA_KEYS)];
+  function sepaPaymentText(text3) {
+    const keys = [...text3.matchAll(SEPA_KEYS)];
     const svwz = keys.findIndex((m) => m[1] === "SVWZ");
-    if (svwz < 0) return cleanText(text2.slice(0, keys[0]?.index ?? text2.length));
+    if (svwz < 0) return cleanText(text3.slice(0, keys[0]?.index ?? text3.length));
     const start = keys[svwz].index + 5;
-    const end = keys[svwz + 1]?.index ?? text2.length;
-    return cleanText(text2.slice(start, end));
+    const end = keys[svwz + 1]?.index ?? text3.length;
+    return cleanText(text3.slice(start, end));
   }
 
   // src/engine/readers/table.ts
@@ -11406,8 +11460,8 @@ var __AresiumEngine = (() => {
       this.name = "BankFileError";
     }
   };
-  function checkedCsvRows(text2, separator) {
-    const result = inspectCsv(text2.replace(/^\uFEFF/, ""), separator);
+  function checkedCsvRows(text3, separator) {
+    const result = inspectCsv(text3.replace(/^\uFEFF/, ""), separator);
     if (result.damaged) throw new BankFileError("unknown", "The file has a broken or unfinished quoted field. Download it again.");
     return result.rows;
   }
@@ -11417,35 +11471,35 @@ var __AresiumEngine = (() => {
     return row.slice(0, end).map((cell2) => cell2.trim());
   }
   function findHeaderRow(rows, keys) {
-    for (let i = 0; i < Math.min(rows.length, 60); i++) {
-      const present = new Set(rows[i].map(headerKey));
-      if (keys.every((group) => group.some((k) => present.has(k)))) return i;
+    for (let i2 = 0; i2 < Math.min(rows.length, 60); i2++) {
+      const present = new Set(rows[i2].map(headerKey));
+      if (keys.every((group) => group.some((k) => present.has(k)))) return i2;
     }
     return -1;
   }
-  function findTable(rows, layout) {
-    if (layout.header.length === 0) {
+  function findTable(rows, layout2) {
+    if (layout2.header.length === 0) {
       const first = rows.find((r) => r.some((v) => v.trim() !== ""));
-      const fits = first !== void 0 && (layout.columnCount === void 0 || first.length === layout.columnCount) && parseDate(cell(first, layout.columns.date), layout.dateFormat) !== null;
+      const fits = first !== void 0 && (layout2.columnCount === void 0 || first.length === layout2.columnCount) && parseDate(cell(first, layout2.columns.date), layout2.dateFormat) !== null;
       return fits ? -1 : null;
     }
-    const want = trimRow(layout.header).map(headerKey).join("");
-    for (let i = 0; i < Math.min(rows.length, 60); i++) {
-      if (trimRow(rows[i]).map(headerKey).join("") === want) return i;
+    const want = trimRow(layout2.header).map(headerKey).join("");
+    for (let i2 = 0; i2 < Math.min(rows.length, 60); i2++) {
+      if (trimRow(rows[i2]).map(headerKey).join("") === want) return i2;
     }
     return null;
   }
   function uniqueHeader(header) {
     const seen = /* @__PURE__ */ new Map();
-    return header.map((name, i) => {
-      const base = name.trim() || `Column ${i + 1}`;
+    return header.map((name, i2) => {
+      const base = name.trim() || `Column ${i2 + 1}`;
       const n = (seen.get(base) ?? 0) + 1;
       seen.set(base, n);
       return n === 1 ? base : `${base} (${n})`;
     });
   }
-  function findIban(text2) {
-    for (const m of text2.toUpperCase().matchAll(/[A-Z]{2}\d{2}(?:\s?[A-Z0-9]){11,30}/g)) {
+  function findIban(text3) {
+    for (const m of text3.toUpperCase().matchAll(/[A-Z]{2}\d{2}(?:\s?[A-Z0-9]){11,30}/g)) {
       const compact = m[0].replace(/\s/g, "");
       for (let len = compact.length; len >= 15; len--) {
         const iban = normalizeIban(compact.slice(0, len));
@@ -11454,11 +11508,11 @@ var __AresiumEngine = (() => {
     }
     return void 0;
   }
-  function labelledPart(text2, label, labels) {
+  function labelledPart(text3, label, labels) {
     const escape = (l) => l.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&");
-    const start = label === "" ? { index: 0, 0: "" } : new RegExp(`(?:^|\\s)${escape(label)}\\s*[:.]`, "i").exec(text2);
+    const start = label === "" ? { index: 0, 0: "" } : new RegExp(`(?:^|\\s)${escape(label)}\\s*[:.]`, "i").exec(text3);
     if (!start) return "";
-    const rest = text2.slice(start.index + start[0].length);
+    const rest = text3.slice(start.index + start[0].length);
     const next = new RegExp(`(?:^|\\s)(?:${labels.map(escape).join("|")})\\s*[:.]`, "i").exec(rest);
     return cleanText(next ? rest.slice(0, next.index) : rest);
   }
@@ -11474,16 +11528,16 @@ var __AresiumEngine = (() => {
   function cell(row, index) {
     return index === void 0 ? "" : (row[index] ?? "").trim();
   }
-  function readCsv(text2, layout) {
-    const rows = checkedCsvRows(text2, layout.separator);
+  function readCsv(text3, layout2) {
+    const rows = checkedCsvRows(text3, layout2.separator);
     if (rows.length === 0) throw new BankFileError("empty", "The file is empty.");
-    const headerIndex = findTable(rows, layout);
+    const headerIndex = findTable(rows, layout2);
     if (headerIndex === null) throw new BankFileError("headerMismatch", "The file's header row does not match the layout.");
-    return readTable(rows, headerIndex, layout);
+    return readTable(rows, headerIndex, layout2);
   }
-  function readTable(rows, headerIndex, layout) {
-    const c = layout.columns;
-    const width = layout.columnCount ?? Math.max(0, ...rows.slice(0, 50).map((r) => r.length));
+  function readTable(rows, headerIndex, layout2) {
+    const c = layout2.columns;
+    const width = layout2.columnCount ?? Math.max(0, ...rows.slice(0, 50).map((r) => r.length));
     const names2 = uniqueHeader(headerIndex >= 0 ? rows[headerIndex].map((h) => h.trim()) : new Array(width).fill(""));
     const transactions = [];
     const idFields = [];
@@ -11491,20 +11545,20 @@ var __AresiumEngine = (() => {
     let skipped = 0;
     let unreadable = 0;
     let ownIban2;
-    const accountColumn = layout.header.findIndex((h) => /^(kontoname|accountname|bezeichnungauftragskonto|kontonummerauftragskonto)$/.test(headerKey(h)));
+    const accountColumn = layout2.header.findIndex((h) => /^(kontoname|accountname|bezeichnungauftragskonto|kontonummerauftragskonto)$/.test(headerKey(h)));
     let ownAccount;
-    const amountHeader = layout.header[c.amount ?? c.debit ?? c.credit ?? -1] ?? "";
+    const amountHeader = layout2.header[c.amount ?? c.debit ?? c.credit ?? -1] ?? "";
     const headerCurrencies = [...new Set(amountHeader.toUpperCase().match(/\b(EUR|USD|GBP|CHF|JPY|CAD|AUD|CNY|DKK|NOK|SEK|PLN|CZK|HUF)\b/g) ?? [])];
     if (headerCurrencies.length > 1 && c.currency === void 0) {
       throw new BankFileError("unknown", "The amount column names several currencies without identifying each payment's currency.");
     }
-    let currency = layout.currency ?? headerCurrencies[0] ?? "EUR";
-    const skip = (layout.skipStatus ?? []).map((s) => s.toLowerCase());
-    const keep = (layout.keepStatus ?? []).map((s) => s.toLowerCase());
+    let currency = layout2.currency ?? headerCurrencies[0] ?? "EUR";
+    const skip = (layout2.skipStatus ?? []).map((s) => s.toLowerCase());
+    const keep = (layout2.keepStatus ?? []).map((s) => s.toLowerCase());
     const dateHeader = headerIndex >= 0 ? headerKey(rows[headerIndex][c.date] ?? "") : "";
     const datedRows = rows.slice(headerIndex + 1).filter((row) => DATE_FORMATS.some((f) => parseDate(cell(row, c.date), f) !== null));
     const expectedWidth = Math.min(
-      layout.columnCount ?? layout.header.length,
+      layout2.columnCount ?? layout2.header.length,
       datedRows.reduce((n, row) => Math.max(n, row.length), 0)
     );
     for (let r = headerIndex + 1; r < rows.length; r++) {
@@ -11520,7 +11574,7 @@ var __AresiumEngine = (() => {
       if (keys.some((k) => /^(date|bookingdate|buchungstag|buchungsdatum|buchung|umsatztag|belegdatum)$/.test(k)) && keys.some((k) => /^(amount|amounteur|betrag|betrageur|umsatzineur|debit|soll)$/.test(k))) {
         throw new BankFileError("unknown", "This file contains several payment tables or accounts. Export each account separately.");
       }
-      const date2 = parseDate(cell(row, c.date), layout.dateFormat);
+      const date2 = parseDate(cell(row, c.date), layout2.dateFormat);
       const status = cell(row, c.status).toLowerCase();
       if (c.status !== void 0 && (skip.some((s) => status.includes(s)) || keep.length > 0 && !keep.some((s) => status.includes(s)))) {
         skipped++;
@@ -11538,15 +11592,15 @@ var __AresiumEngine = (() => {
       }
       let amount2 = null;
       if (c.amount !== void 0) {
-        amount2 = parseAmountStrict(cell(row, c.amount), layout.numberFormat);
+        amount2 = parseAmountStrict(cell(row, c.amount), layout2.numberFormat);
         const mark = signMark(cell(row, c.sign));
         if (amount2 && c.sign !== void 0) {
           if (mark === "debit") amount2 = negate(absolute(amount2));
           else if (mark === "credit") amount2 = absolute(amount2);
         }
       } else {
-        const debit = parseAmountStrict(cell(row, c.debit), layout.numberFormat);
-        const credit = parseAmountStrict(cell(row, c.credit), layout.numberFormat);
+        const debit = parseAmountStrict(cell(row, c.debit), layout2.numberFormat);
+        const credit = parseAmountStrict(cell(row, c.credit), layout2.numberFormat);
         if (debit && !/^0\.0+$/.test(debit)) amount2 = negate(absolute(debit));
         else if (credit) amount2 = absolute(credit);
         else if (debit) amount2 = debit;
@@ -11556,13 +11610,13 @@ var __AresiumEngine = (() => {
         unreadable++;
         continue;
       }
-      if (layout.invertSign) amount2 = negate(amount2);
+      if (layout2.invertSign) amount2 = negate(amount2);
       for (const j of c.fees ?? []) {
-        const fee = parseAmountStrict(cell(row, j), layout.numberFormat);
+        const fee = parseAmountStrict(cell(row, j), layout2.numberFormat);
         if (fee) amount2 = addAmounts(amount2, negate(absolute(fee)));
       }
       for (const j of c.addAmounts ?? []) {
-        const extra = parseAmountStrict(cell(row, j), layout.numberFormat);
+        const extra = parseAmountStrict(cell(row, j), layout2.numberFormat);
         if (extra) amount2 = addAmounts(amount2, extra);
       }
       if (/^-?0\.0+$/.test(amount2)) {
@@ -11570,10 +11624,10 @@ var __AresiumEngine = (() => {
         continue;
       }
       const out = amount2.startsWith("-");
-      let counterparty = (out ? cell(row, c.payee) || cell(row, c.payer) : cell(row, c.payer) || cell(row, c.payee)) || (c.counterparty ?? []).map((i) => cell(row, i)).find(Boolean) || "";
-      let paymentText = sepaPaymentText(cleanText(...(c.text ?? []).map((i) => cell(row, i))));
-      if (layout.labelledText) {
-        const { labels, counterparty: names3, text: texts2 } = layout.labelledText;
+      let counterparty = (out ? cell(row, c.payee) || cell(row, c.payer) : cell(row, c.payer) || cell(row, c.payee)) || (c.counterparty ?? []).map((i2) => cell(row, i2)).find(Boolean) || "";
+      let paymentText = sepaPaymentText(cleanText(...(c.text ?? []).map((i2) => cell(row, i2))));
+      if (layout2.labelledText) {
+        const { labels, counterparty: names3, text: texts2 } = layout2.labelledText;
         const whole = paymentText;
         counterparty || (counterparty = names3.map((l) => labelledPart(whole, l, labels)).find(Boolean) ?? "");
         const labelled = texts2.map((l) => labelledPart(whole, l, labels)).find(Boolean);
@@ -11581,11 +11635,11 @@ var __AresiumEngine = (() => {
         else if (counterparty) paymentText = "";
       }
       let description = paymentText || cleanText(cell(row, c.kind)) || cleanText(counterparty) || "(no description)";
-      if (layout.idStyle === "vrbank") {
-        description = (c.text ?? []).map((i) => cell(row, i)).find(Boolean) || cell(row, c.kind) || "(no description)";
+      if (layout2.idStyle === "vrbank") {
+        description = (c.text ?? []).map((i2) => cell(row, i2)).find(Boolean) || cell(row, c.kind) || "(no description)";
       }
-      const valueDate = c.valueDate !== void 0 ? parseDate(cell(row, c.valueDate), layout.dateFormat) : void 0;
-      const balance = c.balance !== void 0 ? parseAmountStrict(cell(row, c.balance), layout.numberFormat) : void 0;
+      const valueDate = c.valueDate !== void 0 ? parseDate(cell(row, c.valueDate), layout2.dateFormat) : void 0;
+      const balance = c.balance !== void 0 ? parseAmountStrict(cell(row, c.balance), layout2.numberFormat) : void 0;
       const rowCurrency = /^[A-Za-z]{3}$/.test(cell(row, c.currency)) ? cell(row, c.currency).toUpperCase() : currency;
       currency = rowCurrency;
       const rowIban = c.accountIban !== void 0 ? normalizeIban(cell(row, c.accountIban)) ?? void 0 : void 0;
@@ -11597,8 +11651,8 @@ var __AresiumEngine = (() => {
       ownAccount ?? (ownAccount = rowAccount || void 0);
       const counterpartyIban = c.iban !== void 0 ? normalizeIban(cell(row, c.iban)) : null;
       const raw = {};
-      names2.forEach((name2, i) => {
-        raw[name2] = (row[i] ?? "").trim();
+      names2.forEach((name2, i2) => {
+        raw[name2] = (row[i2] ?? "").trim();
       });
       transactions.push({
         bookingDate: `${date2}T00:00:00.000Z`,
@@ -11611,7 +11665,7 @@ var __AresiumEngine = (() => {
         ...counterpartyIban ? { counterpartyIban } : {},
         raw
       });
-      if (layout.idStyle === "vrbank") {
+      if (layout2.idStyle === "vrbank") {
         let legacy = parseAmount(cell(row, c.amount));
         if (/^(s|d|soll)/i.test(cell(row, c.sign)) && !legacy.startsWith("-")) legacy = `-${legacy}`;
         idFields.push(`${date2}T00:00:00.000Z|${legacy}|${description}|${counterparty}`);
@@ -11619,7 +11673,7 @@ var __AresiumEngine = (() => {
         idFields.push([
           date2,
           amount2,
-          ...[c.payer, c.payee, ...c.counterparty ?? [], ...c.text ?? []].map((i) => cleanText(cell(row, i))),
+          ...[c.payer, c.payee, ...c.counterparty ?? [], ...c.text ?? []].map((i2) => cleanText(cell(row, i2))),
           cell(row, c.iban).replace(/\s/g, "")
         ].join("|"));
       }
@@ -11630,697 +11684,622 @@ var __AresiumEngine = (() => {
     if (!ownIban2) for (const row of rows.slice(0, Math.max(headerIndex, 0))) ownIban2 ?? (ownIban2 = findIban(row.join(" ")));
     const hashed = bookingIds(idFields);
     const ids = withReferences(references, hashed);
-    const name = layout.name ?? "Bank";
+    const name = layout2.name ?? "Bank";
     const account = { name: accountName(name, ownIban2), currency };
     if (ownIban2) account.iban = ownIban2;
     return {
       format: "csv",
       account,
-      transactions: transactions.map((t, i) => ({ externalId: ids[i], ...t })),
+      transactions: transactions.map((t, i2) => ({ externalId: ids[i2], ...t })),
       skipped,
-      layout
+      layout: layout2
     };
   }
   function withReferences(references, hashed) {
     const counts = /* @__PURE__ */ new Map();
     for (const ref of references) if (ref) counts.set(ref, (counts.get(ref) ?? 0) + 1);
-    return references.map((ref, i) => ref && counts.get(ref) === 1 ? ref : hashed[i]);
+    return references.map((ref, i2) => ref && counts.get(ref) === 1 ? ref : hashed[i2]);
   }
 
-  // src/engine/readers/camt.ts
-  var parser2 = new import_fast_xml_parser2.XMLParser({
-    ignoreAttributes: false,
-    attributeNamePrefix: "@_",
-    parseTagValue: false,
-    // keep IBANs and amounts as strings
-    removeNSPrefix: true
-    // <ns2:Document> and friends
-  });
-  function arr2(x) {
-    if (x === void 0 || x === null) return [];
-    return Array.isArray(x) ? x : [x];
-  }
-  function textOf2(node2) {
-    if (node2 && typeof node2 === "object" && "#text" in node2) return String(node2["#text"]);
-    return node2 == null || typeof node2 === "object" ? "" : String(node2);
-  }
-  var dateOnly = (value) => {
-    const v = textOf2(value).trim();
-    return /^\d{4}-\d{2}-\d{2}/.test(v) ? `${v.slice(0, 10)}T00:00:00.000Z` : null;
+  // node_modules/fflate/esm/browser.js
+  var u8 = Uint8Array;
+  var u16 = Uint16Array;
+  var i32 = Int32Array;
+  var fleb = new u8([
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    1,
+    1,
+    1,
+    2,
+    2,
+    2,
+    2,
+    3,
+    3,
+    3,
+    3,
+    4,
+    4,
+    4,
+    4,
+    5,
+    5,
+    5,
+    5,
+    0,
+    /* unused */
+    0,
+    0,
+    /* impossible */
+    0
+  ]);
+  var fdeb = new u8([
+    0,
+    0,
+    0,
+    0,
+    1,
+    1,
+    2,
+    2,
+    3,
+    3,
+    4,
+    4,
+    5,
+    5,
+    6,
+    6,
+    7,
+    7,
+    8,
+    8,
+    9,
+    9,
+    10,
+    10,
+    11,
+    11,
+    12,
+    12,
+    13,
+    13,
+    /* unused */
+    0,
+    0
+  ]);
+  var clim = new u8([16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15]);
+  var freb = function(eb, start) {
+    var b = new u16(31);
+    for (var i2 = 0; i2 < 31; ++i2) {
+      b[i2] = start += 1 << eb[i2 - 1];
+    }
+    var r = new i32(b[30]);
+    for (var i2 = 1; i2 < 30; ++i2) {
+      for (var j = b[i2]; j < b[i2 + 1]; ++j) {
+        r[j] = j - b[i2] << 5 | i2;
+      }
+    }
+    return { b, r };
   };
-  var nameOf = (party) => cleanText(textOf2(party?.Nm) || textOf2(party?.Pty?.Nm));
-  var ibanOf = (account) => textOf2(account?.Id?.IBAN).replace(/\s/g, "");
-  function entryCounterpartyIban(ntry) {
-    if (!ntry || typeof ntry !== "object") return void 0;
-    const node2 = ntry;
-    const tx = arr2(node2.NtryDtls).flatMap((d) => arr2(d?.TxDtls))[0];
-    const parties = tx?.RltdPties ?? {};
-    return normalizeIban(ibanOf(node2.CdtDbtInd === "DBIT" ? parties.CdtrAcct : parties.DbtrAcct)) ?? void 0;
+  var _a = freb(fleb, 2);
+  var fl = _a.b;
+  var revfl = _a.r;
+  fl[28] = 258, revfl[258] = 28;
+  var _b = freb(fdeb, 0);
+  var fd = _b.b;
+  var revfd = _b.r;
+  var rev = new u16(32768);
+  for (i = 0; i < 32768; ++i) {
+    x = (i & 43690) >> 1 | (i & 21845) << 1;
+    x = (x & 52428) >> 2 | (x & 13107) << 2;
+    x = (x & 61680) >> 4 | (x & 3855) << 4;
+    rev[i] = ((x & 65280) >> 8 | (x & 255) << 8) >> 1;
   }
-  var remittance = (tx) => cleanText(...arr2(tx?.RmtInf?.Ustrd).map(textOf2)) || cleanText(...arr2(tx?.RmtInf?.Strd).map((s) => textOf2(s?.CdtrRefInf?.Ref))) || cleanText(textOf2(tx?.AddtlTxInf));
-  function batchText(texts2) {
-    const distinct = [...new Set(texts2.filter(Boolean))];
-    return distinct.length > 3 ? `${distinct.slice(0, 3).join(" / ")} / \u2026` : distinct.join(" / ");
-  }
-  function signedAmount(node2) {
-    const amount2 = parseAmountStrict(textOf2(node2.Amt), "en");
-    if (!amount2) return null;
-    return node2.CdtDbtInd === "DBIT" ? negate(amount2) : amount2;
-  }
-  function vrCamtId(ntry) {
-    const isDebit = ntry.CdtDbtInd === "DBIT";
-    const amount2 = `${isDebit ? "-" : ""}${parseAmount(textOf2(ntry.Amt))}`;
-    const bookingDate2 = new Date(ntry.BookgDt?.Dt || ntry.BookgDt?.DtTm || ntry.ValDt?.Dt);
-    const tx = arr2(ntry.NtryDtls?.TxDtls)[0];
-    const remittance2 = arr2(tx?.RmtInf?.Ustrd).map(textOf2).join(" ").trim() || textOf2(ntry.AddtlNtryInf).trim() || "(no description)";
-    const creditor = tx?.RltdPties?.Cdtr?.Nm;
-    const debtor = tx?.RltdPties?.Dbtr?.Nm;
-    const counterpartyRaw = (isDebit ? creditor : debtor) || creditor || debtor;
-    const counterparty = counterpartyRaw ? String(counterpartyRaw) : null;
-    const time = bookingDate2.getTime();
-    const fields2 = `${isNaN(time) ? "Invalid Date" : bookingDate2.toISOString()}|${amount2}|${remittance2}|${counterparty ?? ""}`;
-    const ref = ntry.AcctSvcrRef || tx?.Refs?.AcctSvcrRef || tx?.Refs?.EndToEndId || tx?.Refs?.TxId;
-    return { id: ref && ref !== "NOTPROVIDED" ? String(ref) : hashId(fields2), fields: fields2 };
-  }
-  function isVrBank(iban, bic) {
-    if (!iban && !bic) return true;
-    if (bic.toUpperCase().startsWith("GENO")) return true;
-    return /^DE\d{2}\d{3}[69]/.test(iban);
-  }
-  var PENDING = /* @__PURE__ */ new Set(["PDNG", "INFO", "FUTR"]);
-  var statusOf = (ntry) => textOf2(ntry.Sts?.Cd ?? ntry.Sts).trim().toUpperCase();
-  function balances(stmt) {
-    const out = {};
-    for (const bal of arr2(stmt.Bal)) {
-      const code = textOf2(bal?.Tp?.CdOrPrtry?.Cd).toUpperCase();
-      const amount2 = signedAmount(bal);
-      if (!amount2) continue;
-      if ((code === "OPBD" || code === "PRCD") && out.opening === void 0) out.opening = amount2;
-      if (code === "CLBD") out.closing = amount2;
+  var x;
+  var i;
+  var hMap = (function(cd, mb, r) {
+    var s = cd.length;
+    var i2 = 0;
+    var l = new u16(mb);
+    for (; i2 < s; ++i2) {
+      if (cd[i2])
+        ++l[cd[i2] - 1];
     }
-    return out;
-  }
-  function readCamt(xml) {
-    let doc;
-    try {
-      doc = parser2.parse(xml);
-    } catch {
-      throw new BankFileError("camt", "This XML file could not be read.");
+    var le = new u16(mb);
+    for (i2 = 1; i2 < mb; ++i2) {
+      le[i2] = le[i2 - 1] + l[i2 - 1] << 1;
     }
-    const root = doc.Document;
-    const container = root?.BkToCstmrStmt ?? root?.BkToCstmrAcctRpt ?? root?.BkToCstmrDbtCdtNtfctn;
-    if (!container) throw new BankFileError("camt", "This XML file is not a CAMT bank statement (camt.052, .053 or .054).");
-    const statements = arr2(container.Stmt ?? container.Rpt ?? container.Ntfctn);
-    const transactions = [];
-    const candidates = [];
-    let iban = "", bic = "", bankName2 = "", currency = "EUR", skipped = 0;
-    for (const stmt of statements) {
-      iban || (iban = ibanOf(stmt.Acct));
-      bic || (bic = textOf2(stmt.Acct?.Svcr?.FinInstnId?.BIC ?? stmt.Acct?.Svcr?.FinInstnId?.BICFI));
-      bankName2 || (bankName2 = cleanText(textOf2(stmt.Acct?.Svcr?.FinInstnId?.Nm)));
-      currency = textOf2(stmt.Acct?.Ccy) || currency;
-    }
-    const vr = isVrBank(iban, bic);
-    for (const stmt of statements) {
-      const { opening, closing: closing2 } = balances(stmt);
-      const start = transactions.length;
-      for (const ntry of arr2(stmt.Ntry)) {
-        const amount2 = signedAmount(ntry);
-        const bookingDate2 = dateOnly(ntry.BookgDt?.Dt ?? ntry.BookgDt?.DtTm) ?? dateOnly(ntry.ValDt?.Dt ?? ntry.ValDt?.DtTm);
-        if (PENDING.has(statusOf(ntry)) || !amount2 || !bookingDate2) {
-          skipped++;
-          continue;
-        }
-        const out = amount2.startsWith("-");
-        const details = arr2(ntry.NtryDtls).flatMap((d) => arr2(d?.TxDtls));
-        const tx = details[0];
-        const parties = tx?.RltdPties ?? {};
-        const creditor = nameOf(parties.Cdtr) || nameOf(parties.UltmtCdtr);
-        const debtor = nameOf(parties.Dbtr) || nameOf(parties.UltmtDbtr);
-        const counterparty = (out ? creditor || debtor : debtor || creditor) || null;
-        const counterpartyIban = ibanOf(out ? parties.CdtrAcct : parties.DbtrAcct);
-        const checkedIban = entryCounterpartyIban(ntry);
-        const description = batchText(details.map(remittance)) || cleanText(textOf2(ntry.AddtlNtryInf)) || "(no description)";
-        const ccy = (ntry.Amt && typeof ntry.Amt === "object" ? ntry.Amt["@_Ccy"] : void 0) || currency;
-        transactions.push({
-          bookingDate: bookingDate2,
-          valueDate: dateOnly(ntry.ValDt?.Dt ?? ntry.ValDt?.DtTm),
-          amount: amount2,
-          currency: ccy,
-          description,
-          counterparty,
-          ...checkedIban ? { counterpartyIban: checkedIban } : {},
-          raw: ntry
-        });
-        if (vr) candidates.push(vrCamtId(ntry));
-        else {
-          const ref = textOf2(ntry.AcctSvcrRef) || textOf2(tx?.Refs?.AcctSvcrRef);
-          const fields2 = [
-            bookingDate2.slice(0, 10),
-            amount2,
-            description,
-            counterparty ?? "",
-            counterpartyIban,
-            textOf2(tx?.Refs?.EndToEndId)
-          ].join("|");
-          candidates.push({ id: ref && ref !== "NOTPROVIDED" ? ref : hashId(fields2), fields: fields2 });
+    var co;
+    if (r) {
+      co = new u16(1 << mb);
+      var rvb = 15 - mb;
+      for (i2 = 0; i2 < s; ++i2) {
+        if (cd[i2]) {
+          var sv = i2 << 4 | cd[i2];
+          var r_1 = mb - cd[i2];
+          var v = le[cd[i2] - 1]++ << r_1;
+          for (var m = v | (1 << r_1) - 1; v <= m; ++v) {
+            co[rev[v] >> rvb] = sv;
+          }
         }
       }
-      const own = transactions.slice(start);
-      if (opening !== void 0 && own.length > 0 && own.every((t, i) => i === 0 || own[i - 1].bookingDate <= t.bookingDate)) {
-        let running = opening;
-        const after = own.map((t) => running = addAmounts(running, t.amount));
-        if (closing2 === void 0 || sameAmount(running, closing2)) own.forEach((t, i) => {
-          t.balance = after[i];
-        });
-      }
-    }
-    const ids = withOccurrences(candidates);
-    const account = { name: accountName(bankName2 || "Bank", iban || void 0), currency };
-    if (iban) account.iban = iban;
-    return {
-      format: "camt",
-      account,
-      transactions: transactions.map((t, i) => ({ externalId: ids[i], ...t })),
-      skipped
-    };
-  }
-
-  // src/engine/readers/guess.ts
-  var WORDS = {
-    date: [
-      "buchungstag",
-      "buchungsdatum",
-      "buchung",
-      "datum",
-      "date",
-      "bookingdate",
-      "completeddate",
-      "transactiondate",
-      "umsatztag",
-      "belegdatum",
-      "booked",
-      "tag"
-    ],
-    valueDate: ["valuta", "valutadatum", "wertstellung", "wert", "valuedate"],
-    amount: ["betrag", "umsatz", "amount", "summe", "value", "total", "betrageur", "amounteur"],
-    debit: ["soll", "belastung", "debit", "ausgang", "ausgabe", "moneyout", "paidout", "withdrawal", "lastschrift"],
-    credit: ["haben", "gutschrift", "credit", "eingang", "einnahme", "moneyin", "paidin", "deposit"],
-    balance: ["saldo", "kontostand", "balance", "guthaben", "saldonachbuchung", "runningbalance"],
-    counterparty: [
-      "zahlungsbeteiligter",
-      "namezahlungsbeteiligter",
-      "beguenstigter",
-      "zahlungspflichtiger",
-      "empfaenger",
-      "auftraggeber",
-      "name",
-      "payee",
-      "payer",
-      "partner",
-      "partnername",
-      "merchant",
-      "counterparty",
-      "haendler",
-      "gegenpartei",
-      "gegenseite",
-      "beguenstigterzahlungspflichtiger",
-      "auftraggeberempfaenger",
-      "recipient",
-      "sender"
-    ],
-    text: [
-      "verwendungszweck",
-      "zweck",
-      "purpose",
-      "reference",
-      "paymentreference",
-      "referenz",
-      "memo",
-      "description",
-      "beschreibung",
-      "details",
-      "buchungsdetails",
-      "text",
-      "notes",
-      "notiz",
-      "betreff",
-      "vorgangverwendungszweck",
-      "information",
-      "buchungsinformation"
-    ],
-    kind: ["buchungstext", "umsatzart", "vorgang", "type", "transactiontype", "art", "buchungsart", "umsatztyp", "typ"],
-    iban: ["iban", "kontonummer", "accountnumber", "konto", "partneriban", "ibanzahlungsbeteiligter", "kontonummeriban"],
-    accountIban: ["auftragskonto", "ibanauftragskonto", "eigeneiban", "ownaccount"],
-    currency: ["waehrung", "currency", "ccy"],
-    reference: ["transactionid", "transaktionsid", "transaktionscode", "referenznummer", "buchungsreferenz", "id"],
-    status: ["status", "state", "zustand", "info"]
-  };
-  function wordScore(header, role) {
-    const key = headerKey(header);
-    let best = 0;
-    for (const word of WORDS[role]) {
-      const fits = word.length <= 4 ? key === word || key === `${word}eur` : key.includes(word);
-      if (fits && word.length > best) best = word.length;
-    }
-    return best;
-  }
-  var hasLetter = (v) => /\p{L}/u.test(v);
-  var DE_DECIMAL = /\d,\d{1,2}(?!\d)/;
-  var EN_DECIMAL = /\d\.\d{1,2}(?!\d)/;
-  var isDateLike = (v) => DATE_FORMATS.some((f) => parseDate(v, f) !== null);
-  var SIGN_VALUE = /^(s|h|soll|haben|d|c|db|cr|dbit|crdt|debit|credit|\+|-)$/i;
-  function findHeader(rows) {
-    for (let i = 0; i < Math.min(rows.length, 60); i++) {
-      const cells = trimRow(rows[i]);
-      if (cells.some((v) => /^(plannedamount|forecastamount|budgetamount)/.test(headerKey(v)))) continue;
-      const filled = cells.filter(Boolean);
-      if (filled.length < 3 || filled.length < cells.length * 0.6) continue;
-      if (!filled.every((v) => hasLetter(v) && !isDateLike(v) && !DE_DECIMAL.test(v) && !EN_DECIMAL.test(v))) continue;
-      const next = rows.slice(i + 1, i + 6).map(trimRow).filter((r) => r.length > 0);
-      if (next.some((r) => r.length >= cells.length - 2 && r.some(isDateLike))) return i;
-    }
-    return -1;
-  }
-  function bestDateFormat(values) {
-    let best = "DD.MM.YYYY", share = 0;
-    const full = [];
-    for (const format of DATE_FORMATS) {
-      const ok = values.filter((v) => parseDate(v, format) !== null).length / Math.max(values.length, 1);
-      if (ok > share) {
-        best = format;
-        share = ok;
-      }
-      if (ok === 1) full.push(format);
-    }
-    let ambiguous = false;
-    if (full.includes("DD/MM/YYYY") && full.includes("MM/DD/YYYY")) {
-      const sorted = (format) => {
-        const dates = values.map((v) => parseDate(v, format));
-        const up = dates.every((d, i) => i === 0 || dates[i - 1] <= d), down = dates.every((d, i) => i === 0 || dates[i - 1] >= d);
-        return up || down;
-      };
-      const dm = sorted("DD/MM/YYYY"), md = sorted("MM/DD/YYYY");
-      best = md && !dm ? "MM/DD/YYYY" : "DD/MM/YYYY";
-      ambiguous = true;
-    }
-    return { format: best, share, ambiguous };
-  }
-  function balanceFits(amounts, balances2) {
-    let fits = 0, pairs = 0;
-    for (let i = 1; i < amounts.length; i++) {
-      const a0 = amounts[i - 1], a1 = amounts[i], b0 = balances2[i - 1], b1 = balances2[i];
-      if (!a0 || !a1 || !b0 || !b1) continue;
-      pairs++;
-      if (sameAmount(addAmounts(b0, a1), b1) || sameAmount(addAmounts(b1, a0), b0)) fits++;
-    }
-    return pairs === 0 ? 0 : fits / pairs;
-  }
-  var filledAmount = (v) => v !== null && !/^-?0\.0+$/.test(v);
-  function complementary(a, b) {
-    return !a.some((v, i) => filledAmount(v) && filledAmount(b[i])) && a.some(filledAmount) && b.some(filledAmount);
-  }
-  function outAndIn(out, inn) {
-    return out.map((v, i) => filledAmount(v) ? `-${v.replace(/^-/, "")}` : filledAmount(inn[i]) ? inn[i].replace(/^-/, "") : null);
-  }
-  function findTableStart(rows) {
-    const headerRow = findHeader(rows);
-    if (headerRow >= 0) return { headerRow, width: trimRow(rows[headerRow]).length };
-    const filled = rows.filter((r) => r.some((v) => v.trim() !== ""));
-    const sample = filled.slice(0, 5);
-    const width = sample[0]?.length ?? 0;
-    const isData = (r) => r.length === width && trimRow(r).length >= 3 && r.some(isDateLike) && r.some((v) => !isDateLike(v) && (DE_DECIMAL.test(v) || EN_DECIMAL.test(v)));
-    return sample.length > 0 && sample.every(isData) ? { headerRow: -1, width } : null;
-  }
-  function guessCsvLayout(text2) {
-    return analyseCsv(text2).guess;
-  }
-  function analyseCsv(text2) {
-    const separator = detectSeparator(text2);
-    const rows = checkedCsvRows(text2, separator);
-    const table = findTableStart(rows);
-    if (!table) throw new BankFileError("noTable", "No table with a header row and dates was found in this file.");
-    const { headerRow, width } = table;
-    const header = headerRow >= 0 ? trimRow(rows[headerRow]) : [];
-    const names2 = headerRow >= 0 ? header : Array.from({ length: width }, (_, i) => `Column ${i + 1}`);
-    const data = rows.slice(headerRow + 1).map(trimRow).filter((r) => r.length >= Math.ceil(width / 2) && r.some(isDateLike));
-    const column = (j) => data.map((r) => r[j] ?? "");
-    let de = 0, en = 0;
-    for (const r of data) for (const v of r) {
-      if (isDateLike(v)) continue;
-      if (DE_DECIMAL.test(v)) de++;
-      if (EN_DECIMAL.test(v)) en++;
-    }
-    const numberFormat = en > de ? "en" : "de";
-    const decimalMark = numberFormat === "de" ? DE_DECIMAL : EN_DECIMAL;
-    const columns = [];
-    for (let j = 0; j < width; j++) {
-      const all = column(j), values = all.filter(Boolean);
-      let kind = "text";
-      let dateFormat2, ambiguous = false;
-      if (values.length === 0) kind = "empty";
-      else {
-        const date2 = bestDateFormat(values);
-        const amounts = values.filter((v) => parseAmountStrict(v, numberFormat) !== null).length / values.length;
-        const decimals = values.filter((v) => decimalMark.test(v)).length / values.length;
-        if (date2.share >= 0.9) {
-          kind = "date";
-          dateFormat2 = date2.format;
-          ambiguous = date2.ambiguous;
-        } else if (values.filter((v) => normalizeIban(v)).length / values.length >= 0.8) kind = "iban";
-        else if (amounts >= 0.9 && decimals >= 0.5) kind = "amount";
-        else if (values.every((v) => SIGN_VALUE.test(v)) && new Set(values.map((v) => v.toLowerCase())).size <= 4) kind = "sign";
-        else if (values.every((v) => /^[A-Z]{3}$/.test(v)) && new Set(values).size <= 3) kind = "currency";
-        else if (values.every((v) => /^[\d\s/-]+$/.test(v))) kind = "number";
-      }
-      columns.push({ index: j, header: names2[j], kind, samples: values.slice(0, 3), values: all, dateFormat: dateFormat2, ambiguous });
-    }
-    const roles = {};
-    const unsure = /* @__PURE__ */ new Set();
-    const taken = /* @__PURE__ */ new Set();
-    const take = (role, j) => {
-      roles[role] = j;
-      taken.add(j);
-    };
-    const byWord = (role, kinds) => columns.filter((col) => !taken.has(col.index) && kinds.includes(col.kind) && wordScore(col.header, role) > 0).sort((a, b) => wordScore(b.header, role) - wordScore(a.header, role))[0];
-    const dates = columns.filter((col) => col.kind === "date");
-    const booking = [...dates].sort((a, b) => wordScore(b.header, "date") - wordScore(b.header, "valueDate") - (wordScore(a.header, "date") - wordScore(a.header, "valueDate")) || a.index - b.index)[0];
-    if (booking) {
-      take("date", booking.index);
-      if (wordScore(booking.header, "date") === 0) unsure.add("date");
-      const value = dates.find((col) => col !== booking && wordScore(col.header, "valueDate") > 0) ?? dates.find((col) => col !== booking);
-      if (value) take("valueDate", value.index);
-    }
-    const amountCols = columns.filter((col) => col.kind === "amount");
-    const parsed = (j) => columns[j].values.map((v) => parseAmountStrict(v, numberFormat));
-    const balanceWord = byWord("balance", ["amount"]);
-    if (balanceWord) take("balance", balanceWord.index);
-    const debitWord = byWord("debit", ["amount"]), creditWord = byWord("credit", ["amount"]);
-    const amountWord = byWord("amount", ["amount"]);
-    if (amountWord) take("amount", amountWord.index);
-    else if (debitWord && creditWord) {
-      take("debit", debitWord.index);
-      take("credit", creditWord.index);
     } else {
-      let rest = amountCols.filter((col) => !taken.has(col.index));
-      if (roles.balance === void 0) {
-        const movesBy = (b) => rest.some((a) => a.index !== b && balanceFits(parsed(a.index), parsed(b)) >= 0.8) || rest.some((x) => rest.some((y) => x !== y && x.index !== b && y.index !== b && complementary(parsed(x.index), parsed(y.index)) && balanceFits(outAndIn(parsed(x.index), parsed(y.index)), parsed(b)) >= 0.8));
-        const moving = rest.find((col) => movesBy(col.index));
-        if (moving) {
-          take("balance", moving.index);
-          rest = rest.filter((col) => col !== moving);
-        }
-      }
-      const pair = rest.length === 2 ? debitCredit(rest[0].index, rest[1].index) : null;
-      if (pair) {
-        take("debit", pair.debit);
-        take("credit", pair.credit);
-        if (!pair.sure) unsure.add("amount");
-      } else {
-        const balanceCol = roles.balance;
-        const fitting = balanceCol !== void 0 ? rest.find((col) => balanceFits(parsed(col.index), parsed(balanceCol)) >= 0.8) : void 0;
-        if (fitting) take("amount", fitting.index);
-        else if (rest[0]) {
-          take("amount", rest[0].index);
-          unsure.add("amount");
+      co = new u16(s);
+      for (i2 = 0; i2 < s; ++i2) {
+        if (cd[i2]) {
+          co[i2] = rev[le[cd[i2] - 1]++] >> 15 - cd[i2];
         }
       }
     }
-    if (roles.balance === void 0 && roles.amount !== void 0) {
-      const fitting = amountCols.find((col) => !taken.has(col.index) && balanceFits(parsed(roles.amount), parsed(col.index)) >= 0.8);
-      if (fitting) take("balance", fitting.index);
+    return co;
+  });
+  var flt = new u8(288);
+  for (i = 0; i < 144; ++i)
+    flt[i] = 8;
+  var i;
+  for (i = 144; i < 256; ++i)
+    flt[i] = 9;
+  var i;
+  for (i = 256; i < 280; ++i)
+    flt[i] = 7;
+  var i;
+  for (i = 280; i < 288; ++i)
+    flt[i] = 8;
+  var i;
+  var fdt = new u8(32);
+  for (i = 0; i < 32; ++i)
+    fdt[i] = 5;
+  var i;
+  var flrm = /* @__PURE__ */ hMap(flt, 9, 1);
+  var fdrm = /* @__PURE__ */ hMap(fdt, 5, 1);
+  var max = function(a) {
+    var m = a[0];
+    for (var i2 = 1; i2 < a.length; ++i2) {
+      if (a[i2] > m)
+        m = a[i2];
     }
-    function debitCredit(a, b) {
-      const pa = parsed(a), pb = parsed(b);
-      if (!complementary(pa, pb)) return null;
-      if (debitWord?.index === a || creditWord?.index === b) return { debit: a, credit: b, sure: true };
-      if (debitWord?.index === b || creditWord?.index === a) return { debit: b, credit: a, sure: true };
-      if (roles.balance !== void 0) {
-        const balance = parsed(roles.balance);
-        if (balanceFits(outAndIn(pa, pb), balance) >= 0.8) return { debit: a, credit: b, sure: true };
-        if (balanceFits(outAndIn(pb, pa), balance) >= 0.8) return { debit: b, credit: a, sure: true };
+    return m;
+  };
+  var bits = function(d, p, m) {
+    var o = p / 8 | 0;
+    return (d[o] | d[o + 1] << 8) >> (p & 7) & m;
+  };
+  var bits16 = function(d, p) {
+    var o = p / 8 | 0;
+    return (d[o] | d[o + 1] << 8 | d[o + 2] << 16) >> (p & 7);
+  };
+  var shft = function(p) {
+    return (p + 7) / 8 | 0;
+  };
+  var slc = function(v, s, e) {
+    if (s == null || s < 0)
+      s = 0;
+    if (e == null || e > v.length)
+      e = v.length;
+    return new u8(v.subarray(s, e));
+  };
+  var ec = [
+    "unexpected EOF",
+    "invalid block type",
+    "invalid length/literal",
+    "invalid distance",
+    "stream finished",
+    "no stream handler",
+    ,
+    "no callback",
+    "invalid UTF-8 data",
+    "extra field too long",
+    "date not in range 1980-2099",
+    "filename too long",
+    "stream finishing",
+    "invalid zip data"
+    // determined by unknown compression method
+  ];
+  var err = function(ind, msg, nt) {
+    var e = new Error(msg || ec[ind]);
+    e.code = ind;
+    if (Error.captureStackTrace)
+      Error.captureStackTrace(e, err);
+    if (!nt)
+      throw e;
+    return e;
+  };
+  var inflt = function(dat, st, buf, dict) {
+    var sl = dat.length, dl = dict ? dict.length : 0;
+    if (!sl || st.f && !st.l)
+      return buf || new u8(0);
+    var noBuf = !buf;
+    var resize = noBuf || st.i != 2;
+    var noSt = st.i;
+    if (noBuf)
+      buf = new u8(sl * 3);
+    var cbuf = function(l2) {
+      var bl = buf.length;
+      if (l2 > bl) {
+        var nbuf = new u8(Math.max(bl * 2, l2));
+        nbuf.set(buf);
+        buf = nbuf;
       }
-      if (pa.filter(filledAmount).every((v) => v.startsWith("-"))) return { debit: a, credit: b, sure: true };
-      if (pb.filter(filledAmount).every((v) => v.startsWith("-"))) return { debit: b, credit: a, sure: true };
-      return { debit: a, credit: b, sure: false };
-    }
-    const sign = columns.find((col) => col.kind === "sign");
-    const anyNegative = roles.amount !== void 0 && parsed(roles.amount).some((a) => a?.startsWith("-"));
-    if (sign && roles.amount !== void 0 && !anyNegative) taken.add(sign.index);
-    else if (roles.amount !== void 0 && !anyNegative) unsure.add("sign");
-    for (const col of columns.filter((c) => c.kind === "iban" && !taken.has(c.index))) {
-      const distinct = new Set(col.values.filter(Boolean).map((v) => v.replace(/\s/g, "")));
-      if (distinct.size === 1 && data.length > 1 || wordScore(col.header, "accountIban") > 0) {
-        if (roles.accountIban === void 0) take("accountIban", col.index);
-      } else if (roles.iban === void 0) take("iban", col.index);
-    }
-    const currency = byWord("currency", ["currency", "text"]) ?? columns.find((col) => col.kind === "currency" && !taken.has(col.index));
-    if (currency) take("currency", currency.index);
-    const status = byWord("status", ["text"]);
-    if (status && new Set(status.values).size <= 6) take("status", status.index);
-    const reference = byWord("reference", ["text", "number"]);
-    if (reference && new Set(reference.values.filter(Boolean)).size === reference.values.filter(Boolean).length) take("reference", reference.index);
-    const bookingType = (col) => col.values.filter(Boolean).every((v) => /^(lastschrift|sepa.lastschrift|überweisung|sepa.überweisung|gutschrift|kartenzahlung|kartenverfügung|dauerauftrag|card payment|transfer)$/i.test(v.trim()));
-    const purpose = columns.filter((col) => col.kind === "text" && !taken.has(col.index) && wordScore(col.header, "text") > wordScore(col.header, "kind") && wordScore(col.header, "text") > 0).sort((a, b) => wordScore(b.header, "text") - wordScore(a.header, "text"))[0];
-    if (purpose) take("text", purpose.index);
-    const type = columns.filter((col) => col.kind === "text" && !taken.has(col.index) && wordScore(col.header, "kind") > 0 && bookingType(col)).sort((a, b) => wordScore(b.header, "kind") - wordScore(a.header, "kind"))[0];
-    if (type) take("kind", type.index);
-    for (const role of ["kind", "counterparty", "text"]) {
-      if (roles[role] !== void 0) continue;
-      const col = byWord(role, ["text"]);
-      if (col) take(role, col.index);
-    }
-    const freeText = columns.filter((col) => col.kind === "text" && !taken.has(col.index));
-    const avg = (col) => col.values.reduce((n, v) => n + v.length, 0) / Math.max(col.values.length, 1);
-    if (roles.text === void 0) {
-      const longest = [...freeText].sort((a, b) => avg(b) - avg(a))[0];
-      if (longest) {
-        take("text", longest.index);
-        unsure.add("text");
-      }
-    }
-    if (roles.counterparty === void 0) unsure.add("counterparty");
-    const missing = [];
-    if (roles.date === void 0) missing.push("date");
-    if (roles.amount === void 0 && (roles.debit === void 0 || roles.credit === void 0)) missing.push("amount");
-    const info = columns.map(({ index, header: h, kind, samples, dateFormat: f }) => ({ index, header: h, kind, samples, ...f ? { dateFormat: f } : {} }));
-    const dateCol = roles.date !== void 0 ? columns[roles.date] : void 0;
-    const dateFormat = dateCol?.dateFormat ?? "DD.MM.YYYY";
-    if (dateCol?.ambiguous) unsure.add("dateFormat");
-    if (missing.length > 0) {
-      return {
-        guess: { layout: null, confidence: 0, unsure: [...unsure], missing, separator, header, headerRow, columns: info, preview: [] },
-        columns,
-        rows,
-        payments: []
-      };
-    }
-    const layout = {
-      version: 1,
-      separator,
-      header,
-      ...headerRow < 0 ? { columnCount: width } : {},
-      dateFormat,
-      numberFormat,
-      columns: {
-        date: roles.date,
-        ...roles.valueDate !== void 0 ? { valueDate: roles.valueDate } : {},
-        ...roles.amount !== void 0 ? { amount: roles.amount } : { debit: roles.debit, credit: roles.credit },
-        ...sign && roles.amount !== void 0 && !anyNegative ? { sign: sign.index } : {},
-        ...roles.counterparty !== void 0 ? { counterparty: [roles.counterparty] } : {},
-        ...roles.text !== void 0 ? { text: [roles.text] } : {},
-        ...roles.kind !== void 0 ? { kind: roles.kind } : {},
-        ...roles.iban !== void 0 ? { iban: roles.iban } : {},
-        ...roles.accountIban !== void 0 ? { accountIban: roles.accountIban } : {},
-        ...roles.balance !== void 0 ? { balance: roles.balance } : {},
-        ...roles.currency !== void 0 ? { currency: roles.currency } : {},
-        ...roles.reference !== void 0 ? { reference: roles.reference } : {},
-        ...roles.status !== void 0 ? { status: roles.status } : {}
-      },
-      ...roles.status !== void 0 ? { skipStatus: ["vorgemerkt", "pending", "offen", "reverted", "declined", "failed", "storniert"] } : {}
     };
-    const read2 = readTable(rows, headerRow, layout);
-    const rowsRead = read2.transactions.length / Math.max(data.length, 1);
-    let confidence = Math.min(1, rowsRead);
-    if (unsure.has("date")) confidence *= 0.85;
-    if (unsure.has("dateFormat")) confidence *= 0.7;
-    if (unsure.has("amount")) confidence *= 0.75;
-    if (unsure.has("sign")) confidence *= 0.7;
-    if (unsure.has("text")) confidence *= 0.9;
-    if (unsure.has("counterparty")) confidence *= 0.9;
+    var final = st.f || 0, pos = st.p || 0, bt = st.b || 0, lm = st.l, dm = st.d, lbt = st.m, dbt = st.n;
+    var tbts = sl * 8;
+    do {
+      if (!lm) {
+        final = bits(dat, pos, 1);
+        var type = bits(dat, pos + 1, 3);
+        pos += 3;
+        if (!type) {
+          var s = shft(pos) + 4, l = dat[s - 4] | dat[s - 3] << 8, t = s + l;
+          if (t > sl) {
+            if (noSt)
+              err(0);
+            break;
+          }
+          if (resize)
+            cbuf(bt + l);
+          buf.set(dat.subarray(s, t), bt);
+          st.b = bt += l, st.p = pos = t * 8, st.f = final;
+          continue;
+        } else if (type == 1)
+          lm = flrm, dm = fdrm, lbt = 9, dbt = 5;
+        else if (type == 2) {
+          var hLit = bits(dat, pos, 31) + 257, hcLen = bits(dat, pos + 10, 15) + 4;
+          var tl = hLit + bits(dat, pos + 5, 31) + 1;
+          pos += 14;
+          var ldt = new u8(tl);
+          var clt = new u8(19);
+          for (var i2 = 0; i2 < hcLen; ++i2) {
+            clt[clim[i2]] = bits(dat, pos + i2 * 3, 7);
+          }
+          pos += hcLen * 3;
+          var clb = max(clt), clbmsk = (1 << clb) - 1;
+          var clm = hMap(clt, clb, 1);
+          for (var i2 = 0; i2 < tl; ) {
+            var r = clm[bits(dat, pos, clbmsk)];
+            pos += r & 15;
+            var s = r >> 4;
+            if (s < 16) {
+              ldt[i2++] = s;
+            } else {
+              var c = 0, n = 0;
+              if (s == 16)
+                n = 3 + bits(dat, pos, 3), pos += 2, c = ldt[i2 - 1];
+              else if (s == 17)
+                n = 3 + bits(dat, pos, 7), pos += 3;
+              else if (s == 18)
+                n = 11 + bits(dat, pos, 127), pos += 7;
+              while (n--)
+                ldt[i2++] = c;
+            }
+          }
+          var lt = ldt.subarray(0, hLit), dt = ldt.subarray(hLit);
+          lbt = max(lt);
+          dbt = max(dt);
+          lm = hMap(lt, lbt, 1);
+          dm = hMap(dt, dbt, 1);
+        } else
+          err(1);
+        if (pos > tbts) {
+          if (noSt)
+            err(0);
+          break;
+        }
+      }
+      if (resize)
+        cbuf(bt + 131072);
+      var lms = (1 << lbt) - 1, dms = (1 << dbt) - 1;
+      var lpos = pos;
+      for (; ; lpos = pos) {
+        var c = lm[bits16(dat, pos) & lms], sym = c >> 4;
+        pos += c & 15;
+        if (pos > tbts) {
+          if (noSt)
+            err(0);
+          break;
+        }
+        if (!c)
+          err(2);
+        if (sym < 256)
+          buf[bt++] = sym;
+        else if (sym == 256) {
+          lpos = pos, lm = null;
+          break;
+        } else {
+          var add = sym - 254;
+          if (sym > 264) {
+            var i2 = sym - 257, b = fleb[i2];
+            add = bits(dat, pos, (1 << b) - 1) + fl[i2];
+            pos += b;
+          }
+          var d = dm[bits16(dat, pos) & dms], dsym = d >> 4;
+          if (!d)
+            err(3);
+          pos += d & 15;
+          var dt = fd[dsym];
+          if (dsym > 3) {
+            var b = fdeb[dsym];
+            dt += bits16(dat, pos) & (1 << b) - 1, pos += b;
+          }
+          if (pos > tbts) {
+            if (noSt)
+              err(0);
+            break;
+          }
+          if (resize)
+            cbuf(bt + 131072);
+          var end = bt + add;
+          if (bt < dt) {
+            var shift = dl - dt, dend = Math.min(dt, end);
+            if (shift + bt < 0)
+              err(3);
+            for (; bt < dend; ++bt)
+              buf[bt] = dict[shift + bt];
+          }
+          for (; bt < end; ++bt)
+            buf[bt] = buf[bt - dt];
+        }
+      }
+      st.l = lm, st.p = lpos, st.b = bt, st.f = final;
+      if (lm)
+        final = 1, st.m = lbt, st.d = dm, st.n = dbt;
+    } while (!final);
+    return bt != buf.length && noBuf ? slc(buf, 0, bt) : buf.subarray(0, bt);
+  };
+  var et = /* @__PURE__ */ new u8(0);
+  var Inflate = /* @__PURE__ */ (function() {
+    function Inflate2(opts, cb) {
+      if (typeof opts == "function")
+        cb = opts, opts = {};
+      this.ondata = cb;
+      var dict = opts && opts.dictionary && opts.dictionary.subarray(-32768);
+      this.s = { i: 0, b: dict ? dict.length : 0 };
+      this.o = new u8(32768);
+      this.p = new u8(0);
+      if (dict)
+        this.o.set(dict);
+    }
+    Inflate2.prototype.e = function(c) {
+      if (!this.ondata)
+        err(5);
+      if (this.d)
+        err(4);
+      if (!this.p.length)
+        this.p = c;
+      else if (c.length) {
+        var n = new u8(this.p.length + c.length);
+        n.set(this.p), n.set(c, this.p.length), this.p = n;
+      }
+    };
+    Inflate2.prototype.c = function(final) {
+      this.s.i = +(this.d = final || false);
+      var bts = this.s.b;
+      var dt = inflt(this.p, this.s, this.o);
+      this.ondata(slc(dt, bts, this.s.b), this.d);
+      this.o = slc(dt, this.s.b - 32768), this.s.b = this.o.length;
+      this.p = slc(this.p, this.s.p / 8 | 0), this.s.p &= 7;
+    };
+    Inflate2.prototype.push = function(chunk, final) {
+      this.e(chunk), this.c(final);
+    };
+    return Inflate2;
+  })();
+  var td = typeof TextDecoder != "undefined" && /* @__PURE__ */ new TextDecoder();
+  var tds = 0;
+  try {
+    td.decode(et, { stream: true });
+    tds = 1;
+  } catch (e) {
+  }
+  var dutf8 = function(d) {
+    for (var r = "", i2 = 0; ; ) {
+      var c = d[i2++];
+      var eb = (c > 127) + (c > 223) + (c > 239);
+      if (i2 + eb > d.length)
+        return { s: r, r: slc(d, i2 - 1) };
+      if (!eb)
+        r += String.fromCharCode(c);
+      else if (eb == 3) {
+        c = ((c & 15) << 18 | (d[i2++] & 63) << 12 | (d[i2++] & 63) << 6 | d[i2++] & 63) - 65536, r += String.fromCharCode(55296 | c >> 10, 56320 | c & 1023);
+      } else if (eb & 1)
+        r += String.fromCharCode((c & 31) << 6 | d[i2++] & 63);
+      else
+        r += String.fromCharCode((c & 15) << 12 | (d[i2++] & 63) << 6 | d[i2++] & 63);
+    }
+  };
+  function strFromU8(dat, latin1) {
+    if (latin1) {
+      var r = "";
+      for (var i2 = 0; i2 < dat.length; i2 += 16384)
+        r += String.fromCharCode.apply(null, dat.subarray(i2, i2 + 16384));
+      return r;
+    } else if (td) {
+      return td.decode(dat);
+    } else {
+      var _a2 = dutf8(dat), s = _a2.s, r = _a2.r;
+      if (r.length)
+        err(8);
+      return s;
+    }
+  }
+
+  // src/engine/readers/zip.ts
+  var ZIP_MAX_BYTES = 50 * 1024 * 1024;
+  var ZIP_MAX_ENTRIES = 2e3;
+  var isZip = (b) => b[0] === 80 && b[1] === 75 && (b[2] === 3 && b[3] === 4 || b[2] === 5 && b[3] === 6);
+  var bad = () => {
+    throw new BankFileError("zip", "This ZIP archive is damaged or uses an unsupported ZIP format.");
+  };
+  var limit = () => {
+    throw new BankFileError("zipLimit", "The ZIP archive exceeds 50 MB unpacked or 2,000 entries.");
+  };
+  var encrypted = () => {
+    throw new BankFileError("zipEncrypted", "Encrypted ZIP files cannot be read. Export an unencrypted bank file.");
+  };
+  var crcTable = Array.from({ length: 256 }, (_, i2) => {
+    let c = i2;
+    for (let k = 0; k < 8; k++) c = c >>> 1 ^ (c & 1 ? 3988292384 : 0);
+    return c;
+  });
+  var crc32 = (b) => {
+    let c = 4294967295;
+    for (const v of b) c = c >>> 8 ^ crcTable[(c ^ v) & 255];
+    return (c ^ 4294967295) >>> 0;
+  };
+  function unzipBankFile(input) {
+    const b = Uint8Array.from(input);
+    const u162 = (p2) => {
+      if (p2 < 0 || p2 + 2 > b.length) return bad();
+      return b[p2] | b[p2 + 1] << 8;
+    };
+    const u32 = (p2) => u162(p2) + u162(p2 + 2) * 65536 >>> 0;
+    const entryName = (start, length, flags) => {
+      const bytes = b.subarray(start, start + length);
+      if (!(flags & 2048)) return strFromU8(bytes, true).replace(/\\/g, "/");
+      const decoded = decodeBankFileWithEncoding(bytes);
+      if (decoded.encoding !== "utf-8") return bad();
+      return decoded.text.replace(/\\/g, "/");
+    };
+    let end = b.length - 22;
+    for (; end >= Math.max(0, b.length - 65557); end--) {
+      if (u32(end) === 101010256 && end + 22 + u162(end + 20) === b.length) break;
+    }
+    if (end < 0 || u32(end) !== 101010256) return bad();
+    if (u162(end + 4) || u162(end + 6) || u162(end + 8) !== u162(end + 10)) return bad();
+    const count = u162(end + 10), directory = u32(end + 16);
+    if (count > ZIP_MAX_ENTRIES) limit();
+    if (directory + u32(end + 12) !== end) return bad();
+    const entries = [];
+    const names2 = /* @__PURE__ */ new Set();
+    let p = directory, total = 0;
+    for (let i2 = 0; i2 < count; i2++) {
+      if (u32(p) !== 33639248) return bad();
+      const flags = u162(p + 8), method = u162(p + 10), packed = u32(p + 20), size = u32(p + 24);
+      const len = u162(p + 28), extra = u162(p + 30), comment = u162(p + 32), local = u32(p + 42);
+      if (flags & 65) encrypted();
+      total += size;
+      if (total > ZIP_MAX_BYTES) limit();
+      if (p + 46 + len + extra + comment > end || u162(p + 34) || local >= directory) return bad();
+      const name = entryName(p + 46, len, flags);
+      if (!name || name.startsWith("/") || name.split("/").includes("..") || names2.has(name)) return bad();
+      names2.add(name);
+      if (u32(local) !== 67324752) return bad();
+      const localFlags = u162(local + 6);
+      if (localFlags & 65) encrypted();
+      const start = local + 30 + u162(local + 26) + u162(local + 28);
+      if (localFlags !== flags || u162(local + 8) !== method || start + packed > directory || entryName(local + 30, u162(local + 26), flags) !== name) return bad();
+      if (!(flags & 8) && (u32(local + 18) !== packed || u32(local + 22) !== size || u32(local + 14) !== u32(p + 16))) return bad();
+      if (method !== 0 && method !== 8) return bad();
+      entries.push({ name, size, packed, start, method, crc: u32(p + 16) });
+      p += 46 + len + extra + comment;
+    }
+    if (p !== end) return bad();
+    const result = /* @__PURE__ */ new Map();
+    let actual = 0;
+    for (const e of entries) {
+      const chunks = [];
+      let length = 0;
+      const take = (chunk) => {
+        length += chunk.length;
+        actual += chunk.length;
+        if (actual > ZIP_MAX_BYTES) limit();
+        if (length > e.size) return bad();
+        chunks.push(chunk);
+      };
+      try {
+        if (e.method === 0) take(b.subarray(e.start, e.start + e.packed));
+        else {
+          const inflater = new Inflate(take);
+          for (let n = 0; n < e.packed; n += 256) inflater.push(b.subarray(e.start + n, e.start + Math.min(n + 256, e.packed)), n + 256 >= e.packed);
+        }
+      } catch (error) {
+        if (error instanceof BankFileError) throw error;
+        return bad();
+      }
+      if (length !== e.size) return bad();
+      const out = new Uint8Array(length);
+      let at = 0;
+      for (const chunk of chunks) {
+        out.set(chunk, at);
+        at += chunk.length;
+      }
+      if (crc32(out) !== e.crc) return bad();
+      if (!e.name.endsWith("/") && !e.name.split("/").some((part) => part.startsWith(".") || part === "__MACOSX")) result.set(e.name, out);
+    }
+    return result;
+  }
+
+  // src/engine/readers/archive.ts
+  var noBank = () => {
+    throw new BankFileError("zipNoBankFile", "The ZIP archive contains no CAMT, MT940 or CSV bank files.");
+  };
+  var accounts = () => {
+    throw new BankFileError("zipAccounts", "The ZIP archive contains different accounts or its files cannot be confirmed as one account. Export one account at a time.");
+  };
+  var layout = () => {
+    throw new BankFileError("zipLayout", "A bank file inside this ZIP needs its columns confirmed. Import that file separately first.");
+  };
+  function archiveBankTexts(files, isBank) {
+    const texts2 = [];
+    for (const [name, bytes] of files) {
+      if (isZip(bytes) || /\.(zip|xlsx|xls)$/i.test(name)) continue;
+      const text3 = decodeBankFile(bytes);
+      if (isBank(text3) || /\.(csv|sta|mta|mt940)$/i.test(name)) texts2.push(text3);
+    }
+    if (!texts2.length) return noBank();
+    return texts2;
+  }
+  function memberAccounts(text3) {
+    if (text3.trimStart().startsWith("<")) {
+      const parser4 = new import_fast_xml_parser2.XMLParser({ ignoreAttributes: false, parseTagValue: false, removeNSPrefix: true });
+      let root;
+      try {
+        root = parser4.parse(text3).Document;
+      } catch {
+        throw new BankFileError("camt", "This XML file could not be read.");
+      }
+      const container = root?.BkToCstmrStmt ?? root?.BkToCstmrAcctRpt ?? root?.BkToCstmrDbtCdtNtfctn;
+      const statements = container?.Stmt ?? container?.Rpt ?? container?.Ntfctn ?? [];
+      return [statements].flat().map((s) => String(s.Acct?.Id?.IBAN ?? s.Acct?.Id?.Othr?.Id ?? "").replace(/\s/g, "").toUpperCase());
+    }
+    return [...text3.matchAll(/^:25:(.+)$/gm)].map((m) => m[1].trim().replace(/\s/g, "").toUpperCase());
+  }
+  function readArchive(texts2, read2) {
+    const files = texts2.map((text3) => {
+      const ids = memberAccounts(text3);
+      if (new Set(ids).size > 1) return accounts();
+      return { file: read2(text3), own: ids[0] };
+    });
+    if (files.length === 1) return { ...files[0].file, transactions: [...files[0].file.transactions].sort((a, b) => a.bookingDate.localeCompare(b.bookingDate)) };
+    if (files.some(({ file }) => file.needsLayout)) return layout();
+    const identities = files.map(({ file, own }) => file.account?.iban?.replace(/\s/g, "").toUpperCase() || own);
+    if (identities.some((id) => !id) || new Set(identities).size !== 1 || new Set(files.map(({ file }) => file.account?.currency ?? "EUR")).size !== 1) return accounts();
+    const payments = /* @__PURE__ */ new Map();
+    for (const { file } of files) for (const txn of file.transactions) {
+      const previous = payments.get(txn.externalId);
+      if (previous) {
+        if (previous.bookingDate !== txn.bookingDate || previous.amount !== txn.amount || previous.currency !== txn.currency || previous.description !== txn.description || previous.counterparty !== txn.counterparty) {
+          throw new BankFileError("unknown", "Two statements give different payments with the same id. Import the statements separately and check them.");
+        }
+      } else payments.set(txn.externalId, txn);
+    }
     return {
-      guess: {
-        layout,
-        confidence: Math.round(confidence * 100) / 100,
-        unsure: [...unsure],
-        missing,
-        separator,
-        header,
-        headerRow,
-        columns: info,
-        preview: read2.transactions.slice(0, 5)
-      },
-      columns,
-      rows,
-      payments: read2.transactions
+      ...files[0].file,
+      transactions: [...payments.values()].sort((a, b) => a.bookingDate.localeCompare(b.bookingDate)),
+      skipped: files.reduce((n, { file }) => n + (file.skipped ?? 0), 0)
     };
   }
 
-  // src/engine/readers/mt940.ts
-  function fields(text2) {
-    const out = [];
-    for (const line of text2.replace(/\r\n?/g, "\n").split("\n")) {
-      const m = /^:(\d{2}[A-Z]?):(.*)$/.exec(line);
-      if (m) out.push({ tag: m[1], value: m[2] });
-      else if (/^-}?\s*$/.test(line) || line.startsWith("{")) out.push({ tag: "end", value: "" });
-      else if (out.length > 0 && out[out.length - 1].tag !== "end") out[out.length - 1].value += `
-${line}`;
-    }
-    return out;
-  }
-  function date6(value) {
-    const m = /^(\d{2})(\d{2})(\d{2})$/.exec(value);
-    if (!m || +m[2] < 1 || +m[2] > 12 || +m[3] < 1 || +m[3] > 31) return null;
-    return `20${m[1]}-${m[2]}-${m[3]}`;
-  }
-  var amountOf = (value) => parseAmountStrict(value.endsWith(",") ? `${value}00` : value, "de");
-  function balanceOf(value) {
-    const m = /^([CD])(\d{6})([A-Z]{3})([\d,]+)/.exec(value.trim());
-    const amount2 = m ? amountOf(m[4]) : null;
-    if (!m || !amount2) return null;
-    return { amount: m[1] === "D" ? negate(amount2) : amount2, currency: m[3] };
-  }
-  var LINE_61 = /^(\d{6})(\d{4})?(RC|RD|C|D)([A-Z])?(\d+,\d*)([NFS][A-Z0-9]{3})(.*)$/;
-  function bookingDate(valueDate, entry) {
-    if (!entry) return valueDate;
-    let year = +valueDate.slice(0, 4);
-    const valueMonth = +valueDate.slice(5, 7), month = +entry.slice(0, 2);
-    if (month - valueMonth > 6) year--;
-    if (valueMonth - month > 6) year++;
-    return `${year}-${entry.slice(0, 2)}-${entry.slice(2, 4)}`;
-  }
-  function joinSubfields(parts) {
-    let text2 = "";
-    parts.forEach((part, i) => {
-      text2 += (i > 0 && parts[i - 1].length < 27 ? " " : "") + part;
-    });
-    return text2.replace(/\s+/g, " ").trim();
-  }
-  function details86(value) {
-    const joined = value.replace(/\n/g, "");
-    const m = /^(\d{3})(\D)/.exec(joined);
-    if (!m) return { kind: "", text: cleanText(joined), name: "", iban: null };
-    const separator = m[2];
-    const sub = /* @__PURE__ */ new Map();
-    const parts = joined.slice(4).split(new RegExp(`\\${separator}(\\d{2})`));
-    for (let i = 1; i < parts.length; i += 2) sub.set(parts[i], (sub.get(parts[i]) ?? "") + parts[i + 1]);
-    const codes = (from2, to) => {
-      const out = [];
-      for (let n = from2; n <= to; n++) if (sub.has(String(n))) out.push(sub.get(String(n)));
-      return out;
-    };
-    const purpose = joinSubfields([...codes(20, 29), ...codes(60, 63)]);
-    return {
-      kind: cleanText(sub.get("00")),
-      text: sepaPaymentText(purpose),
-      name: joinSubfields(codes(32, 33)),
-      iban: normalizeIban(sub.get("31") ?? "")
-      // ?31 holds an IBAN or an old account number; only an IBAN counts
-    };
-  }
-  function readMt940(text2) {
-    const list2 = fields(text2);
-    if (!list2.some((f) => f.tag === "61") && !list2.some((f) => f.tag === "20")) {
-      throw new BankFileError("mt940", "This file is not an MT940 statement.");
-    }
-    const transactions = [];
-    let iban, accountNumber = "", currency = "EUR", skipped = 0;
-    let statement = -1, intraday = false;
-    const openings = /* @__PURE__ */ new Map(), closings = /* @__PURE__ */ new Map();
-    const intradayStatements = /* @__PURE__ */ new Set();
-    let last2 = null;
-    for (const field2 of list2) {
-      if (field2.tag === "20") {
-        statement++;
-        intraday = false;
-        last2 = null;
-        continue;
-      }
-      if (field2.tag === "end") {
-        last2 = null;
-        continue;
-      }
-      if (field2.tag === "25") {
-        const value = field2.value.trim();
-        iban ?? (iban = findIban(value));
-        accountNumber || (accountNumber = value.split("/").pop().replace(/[^0-9]/g, ""));
-      } else if (field2.tag === "34F" || field2.tag === "13D" || field2.tag === "13") {
-        intraday = true;
-        intradayStatements.add(statement);
-      } else if (field2.tag === "60F" || field2.tag === "60M") {
-        const bal = balanceOf(field2.value);
-        if (bal) {
-          openings.set(statement, bal.amount);
-          currency = bal.currency;
-        }
-      } else if (field2.tag === "62F" || field2.tag === "62M") {
-        const bal = balanceOf(field2.value);
-        if (bal) closings.set(statement, bal.amount);
-        last2 = null;
-      } else if (field2.tag === "61") {
-        last2 = null;
-        const [first] = field2.value.split("\n");
-        const m = LINE_61.exec(first.trim());
-        const valueDate = m ? date6(m[1]) : null;
-        const amount2 = m ? amountOf(m[5]) : null;
-        if (!m || !valueDate || !amount2 || intraday) {
-          skipped++;
-          continue;
-        }
-        const debit = m[3] === "D" || m[3] === "RC";
-        last2 = {
-          bookingDate: `${bookingDate(valueDate, m[2])}T00:00:00.000Z`,
-          valueDate: `${valueDate}T00:00:00.000Z`,
-          amount: debit ? negate(amount2) : amount2,
-          currency,
-          description: "(no description)",
-          counterparty: null,
-          raw: { ":61:": field2.value, ":86:": "" },
-          idFields: field2.value.trim(),
-          statement
-        };
-        transactions.push(last2);
-      } else if (field2.tag === "86" && last2) {
-        const d = details86(field2.value);
-        last2.description = d.text || d.kind || d.name || "(no description)";
-        last2.counterparty = d.name || null;
-        if (d.iban) last2.counterpartyIban = d.iban;
-        last2.raw[":86:"] = field2.value;
-        last2.idFields += `${field2.value.replace(/\s+/g, " ").trim()}`;
-        last2 = null;
-      }
-    }
-    for (const [index, opening] of openings) {
-      if (intradayStatements.has(index)) continue;
-      const own = transactions.filter((t) => t.statement === index);
-      if (!own.every((t, i) => i === 0 || own[i - 1].bookingDate <= t.bookingDate)) continue;
-      let running = opening;
-      const after = own.map((t) => running = addAmounts(running, t.amount));
-      const closing2 = closings.get(index);
-      if (own.length > 0 && (closing2 === void 0 || sameAmount(running, closing2))) own.forEach((t, i) => {
-        t.balance = after[i];
-      });
-    }
-    const ids = bookingIds(transactions.map((t) => t.idFields));
-    const account = { name: iban ? accountName("Bank", iban) : accountNumber ? `Bank \u2022\u2022${accountNumber.slice(-4)}` : "Bank", currency };
-    if (iban) account.iban = iban;
-    return {
-      format: "mt940",
-      account,
-      transactions: transactions.map(({ idFields: _, statement: __, ...t }, i) => ({ externalId: ids[i], ...t })),
-      skipped
-    };
-  }
+  // src/engine/readers/xlsx.ts
+  var import_fast_xml_parser3 = __toESM(require_fxp(), 1);
 
   // src/engine/readers/bank-profiles.ts
   var GH = "https://github.com/";
@@ -13047,9 +13026,9 @@ ${line}`;
     }
     return en === de ? preferred : en > de ? "en" : "de";
   }
-  function profileDateAmbiguous(profile, rows, headerRow, layout) {
-    if (formats(profile).includes(layout.dateFormat)) return false;
-    const choices = columnDateFormats(rows.slice(headerRow + 1).map((r) => r[layout.columns.date] ?? ""));
+  function profileDateAmbiguous(profile, rows, headerRow, layout2) {
+    if (formats(profile).includes(layout2.dateFormat)) return false;
+    const choices = columnDateFormats(rows.slice(headerRow + 1).map((r) => r[layout2.columns.date] ?? ""));
     return choices.includes("DD/MM/YYYY") && choices.includes("MM/DD/YYYY");
   }
   function fileBank(profile, rows, headerRow) {
@@ -13071,8 +13050,8 @@ ${line}`;
     const at = (column) => {
       for (const name of column === void 0 ? [] : names(column)) {
         if (typeof name === "number") return name;
-        const i = keys.indexOf(headerKey(name));
-        if (i >= 0) return i;
+        const i2 = keys.indexOf(headerKey(name));
+        if (i2 >= 0) return i2;
       }
       return void 0;
     };
@@ -13094,18 +13073,18 @@ ${line}`;
       "reference",
       "status"
     ]) {
-      const i = at(p[role]);
-      if (i !== void 0) columns[role] = i;
+      const i2 = at(p[role]);
+      if (i2 !== void 0) columns[role] = i2;
     }
     for (const role of ["counterparty", "text", "fees", "addAmounts"]) {
-      const list2 = (p[role] ?? []).map(at).filter((i) => i !== void 0);
+      const list2 = (p[role] ?? []).map(at).filter((i2) => i2 !== void 0);
       if (list2.length > 0) columns[role] = list2;
     }
     if (columns.date < 0) return null;
     if (columns.amount === void 0 && (columns.debit === void 0 || columns.credit === void 0)) return null;
-    const amountColumns = [columns.amount, columns.debit, columns.credit].filter((i) => i !== void 0);
+    const amountColumns = [columns.amount, columns.debit, columns.credit].filter((i2) => i2 !== void 0);
     const data = rows.slice(headerRow + 1).filter((r) => r.some((v) => v.trim() !== ""));
-    const dateFormat = columnDateFormats(data.map((r) => r[columns.date] ?? ""), formats(profile))[0] ?? formats(profile)[0];
+    const dateFormat2 = columnDateFormats(data.map((r) => r[columns.date] ?? ""), formats(profile))[0] ?? formats(profile)[0];
     return {
       version: 1,
       name: fileBank(profile, rows, headerRow),
@@ -13113,7 +13092,7 @@ ${line}`;
       separator,
       header,
       ...profile.headerless ? { columnCount: profile.headerless.columnCount } : {},
-      dateFormat,
+      dateFormat: dateFormat2,
       numberFormat: fileNumberFormat(data, amountColumns, profile.numberFormat === "either" ? "de" : profile.numberFormat),
       columns,
       ...profile.skipStatus ? { skipStatus: profile.skipStatus } : {},
@@ -13124,23 +13103,830 @@ ${line}`;
     };
   }
 
+  // src/engine/readers/xlsx.ts
+  var fail2 = () => {
+    throw new BankFileError("xlsx", "This Excel workbook could not be read. Export it as CSV or save a new .xlsx file.");
+  };
+  var parser2 = new import_fast_xml_parser3.XMLParser({
+    ignoreAttributes: false,
+    removeNSPrefix: true,
+    parseTagValue: false,
+    trimValues: false,
+    processEntities: true
+  });
+  var arr2 = (x2) => x2 === void 0 ? [] : Array.isArray(x2) ? x2 : [x2];
+  var text2 = (x2) => x2 == null ? "" : typeof x2 === "object" ? String(x2["#text"] ?? "") : String(x2);
+  var rich = (x2) => x2 ? text2(x2.t) + arr2(x2.r).map((r) => text2(r.t)).join("") : "";
+  function xml(files, path) {
+    const bytes = files.get(path);
+    if (!bytes) return fail2();
+    const source = decodeBankFile(bytes);
+    if (/<!DOCTYPE|<!ENTITY/i.test(source) || import_fast_xml_parser3.XMLValidator.validate(source) !== true) return fail2();
+    try {
+      return parser2.parse(source);
+    } catch {
+      return fail2();
+    }
+  }
+  var isXlsx = (files) => files.has("[Content_Types].xml") && files.has("xl/workbook.xml");
+  var rowsText = (rows) => rows.map((r) => r.map((v) => `"${v.replace(/"/g, '""')}"`).join(";")).join("\n");
+  function excelDecimal(value, money2 = false) {
+    const m = /^([+-]?)(\d+)(?:\.(\d*))?(?:[eE]([+-]?\d+))?$/.exec(value.trim());
+    if (!m) return fail2();
+    const exponent = Number(m[4] ?? 0);
+    if (!Number.isInteger(exponent) || Math.abs(exponent) > 1e3) return fail2();
+    const digits = m[2] + (m[3] ?? ""), point = m[2].length + exponent;
+    const whole = (point <= 0 ? "0" : digits.slice(0, point).padEnd(point, "0")).replace(/^0+(?=\d)/, "");
+    let fraction = point < 0 ? "0".repeat(-point) + digits : digits.slice(point);
+    fraction = fraction.replace(/0+$/, "");
+    if (money2) fraction = fraction.padEnd(2, "0");
+    return (m[1] === "-" && /[1-9]/.test(whole + fraction) ? "-" : "") + whole + (fraction ? "." + fraction : "");
+  }
+  var builtinDates = /* @__PURE__ */ new Set([14, 15, 16, 17, 22, 27, 28, 29, 30, 31, 34, 35, 36, 50, 51, 52, 53, 54, 55, 56, 57, 58]);
+  function dateFormat(id, code) {
+    const bare = code.replace(/"[^"]*"|\\.|\[[^\]]*\]/g, "");
+    return builtinDates.has(id) || /y|d/i.test(bare);
+  }
+  function serialDate(value, mac) {
+    const n = Number(excelDecimal(value));
+    if (!Number.isFinite(n) || n < 0 || n > 2958465 || !mac && Math.floor(n) === 60) return fail2();
+    const days = Math.floor(n);
+    const ms = (mac ? Date.UTC(1904, 0, 1) : Date.UTC(1899, 11, 31)) + (days - (!mac && days > 60 ? 1 : 0)) * 864e5;
+    return new Date(ms).toISOString().slice(0, 10);
+  }
+  function xlsxTableText(files, hasTable) {
+    const workbook = xml(files, "xl/workbook.xml").workbook;
+    if (!workbook) return fail2();
+    const rels = arr2(xml(files, "xl/_rels/workbook.xml.rels").Relationships?.Relationship);
+    const strings = files.has("xl/sharedStrings.xml") ? arr2(xml(files, "xl/sharedStrings.xml").sst?.si).map(rich) : [];
+    const style = files.has("xl/styles.xml") ? xml(files, "xl/styles.xml").styleSheet : {};
+    const formats2 = new Map(arr2(style?.numFmts?.numFmt).map((f) => [Number(f["@_numFmtId"]), String(f["@_formatCode"])]));
+    const styles = arr2(style?.cellXfs?.xf).map((f) => ({ id: Number(f["@_numFmtId"] ?? 0), code: formats2.get(Number(f["@_numFmtId"])) ?? "" }));
+    const mac = ["1", "true"].includes(String(workbook.workbookPr?.["@_date1904"]));
+    for (const sheet of arr2(workbook.sheets?.sheet)) {
+      const rel = rels.find((r) => r["@_Id"] === sheet["@_id"]);
+      if (!rel || rel["@_TargetMode"] === "External" || !String(rel["@_Type"]).endsWith("/worksheet")) return fail2();
+      const target = String(rel["@_Target"]);
+      if (target.includes("..") || target.includes("\\")) return fail2();
+      const path = target.startsWith("/") ? target.slice(1) : `xl/${target.replace(/^\.\//, "")}`;
+      const data = xml(files, path).worksheet?.sheetData;
+      const rows = [];
+      const numeric = [];
+      let width = 0, cells = 0;
+      for (const row of arr2(data?.row)) {
+        const values = [];
+        for (const cell2 of arr2(row.c)) {
+          if (++cells > 1e6) return fail2();
+          const ref = /^([A-Z]+)(\d+)$/.exec(String(cell2["@_r"] ?? ""));
+          if (cell2["@_r"] !== void 0 && !ref) return fail2();
+          let col = values.length;
+          if (ref) {
+            col = 0;
+            for (const c of ref[1]) col = col * 26 + c.charCodeAt(0) - 64;
+            col--;
+          }
+          if (col >= 16384 || col < values.length) return fail2();
+          while (values.length <= col) values.push("");
+          if (cell2.f !== void 0 || cell2["@_t"] === "e") return fail2();
+          const value = text2(cell2.v), kind = cell2["@_t"];
+          if (kind !== void 0 && !["s", "inlineStr", "b", "str", "d", "n"].includes(kind)) return fail2();
+          const styleIndex = Number(cell2["@_s"] ?? 0);
+          if (!Number.isInteger(styleIndex) || styleIndex < 0 || styleIndex > 0 && !styles[styleIndex]) return fail2();
+          if (kind === "s") {
+            if (!/^\d+$/.test(value) || strings[Number(value)] === void 0) return fail2();
+            values[col] = strings[Number(value)];
+          } else if (kind === "inlineStr") values[col] = rich(cell2.is);
+          else if (kind === "b") {
+            if (value !== "0" && value !== "1") return fail2();
+            values[col] = value === "1" ? "true" : "false";
+          } else if (kind === "str" || kind === "d") values[col] = value;
+          else if (value !== "") {
+            const s = styles[styleIndex] ?? { id: 0, code: "" };
+            if (dateFormat(s.id, s.code)) values[col] = serialDate(value, mac);
+            else {
+              const money2 = [2, 4, 7, 8, 39, 40, 43, 44].includes(s.id) || /[0#][.,]00|[$€£]/.test(s.code);
+              values[col] = excelDecimal(value, money2);
+              numeric.push({ row: rows.length, col, value, money: money2 });
+            }
+          }
+        }
+        width = Math.max(width, values.length);
+        rows.push(values);
+      }
+      if (rows.length * width > 1e6) return fail2();
+      rows.forEach((r) => {
+        while (r.length < width) r.push("");
+      });
+      const known = findProfile(rows);
+      const layout2 = known ? profileLayout(known.profile, rows, known.headerRow, ";") : void 0;
+      const moneyColumns = layout2 ? /* @__PURE__ */ new Set([
+        layout2.columns.amount,
+        layout2.columns.debit,
+        layout2.columns.credit,
+        layout2.columns.balance,
+        ...layout2.columns.fees ?? [],
+        ...layout2.columns.addAmounts ?? []
+      ]) : /* @__PURE__ */ new Set();
+      for (const c of numeric) if (c.money || moneyColumns.has(c.col)) rows[c.row][c.col] = excelDecimal(c.value, true);
+      const table = rowsText(rows);
+      if (hasTable(table)) return table;
+    }
+    throw new BankFileError("zip", "No bank payment table was found in this Excel workbook. Export a bank statement as CSV or .xlsx.");
+  }
+
+  // src/engine/readers/camt.ts
+  var import_fast_xml_parser4 = __toESM(require_fxp(), 1);
+  var parser3 = new import_fast_xml_parser4.XMLParser({
+    ignoreAttributes: false,
+    attributeNamePrefix: "@_",
+    parseTagValue: false,
+    // keep IBANs and amounts as strings
+    removeNSPrefix: true
+    // <ns2:Document> and friends
+  });
+  function arr3(x2) {
+    if (x2 === void 0 || x2 === null) return [];
+    return Array.isArray(x2) ? x2 : [x2];
+  }
+  function textOf2(node2) {
+    if (node2 && typeof node2 === "object" && "#text" in node2) return String(node2["#text"]);
+    return node2 == null || typeof node2 === "object" ? "" : String(node2);
+  }
+  var dateOnly = (value) => {
+    const v = textOf2(value).trim();
+    return /^\d{4}-\d{2}-\d{2}/.test(v) ? `${v.slice(0, 10)}T00:00:00.000Z` : null;
+  };
+  var nameOf = (party) => cleanText(textOf2(party?.Nm) || textOf2(party?.Pty?.Nm));
+  var ibanOf = (account) => textOf2(account?.Id?.IBAN).replace(/\s/g, "");
+  function entryCounterpartyIban(ntry) {
+    if (!ntry || typeof ntry !== "object") return void 0;
+    const node2 = ntry;
+    const tx = arr3(node2.NtryDtls).flatMap((d) => arr3(d?.TxDtls))[0];
+    const parties = tx?.RltdPties ?? {};
+    return normalizeIban(ibanOf(node2.CdtDbtInd === "DBIT" ? parties.CdtrAcct : parties.DbtrAcct)) ?? void 0;
+  }
+  var remittance = (tx) => cleanText(...arr3(tx?.RmtInf?.Ustrd).map(textOf2)) || cleanText(...arr3(tx?.RmtInf?.Strd).map((s) => textOf2(s?.CdtrRefInf?.Ref))) || cleanText(textOf2(tx?.AddtlTxInf));
+  function batchText(texts2) {
+    const distinct = [...new Set(texts2.filter(Boolean))];
+    return distinct.length > 3 ? `${distinct.slice(0, 3).join(" / ")} / \u2026` : distinct.join(" / ");
+  }
+  function signedAmount(node2) {
+    const amount2 = parseAmountStrict(textOf2(node2.Amt), "en");
+    if (!amount2) return null;
+    return node2.CdtDbtInd === "DBIT" ? negate(amount2) : amount2;
+  }
+  function vrCamtId(ntry) {
+    const isDebit = ntry.CdtDbtInd === "DBIT";
+    const amount2 = `${isDebit ? "-" : ""}${parseAmount(textOf2(ntry.Amt))}`;
+    const bookingDate2 = new Date(ntry.BookgDt?.Dt || ntry.BookgDt?.DtTm || ntry.ValDt?.Dt);
+    const tx = arr3(ntry.NtryDtls?.TxDtls)[0];
+    const remittance2 = arr3(tx?.RmtInf?.Ustrd).map(textOf2).join(" ").trim() || textOf2(ntry.AddtlNtryInf).trim() || "(no description)";
+    const creditor = tx?.RltdPties?.Cdtr?.Nm;
+    const debtor = tx?.RltdPties?.Dbtr?.Nm;
+    const counterpartyRaw = (isDebit ? creditor : debtor) || creditor || debtor;
+    const counterparty = counterpartyRaw ? String(counterpartyRaw) : null;
+    const time = bookingDate2.getTime();
+    const fields2 = `${isNaN(time) ? "Invalid Date" : bookingDate2.toISOString()}|${amount2}|${remittance2}|${counterparty ?? ""}`;
+    const ref = ntry.AcctSvcrRef || tx?.Refs?.AcctSvcrRef || tx?.Refs?.EndToEndId || tx?.Refs?.TxId;
+    return { id: ref && ref !== "NOTPROVIDED" ? String(ref) : hashId(fields2), fields: fields2 };
+  }
+  function isVrBank(iban, bic) {
+    if (!iban && !bic) return true;
+    if (bic.toUpperCase().startsWith("GENO")) return true;
+    return /^DE\d{2}\d{3}[69]/.test(iban);
+  }
+  var PENDING = /* @__PURE__ */ new Set(["PDNG", "INFO", "FUTR"]);
+  var statusOf = (ntry) => textOf2(ntry.Sts?.Cd ?? ntry.Sts).trim().toUpperCase();
+  function balances(stmt) {
+    const out = {};
+    for (const bal of arr3(stmt.Bal)) {
+      const code = textOf2(bal?.Tp?.CdOrPrtry?.Cd).toUpperCase();
+      const amount2 = signedAmount(bal);
+      if (!amount2) continue;
+      if ((code === "OPBD" || code === "PRCD") && out.opening === void 0) out.opening = amount2;
+      if (code === "CLBD") out.closing = amount2;
+    }
+    return out;
+  }
+  function readCamt(xml2) {
+    let doc;
+    try {
+      doc = parser3.parse(xml2);
+    } catch {
+      throw new BankFileError("camt", "This XML file could not be read.");
+    }
+    const root = doc.Document;
+    const container = root?.BkToCstmrStmt ?? root?.BkToCstmrAcctRpt ?? root?.BkToCstmrDbtCdtNtfctn;
+    if (!container) throw new BankFileError("camt", "This XML file is not a CAMT bank statement (camt.052, .053 or .054).");
+    const statements = arr3(container.Stmt ?? container.Rpt ?? container.Ntfctn);
+    const transactions = [];
+    const candidates = [];
+    let iban = "", bic = "", bankName2 = "", currency = "EUR", skipped = 0;
+    for (const stmt of statements) {
+      iban || (iban = ibanOf(stmt.Acct));
+      bic || (bic = textOf2(stmt.Acct?.Svcr?.FinInstnId?.BIC ?? stmt.Acct?.Svcr?.FinInstnId?.BICFI));
+      bankName2 || (bankName2 = cleanText(textOf2(stmt.Acct?.Svcr?.FinInstnId?.Nm)));
+      currency = textOf2(stmt.Acct?.Ccy) || currency;
+    }
+    const vr = isVrBank(iban, bic);
+    for (const stmt of statements) {
+      const { opening, closing: closing2 } = balances(stmt);
+      const start = transactions.length;
+      for (const ntry of arr3(stmt.Ntry)) {
+        const amount2 = signedAmount(ntry);
+        const bookingDate2 = dateOnly(ntry.BookgDt?.Dt ?? ntry.BookgDt?.DtTm) ?? dateOnly(ntry.ValDt?.Dt ?? ntry.ValDt?.DtTm);
+        if (PENDING.has(statusOf(ntry)) || !amount2 || !bookingDate2) {
+          skipped++;
+          continue;
+        }
+        const out = amount2.startsWith("-");
+        const details = arr3(ntry.NtryDtls).flatMap((d) => arr3(d?.TxDtls));
+        const tx = details[0];
+        const parties = tx?.RltdPties ?? {};
+        const creditor = nameOf(parties.Cdtr) || nameOf(parties.UltmtCdtr);
+        const debtor = nameOf(parties.Dbtr) || nameOf(parties.UltmtDbtr);
+        const counterparty = (out ? creditor || debtor : debtor || creditor) || null;
+        const counterpartyIban = ibanOf(out ? parties.CdtrAcct : parties.DbtrAcct);
+        const checkedIban = entryCounterpartyIban(ntry);
+        const description = batchText(details.map(remittance)) || cleanText(textOf2(ntry.AddtlNtryInf)) || "(no description)";
+        const ccy = (ntry.Amt && typeof ntry.Amt === "object" ? ntry.Amt["@_Ccy"] : void 0) || currency;
+        transactions.push({
+          bookingDate: bookingDate2,
+          valueDate: dateOnly(ntry.ValDt?.Dt ?? ntry.ValDt?.DtTm),
+          amount: amount2,
+          currency: ccy,
+          description,
+          counterparty,
+          ...checkedIban ? { counterpartyIban: checkedIban } : {},
+          raw: ntry
+        });
+        if (vr) candidates.push(vrCamtId(ntry));
+        else {
+          const ref = textOf2(ntry.AcctSvcrRef) || textOf2(tx?.Refs?.AcctSvcrRef);
+          const fields2 = [
+            bookingDate2.slice(0, 10),
+            amount2,
+            description,
+            counterparty ?? "",
+            counterpartyIban,
+            textOf2(tx?.Refs?.EndToEndId)
+          ].join("|");
+          candidates.push({ id: ref && ref !== "NOTPROVIDED" ? ref : hashId(fields2), fields: fields2 });
+        }
+      }
+      const own = transactions.slice(start);
+      if (opening !== void 0 && own.length > 0 && own.every((t, i2) => i2 === 0 || own[i2 - 1].bookingDate <= t.bookingDate)) {
+        let running = opening;
+        const after = own.map((t) => running = addAmounts(running, t.amount));
+        if (closing2 === void 0 || sameAmount(running, closing2)) own.forEach((t, i2) => {
+          t.balance = after[i2];
+        });
+      }
+    }
+    const ids = withOccurrences(candidates);
+    const account = { name: accountName(bankName2 || "Bank", iban || void 0), currency };
+    if (iban) account.iban = iban;
+    return {
+      format: "camt",
+      account,
+      transactions: transactions.map((t, i2) => ({ externalId: ids[i2], ...t })),
+      skipped
+    };
+  }
+
+  // src/engine/readers/guess.ts
+  var WORDS = {
+    date: [
+      "buchungstag",
+      "buchungsdatum",
+      "buchung",
+      "datum",
+      "date",
+      "bookingdate",
+      "completeddate",
+      "transactiondate",
+      "umsatztag",
+      "belegdatum",
+      "booked",
+      "tag"
+    ],
+    valueDate: ["valuta", "valutadatum", "wertstellung", "wert", "valuedate"],
+    amount: ["betrag", "umsatz", "amount", "summe", "value", "total", "betrageur", "amounteur"],
+    debit: ["soll", "belastung", "debit", "ausgang", "ausgabe", "moneyout", "paidout", "withdrawal", "lastschrift"],
+    credit: ["haben", "gutschrift", "credit", "eingang", "einnahme", "moneyin", "paidin", "deposit"],
+    balance: ["saldo", "kontostand", "balance", "guthaben", "saldonachbuchung", "runningbalance"],
+    counterparty: [
+      "zahlungsbeteiligter",
+      "namezahlungsbeteiligter",
+      "beguenstigter",
+      "zahlungspflichtiger",
+      "empfaenger",
+      "auftraggeber",
+      "name",
+      "payee",
+      "payer",
+      "partner",
+      "partnername",
+      "merchant",
+      "counterparty",
+      "haendler",
+      "gegenpartei",
+      "gegenseite",
+      "beguenstigterzahlungspflichtiger",
+      "auftraggeberempfaenger",
+      "recipient",
+      "sender"
+    ],
+    text: [
+      "verwendungszweck",
+      "zweck",
+      "purpose",
+      "reference",
+      "paymentreference",
+      "referenz",
+      "memo",
+      "description",
+      "beschreibung",
+      "details",
+      "buchungsdetails",
+      "text",
+      "notes",
+      "notiz",
+      "betreff",
+      "vorgangverwendungszweck",
+      "information",
+      "buchungsinformation"
+    ],
+    kind: ["buchungstext", "umsatzart", "vorgang", "type", "transactiontype", "art", "buchungsart", "umsatztyp", "typ"],
+    iban: ["iban", "kontonummer", "accountnumber", "konto", "partneriban", "ibanzahlungsbeteiligter", "kontonummeriban"],
+    accountIban: ["auftragskonto", "ibanauftragskonto", "eigeneiban", "ownaccount"],
+    currency: ["waehrung", "currency", "ccy"],
+    reference: ["transactionid", "transaktionsid", "transaktionscode", "referenznummer", "buchungsreferenz", "id"],
+    status: ["status", "state", "zustand", "info"]
+  };
+  function wordScore(header, role) {
+    const key = headerKey(header);
+    let best = 0;
+    for (const word of WORDS[role]) {
+      const fits = word.length <= 4 ? key === word || key === `${word}eur` : key.includes(word);
+      if (fits && word.length > best) best = word.length;
+    }
+    return best;
+  }
+  var hasLetter = (v) => /\p{L}/u.test(v);
+  var DE_DECIMAL = /\d,\d{1,2}(?!\d)/;
+  var EN_DECIMAL = /\d\.\d{1,2}(?!\d)/;
+  var isDateLike = (v) => DATE_FORMATS.some((f) => parseDate(v, f) !== null);
+  var SIGN_VALUE = /^(s|h|soll|haben|d|c|db|cr|dbit|crdt|debit|credit|\+|-)$/i;
+  function findHeader(rows) {
+    for (let i2 = 0; i2 < Math.min(rows.length, 60); i2++) {
+      const cells = trimRow(rows[i2]);
+      if (cells.some((v) => /^(plannedamount|forecastamount|budgetamount)/.test(headerKey(v)))) continue;
+      const filled = cells.filter(Boolean);
+      if (filled.length < 3 || filled.length < cells.length * 0.6) continue;
+      if (!filled.every((v) => hasLetter(v) && !isDateLike(v) && !DE_DECIMAL.test(v) && !EN_DECIMAL.test(v))) continue;
+      const next = rows.slice(i2 + 1, i2 + 6).map(trimRow).filter((r) => r.length > 0);
+      if (next.some((r) => r.length >= cells.length - 2 && r.some(isDateLike))) return i2;
+    }
+    return -1;
+  }
+  function bestDateFormat(values) {
+    let best = "DD.MM.YYYY", share = 0;
+    const full = [];
+    for (const format of DATE_FORMATS) {
+      const ok = values.filter((v) => parseDate(v, format) !== null).length / Math.max(values.length, 1);
+      if (ok > share) {
+        best = format;
+        share = ok;
+      }
+      if (ok === 1) full.push(format);
+    }
+    let ambiguous = false;
+    if (full.includes("DD/MM/YYYY") && full.includes("MM/DD/YYYY")) {
+      const sorted = (format) => {
+        const dates = values.map((v) => parseDate(v, format));
+        const up = dates.every((d, i2) => i2 === 0 || dates[i2 - 1] <= d), down = dates.every((d, i2) => i2 === 0 || dates[i2 - 1] >= d);
+        return up || down;
+      };
+      const dm = sorted("DD/MM/YYYY"), md = sorted("MM/DD/YYYY");
+      best = md && !dm ? "MM/DD/YYYY" : "DD/MM/YYYY";
+      ambiguous = true;
+    }
+    return { format: best, share, ambiguous };
+  }
+  function balanceFits(amounts, balances2) {
+    let fits = 0, pairs = 0;
+    for (let i2 = 1; i2 < amounts.length; i2++) {
+      const a0 = amounts[i2 - 1], a1 = amounts[i2], b0 = balances2[i2 - 1], b1 = balances2[i2];
+      if (!a0 || !a1 || !b0 || !b1) continue;
+      pairs++;
+      if (sameAmount(addAmounts(b0, a1), b1) || sameAmount(addAmounts(b1, a0), b0)) fits++;
+    }
+    return pairs === 0 ? 0 : fits / pairs;
+  }
+  var filledAmount = (v) => v !== null && !/^-?0\.0+$/.test(v);
+  function complementary(a, b) {
+    return !a.some((v, i2) => filledAmount(v) && filledAmount(b[i2])) && a.some(filledAmount) && b.some(filledAmount);
+  }
+  function outAndIn(out, inn) {
+    return out.map((v, i2) => filledAmount(v) ? `-${v.replace(/^-/, "")}` : filledAmount(inn[i2]) ? inn[i2].replace(/^-/, "") : null);
+  }
+  function findTableStart(rows) {
+    const headerRow = findHeader(rows);
+    if (headerRow >= 0) return { headerRow, width: trimRow(rows[headerRow]).length };
+    const filled = rows.filter((r) => r.some((v) => v.trim() !== ""));
+    const sample = filled.slice(0, 5);
+    const width = sample[0]?.length ?? 0;
+    const isData = (r) => r.length === width && trimRow(r).length >= 3 && r.some(isDateLike) && r.some((v) => !isDateLike(v) && (DE_DECIMAL.test(v) || EN_DECIMAL.test(v)));
+    return sample.length > 0 && sample.every(isData) ? { headerRow: -1, width } : null;
+  }
+  function guessCsvLayout(text3) {
+    return analyseCsv(text3).guess;
+  }
+  function analyseCsv(text3) {
+    const separator = detectSeparator(text3);
+    const rows = checkedCsvRows(text3, separator);
+    const table = findTableStart(rows);
+    if (!table) throw new BankFileError("noTable", "No table with a header row and dates was found in this file.");
+    const { headerRow, width } = table;
+    const header = headerRow >= 0 ? trimRow(rows[headerRow]) : [];
+    const names2 = headerRow >= 0 ? header : Array.from({ length: width }, (_, i2) => `Column ${i2 + 1}`);
+    const data = rows.slice(headerRow + 1).map(trimRow).filter((r) => r.length >= Math.ceil(width / 2) && r.some(isDateLike));
+    const column = (j) => data.map((r) => r[j] ?? "");
+    let de = 0, en = 0;
+    for (const r of data) for (const v of r) {
+      if (isDateLike(v)) continue;
+      if (DE_DECIMAL.test(v)) de++;
+      if (EN_DECIMAL.test(v)) en++;
+    }
+    const numberFormat = en > de ? "en" : "de";
+    const decimalMark = numberFormat === "de" ? DE_DECIMAL : EN_DECIMAL;
+    const columns = [];
+    for (let j = 0; j < width; j++) {
+      const all = column(j), values = all.filter(Boolean);
+      let kind = "text";
+      let dateFormat3, ambiguous = false;
+      if (values.length === 0) kind = "empty";
+      else {
+        const date2 = bestDateFormat(values);
+        const amounts = values.filter((v) => parseAmountStrict(v, numberFormat) !== null).length / values.length;
+        const decimals = values.filter((v) => decimalMark.test(v)).length / values.length;
+        if (date2.share >= 0.9) {
+          kind = "date";
+          dateFormat3 = date2.format;
+          ambiguous = date2.ambiguous;
+        } else if (values.filter((v) => normalizeIban(v)).length / values.length >= 0.8) kind = "iban";
+        else if (amounts >= 0.9 && decimals >= 0.5) kind = "amount";
+        else if (values.every((v) => SIGN_VALUE.test(v)) && new Set(values.map((v) => v.toLowerCase())).size <= 4) kind = "sign";
+        else if (values.every((v) => /^[A-Z]{3}$/.test(v)) && new Set(values).size <= 3) kind = "currency";
+        else if (values.every((v) => /^[\d\s/-]+$/.test(v))) kind = "number";
+      }
+      columns.push({ index: j, header: names2[j], kind, samples: values.slice(0, 3), values: all, dateFormat: dateFormat3, ambiguous });
+    }
+    const roles = {};
+    const unsure = /* @__PURE__ */ new Set();
+    const taken = /* @__PURE__ */ new Set();
+    const take = (role, j) => {
+      roles[role] = j;
+      taken.add(j);
+    };
+    const byWord = (role, kinds) => columns.filter((col) => !taken.has(col.index) && kinds.includes(col.kind) && wordScore(col.header, role) > 0).sort((a, b) => wordScore(b.header, role) - wordScore(a.header, role))[0];
+    const dates = columns.filter((col) => col.kind === "date");
+    const booking = [...dates].sort((a, b) => wordScore(b.header, "date") - wordScore(b.header, "valueDate") - (wordScore(a.header, "date") - wordScore(a.header, "valueDate")) || a.index - b.index)[0];
+    if (booking) {
+      take("date", booking.index);
+      if (wordScore(booking.header, "date") === 0) unsure.add("date");
+      const value = dates.find((col) => col !== booking && wordScore(col.header, "valueDate") > 0) ?? dates.find((col) => col !== booking);
+      if (value) take("valueDate", value.index);
+    }
+    const amountCols = columns.filter((col) => col.kind === "amount");
+    const parsed = (j) => columns[j].values.map((v) => parseAmountStrict(v, numberFormat));
+    const balanceWord = byWord("balance", ["amount"]);
+    if (balanceWord) take("balance", balanceWord.index);
+    const debitWord = byWord("debit", ["amount"]), creditWord = byWord("credit", ["amount"]);
+    const amountWord = byWord("amount", ["amount"]);
+    if (amountWord) take("amount", amountWord.index);
+    else if (debitWord && creditWord) {
+      take("debit", debitWord.index);
+      take("credit", creditWord.index);
+    } else {
+      let rest = amountCols.filter((col) => !taken.has(col.index));
+      if (roles.balance === void 0) {
+        const movesBy = (b) => rest.some((a) => a.index !== b && balanceFits(parsed(a.index), parsed(b)) >= 0.8) || rest.some((x2) => rest.some((y) => x2 !== y && x2.index !== b && y.index !== b && complementary(parsed(x2.index), parsed(y.index)) && balanceFits(outAndIn(parsed(x2.index), parsed(y.index)), parsed(b)) >= 0.8));
+        const moving = rest.find((col) => movesBy(col.index));
+        if (moving) {
+          take("balance", moving.index);
+          rest = rest.filter((col) => col !== moving);
+        }
+      }
+      const pair = rest.length === 2 ? debitCredit(rest[0].index, rest[1].index) : null;
+      if (pair) {
+        take("debit", pair.debit);
+        take("credit", pair.credit);
+        if (!pair.sure) unsure.add("amount");
+      } else {
+        const balanceCol = roles.balance;
+        const fitting = balanceCol !== void 0 ? rest.find((col) => balanceFits(parsed(col.index), parsed(balanceCol)) >= 0.8) : void 0;
+        if (fitting) take("amount", fitting.index);
+        else if (rest[0]) {
+          take("amount", rest[0].index);
+          unsure.add("amount");
+        }
+      }
+    }
+    if (roles.balance === void 0 && roles.amount !== void 0) {
+      const fitting = amountCols.find((col) => !taken.has(col.index) && balanceFits(parsed(roles.amount), parsed(col.index)) >= 0.8);
+      if (fitting) take("balance", fitting.index);
+    }
+    function debitCredit(a, b) {
+      const pa = parsed(a), pb = parsed(b);
+      if (!complementary(pa, pb)) return null;
+      if (debitWord?.index === a || creditWord?.index === b) return { debit: a, credit: b, sure: true };
+      if (debitWord?.index === b || creditWord?.index === a) return { debit: b, credit: a, sure: true };
+      if (roles.balance !== void 0) {
+        const balance = parsed(roles.balance);
+        if (balanceFits(outAndIn(pa, pb), balance) >= 0.8) return { debit: a, credit: b, sure: true };
+        if (balanceFits(outAndIn(pb, pa), balance) >= 0.8) return { debit: b, credit: a, sure: true };
+      }
+      if (pa.filter(filledAmount).every((v) => v.startsWith("-"))) return { debit: a, credit: b, sure: true };
+      if (pb.filter(filledAmount).every((v) => v.startsWith("-"))) return { debit: b, credit: a, sure: true };
+      return { debit: a, credit: b, sure: false };
+    }
+    const sign = columns.find((col) => col.kind === "sign");
+    const anyNegative = roles.amount !== void 0 && parsed(roles.amount).some((a) => a?.startsWith("-"));
+    if (sign && roles.amount !== void 0 && !anyNegative) taken.add(sign.index);
+    else if (roles.amount !== void 0 && !anyNegative) unsure.add("sign");
+    for (const col of columns.filter((c) => c.kind === "iban" && !taken.has(c.index))) {
+      const distinct = new Set(col.values.filter(Boolean).map((v) => v.replace(/\s/g, "")));
+      if (distinct.size === 1 && data.length > 1 || wordScore(col.header, "accountIban") > 0) {
+        if (roles.accountIban === void 0) take("accountIban", col.index);
+      } else if (roles.iban === void 0) take("iban", col.index);
+    }
+    const currency = byWord("currency", ["currency", "text"]) ?? columns.find((col) => col.kind === "currency" && !taken.has(col.index));
+    if (currency) take("currency", currency.index);
+    const status = byWord("status", ["text"]);
+    if (status && new Set(status.values).size <= 6) take("status", status.index);
+    const reference = byWord("reference", ["text", "number"]);
+    if (reference && new Set(reference.values.filter(Boolean)).size === reference.values.filter(Boolean).length) take("reference", reference.index);
+    const bookingType = (col) => col.values.filter(Boolean).every((v) => /^(lastschrift|sepa.lastschrift|überweisung|sepa.überweisung|gutschrift|kartenzahlung|kartenverfügung|dauerauftrag|card payment|transfer)$/i.test(v.trim()));
+    const purpose = columns.filter((col) => col.kind === "text" && !taken.has(col.index) && wordScore(col.header, "text") > wordScore(col.header, "kind") && wordScore(col.header, "text") > 0).sort((a, b) => wordScore(b.header, "text") - wordScore(a.header, "text"))[0];
+    if (purpose) take("text", purpose.index);
+    const type = columns.filter((col) => col.kind === "text" && !taken.has(col.index) && wordScore(col.header, "kind") > 0 && bookingType(col)).sort((a, b) => wordScore(b.header, "kind") - wordScore(a.header, "kind"))[0];
+    if (type) take("kind", type.index);
+    for (const role of ["kind", "counterparty", "text"]) {
+      if (roles[role] !== void 0) continue;
+      const col = byWord(role, ["text"]);
+      if (col) take(role, col.index);
+    }
+    const freeText = columns.filter((col) => col.kind === "text" && !taken.has(col.index));
+    const avg = (col) => col.values.reduce((n, v) => n + v.length, 0) / Math.max(col.values.length, 1);
+    if (roles.text === void 0) {
+      const longest = [...freeText].sort((a, b) => avg(b) - avg(a))[0];
+      if (longest) {
+        take("text", longest.index);
+        unsure.add("text");
+      }
+    }
+    if (roles.counterparty === void 0) unsure.add("counterparty");
+    const missing = [];
+    if (roles.date === void 0) missing.push("date");
+    if (roles.amount === void 0 && (roles.debit === void 0 || roles.credit === void 0)) missing.push("amount");
+    const info = columns.map(({ index, header: h, kind, samples, dateFormat: f }) => ({ index, header: h, kind, samples, ...f ? { dateFormat: f } : {} }));
+    const dateCol = roles.date !== void 0 ? columns[roles.date] : void 0;
+    const dateFormat2 = dateCol?.dateFormat ?? "DD.MM.YYYY";
+    if (dateCol?.ambiguous) unsure.add("dateFormat");
+    if (missing.length > 0) {
+      return {
+        guess: { layout: null, confidence: 0, unsure: [...unsure], missing, separator, header, headerRow, columns: info, preview: [] },
+        columns,
+        rows,
+        payments: []
+      };
+    }
+    const layout2 = {
+      version: 1,
+      separator,
+      header,
+      ...headerRow < 0 ? { columnCount: width } : {},
+      dateFormat: dateFormat2,
+      numberFormat,
+      columns: {
+        date: roles.date,
+        ...roles.valueDate !== void 0 ? { valueDate: roles.valueDate } : {},
+        ...roles.amount !== void 0 ? { amount: roles.amount } : { debit: roles.debit, credit: roles.credit },
+        ...sign && roles.amount !== void 0 && !anyNegative ? { sign: sign.index } : {},
+        ...roles.counterparty !== void 0 ? { counterparty: [roles.counterparty] } : {},
+        ...roles.text !== void 0 ? { text: [roles.text] } : {},
+        ...roles.kind !== void 0 ? { kind: roles.kind } : {},
+        ...roles.iban !== void 0 ? { iban: roles.iban } : {},
+        ...roles.accountIban !== void 0 ? { accountIban: roles.accountIban } : {},
+        ...roles.balance !== void 0 ? { balance: roles.balance } : {},
+        ...roles.currency !== void 0 ? { currency: roles.currency } : {},
+        ...roles.reference !== void 0 ? { reference: roles.reference } : {},
+        ...roles.status !== void 0 ? { status: roles.status } : {}
+      },
+      ...roles.status !== void 0 ? { skipStatus: ["vorgemerkt", "pending", "offen", "reverted", "declined", "failed", "storniert"] } : {}
+    };
+    const read2 = readTable(rows, headerRow, layout2);
+    const rowsRead = read2.transactions.length / Math.max(data.length, 1);
+    let confidence = Math.min(1, rowsRead);
+    if (unsure.has("date")) confidence *= 0.85;
+    if (unsure.has("dateFormat")) confidence *= 0.7;
+    if (unsure.has("amount")) confidence *= 0.75;
+    if (unsure.has("sign")) confidence *= 0.7;
+    if (unsure.has("text")) confidence *= 0.9;
+    if (unsure.has("counterparty")) confidence *= 0.9;
+    return {
+      guess: {
+        layout: layout2,
+        confidence: Math.round(confidence * 100) / 100,
+        unsure: [...unsure],
+        missing,
+        separator,
+        header,
+        headerRow,
+        columns: info,
+        preview: read2.transactions.slice(0, 5)
+      },
+      columns,
+      rows,
+      payments: read2.transactions
+    };
+  }
+
+  // src/engine/readers/mt940.ts
+  function fields(text3) {
+    const out = [];
+    for (const line of text3.replace(/\r\n?/g, "\n").split("\n")) {
+      const m = /^:(\d{2}[A-Z]?):(.*)$/.exec(line);
+      if (m) out.push({ tag: m[1], value: m[2] });
+      else if (/^-}?\s*$/.test(line) || line.startsWith("{")) out.push({ tag: "end", value: "" });
+      else if (out.length > 0 && out[out.length - 1].tag !== "end") out[out.length - 1].value += `
+${line}`;
+    }
+    return out;
+  }
+  function date6(value) {
+    const m = /^(\d{2})(\d{2})(\d{2})$/.exec(value);
+    if (!m || +m[2] < 1 || +m[2] > 12 || +m[3] < 1 || +m[3] > 31) return null;
+    return `20${m[1]}-${m[2]}-${m[3]}`;
+  }
+  var amountOf = (value) => parseAmountStrict(value.endsWith(",") ? `${value}00` : value, "de");
+  function balanceOf(value) {
+    const m = /^([CD])(\d{6})([A-Z]{3})([\d,]+)/.exec(value.trim());
+    const amount2 = m ? amountOf(m[4]) : null;
+    if (!m || !amount2) return null;
+    return { amount: m[1] === "D" ? negate(amount2) : amount2, currency: m[3] };
+  }
+  var LINE_61 = /^(\d{6})(\d{4})?(RC|RD|C|D)([A-Z])?(\d+,\d*)([NFS][A-Z0-9]{3})(.*)$/;
+  function bookingDate(valueDate, entry) {
+    if (!entry) return valueDate;
+    let year = +valueDate.slice(0, 4);
+    const valueMonth = +valueDate.slice(5, 7), month = +entry.slice(0, 2);
+    if (month - valueMonth > 6) year--;
+    if (valueMonth - month > 6) year++;
+    return `${year}-${entry.slice(0, 2)}-${entry.slice(2, 4)}`;
+  }
+  function joinSubfields(parts) {
+    let text3 = "";
+    parts.forEach((part, i2) => {
+      text3 += (i2 > 0 && parts[i2 - 1].length < 27 ? " " : "") + part;
+    });
+    return text3.replace(/\s+/g, " ").trim();
+  }
+  function details86(value) {
+    const joined = value.replace(/\n/g, "");
+    const m = /^(\d{3})(\D)/.exec(joined);
+    if (!m) return { kind: "", text: cleanText(joined), name: "", iban: null };
+    const separator = m[2];
+    const sub = /* @__PURE__ */ new Map();
+    const parts = joined.slice(4).split(new RegExp(`\\${separator}(\\d{2})`));
+    for (let i2 = 1; i2 < parts.length; i2 += 2) sub.set(parts[i2], (sub.get(parts[i2]) ?? "") + parts[i2 + 1]);
+    const codes = (from2, to) => {
+      const out = [];
+      for (let n = from2; n <= to; n++) if (sub.has(String(n))) out.push(sub.get(String(n)));
+      return out;
+    };
+    const purpose = joinSubfields([...codes(20, 29), ...codes(60, 63)]);
+    return {
+      kind: cleanText(sub.get("00")),
+      text: sepaPaymentText(purpose),
+      name: joinSubfields(codes(32, 33)),
+      iban: normalizeIban(sub.get("31") ?? "")
+      // ?31 holds an IBAN or an old account number; only an IBAN counts
+    };
+  }
+  function readMt940(text3) {
+    const list2 = fields(text3);
+    if (!list2.some((f) => f.tag === "61") && !list2.some((f) => f.tag === "20")) {
+      throw new BankFileError("mt940", "This file is not an MT940 statement.");
+    }
+    const transactions = [];
+    let iban, accountNumber = "", currency = "EUR", skipped = 0;
+    let statement = -1, intraday = false;
+    const openings = /* @__PURE__ */ new Map(), closings = /* @__PURE__ */ new Map();
+    const intradayStatements = /* @__PURE__ */ new Set();
+    let last2 = null;
+    for (const field2 of list2) {
+      if (field2.tag === "20") {
+        statement++;
+        intraday = false;
+        last2 = null;
+        continue;
+      }
+      if (field2.tag === "end") {
+        last2 = null;
+        continue;
+      }
+      if (field2.tag === "25") {
+        const value = field2.value.trim();
+        iban ?? (iban = findIban(value));
+        accountNumber || (accountNumber = value.split("/").pop().replace(/[^0-9]/g, ""));
+      } else if (field2.tag === "34F" || field2.tag === "13D" || field2.tag === "13") {
+        intraday = true;
+        intradayStatements.add(statement);
+      } else if (field2.tag === "60F" || field2.tag === "60M") {
+        const bal = balanceOf(field2.value);
+        if (bal) {
+          openings.set(statement, bal.amount);
+          currency = bal.currency;
+        }
+      } else if (field2.tag === "62F" || field2.tag === "62M") {
+        const bal = balanceOf(field2.value);
+        if (bal) closings.set(statement, bal.amount);
+        last2 = null;
+      } else if (field2.tag === "61") {
+        last2 = null;
+        const [first] = field2.value.split("\n");
+        const m = LINE_61.exec(first.trim());
+        const valueDate = m ? date6(m[1]) : null;
+        const amount2 = m ? amountOf(m[5]) : null;
+        if (!m || !valueDate || !amount2 || intraday) {
+          skipped++;
+          continue;
+        }
+        const debit = m[3] === "D" || m[3] === "RC";
+        last2 = {
+          bookingDate: `${bookingDate(valueDate, m[2])}T00:00:00.000Z`,
+          valueDate: `${valueDate}T00:00:00.000Z`,
+          amount: debit ? negate(amount2) : amount2,
+          currency,
+          description: "(no description)",
+          counterparty: null,
+          raw: { ":61:": field2.value, ":86:": "" },
+          idFields: field2.value.trim(),
+          statement
+        };
+        transactions.push(last2);
+      } else if (field2.tag === "86" && last2) {
+        const d = details86(field2.value);
+        last2.description = d.text || d.kind || d.name || "(no description)";
+        last2.counterparty = d.name || null;
+        if (d.iban) last2.counterpartyIban = d.iban;
+        last2.raw[":86:"] = field2.value;
+        last2.idFields += `${field2.value.replace(/\s+/g, " ").trim()}`;
+        last2 = null;
+      }
+    }
+    for (const [index, opening] of openings) {
+      if (intradayStatements.has(index)) continue;
+      const own = transactions.filter((t) => t.statement === index);
+      if (!own.every((t, i2) => i2 === 0 || own[i2 - 1].bookingDate <= t.bookingDate)) continue;
+      let running = opening;
+      const after = own.map((t) => running = addAmounts(running, t.amount));
+      const closing2 = closings.get(index);
+      if (own.length > 0 && (closing2 === void 0 || sameAmount(running, closing2))) own.forEach((t, i2) => {
+        t.balance = after[i2];
+      });
+    }
+    const ids = bookingIds(transactions.map((t) => t.idFields));
+    const account = { name: iban ? accountName("Bank", iban) : accountNumber ? `Bank \u2022\u2022${accountNumber.slice(-4)}` : "Bank", currency };
+    if (iban) account.iban = iban;
+    return {
+      format: "mt940",
+      account,
+      transactions: transactions.map(({ idFields: _, statement: __, ...t }, i2) => ({ externalId: ids[i2], ...t })),
+      skipped
+    };
+  }
+
   // src/engine/readers/read.ts
   var isPaypalHeader = (row) => {
     const keys = new Set(row.map(headerKey));
     return (keys.has("transaktionscode") || keys.has("transactionid")) && ["netto", "net", "brutto", "gross"].some((k) => keys.has(k));
   };
-  function savedLayoutFor(text2, saved) {
+  function savedLayoutFor(text3, saved) {
     const bySeparator = /* @__PURE__ */ new Map();
     const ordered = [...saved].sort((a, b) => Number(a.header.length === 0) - Number(b.header.length === 0));
-    for (const layout of ordered) {
-      if (!bySeparator.has(layout.separator)) bySeparator.set(layout.separator, splitCsv(text2.slice(0, 2e5), layout.separator));
-      const headerRow = findTable(bySeparator.get(layout.separator), layout);
-      if (headerRow !== null) return { layout, headerRow };
+    for (const layout2 of ordered) {
+      if (!bySeparator.has(layout2.separator)) bySeparator.set(layout2.separator, splitCsv(text3.slice(0, 2e5), layout2.separator));
+      const headerRow = findTable(bySeparator.get(layout2.separator), layout2);
+      if (headerRow !== null) return { layout: layout2, headerRow };
     }
     return null;
   }
-  function detectBankFile(text2, savedLayouts = []) {
-    const head = text2.replace(/^\uFEFF/, "").trimStart();
+  function detectBankFile(text3, savedLayouts = []) {
+    const head = text3.replace(/^\uFEFF/, "").trimStart();
     if (head === "") return { format: "unknown", reason: "empty" };
     if (head.startsWith("PK")) return { format: "unknown", reason: "zip" };
     if (head.startsWith("<")) {
@@ -13156,15 +13942,15 @@ ${line}`;
     const saved = savedLayoutFor(head, savedLayouts);
     if (saved) return { format: "csv", separator: saved.layout.separator, headerRow: saved.headerRow, layout: saved.layout };
     const known = findProfile(rows);
-    const layout = known ? profileLayout(known.profile, rows, known.headerRow, separator) : null;
-    if (known && layout) {
+    const layout2 = known ? profileLayout(known.profile, rows, known.headerRow, separator) : null;
+    if (known && layout2) {
       return {
         format: "csv",
         separator,
         headerRow: known.headerRow,
-        layout,
+        layout: layout2,
         profile: { id: known.profile.id, bank: known.profile.bank },
-        ...profileDateAmbiguous(known.profile, rows, known.headerRow, layout) ? { dateAmbiguous: true } : {}
+        ...profileDateAmbiguous(known.profile, rows, known.headerRow, layout2) ? { dateAmbiguous: true } : {}
       };
     }
     const table = findTableStart(rows);
@@ -13179,28 +13965,28 @@ ${line}`;
   }
   var findKnown = (id) => BANK_PROFILES.find((p) => p.id === id);
   var bankName = (profile) => profile.variant ? `${profile.bank} (${profile.variant})` : profile.bank;
-  function dateConfirmation(rows, headerRow, layout) {
-    if (layout.profile === "volksbank" && headerRow === 0) layout = { ...layout, idStyle: "vrbank" };
+  function dateConfirmation(rows, headerRow, layout2) {
+    if (layout2.profile === "volksbank" && headerRow === 0) layout2 = { ...layout2, idStyle: "vrbank" };
     const data = rows.slice(headerRow + 1);
-    const c = layout.columns;
-    const names2 = layout.header.length ? layout.header : Array.from({ length: layout.columnCount ?? 0 }, (_, i) => `Column ${i + 1}`);
+    const c = layout2.columns;
+    const names2 = layout2.header.length ? layout2.header : Array.from({ length: layout2.columnCount ?? 0 }, (_, i2) => `Column ${i2 + 1}`);
     const columns = names2.map((header, index) => ({
       index,
       header,
       kind: index === c.date || index === c.valueDate ? "date" : [c.amount, c.debit, c.credit, c.balance, ...c.fees ?? [], ...c.addAmounts ?? []].includes(index) ? "amount" : [c.iban, c.accountIban].includes(index) ? "iban" : index === c.currency ? "currency" : index === c.sign ? "sign" : "text",
       samples: data.map((r) => r[index] ?? "").filter(Boolean).slice(0, 3),
-      ...index === layout.columns.date ? { dateFormat: layout.dateFormat } : {}
+      ...index === layout2.columns.date ? { dateFormat: layout2.dateFormat } : {}
     }));
     return {
-      layout,
+      layout: layout2,
       confidence: 0.7,
       unsure: ["dateFormat"],
       missing: [],
-      separator: layout.separator,
-      header: layout.header,
+      separator: layout2.separator,
+      header: layout2.header,
       headerRow,
       columns,
-      preview: readTable(rows, headerRow, layout).transactions.slice(0, 5)
+      preview: readTable(rows, headerRow, layout2).transactions.slice(0, 5)
     };
   }
   function recordCounterpartyIban(record, profile) {
@@ -13213,8 +13999,8 @@ ${line}`;
     }
     return void 0;
   }
-  function readVrBank(text2, profile, bank = profile.bank) {
-    const parsed = parseVrBankCsv(text2);
+  function readVrBank(text3, profile, bank = profile.bank) {
+    const parsed = parseVrBankCsv(text3);
     const dateColumns = ["Buchungstag", "Buchung", "Buchungsdatum"];
     const kept = parsed.transactions.filter((t) => {
       const raw = t.raw;
@@ -13226,11 +14012,11 @@ ${line}`;
       fields: `${t.bookingDate.toISOString()}|${t.amount}|${t.description}|${t.counterparty ?? ""}`
     })));
     const canonical = (v) => parseAmountStrict(v, "en") ?? v;
-    const transactions = isoTransactions({ ...parsed, transactions: kept }).map((t, i) => {
+    const transactions = isoTransactions({ ...parsed, transactions: kept }).map((t, i2) => {
       const counterpartyIban = recordCounterpartyIban(t.raw, profile);
       return {
         ...t,
-        externalId: ids[i],
+        externalId: ids[i2],
         amount: canonical(t.amount),
         ...t.balance ? { balance: canonical(t.balance) } : {},
         ...counterpartyIban ? { counterpartyIban } : {}
@@ -13247,21 +14033,39 @@ ${line}`;
     };
   }
   function readBankFile(bytes, savedLayouts = []) {
-    if (bytes[0] === 80 && bytes[1] === 75 && bytes[2] === 3 && bytes[3] === 4) {
-      throw new BankFileError("zip", "This is a ZIP archive; open it and import the files inside.");
+    if (bytes[0] === 208 && bytes[1] === 207 && bytes[2] === 17 && bytes[3] === 224) {
+      throw new BankFileError("xls", "Old Excel (.xls) files cannot be read. Export as CSV or save as .xlsx.");
     }
-    const { text: text2, encoding } = decodeBankFileWithEncoding(bytes);
-    return { ...readBankText(text2, savedLayouts), encoding };
+    if (isZip(bytes)) {
+      const files = unzipBankFile(bytes);
+      if (isXlsx(files)) return readBankText(xlsxText(files, savedLayouts), savedLayouts);
+      return readArchive(archiveBankTexts(files, isBankText), (text4) => readBankText(text4, savedLayouts));
+    }
+    const { text: text3, encoding } = decodeBankFileWithEncoding(bytes);
+    return { ...readBankText(text3, savedLayouts), encoding };
   }
-  function readBankText(text2, savedLayouts = []) {
-    const detected = detectBankFile(text2, savedLayouts);
+  var isBankText = (text3) => detectBankFile(text3).format !== "unknown";
+  var xlsxText = (files, saved) => xlsxTableText(files, (text3) => {
+    const format = detectBankFile(text3, saved).format;
+    return format === "csv" || format === "paypal";
+  });
+  function bankTableText(bytes, saved = []) {
+    if (!isZip(bytes)) return decodeBankFileWithEncoding(bytes).text;
+    const files = unzipBankFile(bytes);
+    if (isXlsx(files)) return xlsxText(files, saved);
+    const texts2 = archiveBankTexts(files, isBankText);
+    if (texts2.length !== 1) throw new BankFileError("zipLayout", "A bank file inside this ZIP needs its columns confirmed. Import that file separately first.");
+    return texts2[0];
+  }
+  function readBankText(text3, savedLayouts = []) {
+    const detected = detectBankFile(text3, savedLayouts);
     switch (detected.format) {
       case "camt":
-        return readCamt(text2);
+        return readCamt(text3);
       case "mt940":
-        return readMt940(text2);
+        return readMt940(text3);
       case "paypal": {
-        const rows = checkedCsvRows(text2, detected.separator).slice(detected.headerRow);
+        const rows = checkedCsvRows(text3, detected.separator).slice(detected.headerRow);
         const data = rows.slice(1).filter((r) => r.some((v) => v.trim() !== ""));
         if (data.length === 0) throw new BankFileError("noTable", "No readable booked payments were found in this file.");
         const width = Math.min(rows[0].length, data.reduce((n, row) => Math.max(n, row.length), 0));
@@ -13276,31 +14080,31 @@ ${line}`;
         };
       }
       case "csv": {
-        const rows = checkedCsvRows(text2, detected.separator);
-        const { layout, profile } = detected;
+        const rows = checkedCsvRows(text3, detected.separator);
+        const { layout: layout2, profile } = detected;
         const known = profile ? findKnown(profile.id) : void 0;
-        if (layout && detected.dateAmbiguous) {
-          return { format: "csv", transactions: [], needsLayout: dateConfirmation(rows, detected.headerRow, layout) };
+        if (layout2 && detected.dateAmbiguous) {
+          return { format: "csv", transactions: [], needsLayout: dateConfirmation(rows, detected.headerRow, layout2) };
         }
-        if (known?.reader === "vrbank" && detected.headerRow === 0 && layout) {
-          const checked4 = readTable(rows, detected.headerRow, layout);
-          const c = layout.columns;
-          const kept = rows.filter((r, i) => i === 0 || parseDate(r[c.date] ?? "", layout.dateFormat) !== null && parseAmountStrict(r[c.amount] ?? "", layout.numberFormat) !== null);
-          const changedDates = layout.dateFormat === "DD/MM/YYYY";
-          if (changedDates) for (let i = 1; i < kept.length; i++) {
-            kept[i] = [...kept[i]];
+        if (known?.reader === "vrbank" && detected.headerRow === 0 && layout2) {
+          const checked4 = readTable(rows, detected.headerRow, layout2);
+          const c = layout2.columns;
+          const kept = rows.filter((r, i2) => i2 === 0 || parseDate(r[c.date] ?? "", layout2.dateFormat) !== null && parseAmountStrict(r[c.amount] ?? "", layout2.numberFormat) !== null);
+          const changedDates = layout2.dateFormat === "DD/MM/YYYY";
+          if (changedDates) for (let i2 = 1; i2 < kept.length; i2++) {
+            kept[i2] = [...kept[i2]];
             for (const j of [c.date, c.valueDate]) if (j !== void 0) {
-              kept[i][j] = parseDate(kept[i][j] ?? "", layout.dateFormat) ?? "";
+              kept[i2][j] = parseDate(kept[i2][j] ?? "", layout2.dateFormat) ?? "";
             }
           }
-          const compatible = changedDates || kept.length !== rows.length || detected.separator === "	" || detected.separator === "|" ? kept.map((row) => row.map((v) => `"${v.replace(/"/g, '""')}"`).join(";")).join("\n") : text2;
-          return { ...readVrBank(compatible, known, layout.name), skipped: checked4.skipped };
+          const compatible = changedDates || kept.length !== rows.length || detected.separator === "	" || detected.separator === "|" ? kept.map((row) => row.map((v) => `"${v.replace(/"/g, '""')}"`).join(";")).join("\n") : text3;
+          return { ...readVrBank(compatible, known, layout2.name), skipped: checked4.skipped };
         }
-        if (layout) {
-          const file = readTable(rows, detected.headerRow, layout);
+        if (layout2) {
+          const file = readTable(rows, detected.headerRow, layout2);
           return known ? { ...file, bank: { id: known.id, name: bankName(known) } } : file;
         }
-        return { format: "csv", transactions: [], needsLayout: guessCsvLayout(text2.replace(/^\uFEFF/, "")) };
+        return { format: "csv", transactions: [], needsLayout: guessCsvLayout(text3.replace(/^\uFEFF/, "")) };
       }
       case "unknown": {
         const messages = {
@@ -13329,88 +14133,88 @@ ${line}`;
     "valueDate"
   ];
   var OTHER_DAY_ORDER = { "DD/MM/YYYY": "MM/DD/YYYY", "MM/DD/YYYY": "DD/MM/YYYY" };
-  function usedColumns(layout) {
-    return new Set(Object.values(layout.columns).flat().filter((i) => typeof i === "number"));
+  function usedColumns(layout2) {
+    return new Set(Object.values(layout2.columns).flat().filter((i2) => typeof i2 === "number"));
   }
-  function withColumns(layout, change) {
-    const columns = { ...layout.columns, ...change };
+  function withColumns(layout2, change) {
+    const columns = { ...layout2.columns, ...change };
     for (const key of Object.keys(columns)) if (columns[key] === void 0) delete columns[key];
-    return { ...layout, columns };
+    return { ...layout2, columns };
   }
   function alternatives(guess, columns, guessed) {
-    const layout = guess.layout, c = layout.columns;
+    const layout2 = guess.layout, c = layout2.columns;
     const unsure = new Set(guess.unsure);
-    const used = usedColumns(layout);
+    const used = usedColumns(layout2);
     const freeText = columns.filter((col) => col.kind === "text" && !used.has(col.index));
     const out = [];
     const offer = (reason, changed, doubted) => out.push({ layout: changed, reason, doubted });
-    const otherOrder = OTHER_DAY_ORDER[layout.dateFormat];
-    if (otherOrder) offer("dateFormat", { ...layout, dateFormat: otherOrder }, unsure.has("dateFormat"));
+    const otherOrder = OTHER_DAY_ORDER[layout2.dateFormat];
+    if (otherOrder) offer("dateFormat", { ...layout2, dateFormat: otherOrder }, unsure.has("dateFormat"));
     if (c.debit !== void 0 && c.credit !== void 0 && unsure.has("amount")) {
-      offer("debitCredit", withColumns(layout, { debit: c.credit, credit: c.debit }), true);
+      offer("debitCredit", withColumns(layout2, { debit: c.credit, credit: c.debit }), true);
     }
     if (c.amount !== void 0 && unsure.has("amount")) {
       for (const col of columns.filter((col2) => col2.kind === "amount" && !used.has(col2.index))) {
-        offer("amount", withColumns(layout, { amount: col.index }), true);
+        offer("amount", withColumns(layout2, { amount: col.index }), true);
       }
     }
     if (c.amount !== void 0 && c.sign === void 0) {
-      const amounts = (j) => columns[j].values.map((v) => parseAmountStrict(v, layout.numberFormat));
+      const amounts = (j) => columns[j].values.map((v) => parseAmountStrict(v, layout2.numberFormat));
       for (const col of columns.filter((col2) => col2.kind === "amount" && !used.has(col2.index))) {
         if (!complementary(amounts(c.amount), amounts(col.index))) continue;
         const [left, right] = [c.amount, col.index].sort((a, b) => a - b);
         const minus = (j) => amounts(j).filter((v) => v !== null && !/^-?0\.0+$/.test(v)).every((v) => v.startsWith("-"));
         const [debit, credit] = minus(right) && !minus(left) ? [right, left] : [left, right];
         const pair = { amount: void 0, debit, credit };
-        offer("debitCredit", withColumns(layout, pair), true);
-        offer("debitCredit", withColumns(layout, { ...pair, debit: credit, credit: debit }), true);
+        offer("debitCredit", withColumns(layout2, pair), true);
+        offer("debitCredit", withColumns(layout2, { ...pair, debit: credit, credit: debit }), true);
       }
     }
     if (c.amount !== void 0 && c.sign === void 0) {
       for (const col of columns.filter((col2) => col2.index !== c.date && col2.index !== c.amount)) {
         const marks = col.values.filter((v) => v.trim() !== "").map(signMark);
         if (marks.length > 0 && marks.every(Boolean) && marks.includes("debit") && marks.includes("credit")) {
-          offer("sign", withColumns(layout, { sign: col.index }), unsure.has("sign"));
+          offer("sign", withColumns(layout2, { sign: col.index }), unsure.has("sign"));
         }
       }
       const proven2 = c.balance !== void 0 && balanceFits(guessed.map((t) => t.amount), guessed.map((t) => t.balance ?? null)) >= 0.8;
-      if (!proven2) offer("invertSign", { ...layout, invertSign: true }, unsure.has("sign"));
+      if (!proven2) offer("invertSign", { ...layout2, invertSign: true }, unsure.has("sign"));
     }
-    const party = c.counterparty, text2 = c.text;
+    const party = c.counterparty, text3 = c.text;
     const unsureText = unsure.has("text") || unsure.has("counterparty");
-    if (party?.length && text2?.length) offer("counterpartyText", withColumns(layout, { counterparty: text2, text: party }), unsureText);
-    else if (text2?.length) {
+    if (party?.length && text3?.length) offer("counterpartyText", withColumns(layout2, { counterparty: text3, text: party }), unsureText);
+    else if (text3?.length) {
       const longest = [...freeText].sort((a, b) => average(b) - average(a))[0];
-      offer("counterpartyText", withColumns(layout, { counterparty: text2, text: longest ? [longest.index] : void 0 }), unsureText);
-      if (longest) offer("counterparty", withColumns(layout, { counterparty: [longest.index] }), unsureText);
-    } else if (party?.length) offer("counterpartyText", withColumns(layout, { counterparty: void 0, text: party }), unsureText);
-    if (c.valueDate !== void 0) offer("valueDate", withColumns(layout, { date: c.valueDate, valueDate: c.date }), unsure.has("date"));
-    const rank = (x) => (x.doubted ? 0 : ORDER.length) + ORDER.indexOf(x.reason);
-    return out.map((x, i) => ({ x, i })).sort((a, b) => rank(a.x) - rank(b.x) || a.i - b.i).map(({ x }) => x);
+      offer("counterpartyText", withColumns(layout2, { counterparty: text3, text: longest ? [longest.index] : void 0 }), unsureText);
+      if (longest) offer("counterparty", withColumns(layout2, { counterparty: [longest.index] }), unsureText);
+    } else if (party?.length) offer("counterpartyText", withColumns(layout2, { counterparty: void 0, text: party }), unsureText);
+    if (c.valueDate !== void 0) offer("valueDate", withColumns(layout2, { date: c.valueDate, valueDate: c.date }), unsure.has("date"));
+    const rank = (x2) => (x2.doubted ? 0 : ORDER.length) + ORDER.indexOf(x2.reason);
+    return out.map((x2, i2) => ({ x: x2, i: i2 })).sort((a, b) => rank(a.x) - rank(b.x) || a.i - b.i).map(({ x: x2 }) => x2);
   }
   var average = (col) => col.values.reduce((n, v) => n + v.length, 0) / Math.max(col.values.length, 1);
   var shown = (preview) => JSON.stringify(preview.map((t) => [t.bookingDate.slice(0, 10), t.counterparty ?? "", t.description, t.amount]));
-  function readingsOfUnknownText(text2, savedLayouts = []) {
-    const clean2 = text2.replace(/^\uFEFF/, "");
+  function readingsOfUnknownText(text3, savedLayouts = []) {
+    const clean2 = text3.replace(/^\uFEFF/, "");
     const detected = detectBankFile(clean2, savedLayouts);
     if (detected.format !== "csv") return [];
     if (detected.layout) {
       if (!detected.dateAmbiguous) return [];
       const rows2 = checkedCsvRows(clean2, detected.separator);
       const first = dateConfirmation(rows2, detected.headerRow, detected.layout).layout;
-      return [first, { ...first, dateFormat: OTHER_DAY_ORDER[first.dateFormat] }].map((layout, i) => ({
-        layout,
-        reason: i === 0 ? null : "dateFormat",
-        preview: readTable(rows2, detected.headerRow, layout).transactions.slice(0, PREVIEW_PAYMENTS)
+      return [first, { ...first, dateFormat: OTHER_DAY_ORDER[first.dateFormat] }].map((layout2, i2) => ({
+        layout: layout2,
+        reason: i2 === 0 ? null : "dateFormat",
+        preview: readTable(rows2, detected.headerRow, layout2).transactions.slice(0, PREVIEW_PAYMENTS)
       }));
     }
     const { guess, columns, rows, payments: guessed } = analyseCsv(clean2);
     if (!guess.layout) return [];
-    const read2 = (layout) => {
-      const start = findTable(rows, layout);
+    const read2 = (layout2) => {
+      const start = findTable(rows, layout2);
       if (start === null) return [];
       try {
-        return readTable(rows, start, layout).transactions;
+        return readTable(rows, start, layout2).transactions;
       } catch (error) {
         if (error instanceof BankFileError) return [];
         throw error;
@@ -13418,24 +14222,31 @@ ${line}`;
     };
     const candidates = [
       { layout: guess.layout, reason: null, payments: guessed },
-      ...alternatives({ ...guess, layout: guess.layout }, columns, guessed).map((x) => ({ ...x, payments: read2(x.layout) }))
+      ...alternatives({ ...guess, layout: guess.layout }, columns, guessed).map((x2) => ({ ...x2, payments: read2(x2.layout) }))
     ];
-    const most = Math.max(...candidates.map((x) => x.payments.length));
+    const most = Math.max(...candidates.map((x2) => x2.payments.length));
     const readings = [];
     const seen = /* @__PURE__ */ new Set();
-    for (const { layout, reason, payments } of candidates) {
+    for (const { layout: layout2, reason, payments } of candidates) {
       if (payments.length === 0 || payments.length < most) continue;
       const preview = payments.slice(0, PREVIEW_PAYMENTS);
       const key = shown(preview);
       if (seen.has(key)) continue;
       seen.add(key);
-      readings.push({ layout, reason, preview });
+      readings.push({ layout: layout2, reason, preview });
       if (readings.length === MAX_READINGS) break;
     }
     return readings;
   }
   function readingsOfUnknownFile(bytes, savedLayouts = []) {
-    return readingsOfUnknownText(decodeBankFile(bytes), savedLayouts);
+    let text3;
+    try {
+      text3 = bankTableText(bytes, savedLayouts);
+    } catch (error) {
+      if (error instanceof BankFileError) return [];
+      throw error;
+    }
+    return readingsOfUnknownText(text3, savedLayouts);
   }
 
   // src/engine/readers/share.ts
@@ -13457,13 +14268,13 @@ ${line}`;
     ["amount", (t) => AMOUNT.test(t)],
     ["digits", (t) => /\d(\s?\d){4,}/.test(t) || (t.match(DIGIT_GROUPS) ?? []).some((run) => digitCount(run) >= 8)]
   ];
-  function looksPersonal(text2) {
-    for (const [reason, test] of LOOKS_PERSONAL) if (test(text2)) return reason;
-    return text2.length > MAX_CELL ? "tooLong" : null;
+  function looksPersonal(text3) {
+    for (const [reason, test] of LOOKS_PERSONAL) if (test(text3)) return reason;
+    return text3.length > MAX_CELL ? "tooLong" : null;
   }
-  function utf8Length(text2) {
+  function utf8Length(text3) {
     let bytes = 0;
-    for (const ch of text2) {
+    for (const ch of text3) {
       const code = ch.codePointAt(0);
       bytes += code < 128 ? 1 : code < 2048 ? 2 : code < 65536 ? 3 : 4;
     }
@@ -13489,15 +14300,15 @@ ${line}`;
     "status"
   ];
   var LISTS = ["counterparty", "text", "fees", "addAmounts"];
-  function shareableLayout(layout) {
+  function shareableLayout(layout2) {
     const no = (reason) => ({ ok: false, reason });
-    const input = layout;
+    const input = layout2;
     if (!input || typeof input !== "object" || input.version !== 1) return no("invalid");
     const {
       separator,
       header,
       columnCount,
-      dateFormat,
+      dateFormat: dateFormat2,
       numberFormat,
       columns,
       skipStatus,
@@ -13506,7 +14317,7 @@ ${line}`;
       labelledText,
       currency
     } = input;
-    if (!SEPARATORS.includes(separator) || !DATE_FORMATS.includes(dateFormat)) return no("invalid");
+    if (!SEPARATORS.includes(separator) || !DATE_FORMATS.includes(dateFormat2)) return no("invalid");
     if (numberFormat !== "de" && numberFormat !== "en") return no("invalid");
     if (!Array.isArray(header) || !header.every((h) => typeof h === "string")) return no("invalid");
     if (header.length > MAX_COLUMNS) return no("tooWide");
@@ -13554,7 +14365,7 @@ ${line}`;
       separator,
       header: [...header],
       ...columnCount !== void 0 ? { columnCount } : {},
-      dateFormat,
+      dateFormat: dateFormat2,
       numberFormat,
       columns: copy2,
       ...skipStatus !== void 0 ? { skipStatus: [...skipStatus] } : {},
@@ -13568,7 +14379,7 @@ ${line}`;
   }
 
   // src/engine/receipts/register-code.ts
-  var amount = (text2) => /^-?\d+\.\d{2}$/.test(text2) ? parseAmountStrict(text2, "en") : null;
+  var amount = (text3) => /^-?\d+\.\d{2}$/.test(text3) ? parseAmountStrict(text3, "en") : null;
   function readRegisterCode(code) {
     if (typeof code !== "string") return null;
     const fields2 = code.trim().split(";");
@@ -13602,7 +14413,7 @@ ${line}`;
   function germanTime(value) {
     const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?(Z)?$/.exec(value?.trim() ?? "");
     if (!m) return null;
-    const [y, mo, d, h, mi] = [1, 2, 3, 4, 5].map((i) => Number(m[i]));
+    const [y, mo, d, h, mi] = [1, 2, 3, 4, 5].map((i2) => Number(m[i2]));
     let utc = Date.UTC(y, mo - 1, d, h, mi);
     if (Number.isNaN(utc) || mo < 1 || mo > 12 || d < 1 || d > 31 || h > 23 || mi > 59) return null;
     if (m[7]) {
@@ -13680,11 +14491,11 @@ ${line}`;
   };
   var OTHER_SCRIPT = /[\p{Script=Cyrillic}\p{Script=Greek}]/gu;
   var LATIN_OR_DIGIT = /[\p{Script=Latin}\p{N}]/gu;
-  function latinLookAlikes(text2) {
-    const other = text2.match(OTHER_SCRIPT)?.length ?? 0;
-    if (other === 0) return text2;
-    const latin = text2.match(LATIN_OR_DIGIT)?.length ?? 0;
-    return text2.replace(/[\p{L}\p{N}]+/gu, (word) => {
+  function latinLookAlikes(text3) {
+    const other = text3.match(OTHER_SCRIPT)?.length ?? 0;
+    if (other === 0) return text3;
+    const latin = text3.match(LATIN_OR_DIGIT)?.length ?? 0;
+    return text3.replace(/[\p{L}\p{N}]+/gu, (word) => {
       const mixed = /[\p{Script=Latin}\p{N}]/u.test(word);
       const single = [...word].length === 1 && latin > other;
       return mixed || single ? [...word].map((c) => LOOK_ALIKES[c] ?? c).join("") : word;
@@ -13709,9 +14520,9 @@ ${line}`;
   function receiptRows(observations) {
     const pieces = [];
     for (const o of observations ?? []) {
-      const text2 = typeof o?.text === "string" ? o.text.replace(/\s+/g, " ").trim() : "";
-      if (!text2 || ![o.x, o.y, o.width, o.height].every(finite)) continue;
-      pieces.push({ text: text2, left: o.x, right: o.x + o.width, cx: o.x + o.width / 2, cy: o.y + o.height / 2, height: Math.abs(o.height) });
+      const text3 = typeof o?.text === "string" ? o.text.replace(/\s+/g, " ").trim() : "";
+      if (!text3 || ![o.x, o.y, o.width, o.height].every(finite)) continue;
+      pieces.push({ text: text3, left: o.x, right: o.x + o.width, cx: o.x + o.width / 2, cy: o.y + o.height / 2, height: Math.abs(o.height) });
     }
     const pages = /* @__PURE__ */ new Map();
     for (const p of pieces) {
@@ -13954,7 +14765,7 @@ ${line}`;
   var KRONE_BY_PHONE = { "+45": "DKK", "+46": "SEK", "+47": "NOK", "+354": "ISK" };
 
   // src/engine/receipts/read.ts
-  var phrasesOf = (table, language) => Object.entries(table).flatMap(([kind, list2]) => (list2 ?? []).map((text2) => ({ words: shopWords(text2), kind, language })));
+  var phrasesOf = (table, language) => Object.entries(table).flatMap(([kind, list2]) => (list2 ?? []).map((text3) => ({ words: shopWords(text3), kind, language })));
   var PHRASES = [
     ...Object.entries(RECEIPT_WORDS).flatMap(([language, table]) => phrasesOf(table, language)),
     ...phrasesOf(SHARED_WORDS, null)
@@ -13965,22 +14776,22 @@ ${line}`;
   var LANGUAGES = Object.keys(RECEIPT_WORDS);
   function nearlySame(a, b) {
     if (Math.abs(a.length - b.length) > 1) return false;
-    let i = 0, j = 0, edits = 0;
-    while (i < a.length && j < b.length) {
-      if (a[i] === b[j]) {
-        i++;
+    let i2 = 0, j = 0, edits = 0;
+    while (i2 < a.length && j < b.length) {
+      if (a[i2] === b[j]) {
+        i2++;
         j++;
         continue;
       }
       if (++edits > 1) return false;
-      if (a.length > b.length) i++;
+      if (a.length > b.length) i2++;
       else if (b.length > a.length) j++;
       else {
-        i++;
+        i2++;
         j++;
       }
     }
-    return edits + (a.length - i) + (b.length - j) <= 1;
+    return edits + (a.length - i2) + (b.length - j) <= 1;
   }
   function hitsIn(words2) {
     const hits = [];
@@ -13992,25 +14803,25 @@ ${line}`;
         }
       }
     }
-    words2.forEach((word, i) => {
-      if (word.length < FUZZY_MIN_LENGTH - 1 || !/\p{L}/u.test(word) || hits.some((h) => h.start <= i && i < h.end)) return;
+    words2.forEach((word, i2) => {
+      if (word.length < FUZZY_MIN_LENGTH - 1 || !/\p{L}/u.test(word) || hits.some((h) => h.start <= i2 && i2 < h.end)) return;
       for (const p of FUZZY) {
-        if (nearlySame(word, p.words[0])) hits.push({ start: i, end: i + 1, kind: p.kind, language: p.language, fuzzy: true, phrase: p.words[0] });
+        if (nearlySame(word, p.words[0])) hits.push({ start: i2, end: i2 + 1, kind: p.kind, language: p.language, fuzzy: true, phrase: p.words[0] });
       }
     });
     return hits.filter((h) => !hits.some((o) => o.start <= h.start && o.end >= h.end && o.end - o.start > h.end - h.start));
   }
   var AMOUNT2 = /(?<![\p{L}\p{N}.,'])([-−–]\s?)?(?:US\$|CA\$|AU\$|R\$|[€£$]|EUR|CHF|GBP|USD)?\s?(\d{1,3}(?:[.,']\d{3})+|\d+)([.,])(\d{2})(?![\p{N}]|[.,]\d)(\s?[-−])?/gu;
   var PRICE_WITH_OS = /^([-−]?[€£$]?)([\dOo]+(?:[.,'][\dOo]{3})*[.,][\dOo]{2})([-−]?[A-Z€£$]?)$/;
-  var zeroes = (text2) => text2.split(/(\s+)/).map((piece) => {
+  var zeroes = (text3) => text3.split(/(\s+)/).map((piece) => {
     const m = PRICE_WITH_OS.exec(piece);
     return m && /\d/.test(m[2]) ? m[1] + m[2].replace(/[Oo]/g, "0") + m[3] : piece;
   }).join("");
   function amountsIn(raw) {
-    const text2 = zeroes(raw).replace(/’/g, "'").replace(/(\d)\s*[xX*]\s*(\d)/g, "$1 x $2");
+    const text3 = zeroes(raw).replace(/’/g, "'").replace(/(\d)\s*[xX*]\s*(\d)/g, "$1 x $2");
     const amounts = [];
-    for (const m of text2.matchAll(AMOUNT2)) {
-      const after = text2.slice(m.index + m[0].length);
+    for (const m of text3.matchAll(AMOUNT2)) {
+      const after = text3.slice(m.index + m[0].length);
       if (/^\s?(?:%|uhr\b|h\b)/iu.test(after)) continue;
       const value = parseAmountStrict(`${(m[1] ?? "").trim()}${m[2]}${m[3]}${m[4]}${(m[5] ?? "").trim()}`, m[3] === "," ? "de" : "en");
       if (value !== null) amounts.push(Number(value));
@@ -14038,13 +14849,13 @@ ${line}`;
     return index < 0 ? null : index + 1;
   };
   var fullYear2 = (y) => y.length === 2 ? `20${y}` : y;
-  function datesIn(text2, monthFirst) {
+  function datesIn(text3, monthFirst) {
     const found = [];
-    for (const m of text2.matchAll(/(?<!\d)(\d{4})-(\d{1,2})-(\d{1,2})(T\d)?(?!\d)/g)) {
+    for (const m of text3.matchAll(/(?<!\d)(\d{4})-(\d{1,2})-(\d{1,2})(T\d)?(?!\d)/g)) {
       const day2 = parseDate(`${m[1]}-${m[2]}-${m[3]}`, "YYYY-MM-DD");
       if (day2) found.push({ day: day2, ambiguous: false, utc: !!m[4] });
     }
-    for (const m of text2.matchAll(/(?<![\d./-])(\d{1,2})([./-])(\d{1,2})\2(\d{4}|\d{2})(?![\d.]\d|\d)/g)) {
+    for (const m of text3.matchAll(/(?<![\d./-])(\d{1,2})([./-])(\d{1,2})\2(\d{4}|\d{2})(?![\d.]\d|\d)/g)) {
       const year = fullYear2(m[4]);
       const dayFirst = parseDate(`${m[1]}.${m[3]}.${year}`, "DD.MM.YYYY");
       if (m[2] === ".") {
@@ -14060,7 +14871,7 @@ ${line}`;
       { re: /(?<!\p{L})(\p{L}{3,})\.?\s+(\d{1,2}),?\s+(\d{4})(?!\d)/gu, d: 2, mo: 1, y: 3 }
     ];
     for (const { re, d, mo, y } of named) {
-      for (const m of text2.matchAll(re)) {
+      for (const m of text3.matchAll(re)) {
         const month = monthOf(m[mo]);
         const day2 = month && parseDate(`${m[d]}.${month}.${m[y]}`, "DD.MM.YYYY");
         if (day2) found.push({ day: day2, ambiguous: false, utc: false });
@@ -14069,9 +14880,9 @@ ${line}`;
     return found;
   }
   var pad3 = (n) => String(n).padStart(2, "0");
-  function timesIn(text2) {
+  function timesIn(text3) {
     const times = [];
-    for (const m of text2.matchAll(/(?<![\d:.])(\d{1,2})(?::|h)(\d{2})(?::\d{2})?(?![\d])(?:\s*([ap])\.?\s?m\b\.?)?/giu)) {
+    for (const m of text3.matchAll(/(?<![\d:.])(\d{1,2})(?::|h)(\d{2})(?::\d{2})?(?![\d])(?:\s*([ap])\.?\s?m\b\.?)?/giu)) {
       let hour = Number(m[1]);
       const minute = Number(m[2]);
       if (minute > 59) continue;
@@ -14086,13 +14897,13 @@ ${line}`;
   var has = (line, ...kinds) => kinds.some((k) => line.kinds.has(k));
   var last = (line) => line.amounts.at(-1) ?? null;
   var cents4 = (n) => Math.round(n * 100);
-  function readLine(text2, index, monthFirst) {
-    const words2 = shopWords(text2);
+  function readLine(text3, index, monthFirst) {
+    const words2 = shopWords(text3);
     const hits = hitsIn(words2);
-    const dates = datesIn(text2, monthFirst);
-    const times = timesIn(text2);
-    const amounts = dates.length ? [] : amountsIn(text2);
-    return { index, text: text2, words: words2, hits, kinds: new Set(hits.map((h) => h.kind)), amounts, dates, times };
+    const dates = datesIn(text3, monthFirst);
+    const times = timesIn(text3);
+    const amounts = dates.length ? [] : amountsIn(text3);
+    return { index, text: text3, words: words2, hits, kinds: new Set(hits.map((h) => h.kind)), amounts, dates, times };
   }
   var SIGNS = CURRENCY_SIGNS.map(([sign, code]) => {
     const escaped = sign.replace(/[.$]/g, "\\$&");
@@ -14215,20 +15026,20 @@ ${line}`;
     if (has(line, "due", "total", "amount", "subtotal", "tax", "card", "cash", "given", "change", "register", "greeting", "phone", "date", "validity")) return false;
     return !isAddress(line) && !WEB.test(line.text) && !/\b[A-Z]{2}\s?\d{8,12}\b/.test(line.text) && !/\d[\d\s/-]{5,}\d/.test(line.text);
   }
-  function printedWords(text2) {
-    const tokens = [...text2.normalize("NFC").matchAll(/[\p{L}\p{M}\p{N}'’‘`´]+|[&+]/gu)].filter((m) => shopWords(m[0]).length === 1);
-    return tokens.length === shopWords(text2).length ? tokens.map((m) => ({ index: m.index, end: m.index + m[0].length })) : null;
+  function printedWords(text3) {
+    const tokens = [...text3.normalize("NFC").matchAll(/[\p{L}\p{M}\p{N}'’‘`´]+|[&+]/gu)].filter((m) => shopWords(m[0]).length === 1);
+    return tokens.length === shopWords(text3).length ? tokens.map((m) => ({ index: m.index, end: m.index + m[0].length })) : null;
   }
   var chainLike = (found) => found.source !== "rule" || found.direction === "both";
-  var clean = (text2) => text2.replace(/\s+/g, " ").replace(/^[\s*#.,:;|-]+|[\s*#,:;|-]+$/g, "");
-  function shopIn(text2, found, whole) {
-    if (whole && !chainLike(found)) return clean(text2);
-    const spans = found.at && printedWords(text2);
-    if (!spans || !found.at) return clean(text2);
-    return clean(text2.slice(spans[found.at[0]].index, spans[found.at[1] - 1].end));
+  var clean = (text3) => text3.replace(/\s+/g, " ").replace(/^[\s*#.,:;|-]+|[\s*#,:;|-]+$/g, "");
+  function shopIn(text3, found, whole) {
+    if (whole && !chainLike(found)) return clean(text3);
+    const spans = found.at && printedWords(text3);
+    if (!spans || !found.at) return clean(text3);
+    return clean(text3.slice(spans[found.at[0]].index, spans[found.at[1] - 1].end));
   }
   function shopOf(lines, itemsFrom, itemsTo) {
-    const find = (text2) => findShop({ counterparty: text2, amount: -1 });
+    const find = (text3) => findShop({ counterparty: text3, amount: -1 });
     const top = lines.slice(0, Math.min(itemsFrom, 10)).filter((l) => !l.amounts.length && !l.dates.length && !l.times.length && !isAddress(l) && !WEB.test(l.text));
     for (const line of top) {
       const found = find(line.text);
@@ -14249,9 +15060,9 @@ ${line}`;
   }
   function readReceipt(input) {
     const rows = receiptRows(input?.observations ?? []);
-    const firstPass = rows.map((text2, i) => readLine(text2, i, false));
+    const firstPass = rows.map((text3, i2) => readLine(text3, i2, false));
     const dollars = currencyOf(firstPass, null) === "USD";
-    const lines = dollars ? rows.map((text2, i) => readLine(text2, i, true)) : firstPass;
+    const lines = dollars ? rows.map((text3, i2) => readLine(text3, i2, true)) : firstPass;
     const total = totalOf(lines);
     const currency = currencyOf(lines, total.line);
     const firstAmount = lines.findIndex((l) => l.amounts.length > 0);
@@ -14387,10 +15198,10 @@ ${line}`;
   var nameWords = (words2, drop) => words2.filter((w) => w.length >= 3 && !/^\d+$/.test(w) && !drop(w));
   function withoutProcessors(words2) {
     const kept = [];
-    for (let i = 0; i < words2.length; ) {
-      const name = PROCESSORS.find((p) => p.every((w, k) => words2[i + k] === w));
-      if (name) i += name.length;
-      else kept.push(words2[i++]);
+    for (let i2 = 0; i2 < words2.length; ) {
+      const name = PROCESSORS.find((p) => p.every((w, k) => words2[i2 + k] === w));
+      if (name) i2 += name.length;
+      else kept.push(words2[i2++]);
     }
     return kept;
   }
@@ -14408,7 +15219,7 @@ ${line}`;
     const theirs = findShop(bank);
     if (shop.chain && chainLike2(theirs)) {
       const a = shop.chain.name.split(" "), b = theirs.name.split(" ");
-      return a.every((w, i) => b[i] === void 0 || b[i] === w) || b.every((w, i) => a[i] === void 0 || a[i] === w) ? "similar" : "different";
+      return a.every((w, i2) => b[i2] === void 0 || b[i2] === w) || b.every((w, i2) => a[i2] === void 0 || a[i2] === w) ? "similar" : "different";
     }
     if (shop.key && shop.key === merchantKey(bank)) return "similar";
     const bankWords = nameWords(withoutProcessors(shopWords(merchantKey(bank))), (w) => BOOKING.has(w));
@@ -14500,10 +15311,10 @@ ${line}`;
       {
         length: 31
       },
-      (_, i) => {
-        const distances = days.map((d) => distance(d, i + 1));
+      (_, i2) => {
+        const distances = days.map((d) => distance(d, i2 + 1));
         return {
-          day: i + 1,
+          day: i2 + 1,
           total: distances.reduce((a, b) => a + b, 0),
           close: distances.filter((d) => d <= 5).length
         };
@@ -14514,7 +15325,7 @@ ${line}`;
   function cadenceFor(dates, short = false) {
     if (dates.length < 2)
       return;
-    const gaps = dates.slice(1).map((d, i) => gap(dates[i], d));
+    const gaps = dates.slice(1).map((d, i2) => gap(dates[i2], d));
     return Object.keys(CADENCES).find(
       (key) => {
         const c = CADENCES[key];
@@ -14544,8 +15355,8 @@ ${line}`;
   function amountSeries(payments) {
     const result = [];
     for (const payment of payments) {
-      const choices = result.map((s, i) => ({
-        i,
+      const choices = result.map((s, i2) => ({
+        i: i2,
         delta: Math.abs(s.at(-1).cents - payment.cents)
       })).filter((s) => s.delta <= Math.max(300, Math.round(payment.cents * 0.1))).sort((a, b) => a.delta - b.delta || a.i - b.i);
       if (choices.length)
@@ -14560,19 +15371,19 @@ ${line}`;
     let changed = true;
     while (changed) {
       changed = false;
-      for (let i = 0; i < result.length; i++) {
-        const previous = result[i];
+      for (let i2 = 0; i2 < result.length; i2++) {
+        const previous = result[i2];
         const dates = previous.map((p) => p.date);
         const cadence = cadenceFor(dates, true);
         if (!cadence || !steady(dates))
           continue;
         const usual = usualDay(dates).day;
         const j = result.findIndex(
-          (next, j2) => j2 !== i && previous.at(-1).date < next[0].date && cadenceFor(next.map((p) => p.date), true) === cadence && steady(next.map((p) => p.date)) && distance(usualDay(next.map((p) => p.date)).day, usual) <= 5 && period(next[0].date, usual) - period(previous.at(-1).date, usual) === CADENCES[cadence].months && cadenceFor([...dates, ...next.map((p) => p.date)]) === cadence
+          (next, j2) => j2 !== i2 && previous.at(-1).date < next[0].date && cadenceFor(next.map((p) => p.date), true) === cadence && steady(next.map((p) => p.date)) && distance(usualDay(next.map((p) => p.date)).day, usual) <= 5 && period(next[0].date, usual) - period(previous.at(-1).date, usual) === CADENCES[cadence].months && cadenceFor([...dates, ...next.map((p) => p.date)]) === cadence
         );
         if (j < 0)
           continue;
-        result[i] = previous.concat(result[j]);
+        result[i2] = previous.concat(result[j]);
         result.splice(j, 1);
         changed = true;
         break;
@@ -14603,7 +15414,7 @@ ${line}`;
         const original = cadenceFor(dates);
         if (!steady(dates) || original && CADENCES[original].months >= 6)
           continue;
-        const gaps = dates.slice(1).map((d, i) => gap(dates[i], d));
+        const gaps = dates.slice(1).map((d, i2) => gap(dates[i2], d));
         const ownIDs = new Set(seed.map((p) => p.row.id));
         const usual = usualDay(dates).day;
         const phase = period(dates[0], usual);
@@ -14852,17 +15663,17 @@ ${line}`;
     const universe = [...keys, ...probes, ...Object.keys(settings.names), ...Object.keys(settings.learned)];
     const resolved = shopIdentities(universe);
     const identities = resolved.slice(0, keys.length);
-    const identityFor = new Map(universe.map((key, i) => [key, resolved[i]]));
+    const identityFor = new Map(universe.map((key, i2) => [key, resolved[i2]]));
     const rules = /* @__PURE__ */ new Map();
     for (const key of Object.keys(settings.names).sort()) {
       const identity = identityFor.get(key);
       if (!rules.has(identity))
         rules.set(identity, settings.names[key]);
     }
-    const byId = new Map(payments.map((p, i) => [p.id, {
+    const byId = new Map(payments.map((p, i2) => [p.id, {
       p,
-      key: keys[i],
-      identity: identities[i]
+      key: keys[i2],
+      identity: identities[i2]
     }]));
     const bankNames = /* @__PURE__ */ new Map();
     for (const t of dashboard.transactions) {
@@ -15173,17 +15984,17 @@ ${line}`;
     return {
       links,
       expenses: expenses.map(
-        (p2, i) => ({
+        (p2, i2) => ({
           id: p2.id,
-          amount: (originalOpen[i] - open[i]) / 100,
-          rest: open[i] / 100
+          amount: (originalOpen[i2] - open[i2]) / 100,
+          rest: open[i2] / 100
         })
       ),
       paymentsIn: paymentsIn.map(
-        (p2, i) => ({
+        (p2, i2) => ({
           id: p2.id,
-          amount: (originalAvailable[i] - available[i]) / 100,
-          rest: available[i] / 100
+          amount: (originalAvailable[i2] - available[i2]) / 100,
+          rest: available[i2] / 100
         })
       ),
       linked: links.reduce((n, l) => n + cents6(l.amount), 0) / 100,
@@ -15206,14 +16017,14 @@ ${line}`;
           }
         );
       const rows = result[link.from];
-      const i = rows.findIndex((l) => l.payment === link.to);
-      if (i < 0)
+      const i2 = rows.findIndex((l) => l.payment === link.to);
+      if (i2 < 0)
         rows.push({
           payment: link.to,
           amount: link.totalAmount
         });
       else
-        rows[i].amount = link.totalAmount;
+        rows[i2].amount = link.totalAmount;
     }
     return result;
   }
@@ -15251,9 +16062,9 @@ ${line}`;
       }))
     };
   }
-  var parseVrBankCsv2 = (text2) => isoDates(parseVrBankCsv(text2));
-  var parseCamt2 = (text2) => isoDates(parseCamt(text2));
-  var parsePaypalCsv3 = (text2) => isoDates(parsePaypalCsv2(text2));
+  var parseVrBankCsv2 = (text3) => isoDates(parseVrBankCsv(text3));
+  var parseCamt2 = (text3) => isoDates(parseCamt(text3));
+  var parsePaypalCsv3 = (text3) => isoDates(parsePaypalCsv2(text3));
   return __toCommonJS(index_exports);
 })();
 globalThis.AresiumEngine = __AresiumEngine;

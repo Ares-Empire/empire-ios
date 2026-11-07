@@ -38,6 +38,10 @@ done
 for file in unknown-fiktivbank.csv dkb.csv; do
   cp "$aresium/src/engine/fixtures/banks/$file" "$tests/$file"
 done
+# A ZIP of CAMT statements and an Excel export from the engine's test set (aresium brief 240).
+for file in zip-camt.zip xlsx-dkb.xlsx; do
+  cp "$aresium/eval/files/cases/$file" "$tests/$file"
+done
 
 # The licence notice of the brand names in the shop list: the copyright line, what it covers, then the licence's text.
 node -e '
