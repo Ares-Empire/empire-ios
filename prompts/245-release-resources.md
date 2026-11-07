@@ -1,6 +1,6 @@
 # 245: Release builds without development fixtures, checked by an audit
 
-Status: running (Codex, started 2026-11-07)
+Status: merged 2026-11-07 (all five archives audited by Codex; Arestemis and Aresium archives re-audited and 445 Arestemis tests by Claude)
 Branch: `codex/245-release-resources` · Worktree: `../empire-ios-245-release-resources` · Model: `gpt-6.1-sol`, effort
 `high` (mostly build configuration, but each resource's use must be traced through Release code paths so no shipping
 tour or screen loses a file it needs; a miss would only show on Patrik's phone)
