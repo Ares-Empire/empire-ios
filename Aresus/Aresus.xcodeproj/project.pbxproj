@@ -553,6 +553,13 @@
 		A19C06D5D36B62ED7BCF6A19 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				EXCLUDED_SOURCE_FILE_NAMES = (
+					"$(inherited)",
+					"sample-push.apns",
+					"Samples",
+					"*/Samples/*",
+					"*/Samples/**/*",
+				);
 				DEVELOPMENT_TEAM = WQN8SHAH9B;
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ENABLE_MODULES = YES;

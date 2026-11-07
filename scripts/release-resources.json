@@ -1,0 +1,527 @@
+{
+  "version": 1,
+  "notes": [
+    "Paths in required are exact paths relative to the .app, including each extension; a file in another bundle does not satisfy a loader.",
+    "Forbidden patterns match every relative suffix, including flattened resource basenames inside extensions. Classified non-Release source basenames are forbidden too.",
+    "sample_roots must have every file classified. Update this inventory when adding samples; unused files are retained in source and excluded from Release.",
+    "Xcode folder-synchronized resources are flattened. Moving prices-9.json to Resources preserves its basename lookup for TourData and Debug samples.",
+    "Aresium engine includes the shop list in aresium-engine.js (scripts/aresium-engine.sh); there is no separately loaded shop JSON.",
+    "English literals fall back to their keys: Xcode emits no en .strings for tables with no translated English units. English plural .stringsdict files and explicit English translations are required where emitted.",
+    "Release exclusions include both direct-child and recursive patterns: Aresium PhoneSample fixtures are nested under Preview Content."
+  ],
+  "shared_required": [
+    {
+      "paths": [
+        "SpaceGrotesk-Variable.ttf",
+        "JetBrainsMono-Variable.ttf"
+      ],
+      "reason": "Shared/AppFont.register loads both fonts in every app and widget."
+    },
+    {
+      "paths": [
+        "OFL-SpaceGrotesk.txt",
+        "OFL-JetBrainsMono.txt"
+      ],
+      "reason": "Shared/Settings/SettingsInfo.swift loads the bundled font licences."
+    },
+    {
+      "paths": [
+        "de.lproj/Shared.strings"
+      ],
+      "reason": "Shared/AppLanguage and SwiftUI load German from Shared.strings; English falls back to source keys."
+    }
+  ],
+  "apps": {
+    "Aresium": {
+      "sample_roots": [
+        "Aresium/Aresium/Preview Content"
+      ],
+      "classifications": [
+        {
+          "source": "Aresium/Aresium/Preview Content/PhoneSample/sample-camt.xml",
+          "classification": "debug_only",
+          "reason": "PhoneSample.backend imports this only under #if DEBUG (-samplePhone)."
+        },
+        {
+          "source": "Aresium/Aresium/Preview Content/PhoneSample/sample-paypal.csv",
+          "classification": "debug_only",
+          "reason": "PhoneSample.backend imports this only under #if DEBUG (-samplePhone)."
+        },
+        {
+          "source": "Aresium/Aresium/Preview Content/PhoneSample/sample-unknown-bank.csv",
+          "classification": "debug_only",
+          "reason": "PhoneSample.unknownBankFile is compiled only under #if DEBUG (-sampleLayout)."
+        },
+        {
+          "source": "Aresium/Aresium/Preview Content/transaction-detail.sample.json",
+          "classification": "debug_only",
+          "reason": "TransactionDetail.sample is used only by the DEBUG server sample dashboard; the shipping phone tour uses PhoneBackend."
+        },
+        {
+          "source": "Aresium/AresiumShared/dashboard.sample.json",
+          "classification": "release",
+          "reason": "WidgetSnapshot.sample calls Dashboard.sample from Release WidgetProviders placeholders and gallery snapshots."
+        }
+      ],
+      "forbidden_patterns": [
+        "Samples/*",
+        "Preview Content/*"
+      ],
+      "bundles": [
+        {
+          "path": ".",
+          "shared_required": true,
+          "required": [
+            {
+              "paths": [
+                "Assets.car"
+              ],
+              "reason": "Named images and colours used by the shipping SwiftUI screens."
+            },
+            {
+              "paths": [
+                "en.lproj/Localizable.strings",
+                "de.lproj/Localizable.strings",
+                "en.lproj/Localizable.stringsdict",
+                "de.lproj/Localizable.stringsdict"
+              ],
+              "reason": "AppLanguage and SwiftUI load the app table, including its plurals where present."
+            },
+            {
+              "paths": [
+                "aresium-engine.js",
+                "engine-version.txt"
+              ],
+              "reason": "AresiumEngine.bundledForPhone and PhoneBackend load the engine (including the shop list) and its revision."
+            },
+            {
+              "paths": [
+                "de.places.bin.gz"
+              ],
+              "reason": "PackedLocalPlaces.load feeds the shipping phone engine."
+            },
+            {
+              "paths": [
+                "name-suggestion-index-licence.txt",
+                "local-places-licence.txt"
+              ],
+              "reason": "BundledLicence.shopList/localPlaces load the shipped data attribution."
+            },
+            {
+              "paths": [
+                "bank-steps.json"
+              ],
+              "reason": "BankGuide.bundled loads the shipping import guide."
+            },
+            {
+              "paths": [
+                "de.lproj/AresiumShared.strings",
+                "en.lproj/InfoPlist.strings",
+                "de.lproj/InfoPlist.strings"
+              ],
+              "reason": "The shared dashboard table and localized iOS permission descriptions."
+            }
+          ]
+        },
+        {
+          "path": "PlugIns/AresiumWidgetExtension.appex",
+          "shared_required": true,
+          "required": [
+            {
+              "paths": [
+                "dashboard.sample.json"
+              ],
+              "reason": "WidgetProviders loads WidgetSnapshot.sample for shipping placeholders and gallery snapshots."
+            },
+            {
+              "paths": [
+                "de.lproj/AresiumShared.strings",
+                "de.lproj/Localizable.strings"
+              ],
+              "reason": "Widget and shared dashboard strings in both languages."
+            }
+          ]
+        }
+      ]
+    },
+    "Empire": {
+      "sample_roots": [
+        "Empire/Empire/Preview Content"
+      ],
+      "classifications": [
+        {
+          "source": "Empire/Empire/Preview Content/empire.admin.json",
+          "classification": "debug_only",
+          "reason": "EmpireSamples.load loads the admin dashboard only when EmpireSamples.enabled is true; it always returns false in Release."
+        },
+        {
+          "source": "Empire/Empire/Preview Content/empire.user.json",
+          "classification": "debug_only",
+          "reason": "EmpireSamples.load loads the member dashboard only when EmpireSamples.enabled is true; it always returns false in Release."
+        }
+      ],
+      "forbidden_patterns": [
+        "Samples/*",
+        "Preview Content/*"
+      ],
+      "bundles": [
+        {
+          "path": ".",
+          "shared_required": true,
+          "required": [
+            {
+              "paths": [
+                "Assets.car"
+              ],
+              "reason": "Named images and colours used by the shipping SwiftUI screens."
+            },
+            {
+              "paths": [
+                "de.lproj/Localizable.strings"
+              ],
+              "reason": "AppLanguage and SwiftUI load the app table, including its plurals where present."
+            }
+          ]
+        }
+      ]
+    },
+    "Arestemis": {
+      "sample_roots": [
+        "Arestemis/Arestemis/Samples"
+      ],
+      "classifications": [
+        {
+          "source": "Arestemis/Arestemis/Samples/ebay-match.json",
+          "classification": "debug_only",
+          "reason": "SampleContent.contract loads this for the DEBUG SampleBackend initializer or unit tests; the shipping tour builds its own content in TourData."
+        },
+        {
+          "source": "Arestemis/Arestemis/Samples/fulfillment-preview.json",
+          "classification": "debug_only",
+          "reason": "FulfillmentSample loads this only under #if DEBUG for fulfillment screenshots and tests."
+        },
+        {
+          "source": "Arestemis/Arestemis/Samples/hunts.json",
+          "classification": "debug_only",
+          "reason": "The decoding and hunt contract tests load this through ArestemisSamples; no shipping caller loads it."
+        },
+        {
+          "source": "Arestemis/Arestemis/Samples/ikea-match.json",
+          "classification": "debug_only",
+          "reason": "SampleContent.contract loads this for the DEBUG SampleBackend initializer or unit tests; the shipping tour builds its own content in TourData."
+        },
+        {
+          "source": "Arestemis/Arestemis/Samples/immowelt-match.json",
+          "classification": "debug_only",
+          "reason": "SampleContent.contract loads this for the DEBUG SampleBackend initializer or unit tests; the shipping tour builds its own content in TourData."
+        },
+        {
+          "source": "Arestemis/Arestemis/Samples/item-matches.json",
+          "classification": "debug_only",
+          "reason": "SampleContent.contract loads this for the DEBUG SampleBackend initializer or unit tests; the shipping tour builds its own content in TourData."
+        },
+        {
+          "source": "Arestemis/Arestemis/Samples/kinds.json",
+          "classification": "debug_only",
+          "reason": "SampleContent.contract loads this for the DEBUG SampleBackend initializer or unit tests; the shipping tour builds its own content in TourData."
+        },
+        {
+          "source": "Arestemis/Arestemis/Samples/match.json",
+          "classification": "debug_only",
+          "reason": "SampleContent.contract loads this for the DEBUG SampleBackend initializer or unit tests; the shipping tour builds its own content in TourData."
+        },
+        {
+          "source": "Arestemis/Arestemis/Samples/matches.json",
+          "classification": "debug_only",
+          "reason": "SampleContent.contract loads this for the DEBUG SampleBackend initializer or unit tests; the shipping tour builds its own content in TourData."
+        },
+        {
+          "source": "Arestemis/Arestemis/Samples/not-checked.json",
+          "classification": "debug_only",
+          "reason": "SampleContent.contract loads this for the DEBUG SampleBackend initializer or unit tests; the shipping tour builds its own content in TourData."
+        },
+        {
+          "source": "Arestemis/Arestemis/Samples/overview.json",
+          "classification": "debug_only",
+          "reason": "SampleContent.contract loads this for the DEBUG SampleBackend initializer or unit tests; the shipping tour builds its own content in TourData."
+        },
+        {
+          "source": "Arestemis/Arestemis/Samples/places.json",
+          "classification": "debug_only",
+          "reason": "SampleContent.contract loads this for the DEBUG SampleBackend initializer or unit tests; the shipping tour builds its own content in TourData."
+        },
+        {
+          "source": "Arestemis/Arestemis/Samples/price-matches.json",
+          "classification": "debug_only",
+          "reason": "SampleContent.contract loads this for the DEBUG SampleBackend initializer or unit tests; the shipping tour builds its own content in TourData."
+        },
+        {
+          "source": "Arestemis/Arestemis/Samples/price-offers.json",
+          "classification": "debug_only",
+          "reason": "SampleContent.contract loads this for the DEBUG SampleBackend initializer or unit tests; the shipping tour builds its own content in TourData."
+        },
+        {
+          "source": "Arestemis/Arestemis/Samples/prices-10.json",
+          "classification": "debug_only",
+          "reason": "SampleContent.contract loads this for the DEBUG SampleBackend initializer or unit tests; the shipping tour builds its own content in TourData."
+        },
+        {
+          "source": "Arestemis/Arestemis/Samples/prices-12.json",
+          "classification": "debug_only",
+          "reason": "SampleContent.contract loads this for the DEBUG SampleBackend initializer or unit tests; the shipping tour builds its own content in TourData."
+        },
+        {
+          "source": "Arestemis/Arestemis/Samples/product-preview.json",
+          "classification": "debug_only",
+          "reason": "SampleContent.contract loads this for the DEBUG SampleBackend initializer or unit tests; the shipping tour builds its own content in TourData."
+        },
+        {
+          "source": "Arestemis/Arestemis/Samples/rejected.json",
+          "classification": "debug_only",
+          "reason": "SampleContent.contract loads this for the DEBUG SampleBackend initializer or unit tests; the shipping tour builds its own content in TourData."
+        },
+        {
+          "source": "Arestemis/Arestemis/Samples/settings.json",
+          "classification": "debug_only",
+          "reason": "SampleContent.contract loads this for the DEBUG SampleBackend initializer or unit tests; the shipping tour builds its own content in TourData."
+        },
+        {
+          "source": "Arestemis/Arestemis/Samples/shipping-unknown-preview.json",
+          "classification": "debug_only",
+          "reason": "FulfillmentSample loads this only under #if DEBUG for fulfillment screenshots and tests."
+        },
+        {
+          "source": "Arestemis/Arestemis/Samples/used-matches.json",
+          "classification": "debug_only",
+          "reason": "UsedSample loads this only under #if DEBUG for used-offer screenshots and tests."
+        },
+        {
+          "source": "Arestemis/Arestemis/Samples/vinted-match.json",
+          "classification": "debug_only",
+          "reason": "SampleContent.contract loads this for the DEBUG SampleBackend initializer or unit tests; the shipping tour builds its own content in TourData."
+        },
+        {
+          "source": "Arestemis/Arestemis/Samples/watch-matches.json",
+          "classification": "debug_only",
+          "reason": "SampleContent.contract loads this for the DEBUG SampleBackend initializer or unit tests; the shipping tour builds its own content in TourData."
+        },
+        {
+          "source": "Arestemis/Arestemis/Resources/prices-9.json",
+          "classification": "release",
+          "reason": "TourData.history loads this year of prices in the shipping tour (and DEBUG contract samples)."
+        }
+      ],
+      "forbidden_patterns": [
+        "Samples/*",
+        "Preview Content/*"
+      ],
+      "bundles": [
+        {
+          "path": ".",
+          "shared_required": true,
+          "required": [
+            {
+              "paths": [
+                "Assets.car"
+              ],
+              "reason": "Named images and colours used by the shipping SwiftUI screens."
+            },
+            {
+              "paths": [
+                "de.lproj/Localizable.strings",
+                "en.lproj/Localizable.stringsdict",
+                "de.lproj/Localizable.stringsdict"
+              ],
+              "reason": "AppLanguage and SwiftUI load the app table, including its plurals where present."
+            },
+            {
+              "paths": [
+                "prices-9.json"
+              ],
+              "reason": "TourData.history reads this in Release for the console price chart."
+            },
+            {
+              "paths": [
+                "town-locations-licence.txt"
+              ],
+              "reason": "BundledLicence.townLocations loads this OpenStreetMap attribution."
+            }
+          ]
+        }
+      ]
+    },
+    "Aresus": {
+      "sample_roots": [
+        "Aresus/Aresus/Samples"
+      ],
+      "classifications": [
+        {
+          "source": "Aresus/Aresus/Samples/board-waiting.json",
+          "classification": "debug_only",
+          "reason": "AresusSamples.boardWaiting loads this only through DEBUG sample launch or the DEBUG WidgetGallery; launched returns nil in Release."
+        },
+        {
+          "source": "Aresus/Aresus/Samples/drop-folders.json",
+          "classification": "debug_only",
+          "reason": "AresusSamples.folders loads this only through DEBUG sample launch or the DEBUG WidgetGallery; launched returns nil in Release."
+        },
+        {
+          "source": "Aresus/Aresus/Samples/drops.json",
+          "classification": "debug_only",
+          "reason": "AresusSamples.drops loads this only through DEBUG sample launch or the DEBUG WidgetGallery; launched returns nil in Release."
+        },
+        {
+          "source": "Aresus/Aresus/Samples/overview.json",
+          "classification": "debug_only",
+          "reason": "AresusSamples.overview loads this only through DEBUG sample launch or the DEBUG WidgetGallery; launched returns nil in Release."
+        },
+        {
+          "source": "Aresus/Aresus/Samples/province.json",
+          "classification": "debug_only",
+          "reason": "AresusSamples.province loads this only through DEBUG sample launch or the DEBUG WidgetGallery; launched returns nil in Release."
+        },
+        {
+          "source": "Aresus/Aresus/Samples/run.json",
+          "classification": "debug_only",
+          "reason": "AresusSamples.run loads this only through DEBUG sample launch or the DEBUG WidgetGallery; launched returns nil in Release."
+        },
+        {
+          "source": "Aresus/Aresus/Samples/sync.json",
+          "classification": "debug_only",
+          "reason": "AresusSamples.sync loads this only through DEBUG sample launch or the DEBUG WidgetGallery; launched returns nil in Release."
+        }
+      ],
+      "forbidden_patterns": [
+        "Samples/*",
+        "Preview Content/*"
+      ],
+      "bundles": [
+        {
+          "path": ".",
+          "shared_required": true,
+          "required": [
+            {
+              "paths": [
+                "Assets.car"
+              ],
+              "reason": "Named images and colours used by the shipping SwiftUI screens."
+            },
+            {
+              "paths": [
+                "de.lproj/Localizable.strings",
+                "en.lproj/Localizable.stringsdict",
+                "de.lproj/Localizable.stringsdict"
+              ],
+              "reason": "AppLanguage and SwiftUI load the app table, including its plurals where present."
+            },
+            {
+              "paths": [
+                "de.lproj/AresusShared.strings",
+                "en.lproj/AresusShared.stringsdict",
+                "de.lproj/AresusShared.stringsdict",
+                "en.lproj/AresusDrops.strings",
+                "de.lproj/AresusDrops.strings",
+                "en.lproj/AresusDrops.stringsdict",
+                "de.lproj/AresusDrops.stringsdict",
+                "en.lproj/InfoPlist.strings",
+                "de.lproj/InfoPlist.strings"
+              ],
+              "reason": "Shared status, drop screens and iOS permission descriptions."
+            }
+          ]
+        },
+        {
+          "path": "PlugIns/AresusWidgetExtension.appex",
+          "shared_required": true,
+          "required": [
+            {
+              "paths": [
+                "de.lproj/AresusShared.strings",
+                "en.lproj/AresusShared.stringsdict",
+                "de.lproj/AresusShared.stringsdict",
+                "de.lproj/Localizable.strings"
+              ],
+              "reason": "Widget status and widget gallery strings."
+            }
+          ]
+        },
+        {
+          "path": "PlugIns/AresusShareExtension.appex",
+          "shared_required": true,
+          "required": [
+            {
+              "paths": [
+                "en.lproj/AresusDrops.strings",
+                "de.lproj/AresusDrops.strings",
+                "en.lproj/AresusDrops.stringsdict",
+                "de.lproj/AresusDrops.stringsdict"
+              ],
+              "reason": "SendSheet and the share extension load the drops table."
+            }
+          ]
+        }
+      ]
+    },
+    "Arestoteles": {
+      "sample_roots": [
+        "Arestoteles/Arestoteles/Samples"
+      ],
+      "classifications": [
+        {
+          "source": "Arestoteles/Arestoteles/Samples/edit-result.json",
+          "classification": "debug_only",
+          "reason": "ArestotelesSamples.decode loads the edit result only from the #if DEBUG SampleBackend or unit tests."
+        },
+        {
+          "source": "Arestoteles/Arestoteles/Samples/note-source.json",
+          "classification": "debug_only",
+          "reason": "ArestotelesSamples.decode loads the note source only from the #if DEBUG SampleBackend or unit tests."
+        },
+        {
+          "source": "Arestoteles/Arestoteles/Samples/search.json",
+          "classification": "debug_only",
+          "reason": "ArestotelesSamples.decode loads the search answer only from the #if DEBUG SampleBackend or unit tests."
+        },
+        {
+          "source": "Arestoteles/Arestoteles/Samples/vault.json",
+          "classification": "debug_only",
+          "reason": "ArestotelesSamples.decode loads the vault only from the #if DEBUG SampleBackend or unit tests."
+        }
+      ],
+      "forbidden_patterns": [
+        "Samples/*",
+        "Preview Content/*"
+      ],
+      "bundles": [
+        {
+          "path": ".",
+          "shared_required": true,
+          "required": [
+            {
+              "paths": [
+                "Assets.car"
+              ],
+              "reason": "Named images and colours used by the shipping SwiftUI screens."
+            },
+            {
+              "paths": [
+                "en.lproj/Localizable.strings",
+                "de.lproj/Localizable.strings",
+                "en.lproj/Localizable.stringsdict",
+                "de.lproj/Localizable.stringsdict"
+              ],
+              "reason": "AppLanguage and SwiftUI load the app table, including its plurals where present."
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "shared_classifications": [
+    {
+      "source": "Shared/Push/sample-push.apns",
+      "classification": "debug_only",
+      "reason": "Development-only simctl push input (docs/DEVELOPMENT.md); no app or extension loads its bundled copy in Release."
+    }
+  ]
+}

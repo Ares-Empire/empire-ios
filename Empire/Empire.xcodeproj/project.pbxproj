@@ -254,6 +254,14 @@
 		710BD8387C69EC79A9FE4B6B /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				EXCLUDED_SOURCE_FILE_NAMES = (
+					"$(inherited)",
+					"sample-push.apns",
+					/* Match the space without build-setting word splitting. */
+					"Preview?Content",
+					"*/Preview?Content/*",
+					"*/Preview?Content/**/*",
+				);
 				DEVELOPMENT_TEAM = WQN8SHAH9B;
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ENABLE_MODULES = YES;
