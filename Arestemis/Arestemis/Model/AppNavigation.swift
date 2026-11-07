@@ -372,7 +372,9 @@ final class AppNavigation {
 /// monitor's page) and `-monitorLine refused|hold` (its switches' line, read by `MonitorPage`); brief 157's
 /// `-priceMode page|everywhere`, `-priceProduct <text>`, `-priceDetails <text>`, `-sitesOff <id,id>` and `-priceSites`
 /// (the form's "Where it looks" once its sites are known), `-openSites` (with `-openHunt <id>`, the page's), `-scrollTo
-/// offers` and `-suggestShop` (on "Where it looks", the contact form as "Suggest a shop" opens it),
+/// offers` and `-suggestShop` (on "Where it looks", the contact form as "Suggest a shop" opens it), brief 256's
+/// `-scrollTo prices` (with `-openHunt <id>`, a thing search's asking prices) and `-sampleNoPrices` (no asking prices or
+/// verdicts, as a server from before them),
 /// `-openSheet settings|application|rejected|place|describe` (place and describe over a form, the
 /// first hunt's unless another is asked for; rejected: of the search `-openSearch` opened, else of every search), `-scrollBottom` (Hunts and the forms), `-scrollTo size|rent|movein`
 /// (the flat form), `-scrollTo where` (the thing form), `-sampleUndo`, `-sampleSearchDraft`, `-sampleMoreLoading`,
@@ -413,6 +415,8 @@ struct LaunchOptions {
     var productState: ProductState?
     /// `-sampleRead <id,id>`: those listings already opened (brief 180), the latest opened first (brief 182).
     var read: [Int] = []
+    /// `-sampleNoPrices`: the samples without asking prices or verdicts, as a server from before them (brief 256).
+    var noPrices = false
     /// `-openRecent`: Recently viewed, of every search or of the search `-openSearch` opened (brief 182).
     var openRecent = false
     /// `-openNotChecked`: Not checked in time, of every search or of the search `-openSearch` opened (brief 187).
@@ -464,6 +468,7 @@ struct LaunchOptions {
         suggestedPage = value("-sampleSuggestedPage")
         productState = value("-sampleProductState").flatMap(ProductState.init(rawValue:))
         read = (value("-sampleRead") ?? "").split(separator: ",").compactMap { Int($0) }
+        noPrices = arguments.contains("-sampleNoPrices")
         openRecent = arguments.contains("-openRecent")
         openNotChecked = arguments.contains("-openNotChecked")
         scrollToHunt = value("-scrollToHunt").flatMap(Int.init)

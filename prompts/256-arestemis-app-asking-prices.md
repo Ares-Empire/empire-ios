@@ -1,6 +1,6 @@
 # 256: Arestemis app: asking prices on searches and listings
 
-Status: open (2026-11-07). Arestemis server brief 254 is live (schema 26); board #47 (Patrik: "yes").
+Status: built (2026-11-07), on `claude/256-asking-prices`, waiting for Claude's review and merge. Arestemis server brief 254 is live (schema 26); board #47 (Patrik: "yes").
 Branch: `claude/256-asking-prices` · Worktree: `../empire-ios-256-prices` · Builder: Claude agent (design)
 
 ## Goal
@@ -86,3 +86,69 @@ The server is built and deployed: build from the contract.
   and few-observation cases), a list with each verdict, and the detail page. Save them under
   `docs/build-2026-11-07/256/` (not committed) and list the paths.
 - Commit on your branch in the worktree; never push or merge (Claude does).
+
+## Result (2026-11-07, Claude agent)
+
+**Built.** Decoding (`Model/ItemPriceModels.swift`): `ItemPriceSummary`, `ItemPriceStats`, `ItemPriceWeek`, `ItemPriceTrend`,
+`ItemPriceVerdict`, `LocalizedText`, and `Match.priceVerdict`. Lenient where the contract may grow: a verdict that is
+missing, malformed or of an unknown kind reads as none (the listing still loads); an unknown trend is none; a missing
+language shows the other. `ArestemisAPI.priceRecord(huntID:)` → `GET /hunts/{id}/price-record`;
+`ArestemisStore.loadPriceRecord` loads it with a Dinge search's page only, again after a newer scan or a changed search
+(`PriceRecordRead`; a changed search drops the old numbers at once, as the server restarts its record), forced on pull to
+refresh; a 404 or a failure shows nothing (no notice, no error), a refused login still goes to the session. Words in
+`Model/ItemPricePresentation.swift` (`PriceRecordCard`, `PriceVerdictWords`, pure, `language:`), screens in
+`Screens/ItemPriceViews.swift`, wired into `HuntPage`, `MatchRow` and `MatchDetailScreen`. Old servers: unchanged
+(checked with `-sampleNoPrices`).
+
+**Layout choices.**
+- *Search's page:* the section goes **under Latest**, so the listings stay exactly where they were (a card between the
+  figures and Latest pushed them down by about half a screen in the rich case). Heading "ASKING PRICES" / "ANGEBOTSPREISE"
+  (distinct from the monitor's "Preisverlauf"/"Günstigster Preis", and the server's own word) with "Last 30 days" /
+  "Letzte 30 Tage" on the right, which covers the 30 days. One glass card: the server's `display` one fact per line
+  (split at its " · "; a line without it stays whole), all in one quiet style, since the app cannot know which fact is
+  which without parsing; the trend comes as the server's words. Two or more sites with offers: a hairline, then one row
+  per site, name left, usual range in the numbers' face and a muted count right (only the count below 8 offers). The
+  server's `note` under the card as fine print (it says asking prices, the search's limits, VB allowance, no fees, not
+  sale prices). Count 0: no card, one quiet line "Noch keine Preise. Sie kommen mit den ersten passenden Angeboten." /
+  "No prices yet. They come with the first fitting listings." (so a just-edited search doesn't simply lose the section).
+- *Rows:* a small label on its own line right under the price: a mark plus the server's label, text only like the row's
+  other labels (no capsule; the long German label would not fit beside the price once a photo takes the row's left).
+  ↓ Günstig in the accent, ↑ Teuer in neutral ink, (!) Ungewöhnlich günstig – genau prüfen (`exclamationmark.circle`) in the warnings' amber
+  (`Look.amber`, deeper ochre on the light wall), never red. The marks mean the three differ by more than colour.
+- *Listing's page:* under the price, title and site (keeping the hero together; directly under the price it pushed the
+  title down by seven lines), the server's line with only its leading label in the verdict's tone and the rest in quiet
+  ink (split only when the line starts with the server's own label, else shown whole), the note under it in small muted
+  type.
+- A number keeps its word or currency when a line wraps (`PriceText.keepingNumbersTogether`, e.g. "letzten / 7 Tage",
+  not "letzten 7 / Tage"): the server's texts use plain spaces.
+- Nothing animates in the new views and none has a shadow; colours only from `Ink`, `Look.accent`, `Look.amber`.
+
+**Sample mode** (`Model/PriceRecordSample.swift`, DEBUG; on with `-sampleData`, off in the tests unless asked, so the
+contract's listings and ids stay as they were for existing tests): hunt 2 (Herman Miller Aeron) 23 fitting listings,
+usually €400–450, cheapest of 7 days €360, weekly median falling, Kleinanzeigen €395–445 · 14 and eBay €410–450 · 9;
+listing 31 (€400) cheap, 30 (€480 VB) expensive, 29 none, and one invented listing **43** (€95, shipped from Bremen)
+unusually cheap (the auction and the free chair can never carry one, per the contract). Hunt 5 (jeans): 3 listings,
+cheapest €22, counts per site only. Hunt 4: none yet. Texts worded as the server's `texts.py`.
+
+**DEBUG arguments (new):** `-sampleNoPrices` (the samples as a server from before brief 254: no records, no verdicts),
+`-scrollTo prices` with `-openHunt <id>` (a thing search's section). Screens: `-openHunt 2|5|4 -scrollTo prices`,
+`-tab listings -openSearch 2` (each verdict in one list), `-openMatch 43|31|30`.
+
+**Strings added** (Arestemis catalog, German filled): "Asking prices" / "Angebotspreise", "Last %lld days" / "Letzte
+%lld Tage", "%lld listings" (plural: "1 Angebot" / "%lld Angebote"), "No prices yet. They come with the first fitting
+listings." / "Noch keine Preise. Sie kommen mit den ersten passenden Angeboten.". Everything else on these screens is
+the server's text.
+
+**Tests:** `AskingPricesTests` (an old server's match, unreadable verdicts, a lenient record, the card and the verdict in
+both languages, few/none, site ranges, numbers kept together, nothing without a verdict, the route, the store asking for
+thing searches only and once per scan, 404/500/503 showing nothing, sample mode) and `ServerSamplesTests` (the server's
+four samples, copied to `ArestemisTests/ServerSamples/server-item-price-*.json`). `bash scripts/test-unit.sh Arestemis`:
+"Arestemis: 459 tests, 0 failures"; `scripts/strings.py check`: 0 problems.
+
+**Screenshots** (not committed): `docs/build-2026-11-07/256/`: `search-rich-*`, `search-few-*`, `list-verdicts-*`,
+`listing-unusually-cheap-*` in de/en × light/dark, plus `search-none-*`, `listing-cheap-de-light`,
+`listing-expensive-en-dark`, `search-rich-top-de-dark` (the page as it opens) and `search-old-server-de-dark`.
+
+**Open / for the reviewer:** the Chronicle line in `ares-empire/EMPIRE.md` (outside this worktree); the section's place
+under Latest is the main judgement call (the alternative, between the figures and Latest, is one move in
+`HuntPage.figuresAndLatest`); the tour's data has no record, so the tour shows none.

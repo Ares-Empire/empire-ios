@@ -5,7 +5,8 @@ import SwiftUI
 /// title, the site and when it was found; then one card of facts as a portal lists them (`Listing.detailFacts`,
 /// `itemDetailFacts`: every fact the search asks about, a quiet "–" where the listing does not say) with the AI's
 /// warnings at its foot as short notes "To check"; then the description in full, and when it is only the site's preview
-/// one quiet line that opens the listing. At the bottom "Open on <site>" in the accent fill, the main button; a flat's
+/// one quiet line that opens the listing. A thing with a price verdict (brief 256) has the server's line and note under its
+/// price, title and site ("Cheap: usually €400–€450 asked within your search limits"). At the bottom "Open on <site>" in the accent fill, the main button; a flat's
 /// application text under it as the quiet second one (`ListingButton`). Why the AI let it through is not on the page:
 /// it fits because of the search. The menu sets the state; a thing's seller is "Asked", not applied to. A change on a
 /// watched page (brief 131): the server's summary as the title, "Now: …", the host and when, then the lines that came
@@ -89,6 +90,11 @@ struct MatchDetailScreen: View {
                 } else {
                     let thing = kind == .item
                     hero(match, thing: thing)
+                    // Under the price, title and site: how the price compares with the search's other fitting offers,
+                    // with the server's note (brief 256). Nothing when there is no verdict.
+                    if let verdict = PriceVerdictWords.shown(for: match, kind: kind) {
+                        PriceVerdictLine(words: verdict).padding(.top, 16)
+                    }
                     // The facts the listing's search asks about are always there (`detailFacts(search:)`).
                     let search = store.card(match.huntID)?.hunt.search
                     let facts = thing ? listing.itemDetailFacts(search: search?.item)

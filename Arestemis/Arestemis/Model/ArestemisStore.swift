@@ -64,6 +64,16 @@ final class ArestemisStore {
         var error: String?
     }
 
+    /// A thing search's asking prices (brief 256), as last loaded for its search and last scan.
+    struct PriceRecordState: Equatable {
+        var record: ItemPriceSummary?
+        /// What the record was loaded for: a newer scan, or a changed search (which restarts the server's record), loads
+        /// it again.
+        var loadedFor: PriceRecordRead?
+        /// The read being asked for now; an answer for an older one is dropped.
+        var loading: PriceRecordRead?
+    }
+
     struct PriceHistoryKey: Hashable {
         let hunt: Int
         let days: Int
@@ -135,6 +145,8 @@ final class ArestemisStore {
     private var monitorWanted: [Int: PriceSearch] = [:]
     /// Everywhere monitors' offers and sites, by hunt id (brief 157).
     private(set) var priceOffers: [Int: OffersState] = [:]
+    /// Thing searches' asking prices, by hunt id (brief 256).
+    private(set) var priceRecords: [Int: PriceRecordState] = [:]
 
     // applications, settings, search
     private(set) var applications: [Int: ApplicationState] = [:]
@@ -496,6 +508,7 @@ final class ArestemisStore {
             huntLatest[id] = nil
             priceHistories = priceHistories.filter { $0.key.hunt != id }
             priceOffers[id] = nil
+            priceRecords[id] = nil
             invalidateMonitorListings(id)
             monitorIDs = monitorIDs.filter { $0.key.hunt != id }
             // Every list is asked again when it shows (the counts and pages of every search changed).
@@ -1194,6 +1207,37 @@ final class ArestemisStore {
         }
     }
 
+    /// A thing search's asking prices as last loaded; nil until they arrived, and when the server has none for it (a 404:
+    /// a server from before them) or could not be asked.
+    func priceRecord(hunt id: Int) -> ItemPriceSummary? { priceRecords[id]?.record }
+
+    /// Loads a thing search's asking prices with its page, quietly: again only after a newer scan or a changed search,
+    /// or when `force`d (pull to refresh). Nothing here is ever an error on screen: a 404 (another kind, a server from
+    /// before them) or a failure keeps what was shown, or shows nothing; a refused login still goes to the session.
+    func loadPriceRecord(hunt id: Int, force: Bool = false) async {
+        guard canAct, id > 0, let card = card(id), let read = PriceRecordRead(card),
+              priceRecords[id]?.loading != read else { return }
+        if !force, let known = priceRecords[id], known.loadedFor == read { return }
+        // A changed search restarts the server's record: the old numbers are not this search's any more.
+        if let known = priceRecords[id]?.loadedFor, known.search != read.search { priceRecords[id]?.record = nil }
+        priceRecords[id, default: PriceRecordState()].loading = read
+        let context = context
+        defer { if isCurrent(context), priceRecords[id]?.loading == read { priceRecords[id]?.loading = nil } }
+        do {
+            let loaded = try await backend.priceRecord(hunt: id)
+            guard isCurrent(context), priceRecords[id]?.loading == read else { return }
+            priceRecords[id]?.record = loaded.huntID == id ? loaded : nil
+            priceRecords[id]?.loadedFor = read
+        } catch HTTPError.server(404, _) {
+            guard isCurrent(context), priceRecords[id]?.loading == read else { return }
+            priceRecords[id]?.record = nil
+            priceRecords[id]?.loadedFor = read
+        } catch {
+            guard isCurrent(context) else { return }
+            session.handleAuthFailure(error, generation: context.session, token: context.token)
+        }
+    }
+
     /// The shop an alarm names: the cheapest offer's (`source_name`) for an everywhere monitor's alarm, nil otherwise
     /// (a page monitor's alarm names nothing; its shop is the host under it).
     func alarmShop(of match: Match) -> String? {
@@ -1370,6 +1414,7 @@ final class ArestemisStore {
         applications = [:]
         priceHistories = [:]
         priceOffers = [:]
+        priceRecords = [:]
         monitorLists = [:]
         monitorIDs = [:]
         monitorGeneration = [:]

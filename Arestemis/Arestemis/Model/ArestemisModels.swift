@@ -282,10 +282,14 @@ struct Match: Codable, Equatable, Identifiable, Sendable {
     /// When it was first opened (brief 181 on the server, 182 here), an ISO 8601 time; nil while unread, and from a server
     /// before it. Recently viewed is ordered by it (the server's order; one opened here goes on top).
     var seenAt: String? = nil
+    /// How a thing's asking price compares with its search's other fitting offers (brief 256; the server's brief 254):
+    /// cheap, expensive or unusually cheap. Most listings have none; a server from before it never sends one.
+    var priceVerdict: ItemPriceVerdict? = nil
 
     enum CodingKeys: String, CodingKey {
         case id, state, found, listing, reason, warnings, application, seen
         case huntID = "hunt_id", atStart = "at_start", overMax = "over_max", seenAt = "seen_at"
+        case priceVerdict = "price_verdict"
     }
 }
 
@@ -522,5 +526,8 @@ extension Match {
         overMax = try c.decodeIfPresent(Double.self, forKey: .overMax)
         seen = ((try? c.decodeIfPresent(Bool.self, forKey: .seen)) ?? nil) ?? false
         seenAt = (try? c.decodeIfPresent(String.self, forKey: .seenAt)) ?? nil
+        // Optional and new: one that is missing, malformed or of a kind this build does not know is none, never a
+        // listing that fails to load.
+        priceVerdict = (try? c.decodeIfPresent(ItemPriceVerdict.self, forKey: .priceVerdict)) ?? nil
     }
 }

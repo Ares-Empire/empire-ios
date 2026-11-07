@@ -216,6 +216,44 @@ struct ServerSamplesTests {
         #expect(try JSONDecoder().decode(Overview.self, from: data("overview")).latest.allSatisfy { $0.seenAt == nil })
     }
 
+    /// Brief 256 (the server's brief 254): a thing search's asking prices with enough offers (overall and per site, a
+    /// weekly trend) and with few (count and cheapest only), and a match's verdict, expensive and unusually cheap; every
+    /// text in both languages.
+    @Test func askingPricesAndVerdicts() throws {
+        let record = try JSONDecoder().decode(ItemPriceSummary.self, from: data("item-price-record"))
+        #expect(record.huntID == 12 && record.currency == "EUR" && record.days == 30)
+        #expect(record.since == "2026-10-08T12:00:00Z" && record.until == "2026-11-07T12:00:00Z")
+        #expect(record.overall.source == nil && record.overall.count == 16 && record.overall.median == 26)
+        #expect(record.overall.usual == 23.5...30 && record.overall.cheapest7d == 22 && record.overall.trend == .up)
+        #expect(record.overall.weeklyMedians.map(\.median) == [25, 27])
+        #expect(record.overall.weeklyMedians.first?.weekStart == "2026-10-19T00:00:00Z")
+        #expect(record.overall.display.de.hasPrefix("16 passende Angebote · Üblicher Angebotspreis"))
+        #expect(record.overall.display.en.hasPrefix("16 fitting listings · Usually"))
+        #expect(record.sites.map(\.source) == [.kleinanzeigen, .ebay])
+        #expect(record.sites[0].cheapest7d == nil && record.sites[0].trend == nil && record.sites[0].weeklyMedians.isEmpty)
+        #expect(record.note.en.hasSuffix("These are not sale prices.") && record.note.de.hasSuffix("keine Verkaufspreise."))
+        #expect(try JSONDecoder().decode(ItemPriceSummary.self, from: JSONEncoder().encode(record)) == record)
+
+        let small = try JSONDecoder().decode(ItemPriceSummary.self, from: data("item-price-record-small"))
+        #expect(small.overall.count == 2 && small.overall.median == nil && small.overall.usual == nil)
+        #expect(small.overall.cheapest7d == 32 && small.overall.trend == nil && small.sites.map(\.source) == [.ebay])
+
+        let expensive = try JSONDecoder().decode(Match.self, from: data("item-price-match"))
+        let verdict = try #require(expensive.priceVerdict)
+        #expect(expensive.isThing && verdict.verdict == .expensive && verdict.price == 50 && verdict.currency == "EUR")
+        #expect(verdict.comparisonCount == 16 && verdict.q25 == 23.5 && verdict.q75 == 30)
+        #expect(verdict.label == LocalizedText(en: "Expensive", de: "Teuer"))
+        #expect(verdict.display.de == "Teuer: üblicher Angebotspreis innerhalb deiner Suchgrenzen 23,50 €–30,00 €")
+        #expect(try JSONDecoder().decode(Match.self, from: JSONEncoder().encode(expensive)) == expensive)
+
+        let unusual = try JSONDecoder().decode(Match.self, from: data("item-price-match-unusually-cheap"))
+        #expect(unusual.priceVerdict?.verdict == .unusuallyCheap && unusual.priceVerdict?.price == 1)
+        #expect(unusual.priceVerdict?.label.de == "Ungewöhnlich günstig – genau prüfen")
+        // The answers from before it carry none.
+        #expect(try JSONDecoder().decode(Match.self, from: data("match")).priceVerdict == nil)
+        #expect(try JSONDecoder().decode(MatchPage.self, from: data("matches")).items.allSatisfy { $0.priceVerdict == nil })
+    }
+
     @Test func theOtherAnswers() throws {
         _ = try JSONDecoder().decode(Match.self, from: data("match"))
         _ = try JSONDecoder().decode(RejectedPage.self, from: data("rejected"))

@@ -4,7 +4,8 @@ import SwiftUI
 /// form) and Listings (this search's listings on the Listings tab, over Searches), its figures (New, Today, Applied or Asked; a watch's
 /// Saved) and when it was last read (a watch's card says it), then its newest matches. A watch's words name it a watch
 /// (`HuntWords`). A price monitor's page has Open in shop in place of Listings, then its chart, its switches and its
-/// alarms (`MonitorSections`, brief 137).
+/// alarms (`MonitorSections`, brief 137). A thing search's page ends with what fitting listings usually ask there
+/// (`PriceRecordSection`, brief 256).
 ///
 /// **The name is renamed where it stands** (brief 135, as Aresium renames a payment): a tap on the name or the small pen
 /// after it (or Rename in the `…` menu, or a card's long press, `AppNavigation.rename`) turns it into a field in the same
@@ -52,6 +53,8 @@ struct HuntPage: View {
             Text(words.deleteMessage)
         }
         .task(id: store.card(id).map(MonitorListingsRead.init)) { await store.loadLatest(hunt: id) }
+        // A thing search's asking prices (brief 256): with the page, again after a newer scan or a changed search.
+        .task(id: store.card(id).flatMap(PriceRecordRead.init)) { await store.loadPriceRecord(hunt: id) }
         // A card's long press asked for Rename: the field opens once the page is there.
         .onChange(of: navigation.renaming, initial: true) { _, asked in
             guard asked == id else { return }
@@ -133,6 +136,7 @@ struct HuntPage: View {
                 await store.reloadOverview()
                 await store.loadLatest(hunt: id, force: true)
                 await store.loadUsed(hunt: id, force: true)
+                await store.loadPriceRecord(hunt: id, force: true)
             }
             .onAppear {
                 // Screenshots: `-openHunt <id> -scrollTo history|switches|bottom` (a monitor's sections).
@@ -161,6 +165,11 @@ struct HuntPage: View {
             } else {
                 ProgressView().controlSize(.small).tint(Ink.muted).frame(maxWidth: .infinity, minHeight: 44)
             }
+        }
+        // What fitting listings usually ask, under the newest ones so they stay where they were (brief 256); nothing
+        // until the server answered, and nothing from a server without it.
+        if kind == .item, let record = store.priceRecord(hunt: id) {
+            PriceRecordSection(card: PriceRecordCard(record, names: store.siteNames)).id("prices")
         }
     }
 

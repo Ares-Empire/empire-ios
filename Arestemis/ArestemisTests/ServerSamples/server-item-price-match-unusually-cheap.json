@@ -1,0 +1,71 @@
+{
+  "id": 255,
+  "hunt_id": 12,
+  "state": "new",
+  "seen": false,
+  "seen_at": null,
+  "found": "2026-11-07T12:00:00Z",
+  "listing": {
+    "source": "ebay",
+    "source_name": "eBay",
+    "url": "https://example.test/invented-chair",
+    "title": "Invented chair",
+    "kind": null,
+    "rent_warm": null,
+    "rent_cold": null,
+    "sqm": null,
+    "rooms": null,
+    "flatmates": null,
+    "city": null,
+    "district": null,
+    "address": null,
+    "available_from": null,
+    "available_until": null,
+    "furnished": null,
+    "facts_from_text": [],
+    "posted": null,
+    "image_url": null,
+    "description": "",
+    "description_partial": false,
+    "item": {
+      "price": 1,
+      "price_kind": "fixed",
+      "shipping": "yes",
+      "shipping_cost": null,
+      "condition": "good",
+      "condition_label": null,
+      "seller": null,
+      "distance_km": null,
+      "reserved": null,
+      "bids": null,
+      "ends": null
+    },
+    "page": null,
+    "price_change": null
+  },
+  "reason": "The chair fits the search.",
+  "warnings": [],
+  "application": null,
+  "at_start": false,
+  "over_max": null,
+  "price_verdict": {
+    "verdict": "unusually_cheap",
+    "price": 1,
+    "currency": "EUR",
+    "comparison_count": 16,
+    "q25": 23.5,
+    "q75": 30,
+    "label": {
+      "en": "Unusually cheap – check carefully",
+      "de": "Ungewöhnlich günstig – genau prüfen"
+    },
+    "display": {
+      "en": "Unusually cheap – check carefully: usually €23.50–€30.00 asked within your search limits",
+      "de": "Ungewöhnlich günstig – genau prüfen: üblicher Angebotspreis innerhalb deiner Suchgrenzen 23,50 €–30,00 €"
+    },
+    "note": {
+      "en": "Asking prices of fitting listings within this search’s price limits (including VB allowance), without shipping or buyer protection. These are not sale prices.",
+      "de": "Angebotspreise passender Angebote innerhalb der Preisgrenzen dieser Suche (einschließlich VB-Spielraum), ohne Versand oder Käuferschutz. Das sind keine Verkaufspreise."
+    }
+  }
+}
