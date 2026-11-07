@@ -260,8 +260,8 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
    0.1 (1) uploaded 2026-11-01 02:25** (156 tests; the bust without the watermark, brief 72; Spotlight and backup fixes,
    brief 74); **Arestoteles build 2 uploaded 2026-11-01 03:01** (brief 75: a note closes at once and is sent in the background, the vault prepared off the main thread), after a check of what differs between the simulator and the phone (brief 73: no blocker; its three fixes
    in brief 74, whose Empire part, a notification's tap closing Settings, shipped with Empire build 2; later: Preview
-   Content and samples are bundled in Release builds of all apps, and a failed write of Arestoteles's quick-note queue
-   is not reported). So all five apps reach Patrik's iPhone. App Store Connect records (Patrik, 2026-10-30: Arestemis, Aresus, Arestoteles, Ares Empire),
+   Content and samples are bundled in Release builds of all apps; a failed write of Arestoteles's quick-note queue
+   was not reported: fixed by brief 243). So all five apps reach Patrik's iPhone. App Store Connect records (Patrik, 2026-10-30: Arestemis, Aresus, Arestoteles, Ares Empire),
    each with an internal group that gets every build automatically (Arestemis's checked: Patrik as tester). Original
    list: set the paid team (project level, all five projects; done); the App Groups
    `group.de.ares-empire.aresium` + `group.de.ares-empire.shared` registered for the bundle ids, the widgets' too
@@ -867,6 +867,11 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   after the first frame, so while it is read (`VaultStore.isLoadingSaved`) ContentView shows the plain
   `LaunchBackground`, iOS's launch screen, not the loading screen (Claude, checked by recording launches: no flash, the
   launch as long as before). DEBUG: `-quickNoteText <text>` fills the open note sheet, `-saveQuickNote` then saves.
+  **A queue write that fails is reported** (brief 243): a delete writes first and keeps the note on failure; a sent or
+  refused note changes memory at once and the disk catches up (retried on the next save, flush and foreground); the
+  failure shows as the notice and as a line in the quick-note sheet (`VaultStore.quickNoteQueueProblem`). One replay
+  window stays: a note the server accepted is sent again if the app is killed before the write succeeds (exactly once
+  would need the server to take a note id). DEBUG `-failQueueWrites` (sample: one waiting note, every queue write fails).
 - **Aresium phone mode** (2026-10-27, briefs 15, 18 and 22; plan `ares-empire/docs/ARESIUM-FOR-OTHERS.md`): everyone
   but Patrik keeps their Aresium data on their iPhone. **No account** (Patrik, 2026-10-27, brief 22): Aresium opens in
   phone mode on the phone's one store at once, without a login and without waiting for any server (`ModeStore.start`);
