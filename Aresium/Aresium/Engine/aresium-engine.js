@@ -12286,7 +12286,8 @@ var __AresiumEngine = (() => {
     for (const { file } of files) for (const txn of file.transactions) {
       const previous = payments.get(txn.externalId);
       if (previous) {
-        if (previous.bookingDate !== txn.bookingDate || previous.amount !== txn.amount || previous.currency !== txn.currency || previous.description !== txn.description || previous.counterparty !== txn.counterparty) {
+        const balances2 = previous.balance !== void 0 && txn.balance !== void 0 && previous.balance !== txn.balance;
+        if (previous.bookingDate !== txn.bookingDate || previous.amount !== txn.amount || previous.currency !== txn.currency || previous.description !== txn.description || previous.counterparty !== txn.counterparty || balances2) {
           throw new BankFileError("unknown", "Two statements give different payments with the same id. Import the statements separately and check them.");
         }
       } else payments.set(txn.externalId, txn);
@@ -13107,6 +13108,9 @@ var __AresiumEngine = (() => {
   var fail2 = () => {
     throw new BankFileError("xlsx", "This Excel workbook could not be read. Export it as CSV or save a new .xlsx file.");
   };
+  var XLSX_MAX_CELLS = 1e6;
+  var XLSX_MAX_TEXT = 25 * 1024 * 1024;
+  var textCost = (value) => value.length + 3 + (value.match(/"/g)?.length ?? 0);
   var parser2 = new import_fast_xml_parser3.XMLParser({
     ignoreAttributes: false,
     removeNSPrefix: true,
@@ -13159,6 +13163,7 @@ var __AresiumEngine = (() => {
     if (!workbook) return fail2();
     const rels = arr2(xml(files, "xl/_rels/workbook.xml.rels").Relationships?.Relationship);
     const strings = files.has("xl/sharedStrings.xml") ? arr2(xml(files, "xl/sharedStrings.xml").sst?.si).map(rich) : [];
+    const stringCosts = strings.map(textCost);
     const style = files.has("xl/styles.xml") ? xml(files, "xl/styles.xml").styleSheet : {};
     const formats2 = new Map(arr2(style?.numFmts?.numFmt).map((f) => [Number(f["@_numFmtId"]), String(f["@_formatCode"])]));
     const styles = arr2(style?.cellXfs?.xf).map((f) => ({ id: Number(f["@_numFmtId"] ?? 0), code: formats2.get(Number(f["@_numFmtId"])) ?? "" }));
@@ -13172,7 +13177,11 @@ var __AresiumEngine = (() => {
       const data = xml(files, path).worksheet?.sheetData;
       const rows = [];
       const numeric = [];
-      let width = 0, cells = 0;
+      let width = 0, cells = 0, grid = 0, chars = 0;
+      const spend = (n) => {
+        chars += n;
+        if (chars > XLSX_MAX_TEXT) fail2();
+      };
       for (const row of arr2(data?.row)) {
         const values = [];
         for (const cell2 of arr2(row.c)) {
@@ -13186,6 +13195,10 @@ var __AresiumEngine = (() => {
             col--;
           }
           if (col >= 16384 || col < values.length) return fail2();
+          const padding = col + 1 - values.length;
+          grid += padding;
+          if (grid > XLSX_MAX_CELLS) return fail2();
+          spend(3 * padding);
           while (values.length <= col) values.push("");
           if (cell2.f !== void 0 || cell2["@_t"] === "e") return fail2();
           const value = text2(cell2.v), kind = cell2["@_t"];
@@ -13195,6 +13208,7 @@ var __AresiumEngine = (() => {
           if (kind === "s") {
             if (!/^\d+$/.test(value) || strings[Number(value)] === void 0) return fail2();
             values[col] = strings[Number(value)];
+            spend(stringCosts[Number(value)] - 3);
           } else if (kind === "inlineStr") values[col] = rich(cell2.is);
           else if (kind === "b") {
             if (value !== "0" && value !== "1") return fail2();
@@ -13209,11 +13223,13 @@ var __AresiumEngine = (() => {
               numeric.push({ row: rows.length, col, value, money: money2 });
             }
           }
+          if (kind !== "s") spend(textCost(values[col]) - 3);
         }
         width = Math.max(width, values.length);
         rows.push(values);
       }
-      if (rows.length * width > 1e6) return fail2();
+      if (rows.length * width > XLSX_MAX_CELLS) return fail2();
+      spend(3 * (rows.length * width - grid));
       rows.forEach((r) => {
         while (r.length < width) r.push("");
       });

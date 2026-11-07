@@ -12,4 +12,4 @@ Data date: 2026-10-31T21:23:06.000Z
 
 Source and licence: https://download.geofabrik.de/europe/germany.html (OpenStreetMap); https://www.openstreetmap.org/copyright; https://opendatacommons.org/licenses/odbl/1-0/
 
-Packed database built from the Germany extract; aresium 1d9577ac14cc661ad9a5639d2a0d19109d49181b.
+Packed database built from the Germany extract; aresium a3dcdf113be1b411764c8efba83f514517cbc548.
