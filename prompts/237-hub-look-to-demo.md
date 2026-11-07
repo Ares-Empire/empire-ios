@@ -1,6 +1,6 @@
 # 237: Light and dark carried between the hub and the Arestemis demo
 
-Status: running
+Status: merged 2026-11-07 (ares-empire 73d0940, Arestemis d5121af; Claude added the legal footer links)
 Repos: `ares-empire` (branch `codex/237-look`, worktree `../ares-empire-237-look`) and `Arestemis` (branch
 `codex/237-look`, worktree `../Arestemis-237-look`) · Model: `gpt-6.1-sol`, effort `high`
 
