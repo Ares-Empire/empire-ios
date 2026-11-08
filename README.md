@@ -4,8 +4,9 @@
 
 # The Ares iPhone apps
 
-Five native iPhone apps on one shared account, written in SwiftUI. Each works in English and German, in light and
-dark, and on made-up sample data for trying it without an account.
+Five native iPhone apps, written in SwiftUI. Four share one account; Aresium needs none. Each works in English and
+German, in light and dark, and, in a build from Xcode, on made-up sample data without an account. Aresium and Arestemis
+also come with a tour on made-up data.
 **[See them on patrikbreeck.com](https://patrikbreeck.com/en/apps/)**
 
 <table>
@@ -23,8 +24,10 @@ dark, and on made-up sample data for trying it without an account.
   <tr>
     <td valign="top">
       <h3>Arestemis</h3>
-      Searches that run for you: flats, things for sale, price monitors and page watches. New finds arrive as
-      notifications, each with why it fits.
+      Searches that run for you: flats, things for sale, a product's price in one shop or in every shop that sells it,
+      and changes on a web page. New finds arrive as notifications, and a search for things shows what fitting listings
+      ask.<br><br>
+      Demo: <a href="https://arestemis.de">arestemis.de</a>
     </td>
     <td><img src="showcase/arestemis/01-hunt-dark.png" alt="Arestemis: every search at a glance"></td>
     <td><img src="showcase/arestemis/05-price-monitor-light.png" alt="Arestemis: a price monitor with its price history"></td>
@@ -55,7 +58,8 @@ dark, and on made-up sample data for trying it without an account.
     <td valign="top">
       <h3>Aresus</h3>
       The watchtower: the server and every service at a glance, each machine's sync runs, files sent from the iPhone
-      to the Mac, and widgets for the home and lock screen.
+      to the Mac, the questions Claude Code sessions wait on (answered with a tap or in your own words), and widgets
+      for the home and lock screen.
     </td>
     <td><img src="showcase/aresus/01-watchtower-dark.png" alt="Aresus: the server and every service"></td>
     <td><img src="showcase/aresus/03-aresync-light.png" alt="Aresus: each machine's sync runs"></td>
@@ -65,11 +69,13 @@ dark, and on made-up sample data for trying it without an account.
 
 More pictures with captions: [showcase/](showcase/README.md).
 
-## Shared by every app
+## Shared by the apps
 
-- **One account.** Logging in to one app logs in to all of them, through a shared Keychain group, and logging out
-  ends it everywhere. Each app asks for its own access; accounts are created and run from inside any app.
-- **Push.** One service on the server sends every app's notifications.
+- **One account.** Arestemis, Ares Empire, Arestoteles and Aresus share one Ares account: logging in to one logs in to
+  all of them, through a shared Keychain group, and logging out ends it everywhere. Each asks for its own access;
+  accounts are created and run from inside any of them. Aresium needs no account.
+- **Push.** One service on the server sends the notifications of Arestemis, Aresus and Ares Empire. Aresium's
+  notifications are made on the iPhone itself, with no server.
 - **The same Settings.** Language, appearance, notifications, a contact form, the legal pages, the account.
 - **Private when switching apps.** A cover hides the screen in the app switcher.
 
@@ -78,11 +84,11 @@ More pictures with captions: [showcase/](showcase/README.md).
 - SwiftUI for iOS 26 and later, with Apple's frameworks only (Swift Charts, SwiftData, WidgetKit, Vision,
   JavaScriptCore, Core Spotlight) and no third-party packages.
 - One Xcode project per app. `Shared/` (login, network, push, settings, design) is compiled into every one of them.
-- Each app talks to its own server's JSON API. Aresium also runs the server's TypeScript engine on the iPhone, in
-  JavaScriptCore, so phone and server count alike.
+- Aresium keeps its data on the iPhone and runs the aresium server's TypeScript engine there, in JavaScriptCore. The
+  other four apps talk to their own server's JSON API.
 - Every text lives in String Catalogs, in English and German.
-- A sample mode (`-sampleData`) shows each app on made-up data with no server. `scripts/showcase.py` makes the
-  pictures above from it.
+- In Debug builds, a sample mode (`-sampleData`) shows each app on made-up data with no server; Release builds leave
+  the sample files out. `scripts/showcase.py` makes the pictures above from it.
 
 ## Run it
 
@@ -109,11 +115,37 @@ app cannot share its output directory.
 On GitHub the workflow adds `--ci`, which also leaves out the six receipt tests that read the made-up receipt's code:
 Vision's barcode detection finds nothing on GitHub's virtual Macs. They run on this Mac.
 
-The shared-login probe (`scripts/check-shared-login.sh`), UI tests, AXe screen checks and device-only checks (Face ID,
-push delivery, camera and rendering on a phone) stay manual. CI uploads no artifacts.
+The smoke tap-throughs (below), the shared-login probe (`scripts/check-shared-login.sh`) and Aresus's UI tests run on a
+Mac, not on GitHub; Face ID, push delivery, the camera and rendering on a phone are checked by hand. CI uploads no
+artifacts.
 
 The layout, push and releasing to TestFlight: [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 
 ## Smoke tests
 
 `python3 scripts/smoke-ios/run.py --all --language en --appearance light` taps through all five apps on invented sample data on a fresh, disposable simulator. Run again with `--language de --appearance dark` for German and dark mode. Requirements, scenarios and failure artifacts: [scripts/smoke-ios/README.md](scripts/smoke-ios/README.md).
+
+## License
+
+Free to use, change and share for non-commercial purposes, such as study, research, hobby projects, schools and
+charities, under the [PolyForm Noncommercial License 1.0.0](LICENSE.md). Commercial use, also inside a company, needs
+permission: [ares-empire.de/contact](https://www.ares-empire.de/contact).
+
+The licence covers the code. It does not cover the Ares names, the busts, the app icons or the screenshots. Parts from
+others keep their own licences:
+
+- The fonts Space Grotesk and JetBrains Mono: SIL Open Font License 1.1
+  ([OFL-SpaceGrotesk.txt](Shared/Fonts/OFL-SpaceGrotesk.txt),
+  [OFL-JetBrainsMono.txt](Shared/Fonts/OFL-JetBrainsMono.txt)).
+- Aresium's engine (`Aresium/Aresium/Engine/aresium-engine.js`) is built from the
+  [aresium](https://github.com/Ares-Empire/aresium) repo, under the same licence as this one. Inside it:
+  - the shop names from the [name-suggestion-index](https://github.com/osmlab/name-suggestion-index): BSD-3-Clause
+    ([name-suggestion-index-licence.txt](Aresium/Aresium/Engine/name-suggestion-index-licence.txt));
+  - the libraries csv-parse, fast-xml-parser, strnum and fflate: MIT
+    ([csv-parse](https://unpkg.com/csv-parse@5.6.0/LICENSE),
+    [fast-xml-parser](https://unpkg.com/fast-xml-parser@4.5.6/LICENSE),
+    [strnum](https://unpkg.com/strnum@1.1.2/LICENSE), [fflate](https://unpkg.com/fflate@0.8.2/LICENSE)).
+- Aresium's local places (`Aresium/Aresium/Engine/de.places.bin.gz`): © OpenStreetMap contributors, Open Database
+  License 1.0 ([local-places-licence.txt](Aresium/Aresium/Engine/local-places-licence.txt)).
+- Arestemis holds no OpenStreetMap data, but its server looks up the towns of a search there (ODbL 1.0):
+  [town-locations-licence.txt](Arestemis/Arestemis/Licences/town-locations-licence.txt).
