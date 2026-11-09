@@ -572,7 +572,7 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   `uploading` row is deleted after 24 hours, a landed one stays 30 days), so `finished` forgets the server id and sends
   the file again as a new drop, at most twice per record (`restarts`, `DropOutbox.maximumRestarts`), then it fails as
   before; Retry starts the count again, and a record being removed is never sent again (2026-11-08: three photos whose
-  first upload had failed were stuck with 404 once their rows expired; fixed 2026-11-09). At launch and on
+  first upload had failed were stuck with 404 once their rows expired; fixed 2026-11-09, Aresus build 12). At launch and on
   coming to the foreground `reconnect()` checks every idle record with a server id in the same one request, but only
   removes those the server has: a record that failed for good (413, 507) or waits for its retry stays as it was. A
   server row past `uploading` always shows the server's line, never the phone's copy (`DropRow.hidden(for:in:)`).
