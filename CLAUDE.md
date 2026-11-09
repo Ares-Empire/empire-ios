@@ -567,7 +567,12 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   upload's 200, sent the bytes again the next day, got `409` and showed the landed file as "Not sent" with Retry):
   before the bytes of a record that already has a server id go again (a retry, a launch, Retry, a deferred retry), and
   after any `409` on the upload, `DropOutbox.reconcile` asks `GET /drops` once: `waiting`/`failed`/`landed` discards the
-  phone's copy (`onUploaded`), `cancelled` discards it, `uploading` sends; a failed check never sends. At launch and on
+  phone's copy (`onUploaded`), `cancelled` discards it, `uploading` sends; a failed check never sends. A row missing
+  from the list proves nothing (the list is bounded), but the upload's own `404` does: the server has no such drop (its
+  `uploading` row is deleted after 24 hours, a landed one stays 30 days), so `finished` forgets the server id and sends
+  the file again as a new drop, at most twice per record (`restarts`, `DropOutbox.maximumRestarts`), then it fails as
+  before; Retry starts the count again, and a record being removed is never sent again (2026-11-08: three photos whose
+  first upload had failed were stuck with 404 once their rows expired; fixed 2026-11-09). At launch and on
   coming to the foreground `reconnect()` checks every idle record with a server id in the same one request, but only
   removes those the server has: a record that failed for good (413, 507) or waits for its retry stays as it was. A
   server row past `uploading` always shows the server's line, never the phone's copy (`DropRow.hidden(for:in:)`).

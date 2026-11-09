@@ -44,12 +44,13 @@ extension Server {
 }
 
 extension Machine {
-    /// The SF Symbol for the machine's system.
+    /// The SF Symbol for the machine: the rack for the server, else by its system (a laptop running Linux, AresOS, is
+    /// no server).
     nonisolated var symbol: String {
-        switch os {
+        if server { return "server.rack" }
+        return switch os {
         case "macOS": "laptopcomputer"
         case "Windows": "pc"
-        case "Linux": "server.rack"
         default: "desktopcomputer"
         }
     }

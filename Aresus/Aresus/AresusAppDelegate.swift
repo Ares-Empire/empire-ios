@@ -24,8 +24,9 @@ final class AresusAppDelegate: PushAppDelegate {
         uploads.finishedEvents = { [weak self, weak uploads] in
             completionHandler()
             self?.deliveries.removeValue(forKey: identifier)
-            // A share invocation has a unique id; release it after its event batch. If checksum handling submitted
-            // another task, finishTasksAndInvalidate keeps its delegate and outbox until that task has finished too.
+            // A share invocation has a unique id; release it after its event batch. If checksum handling or a 404
+            // restart submitted another task, finishTasksAndInvalidate keeps its delegate and outbox until that task
+            // has finished too.
             if identifier != DropContainer.appUploadSession { uploads?.invalidate() }
         }
     }

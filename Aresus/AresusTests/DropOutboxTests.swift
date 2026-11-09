@@ -63,6 +63,7 @@ struct DropOutboxTests {
         await outbox.process()
         let item = try #require(outbox.items.only)
         #expect(item.state == .failed && item.checksumRetries == 1 && item.retryAt == nil)
+        #expect(item.serverID == 44 && item.restarts == nil, "a 400 never starts a new drop")
         #expect(item.lastError == "The checksum does not match.")
         #expect(item.drop.sha256 == newDrop().sha256)
         #expect(fake.requests.map(\.httpMethod) == ["POST", "PUT", "GET", "PUT"])
@@ -82,7 +83,7 @@ struct DropOutboxTests {
         #expect(outbox.items.isEmpty && fake.files.count == 2)
     }
 
-    @Test(arguments: [413, 507, 404])
+    @Test(arguments: [413, 507])
     func permanentErrorsKeepTheFileAndServerSentence(status: Int) async throws {
         let directory = testDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -156,23 +157,137 @@ struct DropOutboxTests {
         } else {
             let pending = try #require(outbox.items.only)
             #expect(pending.state == .onPhone && pending.retryAt != nil && pending.uploadSession == nil)
+            #expect(pending.serverID == 44 && pending.restarts == nil, "a 409 never starts a new drop")
             #expect(uploaded.isEmpty)
         }
     }
 
-    @Test func absentDropStillUsesPutAndKeepsThe404Sentence() async throws {
+    @Test func absentDropStillUsesPutFirstAndIts404StartsANewDrop() async throws {
         let directory = testDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
         let fake = DropTransport()
-        fake.responses = [.answer(200, Data(#"{"drops":[]}"#.utf8)), .answer(404, Data(#"{"error":"Unknown drop."}"#.utf8))]
+        fake.responses = [.answer(200, Data(#"{"drops":[]}"#.utf8)), .answer(404, Data(#"{"error":"Unknown drop."}"#.utf8)),
+                          .answer(201, try dropAnswer(id: 45)), .answer(200, try dropAnswer(state: .waiting, id: 45))]
         let outbox = DropOutbox(session: await signedInSession(), client: AresusAPI(transport: fake),
                                 directory: directory, automatic: false, uploads: ImmediateDropUploads(fake))
         _ = try await enqueue(outbox)
         var record = try #require(outbox.items.only); record.serverID = 44
         try DropJournal(directory: directory).save(record)
         await outbox.process()
-        #expect(fake.requests.map(\.httpMethod) == ["GET", "PUT"])
-        #expect(outbox.items.only?.state == .failed && outbox.items.only?.lastError == "Unknown drop.")
+        // The bounded list proves nothing; only the PUT's own 404 does.
+        #expect(fake.requests.map(\.httpMethod) == ["GET", "PUT", "POST", "PUT"])
+        #expect(fake.requests.filter { $0.httpMethod == "PUT" }.compactMap(\.url?.path)
+                == ["/api/aresus/drops/44/file", "/api/aresus/drops/45/file"])
+        #expect(outbox.items.isEmpty)
+    }
+
+    /// The upload's 404: the server has no such drop (its `uploading` row expired after 24 hours), so the bytes never
+    /// landed. The record forgets the id and goes again as a new drop, in the same pass.
+    @Test func upload404SendsTheFileAgainAsANewDrop() async throws {
+        let directory = testDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let fake = DropTransport()
+        fake.responses = [.answer(201, try dropAnswer()), .answer(404, Data(#"{"error":"Unknown drop."}"#.utf8)),
+                          .answer(201, try dropAnswer(id: 45)), .answer(200, try dropAnswer(state: .waiting, id: 45))]
+        let outbox = DropOutbox(session: await signedInSession(), client: AresusAPI(transport: fake),
+                                directory: directory, automatic: false, uploads: ImmediateDropUploads(fake))
+        _ = try await enqueue(outbox)
+        let record = try #require(outbox.items.only)
+        var uploaded: [Drop] = []; outbox.onUploaded = { uploaded.append($0) }
+        await outbox.process()
+        #expect(fake.requests.map(\.httpMethod) == ["POST", "PUT", "POST", "PUT"])
+        #expect(fake.requests.filter { $0.httpMethod == "PUT" }.compactMap(\.url?.path)
+                == ["/api/aresus/drops/44/file", "/api/aresus/drops/45/file"])
+        let posts = try fake.requests.filter { $0.httpMethod == "POST" }
+            .map { try AresusJSON.decoder().decode(NewDrop.self, from: $0.httpBody!) }
+        #expect(posts.count == 2 && posts[0] == posts[1], "the same drop again: name, size, checksum, folder")
+        let file = directory.appendingPathComponent(record.localFile)
+        #expect(fake.files == [file, file], "the same bytes from the phone's copy")
+        #expect(outbox.items.isEmpty && uploaded.map(\.id) == [45])
+        #expect(try FileManager.default.contentsOfDirectory(atPath: directory.path).isEmpty)
+    }
+
+    /// The new id is saved before its bytes go, as for any drop.
+    @Test func upload404SavesTheNewServerID() async throws {
+        let directory = testDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let fake = DropTransport()
+        fake.responses = [.answer(201, try dropAnswer()), .answer(404, Data(#"{"error":"Unknown drop."}"#.utf8)),
+                          .answer(201, try dropAnswer(id: 45)), .failure(URLError(.notConnectedToInternet))]
+        let outbox = DropOutbox(session: await signedInSession(), client: AresusAPI(transport: fake),
+                                directory: directory, automatic: false, uploads: ImmediateDropUploads(fake))
+        let id = try await enqueue(outbox)
+        await outbox.process()
+        let pending = try #require(outbox.items.only)
+        #expect(pending.serverID == 45 && pending.restarts == 1)
+        #expect(pending.state == .onPhone && pending.retryAt != nil && pending.lastError == "No connection.")
+        #expect(try DropJournal(directory: directory).read(id)?.serverID == 45)
+        #expect(fake.requests.map(\.httpMethod) == ["POST", "PUT", "POST", "PUT"])
+    }
+
+    /// A server that answers every upload with 404 gets a few new drops, never a loop; the record then fails as any
+    /// refused upload. Retry, a person's tap, starts the limit again.
+    @Test func upload404RestartsAtMostTwiceThenFails() async throws {
+        let directory = testDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let fake = DropTransport()
+        let unknown = Data(#"{"error":"Unknown drop."}"#.utf8)
+        fake.responses = [.answer(201, try dropAnswer()), .answer(404, unknown), .answer(201, try dropAnswer(id: 45)),
+                          .answer(404, unknown), .answer(201, try dropAnswer(id: 46)), .answer(404, unknown)]
+        let outbox = DropOutbox(session: await signedInSession(), client: AresusAPI(transport: fake),
+                                directory: directory, automatic: false, uploads: ImmediateDropUploads(fake))
+        let id = try await enqueue(outbox)
+        await outbox.process()
+        #expect(DropOutbox.maximumRestarts == 2)
+        let failed = try #require(outbox.items.only)
+        #expect(failed.state == .failed && failed.restarts == 2 && failed.serverID == 46 && failed.retryAt == nil)
+        #expect(failed.lastError == "Unknown drop." && failed.uploadSession == nil)
+        #expect(fake.requests.map(\.httpMethod) == ["POST", "PUT", "POST", "PUT", "POST", "PUT"])
+        await outbox.process()
+        #expect(fake.requests.count == 6, "a failed record waits for Retry")
+        #expect(FileManager.default.fileExists(atPath: directory.appendingPathComponent(failed.localFile).path))
+        fake.responses = [.answer(200, Data(#"{"drops":[]}"#.utf8)), .answer(404, unknown),
+                          .answer(201, try dropAnswer(id: 47)), .answer(200, try dropAnswer(state: .waiting, id: 47))]
+        await outbox.retry(id)
+        #expect(fake.requests.map(\.httpMethod).suffix(4) == ["GET", "PUT", "POST", "PUT"])
+        #expect(fake.requests.last?.url?.path == "/api/aresus/drops/47/file")
+        #expect(outbox.items.isEmpty)
+    }
+
+    /// The three photos of 2026-11-08: their first upload failed, their rows expired a day later, and Retry got 404
+    /// for good. Such a record, saved by the build before the restarts (no `restarts` key), decodes and goes on Retry.
+    @Test func aRecordSavedBeforeTheRestartsDecodesAndIsSentAgainOnRetry() async throws {
+        let directory = testDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let id = try #require(UUID(uuidString: "6F1C2A0E-3B4D-4E5F-8A9B-0C1D2E3F4A5B"))
+        let saved = #"""
+        {"id":"6F1C2A0E-3B4D-4E5F-8A9B-0C1D2E3F4A5B","drop":{"kind":"file","name":"Sample.pdf","size":3,\#
+        "sha256":"ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",\#
+        "target":{"root":"documents","folder":"Photos","new_folder":null},"receipt":null},\#
+        "localFile":"6F1C2A0E-3B4D-4E5F-8A9B-0C1D2E3F4A5B.file","serverID":44,"created":784300000,"attempts":3,\#
+        "lastError":"Unknown drop.","state":"failed","checksumRetries":0,"cancellationRequested":false,\#
+        "uploadAttempt":"0A1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D"}
+        """#
+        let record = try JSONDecoder().decode(DropOutboxItem.self, from: Data(saved.utf8))
+        #expect(record.id == id && record.serverID == 44 && record.state == .failed && record.attempts == 3)
+        #expect(record.restarts == nil && record.drop.target?.folder == "Photos")
+        try Data(saved.utf8).write(to: directory.appendingPathComponent(id.uuidString + ".json"))
+        try Data("abc".utf8).write(to: directory.appendingPathComponent(record.localFile))
+        let fake = DropTransport()
+        let outbox = DropOutbox(session: await signedInSession(), client: AresusAPI(transport: fake),
+                                directory: directory, automatic: false, uploads: ImmediateDropUploads(fake))
+        #expect(outbox.items == [record] && outbox.storageError == nil)
+        await outbox.process()
+        #expect(fake.requests.isEmpty, "a failed record waits for Retry")
+        fake.responses = [.answer(200, Data(#"{"drops":[]}"#.utf8)), .answer(404, Data(#"{"error":"Unknown drop."}"#.utf8)),
+                          .answer(201, try dropAnswer(id: 45)), .answer(200, try dropAnswer(state: .waiting, id: 45))]
+        await outbox.retry(id)
+        #expect(fake.requests.map(\.httpMethod) == ["GET", "PUT", "POST", "PUT"])
+        #expect(fake.requests.last?.url?.path == "/api/aresus/drops/45/file")
+        let body = try AresusJSON.decoder().decode(NewDrop.self, from: try #require(fake.requests[2].httpBody))
+        #expect(body.target == Target(root: .documents, folder: "Photos", newFolder: nil) && body.sha256 == newDrop().sha256)
+        #expect(outbox.items.isEmpty)
     }
 
     @Test func create400StopsAnd503WaitsWithCappedBackoff() async throws {

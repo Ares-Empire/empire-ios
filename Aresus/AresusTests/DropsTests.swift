@@ -180,9 +180,9 @@ func newDrop() -> NewDrop {
     NewDrop(kind: .file, name: "Sample.pdf", size: 3, sha256: "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad", target: nil, receipt: nil)
 }
 
-func dropAnswer(state: DropState = .uploading) throws -> Data {
+func dropAnswer(state: DropState = .uploading, id: Int = 44) throws -> Data {
     var drop = try sample("drops", as: DropsAnswer.self).drops[0]
-    drop.id = 44                      // the id the request tests expect, whatever the samples hold
+    drop.id = id                      // 44: the id the request tests expect, whatever the samples hold
     drop.state = state
     return try AresusJSON.encoder().encode(drop)
 }
@@ -192,6 +192,6 @@ func localItem(serverID: Int?, created: Date = .now) -> DropOutboxItem {
     return DropOutboxItem(id: id, drop: newDrop(), localFile: id.uuidString + ".file", serverID: serverID, created: created)
 }
 
-func dropListAnswer(state: DropState = .uploading) throws -> Data {
-    Data(#"{"drops":["#.utf8) + (try dropAnswer(state: state)) + Data("]}".utf8)
+func dropListAnswer(state: DropState = .uploading, id: Int = 44) throws -> Data {
+    Data(#"{"drops":["#.utf8) + (try dropAnswer(state: state, id: id)) + Data("]}".utf8)
 }

@@ -3,6 +3,7 @@
     {
       "name": "Aresium",
       "os": "macOS",
+      "server": false,
       "last_run": "2026-10-24T09:00:31Z",
       "last_result": "ok",
       "last_ok": "2026-10-24T09:00:31Z",
@@ -12,6 +13,7 @@
     {
       "name": "Server",
       "os": "Linux",
+      "server": true,
       "last_run": "2026-10-24T12:05:03Z",
       "last_result": "ok",
       "last_ok": "2026-10-24T12:05:03Z",
@@ -21,6 +23,7 @@
     {
       "name": "Windows-Laptop",
       "os": "Windows",
+      "server": false,
       "last_run": "2026-10-19T09:00:12Z",
       "last_result": "failed",
       "last_ok": "2026-10-18T09:00:09Z",

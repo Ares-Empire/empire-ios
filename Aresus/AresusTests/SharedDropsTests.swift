@@ -362,6 +362,62 @@ struct SharedDropsTests {
         #expect(api.requests.map(\.httpMethod) == ["POST", "GET"])
     }
 
+    /// A 404 delivered by the background session (the app woken for events, the share extension, or the app with no
+    /// pass running): the record starts again as a new drop within that delivery, as the checksum retry does.
+    @Test(arguments: [false, true])
+    func background404StartsANewDropWithinTheDelivery(deferred: Bool) async throws {
+        let directory = testDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let api = DropTransport()
+        api.responses = [.answer(201, try dropAnswer()), .answer(201, try dropAnswer(id: 45))]
+        let uploads = HeldDropUploads(); uploads.supportsDeferredRetry = deferred
+        let outbox = DropOutbox(session: await signedInSession(), client: AresusAPI(transport: api), directory: directory,
+                                automatic: false, uploads: uploads)
+        let id = try await enqueue(outbox); await outbox.process()
+        let first = try #require(uploads.tasks.first)
+        try await uploads.finish(.failure(HTTPError.server(404, "Unknown drop.")))
+        let restarted = try #require(outbox.items.only)
+        #expect(restarted.id == id && restarted.serverID == 45 && restarted.restarts == 1)
+        #expect(restarted.state == .uploading && restarted.uploadSession == uploads.identifier && restarted.lastError == nil)
+        let second = try #require(uploads.tasks.only)
+        #expect(second.record == id && second.attempt != first.attempt && restarted.uploadAttempt == second.attempt)
+        #expect(uploads.requests.compactMap(\.url?.path) == ["/api/aresus/drops/44/file", "/api/aresus/drops/45/file"])
+        #expect(uploads.deadlines.last! == nil, "a new drop goes at once")
+        #expect(api.requests.map(\.httpMethod) == ["POST", "POST"], "no list is asked: the server has no such drop")
+        let waiting = try AresusJSON.decoder().decode(Drop.self, from: dropAnswer(state: .waiting, id: 45))
+        await outbox.finished(first, result: .success(waiting), token: "fictional-empire-token")
+        #expect(outbox.items.count == 1, "a late completion of the old upload cannot finish the new one")
+        try await uploads.finish(.success(waiting))
+        #expect(outbox.items.isEmpty && api.requests.count == 2)
+    }
+
+    /// A removal asked (here by another process) before the 404 arrives: the record is not sent again; its removal
+    /// goes on with the saved id, whose DELETE the server answers 404 (counted as deleted).
+    @Test(arguments: [false, true])
+    func a404WhileRemovalIsAskedNeverCreatesAnotherDrop(deferred: Bool) async throws {
+        let directory = testDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let api = DropTransport()
+        api.responses = [.answer(201, try dropAnswer())]
+        let uploads = HeldDropUploads(); uploads.supportsDeferredRetry = deferred
+        let outbox = DropOutbox(session: await signedInSession(), client: AresusAPI(transport: api), directory: directory,
+                                automatic: false, uploads: uploads)
+        let id = try await enqueue(outbox); await outbox.process()
+        let journal = DropJournal(directory: directory)
+        var record = try #require(try journal.read(id))
+        record.cancellationRequested = true
+        try journal.save(record)
+        try await uploads.finish(.failure(HTTPError.server(404, "Unknown drop.")))
+        let pending = try #require(outbox.items.only)
+        #expect(pending.cancellationRequested && pending.serverID == 44 && pending.restarts == nil)
+        #expect(pending.state == .onPhone && pending.uploadSession == nil)
+        #expect(api.requests.map(\.httpMethod) == ["POST"] && uploads.tasks.isEmpty)
+        api.responses = [.answer(404, Data(#"{"error":"Unknown drop."}"#.utf8))]
+        await outbox.process()
+        #expect(api.requests.map(\.httpMethod) == ["POST", "DELETE"] && api.requests.last?.url?.path == "/api/aresus/drops/44")
+        #expect(outbox.items.isEmpty && uploads.tasks.isEmpty)
+    }
+
     @Test func logoutDuringReconcileDiscardsItsLateAnswer() async throws {
         let directory = testDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }

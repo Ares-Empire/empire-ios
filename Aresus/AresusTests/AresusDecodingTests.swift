@@ -65,6 +65,7 @@ struct AresusDecodingTests {
     @Test func syncSample() throws {
         let sync: SyncOverview = try sample("sync")
         #expect(sync.machines.map(\.name) == ["Aresium", "Server", "Windows-Laptop"])
+        #expect(sync.machines.map(\.server) == [false, true, false])
         let notebook = try #require(sync.machines.last)
         #expect(notebook.os == "Windows" && notebook.state == .issue && notebook.lastResult == .failed)
         #expect(notebook.lastOK == at("2026-10-18T09:00:09Z"))
@@ -73,6 +74,26 @@ struct AresusDecodingTests {
         #expect(sync.runs[0] == .quiet(QuietDay(machine: "Server", day: "2026-10-24", count: 141, last: at("2026-10-24T12:05:03Z"))))
         #expect(sync.runs[4] == .run(RunSummary(id: 612, machine: "Windows-Laptop", finished: at("2026-10-19T09:00:12Z"),
                                                 result: .failed, summary: "rebase conflict in aresium")))
+    }
+
+    /// `server` marks the aresus server; an answer without it (an older server), or with null, reads false.
+    @Test(arguments: [(#""server": true,"#, true), (#""server": false,"#, false), ("", false), (#""server": null,"#, false)])
+    func machineServerIsReadLeniently(field: String, server: Bool) throws {
+        let json = #"{"name": "AresOS", "os": "Linux", "# + field
+            + #""last_run": "2026-11-09T08:00:00Z", "last_result": "ok", "last_ok": "2026-11-09T08:00:00Z", "open_problems": [], "state": "active"}"#
+        let machine = try AresusJSON.decoder().decode(Machine.self, from: Data(json.utf8))
+        #expect(machine.server == server)
+        #expect(machine.name == "AresOS" && machine.os == "Linux" && machine.state == .active && machine.lastResult == .ok)
+        #expect(machine.lastRun == at("2026-11-09T08:00:00Z") && machine.openProblems.isEmpty)
+    }
+
+    /// The rack only for the server; any other machine by its system, so a laptop running Linux (AresOS) is a computer.
+    @Test(arguments: [("Linux", true, "server.rack"), ("Linux", false, "desktopcomputer"), ("macOS", false, "laptopcomputer"),
+                      ("Windows", false, "pc"), ("FreeBSD", false, "desktopcomputer")])
+    func machineSymbol(os: String, server: Bool, symbol: String) {
+        let machine = Machine(name: "Machine", os: os, server: server, lastRun: nil, lastResult: nil, lastOK: nil,
+                              openProblems: [], state: .active)
+        #expect(machine.symbol == symbol)
     }
 
     @Test func runSample() throws {
@@ -131,9 +152,10 @@ struct AresusDecodingTests {
         """.utf8)
         let detail = try AresusJSON.decoder().decode(ProvinceDetail.self, from: json)
         #expect(detail.logo == nil && detail.about == nil && detail.deploy == nil && detail.uptime.isEmpty)
+        // Without `server` too, as an answer from before the field: it reads as no server.
         let machine = Data(#"{"name": "New", "os": "Linux", "last_run": null, "last_result": null, "last_ok": null, "open_problems": [], "state": "inactive"}"#.utf8)
         let decoded = try AresusJSON.decoder().decode(Machine.self, from: machine)
-        #expect(decoded.lastRun == nil && decoded.lastResult == nil && decoded.symbol == "server.rack")
+        #expect(decoded.lastRun == nil && decoded.lastResult == nil && !decoded.server && decoded.symbol == "desktopcomputer")
         let deploy = Data(#"{"commit": "abc1234", "subject": "x", "date": "2026-10-24T01:58:00Z", "behind": null}"#.utf8)
         #expect(try AresusJSON.decoder().decode(Deploy.self, from: deploy).behind == nil)
     }

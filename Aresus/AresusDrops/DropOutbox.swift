@@ -30,6 +30,9 @@ nonisolated struct DropOutboxItem: Codable, Equatable, Identifiable, Sendable {
     var cancellationRequested = false
     var uploadSession: String?
     var uploadAttempt: UUID?
+    /// How often the upload's `404` (the server has no such drop) sent the file again as a new drop; nil = never.
+    /// Optional, so records saved by builds before it still decode (synthesized decoding ignores default values).
+    var restarts: Int?
 }
 
 nonisolated enum DropLocalError: LocalizedError {
@@ -181,7 +184,8 @@ final class DropOutbox {
                 guard let current = item(record.id), !current.cancellationRequested,
                       current.uploadAttempt == record.uploadAttempt, let serverID = current.serverID else { continue }
                 guard let drop = server.first(where: { $0.id == serverID }) else {
-                    // The list is bounded; an absent row keeps the existing PUT/404 behavior, never a new POST.
+                    // The list is bounded, so an absent row proves nothing: the PUT goes to the saved id, never a new
+                    // POST here. Only the PUT's own 404 sends the file again as a new drop (`finished`).
                     remaining.insert(record.id)
                     continue
                 }
@@ -277,8 +281,9 @@ final class DropOutbox {
         guard let index = items.firstIndex(where: { $0.id == id }) else { return }
         guard items[index].uploadSession == nil else { return }
         do {
+            // A person's Retry starts the automatic limits again (the checksum retry, the 404 restarts).
             try update(id) {
-                $0.state = .onPhone; $0.retryAt = nil; $0.lastError = nil; $0.checksumRetries = 0
+                $0.state = .onPhone; $0.retryAt = nil; $0.lastError = nil; $0.checksumRetries = 0; $0.restarts = nil
             }
         } catch { storageError = error.localizedDescription; return }
         await process()
@@ -470,6 +475,24 @@ final class DropOutbox {
                         await process()
                     } else if worker == nil { await process() }
                 } catch { fail(id, error: error, login: session.generation, token: token) }
+            } else if case HTTPError.server(404, _) = error, (pending.restarts ?? 0) < Self.maximumRestarts {
+                // The server has no such drop (on this route 404 means only that), so these bytes never landed: a
+                // landed row stays 30 days, and `reconcile` discards a record whose row is past `uploading`. Its
+                // `uploading` row expired (24 hours) or was never kept. Forget the id and send the file again as a new
+                // drop, a few times at most, so a server that always answers 404 cannot make drops in a loop. A
+                // removal asked meanwhile still wins: `attempt` checks it before any POST.
+                do {
+                    try update(id) {
+                        $0.restarts = ($0.restarts ?? 0) + 1
+                        $0.serverID = nil; $0.uploadSession = nil; $0.uploadAttempt = nil
+                        $0.state = .onPhone; $0.retryAt = nil; $0.lastError = nil
+                    }
+                    // As the checksum retry: also during a background event delivery or in the share extension.
+                    if uploads.supportsDeferredRetry {
+                        await worker?.value
+                        await process()
+                    } else if worker == nil { await process() }
+                } catch { fail(id, error: error, login: session.generation, token: token) }
             } else { fail(id, error: error, login: session.generation, token: token) }
         }
         if uploads.supportsDeferredRetry {
@@ -524,6 +547,9 @@ final class DropOutbox {
             }
         } catch { storageError = error.localizedDescription }
     }
+
+    /// How often an upload answered `404` may start again as a new drop before the record fails (`finished`).
+    static let maximumRestarts = 2
 
     static func retryDelay(attempts: Int) -> TimeInterval { min(600, 5 * pow(2, Double(min(10, max(0, attempts - 1))))) }
 

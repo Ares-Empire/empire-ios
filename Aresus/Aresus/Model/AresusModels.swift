@@ -60,8 +60,11 @@ nonisolated struct ProvinceDetail: Codable, Equatable, Sendable {
 }
 
 nonisolated struct Machine: Codable, Equatable, Identifiable, Sendable {
-    let name: String               // "Aresium" (the MacBook's host name), "Windows-Laptop", "Server"
+    let name: String               // "Aresium" (the MacBook's host name), "Windows-Laptop", "Server", "AresOS"
     let os: String                 // "macOS" | "Windows" | "Linux"
+    /// The aresus server itself; every other machine (a laptop, also one running Linux) is false. Read leniently: an
+    /// answer from before the field reads false.
+    let server: Bool
     let lastRun: Date?
     let lastResult: RunResult?
     let lastOK: Date?
@@ -70,8 +73,23 @@ nonisolated struct Machine: Codable, Equatable, Identifiable, Sendable {
     var id: String { name }
 
     enum CodingKeys: String, CodingKey {
-        case name, os, state
+        case name, os, server, state
         case lastRun = "last_run", lastResult = "last_result", lastOK = "last_ok", openProblems = "open_problems"
+    }
+}
+
+extension Machine {
+    // In an extension, so the memberwise initializer stays.
+    nonisolated init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        name = try container.decode(String.self, forKey: .name)
+        os = try container.decode(String.self, forKey: .os)
+        server = try container.decodeIfPresent(Bool.self, forKey: .server) ?? false
+        lastRun = try container.decodeIfPresent(Date.self, forKey: .lastRun)
+        lastResult = try container.decodeIfPresent(RunResult.self, forKey: .lastResult)
+        lastOK = try container.decodeIfPresent(Date.self, forKey: .lastOK)
+        openProblems = try container.decode([String].self, forKey: .openProblems)
+        state = try container.decode(AresusState.self, forKey: .state)
     }
 }
 
