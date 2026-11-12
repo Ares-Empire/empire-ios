@@ -119,6 +119,9 @@ final class ArestemisStore {
     private(set) var huntLatest: [Int: [Int]] = [:]
     private(set) var lists: [ListScope: MatchList] = [:]
     private(set) var changingState: Set<Int> = []
+    private(set) var changingVotes: Set<Int> = []
+    private(set) var changingRejectedVotes: Set<Int> = []
+    private var rejectedVoteRevision: [Int: Int] = [:]
     private(set) var matchErrors: [Int: String] = [:]
 
     // filtered out, of every search (nil) and of single ones
@@ -749,7 +752,9 @@ final class ArestemisStore {
             guard isCurrent(context), !deletedHunts.contains(current.huntID) else { return }
             stateRevision += 1
             matchStateRevision[id] = stateRevision
-            matchesByID[id] = keepingRead(returned)
+            var confirmed = keepingRead(returned)
+            confirmed.vote = match(id)?.vote
+            matchesByID[id] = confirmed
             // Offered as soon as the server confirmed, before the counts reload, so it follows the swipe at once.
             if state == .dismissed, returned.state == .dismissed {
                 undo = UndoOffer(message: String(localized: "Listing dismissed.")) { [weak self] in
@@ -762,7 +767,9 @@ final class ArestemisStore {
             guard isCurrent(context), !deletedHunts.contains(current.huntID) else { return }
             stateRevision += 1
             matchStateRevision[id] = stateRevision
-            matchesByID[id] = keepingRead(current)
+            var restored = keepingRead(current)
+            restored.vote = match(id)?.vote
+            matchesByID[id] = restored
             handle(error, context: context) { self.show("\(state.failure) \($0)") }
         }
     }
@@ -902,14 +909,90 @@ final class ArestemisStore {
         }
     }
 
+    // MARK: - photo votes
+
+    /// A repeated tap clears the active vote. Voting never changes a listing's state or list membership.
+    func setVote(_ vote: Vote?, for id: Int) async {
+        guard canAct, !changingVotes.contains(id), let current = match(id), isThing(current), current.look != nil
+        else { return }
+        let wanted = current.vote == vote ? nil : vote
+        changingVotes.insert(id)
+        updateMatchVote(wanted, id: id)
+        let context = context
+        defer { if isCurrent(context) { changingVotes.remove(id) } }
+        do {
+            let returned = try await backend.vote(wanted, match: id)
+            guard isCurrent(context), !deletedHunts.contains(current.huntID) else { return }
+            updateMatchVote(returned.vote, id: id)
+        } catch {
+            guard isCurrent(context), !deletedHunts.contains(current.huntID) else { return }
+            updateMatchVote(current.vote, id: id)
+            handle(error, context: context) { self.show($0) }
+        }
+    }
+
+    private func updateMatchVote(_ vote: Vote?, id: Int) {
+        guard var match = match(id) else { return }
+        match.vote = vote
+        matchesByID[id] = match
+        stateRevision += 1
+        matchStateRevision[id] = stateRevision
+    }
+
+    func canVote(on entry: Rejected) -> Bool {
+        guard let hunt = card(entry.huntID)?.hunt, hunt.kind == .item, let search = hunt.search.item else { return false }
+        return search.hasLook
+    }
+
+    func setVote(_ vote: Vote?, forRejected id: Int) async {
+        guard canAct, !changingRejectedVotes.contains(id), let current = rejectedEntry(id), canVote(on: current)
+        else { return }
+        let wanted = current.vote == vote ? nil : vote
+        changingRejectedVotes.insert(id)
+        updateRejectedVote(wanted, id: id)
+        let context = context
+        defer { if isCurrent(context) { changingRejectedVotes.remove(id) } }
+        do {
+            try await backend.vote(wanted, rejected: id)
+            guard isCurrent(context), !deletedHunts.contains(current.huntID) else { return }
+            updateRejectedVote(wanted, id: id)
+        } catch {
+            guard isCurrent(context), !deletedHunts.contains(current.huntID) else { return }
+            updateRejectedVote(current.vote, id: id)
+            handle(error, context: context) { self.show($0) }
+        }
+    }
+
+    private func rejectedEntry(_ id: Int) -> Rejected? {
+        rejectedLists.values.lazy.flatMap(\.items).first { $0.id == id }
+    }
+
+    private func updateRejectedVote(_ vote: Vote?, id: Int) {
+        for scope in Array(rejectedLists.keys) {
+            guard let index = rejectedLists[scope]?.items.firstIndex(where: { $0.id == id }) else { continue }
+            rejectedLists[scope]?.items[index].vote = vote
+        }
+        stateRevision += 1
+        rejectedVoteRevision[id] = stateRevision
+    }
+
     // MARK: - filtered out
 
     /// The listings filtered out of every search (nil) or of one, as last loaded.
     func rejected(hunt: Int? = nil) -> RejectedList { rejectedLists[hunt] ?? RejectedList() }
 
     func loadRejected(hunt: Int? = nil) async {
+        let revision = stateRevision
         await loadOnePage(\.rejectedLists, hunt: hunt) { [backend] in
-            try await backend.rejected(hunt: hunt, limit: Self.pageSize).items
+            let items = try await backend.rejected(hunt: hunt, limit: Self.pageSize).items
+            return items.map { item in
+                var item = item
+                if self.changingRejectedVotes.contains(item.id) || (self.rejectedVoteRevision[item.id] ?? 0) > revision,
+                   let known = self.rejectedEntry(item.id) {
+                    item.vote = known.vote
+                }
+                return item
+            }
         }
     }
 
@@ -1408,6 +1491,9 @@ final class ArestemisStore {
         openedHere = [:]
         heldInNew = []
         changingState = []
+        changingVotes = []
+        changingRejectedVotes = []
+        rejectedVoteRevision = [:]
         matchErrors = [:]
         rejectedLists = [:]
         notCheckedLists = [:]
@@ -1444,7 +1530,7 @@ final class ArestemisStore {
 
     private func remember(_ match: Match, since revision: Int? = nil) {
         // A match whose state is being changed here keeps the state shown until the server answers.
-        guard !deletedHunts.contains(match.huntID), !changingState.contains(match.id),
+        guard !deletedHunts.contains(match.huntID), !changingState.contains(match.id), !changingVotes.contains(match.id),
               revision.map({ (matchStateRevision[match.id] ?? 0) <= $0 }) ?? true else { return }
         matchesByID[match.id] = keepingRead(match)
     }

@@ -470,6 +470,22 @@
         }
       }
     },
+    "%lld of %lld" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld von %lld"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld of %2$lld"
+          }
+        }
+      }
+    },
     "%lld people" : {
       "localizations" : {
         "de" : {
@@ -2041,6 +2057,16 @@
         }
       }
     },
+    "Faux fur" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kunstpelz"
+          }
+        }
+      }
+    },
     "Favorite" : {
       "localizations" : {
         "de" : {
@@ -2237,6 +2263,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Möbliert, nur befristet."
+          }
+        }
+      }
+    },
+    "Good find" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guter Fund"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Good find"
           }
         }
       }
@@ -2617,6 +2659,32 @@
         }
       }
     },
+    "Long" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lang"
+          }
+        }
+      }
+    },
+    "Look %lld/10" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Look %lld/10"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Look %lld/10"
+          }
+        }
+      }
+    },
     "Looking for the product…" : {
       "localizations" : {
         "de" : {
@@ -2747,12 +2815,32 @@
         }
       }
     },
+    "Men's cut" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Herrenschnitt"
+          }
+        }
+      }
+    },
     "Mensa Garching menu" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Speiseplan Mensa Garching"
+          }
+        }
+      }
+    },
+    "Mid-length" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mittellang"
           }
         }
       }
@@ -3103,6 +3191,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nicht rechtzeitig geprüft"
+          }
+        }
+      }
+    },
+    "Not it" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nicht das"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not it"
           }
         }
       }
@@ -3507,6 +3611,16 @@
         }
       }
     },
+    "Photos" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fotos"
+          }
+        }
+      }
+    },
     "Pickup" : {
       "localizations" : {
         "de" : {
@@ -3733,6 +3847,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Liest…"
+          }
+        }
+      }
+    },
+    "Real fur" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Echtpelz"
           }
         }
       }
@@ -4083,6 +4207,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Shops"
+          }
+        }
+      }
+    },
+    "Short" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kurz"
           }
         }
       }
@@ -4747,6 +4881,16 @@
         }
       }
     },
+    "Unisex" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unisex"
+          }
+        }
+      }
+    },
     "Until" : {
       "localizations" : {
         "de" : {
@@ -4983,6 +5127,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Mit Beispiel-Suchen"
+          }
+        }
+      }
+    },
+    "Women's cut" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Damenschnitt"
           }
         }
       }

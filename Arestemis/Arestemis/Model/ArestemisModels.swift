@@ -234,6 +234,9 @@ struct Listing: Codable, Equatable, Sendable {
     let furnished: Bool?
     let posted: String?
     let imageURL: String?
+    /// Up to four photos the site gave (server brief 267), the first usually `imageURL`. Absent, null or not a list of
+    /// texts (a server from before it) is none; the page then shows `imageURL` alone (`Listing.photos`).
+    var photoURLs: [String] = []
     let description: String
     /// The description is only the site's preview (a list card's snippet), so the whole text is on the site (server
     /// brief 141). A server from before it sends nothing: read as the whole text.
@@ -250,6 +253,7 @@ struct Listing: Codable, Equatable, Sendable {
         case priceChange = "price_change"
         case sourceName = "source_name", rentWarm = "rent_warm", rentCold = "rent_cold"
         case availableFrom = "available_from", availableUntil = "available_until", imageURL = "image_url"
+        case photoURLs = "photo_urls"
         case descriptionPartial = "description_partial"
     }
 }
@@ -282,12 +286,15 @@ struct Match: Codable, Equatable, Identifiable, Sendable {
     /// When it was first opened (brief 181 on the server, 182 here), an ISO 8601 time; nil while unread, and from a server
     /// before it. Recently viewed is ordered by it (the server's order; one opened here goes on top).
     var seenAt: String? = nil
+    /// Optional photo judgment and the person's teaching vote (server brief 267).
+    var look: LookVerdict? = nil
+    var vote: Vote? = nil
     /// How a thing's asking price compares with its search's other fitting offers (brief 256; the server's brief 254):
     /// cheap, expensive or unusually cheap. Most listings have none; a server from before it never sends one.
     var priceVerdict: ItemPriceVerdict? = nil
 
     enum CodingKeys: String, CodingKey {
-        case id, state, found, listing, reason, warnings, application, seen
+        case id, state, found, listing, reason, warnings, application, seen, look, vote
         case huntID = "hunt_id", atStart = "at_start", overMax = "over_max", seenAt = "seen_at"
         case priceVerdict = "price_verdict"
     }
@@ -300,9 +307,23 @@ struct Rejected: Codable, Equatable, Identifiable, Sendable {
     let listing: Listing
     let reason: String
 
+    var vote: Vote? = nil
+
     enum CodingKeys: String, CodingKey {
-        case id, found, listing, reason
+        case id, found, listing, reason, vote
         case huntID = "hunt_id"
+    }
+}
+
+extension Rejected {
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(Int.self, forKey: .id)
+        huntID = try c.decode(Int.self, forKey: .huntID)
+        found = try c.decode(String.self, forKey: .found)
+        listing = try c.decode(Listing.self, forKey: .listing)
+        reason = try c.decode(String.self, forKey: .reason)
+        vote = (try? c.decodeIfPresent(Vote.self, forKey: .vote)) ?? nil
     }
 }
 
@@ -482,7 +503,7 @@ extension Hunt {
 
 extension Listing {
     /// Read as the contract says; `description_partial` leniently: absent, null or not a boolean is the whole text
-    /// (a server from before brief 141).
+    /// (a server from before brief 141); `photo_urls` too: absent, null or malformed is none (brief 267).
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         source = try c.decode(Source.self, forKey: .source)
@@ -503,6 +524,7 @@ extension Listing {
         furnished = try c.decodeIfPresent(Bool.self, forKey: .furnished)
         posted = try c.decodeIfPresent(String.self, forKey: .posted)
         imageURL = try c.decodeIfPresent(String.self, forKey: .imageURL)
+        photoURLs = ((try? c.decodeIfPresent([String].self, forKey: .photoURLs)) ?? nil) ?? []
         description = try c.decode(String.self, forKey: .description)
         descriptionPartial = ((try? c.decodeIfPresent(Bool.self, forKey: .descriptionPartial)) ?? nil) ?? false
         item = try c.decodeIfPresent(ItemDetails.self, forKey: .item)
@@ -528,6 +550,8 @@ extension Match {
         seenAt = (try? c.decodeIfPresent(String.self, forKey: .seenAt)) ?? nil
         // Optional and new: one that is missing, malformed or of a kind this build does not know is none, never a
         // listing that fails to load.
+        look = (try? c.decodeIfPresent(LookVerdict.self, forKey: .look)) ?? nil
+        vote = (try? c.decodeIfPresent(Vote.self, forKey: .vote)) ?? nil
         priceVerdict = (try? c.decodeIfPresent(ItemPriceVerdict.self, forKey: .priceVerdict)) ?? nil
     }
 }
