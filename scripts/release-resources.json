@@ -309,6 +309,31 @@
           "source": "Arestemis/Arestemis/Resources/prices-9.json",
           "classification": "release",
           "reason": "TourData.history loads this year of prices in the shipping tour (and DEBUG contract samples)."
+        },
+        {
+          "source": "Arestemis/Arestemis/Samples/look-coat-back.jpg",
+          "classification": "debug_only",
+          "reason": "Made-up photo for the DEBUG look-hunt sample (-sampleLook, brief 268); never fetched from a site."
+        },
+        {
+          "source": "Arestemis/Arestemis/Samples/look-coat-collar.jpg",
+          "classification": "debug_only",
+          "reason": "Made-up photo for the DEBUG look-hunt sample (-sampleLook, brief 268); never fetched from a site."
+        },
+        {
+          "source": "Arestemis/Arestemis/Samples/look-coat-front.jpg",
+          "classification": "debug_only",
+          "reason": "Made-up photo for the DEBUG look-hunt sample (-sampleLook, brief 268); never fetched from a site."
+        },
+        {
+          "source": "Arestemis/Arestemis/Samples/look-jacket.jpg",
+          "classification": "debug_only",
+          "reason": "Made-up photo for the DEBUG look-hunt sample (-sampleLook, brief 268); never fetched from a site."
+        },
+        {
+          "source": "Arestemis/Arestemis/Samples/look-overcoat.jpg",
+          "classification": "debug_only",
+          "reason": "Made-up photo for the DEBUG look-hunt sample (-sampleLook, brief 268); never fetched from a site."
         }
       ],
       "forbidden_patterns": [

@@ -941,7 +941,7 @@ final class ArestemisStore {
 
     func canVote(on entry: Rejected) -> Bool {
         guard let hunt = card(entry.huntID)?.hunt, hunt.kind == .item, let search = hunt.search.item else { return false }
-        return !search.look.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        return search.hasLook
     }
 
     func setVote(_ vote: Vote?, forRejected id: Int) async {

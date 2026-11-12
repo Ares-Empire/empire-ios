@@ -118,7 +118,7 @@ struct MatchRow: View {
     }
 
     @ViewBuilder private var listing: some View {
-        if let url = match.listing.imageURL.flatMap(URL.init(string:)) {
+        if let url = match.listing.photos.first {
             ListingPhoto(url: url).frame(width: 56, height: 56)
                 .clipShape(RoundedRectangle(cornerRadius: Ink.rowRadius, style: .continuous))
         }
@@ -182,24 +182,6 @@ struct MatchRow: View {
         } else {
             Text("Price not given").font(AppFont.text(15, weight: .semibold)).foregroundStyle(Ink.secondary)
         }
-    }
-}
-
-/// A listing's photo, with a quiet tile while it loads or when it fails.
-struct ListingPhoto: View {
-    let url: URL
-    var radius: CGFloat = Ink.rowRadius
-
-    var body: some View {
-        AsyncImage(url: url, transaction: Transaction(animation: .easeOut(duration: 0.25))) { phase in
-            if let image = phase.image {
-                image.resizable().scaledToFill()
-            } else {
-                Rectangle().fill(Ink.card2)
-            }
-        }
-        .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous).strokeBorder(Ink.line))
-        .accessibilityHidden(true)
     }
 }
 

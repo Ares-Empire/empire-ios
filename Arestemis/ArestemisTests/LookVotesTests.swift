@@ -55,8 +55,8 @@ struct LookVotesTests {
         let match = try match()
         #expect(match.look?.score == 8 && match.look?.length == .long && match.look?.cut == .men && match.look?.fur == .real)
         #expect(match.vote == .up)
-        #expect(match.look?.reason(language: .english) == "Long, straight cut with a broad collar.")
-        #expect(match.look?.reason(language: .german) == "Langer, gerader Schnitt mit breitem Kragen.")
+        #expect(match.look?.reason(language: .english).hasPrefix("Long, straight cut that falls below the knee") == true)
+        #expect(match.look?.reason(language: .german).hasPrefix("Langer, gerader Schnitt bis unter das Knie") == true)
         #expect(try JSONDecoder().decode(Match.self, from: JSONEncoder().encode(match)) == match)
         let old = try sample(Match.self, "vinted-match")
         #expect(old.look == nil && old.vote == nil)
@@ -224,8 +224,10 @@ struct LookVotesTests {
         #expect(try await backend.vote(.down, match: 34).vote == .down)
         #expect(try await backend.vote(nil, match: 34).vote == nil)
         try await backend.vote(.up, rejected: 13)
-        #expect(try await backend.rejected(hunt: 5, limit: 50).items.only?.vote == .up)
+        #expect(try await backend.rejected(hunt: 5, limit: 50).items.first { $0.id == 13 }?.vote == .up)
         try await backend.vote(nil, rejected: 13)
-        #expect(try await backend.rejected(hunt: 5, limit: 50).items.only?.vote == nil)
+        #expect(try await backend.rejected(hunt: 5, limit: 50).items.first { $0.id == 13 }?.vote == nil)
+        // The other filtered-out coat keeps its own (none).
+        #expect(try await backend.rejected(hunt: 5, limit: 50).items.first { $0.id == 14 }?.vote == nil)
     }
 }

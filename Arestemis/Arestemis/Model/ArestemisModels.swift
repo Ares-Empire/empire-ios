@@ -234,6 +234,9 @@ struct Listing: Codable, Equatable, Sendable {
     let furnished: Bool?
     let posted: String?
     let imageURL: String?
+    /// Up to four photos the site gave (server brief 267), the first usually `imageURL`. Absent, null or not a list of
+    /// texts (a server from before it) is none; the page then shows `imageURL` alone (`Listing.photos`).
+    var photoURLs: [String] = []
     let description: String
     /// The description is only the site's preview (a list card's snippet), so the whole text is on the site (server
     /// brief 141). A server from before it sends nothing: read as the whole text.
@@ -250,6 +253,7 @@ struct Listing: Codable, Equatable, Sendable {
         case priceChange = "price_change"
         case sourceName = "source_name", rentWarm = "rent_warm", rentCold = "rent_cold"
         case availableFrom = "available_from", availableUntil = "available_until", imageURL = "image_url"
+        case photoURLs = "photo_urls"
         case descriptionPartial = "description_partial"
     }
 }
@@ -499,7 +503,7 @@ extension Hunt {
 
 extension Listing {
     /// Read as the contract says; `description_partial` leniently: absent, null or not a boolean is the whole text
-    /// (a server from before brief 141).
+    /// (a server from before brief 141); `photo_urls` too: absent, null or malformed is none (brief 267).
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         source = try c.decode(Source.self, forKey: .source)
@@ -520,6 +524,7 @@ extension Listing {
         furnished = try c.decodeIfPresent(Bool.self, forKey: .furnished)
         posted = try c.decodeIfPresent(String.self, forKey: .posted)
         imageURL = try c.decodeIfPresent(String.self, forKey: .imageURL)
+        photoURLs = ((try? c.decodeIfPresent([String].self, forKey: .photoURLs)) ?? nil) ?? []
         description = try c.decode(String.self, forKey: .description)
         descriptionPartial = ((try? c.decodeIfPresent(Bool.self, forKey: .descriptionPartial)) ?? nil) ?? false
         item = try c.decodeIfPresent(ItemDetails.self, forKey: .item)

@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// One match. A flat or a thing reads like a listing on its site (brief 142): the figure big (a flat's rent: warm, else
+/// One match. The site's photos at the top, swiped sideways (brief 268, `ListingGallery`). A flat or a thing reads like
+/// a listing on its site (brief 142): the figure big (a flat's rent: warm, else
 /// cold; a thing's price with "VB" or how far it lies over the maximum, an auction's current bid and the time left), the
 /// title, the site and when it was found; then one card of facts as a portal lists them (`Listing.detailFacts`,
 /// `itemDetailFacts`: every fact the search asks about, a quiet "–" where the listing does not say) with the AI's
@@ -8,7 +9,8 @@ import SwiftUI
 /// one quiet line that opens the listing. A thing with a price verdict (brief 256) has the server's line and note under its
 /// price, title and site ("Cheap: usually €400–€450 asked within your search limits"). At the bottom "Open on <site>" in the accent fill, the main button; a flat's
 /// application text under it as the quiet second one (`ListingButton`). Why the AI let it through is not on the page:
-/// it fits because of the search. The menu sets the state; a thing's seller is "Asked", not applied to. A change on a
+/// it fits because of the search. A look hunt's finding (brief 268) has the judge's "Look 8/10", its reason and the
+/// thumbs that teach it under its price, title and site (`LookLine`). The menu sets the state; a thing's seller is "Asked", not applied to. A change on a
 /// watched page (brief 131): the server's summary as the title, "Now: …", the host and when, then the lines that came
 /// and went (the removed ones labelled and struck through, not told apart by colour alone), and "Open page" (the watched
 /// address) as the one main button; its menu only saves or dismisses. A monitor's alarm (brief 137): the new price big
@@ -71,13 +73,14 @@ struct MatchDetailScreen: View {
         return VStack(spacing: 0) {
           ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                if let url = listing.imageURL.flatMap(URL.init(string:)) {
-                    Color.clear.aspectRatio(16 / 10, contentMode: .fit)
-                        .overlay { ListingPhoto(url: url, radius: Ink.cardRadius) }
-                        .clipShape(RoundedRectangle(cornerRadius: Ink.cardRadius, style: .continuous))
-                        .padding(.bottom, 22)
-                }
                 let kind = store.kind(of: match)
+                // The site's photos, swiped sideways (brief 268); none, nothing.
+                let photos = listing.photos
+                if !photos.isEmpty {
+                    ListingGallery(photos: photos,
+                                   frame: .of(kind: kind, search: store.card(match.huntID)?.hunt.search.item))
+                        .padding(.bottom, photos.count > 1 ? 16 : 22)
+                }
                 if kind == .price {
                     priceHero(match)
                 } else if kind == .watch {
@@ -90,18 +93,12 @@ struct MatchDetailScreen: View {
                 } else {
                     let thing = kind == .item
                     hero(match, thing: thing)
+                    // A look hunt's finding (brief 268): the judge's score and reason, with the thumbs that teach it.
                     if thing, let look = match.look {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("Look \(look.score)/10")
-                                .font(AppFont.text(15, weight: .semibold)).foregroundStyle(Ink.primary)
-                            Text(verbatim: look.reason())
-                                .font(AppFont.text(14)).foregroundStyle(Ink.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                            LookVoteButtons(vote: match.vote, isSaving: store.changingVotes.contains(match.id)) { vote in
-                                Task { await store.setVote(vote, for: match.id) }
-                            }
+                        LookLine(verdict: look, vote: match.vote, isSaving: store.changingVotes.contains(match.id)) { vote in
+                            Task { await store.setVote(vote, for: match.id) }
                         }
-                        .padding(.top, 16)
+                        .padding(.top, 12)
                     }
                     // Under the price, title and site: how the price compares with the search's other fitting offers,
                     // with the server's note (brief 256). Nothing when there is no verdict.

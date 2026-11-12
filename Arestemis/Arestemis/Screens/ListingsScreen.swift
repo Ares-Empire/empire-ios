@@ -191,7 +191,7 @@ private struct SearchesPart: View {
 }
 
 /// The listings the AI turned down in the last 7 days (of every search, or of one), each with its reason; tapping one
-/// opens it on the portal.
+/// opens it on the portal. A look hunt's (brief 268) show their photo and the thumbs that teach its judge.
 struct RejectedSheet: View {
     let store: ArestemisStore
     /// nil: every search's.
@@ -213,15 +213,12 @@ struct RejectedSheet: View {
                         CalmMessage(text: rejected.error ?? String(localized: "Nothing was filtered out."), loading: rejected.isLoading)
                     }
                     ForEach(rejected.items) { item in
-                        VStack(alignment: .leading, spacing: 6) {
-                            Button { item.listing.portalURL.map { openURL($0) } } label: { row(item) }
+                        if store.canVote(on: item) {
+                            lookRow(item)
+                        } else {
+                            Button { open(item) } label: { row(item) }
                                 .buttonStyle(.plain)
                                 .disabled(item.listing.portalURL == nil)
-                            if store.canVote(on: item) {
-                                LookVoteButtons(vote: item.vote, isSaving: store.changingRejectedVotes.contains(item.id)) { vote in
-                                    Task { await store.setVote(vote, forRejected: item.id) }
-                                }
-                            }
                         }
                     }
                 }
@@ -243,32 +240,95 @@ struct RejectedSheet: View {
         .task { await store.loadRejected(hunt: hunt) }
     }
 
+    private func open(_ item: Rejected) {
+        item.listing.portalURL.map { openURL($0) }
+    }
+
+    /// A listing turned down: the whole card opens it on its site.
     private func row(_ item: Rejected) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .firstTextBaseline, spacing: 10) {
-                Text(item.listing.title).font(AppFont.text(15, weight: .semibold)).foregroundStyle(Ink.primary)
-                    .lineLimit(2).multilineTextAlignment(.leading)
-                Spacer(minLength: 0)
-                Image(systemName: "arrow.up.right").font(.system(size: 11, weight: .semibold)).foregroundStyle(Ink.muted)
-            }
-            let facts = item.listing.item == nil ? item.listing.factsWithRent : item.listing.itemFactsWithPrice()
-            if !facts.isEmpty {
-                Text(facts).font(AppFont.text(13)).foregroundStyle(Ink.secondary).lineLimit(1)
-            }
-            Text(item.reason).font(AppFont.text(13)).foregroundStyle(Ink.muted).lineSpacing(2)
-                .fixedSize(horizontal: false, vertical: true)
-            TimelineView(.periodic(from: .now, by: 30)) { context in
-                Text([item.listing.sourceName, Format.relative(item.found, now: context.date)].compactMap { $0 }
-                        .joined(separator: " · "))
-                    // A touch fainter than muted on the dark wall; on the light one muted is already the faintest that reads.
-                    .font(AppFont.text(11)).foregroundStyle(Ink.muted.opacity(scheme == .dark ? 0.85 : 1))
-            }
-            .padding(.top, 2)
+            words(item)
+            sourceLine(item).padding(.top, 2)
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .glassCard()
         .accessibilityElement(children: .combine)
         .accessibilityHint("Opens the listing on \(item.listing.sourceName)")
+    }
+
+    /// A listing a look hunt turned down (brief 268): its photo beside the words, so it can be judged at a glance, and the
+    /// thumbs at the foot of the card that teach the judge. The photo and the words open it on its site; the thumbs only
+    /// vote.
+    private func lookRow(_ item: Rejected) -> some View {
+        let photo = item.listing.photos.first
+        let photoSize = CGSize(width: 64, height: 80)
+        return VStack(alignment: .leading, spacing: 4) {
+            Button { open(item) } label: {
+                HStack(alignment: .top, spacing: 12) {
+                    if let photo {
+                        ListingPhoto(url: photo).frame(width: photoSize.width, height: photoSize.height)
+                            .clipShape(RoundedRectangle(cornerRadius: Ink.rowRadius, style: .continuous))
+                    }
+                    VStack(alignment: .leading, spacing: 6) { words(item) }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .disabled(item.listing.portalURL == nil)
+            .accessibilityElement(children: .combine)
+            .accessibilityHint("Opens the listing on \(item.listing.sourceName)")
+            HStack(alignment: .center, spacing: 8) {
+                sourceLine(item)
+                Spacer(minLength: 0)
+                LookVoteButtons(vote: item.vote, isSaving: store.changingRejectedVotes.contains(item.id),
+                                size: .compact) { vote in
+                    Task { await store.setVote(vote, forRejected: item.id) }
+                }
+                .padding(.vertical, -6).padding(.trailing, -6) // 44 pt targets around 32 pt circles
+            }
+            .padding(.leading, photo == nil ? 0 : photoSize.width + 12)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassCard()
+    }
+
+    /// The title with the mark that it opens the site, the listing's facts and why it was turned down.
+    @ViewBuilder private func words(_ item: Rejected) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
+            Text(item.listing.title).font(AppFont.text(15, weight: .semibold)).foregroundStyle(Ink.primary)
+                .lineLimit(2).multilineTextAlignment(.leading)
+            Spacer(minLength: 0)
+            Image(systemName: "arrow.up.right").font(.system(size: 11, weight: .semibold)).foregroundStyle(Ink.muted)
+        }
+        let facts = item.listing.item == nil ? item.listing.factsWithRent : item.listing.itemFactsWithPrice()
+        if !facts.isEmpty {
+            Text(facts).font(AppFont.text(13)).foregroundStyle(Ink.secondary).lineLimit(1)
+        }
+        Text(reason(item.reason)).font(AppFont.text(13)).foregroundStyle(Ink.muted).lineSpacing(2)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    /// The reason as the server wrote it; the look check's "Look 4/10" (or "Look not judged") at its start a little
+    /// stronger, as the score on a finding's page.
+    private func reason(_ text: String) -> AttributedString {
+        let reason = RejectedReason(text)
+        guard let lead = reason.lead else { return AttributedString(reason.rest) }
+        var label = AttributedString(lead + ":")
+        label.font = AppFont.text(13, weight: .semibold)
+        label.foregroundColor = Ink.secondary
+        return label + AttributedString(" " + reason.rest)
+    }
+
+    private func sourceLine(_ item: Rejected) -> some View {
+        TimelineView(.periodic(from: .now, by: 30)) { context in
+            Text([item.listing.sourceName, Format.relative(item.found, now: context.date)].compactMap { $0 }
+                    .joined(separator: " · "))
+                // A touch fainter than muted on the dark wall; on the light one muted is already the faintest that reads.
+                .font(AppFont.text(11)).foregroundStyle(Ink.muted.opacity(scheme == .dark ? 0.85 : 1))
+                .lineLimit(1)
+        }
     }
 }

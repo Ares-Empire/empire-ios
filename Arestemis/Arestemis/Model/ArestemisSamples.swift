@@ -860,7 +860,7 @@ final class SampleBackend: ArestemisBackend {
     func vote(_ vote: Vote?, rejected id: Int) async throws {
         guard let index = rejectedItems.firstIndex(where: { $0.id == id }),
               let hunt = huntValues.first(where: { $0.id == rejectedItems[index].huntID }),
-              let search = hunt.search.item, !search.look.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+              let search = hunt.search.item, search.hasLook else {
             throw HTTPError.server(404, nil)
         }
         rejectedItems[index].vote = vote
