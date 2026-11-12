@@ -41,6 +41,8 @@ protocol ArestemisBackend {
     func findMatches(_ words: String, hunt: Int?, limit: Int) async throws -> MatchPage
     func match(id: Int) async throws -> Match
     func setState(_ state: MatchState, match id: Int) async throws -> Match
+    func vote(_ vote: Vote?, match id: Int) async throws -> Match
+    func vote(_ vote: Vote?, rejected id: Int) async throws
     /// `POST /matches/{id}/seen` (brief 179 on the server): the listing was opened in the app. Idempotent; it changes no
     /// state, and a later state change keeps it read.
     func markSeen(match id: Int) async throws -> Match
@@ -187,6 +189,29 @@ struct ArestemisAPI: ArestemisBackend {
 
     func setState(_ state: MatchState, match id: Int) async throws -> Match {
         try await send(.post, "matches/\(id)/state", body: ["state": state.rawValue])
+    }
+
+    func vote(_ vote: Vote?, match id: Int) async throws -> Match {
+        try await send(.post, "matches/\(id)/vote", body: VoteBody(vote: vote))
+    }
+
+    func vote(_ vote: Vote?, rejected id: Int) async throws {
+        let _: RejectedVote = try await send(.post, "rejected/\(id)/vote", body: VoteBody(vote: vote))
+    }
+
+    private struct RejectedVote: Decodable {
+        let id: Int
+        let vote: Vote?
+    }
+
+    private struct VoteBody: Encodable {
+        let vote: Vote?
+        enum CodingKeys: CodingKey { case vote }
+        func encode(to encoder: Encoder) throws {
+            var c = encoder.container(keyedBy: CodingKeys.self)
+            // An explicit null clears a recorded vote.
+            try c.encode(vote, forKey: .vote)
+        }
     }
 
     func markSeen(match id: Int) async throws -> Match {

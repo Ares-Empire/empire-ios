@@ -282,12 +282,15 @@ struct Match: Codable, Equatable, Identifiable, Sendable {
     /// When it was first opened (brief 181 on the server, 182 here), an ISO 8601 time; nil while unread, and from a server
     /// before it. Recently viewed is ordered by it (the server's order; one opened here goes on top).
     var seenAt: String? = nil
+    /// Optional photo judgment and the person's teaching vote (server brief 267).
+    var look: LookVerdict? = nil
+    var vote: Vote? = nil
     /// How a thing's asking price compares with its search's other fitting offers (brief 256; the server's brief 254):
     /// cheap, expensive or unusually cheap. Most listings have none; a server from before it never sends one.
     var priceVerdict: ItemPriceVerdict? = nil
 
     enum CodingKeys: String, CodingKey {
-        case id, state, found, listing, reason, warnings, application, seen
+        case id, state, found, listing, reason, warnings, application, seen, look, vote
         case huntID = "hunt_id", atStart = "at_start", overMax = "over_max", seenAt = "seen_at"
         case priceVerdict = "price_verdict"
     }
@@ -300,9 +303,23 @@ struct Rejected: Codable, Equatable, Identifiable, Sendable {
     let listing: Listing
     let reason: String
 
+    var vote: Vote? = nil
+
     enum CodingKeys: String, CodingKey {
-        case id, found, listing, reason
+        case id, found, listing, reason, vote
         case huntID = "hunt_id"
+    }
+}
+
+extension Rejected {
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(Int.self, forKey: .id)
+        huntID = try c.decode(Int.self, forKey: .huntID)
+        found = try c.decode(String.self, forKey: .found)
+        listing = try c.decode(Listing.self, forKey: .listing)
+        reason = try c.decode(String.self, forKey: .reason)
+        vote = (try? c.decodeIfPresent(Vote.self, forKey: .vote)) ?? nil
     }
 }
 
@@ -528,6 +545,8 @@ extension Match {
         seenAt = (try? c.decodeIfPresent(String.self, forKey: .seenAt)) ?? nil
         // Optional and new: one that is missing, malformed or of a kind this build does not know is none, never a
         // listing that fails to load.
+        look = (try? c.decodeIfPresent(LookVerdict.self, forKey: .look)) ?? nil
+        vote = (try? c.decodeIfPresent(Vote.self, forKey: .vote)) ?? nil
         priceVerdict = (try? c.decodeIfPresent(ItemPriceVerdict.self, forKey: .priceVerdict)) ?? nil
     }
 }

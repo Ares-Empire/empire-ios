@@ -213,9 +213,16 @@ struct RejectedSheet: View {
                         CalmMessage(text: rejected.error ?? String(localized: "Nothing was filtered out."), loading: rejected.isLoading)
                     }
                     ForEach(rejected.items) { item in
-                        Button { item.listing.portalURL.map { openURL($0) } } label: { row(item) }
-                            .buttonStyle(.plain)
-                            .disabled(item.listing.portalURL == nil)
+                        VStack(alignment: .leading, spacing: 6) {
+                            Button { item.listing.portalURL.map { openURL($0) } } label: { row(item) }
+                                .buttonStyle(.plain)
+                                .disabled(item.listing.portalURL == nil)
+                            if store.canVote(on: item) {
+                                LookVoteButtons(vote: item.vote, isSaving: store.changingRejectedVotes.contains(item.id)) { vote in
+                                    Task { await store.setVote(vote, forRejected: item.id) }
+                                }
+                            }
+                        }
                     }
                 }
                 .padding(.horizontal, Look.side).padding(.top, 8).padding(.bottom, 30)
@@ -225,6 +232,12 @@ struct RejectedSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
+            }
+        }
+        .overlay(alignment: .top) {
+            if let notice = store.notice {
+                NoticeBanner(text: notice.text) { store.dismissNotice() }
+                    .padding(.top, 6)
             }
         }
         .task { await store.loadRejected(hunt: hunt) }

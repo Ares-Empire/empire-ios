@@ -90,6 +90,19 @@ struct MatchDetailScreen: View {
                 } else {
                     let thing = kind == .item
                     hero(match, thing: thing)
+                    if thing, let look = match.look {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Look \(look.score)/10")
+                                .font(AppFont.text(15, weight: .semibold)).foregroundStyle(Ink.primary)
+                            Text(verbatim: look.reason())
+                                .font(AppFont.text(14)).foregroundStyle(Ink.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                            LookVoteButtons(vote: match.vote, isSaving: store.changingVotes.contains(match.id)) { vote in
+                                Task { await store.setVote(vote, for: match.id) }
+                            }
+                        }
+                        .padding(.top, 16)
+                    }
                     // Under the price, title and site: how the price compares with the search's other fitting offers,
                     // with the server's note (brief 256). Nothing when there is no verdict.
                     if let verdict = PriceVerdictWords.shown(for: match, kind: kind) {

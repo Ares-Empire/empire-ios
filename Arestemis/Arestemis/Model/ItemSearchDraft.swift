@@ -30,6 +30,9 @@ struct ItemSearchDraft: Codable, Equatable {
     var extra = ""
     /// Nice to have ("Wäre schön", sent as `nice`, brief 187): never filters a listing out.
     var nice = ""
+    // Preserved on edit; this brief adds no editor controls for photo judgments.
+    var look = ""
+    var lookMin = 6
     var sources: Set<Source> = [.kleinanzeigen]
     /// The hunt's own name (brief 135); empty = named after its words.
     var name = ""
@@ -53,6 +56,8 @@ struct ItemSearchDraft: Codable, Equatable {
         seller = search.seller
         extra = search.extra
         nice = search.nice
+        look = search.look
+        lookMin = search.lookMin
         sources = Set(search.sources)
     }
 
@@ -88,7 +93,8 @@ struct ItemSearchDraft: Codable, Equatable {
                           conditionMin: conditionMin, forParts: forParts, auctions: auctions, delivery: delivery,
                           places: places, radiusKm: radius, seller: seller,
                           extra: extra.trimmingCharacters(in: .whitespacesAndNewlines),
-                          nice: nice.trimmingCharacters(in: .whitespacesAndNewlines), sources: Source.ordered(sources))
+                          nice: nice.trimmingCharacters(in: .whitespacesAndNewlines),
+                          look: look, lookMin: lookMin, sources: Source.ordered(sources))
     }
 
     /// Like the flat form: omitted/null fields stay; places and words merge (search words up to five, none repeated);
@@ -113,12 +119,14 @@ struct ItemSearchDraft: Codable, Equatable {
         if let value = partial.seller { seller = value }
         if let value = partial.extra, !value.isEmpty { extra = value }
         if let value = partial.nice, !value.isEmpty { nice = value }
+        if let value = partial.look { look = value }
+        if let value = partial.lookMin { lookMin = value }
         if let value = partial.sources, !value.isEmpty { sources = Set(value) }
     }
 
     private enum CodingKeys: String, CodingKey {
         case words, typedWord, exclude, priceMin, priceMax, vbText, vbOverMaxTouched, conditionMin, forParts, auctions
-        case delivery, places, radiusKm, seller, extra, nice, sources, name
+        case delivery, places, radiusKm, seller, extra, nice, look, lookMin, sources, name
     }
     /// A kept draft from before brief 149: the one search field's text.
     private enum EarlierKeys: String, CodingKey { case query }
@@ -150,6 +158,8 @@ struct ItemSearchDraft: Codable, Equatable {
         seller = try c.decode(SearchSeller.self, forKey: .seller)
         extra = try c.decode(String.self, forKey: .extra)
         nice = try c.decodeIfPresent(String.self, forKey: .nice) ?? ""
+        look = try c.decodeIfPresent(String.self, forKey: .look) ?? ""
+        lookMin = try c.decodeIfPresent(Int.self, forKey: .lookMin) ?? 6
         sources = try c.decode(Set<Source>.self, forKey: .sources)
         name = try c.decodeIfPresent(String.self, forKey: .name) ?? ""
     }

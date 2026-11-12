@@ -259,6 +259,9 @@ final class SampleBackend: ArestemisBackend {
         if options.priceRecords {
             content = try PriceRecordSample.content(content, now: now)
         }
+        if LaunchArguments.current.contains("-sampleLook") {
+            content = try LookSample.content(content)
+        }
         #endif
         try self.init(content: content, options: options, now: now)
     }
@@ -844,6 +847,23 @@ final class SampleBackend: ArestemisBackend {
         guard let index = matches.firstIndex(where: { $0.id == id }) else { throw HTTPError.server(404, nil) }
         matches[index].state = state
         return matches[index]
+    }
+
+    func vote(_ vote: Vote?, match id: Int) async throws -> Match {
+        guard let index = matches.firstIndex(where: { $0.id == id }), matches[index].isThing else {
+            throw HTTPError.server(404, nil)
+        }
+        matches[index].vote = vote
+        return matches[index]
+    }
+
+    func vote(_ vote: Vote?, rejected id: Int) async throws {
+        guard let index = rejectedItems.firstIndex(where: { $0.id == id }),
+              let hunt = huntValues.first(where: { $0.id == rejectedItems[index].huntID }),
+              let search = hunt.search.item, !search.look.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw HTTPError.server(404, nil)
+        }
+        rejectedItems[index].vote = vote
     }
 
     /// Read, as the server: idempotent, no state changed; the first opening's time is kept.

@@ -2241,6 +2241,16 @@
         }
       }
     },
+    "Good find" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Good find"
+          }
+        }
+      }
+    },
     "Hallo, …" : {
       "localizations" : {
         "de" : {
@@ -2613,6 +2623,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Lage"
+          }
+        }
+      }
+    },
+    "Look %lld/10" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Look %lld/10"
           }
         }
       }
@@ -3103,6 +3123,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nicht rechtzeitig geprüft"
+          }
+        }
+      }
+    },
+    "Not it" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not it"
           }
         }
       }
