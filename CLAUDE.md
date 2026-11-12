@@ -855,6 +855,23 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   none. DEBUG `-sampleNoPrices` (as a server from before it), `-openHunt <id> -scrollTo prices`. Tests:
   `AskingPricesTests`, `ServerSamplesTests` (the server's four `item-price-*` samples). Screenshots:
   `build/256-*.png`.
+  **Look hunts and votes** (brief 268, 2026-11-12; the Arestemis repo's brief 267, `~/Arestemis/docs/API.md` → "brief
+  267"): a Dinge search may carry `look` (Claude judges the listing's photos against it) and `look_min`; the app has no
+  editor for them yet but always decodes and sends both, so editing such a search keeps them (the server also keeps
+  them when an older app omits them). A finding with `Match.look` (`LookVerdict`: score, length, cut, fur, reasons;
+  unknown values read as unknown) shows under the price, title and site "Look 8/10" in the accent with thumbs up /
+  down at the row's right (`LookLine`, `LookVoteButtons` in `Screens/LookViews.swift`; SF Symbols, filled in the accent
+  when chosen, 44 pt, "Good find" / "Guter Fund", "Not it" / "Nicht das"), the reason in the app's language whole, and
+  "Long · Men's cut · Real fur" muted. Filtered out of a look hunt: the listing's photo beside the words, "Look 4/10:"
+  a little stronger, compact thumbs at the card's foot. A tap on the chosen thumb takes the vote back; votes are
+  optimistic with rollback (`ArestemisStore.setVote`, `POST /matches/{id}/vote`, `POST /rejected/{id}/vote` with
+  `{"vote": "up" | "down" | null}`) and never move an entry between lists. **Photos** (every listing page): a swipeable
+  gallery from `Listing.photo_urls` (up to four; else `image_url`; `ListingGallery`), a look hunt's 4:5 and other
+  things square showing the whole photo on a mat, a flat's 16:10 filled; row thumbnails use the first photo. Sample:
+  hunt 5 is a fur coat look hunt with made-up coat drawings under `sample://` (`Samples/look-*.jpg`, Debug only,
+  `debug_only` in `scripts/release-resources.json`); never real portal photos on the Mac. DEBUG `-sampleData
+  -sampleLook -openMatch 34` (`-sampleLookVote up|down|none`), `-openSearch 5 -openSheet rejected`. Tests:
+  `LookVotesTests`, `LookPresentationTests`. Screenshots: `build/268-design-*.png`.
   **The shared tour pieces** (`Shared/Design/TourPieces.swift`, moved from Aresium's `TourScreens.swift` in brief 139,
   Aresium's look unchanged): `TourGuide` (what a tour points at, `\.tourGuide`), `tourSpot` (each app wraps it as
   `tourAnchor` with its own spots), `tourSpotlight` (the veil and ring, around several spots together when a step names

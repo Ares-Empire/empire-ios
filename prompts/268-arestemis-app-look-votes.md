@@ -1,6 +1,6 @@
 # 268: Arestemis app: look score and 👍/👎 votes
 
-Status: draft
+Status: merged 2026-11-12 (structure by Codex gpt-6.1-sol 77c9e01; design by a Claude Opus agent 8aeca58; reviewed by Claude)
 Branch: `codex/268-arestemis-look-votes` · Worktree: `../empire-ios-268-look-votes` · Model: `gpt-6.1-sol`, effort
 `high` (models, API client, store and tests in known code; the workhorse is enough and the weekly allowance has to
 last until 11-17). The look of the new controls is Claude's (a Claude Opus design agent after this build).
