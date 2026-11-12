@@ -14,7 +14,7 @@ and sends his votes on findings and on filtered-out listings of a look hunt.
 ## Read first
 
 - `AGENTS.md` and `CLAUDE.md` (always)
-- The server contract: `~/Arestemis/docs/API.md`, the parts marked "brief 267" (read only; the server branch is
+- The server contract: `~/Arestemis-267-look-check/docs/API.md` (the server worktree), the parts marked "brief 267" (read only; the branch is
   `codex/267-look-check` until it merges, the fields are final)
 - `Arestemis/Arestemis/Model/ItemModels.swift` (`ItemSearch`), `Model/ArestemisModels.swift` (`Match`, `Rejected`),
   `API/ArestemisAPI.swift`, `Model/ArestemisStore.swift` (`setState`, the reject action), `Screens/MatchDetailScreen.swift`,
@@ -53,7 +53,7 @@ The visual design of the controls (Claude, next), editing `look` in the app, ref
 
 ## API
 
-From `~/Arestemis/docs/API.md` (brief 267): `ItemSearch.look`, `ItemSearch.look_min`, `Match.look` (`LookVerdict`),
+From `~/Arestemis-267-look-check/docs/API.md` (brief 267): `ItemSearch.look`, `ItemSearch.look_min`, `Match.look` (`LookVerdict`),
 `Match.vote`, `Rejected.vote`, `POST /matches/{id}/vote`, `POST /rejected/{id}/vote`.
 
 ## Done when
