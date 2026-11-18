@@ -66,10 +66,11 @@ struct ItemSearchDraft: Codable, Equatable {
     }
     /// The most either wish may hold (the server's limit for `extra` and `nice`).
     static let maxWishLength = 1000
+    static let maxExcludeWords = 60
     var problems: [Problem] {
         var result: [Problem] = []
         if wordsProblem != nil { result.append(.words) }
-        if exclude.count > 20 || exclude.contains(where: { $0.count > 40 }) { result.append(.exclude) }
+        if exclude.count > Self.maxExcludeWords || exclude.contains(where: { $0.count > 40 }) { result.append(.exclude) }
         if !priceMin.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && Self.number(priceMin) == nil { result.append(.priceMin) }
         if !priceMax.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && Self.number(priceMax) == nil { result.append(.priceMax) }
         if let min = Self.number(priceMin), let max = Self.number(priceMax), min > max { result.append(.priceOrder) }
@@ -357,7 +358,7 @@ extension ItemSearchDraft {
         let l = language
         switch problem {
         case .words: return l.string(wordsProblem ?? "Type what you look for.")
-        case .exclude: return l.string("Up to 20 words, each at most 40 characters.")
+        case .exclude: return l.string("Up to 60 words, each at most 40 characters.")
         case .priceMin, .priceMax, .vbOverMax: return l.string("Type an amount in euros.")
         case .priceOrder: return l.string("The lowest price is above the highest.")
         case .condition: return l.string("Choose a condition.")
