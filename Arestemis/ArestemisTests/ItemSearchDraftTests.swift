@@ -43,7 +43,8 @@ struct ItemSearchDraftTests {
         d.words = ["a"]; #expect(d.problems.contains(.words))
         d.words = [String(repeating: "a", count: 100)]; #expect(d.isValid)
         d.words[0] += "a"; #expect(d.problems.contains(.words)); d.words = ["Chair"]
-        d.exclude = Array(repeating: "word", count: 21); #expect(d.problems.contains(.exclude))
+        d.exclude = Array(repeating: "word", count: 60); #expect(!d.problems.contains(.exclude))
+        d.exclude.append("word"); #expect(d.problems.contains(.exclude))
         d.exclude = [String(repeating: "a", count: 41)]; #expect(d.problems.contains(.exclude)); d.exclude = []
         d.priceMin = "100"; d.priceMax = "90"; #expect(d.problems.contains(.priceOrder))
         d.priceMin = "abc"; #expect(d.problems.contains(.priceMin) && d.search() == nil)

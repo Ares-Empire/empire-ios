@@ -4911,12 +4911,12 @@
         }
       }
     },
-    "Up to 20 words, each at most 40 characters." : {
+    "Up to 60 words, each at most 40 characters." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bis zu 20 Wörter mit je höchstens 40 Zeichen."
+            "value" : "Bis zu 60 Wörter mit je höchstens 40 Zeichen."
           }
         }
       }
