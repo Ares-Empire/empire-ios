@@ -666,6 +666,8 @@ struct PhoneSettingsSection: View {
                     SettingsDivider()
                     OwnNamesSetting(dashboard: modes.dashboard)
                     SettingsDivider()
+                    SubtractPaybacksSetting(dashboard: modes.dashboard)
+                    SettingsDivider()
                 }
                 Button { Task { await data.export() } } label: {
                     SettingsRow(title: String(localized: "Export"),
@@ -764,6 +766,25 @@ struct OwnNamesRow: View {
         }
         .padding(.horizontal, 16).padding(.vertical, 8).frame(minHeight: 58)
         .accessibilityIdentifier("ownNames")
+    }
+}
+
+/// Settings → Your data on this iPhone → Take off money paid back (brief 314): on, a linked payback comes off spending
+/// and is not income; off, both payments count as the bank booked them, and the links stay.
+struct SubtractPaybacksSetting: View {
+    let dashboard: DashboardStore
+
+    var body: some View {
+        Toggle(isOn: Binding(get: { dashboard.subtractPaybacks },
+                             set: { on in Task { await dashboard.setSubtractPaybacks(on) } })) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Take off money paid back").font(AppFont.text(15, weight: .medium)).foregroundStyle(Ink.primary)
+                Text("Off counts linked payments as the bank booked them.").font(AppFont.text(12))
+                    .foregroundStyle(Ink.muted).fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(.horizontal, 16).padding(.vertical, 8).frame(minHeight: 58)
+        .accessibilityIdentifier("subtractPaybacks")
     }
 }
 

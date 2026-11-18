@@ -311,6 +311,8 @@ nonisolated struct DashboardSourceInput: Codable, Equatable, Sendable {
     /// dashboard carries the Cash page's `cash` and marks the withdrawals; nil (left out of the JSON) is the server's
     /// dashboard as before.
     var receipts: [SourceReceipt]? = nil
+    /// False: linked paybacks come off no total (brief 314). Nil (left out of the JSON) is the engine's default, true.
+    var subtractPaybacks: Bool? = nil
 }
 
 // MARK: - receipts (aresium/src/engine/receipts, brief 30)

@@ -13,6 +13,11 @@ struct TransactionDetail: Codable {
     var paidBackBy: [PaybackDetailLink]? = nil
     var paysBack: [PaybackDetailLink]? = nil
     var countedAmount: Double { counted ?? amount }
+    /// Euros not linked yet, whichever way paybacks count (Settings).
+    var paybackRest: Double {
+        let linked = Paybacks.cents(amount < 0 ? paidBack ?? 0 : paysBackTotal) ?? 0
+        return Double(max(0, (Paybacks.cents(abs(amount)) ?? 0) - linked)) / 100
+    }
     var paysBackTotal: Double { Double((paysBack ?? []).reduce(0) { $0 + Int(($1.linkedAmount * 100).rounded()) }) / 100 }
     let currency: String
     var bookingDate: String

@@ -9,10 +9,10 @@ extension PhoneLedger {
     /// `names`: the search's spellings (the shops' name rules, which take the engine's shop identities). Eligibility,
     /// rests and the suggestions need none of them, so a payment's page and the suggestions skip that work (brief 203:
     /// measured on the simulator at 5,000 payments, the state took 489 ms with the names).
-    func paybackCandidates(engine: AresiumEngine, catalog: CategoryCatalog, today: String, ownNames: Bool,
+    func paybackCandidates(engine: AresiumEngine, catalog: CategoryCatalog, today: String, preferences: DashboardPreferences,
                            names: Bool = true) async throws -> [PaybackCandidate] {
         configurePaybacks(catalog: catalog)
-        let dashboard = try await dashboard(engine: engine, catalog: catalog, language: .current, today: today, ownNames: ownNames)
+        let dashboard = try await dashboard(engine: engine, catalog: catalog, language: .current, today: today, preferences: preferences)
         guard names else {
             return Paybacks.candidates(dashboard: dashboard, payments: try payments(), transferIDs: transferCategoryIDs)
         }
@@ -27,7 +27,7 @@ extension PhoneLedger {
 
     /// No awaited work after the revision check: validation and one save are an atomic ledger operation.
     func changePayback(from: String, to: String, amount: Double?, engine: AresiumEngine, catalog: CategoryCatalog,
-                       today: String, ownNames: Bool) async throws -> BatchLedgerUndo {
+                       today: String, preferences: DashboardPreferences) async throws -> BatchLedgerUndo {
         let observer = batchObserver(), revision = observer.value
         let before = try batchSnapshot()
         guard let payer = before.payments.first(where: { $0.id == from }) else { throw PaybackError.invalidPayment }
@@ -35,7 +35,7 @@ extension PhoneLedger {
         let previous = links.first(where: { $0.payment == to }).flatMap { Double($0.amount) } ?? 0
         if let amount {
             guard let requested = Paybacks.cents(amount), requested > 0 else { throw PaybackError.invalidAmount }
-            let candidates = try await paybackCandidates(engine: engine, catalog: catalog, today: today, ownNames: ownNames,
+            let candidates = try await paybackCandidates(engine: engine, catalog: catalog, today: today, preferences: preferences,
                                                          names: false)
             guard observer.value == revision else { throw BatchChangeError.changed }
             guard from != to, let incoming = candidates.first(where: { $0.transaction.id == from }),
@@ -100,11 +100,11 @@ nonisolated struct PaybackLedgerResult: Sendable {
 
 extension PhoneLedger {
     func paybackGroup(ids: Set<String>, engine: AresiumEngine, catalog: CategoryCatalog,
-                      today: String, ownNames: Bool) async throws -> PaybackGroup? {
+                      today: String, preferences: DashboardPreferences) async throws -> PaybackGroup? {
         let observer = batchObserver(), revision = observer.value
         configurePaybacks(catalog: catalog)
         let dashboard = try await dashboard(engine: engine, catalog: catalog, language: .current,
-                                            today: today, ownNames: ownNames)
+                                            today: today, preferences: preferences)
         guard observer.value == revision else { throw BatchChangeError.changed }
         return Paybacks.group(ids: ids, dashboard: dashboard, payments: try payments(), transferIDs: transferCategoryIDs,
                               revision: PaybackRevision(ledger: observer.id, value: revision))
@@ -118,10 +118,10 @@ extension PhoneLedger {
 
     /// Both preview and save resolve current candidates on the ledger executor. Never trust rests from the screen.
     func planPaybacks(group: PaybackGroup, others: Set<String>, engine: AresiumEngine, catalog: CategoryCatalog,
-                      today: String, ownNames: Bool) async throws -> PaybackPlan {
+                      today: String, preferences: DashboardPreferences) async throws -> PaybackPlan {
         try checkPaybackRevision(group)
         let candidates = try await paybackCandidates(engine: engine, catalog: catalog, today: today,
-                                                     ownNames: ownNames, names: false)
+                                                     preferences: preferences, names: false)
         try checkPaybackRevision(group)
         let selected = candidates.filter { group.ids.contains($0.transaction.id) && $0.state.rest > 0 }
         let picked = candidates.filter { others.contains($0.transaction.id) && $0.state.rest > 0 }
@@ -135,9 +135,9 @@ extension PhoneLedger {
     /// One save and one snapshot undo for every new or raised pair. No suspension between the last revision check
     /// and save, so an import, category change or another link cannot interleave with applying this plan.
     func changePaybacks(group: PaybackGroup, others: Set<String>, engine: AresiumEngine, catalog: CategoryCatalog,
-                        today: String, ownNames: Bool) async throws -> PaybackLedgerResult {
+                        today: String, preferences: DashboardPreferences) async throws -> PaybackLedgerResult {
         let plan = try await planPaybacks(group: group, others: others, engine: engine, catalog: catalog,
-                                          today: today, ownNames: ownNames)
+                                          today: today, preferences: preferences)
         try checkPaybackRevision(group)
         guard plan.hasLinks else { throw PaybackError.invalidPayment }
         let observer = batchObserver(), before = try batchSnapshot()

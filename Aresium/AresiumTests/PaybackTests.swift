@@ -33,6 +33,82 @@ struct PaybackTests {
         #expect(try await phone.dashboard(auth: auth).paybacksIgnored?.isEmpty != false)
     }
 
+    @Test func theSwitchCountsLinkedPaymentsAsBookedAndKeepsTheLinks() async throws {
+        let (phone, store) = try await setup([payment("trip", "-1000.00", day: "2026-09-30", category: "groceries"),
+                                              payment("in", "1000.00", day: "2026-10-01", category: "salary")])
+        _ = try await store.setPayback(from: "in", to: "trip", amount: 400)
+        #expect(store.dashboard?.total.expense == 600 && store.dashboard?.total.income == 600)
+        #expect(store.paybackNote(side: .expenses, scope: .overview) == PaybackNote(linked: 400, subtracted: true))
+
+        await store.setSubtractPaybacks(false)
+        let booked = try #require(store.dashboard)
+        #expect(booked.total.expense == 1000 && booked.total.income == 1000)
+        #expect(booked.byMonth["2026-09"]?.expense == 1000 && booked.byMonth["2026-10"]?.income == 1000)
+        #expect(booked.total.categories.first { $0.name == "Groceries" }?.total == 1000)
+        let out = try #require(booked.transactions.first { $0.id == "trip" })
+        #expect(out.counted == nil && out.countedAmount == -1000 && out.paidBack == 400)
+        #expect(booked.transactions.first { $0.id == "in" }?.paysBack?.first?.amount == 400)
+        #expect(store.paybackNote(side: .expenses, scope: .overview) == PaybackNote(linked: 400, subtracted: false))
+
+        // What a payment has free comes from its links, so counting as booked never frees euros already linked.
+        #expect(try await store.paybackState(for: "trip")?.rest == 600)
+        #expect(try await store.paybackState(for: "in")?.rest == 600)
+        await #expect(throws: PaybackError.payerLimit) { try await store.setPayback(from: "in", to: "trip", amount: 1000.01) }
+
+        // Linking while off: the undo bar's line speaks of the link, since all of the payment counts as income.
+        let (_, several) = try await setup([payment("a", "-100.00", day: "2026-09-01"), payment("b", "-100.00", day: "2026-09-02"),
+                                            payment("c", "500.00", day: "2026-09-03", category: "salary")])
+        await several.setSubtractPaybacks(false)
+        let group = try #require(try await several.paybackGroup(ids: ["a", "b"]))
+        let linked = try await several.setPaybacks(group: group, others: ["c"])
+        #expect(linked.message.hasSuffix("€300.00 not linked."))
+
+        await store.setSubtractPaybacks(true)
+        #expect(store.dashboard?.total.expense == 600 && store.dashboard?.total.income == 600)
+        try await clean(phone)
+    }
+
+    @Test func theSwitchIsRememberedAndOnByDefault() async throws {
+        let defaults = PhoneTest.defaults()
+        let (phone, _) = try await setup([payment("trip", "-10.00")])
+        #expect(phone.subtractPaybacks)
+        let first = PhoneBackend(ledger: phone.ledger, engine: phone.engine, defaults: defaults)
+        #expect(first.subtractPaybacks)
+        first.setSubtractPaybacks(false)
+        #expect(!PhoneBackend(ledger: phone.ledger, engine: phone.engine, defaults: defaults).subtractPaybacks)
+    }
+
+    @Test func theNoteFollowsItsMonthSideAndCategory() async throws {
+        let (_, store) = try await setup([payment("trip", "-120.00", day: "2026-09-30", category: "groceries"),
+                                          payment("other", "-30.00", day: "2026-10-05", category: "other"),
+                                          payment("in", "50.00", day: "2026-10-01", category: "salary")])
+        #expect(store.paybackNote(side: .expenses, scope: .overview) == nil)
+        _ = try await store.setPayback(from: "in", to: "trip", amount: 50)
+        #expect(store.paybackNote(side: .expenses, scope: .month("2026-09"))?.linked == 50)
+        #expect(store.paybackNote(side: .expenses, scope: .month("2026-10")) == nil)
+        #expect(store.paybackNote(side: .income, scope: .month("2026-10"))?.linked == 50)
+        #expect(store.paybackNote(side: .income, scope: .month("2026-09")) == nil)
+        #expect(store.paybackNote(side: .expenses, scope: .overview, category: "Groceries")?.linked == 50)
+        #expect(store.paybackNote(side: .expenses, scope: .overview, category: "Other") == nil)
+    }
+
+    @Test func theWordsSayHowTheLinkCounts() {
+        #expect(PaybackNote(linked: 64, subtracted: true).text(language: .english) == "Excludes €64.00 paid back")
+        #expect(PaybackNote(linked: 64, subtracted: false).text(language: .english) == "Includes €64.00 paid back")
+        let euros = Money.precise(64, language: .german)
+        #expect(PaybackNote(linked: 64, subtracted: true).text(language: .german) == "Ohne \(euros) Rückzahlungen")
+        #expect(PaybackNote(linked: 64, subtracted: false).text(language: .german) == "Mit \(euros) Rückzahlungen")
+        let rest = Money.precise(600, language: .german)
+        #expect(PaybackGroupWording.income(600, subtracted: false, language: .english) == "€600.00 not linked.")
+        #expect(PaybackGroupWording.income(600, subtracted: false, language: .german) == "\(rest) nicht verknüpft.")
+        #expect(PaybackGroupWording.income(600, language: .english) == "€600.00 stays income.")
+        #expect(PaybackWording.afterAmount(open: 0, income: 600, subtracted: false, language: .english) == "€600.00 not linked.")
+        #expect(PaybackWording.summary(direction: .moneyOut, counted: -128, subtracted: false, language: .english)
+            == "Counts in full as spent: money paid back isn't taken off.")
+        #expect(PaybackWording.summary(direction: .moneyIn, counted: 64, subtracted: false, language: .german)
+            == "Zählt voll als Einnahme: Rückzahlungen werden nicht abgezogen.")
+    }
+
     @Test func countedNumbersAndDetailsAtBothEndsAndUndo() async throws {
         var expense = payment("trip", "-120.00", day: "2026-09-30", name: "Fictional Trip", category: "groceries")
         expense.extraCategories = ["other"]

@@ -10881,7 +10881,7 @@ var __AresiumEngine = (() => {
   // src/engine/paybacks.ts
   var cents2 = (amount2) => Math.round(amount2 * 100);
   var compare4 = (a, b) => a < b ? -1 : a > b ? 1 : 0;
-  function countPaybacks(originals, stored, categories) {
+  function countPaybacks(originals, stored, categories, subtract = true) {
     const marks = /* @__PURE__ */ new Map();
     const ignored = [];
     const payers = originals.filter((p) => p.paysBack?.length).sort((a, b) => compare4(a.date.slice(0, 10), b.date.slice(0, 10)) || compare4(a.id, b.id));
@@ -10914,11 +10914,11 @@ var __AresiumEngine = (() => {
         paid += applied;
         received.set(target.id, got + applied);
         const payerMarks = marks.get(original.id) ?? {};
-        payerMarks.counted = (cents2(payer.amount) - paid) / 100;
+        if (subtract) payerMarks.counted = (cents2(payer.amount) - paid) / 100;
         (payerMarks.paysBack ?? (payerMarks.paysBack = [])).push({ payment: target.id, amount: applied / 100 });
         marks.set(original.id, payerMarks);
         const targetMarks = marks.get(target.id) ?? {};
-        targetMarks.counted = (cents2(target.amount) + got + applied) / 100;
+        if (subtract) targetMarks.counted = (cents2(target.amount) + got + applied) / 100;
         targetMarks.paidBack = (got + applied) / 100;
         (targetMarks.paidBackBy ?? (targetMarks.paidBackBy = [])).push({ payment: original.id, amount: applied / 100 });
         marks.set(target.id, targetMarks);
@@ -11038,7 +11038,7 @@ var __AresiumEngine = (() => {
     if (!today) throw new Error("today is not an ISO date (YYYY-MM-DD)");
     const ordered = checked3(input.transactions);
     const stored = counted(ordered).rows;
-    const paybacks = countPaybacks(input.transactions, stored, input.categories);
+    const paybacks = countPaybacks(input.transactions, stored, input.categories, input.subtractPaybacks !== false);
     const storedPayments = new Set(stored);
     const fromReceipts = input.receipts ? countReceipts(stored, input.receipts, new Set(input.transactions.map((p) => p.id))) : null;
     const payments = fromReceipts?.rows.length ? withReceiptRows(stored, fromReceipts.rows) : stored;
@@ -15666,6 +15666,7 @@ ${line}`;
     links: {},
     paymentNames: {},
     ownNames: true,
+    subtractPaybacks: true,
     revision: 0,
     cashEntries: [],
     learned: {}
@@ -15862,6 +15863,8 @@ ${line}`;
       summedLists,
       quickSort: quickSortGroups(transactions, Object.fromEntries(payments.map((p) => [p.id, p.description || ""]))),
       ownNames: settings.ownNames,
+      // Only when switched off, so the default dashboard's JSON stays as it was.
+      ...settings.subtractPaybacks === false ? { subtractPaybacks: false } : {},
       monthlyAverage: {
         expenses: monthlyAverage(named, "expenses"),
         income: monthlyAverage(named, "income")
@@ -15876,10 +15879,7 @@ ${line}`;
   // src/engine/payback-plan.ts
   var centAmount = (n) => typeof n === "number" && Number.isFinite(n) && Number.isSafeInteger(Math.round(n * 100)) && Math.abs(n * 100 - Math.round(n * 100)) < 1e-7;
   var cents6 = (n) => Math.round(n * 100);
-  var remaining = (p) => Math.min(
-    cents6(Math.abs(p.amount)),
-    cents6(Math.abs(p.counted ?? p.amount))
-  );
+  var remaining = (p) => Math.max(0, cents6(Math.abs(p.amount)) - [...p.paidBackBy ?? [], ...p.paysBack ?? []].reduce((n, link) => n + cents6(link.amount), 0));
   var compare5 = (a, b) => a.date.localeCompare(b.date) || (a.ledgerSequence ?? 0) - (b.ledgerSequence ?? 0) || a.id.localeCompare(b.id);
   function paybackChoices(dashboard, ids) {
     const wanted = new Set(ids);

@@ -177,25 +177,27 @@ extension Paybacks {
 struct PaybackGroupResult {
     let plan: PaybackPlan
     let undo: BatchUndo
+    /// Whether linked money comes off the totals (Settings), which decides what the rest of a payment in is called.
+    var subtracted = true
     var expenseCount: Int { plan.expenseCount }
     var moneyInCount: Int { plan.moneyInCount }
     var linked: Double { plan.linked }
     var stillOpen: Double { plan.stillOpen }
     var staysIncome: Double { plan.staysIncome }
-    var message: String { PaybackGroupWording.summary(plan) }
+    var message: String { PaybackGroupWording.summary(plan, subtracted: subtracted) }
 }
 
 nonisolated enum PaybackGroupWording {
-    static func summary(_ plan: PaybackPlan, language: AppLanguage = .current) -> String {
+    static func summary(_ plan: PaybackPlan, subtracted: Bool = true, language: AppLanguage = .current) -> String {
         summary(expenses: plan.expenseCount, linked: plan.linked, stillOpen: plan.stillOpen,
-                staysIncome: plan.staysIncome, language: language)
+                staysIncome: plan.staysIncome, subtracted: subtracted, language: language)
     }
 
-    static func summary(expenses: Int, linked: Double, stillOpen: Double, staysIncome: Double,
+    static func summary(expenses: Int, linked: Double, stillOpen: Double, staysIncome: Double, subtracted: Bool = true,
                         language: AppLanguage = .current) -> String {
         var parts = [language.string("\(expenses) expenses, \(Money.precise(linked, language: language)) paid back.")]
         if stillOpen > 0 { parts.append(open(stillOpen, language: language)) }
-        if staysIncome > 0 { parts.append(income(staysIncome, language: language)) }
+        if staysIncome > 0 { parts.append(income(staysIncome, subtracted: subtracted, language: language)) }
         return parts.joined(separator: " ")
     }
 
@@ -203,14 +205,17 @@ nonisolated enum PaybackGroupWording {
         language.string("\(Money.precise(amount, language: language)) still open.")
     }
 
-    static func income(_ amount: Double, language: AppLanguage = .current) -> String {
-        language.string("\(Money.precise(amount, language: language)) stays income.")
+    /// What is left of a payment in after linking. While paybacks count as booked all of it is income anyway, so only
+    /// the link is spoken of.
+    static func income(_ amount: Double, subtracted: Bool = true, language: AppLanguage = .current) -> String {
+        let euros = Money.precise(amount, language: language)
+        return subtracted ? language.string("\(euros) stays income.") : language.string("\(euros) not linked.")
     }
 }
 
 extension PhoneBackend {
     func paybackGroup(ids: Set<String>) async throws -> PaybackGroup? {
-        try await ledger.paybackGroup(ids: ids, engine: engine, catalog: engine.catalog(), today: today(), ownNames: ownNames)
+        try await ledger.paybackGroup(ids: ids, engine: engine, catalog: engine.catalog(), today: today(), preferences: dashboardPreferences)
     }
 
     func paybackSuggestions(forGroup group: PaybackGroup) async throws -> [PaybackSuggestion] {
@@ -223,13 +228,14 @@ extension PhoneBackend {
 
     func paybackPlan(group: PaybackGroup, others: Set<String>) async throws -> PaybackPlan {
         try await ledger.planPaybacks(group: group, others: others, engine: engine, catalog: engine.catalog(),
-                                      today: today(), ownNames: ownNames)
+                                      today: today(), preferences: dashboardPreferences)
     }
 
     func setPaybacks(group: PaybackGroup, others: Set<String>) async throws -> PaybackGroupResult {
         let saved = try await ledger.changePaybacks(group: group, others: others, engine: engine,
-            catalog: engine.catalog(), today: today(), ownNames: ownNames)
-        return PaybackGroupResult(plan: saved.plan, undo: BatchUndo(token: saved.undo, phone: self))
+            catalog: engine.catalog(), today: today(), preferences: dashboardPreferences)
+        return PaybackGroupResult(plan: saved.plan, undo: BatchUndo(token: saved.undo, phone: self),
+                                  subtracted: subtractPaybacks)
     }
 }
 

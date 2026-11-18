@@ -26,10 +26,10 @@ extension PhoneLedger {
     }
 
     func changeNotFixed(_ entry: FixedCostEntry, _ notFixed: Bool, engine: AresiumEngine,
-                        catalog: CategoryCatalog, today: String, ownNames: Bool) async throws -> BatchLedgerUndo {
+                        catalog: CategoryCatalog, today: String, preferences: DashboardPreferences) async throws -> BatchLedgerUndo {
         let observer = batchObserver(), revision = observer.value
         let before = try batchSnapshot()
-        let dashboard = try await dashboard(engine: engine, catalog: catalog, language: .current, today: today, ownNames: ownNames)
+        let dashboard = try await dashboard(engine: engine, catalog: catalog, language: .current, today: today, preferences: preferences)
         guard observer.value == revision else { throw BatchChangeError.changed }
         // Refuse a stale screen before any write, including an import that changed membership or cadence.
         let entries = try await engine.fixedCostEntries(in: dashboard, marks: before.fixedCostMarks)
@@ -56,7 +56,7 @@ extension PhoneLedger {
 extension PhoneBackend {
     func setNotFixed(_ entry: FixedCostEntry, _ notFixed: Bool) async throws -> BatchUndo {
         let token = try await ledger.changeNotFixed(entry, notFixed, engine: engine, catalog: engine.catalog(),
-                                                    today: today(), ownNames: ownNames)
+                                                    today: today(), preferences: dashboardPreferences)
         try await refresh()
         return BatchUndo(token: token, phone: self)
     }
