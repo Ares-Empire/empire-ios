@@ -194,6 +194,16 @@
         }
       }
     },
+    "%@ not linked." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ nicht verknüpft."
+          }
+        }
+      }
+    },
     "%@ paid back" : {
       "localizations" : {
         "de" : {

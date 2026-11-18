@@ -139,10 +139,13 @@ nonisolated enum PaybackWording {
 
     /// The amount step's line under the most it can take: what the typed euros leave open on the expense and as income on
     /// the payment in (brief 205's words), nil when they leave nothing. "€64.00 still open. €36.00 stays income."
-    static func afterAmount(open: Double, income: Double, language: AppLanguage = .current) -> String? {
+    static func afterAmount(open: Double, income: Double, subtracted: Bool = true,
+                            language: AppLanguage = .current) -> String? {
         var parts: [String] = []
         if Paybacks.cents(open) ?? 0 > 0 { parts.append(PaybackGroupWording.open(open, language: language)) }
-        if Paybacks.cents(income) ?? 0 > 0 { parts.append(PaybackGroupWording.income(income, language: language)) }
+        if Paybacks.cents(income) ?? 0 > 0 {
+            parts.append(PaybackGroupWording.income(income, subtracted: subtracted, language: language))
+        }
         return parts.isEmpty ? nil : parts.joined(separator: " ")
     }
 
@@ -382,7 +385,8 @@ struct PaybackPlanSummary: Equatable {
     let left: String?
 
     /// `transactions`: the payments of both sides by id (the group's and the ticked ones).
-    init(plan: PaybackPlan, transactions: [String: Transaction], now: Date = .now, language: AppLanguage = .current) {
+    init(plan: PaybackPlan, transactions: [String: Transaction], subtracted: Bool = true, now: Date = .now,
+         language: AppLanguage = .current) {
         rows = plan.expenses.map { allocation in
             let transaction = transactions[allocation.id]
             let name = transaction?.place ?? ""
@@ -396,7 +400,7 @@ struct PaybackPlanSummary: Equatable {
         if Paybacks.cents(plan.stillOpen) ?? 0 > 0 {
             left = PaybackGroupWording.open(plan.stillOpen, language: language)
         } else if Paybacks.cents(plan.staysIncome) ?? 0 > 0 {
-            left = PaybackGroupWording.income(plan.staysIncome, language: language)
+            left = PaybackGroupWording.income(plan.staysIncome, subtracted: subtracted, language: language)
         } else {
             left = nil
         }
@@ -591,7 +595,7 @@ final class PaybackWindow: Identifiable {
         guard let plan, let group else { return nil }
         var transactions = Dictionary(uniqueKeysWithValues: group.payments.map { ($0.transaction.id, $0.transaction) })
         for suggestion in ticked { transactions[suggestion.id] = suggestion.transaction }
-        return PaybackPlanSummary(plan: plan, transactions: transactions)
+        return PaybackPlanSummary(plan: plan, transactions: transactions, subtracted: store.subtractPaybacks)
     }
 
     var canNext: Bool { !isWorking && confirmsByAmount && ticked.count == 1 }
@@ -608,7 +612,7 @@ final class PaybackWindow: Identifiable {
     var afterAmount: String? {
         guard let pick, let amount = check.amount else { return nil }
         let left = pick.left(after: amount)
-        return PaybackWording.afterAmount(open: left.open, income: left.income)
+        return PaybackWording.afterAmount(open: left.open, income: left.income, subtracted: store.subtractPaybacks)
     }
 
     /// The suggestions (new links: this payment's group read first when the window comes from its page), or the link's

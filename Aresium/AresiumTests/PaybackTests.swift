@@ -55,6 +55,14 @@ struct PaybackTests {
         #expect(try await store.paybackState(for: "in")?.rest == 600)
         await #expect(throws: PaybackError.payerLimit) { try await store.setPayback(from: "in", to: "trip", amount: 1000.01) }
 
+        // Linking while off: the undo bar's line speaks of the link, since all of the payment counts as income.
+        let (_, several) = try await setup([payment("a", "-100.00", day: "2026-09-01"), payment("b", "-100.00", day: "2026-09-02"),
+                                            payment("c", "500.00", day: "2026-09-03", category: "salary")])
+        await several.setSubtractPaybacks(false)
+        let group = try #require(try await several.paybackGroup(ids: ["a", "b"]))
+        let linked = try await several.setPaybacks(group: group, others: ["c"])
+        #expect(linked.message.hasSuffix("€300.00 not linked."))
+
         await store.setSubtractPaybacks(true)
         #expect(store.dashboard?.total.expense == 600 && store.dashboard?.total.income == 600)
         try await clean(phone)
@@ -90,6 +98,11 @@ struct PaybackTests {
         let euros = Money.precise(64, language: .german)
         #expect(PaybackNote(linked: 64, subtracted: true).text(language: .german) == "Ohne \(euros) Rückzahlungen")
         #expect(PaybackNote(linked: 64, subtracted: false).text(language: .german) == "Mit \(euros) Rückzahlungen")
+        let rest = Money.precise(600, language: .german)
+        #expect(PaybackGroupWording.income(600, subtracted: false, language: .english) == "€600.00 not linked.")
+        #expect(PaybackGroupWording.income(600, subtracted: false, language: .german) == "\(rest) nicht verknüpft.")
+        #expect(PaybackGroupWording.income(600, language: .english) == "€600.00 stays income.")
+        #expect(PaybackWording.afterAmount(open: 0, income: 600, subtracted: false, language: .english) == "€600.00 not linked.")
         #expect(PaybackWording.summary(direction: .moneyOut, counted: -128, subtracted: false, language: .english)
             == "Counts in full as spent: money paid back isn't taken off.")
         #expect(PaybackWording.summary(direction: .moneyIn, counted: 64, subtracted: false, language: .german)
