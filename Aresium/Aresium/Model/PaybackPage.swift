@@ -25,8 +25,14 @@ nonisolated enum PaybackWording {
         direction == .moneyOut ? language.string("Paid back") : language.string("Pays back")
     }
 
-    /// Under the links: what still counts. An expense counts its share, a payment in its rest as income.
-    static func summary(direction: PaybackDirection, counted: Double, language: AppLanguage = .current) -> String {
+    /// Under the links: what still counts. An expense counts its share, a payment in its rest as income; with
+    /// `subtracted` false (Settings) both count in full.
+    static func summary(direction: PaybackDirection, counted: Double, subtracted: Bool = true,
+                        language: AppLanguage = .current) -> String {
+        guard subtracted else {
+            return direction == .moneyOut ? language.string("Counts in full as spent: money paid back isn't taken off.")
+                                          : language.string("Counts in full as income: money paid back isn't taken off.")
+        }
         let left = abs(counted)
         let euros = Money.precise(left, language: language)
         switch direction {
@@ -195,17 +201,19 @@ nonisolated enum PaybackWording {
 
     /// A list row's quiet line when a link changes what it counts: why the number differs from the bank's.
     /// An expense: "€128.00 · €64.00 back"; a payment in: "€64.00 · pays back Fiktiv Ferienhaus" (or "… 2 expenses").
-    /// nil without a link. `name` gives the shown name of a payment by its id.
+    /// nil without a link. While paybacks count as booked the row's number already is the bank's, so only the link is
+    /// said. `name` gives the shown name of a payment by its id.
     static func rowLine(_ transaction: Transaction, name: (String) -> String?, language: AppLanguage = .current) -> String? {
-        let original = Money.precise(abs(transaction.amount), language: language)
+        let original = transaction.counted == nil ? ""
+            : Money.precise(abs(transaction.amount), language: language) + " · "
         if transaction.amount < 0, let back = transaction.paidBack, back > 0 {
-            return original + " · " + language.string("\(Money.precise(back, language: language)) back")
+            return original + language.string("\(Money.precise(back, language: language)) back")
         }
         if transaction.amount > 0, let links = transaction.paysBack, !links.isEmpty {
             if links.count == 1, let other = name(links[0].payment) {
-                return original + " · " + language.string("pays back \(other)")
+                return original + language.string("pays back \(other)")
             }
-            return original + " · " + language.string("pays back \(links.count) expenses")
+            return original + language.string("pays back \(links.count) expenses")
         }
         return nil
     }
@@ -238,7 +246,8 @@ struct PaybackSectionContent: Equatable {
         links = (direction == .moneyOut ? detail.paidBackBy : detail.paysBack) ?? []
         heading = links.isEmpty ? nil : PaybackWording.heading(direction: direction, language: language)
         summary = links.isEmpty ? nil
-            : PaybackWording.summary(direction: direction, counted: detail.countedAmount, language: language)
+            : PaybackWording.summary(direction: direction, counted: detail.countedAmount,
+                                     subtracted: detail.counted != nil, language: language)
         if let state, state.direction == direction, Paybacks.cents(state.rest) ?? 0 > 0 {
             action = PaybackWording.action(direction: direction, linked: !links.isEmpty, language: language)
         } else {
@@ -442,7 +451,7 @@ final class PaybackLinks {
     /// The window at the euros of a link, with Remove.
     func edit(_ link: PaybackDetailLink, detail: TransactionDetail) {
         let direction: PaybackDirection = detail.amount < 0 ? .moneyOut : .moneyIn
-        let state = state ?? PaybackState(direction: direction, rest: abs(detail.countedAmount))
+        let state = state ?? PaybackState(direction: direction, rest: detail.paybackRest)
         window = PaybackWindow(store: dashboardStore, detail: detail, state: state, editing: link, done: finished)
     }
 

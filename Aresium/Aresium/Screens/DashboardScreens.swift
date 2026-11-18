@@ -571,6 +571,7 @@ private struct StartPage: View {
                 }
                 let total = store.totals(scope).map { Money.total(side == .income ? $0.income : $0.expense) }
                 SideTotal(side: side, total: total, palette: palette)
+                if let note = store.paybackNote(side: side, scope: scope) { PaybackNoteLine(note: note, palette: palette) }
                 // Brief 209: Overview's average month and what of it is fixed, which opens the fixed costs.
                 if scope == .overview, let line = AverageLine(average: store.monthlyAverage(side: side),
                                           fixedCosts: store.fixedCosts(side: side), side: side, scope: scope) {
@@ -701,6 +702,9 @@ struct CategoryScreen: View {
                 if let category {
                     VStack(spacing: 0) {
                         if showsChart && graphMoves { chart(category) }
+                        if let note = store.paybackNote(side: route.side, scope: .overview, category: route.category) {
+                            PaybackNoteLine(note: note, palette: palette).padding(.horizontal, 18).padding(.top, 8)
+                        }
                         LazyVStack(spacing: 0) {
                             ForEach(months) { row in
                                 Button { open(row.month.key) } label: {

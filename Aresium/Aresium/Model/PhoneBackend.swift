@@ -87,6 +87,17 @@ final class PhoneBackend: AresiumBackend {
         defaults.set(enabled, forKey: Self.ownNamesKey)
         ownNames = enabled
     }
+    /// Published preference; the links themselves stay whichever way it is set.
+    private(set) var subtractPaybacks: Bool
+
+    func setSubtractPaybacks(_ enabled: Bool) {
+        defaults.set(enabled, forKey: Self.subtractPaybacksKey)
+        subtractPaybacks = enabled
+    }
+
+    var dashboardPreferences: DashboardPreferences {
+        DashboardPreferences(ownNames: ownNames, subtractPaybacks: subtractPaybacks)
+    }
     /// Today as `YYYY-MM-DD` for the dashboard (tests pin it).
     @ObservationIgnored var today: () -> String = { LedgerExport.day(.now) }
     /// "Is this the same payment?" for waiting card receipts, found after a bank import (`matchWaitingReceipts`): asked
@@ -103,6 +114,7 @@ final class PhoneBackend: AresiumBackend {
         self.engine = engine
         self.defaults = defaults
         self.ownNames = defaults.object(forKey: Self.ownNamesKey) as? Bool ?? true
+        self.subtractPaybacks = defaults.object(forKey: Self.subtractPaybacksKey) as? Bool ?? true
         self.engineVersion = engineVersion
     }
 
@@ -155,7 +167,7 @@ final class PhoneBackend: AresiumBackend {
     func isReady(_ session: EmpireSession) -> Bool { true }
 
     func dashboard(auth: BackendAuth) async throws -> Dashboard {
-        try await ledger.dashboard(engine: engine, catalog: catalogValue(), language: .current, today: today(), ownNames: ownNames)
+        try await ledger.dashboard(engine: engine, catalog: catalogValue(), language: .current, today: today(), preferences: dashboardPreferences)
     }
 
     func transactionDetail(id: String, auth: BackendAuth) async throws -> TransactionDetail {
@@ -475,7 +487,7 @@ final class PhoneBackend: AresiumBackend {
 /// Stored payments → the engine's input, and a payment → its detail. Pure, so tests pin them.
 nonisolated enum PhoneDashboard {
     static func input(payments: [LedgerPayment], list: PhoneCategoryList, today: String,
-                      receipts: [LedgerReceipt] = []) -> DashboardSourceInput {
+                      receipts: [LedgerReceipt] = [], subtractPaybacks: Bool = true) -> DashboardSourceInput {
         let named = Dictionary(list.sortingIDs.compactMap { id in list.name(of: id).map { (id, $0) } },
                                uniquingKeysWith: { first, _ in first })
         let transactions = payments.map { payment in
@@ -490,7 +502,8 @@ nonisolated enum PhoneDashboard {
         }
         // Always the receipts, even none: the dashboard then carries the Cash page's `cash` (brief 32).
         return DashboardSourceInput(transactions: transactions, categories: list.sourceCategories, today: today,
-                                    receipts: receipts.map { source($0, named: named) })
+                                    receipts: receipts.map { source($0, named: named) },
+                                    subtractPaybacks: subtractPaybacks ? nil : false)
     }
 
     /// A receipt or cash entry as the engine counts it: in euros (a cash receipt in another currency with the euro

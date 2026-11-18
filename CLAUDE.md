@@ -1510,6 +1510,16 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   the course found by name, "€50.00 stays income.", Link, both rows "pays back Fiktiv Sprachschule"; Felix's page, one
   ticked shows Next, a second Link, the page shows both links and "The rest, €16.00, counts as income.". Screenshots:
   `build/206-*.png`.
+  **Whether it comes off the totals** (brief 314, Patrik 2026-11-18): Settings → Your data on this iPhone → "Take off
+  money paid back" / "Rückzahlungen abziehen" (`SubtractPaybacksSetting`, `aresium.subtractPaybacks`, on by default).
+  Off, the engine (`subtractPaybacks: false`) keeps every link and its limits but gives no `counted`, so both payments
+  count as booked in every total, category, graph, average and widget. **What a payment has free is read from its links**
+  (`Paybacks.linked`, `TransactionDetail.paybackRest`), never from `countedAmount`. The settings that change the
+  dashboard travel as one value (`DashboardPreferences`, part of the cache's key). **The note** (`PaybackNoteLine`,
+  `Model/PaybackTotals.swift`): under a start page's total and at the top of a category's months, only where a link
+  touches that number: "Excludes €64.00 paid back" / "Ohne 64,00 € Rückzahlungen" while on, "Includes …" / "Mit …" while
+  off; whether it came off is read from the dashboard, so it always agrees with the number beside it. DEBUG
+  `-subtractPaybacks off`. Tests: `PaybackTests`.
   DEBUG (with `-samplePhone -sampleCategory Groceries -sampleMonth 2026-10 -samplePhoneTransaction REWE
   -sampleRecategorise add`): `-samplePick Clothes -sampleAddSave` picks and taps Save after the sheet opens;
   `-sampleRemoveAnswer keep|remove` answers the first alert and shows the shop alert. Tests: `AddQuestionsTests`,

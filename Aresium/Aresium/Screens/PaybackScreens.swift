@@ -23,7 +23,7 @@ struct PaybackSection: View {
         // While the state loads (off the main thread, brief 203: 69 ms on the sample, 417 ms at 5,000 payments) the
         // action's room is kept for a payment that will likely have it, so the bank's own row below does not jump.
         let waits = !links.isLoaded && content.action == nil && detail.currency == "EUR"
-            && (Paybacks.cents(abs(detail.countedAmount)) ?? 0) > 0
+            && (Paybacks.cents(detail.paybackRest) ?? 0) > 0
         if !content.isEmpty || waits {
             VStack(alignment: .leading, spacing: 8) {
                 if let heading = content.heading {
@@ -601,5 +601,24 @@ private struct PaybackPartyRow: View {
         .foregroundStyle(palette.ink)
         .padding(.horizontal, 12).padding(.vertical, 11)
         .accessibilityElement(children: .combine)
+    }
+}
+
+/// Beside a total (brief 314): how much money paid back the number leaves out, or still holds. Only where a link touches
+/// that total, so it says nothing to someone who never links a payment.
+struct PaybackNoteLine: View {
+    let note: PaybackNote
+    let palette: Palette
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "link").font(.system(size: 10, weight: .medium))
+            Text(verbatim: note.text()).lineLimit(1).minimumScaleFactor(0.85)
+        }
+        .font(AppFont.text(12.5)).foregroundStyle(palette.muted)
+        .frame(maxWidth: .infinity, alignment: .trailing)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(verbatim: note.text()))
+        .accessibilityIdentifier("paybackNote")
     }
 }

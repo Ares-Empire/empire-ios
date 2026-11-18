@@ -37,9 +37,9 @@ var __AresiumEngine = (() => {
   var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
   var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
-  // node_modules/fast-xml-parser/src/util.js
+  // ../aresium/node_modules/fast-xml-parser/src/util.js
   var require_util = __commonJS({
-    "node_modules/fast-xml-parser/src/util.js"(exports) {
+    "../aresium/node_modules/fast-xml-parser/src/util.js"(exports) {
       "use strict";
       var nameStartChar = ":A-Za-z_\\u00C0-\\u00D6\\u00D8-\\u00F6\\u00F8-\\u02FF\\u0370-\\u037D\\u037F-\\u1FFF\\u200C-\\u200D\\u2070-\\u218F\\u2C00-\\u2FEF\\u3001-\\uD7FF\\uF900-\\uFDCF\\uFDF0-\\uFFFD";
       var nameChar = nameStartChar + "\\-.\\d\\u00B7\\u0300-\\u036F\\u203F-\\u2040";
@@ -111,9 +111,9 @@ var __AresiumEngine = (() => {
     }
   });
 
-  // node_modules/fast-xml-parser/src/validator.js
+  // ../aresium/node_modules/fast-xml-parser/src/validator.js
   var require_validator = __commonJS({
-    "node_modules/fast-xml-parser/src/validator.js"(exports) {
+    "../aresium/node_modules/fast-xml-parser/src/validator.js"(exports) {
       "use strict";
       var util = require_util();
       var defaultOptions = {
@@ -423,9 +423,9 @@ var __AresiumEngine = (() => {
     }
   });
 
-  // node_modules/fast-xml-parser/src/xmlparser/OptionsBuilder.js
+  // ../aresium/node_modules/fast-xml-parser/src/xmlparser/OptionsBuilder.js
   var require_OptionsBuilder = __commonJS({
-    "node_modules/fast-xml-parser/src/xmlparser/OptionsBuilder.js"(exports) {
+    "../aresium/node_modules/fast-xml-parser/src/xmlparser/OptionsBuilder.js"(exports) {
       var { DANGEROUS_PROPERTY_NAMES, criticalProperties } = require_util();
       var defaultOnDangerousProperty = (name) => {
         if (DANGEROUS_PROPERTY_NAMES.includes(name)) {
@@ -549,9 +549,9 @@ var __AresiumEngine = (() => {
     }
   });
 
-  // node_modules/fast-xml-parser/src/xmlparser/xmlNode.js
+  // ../aresium/node_modules/fast-xml-parser/src/xmlparser/xmlNode.js
   var require_xmlNode = __commonJS({
-    "node_modules/fast-xml-parser/src/xmlparser/xmlNode.js"(exports, module) {
+    "../aresium/node_modules/fast-xml-parser/src/xmlparser/xmlNode.js"(exports, module) {
       "use strict";
       var XmlNode = class {
         constructor(tagname) {
@@ -576,9 +576,9 @@ var __AresiumEngine = (() => {
     }
   });
 
-  // node_modules/fast-xml-parser/src/xmlparser/DocTypeReader.js
+  // ../aresium/node_modules/fast-xml-parser/src/xmlparser/DocTypeReader.js
   var require_DocTypeReader = __commonJS({
-    "node_modules/fast-xml-parser/src/xmlparser/DocTypeReader.js"(exports, module) {
+    "../aresium/node_modules/fast-xml-parser/src/xmlparser/DocTypeReader.js"(exports, module) {
       var util = require_util();
       var DocTypeReader = class {
         constructor(options) {
@@ -864,9 +864,9 @@ var __AresiumEngine = (() => {
     }
   });
 
-  // node_modules/strnum/strnum.js
+  // ../aresium/node_modules/strnum/strnum.js
   var require_strnum = __commonJS({
-    "node_modules/strnum/strnum.js"(exports, module) {
+    "../aresium/node_modules/strnum/strnum.js"(exports, module) {
       var hexRegex = /^[-+]?0x[a-fA-F0-9]+$/;
       var numRegex = /^([\-\+])?(0*)([0-9]*(\.[0-9]*)?)$/;
       var consider = {
@@ -952,9 +952,9 @@ var __AresiumEngine = (() => {
     }
   });
 
-  // node_modules/fast-xml-parser/src/ignoreAttributes.js
+  // ../aresium/node_modules/fast-xml-parser/src/ignoreAttributes.js
   var require_ignoreAttributes = __commonJS({
-    "node_modules/fast-xml-parser/src/ignoreAttributes.js"(exports, module) {
+    "../aresium/node_modules/fast-xml-parser/src/ignoreAttributes.js"(exports, module) {
       function getIgnoreAttributesFn(ignoreAttributes) {
         if (typeof ignoreAttributes === "function") {
           return ignoreAttributes;
@@ -977,9 +977,9 @@ var __AresiumEngine = (() => {
     }
   });
 
-  // node_modules/fast-xml-parser/src/xmlparser/OrderedObjParser.js
+  // ../aresium/node_modules/fast-xml-parser/src/xmlparser/OrderedObjParser.js
   var require_OrderedObjParser = __commonJS({
-    "node_modules/fast-xml-parser/src/xmlparser/OrderedObjParser.js"(exports, module) {
+    "../aresium/node_modules/fast-xml-parser/src/xmlparser/OrderedObjParser.js"(exports, module) {
       "use strict";
       var util = require_util();
       var xmlNode = require_xmlNode();
@@ -1582,9 +1582,9 @@ var __AresiumEngine = (() => {
     }
   });
 
-  // node_modules/fast-xml-parser/src/xmlparser/node2json.js
+  // ../aresium/node_modules/fast-xml-parser/src/xmlparser/node2json.js
   var require_node2json = __commonJS({
-    "node_modules/fast-xml-parser/src/xmlparser/node2json.js"(exports) {
+    "../aresium/node_modules/fast-xml-parser/src/xmlparser/node2json.js"(exports) {
       "use strict";
       function prettify(node2, options) {
         return compress(node2, options);
@@ -1669,9 +1669,9 @@ var __AresiumEngine = (() => {
     }
   });
 
-  // node_modules/fast-xml-parser/src/xmlparser/XMLParser.js
+  // ../aresium/node_modules/fast-xml-parser/src/xmlparser/XMLParser.js
   var require_XMLParser = __commonJS({
-    "node_modules/fast-xml-parser/src/xmlparser/XMLParser.js"(exports, module) {
+    "../aresium/node_modules/fast-xml-parser/src/xmlparser/XMLParser.js"(exports, module) {
       var { buildOptions } = require_OptionsBuilder();
       var OrderedObjParser = require_OrderedObjParser();
       var { prettify } = require_node2json();
@@ -1727,9 +1727,9 @@ var __AresiumEngine = (() => {
     }
   });
 
-  // node_modules/fast-xml-parser/src/xmlbuilder/orderedJs2Xml.js
+  // ../aresium/node_modules/fast-xml-parser/src/xmlbuilder/orderedJs2Xml.js
   var require_orderedJs2Xml = __commonJS({
-    "node_modules/fast-xml-parser/src/xmlbuilder/orderedJs2Xml.js"(exports, module) {
+    "../aresium/node_modules/fast-xml-parser/src/xmlbuilder/orderedJs2Xml.js"(exports, module) {
       var EOL = "\n";
       function toXml(jArray, options) {
         let indentation = "";
@@ -1860,9 +1860,9 @@ var __AresiumEngine = (() => {
     }
   });
 
-  // node_modules/fast-xml-parser/src/xmlbuilder/json2xml.js
+  // ../aresium/node_modules/fast-xml-parser/src/xmlbuilder/json2xml.js
   var require_json2xml = __commonJS({
-    "node_modules/fast-xml-parser/src/xmlbuilder/json2xml.js"(exports, module) {
+    "../aresium/node_modules/fast-xml-parser/src/xmlbuilder/json2xml.js"(exports, module) {
       "use strict";
       var buildFromOrderedJs = require_orderedJs2Xml();
       var getIgnoreAttributesFn = require_ignoreAttributes();
@@ -2106,9 +2106,9 @@ var __AresiumEngine = (() => {
     }
   });
 
-  // node_modules/fast-xml-parser/src/fxp.js
+  // ../aresium/node_modules/fast-xml-parser/src/fxp.js
   var require_fxp = __commonJS({
-    "node_modules/fast-xml-parser/src/fxp.js"(exports, module) {
+    "../aresium/node_modules/fast-xml-parser/src/fxp.js"(exports, module) {
       "use strict";
       var validator = require_validator();
       var XMLParser5 = require_XMLParser();
@@ -2173,7 +2173,7 @@ var __AresiumEngine = (() => {
     version: () => version
   });
 
-  // node_modules/csv-parse/dist/esm/sync.js
+  // ../aresium/node_modules/csv-parse/dist/esm/sync.js
   var global$1 = typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {};
   var lookup = [];
   var revLookup = [];
@@ -10881,7 +10881,7 @@ var __AresiumEngine = (() => {
   // src/engine/paybacks.ts
   var cents2 = (amount2) => Math.round(amount2 * 100);
   var compare4 = (a, b) => a < b ? -1 : a > b ? 1 : 0;
-  function countPaybacks(originals, stored, categories) {
+  function countPaybacks(originals, stored, categories, subtract = true) {
     const marks = /* @__PURE__ */ new Map();
     const ignored = [];
     const payers = originals.filter((p) => p.paysBack?.length).sort((a, b) => compare4(a.date.slice(0, 10), b.date.slice(0, 10)) || compare4(a.id, b.id));
@@ -10914,11 +10914,11 @@ var __AresiumEngine = (() => {
         paid += applied;
         received.set(target.id, got + applied);
         const payerMarks = marks.get(original.id) ?? {};
-        payerMarks.counted = (cents2(payer.amount) - paid) / 100;
+        if (subtract) payerMarks.counted = (cents2(payer.amount) - paid) / 100;
         (payerMarks.paysBack ?? (payerMarks.paysBack = [])).push({ payment: target.id, amount: applied / 100 });
         marks.set(original.id, payerMarks);
         const targetMarks = marks.get(target.id) ?? {};
-        targetMarks.counted = (cents2(target.amount) + got + applied) / 100;
+        if (subtract) targetMarks.counted = (cents2(target.amount) + got + applied) / 100;
         targetMarks.paidBack = (got + applied) / 100;
         (targetMarks.paidBackBy ?? (targetMarks.paidBackBy = [])).push({ payment: original.id, amount: applied / 100 });
         marks.set(target.id, targetMarks);
@@ -11038,7 +11038,7 @@ var __AresiumEngine = (() => {
     if (!today) throw new Error("today is not an ISO date (YYYY-MM-DD)");
     const ordered = checked3(input.transactions);
     const stored = counted(ordered).rows;
-    const paybacks = countPaybacks(input.transactions, stored, input.categories);
+    const paybacks = countPaybacks(input.transactions, stored, input.categories, input.subtractPaybacks !== false);
     const storedPayments = new Set(stored);
     const fromReceipts = input.receipts ? countReceipts(stored, input.receipts, new Set(input.transactions.map((p) => p.id))) : null;
     const payments = fromReceipts?.rows.length ? withReceiptRows(stored, fromReceipts.rows) : stored;
@@ -11701,7 +11701,7 @@ var __AresiumEngine = (() => {
     return references.map((ref, i2) => ref && counts.get(ref) === 1 ? ref : hashed[i2]);
   }
 
-  // node_modules/fflate/esm/browser.js
+  // ../aresium/node_modules/fflate/esm/browser.js
   var u8 = Uint8Array;
   var u16 = Uint16Array;
   var i32 = Int32Array;
@@ -15666,6 +15666,7 @@ ${line}`;
     links: {},
     paymentNames: {},
     ownNames: true,
+    subtractPaybacks: true,
     revision: 0,
     cashEntries: [],
     learned: {}
@@ -15862,6 +15863,8 @@ ${line}`;
       summedLists,
       quickSort: quickSortGroups(transactions, Object.fromEntries(payments.map((p) => [p.id, p.description || ""]))),
       ownNames: settings.ownNames,
+      // Only when switched off, so the default dashboard's JSON stays as it was.
+      ...settings.subtractPaybacks === false ? { subtractPaybacks: false } : {},
       monthlyAverage: {
         expenses: monthlyAverage(named, "expenses"),
         income: monthlyAverage(named, "income")
@@ -15876,10 +15879,7 @@ ${line}`;
   // src/engine/payback-plan.ts
   var centAmount = (n) => typeof n === "number" && Number.isFinite(n) && Number.isSafeInteger(Math.round(n * 100)) && Math.abs(n * 100 - Math.round(n * 100)) < 1e-7;
   var cents6 = (n) => Math.round(n * 100);
-  var remaining = (p) => Math.min(
-    cents6(Math.abs(p.amount)),
-    cents6(Math.abs(p.counted ?? p.amount))
-  );
+  var remaining = (p) => Math.max(0, cents6(Math.abs(p.amount)) - [...p.paidBackBy ?? [], ...p.paysBack ?? []].reduce((n, link) => n + cents6(link.amount), 0));
   var compare5 = (a, b) => a.date.localeCompare(b.date) || (a.ledgerSequence ?? 0) - (b.ledgerSequence ?? 0) || a.id.localeCompare(b.id);
   function paybackChoices(dashboard, ids) {
     const wanted = new Set(ids);

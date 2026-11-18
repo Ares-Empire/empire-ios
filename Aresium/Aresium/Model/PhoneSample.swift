@@ -105,6 +105,8 @@ enum PhoneSample {
         // Own names (brief 44): on unless `-ownNames off` (the sample's settings outlive a launch); `-sampleNames` names
         // the bakery's shop and one dinner.
         backend.setOwnNames(LaunchArguments.value("-ownNames") != "off")
+        // Brief 314: `-subtractPaybacks off` counts the sample's linked payments as booked.
+        backend.setSubtractPaybacks(LaunchArguments.value("-subtractPaybacks") != "off")
         if LaunchArguments.current.contains("-sampleNames") { try await addNames(backend) }
         return (backend, storage)
     }

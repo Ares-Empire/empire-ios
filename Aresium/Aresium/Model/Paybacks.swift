@@ -56,6 +56,12 @@ nonisolated enum Paybacks {
         return Int(scaled.rounded())
     }
 
+    /// The euros of a payment already linked, in cents. What is free is read from the links, never from what the
+    /// payment counts: while paybacks count as booked (Settings) a linked payment counts its whole amount.
+    static func linked(_ row: Transaction) -> Int {
+        ((row.amount < 0 ? row.paidBackBy : row.paysBack) ?? []).reduce(0) { $0 + (cents($1.amount) ?? 0) }
+    }
+
     static func stored(_ cents: Int) -> String {
         String(cents / 100) + String(format: ".%02d", abs(cents % 100))
     }
@@ -73,13 +79,13 @@ nonisolated enum Paybacks {
             guard let payment = stored[row.id], payment.currency == "EUR",
                   payment.category.map({ !transferIDs.contains($0) }) ?? true,
                   row.receiptId == nil, row.coveredBy == nil, row.cashWithdrawal != true, row.amount != 0,
-                  let original = cents(abs(row.amount)), let counted = cents(abs(row.countedAmount)) else { return nil }
+                  let original = cents(abs(row.amount)) else { return nil }
             // Bank spellings belong to the shop; a payment-only own name belongs only to that payment.
             let bankNames = row.nameKey.flatMap { bankNamesByGroup[$0] } ?? []
             let names = [row.place, row.bankName, payment.place, payment.ownName, shopNames[row.id]].compactMap { $0 } + bankNames
             return PaybackCandidate(transaction: row,
                                     state: PaybackState(direction: row.amount > 0 ? .moneyIn : .moneyOut,
-                                                        rest: Double(min(original, counted)) / 100), names: names)
+                                                        rest: Double(max(0, original - linked(row))) / 100), names: names)
         }
     }
 
@@ -148,9 +154,11 @@ nonisolated enum Paybacks {
 }
 
 extension PhoneBackend {
+    static let subtractPaybacksKey = "aresium.subtractPaybacks"
+
     /// `names: false` leaves out the search's spellings (the state and the suggestions need none, brief 203).
     func paybackCandidates(names: Bool = true) async throws -> [PaybackCandidate] {
-        try await ledger.paybackCandidates(engine: engine, catalog: engine.catalog(), today: today(), ownNames: ownNames,
+        try await ledger.paybackCandidates(engine: engine, catalog: engine.catalog(), today: today(), preferences: dashboardPreferences,
                                            names: names)
     }
 
@@ -171,18 +179,27 @@ extension PhoneBackend {
     /// Saves once; the dashboard store publishes the rebuilt dashboard and widget once.
     func setPayback(from: String, to: String, amount: Double) async throws -> BatchUndo {
         let token = try await ledger.changePayback(from: from, to: to, amount: amount, engine: engine,
-                                                   catalog: engine.catalog(), today: today(), ownNames: ownNames)
+                                                   catalog: engine.catalog(), today: today(), preferences: dashboardPreferences)
         return BatchUndo(token: token, phone: self)
     }
 
     func removePayback(from: String, to: String) async throws -> BatchUndo {
         let token = try await ledger.changePayback(from: from, to: to, amount: nil, engine: engine,
-                                                   catalog: engine.catalog(), today: today(), ownNames: ownNames)
+                                                   catalog: engine.catalog(), today: today(), preferences: dashboardPreferences)
         return BatchUndo(token: token, phone: self)
     }
 }
 
 extension DashboardStore {
+    var subtractPaybacks: Bool { phone?.subtractPaybacks ?? true }
+
+    /// Settings must use this call so the dashboard and widget rebuild after the preference changes.
+    func setSubtractPaybacks(_ enabled: Bool) async {
+        guard let phone, phone.subtractPaybacks != enabled else { return }
+        phone.setSubtractPaybacks(enabled)
+        await reloadAfterTransactionChange()
+    }
+
     /// Nil/empty in server mode, and for rows outside the bank ledger (receipts, cash entries and covered rows).
     func paybackState(for id: String) async throws -> PaybackState? { try await phone?.paybackState(for: id) }
     func paybackSuggestions(for id: String) async throws -> [PaybackSuggestion] { try await phone?.paybackSuggestions(for: id) ?? [] }

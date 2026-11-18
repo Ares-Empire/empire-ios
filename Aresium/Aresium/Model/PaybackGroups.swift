@@ -210,7 +210,7 @@ nonisolated enum PaybackGroupWording {
 
 extension PhoneBackend {
     func paybackGroup(ids: Set<String>) async throws -> PaybackGroup? {
-        try await ledger.paybackGroup(ids: ids, engine: engine, catalog: engine.catalog(), today: today(), ownNames: ownNames)
+        try await ledger.paybackGroup(ids: ids, engine: engine, catalog: engine.catalog(), today: today(), preferences: dashboardPreferences)
     }
 
     func paybackSuggestions(forGroup group: PaybackGroup) async throws -> [PaybackSuggestion] {
@@ -223,12 +223,12 @@ extension PhoneBackend {
 
     func paybackPlan(group: PaybackGroup, others: Set<String>) async throws -> PaybackPlan {
         try await ledger.planPaybacks(group: group, others: others, engine: engine, catalog: engine.catalog(),
-                                      today: today(), ownNames: ownNames)
+                                      today: today(), preferences: dashboardPreferences)
     }
 
     func setPaybacks(group: PaybackGroup, others: Set<String>) async throws -> PaybackGroupResult {
         let saved = try await ledger.changePaybacks(group: group, others: others, engine: engine,
-            catalog: engine.catalog(), today: today(), ownNames: ownNames)
+            catalog: engine.catalog(), today: today(), preferences: dashboardPreferences)
         return PaybackGroupResult(plan: saved.plan, undo: BatchUndo(token: saved.undo, phone: self))
     }
 }
