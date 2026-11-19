@@ -137,7 +137,7 @@ final class ArestiaNavigation {
 /// Screenshots and the simulator: point the app at a fake flatd from the launch arguments, never at the real one.
 enum DebugConnection {
     static func apply(arguments: [String], to connection: FlatdConnection) {
-        if arguments.contains("-forgetFlatd") { connection.forget() }
+        if arguments.contains("-forgetFlatd") { try? connection.forget() }
         guard let index = arguments.firstIndex(of: "-flatd"), arguments.indices.contains(index + 1),
               let url = PairingCode.serviceURL(arguments[index + 1]) else { return }
         let service = arguments.firstIndex(of: "-flatdService").flatMap {

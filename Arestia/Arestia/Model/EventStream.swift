@@ -6,7 +6,7 @@ import os
 protocol FlatEventSource: Sendable {
     /// The events until the connection ends: the stream finishes with `FlatdError.refused` on a 401 and
     /// `FlatdError.unreachable` on anything else (the store then tries again).
-    func events(from url: URL) -> AsyncThrowingStream<FlatEvent, Error>
+    func events(from request: URLRequest) -> AsyncThrowingStream<FlatEvent, Error>
 }
 
 /// The real stream over a WebSocket. A sleeping Mac leaves a socket open without answering, so a ping goes every
@@ -17,15 +17,10 @@ nonisolated struct WebSocketEvents: FlatEventSource {
     static let snapshotWithin: Duration = .seconds(10)
     private static let log = Logger(subsystem: "de.ares-empire.arestia", category: "events")
 
-    func events(from url: URL) -> AsyncThrowingStream<FlatEvent, Error> {
+    func events(from request: URLRequest) -> AsyncThrowingStream<FlatEvent, Error> {
         AsyncThrowingStream { continuation in
-            let configuration = URLSessionConfiguration.ephemeral
-            configuration.timeoutIntervalForRequest = 3600      // idle: liveness comes from the pings
-            configuration.waitsForConnectivity = false
-            let session = URLSession(configuration: configuration)
-            var request = URLRequest(url: url, timeoutInterval: 8)
-            request.setValue(AppLanguage.current.code, forHTTPHeaderField: "Accept-Language")
-            let task = session.webSocketTask(with: request)
+            let session = FlatdSession.events()             // idle for long: liveness comes from the pings
+            let task = session.webSocketTask(with: request.withLanguage())
             task.resume()
             Self.log.notice("events: connecting")
 

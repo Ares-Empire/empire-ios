@@ -71,9 +71,11 @@ struct ClientTests {
     }
 
     @Test func theStreamAndThePage() {
-        #expect(client.eventsURL.absoluteString == "ws://192.0.2.10:8787/api/events?token=\(Flat.key)")
+        let events = client.eventsRequest
+        #expect(events.url?.absoluteString == "ws://192.0.2.10:8787/api/events")
+        #expect(events.value(forHTTPHeaderField: "Authorization") == "Bearer \(Flat.key)")
         let secure = FlatdClient(baseURL: URL(string: "https://flat.example")!, token: "k")
-        #expect(secure.eventsURL.scheme == "wss")
+        #expect(secure.eventsRequest.url?.scheme == "wss")
         // The page takes the key only in the header (contract v1.1).
         let page = client.viewerRequest
         #expect(page.url?.absoluteString == "http://192.0.2.10:8787/viewer")

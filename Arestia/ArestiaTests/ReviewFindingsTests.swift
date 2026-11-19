@@ -52,14 +52,33 @@ struct KeySafetyTests {
         #expect(transport.requests(to: "192.0.2.77").isEmpty)
     }
 
-    @Test func aLateLookupNeverMovesANewerPairing() throws {
+    @Test func aLateLookupNeverMovesANewerOrForgottenPairing() throws {
         let connection = Flat.connection()
-        try connection.save(FlatdPairing(link: FlatdLink(baseURL: Flat.base, serviceName: "flatd"), token: "newer-key-0123456789"))
-        connection.move(to: URL(string: "http://192.0.2.77:8787")!, keyedBy: Flat.key)     // the old pairing's lookup
-        #expect(connection.link?.baseURL == Flat.base)
-        connection.move(to: URL(string: "http://192.0.2.77:8787")!, keyedBy: "newer-key-0123456789")
+        let old = try #require(connection.pairing)
+        let newer = FlatdPairing(link: FlatdLink(baseURL: Flat.base, serviceName: "flatd"), token: "newer-key-0123456789")
+        try connection.save(newer)
+        connection.move(old, to: URL(string: "http://192.0.2.77:8787")!)          // the old pairing's late lookup
+        #expect(connection.pairing == newer)
+        connection.move(newer, to: URL(string: "http://192.0.2.77:8787")!)
         #expect(connection.link?.baseURL.host() == "192.0.2.77")
         #expect(connection.token == "newer-key-0123456789")
+        try connection.forget()
+        connection.move(newer, to: Flat.base)                                     // after Disconnect: nothing comes back
+        #expect(connection.pairing == nil)
+    }
+
+    @Test func aCommandRunsOnceEvenWhenItsConnectionIsLost() async {
+        let moved = URL(string: "http://192.0.2.77:8787")!
+        transport.answer("POST /api/scenes/air_out", fails: true)                 // lost after flatd may have taken it
+        await #expect(throws: FlatdError.unreachable) {
+            try await FlatActions(reach: reach(Flat.connection(), resolve: moved)).runScene("air_out")
+        }
+        #expect(transport.bodies(for: "POST /api/scenes/air_out").count == 1)
+        #expect(transport.requests(to: "192.0.2.77").isEmpty)
+    }
+
+    @Test func repeatedFailureIdsAreReadOnce() throws {
+        #expect(try Flat.decode(CommandFailures.self, ["failed": ["fan:fan_1", "fan:fan_1"]]).ids == ["fan:fan_1"])
     }
 
     @Test func addressAndKeyAreOneItem() throws {
@@ -67,7 +86,7 @@ struct KeySafetyTests {
         let pairing = FlatdPairing(link: FlatdLink(baseURL: Flat.base, serviceName: nil), token: Flat.key)
         try connection.save(pairing)
         #expect(connection.pairing == pairing)
-        connection.forget()
+        try connection.forget()
         #expect(connection.pairing == nil && connection.client == nil)
     }
 }
@@ -164,6 +183,57 @@ struct StoreReviewTests {
         store.endDrag("rollo:blind_1")
         #expect(store.dragging.isEmpty)
         store.stop()
+    }
+
+    @Test func homesCommandsCheckTheAddressWhileNotLive() async throws {
+        let (store, transport, events, _) = try await liveStore()
+        transport.answer("GET /api/scenes", fails: true)
+        events.end(FlatdError.unreachable)
+        #expect(await eventually({ store.link == .offline }, timeout: .seconds(5)))
+        // Another device holds the address now: the command is not sent with the key.
+        transport.answer("GET /api/health", status: 404, body: [:])
+        let before = transport.sent.count
+        store.setFan("fan:fan_1", on: true)
+        #expect(await eventually { !store.isWorking("power:fan:fan_1") })
+        #expect(transport.sent.dropFirst(before).allSatisfy { $0.value(forHTTPHeaderField: "Authorization") == nil })
+        store.stop()
+    }
+
+    @Test func anAnswerIsLeftOutWhenTheStreamSpokeMeanwhile() async throws {
+        let (store, transport, events, _) = try await liveStore()
+        var active = Flat.cooking
+        active["active"] = true
+        transport.answer("POST /api/modes/cooking", body: active.merging(["failed": [:]]) { $1 },
+                         delay: .milliseconds(400))
+        store.setMode("cooking", active: true)
+        try await Task.sleep(for: .milliseconds(150))
+        // While the slow answer to Start cooking is out, the stream says cooking ended (Claude ended it, say).
+        events.send(.mode(FlatMode(id: "cooking", label: "Cooking", active: false)))
+        #expect(await eventually { !store.isWorking("mode:cooking") })
+        #expect(!store.isCooking)        // the stream's newer word stands
+        store.stop()
+    }
+
+    @Test func aLateConnectKeepsNothingAfterADisconnect() async throws {
+        let connection = Flat.connection(linked: false)
+        let (store, transport, _, _) = Flat.store(connection: connection)
+        transport.answer("GET /api/devices", body: ["devices": [Flat.fan(1)]])
+        let attempt = Task { await store.connect(to: Flat.base, serviceName: nil, token: Flat.key) }
+        attempt.cancel()
+        #expect(await attempt.value == .notPossible)
+        #expect(connection.pairing == nil && store.link == .notSetUp)
+    }
+
+    @Test func aDisconnectTheKeychainRefusesSaysSo() async throws {
+        let keys = MemoryKeys()
+        let connection = FlatdConnection(defaults: UserDefaults(suiteName: "arestia-tests-" + UUID().uuidString)!,
+                                         keychain: keys)
+        try connection.save(FlatdPairing(link: FlatdLink(baseURL: Flat.base, serviceName: nil), token: Flat.key))
+        let (store, _, _, _) = Flat.store(connection: connection)
+        keys.failsToDelete = true
+        store.disconnect()
+        #expect(store.offer != nil)
+        #expect(connection.pairing != nil)
     }
 
     @Test func aMalformedRequestStillGetsItsResult() {

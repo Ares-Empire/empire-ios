@@ -68,30 +68,30 @@ nonisolated enum FlatdBonjour {
     }
 }
 
-/// The client to use, for the intents and the controls (which run without the app): the saved pairing's address, once
-/// it answered like flatd; when it cannot be reached at all and the pairing came from Bonjour, flatd is looked up again
-/// under its name (the Mac's address may have changed), checked the same way, and the new address is kept once the
-/// work succeeded there. A timeout is never retried elsewhere: flatd may have done it already.
+/// The client to use, for the intents and the controls (which run without the app). The address is settled first,
+/// without the key: the saved one if it answers like flatd, else (it gives no answer and the pairing came from
+/// Bonjour) flatd looked up again under its name and checked the same way. Then the work runs once, there: a command
+/// is never sent twice (a connection lost after flatd took it would otherwise repeat it). The new address is kept once
+/// the work succeeded.
 nonisolated struct FlatdReach: Sendable {
     let connection: FlatdConnection
-    var transport: any HTTPTransport & Sendable = URLSessionTransport()
+    var transport: any HTTPTransport & Sendable = FlatdTransport()
     var resolve: @Sendable (String) async -> URL? = { await FlatdBonjour.resolve(name: $0) }
 
     /// Throws `FlatdError.refused` without a pairing, `.unreachable` when flatd cannot be found.
     func run<T: Sendable>(_ work: @Sendable (FlatdClient) async throws -> T) async throws -> T {
         guard let pairing = connection.pairing, !pairing.token.isEmpty else { throw FlatdError.refused }
-        let saved = FlatdClient(baseURL: pairing.link.baseURL, token: pairing.token, transport: transport)
+        var client = FlatdClient(baseURL: pairing.link.baseURL, token: pairing.token, transport: transport)
         do {
-            try await saved.verify()
-            return try await work(saved)
-        } catch FlatdError.unreachable {
+            try await client.verify()
+        } catch let error as FlatdError where error == .unreachable || error == .noAnswer {
             guard let name = pairing.link.serviceName, let found = await resolve(name),
                   found != pairing.link.baseURL else { throw FlatdError.unreachable }
-            let moved = FlatdClient(baseURL: found, token: pairing.token, transport: transport)
-            try await moved.verify()
-            let result = try await work(moved)
-            connection.move(to: found, keyedBy: pairing.token)
-            return result
+            client = FlatdClient(baseURL: found, token: pairing.token, transport: transport)
+            try await client.verify()
         }
+        let result = try await work(client)
+        connection.move(pairing, to: client.baseURL)
+        return result
     }
 }

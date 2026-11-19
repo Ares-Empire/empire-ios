@@ -14,6 +14,8 @@ nonisolated struct FlatdLink: Codable, Equatable, Sendable {
 nonisolated struct FlatdPairing: Codable, Equatable, Sendable {
     var link: FlatdLink
     var token: String
+    /// Names this pairing (also the Keychain item's label), so moving it to a new address changes only this pairing.
+    var id = UUID()
 }
 
 /// What Arestia shares between the app and its Control Center extension: the App Group's defaults and the Keychain
@@ -30,10 +32,13 @@ nonisolated enum ArestiaGroup {
     }
 }
 
-/// Where flatd's key is kept: the Keychain in the app, memory in the tests.
+/// Where the pairing is kept: the Keychain in the app, memory in the tests. `label` names the saved item, so a change can
+/// be made only while that item is still the one saved.
 nonisolated protocol FlatdKeyStore: Sendable {
     func read() throws -> String?
-    func save(_ key: String) throws
+    func save(_ value: String, label: String) throws
+    /// Replaces the value only while the saved item has this label; false when there is none (deleted or replaced).
+    func update(_ value: String, ifLabel label: String) -> Bool
     func delete() throws
 }
 
@@ -63,8 +68,15 @@ nonisolated struct FlatdKeychain: FlatdKeyStore {
         return String(data: data, encoding: .utf8)
     }
 
-    func save(_ key: String) throws {
-        let attributes: [String: Any] = [kSecValueData as String: Data(key.utf8),
+    func update(_ value: String, ifLabel label: String) -> Bool {
+        var query = query
+        query[kSecAttrLabel as String] = label
+        let status = SecItemUpdate(query as CFDictionary, [kSecValueData as String: Data(value.utf8)] as CFDictionary)
+        return status == errSecSuccess
+    }
+
+    func save(_ value: String, label: String) throws {
+        let attributes: [String: Any] = [kSecValueData as String: Data(value.utf8), kSecAttrLabel as String: label,
                                          kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly]
         let status = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
         if status == errSecItemNotFound {
@@ -111,15 +123,18 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
 
     func save(_ pairing: FlatdPairing) throws {
         let data = try JSONEncoder().encode(pairing)
-        try keychain.save(String(decoding: data, as: UTF8.self))
+        try keychain.save(String(decoding: data, as: UTF8.self), label: pairing.id.uuidString)
     }
 
-    /// A new address for the same pairing (flatd found again over Bonjour). Kept only while the saved pairing still has
-    /// this key, so a late lookup never changes a newer pairing.
-    func move(to baseURL: URL, keyedBy token: String) {
-        guard var current = pairing, current.token == token, current.link.baseURL != baseURL else { return }
-        current.link.baseURL = baseURL
-        try? save(current)
+    /// A new address for this pairing (flatd found again over Bonjour), in one conditional Keychain update: it changes
+    /// nothing once the pairing was replaced or forgotten, so a late lookup (in the app or a control) never brings an
+    /// old pairing back.
+    func move(_ pairing: FlatdPairing, to baseURL: URL) {
+        guard pairing.link.baseURL != baseURL else { return }
+        var moved = pairing
+        moved.link.baseURL = baseURL
+        guard let data = try? JSONEncoder().encode(moved) else { return }
+        _ = keychain.update(String(decoding: data, as: UTF8.self), ifLabel: pairing.id.uuidString)
     }
 
     /// Both, when they are there.
@@ -128,9 +143,9 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
         return FlatdClient(baseURL: pairing.link.baseURL, token: pairing.token)
     }
 
-    /// Forgets the connection (Settings → Disconnect).
-    func forget() {
-        try? keychain.delete()
+    /// Forgets the connection (Settings → Disconnect). Throws when the Keychain kept the item.
+    func forget() throws {
+        try keychain.delete()
         defaults?.removeObject(forKey: Self.devicesKey)
     }
 

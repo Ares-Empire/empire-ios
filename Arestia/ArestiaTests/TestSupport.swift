@@ -9,6 +9,7 @@ final class FakeTransport: HTTPTransport, @unchecked Sendable {
         var status = 200
         var body: Any = [String: Any]()
         var fails: URLError.Code?    // no answer: .cannotConnectToHost (flatd out of reach), .timedOut (too slow)
+        var delay: Duration?         // a slow answer
     }
 
     private let lock = NSLock()
@@ -18,8 +19,8 @@ final class FakeTransport: HTTPTransport, @unchecked Sendable {
 
     /// `"POST /api/devices/fan:fan_1"` → answer.
     func answer(_ route: String, status: Int = 200, body: Any = [String: Any](), fails: Bool = false,
-                failure: URLError.Code = .cannotConnectToHost) {
-        lock.withLock { answers[route] = Answer(status: status, body: body, fails: fails ? failure : nil) }
+                failure: URLError.Code = .cannotConnectToHost, delay: Duration? = nil) {
+        lock.withLock { answers[route] = Answer(status: status, body: body, fails: fails ? failure : nil, delay: delay) }
     }
 
     /// Every answer for this host: as if another device held the address (`host` "192.0.2.10").
@@ -34,6 +35,7 @@ final class FakeTransport: HTTPTransport, @unchecked Sendable {
             return answers["\(method) \(host)\(path)"] ?? answers["\(method) \(path)"]
         }
         guard let answer else { throw URLError(.cannotConnectToHost) }
+        if let delay = answer.delay { try await Task.sleep(for: delay) }
         if let failure = answer.fails { throw URLError(failure) }
         let data = try JSONSerialization.data(withJSONObject: answer.body)
         let response = HTTPURLResponse(url: request.url!, statusCode: answer.status, httpVersion: nil, headerFields: nil)!
@@ -52,12 +54,12 @@ final class FakeTransport: HTTPTransport, @unchecked Sendable {
 final class FakeEvents: FlatEventSource, @unchecked Sendable {
     private let lock = NSLock()
     private var continuation: AsyncThrowingStream<FlatEvent, Error>.Continuation?
-    private(set) var urls: [URL] = []
+    private(set) var requests: [URLRequest] = []
 
-    func events(from url: URL) -> AsyncThrowingStream<FlatEvent, Error> {
+    func events(from request: URLRequest) -> AsyncThrowingStream<FlatEvent, Error> {
         AsyncThrowingStream { continuation in
             lock.withLock {
-                urls.append(url)
+                requests.append(request)
                 self.continuation = continuation
             }
         }
@@ -76,14 +78,24 @@ final class FakeEvents: FlatEventSource, @unchecked Sendable {
     }
 }
 
-/// The key in memory.
+/// The pairing in memory, with the Keychain's label rules.
 final class MemoryKeys: FlatdKeyStore, @unchecked Sendable {
     private let lock = NSLock()
-    private var key: String?
-    init(_ key: String? = nil) { self.key = key }
-    func read() throws -> String? { lock.withLock { key } }
-    func save(_ key: String) throws { lock.withLock { self.key = key } }
-    func delete() throws { lock.withLock { key = nil } }
+    private var item: (value: String, label: String)?
+    var failsToDelete = false
+    func read() throws -> String? { lock.withLock { item?.value } }
+    func save(_ value: String, label: String) throws { lock.withLock { item = (value, label) } }
+    func update(_ value: String, ifLabel label: String) -> Bool {
+        lock.withLock {
+            guard item?.label == label else { return false }
+            item = (value, label)
+            return true
+        }
+    }
+    func delete() throws {
+        if failsToDelete { throw FlatdKeychainError(status: -1) }
+        lock.withLock { item = nil }
+    }
 }
 
 enum Flat {

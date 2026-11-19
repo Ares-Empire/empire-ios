@@ -335,6 +335,16 @@
         }
       }
     },
+    "Arestia couldn't forget the key. Try again." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arestia konnte den Schlüssel nicht vergessen. Versuch es noch einmal."
+          }
+        }
+      }
+    },
     "Arestia forgets the key and the address. The Control Center controls and Shortcuts stop until you connect again." : {
       "localizations" : {
         "de" : {

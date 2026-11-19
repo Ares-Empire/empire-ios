@@ -327,7 +327,7 @@ nonisolated struct CommandFailures: Decodable, Equatable, Sendable {
         if let map = try? container.decodeIfPresent([String: String].self, forKey: .failed) {
             failed = map
         } else if let ids = try? container.decodeIfPresent([String].self, forKey: .failed) {
-            failed = Dictionary(uniqueKeysWithValues: ids.map { ($0, "") })
+            failed = Dictionary(ids.map { ($0, "") }, uniquingKeysWith: { first, _ in first })
         } else {
             failed = [:]
         }

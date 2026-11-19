@@ -55,6 +55,13 @@ final class FlatStore {
     private var loop: Task<Void, Never>?
     /// Which loop may change the store (`run`); a stopped or replaced loop finds it changed and ends.
     private var loopGeneration = 0
+    /// The address the live loop checked (it answered like flatd): commands go there while live; otherwise they check
+    /// the saved address first, as the loop does, so the key never goes to an address that was not checked.
+    private var liveBase: URL?
+    /// How often each device or mode changed in the stream, and how many snapshots came: a command's answer is shown
+    /// only when nothing newer came from the stream meanwhile (Codex's review, round 2).
+    private var revisions: [String: Int] = [:]
+    private var snapshots = 0
     /// Who hears every change as flatd describes it (the 3D page, `FlatScreen`'s bridge).
     private var listeners: [UUID: @MainActor (FlatEvent) -> Void] = [:]
     private static let log = Logger(subsystem: "de.ares-empire.arestia", category: "store")
@@ -65,7 +72,7 @@ final class FlatStore {
         backoff[min(max(failures, 1), backoff.count) - 1]
     }
 
-    init(connection: FlatdConnection, transport: any HTTPTransport & Sendable = URLSessionTransport(),
+    init(connection: FlatdConnection, transport: any HTTPTransport & Sendable = FlatdTransport(),
          eventSource: any FlatEventSource = WebSocketEvents(),
          rediscover: @escaping @Sendable (String) async -> URL? = { await FlatdBonjour.resolve(name: $0) },
          reloadControls: @escaping @MainActor () -> Void = { ArestiaControlKind.reloadAll() }) {
@@ -112,6 +119,7 @@ final class FlatStore {
         loopGeneration += 1
         loop?.cancel()
         loop = nil
+        liveBase = nil
     }
 
     /// Try again now (pull to refresh, the offline card's button).
@@ -164,15 +172,19 @@ final class FlatStore {
         do { answered = try await client.scenes() } catch FlatdError.unknown { answered = [] }   // a flatd without scenes
         guard owns(generation) else { return }
         scenes = answered
-        for try await event in eventSource.events(from: client.eventsURL) {
+        for try await event in eventSource.events(from: client.eventsRequest) {
             guard owns(generation) else { return }
             apply(event)
             if case .snapshot = event {
                 live()
                 link = .live
-                connection.move(to: client.baseURL, keyedBy: client.token)
+                liveBase = client.baseURL
+                if let pairing = connection.pairing, pairing.token == client.token {
+                    connection.move(pairing, to: client.baseURL)
+                }
             }
         }
+        liveBase = nil
         throw FlatdError.unreachable            // the stream ended: reconnect
     }
 
@@ -199,6 +211,7 @@ final class FlatStore {
         let before = controlState
         switch event {
         case let .snapshot(devices, modes):
+            snapshots += 1
             self.devices = devices
             if let modes { self.modes = modes }
             dragging = [:]
@@ -207,12 +220,14 @@ final class FlatStore {
             tell(snapshot)
         case let .state(id, patch, _):
             guard let index = devices.firstIndex(where: { $0.id == id }) else { return }
+            revisions[id, default: 0] += 1
             devices[index].state = devices[index].state.merging(patch)
             if dragging[id] != nil, patch.fields["target"] != nil || patch.fields["moving"] != nil
                 || patch.fields["position"] != nil { dragging[id] = nil }
             lastSeen = now
             tell(event)
         case let .mode(mode):
+            revisions["mode:" + mode.id, default: 0] += 1
             store(mode)
             lastSeen = now
             tell(event)
@@ -228,9 +243,18 @@ final class FlatStore {
             + rollos.map { $0.id + String(RolloOpenness.isOpen($0.state)) }
     }
 
-    /// A device as a command's answer brought it. An answer older than what the stream already brought is left out.
-    private func take(_ device: Device) {
-        guard let index = devices.firstIndex(where: { $0.id == device.id }) else { return }
+    /// Where the stream stood for a device or mode when a command was sent.
+    struct Stamp: Equatable, Sendable {
+        let snapshots: Int
+        let revision: Int
+    }
+
+    func stamp(_ key: String) -> Stamp { Stamp(snapshots: snapshots, revision: revisions[key, default: 0]) }
+
+    /// A device as a command's answer brought it, unless the stream brought newer news of it since the command was sent
+    /// (`stamp`), or the answer is older than what is shown.
+    private func take(_ device: Device, since stamp: Stamp) {
+        guard stamp == self.stamp(device.id), let index = devices.firstIndex(where: { $0.id == device.id }) else { return }
         if let incoming = device.state.updatedAt, let current = devices[index].state.updatedAt, incoming < current {
             return
         }
@@ -240,8 +264,9 @@ final class FlatStore {
         if controlState != before { reloadControls() }
     }
 
-    /// A mode as a command's answer brought it.
-    private func take(_ mode: FlatMode) {
+    /// A mode as a command's answer brought it, unless the stream brought newer news of it meanwhile.
+    private func take(_ mode: FlatMode, since stamp: Stamp) {
+        guard stamp == self.stamp("mode:" + mode.id) else { return }
         let before = controlState
         store(mode)
         tell(.mode(mode))
@@ -265,9 +290,12 @@ final class FlatStore {
     /// answers. Returns why not.
     func connect(to baseURL: URL, serviceName: String?, token: String) async -> FlatdError? {
         let candidate = FlatdClient(baseURL: baseURL, token: token, transport: transport)
+        let started = pairingGeneration
         do {
             try await candidate.verify()
             let found = try await candidate.devices()
+            // The screen went away, or another pairing or a disconnect came first: this attempt keeps nothing.
+            guard !Task.isCancelled, started == pairingGeneration else { return .notPossible }
             try connection.save(FlatdPairing(link: FlatdLink(baseURL: baseURL, serviceName: serviceName), token: token))
             stop()
             pairingGeneration += 1
@@ -276,6 +304,9 @@ final class FlatStore {
             scenes = []
             dragging = [:]
             working = []
+            revisions = [:]
+            offer = nil
+            lastSeen = nil
             connection.remember(found)
             link = .connecting
             start()
@@ -288,16 +319,23 @@ final class FlatStore {
         }
     }
 
-    /// Forgets the address and the key (Settings → Disconnect).
+    /// Forgets the address and the key (Settings → Disconnect). If the Keychain keeps them, says so and stays.
     func disconnect() {
+        do {
+            try connection.forget()
+        } catch {
+            offer = UndoOffer(message: String(localized: "Arestia couldn't forget the key. Try again."))
+            return
+        }
         stop()
         pairingGeneration += 1
-        connection.forget()
         devices = []
         modes = []
         scenes = []
         dragging = [:]
         working = []
+        revisions = [:]
+        offer = nil
         lastSeen = nil
         link = .notSetUp
         reloadControls()
@@ -307,19 +345,19 @@ final class FlatStore {
 
     /// A fan on (for `minutes`, nil: until off) or off.
     func setFan(_ id: String, on: Bool, minutes: Int? = nil) {
-        send("power:" + id) { client in
+        send("power:" + id, affects: id) { client in
             try await client.send(.power(on: on, seconds: minutes.map { $0 * 60 }), to: id)
-        } done: { device in
-            self.take(device)
+        } done: { device, stamp in
+            self.take(device, since: stamp)
         }
     }
 
     func moveRollo(_ id: String, _ command: RolloCommand) {
         dragging[id] = nil
-        send("rollo:" + id, blocking: false) { client in
+        send("rollo:" + id, affects: id, blocking: false) { client in
             try await client.send(.rollo(command), to: id)
-        } done: { device in
-            self.take(device)
+        } done: { device, stamp in
+            self.take(device, since: stamp)
         }
     }
 
@@ -336,38 +374,40 @@ final class FlatStore {
     func setRollo(_ id: String, position: Int) {
         let position = min(100, max(0, position))
         dragging[id] = position
-        send("rollo:" + id, blocking: false) { client in
+        send("rollo:" + id, affects: id, blocking: false) { client in
             try await client.send(.position(position), to: id)
-        } done: { device in
-            self.take(device)
+        } done: { device, stamp in
+            self.take(device, since: stamp)
             if self.dragging[id] == position { self.dragging[id] = nil }   // flatd has it now (moving, target)
         } failed: {
             if self.dragging[id] == position { self.dragging[id] = nil }
         }
     }
 
-    /// Cooking on or off (any mode). Ending cooking offers Undo, which starts it again. Devices that did not follow
-    /// are named (flatd changes the mode anyway).
+    /// Cooking on or off (any mode). Ending cooking offers Undo, which starts it again (only on the same pairing).
+    /// Devices that did not follow are named (flatd changes the mode anyway).
     func setMode(_ id: String, active: Bool) {
-        send("mode:" + id) { client in
+        send("mode:" + id, affects: "mode:" + id) { client in
             try await client.setMode(id, active: active)
-        } done: { answer in
+        } done: { answer, stamp in
             let (mode, failed) = answer
-            self.take(mode)
+            self.take(mode, since: stamp)
             if let line = self.failureLine(failed) {
                 self.offer = UndoOffer(message: line)
             } else if id == FlatMode.cookingID, !active {
+                let pairing = self.pairingGeneration
                 self.offer = UndoOffer(message: FlatWords.cookingEnded()) { [weak self] in
-                    self?.setMode(id, active: true)
+                    guard let self, pairing == self.pairingGeneration else { return }
+                    self.setMode(id, active: true)
                 }
             }
         }
     }
 
     func runScene(_ id: String, title: String) {
-        send("scene:" + id) { client in
+        send("scene:" + id, affects: "scene:" + id) { client in
             try await client.runScene(id)
-        } done: { failed in
+        } done: { failed, _ in
             self.offer = UndoOffer(message: [FlatWords.sceneDone(title), self.failureLine(failed)]
                 .compactMap { $0 }.joined(separator: " "))
         }
@@ -375,22 +415,38 @@ final class FlatStore {
 
     func isWorking(_ key: String) -> Bool { working.contains(key) }
 
+    /// The client a command goes through: the live loop's checked address, or the saved one once it answered like
+    /// flatd (never the key to an address that was not checked).
+    private func readyClient() async throws -> FlatdClient {
+        guard let pairing = connection.pairing else { throw FlatdError.refused }
+        if link == .live, let liveBase {
+            return FlatdClient(baseURL: liveBase, token: pairing.token, transport: transport)
+        }
+        let client = FlatdClient(baseURL: pairing.link.baseURL, token: pairing.token, transport: transport)
+        try await client.verify()
+        return client
+    }
+
     /// Runs a command: one at a time per thing (`blocking`), the failure as a calm line, a refused key back to the
-    /// connect screen, a lost flatd as a reason to reconnect. An answer that comes after the pairing changed is dropped.
-    private func send<Answer: Sendable>(_ key: String, blocking: Bool = true,
+    /// connect screen, a lost flatd as a reason to reconnect. An answer that comes after the pairing changed is dropped;
+    /// `affects` names what the answer shows (a device id, "mode:<id>"), for `stamp`.
+    private func send<Answer: Sendable>(_ key: String, affects: String, blocking: Bool = true,
                                         _ work: @escaping @Sendable (FlatdClient) async throws -> Answer,
-                                        done: @escaping @MainActor (Answer) -> Void,
+                                        done: @escaping @MainActor (Answer, Stamp) -> Void,
                                         failed: @escaping @MainActor () -> Void = {}) {
-        guard let client = currentClient() else { return }
+        guard connection.pairing != nil else { return }
         if blocking, working.contains(key) { return }
         let pairing = pairingGeneration
         working.insert(key)
         Task {
             defer { if pairing == pairingGeneration { working.remove(key) } }
             do {
+                let client = try await readyClient()
+                guard pairing == pairingGeneration else { return }
+                let stamp = stamp(affects)
                 let answer = try await work(client)
                 guard pairing == pairingGeneration else { return }
-                done(answer)
+                done(answer, stamp)
                 reloadControls()
             } catch let error as FlatdError {
                 guard pairing == pairingGeneration else { return }
@@ -403,7 +459,8 @@ final class FlatStore {
         }
     }
 
-    /// What a failed command does to the store: a refused key stops it, a lost flatd reconnects, the rest is a line.
+    /// What a failed command does to the store: a refused key stops it, a lost flatd reconnects (only while the store
+    /// follows flatd at all), the rest is a line.
     private func handle(_ error: FlatdError) {
         switch error {
         case .refused:
@@ -411,7 +468,7 @@ final class FlatStore {
             stop()
         case .unreachable:
             offer = UndoOffer(message: error.message())
-            if link == .live { retry() }
+            if link == .live, loop != nil { retry() }
         default:
             offer = UndoOffer(message: error.message())
         }
@@ -421,12 +478,14 @@ final class FlatStore {
 
     /// A device command from the 3D page. The answer's state reaches the page through the listeners.
     func pageRequest(_ id: String, body: Data) async -> FlatdError? {
-        guard let client = currentClient() else { return .refused }
         let pairing = pairingGeneration
         do {
+            let client = try await readyClient()
+            guard pairing == pairingGeneration else { return .notPossible }
+            let stamp = stamp(id)
             let device = try await client.send(body: body, to: id)
             guard pairing == pairingGeneration else { return nil }
-            take(device)
+            take(device, since: stamp)
             reloadControls()
             return nil
         } catch {
@@ -436,22 +495,20 @@ final class FlatStore {
 
     /// A mode change from the 3D page (it only ever ends cooking).
     func pageMode(_ id: String, body: Data) async -> FlatdError? {
-        guard let client = currentClient() else { return .refused }
         let pairing = pairingGeneration
         do {
+            let client = try await readyClient()
+            guard pairing == pairingGeneration else { return .notPossible }
+            let stamp = stamp("mode:" + id)
             let (mode, failed) = try await client.setMode(id, body: body)
             guard pairing == pairingGeneration else { return nil }
-            take(mode)
+            take(mode, since: stamp)
             if let line = failureLine(failed) { offer = UndoOffer(message: line) }
             reloadControls()
             return nil
         } catch {
             return pageFailure(error, pairing: pairing)
         }
-    }
-
-    private func currentClient() -> FlatdClient? {
-        connection.client.map { FlatdClient(baseURL: $0.baseURL, token: $0.token, transport: transport) }
     }
 
     /// A page's failed command: the bridge's error, and the store's reaction while the pairing is still the same.
@@ -461,7 +518,7 @@ final class FlatStore {
         if error == .refused {
             link = .refused
             stop()
-        } else if error == .unreachable, link == .live {
+        } else if error == .unreachable, link == .live, loop != nil {
             retry()
         }
         return error

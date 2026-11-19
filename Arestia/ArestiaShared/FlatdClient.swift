@@ -54,7 +54,7 @@ nonisolated enum FlatdError: Error, Equatable, Sendable {
 nonisolated struct FlatdClient: Sendable {
     let baseURL: URL
     let token: String
-    var transport: any HTTPTransport & Sendable = URLSessionTransport()
+    var transport: any HTTPTransport & Sendable = FlatdTransport()
     /// Reads answer quickly or not at all (the service is on the home network).
     var readTimeout: TimeInterval = 6
     /// A command waits for the device to confirm (a Rollo's board, a plug), so it may take longer.
@@ -136,13 +136,14 @@ nonisolated struct FlatdClient: Sendable {
 
     // MARK: the event stream and the 3D page
 
-    /// `ws://<host>/api/events?token=…` (a WebSocket cannot carry the header from every client, so flatd takes the
-    /// query too).
-    var eventsURL: URL {
+    /// The event stream's request: `ws://<host>/api/events` with the key in the header (contract v1.1 takes the
+    /// header or `?token=`; the header keeps the key out of every URL a log or proxy might keep).
+    var eventsRequest: URLRequest {
         var components = URLComponents(url: baseURL.appending(path: "api/events"), resolvingAgainstBaseURL: false)!
         components.scheme = baseURL.scheme == "https" ? "wss" : "ws"
-        components.queryItems = [URLQueryItem(name: "token", value: token)]
-        return components.url!
+        var request = URLRequest(url: components.url!, timeoutInterval: 8)
+        request.setValue("Bearer " + token, forHTTPHeaderField: "Authorization")
+        return request
     }
 
     /// The phone viewer page (`GET /viewer`, private: flatd serves it only with the key). The page is never bundled.

@@ -14,6 +14,8 @@ struct ConnectScreen: View {
     var closable = false
     var onConnected: () -> Void = {}
     @State private var scanning = false
+    /// The Connect in progress: it ends with the screen, so a slow attempt never keeps a pairing after it was closed.
+    @State private var attempt: Task<Void, Never>?
     @FocusState private var keyFocused: Bool
     @Environment(\.dismiss) private var dismiss
 
@@ -46,8 +48,9 @@ struct ConnectScreen: View {
                         FormProblem(text: problem).padding(.top, 14)
                     }
                     Button {
-                        Task {
-                            if await model.connect(store: store) {
+                        attempt?.cancel()
+                        attempt = Task {
+                            if await model.connect(store: store), !Task.isCancelled {
                                 onConnected()
                                 if closable { dismiss() }
                             }
@@ -74,7 +77,10 @@ struct ConnectScreen: View {
         }
         .tint(Ink.primary)
         .onAppear { model.browser.start() }
-        .onDisappear { model.browser.stop() }
+        .onDisappear {
+            model.browser.stop()
+            attempt?.cancel()
+        }
         .sheet(isPresented: $scanning) {
             QRScanSheet { text in
                 scanning = false

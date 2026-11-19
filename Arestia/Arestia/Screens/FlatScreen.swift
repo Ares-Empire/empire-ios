@@ -136,8 +136,12 @@ private struct FlatWebView: UIViewRepresentable {
         var coveredBottom: CGFloat = 0
         var alwaysDaylight = false
         private(set) var loadedCount: String?
-        /// Ends a load whose page never says `ready` (it failed while starting): the calm card with Try again.
+        /// Ends a load whose page never says `ready` (it failed while starting, or never finished loading): the calm
+        /// card with Try again.
         private var readyDeadline: Task<Void, Never>?
+        /// Counts the documents loaded: a request's result goes only to the document that asked (a reloaded page may
+        /// reuse its request ids).
+        private var document = 0
         private var listener: UUID?
         private var lastConnection: FlatStore.Link?
         private var pageOrigin: URL?
@@ -148,16 +152,37 @@ private struct FlatWebView: UIViewRepresentable {
             self.page = page
         }
 
-        /// Loads flatd's viewer page with the key (the page loads nothing else). The old page's subscription ends first.
+        /// Loads flatd's viewer page with the key (the page loads nothing else), once the address answered like flatd
+        /// without it. The old page's subscription ends first; the page has half a minute to say `ready`.
         func load(_ count: String? = nil) {
             if let count { loadedCount = count }
             stopListening()
             readyDeadline?.cancel()
+            document += 1
+            let loading = document
             guard let client = store.connection.client else { return }
             pageOrigin = client.baseURL
             page.isReady = false
             page.problem = nil
-            webView?.load(client.viewerRequest)
+            webView?.stopLoading()
+            readyDeadline = Task { [weak self] in
+                try? await Task.sleep(for: .seconds(30))
+                guard let self, !Task.isCancelled, loading == document, !page.isReady, page.problem == nil else { return }
+                webView?.stopLoading()
+                page.problem = String(localized: "The 3D flat didn't start.")
+            }
+            Task { [weak self] in
+                do {
+                    try await client.verify()
+                } catch {
+                    guard let self, loading == document else { return }
+                    readyDeadline?.cancel()
+                    page.problem = (error as? FlatdError ?? .unreachable).message()
+                    return
+                }
+                guard let self, loading == document else { return }
+                webView?.load(client.viewerRequest)
+            }
         }
 
         func stopListening() {
@@ -188,14 +213,16 @@ private struct FlatWebView: UIViewRepresentable {
                 if LaunchArguments.current.contains("-probeViewer") { probe() }
                 #endif
             case let .request(reqId, id, body):
+                let asking = document
                 Task {
                     let error = await store.pageRequest(id, body: body)
-                    send(PageScript.result(reqId: reqId, error: error))
+                    if asking == document { send(PageScript.result(reqId: reqId, error: error)) }
                 }
             case let .mode(reqId, id, body):
+                let asking = document
                 Task {
                     let error = await store.pageMode(id, body: body)
-                    send(PageScript.result(reqId: reqId, error: error))
+                    if asking == document { send(PageScript.result(reqId: reqId, error: error)) }
                 }
             case let .invalid(reqId):
                 send(PageScript.result(reqId: reqId, error: .failed(status: 400, message: nil)))
@@ -291,16 +318,6 @@ private struct FlatWebView: UIViewRepresentable {
                 return .cancel
             }
             return .allow
-        }
-
-        /// The page arrived: it says `ready` within half a minute (before it lights the model), or it failed to start.
-        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-            readyDeadline?.cancel()
-            readyDeadline = Task { [weak self] in
-                try? await Task.sleep(for: .seconds(30))
-                guard let self, !Task.isCancelled, !page.isReady, page.problem == nil else { return }
-                page.problem = String(localized: "The 3D flat didn't start.")
-            }
         }
 
         func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {

@@ -31,7 +31,9 @@ struct StoreTests {
         #expect(store.scenes.map(\.id) == ["air_out", "all_down"])
         #expect(store.cooking?.active == false)
         #expect(store.hasSnapshot)
-        #expect(events.urls.first?.query == "token=\(Flat.key)")
+        // The stream carries the key in its header, never in the URL.
+        #expect(events.requests.first?.url?.query == nil)
+        #expect(events.requests.first?.value(forHTTPHeaderField: "Authorization") == "Bearer \(Flat.key)")
         // First the keyless health check, then the key.
         #expect(transport.sent.first?.url?.path() == "/api/health")
         #expect(transport.sent.first?.value(forHTTPHeaderField: "Authorization") == nil)

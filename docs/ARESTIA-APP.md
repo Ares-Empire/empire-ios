@@ -39,6 +39,11 @@ loaded with the key and never bundled.
   first unlock, so a control works from the lock screen (never synced, never restored to another device); the address
   and the Bonjour name in Arestia's own App Group. When the Mac's address changes, the app and the controls find flatd
   again under its Bonjour name. Plain HTTP is allowed for local addresses only (`NSAllowsLocalNetworking`).
+- **The key goes only to an address that answers like flatd** (`GET /api/health` without the key first), and a new
+  address is kept only after flatd worked there. Plain HTTP cannot prove who answers, so on another Wi-Fi a device
+  pretending to be flatd at the saved address could still read the key (an independent review, 2026-11-19). Closing
+  that needs flatd to prove it knows the key before the app sends it (for example `/api/health?challenge=<nonce>`
+  answering with an HMAC of the nonce under the key): a contract change for the integration step.
 - **Two tabs and the gear** ("not many buttons and big menu"): **Home** (what the flat is doing in one line; cooking
   while it runs, with Done cooking as the one big button; otherwise the modes and scenes as three tiles; the fans with
   on/off and the timers 15 min / 30 min / 1 h / ∞ and the time left; the blinds with their window drawn at its position,

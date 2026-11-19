@@ -437,8 +437,9 @@ def make_handler(flat: Flat, key: str, latency: float, viewer: bytes):
         def fake(self, path: str, query: dict):
             device_id = query.get("id", "")
             if path == "/fake/reset":
-                flat.reset()
-                broadcast(flat.snapshot())
+                with flat.lock:                  # the fresh snapshot before any newer event
+                    flat.reset()
+                    broadcast(flat.snapshot())
             elif path == "/fake/drop":
                 for ws in list(sockets):
                     ws.close(1013)
