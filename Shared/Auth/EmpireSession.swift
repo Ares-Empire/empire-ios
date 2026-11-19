@@ -15,14 +15,21 @@ struct EmpireAppIdentity: Equatable, Sendable {
     /// (Aresium, Patrik 2026-10-27: the privacy policy handles its messages like the website's contact form, without
     /// accounts). Every other app sends the account-linked `feedback` record with its login.
     var supportWithoutLogin = false
+    /// The app has no Ares account at all (Arestia, Patrik 2026-11-19: "no account needed, just me"): it never restores
+    /// or offers a login, and Settings shows no account section. It still sends the contact form, without a login.
+    var hasAccount = true
     static let aresium = EmpireAppIdentity(service: "aresium", name: "Aresium", accountOptional: true,
                                            supportWithoutLogin: true)
     static let empire = EmpireAppIdentity(service: "empire", name: "Ares Empire")
     static let arestemis = EmpireAppIdentity(service: "arestemis", name: "Arestemis")
     static let aresus = EmpireAppIdentity(service: "aresus", name: "Aresus")
     static let arestoteles = EmpireAppIdentity(service: "arestoteles", name: "Arestoteles")
+    /// The flat (flatd on the home network, its own key): no Ares account, so no service on the account server and not
+    /// in `all`.
+    static let arestia = EmpireAppIdentity(service: "arestia", name: "Arestia", accountOptional: true,
+                                           supportWithoutLogin: true, hasAccount: false)
 
-    /// Every Ares app, in the order the account server lists its services.
+    /// Every Ares app with an account, in the order the account server lists its services (Arestia has none).
     static let all: [EmpireAppIdentity] = [.empire, .aresium, .arestemis, .aresus, .arestoteles]
 
     /// The app's name for a service id ("arestemis" → "Arestemis"); the id itself for one this build does not know.

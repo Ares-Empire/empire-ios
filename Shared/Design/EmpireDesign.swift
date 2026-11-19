@@ -41,6 +41,9 @@ struct AppAccent: Sendable {
     /// Arestoteles: Aegean teal.
     static let arestoteles = AppAccent(color: Color(light: Color(hex: 0x12746B), dark: Color(hex: 0x5ECBBE)),
                                        deep: Color(hex: 0x1E8C82))
+    /// Arestia: hearth ember (Hestia keeps the hearth fire); warm, but neither the Empire's gold nor the issue red.
+    static let arestia = AppAccent(color: Color(light: Color(hex: 0xA8481A), dark: Color(hex: 0xFF9A62)),
+                                   deep: Color(hex: 0xD2602A))
 }
 
 /// Ink and surfaces of the wall, light and dark (`html[data-theme="light"]` / `"dark"` in Aresium's styles). One
