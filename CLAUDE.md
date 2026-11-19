@@ -924,6 +924,32 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   failure shows as the notice and as a line in the quick-note sheet (`VaultStore.quickNoteQueueProblem`). One replay
   window stays: a note the server accepted is sent again if the app is killed before the write succeeds (exactly once
   would need the server to take a note id). DEBUG `-failQueueWrites` (sample: one waiting note, every queue write fails).
+- **Arestia app** (2026-11-19, `Arestia/`, bundle id `de.ares-empire.arestia`, URL scheme `arestia`; decisions
+  `docs/ARESTIA-APP.md`): Patrik's flat through his own flat service **flatd** on the home network (its contract and the
+  flat stay private, outside every repo; nothing of the flat is in this one: devices, names, modes and the 3D page come
+  from flatd at runtime). **No Ares account** (Patrik: "no account needed, just me"): `EmpireAppIdentity.arestia`
+  (`hasAccount` false, not in `all`), no login, no account section in Settings, the contact form without a login; its
+  own App Group `group.de.ares-empire.arestia` and Keychain group `de.ares-empire.arestia` (flatd's address; flatd's
+  key, readable after the first unlock), shared with **`ArestiaControlsExtension`** (`Arestia/ArestiaControls/`,
+  `de.ares-empire.arestia.controls`: Control Center's Cooking, Fans and Blind controls). `Arestia/ArestiaShared/` is
+  compiled into both: the contract's types (`FlatdModels`, read leniently, states merged key by key), `FlatdClient`
+  (every call but health with the Bearer key; 401 refused, 404 unknown, 409 not possible, 504 no answer from the
+  device), `FlatdConnection`, Bonjour (`FlatdBonjour`, `FlatdReach`: the saved address, else found again under its
+  Bonjour name), `PairingCode` (the key alone, `arestia://connect?url=…&token=…`, an address with `?token=`, JSON),
+  `FlatActions` and the App Intents (Siri, Shortcuts, NFC automations; the phrases in `AppShortcuts.xcstrings`). The
+  app: `FlatStore` (the event stream's snapshot and events, reconnecting with growing pauses and 20 s pings, commands
+  with their answers shown at once, listeners for the 3D page), `FlatWords` and `AutomationRow` (the words, pure),
+  `ViewerBridge` (the viewer's `BRIDGE.md` v1: handler `flat3d`, `flat3d.receive`, one `result` per request), screens
+  Home, Flat (the WKWebView), Connect, Settings' Flat service section. Accent: hearth ember (`AppAccent.arestia`), the
+  mark a drawn flame (`scripts/arestia-mark.swift`) until a Hestia bust exists. **The fake flatd** for the simulator:
+  `python3 scripts/fake-flatd.py` (port 8790, key printed, Bonjour "flatd (fake)", made-up Fan 1/2, Blind 1/2, `--extra`
+  Lamp 1, a stand-in `/viewer` that speaks the bridge, test hooks under `/fake/`); never the real flatd (port 8787,
+  its own key). DEBUG launch arguments: `-flatd http://127.0.0.1:8790 -flatdToken <key>` (connect without the screen;
+  `-flatdService <name>` as found over Bonjour), `-forgetFlatd`, `-tab home|flat`, `-openSheet settings|connect`,
+  `-scrollToEnd`, `-scrollTo blinds|automations`. Tests: `ArestiaTests` (contract, client, actions, store, words,
+  bridge; a fake transport and event stream). **`scripts/strings.py fill` writes a key's German into every catalog
+  that has it** (an "Up" meant for blinds overwrote Aresus's uptime "Laufzeit" once): give it only new keys, and read
+  `git diff` of the other apps' catalogs after it.
 - **Aresium phone mode** (2026-10-27, briefs 15, 18 and 22; plan `ares-empire/docs/ARESIUM-FOR-OTHERS.md`): everyone
   but Patrik keeps their Aresium data on their iPhone. **No account** (Patrik, 2026-10-27, brief 22): Aresium opens in
   phone mode on the phone's one store at once, without a login and without waiting for any server (`ModeStore.start`);

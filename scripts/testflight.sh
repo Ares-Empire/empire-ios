@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Archive one app and upload it to App Store Connect, where it shows up in TestFlight.
 #
-#   scripts/testflight.sh <Aresium|Empire|Arestemis|Aresus|Arestoteles> [--export-only]
+#   scripts/testflight.sh <Aresium|Empire|Arestemis|Aresus|Arestoteles|Arestia> [--export-only]
 #
 # --export-only signs the app for the App Store and writes the .ipa to build/testflight/<App>/ without uploading.
 # Before every new upload of an app, raise CURRENT_PROJECT_VERSION in its project (README → Releasing): App Store

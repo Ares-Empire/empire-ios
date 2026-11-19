@@ -23,6 +23,8 @@ filled the placeholders.
   | Aresus | Email Address, Name, User ID, Device ID, Customer Support | UserDefaults `CA92.1`, `1C8F.1` |
   | Aresus widget | User ID (fetches with the shared login) | UserDefaults `1C8F.1` (the app's language) |
   | Arestoteles | Email Address, Name, User ID, Other User Content, Customer Support | UserDefaults `CA92.1`, `1C8F.1` |
+  | Arestia | Email Address, Name, Customer Support (only from Contact & support; Arestia has no account, `docs/ARESTIA-APP.md`) | UserDefaults `CA92.1` (language, appearance, local network asked), `1C8F.1` (its own App Group: flatd's address, device names, language) |
+  | Arestia controls | none (Control Center; they talk only to flatd on the home network) | UserDefaults `1C8F.1` |
 
   To check again after a change (no boot time, disk space or keyboards are used today; file timestamps only in Aresium):
   `nm -u <App>.app/<App> | grep -E "NSUserDefaults|stat|getattrlist|mach_absolute_time|systemUptime|Volume.*Capacity|activeInputModes"`
@@ -45,6 +47,7 @@ For every app: **"Do you or your third-party partners collect data from this app
 | Arestemis | Contact Info → Email Address, Name · Identifiers → User ID, Device ID · Search History · User Content → Other User Content, Customer Support |
 | Aresus | Contact Info → Email Address, Name · Identifiers → User ID, Device ID · User Content → Customer Support |
 | Arestoteles | Contact Info → Email Address, Name · Identifiers → User ID · User Content → Other User Content, Customer Support |
+| Arestia | Contact Info → Email Address, Name · User Content → Customer Support (only who writes to support; the flat's devices and commands go only to the owner's own service on the home network, never to the Empire) |
 
 Why these and not others:
 
@@ -125,6 +128,12 @@ Contact & support; an unreadable bank file sends only the bank's name and header
 - **Arestoteles:** "A reader and editor for a personal knowledge vault: positions, topics, mechanisms and events,
   searchable in English and German." (*Lesen und Bearbeiten einer persönlichen Wissenssammlung: Positionen, Themen,
   Mechanismen und Ereignisse, durchsuchbar auf Deutsch und Englisch.*)
+
+- **Arestia:** "The owner's flat: fans with timers, blinds, cooking and the flat in 3D, through his own service on the
+  home network; Siri, Shortcuts and Control Center." (*Die eigene Wohnung: Ventilatoren mit Timer, Rollos, Kochen und
+  die Wohnung in 3D, über den eigenen Dienst im WLAN; Siri, Kurzbefehle und Kontrollzentrum.*) It works only with the
+  owner's flatd on his home network, so no reviewer could use it: internal TestFlight only (Patrik, 2026-11-19: "just
+  me").
 
 ### The demo login (the lead makes it)
 

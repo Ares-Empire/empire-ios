@@ -15,12 +15,12 @@ for argument in "$@"; do
         --keep-simulator) keep=1 ;;
         --ci) ci=1 ;;
         -h|--help) usage; exit 0 ;;
-        Aresium|Empire|Arestemis|Aresus|Arestoteles) apps+=("$argument") ;;
+        Aresium|Empire|Arestemis|Aresus|Arestoteles|Arestia) apps+=("$argument") ;;
         *) usage >&2; exit 2 ;;
     esac
 done
 if (( all && ${#apps[@]} )); then usage >&2; exit 2; fi
-if (( all || ${#apps[@]} == 0 )); then apps=(Aresium Empire Arestemis Aresus Arestoteles); fi
+if (( all || ${#apps[@]} == 0 )); then apps=(Aresium Empire Arestemis Aresus Arestoteles Arestia); fi
 
 # Explicit inventory: keep budgets in the tests unchanged. Measurements run only with --timing.
 timing_tests() {

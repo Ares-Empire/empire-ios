@@ -540,6 +540,57 @@
           ]
         }
       ]
+    },
+    "Arestia": {
+      "sample_roots": [],
+      "classifications": [],
+      "forbidden_patterns": [
+        "Samples/*",
+        "Preview Content/*",
+        "fake-flatd*"
+      ],
+      "bundles": [
+        {
+          "path": ".",
+          "shared_required": true,
+          "required": [
+            {
+              "paths": [
+                "Assets.car"
+              ],
+              "reason": "The mark, the app icon and the colours of the shipping SwiftUI screens."
+            },
+            {
+              "paths": [
+                "de.lproj/Localizable.strings",
+                "en.lproj/Localizable.stringsdict",
+                "de.lproj/Localizable.stringsdict"
+              ],
+              "reason": "AppLanguage and SwiftUI load the app table, including its plurals."
+            },
+            {
+              "paths": [
+                "de.lproj/ArestiaShared.strings",
+                "de.lproj/InfoPlist.strings",
+                "de.lproj/AppShortcuts.strings"
+              ],
+              "reason": "The intents' and errors' words, iOS permission lines and the Siri phrases."
+            }
+          ]
+        },
+        {
+          "path": "PlugIns/ArestiaControlsExtension.appex",
+          "shared_required": true,
+          "required": [
+            {
+              "paths": [
+                "de.lproj/ArestiaShared.strings"
+              ],
+              "reason": "The Control Center controls' words."
+            }
+          ]
+        }
+      ]
     }
   },
   "shared_classifications": [
