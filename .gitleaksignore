@@ -8,3 +8,7 @@ fac22e16420b55aaeadb4d4c9b1ae48b478d6ac1:Arestia/ArestiaTests/ReviewFindingsTest
 fac22e16420b55aaeadb4d4c9b1ae48b478d6ac1:Arestia/ArestiaTests/ReviewFindingsTests.swift:generic-api-key:60
 fac22e16420b55aaeadb4d4c9b1ae48b478d6ac1:Arestia/ArestiaTests/ReviewFindingsTests.swift:generic-api-key:62
 58e818a388b4cf2070d25cfd6d14012c8e3e701f:Arestia/ArestiaTests/ReviewFindingsTests.swift:generic-api-key:58
+# Arestia's trust tests and the lines its pinning change touched: the same made-up test keys (2026-11-20).
+f4c1599d4ad08b11269dcc5fc50cc227715cfb7e:Arestia/ArestiaTests/StoreTests.swift:generic-api-key:133
+f4c1599d4ad08b11269dcc5fc50cc227715cfb7e:Arestia/ArestiaTests/ReviewFindingsTests.swift:generic-api-key:58
+f4c1599d4ad08b11269dcc5fc50cc227715cfb7e:Arestia/ArestiaTests/TrustTests.swift:generic-api-key:148
