@@ -79,6 +79,7 @@ private struct FlatWebView: UIViewRepresentable {
     /// Which load the page should show (nil: not yet, the tab was never opened); a new number loads it again.
     let load: Int?
     @Environment(\.colorScheme) private var scheme
+    @AppStorage(PageScript.alwaysDaylightKey) private var alwaysDaylight = false
 
     func makeCoordinator() -> Coordinator { Coordinator(store: store, page: page) }
 
@@ -101,14 +102,17 @@ private struct FlatWebView: UIViewRepresentable {
         #endif
         context.coordinator.webView = webView
         context.coordinator.dark = scheme == .dark
+        context.coordinator.alwaysDaylight = alwaysDaylight
         return webView
     }
 
     func updateUIView(_ webView: WKWebView, context: Context) {
         let coordinator = context.coordinator
-        if coordinator.dark != (scheme == .dark) || coordinator.coveredBottom != coveredBottom {
+        if coordinator.dark != (scheme == .dark) || coordinator.coveredBottom != coveredBottom
+            || coordinator.alwaysDaylight != alwaysDaylight {
             coordinator.dark = scheme == .dark
             coordinator.coveredBottom = coveredBottom
+            coordinator.alwaysDaylight = alwaysDaylight
             coordinator.sendConfig()
         }
         coordinator.sendConnection(store.link)
@@ -129,6 +133,7 @@ private struct FlatWebView: UIViewRepresentable {
         weak var webView: WKWebView?
         var dark = true
         var coveredBottom: CGFloat = 0
+        var alwaysDaylight = false
         private(set) var loadedCount: Int?
         private var listener: UUID?
         private var lastConnection: FlatStore.Link?
@@ -171,6 +176,9 @@ private struct FlatWebView: UIViewRepresentable {
                 if listener == nil {
                     listener = store.listen { [weak self] event in self?.send(event.json) }
                 }
+                #if DEBUG
+                if LaunchArguments.current.contains("-probeViewer") { probe() }
+                #endif
             case let .request(reqId, id, body):
                 Task {
                     let error = await store.pageRequest(id, body: body)
@@ -189,11 +197,40 @@ private struct FlatWebView: UIViewRepresentable {
                 default: UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 }
             case let .log(text):
+                #if DEBUG
+                Self.log.error("page: \(text, privacy: .public)")
+                #else
                 Self.log.error("page: \(text, privacy: .private)")
+                #endif
             case .other:
                 break
             }
         }
+
+        #if DEBUG
+        /// `-probeViewer`: whether the web view has WebGL2, and what the page shows, every 5 s for half a minute (the
+        /// device log, category `viewer`), to check the 3D page in a real web view.
+        private func probe() {
+            let script = """
+            (() => { const c = document.createElement('canvas'); const gl = c.getContext('webgl2');
+              window.__frames = window.__frames || 0;
+              if (!window.__counting) { window.__counting = true;
+                const tick = () => { window.__frames++; requestAnimationFrame(tick); }; requestAnimationFrame(tick); }
+              const loading = document.getElementById('loading');
+              return JSON.stringify({webgl2: !!gl, renderer: gl ? gl.getParameter(gl.RENDERER) : null,
+                frames: window.__frames, hidden: document.hidden, visibility: document.visibilityState,
+                loading: loading ? loading.className : null,
+                text: (document.body && document.body.innerText || '').slice(0, 120)}); })()
+            """
+            Task {
+                for _ in 0..<6 {
+                    let answer = try? await webView?.evaluateJavaScript(script) as? String
+                    Self.log.notice("probe: \(answer ?? "nil", privacy: .public)")
+                    try? await Task.sleep(for: .seconds(5))
+                }
+            }
+        }
+        #endif
 
         // MARK: app → page
 
@@ -202,7 +239,7 @@ private struct FlatWebView: UIViewRepresentable {
             // The tab bar over the page's bottom, beyond the safe area the page sees itself (the home indicator).
             let bars = max(0, coveredBottom - (webView?.window?.safeAreaInsets.bottom ?? 0))
             send(PageScript.config(dark: dark, language: .current, accent: PageScript.accentHex,
-                                   bottomBar: Double(bars)))
+                                   alwaysDaylight: alwaysDaylight, bottomBar: Double(bars)))
         }
 
         func sendConnection(_ link: FlatStore.Link) {

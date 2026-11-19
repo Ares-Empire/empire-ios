@@ -240,7 +240,9 @@ struct BlindWindow: View {
                             y += 5
                         }
                     }
-                    .frame(height: max(0, inner.height * closed))
+                    // Never past the window: the hem below it stays inside too (no clip: a clip is drawn offscreen in
+                    // every frame the fabric moves).
+                    .frame(height: max(0, (inner.height - 6) * closed))
                     // The hem: the grip.
                     Capsule().fill(Ink.primary.opacity(0.75)).frame(width: inner.width * 0.36, height: 3)
                         .padding(.top, 3)
@@ -248,11 +250,10 @@ struct BlindWindow: View {
                 .frame(width: inner.width)
                 if let target, moving != nil {
                     Rectangle().fill(AppAccent.arestia.color.opacity(0.8)).frame(height: 1.5)
-                        .offset(y: inner.height * CGFloat(target) / 100)
+                        .offset(y: min(inner.height - 1.5, (inner.height - 6) * CGFloat(target) / 100))
                 }
             }
             .frame(width: inner.width, height: inner.height, alignment: .top)
-            .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
             .padding(4)
             .contentShape(shape)
             .gesture(

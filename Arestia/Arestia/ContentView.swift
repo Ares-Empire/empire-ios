@@ -55,6 +55,7 @@ struct ContentView: View {
             case .settings:
                 SettingsScreen(app: SettingsApp(name: "Arestia", accent: .arestia), session: session, logOut: {}) {
                     ConnectionSection(store: store)
+                    FlatViewSection()
                 }
             case let .connect(code):
                 ConnectScreen(store: store, code: code, closable: true) { navigation.tab = .home }

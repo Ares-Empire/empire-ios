@@ -84,17 +84,24 @@ enum PageScript {
                                             options: [.sortedKeys])) ?? Data()
     }
 
-    /// The app's look and language, and how much of the page's bottom its tab bar covers.
-    static func config(dark: Bool, language: AppLanguage, accent: String, bottomBar: Double) -> Data {
+    /// The app's look and language, the 3D flat's light (`real`: the sun where it really is now; `day`: always
+    /// daylight, Settings → 3D flat), and how much of the page's bottom its tab bar covers.
+    static func config(dark: Bool, language: AppLanguage, accent: String, alwaysDaylight: Bool,
+                       bottomBar: Double) -> Data {
         let message: [String: Any] = [
             "type": "config",
             "theme": dark ? "dark" : "light",
             "language": language.code,
             "accent": accent,
+            "lighting": alwaysDaylight ? "day" : "real",
             "insets": ["top": 0, "right": 0, "bottom": max(0, bottomBar.rounded()), "left": 0],
         ]
         return (try? JSONSerialization.data(withJSONObject: message, options: [.sortedKeys])) ?? Data()
     }
+
+    /// Settings → 3D flat → Always daylight (Patrik, 2026-11-19: the real time of day and season, "but with a setting
+    /// toggle to always day"); off by default.
+    static let alwaysDaylightKey = "arestia.alwaysDaylight"
 
     /// The accent as the page takes it ("#FF9A62": the bright one; the page deepens it on the light wall itself).
     static let accentHex = "#FF9A62"

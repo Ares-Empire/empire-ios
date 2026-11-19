@@ -172,8 +172,14 @@ struct BridgeTests {
         let live = try #require(try JSONSerialization.jsonObject(with: PageScript.connection(.live)) as? [String: Any])
         #expect(live["status"] as? String == "connected")
         let config = try #require(try JSONSerialization.jsonObject(
-            with: PageScript.config(dark: false, language: .german, accent: "#FF9A62", bottomBar: 49.4)) as? [String: Any])
+            with: PageScript.config(dark: false, language: .german, accent: "#FF9A62", alwaysDaylight: false,
+                                    bottomBar: 49.4)) as? [String: Any])
         #expect(config["theme"] as? String == "light")
+        #expect(config["lighting"] as? String == "real")
+        let day = try #require(try JSONSerialization.jsonObject(
+            with: PageScript.config(dark: true, language: .english, accent: "#FF9A62", alwaysDaylight: true,
+                                    bottomBar: 0)) as? [String: Any])
+        #expect(day["lighting"] as? String == "day")
         #expect(config["language"] as? String == "de")
         #expect((config["insets"] as? [String: Any])?["bottom"] as? Double == 49)
     }

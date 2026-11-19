@@ -54,7 +54,7 @@ struct HomeScreen: View {
         case (_, false):
             ProgressView().tint(Ink.secondary).frame(maxWidth: .infinity).padding(.top, 120)
         default:
-            flat
+            flat.opacity(store.link == .offline ? 0.72 : 1)
         }
     }
 
@@ -99,12 +99,16 @@ private struct StatusSummary: View {
             if store.hasSnapshot, !store.isCooking {
                 Text(verbatim: FlatWords.summary(cooking: store.isCooking, fans: store.fans, rollos: store.rollos))
                     .font(AppFont.text(26, weight: .bold))
-                    .foregroundStyle(Ink.primary)
+                    // Not live: the last known state, quieter, and why it may be old.
+                    .foregroundStyle(store.link == .live ? Ink.primary : Ink.secondary)
                     .contentTransition(.opacity)
                     .padding(.top, 6)
                 if store.link != .live, let seen = store.lastSeen {
-                    Text(verbatim: FlatWords.lastSeen(seen, now: .now))
-                        .font(AppFont.text(13)).foregroundStyle(Ink.muted).padding(.top, 4)
+                    Text(verbatim: store.link == .offline
+                         ? FlatWords.lastSeen(seen, now: .now) + " · " + String(localized: "The Mac may be asleep, or you're not at home.")
+                         : FlatWords.lastSeen(seen, now: .now))
+                        .font(AppFont.text(13)).foregroundStyle(Ink.muted).lineSpacing(2)
+                        .fixedSize(horizontal: false, vertical: true).padding(.top, 4)
                 }
             }
         }

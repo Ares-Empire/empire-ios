@@ -936,17 +936,28 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   (every call but health with the Bearer key; 401 refused, 404 unknown, 409 not possible, 504 no answer from the
   device), `FlatdConnection`, Bonjour (`FlatdBonjour`, `FlatdReach`: the saved address, else found again under its
   Bonjour name), `PairingCode` (the key alone, `arestia://connect?url=…&token=…`, an address with `?token=`, JSON),
-  `FlatActions` and the App Intents (Siri, Shortcuts, NFC automations; the phrases in `AppShortcuts.xcstrings`). The
+  `FlatActions` and what the intents share (`IntentSupport`). **Each intent lives in one target:** the Siri, Shortcuts
+  and NFC ones in the app (`Arestia/Intents/FlatIntents.swift`, the phrases in `AppShortcuts.xcstrings`), the Control
+  Center ones in the extension (`ArestiaControls/ControlIntents.swift`); an intent compiled into both was run by iOS in
+  the extension, which has no `AppShortcutsProvider`, so Spotlight's App Shortcut failed with "Couldn't find shortcut"
+  (2026-11-19; checked after the split: Spotlight's Lüften ran in the app and reached flatd, the Cooking control in
+  Control Center toggled flatd's mode). The
   app: `FlatStore` (the event stream's snapshot and events, reconnecting with growing pauses and 20 s pings, commands
   with their answers shown at once, listeners for the 3D page), `FlatWords` and `AutomationRow` (the words, pure),
   `ViewerBridge` (the viewer's `BRIDGE.md` v1: handler `flat3d`, `flat3d.receive`, one `result` per request), screens
-  Home, Flat (the WKWebView), Connect, Settings' Flat service section. Accent: hearth ember (`AppAccent.arestia`), the
+  Home, Flat (the WKWebView), Connect, Settings' Flat service and 3D flat sections (Always daylight, the bridge's
+  `lighting: "day"`, Patrik 2026-11-19; off: the real sun, `"real"`). The real phone viewer was checked in the
+  WKWebView on the simulator through the fake (`--viewer`, `--devices`, local files only): WebGL2 works, a blind tapped
+  in 3D moved through the app. Accent: hearth ember (`AppAccent.arestia`), the
   mark a drawn flame (`scripts/arestia-mark.swift`) until a Hestia bust exists. **The fake flatd** for the simulator:
   `python3 scripts/fake-flatd.py` (port 8790, key printed, Bonjour "flatd (fake)", made-up Fan 1/2, Blind 1/2, `--extra`
-  Lamp 1, a stand-in `/viewer` that speaks the bridge, test hooks under `/fake/`); never the real flatd (port 8787,
-  its own key). DEBUG launch arguments: `-flatd http://127.0.0.1:8790 -flatdToken <key>` (connect without the screen;
+  Lamp 1, a stand-in `/viewer` that speaks the bridge, test hooks under `/fake/`; `--viewer <file>` and `--devices
+  <file>` serve a local page and its device ids instead, never committed); never the real flatd (port 8787, its own
+  key). Its key has letters and digits only: AXe types through the simulator's German keyboard, where "y", "z" and "-"
+  land elsewhere. DEBUG launch arguments: `-flatd http://127.0.0.1:8790 -flatdToken <key>` (connect without the screen;
   `-flatdService <name>` as found over Bonjour), `-forgetFlatd`, `-tab home|flat`, `-openSheet settings|connect`,
-  `-scrollToEnd`, `-scrollTo blinds|automations`. Tests: `ArestiaTests` (contract, client, actions, store, words,
+  `-scrollToEnd`, `-scrollTo blinds|automations`, `-probeViewer` (logs WebGL2, frames and the page's text every 5 s,
+  category `viewer`). Screenshots: `axe screenshot` (`xcrun simctl io … screenshot` caught the launch screen at times). Tests: `ArestiaTests` (contract, client, actions, store, words,
   bridge; a fake transport and event stream). **`scripts/strings.py fill` writes a key's German into every catalog
   that has it** (an "Up" meant for blinds overwrote Aresus's uptime "Laufzeit" once): give it only new keys, and read
   `git diff` of the other apps' catalogs after it.

@@ -255,6 +255,16 @@
         }
       }
     },
+    "3D flat" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "3D-Wohnung"
+          }
+        }
+      }
+    },
     "A new key or another address" : {
       "localizations" : {
         "de" : {
@@ -311,6 +321,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Erlaube Arestia die Kamera in den iOS-Einstellungen, oder füge den Schlüssel ein."
+          }
+        }
+      }
+    },
+    "Always daylight" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Immer Tageslicht"
           }
         }
       }
@@ -895,6 +915,16 @@
         }
       }
     },
+    "Otherwise the sun stands where it really is now." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sonst steht die Sonne, wo sie gerade wirklich steht."
+          }
+        }
+      }
+    },
     "Paste flatd's key" : {
       "localizations" : {
         "de" : {
@@ -991,6 +1021,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Die 3D-Wohnung ist gerade nicht da"
+          }
+        }
+      }
+    },
+    "The Mac may be asleep, or you're not at home." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Mac schläft vielleicht, oder du bist nicht zu Hause."
           }
         }
       }

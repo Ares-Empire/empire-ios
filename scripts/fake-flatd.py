@@ -15,6 +15,9 @@ Made-up devices: Fan 1, Fan 2 (plugs with timers), Blind 1 (with a favourite spo
 Lamp 1. Mode `cooking` (both fans on and Blind 1 up; ended: fans off, Blind 1 to its favourite), scenes `air_out` (both
 fans for 30 min, Blind 1 up) and `all_down`. Blinds travel 100 % in `--travel` seconds and report every second.
 
+For a page that is not public (the real 3D viewer), `--viewer <file>` serves it at /viewer and `--devices <file>` gives
+the devices that page knows; both stay local files, never in this repo.
+
 Test hooks (with the key, like everything else): POST /fake/press?id=<rollo>&command=up|down (a wall switch, source
 `device`), POST /fake/switch?id=<fan>&on=1|0 (the plug's own button), POST /fake/online?id=<id>&online=0|1,
 POST /fake/fail?id=<id> (its next command answers 504), POST /fake/drop (closes every event stream),
@@ -38,7 +41,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, unquote, urlparse
 
 WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
-DEFAULT_KEY = "fake-flatd-key-0123456789abcdef"
+DEFAULT_KEY = "fakeflatd0123456789abcdef"   # letters and digits, no y or z: typed the same on a German keyboard
 
 
 def now_iso(at: float | None = None) -> str:
@@ -50,9 +53,10 @@ def now_iso(at: float | None = None) -> str:
 class Flat:
     """The made-up flat: devices, modes, scenes, timers and blinds that move."""
 
-    def __init__(self, travel: float, extra: bool):
+    def __init__(self, travel: float, extra: bool, devices: list[dict] | None = None):
         self.travel = travel
         self.extra = extra
+        self.custom = devices                # --devices: ids and names from a local file instead of the made-up ones
         self.lock = threading.RLock()
         self.listeners: list = []          # callables taking an event dict
         self.fail_next: set[str] = set()
@@ -79,11 +83,30 @@ class Flat:
                 self.devices["light:lamp_1"] = {"id": "light:lamp_1", "kind": "light", "label": "Lamp 1",
                                                 "room": "hall", "driver": "fake", "controls": ["on", "for_s"],
                                                 "state": switch()}
+            if self.custom is not None:
+                self.devices = {}
+                for entry in self.custom:
+                    kind = entry.get("kind") or entry["id"].split(":")[0]
+                    if kind == "rollo":
+                        state = {"position": entry.get("position", 0), "moving": None, "target": None,
+                                 "favourite": entry.get("favourite"), "online": True, "updated_at": now_iso()}
+                        controls = ["command", "position"]
+                    else:
+                        state, controls = switch(), ["on", "for_s"]
+                    self.devices[entry["id"]] = {"id": entry["id"], "kind": kind, "label": entry.get("label", entry["id"]),
+                                                 "room": entry.get("room"), "driver": "fake", "controls": controls,
+                                                 "state": state}
+            # Cooking: every fan and the first blind with a favourite spot (the contract's shape, whatever the ids).
+            fans = [i for i, d in self.devices.items() if d["kind"] == "fan"]
+            blinds = [i for i, d in self.devices.items() if d["kind"] == "rollo"]
+            self.cooking_blind = next((i for i in blinds if self.devices[i]["state"].get("favourite") is not None),
+                                      blinds[0] if blinds else None)
+            near = fans + ([self.cooking_blind] if self.cooking_blind else [])
             self.modes = {"cooking": {"id": "cooking", "label": "Cooking", "active": False, "since": None,
-                                      "devices": ["fan:fan_1", "fan:fan_2", "rollo:blind_1"]}}
+                                      "devices": near}}
             self.scenes = {
-                "air_out": {"id": "air_out", "label": "Air out", "devices": ["fan:fan_1", "fan:fan_2", "rollo:blind_1"]},
-                "all_down": {"id": "all_down", "label": "All blinds down", "devices": ["rollo:blind_1", "rollo:blind_2"]},
+                "air_out": {"id": "air_out", "label": "Air out", "devices": near},
+                "all_down": {"id": "all_down", "label": "All blinds down", "devices": blinds},
             }
             self.timers: dict[str, float] = {}       # switch id -> when it goes off
             self.motion: dict[str, dict] = {}        # rollo id -> {"from", "to", "start"}
@@ -181,14 +204,15 @@ class Flat:
             if mode is None:
                 return 404, {"error": f"unknown mode {mode_id}"}
             failed: dict[str, str] = {}
+            fans = [i for i in mode["devices"] if self.devices[i]["kind"] == "fan"]
+            blind = self.cooking_blind
             if active:
-                steps = [("fan:fan_1", {"on": True}), ("fan:fan_2", {"on": True}), ("rollo:blind_1", {"command": "up"})]
+                steps = [(fan, {"on": True}) for fan in fans] + ([(blind, {"command": "up"})] if blind else [])
                 if not mode["active"]:
                     mode["since"] = now_iso()
                 mode["active"] = True
             elif mode["active"]:
-                steps = [("fan:fan_1", {"on": False}), ("fan:fan_2", {"on": False}),
-                         ("rollo:blind_1", {"command": "favourite"})]
+                steps = [(fan, {"on": False}) for fan in fans] + ([(blind, {"command": "favourite"})] if blind else [])
                 mode["active"] = False
                 mode["since"] = None
             else:
@@ -208,10 +232,10 @@ class Flat:
             if scene is None:
                 return 404, {"error": f"unknown scene {scene_id}"}
             if scene_id == "air_out":
-                steps = [("fan:fan_1", {"on": True, "for_s": 1800}), ("fan:fan_2", {"on": True, "for_s": 1800}),
-                         ("rollo:blind_1", {"command": "up"})]
+                steps = [(i, {"on": True, "for_s": 1800} if self.devices[i]["kind"] == "fan" else {"command": "up"})
+                         for i in scene["devices"]]
             else:
-                steps = [("rollo:blind_1", {"command": "down"}), ("rollo:blind_2", {"command": "down"})]
+                steps = [(i, {"command": "down"}) for i in scene["devices"]]
             failed = {}
             for device_id, body in steps:
                 status, answer = self.command(device_id, body, f"scene:{scene_id}")
@@ -305,7 +329,7 @@ class WebSocket:
         return data
 
 
-def make_handler(flat: Flat, key: str, latency: float):
+def make_handler(flat: Flat, key: str, latency: float, viewer: bytes):
     sockets: list[WebSocket] = []
 
     def broadcast(event: dict) -> None:
@@ -380,7 +404,8 @@ def make_handler(flat: Flat, key: str, latency: float):
             if url.path == "/api/history":
                 return self.answer(200, {"events": []})
             if url.path == "/viewer":
-                return self.answer(200, VIEWER.encode(), "text/html; charset=utf-8")
+                # Only the header carries the key here (contract v1.1), as for every other endpoint but the events.
+                return self.answer(200, viewer, "text/html; charset=utf-8")
             if url.path == "/api/events":
                 return self.events()
             self.answer(404, {"error": "not found"})
@@ -515,7 +540,7 @@ window.flat3d = { receive(msg){
   else if (msg.type === 'mode'){ modes.set(msg.mode.id, msg.mode); }
   else if (msg.type === 'result'){ const id = pending[msg.reqId]; delete pending[msg.reqId]; busy.delete(id); document.getElementById('line').textContent = msg.ok ? '' : (msg.message || msg.error); }
   else if (msg.type === 'connection'){ document.getElementById('line').textContent = msg.status === 'offline' ? 'Not connected · last known state' : ''; }
-  else if (msg.type === 'config'){ document.documentElement.className = msg.theme === 'light' ? 'light' : ''; if (msg.insets) document.documentElement.style.setProperty('--bars', (msg.insets.bottom || 0) + 'px'); }
+  else if (msg.type === 'config'){ document.documentElement.className = msg.theme === 'light' ? 'light' : ''; if (msg.insets) document.documentElement.style.setProperty('--bars', (msg.insets.bottom || 0) + 'px'); document.querySelector('h1').textContent = 'Stand-in flat · ' + (msg.lighting === 'day' ? 'always day' : 'real sun'); }
   else return false;
   render(); return true; } };
 setInterval(render, 15000);
@@ -534,12 +559,18 @@ def main() -> None:
     parser.add_argument("--travel", type=float, default=20, help="seconds a blind takes from open to closed")
     parser.add_argument("--latency", type=float, default=0, help="seconds every command waits before it answers")
     parser.add_argument("--extra", action="store_true", help="add a lamp besides the fans and blinds")
+    parser.add_argument("--viewer", help="serve this HTML file at /viewer instead of the stand-in page "
+                                         "(a local file; never commit a private page)")
+    parser.add_argument("--devices", help='a local JSON list of devices instead of the made-up ones: '
+                                          '[{"id": "fan:…", "label": "…"}, {"id": "rollo:…", "favourite": 48}, …]')
     args = parser.parse_args()
     if args.port == 8787:
         sys.exit("8787 is the real flatd's port; pick another one.")
 
-    flat = Flat(travel=args.travel, extra=args.extra)
-    server = ThreadingHTTPServer((args.host, args.port), make_handler(flat, args.key, args.latency))
+    devices = json.loads(open(args.devices).read()) if args.devices else None
+    viewer = open(args.viewer, "rb").read() if args.viewer else VIEWER.encode()
+    flat = Flat(travel=args.travel, extra=args.extra, devices=devices)
+    server = ThreadingHTTPServer((args.host, args.port), make_handler(flat, args.key, args.latency, viewer))
     server.daemon_threads = True
 
     def ticking():
@@ -554,9 +585,8 @@ def main() -> None:
                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     def stop(*_):
-        if bonjour:
-            bonjour.terminate()
-        server.shutdown()
+        # Out of serve_forever through the same path as Ctrl-C (shutdown() from this thread would wait for itself).
+        raise KeyboardInterrupt
 
     signal.signal(signal.SIGTERM, stop)
     print(f"fake flatd on http://127.0.0.1:{args.port}  key: {args.key}"
@@ -566,6 +596,7 @@ def main() -> None:
     except KeyboardInterrupt:
         pass
     finally:
+        server.server_close()
         if bonjour:
             bonjour.terminate()
 

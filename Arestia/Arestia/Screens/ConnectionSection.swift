@@ -67,3 +67,23 @@ struct ConnectionSection: View {
         }
     }
 }
+
+/// Settings → 3D flat: always daylight, or the sun where it really is now (time of day and season; Patrik, 2026-11-19:
+/// "Real time of day but also accurately depending on season and stuff. But with a setting toggle to always day").
+struct FlatViewSection: View {
+    @AppStorage(PageScript.alwaysDaylightKey) private var alwaysDaylight = false
+
+    var body: some View {
+        SettingsSection(String(localized: "3D flat")) {
+            Toggle(isOn: $alwaysDaylight) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Always daylight").font(AppFont.text(15, weight: .medium)).foregroundStyle(Ink.primary)
+                    Text("Otherwise the sun stands where it really is now.")
+                        .font(AppFont.text(12)).foregroundStyle(Ink.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .frame(minHeight: 58).padding(.horizontal, 16)
+        }
+    }
+}
