@@ -52,8 +52,8 @@ loaded with the key and never bundled.
   - nothing in the app speaks plain HTTP: no App Transport Security exception, the transport and the event stream
     refuse a non-TLS address themselves, a pairing code with a plain address is refused, and a saved pairing without a
     pin (from a build before this) counts as no pairing;
-  - no redirect is ever followed; one URLSession per pin, so a connection checked against one identity never carries a
-    request for another;
+  - no redirect is ever followed, no proxy set up on the iPhone is used, and iOS fetches nothing on the certificate's
+    behalf; one URLSession per pin, so a connection checked against one identity never carries a request for another;
   - never an `arestia://` link with the key (another app may claim the scheme and would get it when the camera opens
     the link), and no pairing by key alone or by address: neither carries the identity.
 
@@ -69,9 +69,11 @@ loaded with the key and never bundled.
   extension and readable after the first unlock, so a control works from the lock screen (never synced, never
   restored to another device). Settings → Flat service shows the address flatd was last reached at and the identity's
   first 16 hex digits, the same ones `flatd pair` prints under its QR code and flatd logs at startup.
-- **Pairing again with another flatd** (a code whose identity differs from the paired one) never happens by itself:
-  the code is shown with its identity and waits for Connect, because the code decides who the app trusts from then
-  on. A first pairing, and a fresh code of the same flatd, connect at once. Work that was under way for one pairing
+- **Pairing again with another flatd** (a code whose identity differs from the paired one, or when the saved pairing
+  cannot be read) never happens by itself: the code is shown with its identity and waits for Connect, because the
+  code decides who the app trusts from then on. A first pairing, and a fresh code of the same flatd, connect at once
+  (a first scan is not confirmed against the identity on flatd's screen: whoever could put another code in front of
+  the camera would only pair the app with their own service, and learns nothing of the flat's). Work that was under way for one pairing
   (a Shortcut reading the fans, a late device list, the 3D page) never continues under another: each checks that its
   flatd and key are still the saved ones, and the 3D tab gets a web view of its own per pairing.
 - **What the pin does not cover:** anything behind flatd (how flatd reaches its devices is flatd's own matter, in

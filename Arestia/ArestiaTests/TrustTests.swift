@@ -132,7 +132,12 @@ struct PinTests {
         // The real transport and the real event stream refuse a plain address before anything is sent.
         var request = URLRequest(url: URL(string: "http://192.0.2.10:8787/api/devices")!)
         request.setValue("Bearer " + Flat.key, forHTTPHeaderField: "Authorization")
-        await #expect(throws: URLError.self) { _ = try await FlatdTransport(pin: Made.pinA).send(request) }
+        do {
+            _ = try await FlatdTransport(pin: Made.pinA).send(request)
+            Issue.record("a plain address was not refused")
+        } catch {
+            #expect((error as? URLError)?.code == .unsupportedURL)       // refused by the transport itself, unsent
+        }
         let plain = FlatdClient(baseURL: URL(string: "http://192.0.2.10:8787")!, token: Flat.key, pin: Made.pinA)
         await #expect(throws: FlatdError.unreachable) { _ = try await plain.devices() }
         var stream = URLRequest(url: URL(string: "ws://192.0.2.10:8787/api/events")!)
@@ -326,6 +331,38 @@ struct RediscoveryTests {
         #expect(!connection.isCurrent(old))
     }
 
+    @Test @MainActor func aPageOfAnEarlierPairingCommandsNothing() async throws {
+        // The 3D page's message was taken while one flatd was paired; its work gets its turn after another was.
+        let connection = Flat.connection()
+        let (store, transport, _, _) = Flat.store(connection: connection)
+        transport.answer("GET /api/devices", body: ["devices": [Flat.fan(1)]])
+        transport.answer("GET /api/scenes", body: ["scenes": []])
+        transport.answer("POST /api/devices/fan:fan_1", body: Flat.fan(1, on: true))
+        transport.answer("POST /api/modes/cooking", body: Flat.cooking)
+        let before = store.pairingGeneration
+        #expect(await store.connect(to: moved, token: Flat.key, pin: MadeUpCertificates.pinB) == nil)
+        #expect(store.pairingGeneration != before)
+        #expect(await store.pageRequest("fan:fan_1", body: Data(#"{"on":true}"#.utf8), pairing: before) == .notPossible)
+        #expect(await store.pageMode("cooking", body: Data(#"{"active":false}"#.utf8), pairing: before) == .notPossible)
+        #expect(transport.sent.allSatisfy { $0.httpMethod != "POST" })
+        // The new pairing's own page still works.
+        #expect(await store.pageRequest("fan:fan_1", body: Data(#"{"on":true}"#.utf8),
+                                        pairing: store.pairingGeneration) == nil)
+        store.stop()
+    }
+
+    @Test func deviceNamesBelongToTheirPairing() throws {
+        let connection = Flat.connection()
+        connection.remember(try Flat.devices([Flat.fan(1)]))
+        #expect(connection.knownDevices.map(\.id) == ["fan:fan_1"])
+        // Paired anew (even with the same flatd): the old pairing's names are not this pairing's.
+        try connection.save(Flat.pairing())
+        #expect(connection.knownDevices.isEmpty)
+        try connection.forget()
+        connection.remember(try Flat.devices([Flat.fan(1)]))            // a late write after Disconnect: nothing kept
+        #expect(connection.knownDevices.isEmpty)
+    }
+
     @Test func aSavedPairingWithoutAnIdentityIsNoPairing() throws {
         // What a build before flatd had an identity saved: an address and a key. Never used again; pair anew.
         let keys = MemoryKeys()
@@ -412,16 +449,55 @@ struct ConnectModelTests {
         #expect(transport.sent.allSatisfy { $0.value(forHTTPHeaderField: "Authorization") == nil })
     }
 
-    @Test func aCodeForAnotherFlatdWaitsForADeliberateConnect() {
+    @Test func aCodeThatReplacesWhoIsTrustedWaitsForADeliberateConnect() throws {
         let model = ConnectModel(candidates: { [] })
-        #expect(!model.replacesAnotherFlatd(paired: pin))              // nothing read yet
+        #expect(!model.needsConfirmation(saved: .paired(Flat.pairing())))      // nothing read yet
         model.take(text())
-        #expect(!model.replacesAnotherFlatd(paired: nil))              // a first pairing connects at once
-        #expect(!model.replacesAnotherFlatd(paired: pin))              // a fresh code of the same flatd too
-        #expect(model.replacesAnotherFlatd(paired: MadeUpCertificates.pinB))
+        #expect(!model.needsConfirmation(saved: .none))                        // a first pairing connects at once
+        #expect(!model.needsConfirmation(saved: .paired(Flat.pairing())))      // a fresh code of the same flatd too
+        let other = FlatdPairing(baseURL: Flat.base, token: Flat.key, pin: MadeUpCertificates.pinB)
+        #expect(model.needsConfirmation(saved: .paired(other)))
+        #expect(model.needsConfirmation(saved: .unusable))                     // what is paired cannot be told
         // Something else scanned afterwards: the earlier code is no longer staged.
         #expect(model.take("not a code") == false)
         #expect(model.code == nil && !model.canConnect)
+    }
+
+    @Test func aKeychainThatCannotBeReadIsNotAnEmptyOne() throws {
+        let keys = MemoryKeys()
+        let connection = FlatdConnection(defaults: nil, keychain: keys)
+        #expect(connection.saved == .none)
+        try connection.save(Flat.pairing())
+        guard case .paired = connection.saved else {
+            Issue.record("not paired")
+            return
+        }
+        keys.failsToRead = true
+        #expect(connection.saved == .unusable && connection.pairing == nil)
+        keys.failsToRead = false
+        try keys.save("{}", label: "odd")
+        #expect(connection.saved == .unusable)
+    }
+
+    @Test func bonjourAddressesAreAskedWithoutTheKeyAndTheKeyGoesOutOnce() async throws {
+        let connection = Flat.connection(linked: false)
+        let (store, transport, _, _) = Flat.store(connection: connection)
+        for host in ["192.0.2.20", "192.0.2.66", "192.0.2.67"] {
+            transport.answer("GET \(host)/api/health", fails: true, failure: .serverCertificateUntrusted,
+                             delay: host == "192.0.2.20" ? nil : .seconds(4))
+        }
+        transport.answer("GET /api/devices", body: ["devices": [Flat.fan(1)]])
+        transport.answer("GET /api/scenes", body: ["scenes": []])
+        let found = [URL(string: "https://192.0.2.66:8788")!, URL(string: "https://192.0.2.67:8788")!, moved]
+        let model = ConnectModel(candidates: { found })
+        model.take(text())
+        let clock = ContinuousClock(), start = clock.now
+        #expect(await model.connect(store: store))
+        #expect(clock.now - start < .seconds(3))                       // the slow forged addresses were not waited for
+        #expect(connection.pairing?.baseURL == moved)
+        let withKey = transport.sent.filter { $0.value(forHTTPHeaderField: "Authorization") != nil }
+        #expect(withKey.allSatisfy { $0.url?.host() == "192.0.2.77" })
+        store.stop()
     }
 
     @Test func somethingElseScannedIsNotACode() {
@@ -467,17 +543,32 @@ struct LiveFlatdTests {
         }
     }
 
+    /// How many requests the fake has received so far, this one included (`GET /fake/requests`).
+    func requestsSeen() async throws -> Int {
+        struct Answer: Decodable { let requests: Int }
+        var request = URLRequest(url: base.appending(path: "fake/requests"))
+        request.setValue("Bearer " + code.token, forHTTPHeaderField: "Authorization")
+        let (data, _) = try await FlatdTransport(pin: code.pin).send(request)
+        return try JSONDecoder().decode(Answer.self, from: data).requests
+    }
+
     @Test func anotherPinEndsTheConnectionBeforeAnyRequest() async throws {
-        // The same server, but the app expects another key: to the app it is not flatd.
+        // The same server, but the app expects another key: to the app it is not flatd. Counted at the server: not
+        // one request arrives, neither before nor after the right pin connected to the same address.
         let wrong = MadeUpCertificates.pinB
+        let right = FlatdClient(baseURL: base, token: code.token, pin: code.pin)
+        try await right.verify()
+        let before = try await requestsSeen()
         let client = FlatdClient(baseURL: base, token: code.token, pin: wrong)
         await #expect(throws: FlatdError.unreachable) { try await client.verify() }
         await #expect(throws: FlatdError.unreachable) { _ = try await client.devices() }
+        await #expect(throws: FlatdError.unreachable) { _ = try await client.send(.power(on: true), to: "fan:fan_1") }
         await #expect(throws: FlatdError.unreachable) {
             for try await _ in WebSocketEvents().events(from: client.eventsRequest, pin: wrong) {}
         }
+        #expect(try await requestsSeen() == before + 1)                // only this count itself
         // And the right pin still works afterwards (a session per pin: no connection is shared between them).
-        #expect(try await FlatdClient(baseURL: base, token: code.token, pin: code.pin).health())
+        #expect(try await right.health())
     }
 
     @Test func theUntrustedErrorIsNotACancellation() async {

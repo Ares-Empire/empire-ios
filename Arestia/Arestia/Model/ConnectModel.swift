@@ -100,13 +100,17 @@ final class ConnectModel {
 
     var canConnect: Bool { code != nil && !isConnecting }
 
-    /// Whether the code read is for another flatd than the one paired now (`paired`): then nothing connects by itself.
-    /// A code decides who the app trusts from then on, so swapping that for another identity takes a deliberate
-    /// Connect, with the new identity on screen to compare with flatd's own. (A first pairing and a fresh code of the
-    /// same flatd connect at once.)
-    func replacesAnotherFlatd(paired: FlatdPin?) -> Bool {
-        guard let code, let paired else { return false }
-        return code.pin != paired
+    /// Whether the code read would replace who the app trusts now: it is for another flatd than the one paired, or
+    /// what is paired cannot be told (`saved` unusable). Then nothing connects by itself: a code decides who the app
+    /// trusts from then on, so swapping that takes a deliberate Connect, with the new identity on screen to compare
+    /// with flatd's own. (A first pairing and a fresh code of the same flatd connect at once.)
+    func needsConfirmation(saved: FlatdConnection.Saved) -> Bool {
+        guard let code else { return false }
+        return switch saved {
+        case .none: false
+        case let .paired(pairing): code.pin != pairing.pin
+        case .unusable: true
+        }
     }
 
     /// A scanned or pasted text: flatd's pairing code, or not. Returns whether it was one.
@@ -144,11 +148,11 @@ final class ConnectModel {
         var outcome: Bool?
         if let hint = code.baseURL { outcome = await attempt(hint) }
         if outcome == nil {
-            for url in await candidates() where !tried.contains(url) {
-                guard !Task.isCancelled else { return false }
-                outcome = await attempt(url)
-                if outcome != nil { break }
-            }
+            // Bonjour's addresses are asked side by side, without the key (`FlatStore.locate`): forged ones cannot use
+            // up the time, and the key goes out once, to the address where the code's identity answered.
+            let others = await candidates().filter { !tried.contains($0) }
+            guard !Task.isCancelled else { return false }
+            if let found = await store.locate(code, among: others) { outcome = await attempt(found) }
         }
         if outcome == true {
             self.code = nil

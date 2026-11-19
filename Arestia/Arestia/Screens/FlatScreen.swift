@@ -20,7 +20,8 @@ struct FlatScreen: View {
                 ProvinceWall(accent: .arestia)
                 if store.link != .notSetUp {
                     // The safe area's bottom here is the tab bar and the home indicator; the page sees only the latter.
-                    FlatWebView(store: store, page: page, coveredBottom: proxy.safeAreaInsets.bottom,
+                    FlatWebView(store: store, page: page, pairing: store.pairingGeneration,
+                                coveredBottom: proxy.safeAreaInsets.bottom,
                                 load: page.wanted ? "\(page.loads)-\(store.pairingGeneration)" : nil)
                         // A web view of its own per pairing: another flat's page is gone, with its bridge, the moment
                         // the pairing changes, and can neither read the new flat's state nor command it.
@@ -78,6 +79,9 @@ final class FlatPage {
 private struct FlatWebView: UIViewRepresentable {
     let store: FlatStore
     let page: FlatPage
+    /// The pairing (the store's `pairingGeneration`) this web view belongs to; the view's identity, so each pairing
+    /// gets a web view and a coordinator of its own.
+    let pairing: Int
     /// How much of the screen's bottom the app's bars and the home indicator cover.
     let coveredBottom: CGFloat
     /// Which load the page should show (nil: not yet, the tab was never opened): a new value loads it again (Try
@@ -86,7 +90,7 @@ private struct FlatWebView: UIViewRepresentable {
     @Environment(\.colorScheme) private var scheme
     @AppStorage(PageScript.alwaysDaylightKey) private var alwaysDaylight = false
 
-    func makeCoordinator() -> Coordinator { Coordinator(store: store, page: page) }
+    func makeCoordinator() -> Coordinator { Coordinator(store: store, page: page, pairing: pairing) }
 
     func makeUIView(context: Context) -> WKWebView {
         let configuration = WKWebViewConfiguration()
@@ -135,6 +139,11 @@ private struct FlatWebView: UIViewRepresentable {
     final class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
         let store: FlatStore
         let page: FlatPage
+        /// The pairing this coordinator's pages come from. Everything between the page and the store is tied to it:
+        /// once the store has another pairing, this page is told nothing and commands nothing, whenever its messages
+        /// or their queued work get their turn.
+        let pairing: Int
+        private var isCurrent: Bool { store.pairingGeneration == pairing }
         weak var webView: WKWebView?
         var dark = true
         var coveredBottom: CGFloat = 0
@@ -158,9 +167,10 @@ private struct FlatWebView: UIViewRepresentable {
         static let pageURL = URL(string: "https://viewer.arestia.invalid/")!
         private static let log = Logger(subsystem: "de.ares-empire.arestia", category: "viewer")
 
-        init(store: FlatStore, page: FlatPage) {
+        init(store: FlatStore, page: FlatPage, pairing: Int) {
             self.store = store
             self.page = page
+            self.pairing = pairing
         }
 
         /// Fetches flatd's viewer page (the pinned client, with the key) and hands it to the web view, which loads
@@ -173,7 +183,7 @@ private struct FlatWebView: UIViewRepresentable {
             let loading = document
             handedOver = nil
             expectsPage = false
-            guard let client = store.connection.client else { return }
+            guard isCurrent, let client = store.connection.client else { return }
             page.isReady = false
             page.problem = nil
             webView?.stopLoading()
@@ -204,7 +214,7 @@ private struct FlatWebView: UIViewRepresentable {
                     page.problem = String(localized: "The 3D flat didn't start.")
                     return
                 }
-                guard loading == document, store.connection.isCurrent(client) else { return }
+                guard loading == document, isCurrent, store.connection.isCurrent(client) else { return }
                 expectsPage = true
                 handedOver = loading
                 webView?.load(html, mimeType: "text/html", characterEncodingName: "utf-8", baseURL: Self.pageURL)
@@ -221,7 +231,8 @@ private struct FlatWebView: UIViewRepresentable {
 
         func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
             // Only the page the app handed over, in the main frame, may speak to the app.
-            guard handedOver == document, message.frameInfo.isMainFrame, isThePage(message.frameInfo.securityOrigin),
+            guard isCurrent, handedOver == document, message.frameInfo.isMainFrame,
+                  isThePage(message.frameInfo.securityOrigin),
                   let parsed = PageMessage.parse(message.body) else { return }
             switch parsed {
             case .ready:
@@ -241,13 +252,13 @@ private struct FlatWebView: UIViewRepresentable {
             case let .request(reqId, id, body):
                 let asking = document
                 Task {
-                    let error = await store.pageRequest(id, body: body)
+                    let error = await store.pageRequest(id, body: body, pairing: pairing)
                     if asking == document { send(PageScript.result(reqId: reqId, error: error)) }
                 }
             case let .mode(reqId, id, body):
                 let asking = document
                 Task {
-                    let error = await store.pageMode(id, body: body)
+                    let error = await store.pageMode(id, body: body, pairing: pairing)
                     if asking == document { send(PageScript.result(reqId: reqId, error: error)) }
                 }
             case let .invalid(reqId):
@@ -313,7 +324,7 @@ private struct FlatWebView: UIViewRepresentable {
         }
 
         private func send(_ json: Data?) {
-            guard let json, let webView else { return }
+            guard isCurrent, let json, let webView else { return }
             webView.evaluateJavaScript(PageScript.receive(json)) { _, error in
                 if let error { Self.log.notice("receive failed: \(error.localizedDescription, privacy: .public)") }
             }

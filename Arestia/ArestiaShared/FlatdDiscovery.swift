@@ -17,7 +17,8 @@ nonisolated enum FlatdBonjour {
     /// within `browse` (none seen: empty), each resolved. Candidates only, see above.
     static func candidates(browse: Duration = .seconds(2)) async -> [URL] {
         // Anyone on the Wi-Fi can advertise any number of services: a handful is looked at, never all of them.
-        let names = await serviceNames(within: browse).prefix(maxCandidates)
+        // Which handful changes from one look to the next, so no set of forged names can keep the real one out.
+        let names = await serviceNames(within: browse).shuffled().prefix(maxCandidates)
         return await withTaskGroup(of: URL?.self) { group in
             for name in names { group.addTask { await resolve(name: name) } }
             var found: [URL] = []

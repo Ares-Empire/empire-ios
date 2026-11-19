@@ -301,6 +301,14 @@ final class FlatStore {
 
     // MARK: connecting
 
+    /// Where among these addresses the flatd of this pairing code answers (its identity proved by the transport, its
+    /// health asked without the key); nil when nowhere.
+    func locate(_ code: PairingCode, among candidates: [URL]) async -> URL? {
+        guard let first = candidates.first else { return nil }
+        let probe = FlatdPairing(baseURL: first, token: code.token, pin: code.pin)
+        return await FlatdReach.find(probe, among: candidates, transport: transport)?.baseURL
+    }
+
     /// Checks a pairing code's key with flatd at this address (`GET /api/devices`; the transport accepts only a server
     /// holding the code's pin) and keeps the pairing when flatd answers. Returns why not: `.unreachable` when flatd is
     /// not there (nothing, or something without its key), `.refused` when flatd itself does not know the key.
@@ -491,9 +499,12 @@ final class FlatStore {
 
     // MARK: the 3D page's requests (BRIDGE.md: bodies forwarded unchanged, one result each)
 
-    /// A device command from the 3D page. The answer's state reaches the page through the listeners.
-    func pageRequest(_ id: String, body: Data) async -> FlatdError? {
-        let pairing = pairingGeneration
+    /// A device command from the 3D page. The answer's state reaches the page through the listeners. `pairing` is the
+    /// pairing (`pairingGeneration`) whose flatd gave the page that asks: a page of an earlier pairing commands nothing,
+    /// however late its message is worked off.
+    func pageRequest(_ id: String, body: Data, pairing: Int? = nil) async -> FlatdError? {
+        let pairing = pairing ?? pairingGeneration
+        guard pairing == pairingGeneration else { return .notPossible }
         do {
             let client = try await readyClient()
             guard pairing == pairingGeneration else { return .notPossible }
@@ -508,9 +519,10 @@ final class FlatStore {
         }
     }
 
-    /// A mode change from the 3D page (it only ever ends cooking).
-    func pageMode(_ id: String, body: Data) async -> FlatdError? {
-        let pairing = pairingGeneration
+    /// A mode change from the 3D page (it only ever ends cooking); `pairing` as for `pageRequest`.
+    func pageMode(_ id: String, body: Data, pairing: Int? = nil) async -> FlatdError? {
+        let pairing = pairing ?? pairingGeneration
+        guard pairing == pairingGeneration else { return .notPossible }
         do {
             let client = try await readyClient()
             guard pairing == pairingGeneration else { return .notPossible }

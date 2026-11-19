@@ -33,15 +33,24 @@ nonisolated enum FlatdSession {
     static func shared(pin: FlatdPin) -> URLSession {
         sessions.withLock { sessions in
             if let session = sessions[pin] { return session }
-            let session = URLSession(configuration: .ephemeral, delegate: PinnedServer(pin: pin), delegateQueue: nil)
+            let session = URLSession(configuration: configuration(), delegate: PinnedServer(pin: pin),
+                                     delegateQueue: nil)
             sessions[pin] = session
             return session
         }
     }
 
+    /// Nothing kept (no cookies, cache or credentials), and straight to flatd: a proxy set up on the iPhone is not
+    /// used, so not even the address flatd has is told to anyone on the way.
+    private static func configuration() -> URLSessionConfiguration {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.connectionProxyDictionary = [:]
+        return configuration
+    }
+
     /// A session for the event stream: idle for long stretches (its liveness comes from pings); the same rules.
     static func events(pin: FlatdPin) -> URLSession {
-        let configuration = URLSessionConfiguration.ephemeral
+        let configuration = configuration()
         configuration.timeoutIntervalForRequest = 3600
         configuration.waitsForConnectivity = false
         return URLSession(configuration: configuration, delegate: PinnedServer(pin: pin), delegateQueue: nil)

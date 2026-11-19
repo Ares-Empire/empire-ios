@@ -48,6 +48,8 @@ nonisolated struct FlatdPin: Hashable, Sendable, Codable {
     /// Whether the server that presented this trust (its leaf certificate) holds flatd's key. Only the key is
     /// compared; the handshake itself has proved the server owns it.
     func matches(_ trust: SecTrust) -> Bool {
+        // Only what the server sent is looked at: iOS must not go and fetch issuers for a certificate nobody issued.
+        SecTrustSetNetworkFetchAllowed(trust, false)
         guard let leaf = (SecTrustCopyCertificateChain(trust) as? [SecCertificate])?.first else { return false }
         return FlatdPin.of(leaf) == self
     }

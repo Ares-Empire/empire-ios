@@ -31,7 +31,7 @@ without Bonjour, and makes up a fresh key (printed) unless --host and --key say 
 Test hooks (with the key, like everything else): POST /fake/press?id=<rollo>&command=up|down (a wall switch, source
 `device`), POST /fake/switch?id=<fan>&on=1|0 (the plug's own button), POST /fake/online?id=<id>&online=0|1,
 POST /fake/fail?id=<id> (its next command answers 504), POST /fake/drop (closes every event stream),
-POST /fake/reset (back to the start state).
+POST /fake/reset (back to the start state), GET /fake/requests (how many requests arrived so far, this one included).
 """
 from __future__ import annotations
 
@@ -75,6 +75,7 @@ class Flat:
         self.lock = threading.RLock()
         self.listeners: list = []          # callables taking an event dict
         self.fail_next: set[str] = set()
+        self.requests_seen = 0             # HTTP requests received (after TLS), for GET /fake/requests
         self.reset()
 
     def reset(self) -> None:
@@ -411,6 +412,13 @@ def make_handler(flat: Flat, key: str, latency: float, viewer: bytes):
         def do_GET(self):
             url = urlparse(self.path)
             query = parse_qs(url.query)
+            with flat.lock:
+                flat.requests_seen += 1
+                seen = flat.requests_seen
+            if url.path == "/fake/requests" and self.authorized(query):
+                # How many requests (this one included) got past the TLS handshake since the start: a client that
+                # refused this identity must not have added any (ArestiaTests, LiveFlatdTests).
+                return self.answer(200, {"requests": seen})
             if url.path == "/api/health":
                 return self.answer(200, {"ok": True, "version": "1.1.0-fake"})
             if not self.authorized(query):
@@ -436,6 +444,8 @@ def make_handler(flat: Flat, key: str, latency: float, viewer: bytes):
         def do_POST(self):
             url = urlparse(self.path)
             query = parse_qs(url.query)
+            with flat.lock:
+                flat.requests_seen += 1
             if not self.authorized(query):
                 return self.refuse()
             body = self.body()

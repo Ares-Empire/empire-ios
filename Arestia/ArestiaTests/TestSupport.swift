@@ -86,7 +86,11 @@ final class MemoryKeys: FlatdKeyStore, @unchecked Sendable {
     private let lock = NSLock()
     private var item: (value: String, label: String)?
     var failsToDelete = false
-    func read() throws -> String? { lock.withLock { item?.value } }
+    var failsToRead = false
+    func read() throws -> String? {
+        if failsToRead { throw FlatdKeychainError(status: -1) }
+        return lock.withLock { item?.value }
+    }
     func save(_ value: String, label: String) throws { lock.withLock { item = (value, label) } }
     func update(_ value: String, ifLabel label: String) -> Bool {
         lock.withLock {

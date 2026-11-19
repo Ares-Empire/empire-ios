@@ -106,13 +106,28 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
                                                 accessGroup: ArestiaGroup.keychainAccessGroup))
     }
 
-    /// The pairing as saved; nil without one, when the item cannot be read, or when it is not a whole pairing (one
-    /// without a pin, or with a plain-HTTP address, from a build before flatd had an identity: pair again).
+    /// What the Keychain holds: no pairing, a pairing, or something that cannot be used as one (the item could not be
+    /// read right now, or it is not a whole pairing: one without a pin or with a plain-HTTP address, from a build before
+    /// flatd had an identity). The last is not "nothing": a pairing may be there, so replacing it takes the same
+    /// deliberate Connect as replacing a known one (`ConnectModel.needsConfirmation`).
+    nonisolated enum Saved: Equatable, Sendable {
+        case none
+        case paired(FlatdPairing)
+        case unusable
+    }
+
+    var saved: Saved {
+        let text: String?
+        do { text = try keychain.read() } catch { return .unusable }
+        guard let text else { return .none }
+        guard let pairing = try? JSONDecoder().decode(FlatdPairing.self, from: Data(text.utf8)),
+              pairing.baseURL.scheme == "https", !pairing.token.isEmpty else { return .unusable }
+        return .paired(pairing)
+    }
+
+    /// The pairing to work with; nil without a usable one (then the app asks to pair).
     var pairing: FlatdPairing? {
-        guard let text = (try? keychain.read()) ?? nil,
-              let pairing = try? JSONDecoder().decode(FlatdPairing.self, from: Data(text.utf8)),
-              pairing.baseURL.scheme == "https", !pairing.token.isEmpty else { return nil }
-        return pairing
+        if case let .paired(pairing) = saved { pairing } else { nil }
     }
 
     var token: String? { pairing?.token }
@@ -151,8 +166,19 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
         let label: String
     }
 
+    /// The names as saved, with the pairing they came from: read only while that pairing is the saved one, so names
+    /// written late (after Disconnect, or after pairing with another flatd) are never shown.
+    private nonisolated struct KnownDevices: Codable {
+        let pairing: UUID
+        let devices: [KnownDevice]
+    }
+
     var knownDevices: [KnownDevice] {
-        defaults?.data(forKey: Self.devicesKey).flatMap { try? JSONDecoder().decode([KnownDevice].self, from: $0) } ?? []
+        guard let id = pairing?.id,
+              let known = defaults?.data(forKey: Self.devicesKey)
+                .flatMap({ try? JSONDecoder().decode(KnownDevices.self, from: $0) }),
+              known.pairing == id else { return [] }
+        return known.devices
     }
 
     /// Whether this client still speaks for the saved pairing: the same flatd (its identity) and the same key. False
@@ -165,10 +191,11 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
     /// Keeps the devices' names for Shortcuts' pickers, only while the pairing they came from (`client`'s) is the saved
     /// one: a late answer never brings names back after Disconnect, or another flat's names into a new pairing.
     func remember(_ devices: [Device], from client: FlatdClient? = nil) {
-        if let client, !isCurrent(client) { return }
+        guard let pairing, client.map({ $0.pin == pairing.pin && $0.token == pairing.token }) ?? true else { return }
         let known = devices.map { KnownDevice(id: $0.id, kind: $0.kind.raw, label: $0.label) }
         guard known != knownDevices else { return }
-        defaults?.set(try? JSONEncoder().encode(known), forKey: Self.devicesKey)
+        defaults?.set(try? JSONEncoder().encode(KnownDevices(pairing: pairing.id, devices: known)),
+                      forKey: Self.devicesKey)
     }
 }
 
