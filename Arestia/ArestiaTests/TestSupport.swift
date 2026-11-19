@@ -8,25 +8,33 @@ final class FakeTransport: HTTPTransport, @unchecked Sendable {
     struct Answer {
         var status = 200
         var body: Any = [String: Any]()
-        var fails = false            // no answer at all (flatd out of reach)
+        var fails: URLError.Code?    // no answer: .cannotConnectToHost (flatd out of reach), .timedOut (too slow)
     }
 
     private let lock = NSLock()
-    private var answers: [String: Answer] = [:]
+    /// Health answers like flatd unless a test says otherwise (the key goes only to such an address).
+    private var answers: [String: Answer] = ["GET /api/health": Answer(body: ["ok": true, "version": "1.1.0-test"])]
     private(set) var requests: [URLRequest] = []
 
     /// `"POST /api/devices/fan:fan_1"` → answer.
-    func answer(_ route: String, status: Int = 200, body: Any = [String: Any](), fails: Bool = false) {
-        lock.withLock { answers[route] = Answer(status: status, body: body, fails: fails) }
+    func answer(_ route: String, status: Int = 200, body: Any = [String: Any](), fails: Bool = false,
+                failure: URLError.Code = .cannotConnectToHost) {
+        lock.withLock { answers[route] = Answer(status: status, body: body, fails: fails ? failure : nil) }
     }
 
+    /// Every answer for this host: as if another device held the address (`host` "192.0.2.10").
+    func requests(to host: String) -> [URLRequest] { sent.filter { $0.url?.host() == host } }
+
     func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
-        let route = (request.httpMethod ?? "GET") + " " + (request.url?.path(percentEncoded: true) ?? "")
+        let method = request.httpMethod ?? "GET", path = request.url?.path(percentEncoded: true) ?? ""
+        let host = request.url?.host() ?? ""
         let answer = lock.withLock {
             requests.append(request)
-            return answers[route]
+            // `"GET 192.0.2.77/api/health"` for one host, else `"GET /api/health"` for every host.
+            return answers["\(method) \(host)\(path)"] ?? answers["\(method) \(path)"]
         }
-        guard let answer, !answer.fails else { throw URLError(.cannotConnectToHost) }
+        guard let answer else { throw URLError(.cannotConnectToHost) }
+        if let failure = answer.fails { throw URLError(failure) }
         let data = try JSONSerialization.data(withJSONObject: answer.body)
         let response = HTTPURLResponse(url: request.url!, statusCode: answer.status, httpVersion: nil, headerFields: nil)!
         return (data, response)
@@ -85,8 +93,8 @@ enum Flat {
     /// A connection in a defaults suite of its own and an in-memory key.
     static func connection(linked: Bool = true) -> FlatdConnection {
         let defaults = UserDefaults(suiteName: "arestia-tests-" + UUID().uuidString)!
-        let connection = FlatdConnection(defaults: defaults, keychain: MemoryKeys(linked ? key : nil))
-        if linked { connection.save(link: FlatdLink(baseURL: base, serviceName: "flatd")) }
+        let connection = FlatdConnection(defaults: defaults, keychain: MemoryKeys())
+        if linked { try? connection.save(FlatdPairing(link: FlatdLink(baseURL: base, serviceName: "flatd"), token: key)) }
         return connection
     }
 

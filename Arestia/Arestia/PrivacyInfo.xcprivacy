@@ -22,7 +22,7 @@
 				     appearance; Model/ConnectModel.swift: whether iOS asked about the local network yet). -->
 				<string>CA92.1</string>
 				<!-- 1C8F.1: Arestia's App Group, shared with its Control Center controls (ArestiaShared/FlatdConnection.swift:
-				     flatd's address and the devices' names as last seen; Shared/Language/WidgetLanguage.swift: the app's
+				     the devices' names as last seen; Shared/Language/WidgetLanguage.swift: the app's
 				     language for the controls). -->
 				<string>1C8F.1</string>
 			</array>

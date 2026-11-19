@@ -441,6 +441,16 @@
         }
       }
     },
+    "The flat service didn't answer in time. It may still have done it." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Wohnungsdienst hat nicht rechtzeitig geantwortet. Vielleicht hat er es trotzdem ausgeführt."
+          }
+        }
+      }
+    },
     "The flat service doesn't know this any more." : {
       "localizations" : {
         "de" : {

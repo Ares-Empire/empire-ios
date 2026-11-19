@@ -2,12 +2,18 @@ import Foundation
 import Security
 
 /// Where flatd is: its address, and the Bonjour name it was found under (so the app and its controls can find it again
-/// when the Mac's address changes). Kept in Arestia's App Group, shared with the Control Center controls; the key is in
-/// the Keychain, never here.
+/// when the Mac's address changes).
 nonisolated struct FlatdLink: Codable, Equatable, Sendable {
     var baseURL: URL
     /// The Bonjour service's name (`_flatd._tcp`), nil for an address typed or scanned by hand.
     var serviceName: String?
+}
+
+/// One pairing: where flatd is and its key, kept together as one Keychain item, so the app and its controls never
+/// read one pairing's address with another's key (Codex's review, 2026-11-19).
+nonisolated struct FlatdPairing: Codable, Equatable, Sendable {
+    var link: FlatdLink
+    var token: String
 }
 
 /// What Arestia shares between the app and its Control Center extension: the App Group's defaults and the Keychain
@@ -79,44 +85,52 @@ nonisolated struct FlatdKeychainError: Error {
     let status: OSStatus
 }
 
-/// The saved connection: the link in the App Group, the key in the Keychain.
+/// The saved connection: the pairing (address and key) as one Keychain item, the devices' names in the App Group.
 nonisolated struct FlatdConnection: @unchecked Sendable {
     /// Thread-safe (`UserDefaults` is), hence the unchecked Sendable.
     let defaults: UserDefaults?
     let keychain: any FlatdKeyStore
 
-    static let linkKey = "flatd.link"
     /// The devices' ids, kinds and names as last seen, for Shortcuts' pickers while flatd is out of reach.
     static let devicesKey = "flatd.devices"
 
     static var live: FlatdConnection {
         FlatdConnection(defaults: ArestiaGroup.defaults,
-                        keychain: FlatdKeychain(service: "de.ares-empire.arestia.flatd", account: "flatd-key",
+                        keychain: FlatdKeychain(service: "de.ares-empire.arestia.flatd", account: "flatd-pairing",
                                                 accessGroup: ArestiaGroup.keychainAccessGroup))
     }
 
-    var link: FlatdLink? {
-        defaults?.data(forKey: Self.linkKey).flatMap { try? JSONDecoder().decode(FlatdLink.self, from: $0) }
+    /// The pairing as saved; nil without one (or when the item cannot be read).
+    var pairing: FlatdPairing? {
+        guard let text = (try? keychain.read()) ?? nil else { return nil }
+        return try? JSONDecoder().decode(FlatdPairing.self, from: Data(text.utf8))
     }
 
-    func save(link: FlatdLink) {
-        defaults?.set(try? JSONEncoder().encode(link), forKey: Self.linkKey)
+    var link: FlatdLink? { pairing?.link }
+    var token: String? { pairing?.token }
+
+    func save(_ pairing: FlatdPairing) throws {
+        let data = try JSONEncoder().encode(pairing)
+        try keychain.save(String(decoding: data, as: UTF8.self))
     }
 
-    var token: String? { (try? keychain.read()) ?? nil }
-
-    func save(token: String) throws { try keychain.save(token) }
+    /// A new address for the same pairing (flatd found again over Bonjour). Kept only while the saved pairing still has
+    /// this key, so a late lookup never changes a newer pairing.
+    func move(to baseURL: URL, keyedBy token: String) {
+        guard var current = pairing, current.token == token, current.link.baseURL != baseURL else { return }
+        current.link.baseURL = baseURL
+        try? save(current)
+    }
 
     /// Both, when they are there.
     var client: FlatdClient? {
-        guard let link, let token, !token.isEmpty else { return nil }
-        return FlatdClient(baseURL: link.baseURL, token: token)
+        guard let pairing, !pairing.token.isEmpty else { return nil }
+        return FlatdClient(baseURL: pairing.link.baseURL, token: pairing.token)
     }
 
     /// Forgets the connection (Settings → Disconnect).
     func forget() {
         try? keychain.delete()
-        defaults?.removeObject(forKey: Self.linkKey)
         defaults?.removeObject(forKey: Self.devicesKey)
     }
 

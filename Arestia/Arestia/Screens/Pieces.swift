@@ -212,7 +212,10 @@ struct BlindWindow: View {
     /// While dragging: the new position; at the end: send it.
     let onDrag: (Int) -> Void
     let onRelease: (Int) -> Void
+    /// The gesture ended without a release (iOS took it over): flatd's position again.
+    let onCancel: () -> Void
     @State private var start: Int?
+    @GestureState private var touching = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     static let size = CGSize(width: 58, height: 78)
@@ -258,6 +261,7 @@ struct BlindWindow: View {
             .contentShape(shape)
             .gesture(
                 DragGesture(minimumDistance: 3)
+                    .updating($touching) { _, touching, _ in touching = true }
                     .onChanged { value in
                         let from = start ?? (position ?? 0)
                         if start == nil { start = from }
@@ -269,6 +273,16 @@ struct BlindWindow: View {
                         onRelease(Self.position(from: from, drag: value.translation.height, height: inner.height))
                     }
             )
+        }
+        .onChange(of: touching) { _, isTouching in
+            guard !isTouching else { return }
+            // After a normal release `onEnded` has cleared `start` by the next turn; still set means it was cancelled.
+            Task { @MainActor in
+                if start != nil {
+                    start = nil
+                    onCancel()
+                }
+            }
         }
         .frame(width: Self.size.width, height: Self.size.height)
         .background(shape.fill(Ink.field))

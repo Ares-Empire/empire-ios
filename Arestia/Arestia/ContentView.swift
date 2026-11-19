@@ -41,6 +41,8 @@ struct ContentView: View {
             }
         }
         .task { if follows { store.start() } }
+        // A language switch builds the app anew with a new store: this one stops following (Codex's review, 2026-11-19).
+        .onDisappear { store.stop() }
         .onChange(of: scenePhase) { _, phase in
             guard follows else { return }
             switch phase {
@@ -141,10 +143,11 @@ enum DebugConnection {
         let service = arguments.firstIndex(of: "-flatdService").flatMap {
             arguments.indices.contains($0 + 1) ? arguments[$0 + 1] : nil
         }
-        connection.save(link: FlatdLink(baseURL: url, serviceName: service))
-        if let tokenIndex = arguments.firstIndex(of: "-flatdToken"), arguments.indices.contains(tokenIndex + 1) {
-            try? connection.save(token: arguments[tokenIndex + 1])
+        guard let tokenIndex = arguments.firstIndex(of: "-flatdToken"), arguments.indices.contains(tokenIndex + 1) else {
+            return
         }
+        try? connection.save(FlatdPairing(link: FlatdLink(baseURL: url, serviceName: service),
+                                          token: arguments[tokenIndex + 1]))
     }
 }
 #endif

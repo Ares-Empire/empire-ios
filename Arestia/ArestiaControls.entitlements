@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<!-- Arestia's own App Group (the saved flatd address, the app's language) and Keychain group (flatd's key), shared with
+<!-- Arestia's own App Group (the devices' names, the app's language) and Keychain group (the pairing: flatd's address and key), shared with
      the app. Not the Empire's shared groups: Arestia has no Ares account (docs/ARESTIA-APP.md). Needs the paid team on
      a device; the simulator embeds them as simulated entitlements. -->
 <plist version="1.0">

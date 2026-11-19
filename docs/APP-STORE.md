@@ -23,7 +23,7 @@ filled the placeholders.
   | Aresus | Email Address, Name, User ID, Device ID, Customer Support | UserDefaults `CA92.1`, `1C8F.1` |
   | Aresus widget | User ID (fetches with the shared login) | UserDefaults `1C8F.1` (the app's language) |
   | Arestoteles | Email Address, Name, User ID, Other User Content, Customer Support | UserDefaults `CA92.1`, `1C8F.1` |
-  | Arestia | Email Address, Name, Customer Support (only from Contact & support; Arestia has no account, `docs/ARESTIA-APP.md`) | UserDefaults `CA92.1` (language, appearance, local network asked), `1C8F.1` (its own App Group: flatd's address, device names, language) |
+  | Arestia | Email Address, Name, Customer Support (only from Contact & support; Arestia has no account, `docs/ARESTIA-APP.md`) | UserDefaults `CA92.1` (language, appearance, local network asked), `1C8F.1` (its own App Group: device names, language) |
   | Arestia controls | none (Control Center; they talk only to flatd on the home network) | UserDefaults `1C8F.1` |
 
   To check again after a change (no boot time, disk space or keyboards are used today; file timestamps only in Aresium):

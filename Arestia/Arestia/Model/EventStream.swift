@@ -13,6 +13,8 @@ protocol FlatEventSource: Sendable {
 /// 20 s and a missing pong ends the stream.
 nonisolated struct WebSocketEvents: FlatEventSource {
     static let pingEvery: Duration = .seconds(20)
+    /// flatd sends its snapshot at once; a stream without one this long is not flatd's (or flatd is stuck): it ends.
+    static let snapshotWithin: Duration = .seconds(10)
     private static let log = Logger(subsystem: "de.ares-empire.arestia", category: "events")
 
     func events(from url: URL) -> AsyncThrowingStream<FlatEvent, Error> {
@@ -27,17 +29,18 @@ nonisolated struct WebSocketEvents: FlatEventSource {
             task.resume()
             Self.log.notice("events: connecting")
 
+            let snapshotSeen = OSAllocatedUnfairLock(initialState: false)
             let reader = Task {
                 do {
                     while !Task.isCancelled {
                         let message = try await task.receive()
-                        Self.log.debug("events: a message")
                         let data: Data? = switch message {
                         case let .data(data): data
                         case let .string(text): Data(text.utf8)
                         @unknown default: nil
                         }
                         if let data, let event = FlatEvent.decode(data) {
+                            if case .snapshot = event { snapshotSeen.withLock { $0 = true } }
                             continuation.yield(event)
                         } else {
                             Self.log.error("an event did not decode (\(data?.count ?? 0, privacy: .public) bytes)")
@@ -48,6 +51,13 @@ nonisolated struct WebSocketEvents: FlatEventSource {
                     Self.log.notice("events ended (\(status ?? 0, privacy: .public))")
                     continuation.finish(throwing: status == 401 ? FlatdError.refused : FlatdError.unreachable)
                 }
+            }
+            let deadline = Task {
+                try? await Task.sleep(for: Self.snapshotWithin)
+                guard !Task.isCancelled, !snapshotSeen.withLock({ $0 }) else { return }
+                Self.log.notice("no snapshot in time: the stream ends")
+                task.cancel(with: .goingAway, reason: nil)
+                continuation.finish(throwing: FlatdError.unreachable)
             }
             let pinger = Task {
                 while !Task.isCancelled {
@@ -64,6 +74,7 @@ nonisolated struct WebSocketEvents: FlatEventSource {
             }
             continuation.onTermination = { _ in
                 reader.cancel()
+                deadline.cancel()
                 pinger.cancel()
                 task.cancel(with: .normalClosure, reason: nil)
                 session.invalidateAndCancel()

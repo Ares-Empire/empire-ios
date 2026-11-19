@@ -20,7 +20,7 @@ struct FlatScreen: View {
                 if store.link != .notSetUp {
                     // The safe area's bottom here is the tab bar and the home indicator; the page sees only the latter.
                     FlatWebView(store: store, page: page, coveredBottom: proxy.safeAreaInsets.bottom,
-                                load: page.wanted ? page.loads : nil)
+                                load: page.wanted ? "\(page.loads)-\(store.pairingGeneration)" : nil)
                         .ignoresSafeArea()
                         .opacity(page.isReady ? 1 : 0)
                         .animation(.easeOut(duration: 0.3), value: page.isReady)
@@ -76,8 +76,9 @@ private struct FlatWebView: UIViewRepresentable {
     let page: FlatPage
     /// How much of the screen's bottom the app's bars and the home indicator cover.
     let coveredBottom: CGFloat
-    /// Which load the page should show (nil: not yet, the tab was never opened); a new number loads it again.
-    let load: Int?
+    /// Which load the page should show (nil: not yet, the tab was never opened): a new value loads it again (Try
+    /// again, or a new pairing: a page of the old flatd never stays).
+    let load: String?
     @Environment(\.colorScheme) private var scheme
     @AppStorage(PageScript.alwaysDaylightKey) private var alwaysDaylight = false
 
@@ -134,7 +135,9 @@ private struct FlatWebView: UIViewRepresentable {
         var dark = true
         var coveredBottom: CGFloat = 0
         var alwaysDaylight = false
-        private(set) var loadedCount: Int?
+        private(set) var loadedCount: String?
+        /// Ends a load whose page never says `ready` (it failed while starting): the calm card with Try again.
+        private var readyDeadline: Task<Void, Never>?
         private var listener: UUID?
         private var lastConnection: FlatStore.Link?
         private var pageOrigin: URL?
@@ -145,12 +148,13 @@ private struct FlatWebView: UIViewRepresentable {
             self.page = page
         }
 
-        /// Loads flatd's viewer page with the key (the page loads nothing else).
-        func load(_ count: Int? = nil) {
+        /// Loads flatd's viewer page with the key (the page loads nothing else). The old page's subscription ends first.
+        func load(_ count: String? = nil) {
             if let count { loadedCount = count }
-            guard let link = store.connection.link, let token = store.connection.token else { return }
-            let client = FlatdClient(baseURL: link.baseURL, token: token)
-            pageOrigin = link.baseURL
+            stopListening()
+            readyDeadline?.cancel()
+            guard let client = store.connection.client else { return }
+            pageOrigin = client.baseURL
             page.isReady = false
             page.problem = nil
             webView?.load(client.viewerRequest)
@@ -159,14 +163,18 @@ private struct FlatWebView: UIViewRepresentable {
         func stopListening() {
             if let listener { store.unlisten(listener) }
             listener = nil
+            lastConnection = nil
         }
 
         // MARK: page → app
 
         func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
-            guard message.frameInfo.isMainFrame, let parsed = PageMessage.parse(message.body) else { return }
+            // Only flatd's own page, in the main frame, may speak to the app.
+            guard message.frameInfo.isMainFrame, isFlatd(message.frameInfo.securityOrigin),
+                  let parsed = PageMessage.parse(message.body) else { return }
             switch parsed {
             case .ready:
+                readyDeadline?.cancel()
                 page.isReady = true
                 page.problem = nil
                 sendConfig()
@@ -189,6 +197,8 @@ private struct FlatWebView: UIViewRepresentable {
                     let error = await store.pageMode(id, body: body)
                     send(PageScript.result(reqId: reqId, error: error))
                 }
+            case let .invalid(reqId):
+                send(PageScript.result(reqId: reqId, error: .failed(status: 400, message: nil)))
             case let .haptic(style):
                 switch style {
                 case "success": UINotificationFeedbackGenerator().notificationOccurred(.success)
@@ -256,6 +266,13 @@ private struct FlatWebView: UIViewRepresentable {
             }
         }
 
+        /// The page's origin is flatd's address (scheme, host and port).
+        private func isFlatd(_ origin: WKSecurityOrigin) -> Bool {
+            guard let base = pageOrigin else { return false }
+            return origin.protocol == base.scheme && origin.host == base.host()
+                && origin.port == (base.port ?? (base.scheme == "https" ? 443 : 80))
+        }
+
         // MARK: navigation: only flatd's own page
 
         func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction) async -> WKNavigationActionPolicy {
@@ -274,6 +291,16 @@ private struct FlatWebView: UIViewRepresentable {
                 return .cancel
             }
             return .allow
+        }
+
+        /// The page arrived: it says `ready` within half a minute (before it lights the model), or it failed to start.
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            readyDeadline?.cancel()
+            readyDeadline = Task { [weak self] in
+                try? await Task.sleep(for: .seconds(30))
+                guard let self, !Task.isCancelled, !page.isReady, page.problem == nil else { return }
+                page.problem = String(localized: "The 3D flat didn't start.")
+            }
         }
 
         func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {

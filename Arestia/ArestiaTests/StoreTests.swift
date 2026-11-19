@@ -32,7 +32,10 @@ struct StoreTests {
         #expect(store.cooking?.active == false)
         #expect(store.hasSnapshot)
         #expect(events.urls.first?.query == "token=\(Flat.key)")
-        #expect(transport.sent.first?.value(forHTTPHeaderField: "Authorization") == "Bearer \(Flat.key)")
+        // First the keyless health check, then the key.
+        #expect(transport.sent.first?.url?.path() == "/api/health")
+        #expect(transport.sent.first?.value(forHTTPHeaderField: "Authorization") == nil)
+        #expect(transport.sent.dropFirst().first?.value(forHTTPHeaderField: "Authorization") == "Bearer \(Flat.key)")
         #expect(store.connection.knownDevices.count == 4)
         store.stop()
     }

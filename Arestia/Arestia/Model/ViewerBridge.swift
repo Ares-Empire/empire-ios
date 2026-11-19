@@ -16,6 +16,8 @@ enum PageMessage: Equatable {
     case haptic(String)
     /// An uncaught error in the page.
     case log(String)
+    /// A request or mode change that names its `reqId` but nothing usable: answered with one failed result.
+    case invalid(reqId: String)
     case other
 
     /// Reads WebKit's message body (a dictionary of Foundation objects).
@@ -25,9 +27,10 @@ enum PageMessage: Equatable {
         case "ready":
             return .ready
         case "request", "mode":
-            guard let reqId = message["reqId"] as? String, let id = message["id"] as? String,
+            guard let reqId = message["reqId"] as? String else { return nil }
+            guard let id = message["id"] as? String, !id.isEmpty,
                   let payload = message["body"] as? [String: Any], JSONSerialization.isValidJSONObject(payload),
-                  let body = try? JSONSerialization.data(withJSONObject: payload) else { return nil }
+                  let body = try? JSONSerialization.data(withJSONObject: payload) else { return .invalid(reqId: reqId) }
             return type == "request" ? .request(reqId: reqId, id: id, body: body) : .mode(reqId: reqId, id: id, body: body)
         case "haptic":
             return .haptic(message["style"] as? String ?? "light")
@@ -64,7 +67,7 @@ enum PageScript {
     static func errorWord(_ error: FlatdError) -> String {
         switch error {
         case .unreachable: "offline"
-        case .deviceDidNotAnswer: "timeout"
+        case .deviceDidNotAnswer, .noAnswer: "timeout"
         case .refused: "unauthorized"
         case .unknown: "unknown"
         case .notPossible: "refused"

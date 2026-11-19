@@ -1015,6 +1015,16 @@
         }
       }
     },
+    "The 3D flat didn't start." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die 3D-Wohnung ist nicht gestartet."
+          }
+        }
+      }
+    },
     "The 3D flat isn't here right now" : {
       "localizations" : {
         "de" : {

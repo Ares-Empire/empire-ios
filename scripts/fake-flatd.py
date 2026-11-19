@@ -16,7 +16,8 @@ Lamp 1. Mode `cooking` (both fans on and Blind 1 up; ended: fans off, Blind 1 to
 fans for 30 min, Blind 1 up) and `all_down`. Blinds travel 100 % in `--travel` seconds and report every second.
 
 For a page that is not public (the real 3D viewer), `--viewer <file>` serves it at /viewer and `--devices <file>` gives
-the devices that page knows; both stay local files, never in this repo.
+the devices that page knows; both stay local files, never in this repo. With either, the fake listens on 127.0.0.1 only,
+without Bonjour, and makes up a fresh key (printed) unless --host and --key say otherwise.
 
 Test hooks (with the key, like everything else): POST /fake/press?id=<rollo>&command=up|down (a wall switch, source
 `device`), POST /fake/switch?id=<fan>&on=1|0 (the plug's own button), POST /fake/online?id=<id>&online=0|1,
@@ -30,6 +31,7 @@ import base64
 import datetime as dt
 import hashlib
 import json
+import secrets
 import signal
 import socket
 import struct
@@ -552,8 +554,9 @@ post({type:'ready', devices:['fan:fan_1','fan:fan_2','rollo:blind_1','rollo:blin
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--port", type=int, default=8790)
-    parser.add_argument("--host", default="0.0.0.0")
-    parser.add_argument("--key", default=DEFAULT_KEY, help="the key the app must send (made up, for tests only)")
+    parser.add_argument("--host", help="where to listen (default 0.0.0.0; 127.0.0.1 with --viewer or --devices)")
+    parser.add_argument("--key", help="the key the app must send (default: a made-up fixed one; a fresh random one "
+                                      "with --viewer or --devices)")
     parser.add_argument("--name", default="flatd (fake)", help="the Bonjour instance name")
     parser.add_argument("--no-bonjour", action="store_true")
     parser.add_argument("--travel", type=float, default=20, help="seconds a blind takes from open to closed")
@@ -567,6 +570,15 @@ def main() -> None:
     if args.port == 8787:
         sys.exit("8787 is the real flatd's port; pick another one.")
 
+    private = bool(args.viewer or args.devices)
+    # Local private files stay on this Mac: only loopback, no Bonjour, and a key nobody else knows (the simulator reaches
+    # 127.0.0.1). Opening them to the network takes an explicit --host.
+    if args.host is None:
+        args.host = "127.0.0.1" if private else "0.0.0.0"
+    if args.key is None:
+        args.key = secrets.token_hex(16) if private else DEFAULT_KEY
+    if private and args.host == "127.0.0.1":
+        args.no_bonjour = True
     devices = json.loads(open(args.devices).read()) if args.devices else None
     viewer = open(args.viewer, "rb").read() if args.viewer else VIEWER.encode()
     flat = Flat(travel=args.travel, extra=args.extra, devices=devices)

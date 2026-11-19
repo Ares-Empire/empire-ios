@@ -929,8 +929,8 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   flat stay private, outside every repo; nothing of the flat is in this one: devices, names, modes and the 3D page come
   from flatd at runtime). **No Ares account** (Patrik: "no account needed, just me"): `EmpireAppIdentity.arestia`
   (`hasAccount` false, not in `all`), no login, no account section in Settings, the contact form without a login; its
-  own App Group `group.de.ares-empire.arestia` and Keychain group `de.ares-empire.arestia` (flatd's address; flatd's
-  key, readable after the first unlock), shared with **`ArestiaControlsExtension`** (`Arestia/ArestiaControls/`,
+  own App Group `group.de.ares-empire.arestia` and Keychain group `de.ares-empire.arestia` (device names, language;
+  the pairing, flatd's address and key as one item, readable after the first unlock), shared with **`ArestiaControlsExtension`** (`Arestia/ArestiaControls/`,
   `de.ares-empire.arestia.controls`: Control Center's Cooking, Fans and Blind controls). `Arestia/ArestiaShared/` is
   compiled into both: the contract's types (`FlatdModels`, read leniently, states merged key by key), `FlatdClient`
   (every call but health with the Bearer key; 401 refused, 404 unknown, 409 not possible, 504 no answer from the

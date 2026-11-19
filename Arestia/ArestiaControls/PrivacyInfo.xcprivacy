@@ -18,8 +18,7 @@
 			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
 			<key>NSPrivacyAccessedAPITypeReasons</key>
 			<array>
-				<!-- 1C8F.1: the App Group it shares with the app (ArestiaShared/FlatdConnection.swift: flatd's address and
-				     the devices' names; Shared/Language/WidgetLanguage.swift: the app's language). -->
+				<!-- 1C8F.1: the App Group it shares with the app (ArestiaShared/FlatdConnection.swift: the devices' names; Shared/Language/WidgetLanguage.swift: the app's language). -->
 				<string>1C8F.1</string>
 			</array>
 		</dict>

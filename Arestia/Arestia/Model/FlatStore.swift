@@ -12,6 +12,12 @@ import os
 ///   brings the same a moment later). Nothing is shown as done before flatd said so, except a blind's target while it
 ///   is dragged.
 /// - Not reachable (the Mac asleep, away from home): the last state stays on screen, marked as not live; no alerts.
+/// - The key goes only to an address that answered like flatd (`FlatdClient.verify`).
+///
+/// One loop follows flatd at a time: each has its own generation and failure count, and after every wait it checks it
+/// is still the store's loop before it changes anything (Codex's review, 2026-11-19: a Try again during a Bonjour
+/// lookup used to leave the old loop running on a reset count). Every command remembers the pairing it was sent with,
+/// so a late answer after connecting again changes nothing.
 @MainActor @Observable
 final class FlatStore {
     enum Link: Equatable {
@@ -32,10 +38,12 @@ final class FlatStore {
     private(set) var scenes: [FlatScene] = []
     /// When the stream last delivered something (for "last seen 18:40" while not live).
     private(set) var lastSeen: Date?
-    /// Requests on their way, by what they change ("fan:…", "mode:cooking", "scene:air_out").
+    /// Requests on their way, by what they change ("power:fan:…", "mode:cooking", "scene:air_out").
     private(set) var working: Set<String> = []
-    /// A blind's position while a finger drags it, before flatd has it.
+    /// A blind's position while a finger drags it, until flatd has it.
     private(set) var dragging: [String: Int] = [:]
+    /// Counts up whenever the pairing changes (connect, disconnect): the 3D page loads again, late answers are dropped.
+    private(set) var pairingGeneration = 0
     /// The line at the bottom: what could not be done, or "Cooking ended · Undo".
     var offer: UndoOffer?
 
@@ -45,12 +53,17 @@ final class FlatStore {
     private let rediscover: @Sendable (String) async -> URL?
     private let reloadControls: @MainActor () -> Void
     private var loop: Task<Void, Never>?
-    private var failures = 0
-    /// Who hears every change as flatd describes it (the 3D page, `FlatViewerBridge`).
+    /// Which loop may change the store (`run`); a stopped or replaced loop finds it changed and ends.
+    private var loopGeneration = 0
+    /// Who hears every change as flatd describes it (the 3D page, `FlatScreen`'s bridge).
     private var listeners: [UUID: @MainActor (FlatEvent) -> Void] = [:]
     private static let log = Logger(subsystem: "de.ares-empire.arestia", category: "store")
     /// Pauses between attempts to reach flatd again (the last one repeats).
     static let backoff: [Duration] = [.seconds(1), .seconds(2), .seconds(4), .seconds(8), .seconds(15), .seconds(30)]
+
+    static func pause(after failures: Int) -> Duration {
+        backoff[min(max(failures, 1), backoff.count) - 1]
+    }
 
     init(connection: FlatdConnection, transport: any HTTPTransport & Sendable = URLSessionTransport(),
          eventSource: any FlatEventSource = WebSocketEvents(),
@@ -84,16 +97,19 @@ final class FlatStore {
     /// Starts following flatd (at launch and back in the foreground). Does nothing while it already does or without a key.
     func start() {
         guard loop == nil else { return }
-        guard connection.client != nil else {
+        guard let pairing = connection.pairing else {
             link = .notSetUp
             return
         }
-        if link != .live { link = hasSnapshot ? link : .connecting }
-        loop = Task { [weak self] in await self?.run() }
+        if link != .live, !hasSnapshot { link = .connecting }
+        loopGeneration += 1
+        let generation = loopGeneration
+        loop = Task { [weak self] in await self?.run(generation: generation, pairing: pairing) }
     }
 
-    /// Stops following (the app went to the background; the stream would be cut anyway).
+    /// Stops following (the app went to the background, the screen went away, the pairing changed).
     func stop() {
+        loopGeneration += 1
         loop?.cancel()
         loop = nil
     }
@@ -101,62 +117,60 @@ final class FlatStore {
     /// Try again now (pull to refresh, the offline card's button).
     func retry() {
         stop()
-        failures = 0
         if link == .offline || link == .refused { link = .connecting }
         start()
     }
 
-    private func client() -> FlatdClient? {
-        guard let link = connection.link, let token = connection.token, !token.isEmpty else { return nil }
-        return FlatdClient(baseURL: link.baseURL, token: token, transport: transport)
-    }
+    /// Whether the loop of `generation` may still change the store.
+    private func owns(_ generation: Int) -> Bool { generation == loopGeneration && !Task.isCancelled }
 
-    private func run() async {
-        while !Task.isCancelled {
-            guard let client = client() else {
-                link = .notSetUp
-                loop = nil
-                return
-            }
+    private func run(generation: Int, pairing: FlatdPairing) async {
+        var failures = 0
+        var base = pairing.link.baseURL
+        while owns(generation) {
+            let client = FlatdClient(baseURL: base, token: pairing.token, transport: transport)
             do {
-                try await follow(client)
+                try await follow(client, generation: generation) { failures = 0 }
             } catch FlatdError.refused {
+                guard owns(generation) else { return }
                 Self.log.notice("flatd refused the key")
                 link = .refused
-                loop = nil
-                return
-            } catch is CancellationError {
+                stop()
                 return
             } catch {}
-            guard !Task.isCancelled else { return }
+            guard owns(generation) else { return }
             failures += 1
-            // The Mac's address may have changed: after the first miss, look for flatd again under its Bonjour name.
-            if failures >= 2, let name = connection.link?.serviceName, let found = await rediscover(name),
-               found != connection.link?.baseURL {
-                Self.log.notice("flatd found again at a new address")
-                connection.save(link: FlatdLink(baseURL: found, serviceName: name))
-                continue
+            // The Mac's address may have changed: after the second miss, look for flatd again under its Bonjour name.
+            if failures >= 2, let name = pairing.link.serviceName {
+                let found = await rediscover(name)
+                guard owns(generation) else { return }
+                if let found, found != base {
+                    Self.log.notice("flatd may be at a new address")
+                    base = found                     // kept in the pairing only once it answered (in `follow`)
+                    continue
+                }
             }
             // One quick retry before the screen says so: a stream cut while the app was in the background, say.
             if failures >= 2 || !hasSnapshot { link = .offline }
-            let pause = Self.backoff[min(failures - 1, Self.backoff.count - 1)]
-            try? await Task.sleep(for: pause)
+            try? await Task.sleep(for: Self.pause(after: failures))
         }
     }
 
-    /// Scenes over HTTP (also telling a refused key apart at once), then the event stream until it ends.
-    private func follow(_ client: FlatdClient) async throws {
-        do {
-            scenes = try await client.scenes()
-        } catch FlatdError.unknown {
-            scenes = []                         // a flatd without scenes
-        }
+    /// The address checked, scenes over HTTP (also telling a refused key apart at once), then the event stream until it
+    /// ends. A first snapshot resets the failures and, at a new address, keeps it in the pairing.
+    private func follow(_ client: FlatdClient, generation: Int, live: () -> Void) async throws {
+        try await client.verify()
+        let answered: [FlatScene]
+        do { answered = try await client.scenes() } catch FlatdError.unknown { answered = [] }   // a flatd without scenes
+        guard owns(generation) else { return }
+        scenes = answered
         for try await event in eventSource.events(from: client.eventsURL) {
-            Self.log.debug("store: an event")
+            guard owns(generation) else { return }
             apply(event)
             if case .snapshot = event {
-                failures = 0
+                live()
                 link = .live
+                connection.move(to: client.baseURL, keyedBy: client.token)
             }
         }
         throw FlatdError.unreachable            // the stream ended: reconnect
@@ -179,25 +193,32 @@ final class FlatStore {
     /// The whole state now, as a snapshot event (for a listener that starts, or the page after it loaded).
     var snapshot: FlatEvent { .snapshot(devices: devices, modes: modes) }
 
-    /// One event of the stream (also called by the tests).
+    /// One event of the stream (also called by the tests). Listeners hear it once; a snapshot as the whole state (a
+    /// snapshot without modes keeps the modes known).
     func apply(_ event: FlatEvent, at now: Date = .now) {
         let before = controlState
         switch event {
         case let .snapshot(devices, modes):
             self.devices = devices
             if let modes { self.modes = modes }
+            dragging = [:]
             connection.remember(devices)
+            lastSeen = now
+            tell(snapshot)
         case let .state(id, patch, _):
             guard let index = devices.firstIndex(where: { $0.id == id }) else { return }
             devices[index].state = devices[index].state.merging(patch)
-            if dragging[id] != nil, patch.fields["target"] != nil || patch.fields["moving"] != nil { dragging[id] = nil }
+            if dragging[id] != nil, patch.fields["target"] != nil || patch.fields["moving"] != nil
+                || patch.fields["position"] != nil { dragging[id] = nil }
+            lastSeen = now
+            tell(event)
         case let .mode(mode):
-            take(mode)
+            store(mode)
+            lastSeen = now
+            tell(event)
         case .other:
             return
         }
-        lastSeen = now
-        tell(event)
         if controlState != before { reloadControls() }
     }
 
@@ -207,20 +228,28 @@ final class FlatStore {
             + rollos.map { $0.id + String(RolloOpenness.isOpen($0.state)) }
     }
 
-    /// A device as a command's answer brought it (the stream brings the same a moment later).
+    /// A device as a command's answer brought it. An answer older than what the stream already brought is left out.
     private func take(_ device: Device) {
-        let before = controlState
         guard let index = devices.firstIndex(where: { $0.id == device.id }) else { return }
+        if let incoming = device.state.updatedAt, let current = devices[index].state.updatedAt, incoming < current {
+            return
+        }
+        let before = controlState
         devices[index].state = devices[index].state.merging(device.state)
         tell(.state(id: device.id, state: device.state, source: "api"))
         if controlState != before { reloadControls() }
     }
 
+    /// A mode as a command's answer brought it.
     private func take(_ mode: FlatMode) {
         let before = controlState
-        if let index = modes.firstIndex(where: { $0.id == mode.id }) { modes[index] = mode } else { modes.append(mode) }
+        store(mode)
         tell(.mode(mode))
         if controlState != before { reloadControls() }
+    }
+
+    private func store(_ mode: FlatMode) {
+        if let index = modes.firstIndex(where: { $0.id == mode.id }) { modes[index] = mode } else { modes.append(mode) }
     }
 
     /// "Didn't answer: Fan 2." for the devices a mode or scene could not reach; nil when all followed.
@@ -232,17 +261,22 @@ final class FlatStore {
 
     // MARK: connecting
 
-    /// Checks the address and key with flatd (`GET /api/devices`) and keeps them when it answers. Returns why not.
+    /// Checks the address and key with flatd (`GET /api/devices`, once it answered like flatd) and keeps them when it
+    /// answers. Returns why not.
     func connect(to baseURL: URL, serviceName: String?, token: String) async -> FlatdError? {
         let candidate = FlatdClient(baseURL: baseURL, token: token, transport: transport)
         do {
+            try await candidate.verify()
             let found = try await candidate.devices()
-            try connection.save(token: token)
-            connection.save(link: FlatdLink(baseURL: baseURL, serviceName: serviceName))
+            try connection.save(FlatdPairing(link: FlatdLink(baseURL: baseURL, serviceName: serviceName), token: token))
             stop()
+            pairingGeneration += 1
             devices = found
+            modes = []
+            scenes = []
+            dragging = [:]
+            working = []
             connection.remember(found)
-            failures = 0
             link = .connecting
             start()
             reloadControls()
@@ -257,10 +291,13 @@ final class FlatStore {
     /// Forgets the address and the key (Settings → Disconnect).
     func disconnect() {
         stop()
+        pairingGeneration += 1
         connection.forget()
         devices = []
         modes = []
         scenes = []
+        dragging = [:]
+        working = []
         lastSeen = nil
         link = .notSetUp
         reloadControls()
@@ -271,7 +308,8 @@ final class FlatStore {
     /// A fan on (for `minutes`, nil: until off) or off.
     func setFan(_ id: String, on: Bool, minutes: Int? = nil) {
         send("power:" + id) { client in
-            let device = try await client.send(.power(on: on, seconds: minutes.map { $0 * 60 }), to: id)
+            try await client.send(.power(on: on, seconds: minutes.map { $0 * 60 }), to: id)
+        } done: { device in
             self.take(device)
         }
     }
@@ -279,7 +317,9 @@ final class FlatStore {
     func moveRollo(_ id: String, _ command: RolloCommand) {
         dragging[id] = nil
         send("rollo:" + id, blocking: false) { client in
-            self.take(try await client.send(.rollo(command), to: id))
+            try await client.send(.rollo(command), to: id)
+        } done: { device in
+            self.take(device)
         }
     }
 
@@ -288,13 +328,21 @@ final class FlatStore {
         dragging[id] = min(100, max(0, position))
     }
 
+    /// The finger left without letting go on the blind (the gesture was cancelled): flatd's position again.
+    func endDrag(_ id: String) {
+        dragging[id] = nil
+    }
+
     func setRollo(_ id: String, position: Int) {
         let position = min(100, max(0, position))
         dragging[id] = position
         send("rollo:" + id, blocking: false) { client in
-            self.take(try await client.send(.position(position), to: id))
+            try await client.send(.position(position), to: id)
+        } done: { device in
+            self.take(device)
+            if self.dragging[id] == position { self.dragging[id] = nil }   // flatd has it now (moving, target)
         } failed: {
-            self.dragging[id] = nil
+            if self.dragging[id] == position { self.dragging[id] = nil }
         }
     }
 
@@ -302,7 +350,9 @@ final class FlatStore {
     /// are named (flatd changes the mode anyway).
     func setMode(_ id: String, active: Bool) {
         send("mode:" + id) { client in
-            let (mode, failed) = try await client.setMode(id, active: active)
+            try await client.setMode(id, active: active)
+        } done: { answer in
+            let (mode, failed) = answer
             self.take(mode)
             if let line = self.failureLine(failed) {
                 self.offer = UndoOffer(message: line)
@@ -316,9 +366,54 @@ final class FlatStore {
 
     func runScene(_ id: String, title: String) {
         send("scene:" + id) { client in
-            let failed = try await client.runScene(id)
+            try await client.runScene(id)
+        } done: { failed in
             self.offer = UndoOffer(message: [FlatWords.sceneDone(title), self.failureLine(failed)]
                 .compactMap { $0 }.joined(separator: " "))
+        }
+    }
+
+    func isWorking(_ key: String) -> Bool { working.contains(key) }
+
+    /// Runs a command: one at a time per thing (`blocking`), the failure as a calm line, a refused key back to the
+    /// connect screen, a lost flatd as a reason to reconnect. An answer that comes after the pairing changed is dropped.
+    private func send<Answer: Sendable>(_ key: String, blocking: Bool = true,
+                                        _ work: @escaping @Sendable (FlatdClient) async throws -> Answer,
+                                        done: @escaping @MainActor (Answer) -> Void,
+                                        failed: @escaping @MainActor () -> Void = {}) {
+        guard let client = currentClient() else { return }
+        if blocking, working.contains(key) { return }
+        let pairing = pairingGeneration
+        working.insert(key)
+        Task {
+            defer { if pairing == pairingGeneration { working.remove(key) } }
+            do {
+                let answer = try await work(client)
+                guard pairing == pairingGeneration else { return }
+                done(answer)
+                reloadControls()
+            } catch let error as FlatdError {
+                guard pairing == pairingGeneration else { return }
+                failed()
+                handle(error)
+            } catch {
+                guard pairing == pairingGeneration else { return }
+                failed()
+            }
+        }
+    }
+
+    /// What a failed command does to the store: a refused key stops it, a lost flatd reconnects, the rest is a line.
+    private func handle(_ error: FlatdError) {
+        switch error {
+        case .refused:
+            link = .refused
+            stop()
+        case .unreachable:
+            offer = UndoOffer(message: error.message())
+            if link == .live { retry() }
+        default:
+            offer = UndoOffer(message: error.message())
         }
     }
 
@@ -326,67 +421,49 @@ final class FlatStore {
 
     /// A device command from the 3D page. The answer's state reaches the page through the listeners.
     func pageRequest(_ id: String, body: Data) async -> FlatdError? {
-        await pageCommand { client in self.take(try await client.send(body: body, to: id)) }
+        guard let client = currentClient() else { return .refused }
+        let pairing = pairingGeneration
+        do {
+            let device = try await client.send(body: body, to: id)
+            guard pairing == pairingGeneration else { return nil }
+            take(device)
+            reloadControls()
+            return nil
+        } catch {
+            return pageFailure(error, pairing: pairing)
+        }
     }
 
     /// A mode change from the 3D page (it only ever ends cooking).
     func pageMode(_ id: String, body: Data) async -> FlatdError? {
-        await pageCommand { client in
-            let (mode, failed) = try await client.setMode(id, body: body)
-            self.take(mode)
-            if let line = self.failureLine(failed) { self.offer = UndoOffer(message: line) }
-        }
-    }
-
-    private func pageCommand(_ work: @MainActor (FlatdClient) async throws -> Void) async -> FlatdError? {
-        guard let client = client() else { return .refused }
+        guard let client = currentClient() else { return .refused }
+        let pairing = pairingGeneration
         do {
-            try await work(client)
+            let (mode, failed) = try await client.setMode(id, body: body)
+            guard pairing == pairingGeneration else { return nil }
+            take(mode)
+            if let line = failureLine(failed) { offer = UndoOffer(message: line) }
             reloadControls()
             return nil
-        } catch let error as FlatdError {
-            if error == .refused {
-                link = .refused
-                stop()
-            } else if error == .unreachable, link == .live {
-                retry()
-            }
-            return error
         } catch {
-            return .unreachable
+            return pageFailure(error, pairing: pairing)
         }
     }
 
-    func isWorking(_ key: String) -> Bool { working.contains(key) }
+    private func currentClient() -> FlatdClient? {
+        connection.client.map { FlatdClient(baseURL: $0.baseURL, token: $0.token, transport: transport) }
+    }
 
-    /// Runs a command: one at a time per thing (`blocking`), the failure as a calm line, a refused key back to the
-    /// connect screen, a missed flatd as a reason to reconnect.
-    private func send(_ key: String, blocking: Bool = true,
-                      _ work: @escaping @MainActor (FlatdClient) async throws -> Void,
-                      failed: @escaping @MainActor () -> Void = {}) {
-        guard let client = client() else { return }
-        if blocking, working.contains(key) { return }
-        working.insert(key)
-        Task {
-            defer { working.remove(key) }
-            do {
-                try await work(client)
-                reloadControls()
-            } catch let error as FlatdError {
-                failed()
-                switch error {
-                case .refused:
-                    link = .refused
-                    stop()
-                case .unreachable:
-                    offer = UndoOffer(message: error.message())
-                    if link == .live { retry() }
-                default:
-                    offer = UndoOffer(message: error.message())
-                }
-            } catch {
-                failed()
-            }
+    /// A page's failed command: the bridge's error, and the store's reaction while the pairing is still the same.
+    private func pageFailure(_ error: Error, pairing: Int) -> FlatdError {
+        let error = error as? FlatdError ?? .unreachable
+        guard pairing == pairingGeneration else { return error }
+        if error == .refused {
+            link = .refused
+            stop()
+        } else if error == .unreachable, link == .live {
+            retry()
         }
+        return error
     }
 }

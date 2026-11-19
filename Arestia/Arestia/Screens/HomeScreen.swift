@@ -348,7 +348,8 @@ private struct BlindRow: View {
         HStack(alignment: .top, spacing: 16) {
             BlindWindow(position: shown, moving: state.moving, target: state.target,
                         onDrag: { store.drag(rollo.id, to: $0) },
-                        onRelease: { store.setRollo(rollo.id, position: $0) })
+                        onRelease: { store.setRollo(rollo.id, position: $0) },
+                        onCancel: { store.endDrag(rollo.id) })
                 .accessibilityElement()
                 .accessibilityLabel(rollo.label)
                 .accessibilityValue(Text(verbatim: FlatWords.rolloStatus(state)))

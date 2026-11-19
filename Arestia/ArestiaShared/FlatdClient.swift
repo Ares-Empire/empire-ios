@@ -3,8 +3,10 @@ import os
 
 /// Why a request to flatd failed, in the terms the app shows (never a raw error).
 nonisolated enum FlatdError: Error, Equatable, Sendable {
-    /// No answer at all: the Mac is asleep, flatd is not running, or the phone is not on the home network.
+    /// No connection at all: the Mac is asleep, flatd is not running, or the phone is not on the home network.
     case unreachable
+    /// Connected, but no answer in time: flatd may still have done it, so a command is never sent again elsewhere.
+    case noAnswer
     /// 401: the key is wrong or flatd has a new one.
     case refused
     /// 404: flatd does not know this device, mode or scene (any more).
@@ -23,6 +25,9 @@ nonisolated enum FlatdError: Error, Equatable, Sendable {
         switch self {
         case .unreachable:
             language.string(LocalizedStringResource("Can't reach the flat. The Mac may be asleep, or you're not at home.",
+                                                    table: "ArestiaShared"))
+        case .noAnswer:
+            language.string(LocalizedStringResource("The flat service didn't answer in time. It may still have done it.",
                                                     table: "ArestiaShared"))
         case .refused:
             language.string(LocalizedStringResource("The flat service refused the key. Enter it again in Settings.",
@@ -57,10 +62,24 @@ nonisolated struct FlatdClient: Sendable {
 
     // MARK: reads
 
+    /// `GET /api/health`, without the key: whether this address answers like flatd (`{"ok": true, "version": …}`).
     func health() async throws -> Bool {
-        let data = try await send(request("api/health", timeout: readTimeout, authorized: false))
-        struct Health: Decodable { let ok: Bool? }
-        return (try? JSONDecoder().decode(Health.self, from: data))?.ok ?? true
+        let data: Data
+        do {
+            data = try await send(request("api/health", timeout: readTimeout, authorized: false))
+        } catch let error as FlatdError where error != .unreachable && error != .noAnswer {
+            return false                         // something answered, but not flatd's health
+        }
+        struct Health: Decodable { let ok: Bool?; let version: String? }
+        guard let health = try? JSONDecoder().decode(Health.self, from: data) else { return false }
+        return health.ok == true && health.version != nil
+    }
+
+    /// Before the key goes to an address: it must answer like flatd. Plain HTTP on the home network cannot prove who
+    /// answers (that needs flatd to prove it knows the key, a contract change), but this keeps the key from a printer or
+    /// a stranger's device that happens to have the saved address on another Wi-Fi. Throws `.unreachable` otherwise.
+    func verify() async throws {
+        guard try await health() else { throw FlatdError.unreachable }
     }
 
     func devices() async throws -> [Device] {
@@ -164,6 +183,8 @@ nonisolated struct FlatdClient: Sendable {
             throw CancellationError()
         } catch let error as URLError where error.code == .cancelled {
             throw CancellationError()
+        } catch let error as URLError where error.code == .timedOut {
+            throw FlatdError.noAnswer
         } catch {
             throw FlatdError.unreachable
         }
