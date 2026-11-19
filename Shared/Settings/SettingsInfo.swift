@@ -54,7 +54,11 @@ nonisolated struct BundledLicence: Identifiable, Hashable, Sendable {
     let licenceName: String     // "BSD-3-Clause"
     let file: String            // the text file's name in the bundle, without ".txt"
     var links: [SourceLink] = []
+    var kind: Kind = .data
     var id: String { name }
+
+    /// Which card the licence is listed in: data the app ships (a list of names, a map's places) or code it runs.
+    enum Kind: Sendable { case data, code }
 
     nonisolated struct SourceLink: Hashable, Sendable {
         let title: String

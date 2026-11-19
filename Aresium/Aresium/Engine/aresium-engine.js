@@ -12969,14 +12969,14 @@ var __AresiumEngine = (() => {
     {
       id: "barclays",
       bank: "Barclays",
-      variant: "Excel export saved as CSV",
+      variant: "Excel export",
       sources: [
         `${GH}firefly-iii/import-configurations/blob/main/de/barclays/Readme.md`,
         `${GH}firefly-iii/import-configurations/blob/main/de/barclays/barclays.json`,
         `${GH}phdorp/firefly-cash-converter/blob/9a0a940f55f512a89da1ec27a368ecae4fbbcf7d/test/data/barclays.xlsx`,
         `${GH}sercxanto/go-homebank-csv/blob/5c20f3ed964ceca073fa832f54406703729399ae/pkg/parser/barclaycard.go`
       ],
-      unconfirmed: 'Barclays (now easybank) offers no CSV, only Excel (.xlsx), which the app cannot read; this reads the Excel file saved as CSV. Which of the two "Buchungsdatum" columns is the purchase day: sources disagree (here the first).',
+      unconfirmed: 'Barclays (now easybank) offers no CSV, only Excel (.xlsx); this reads the .xlsx itself or the file saved as CSV. Which of the two "Buchungsdatum" columns is the purchase day: sources disagree (here the first).',
       separator: [";", ","],
       match: ["Referenznummer", "Buchungsdatum", "Betrag", "Beschreibung", "Typ", "Status", "Kartennummer"],
       dateFormat: "DD.MM.YYYY",

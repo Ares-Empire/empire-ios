@@ -361,7 +361,7 @@ struct ContentView: View {
                 // Brief 215: no sign-in while signed out (an Ares account is only Patrik's, for his server); the "Ares
                 // account" section shows only while a login of the Ares apps exists on this iPhone.
                 SettingsScreen(app: SettingsApp(name: "Aresium", offersSignIn: false,
-                                                licences: [.shopList(), .localPlaces()]),
+                                                licences: [.shopList(), .localPlaces()] + BundledLicence.enginePackages()),
                                session: session, sample: sampleActive, logOut: logOut) {
                     if modes.phone != nil { PhoneSettingsSection(modes: modes, data: phoneData, palette: palette) }
                     // Brief 46: Aresium's own messages (phone mode), after the data they are about, before the Lock.

@@ -468,18 +468,14 @@ struct FontsScreen: View {
                 } else {
                     SettingsSection(String(localized: LocalizedStringResource("Fonts", table: "Shared",
                                                                               locale: .appLanguage))) { fonts }
-                    SettingsSection(String(localized: LocalizedStringResource("Data", table: "Shared",
-                                                                              locale: .appLanguage))) {
-                        ForEach(Array(licences.enumerated()), id: \.element.id) { index, licence in
-                            if index > 0 { SettingsDivider() }
-                            NavigationLink {
-                                LicenceScreen(title: licence.name, text: licence.text(), accent: accent, links: licence.links)
-                            } label: {
-                                row(Text(verbatim: licence.name).font(AppFont.text(15, weight: .medium)),
-                                    detail: "\(licence.purpose) · \(licence.licenceName)")
-                            }
-                            .buttonStyle(SettingsRowStyle())
-                        }
+                    let data = licences.filter { $0.kind == .data }, code = licences.filter { $0.kind == .code }
+                    if !data.isEmpty {
+                        SettingsSection(String(localized: LocalizedStringResource("Data", table: "Shared",
+                                                                                  locale: .appLanguage))) { rows(data) }
+                    }
+                    if !code.isEmpty {
+                        SettingsSection(String(localized: LocalizedStringResource("Code", table: "Shared",
+                                                                                  locale: .appLanguage))) { rows(code) }
                     }
                 }
             }
@@ -500,6 +496,20 @@ struct FontsScreen: View {
             }
         }
         #endif
+    }
+
+    /// One card's licences, each opening its text.
+    @ViewBuilder private func rows(_ licences: [BundledLicence]) -> some View {
+        ForEach(Array(licences.enumerated()), id: \.element.id) { index, licence in
+            if index > 0 { SettingsDivider() }
+            NavigationLink {
+                LicenceScreen(title: licence.name, text: licence.text(), accent: accent, links: licence.links)
+            } label: {
+                row(Text(verbatim: licence.name).font(AppFont.text(15, weight: .medium)),
+                    detail: "\(licence.purpose) · \(licence.licenceName)")
+            }
+            .buttonStyle(SettingsRowStyle())
+        }
     }
 
     /// The typefaces' rows (the card is the caller's: alone, or a section's).
