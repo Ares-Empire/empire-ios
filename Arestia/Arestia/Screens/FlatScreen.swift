@@ -159,9 +159,12 @@ private struct FlatWebView: UIViewRepresentable {
         private var lastConnection: FlatStore.Link?
         /// Whether the one navigation allowed, the page `load()` hands over, is due.
         private var expectsPage = false
-        /// The document (`document`'s count) the app handed to the web view last: only it may speak to the app. While
-        /// the next page is fetched, the old document is no longer the one and is not heard.
+        /// The document (`document`'s count) the app handed to the web view and WebKit has put in place: only it may
+        /// speak to the app. While the next page is fetched and until it is in place, no document is heard (the old
+        /// one is no longer the one, the new one is not there yet).
         private var handedOver: Int?
+        /// The document handed to the web view that WebKit has not put in place yet.
+        private var arriving: Int?
         /// The page's address inside the web view: a name that never resolves (`.invalid`, RFC 2606), so the page has
         /// an ordinary origin of its own and nothing it does can reach a real server. Never flatd's address.
         static let pageURL = URL(string: "https://viewer.arestia.invalid/")!
@@ -182,6 +185,7 @@ private struct FlatWebView: UIViewRepresentable {
             document += 1
             let loading = document
             handedOver = nil
+            arriving = nil
             expectsPage = false
             guard isCurrent, let client = store.connection.client else { return }
             page.isReady = false
@@ -216,7 +220,7 @@ private struct FlatWebView: UIViewRepresentable {
                 }
                 guard loading == document, isCurrent, store.connection.isCurrent(client) else { return }
                 expectsPage = true
-                handedOver = loading
+                arriving = loading
                 webView?.load(html, mimeType: "text/html", characterEncodingName: "utf-8", baseURL: Self.pageURL)
             }
         }
@@ -362,11 +366,19 @@ private struct FlatWebView: UIViewRepresentable {
         /// too). The web view never fetches a document from the network at all.
         func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction) async -> WKNavigationActionPolicy {
             guard let url = action.request.url else { return .cancel }
-            if url.scheme == "about" { return .allow }
+            // Frames inside the page may be blank ones; the main frame is only ever the page handed over.
+            if url.scheme == "about" { return action.targetFrame?.isMainFrame == false ? .allow : .cancel }
             guard expectsPage, action.targetFrame?.isMainFrame == true, action.navigationType == .other,
                   url == Self.pageURL else { return .cancel }
             expectsPage = false
             return .allow
+        }
+
+        /// The page handed over is in place: from now on it is the one that may speak.
+        func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
+            guard let arriving, arriving == document else { return }
+            handedOver = arriving
+            self.arriving = nil
         }
 
         /// Never trust a server from inside the web view: the page has no business with one, and flatd's identity is

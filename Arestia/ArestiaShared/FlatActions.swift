@@ -36,12 +36,14 @@ nonisolated struct FlatActions: Sendable {
     }
 
     /// Switches the fans (all, or those in `only`) on (for `minutes`, nil: until switched off) or off, side by side.
-    /// Returns the fans as flatd confirmed them; throws the first failure after every fan was tried.
+    /// Returns the fans as flatd confirmed them; throws the first failure after every fan was tried. `only` holds
+    /// saved choices (`SavedDevice`): one made for another flatd is `.unknown`, and nothing is switched.
     @discardableResult
-    func setFans(on: Bool, minutes: Int? = nil, only ids: [String]? = nil) async throws -> [Device] {
+    func setFans(on: Bool, minutes: Int? = nil, only saved: [String]? = nil) async throws -> [Device] {
         let command = DeviceCommand.power(on: on, seconds: minutes.map { max(1, $0) * 60 })
         let connection = reach.connection
         return try await reach.run { client in
+            let ids = try saved?.map { try SavedDevice.device($0, of: client.pin) }
             let fans = try await client.devices().filter { $0.kind == .fan && (ids?.contains($0.id) ?? true) }
             guard !fans.isEmpty else { throw FlatdError.unknown }
             // The pairing may have changed while the list was read: then nothing is switched.
@@ -77,13 +79,22 @@ nonisolated struct FlatActions: Sendable {
         try await devices().filter { $0.kind == .rollo }
     }
 
+    /// `saved`: the blind as a Shortcut or a control remembers it (`SavedDevice`); one chosen for another flatd is
+    /// `.unknown`, and nothing moves.
     @discardableResult
-    func move(rollo id: String, _ command: RolloCommand) async throws -> Device {
-        try await reach.run { try await $0.send(.rollo(command), to: id) }
+    func move(rollo saved: String, _ command: RolloCommand) async throws -> Device {
+        try await reach.run { client in
+            try await client.send(.rollo(command), to: try SavedDevice.device(saved, of: client.pin))
+        }
     }
 
-    func rollo(_ id: String) async throws -> Device? {
-        try await rollos().first { $0.id == id }
+    /// The blind a control remembers, as flatd has it now; nil when flatd has none with that id (or the choice was
+    /// made for another flatd).
+    func rollo(_ saved: String) async throws -> Device? {
+        let (devices, client) = try await reach.run { client in (try await client.devices(), client) }
+        reach.connection.remember(devices, from: client)
+        guard let id = try? SavedDevice.device(saved, of: client.pin) else { return nil }
+        return devices.first { $0.kind == .rollo && $0.id == id }
     }
 
     // MARK: scenes
@@ -92,6 +103,24 @@ nonisolated struct FlatActions: Sendable {
     @discardableResult
     func runScene(_ id: String) async throws -> [String] {
         try await reach.run { try await $0.runScene(id) }
+    }
+}
+
+/// A device as a Shortcut or a Control Center control remembers it (an entity's id): flatd's device id together with
+/// the start of that flatd's identity. flatd's ids are only names inside one flatd; after pairing with another flatd
+/// the same id may be another device, so a choice made for one flatd is never used on another: it has to be made
+/// again. It survives everything the pairing survives (a new address, a renewed certificate, a fresh code of the same
+/// flatd).
+nonisolated enum SavedDevice {
+    static func id(for device: String, of pin: FlatdPin) -> String {
+        pin.hex.prefix(16) + "/" + device
+    }
+
+    /// flatd's device id from a saved choice; throws `.unknown` when the choice was made for another flatd.
+    static func device(_ saved: String, of pin: FlatdPin) throws -> String {
+        let prefix = pin.hex.prefix(16) + "/"
+        guard saved.hasPrefix(prefix), saved.count > prefix.count else { throw FlatdError.unknown }
+        return String(saved.dropFirst(prefix.count))
     }
 }
 

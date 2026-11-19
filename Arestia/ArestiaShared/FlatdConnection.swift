@@ -59,7 +59,9 @@ nonisolated struct FlatdKeychain: FlatdKeyStore {
         let status = SecItemCopyMatching(query as CFDictionary, &item)
         if status == errSecItemNotFound { return nil }
         guard status == errSecSuccess, let data = item as? Data else { throw FlatdKeychainError(status: status) }
-        return String(data: data, encoding: .utf8)
+        // nil means "no item" and nothing else: an item that is there but unreadable is an error, not an absence.
+        guard let text = String(data: data, encoding: .utf8) else { throw FlatdKeychainError(status: errSecDecode) }
+        return text
     }
 
     func update(_ value: String, ifLabel label: String) -> Bool {

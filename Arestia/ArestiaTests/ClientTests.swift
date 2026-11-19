@@ -117,9 +117,43 @@ struct ActionsTests {
     @Test func oneFanOnly() async throws {
         transport.answer("GET /api/devices", body: ["devices": [Flat.fan(1), Flat.fan(2)]])
         transport.answer("POST /api/devices/fan:fan_2", body: Flat.fan(2))
-        try await actions().setFans(on: false, only: ["fan:fan_2"])
+        try await actions().setFans(on: false, only: [SavedDevice.id(for: "fan:fan_2", of: Flat.pin)])
         #expect(transport.bodies(for: "POST /api/devices/fan:fan_1").isEmpty)
         #expect(transport.bodies(for: "POST /api/devices/fan:fan_2").first?["on"] as? Bool == false)
+    }
+
+    @Test func aChoiceMadeForAnotherFlatdIsNeverUsedOnThisOne() async throws {
+        // flatd's ids are names inside one flatd: after pairing with another, "blind_1" may be another blind.
+        let other = MadeUpCertificates.pinB
+        transport.answer("GET /api/devices", body: ["devices": [Flat.fan(1), Flat.rollo(1)]])
+        transport.answer("POST /api/devices/rollo:blind_1", body: Flat.rollo(1))
+        transport.answer("POST /api/devices/fan:fan_1", body: Flat.fan(1))
+        let foreignBlind = SavedDevice.id(for: "rollo:blind_1", of: other)
+        await #expect(throws: FlatdError.unknown) { try await actions().move(rollo: foreignBlind, .up) }
+        await #expect(throws: FlatdError.unknown) {
+            try await actions().setFans(on: true, only: [SavedDevice.id(for: "fan:fan_1", of: other)])
+        }
+        await #expect(throws: FlatdError.unknown) { try await actions().move(rollo: "rollo:blind_1", .up) }   // no flatd named
+        #expect(try await actions().rollo(foreignBlind) == nil)
+        #expect(transport.sent.allSatisfy { $0.httpMethod != "POST" })
+        // The same choice for the paired flatd works, whatever its address is now.
+        let mine = SavedDevice.id(for: "rollo:blind_1", of: Flat.pin)
+        try await actions().move(rollo: mine, .up)
+        #expect(try await actions().rollo(mine)?.id == "rollo:blind_1")
+        #expect(transport.bodies(for: "POST /api/devices/rollo:blind_1").count == 1)
+    }
+
+    @Test func shortcutsChoicesCarryThePairedFlatd() async throws {
+        let connection = Flat.connection()
+        transport.answer("GET /api/devices", body: ["devices": [Flat.fan(1), Flat.rollo(1)]])
+        let reach = FlatdReach(connection: connection, transport: transport, rediscover: { [] })
+        let blinds = await DeviceChoices.load(kind: .rollo, connection: connection, reach: reach)
+        #expect(blinds == [.init(id: SavedDevice.id(for: "rollo:blind_1", of: Flat.pin), label: "Blind 1")])
+        #expect(try SavedDevice.device(blinds[0].id, of: Flat.pin) == "rollo:blind_1")
+        // Paired with another flatd: the old choices are no longer offered.
+        try connection.save(FlatdPairing(baseURL: Flat.base, token: Flat.key, pin: MadeUpCertificates.pinB))
+        transport.answer("GET /api/devices", fails: true)
+        #expect(await DeviceChoices.load(kind: .rollo, connection: connection, reach: reach).isEmpty)
     }
 
     @Test func aFanThatDoesNotAnswerIsReportedAfterTheOthers() async throws {

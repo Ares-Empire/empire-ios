@@ -76,6 +76,9 @@ loaded with the key and never bundled.
   the camera would only pair the app with their own service, and learns nothing of the flat's). Work that was under way for one pairing
   (a Shortcut reading the fans, a late device list, the 3D page) never continues under another: each checks that its
   flatd and key are still the saved ones, and the 3D tab gets a web view of its own per pairing.
+  A blind or fan chosen in a Shortcut or a control is remembered together with its flatd's identity (`SavedDevice`):
+  flatd's device ids are only names inside one flatd, so after pairing with another flatd the choice has to be made
+  again instead of moving whatever has that id there.
 - **What the pin does not cover:** anything behind flatd (how flatd reaches its devices is flatd's own matter, in
   its private contract); what the 3D page does inside WebKit beyond HTTP and WebSocket loads, which are blocked (the
   page is flatd's own, fetched from the proven flatd, and is trusted as that); and someone who can read flatd's
