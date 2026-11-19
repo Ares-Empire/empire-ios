@@ -1,15 +1,24 @@
 #!/usr/bin/env python3
-"""A fake flatd for Arestia on the simulator and in screenshots: the flat service's contract v1.1 (REST, the event
-stream over a WebSocket, Bonjour as `_flatd._tcp`) with made-up devices, and a stand-in 3D page at `/viewer` that speaks
-the viewer's bridge (BRIDGE.md v1). Standard library only; Bonjour through macOS's own `dns-sd`.
+"""A fake flatd for Arestia on the simulator and in screenshots: the flat service's contract v1.2 as the app sees it
+(HTTPS only, with an identity the app pins through a pairing code; REST, the event stream over a WebSocket, Bonjour as
+`_flatd._tcp`) with made-up devices, and a stand-in 3D page at `/viewer` that speaks the viewer's bridge (BRIDGE.md v1).
+Standard library only; Bonjour through macOS's own `dns-sd`, the identity's key and certificate through `openssl`.
 
     python3 scripts/fake-flatd.py                      # port 8790, Bonjour name "flatd (fake)"
     python3 scripts/fake-flatd.py --port 8791 --no-bonjour --travel 8 --extra
+    python3 scripts/fake-flatd.py --pairing            # only print the pairing code (same options), and exit
 
-Then, in the simulator: Arestia's connect screen finds "flatd (fake)"; paste the key it prints. Or skip the screen:
-    xcrun simctl launch <udid> de.ares-empire.arestia -flatd http://127.0.0.1:8790 -flatdToken <key>
+It prints its pairing code, the JSON the real `flatd pair` shows as a QR code:
+`{"url": "https://127.0.0.1:8790", "token": …, "spki_sha256": …}`. In the simulator: copy it
+(`xcrun simctl pbcopy <udid>`) and paste it on Arestia's connect screen. Or skip the screen:
+    xcrun simctl launch <udid> de.ares-empire.arestia -flatdPairing '<the code>'
+The unit tests' live suite takes the same code (`ArestiaTests/TrustTests.swift`, `LiveFlatdTests`).
 
-Never the real flatd: it runs on its own port (not 8787) with its own key, and no real device is behind it.
+Its identity (a P-256 key and a self-signed certificate, made on first use) is kept in `build/fake-flatd/` (not in
+git), so a pairing survives a restart; `--new-identity` makes another, as if flatd had lost its key (the app must then
+refuse to talk to it until paired again). The test hooks need `curl -k https://…` now.
+
+Never the real flatd: it runs on its own port (not 8787/8788) with its own key, and no real device is behind it.
 
 Made-up devices: Fan 1, Fan 2 (plugs with timers), Blind 1 (with a favourite spot), Blind 2 (without); `--extra` adds
 Lamp 1. Mode `cooking` (both fans on and Blind 1 up; ended: fans off, Blind 1 to its favourite), scenes `air_out` (both
@@ -31,15 +40,19 @@ import base64
 import datetime as dt
 import hashlib
 import json
+import os
 import secrets
+import select
 import signal
 import socket
+import ssl
 import struct
 import subprocess
 import sys
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
 
 WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
@@ -325,7 +338,14 @@ class WebSocket:
     def _read(self, count: int) -> bytes:
         data = b""
         while len(data) < count:
-            chunk = self.sock.recv(count - len(data))
+            # A TLS socket must not be read and written at once from two threads: wait until there is something to
+            # read, then read under the lock the writers use.
+            if not self.sock.pending() and not select.select([self.sock], [], [], 1.0)[0]:
+                if not self.open:
+                    raise ConnectionError("closed")
+                continue
+            with self.lock:
+                chunk = self.sock.recv(count - len(data))
             if not chunk:
                 raise ConnectionError("closed")
             data += chunk
@@ -346,7 +366,7 @@ def make_handler(flat: Flat, key: str, latency: float, viewer: bytes):
     flat.listeners.append(broadcast)
 
     class Handler(BaseHTTPRequestHandler):
-        server_version = "fake-flatd/1.1"
+        server_version = "fake-flatd/1.2"
         protocol_version = "HTTP/1.1"
 
         def log_message(self, format, *args):       # one short line per request
@@ -554,6 +574,50 @@ post({type:'ready', devices:['fan:fan_1','fan:fan_2','rollo:blind_1','rollo:blin
 """
 
 
+IDENTITY_DIR = Path(__file__).resolve().parent.parent / "build" / "fake-flatd"
+
+
+def identity(fresh: bool) -> tuple[Path, Path, str]:
+    """The fake's key and certificate (made with openssl on first use, or anew), and its pin: the SHA-256 of the
+    certificate's SubjectPublicKeyInfo, as flatd's contract defines `spki_sha256`."""
+    key, cert = IDENTITY_DIR / "key.pem", IDENTITY_DIR / "cert.pem"
+    if fresh or not (key.exists() and cert.exists()):
+        IDENTITY_DIR.mkdir(parents=True, exist_ok=True)
+        key.unlink(missing_ok=True)
+        cert.unlink(missing_ok=True)
+        previous = os.umask(0o077)
+        try:
+            subprocess.run(["openssl", "ecparam", "-name", "prime256v1", "-genkey", "-noout", "-out", str(key)],
+                           check=True, capture_output=True)
+        finally:
+            os.umask(previous)
+        subprocess.run(["openssl", "req", "-new", "-x509", "-key", str(key), "-subj", "/CN=flatd", "-days", "730",
+                        "-out", str(cert)], check=True, capture_output=True)
+    public = subprocess.run(["openssl", "x509", "-in", str(cert), "-pubkey", "-noout"], check=True,
+                            capture_output=True).stdout
+    spki = subprocess.run(["openssl", "pkey", "-pubin", "-outform", "der"], input=public, check=True,
+                          capture_output=True).stdout
+    return key, cert, hashlib.sha256(spki).hexdigest()
+
+
+class TLSServer(ThreadingHTTPServer):
+    """HTTPS only, as flatd on the home network. The handshake runs in each connection's own thread."""
+    daemon_threads = True
+
+    def __init__(self, address, handler, context: ssl.SSLContext):
+        super().__init__(address, handler)
+        self.socket = context.wrap_socket(self.socket, server_side=True, do_handshake_on_connect=False)
+
+    def finish_request(self, request, client_address):
+        try:
+            request.settimeout(5)
+            request.do_handshake()
+            request.settimeout(None)
+        except (OSError, ssl.SSLError):
+            return          # not TLS, or a client that refused this identity: nothing was served
+        super().finish_request(request, client_address)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--port", type=int, default=8790)
@@ -569,9 +633,12 @@ def main() -> None:
                                          "(a local file; never commit a private page)")
     parser.add_argument("--devices", help='a local JSON list of devices instead of the made-up ones: '
                                           '[{"id": "fan:…", "label": "…"}, {"id": "rollo:…", "favourite": 48}, …]')
+    parser.add_argument("--pairing", action="store_true", help="print the pairing code only, and exit")
+    parser.add_argument("--new-identity", action="store_true",
+                        help="make a new key and certificate, as if flatd had lost its identity")
     args = parser.parse_args()
-    if args.port == 8787:
-        sys.exit("8787 is the real flatd's port; pick another one.")
+    if args.port in (8787, 8788):
+        sys.exit("8787 and 8788 are the real flatd's ports; pick another one.")
 
     private = bool(args.viewer or args.devices)
     # Local private files stay on this Mac: only loopback, no Bonjour, and a key nobody else knows (the simulator reaches
@@ -582,11 +649,22 @@ def main() -> None:
         args.key = secrets.token_hex(16) if private else DEFAULT_KEY
     if private and args.host == "127.0.0.1":
         args.no_bonjour = True
+    key_file, cert_file, pin = identity(args.new_identity)
+    pairing = json.dumps({"url": f"https://127.0.0.1:{args.port}", "token": args.key, "spki_sha256": pin},
+                         separators=(",", ":"))
+    if args.pairing:
+        if private and args.key != DEFAULT_KEY and "--key" not in sys.argv:
+            sys.exit("With --viewer or --devices the key is made up anew on every start: pass --key to both runs, "
+                     "or copy the pairing code the running fake printed.")
+        print(pairing)
+        return
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    context.minimum_version = ssl.TLSVersion.TLSv1_2
+    context.load_cert_chain(cert_file, key_file)
     devices = json.loads(open(args.devices).read()) if args.devices else None
     viewer = open(args.viewer, "rb").read() if args.viewer else VIEWER.encode()
     flat = Flat(travel=args.travel, extra=args.extra, devices=devices)
-    server = ThreadingHTTPServer((args.host, args.port), make_handler(flat, args.key, args.latency, viewer))
-    server.daemon_threads = True
+    server = TLSServer((args.host, args.port), make_handler(flat, args.key, args.latency, viewer), context)
 
     def ticking():
         while True:
@@ -604,8 +682,9 @@ def main() -> None:
         raise KeyboardInterrupt
 
     signal.signal(signal.SIGTERM, stop)
-    print(f"fake flatd on http://127.0.0.1:{args.port}  key: {args.key}"
+    print(f"fake flatd on https://127.0.0.1:{args.port}  identity: {' '.join(pin[i:i + 4] for i in range(0, 16, 4))}"
           + ("" if args.no_bonjour else f"  Bonjour: {args.name!r}"), flush=True)
+    print(f"pairing code: {pairing}", flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
