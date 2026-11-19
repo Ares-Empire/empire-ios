@@ -1,2 +1,9 @@
 # Confirmed gitleaks false alarms (made-up test data), one fingerprint per line.
 27b4c21d7d069acd1b5175b99e2007e42c514a9f:Shared/Auth/SampleAccount.swift:jwt:44
+# Arestia's unit tests: made-up flatd keys for a fake transport (2026-11-19), never a real key.
+592b268bee492f0af90d6d100b892eeaefcd1e35:Arestia/ArestiaTests/ContractTests.swift:generic-api-key:151
+592b268bee492f0af90d6d100b892eeaefcd1e35:Arestia/ArestiaTests/TestSupport.swift:generic-api-key:83
+592b268bee492f0af90d6d100b892eeaefcd1e35:Arestia/ArestiaTests/StoreTests.swift:generic-api-key:128
+22bd7065a12ec26ee5f17da8efad6fb257fbfb37:Arestia/ArestiaTests/ReviewFindingsTests.swift:generic-api-key:57
+22bd7065a12ec26ee5f17da8efad6fb257fbfb37:Arestia/ArestiaTests/ReviewFindingsTests.swift:generic-api-key:60
+22bd7065a12ec26ee5f17da8efad6fb257fbfb37:Arestia/ArestiaTests/ReviewFindingsTests.swift:generic-api-key:62
