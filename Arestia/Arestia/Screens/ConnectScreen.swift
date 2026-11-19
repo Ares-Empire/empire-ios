@@ -70,12 +70,18 @@ struct ConnectScreen: View {
             .background { ProvinceWall(accent: .arestia) }
             .toolbar {
                 if closable {
-                    ToolbarItem(placement: .topBarTrailing) { Button(role: .close) { dismiss() } }
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button(role: .close) {
+                            attempt?.cancel()          // at once, before the sheet is gone
+                            dismiss()
+                        }
+                    }
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
         }
         .tint(Ink.primary)
+        .interactiveDismissDisabled(model.isConnecting)
         .onAppear { model.browser.start() }
         .onDisappear {
             model.browser.stop()

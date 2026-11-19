@@ -150,9 +150,9 @@ struct ContractTests {
 struct PairingCodeTests {
     let key = "Xq3v-A_9bc0dEf1gHi2jKl3mNo4pQr5s"
 
-    @Test func theAppLink() {
-        let code = PairingCode.parse("arestia://connect?url=http://192.168.1.20:8787&token=\(key)")
-        #expect(code == PairingCode(token: key, baseURL: URL(string: "http://192.168.1.20:8787")))
+    @Test func neverAnAppLinkWithTheKey() {
+        // Another app may claim the arestia:// scheme: a key is never taken from such a link.
+        #expect(PairingCode.parse("arestia://connect?url=http://192.168.1.20:8787&token=\(key)") == nil)
     }
 
     @Test func flatdsOwnAddressWithTheKey() {

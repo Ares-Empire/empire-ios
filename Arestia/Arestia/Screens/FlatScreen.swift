@@ -145,6 +145,8 @@ private struct FlatWebView: UIViewRepresentable {
         private var listener: UUID?
         private var lastConnection: FlatStore.Link?
         private var pageOrigin: URL?
+        /// The one navigation allowed: the viewer page `load()` asked for.
+        private var expectedPage: URL?
         private static let log = Logger(subsystem: "de.ares-empire.arestia", category: "viewer")
 
         init(store: FlatStore, page: FlatPage) {
@@ -181,7 +183,11 @@ private struct FlatWebView: UIViewRepresentable {
                     return
                 }
                 guard let self, loading == document else { return }
-                webView?.load(client.viewerRequest)
+                let request = client.viewerRequest
+                expectedPage = request.url
+                await blockOtherHosts(than: client.baseURL)
+                guard loading == document else { return }
+                webView?.load(request)
             }
         }
 
@@ -293,19 +299,42 @@ private struct FlatWebView: UIViewRepresentable {
             }
         }
 
-        /// The page's origin is flatd's address (scheme, host and port).
+        /// The page is self-contained: nothing but flatd's own address may be loaded or reached from it (no remote
+        /// script, fetch or socket), whatever the page does. A content rule list, made for this address.
+        private func blockOtherHosts(than base: URL) async {
+            guard let webView, let host = base.host() else { return }
+            let port = base.port.map { ":\($0)" } ?? ""
+            // WebKit's filters know no alternation (`a|b`); the escaped pattern's backslashes are escaped again for JSON.
+            let origin = NSRegularExpression.escapedPattern(for: "\(base.scheme ?? "http")://\(host)\(port)/")
+                .replacingOccurrences(of: "\\", with: "\\\\")
+            let rules = """
+            [{"trigger": {"url-filter": "^https?://"}, "action": {"type": "block"}},
+             {"trigger": {"url-filter": "^wss?://"}, "action": {"type": "block"}},
+             {"trigger": {"url-filter": "^\(origin)"}, "action": {"type": "ignore-previous-rules"}}]
+            """
+            let list = try? await WKContentRuleListStore.default().compileContentRuleList(
+                forIdentifier: "arestia-viewer-only-flatd", encodedContentRuleList: rules)
+            webView.configuration.userContentController.removeAllContentRuleLists()
+            if let list { webView.configuration.userContentController.add(list) }
+        }
+
+        /// The page's origin is flatd's address (scheme, host and port; WebKit reports a default port as 0).
         private func isFlatd(_ origin: WKSecurityOrigin) -> Bool {
-            guard let base = pageOrigin else { return false }
-            return origin.protocol == base.scheme && origin.host == base.host()
-                && origin.port == (base.port ?? (base.scheme == "https" ? 443 : 80))
+            guard let base = pageOrigin, let scheme = base.scheme else { return false }
+            let standard = scheme == "https" ? 443 : 80
+            return origin.protocol == scheme && origin.host == base.host()
+                && (origin.port == 0 ? standard : origin.port) == (base.port ?? standard)
         }
 
         // MARK: navigation: only flatd's own page
 
+        /// Only the page `load()` asked for: the page itself never navigates or reloads (a new document would take the
+        /// bridge without the app knowing; WebKit's own reload after its process ended goes through `load()` too).
         func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction) async -> WKNavigationActionPolicy {
-            guard let url = action.request.url, let origin = pageOrigin else { return .cancel }
-            let sameOrigin = url.scheme == origin.scheme && url.host() == origin.host() && url.port == origin.port
-            return sameOrigin || url.scheme == "about" ? .allow : .cancel
+            guard let url = action.request.url, let expected = expectedPage else { return .cancel }
+            if url.scheme == "about" { return .allow }
+            return action.targetFrame?.isMainFrame == true && action.navigationType == .other && url == expected
+                ? .allow : .cancel
         }
 
         func webView(_ webView: WKWebView, decidePolicyFor response: WKNavigationResponse) async -> WKNavigationResponsePolicy {

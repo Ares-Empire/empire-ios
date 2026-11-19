@@ -272,6 +272,8 @@ class WebSocket:
         self.sock = sock
         self.lock = threading.Lock()
         self.open = True
+        # A client that stops reading is dropped after 2 s instead of holding every broadcast (and the flat's lock).
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDTIMEO, struct.pack("ll", 2, 0))
 
     def send_text(self, text: str) -> None:
         self.send_frame(0x1, text.encode())

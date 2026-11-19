@@ -77,6 +77,18 @@ struct KeySafetyTests {
         #expect(transport.requests(to: "192.0.2.77").isEmpty)
     }
 
+    @Test func aPairingChangedDuringTheLookupSendsNothing() async throws {
+        let connection = Flat.connection()
+        transport.answer("GET 192.0.2.10/api/health", fails: true)
+        transport.answer("POST /api/scenes/all_down", body: ["id": "all_down", "failed": [:]])
+        let reach = FlatdReach(connection: connection, transport: transport, resolve: { _ in
+            try? connection.forget()                                  // Disconnect while flatd is looked up again
+            return URL(string: "http://192.0.2.77:8787")!
+        })
+        await #expect(throws: FlatdError.refused) { try await FlatActions(reach: reach).runScene("all_down") }
+        #expect(transport.bodies(for: "POST /api/scenes/all_down").isEmpty)
+    }
+
     @Test func repeatedFailureIdsAreReadOnce() throws {
         #expect(try Flat.decode(CommandFailures.self, ["failed": ["fan:fan_1", "fan:fan_1"]]).ids == ["fan:fan_1"])
     }
@@ -192,6 +204,19 @@ struct StoreReviewTests {
         #expect(await eventually({ store.link == .offline }, timeout: .seconds(5)))
         // Another device holds the address now: the command is not sent with the key.
         transport.answer("GET /api/health", status: 404, body: [:])
+        let before = transport.sent.count
+        store.setFan("fan:fan_1", on: true)
+        #expect(await eventually { !store.isWorking("power:fan:fan_1") })
+        #expect(transport.sent.dropFirst(before).allSatisfy { $0.value(forHTTPHeaderField: "Authorization") == nil })
+        store.stop()
+    }
+
+    @Test func aCommandInTheRetryPauseChecksTheAddressAgain() async throws {
+        let (store, transport, events, _) = try await liveStore()
+        // The stream drops; the store still says live during its quick retry, but its checked address no longer counts.
+        transport.answer("GET /api/health", status: 404, body: [:])
+        events.end(FlatdError.unreachable)
+        try await Task.sleep(for: .milliseconds(50))
         let before = transport.sent.count
         store.setFan("fan:fan_1", on: true)
         #expect(await eventually { !store.isWorking("power:fan:fan_1") })

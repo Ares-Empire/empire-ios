@@ -161,7 +161,10 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
         defaults?.data(forKey: Self.devicesKey).flatMap { try? JSONDecoder().decode([KnownDevice].self, from: $0) } ?? []
     }
 
-    func remember(_ devices: [Device]) {
+    /// Keeps the devices' names for Shortcuts' pickers, only while the pairing they came from (its key) is the saved
+    /// one: a late answer never brings names back after Disconnect.
+    func remember(_ devices: [Device], keyedBy token: String? = nil) {
+        if let token, self.token != token { return }
         let known = devices.map { KnownDevice(id: $0.id, kind: $0.kind.raw, label: $0.label) }
         guard known != knownDevices else { return }
         defaults?.set(try? JSONEncoder().encode(known), forKey: Self.devicesKey)

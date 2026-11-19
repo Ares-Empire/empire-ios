@@ -167,6 +167,9 @@ final class FlatStore {
     /// The address checked, scenes over HTTP (also telling a refused key apart at once), then the event stream until it
     /// ends. A first snapshot resets the failures and, at a new address, keeps it in the pairing.
     private func follow(_ client: FlatdClient, generation: Int, live: () -> Void) async throws {
+        // However the stream ends, its checked address stops counting at once: a command in the retry's pause checks
+        // the address again (Codex's review, round 3).
+        defer { liveBase = nil }
         try await client.verify()
         let answered: [FlatScene]
         do { answered = try await client.scenes() } catch FlatdError.unknown { answered = [] }   // a flatd without scenes
@@ -184,7 +187,6 @@ final class FlatStore {
                 }
             }
         }
-        liveBase = nil
         throw FlatdError.unreachable            // the stream ended: reconnect
     }
 

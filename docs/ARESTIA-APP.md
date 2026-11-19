@@ -33,8 +33,9 @@ loaded with the key and never bundled.
   (`supportWithoutLogin`). Everything else of the standard applies: English and German, light and dark, Settings
   behind the gear, the band at the end of the main screen, the shared design.
 - **Connecting once:** flatd advertises itself over Bonjour (`_flatd._tcp`), so the app finds it without an address;
-  Patrik pastes the key, or scans a QR code (`arestia://connect?url=…&token=…`, also opened by the iPhone's camera; an
-  address with `?token=`, JSON or the key alone work too, `PairingCode`). The app checks it with flatd before keeping
+  Patrik pastes the key, or scans flatd's QR code with Arestia's own scanner (JSON
+  `{"url": …, "token": …}`; an address with `?token=` or the key alone work too, `PairingCode`). Never an `arestia://`
+  link with the key: another app may claim the same URL scheme and would get it when the camera opens the link. The app checks it with flatd before keeping
   it. The key lives in Arestia's own Keychain group, shared with its Control Center extension and readable after the
   first unlock, so a control works from the lock screen (never synced, never restored to another device); the address
   and the Bonjour name in Arestia's own App Group. When the Mac's address changes, the app and the controls find flatd

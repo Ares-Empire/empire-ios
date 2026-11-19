@@ -2,8 +2,8 @@ import SwiftUI
 
 /// Arestia: the flat (Patrik's own service flatd on the home network) on the iPhone. No Ares account (Patrik,
 /// 2026-11-19: "no account needed, just me"): without flatd's key the app shows the connect screen, with it two tabs,
-/// Home and the 3D flat, and Settings behind the gear. Links: `arestia://home`, `arestia://flat`,
-/// `arestia://connect?url=…&token=…` (flatd's QR code; it opens the connect screen filled in, Connect still asks).
+/// Home and the 3D flat, and Settings behind the gear. Links: `arestia://home`, `arestia://flat` (never one with the
+/// key: flatd's QR code is scanned inside the app).
 ///
 /// DEBUG launch arguments: `-flatd <url> -flatdToken <key>` (connect to a fake flatd without the screen, e.g.
 /// `scripts/fake-flatd.py`; never the real one), `-flatdService <name>` (with them: as found over Bonjour),
@@ -104,15 +104,13 @@ final class ArestiaNavigation {
     var tab: Tab = .home
     var sheet: Sheet?
 
-    /// `arestia://home`, `arestia://flat`, `arestia://connect?url=…&token=…`.
+    /// `arestia://home`, `arestia://flat`.
     func open(_ url: URL) {
         guard url.scheme == "arestia" else { return }
         switch url.host() {
         case "flat":
             sheet = nil
             tab = .flat
-        case "connect":
-            sheet = .connect(PairingCode.parse(url.absoluteString))
         default:
             sheet = nil
             tab = .home

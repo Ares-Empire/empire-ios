@@ -1,12 +1,12 @@
 import Foundation
 
-/// What Patrik pastes or scans once to connect the app: flatd's key, and maybe its address. Read leniently, so any of
-/// the ways flatd might show it works:
-/// - a link that opens the app: `arestia://connect?url=http://<host>:8787&token=<key>` (the QR code's best form: the
-///   iPhone's camera opens Arestia with it);
+/// What Patrik pastes or scans (with Arestia's own scanner) once to connect the app: flatd's key, and maybe its
+/// address. Read leniently:
+/// - JSON: `{"url": "http://<host>:8787", "token": "<key>"}` (the QR code's form: scanned inside the app only);
 /// - flatd's own address with the key: `http://<host>:8787/?token=<key>` (also `flatd_token=`, the viewer's name);
-/// - JSON: `{"url": "http://<host>:8787", "token": "<key>"}`;
 /// - the key alone (the address then comes from Bonjour).
+/// Never an `arestia://` link with the key: another app may claim the same URL scheme and would get the key when the
+/// camera opens the link (Codex's review, round 3).
 nonisolated struct PairingCode: Equatable, Sendable {
     let token: String
     let baseURL: URL?
@@ -17,20 +17,11 @@ nonisolated struct PairingCode: Equatable, Sendable {
         if text.hasPrefix("{") { return json(text) }
         if let url = URL(string: text), let scheme = url.scheme?.lowercased() {
             switch scheme {
-            case "arestia": return appLink(url)
             case "http", "https": return serviceLink(url)
             default: return nil
             }
         }
         return bareToken(text)
-    }
-
-    /// `arestia://connect?url=…&token=…`
-    private static func appLink(_ url: URL) -> PairingCode? {
-        guard url.host() == "connect" else { return nil }
-        let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
-        guard let token = value("token", in: items).flatMap(cleanToken) else { return nil }
-        return PairingCode(token: token, baseURL: value("url", in: items).flatMap(serviceURL))
     }
 
     /// `http://<host>:8787/anything?token=…`

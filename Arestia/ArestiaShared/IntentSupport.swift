@@ -72,8 +72,10 @@ nonisolated struct RolloQuery: EntityQuery {
 /// an automation away from home still works).
 nonisolated enum DeviceChoices {
     static func load(kind: Device.Kind, connection: FlatdConnection = .live) async -> [FlatdConnection.KnownDevice] {
-        if let devices = try? await FlatdReach(connection: connection).run({ try await $0.devices() }) {
-            connection.remember(devices)
+        if let answer = try? await FlatdReach(connection: connection).run({ client in
+            (try await client.devices(), client.token)
+        }) {
+            connection.remember(answer.0, keyedBy: answer.1)
         }
         return connection.knownDevices.filter { $0.kind == kind.raw }
     }

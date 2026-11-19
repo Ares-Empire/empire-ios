@@ -90,6 +90,8 @@ nonisolated struct FlatdReach: Sendable {
             client = FlatdClient(baseURL: found, token: pairing.token, transport: transport)
             try await client.verify()
         }
+        // Disconnected or paired anew while the address was looked up: this run sends nothing.
+        guard connection.pairing?.id == pairing.id else { throw FlatdError.refused }
         let result = try await work(client)
         connection.move(pairing, to: client.baseURL)
         return result

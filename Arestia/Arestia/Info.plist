@@ -28,7 +28,7 @@
 	<!-- Scanning the QR code flatd shows, once, to connect. -->
 	<key>NSCameraUsageDescription</key>
 	<string>Arestia reads the flat service's QR code to connect. Nothing is recorded.</string>
-	<!-- arestia://connect?url=…&token=… (the QR code's link, opened by the camera) and arestia://home, arestia://flat. -->
+	<!-- arestia://home and arestia://flat. Never a link with flatd's key: another app may claim the same scheme. -->
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

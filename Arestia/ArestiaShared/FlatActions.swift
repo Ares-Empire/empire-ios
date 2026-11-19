@@ -25,9 +25,14 @@ nonisolated struct FlatActions: Sendable {
     // MARK: fans (every device of kind `fan`, or the ones named)
 
     func fans() async throws -> [Device] {
-        let devices = try await reach.run { try await $0.devices() }
-        reach.connection.remember(devices)
-        return devices.filter { $0.kind == .fan }
+        try await devices().filter { $0.kind == .fan }
+    }
+
+    /// flatd's devices, remembered for Shortcuts' pickers while their pairing is still the saved one.
+    func devices() async throws -> [Device] {
+        let (devices, token) = try await reach.run { client in (try await client.devices(), client.token) }
+        reach.connection.remember(devices, keyedBy: token)
+        return devices
     }
 
     /// Switches the fans (all, or those in `only`) on (for `minutes`, nil: until switched off) or off, side by side.
@@ -35,9 +40,12 @@ nonisolated struct FlatActions: Sendable {
     @discardableResult
     func setFans(on: Bool, minutes: Int? = nil, only ids: [String]? = nil) async throws -> [Device] {
         let command = DeviceCommand.power(on: on, seconds: minutes.map { max(1, $0) * 60 })
+        let connection = reach.connection
         return try await reach.run { client in
             let fans = try await client.devices().filter { $0.kind == .fan && (ids?.contains($0.id) ?? true) }
             guard !fans.isEmpty else { throw FlatdError.unknown }
+            // The pairing may have changed while the list was read: then nothing is switched.
+            guard connection.token == client.token else { throw FlatdError.refused }
             return try await withThrowingTaskGroup(of: Result<Device, FlatdError>.self) { group in
                 for fan in fans {
                     group.addTask {
@@ -66,9 +74,7 @@ nonisolated struct FlatActions: Sendable {
     // MARK: blinds (Rollos)
 
     func rollos() async throws -> [Device] {
-        let devices = try await reach.run { try await $0.devices() }
-        reach.connection.remember(devices)
-        return devices.filter { $0.kind == .rollo }
+        try await devices().filter { $0.kind == .rollo }
     }
 
     @discardableResult

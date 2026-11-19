@@ -935,7 +935,8 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   compiled into both: the contract's types (`FlatdModels`, read leniently, states merged key by key), `FlatdClient`
   (every call but health with the Bearer key; 401 refused, 404 unknown, 409 not possible, 504 no answer from the
   device), `FlatdConnection`, Bonjour (`FlatdBonjour`, `FlatdReach`: the saved address, else found again under its
-  Bonjour name), `PairingCode` (the key alone, `arestia://connect?url=…&token=…`, an address with `?token=`, JSON),
+  Bonjour name), `PairingCode` (JSON `{"url", "token"}` from flatd's QR code, read by the app's own scanner; an address with
+  `?token=`; the key alone; never an `arestia://` link with the key),
   `FlatActions` and what the intents share (`IntentSupport`). **Each intent lives in one target:** the Siri, Shortcuts
   and NFC ones in the app (`Arestia/Intents/FlatIntents.swift`, the phrases in `AppShortcuts.xcstrings`), the Control
   Center ones in the extension (`ArestiaControls/ControlIntents.swift`); an intent compiled into both was run by iOS in
