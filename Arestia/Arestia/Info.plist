@@ -7,17 +7,11 @@
 	<!-- The team prefix of Arestia's Keychain group (ArestiaShared/FlatdConnection.swift). -->
 	<key>AppIdentifierPrefix</key>
 	<string>$(AppIdentifierPrefix)</string>
-	<!-- Only standard HTTPS (the contact form) and plain HTTP on the home network: exempt, so App Store Connect stops
-	     asking about encryption on every build. -->
+	<!-- Only the system's own HTTPS (the contact form, and flatd on the home network, whose key the app pins:
+	     FlatdPin): exempt, so App Store Connect stops asking about encryption on every build. No App Transport
+	     Security exception: nothing in this app speaks plain HTTP, the home network included. -->
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
-	<!-- flatd runs on the home network over plain HTTP (and its 3D page in the web view): allowed for local addresses
-	     only (.local names, IP addresses); everything else stays HTTPS. -->
-	<key>NSAppTransportSecurity</key>
-	<dict>
-		<key>NSAllowsLocalNetworking</key>
-		<true/>
-	</dict>
 	<!-- Finding flatd without an address: it advertises itself over Bonjour. -->
 	<key>NSBonjourServices</key>
 	<array>

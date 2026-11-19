@@ -130,18 +130,19 @@ struct StoreTests {
         let connection = Flat.connection(linked: false)
         let (store, transport, events, _) = Flat.store(connection: connection)
         transport.answer("GET /api/devices", status: 401, body: ["error": "missing or wrong token"])
-        #expect(await store.connect(to: Flat.base, serviceName: "flatd", token: "wrong-key-0123456789") == .refused)
-        #expect(connection.link == nil && connection.token == nil)
+        #expect(await store.connect(to: Flat.base, token: "wrong-key-0123456789", pin: Flat.pin) == .refused)
+        #expect(connection.pairing == nil && connection.token == nil)
         #expect(store.link == .notSetUp)
 
         transport.answer("GET /api/devices", body: ["devices": [Flat.fan(1)]])
         transport.answer("GET /api/scenes", body: ["scenes": []])
-        #expect(await store.connect(to: Flat.base, serviceName: "flatd", token: Flat.key) == nil)
-        #expect(connection.link == FlatdLink(baseURL: Flat.base, serviceName: "flatd"))
+        #expect(await store.connect(to: Flat.base, token: Flat.key, pin: Flat.pin) == nil)
+        #expect(connection.pairing?.baseURL == Flat.base && connection.pairing?.pin == Flat.pin)
         #expect(connection.token == Flat.key)
         #expect(await eventually { events.isOpen })
+        #expect(events.pins == [Flat.pin])                 // the stream is opened for the pairing's identity
         store.disconnect()
-        #expect(connection.link == nil && connection.token == nil && store.devices.isEmpty)
+        #expect(connection.pairing == nil && connection.token == nil && store.devices.isEmpty)
         #expect(store.link == .notSetUp)
     }
 

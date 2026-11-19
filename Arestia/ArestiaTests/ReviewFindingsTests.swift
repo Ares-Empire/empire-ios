@@ -7,11 +7,11 @@ struct KeySafetyTests {
     let transport = FakeTransport()
 
     func reach(_ connection: FlatdConnection, resolve: URL? = nil) -> FlatdReach {
-        FlatdReach(connection: connection, transport: transport, resolve: { _ in resolve })
+        FlatdReach(connection: connection, transport: transport, rediscover: { resolve.map { [$0] } ?? [] })
     }
 
-    @Test func theKeyGoesOnlyToAnAddressThatAnswersLikeFlatd() async {
-        // Another device holds the saved address (another Wi-Fi): no flatd health there.
+    @Test func nothingWithTheKeyGoesToAnAddressWhereFlatdDoesNotAnswer() async {
+        // The address settles first (who answers is the pinned transport's check, `TrustTests`): no health, no work.
         transport.answer("GET /api/health", status: 404, body: ["detail": "not found"])
         transport.answer("GET /api/devices", body: ["devices": []])
         await #expect(throws: FlatdError.unreachable) {
@@ -22,28 +22,28 @@ struct KeySafetyTests {
 
     @Test func aHealthWithoutFlatdsShapeIsNotFlatd() async throws {
         transport.answer("GET /api/health", body: ["status": "up"])
-        let client = FlatdClient(baseURL: Flat.base, token: Flat.key, transport: transport)
+        let client = FlatdClient(Flat.pairing(), transport: transport)
         #expect(try await client.health() == false)
         await #expect(throws: FlatdError.unreachable) { try await client.verify() }
     }
 
     @Test func aNewAddressIsKeptOnlyOnceTheWorkSucceededThere() async throws {
         let connection = Flat.connection()
-        let moved = URL(string: "http://192.0.2.77:8787")!
+        let moved = URL(string: "https://192.0.2.77:8788")!
         transport.answer("GET 192.0.2.10/api/health", fails: true)        // the saved address: nobody there any more
         transport.answer("POST /api/scenes/all_down", status: 500, body: ["error": "boom"])
         let actions = FlatActions(reach: reach(connection, resolve: moved))
         await #expect(throws: FlatdError.self) { try await actions.runScene("all_down") }
-        #expect(connection.link?.baseURL == Flat.base)                     // failed there: not kept
+        #expect(connection.pairing?.baseURL == Flat.base)                  // failed there: not kept
 
         transport.answer("POST /api/scenes/all_down", body: ["id": "all_down", "failed": [:]])
         try await actions.runScene("all_down")
-        #expect(connection.link?.baseURL == moved)                         // worked there: kept
-        #expect(connection.link?.serviceName == "flatd" && connection.token == Flat.key)
+        #expect(connection.pairing?.baseURL == moved)                      // worked there: kept
+        #expect(connection.pairing?.pin == Flat.pin && connection.token == Flat.key)
     }
 
     @Test func aTimeoutIsNeverSentAgainElsewhere() async {
-        let moved = URL(string: "http://192.0.2.77:8787")!
+        let moved = URL(string: "https://192.0.2.77:8788")!
         transport.answer("POST /api/scenes/air_out", fails: true, failure: .timedOut)
         await #expect(throws: FlatdError.noAnswer) {
             try await FlatActions(reach: reach(Flat.connection(), resolve: moved)).runScene("air_out")
@@ -55,12 +55,12 @@ struct KeySafetyTests {
     @Test func aLateLookupNeverMovesANewerOrForgottenPairing() throws {
         let connection = Flat.connection()
         let old = try #require(connection.pairing)
-        let newer = FlatdPairing(link: FlatdLink(baseURL: Flat.base, serviceName: "flatd"), token: "newer-key-0123456789")
+        let newer = Flat.pairing(token: "newer-key-0123456789")
         try connection.save(newer)
-        connection.move(old, to: URL(string: "http://192.0.2.77:8787")!)          // the old pairing's late lookup
+        connection.move(old, to: URL(string: "https://192.0.2.77:8788")!)          // the old pairing's late lookup
         #expect(connection.pairing == newer)
-        connection.move(newer, to: URL(string: "http://192.0.2.77:8787")!)
-        #expect(connection.link?.baseURL.host() == "192.0.2.77")
+        connection.move(newer, to: URL(string: "https://192.0.2.77:8788")!)
+        #expect(connection.pairing?.baseURL.host() == "192.0.2.77")
         #expect(connection.token == "newer-key-0123456789")
         try connection.forget()
         connection.move(newer, to: Flat.base)                                     // after Disconnect: nothing comes back
@@ -68,7 +68,7 @@ struct KeySafetyTests {
     }
 
     @Test func aCommandRunsOnceEvenWhenItsConnectionIsLost() async {
-        let moved = URL(string: "http://192.0.2.77:8787")!
+        let moved = URL(string: "https://192.0.2.77:8788")!
         transport.answer("POST /api/scenes/air_out", fails: true)                 // lost after flatd may have taken it
         await #expect(throws: FlatdError.unreachable) {
             try await FlatActions(reach: reach(Flat.connection(), resolve: moved)).runScene("air_out")
@@ -81,9 +81,9 @@ struct KeySafetyTests {
         let connection = Flat.connection()
         transport.answer("GET 192.0.2.10/api/health", fails: true)
         transport.answer("POST /api/scenes/all_down", body: ["id": "all_down", "failed": [:]])
-        let reach = FlatdReach(connection: connection, transport: transport, resolve: { _ in
+        let reach = FlatdReach(connection: connection, transport: transport, rediscover: {
             try? connection.forget()                                  // Disconnect while flatd is looked up again
-            return URL(string: "http://192.0.2.77:8787")!
+            return [URL(string: "https://192.0.2.77:8788")!]
         })
         await #expect(throws: FlatdError.refused) { try await FlatActions(reach: reach).runScene("all_down") }
         #expect(transport.bodies(for: "POST /api/scenes/all_down").isEmpty)
@@ -95,7 +95,7 @@ struct KeySafetyTests {
 
     @Test func addressAndKeyAreOneItem() throws {
         let connection = Flat.connection(linked: false)
-        let pairing = FlatdPairing(link: FlatdLink(baseURL: Flat.base, serviceName: nil), token: Flat.key)
+        let pairing = Flat.pairing()
         try connection.save(pairing)
         #expect(connection.pairing == pairing)
         try connection.forget()
@@ -121,7 +121,7 @@ struct StoreReviewTests {
         let transport = FakeTransport(), events = FakeEvents()
         transport.answer("GET /api/scenes", fails: true)
         let store = FlatStore(connection: Flat.connection(), transport: transport, eventSource: events,
-                              rediscover: { _ in await gate.wait() }, reloadControls: {})
+                              rediscover: { await gate.wait() }, reloadControls: {})
         store.start()
         #expect(await eventually({ gate.isWaiting }, timeout: .seconds(5)))
         store.retry()
@@ -202,7 +202,7 @@ struct StoreReviewTests {
         transport.answer("GET /api/scenes", fails: true)
         events.end(FlatdError.unreachable)
         #expect(await eventually({ store.link == .offline }, timeout: .seconds(5)))
-        // Another device holds the address now: the command is not sent with the key.
+        // flatd does not answer at the address now: the command is not sent.
         transport.answer("GET /api/health", status: 404, body: [:])
         let before = transport.sent.count
         store.setFan("fan:fan_1", on: true)
@@ -213,7 +213,7 @@ struct StoreReviewTests {
 
     @Test func aCommandInTheRetryPauseChecksTheAddressAgain() async throws {
         let (store, transport, events, _) = try await liveStore()
-        // The stream drops; the store still says live during its quick retry, but its checked address no longer counts.
+        // The stream drops; the store still says live during its quick retry, but its address no longer counts.
         transport.answer("GET /api/health", status: 404, body: [:])
         events.end(FlatdError.unreachable)
         try await Task.sleep(for: .milliseconds(50))
@@ -243,7 +243,7 @@ struct StoreReviewTests {
         let connection = Flat.connection(linked: false)
         let (store, transport, _, _) = Flat.store(connection: connection)
         transport.answer("GET /api/devices", body: ["devices": [Flat.fan(1)]])
-        let attempt = Task { await store.connect(to: Flat.base, serviceName: nil, token: Flat.key) }
+        let attempt = Task { await store.connect(to: Flat.base, token: Flat.key, pin: Flat.pin) }
         attempt.cancel()
         #expect(await attempt.value == .notPossible)
         #expect(connection.pairing == nil && store.link == .notSetUp)
@@ -253,7 +253,7 @@ struct StoreReviewTests {
         let keys = MemoryKeys()
         let connection = FlatdConnection(defaults: UserDefaults(suiteName: "arestia-tests-" + UUID().uuidString)!,
                                          keychain: keys)
-        try connection.save(FlatdPairing(link: FlatdLink(baseURL: Flat.base, serviceName: nil), token: Flat.key))
+        try connection.save(Flat.pairing())
         let (store, _, _, _) = Flat.store(connection: connection)
         keys.failsToDelete = true
         store.disconnect()
@@ -271,17 +271,17 @@ struct StoreReviewTests {
 /// A Bonjour lookup that answers only when the test says so.
 @MainActor
 final class Gate: Sendable {
-    private var waiters: [CheckedContinuation<URL?, Never>] = []
+    private var waiters: [CheckedContinuation<[URL], Never>] = []
     var isWaiting: Bool { !waiters.isEmpty }
 
-    nonisolated func wait() async -> URL? {
+    nonisolated func wait() async -> [URL] {
         await withCheckedContinuation { continuation in
             Task { @MainActor in self.waiters.append(continuation) }
         }
     }
 
     func open() {
-        waiters.forEach { $0.resume(returning: nil) }
+        waiters.forEach { $0.resume(returning: []) }
         waiters = []
     }
 }

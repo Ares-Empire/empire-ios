@@ -5,8 +5,9 @@ import WebKit
 
 /// The second tab: the flat in 3D, full-bleed, made for a thumb (Patrik: "the flat model but well made for easy
 /// navigation on an iphone … phone model actions should affect things too … live state yes, also displayed in model").
-/// The page is flatd's `GET /viewer` (private, never bundled), loaded with the key; it talks only to the app through
-/// the bridge in the viewer's BRIDGE.md: taps come in as messages and go to flatd through the store, live state goes
+/// The page is flatd's `GET /viewer` (private, never bundled): the app fetches it itself, over the connection pinned to
+/// flatd's identity, and hands it to the web view, which never talks to the network (so one place checks who flatd is,
+/// and the key never enters the web view). The page talks only to the app, through the bridge in the viewer's BRIDGE.md: taps come in as messages and go to flatd through the store, live state goes
 /// back with `flat3d.receive`. While the page loads or flatd is out of reach, a calm line over the app's wall.
 struct FlatScreen: View {
     let store: FlatStore
@@ -144,9 +145,11 @@ private struct FlatWebView: UIViewRepresentable {
         private var document = 0
         private var listener: UUID?
         private var lastConnection: FlatStore.Link?
-        private var pageOrigin: URL?
-        /// The one navigation allowed: the viewer page `load()` asked for.
-        private var expectedPage: URL?
+        /// Whether the one navigation allowed, the page `load()` hands over, is due.
+        private var expectsPage = false
+        /// The page's address inside the web view: a name that never resolves (`.invalid`, RFC 2606), so the page has
+        /// an ordinary origin of its own and nothing it does can reach a real server. Never flatd's address.
+        static let pageURL = URL(string: "https://viewer.arestia.invalid/")!
         private static let log = Logger(subsystem: "de.ares-empire.arestia", category: "viewer")
 
         init(store: FlatStore, page: FlatPage) {
@@ -154,8 +157,8 @@ private struct FlatWebView: UIViewRepresentable {
             self.page = page
         }
 
-        /// Loads flatd's viewer page with the key (the page loads nothing else), once the address answered like flatd
-        /// without it. The old page's subscription ends first; the page has half a minute to say `ready`.
+        /// Fetches flatd's viewer page (the pinned client, with the key) and hands it to the web view, which loads
+        /// nothing itself. The old page's subscription ends first; the page has half a minute to say `ready`.
         func load(_ count: String? = nil) {
             if let count { loadedCount = count }
             stopListening()
@@ -163,7 +166,7 @@ private struct FlatWebView: UIViewRepresentable {
             document += 1
             let loading = document
             guard let client = store.connection.client else { return }
-            pageOrigin = client.baseURL
+            expectsPage = false
             page.isReady = false
             page.problem = nil
             webView?.stopLoading()
@@ -174,20 +177,23 @@ private struct FlatWebView: UIViewRepresentable {
                 page.problem = String(localized: "The 3D flat didn't start.")
             }
             Task { [weak self] in
+                let html: Data
                 do {
-                    try await client.verify()
+                    html = try await client.viewerPage()
                 } catch {
                     guard let self, loading == document else { return }
                     readyDeadline?.cancel()
-                    page.problem = (error as? FlatdError ?? .unreachable).message()
+                    page.problem = switch error as? FlatdError ?? .unreachable {
+                    case .unknown: String(localized: "flatd has no 3D flat set up yet.")
+                    case let known: known.message()
+                    }
                     return
                 }
                 guard let self, loading == document else { return }
-                let request = client.viewerRequest
-                expectedPage = request.url
-                await blockOtherHosts(than: client.baseURL)
+                await blockTheNetwork()
                 guard loading == document else { return }
-                webView?.load(request)
+                expectsPage = true
+                webView?.load(html, mimeType: "text/html", characterEncodingName: "utf-8", baseURL: Self.pageURL)
             }
         }
 
@@ -200,8 +206,8 @@ private struct FlatWebView: UIViewRepresentable {
         // MARK: page → app
 
         func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
-            // Only flatd's own page, in the main frame, may speak to the app.
-            guard message.frameInfo.isMainFrame, isFlatd(message.frameInfo.securityOrigin),
+            // Only the page the app handed over, in the main frame, may speak to the app.
+            guard message.frameInfo.isMainFrame, isThePage(message.frameInfo.securityOrigin),
                   let parsed = PageMessage.parse(message.body) else { return }
             switch parsed {
             case .ready:
@@ -299,54 +305,44 @@ private struct FlatWebView: UIViewRepresentable {
             }
         }
 
-        /// The page is self-contained: nothing but flatd's own address may be loaded or reached from it (no remote
-        /// script, fetch or socket), whatever the page does. A content rule list, made for this address.
-        private func blockOtherHosts(than base: URL) async {
-            guard let webView, let host = base.host() else { return }
-            let port = base.port.map { ":\($0)" } ?? ""
-            // WebKit's filters know no alternation (`a|b`); the escaped pattern's backslashes are escaped again for JSON.
-            let origin = NSRegularExpression.escapedPattern(for: "\(base.scheme ?? "http")://\(host)\(port)/")
-                .replacingOccurrences(of: "\\", with: "\\\\")
+        /// The page is self-contained and the app is its only way out: nothing may be loaded or reached from it (no
+        /// remote script, fetch or socket), whatever the page does. A content rule list.
+        private func blockTheNetwork() async {
+            guard let webView else { return }
             let rules = """
             [{"trigger": {"url-filter": "^https?://"}, "action": {"type": "block"}},
-             {"trigger": {"url-filter": "^wss?://"}, "action": {"type": "block"}},
-             {"trigger": {"url-filter": "^\(origin)"}, "action": {"type": "ignore-previous-rules"}}]
+             {"trigger": {"url-filter": "^wss?://"}, "action": {"type": "block"}}]
             """
             let list = try? await WKContentRuleListStore.default().compileContentRuleList(
-                forIdentifier: "arestia-viewer-only-flatd", encodedContentRuleList: rules)
+                forIdentifier: "arestia-viewer-no-network", encodedContentRuleList: rules)
             webView.configuration.userContentController.removeAllContentRuleLists()
             if let list { webView.configuration.userContentController.add(list) }
         }
 
-        /// The page's origin is flatd's address (scheme, host and port; WebKit reports a default port as 0).
-        private func isFlatd(_ origin: WKSecurityOrigin) -> Bool {
-            guard let base = pageOrigin, let scheme = base.scheme else { return false }
-            let standard = scheme == "https" ? 443 : 80
-            return origin.protocol == scheme && origin.host == base.host()
-                && (origin.port == 0 ? standard : origin.port) == (base.port ?? standard)
+        /// The page's origin is the one the app gave it (WebKit reports a default port as 0).
+        private func isThePage(_ origin: WKSecurityOrigin) -> Bool {
+            origin.protocol == "https" && origin.host == Self.pageURL.host() && (origin.port == 0 || origin.port == 443)
         }
 
-        // MARK: navigation: only flatd's own page
+        // MARK: navigation: only the page the app hands over
 
-        /// Only the page `load()` asked for: the page itself never navigates or reloads (a new document would take the
-        /// bridge without the app knowing; WebKit's own reload after its process ended goes through `load()` too).
+        /// Only the one document `load()` hands over: the page itself never navigates or reloads (a new document would
+        /// take the bridge without the app knowing; WebKit's own reload after its process ended goes through `load()`
+        /// too). The web view never fetches a document from the network at all.
         func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction) async -> WKNavigationActionPolicy {
-            guard let url = action.request.url, let expected = expectedPage else { return .cancel }
+            guard let url = action.request.url else { return .cancel }
             if url.scheme == "about" { return .allow }
-            return action.targetFrame?.isMainFrame == true && action.navigationType == .other && url == expected
-                ? .allow : .cancel
+            guard expectsPage, action.targetFrame?.isMainFrame == true, action.navigationType == .other,
+                  url == Self.pageURL else { return .cancel }
+            expectsPage = false
+            return .allow
         }
 
-        func webView(_ webView: WKWebView, decidePolicyFor response: WKNavigationResponse) async -> WKNavigationResponsePolicy {
-            if let http = response.response as? HTTPURLResponse, response.isForMainFrame, http.statusCode != 200 {
-                page.problem = switch http.statusCode {
-                case 401: FlatdError.refused.message()
-                case 404: String(localized: "flatd has no 3D flat set up yet.")
-                default: FlatdError.failed(status: http.statusCode, message: nil).message()
-                }
-                return .cancel
-            }
-            return .allow
+        /// Never trust a server from inside the web view: the page has no business with one, and flatd's identity is
+        /// checked in one place only (`FlatdTransport`).
+        func webView(_ webView: WKWebView, respondTo challenge: URLAuthenticationChallenge)
+            async -> (URLSession.AuthChallengeDisposition, URLCredential?) {
+            (.cancelAuthenticationChallenge, nil)
         }
 
         func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {

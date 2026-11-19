@@ -2,14 +2,55 @@ import Foundation
 import Network
 import os
 
-/// Finding flatd on the home network: it advertises itself over Bonjour as `_flatd._tcp` (contract v1.1), so the app
-/// needs no address. iOS asks once for the local network ("Arestia would like to find devices on your local network").
+/// Finding flatd on the home network: it advertises its HTTPS listener over Bonjour as `_flatd._tcp`, so the app needs
+/// no address. iOS asks once for the local network ("Arestia would like to find devices on your local network").
+///
+/// Bonjour is only a hint. Anyone on the Wi-Fi can advertise `_flatd._tcp` under any name, so what it finds are
+/// *candidates*: an address counts as flatd's only once the server there proved the pinned key (`FlatdPin`). That is
+/// also why no name is remembered: flatd is found again under whatever name it has, on whatever machine.
 nonisolated enum FlatdBonjour {
     static let type = "_flatd._tcp"
     static let domain = "local."
     static let log = Logger(subsystem: "de.ares-empire.arestia", category: "bonjour")
 
-    /// The address of the service with this name, `http://<IPv4>:<port>`, or nil when it does not answer in time.
+    /// Every address a `_flatd._tcp` service is advertised at right now, in no particular order: the services seen
+    /// within `browse` (none seen: empty), each resolved. Candidates only, see above.
+    static func candidates(browse: Duration = .seconds(2)) async -> [URL] {
+        let names = await serviceNames(within: browse)
+        return await withTaskGroup(of: URL?.self) { group in
+            for name in names { group.addTask { await resolve(name: name) } }
+            var found: [URL] = []
+            for await url in group {
+                if let url, !found.contains(url) { found.append(url) }
+            }
+            return found
+        }
+    }
+
+    /// The names of the services advertised now. Ends early once some were seen and nothing new came for a moment.
+    static func serviceNames(within limit: Duration) async -> [String] {
+        let browser = NWBrowser(for: .bonjour(type: type, domain: domain), using: .tcp)
+        let names = OSAllocatedUnfairLock<Set<String>>(initialState: [])
+        browser.browseResultsChangedHandler = { results, _ in
+            let found = results.compactMap { result -> String? in
+                if case let .service(name, _, _, _) = result.endpoint { name } else { nil }
+            }
+            names.withLock { $0 = Set(found) }
+        }
+        browser.start(queue: .global(qos: .userInitiated))
+        defer { browser.cancel() }
+        let clock = ContinuousClock(), end = clock.now + limit
+        var seen = 0
+        while clock.now < end, !Task.isCancelled {
+            try? await Task.sleep(for: .milliseconds(300))
+            let count = names.withLock { $0.count }
+            if count > 0, count == seen { break }
+            seen = count
+        }
+        return names.withLock { $0.sorted() }
+    }
+
+    /// The address of the service with this name, `https://<IPv4>:<port>`, or nil when it does not answer in time.
     /// IPv4 only: an IPv6 link-local address needs its interface in the URL, which URLSession and WebKit read poorly.
     static func resolve(name: String, timeout: Duration = .seconds(4)) async -> URL? {
         let parameters = NWParameters.tcp
@@ -32,7 +73,7 @@ nonisolated enum FlatdBonjour {
                 connection.stateUpdateHandler = { state in
                     switch state {
                     case .ready:
-                        finish(connection.currentPath?.remoteEndpoint.flatMap(httpURL))
+                        finish(connection.currentPath?.remoteEndpoint.flatMap(serviceURL))
                     case .failed, .cancelled:
                         finish(nil)
                     case let .waiting(error):
@@ -52,8 +93,8 @@ nonisolated enum FlatdBonjour {
         }
     }
 
-    /// `http://192.168.1.20:8787` from a resolved endpoint.
-    static func httpURL(_ endpoint: NWEndpoint) -> URL? {
+    /// `https://192.168.1.20:8788` from a resolved endpoint.
+    static func serviceURL(_ endpoint: NWEndpoint) -> URL? {
         guard case let .hostPort(host, port) = endpoint else { return nil }
         let address: String
         switch host {
@@ -64,36 +105,48 @@ nonisolated enum FlatdBonjour {
         default:
             return nil
         }
-        return URL(string: "http://\(address):\(port.rawValue)")
+        return URL(string: "https://\(address):\(port.rawValue)")
     }
 }
 
-/// The client to use, for the intents and the controls (which run without the app). The address is settled first,
-/// without the key: the saved one if it answers like flatd, else (it gives no answer and the pairing came from
-/// Bonjour) flatd looked up again under its name and checked the same way. Then the work runs once, there: a command
-/// is never sent twice (a connection lost after flatd took it would otherwise repeat it). The new address is kept once
-/// the work succeeded.
+/// The client to use, for the intents and the controls (which run without the app). The address is settled first:
+/// the saved one if flatd answers there, else (nothing answers, or what answers does not hold flatd's key) every
+/// address Bonjour offers is tried the same way, and only one where the server proved flatd's key counts. Then the
+/// work runs once, there: a command is never sent twice (a connection lost after flatd took it would otherwise repeat
+/// it). The new address is kept once the work succeeded.
 nonisolated struct FlatdReach: Sendable {
     let connection: FlatdConnection
-    var transport: any HTTPTransport & Sendable = FlatdTransport()
-    var resolve: @Sendable (String) async -> URL? = { await FlatdBonjour.resolve(name: $0) }
+    /// Nil: the real, pinned transport (the tests pass a fake).
+    var transport: (any HTTPTransport & Sendable)?
+    var rediscover: @Sendable () async -> [URL] = { await FlatdBonjour.candidates() }
 
     /// Throws `FlatdError.refused` without a pairing, `.unreachable` when flatd cannot be found.
     func run<T: Sendable>(_ work: @Sendable (FlatdClient) async throws -> T) async throws -> T {
-        guard let pairing = connection.pairing, !pairing.token.isEmpty else { throw FlatdError.refused }
-        var client = FlatdClient(baseURL: pairing.link.baseURL, token: pairing.token, transport: transport)
+        guard let pairing = connection.pairing else { throw FlatdError.refused }
+        var client = FlatdClient(pairing, transport: transport)
         do {
             try await client.verify()
         } catch let error as FlatdError where error == .unreachable || error == .noAnswer {
-            guard let name = pairing.link.serviceName, let found = await resolve(name),
-                  found != pairing.link.baseURL else { throw FlatdError.unreachable }
-            client = FlatdClient(baseURL: found, token: pairing.token, transport: transport)
-            try await client.verify()
+            let candidates = await rediscover().filter { $0 != pairing.baseURL }
+            guard let found = await Self.find(pairing, among: candidates, transport: transport) else {
+                throw FlatdError.unreachable
+            }
+            client = found
         }
         // Disconnected or paired anew while the address was looked up: this run sends nothing.
         guard connection.pairing?.id == pairing.id else { throw FlatdError.refused }
         let result = try await work(client)
         connection.move(pairing, to: client.baseURL)
         return result
+    }
+
+    /// The first candidate address where flatd answers (its key proved, by the transport).
+    static func find(_ pairing: FlatdPairing, among candidates: [URL],
+                     transport: (any HTTPTransport & Sendable)?) async -> FlatdClient? {
+        for url in candidates where url.scheme == "https" {
+            let client = FlatdClient(pairing, at: url, transport: transport)
+            if (try? await client.verify()) != nil { return client }
+        }
+        return nil
     }
 }

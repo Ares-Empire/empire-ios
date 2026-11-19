@@ -5,8 +5,8 @@ import SwiftUI
 /// Home and the 3D flat, and Settings behind the gear. Links: `arestia://home`, `arestia://flat` (never one with the
 /// key: flatd's QR code is scanned inside the app).
 ///
-/// DEBUG launch arguments: `-flatd <url> -flatdToken <key>` (connect to a fake flatd without the screen, e.g.
-/// `scripts/fake-flatd.py`; never the real one), `-flatdService <name>` (with them: as found over Bonjour),
+/// DEBUG launch arguments: `-flatdPairing <code>` (pair with a fake flatd without the screen: the JSON pairing code
+/// `scripts/fake-flatd.py` prints; never the real one),
 /// `-forgetFlatd` (start without a key), `-tab home|flat`, `-openSheet settings|connect`, `-scrollToEnd`,
 /// `-scrollTo blinds|automations`, plus the shared ones (`-appearance`, `-openLanguage`, …).
 struct ContentView: View {
@@ -136,16 +136,9 @@ final class ArestiaNavigation {
 enum DebugConnection {
     static func apply(arguments: [String], to connection: FlatdConnection) {
         if arguments.contains("-forgetFlatd") { try? connection.forget() }
-        guard let index = arguments.firstIndex(of: "-flatd"), arguments.indices.contains(index + 1),
-              let url = PairingCode.serviceURL(arguments[index + 1]) else { return }
-        let service = arguments.firstIndex(of: "-flatdService").flatMap {
-            arguments.indices.contains($0 + 1) ? arguments[$0 + 1] : nil
-        }
-        guard let tokenIndex = arguments.firstIndex(of: "-flatdToken"), arguments.indices.contains(tokenIndex + 1) else {
-            return
-        }
-        try? connection.save(FlatdPairing(link: FlatdLink(baseURL: url, serviceName: service),
-                                          token: arguments[tokenIndex + 1]))
+        guard let index = arguments.firstIndex(of: "-flatdPairing"), arguments.indices.contains(index + 1),
+              let code = PairingCode.parse(arguments[index + 1]), let url = code.baseURL else { return }
+        try? connection.save(FlatdPairing(baseURL: url, token: code.token, pin: code.pin))
     }
 }
 #endif

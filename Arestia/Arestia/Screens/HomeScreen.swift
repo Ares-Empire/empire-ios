@@ -43,8 +43,8 @@ struct HomeScreen: View {
         switch (store.link, store.hasSnapshot) {
         case (.refused, _):
             CalmCard(symbol: "key", title: String(localized: "The flat service refused the key"),
-                     text: String(localized: "flatd has a new key, or this one was mistyped. Enter it again."),
-                     action: (String(localized: "Enter the key"), reconnect))
+                     text: String(localized: "flatd has a new key. Pair again with a new code from flatd."),
+                     action: (String(localized: "Pair again"), reconnect))
                 .padding(.top, 22)
         case (_, false) where store.link == .offline:
             CalmCard(symbol: "moon.zzz", title: String(localized: "Can't reach the flat"),

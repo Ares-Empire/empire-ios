@@ -461,12 +461,12 @@
         }
       }
     },
-    "The flat service refused the key. Enter it again in Settings." : {
+    "The flat service refused the key. Pair again in Settings." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Der Wohnungsdienst lehnt den Schlüssel ab. Gib ihn in den Einstellungen neu ein."
+            "value" : "Der Wohnungsdienst lehnt den Schlüssel ab. Kopple in den Einstellungen neu."
           }
         }
       }

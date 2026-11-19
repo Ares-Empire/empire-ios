@@ -7,7 +7,7 @@ nonisolated enum FlatdError: Error, Equatable, Sendable {
     case unreachable
     /// Connected, but no answer in time: flatd may still have done it, so a command is never sent again elsewhere.
     case noAnswer
-    /// 401: the key is wrong or flatd has a new one.
+    /// 401: flatd has a new key (the app pairs again).
     case refused
     /// 404: flatd does not know this device, mode or scene (any more).
     case unknown
@@ -30,7 +30,7 @@ nonisolated enum FlatdError: Error, Equatable, Sendable {
             language.string(LocalizedStringResource("The flat service didn't answer in time. It may still have done it.",
                                                     table: "ArestiaShared"))
         case .refused:
-            language.string(LocalizedStringResource("The flat service refused the key. Enter it again in Settings.",
+            language.string(LocalizedStringResource("The flat service refused the key. Pair again in Settings.",
                                                     table: "ArestiaShared"))
         case .unknown:
             language.string(LocalizedStringResource("The flat service doesn't know this any more.", table: "ArestiaShared"))
@@ -48,21 +48,36 @@ nonisolated enum FlatdError: Error, Equatable, Sendable {
     }
 }
 
-/// Talks to flatd over HTTP (contract v1.1: every endpoint but `/api/health` needs `Authorization: Bearer <token>`).
+/// Talks to flatd over HTTPS (contract v1.2: on the home network flatd speaks HTTPS only and proves its identity with
+/// the key the pairing pinned, `FlatdPin`; every endpoint but `/api/health` needs `Authorization: Bearer <token>`).
 /// The app, its intents and its Control Center controls all go through this one client, so nothing else builds a
-/// request.
+/// request, and every request goes through the pinned transport (`FlatdTransport`).
 nonisolated struct FlatdClient: Sendable {
     let baseURL: URL
     let token: String
-    var transport: any HTTPTransport & Sendable = FlatdTransport()
+    let pin: FlatdPin
+    let transport: any HTTPTransport & Sendable
     /// Reads answer quickly or not at all (the service is on the home network).
     var readTimeout: TimeInterval = 6
     /// A command waits for the device to confirm (a Rollo's board, a plug), so it may take longer.
     var commandTimeout: TimeInterval = 12
 
+    /// `transport` nil: the real one, which accepts only a server holding the pin's key (the tests pass a fake).
+    init(baseURL: URL, token: String, pin: FlatdPin, transport: (any HTTPTransport & Sendable)? = nil) {
+        self.baseURL = baseURL
+        self.token = token
+        self.pin = pin
+        self.transport = transport ?? FlatdTransport(pin: pin)
+    }
+
+    /// The pairing's client, at its saved address or at another one where flatd may be now.
+    init(_ pairing: FlatdPairing, at baseURL: URL? = nil, transport: (any HTTPTransport & Sendable)? = nil) {
+        self.init(baseURL: baseURL ?? pairing.baseURL, token: pairing.token, pin: pairing.pin, transport: transport)
+    }
+
     // MARK: reads
 
-    /// `GET /api/health`, without the key: whether this address answers like flatd (`{"ok": true, "version": …}`).
+    /// `GET /api/health`, without the key: whether flatd answers at this address (`{"ok": true, "version": …}`).
     func health() async throws -> Bool {
         let data: Data
         do {
@@ -75,9 +90,10 @@ nonisolated struct FlatdClient: Sendable {
         return health.ok == true && health.version != nil
     }
 
-    /// Before the key goes to an address: it must answer like flatd. Plain HTTP on the home network cannot prove who
-    /// answers (that needs flatd to prove it knows the key, a contract change), but this keeps the key from a printer or
-    /// a stranger's device that happens to have the saved address on another Wi-Fi. Throws `.unreachable` otherwise.
+    /// Whether flatd is at this address, asked before any work is sent there: the transport has then checked the
+    /// server's key against the pin (anything else at the address ends as `.unreachable`, having received nothing), and
+    /// flatd answered. This settles *where* flatd is, so a command is sent once, to the right address; *who* answers is
+    /// settled by the pin on every connection, also without this call. Throws `.unreachable` otherwise.
     func verify() async throws {
         guard try await health() else { throw FlatdError.unreachable }
     }
@@ -136,22 +152,23 @@ nonisolated struct FlatdClient: Sendable {
 
     // MARK: the event stream and the 3D page
 
-    /// The event stream's request: `ws://<host>/api/events` with the key in the header (contract v1.1 takes the
-    /// header or `?token=`; the header keeps the key out of every URL a log or proxy might keep).
+    /// The event stream's request: `wss://<host>/api/events` with the key in the header (the contract takes the
+    /// header or `?token=`; the header keeps the key out of every URL a log might keep). Always `wss`: the stream is
+    /// opened in a session that accepts only flatd's key (`WebSocketEvents`).
     var eventsRequest: URLRequest {
         var components = URLComponents(url: baseURL.appending(path: "api/events"), resolvingAgainstBaseURL: false)!
-        components.scheme = baseURL.scheme == "https" ? "wss" : "ws"
+        components.scheme = "wss"
         var request = URLRequest(url: components.url!, timeoutInterval: 8)
         request.setValue("Bearer " + token, forHTTPHeaderField: "Authorization")
         return request
     }
 
-    /// The phone viewer page (`GET /viewer`, private: flatd serves it only with the key). The page is never bundled.
-    var viewerRequest: URLRequest {
-        var request = URLRequest(url: baseURL.appending(path: "viewer"), cachePolicy: .reloadIgnoringLocalCacheData,
-                                 timeoutInterval: 20)
-        request.setValue("Bearer " + token, forHTTPHeaderField: "Authorization")
-        return request
+    /// The phone viewer page (`GET /viewer`, private: flatd serves it only with the key; `.unknown` when flatd has none
+    /// set up). The app fetches it here, through the pinned transport, and hands it to the web view, which itself
+    /// never talks to the network: one place checks flatd's identity, and the key never enters the web view. The page
+    /// is never bundled or kept.
+    func viewerPage() async throws -> Data {
+        try await send(request("viewer", timeout: 30))
     }
 
     // MARK: plumbing

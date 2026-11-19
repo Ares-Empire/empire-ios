@@ -1,7 +1,8 @@
 import SwiftUI
 
-/// Arestia's own section at the top of Settings: the flat service it talks to (its state and address), connecting again
-/// (a new key, another address) and disconnecting. There is no account section: Arestia has none.
+/// Arestia's own section at the top of Settings: the flat service it is paired with (its state, the address it was last
+/// reached at, and its identity to compare with what `flatd pair` shows), pairing again and disconnecting. There is no
+/// account section: Arestia has none.
 struct ConnectionSection: View {
     let store: FlatStore
     @State private var connecting = false
@@ -13,9 +14,9 @@ struct ConnectionSection: View {
             SettingsSection(String(localized: "Flat service")) {
                 HStack(spacing: 10) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(verbatim: store.connection.link?.serviceName ?? "flatd")
+                        Text(verbatim: "flatd")
                             .font(AppFont.text(15, weight: .medium)).foregroundStyle(Ink.primary)
-                        if let address = store.connection.link?.baseURL {
+                        if let address = pairing?.baseURL {
                             Text(verbatim: address.host().map { host in address.port.map { "\(host):\($0)" } ?? host } ?? "")
                                 .font(AppFont.number(12)).foregroundStyle(Ink.muted)
                         }
@@ -28,10 +29,25 @@ struct ConnectionSection: View {
                 }
                 .frame(minHeight: 58).padding(.horizontal, 16)
                 .accessibilityElement(children: .combine)
+                if let pairing {
+                    SettingsDivider()
+                    HStack(spacing: 10) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Identity").font(AppFont.text(15, weight: .medium)).foregroundStyle(Ink.primary)
+                            Text("The same as under flatd's QR code")
+                                .font(AppFont.text(12)).foregroundStyle(Ink.muted)
+                        }
+                        Spacer(minLength: 12)
+                        Text(verbatim: pairing.pin.short).font(AppFont.number(13)).foregroundStyle(Ink.secondary)
+                            .textSelection(.enabled)
+                    }
+                    .frame(minHeight: 58).padding(.horizontal, 16)
+                    .accessibilityElement(children: .combine)
+                }
                 SettingsDivider()
                 Button { connecting = true } label: {
-                    SettingsRow(title: String(localized: "Connect again"),
-                                subtitle: String(localized: "A new key or another address"))
+                    SettingsRow(title: String(localized: "Pair again"),
+                                subtitle: String(localized: "Scan a new code from flatd"))
                 }
                 .buttonStyle(SettingsRowStyle())
                 SettingsDivider()
@@ -47,15 +63,18 @@ struct ConnectionSection: View {
                     } label: { Text("Disconnect") }
                     Button(role: .cancel) {} label: { Text("Cancel") }
                 } message: {
-                    Text("Arestia forgets the key and the address. The Control Center controls and Shortcuts stop until you connect again.")
+                    Text("Arestia forgets the pairing. The Control Center controls and Shortcuts stop until you pair again.")
                 }
             }
-            FormNote(text: String(localized: "The key stays on this iPhone, in the Keychain. Shortcuts and the Control Center controls use it too."))
+            FormNote(text: String(localized: "Arestia talks only to the flatd with this identity, encrypted. The pairing stays on this iPhone, in the Keychain; Shortcuts and the Control Center controls use it too."))
         }
         .sheet(isPresented: $connecting) {
             ConnectScreen(store: store, closable: true)
         }
     }
+
+    /// Read on every pass: the address follows flatd (the store's state changes whenever that happens).
+    private var pairing: FlatdPairing? { store.connection.pairing }
 
     private var status: String {
         switch store.link {

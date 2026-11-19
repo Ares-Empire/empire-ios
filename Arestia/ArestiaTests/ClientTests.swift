@@ -5,7 +5,7 @@ import Testing
 /// How the app asks flatd, and how it reads a refusal.
 struct ClientTests {
     let transport = FakeTransport()
-    var client: FlatdClient { FlatdClient(baseURL: Flat.base, token: Flat.key, transport: transport) }
+    var client: FlatdClient { FlatdClient(Flat.pairing(), transport: transport) }
 
     @Test func everyRequestButHealthCarriesTheKey() async throws {
         transport.answer("GET /api/health", body: ["ok": true, "version": "1.1.0"])
@@ -15,7 +15,7 @@ struct ClientTests {
         let sent = transport.sent
         #expect(sent[0].value(forHTTPHeaderField: "Authorization") == nil)
         #expect(sent[1].value(forHTTPHeaderField: "Authorization") == "Bearer \(Flat.key)")
-        #expect(sent[1].url?.absoluteString == "http://192.0.2.10:8787/api/devices")
+        #expect(sent[1].url?.absoluteString == "https://192.0.2.10:8788/api/devices")
     }
 
     @Test func aCommandGoesToTheDeviceWithFlatdsBody() async throws {
@@ -70,17 +70,21 @@ struct ClientTests {
         #expect(try await client.runScene("all_down").isEmpty)
     }
 
-    @Test func theStreamAndThePage() {
+    @Test func theStream() {
         let events = client.eventsRequest
-        #expect(events.url?.absoluteString == "ws://192.0.2.10:8787/api/events")
+        #expect(events.url?.absoluteString == "wss://192.0.2.10:8788/api/events")
         #expect(events.value(forHTTPHeaderField: "Authorization") == "Bearer \(Flat.key)")
-        let secure = FlatdClient(baseURL: URL(string: "https://flat.example")!, token: "k")
-        #expect(secure.eventsRequest.url?.scheme == "wss")
-        // The page takes the key only in the header (contract v1.1).
-        let page = client.viewerRequest
-        #expect(page.url?.absoluteString == "http://192.0.2.10:8787/viewer")
+        #expect(events.url?.query == nil)
+    }
+
+    @Test func thePageIsFetchedByTheClientWithTheKeyInTheHeader() async throws {
+        transport.answer("GET /viewer", body: ["page": true])
+        _ = try await client.viewerPage()
+        let page = try #require(transport.sent.last)
+        #expect(page.url?.absoluteString == "https://192.0.2.10:8788/viewer")
         #expect(page.value(forHTTPHeaderField: "Authorization") == "Bearer \(Flat.key)")
-        #expect(page.url?.query == nil)
+        transport.answer("GET /viewer", status: 404, body: ["error": "not configured"])
+        await #expect(throws: FlatdError.unknown) { _ = try await client.viewerPage() }
     }
 
     @Test func messagesInBothLanguages() {
@@ -95,7 +99,7 @@ struct ActionsTests {
     let transport = FakeTransport()
 
     func actions(_ connection: FlatdConnection = Flat.connection()) -> FlatActions {
-        FlatActions(reach: FlatdReach(connection: connection, transport: transport, resolve: { _ in nil }))
+        FlatActions(reach: FlatdReach(connection: connection, transport: transport, rediscover: { [] }))
     }
 
     @Test func fansOnSwitchesEveryFanForAWhile() async throws {

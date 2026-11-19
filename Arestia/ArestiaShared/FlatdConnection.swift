@@ -1,19 +1,13 @@
 import Foundation
 import Security
 
-/// Where flatd is: its address, and the Bonjour name it was found under (so the app and its controls can find it again
-/// when the Mac's address changes).
-nonisolated struct FlatdLink: Codable, Equatable, Sendable {
-    var baseURL: URL
-    /// The Bonjour service's name (`_flatd._tcp`), nil for an address typed or scanned by hand.
-    var serviceName: String?
-}
-
-/// One pairing: where flatd is and its key, kept together as one Keychain item, so the app and its controls never
-/// read one pairing's address with another's key (Codex's review, 2026-11-19).
+/// One pairing: flatd's identity (the pin), its key, and the address it was last reached at, kept together as one
+/// Keychain item, so the app and its controls never read one pairing's address with another's key or pin (Codex's
+/// review, 2026-11-19). The address is only where to look first: flatd is whoever proves the pin's key, wherever it is.
 nonisolated struct FlatdPairing: Codable, Equatable, Sendable {
-    var link: FlatdLink
-    var token: String
+    var baseURL: URL
+    let token: String
+    let pin: FlatdPin
     /// Names this pairing (also the Keychain item's label), so moving it to a new address changes only this pairing.
     var id = UUID()
 }
@@ -112,13 +106,15 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
                                                 accessGroup: ArestiaGroup.keychainAccessGroup))
     }
 
-    /// The pairing as saved; nil without one (or when the item cannot be read).
+    /// The pairing as saved; nil without one, when the item cannot be read, or when it is not a whole pairing (one
+    /// without a pin, or with a plain-HTTP address, from a build before flatd had an identity: pair again).
     var pairing: FlatdPairing? {
-        guard let text = (try? keychain.read()) ?? nil else { return nil }
-        return try? JSONDecoder().decode(FlatdPairing.self, from: Data(text.utf8))
+        guard let text = (try? keychain.read()) ?? nil,
+              let pairing = try? JSONDecoder().decode(FlatdPairing.self, from: Data(text.utf8)),
+              pairing.baseURL.scheme == "https", !pairing.token.isEmpty else { return nil }
+        return pairing
     }
 
-    var link: FlatdLink? { pairing?.link }
     var token: String? { pairing?.token }
 
     func save(_ pairing: FlatdPairing) throws {
@@ -126,22 +122,20 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
         try keychain.save(String(decoding: data, as: UTF8.self), label: pairing.id.uuidString)
     }
 
-    /// A new address for this pairing (flatd found again over Bonjour), in one conditional Keychain update: it changes
+    /// A new address for this pairing (flatd found again over Bonjour and proved by its key), in one conditional
+    /// Keychain update: it changes
     /// nothing once the pairing was replaced or forgotten, so a late lookup (in the app or a control) never brings an
     /// old pairing back.
     func move(_ pairing: FlatdPairing, to baseURL: URL) {
-        guard pairing.link.baseURL != baseURL else { return }
+        guard pairing.baseURL != baseURL, baseURL.scheme == "https" else { return }
         var moved = pairing
-        moved.link.baseURL = baseURL
+        moved.baseURL = baseURL
         guard let data = try? JSONEncoder().encode(moved) else { return }
         _ = keychain.update(String(decoding: data, as: UTF8.self), ifLabel: pairing.id.uuidString)
     }
 
-    /// Both, when they are there.
-    var client: FlatdClient? {
-        guard let pairing, !pairing.token.isEmpty else { return nil }
-        return FlatdClient(baseURL: pairing.link.baseURL, token: pairing.token)
-    }
+    /// The client for the saved pairing, at its saved address.
+    var client: FlatdClient? { pairing.map { FlatdClient($0) } }
 
     /// Forgets the connection (Settings → Disconnect). Throws when the Keychain kept the item.
     func forget() throws {

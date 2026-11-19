@@ -7,12 +7,6 @@
 	<!-- The team prefix of Arestia's Keychain group (ArestiaShared/FlatdConnection.swift): the controls read flatd's key. -->
 	<key>AppIdentifierPrefix</key>
 	<string>$(AppIdentifierPrefix)</string>
-	<!-- flatd runs on the home network over plain HTTP: allowed for local addresses only (.local names, IP addresses). -->
-	<key>NSAppTransportSecurity</key>
-	<dict>
-		<key>NSAllowsLocalNetworking</key>
-		<true/>
-	</dict>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Arestia talks to the flat service on your home network to switch the fans and move the blinds.</string>
 	<key>NSBonjourServices</key>

@@ -1,7 +1,8 @@
 # Arestia app — decision record
 
 **Decided 2026-11-19 (Patrik).** Status (2026-11-19): built and tested on the simulator against a fake flatd
-(`scripts/fake-flatd.py`); not yet run against the real flatd, not on TestFlight. The name: Arestia (Ares + Hestia,
+(`scripts/fake-flatd.py`, HTTPS with its own identity and pairing code); not yet run against the real flatd, not on
+TestFlight. The name: Arestia (Ares + Hestia,
 goddess of the hearth and home), confirmed by Patrik on 2026-11-19.
 
 Arestia is the flat on the iPhone: the fans, the blinds (Rollos), the modes and scenes and the flat in 3D, all through
@@ -32,26 +33,51 @@ loaded with the key and never bundled.
   account server has no `arestia` service). Contact & support goes without a login, as Aresium's
   (`supportWithoutLogin`). Everything else of the standard applies: English and German, light and dark, Settings
   behind the gear, the band at the end of the main screen, the shared design.
-- **Connecting once:** flatd advertises itself over Bonjour (`_flatd._tcp`), so the app finds it without an address;
-  Patrik pastes the key, or scans flatd's QR code with Arestia's own scanner (JSON
-  `{"url": …, "token": …}`; an address with `?token=` or the key alone work too, `PairingCode`). Never an `arestia://`
-  link with the key: another app may claim the same URL scheme and would get it when the camera opens the link. The app checks it with flatd before keeping
-  it. The key lives in Arestia's own Keychain group, shared with its Control Center extension and readable after the
-  first unlock, so a control works from the lock screen (never synced, never restored to another device); the address
-  and the Bonjour name in Arestia's own App Group. When the Mac's address changes, the app and the controls find flatd
-  again under its Bonjour name. Plain HTTP is allowed for local addresses only (`NSAllowsLocalNetworking`).
-- **The key goes only to an address that answers like flatd** (`GET /api/health` without the key first), and a new
-  address is kept only after flatd worked there. Plain HTTP cannot prove who answers, so on another Wi-Fi a device
-  pretending to be flatd at the saved address could still read the key (an independent review, 2026-11-19). Closing
-  that needs flatd to prove it knows the key before the app sends it (for example `/api/health?challenge=<nonce>`
-  answering with an HMAC of the nonce under the key): a contract change for the integration step.
+- **Pairing once, and who the app trusts** (2026-11-19, flatd contract v1.2; replaces "the key goes only to an address
+  that answers like flatd"). On the home network flatd speaks **HTTPS only**, with a self-signed certificate for one
+  private key it made itself. `flatd pair`, run on flatd's own machine, shows a QR code with JSON
+  `{"url", "token", "spki_sha256"}`: where flatd is right now, its key (the bearer token), and its **identity**, the
+  SHA-256 of its public key. Patrik scans it with Arestia's own scanner (or pastes the same text); that is all there is
+  to enter. From then on the app talks only to a server that proves in the TLS handshake that it holds that key
+  (`FlatdPin`, checked by `FlatdTransport`'s session delegate on every connection). Before that proof nothing is
+  sent: no key, no request. So:
+  - a device that poses as flatd (a forged Bonjour answer, ARP, the saved address on another Wi-Fi) gets nothing, and
+    someone listening on the Wi-Fi reads nothing;
+  - **Bonjour and the saved address are only where to look.** The app tries the saved address, then every address
+    `_flatd._tcp` is advertised at, and keeps the one where the pinned key answered. No Bonjour name is remembered;
+  - the pin is the **key, not the certificate**, and nothing else about the certificate is checked (no CA, no name, no
+    dates). So flatd can renew its certificate, get a new address or machine name, or move to the always-on box with
+    its identity folder, without pairing again. A new key or a new token on flatd's side means pairing again
+    (Settings → Pair again);
+  - nothing in the app speaks plain HTTP: no App Transport Security exception, the transport and the event stream
+    refuse a non-TLS address themselves, a pairing code with a plain address is refused, and a saved pairing without a
+    pin (from a build before this) counts as no pairing;
+  - no redirect is ever followed; one URLSession per pin, so a connection checked against one identity never carries a
+    request for another;
+  - never an `arestia://` link with the key (another app may claim the scheme and would get it when the camera opens
+    the link), and no pairing by key alone or by address: neither carries the identity.
+
+  **Why this and not the alternatives.** An HMAC challenge in `/api/health` (flatd proves it knows the key before the
+  app sends it) would stop a device that merely answers at the address, but the key would still cross the Wi-Fi in
+  the clear on every request, and someone relaying between the phone and the real flatd passes the challenge and
+  reads it. Three review rounds had each found the same root one level deeper (the app cannot prove who answers on
+  plain HTTP); only an authenticated, encrypted channel removes it. Pinning the certificate itself (its fingerprint)
+  would work until the certificate is renewed and then force a new pairing; pinning the key does not. A CA or an
+  account would be more machinery for one phone and one service.
+
+  The pairing (address, key, pin; one item) lives in Arestia's own Keychain group, shared with its Control Center
+  extension and readable after the first unlock, so a control works from the lock screen (never synced, never
+  restored to another device). Settings → Flat service shows the address flatd was last reached at and the identity's
+  first 16 hex digits, the same ones `flatd pair` prints under its QR code and flatd logs at startup.
+- **What the pin does not cover:** someone who can read flatd's machine (its `key.pem` and config) or this iPhone's
+  Keychain, or who photographs the QR code while it is on screen: they have what flatd or the phone has.
 - **Two tabs and the gear** ("not many buttons and big menu"): **Home** (what the flat is doing in one line; cooking
   while it runs, with Done cooking as the one big button; otherwise the modes and scenes as three tiles; the fans with
   on/off and the timers 15 min / 30 min / 1 h / ∞ and the time left; the blinds with their window drawn at its position,
   dragged to set it, up / favourite / down and stop while moving; then the automations, what runs by itself), and
   **Flat**, the 3D model full-bleed. Settings: the flat service (state, connect again, disconnect), then the shared
   sections.
-- **Live state** from flatd's event stream (`/api/events?token=…`): the snapshot, then every change whoever made it (the
+- **Live state** from flatd's event stream (`wss://…/api/events`, the key in its header): the snapshot, then every change whoever made it (the
   app, Claude, a wall switch, a timer). It reconnects by itself with growing pauses and pings every 20 s, so a sleeping
   Mac is noticed. Not reachable: the last state stays, marked "Last seen 18:40", and one calm card when there is no
   state at all ("The Mac may be asleep, or you're not at home"); no alerts. Nothing is shown as done before flatd
@@ -60,9 +86,11 @@ loaded with the key and never bundled.
   blind up; off, the fans off and that blind to its favourite spot). The app shows it while active with since when and
   what its devices do right now, and Done cooking ends it, with Undo for a few seconds. A device that did not follow is named
   ("Didn't answer: …"); the mode stays as flatd recorded it.
-- **The 3D tab** loads flatd's phone viewer into a web view and speaks its bridge (the viewer's `BRIDGE.md` v1: the
+- **The 3D tab** shows flatd's phone viewer in a web view and speaks its bridge (the viewer's `BRIDGE.md` v1: the
   handler `flat3d`, `flat3d.receive`, one result per request): taps in 3D go to flatd through the app, live state goes
-  back to the page. The page never touches the network.
+  back to the page. The app fetches `GET /viewer` itself, over the pinned connection, and hands the page to the web
+  view (under a made-up `.invalid` origin, with every network load blocked): the web view never talks to the network,
+  the key never enters it, and flatd's identity is checked in one place instead of also in WebKit.
 - **Shortcuts, Siri and NFC** (App Intents, `ArestiaShared/ArestiaIntents.swift`): Start cooking, End cooking, Fans on
   (minutes and fan optional), Fans off, Move a blind (which, and up / down / favourite / stop, from flatd's list), Air
   out, All blinds down. Patrik's NFC tag is a personal automation in Shortcuts that runs Start cooking. They run without

@@ -82,95 +82,77 @@ final class FlatdBrowser {
     }
 }
 
-/// The connect screen's state: which flatd (found, or an address typed in), the key, and what Connect answered.
+/// The connect screen's state: flatd's pairing code (scanned or pasted) and what connecting with it answered.
 @MainActor @Observable
 final class ConnectModel {
-    enum Target: Equatable {
-        case service(String)
-        case address(URL)
-    }
-
-    var key = ""
-    var typedAddress = ""
-    var chosenService: String?
-    var typesAddress = false
+    /// The code read, until it connected.
+    private(set) var code: PairingCode?
     private(set) var isConnecting = false
     private(set) var problem: String?
     let browser = FlatdBrowser()
+    /// Where else flatd may be, when it is not at the code's address (Bonjour; candidates only, `FlatdBonjour`).
+    private let candidates: @Sendable () async -> [URL]
 
-    init(code: PairingCode? = nil, current: FlatdLink? = nil) {
-        if let code {
-            key = code.token
-            if let url = code.baseURL {
-                typedAddress = url.absoluteString
-                typesAddress = true
-            }
-        } else if let current {
-            if let name = current.serviceName { chosenService = name } else {
-                typedAddress = current.baseURL.absoluteString
-                typesAddress = true
-            }
-        }
+    init(code: PairingCode? = nil, candidates: @escaping @Sendable () async -> [URL] = { await FlatdBonjour.candidates() }) {
+        self.code = code
+        self.candidates = candidates
     }
 
-    /// The flatd to connect to: a typed address wins while the field is open, else the service chosen (or the only
-    /// one found).
-    var target: Target? {
-        if typesAddress {
-            return PairingCode.serviceURL(addressWithScheme).map(Target.address)
-        }
-        if let chosenService, browser.found.contains(chosenService) { return .service(chosenService) }
-        if browser.found.count == 1 { return .service(browser.found[0]) }
-        return nil
-    }
+    var canConnect: Bool { code != nil && !isConnecting }
 
-    /// "192.168.1.20:8787" as typed gets its scheme.
-    private var addressWithScheme: String {
-        let text = typedAddress.trimmingCharacters(in: .whitespacesAndNewlines)
-        return text.contains("://") ? text : "http://" + text
-    }
-
-    var canConnect: Bool { target != nil && PairingCode.cleanToken(key) != nil && !isConnecting }
-
-    /// A pasted or scanned text: a key alone, or a code that also says where flatd is.
-    func take(_ text: String) {
+    /// A scanned or pasted text: flatd's pairing code, or not. Returns whether it was one.
+    @discardableResult
+    func take(_ text: String) -> Bool {
         guard let code = PairingCode.parse(text) else {
-            problem = String(localized: "That isn't a key from the flat service.")
-            return
+            problem = String(localized: "That isn't a pairing code from flatd.")
+            return false
         }
         problem = nil
-        key = code.token
-        if let url = code.baseURL {
-            typedAddress = url.absoluteString
-            typesAddress = true
-        }
+        self.code = code
+        return true
     }
 
-    /// Finds the address (resolving a Bonjour name), then lets the store check it with flatd and keep it.
+    /// Looks for flatd at the code's address, then at the ones Bonjour offers, and lets the store keep the pairing at
+    /// the first where flatd answered. Every attempt goes through the transport pinned to the code's identity, so an
+    /// address is only somewhere to look: a server without flatd's key gets nothing, and the next address is tried.
     func connect(store: FlatStore) async -> Bool {
-        guard let target, let token = PairingCode.cleanToken(key) else { return false }
+        guard let code, !isConnecting else { return false }
         isConnecting = true
         problem = nil
         defer { isConnecting = false }
-        let url: URL, name: String?
-        switch target {
-        case let .address(address):
-            url = address
-            name = nil
-        case let .service(service):
-            guard let resolved = await FlatdBonjour.resolve(name: service) else {
-                problem = FlatdError.unreachable.message()
-                return false
+        var tried: [URL] = []
+        var failure = FlatdError.unreachable
+
+        /// True: connected. False: flatd answered and said no (looking elsewhere is pointless). Nil: not there.
+        func attempt(_ url: URL) async -> Bool? {
+            tried.append(url)
+            guard let error = await store.connect(to: url, token: code.token, pin: code.pin) else { return true }
+            failure = error
+            return error == .unreachable || error == .noAnswer ? nil : false
+        }
+
+        var outcome: Bool?
+        if let hint = code.baseURL { outcome = await attempt(hint) }
+        if outcome == nil {
+            for url in await candidates() where !tried.contains(url) {
+                guard !Task.isCancelled else { return false }
+                outcome = await attempt(url)
+                if outcome != nil { break }
             }
-            url = resolved
-            name = service
         }
-        if let error = await store.connect(to: url, serviceName: name, token: token) {
-            problem = error == .refused
-                ? String(localized: "The flat service doesn't know this key.")
-                : error.message()
-            return false
+        if outcome == true {
+            self.code = nil
+            return true
         }
-        return true
+        guard !Task.isCancelled else { return false }
+        problem = switch failure {
+        case .refused:
+            String(localized: "flatd has a new key. Run “flatd pair” again and scan the new code.")
+        case .unreachable, .noAnswer:
+            String(localized: "The flat service isn't answering. Check that this iPhone is on the home Wi-Fi and flatd is running. If flatd was set up anew, scan a new code.")
+        default:
+            failure.message()
+        }
+        return false
     }
 }

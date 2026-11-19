@@ -265,26 +265,6 @@
         }
       }
     },
-    "A new key or another address" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ein neuer Schlüssel oder eine andere Adresse"
-          }
-        }
-      }
-    },
-    "Address, e.g. 192.168.1.20:8787" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Adresse, z. B. 192.168.1.20:8787"
-          }
-        }
-      }
-    },
     "Air out" : {
       "localizations" : {
         "de" : {
@@ -315,12 +295,12 @@
         }
       }
     },
-    "Allow the camera for Arestia in iOS Settings, or paste the key instead." : {
+    "Allow the camera for Arestia in iOS Settings, or paste the code instead." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Erlaube Arestia die Kamera in den iOS-Einstellungen, oder füge den Schlüssel ein."
+            "value" : "Erlaube Arestia die Kamera in den iOS-Einstellungen, oder füge den Code stattdessen ein."
           }
         }
       }
@@ -345,12 +325,12 @@
         }
       }
     },
-    "Arestia forgets the key and the address. The Control Center controls and Shortcuts stop until you connect again." : {
+    "Arestia forgets the pairing. The Control Center controls and Shortcuts stop until you pair again." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Arestia vergisst den Schlüssel und die Adresse. Die Steuerelemente im Kontrollzentrum und die Kurzbefehle gehen erst wieder, wenn du dich neu verbindest."
+            "value" : "Arestia vergisst die Kopplung. Die Steuerelemente im Kontrollzentrum und die Kurzbefehle ruhen, bis du neu koppelst."
           }
         }
       }
@@ -365,12 +345,22 @@
         }
       }
     },
-    "Arestia talks to flatd, the flat service on your Mac, over the home Wi-Fi. No account, only flatd's key." : {
+    "Arestia talks only to the flatd with this identity, encrypted. The pairing stays on this iPhone, in the Keychain; Shortcuts and the Control Center controls use it too." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Arestia spricht über das WLAN zu Hause mit flatd, dem Wohnungsdienst auf deinem Mac. Kein Konto, nur der Schlüssel von flatd."
+            "value" : "Arestia spricht nur mit dem flatd mit dieser Kennung, verschlüsselt. Die Kopplung bleibt auf diesem iPhone, im Schlüsselbund; Kurzbefehle und die Steuerelemente im Kontrollzentrum nutzen sie auch."
+          }
+        }
+      }
+    },
+    "Arestia talks to flatd, the flat service on your home network. No account, only flatd's pairing code." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arestia spricht mit flatd, dem Wohnungsdienst in deinem Heimnetz. Kein Konto, nur der Kopplungscode von flatd."
           }
         }
       }
@@ -445,22 +435,22 @@
         }
       }
     },
+    "Code read" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Code gelesen"
+          }
+        }
+      }
+    },
     "Connect" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Verbinden"
-          }
-        }
-      }
-    },
-    "Connect again" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Neu verbinden"
           }
         }
       }
@@ -585,26 +575,6 @@
         }
       }
     },
-    "Enter an address" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Adresse eingeben"
-          }
-        }
-      }
-    },
-    "Enter the key" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Schlüssel eingeben"
-          }
-        }
-      }
-    },
     "Fan timers" : {
       "localizations" : {
         "de" : {
@@ -641,16 +611,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Favorit, %@"
-          }
-        }
-      }
-    },
-    "Find it on the network instead" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Doch im Netzwerk suchen"
           }
         }
       }
@@ -725,12 +685,12 @@
         }
       }
     },
-    "Key" : {
+    "Identity" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Schlüssel"
+            "value" : "Kennung"
           }
         }
       }
@@ -771,16 +731,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Die Wohnung lädt"
-          }
-        }
-      }
-    },
-    "Looking on your network…" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sucht in deinem Netzwerk …"
           }
         }
       }
@@ -885,6 +835,16 @@
         }
       }
     },
+    "On the computer flatd runs on, run “flatd pair” in Terminal. It shows the code. Arestia then talks only to that flatd, encrypted." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Führe auf dem Computer, auf dem flatd läuft, im Terminal „flatd pair“ aus. Es zeigt den Code. Arestia spricht danach nur mit diesem flatd, verschlüsselt."
+          }
+        }
+      }
+    },
     "On until switched off" : {
       "localizations" : {
         "de" : {
@@ -925,6 +885,16 @@
         }
       }
     },
+    "Or paste the code" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Oder den Code einfügen"
+          }
+        }
+      }
+    },
     "Otherwise the sun stands where it really is now." : {
       "localizations" : {
         "de" : {
@@ -935,12 +905,32 @@
         }
       }
     },
-    "Paste flatd's key" : {
+    "Pair again" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Schlüssel von flatd einfügen"
+            "value" : "Neu koppeln"
+          }
+        }
+      }
+    },
+    "Pairing code" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kopplungscode"
+          }
+        }
+      }
+    },
+    "Paste the code" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Den Code einfügen"
           }
         }
       }
@@ -971,6 +961,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Läuft einmal."
+          }
+        }
+      }
+    },
+    "Scan a new code from flatd" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einen neuen Code von flatd scannen"
           }
         }
       }
@@ -1015,12 +1015,12 @@
         }
       }
     },
-    "That isn't a key from the flat service." : {
+    "That isn't a pairing code from flatd." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Das ist kein Schlüssel des Wohnungsdienstes."
+            "value" : "Das ist kein Kopplungscode von flatd."
           }
         }
       }
@@ -1065,12 +1065,12 @@
         }
       }
     },
-    "The flat service doesn't know this key." : {
+    "The flat service isn't answering. Check that this iPhone is on the home Wi-Fi and flatd is running. If flatd was set up anew, scan a new code." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Der Wohnungsdienst kennt diesen Schlüssel nicht."
+            "value" : "Der Wohnungsdienst antwortet nicht. Prüfe, ob dieses iPhone im Heim-WLAN ist und flatd läuft. Wurde flatd neu eingerichtet, scanne einen neuen Code."
           }
         }
       }
@@ -1085,32 +1085,22 @@
         }
       }
     },
-    "The key stays on this iPhone, in the Keychain." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Der Schlüssel bleibt auf diesem iPhone, im Schlüsselbund."
-          }
-        }
-      }
-    },
-    "The key stays on this iPhone, in the Keychain. Shortcuts and the Control Center controls use it too." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Der Schlüssel bleibt auf diesem iPhone, im Schlüsselbund. Kurzbefehle und die Steuerelemente im Kontrollzentrum nutzen ihn auch."
-          }
-        }
-      }
-    },
     "The plug runs the timer: the fan goes off by itself, even when the Mac sleeps." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Den Timer führt die Steckdose: Der Ventilator geht von selbst aus, auch wenn der Mac schläft."
+          }
+        }
+      }
+    },
+    "The same as under flatd's QR code" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieselbe wie unter dem QR-Code von flatd"
           }
         }
       }
@@ -1155,12 +1145,22 @@
         }
       }
     },
-    "flatd has a new key, or this one was mistyped. Enter it again." : {
+    "flatd has a new key. Pair again with a new code from flatd." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "flatd hat einen neuen Schlüssel, oder dieser war vertippt. Gib ihn noch einmal ein."
+            "value" : "flatd hat einen neuen Schlüssel. Kopple neu mit einem neuen Code von flatd."
+          }
+        }
+      }
+    },
+    "flatd has a new key. Run “flatd pair” again and scan the new code." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "flatd hat einen neuen Schlüssel. Führe „flatd pair“ noch einmal aus und scanne den neuen Code."
           }
         }
       }

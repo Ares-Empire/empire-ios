@@ -12,7 +12,8 @@ import os
 ///   brings the same a moment later). Nothing is shown as done before flatd said so, except a blind's target while it
 ///   is dragged.
 /// - Not reachable (the Mac asleep, away from home): the last state stays on screen, marked as not live; no alerts.
-/// - The key goes only to an address that answered like flatd (`FlatdClient.verify`).
+/// - The key and every request go only to a server that proved flatd's key (`FlatdPin`, checked by the transport on
+///   every connection); Bonjour and the saved address only say where to look.
 ///
 /// One loop follows flatd at a time: each has its own generation and failure count, and after every wait it checks it
 /// is still the store's loop before it changes anything (Codex's review, 2026-11-19: a Try again during a Bonjour
@@ -28,7 +29,7 @@ final class FlatStore {
         case live
         /// flatd does not answer.
         case offline
-        /// flatd refused the key (401): it has to be entered again.
+        /// flatd refused the key (401): the app has to pair again.
         case refused
     }
 
@@ -48,15 +49,16 @@ final class FlatStore {
     var offer: UndoOffer?
 
     let connection: FlatdConnection
-    private let transport: any HTTPTransport & Sendable
+    /// Nil: the real transport, which accepts only a server holding the pairing's key (the tests pass a fake).
+    private let transport: (any HTTPTransport & Sendable)?
     private let eventSource: any FlatEventSource
-    private let rediscover: @Sendable (String) async -> URL?
+    private let rediscover: @Sendable () async -> [URL]
     private let reloadControls: @MainActor () -> Void
     private var loop: Task<Void, Never>?
     /// Which loop may change the store (`run`); a stopped or replaced loop finds it changed and ends.
     private var loopGeneration = 0
-    /// The address the live loop checked (it answered like flatd): commands go there while live; otherwise they check
-    /// the saved address first, as the loop does, so the key never goes to an address that was not checked.
+    /// The address the live loop reached flatd at: commands go there while live; otherwise they check the saved address
+    /// first, as the loop does. (Who answers is settled on every connection by the pin, `FlatdTransport`.)
     private var liveBase: URL?
     /// How often each device or mode changed in the stream, and how many snapshots came: a command's answer is shown
     /// only when nothing newer came from the stream meanwhile (Codex's review, round 2).
@@ -72,9 +74,9 @@ final class FlatStore {
         backoff[min(max(failures, 1), backoff.count) - 1]
     }
 
-    init(connection: FlatdConnection, transport: any HTTPTransport & Sendable = FlatdTransport(),
+    init(connection: FlatdConnection, transport: (any HTTPTransport & Sendable)? = nil,
          eventSource: any FlatEventSource = WebSocketEvents(),
-         rediscover: @escaping @Sendable (String) async -> URL? = { await FlatdBonjour.resolve(name: $0) },
+         rediscover: @escaping @Sendable () async -> [URL] = { await FlatdBonjour.candidates() },
          reloadControls: @escaping @MainActor () -> Void = { ArestiaControlKind.reloadAll() }) {
         self.connection = connection
         self.transport = transport
@@ -134,11 +136,14 @@ final class FlatStore {
 
     private func run(generation: Int, pairing: FlatdPairing) async {
         var failures = 0
-        var base = pairing.link.baseURL
+        var client = FlatdClient(pairing, transport: transport)
+        var movedSinceLive = false
         while owns(generation) {
-            let client = FlatdClient(baseURL: base, token: pairing.token, transport: transport)
             do {
-                try await follow(client, generation: generation) { failures = 0 }
+                try await follow(client, generation: generation) {
+                    failures = 0
+                    movedSinceLive = false
+                }
             } catch FlatdError.refused {
                 guard owns(generation) else { return }
                 Self.log.notice("flatd refused the key")
@@ -148,14 +153,22 @@ final class FlatStore {
             } catch {}
             guard owns(generation) else { return }
             failures += 1
-            // The Mac's address may have changed: after the second miss, look for flatd again under its Bonjour name.
-            if failures >= 2, let name = pairing.link.serviceName {
-                let found = await rediscover(name)
+            // flatd's address may have changed: after the second miss, look over Bonjour. What it offers are only
+            // candidates; one counts when the server there proved flatd's key and answered.
+            if failures >= 2 {
+                let candidates = await rediscover().filter { $0 != client.baseURL }
                 guard owns(generation) else { return }
-                if let found, found != base {
-                    Self.log.notice("flatd may be at a new address")
-                    base = found                     // kept in the pairing only once it answered (in `follow`)
-                    continue
+                let found = await FlatdReach.find(pairing, among: candidates, transport: transport)
+                guard owns(generation) else { return }
+                if let found {
+                    Self.log.notice("flatd is at a new address")
+                    client = found                   // kept in the pairing only once it answered (in `follow`)
+                    // At once the first time; a second move without a live stream in between waits like any retry
+                    // (flatd reachable at two addresses with a failing stream must not spin).
+                    if !movedSinceLive {
+                        movedSinceLive = true
+                        continue
+                    }
                 }
             }
             // One quick retry before the screen says so: a stream cut while the app was in the background, say.
@@ -175,14 +188,14 @@ final class FlatStore {
         do { answered = try await client.scenes() } catch FlatdError.unknown { answered = [] }   // a flatd without scenes
         guard owns(generation) else { return }
         scenes = answered
-        for try await event in eventSource.events(from: client.eventsRequest) {
+        for try await event in eventSource.events(from: client.eventsRequest, pin: client.pin) {
             guard owns(generation) else { return }
             apply(event)
             if case .snapshot = event {
                 live()
                 link = .live
                 liveBase = client.baseURL
-                if let pairing = connection.pairing, pairing.token == client.token {
+                if let pairing = connection.pairing, pairing.token == client.token, pairing.pin == client.pin {
                     connection.move(pairing, to: client.baseURL)
                 }
             }
@@ -288,17 +301,18 @@ final class FlatStore {
 
     // MARK: connecting
 
-    /// Checks the address and key with flatd (`GET /api/devices`, once it answered like flatd) and keeps them when it
-    /// answers. Returns why not.
-    func connect(to baseURL: URL, serviceName: String?, token: String) async -> FlatdError? {
-        let candidate = FlatdClient(baseURL: baseURL, token: token, transport: transport)
+    /// Checks a pairing code's key with flatd at this address (`GET /api/devices`; the transport accepts only a server
+    /// holding the code's pin) and keeps the pairing when flatd answers. Returns why not: `.unreachable` when flatd is
+    /// not there (nothing, or something without its key), `.refused` when flatd itself does not know the key.
+    func connect(to baseURL: URL, token: String, pin: FlatdPin) async -> FlatdError? {
+        let candidate = FlatdClient(baseURL: baseURL, token: token, pin: pin, transport: transport)
         let started = pairingGeneration
         do {
             try await candidate.verify()
             let found = try await candidate.devices()
             // The screen went away, or another pairing or a disconnect came first: this attempt keeps nothing.
             guard !Task.isCancelled, started == pairingGeneration else { return .notPossible }
-            try connection.save(FlatdPairing(link: FlatdLink(baseURL: baseURL, serviceName: serviceName), token: token))
+            try connection.save(FlatdPairing(baseURL: baseURL, token: token, pin: pin))
             stop()
             pairingGeneration += 1
             devices = found
@@ -417,14 +431,13 @@ final class FlatStore {
 
     func isWorking(_ key: String) -> Bool { working.contains(key) }
 
-    /// The client a command goes through: the live loop's checked address, or the saved one once it answered like
-    /// flatd (never the key to an address that was not checked).
+    /// The client a command goes through: at the live loop's address, or at the saved one once flatd answered there.
     private func readyClient() async throws -> FlatdClient {
         guard let pairing = connection.pairing else { throw FlatdError.refused }
         if link == .live, let liveBase {
-            return FlatdClient(baseURL: liveBase, token: pairing.token, transport: transport)
+            return FlatdClient(pairing, at: liveBase, transport: transport)
         }
-        let client = FlatdClient(baseURL: pairing.link.baseURL, token: pairing.token, transport: transport)
+        let client = FlatdClient(pairing, transport: transport)
         try await client.verify()
         return client
     }

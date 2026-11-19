@@ -13,7 +13,7 @@ final class FakeTransport: HTTPTransport, @unchecked Sendable {
     }
 
     private let lock = NSLock()
-    /// Health answers like flatd unless a test says otherwise (the key goes only to such an address).
+    /// flatd's health answers unless a test says otherwise.
     private var answers: [String: Answer] = ["GET /api/health": Answer(body: ["ok": true, "version": "1.1.0-test"])]
     private(set) var requests: [URLRequest] = []
 
@@ -56,10 +56,13 @@ final class FakeEvents: FlatEventSource, @unchecked Sendable {
     private var continuation: AsyncThrowingStream<FlatEvent, Error>.Continuation?
     private(set) var requests: [URLRequest] = []
 
-    func events(from request: URLRequest) -> AsyncThrowingStream<FlatEvent, Error> {
+    private(set) var pins: [FlatdPin] = []
+
+    func events(from request: URLRequest, pin: FlatdPin) -> AsyncThrowingStream<FlatEvent, Error> {
         AsyncThrowingStream { continuation in
             lock.withLock {
                 requests.append(request)
+                pins.append(pin)
                 self.continuation = continuation
             }
         }
@@ -99,14 +102,20 @@ final class MemoryKeys: FlatdKeyStore, @unchecked Sendable {
 }
 
 enum Flat {
-    static let base = URL(string: "http://192.0.2.10:8787")!
+    static let base = URL(string: "https://192.0.2.10:8788")!
+    /// A made-up identity (the fake transport checks no certificate; `TrustTests` do, with made-up certificates).
+    static let pin = FlatdPin(String(repeating: "ab", count: 32))!
+
+    static func pairing(at url: URL = base, token: String = key) -> FlatdPairing {
+        FlatdPairing(baseURL: url, token: token, pin: pin)
+    }
     static let key = "test-key-0123456789abcdef"
 
     /// A connection in a defaults suite of its own and an in-memory key.
     static func connection(linked: Bool = true) -> FlatdConnection {
         let defaults = UserDefaults(suiteName: "arestia-tests-" + UUID().uuidString)!
         let connection = FlatdConnection(defaults: defaults, keychain: MemoryKeys())
-        if linked { try? connection.save(FlatdPairing(link: FlatdLink(baseURL: base, serviceName: "flatd"), token: key)) }
+        if linked { try? connection.save(pairing()) }
         return connection
     }
 
@@ -146,7 +155,7 @@ enum Flat {
                       connection: FlatdConnection = connection()) -> (FlatStore, FakeTransport, FakeEvents, Counter) {
         let reloads = Counter()
         let store = FlatStore(connection: connection, transport: transport, eventSource: events,
-                              rediscover: { _ in nil }, reloadControls: { reloads.count += 1 })
+                              rediscover: { [] }, reloadControls: { reloads.count += 1 })
         return (store, transport, events, reloads)
     }
 }
