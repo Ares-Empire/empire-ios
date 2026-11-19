@@ -119,12 +119,12 @@ class Flat:
             listener(event)
 
     def set_state(self, device_id: str, changes: dict, source: str) -> None:
+        # Emitted under the lock, so a stream's snapshot (taken under it too) never misses an event or sees it twice.
         with self.lock:
             state = self.devices[device_id]["state"]
             state.update(changes)
             state["updated_at"] = now_iso()
-            event = {"type": "state", "id": device_id, "state": dict(state), "source": source}
-        self.emit(event)
+            self.emit({"type": "state", "id": device_id, "state": dict(state), "source": source})
 
     def snapshot(self) -> dict:
         with self.lock:
@@ -222,8 +222,7 @@ class Flat:
                 if status != 200:
                     failed[device_id] = answer.get("error", str(status))
             answer = dict(mode)
-            event = {"type": "mode", "mode": dict(mode), "source": "api"}
-        self.emit(event)
+            self.emit({"type": "mode", "mode": dict(mode), "source": "api"})
         return 200, {**answer, "failed": failed}
 
     def run_scene(self, scene_id: str) -> tuple[int, dict]:
@@ -469,8 +468,9 @@ def make_handler(flat: Flat, key: str, latency: float, viewer: bytes):
             self.end_headers()
             self.wfile.flush()
             ws = WebSocket(self.connection)
-            ws.send_text(json.dumps(flat.snapshot()))
-            sockets.append(ws)
+            with flat.lock:                      # no event between the snapshot and joining the broadcast
+                ws.send_text(json.dumps(flat.snapshot()))
+                sockets.append(ws)
             ws.read_forever()
             self.close_connection = True
 
