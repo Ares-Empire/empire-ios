@@ -16,7 +16,8 @@ nonisolated enum FlatdBonjour {
     /// Every address a `_flatd._tcp` service is advertised at right now, in no particular order: the services seen
     /// within `browse` (none seen: empty), each resolved. Candidates only, see above.
     static func candidates(browse: Duration = .seconds(2)) async -> [URL] {
-        let names = await serviceNames(within: browse)
+        // Anyone on the Wi-Fi can advertise any number of services: a handful is looked at, never all of them.
+        let names = await serviceNames(within: browse).prefix(maxCandidates)
         return await withTaskGroup(of: URL?.self) { group in
             for name in names { group.addTask { await resolve(name: name) } }
             var found: [URL] = []
@@ -26,6 +27,9 @@ nonisolated enum FlatdBonjour {
             return found
         }
     }
+
+    /// How many advertised services are resolved and tried at most (a home has one flatd, two during a move).
+    static let maxCandidates = 8
 
     /// The names of the services advertised now. Ends early once some were seen and nothing new came for a moment.
     static func serviceNames(within limit: Duration) async -> [String] {
@@ -140,13 +144,25 @@ nonisolated struct FlatdReach: Sendable {
         return result
     }
 
-    /// The first candidate address where flatd answers (its key proved, by the transport).
+    /// A candidate address where flatd answers (its key proved, by the transport). The candidates are asked side by
+    /// side and the first that answers wins, so addresses that answer slowly or not at all (forged Bonjour records)
+    /// cannot use up the time before the real one is asked.
     static func find(_ pairing: FlatdPairing, among candidates: [URL],
                      transport: (any HTTPTransport & Sendable)?) async -> FlatdClient? {
-        for url in candidates where url.scheme == "https" {
-            let client = FlatdClient(pairing, at: url, transport: transport)
-            if (try? await client.verify()) != nil { return client }
+        await withTaskGroup(of: FlatdClient?.self) { group in
+            for url in candidates.prefix(FlatdBonjour.maxCandidates) where url.scheme == "https" {
+                group.addTask {
+                    let client = FlatdClient(pairing, at: url, transport: transport)
+                    return (try? await client.verify()) != nil ? client : nil
+                }
+            }
+            for await found in group {
+                if let found {
+                    group.cancelAll()
+                    return found
+                }
+            }
+            return nil
         }
-        return nil
     }
 }

@@ -15,25 +15,26 @@ struct FlatdTransport: HTTPTransport {
             guard let response = response as? HTTPURLResponse else { throw HTTPError.invalidResponse }
             return (data, response)
         } catch let error as URLError where error.code == .cancelled && !Task.isCancelled {
-            // Nobody cancelled this request: the session did, because the server is not flatd (`PinnedServer`).
+            // Nobody cancelled this request (and its session is never invalidated): the session's delegate did,
+            // because the server is not flatd (`PinnedServer`).
             throw URLError(.serverCertificateUntrusted)
         }
     }
 }
 
 nonisolated enum FlatdSession {
-    private static let current = OSAllocatedUnfairLock<(pin: FlatdPin, session: URLSession)?>(initialState: nil)
+    private static let sessions = OSAllocatedUnfairLock<[FlatdPin: URLSession]>(initialState: [:])
 
     /// The session for this pin: no cookies or cache kept, no redirects followed, only flatd's key accepted. One
     /// session per pin, because a session reuses its connections: a connection checked against one pin must never
-    /// carry a request meant for another. A new pin retires the old pin's session: requests already on their way
-    /// finish (pairing again while the old pairing still works must not cut either short), nothing new starts on it.
+    /// carry a request meant for another. A session is never invalidated: a caller may still be about to start a
+    /// request on it (pairing again while the old pairing is in use), and a task on an invalidated session is a crash.
+    /// There are only ever as many as pairing codes were tried since the app (or the extension) started.
     static func shared(pin: FlatdPin) -> URLSession {
-        current.withLock { state in
-            if let state, state.pin == pin { return state.session }
-            state?.session.finishTasksAndInvalidate()
+        sessions.withLock { sessions in
+            if let session = sessions[pin] { return session }
             let session = URLSession(configuration: .ephemeral, delegate: PinnedServer(pin: pin), delegateQueue: nil)
-            state = (pin, session)
+            sessions[pin] = session
             return session
         }
     }

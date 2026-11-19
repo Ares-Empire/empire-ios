@@ -69,8 +69,16 @@ loaded with the key and never bundled.
   extension and readable after the first unlock, so a control works from the lock screen (never synced, never
   restored to another device). Settings → Flat service shows the address flatd was last reached at and the identity's
   first 16 hex digits, the same ones `flatd pair` prints under its QR code and flatd logs at startup.
-- **What the pin does not cover:** someone who can read flatd's machine (its `key.pem` and config) or this iPhone's
-  Keychain, or who photographs the QR code while it is on screen: they have what flatd or the phone has.
+- **Pairing again with another flatd** (a code whose identity differs from the paired one) never happens by itself:
+  the code is shown with its identity and waits for Connect, because the code decides who the app trusts from then
+  on. A first pairing, and a fresh code of the same flatd, connect at once. Work that was under way for one pairing
+  (a Shortcut reading the fans, a late device list, the 3D page) never continues under another: each checks that its
+  flatd and key are still the saved ones, and the 3D tab gets a web view of its own per pairing.
+- **What the pin does not cover:** anything behind flatd (how flatd reaches its devices is flatd's own matter, in
+  its private contract); what the 3D page does inside WebKit beyond HTTP and WebSocket loads, which are blocked (the
+  page is flatd's own, fetched from the proven flatd, and is trusted as that); and someone who can read flatd's
+  machine (its `key.pem` and config) or this iPhone's Keychain, or who photographs the QR code while it is on screen:
+  they have what flatd or the phone has.
 - **Two tabs and the gear** ("not many buttons and big menu"): **Home** (what the flat is doing in one line; cooking
   while it runs, with Done cooking as the one big button; otherwise the modes and scenes as three tiles; the fans with
   on/off and the timers 15 min / 30 min / 1 h / ∞ and the time left; the blinds with their window drawn at its position,

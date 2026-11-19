@@ -155,10 +155,17 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
         defaults?.data(forKey: Self.devicesKey).flatMap { try? JSONDecoder().decode([KnownDevice].self, from: $0) } ?? []
     }
 
-    /// Keeps the devices' names for Shortcuts' pickers, only while the pairing they came from (its key) is the saved
-    /// one: a late answer never brings names back after Disconnect.
-    func remember(_ devices: [Device], keyedBy token: String? = nil) {
-        if let token, self.token != token { return }
+    /// Whether this client still speaks for the saved pairing: the same flatd (its identity) and the same key. False
+    /// after Disconnect or after pairing with another flatd, also one that happens to use the same key.
+    func isCurrent(_ client: FlatdClient) -> Bool {
+        guard let pairing else { return false }
+        return pairing.pin == client.pin && pairing.token == client.token
+    }
+
+    /// Keeps the devices' names for Shortcuts' pickers, only while the pairing they came from (`client`'s) is the saved
+    /// one: a late answer never brings names back after Disconnect, or another flat's names into a new pairing.
+    func remember(_ devices: [Device], from client: FlatdClient? = nil) {
+        if let client, !isCurrent(client) { return }
         let known = devices.map { KnownDevice(id: $0.id, kind: $0.kind.raw, label: $0.label) }
         guard known != knownDevices else { return }
         defaults?.set(try? JSONEncoder().encode(known), forKey: Self.devicesKey)

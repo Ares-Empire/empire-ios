@@ -30,8 +30,8 @@ nonisolated struct FlatActions: Sendable {
 
     /// flatd's devices, remembered for Shortcuts' pickers while their pairing is still the saved one.
     func devices() async throws -> [Device] {
-        let (devices, token) = try await reach.run { client in (try await client.devices(), client.token) }
-        reach.connection.remember(devices, keyedBy: token)
+        let (devices, client) = try await reach.run { client in (try await client.devices(), client) }
+        reach.connection.remember(devices, from: client)
         return devices
     }
 
@@ -45,7 +45,7 @@ nonisolated struct FlatActions: Sendable {
             let fans = try await client.devices().filter { $0.kind == .fan && (ids?.contains($0.id) ?? true) }
             guard !fans.isEmpty else { throw FlatdError.unknown }
             // The pairing may have changed while the list was read: then nothing is switched.
-            guard connection.token == client.token else { throw FlatdError.refused }
+            guard connection.isCurrent(client) else { throw FlatdError.refused }
             return try await withThrowingTaskGroup(of: Result<Device, FlatdError>.self) { group in
                 for fan in fans {
                     group.addTask {

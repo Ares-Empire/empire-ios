@@ -78,7 +78,7 @@ struct ConnectScreen: View {
         .interactiveDismissDisabled(model.isConnecting)
         .onAppear {
             model.browser.start()
-            if model.code != nil { connect() }       // a code handed in: connect with it
+            if model.code != nil, !replacesAnotherFlatd { connect() }       // a code handed in: connect with it
         }
         .onDisappear {
             model.browser.stop()
@@ -92,9 +92,14 @@ struct ConnectScreen: View {
         }
     }
 
-    /// A scanned or pasted code connects at once: there is nothing else to enter.
+    /// A scanned or pasted code connects at once (there is nothing else to enter), unless it would replace the flatd
+    /// paired now with another one: that waits for Connect.
     private func take(_ text: String) {
-        if model.take(text) { connect() }
+        if model.take(text), !replacesAnotherFlatd { connect() }
+    }
+
+    private var replacesAnotherFlatd: Bool {
+        model.replacesAnotherFlatd(paired: store.connection.pairing?.pin)
     }
 
     private func connect() {
@@ -148,10 +153,15 @@ struct ConnectScreen: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Code read").font(AppFont.text(15, weight: .medium)).foregroundStyle(Ink.primary)
                         Text(verbatim: code.pin.short).font(AppFont.number(12)).foregroundStyle(Ink.muted)
+                        if replacesAnotherFlatd {
+                            Text("This is another flatd than the one paired now. Connect only if “flatd pair” shows this identity under its code.")
+                                .font(AppFont.text(12)).foregroundStyle(FormProblem.ink)
+                                .fixedSize(horizontal: false, vertical: true).padding(.top, 2)
+                        }
                     }
                     Spacer()
                 }
-                .padding(.horizontal, 16).frame(minHeight: 58)
+                .padding(.horizontal, 16).padding(.vertical, 10).frame(minHeight: 58)
                 .accessibilityElement(children: .combine)
             }
         }

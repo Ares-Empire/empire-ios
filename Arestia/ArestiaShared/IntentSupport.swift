@@ -73,9 +73,9 @@ nonisolated struct RolloQuery: EntityQuery {
 nonisolated enum DeviceChoices {
     static func load(kind: Device.Kind, connection: FlatdConnection = .live) async -> [FlatdConnection.KnownDevice] {
         if let answer = try? await FlatdReach(connection: connection).run({ client in
-            (try await client.devices(), client.token)
+            (try await client.devices(), client)
         }) {
-            connection.remember(answer.0, keyedBy: answer.1)
+            connection.remember(answer.0, from: answer.1)
         }
         return connection.knownDevices.filter { $0.kind == kind.raw }
     }

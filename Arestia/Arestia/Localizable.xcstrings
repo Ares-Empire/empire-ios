@@ -1105,6 +1105,16 @@
         }
       }
     },
+    "This is another flatd than the one paired now. Connect only if “flatd pair” shows this identity under its code." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das ist ein anderer flatd als der gerade gekoppelte. Verbinde nur, wenn „flatd pair“ unter seinem Code diese Kennung zeigt."
+          }
+        }
+      }
+    },
     "Try again" : {
       "localizations" : {
         "de" : {

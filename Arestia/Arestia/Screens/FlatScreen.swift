@@ -22,6 +22,9 @@ struct FlatScreen: View {
                     // The safe area's bottom here is the tab bar and the home indicator; the page sees only the latter.
                     FlatWebView(store: store, page: page, coveredBottom: proxy.safeAreaInsets.bottom,
                                 load: page.wanted ? "\(page.loads)-\(store.pairingGeneration)" : nil)
+                        // A web view of its own per pairing: another flat's page is gone, with its bridge, the moment
+                        // the pairing changes, and can neither read the new flat's state nor command it.
+                        .id(store.pairingGeneration)
                         .ignoresSafeArea()
                         .opacity(page.isReady ? 1 : 0)
                         .animation(.easeOut(duration: 0.3), value: page.isReady)
@@ -147,6 +150,9 @@ private struct FlatWebView: UIViewRepresentable {
         private var lastConnection: FlatStore.Link?
         /// Whether the one navigation allowed, the page `load()` hands over, is due.
         private var expectsPage = false
+        /// The document (`document`'s count) the app handed to the web view last: only it may speak to the app. While
+        /// the next page is fetched, the old document is no longer the one and is not heard.
+        private var handedOver: Int?
         /// The page's address inside the web view: a name that never resolves (`.invalid`, RFC 2606), so the page has
         /// an ordinary origin of its own and nothing it does can reach a real server. Never flatd's address.
         static let pageURL = URL(string: "https://viewer.arestia.invalid/")!
@@ -165,8 +171,9 @@ private struct FlatWebView: UIViewRepresentable {
             readyDeadline?.cancel()
             document += 1
             let loading = document
-            guard let client = store.connection.client else { return }
+            handedOver = nil
             expectsPage = false
+            guard let client = store.connection.client else { return }
             page.isReady = false
             page.problem = nil
             webView?.stopLoading()
@@ -190,9 +197,16 @@ private struct FlatWebView: UIViewRepresentable {
                     return
                 }
                 guard let self, loading == document else { return }
-                await blockTheNetwork()
-                guard loading == document else { return }
+                // No page without its fence: if the rules cannot be installed, nothing is loaded.
+                guard await blockTheNetwork() else {
+                    guard loading == document else { return }
+                    readyDeadline?.cancel()
+                    page.problem = String(localized: "The 3D flat didn't start.")
+                    return
+                }
+                guard loading == document, store.connection.isCurrent(client) else { return }
                 expectsPage = true
+                handedOver = loading
                 webView?.load(html, mimeType: "text/html", characterEncodingName: "utf-8", baseURL: Self.pageURL)
             }
         }
@@ -207,7 +221,7 @@ private struct FlatWebView: UIViewRepresentable {
 
         func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
             // Only the page the app handed over, in the main frame, may speak to the app.
-            guard message.frameInfo.isMainFrame, isThePage(message.frameInfo.securityOrigin),
+            guard handedOver == document, message.frameInfo.isMainFrame, isThePage(message.frameInfo.securityOrigin),
                   let parsed = PageMessage.parse(message.body) else { return }
             switch parsed {
             case .ready:
@@ -306,17 +320,23 @@ private struct FlatWebView: UIViewRepresentable {
         }
 
         /// The page is self-contained and the app is its only way out: nothing may be loaded or reached from it (no
-        /// remote script, fetch or socket), whatever the page does. A content rule list.
-        private func blockTheNetwork() async {
-            guard let webView else { return }
+        /// remote script, fetch or socket), whatever the page does. A content rule list; false when it could not be
+        /// installed (then the web view keeps the rules it had, and the caller loads nothing).
+        private func blockTheNetwork() async -> Bool {
+            guard let webView else { return false }
             let rules = """
             [{"trigger": {"url-filter": "^https?://"}, "action": {"type": "block"}},
              {"trigger": {"url-filter": "^wss?://"}, "action": {"type": "block"}}]
             """
             let list = try? await WKContentRuleListStore.default().compileContentRuleList(
                 forIdentifier: "arestia-viewer-no-network", encodedContentRuleList: rules)
+            guard let list else {
+                Self.log.error("the page's network rules did not compile: nothing is loaded")
+                return false
+            }
             webView.configuration.userContentController.removeAllContentRuleLists()
-            if let list { webView.configuration.userContentController.add(list) }
+            webView.configuration.userContentController.add(list)
+            return true
         }
 
         /// The page's origin is the one the app gave it (WebKit reports a default port as 0).

@@ -281,6 +281,51 @@ struct RediscoveryTests {
         store.stop()
     }
 
+    @Test func slowOrManyForgedAddressesDoNotKeepFlatdOutOfReach() async {
+        // Forged Bonjour records that answer slowly: flatd is asked side by side with them, and at most a handful.
+        let forged = (1...20).map { URL(string: "https://192.0.2.\(100 + $0):8788")! }
+        for url in forged {
+            transport.answer("GET \(url.host()!)/api/health", fails: true, failure: .serverCertificateUntrusted,
+                             delay: .seconds(5))
+        }
+        let clock = ContinuousClock(), start = clock.now
+        let found = await FlatdReach.find(Flat.pairing(), among: Array(forged.prefix(3)) + [moved], transport: transport)
+        #expect(found?.baseURL == moved)
+        #expect(clock.now - start < .seconds(2))
+        // More advertised than the app will look at: only the first few are asked at all.
+        let before = transport.sent.count
+        _ = await FlatdReach.find(Flat.pairing(), among: forged, transport: transport)
+        #expect(transport.sent.count - before == FlatdBonjour.maxCandidates)
+    }
+
+    @Test func workForOneFlatdNeverContinuesUnderAnother() async throws {
+        // Paired anew with another flatd that uses the same key while the fans were being read: nothing is switched,
+        // and the old flat's device names are not kept for the new pairing.
+        let connection = Flat.connection()
+        let old = FlatdClient(Flat.pairing(), transport: transport)
+        #expect(connection.isCurrent(old))
+        let other = FlatdPairing(baseURL: Flat.base, token: Flat.key, pin: MadeUpCertificates.pinB)
+        transport.answer("GET /api/devices", body: ["devices": [Flat.fan(1)]])
+        transport.answer("POST /api/devices/fan:fan_1", body: Flat.fan(1, on: true))
+        let reach = FlatdReach(connection: connection, transport: transport, rediscover: { [] })
+        await #expect(throws: FlatdError.refused) {
+            try await reach.run { client in
+                _ = try await client.devices()
+                try connection.save(other)                         // the pairing changes under the running work
+                guard connection.isCurrent(client) else { throw FlatdError.refused }
+                return try await client.send(.power(on: true), to: "fan:fan_1")
+            }
+        }
+        #expect(transport.bodies(for: "POST /api/devices/fan:fan_1").isEmpty)
+        #expect(!connection.isCurrent(old))
+        connection.remember(try Flat.devices([Flat.fan(1)]), from: old)
+        #expect(connection.knownDevices.isEmpty)
+        connection.remember(try Flat.devices([Flat.fan(2)]), from: FlatdClient(other, transport: transport))
+        #expect(connection.knownDevices.map(\.id) == ["fan:fan_2"])
+        try connection.forget()
+        #expect(!connection.isCurrent(old))
+    }
+
     @Test func aSavedPairingWithoutAnIdentityIsNoPairing() throws {
         // What a build before flatd had an identity saved: an address and a key. Never used again; pair anew.
         let keys = MemoryKeys()
@@ -365,6 +410,18 @@ struct ConnectModelTests {
         #expect(await model.connect(store: store) == false)
         #expect(model.problem != nil && connection.pairing == nil)
         #expect(transport.sent.allSatisfy { $0.value(forHTTPHeaderField: "Authorization") == nil })
+    }
+
+    @Test func aCodeForAnotherFlatdWaitsForADeliberateConnect() {
+        let model = ConnectModel(candidates: { [] })
+        #expect(!model.replacesAnotherFlatd(paired: pin))              // nothing read yet
+        model.take(text())
+        #expect(!model.replacesAnotherFlatd(paired: nil))              // a first pairing connects at once
+        #expect(!model.replacesAnotherFlatd(paired: pin))              // a fresh code of the same flatd too
+        #expect(model.replacesAnotherFlatd(paired: MadeUpCertificates.pinB))
+        // Something else scanned afterwards: the earlier code is no longer staged.
+        #expect(model.take("not a code") == false)
+        #expect(model.code == nil && !model.canConnect)
     }
 
     @Test func somethingElseScannedIsNotACode() {

@@ -100,10 +100,20 @@ final class ConnectModel {
 
     var canConnect: Bool { code != nil && !isConnecting }
 
+    /// Whether the code read is for another flatd than the one paired now (`paired`): then nothing connects by itself.
+    /// A code decides who the app trusts from then on, so swapping that for another identity takes a deliberate
+    /// Connect, with the new identity on screen to compare with flatd's own. (A first pairing and a fresh code of the
+    /// same flatd connect at once.)
+    func replacesAnotherFlatd(paired: FlatdPin?) -> Bool {
+        guard let code, let paired else { return false }
+        return code.pin != paired
+    }
+
     /// A scanned or pasted text: flatd's pairing code, or not. Returns whether it was one.
     @discardableResult
     func take(_ text: String) -> Bool {
         guard let code = PairingCode.parse(text) else {
+            self.code = nil                    // whatever was read before is not what is on screen now
             problem = String(localized: "That isn't a pairing code from flatd.")
             return false
         }
