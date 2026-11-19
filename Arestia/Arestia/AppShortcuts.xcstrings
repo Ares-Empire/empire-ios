@@ -1,25 +1,11 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "${applicationName} cooking" : {
-      "extractionState" : "stale",
+    "Air out with ${applicationName}" : {
       "localizations" : {
         "de" : {
           "stringSet" : {
             "state" : "translated",
-            "values" : [
-              "${applicationName} kochen"
-            ]
-          }
-        }
-      }
-    },
-    "Air out with ${applicationName}" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "de" : {
-          "stringSet" : {
-            "state" : "needs_review",
             "values" : [
               "Mit ${applicationName} lüften"
             ]
@@ -36,11 +22,10 @@
       }
     },
     "All blinds down with ${applicationName}" : {
-      "extractionState" : "extracted_with_value",
       "localizations" : {
         "de" : {
           "stringSet" : {
-            "state" : "needs_review",
+            "state" : "translated",
             "values" : [
               "Alle Rollos runter mit ${applicationName}"
             ]
@@ -56,27 +41,14 @@
         }
       }
     },
-    "Done cooking in ${applicationName}" : {
-      "extractionState" : "stale",
+    "End cooking in ${applicationName}" : {
       "localizations" : {
         "de" : {
           "stringSet" : {
             "state" : "translated",
             "values" : [
+              "Kochen beenden in ${applicationName}",
               "Fertig gekocht in ${applicationName}"
-            ]
-          }
-        }
-      }
-    },
-    "End cooking in ${applicationName}" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "de" : {
-          "stringSet" : {
-            "state" : "needs_review",
-            "values" : [
-              "Kochen beenden in ${applicationName}"
             ]
           }
         },
@@ -92,13 +64,13 @@
       }
     },
     "Fans off in ${applicationName}" : {
-      "extractionState" : "extracted_with_value",
       "localizations" : {
         "de" : {
           "stringSet" : {
-            "state" : "needs_review",
+            "state" : "translated",
             "values" : [
-              "Ventilatoren aus in ${applicationName}"
+              "Ventilatoren aus in ${applicationName}",
+              "Schalte die Ventilatoren in ${applicationName} aus"
             ]
           }
         },
@@ -114,13 +86,13 @@
       }
     },
     "Fans on in ${applicationName}" : {
-      "extractionState" : "extracted_with_value",
       "localizations" : {
         "de" : {
           "stringSet" : {
-            "state" : "needs_review",
+            "state" : "translated",
             "values" : [
-              "Ventilatoren an in ${applicationName}"
+              "Ventilatoren an in ${applicationName}",
+              "Schalte die Ventilatoren in ${applicationName} an"
             ]
           }
         },
@@ -136,11 +108,10 @@
       }
     },
     "Move a blind with ${applicationName}" : {
-      "extractionState" : "extracted_with_value",
       "localizations" : {
         "de" : {
           "stringSet" : {
-            "state" : "needs_review",
+            "state" : "translated",
             "values" : [
               "Ein Rollo mit ${applicationName} fahren"
             ]
@@ -157,13 +128,13 @@
       }
     },
     "Start cooking in ${applicationName}" : {
-      "extractionState" : "extracted_with_value",
       "localizations" : {
         "de" : {
           "stringSet" : {
-            "state" : "needs_review",
+            "state" : "translated",
             "values" : [
-              "Kochen starten in ${applicationName}"
+              "Kochen starten in ${applicationName}",
+              "${applicationName} kochen"
             ]
           }
         },
@@ -173,32 +144,6 @@
             "values" : [
               "Start cooking in ${applicationName}",
               "${applicationName} cooking"
-            ]
-          }
-        }
-      }
-    },
-    "Turn off the fans in ${applicationName}" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringSet" : {
-            "state" : "translated",
-            "values" : [
-              "Schalte die Ventilatoren in ${applicationName} aus"
-            ]
-          }
-        }
-      }
-    },
-    "Turn on the fans in ${applicationName}" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringSet" : {
-            "state" : "translated",
-            "values" : [
-              "Schalte die Ventilatoren in ${applicationName} an"
             ]
           }
         }
