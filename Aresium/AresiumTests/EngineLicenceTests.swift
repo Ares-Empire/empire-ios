@@ -49,6 +49,12 @@ struct EngineLicenceTests {
         #expect(Set(licences.map(\.id)).count == licences.count)
     }
 
+    @Test func packageFileNamesNeverMeet() {
+        #expect(BundledLicence.enginePackageFile("csv-parse") == "engine-package-csv-parse")
+        #expect(BundledLicence.enginePackageFile("@scope/name") == "engine-package-@scope+name")
+        #expect(BundledLicence.enginePackageFile("@scope/name") != BundledLicence.enginePackageFile("scope-name"))
+    }
+
     @Test func purposesAreInGerman() {
         let german = AppLanguage.$scoped.withValue(.german) { BundledLicence.enginePackages() }
         #expect(german.map(\.purpose) == ["CSV-Dateien lesen", "CAMT- und Excel-Dateien lesen",

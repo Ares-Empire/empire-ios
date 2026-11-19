@@ -57,15 +57,17 @@ require("fs").writeFileSync(process.argv[2], [copyright, about, ...licence].join
 ' "$aresium/src/engine/sorting/shops.de.json" "$app/name-suggestion-index-licence.txt"
 
 # The licences of the outside packages in the bundle: what it is and where it comes from, then its own licence file.
-# A package that left the bundle loses its file. The file name is `BundledLicence.enginePackageFile`'s.
+# A package that left the bundle loses its file. The file name is `BundledLicence.enginePackageFile`'s: "@scope/name"
+# becomes "@scope+name", which no other npm name can be ("@" and "+" are not allowed in unscoped names); a file written
+# twice stops the script all the same, so no notice is ever replaced by another.
 rm -f "$app"/engine-package-*.txt
 cp "$aresium/dist/engine-licences.json" "$tests/engine-licences.json"
 node -e '
 const fs = require("fs"), path = require("path");
 for (const p of JSON.parse(fs.readFileSync(process.argv[1], "utf8"))) {
   const about = `Aresium includes ${p.name} ${p.version} (${p.homepage}) under the ${p.licence} licence:`;
-  const file = "engine-package-" + p.name.replace(/@/g, "").replace(/\//g, "-") + ".txt";
-  fs.writeFileSync(path.join(process.argv[2], file), [about, p.text].join("\n\n") + "\n");
+  const file = "engine-package-" + p.name.replace("/", "+") + ".txt";
+  fs.writeFileSync(path.join(process.argv[2], file), [about, p.text].join("\n\n") + "\n", { flag: "wx" });
 }
 ' "$aresium/dist/engine-licences.json" "$app"
 

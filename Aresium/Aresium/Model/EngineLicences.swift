@@ -15,9 +15,10 @@ extension BundledLicence {
         ]
     }
 
-    /// The bundle's file for a package's licence; the script names it the same way.
+    /// The bundle's file for a package's licence; the script names it the same way. "@scope/name" becomes
+    /// "@scope+name", which no other npm name can be.
     static func enginePackageFile(_ name: String) -> String {
-        "engine-package-" + name.replacingOccurrences(of: "@", with: "").replacingOccurrences(of: "/", with: "-")
+        "engine-package-" + name.replacingOccurrences(of: "/", with: "+")
     }
 
     private static func package(_ name: String, purpose: String) -> BundledLicence {
