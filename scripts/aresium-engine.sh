@@ -10,7 +10,11 @@
 # 4. writes the shop list's licence notice (name-suggestion-index, from the header of
 #    src/engine/sorting/shops.de.json) to Engine/name-suggestion-index-licence.txt, which Settings → About → Fonts &
 #    licences shows (`BundledLicence.shopList`; `LicenceTests` checks it against the bundle).
-# 5. copies the packed local places database and writes its ODbL attribution and download notice.
+# 5. writes the licence of every outside package in the bundle (the build lists them from the bundle itself,
+#    dist/engine-licences.json) to Engine/engine-package-<name>.txt, which Settings → About → Fonts & licences → Code
+#    shows (`BundledLicence.enginePackages`), and copies the list to the tests (`EngineLicenceTests` checks the two
+#    agree, so a new package fails the tests until the app lists it),
+# 6. copies the packed local places database and writes its ODbL attribution and download notice.
 # The bundle is never edited by hand.
 set -euo pipefail
 
@@ -51,6 +55,19 @@ const about = `Aresium sorts payments with brand names from the ${nsi.name} (${n
   + `under the ${nsi.licence} licence:`;
 require("fs").writeFileSync(process.argv[2], [copyright, about, ...licence].join("\n\n") + "\n");
 ' "$aresium/src/engine/sorting/shops.de.json" "$app/name-suggestion-index-licence.txt"
+
+# The licences of the outside packages in the bundle: what it is and where it comes from, then its own licence file.
+# A package that left the bundle loses its file. The file name is `BundledLicence.enginePackageFile`'s.
+rm -f "$app"/engine-package-*.txt
+cp "$aresium/dist/engine-licences.json" "$tests/engine-licences.json"
+node -e '
+const fs = require("fs"), path = require("path");
+for (const p of JSON.parse(fs.readFileSync(process.argv[1], "utf8"))) {
+  const about = `Aresium includes ${p.name} ${p.version} (${p.homepage}) under the ${p.licence} licence:`;
+  const file = "engine-package-" + p.name.replace(/@/g, "").replace(/\//g, "-") + ".txt";
+  fs.writeFileSync(path.join(process.argv[2], file), [about, p.text].join("\n\n") + "\n");
+}
+' "$aresium/dist/engine-licences.json" "$app"
 
 echo "Engine copied: $(wc -c < "$app/aresium-engine.js" | tr -d ' ') bytes from aresium $commit"
 

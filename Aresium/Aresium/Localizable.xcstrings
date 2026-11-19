@@ -5436,6 +5436,16 @@
         }
       }
     },
+    "Opening ZIP and Excel files" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ZIP- und Excel-Dateien öffnen"
+          }
+        }
+      }
+    },
     "Or the iPhone's code" : {
       "localizations" : {
         "de" : {
@@ -5626,6 +5636,16 @@
         }
       }
     },
+    "Part of fast-xml-parser" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Teil von fast-xml-parser"
+          }
+        }
+      }
+    },
     "Payment" : {
       "localizations" : {
         "de" : {
@@ -5772,6 +5792,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Vom Beleg gelesen"
+          }
+        }
+      }
+    },
+    "Reading CAMT and Excel files" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CAMT- und Excel-Dateien lesen"
+          }
+        }
+      }
+    },
+    "Reading CSV files" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CSV-Dateien lesen"
           }
         }
       }

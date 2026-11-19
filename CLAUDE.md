@@ -176,7 +176,7 @@ hunt notifications there), General (Language; Appearance; Notifications, opening
 Settings, in apps with `sendsNotifications`), Help (Contact & support: the form from `Shared/Support`, sent to the account
 server's `feedback` collection, which emails Patrik), About (Privacy and Imprint open `LegalPage` in the app's language, inside the app in Apple's in-app browser (`SFSafariViewController`, closed with its own X), brief 41, `Shared/Design/InAppBrowser.swift`: SwiftUI's own
 `openURL(_:prefersInApp:)` presents from the window's root, which iOS 27.0 refuses while a sheet such as Settings is open; Fonts & licences shows the OFL texts from
-`Shared/Fonts` and an app's own licences, `SettingsApp.licences`: Aresium's shop list, Version), Account (the email from the login answer, `EmpireSession.email`; Change password; Log out
+`Shared/Fonts` and an app's own licences, `SettingsApp.licences`, in a Data card (Aresium's shop list and local places) and a Code card (`BundledLicence.kind`; Aresium's engine packages, brief 315: the engine build lists them from the bundle, `scripts/aresium-engine.sh` writes their licences, and `EngineLicenceTests` fails when the app's list misses one), Version), Account (the email from the login answer, `EmpireSession.email`; Change password; Log out
 "in all Ares apps on this iPhone", which asks first (brief 41, `Shared/Settings/LogOutQuestion.swift`: Apple's
 confirmation dialog, as Leave and Delete, "Log out?" / "You'll be logged out of all Ares apps on this iPhone.", in an app
 that works without an account plus "Your data in <app> stays."; Log out, destructive, and Cancel, which iOS 26 shows as a

@@ -37,9 +37,9 @@ var __AresiumEngine = (() => {
   var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
   var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
-  // node_modules/fast-xml-parser/src/util.js
+  // ../aresium/node_modules/fast-xml-parser/src/util.js
   var require_util = __commonJS({
-    "node_modules/fast-xml-parser/src/util.js"(exports) {
+    "../aresium/node_modules/fast-xml-parser/src/util.js"(exports) {
       "use strict";
       var nameStartChar = ":A-Za-z_\\u00C0-\\u00D6\\u00D8-\\u00F6\\u00F8-\\u02FF\\u0370-\\u037D\\u037F-\\u1FFF\\u200C-\\u200D\\u2070-\\u218F\\u2C00-\\u2FEF\\u3001-\\uD7FF\\uF900-\\uFDCF\\uFDF0-\\uFFFD";
       var nameChar = nameStartChar + "\\-.\\d\\u00B7\\u0300-\\u036F\\u203F-\\u2040";
@@ -111,9 +111,9 @@ var __AresiumEngine = (() => {
     }
   });
 
-  // node_modules/fast-xml-parser/src/validator.js
+  // ../aresium/node_modules/fast-xml-parser/src/validator.js
   var require_validator = __commonJS({
-    "node_modules/fast-xml-parser/src/validator.js"(exports) {
+    "../aresium/node_modules/fast-xml-parser/src/validator.js"(exports) {
       "use strict";
       var util = require_util();
       var defaultOptions = {
@@ -423,9 +423,9 @@ var __AresiumEngine = (() => {
     }
   });
 
-  // node_modules/fast-xml-parser/src/xmlparser/OptionsBuilder.js
+  // ../aresium/node_modules/fast-xml-parser/src/xmlparser/OptionsBuilder.js
   var require_OptionsBuilder = __commonJS({
-    "node_modules/fast-xml-parser/src/xmlparser/OptionsBuilder.js"(exports) {
+    "../aresium/node_modules/fast-xml-parser/src/xmlparser/OptionsBuilder.js"(exports) {
       var { DANGEROUS_PROPERTY_NAMES, criticalProperties } = require_util();
       var defaultOnDangerousProperty = (name) => {
         if (DANGEROUS_PROPERTY_NAMES.includes(name)) {
@@ -549,9 +549,9 @@ var __AresiumEngine = (() => {
     }
   });
 
-  // node_modules/fast-xml-parser/src/xmlparser/xmlNode.js
+  // ../aresium/node_modules/fast-xml-parser/src/xmlparser/xmlNode.js
   var require_xmlNode = __commonJS({
-    "node_modules/fast-xml-parser/src/xmlparser/xmlNode.js"(exports, module) {
+    "../aresium/node_modules/fast-xml-parser/src/xmlparser/xmlNode.js"(exports, module) {
       "use strict";
       var XmlNode = class {
         constructor(tagname) {
@@ -576,9 +576,9 @@ var __AresiumEngine = (() => {
     }
   });
 
-  // node_modules/fast-xml-parser/src/xmlparser/DocTypeReader.js
+  // ../aresium/node_modules/fast-xml-parser/src/xmlparser/DocTypeReader.js
   var require_DocTypeReader = __commonJS({
-    "node_modules/fast-xml-parser/src/xmlparser/DocTypeReader.js"(exports, module) {
+    "../aresium/node_modules/fast-xml-parser/src/xmlparser/DocTypeReader.js"(exports, module) {
       var util = require_util();
       var DocTypeReader = class {
         constructor(options) {
@@ -864,9 +864,9 @@ var __AresiumEngine = (() => {
     }
   });
 
-  // node_modules/strnum/strnum.js
+  // ../aresium/node_modules/strnum/strnum.js
   var require_strnum = __commonJS({
-    "node_modules/strnum/strnum.js"(exports, module) {
+    "../aresium/node_modules/strnum/strnum.js"(exports, module) {
       var hexRegex = /^[-+]?0x[a-fA-F0-9]+$/;
       var numRegex = /^([\-\+])?(0*)([0-9]*(\.[0-9]*)?)$/;
       var consider = {
@@ -952,9 +952,9 @@ var __AresiumEngine = (() => {
     }
   });
 
-  // node_modules/fast-xml-parser/src/ignoreAttributes.js
+  // ../aresium/node_modules/fast-xml-parser/src/ignoreAttributes.js
   var require_ignoreAttributes = __commonJS({
-    "node_modules/fast-xml-parser/src/ignoreAttributes.js"(exports, module) {
+    "../aresium/node_modules/fast-xml-parser/src/ignoreAttributes.js"(exports, module) {
       function getIgnoreAttributesFn(ignoreAttributes) {
         if (typeof ignoreAttributes === "function") {
           return ignoreAttributes;
@@ -977,9 +977,9 @@ var __AresiumEngine = (() => {
     }
   });
 
-  // node_modules/fast-xml-parser/src/xmlparser/OrderedObjParser.js
+  // ../aresium/node_modules/fast-xml-parser/src/xmlparser/OrderedObjParser.js
   var require_OrderedObjParser = __commonJS({
-    "node_modules/fast-xml-parser/src/xmlparser/OrderedObjParser.js"(exports, module) {
+    "../aresium/node_modules/fast-xml-parser/src/xmlparser/OrderedObjParser.js"(exports, module) {
       "use strict";
       var util = require_util();
       var xmlNode = require_xmlNode();
@@ -1582,9 +1582,9 @@ var __AresiumEngine = (() => {
     }
   });
 
-  // node_modules/fast-xml-parser/src/xmlparser/node2json.js
+  // ../aresium/node_modules/fast-xml-parser/src/xmlparser/node2json.js
   var require_node2json = __commonJS({
-    "node_modules/fast-xml-parser/src/xmlparser/node2json.js"(exports) {
+    "../aresium/node_modules/fast-xml-parser/src/xmlparser/node2json.js"(exports) {
       "use strict";
       function prettify(node2, options) {
         return compress(node2, options);
@@ -1669,9 +1669,9 @@ var __AresiumEngine = (() => {
     }
   });
 
-  // node_modules/fast-xml-parser/src/xmlparser/XMLParser.js
+  // ../aresium/node_modules/fast-xml-parser/src/xmlparser/XMLParser.js
   var require_XMLParser = __commonJS({
-    "node_modules/fast-xml-parser/src/xmlparser/XMLParser.js"(exports, module) {
+    "../aresium/node_modules/fast-xml-parser/src/xmlparser/XMLParser.js"(exports, module) {
       var { buildOptions } = require_OptionsBuilder();
       var OrderedObjParser = require_OrderedObjParser();
       var { prettify } = require_node2json();
@@ -1727,9 +1727,9 @@ var __AresiumEngine = (() => {
     }
   });
 
-  // node_modules/fast-xml-parser/src/xmlbuilder/orderedJs2Xml.js
+  // ../aresium/node_modules/fast-xml-parser/src/xmlbuilder/orderedJs2Xml.js
   var require_orderedJs2Xml = __commonJS({
-    "node_modules/fast-xml-parser/src/xmlbuilder/orderedJs2Xml.js"(exports, module) {
+    "../aresium/node_modules/fast-xml-parser/src/xmlbuilder/orderedJs2Xml.js"(exports, module) {
       var EOL = "\n";
       function toXml(jArray, options) {
         let indentation = "";
@@ -1860,9 +1860,9 @@ var __AresiumEngine = (() => {
     }
   });
 
-  // node_modules/fast-xml-parser/src/xmlbuilder/json2xml.js
+  // ../aresium/node_modules/fast-xml-parser/src/xmlbuilder/json2xml.js
   var require_json2xml = __commonJS({
-    "node_modules/fast-xml-parser/src/xmlbuilder/json2xml.js"(exports, module) {
+    "../aresium/node_modules/fast-xml-parser/src/xmlbuilder/json2xml.js"(exports, module) {
       "use strict";
       var buildFromOrderedJs = require_orderedJs2Xml();
       var getIgnoreAttributesFn = require_ignoreAttributes();
@@ -2106,9 +2106,9 @@ var __AresiumEngine = (() => {
     }
   });
 
-  // node_modules/fast-xml-parser/src/fxp.js
+  // ../aresium/node_modules/fast-xml-parser/src/fxp.js
   var require_fxp = __commonJS({
-    "node_modules/fast-xml-parser/src/fxp.js"(exports, module) {
+    "../aresium/node_modules/fast-xml-parser/src/fxp.js"(exports, module) {
       "use strict";
       var validator = require_validator();
       var XMLParser5 = require_XMLParser();
@@ -2173,7 +2173,7 @@ var __AresiumEngine = (() => {
     version: () => version
   });
 
-  // node_modules/csv-parse/dist/esm/sync.js
+  // ../aresium/node_modules/csv-parse/dist/esm/sync.js
   var global$1 = typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {};
   var lookup = [];
   var revLookup = [];
@@ -11701,7 +11701,7 @@ var __AresiumEngine = (() => {
     return references.map((ref, i2) => ref && counts.get(ref) === 1 ? ref : hashed[i2]);
   }
 
-  // node_modules/fflate/esm/browser.js
+  // ../aresium/node_modules/fflate/esm/browser.js
   var u8 = Uint8Array;
   var u16 = Uint16Array;
   var i32 = Int32Array;
@@ -12969,14 +12969,14 @@ var __AresiumEngine = (() => {
     {
       id: "barclays",
       bank: "Barclays",
-      variant: "Excel export saved as CSV",
+      variant: "Excel export",
       sources: [
         `${GH}firefly-iii/import-configurations/blob/main/de/barclays/Readme.md`,
         `${GH}firefly-iii/import-configurations/blob/main/de/barclays/barclays.json`,
         `${GH}phdorp/firefly-cash-converter/blob/9a0a940f55f512a89da1ec27a368ecae4fbbcf7d/test/data/barclays.xlsx`,
         `${GH}sercxanto/go-homebank-csv/blob/5c20f3ed964ceca073fa832f54406703729399ae/pkg/parser/barclaycard.go`
       ],
-      unconfirmed: 'Barclays (now easybank) offers no CSV, only Excel (.xlsx), which the app cannot read; this reads the Excel file saved as CSV. Which of the two "Buchungsdatum" columns is the purchase day: sources disagree (here the first).',
+      unconfirmed: 'Barclays (now easybank) offers no CSV, only Excel (.xlsx); this reads the .xlsx itself or the file saved as CSV. Which of the two "Buchungsdatum" columns is the purchase day: sources disagree (here the first).',
       separator: [";", ","],
       match: ["Referenznummer", "Buchungsdatum", "Betrag", "Beschreibung", "Typ", "Status", "Kartennummer"],
       dateFormat: "DD.MM.YYYY",
