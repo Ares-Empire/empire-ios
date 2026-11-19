@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Merged with the generated Info.plist. Marks this target as a WidgetKit extension (Control Center controls only;
+     no home-screen widgets yet, Patrik 2026-11-19). -->
+<plist version="1.0">
+<dict>
+	<!-- The team prefix of Arestia's Keychain group (ArestiaShared/FlatdConnection.swift): the controls read flatd's key. -->
+	<key>AppIdentifierPrefix</key>
+	<string>$(AppIdentifierPrefix)</string>
+	<!-- flatd runs on the home network over plain HTTP: allowed for local addresses only (.local names, IP addresses). -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Arestia talks to the flat service on your home network to switch the fans and move the blinds.</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_flatd._tcp</string>
+	</array>
+	<key>NSExtension</key>
+	<dict>
+		<key>NSExtensionPointIdentifier</key>
+		<string>com.apple.widgetkit-extension</string>
+	</dict>
+</dict>
+</plist>

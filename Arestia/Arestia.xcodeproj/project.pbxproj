@@ -1,0 +1,541 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		7F6B68F573A75FBE7CB4F087 /* ArestiaControlsExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 31C795D30C48EBFBAE07B8CD /* ArestiaControlsExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		384ACB0D750B279C14F4F2F7 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 57EE324B193D948D208366A4 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 99E39FA359C5471EA95BFE2F;
+			remoteInfo = ArestiaControlsExtension;
+		};
+		8E024EDFD4F2AFF5F25FA4AC /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 57EE324B193D948D208366A4 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 534088DE5BD609D2BC87AF4A;
+			remoteInfo = Arestia;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		BD839EE12154C4F332B7A597 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				7F6B68F573A75FBE7CB4F087 /* ArestiaControlsExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		31C795D30C48EBFBAE07B8CD /* ArestiaControlsExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ArestiaControlsExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		14B9CDE499F056C68013BE4F /* Arestia.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Arestia.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		45CA90208440665E643084D5 /* ArestiaTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ArestiaTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		39BE90C8880C6973D706789B /* Exceptions for "ArestiaControls" folder in "ArestiaControlsExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 99E39FA359C5471EA95BFE2F /* ArestiaControlsExtension */;
+		};
+		D4A96E9395A5693CB8C9063A /* Exceptions for "Arestia" folder in "Arestia" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 534088DE5BD609D2BC87AF4A /* Arestia */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		F7802154646B20797104AAF6 /* ArestiaShared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = ArestiaShared;
+			sourceTree = "<group>";
+		};
+		44CB7B65246A0B02579686F0 /* ArestiaControls */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				39BE90C8880C6973D706789B /* Exceptions for "ArestiaControls" folder in "ArestiaControlsExtension" target */,
+			);
+			path = ArestiaControls;
+			sourceTree = "<group>";
+		};
+		40FEB05086E6741EF145CB0C /* Arestia */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				D4A96E9395A5693CB8C9063A,
+			);
+			path = Arestia;
+			sourceTree = "<group>";
+		};
+		A259A177A2A3975A7178CB68 /* ArestiaTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = ArestiaTests;
+			sourceTree = "<group>";
+		};
+		1AFCD1E769E97A279D399363 /* Shared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			name = Shared;
+			path = ../Shared;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		771F20E9CABFAE191B4FCCC0 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D3715F226B0ABE61CA020674 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E9BE46F0EF70D65229AAF8EF /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A5D2D69FBBA88E00753ECCB8 = {
+			isa = PBXGroup;
+			children = (
+				40FEB05086E6741EF145CB0C /* Arestia */,
+				1AFCD1E769E97A279D399363 /* Shared */,
+				F7802154646B20797104AAF6 /* ArestiaShared */,
+				44CB7B65246A0B02579686F0 /* ArestiaControls */,
+				A259A177A2A3975A7178CB68 /* ArestiaTests */,
+				4A3228A75D893C9FB8C85025 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		4A3228A75D893C9FB8C85025 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				14B9CDE499F056C68013BE4F /* Arestia.app */,
+				45CA90208440665E643084D5 /* ArestiaTests.xctest */,
+				31C795D30C48EBFBAE07B8CD /* ArestiaControlsExtension.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		99E39FA359C5471EA95BFE2F /* ArestiaControlsExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A2F4A4CC892F58A5FD299D57 /* Build configuration list for PBXNativeTarget "ArestiaControlsExtension" */;
+			buildPhases = (
+				E3A3E89FC3B163F29A56C0D5 /* Sources */,
+				771F20E9CABFAE191B4FCCC0 /* Frameworks */,
+				266DBB434ABAA80B42B4929F /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				1AFCD1E769E97A279D399363 /* Shared */,
+				F7802154646B20797104AAF6 /* ArestiaShared */,
+				44CB7B65246A0B02579686F0 /* ArestiaControls */,
+			);
+			name = ArestiaControlsExtension;
+			packageProductDependencies = (
+			);
+			productName = ArestiaControlsExtension;
+			productReference = 31C795D30C48EBFBAE07B8CD /* ArestiaControlsExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		534088DE5BD609D2BC87AF4A /* Arestia */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6E373E40233435625F58C138;
+			buildPhases = (
+				4E9DEFB7A5C831DE22664E52,
+				D3715F226B0ABE61CA020674,
+				DF28B1AE84FD8327CF943B24,
+				BD839EE12154C4F332B7A597 /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				F222D854673EF1DA58E142C4 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				40FEB05086E6741EF145CB0C,
+				1AFCD1E769E97A279D399363,
+				F7802154646B20797104AAF6 /* ArestiaShared */,
+			);
+			name = Arestia;
+			packageProductDependencies = (
+			);
+			productName = Arestia;
+			productReference = 14B9CDE499F056C68013BE4F;
+			productType = "com.apple.product-type.application";
+		};
+		CBD3C88951CCBC82CCF05322 /* ArestiaTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0359033446635D57F96DFA62;
+			buildPhases = (
+				FA2774753FC349F311DDE09F,
+				E9BE46F0EF70D65229AAF8EF,
+				D115500DDBD7B2E8037E7A4B,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				2EAB64078585A81434CFB24C,
+			);
+			fileSystemSynchronizedGroups = (
+				A259A177A2A3975A7178CB68,
+			);
+			name = ArestiaTests;
+			packageProductDependencies = (
+			);
+			productName = ArestiaTests;
+			productReference = 45CA90208440665E643084D5;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		57EE324B193D948D208366A4 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2710;
+				LastUpgradeCheck = 2710;
+				TargetAttributes = {
+					534088DE5BD609D2BC87AF4A = {
+						CreatedOnToolsVersion = 27.1;
+					};
+					99E39FA359C5471EA95BFE2F = {
+						CreatedOnToolsVersion = 27.1;
+					};
+					CBD3C88951CCBC82CCF05322 = {
+						CreatedOnToolsVersion = 27.1;
+						TestTargetID = 534088DE5BD609D2BC87AF4A;
+					};
+				};
+			};
+			buildConfigurationList = BFAB76D94C8C2CD9F5338004;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				de,
+				Base,
+			);
+			mainGroup = A5D2D69FBBA88E00753ECCB8;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 4A3228A75D893C9FB8C85025 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				534088DE5BD609D2BC87AF4A /* Arestia */,
+				CBD3C88951CCBC82CCF05322 /* ArestiaTests */,
+				99E39FA359C5471EA95BFE2F /* ArestiaControlsExtension */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		266DBB434ABAA80B42B4929F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DF28B1AE84FD8327CF943B24 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D115500DDBD7B2E8037E7A4B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		E3A3E89FC3B163F29A56C0D5 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4E9DEFB7A5C831DE22664E52 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FA2774753FC349F311DDE09F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		F222D854673EF1DA58E142C4 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 99E39FA359C5471EA95BFE2F /* ArestiaControlsExtension */;
+			targetProxy = 384ACB0D750B279C14F4F2F7 /* PBXContainerItemProxy */;
+		};
+		2EAB64078585A81434CFB24C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 534088DE5BD609D2BC87AF4A /* Arestia */;
+			targetProxy = 8E024EDFD4F2AFF5F25FA4AC /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		FBC296C7E6C5FDA65F050E99 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ArestiaControls.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ArestiaControls/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Arestia;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = "de.ares-empire.arestia.controls";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		9A6313866E4D0AE11EC8E3D6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ArestiaControls.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ArestiaControls/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Arestia;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = "de.ares-empire.arestia.controls";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		60D7EC42FC1C624FEE367EC8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = WQN8SHAH9B;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 0.1;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		6D6AFB05BEFCC1793267069A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXCLUDED_SOURCE_FILE_NAMES = (
+					"$(inherited)",
+					"sample-push.apns",
+					"Samples",
+					"*/Samples/*",
+					"*/Samples/**/*",
+				);
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = WQN8SHAH9B;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 0.1;
+				SDKROOT = iphoneos;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		0D3F86CE82708C783EC0A160 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Arestia.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Arestia/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Arestia";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = "de.ares-empire.arestia";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		7CB0F38DA0BBACF948A7C0B7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Arestia.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Arestia/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Arestia";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = "de.ares-empire.arestia";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		A8F3BD5BCF9EA241C5569292 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = "de.ares-empire.arestia.tests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Arestia.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Arestia";
+			};
+			name = Debug;
+		};
+		9043BFEC9D68702763169F03 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = "de.ares-empire.arestia.tests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Arestia.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Arestia";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A2F4A4CC892F58A5FD299D57 /* Build configuration list for PBXNativeTarget "ArestiaControlsExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FBC296C7E6C5FDA65F050E99 /* Debug */,
+				9A6313866E4D0AE11EC8E3D6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		BFAB76D94C8C2CD9F5338004 /* Build configuration list for PBXProject "Arestia" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				60D7EC42FC1C624FEE367EC8 /* Debug */,
+				6D6AFB05BEFCC1793267069A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		6E373E40233435625F58C138 /* Build configuration list for PBXNativeTarget "Arestia" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0D3F86CE82708C783EC0A160 /* Debug */,
+				7CB0F38DA0BBACF948A7C0B7 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		0359033446635D57F96DFA62 /* Build configuration list for PBXNativeTarget "ArestiaTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A8F3BD5BCF9EA241C5569292 /* Debug */,
+				9043BFEC9D68702763169F03 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 57EE324B193D948D208366A4 /* Project object */;
+}

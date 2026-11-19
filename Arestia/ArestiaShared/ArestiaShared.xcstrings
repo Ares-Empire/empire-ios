@@ -1,0 +1,526 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "%@ is going down." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ fährt runter."
+          }
+        }
+      }
+    },
+    "%@ is going to its favourite spot." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ fährt auf seinen Favoriten."
+          }
+        }
+      }
+    },
+    "%@ is going up." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ fährt hoch."
+          }
+        }
+      }
+    },
+    "%@ stopped." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ hat angehalten."
+          }
+        }
+      }
+    },
+    "Air out" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lüften"
+          }
+        }
+      }
+    },
+    "Airing out for 30 minutes." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Es wird 30 Minuten gelüftet."
+          }
+        }
+      }
+    },
+    "All blinds are going down." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alle Rollos fahren runter."
+          }
+        }
+      }
+    },
+    "All blinds down" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alle Rollos runter"
+          }
+        }
+      }
+    },
+    "Blind" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rollo"
+          }
+        }
+      }
+    },
+    "Blind up or down" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rollo hoch oder runter"
+          }
+        }
+      }
+    },
+    "Can't reach the flat. The Mac may be asleep, or you're not at home." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Wohnung ist nicht erreichbar. Der Mac schläft vielleicht, oder du bist nicht zu Hause."
+          }
+        }
+      }
+    },
+    "Cooking" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kochen"
+          }
+        }
+      }
+    },
+    "Cooking. The fans are on and the blind is going up." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kochen. Die Ventilatoren laufen, das Rollo fährt hoch."
+          }
+        }
+      }
+    },
+    "Didn't answer: %@." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keine Antwort von: %@."
+          }
+        }
+      }
+    },
+    "Done cooking. Fans off, the blind goes to its favourite spot." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kochen beendet. Ventilatoren aus, das Rollo fährt auf seinen Favoriten."
+          }
+        }
+      }
+    },
+    "Down" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Runter"
+          }
+        }
+      }
+    },
+    "Empty: every fan." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leer: alle Ventilatoren."
+          }
+        }
+      }
+    },
+    "Empty: until you turn them off." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leer: bis du sie ausschaltest."
+          }
+        }
+      }
+    },
+    "End cooking" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kochen beenden"
+          }
+        }
+      }
+    },
+    "Ends cooking: the fans go off and its blind goes to its favourite spot." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beendet das Kochen: Die Ventilatoren gehen aus, sein Rollo fährt auf seinen Favoriten."
+          }
+        }
+      }
+    },
+    "Every fan on or off." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alle Ventilatoren an oder aus."
+          }
+        }
+      }
+    },
+    "Fan" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ventilator"
+          }
+        }
+      }
+    },
+    "Fans" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ventilatoren"
+          }
+        }
+      }
+    },
+    "Fans off" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ventilatoren aus"
+          }
+        }
+      }
+    },
+    "Fans off." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ventilatoren aus."
+          }
+        }
+      }
+    },
+    "Fans on" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ventilatoren an"
+          }
+        }
+      }
+    },
+    "Fans on for %lld min." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ventilatoren %lld Min. an."
+          }
+        }
+      }
+    },
+    "Fans on." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ventilatoren an."
+          }
+        }
+      }
+    },
+    "Minutes" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Minuten"
+          }
+        }
+      }
+    },
+    "Move" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fahren"
+          }
+        }
+      }
+    },
+    "Move a blind" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein Rollo fahren"
+          }
+        }
+      }
+    },
+    "Off" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aus"
+          }
+        }
+      }
+    },
+    "On" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "An"
+          }
+        }
+      }
+    },
+    "Open" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Offen"
+          }
+        }
+      }
+    },
+    "Sends a blind up or down." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fährt ein Rollo hoch oder runter."
+          }
+        }
+      }
+    },
+    "Sends a blind up, down, to its favourite spot, or stops it." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fährt ein Rollo hoch, runter, auf seinen Favoriten, oder hält es an."
+          }
+        }
+      }
+    },
+    "Sends every blind down." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fährt alle Rollos runter."
+          }
+        }
+      }
+    },
+    "Start cooking" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kochen starten"
+          }
+        }
+      }
+    },
+    "Start or end cooking: the fans and the blind together." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kochen starten oder beenden: Ventilatoren und Rollo zusammen."
+          }
+        }
+      }
+    },
+    "Stop" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stopp"
+          }
+        }
+      }
+    },
+    "That isn't possible right now." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das geht gerade nicht."
+          }
+        }
+      }
+    },
+    "The device didn't answer. Nothing changed." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das Gerät hat nicht geantwortet. Nichts hat sich geändert."
+          }
+        }
+      }
+    },
+    "The fans run for 30 minutes and a blind goes up." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Ventilatoren laufen 30 Minuten, und ein Rollo fährt hoch."
+          }
+        }
+      }
+    },
+    "The flat service couldn't do it (%lld)." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Wohnungsdienst konnte es nicht ausführen (%lld)."
+          }
+        }
+      }
+    },
+    "The flat service doesn't know this any more." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Wohnungsdienst kennt das nicht mehr."
+          }
+        }
+      }
+    },
+    "The flat service refused the key. Enter it again in Settings." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Wohnungsdienst lehnt den Schlüssel ab. Gib ihn in den Einstellungen neu ein."
+          }
+        }
+      }
+    },
+    "The flat service sent an answer this app can't read." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Wohnungsdienst hat eine Antwort geschickt, die diese App nicht lesen kann."
+          }
+        }
+      }
+    },
+    "To its favourite spot" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auf den Favoriten"
+          }
+        }
+      }
+    },
+    "Turns on cooking: the fans run and its blind goes up, until you end it." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Startet das Kochen: Die Ventilatoren laufen und sein Rollo fährt hoch, bis du es beendest."
+          }
+        }
+      }
+    },
+    "Turns the fans off." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schaltet die Ventilatoren aus."
+          }
+        }
+      }
+    },
+    "Turns the fans on, for a while or until you turn them off. The timer runs in the plug, so it ends even when the Mac sleeps." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schaltet die Ventilatoren ein, für eine Weile oder bis du sie ausschaltest. Den Timer führt die Steckdose, er endet also auch, wenn der Mac schläft."
+          }
+        }
+      }
+    },
+    "Up" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hoch"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

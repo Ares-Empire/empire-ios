@@ -1,0 +1,69 @@
+import SwiftUI
+
+/// Arestia's own section at the top of Settings: the flat service it talks to (its state and address), connecting again
+/// (a new key, another address) and disconnecting. There is no account section: Arestia has none.
+struct ConnectionSection: View {
+    let store: FlatStore
+    @State private var connecting = false
+    @State private var confirmsDisconnect = false
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            SettingsSection(String(localized: "Flat service")) {
+                HStack(spacing: 10) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(verbatim: store.connection.link?.serviceName ?? "flatd")
+                            .font(AppFont.text(15, weight: .medium)).foregroundStyle(Ink.primary)
+                        if let address = store.connection.link?.baseURL {
+                            Text(verbatim: address.host().map { host in address.port.map { "\(host):\($0)" } ?? host } ?? "")
+                                .font(AppFont.number(12)).foregroundStyle(Ink.muted)
+                        }
+                    }
+                    Spacer(minLength: 12)
+                    HStack(spacing: 6) {
+                        LiveDot(live: store.link == .live)
+                        Text(verbatim: status).font(AppFont.text(14)).foregroundStyle(Ink.secondary)
+                    }
+                }
+                .frame(minHeight: 58).padding(.horizontal, 16)
+                .accessibilityElement(children: .combine)
+                SettingsDivider()
+                Button { connecting = true } label: {
+                    SettingsRow(title: String(localized: "Connect again"),
+                                subtitle: String(localized: "A new key or another address"))
+                }
+                .buttonStyle(SettingsRowStyle())
+                SettingsDivider()
+                Button { confirmsDisconnect = true } label: {
+                    SettingsRow(title: String(localized: "Disconnect"), trailing: .none, tint: FormButtonStyle.dangerInk)
+                }
+                .buttonStyle(SettingsRowStyle())
+                .confirmationDialog(Text("Disconnect from the flat?"), isPresented: $confirmsDisconnect,
+                                    titleVisibility: .visible) {
+                    Button(role: .destructive) {
+                        dismiss()
+                        store.disconnect()
+                    } label: { Text("Disconnect") }
+                    Button(role: .cancel) {} label: { Text("Cancel") }
+                } message: {
+                    Text("Arestia forgets the key and the address. The Control Center controls and Shortcuts stop until you connect again.")
+                }
+            }
+            FormNote(text: String(localized: "The key stays on this iPhone, in the Keychain. Shortcuts and the Control Center controls use it too."))
+        }
+        .sheet(isPresented: $connecting) {
+            ConnectScreen(store: store, closable: true)
+        }
+    }
+
+    private var status: String {
+        switch store.link {
+        case .live: String(localized: "Connected")
+        case .connecting: String(localized: "Connecting")
+        case .offline: String(localized: "Not reachable")
+        case .refused: String(localized: "Key refused")
+        case .notSetUp: String(localized: "Not connected")
+        }
+    }
+}

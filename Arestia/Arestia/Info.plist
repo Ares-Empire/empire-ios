@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Merged with the generated Info.plist (GENERATE_INFOPLIST_FILE). Only what build settings cannot express.
+     The usage lines are translated in InfoPlist.xcstrings. -->
+<plist version="1.0">
+<dict>
+	<!-- The team prefix of Arestia's Keychain group (ArestiaShared/FlatdConnection.swift). -->
+	<key>AppIdentifierPrefix</key>
+	<string>$(AppIdentifierPrefix)</string>
+	<!-- Only standard HTTPS (the contact form) and plain HTTP on the home network: exempt, so App Store Connect stops
+	     asking about encryption on every build. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<!-- flatd runs on the home network over plain HTTP (and its 3D page in the web view): allowed for local addresses
+	     only (.local names, IP addresses); everything else stays HTTPS. -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<!-- Finding flatd without an address: it advertises itself over Bonjour. -->
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_flatd._tcp</string>
+	</array>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Arestia talks to the flat service on your home network to switch the fans and move the blinds.</string>
+	<!-- Scanning the QR code flatd shows, once, to connect. -->
+	<key>NSCameraUsageDescription</key>
+	<string>Arestia reads the flat service's QR code to connect. Nothing is recorded.</string>
+	<!-- arestia://connect?url=…&token=… (the QR code's link, opened by the camera) and arestia://home, arestia://flat. -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>de.ares-empire.arestia</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>arestia</string>
+			</array>
+		</dict>
+	</array>
+	<!-- Launch on the app's own background instead of a white flash. -->
+	<key>UILaunchScreen</key>
+	<dict>
+		<key>UIColorName</key>
+		<string>LaunchBackground</string>
+	</dict>
+</dict>
+</plist>
