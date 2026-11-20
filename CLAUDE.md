@@ -954,7 +954,9 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   `lighting: "day"`, Patrik 2026-11-19; off: the real sun, `"real"`). The real phone viewer was checked in the
   WKWebView on the simulator through the fake (`--viewer`, `--devices`, local files only): WebGL2 works, a blind tapped
   in 3D moved through the app. Accent: hearth ember (`AppAccent.arestia`), the
-  mark a drawn flame (`scripts/arestia-mark.swift`) until a Hestia bust exists. **The fake flatd** for the simulator:
+  mark real fire (Patrik, 2026-11-20: "lets go real fire"; busts were rejected): the icon an opaque flame on black,
+  the `Mark` image with a light-appearance variant (`mark-light.png`: the same flame with a gold core and an orange
+  fringe, which the plain one turned pink on the light wall). **The fake flatd** for the simulator:
   `python3 scripts/fake-flatd.py` (HTTPS on port 8790 with its own identity in `build/fake-flatd/`, pairing code printed, also alone with `--pairing`; `--new-identity` = flatd lost its key; Bonjour "flatd (fake)", made-up Fan 1/2, Blind 1/2, `--extra`
   Lamp 1, a stand-in `/viewer` that speaks the bridge, test hooks under `/fake/`; `--viewer <file>` and `--devices
   <file>` serve a local page and its device ids instead, never committed); never the real flatd (port 8787, its own

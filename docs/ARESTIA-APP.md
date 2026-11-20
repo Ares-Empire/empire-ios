@@ -112,7 +112,10 @@ loaded with the key and never bundled.
   blind (chosen when it is added; up when on, down when off). Home-screen widgets: not yet (Patrik).
 - **Look:** the province apps' wall and glass cards, with **hearth ember** as the one accent (`AppAccent.arestia`:
   `#FF9A62` dark, `#A8481A` light, 4.98:1 on the light wall), used only for what is on or the one thing to press. The
-  mark is a drawn flame (marble with an ember core) until there is a Hestia bust, as the other apps have.
+  mark is real fire (Patrik, 2026-11-20: "lets go real fire", after five rounds of drawn flames and Hestia busts,
+  which he found ugly or too close to Artemis): the icon a flame on black, the header's mark the same flame on clear,
+  with a light-appearance variant whose core is gold instead of white and whose fringe is orange instead of pink, so it
+  reads on the light wall. Generic fire, nothing of the flat.
 
 ## iPhone features (IPHONE-APPS.md checklist)
 
