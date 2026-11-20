@@ -366,12 +366,17 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
     }
 
     /// Forgets the flat (Settings → Forget this flat, `FlatSession.forget`): the pairing and everything kept for it here
-    /// (the devices' names, a mode's trouble). Throws when the Keychain kept the item; then nothing else is touched.
+    /// (the devices' names, a mode's trouble), under the lock every writer of the names takes.
+    ///
+    /// The names file goes first, and a file that could not be removed stops Forget with the pairing still saved
+    /// (thrown, so Settings says it and Forget can be tried again): the names never outlive their pairing, not even
+    /// when the process ends between the two steps (Codex's review of the renaming, round 3, finding 5: the Keychain
+    /// item went first and the removal's failure was swallowed). Throws when the Keychain kept the item too; the names
+    /// are gone then, which is harmless: the pairing's next snapshot keeps them again.
     func forget() throws {
         try lock.withLock {
+            try names?.remove()
             try keychain.delete()
-            // A names file that stays could only ever be read for its own pairing (`known`), which is gone now.
-            try? names?.remove()
             defaults?.removeObject(forKey: Self.namesKeyOfBuild2)
             defaults?.removeObject(forKey: Self.troubleKey)
             defaults?.removeObject(forKey: Self.troubleSeenKey)
