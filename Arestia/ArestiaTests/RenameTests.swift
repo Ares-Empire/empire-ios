@@ -367,6 +367,23 @@ struct RenameStoreTests {
         #expect(connection.knownDevices.map(\.label) == ["Desk fan"])
     }
 
+    /// The Blind control's gallery preview names the chosen blind only as the paired flat calls it now (Codex's
+    /// review, finding 5): never a forgotten flat's name kept in the control's configuration.
+    @Test func theBlindPreviewNamesOnlyThePairedFlatsBlind() throws {
+        let connection = Flat.connection()
+        connection.remember(try Flat.devices([Flat.fan(1), named(Flat.rollo(1), "Kitchen blind", default: "Blind 1")]),
+                            for: Flat.id)
+        let chosen = SavedDevice.id(for: "rollo:blind_1", of: Flat.id)
+        #expect(DeviceChoices.name(of: chosen, kind: .rollo, from: connection.known) == "Kitchen blind")
+        #expect(DeviceChoices.name(of: nil, kind: .rollo, from: connection.known) == nil)
+        #expect(DeviceChoices.name(of: SavedDevice.id(for: "rollo:blind_1", of: UUID()), kind: .rollo,
+                                   from: connection.known) == nil)          // chosen for another pairing
+        #expect(DeviceChoices.name(of: SavedDevice.id(for: "fan:fan_1", of: Flat.id), kind: .rollo,
+                                   from: connection.known) == nil)
+        try connection.forget()
+        #expect(DeviceChoices.name(of: chosen, kind: .rollo, from: connection.known) == nil)
+    }
+
     @Test func aRetiredStoreForgetsWhatWasOnItsWay() async throws {
         let (store, transport, _, _) = try await liveStore()
         transport.answer("PATCH /api/devices/fan:fan_1", body: named(Flat.fan(1), "Desk fan", default: "Fan 1"),

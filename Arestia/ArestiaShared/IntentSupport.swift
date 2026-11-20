@@ -105,6 +105,15 @@ nonisolated enum DeviceChoices {
         }
     }
 
+    /// A saved choice's name as kept for the paired flat now (`known`); nil for no choice, one of another pairing
+    /// (chosen before Forget) or one the flat does not have. The Blind control's gallery preview shows this, never the
+    /// name kept inside the control's configuration, which may be a forgotten flat's (Codex's review of the renaming,
+    /// finding 5) or a name from before a rename.
+    static func name(of saved: String?, kind: Device.Kind, from known: FlatdConnection.KnownDevices?) -> String? {
+        guard let saved else { return nil }
+        return choices(kind: kind, from: known).first { $0.id == saved }?.label
+    }
+
     /// The choices of one reading of the names: each tagged with the pairing those names belong to.
     static func choices(kind: Device.Kind, from known: FlatdConnection.KnownDevices?) -> [Choice] {
         guard let known else { return [] }
