@@ -683,7 +683,7 @@ final class FlatStore {
     /// brings the config name back; the name it already has sends nothing). The new name shows quietly until flatd
     /// confirmed it; a refusal puts the old one back with a line (a flatd before v1.3 cannot rename).
     func rename(_ id: String, to text: String) {
-        guard let device = device(id), renaming[id] == nil, let change = DeviceNames.change(text, for: device) else {
+        guard let device = device(id), !isRenaming(id), let change = DeviceNames.change(text, for: device) else {
             return
         }
         renaming[id] = DeviceNames.shown(change, for: device)
@@ -698,7 +698,10 @@ final class FlatStore {
         if !sent { renaming[id] = nil }
     }
 
-    func isRenaming(_ id: String) -> Bool { renaming[id] != nil }
+    /// Whether a new name of this device is on its way: from sending until flatd answered, also once the stream
+    /// confirmed the name (shown as done then). Renaming waits for the answer: a second name sent meanwhile would find
+    /// the first request still holding its place and be dropped unseen (Codex's review of the renaming, finding 2).
+    func isRenaming(_ id: String) -> Bool { renaming[id] != nil || working.contains("label:" + id) }
 
     func runScene(_ id: String, title: String) {
         send("scene:" + id, affects: "scene:" + id) { client in

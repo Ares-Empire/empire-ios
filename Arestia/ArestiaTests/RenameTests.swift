@@ -297,6 +297,32 @@ struct RenameStoreTests {
         store.stop()
     }
 
+    /// The stream confirms a name while flatd's answer is still on its way: the name shows as done, but renaming waits
+    /// for the answer (the menu, the field and VoiceOver's action alike), so no second name is dropped unseen (Codex's
+    /// review of the renaming, finding 2).
+    @Test func renamingWaitsForFlatdsAnswerAfterTheStreamConfirmedIt() async throws {
+        let (store, transport, events, _) = try await liveStore()
+        let desk = try Flat.decode(Device.self, named(Flat.fan(1), "Desk fan", default: "Fan 1"))
+        transport.answer("PATCH /api/devices/fan:fan_1", body: named(Flat.fan(1), "Desk fan", default: "Fan 1"),
+                         delay: .milliseconds(400))
+        store.rename("fan:fan_1", to: "Desk fan")
+        events.send(.device(desk, source: "api"))
+        #expect(await eventually { store.renaming.isEmpty && store.device("fan:fan_1")?.label == "Desk fan" })
+        #expect(store.isRenaming("fan:fan_1"))                              // shown as done, the request still out
+        let editor = RenameEditor()
+        editor.begin(try #require(store.device("fan:fan_1")), in: store)
+        #expect(!editor.isEditing("fan:fan_1"))
+        store.rename("fan:fan_1", to: "Balcony fan")                        // the Original name item's way: not taken
+        #expect(store.renaming.isEmpty)
+        #expect(await eventually { !store.isRenaming("fan:fan_1") })
+        editor.begin(try #require(store.device("fan:fan_1")), in: store)
+        #expect(editor.isEditing("fan:fan_1"))
+        #expect(editor.text == "Desk fan")
+        editor.cancel()
+        #expect(transport.bodies(for: "PATCH /api/devices/fan:fan_1").count == 1)
+        store.stop()
+    }
+
     @Test func aRetiredStoreForgetsWhatWasOnItsWay() async throws {
         let (store, transport, _, _) = try await liveStore()
         transport.answer("PATCH /api/devices/fan:fan_1", body: named(Flat.fan(1), "Desk fan", default: "Fan 1"),

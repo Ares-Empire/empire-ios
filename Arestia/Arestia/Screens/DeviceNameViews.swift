@@ -19,9 +19,10 @@ final class RenameEditor {
 
     func isEditing(_ id: String) -> Bool { deviceID == id }
 
-    /// Opens a device's name for editing (a name still open elsewhere is saved first).
+    /// Opens a device's name for editing (a name still open elsewhere is saved first); not while a name of it is on
+    /// its way to flatd (`FlatStore.isRenaming`), from the menu and VoiceOver's action alike.
     func begin(_ device: Device, in store: FlatStore) {
-        guard deviceID != device.id else { return }
+        guard deviceID != device.id, !store.isRenaming(device.id) else { return }
         save(in: store)
         deviceID = device.id
         text = device.label
