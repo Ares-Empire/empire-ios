@@ -54,6 +54,8 @@ final class FlatStore {
     private(set) var pending: [String: Int] = [:]
     /// Which request each pending position belongs to: an older request's answer never clears a newer one.
     private var pendingRequest: [String: Int] = [:]
+    /// A device's new name sent to flatd, shown (quietly) until flatd confirmed it; never as done before.
+    private(set) var renaming: [String: String] = [:]
     private var moveRequests = 0
     /// Every command for one thing (a device, "mode:<id>", "scene:<id>") goes to flatd after the ones given for it
     /// before, from Home and the 3D page alike (round 7: two at once could arrive the other way round, an earlier
@@ -129,9 +131,11 @@ final class FlatStore {
     // MARK: what the screens read
 
     var fans: [Device] { devices.filter { $0.kind == .fan } }
+    /// The lamps (Patrik, 2026-11-20: "put the lamp under 'Lighting' in Arestia").
+    var lights: [Device] { devices.filter { $0.kind == .light } }
     var rollos: [Device] { devices.filter { $0.kind == .rollo } }
-    /// Devices the home screen has no card for yet (lights, plugs): listed quietly.
-    var others: [Device] { devices.filter { $0.kind != .fan && $0.kind != .rollo } }
+    /// Devices the home screen has no section of their own for (plugs, kinds a newer flatd may bring): listed quietly.
+    var others: [Device] { devices.filter { ![.fan, .light, .rollo].contains($0.kind) } }
     var cooking: FlatMode? { modes.first { $0.id == FlatMode.cookingID } }
     var isCooking: Bool { cooking?.active == true }
     var hasSnapshot: Bool { lastSeen != nil }
@@ -198,6 +202,7 @@ final class FlatStore {
         dragging = [:]
         pending = [:]
         pendingRequest = [:]
+        renaming = [:]
         lines = [:]
         blindNewest = [:]
         offer = nil
@@ -406,16 +411,26 @@ final class FlatStore {
             tell(event)
             // A control's trouble may have been kept before this event arrived (round 7): said now, if it fits.
             if mode.id == FlatMode.cookingID { sayTroubleFromOutside() }
+        case let .device(renamed):
+            // Renamed, whoever did it (this app, another phone, Claude): the new name everywhere, its state as it was.
+            guard let index = devices.firstIndex(where: { $0.id == renamed.id }) else { return }
+            revisions["label:" + renamed.id, default: 0] += 1
+            devices[index] = devices[index].named(like: renamed)
+            if renaming[renamed.id] == renamed.label { renaming[renamed.id] = nil }
+            if let pairingID { connection.remember(devices, for: pairingID) }
+            lastSeen = now
+            tell(.device(devices[index]))
         case .other:
             return
         }
         if controlState != before { reloadControls() }
     }
 
-    /// What the Control Center controls show: when it changes here, they are asked to read again.
+    /// What the Control Center controls show: when it changes here, they are asked to read again (a blind's control
+    /// shows its name too).
     private var controlState: [String] {
         [String(isCooking), String(fans.contains { $0.state.on == true })]
-            + rollos.map { $0.id + String(describing: RolloOpenness.isOpen($0.state)) }
+            + rollos.map { $0.id + String(describing: RolloOpenness.isOpen($0.state)) + $0.label }
     }
 
     /// Where the stream stood for a device or mode when a command was sent.
@@ -445,6 +460,17 @@ final class FlatStore {
         let before = controlState
         store(mode)
         tell(.mode(mode))
+        if controlState != before { reloadControls() }
+    }
+
+    /// A device's names as a rename's answer brought them, unless the stream brought newer news of its name meanwhile.
+    private func takeName(_ device: Device, since stamp: Stamp) {
+        guard stamp == self.stamp("label:" + device.id), let index = devices.firstIndex(where: { $0.id == device.id })
+        else { return }
+        let before = controlState
+        devices[index] = devices[index].named(like: device)
+        if let pairingID { connection.remember(devices, for: pairingID) }
+        tell(.device(devices[index]))
         if controlState != before { reloadControls() }
     }
 
@@ -652,6 +678,27 @@ final class FlatStore {
             }
         }
     }
+
+    /// Renames a device in flatd, so every client shows the name (`DeviceNames`: an empty field or flatd's config name
+    /// brings the config name back; the name it already has sends nothing). The new name shows quietly until flatd
+    /// confirmed it; a refusal puts the old one back with a line (a flatd before v1.3 cannot rename).
+    func rename(_ id: String, to text: String) {
+        guard let device = device(id), renaming[id] == nil, let change = DeviceNames.change(text, for: device) else {
+            return
+        }
+        renaming[id] = DeviceNames.shown(change, for: device)
+        let sent = send("label:" + id, affects: "label:" + id) { client in
+            try await client.rename(id, to: change.label)
+        } done: { device, stamp in
+            self.renaming[id] = nil
+            self.takeName(device, since: stamp)
+        } failed: {
+            self.renaming[id] = nil
+        }
+        if !sent { renaming[id] = nil }
+    }
+
+    func isRenaming(_ id: String) -> Bool { renaming[id] != nil }
 
     func runScene(_ id: String, title: String) {
         send("scene:" + id, affects: "scene:" + id) { client in
