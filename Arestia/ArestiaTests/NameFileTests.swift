@@ -75,8 +75,9 @@ struct NameFileTests {
         #expect(labels(sides.controls) == labels(sides.app))
     }
 
-    /// A real second process (the simulator runs the Mac's programs): it takes the lock file with `flock`, holds it,
-    /// replaces the names file with a rename and lets go. This process waits for the lock, reads what the other one
+    /// A real second process (the simulator runs the Mac's programs): it takes the lock file with `flock`, holds it until
+    /// this test says go (a handshake, not a timer: a slow CI machine can take seconds to start Python), replaces the names
+    /// file with a rename and lets go. This process waits for the lock, reads what the other one
     /// wrote, lays its own rename over it, and refuses a list read before either.
     @Test func aSecondProcessesWriteIsReadUnderTheLock() async throws {
         #if targetEnvironment(simulator)
@@ -85,13 +86,16 @@ struct NameFileTests {
         let begun = sides.controls.devicesVersion
         let marker = sides.file.url.deletingLastPathComponent().appending(path: "locked")
         let said = sides.file.url.deletingLastPathComponent().appending(path: "said")
+        let go = sides.file.url.deletingLastPathComponent().appending(path: "go")
         let script = """
         import fcntl, json, os, sys, time, uuid
-        lock_path, names_path, marker = sys.argv[1:4]
+        lock_path, names_path, marker, go = sys.argv[1:5]
         with open(lock_path, "a+") as lock:
             fcntl.flock(lock, fcntl.LOCK_EX)
             open(marker, "w").close()
-            time.sleep(0.5)
+            deadline = time.time() + 60
+            while not os.path.exists(go) and time.time() < deadline:
+                time.sleep(0.02)
             with open(names_path) as file:
                 names = json.load(file)
             names["devices"][0]["label"] = "Desk fan"
@@ -102,15 +106,17 @@ struct NameFileTests {
             fcntl.flock(lock, fcntl.LOCK_UN)
         """
         let process = try OtherProcess(["/usr/bin/python3", "-c", script, sides.lockPath,
-                                        sides.file.url.path(percentEncoded: false), marker.path(percentEncoded: false)],
+                                        sides.file.url.path(percentEncoded: false), marker.path(percentEncoded: false),
+                                        go.path(percentEncoded: false)],
                                        output: said.path(percentEncoded: false))
         let locked = await eventually({ FileManager.default.fileExists(atPath: marker.path(percentEncoded: false)) },
-                                      timeout: .seconds(10))
+                                      timeout: .seconds(60))
         guard locked else {
             Issue.record("the other process did not start: exit \(process.wait()), \((try? String(contentsOf: said, encoding: .utf8)) ?? "")")
             return
         }
         #expect(labels(sides.controls) == ["Fan 1", "Blind 1"])            // the other process holds the lock, unwritten
+        FileManager.default.createFile(atPath: go.path(percentEncoded: false), contents: nil)   // now it writes and lets go
         // Waits for the other process to let go, then lays the blind's name over what that one wrote.
         sides.controls.rememberName(of: try Flat.decode(Device.self, named(Flat.rollo(1), "Shade")), for: Flat.id)
         #expect(labels(sides.controls) == ["Desk fan", "Shade"])
