@@ -33,7 +33,7 @@ struct OneLinePerDeviceTests {
     /// second only once the first was answered, and the page gets one result for each.
     @Test func thePagesTapsOnOneDeviceReachFlatdInTheOrderMade() async throws {
         let (store, transport) = try await liveStore()
-        transport.answer("POST /api/devices/fan:fan_1", body: Flat.fan(1, on: true), delay: .milliseconds(200))
+        transport.answer("POST /api/devices/fan:fan_1", body: Flat.fan(1, on: true), delay: .milliseconds(600))
         let first = store.pageRequest("fan:fan_1", body: Data(#"{"on":true}"#.utf8))
         let second = store.pageRequest("fan:fan_1", body: Data(#"{"on":false}"#.utf8))
         try await Task.sleep(for: .milliseconds(80))
@@ -48,13 +48,13 @@ struct OneLinePerDeviceTests {
     @Test func thePageAndHomeShareOneLinePerDevice() async throws {
         let (store, transport) = try await liveStore()
         transport.answer("POST /api/devices/rollo:blind_2", body: Flat.rollo(2, moving: "down", target: 100),
-                         delay: .milliseconds(200))
+                         delay: .milliseconds(600))
         let fromPage = store.pageRequest("rollo:blind_2", body: Data(#"{"command":"down"}"#.utf8))
         store.moveRollo("rollo:blind_2", .stop)
         try await Task.sleep(for: .milliseconds(80))
         #expect(blindCommands(transport) == ["down"])
         #expect(await fromPage.value == nil)
-        #expect(await eventually({ blindCommands(transport).count == 2 }, timeout: .seconds(3)))
+        #expect(await eventually({ blindCommands(transport).count == 2 }, timeout: .seconds(5)))
         #expect(blindCommands(transport) == ["down", "stop"])
         store.stop()
     }
@@ -71,12 +71,12 @@ struct OneLinePerDeviceTests {
     /// check is out sends only Stop.
     @Test func aMovementSupersededWhileFlatdIsFoundIsNeverSent() async throws {
         let (store, transport, _, _) = Flat.store()                // not started: no live address
-        transport.answer("GET /api/health", body: ["ok": true, "version": "1.2.0-test"], delay: .milliseconds(200))
+        transport.answer("GET /api/health", body: ["ok": true, "version": "1.2.0-test"], delay: .milliseconds(600))
         transport.answer("POST /api/devices/rollo:blind_2", body: Flat.rollo(2))
         store.setRollo("rollo:blind_2", position: 40)
         try await Task.sleep(for: .milliseconds(80))              // its turn came: flatd is being found
         store.moveRollo("rollo:blind_2", .stop)
-        #expect(await eventually({ !blindCommands(transport).isEmpty }, timeout: .seconds(3)))
+        #expect(await eventually({ !blindCommands(transport).isEmpty }, timeout: .seconds(5)))
         try await Task.sleep(for: .milliseconds(300))
         #expect(blindCommands(transport) == ["stop"])
         #expect(store.pending["rollo:blind_2"] == nil)

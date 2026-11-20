@@ -27,31 +27,35 @@ struct DispatchLockTests {
         #expect(connection.pairing?.id == Flat.id)                      // not forgotten: Forget says it failed
     }
 
-    /// Two holders of the same file, as the app and its extension are: one waits for the other.
+    /// Two holders of the same file, as the app and its extension are: one waits for the other. Checked by order, not
+    /// by time (a slow test machine woke late and measured a shorter wait): the second holder gets the lock only once
+    /// the first one's work is done.
     @Test func theLockFileIsSharedBetweenHolders() async throws {
         let path = lockFile()
         let app = FlatdDispatchLock(path: path), controls = FlatdDispatchLock(path: path)
-        let holding = Latch()
+        let holding = Latch(), done = Latch()
         let holder = Thread {
             try? app.withLock {
                 holding.open()
-                Thread.sleep(forTimeInterval: 0.3)
+                Thread.sleep(forTimeInterval: 0.2)          // room for a lock that is not shared to let the other in
+                done.open()
             }
         }
         holder.start()
         holding.wait()
-        let start = Date.now
-        try controls.withLock {}
-        #expect(Date.now.timeIntervalSince(start) > 0.2)
+        try controls.withLock {
+            #expect(done.isOpen)
+        }
     }
 }
 
 /// Opens once, from any thread.
 private nonisolated final class Latch: @unchecked Sendable {
     private let condition = NSCondition()
-    private var isOpen = false
-    func open() { condition.lock(); isOpen = true; condition.broadcast(); condition.unlock() }
-    func wait() { condition.lock(); while !isOpen { condition.wait() }; condition.unlock() }
+    private var opened = false
+    func open() { condition.lock(); opened = true; condition.broadcast(); condition.unlock() }
+    func wait() { condition.lock(); while !opened { condition.wait() }; condition.unlock() }
+    var isOpen: Bool { condition.lock(); defer { condition.unlock() }; return opened }
 }
 
 @MainActor
