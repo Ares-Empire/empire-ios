@@ -148,7 +148,7 @@ struct FlatWebView: UIViewRepresentable {
         private var isCurrent: Bool { !retired && !store.isRetired }
         /// The web view is gone (or its pairing): nothing more is done for it.
         private var retired = false
-        private let cache = ViewerPageCache.live
+        private let cache: ViewerPageCache
         weak var webView: WKWebView?
         var dark = true
         var coveredBottom: CGFloat = 0
@@ -181,16 +181,23 @@ struct FlatWebView: UIViewRepresentable {
         private var timing: DocumentTiming?
         /// Early process ends, bounded across `ready`. A long-lived page resets the count.
         private var automaticReloads = 0
+        /// Which document ended WebKit early, and how often in a row: a kept copy that keeps doing so is not shown again.
+        private var earlyEnds = EarlyEnds()
         static let maxAutomaticReloads = 3
         /// The page's address inside the web view: a name that never resolves (`.invalid`, RFC 2606), so the page has
         /// an ordinary origin of its own and nothing it does can reach a real server. Never flatd's address.
         static let pageURL = URL(string: "https://viewer.arestia.invalid/")!
         fileprivate static let log = Logger(subsystem: "de.ares-empire.arestia", category: "viewer")
 
-        init(store: FlatStore, page: FlatPage) {
+        /// `cache`: the copy kept on the phone (the tests pass one of their own).
+        init(store: FlatStore, page: FlatPage, cache: ViewerPageCache = .live) {
             self.store = store
             self.page = page
+            self.cache = cache
         }
+
+        /// The document handed over last, for the tests: where it came from (`copy`, `flatd`) and its SHA-256.
+        var shown: (source: String, sha256: String?)? { timing.map { ($0.source.rawValue, $0.sha256) } }
 
         /// How long the page has to say `ready` once its load began.
         static let readyWithin: Duration = .seconds(30)
@@ -206,12 +213,14 @@ struct FlatWebView: UIViewRepresentable {
         private struct PreparedPage {
             let html: Data
             let source: Source
+            let sha256: String?
             let readOrDownload: Int64
             let load: Load
         }
 
         private struct DocumentTiming {
             let source: Source
+            let sha256: String?
             let bytes: Int
             let readOrDownload: Int64
             let handedOver: ContinuousClock.Instant
@@ -260,10 +269,16 @@ struct FlatWebView: UIViewRepresentable {
                 let readTime = Self.milliseconds(since: readStarted)
                 guard let self, isLoading(loading) else { return }
                 defer { if activeLoad?.id == loading.id { loadTask = nil } }
-                if let kept {
-                    guard await handOver(kept.html, from: .copy, took: readTime, loading: loading),
-                          isLoading(loading) else { return }
+                // A copy that ended WebKit early again and again is not shown, nor asked about: flatd's page is
+                // fetched whole, so a fixed page repairs it (Codex's review of the 3D page, finding 3: every reload
+                // and Try again reopened the same bytes first, and the page's end cancelled the fetch each time).
+                guard let kept, earlyEnds.trusts(kept.sha256) else {
+                    if kept != nil { Self.log.notice("3D page: the kept copy kept ending WebKit early; fetching flatd's") }
+                    await fetchPage(client, pairing: pairing, kept: nil, loading: loading)
+                    return
                 }
+                guard await handOver(kept.html, from: .copy, sha256: kept.sha256, took: readTime, loading: loading),
+                      isLoading(loading) else { return }
                 await fetchPage(client, pairing: pairing, kept: kept, loading: loading)
             }
         }
@@ -301,19 +316,21 @@ struct FlatWebView: UIViewRepresentable {
                     logCheck(same ? "same bytes" : "changed", since: started, loading: loading)
                     if same { return }
                 }
-                _ = await handOver(html, from: .flatd, took: downloadTime, loading: loading)
+                _ = await handOver(html, from: .flatd, sha256: hash, took: downloadTime, loading: loading)
             }
         }
 
         /// No document is loaded without its network fence. A replacement gets a new bridge and ready deadline.
-        private func handOver(_ html: Data, from source: Source, took elapsed: Int64, loading: Load) async -> Bool {
+        private func handOver(_ html: Data, from source: Source, sha256: String?, took elapsed: Int64,
+                              loading: Load) async -> Bool {
             let blocked = await blockTheNetwork(loading)
             guard isLoading(loading) else { return false }
             guard blocked else {
                 fail(String(localized: "The 3D flat didn't start."), log: "the network rules did not install")
                 return false
             }
-            return present(PreparedPage(html: html, source: source, readOrDownload: elapsed, load: loading))
+            return present(PreparedPage(html: html, source: source, sha256: sha256, readOrDownload: elapsed,
+                                        load: loading))
         }
 
         private func present(_ next: PreparedPage) -> Bool {
@@ -330,8 +347,8 @@ struct FlatWebView: UIViewRepresentable {
             }
             let arriving = document
             pendingPolicy = (arriving, nil)
-            timing = DocumentTiming(source: next.source, bytes: next.html.count, readOrDownload: next.readOrDownload,
-                                    handedOver: .now)
+            timing = DocumentTiming(source: next.source, sha256: next.sha256, bytes: next.html.count,
+                                    readOrDownload: next.readOrDownload, handedOver: .now)
             let navigation = webView?.load(next.html, mimeType: "text/html", characterEncodingName: "utf-8",
                                            baseURL: Self.pageURL)
             guard handover.loading(arriving, as: navigation) else {
@@ -653,6 +670,7 @@ struct FlatWebView: UIViewRepresentable {
             pendingPolicy = nil
             guard let loading = activeLoad, isLoading(loading) else { return }
             let age = (timing?.handedOver ?? loading.started).duration(to: .now)
+            if age < .seconds(60) { earlyEnds.ended(timing?.sha256) } else { earlyEnds.lived(timing?.sha256) }
             cancelLoad()
             pendingReload = age < .seconds(60)
             reloadIfVisible()
@@ -683,4 +701,28 @@ private final class WeakHandler: NSObject, WKScriptMessageHandler {
     func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
         target?.userContentController(controller, didReceive: message)
     }
+}
+
+/// Which document ended WebKit's page process early (within a minute of being handed over), how often in a row. A kept
+/// copy of the page that has done so `distrustAfter` times is not shown again while it stays the same bytes: the next
+/// load, an automatic one or Try again, fetches flatd's page without asking about the copy (Codex's review of the 3D
+/// page, finding 3). A document that lived longer than that, or another one ending early, starts the count afresh.
+nonisolated struct EarlyEnds: Equatable, Sendable {
+    static let distrustAfter = 2
+    private(set) var page: String?
+    private(set) var count = 0
+
+    /// A document (its SHA-256; nil: unknown, not counted) ended WebKit early.
+    mutating func ended(_ sha256: String?) {
+        guard let sha256 else { return }
+        if page == sha256 { count += 1 } else { (page, count) = (sha256, 1) }
+    }
+
+    /// A document ended WebKit after living longer: its early ends are forgotten.
+    mutating func lived(_ sha256: String?) {
+        if sha256 != nil, page == sha256 { (page, count) = (nil, 0) }
+    }
+
+    /// Whether a copy with these bytes may be shown.
+    func trusts(_ sha256: String) -> Bool { page != sha256 || count < Self.distrustAfter }
 }
