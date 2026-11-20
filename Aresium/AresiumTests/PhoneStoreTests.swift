@@ -45,6 +45,20 @@ struct PhoneStoreTests {
         }
     }
 
+    /// An older build's store that is only counted and left behind, never opened: a store file of made-up bytes, changed
+    /// `daysAgo`. Only the test writes it, so its date stays as set. (A store filled here keeps its SQLite connection
+    /// until SwiftData lets it go, which the test cannot wait for, so its files may still change after they were dated.)
+    private func storeLeftBehind(_ account: String, in storage: PhoneStorage, daysAgo: Double) throws -> Data {
+        let folder = storage.root.appending(path: account, directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let file = folder.appending(path: PhoneStorage.storeName)
+        let bytes = Data("made-up store of \(account)".utf8)
+        try bytes.write(to: file)
+        try FileManager.default.setAttributes([.modificationDate: Date.now.addingTimeInterval(-daysAgo * 86_400)],
+                                              ofItemAtPath: file.path)
+        return bytes
+    }
+
     @Test func oneOldStoreBecomesThePhonesStoreByMoving() async throws {
         let storage = PhoneTest.storage()
         try await oldStore("fictionalAccountA", in: storage, payments: 2, daysAgo: 1)
@@ -58,14 +72,19 @@ struct PhoneStoreTests {
 
     @Test func withSeveralTheMostRecentlyChangedMovesAndTheOthersStay() async throws {
         let storage = PhoneTest.storage()
-        try await oldStore("fictionalAccountA", in: storage, payments: 1, daysAgo: 9)
+        // Only the one that moves is a real store: with real stores for all three, an older one was at times the
+        // newest on GitHub's Macs (twice in November 2026, never locally). A late write to B only makes it newer.
+        let leftBehind = [
+            "fictionalAccountA": try storeLeftBehind("fictionalAccountA", in: storage, daysAgo: 9),
+            "fictionalAccountC": try storeLeftBehind("fictionalAccountC", in: storage, daysAgo: 30),
+        ]
         try await oldStore("fictionalAccountB", in: storage, payments: 3, daysAgo: 1)
-        try await oldStore("fictionalAccountC", in: storage, payments: 2, daysAgo: 30)
-        #expect(try storage.moveOldStore() == .moved(from: "fictionalAccountB", leftBehind: 2))
+        let candidates = storage.oldStores().map { "\($0.folder.lastPathComponent) \($0.changed)" }
+        #expect(try storage.moveOldStore() == .moved(from: "fictionalAccountB", leftBehind: 2), "\(candidates)")
         let phone = try await PhoneTest.backend(storage: storage)
         #expect(phone.summary.payments == 3)
-        for account in ["fictionalAccountA", "fictionalAccountC"] {
-            #expect(FileManager.default.fileExists(atPath: storage.root.appending(path: "\(account)/ledger.store").path))
+        for (account, bytes) in leftBehind {      // untouched
+            #expect(FileManager.default.contents(atPath: storage.root.appending(path: "\(account)/ledger.store").path) == bytes)
         }
         // The phone has its store now: nothing moves any more.
         #expect(try storage.moveOldStore() == .nothing && storage.oldStores().count == 2)
