@@ -27,16 +27,6 @@
         }
       }
     },
-    "%@ down." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ runter."
-          }
-        }
-      }
-    },
     "%@ going down" : {
       "localizations" : {
         "de" : {
@@ -103,58 +93,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ an"
-          }
-        }
-      }
-    },
-    "%@ on for 30 min, %@ up." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ 30 Min. an, %@ hoch."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ on for 30 min, %2$@ up."
-          }
-        }
-      }
-    },
-    "%@ on for 30 min." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ 30 Min. an."
-          }
-        }
-      }
-    },
-    "%@ on, %@ up. Done cooking: fans off, the blind to its favourite spot." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ an, %@ hoch. Kochen beenden: Ventilatoren aus, das Rollo auf seinen Favoriten."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ on, %2$@ up. Done cooking: fans off, the blind to its favourite spot."
-          }
-        }
-      }
-    },
-    "%@ on. Done cooking: fans off." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ an. Kochen beenden: Ventilatoren aus."
           }
         }
       }
@@ -415,16 +353,6 @@
         }
       }
     },
-    "Automations" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automationen"
-          }
-        }
-      }
-    },
     "Blinds" : {
       "localizations" : {
         "de" : {
@@ -461,6 +389,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Abbrechen"
+          }
+        }
+      }
+    },
+    "Clear" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leeren"
           }
         }
       }
@@ -525,16 +463,6 @@
         }
       }
     },
-    "Control Center" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kontrollzentrum"
-          }
-        }
-      }
-    },
     "Cooking" : {
       "localizations" : {
         "de" : {
@@ -575,16 +503,6 @@
         }
       }
     },
-    "Cooking, Fans and a blind: open Control Center, hold, then + and Arestia." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kochen, Ventilatoren und ein Rollo: Kontrollzentrum öffnen, gedrückt halten, dann + und Arestia."
-          }
-        }
-      }
-    },
     "Didn't answer: %@." : {
       "localizations" : {
         "de" : {
@@ -611,16 +529,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Runter"
-          }
-        }
-      }
-    },
-    "Fan timers" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ventilator-Timer"
           }
         }
       }
@@ -785,6 +693,16 @@
         }
       }
     },
+    "Lighting" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Licht"
+          }
+        }
+      }
+    },
     "Live" : {
       "localizations" : {
         "de" : {
@@ -825,12 +743,12 @@
         }
       }
     },
-    "NFC tag" : {
+    "Name" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "NFC-Tag"
+            "value" : "Name"
           }
         }
       }
@@ -925,16 +843,6 @@
         }
       }
     },
-    "On until you end it." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "An, bis du es beendest."
-          }
-        }
-      }
-    },
     "On · %@ left" : {
       "localizations" : {
         "de" : {
@@ -961,6 +869,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Oder den Code einfügen"
+          }
+        }
+      }
+    },
+    "Original name" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Originalname"
           }
         }
       }
@@ -1025,22 +943,22 @@
         }
       }
     },
+    "Rename" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Umbenennen"
+          }
+        }
+      }
+    },
     "Runs it once" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Läuft einmal"
-          }
-        }
-      }
-    },
-    "Runs once." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Läuft einmal."
           }
         }
       }
@@ -1091,16 +1009,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Einstellungen"
-          }
-        }
-      }
-    },
-    "Shortcuts → Automation → NFC: hold the iPhone to the tag, then choose Arestia's Start cooking." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kurzbefehle → Automation → NFC: das iPhone an den Tag halten, dann „Kochen starten“ von Arestia wählen."
           }
         }
       }
@@ -1181,16 +1089,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Der Wohnungsdienst lehnt den Schlüssel ab"
-          }
-        }
-      }
-    },
-    "The plug runs the timer: the fan goes off by itself, even when the Mac sleeps." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Den Timer führt die Steckdose: Der Ventilator geht von selbst aus, auch wenn der Mac schläft."
           }
         }
       }

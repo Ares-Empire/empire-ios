@@ -84,26 +84,6 @@ struct WordsTests {
         #expect(FlatWords.sceneTitle(FlatScene(id: "movie", label: "Movie"), language: .german) == "Movie")
     }
 
-    @Test func theAutomationsCard() throws {
-        let devices = try Flat.devices([Flat.fan(1), Flat.fan(2), Flat.rollo(1), Flat.rollo(2)])
-        let cooking = FlatMode(id: "cooking", label: "Cooking", active: false,
-                               devices: ["fan:fan_1", "fan:fan_2", "rollo:blind_1"])
-        let scenes = [FlatScene(id: "air_out", label: "Air out", devices: ["fan:fan_1", "fan:fan_2", "rollo:blind_1"]),
-                      FlatScene(id: "all_down", label: "All down", devices: ["rollo:blind_1", "rollo:blind_2"])]
-        let english = AutomationRow.rows(modes: [cooking], scenes: scenes, devices: devices, language: .english)
-        #expect(english.map(\.title) == ["Cooking", "Air out", "All down", "Fan timers", "NFC tag", "Control Center"])
-        #expect(english[0].text.hasPrefix("Fan 1 and Fan 2 on, Blind 1 up."))
-        #expect(english[1].text == "Fan 1 and Fan 2 on for 30 min, Blind 1 up.")
-        #expect(english[2].text == "Blind 1 and Blind 2 down.")
-        let german = AutomationRow.rows(modes: [cooking], scenes: scenes, devices: devices, language: .german)
-        #expect(german[0].text.hasPrefix("Fan 1 und Fan 2 an, Blind 1 hoch."))
-        #expect(german[2].text == "Blind 1 und Blind 2 runter.")
-        // Without fans there are no fan timers to explain.
-        let blindsOnly = AutomationRow.rows(modes: [], scenes: [], devices: try Flat.devices([Flat.rollo(1)]),
-                                            language: .english)
-        #expect(blindsOnly.map(\.title) == ["NFC tag", "Control Center"])
-    }
-
     @Test func lastSeen() {
         let today = now.addingTimeInterval(-600)
         #expect(FlatWords.lastSeen(today, now: now, language: .english).hasPrefix("Last seen "))
