@@ -2,12 +2,15 @@ import SwiftUI
 
 /// The first tab: what the flat is doing and the few things to do about it (Patrik, 2026-11-19: "not many buttons and
 /// big menu but just easy navigation"). From the top: the state in one line; cooking while it runs, with Done cooking as
-/// the one big button, else the modes and scenes as three tiles; the fans with their timers; the blinds; then what
-/// runs by itself. Ends with the ARESTIA band (`WordmarkScrollView`).
+/// the one big button, else the modes and scenes as three tiles; the fans with their timers; the lights; the blinds;
+/// then the other devices. Ends with the ARESTIA band (`WordmarkScrollView`). A long press on a device renames it
+/// (`DeviceNameViews.swift`). The Automations card at the end is gone (Patrik, 2026-11-20: "why are there these text
+/// boxes for automations at the bottom? I dont think we need them.").
 struct HomeScreen: View {
     let store: FlatStore
     let openSettings: () -> Void
     let reconnect: () -> Void
+    @State private var editor = RenameEditor()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -23,17 +26,25 @@ struct HomeScreen: View {
                 }
             }
             .scrollIndicators(.hidden)
+            // Scrolling away from a name being edited saves it (the field saves when the keyboard goes).
+            .scrollDismissesKeyboard(.immediately)
             .refreshable { store.retry() }
             #if DEBUG
             .task(id: store.hasSnapshot) {
-                // Screenshots: `-scrollToEnd` shows the automations and the band; `-scrollTo blinds|automations`.
+                // Screenshots: `-scrollToEnd` shows the band; `-scrollTo lights|blinds`; `-renameDevice <id>` opens a
+                // device's name for editing (`-renameText <text>` types into it).
                 guard store.hasSnapshot else { return }
                 try? await Task.sleep(for: .milliseconds(400))
                 if LaunchArguments.current.contains("-scrollToEnd") { proxy.scrollToWordmark() }
                 if let place = LaunchArguments.value("-scrollTo") { proxy.scrollTo(place, anchor: .top) }
+                if let id = LaunchArguments.value("-renameDevice"), let device = store.device(id) {
+                    editor.begin(device, in: store)
+                    if let typed = LaunchArguments.value("-renameText") { editor.text = DeviceNames.typed(typed) }
+                }
             }
             #endif
         }
+        .environment(editor)
         .background { ProvinceWall(accent: .arestia) }
         .undoBar(Binding(get: { store.offer }, set: { store.offer = $0 }), accent: .arestia)
     }
@@ -72,6 +83,11 @@ struct HomeScreen: View {
                 .padding(.top, 30).padding(.bottom, 10)
             FanCard(store: store)
         }
+        if !store.lights.isEmpty {
+            SectionTitle(text: String(localized: "Lighting"), value: FanCard.countLine(store.lights))
+                .padding(.top, 30).padding(.bottom, 10).id("lights")
+            SwitchCard(store: store, devices: store.lights)
+        }
         if !store.rollos.isEmpty {
             SectionTitle(text: String(localized: "Blinds")).padding(.top, 30).padding(.bottom, 10).id("blinds")
             BlindCard(store: store)
@@ -80,8 +96,6 @@ struct HomeScreen: View {
             SectionTitle(text: String(localized: "More")).padding(.top, 30).padding(.bottom, 10)
             SwitchCard(store: store, devices: store.others)
         }
-        SectionTitle(text: String(localized: "Automations")).padding(.top, 34).padding(.bottom, 10).id("automations")
-        AutomationsCard(store: store)
     }
 }
 
@@ -240,9 +254,9 @@ private struct ModeTiles: View {
 struct FanCard: View {
     let store: FlatStore
 
-    /// "1 on", "2 on", nil while none runs.
-    static func countLine(_ fans: [Device]) -> String? {
-        let running = fans.filter { $0.state.on == true }.count
+    /// "1 on", "2 on", nil while none runs (the fans, and the lights).
+    static func countLine(_ devices: [Device]) -> String? {
+        let running = devices.filter { $0.state.on == true }.count
         return running == 0 ? nil : String(localized: "\(running) on")
     }
 
@@ -260,6 +274,7 @@ struct FanCard: View {
 private struct FanRow: View {
     let store: FlatStore
     let fan: Device
+    @Environment(RenameEditor.self) private var editor
 
     var body: some View {
         let on = fan.state.on == true
@@ -267,16 +282,18 @@ private struct FanRow: View {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 14) {
                     VStack(alignment: .leading, spacing: 3) {
-                        Text(verbatim: fan.label).font(AppFont.text(16, weight: .semibold)).foregroundStyle(Ink.primary)
-                            .lineLimit(1)
+                        DeviceName(store: store, device: fan)
                         Text(verbatim: FlatWords.fanStatus(fan.state, now: context.date))
                             .font(AppFont.text(13)).foregroundStyle(on ? AppAccent.arestia.color : Ink.muted)
                             .contentTransition(.opacity)
                     }
                     Spacer(minLength: 8)
-                    PowerButton(isOn: on, busy: store.isWorking("power:" + fan.id),
-                                label: fan.label) {
-                        store.setFan(fan.id, on: !on)
+                    // While its name is edited the field takes the line (with Cancel where the button was).
+                    if !editor.isEditing(fan.id) {
+                        PowerButton(isOn: on, busy: store.isWorking("power:" + fan.id),
+                                    label: fan.label) {
+                            store.setFan(fan.id, on: !on)
+                        }
                     }
                 }
                 TimerSegments(chosen: FlatWords.runningChoice(fan.state, now: context.date)) { timer in
@@ -287,11 +304,12 @@ private struct FanRow: View {
             .padding(.horizontal, 16).padding(.vertical, 14)
             .opacity(fan.state.online ? 1 : 0.6)
         }
+        .renamable(fan, store: store)
         .accessibilityElement(children: .contain)
     }
 }
 
-/// Lights and plugs flatd has besides the fans: on or off.
+/// Switches besides the fans, on or off: the lights under Lighting, plugs and the rest under More.
 private struct SwitchCard: View {
     let store: FlatStore
     let devices: [Device]
@@ -300,24 +318,38 @@ private struct SwitchCard: View {
         VStack(spacing: 0) {
             ForEach(Array(devices.enumerated()), id: \.element.id) { index, device in
                 if index > 0 { SettingsDivider() }
-                let on = device.state.on == true
-                HStack(spacing: 14) {
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(verbatim: device.label).font(AppFont.text(15, weight: .semibold)).foregroundStyle(Ink.primary)
-                        Text(verbatim: FlatWords.fanStatus(device.state, now: .now))
-                            .font(AppFont.text(13)).foregroundStyle(Ink.muted)
-                    }
-                    Spacer(minLength: 8)
-                    if device.controls.contains("on") {
-                        PowerButton(isOn: on, busy: store.isWorking("power:" + device.id), label: device.label) {
-                            store.setFan(device.id, on: !on)
-                        }
-                    }
-                }
-                .padding(.horizontal, 16).padding(.vertical, 12)
+                SwitchRow(store: store, device: device)
             }
         }
         .glassCard()
+    }
+}
+
+private struct SwitchRow: View {
+    let store: FlatStore
+    let device: Device
+    @Environment(RenameEditor.self) private var editor
+
+    var body: some View {
+        let on = device.state.on == true
+        HStack(spacing: 14) {
+            VStack(alignment: .leading, spacing: 3) {
+                DeviceName(store: store, device: device)
+                Text(verbatim: FlatWords.fanStatus(device.state, now: .now))
+                    .font(AppFont.text(13)).foregroundStyle(on ? AppAccent.arestia.color : Ink.muted)
+                    .contentTransition(.opacity)
+            }
+            Spacer(minLength: 8)
+            if device.controls.contains("on"), !editor.isEditing(device.id) {
+                PowerButton(isOn: on, busy: store.isWorking("power:" + device.id), label: device.label) {
+                    store.setFan(device.id, on: !on)
+                }
+            }
+        }
+        .padding(.horizontal, 16).padding(.vertical, 14)
+        .opacity(device.state.online ? 1 : 0.6)
+        .renamable(device, store: store)
+        .accessibilityElement(children: .contain)
     }
 }
 
@@ -360,8 +392,7 @@ private struct BlindRow: View {
                 }
             VStack(alignment: .leading, spacing: 0) {
                 HStack(alignment: .firstTextBaseline) {
-                    Text(verbatim: rollo.label).font(AppFont.text(16, weight: .semibold)).foregroundStyle(Ink.primary)
-                        .lineLimit(1)
+                    DeviceName(store: store, device: rollo)
                     Spacer(minLength: 6)
                 }
                 Text(verbatim: status)
@@ -391,6 +422,11 @@ private struct BlindRow: View {
                 .padding(.top, 12)
                 .disabled(!state.online)
             }
+            // The long press only here: on the window it would hold up a drag that starts slowly. Lifted with a little
+            // room around it, so the preview's rounded corners never cut into the name.
+            .padding(8)
+            .renamable(rollo, store: store)
+            .padding(-8)
         }
         .padding(.horizontal, 16).padding(.vertical, 14)
         .opacity(state.online ? 1 : 0.6)
@@ -403,39 +439,5 @@ private struct BlindRow: View {
         if let dragged = store.dragging[rollo.id] { return FlatWords.rolloStatus(rollo.state, position: dragged) }
         if let asked = store.pending[rollo.id] { return FlatWords.rolloPending(asked) }
         return FlatWords.rolloStatus(rollo.state)
-    }
-}
-
-// MARK: - automations
-
-/// What runs by itself or from outside the app, honestly and small: the modes and scenes with what they do (from
-/// flatd's own lists), the fans' timers, the NFC tag and Control Center.
-private struct AutomationsCard: View {
-    let store: FlatStore
-
-    var body: some View {
-        VStack(spacing: 0) {
-            ForEach(Array(rows.enumerated()), id: \.offset) { index, row in
-                if index > 0 { SettingsDivider() }
-                HStack(alignment: .top, spacing: 14) {
-                    Image(systemName: row.symbol).font(.system(size: 15, weight: .medium))
-                        .foregroundStyle(Ink.secondary).frame(width: 22).padding(.top, 2)
-                        .accessibilityHidden(true)
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(verbatim: row.title).font(AppFont.text(14.5, weight: .semibold)).foregroundStyle(Ink.primary)
-                        Text(verbatim: row.text).font(AppFont.text(12.5)).foregroundStyle(Ink.muted).lineSpacing(2)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    Spacer(minLength: 0)
-                }
-                .padding(.horizontal, 16).padding(.vertical, 13)
-                .accessibilityElement(children: .combine)
-            }
-        }
-        .glassCard()
-    }
-
-    private var rows: [AutomationRow] {
-        AutomationRow.rows(modes: store.modes, scenes: store.scenes, devices: store.devices)
     }
 }

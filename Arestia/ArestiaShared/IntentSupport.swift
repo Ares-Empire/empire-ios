@@ -83,10 +83,11 @@ nonisolated enum DeviceChoices {
 
     static func load(kind: Device.Kind, connection: FlatdConnection = .live,
                      reach: FlatdReach? = nil) async -> [Choice] {
+        let version = connection.devicesVersion
         if let answer = try? await (reach ?? FlatdReach(connection: connection)).run({ client in
             (try await client.devices(), client)
         }) {
-            connection.remember(answer.0, from: answer.1)
+            connection.remember(answer.0, from: answer.1, readSince: version)
         }
         return choices(kind: kind, from: connection.known)
     }
@@ -102,6 +103,15 @@ nonisolated enum DeviceChoices {
                 ?? Choice(id: id, label: language.string(LocalizedStringResource("Not in your flat",
                                                                                  table: "ArestiaShared")))
         }
+    }
+
+    /// A saved choice's name as kept for the paired flat now (`known`); nil for no choice, one of another pairing
+    /// (chosen before Forget) or one the flat does not have. The Blind control's gallery preview shows this, never the
+    /// name kept inside the control's configuration, which may be a forgotten flat's (Codex's review of the renaming,
+    /// finding 5) or a name from before a rename.
+    static func name(of saved: String?, kind: Device.Kind, from known: FlatdConnection.KnownDevices?) -> String? {
+        guard let saved else { return nil }
+        return choices(kind: kind, from: known).first { $0.id == saved }?.label
     }
 
     /// The choices of one reading of the names: each tagged with the pairing those names belong to.

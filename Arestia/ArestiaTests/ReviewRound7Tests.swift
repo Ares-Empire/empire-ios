@@ -16,7 +16,7 @@ struct DispatchLockTests {
     /// Without its file, the lock runs nothing: no request starts, Forget does not report done.
     @Test func theLockFailsClosed() async throws {
         let transport = FakeTransport()
-        let connection = FlatdConnection(defaults: nil, keychain: MemoryKeys(),
+        let connection = FlatdConnection(defaults: nil, names: nil, keychain: MemoryKeys(),
                                          lock: FlatdDispatchLock(path: "/nonexistent-arestia-folder/dispatch.lock"))
         try connection.save(Flat.pairing())
         #expect(throws: FlatdError.pairingUnreadable) { try connection.start(for: Flat.id) {} }
@@ -148,7 +148,7 @@ struct ShortcutAnswerTests {
     /// for says so.
     @Test func anAnswerCountsOnlyWhileItsPairingIsSaved() async throws {
         let keys = MemoryKeys()
-        let connection = FlatdConnection(defaults: nil, keychain: keys, lock: .processOnly)
+        let connection = FlatdConnection(defaults: nil, names: nil, keychain: keys, lock: .processOnly)
         try connection.save(Flat.pairing())
         transport.answer("POST /api/scenes/all_down", status: 404, body: ["error": "unknown scene"],
                          delay: .milliseconds(200))

@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""A fake flatd for Arestia on the simulator and in screenshots: the flat service's contract v1.2 as the app sees it
+"""A fake flatd for Arestia on the simulator and in screenshots: the flat service's contract v1.3 as the app sees it
 (HTTPS only, with an identity the app pins through a pairing code; REST, the event stream over a WebSocket, Bonjour as
 `_flatd._tcp`) with made-up devices, and a stand-in 3D page at `/viewer` that speaks the viewer's bridge (BRIDGE.md v1).
 Standard library only; Bonjour through macOS's own `dns-sd`, the identity's key and certificate through `openssl`.
 
     python3 scripts/fake-flatd.py                      # port 8790, Bonjour name "flatd (fake)"
     python3 scripts/fake-flatd.py --port 8791 --no-bonjour --travel 8 --extra
+    python3 scripts/fake-flatd.py --no-rename          # as a flatd before v1.3: PATCH answers 405, no default_label
     python3 scripts/fake-flatd.py --pairing            # only print the pairing code (same options), and exit
 
 It prints its pairing code, the JSON the real `flatd pair` shows as a QR code:
@@ -20,8 +21,9 @@ refuse to talk to it until paired again). The test hooks need `curl -k https://�
 
 Never the real flatd: it runs on its own port (not 8787/8788) with its own key, and no real device is behind it.
 
-Made-up devices: Fan 1, Fan 2 (plugs with timers), Blind 1 (with a favourite spot), Blind 2 (without); `--extra` adds
-Lamp 1. Mode `cooking` (both fans on and Blind 1 up; ended: fans off, Blind 1 to its favourite), scenes `air_out` (both
+Made-up devices: Fan 1, Fan 2 (plugs with timers), Desk lamp (a light), Blind 1 (with a favourite spot), Blind 2
+(without); `--extra` adds Plug 1. Every device can be renamed (`PATCH /api/devices/{id}` with `{"label": …}`, kept in
+memory until a restart or /fake/reset; every stream hears a `device` event). Mode `cooking` (both fans on and Blind 1 up; ended: fans off, Blind 1 to its favourite), scenes `air_out` (both
 fans for 30 min, Blind 1 up) and `all_down`. Blinds travel 100 % in `--travel` seconds and report every second.
 
 For a page that is not public (the real 3D viewer), `--viewer <file>` serves it at /viewer and `--devices <file>` gives
@@ -31,7 +33,7 @@ without Bonjour, and makes up a fresh key (printed) unless --host and --key say 
 Test hooks (with the key, like everything else): POST /fake/press?id=<rollo>&command=up|down (a wall switch, source
 `device`), POST /fake/switch?id=<fan>&on=1|0 (the plug's own button), POST /fake/online?id=<id>&online=0|1,
 POST /fake/fail?id=<id> (its next command answers 504), POST /fake/drop (closes every event stream),
-POST /fake/reset (back to the start state), GET /fake/requests (how many requests arrived so far, this one included).
+POST /fake/reset (back to the start state, the names too), GET /fake/requests (how many requests arrived so far, this one included).
 """
 from __future__ import annotations
 
@@ -51,6 +53,7 @@ import subprocess
 import sys
 import threading
 import time
+import unicodedata
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
@@ -68,9 +71,10 @@ def now_iso(at: float | None = None) -> str:
 class Flat:
     """The made-up flat: devices, modes, scenes, timers and blinds that move."""
 
-    def __init__(self, travel: float, extra: bool, devices: list[dict] | None = None):
+    def __init__(self, travel: float, extra: bool, devices: list[dict] | None = None, renames: bool = True):
         self.travel = travel
         self.extra = extra
+        self.renames = renames               # False: a flatd before v1.3 (no renaming, no default_label)
         self.custom = devices                # --devices: ids and names from a local file instead of the made-up ones
         self.lock = threading.RLock()
         self.listeners: list = []          # callables taking an event dict
@@ -86,6 +90,8 @@ class Flat:
                               "driver": "fake", "controls": ["on", "for_s"], "state": switch()},
                 "fan:fan_2": {"id": "fan:fan_2", "kind": "fan", "label": "Fan 2", "room": "kitchen",
                               "driver": "fake", "controls": ["on", "for_s"], "state": switch()},
+                "light:desk_lamp": {"id": "light:desk_lamp", "kind": "light", "label": "Desk lamp", "room": "living",
+                                    "driver": "fake", "controls": ["on", "for_s"], "state": switch()},
                 "rollo:blind_1": {"id": "rollo:blind_1", "kind": "rollo", "label": "Blind 1", "room": "living",
                                   "driver": "fake", "controls": ["command", "position"],
                                   "state": {"position": 60, "moving": None, "target": None, "favourite": 60,
@@ -96,9 +102,9 @@ class Flat:
                                             "online": True, "updated_at": now_iso()}},
             }
             if self.extra:
-                self.devices["light:lamp_1"] = {"id": "light:lamp_1", "kind": "light", "label": "Lamp 1",
-                                                "room": "hall", "driver": "fake", "controls": ["on", "for_s"],
-                                                "state": switch()}
+                self.devices["plug:plug_1"] = {"id": "plug:plug_1", "kind": "plug", "label": "Plug 1",
+                                               "room": "hall", "driver": "fake", "controls": ["on", "for_s"],
+                                               "state": switch()}
             if self.custom is not None:
                 self.devices = {}
                 for entry in self.custom:
@@ -112,6 +118,10 @@ class Flat:
                     self.devices[entry["id"]] = {"id": entry["id"], "kind": kind, "label": entry.get("label", entry["id"]),
                                                  "room": entry.get("room"), "driver": "fake", "controls": controls,
                                                  "state": state}
+            # The config's names (contract v1.3: `default_label`; a rename only changes `label`).
+            for device in self.devices.values():
+                if self.renames:
+                    device["default_label"] = device["label"]
             # Cooking: every fan and the first blind with a favourite spot (the contract's shape, whatever the ids).
             fans = [i for i, d in self.devices.items() if d["kind"] == "fan"]
             blinds = [i for i, d in self.devices.items() if d["kind"] == "rollo"]
@@ -146,6 +156,37 @@ class Flat:
         with self.lock:
             return {"type": "snapshot", "devices": json.loads(json.dumps(list(self.devices.values()))),
                     "modes": json.loads(json.dumps(list(self.modes.values())))}
+
+    # --- renaming (contract v1.3) ------------------------------------------------------------------------------
+
+    def rename(self, device_id: str, body) -> tuple[int, dict]:
+        """PATCH /api/devices/{id}: flatd's rules (trimmed, NFC, 1 to 40 characters, no control characters; null or
+        blank: the config's name again), and a `device` event when the shown name changed."""
+        if not self.renames:
+            return 405, {"error": "Method Not Allowed"}
+        with self.lock:
+            device = self.devices.get(device_id)
+            if device is None:
+                return 404, {"error": "Unknown device id"}
+            if not isinstance(body, dict) or set(body) != {"label"}:
+                return 400, {"error": 'Expected {"label": "<name>"} or {"label": null}'}
+            label = body["label"]
+            if label is not None and not isinstance(label, str):
+                return 400, {"error": "label must be a string, or null for the configured name"}
+            label = unicodedata.normalize("NFC", (label or "").strip())
+            if len(label) > 40:
+                return 400, {"error": "label must be at most 40 characters"}
+            if any(unicodedata.category(c) in ("Cc", "Cs", "Zl", "Zp") for c in label):
+                return 400, {"error": "label must not contain control characters or line breaks"}
+            # The config's own name, compared as a rename keeps names (trimmed, NFC), is no own name: the config's
+            # spelling is shown, as flatd does (a config may spell an accent decomposed).
+            default = device["default_label"]
+            if not label or label == unicodedata.normalize("NFC", default.strip()):
+                label = default
+            if label != device["label"]:
+                device["label"] = label
+                self.emit({"type": "device", "device": json.loads(json.dumps(device)), "source": "api"})
+            return 200, json.loads(json.dumps(device))
 
     # --- commands -------------------------------------------------------------------------------------------------
 
@@ -367,7 +408,7 @@ def make_handler(flat: Flat, key: str, latency: float, viewer: bytes):
     flat.listeners.append(broadcast)
 
     class Handler(BaseHTTPRequestHandler):
-        server_version = "fake-flatd/1.2"
+        server_version = "fake-flatd/1.3"
         protocol_version = "HTTP/1.1"
 
         def log_message(self, format, *args):       # one short line per request
@@ -406,7 +447,7 @@ def make_handler(flat: Flat, key: str, latency: float, viewer: bytes):
                 return None
 
         def do_OPTIONS(self):
-            self.answer(204, b"", extra={"Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+            self.answer(204, b"", extra={"Access-Control-Allow-Methods": "GET, POST, PATCH, OPTIONS",
                                          "Access-Control-Allow-Headers": "Authorization, Content-Type"})
 
         def do_GET(self):
@@ -420,7 +461,7 @@ def make_handler(flat: Flat, key: str, latency: float, viewer: bytes):
                 # refused this identity must not have added any (ArestiaTests, LiveFlatdTests).
                 return self.answer(200, {"requests": seen})
             if url.path == "/api/health":
-                return self.answer(200, {"ok": True, "version": "1.1.0-fake"})
+                return self.answer(200, {"ok": True, "version": "1.3.0-fake" if flat.renames else "1.2.0-fake"})
             if not self.authorized(query):
                 return self.refuse()
             if url.path == "/api/devices":
@@ -465,6 +506,21 @@ def make_handler(flat: Flat, key: str, latency: float, viewer: bytes):
             if url.path.startswith("/fake/"):
                 return self.fake(url.path, {k: v[0] for k, v in query.items()})
             self.answer(404, {"error": "not found"})
+
+        def do_PATCH(self):
+            url = urlparse(self.path)
+            with flat.lock:
+                flat.requests_seen += 1
+            if not self.authorized(parse_qs(url.query)):
+                return self.refuse()
+            body = self.body()
+            if body is None:
+                return self.answer(400, {"error": "The body must be JSON"})
+            if latency:
+                time.sleep(latency)
+            if url.path.startswith("/api/devices/"):
+                return self.answer(*flat.rename(unquote(url.path[len("/api/devices/"):]), body))
+            self.answer(405, {"error": "Method Not Allowed"})
 
         def fake(self, path: str, query: dict):
             device_id = query.get("id", "")
@@ -573,13 +629,14 @@ window.flat3d = { receive(msg){
   if (msg.type === 'snapshot'){ devices.clear(); for (const d of msg.devices || []) devices.set(d.id, d); modes.clear(); for (const x of msg.modes || []) modes.set(x.id, x); }
   else if (msg.type === 'state'){ const d = devices.get(msg.id); if (!d) return false; d.state = Object.assign({}, d.state, msg.state); }
   else if (msg.type === 'mode'){ modes.set(msg.mode.id, msg.mode); }
+  else if (msg.type === 'device'){ const d = devices.get(msg.device && msg.device.id); if (!d) return false; d.label = msg.device.label; }
   else if (msg.type === 'result'){ const id = pending[msg.reqId]; delete pending[msg.reqId]; busy.delete(id); document.getElementById('line').textContent = msg.ok ? '' : (msg.message || msg.error); }
   else if (msg.type === 'connection'){ document.getElementById('line').textContent = msg.status === 'offline' ? 'Not connected · last known state' : ''; }
   else if (msg.type === 'config'){ document.documentElement.className = msg.theme === 'light' ? 'light' : ''; if (msg.insets) document.documentElement.style.setProperty('--bars', (msg.insets.bottom || 0) + 'px'); document.querySelector('h1').textContent = 'Stand-in flat · ' + (msg.lighting === 'day' ? 'always day' : 'real sun'); }
   else return false;
   render(); return true; } };
 setInterval(render, 15000);
-post({type:'ready', devices:['fan:fan_1','fan:fan_2','rollo:blind_1','rollo:blind_2'], modes:['cooking']});
+post({type:'ready', devices:['fan:fan_1','fan:fan_2','light:desk_lamp','rollo:blind_1','rollo:blind_2'], modes:['cooking']});
 </script></body></html>
 """
 
@@ -638,7 +695,9 @@ def main() -> None:
     parser.add_argument("--no-bonjour", action="store_true")
     parser.add_argument("--travel", type=float, default=20, help="seconds a blind takes from open to closed")
     parser.add_argument("--latency", type=float, default=0, help="seconds every command waits before it answers")
-    parser.add_argument("--extra", action="store_true", help="add a lamp besides the fans and blinds")
+    parser.add_argument("--extra", action="store_true", help="add a plug (More) besides the fans, lamp and blinds")
+    parser.add_argument("--no-rename", action="store_true",
+                        help="answer as a flatd before v1.3: renaming refused with 405, no default_label")
     parser.add_argument("--viewer", help="serve this HTML file at /viewer instead of the stand-in page "
                                          "(a local file; never commit a private page)")
     parser.add_argument("--devices", help='a local JSON list of devices instead of the made-up ones: '
@@ -673,7 +732,7 @@ def main() -> None:
     context.load_cert_chain(cert_file, key_file)
     devices = json.loads(open(args.devices).read()) if args.devices else None
     viewer = open(args.viewer, "rb").read() if args.viewer else VIEWER.encode()
-    flat = Flat(travel=args.travel, extra=args.extra, devices=devices)
+    flat = Flat(travel=args.travel, extra=args.extra, devices=devices, renames=not args.no_rename)
     server = TLSServer((args.host, args.port), make_handler(flat, args.key, args.latency, viewer), context)
 
     def ticking():

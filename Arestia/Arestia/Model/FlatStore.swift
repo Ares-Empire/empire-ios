@@ -54,6 +54,8 @@ final class FlatStore {
     private(set) var pending: [String: Int] = [:]
     /// Which request each pending position belongs to: an older request's answer never clears a newer one.
     private var pendingRequest: [String: Int] = [:]
+    /// A device's new name sent to flatd, shown (quietly) until flatd confirmed it; never as done before.
+    private(set) var renaming: [String: String] = [:]
     private var moveRequests = 0
     /// Every command for one thing (a device, "mode:<id>", "scene:<id>") goes to flatd after the ones given for it
     /// before, from Home and the 3D page alike (round 7: two at once could arrive the other way round, an earlier
@@ -129,9 +131,11 @@ final class FlatStore {
     // MARK: what the screens read
 
     var fans: [Device] { devices.filter { $0.kind == .fan } }
+    /// The lamps (Patrik, 2026-11-20: "put the lamp under 'Lighting' in Arestia").
+    var lights: [Device] { devices.filter { $0.kind == .light } }
     var rollos: [Device] { devices.filter { $0.kind == .rollo } }
-    /// Devices the home screen has no card for yet (lights, plugs): listed quietly.
-    var others: [Device] { devices.filter { $0.kind != .fan && $0.kind != .rollo } }
+    /// Devices the home screen has no section of their own for (plugs, kinds a newer flatd may bring): listed quietly.
+    var others: [Device] { devices.filter { ![.fan, .light, .rollo].contains($0.kind) } }
     var cooking: FlatMode? { modes.first { $0.id == FlatMode.cookingID } }
     var isCooking: Bool { cooking?.active == true }
     var hasSnapshot: Bool { lastSeen != nil }
@@ -198,6 +202,7 @@ final class FlatStore {
         dragging = [:]
         pending = [:]
         pendingRequest = [:]
+        renaming = [:]
         lines = [:]
         blindNewest = [:]
         offer = nil
@@ -406,16 +411,27 @@ final class FlatStore {
             tell(event)
             // A control's trouble may have been kept before this event arrived (round 7): said now, if it fits.
             if mode.id == FlatMode.cookingID { sayTroubleFromOutside() }
+        case let .device(renamed, source):
+            // Renamed, whoever did it (this app, another phone, Claude): the new name everywhere, its state as it was.
+            guard let index = devices.firstIndex(where: { $0.id == renamed.id }) else { return }
+            revisions["label:" + renamed.id, default: 0] += 1
+            devices[index] = devices[index].named(like: renamed)
+            if renaming[renamed.id] == renamed.label { renaming[renamed.id] = nil }
+            // Only this device's name is kept: the app's list of the others may be older than the names kept.
+            if let pairingID { connection.rememberName(of: devices[index], for: pairingID) }
+            lastSeen = now
+            tell(.device(devices[index], source: source))
         case .other:
             return
         }
         if controlState != before { reloadControls() }
     }
 
-    /// What the Control Center controls show: when it changes here, they are asked to read again.
+    /// What the Control Center controls show: when it changes here, they are asked to read again (a blind's control
+    /// shows its name too).
     private var controlState: [String] {
         [String(isCooking), String(fans.contains { $0.state.on == true })]
-            + rollos.map { $0.id + String(describing: RolloOpenness.isOpen($0.state)) }
+            + rollos.map { $0.id + String(describing: RolloOpenness.isOpen($0.state)) + $0.label }
     }
 
     /// Where the stream stood for a device or mode when a command was sent.
@@ -445,6 +461,24 @@ final class FlatStore {
         let before = controlState
         store(mode)
         tell(.mode(mode))
+        if controlState != before { reloadControls() }
+    }
+
+    /// A device's names as a rename's answer brought them, unless the stream brought newer news of its name meanwhile.
+    /// Kept for Shortcuts and the controls only over the names kept when the request left (`namesSince`): names kept
+    /// since then (a picker or a control read flatd's list while the stream was down) may be newer than this answer, so
+    /// they stay and flatd is asked once more (`readNameAgain`), whose answer settles it (Codex's review of the
+    /// renaming, round 3, finding 3).
+    private func takeName(_ device: Device, since stamp: Stamp, namesSince version: UUID?, readsAgain: Bool = true) {
+        guard stamp == self.stamp("label:" + device.id), let index = devices.firstIndex(where: { $0.id == device.id })
+        else { return }
+        let before = controlState
+        devices[index] = devices[index].named(like: device)
+        if let pairingID, !connection.rememberName(of: devices[index], for: pairingID, unchangedSince: version),
+           readsAgain {
+            readNameAgain(device.id)
+        }
+        tell(.device(devices[index], source: "api"))
         if controlState != before { reloadControls() }
     }
 
@@ -491,7 +525,8 @@ final class FlatStore {
             .gated(by: connection)
         do {
             try await candidate.verify()
-            let found = try await candidate.devices()
+            let version = connection.devicesVersion
+            let found = Found(devices: try await candidate.devices(), version: version)
             // The screen went away, or the store's part ended meanwhile: this attempt keeps nothing.
             guard !Task.isCancelled, !isRetired else { return .notPossible }
             if let pairingID {
@@ -507,9 +542,16 @@ final class FlatStore {
         }
     }
 
+    /// The devices a pairing code's check read, and the version of the names kept when it began: kept only while no
+    /// newer names were (`FlatdConnection.remember(_:for:readSince:)`).
+    private struct Found {
+        let devices: [Device]
+        let version: UUID?
+    }
+
     /// A fresh code of this store's flat: written over the version read (a control that only moved the address
     /// meanwhile is written over too, after reading again).
-    private func renew(_ id: UUID, baseURL: URL, token: String, pin: FlatdPin, found: [Device]) -> FlatdError? {
+    private func renew(_ id: UUID, baseURL: URL, token: String, pin: FlatdPin, found: Found) -> FlatdError? {
         let renewed = FlatdPairing(baseURL: baseURL, token: token, pin: pin, id: id)
         for _ in 0..<3 {
             let current: FlatdPairing
@@ -520,7 +562,7 @@ final class FlatStore {
             }
             guard current.pin == pin else { return .anotherFlat }
             if connection.renew(current, with: renewed) {
-                connection.remember(found, for: id)
+                connection.remember(found.devices, for: id, readSince: found.version)
                 credentials += 1
                 stop()                                  // the stream again, with the new key and address
                 if link == .refused || !hasSnapshot { link = .connecting }
@@ -534,7 +576,7 @@ final class FlatStore {
 
     /// The first pairing, from a store with none: saved only while nothing usable is saved (an item that is no pairing,
     /// from an old build, is replaced); then the session takes over with a store for it.
-    private func pairFirst(baseURL: URL, token: String, pin: FlatdPin, found: [Device]) throws -> FlatdError? {
+    private func pairFirst(baseURL: URL, token: String, pin: FlatdPin, found: Found) throws -> FlatdError? {
         switch connection.saved {
         case .none: break
         case .invalid: try connection.forget()
@@ -548,7 +590,7 @@ final class FlatStore {
             handOver()
             return .notPossible
         }
-        connection.remember(found, for: fresh.id)
+        connection.remember(found.devices, for: fresh.id, readSince: found.version)
         Self.log.notice("paired with a flat")
         handOver()
         reloadControls()
@@ -652,6 +694,47 @@ final class FlatStore {
             }
         }
     }
+
+    /// Renames a device in flatd, so every client shows the name (`DeviceNames`: an empty field or flatd's config name
+    /// brings the config name back; the name it already has sends nothing). The new name shows quietly until flatd
+    /// confirmed it; a refusal puts the old one back with a line (a flatd before v1.3 cannot rename).
+    func rename(_ id: String, to text: String) {
+        guard let device = device(id), !isRenaming(id), let change = DeviceNames.change(text, for: device) else {
+            return
+        }
+        renaming[id] = DeviceNames.shown(change, for: device)
+        let connection = connection
+        let sent = send("label:" + id, affects: "label:" + id) { client in
+            // The names kept as the request leaves: its answer is kept only over these (`takeName`).
+            let kept = connection.devicesVersion
+            return (try await client.rename(id, to: change.label), kept)
+        } done: { answer, stamp in
+            self.renaming[id] = nil
+            self.takeName(answer.0, since: stamp, namesSince: answer.1)
+        } failed: {
+            self.renaming[id] = nil
+        }
+        if !sent { renaming[id] = nil }
+    }
+
+    /// flatd's name of one device read again, after a rename's answer met names kept since it was sent (`takeName`):
+    /// in line behind that device's renames, taken as an answer is, quietly. A failure changes nothing: the names kept
+    /// stay, and the stream's next snapshot brings flatd's.
+    private func readNameAgain(_ id: String) {
+        let connection = connection
+        inLine("label:" + id) { [weak self] in
+            guard let self, !isRetired, !Task.isCancelled, let client = try? await readyClient() else { return }
+            let stamp = stamp("label:" + id)
+            let kept = connection.devicesVersion
+            guard let device = try? await client.device(id), !isRetired else { return }
+            takeName(device, since: stamp, namesSince: kept, readsAgain: false)
+        }
+    }
+
+    /// Whether a new name of this device is on its way: from sending until flatd answered, also once the stream
+    /// confirmed the name (shown as done then). Renaming waits for the answer: a second name sent meanwhile would find
+    /// the first request still holding its place and be dropped unseen (Codex's review of the renaming, finding 2).
+    func isRenaming(_ id: String) -> Bool { renaming[id] != nil || working.contains("label:" + id) }
 
     func runScene(_ id: String, title: String) {
         send("scene:" + id, affects: "scene:" + id) { client in

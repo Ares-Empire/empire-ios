@@ -11,7 +11,7 @@ import WebKit
 private func flakyConnection() throws -> (FlatdConnection, MemoryKeys) {
     let keys = MemoryKeys()
     let connection = FlatdConnection(defaults: UserDefaults(suiteName: "arestia-tests-" + UUID().uuidString)!,
-                                     keychain: keys, lock: .processOnly)
+                                     names: Flat.nameFile(), keychain: keys, lock: .processOnly)
     try connection.save(Flat.pairing())
     return (connection, keys)
 }
