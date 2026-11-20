@@ -978,8 +978,10 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   **Renaming and Lighting** (2026-11-20, after build 2; `docs/ARESTIA-APP.md` → "After build 2"): a device's name lives in
   flatd (contract v1.3, `PATCH /api/devices/{id}`, the `device` event, `default_label`), so every client shows one
   name; on Home a long press on a device's row offers Rename (the name becomes a field where it stands, Cancel beside
-  it, Return or a scroll saves, empty = flatd's name) and Original name (`Screens/DeviceNameViews.swift`,
-  `FlatStore.rename`, shown muted until flatd confirmed it; a flatd before 1.3 gets a calm line). Lights have their own
+  it, Return or a scroll saves an edited name, an untouched field sends nothing, empty = flatd's name) and Original
+  name (`Screens/DeviceNameViews.swift`, `FlatStore.rename`, shown muted until flatd confirmed it, Rename again only
+  once flatd answered; a flatd before 1.3 gets a calm line). The names kept for Shortcuts and the controls are
+  versioned (`FlatdConnection.remember(_:for:readSince:)`): a device list read before a rename never replaces it. Lights have their own
   section, Lighting / Licht, after Fans; the Automations card is gone (Patrik: "I dont think we need them").
   **Build 2 uploaded 2026-11-20** (internal group "Arestia"). Build 1 was refused by Apple (ITMS-90626, Invalid Siri
   Support): App Intent titles, descriptions and phrases may not name Apple products ("Mac", "iPhone", "Siri" …);

@@ -206,13 +206,21 @@ Patrik, after trying build 2 on his iPhone: he loved it, and asked for three cha
     carries the name. The app takes the name from it (`FlatStore.apply`, `Device.named(like:)`; the state stays the
     state events'), keeps it for Shortcuts' choices (`FlatdConnection.remember`), asks Control Center to read again
     when a blind's name changed (its control shows the name), and passes the event on to the 3D page as flatd sent
-    it (BRIDGE.md: a page ignores what it does not know).
+    it, `source` included (BRIDGE.md: a page ignores what it does not know). The names kept for Shortcuts and the
+    controls carry a version: the stream's names always replace them, while a list a picker or a control read
+    (`GET /api/devices`) is kept only if nothing was kept since that reading began, so an older list never brings
+    back a name from before a rename. The Blind control's gallery preview shows the chosen blind's name as kept for
+    the paired flat now, else "Blind" (never the name stored in the control's configuration, which may be a
+    forgotten flat's).
   - *The look* (Claude): a long press on a device's row (on a blind: on its words and buttons, not on the window,
     which a slow drag would otherwise turn into a long press) offers **Rename** and, once renamed, **Original name**
     with flatd's name under it. Rename turns the name into a field where it stands, as Arestemis's and Aresium's names
     do: the name's own font, in a well reaching into the margin, the name selected, the clear button, **Cancel**
-    beside it; Return or scrolling away saves. An empty field shows flatd's name in grey. No autocorrection (names
-    are names). The new name shows in muted ink until flatd confirmed it, never as done before.
+    beside it; Return or scrolling away saves what was edited. A field left as it opened sends nothing, so a rename
+    made elsewhere meanwhile stands and a config name longer than 40 characters is never cut. An empty field shows
+    flatd's name in grey. No autocorrection (names are names). The new name shows in muted ink until flatd confirmed
+    it, never as done before; Rename (and Original name, and VoiceOver's action) wait until flatd answered the
+    request, even when the stream confirmed the name first, so a second name is never dropped unseen.
   - *An older flatd* (before v1.3) answers 405: the line at the bottom says "This flat service can't rename yet.
     Update flatd, then try again." and the name stays.
 - **No Automations card.** "why are there these text boxes for automations at the bottom? I dont think we need
@@ -223,6 +231,14 @@ Patrik, after trying build 2 on his iPhone: he loved it, and asked for three cha
 - **Lighting.** "put the lamp under 'Lighting' in Arestia" (relayed by the lead, 2026-11-20). Lights (`kind` light)
   get their own section, **Lighting** / **Licht**, after Fans and before Blinds: a card with each light's name, its
   state and on/off, renamed the same way. Plugs and kinds a newer flatd brings stay under More.
+
+Codex's review of the renaming (gpt-6.2-astra, 2026-11-20, NOT SAFE, eight findings) and its fixes, all with tests:
+an untouched field saved the name it opened with (finding 1); a confirming event re-enabled Rename while the request
+was still out (2); an older device list could overwrite a rename in the names kept for Shortcuts and the controls (3);
+in flatd 1.3, a rename cancelled during its database write never reached memory or the clients (4); the Blind
+control's preview named a forgotten flat's blind (5); a long paste was cut in quadratic time on the main thread (6);
+flatd compared a name in NFC with the config's raw spelling (7); the `source` of a `device` event was dropped on its
+way to the 3D page (8).
 
 ## Follow-ups
 
