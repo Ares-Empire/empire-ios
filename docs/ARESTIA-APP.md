@@ -73,12 +73,32 @@ loaded with the key and never bundled.
   cannot be read) never happens by itself: the code is shown with its identity and waits for Connect, because the
   code decides who the app trusts from then on. A first pairing, and a fresh code of the same flatd, connect at once
   (a first scan is not confirmed against the identity on flatd's screen: whoever could put another code in front of
-  the camera would only pair the app with their own service, and learns nothing of the flat's). Work that was under way for one pairing
-  (a Shortcut reading the fans, a late device list, the 3D page) never continues under another: each checks that its
-  flatd and key are still the saved ones, and the 3D tab gets a web view of its own per pairing.
-  A blind or fan chosen in a Shortcut or a control is remembered together with its flatd's identity (`SavedDevice`):
-  flatd's device ids are only names inside one flatd, so after pairing with another flatd the choice has to be made
-  again instead of moving whatever has that id there.
+  the camera would only pair the app with their own service, and learns nothing of the flat's). An attempt connects
+  exactly the code it was started with (scanning another cancels it), and the store checks again, when it keeps the
+  pairing, that what is saved is still what the decision was made against.
+- **One pairing identity for all work** (2026-11-20, after the trust review's rounds 1–4 each found work of one pairing
+  reaching the next one level deeper: the old 3D page, its queued task, saved Shortcut and control choices, then a
+  second window's counter, the picker's two readings, the connect task's late reading of the code). The class is
+  closed by design, not by another patch: the pairing's Keychain UUID (`FlatdPairing.id`) is the one value every piece
+  of work carries: the store (`pairingID`), its event stream, every command, the 3D page (its web view, listener and
+  requests), every client (`pairingID`), and a blind or fan chosen in a Shortcut or a control (`SavedDevice`: the
+  device id with the pairing's identity). Anything tagged with another identity is dropped, never acted on; a
+  command's client is built from the same Keychain reading whose identity was checked, so its key and pin are that
+  pairing's. Then:
+  - **another flatd is paired only through a full Disconnect**: the old pairing is forgotten with the names kept for
+    it, the store leaves it completely (its tasks cancelled, the stream and the 3D page gone, its state cleared), and
+    the new pairing is saved fresh, with an identity of its own, only while nothing is saved. Its flatd is checked
+    first, so an unreachable one leaves the old pairing as it was. Choices made in the old pairing do nothing in the
+    new one (flatd's device ids are only names inside one flatd): they are made again, as after any Disconnect;
+  - **a fresh code of the same flatd** (a new key or address) is a light update: the same identity, so its page,
+    choices and work go on; the stream starts again with the new key, and a refusal counts only for the key it was
+    sent with;
+  - **the Keychain item is versioned** (its label is a revision that every write renews): a new address or key is
+    written only over the version it was read as, so a late address update from a control never brings back an older
+    key, and a new pairing never overwrites one made meanwhile;
+  - **one window** (`UIApplicationSupportsMultipleScenes` false, the generated scene manifest off): one store. A
+    store would still notice a pairing made elsewhere and leave its own before following it;
+  - the 3D page speaks only once WebKit committed the very navigation the app started for it (`PageHandover`).
 - **What the pin does not cover:** anything behind flatd (how flatd reaches its devices is flatd's own matter, in
   its private contract); what the 3D page does inside WebKit beyond HTTP and WebSocket loads, which are blocked (the
   page is flatd's own, fetched from the proven flatd, and is trusted as that); and someone who can read flatd's

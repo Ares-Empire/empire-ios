@@ -962,11 +962,11 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   <file>` serve a local page and its device ids instead, never committed); never the real flatd (port 8787, its own
   key). Its key has letters and digits only: AXe types through the simulator's German keyboard, where "y", "z" and "-"
   land elsewhere. Test hooks: `curl -k https://127.0.0.1:8790/fake/…`. DEBUG launch arguments: `-flatdPairing '<the pairing code>'` (pair without the screen; AXe
-  cannot tap the connect screen's system paste button), `-forgetFlatd`, `-tab home|flat`, `-openSheet settings|connect`,
+  cannot tap the connect screen's system paste button), `-connectCode '<the pairing code>'` (the connect sheet with that code, as scanned: another identity waits for Connect), `-forgetFlatd`, `-tab home|flat`, `-openSheet settings|connect`,
   `-scrollToEnd`, `-scrollTo blinds|automations`, `-probeViewer` (logs WebGL2, frames and the page's text every 5 s,
   category `viewer`). Screenshots: `axe screenshot` (`xcrun simctl io … screenshot` caught the launch screen at times). Tests: `ArestiaTests` (contract, client, actions, store, words,
   bridge; a fake transport and event stream; `TrustTests`: the pin against made-up certificates, the pairing code,
-  rediscovery past a server without flatd's key, and `LiveFlatdTests`, the pinned URLSession and WebSocket over real
+  rediscovery past a server without flatd's key; `PairingIdentityTests`: the pairing's identity on all work, re-pairing another flatd mid-flight, two stores on one Keychain, the page's handover, one scene; and `LiveFlatdTests`, the pinned URLSession and WebSocket over real
   TLS against the fake, run only with
   `TEST_RUNNER_ARESTIA_LIVE_FLATD="$(python3 scripts/fake-flatd.py --pairing)" bash scripts/test-unit.sh Arestia`
   while the fake runs). **`scripts/strings.py fill` writes a key's German into every catalog
