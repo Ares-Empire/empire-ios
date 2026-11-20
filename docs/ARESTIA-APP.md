@@ -2,7 +2,8 @@
 
 **Decided 2026-11-19 (Patrik).** Status (2026-11-20): built and tested on the simulator against a fake flatd
 (`scripts/fake-flatd.py`, HTTPS with its own identity and pairing code); one flat per install (below), which replaced
-the re-pairing in place after the fifth review; not yet run against the real flatd. The name: Arestia (Ares + Hestia,
+the re-pairing in place after the fifth review; merged after the final review (round 9, SAFE); not yet run against the
+real flatd. The name: Arestia (Ares + Hestia,
 goddess of the hearth and home), confirmed by Patrik on 2026-11-19.
 
 Arestia is the flat on the iPhone: the fans, the blinds (Rollos), the modes and scenes and the flat in 3D, all through
@@ -186,6 +187,27 @@ loaded with the key and never bundled.
   which he found ugly or too close to Artemis): the icon a flame on black, the header's mark the same flame on clear,
   with a light-appearance variant whose core is gold instead of white and whose fringe is orange instead of pink, so it
   reads on the light wall. Generic fire, nothing of the flat.
+
+## Follow-ups
+
+Left from the final reviews (rounds 8 and 9, Codex gpt-6.2-astra, 2026-11-20; none blocking):
+
+- [ ] On Patrik's iPhone, the first run against the real flatd: pairing with `flatd pair`'s code, Cooking on and off
+  (the NFC tag's Shortcut too), the fans with a timer, a blind dragged and stopped, the 3D tab, the Cooking, Fans and
+  Blind controls in Control Center, Forget this flat and pairing again.
+- [ ] A blind sent down from the 3D page while flatd is being found (reconnecting), then stopped on Home: the
+  movement still goes out before Stop (the order is right, but the blind starts briefly). Give the page's blind
+  commands the same per-blind newest number as Home's, check it after `readyClient()`, answer a skipped page request
+  `.notPossible`.
+- [ ] Two Cooking starts at once (Home and a Shortcut): the earlier one's successful answer, arriving last, can clear
+  the later one's failure note. Clear only the trouble that was saved when the command was sent (its id, under the
+  lock).
+- [ ] Tests: a coordinator test that the page gets exactly one result per `reqId` for its own document (also across a
+  reload that reuses ids while a command is in line); a two-process test of the dispatch lock on the App Group's real
+  path, with a lock-acquired signal instead of timing.
+- [ ] Tests: about twenty store and review tests (rounds 5 to 7) race a short `Task.sleep` against a delayed fake
+  answer. A busy GitHub runner broke three of them on 2026-11-20 (the lock test, the live TLS suite's first request,
+  the Forget test; each fixed since). Make the rest wait for a step they can see (a request seen, a latch) instead.
 
 ## iPhone features (IPHONE-APPS.md checklist)
 
