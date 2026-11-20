@@ -454,12 +454,12 @@
         }
       }
     },
-    "The device didn't answer. Nothing changed." : {
+    "The device didn't confirm it. Its state shows once flatd reads it again." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Das Gerät hat nicht geantwortet. Nichts hat sich geändert."
+            "value" : "Das Gerät hat es nicht bestätigt. Sein Zustand zeigt sich, sobald flatd es wieder liest."
           }
         }
       }

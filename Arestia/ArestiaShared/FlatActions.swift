@@ -25,7 +25,7 @@ nonisolated struct FlatActions: Sendable {
         }
         if let pairing {
             if change.failed.isEmpty {
-                connection.clearTrouble(mode: FlatMode.cookingID, pairing: pairing)
+                connection.clearTrouble(mode: FlatMode.cookingID, pairing: pairing, now: change.isActive)
             } else {
                 connection.note(ModeTrouble(pairing: pairing, mode: FlatMode.cookingID, active: change.isActive,
                                             names: change.failed, at: .now))

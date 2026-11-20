@@ -11,7 +11,8 @@ nonisolated enum FlatdError: Error, Equatable, Sendable {
     case refused
     /// 404: flatd does not know this device, mode or scene (any more).
     case unknown
-    /// 504: the device itself did not answer; nothing changed.
+    /// 504: the device did not confirm in time. It may still have switched (a plug can switch and then not answer the
+    /// reading back), so nothing is claimed: the next state flatd reads tells.
     case deviceDidNotAnswer
     /// 409: not possible now (a blind without a favourite spot asked to go there).
     case notPossible
@@ -41,7 +42,8 @@ nonisolated enum FlatdError: Error, Equatable, Sendable {
         case .unknown:
             language.string(LocalizedStringResource("The flat service doesn't know this any more.", table: "ArestiaShared"))
         case .deviceDidNotAnswer:
-            language.string(LocalizedStringResource("The device didn't answer. Nothing changed.", table: "ArestiaShared"))
+            language.string(LocalizedStringResource("The device didn't confirm it. Its state shows once flatd reads it again.",
+                                                    table: "ArestiaShared"))
         case .notPossible:
             language.string(LocalizedStringResource("That isn't possible right now.", table: "ArestiaShared"))
         case let .failed(status, message):

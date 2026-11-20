@@ -200,7 +200,7 @@ struct OneFlatTests {
     @Test func anOldItemThatIsNoPairingIsReplacedByAFirstPairing() async throws {
         let keys = MemoryKeys()
         let connection = FlatdConnection(defaults: UserDefaults(suiteName: "arestia-tests-" + UUID().uuidString)!,
-                                         keychain: keys)
+                                         keychain: keys, lock: .processOnly)
         try keys.save(#"{"link":{"baseURL":"http://192.0.2.10:8787"},"token":"\#(Flat.key)"}"#, label: "old")
         #expect(connection.saved == .invalid)
         let (session, transport, _, _) = Flat.session(connection: connection)
@@ -215,7 +215,7 @@ struct OneFlatTests {
     @Test func aForgetTheKeychainRefusesChangesNothing() throws {
         let keys = MemoryKeys()
         let connection = FlatdConnection(defaults: UserDefaults(suiteName: "arestia-tests-" + UUID().uuidString)!,
-                                         keychain: keys)
+                                         keychain: keys, lock: .processOnly)
         try connection.save(Flat.pairing())
         let (session, _, _, _) = Flat.session(connection: connection)
         let store = try #require(session.store)

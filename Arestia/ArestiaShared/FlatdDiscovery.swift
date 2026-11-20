@@ -142,13 +142,12 @@ nonisolated struct FlatdReach: Sendable {
         }
         // Forgotten while the address was looked up: this run sends nothing.
         guard try connection.current().id == pairing.id else { throw FlatdError.notPaired }
-        let result = try await work(client)
-        // Forgotten while the work ran (a request started before): its answer is the forgotten flat's, never this one's.
-        switch connection.saved {
-        case let .paired(saved) where saved.id != pairing.id: throw FlatdError.notPaired
-        case .none, .invalid: throw FlatdError.notPaired
-        default: break
-        }
+        let outcome: Result<T, Error>
+        do { outcome = .success(try await work(client)) } catch { outcome = .failure(error) }
+        // Only while the pairing is still the saved one does its answer count, a success or flatd's refusal alike: one
+        // that arrives after Forget is the forgotten flat's, and one the Keychain cannot vouch for says so (round 7).
+        guard try connection.current().id == pairing.id else { throw FlatdError.notPaired }
+        let result = try outcome.get()
         connection.move(pairing, to: client.baseURL)
         return result
     }

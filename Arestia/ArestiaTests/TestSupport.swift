@@ -137,7 +137,7 @@ enum Flat {
     /// A connection in a defaults suite of its own and an in-memory key.
     static func connection(linked: Bool = true) -> FlatdConnection {
         let defaults = UserDefaults(suiteName: "arestia-tests-" + UUID().uuidString)!
-        let connection = FlatdConnection(defaults: defaults, keychain: MemoryKeys())
+        let connection = FlatdConnection(defaults: defaults, keychain: MemoryKeys(), lock: .processOnly)
         if linked { try? connection.save(pairing()) }
         return connection
     }

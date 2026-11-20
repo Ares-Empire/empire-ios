@@ -107,11 +107,21 @@ loaded with the key and never bundled.
     makes and resumes the request's task inside that same step (`FlatdTransport`, `FlatdGate`), so no await and no
     other process can come between the last check and the start: a request either started before Forget, or never.
     The lock is held only for that moment, never across a wait (iOS ends a process suspended with a lock in the App
-    Group). A Shortcut's answer that arrives after Forget is dropped, not taken as the paired flat's. A root built anew
-    (a language switch) retires its session's store, so no old store's work goes on beside the new one.
-  - *Accepted.* Until Control Center reads a control again after Forget, its toggle may show the old flat's state. A
-    request that started before Forget is on the wire and cannot be called back. Losing flatd's identity key (a new
-    machine without its identity folder) makes it another flat: Forget and pair anew.
+    Group), and it fails closed (round 7): without its file (in Application Support, never in Caches, which iOS may
+    empty) no request with the key starts and Forget reports that it failed. The event stream and a fresh code of the
+    same flat start inside the gate too; only a first pairing asks flatd before anything is saved. A Shortcut's answer
+    (or flatd's refusal) counts only while its pairing is still the saved one; one that arrives after Forget is dropped,
+    one the Keychain cannot vouch for says so. A root built anew (a language switch) retires its session's store, so no
+    old store's work goes on beside the new one.
+  - *Accepted.* Until Control Center reads a control again after Forget, its toggle may show the old flat's state.
+    Losing flatd's identity key (a new machine without its identity folder) makes it another flat: Forget and pair
+    anew.
+  - *Open, for the lead and Patrik (round 7):* "started before Forget" means the request's task was resumed before
+    the delete. Its connection and TLS handshake may still be under way when Forget completes, so its first bytes can
+    leave a few milliseconds after it (to the forgotten flat, which proved its key). Closing that too would take a
+    cross-process registry of requests in flight that Forget waits for and drains. The review asks for it; the
+    proposal here is to accept it as "already on the wire", since the command was given before Forget, by the owner,
+    to his own flat.
   - *Out of scope by design*: consistency between two flats without Forget in between, since the app never does that.
 - **The Keychain may fail to answer** (before the iPhone's first unlock after a restart, or a hiccup): that is never
   taken as "no pairing" (`FlatdConnection.Saved.unreadable`). The live loop and the session read again with growing
@@ -137,15 +147,20 @@ loaded with the key and never bundled.
   stream drops, the last state shows as "Reconnecting…" until flatd's next snapshot, never as "Live". Nothing is shown
   as done before flatd confirmed it: a blind follows the finger while it drags, and once let go reads "Sending: 40 %
   closed" until flatd answered that very request or its state confirmed that target (an older drag's answer never
-  clears a newer one; a failure puts flatd's position back, with the reason).
+  clears a newer one; a failure puts flatd's position back, with the reason). A blind's commands go to flatd one after
+  another in the order given; one still waiting when a newer one comes is not sent, so Stop never arrives before the
+  movement it stops, and positions dragged past while one is out are not sent at all.
 - **Cooking** is flatd's mode `cooking` (which devices it moves and how is flatd's own config: on, the fans and one
   blind up; off, the fans off and that blind to its favourite spot). The app shows it while active with since when and
   what its devices do right now, and Done cooking ends it, with Undo for a few seconds. A device that did not follow is named
   ("Didn't answer: …"); the mode stays as flatd recorded it. Changed outside the app (the Cooking control, a Shortcut,
   the NFC tag), the devices that did not follow are kept with the mode's state (`ModeTrouble`, in the App Group, for two
-  hours at most, while the mode is still in that state, written and cleared only for the pairing it belongs to): the
+  hours at most, while the mode is still in that state, written and cleared only for the pairing it belongs to, and
+  cleared only by a change that left that state: a second End cooking, which sends no device commands, leaves it): the
   control reads "On · not all followed" for as long; the app says which ones, once (its own acknowledgement, which
-  leaves the control's line alone), at once while it follows flatd (a Darwin notification) or with its next snapshot.
+  leaves the control's line alone), at once while it follows flatd (a Darwin notification, and again when flatd's mode
+  event arrives after it) or with its next snapshot. A device that does not confirm in time (504) may still have
+  switched: the app says it did not confirm, never that nothing changed.
   flatd itself keeps no record of them. Siri and Shortcuts say only what flatd's answer confirmed ("Cooking is on.",
   "Cooking is off.", a scene's "Not everything followed." with the names, a blind's state as flatd answered it), never
   what the devices are assumed to do; nothing is read before a command to word it.

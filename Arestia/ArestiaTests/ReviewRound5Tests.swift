@@ -11,7 +11,7 @@ import WebKit
 private func flakyConnection() throws -> (FlatdConnection, MemoryKeys) {
     let keys = MemoryKeys()
     let connection = FlatdConnection(defaults: UserDefaults(suiteName: "arestia-tests-" + UUID().uuidString)!,
-                                     keychain: keys)
+                                     keychain: keys, lock: .processOnly)
     try connection.save(Flat.pairing())
     return (connection, keys)
 }
@@ -318,7 +318,7 @@ struct CookingFailureTests {
         let next = Flat.pairing(id: UUID())
         #expect(try connection.pairNew(next))
         connection.note(ModeTrouble(pairing: next.id, mode: "cooking", active: true, names: ["Fan 1"], at: .now))
-        connection.clearTrouble(mode: "cooking", pairing: old)            // the old flat's answer, late
+        connection.clearTrouble(mode: "cooking", pairing: old, now: false)   // the old flat's answer, late
         connection.note(ModeTrouble(pairing: old, mode: "cooking", active: true, names: ["Fan 9"], at: .now))
         #expect(connection.trouble(mode: "cooking", active: true, pairing: next.id)?.names == ["Fan 1"])
     }

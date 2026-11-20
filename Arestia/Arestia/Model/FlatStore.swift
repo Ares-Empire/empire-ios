@@ -55,6 +55,12 @@ final class FlatStore {
     /// Which request each pending position belongs to: an older request's answer never clears a newer one.
     private var pendingRequest: [String: Int] = [:]
     private var moveRequests = 0
+    /// Each blind's commands go to flatd one after another, in the order given (round 7: two at once could arrive the
+    /// other way round, an earlier movement after Stop): the last one given, and a command waits for it.
+    private var blindQueue: [String: Task<Void, Never>] = [:]
+    /// The newest command given for each blind: one still waiting when a newer one comes is not sent at all (a newer
+    /// position or Stop supersedes it).
+    private var blindNewest: [String: Int] = [:]
     /// Counts the times a fresh code of this flat renewed its key or address: the 3D page loads again with it, so a
     /// page fetched with the old key never reports that key's refusal.
     private(set) var credentials = 0
@@ -190,6 +196,8 @@ final class FlatStore {
         dragging = [:]
         pending = [:]
         pendingRequest = [:]
+        blindQueue = [:]
+        blindNewest = [:]
         offer = nil
         lastSeen = nil
         link = .notSetUp
@@ -304,7 +312,13 @@ final class FlatStore {
         do { answered = try await client.scenes() } catch FlatdError.unknown { answered = [] }   // a flatd without scenes
         guard owns(generation) else { return }
         scenes = answered
-        for try await event in eventSource.events(from: client.eventsRequest, pin: client.pin) {
+        // The stream (with the key in its header) starts inside the gate too: only while this pairing is saved.
+        var opened: AsyncThrowingStream<FlatEvent, Error>?
+        if let gate = client.gate {
+            try gate.start { opened = eventSource.events(from: client.eventsRequest, pin: client.pin) }
+        }
+        guard let stream = opened else { throw FlatdError.notPaired }
+        for try await event in stream {
             guard owns(generation) else { return }
             if case .snapshot = event {
                 // Each connection's first word: still this store's pairing? (Forget retires the store before anything
@@ -388,6 +402,8 @@ final class FlatStore {
             store(mode)
             lastSeen = now
             tell(event)
+            // A control's trouble may have been kept before this event arrived (round 7): said now, if it fits.
+            if mode.id == FlatMode.cookingID { sayTroubleFromOutside() }
         case .other:
             return
         }
@@ -467,7 +483,10 @@ final class FlatStore {
     func connect(to baseURL: URL, token: String, pin: FlatdPin) async -> FlatdError? {
         guard !isRetired else { return .notPossible }
         if isAnotherFlat(pin) { return .anotherFlat }
-        let candidate = FlatdClient(baseURL: baseURL, token: token, pin: pin, transport: transport)
+        // A fresh code of this store's flat asks flatd only while that flat is still the saved one (the gate); only a
+        // first pairing asks before anything is saved.
+        let candidate = FlatdClient(baseURL: baseURL, token: token, pin: pin, pairingID: pairingID, transport: transport)
+            .gated(by: connection)
         do {
             try await candidate.verify()
             let found = try await candidate.devices()
@@ -545,15 +564,33 @@ final class FlatStore {
         }
     }
 
+    /// Up, down, favourite or Stop: after the blind's earlier commands, and in place of any still waiting.
     func moveRollo(_ id: String, _ command: RolloCommand) {
         dragging[id] = nil
         pending[id] = nil
         pendingRequest[id] = nil
-        send("rollo:" + id, affects: id, blocking: false) { client in
+        moveRequests += 1
+        let request = moveRequests
+        sendToBlind(id, request: request) { client in
             try await client.send(.rollo(command), to: id)
         } done: { device, stamp in
             self.take(device, since: stamp)
-        }
+        } failed: {}
+    }
+
+    /// A blind's command, queued behind the blind's earlier ones and skipped when a newer one came before its turn.
+    @discardableResult
+    private func sendToBlind(_ id: String, request: Int,
+                             _ work: @escaping @Sendable (FlatdClient) async throws -> Device,
+                             done: @escaping @MainActor (Device, Stamp) -> Void,
+                             failed: @escaping @MainActor () -> Void) -> Bool {
+        let previous = blindQueue[id]
+        blindNewest[id] = request
+        guard let queued = send("rollo:" + id, affects: id, blocking: false, after: previous,
+                                stillWanted: { [weak self] in self?.blindNewest[id] == request },
+                                work, done: done, failed: failed) else { return false }
+        blindQueue[id] = queued
+        return true
     }
 
     /// While a finger drags a blind: shown at once, sent when it lets go (`setRollo(_:position:)`).
@@ -573,7 +610,7 @@ final class FlatStore {
         dragging[id] = nil
         moveRequests += 1
         let request = moveRequests
-        let sent = send("rollo:" + id, affects: id, blocking: false) { client in
+        let sent = sendToBlind(id, request: request) { client in
             try await client.send(.position(position), to: id)
         } done: { device, stamp in
             self.take(device, since: stamp)
@@ -603,7 +640,9 @@ final class FlatStore {
             let (mode, failed) = answer
             self.take(mode, since: stamp)
             // The app says its own failures; an older trouble kept outside the app is moot now.
-            if let pairing = self.pairingID { self.connection.clearTrouble(mode: id, pairing: pairing) }
+            if let pairing = self.pairingID, failed.isEmpty {
+                self.connection.clearTrouble(mode: id, pairing: pairing, now: mode.active)
+            }
             if let line = self.failureLine(failed) {
                 self.offer = UndoOffer(message: line)
             } else if id == FlatMode.cookingID, !active {
@@ -650,28 +689,40 @@ final class FlatStore {
     }
 
     /// Runs a command as a task the store cancels when it retires.
-    private func perform(_ work: @escaping @MainActor () async -> Void) {
+    @discardableResult
+    private func perform(_ work: @escaping @MainActor () async -> Void) -> Task<Void, Never> {
         let token = UUID()
-        tasks[token] = Task { [weak self] in
+        let task = Task { [weak self] in
             await work()
             self?.tasks[token] = nil
         }
+        tasks[token] = task
+        return task
     }
 
     /// Runs a command: one at a time per thing (`blocking`), the failure as a calm line, a refused key back to the
     /// connect card, a lost flatd as a reason to reconnect. Dropped, its answer too, once the store retired; `affects`
-    /// names what the answer shows (a device id, "mode:<id>"), for `stamp`. False when it was not started.
+    /// names what the answer shows (a device id, "mode:<id>"), for `stamp`. `after`: a command that must have ended
+    /// first; `stillWanted` is asked when its turn comes (false: not sent, `failed` runs). Nil when it was not started.
     @discardableResult
     private func send<Answer: Sendable>(_ key: String, affects: String, blocking: Bool = true,
+                                        after previous: Task<Void, Never>? = nil,
+                                        stillWanted: @escaping @MainActor () -> Bool = { true },
                                         _ work: @escaping @Sendable (FlatdClient) async throws -> Answer,
                                         done: @escaping @MainActor (Answer, Stamp) -> Void,
-                                        failed: @escaping @MainActor () -> Void = {}) -> Bool {
-        guard !isRetired, pairingID != nil else { return false }
-        if blocking, working.contains(key) { return false }
+                                        failed: @escaping @MainActor () -> Void = {}) -> Task<Void, Never>? {
+        guard !isRetired, pairingID != nil else { return nil }
+        if blocking, working.contains(key) { return nil }
         working.insert(key)
-        perform { [weak self] in
+        return perform { [weak self] in
+            await previous?.value
             guard let self else { return }
             defer { if !isRetired { working.remove(key) } }
+            guard !isRetired, !Task.isCancelled else { return }
+            guard stillWanted() else {
+                failed()                                    // superseded before its turn: never sent
+                return
+            }
             var used: FlatdClient?
             do {
                 let client = try await readyClient()
@@ -692,7 +743,6 @@ final class FlatStore {
                 failed()
             }
         }
-        return true
     }
 
     /// What a failed command does to the store: a refused key stops it (only while that key is the saved one: a fresh
@@ -756,7 +806,7 @@ final class FlatStore {
             let (mode, failed) = try await client.setMode(id, body: body)
             guard !isRetired else { return .notPossible }
             take(mode, since: stamp)
-            if let pairingID { connection.clearTrouble(mode: id, pairing: pairingID) }
+            if let pairingID, failed.isEmpty { connection.clearTrouble(mode: id, pairing: pairingID, now: mode.active) }
             if let line = failureLine(failed) { offer = UndoOffer(message: line) }
             reloadControls()
             return nil

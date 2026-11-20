@@ -129,38 +129,72 @@ nonisolated struct FlatdKeychainError: Error {
 /// The one lock that Forget and the start of every request with a pairing's key share, in the app and its Control
 /// Center extension alike (a file in the App Group, `flock`): Forget deletes the pairing under it, and a request checks
 /// under it that its pairing is still the saved one and starts there and then (`FlatdConnection.start(for:_:)`). So a
-/// request either started before Forget (on the wire, which nothing can call back) or never starts: no await, no other
-/// process, can slip between the last check and the start (Codex's review, round 6). Held only for that moment, never
-/// across a wait (a process suspended with a lock in the App Group is ended by iOS).
+/// request either started before Forget or never starts: no await, no other process, can slip between the last check
+/// and the start (Codex's review, round 6). Held only for that moment, never across a wait (a process suspended with a
+/// lock in the App Group is ended by iOS). It fails closed (round 7): without its file, nothing it guards runs.
 nonisolated final class FlatdDispatchLock: @unchecked Sendable {
-    /// The lock file; nil: within this process only (the tests).
-    private let path: String?
+    private enum Kind {
+        /// The production lock: this file, shared by the app and the extension.
+        case file(String)
+        /// Within this process only: the unit tests, which have no second process.
+        case processOnly
+        /// The App Group's folder could not be found: nothing the lock guards may run.
+        case unavailable
+    }
+
+    /// The lock could not be taken (no lock file, or `open`/`flock` failed): the guarded work did not run.
+    struct Unavailable: Error {}
+
+    private let kind: Kind
     /// The same within the process (a second `flock` there would wait for the first anyway; this keeps threads tidy).
     private let local = NSLock()
     private static let log = Logger(subsystem: "de.ares-empire.arestia", category: "pairing")
 
-    init(path: String?) { self.path = path }
+    private init(_ kind: Kind) { self.kind = kind }
 
-    /// The lock file in Arestia's App Group (the app and the extension see the same one).
-    static let live = FlatdDispatchLock(path: FileManager.default
-        .containerURL(forSecurityApplicationGroupIdentifier: ArestiaGroup.appGroup)?
-        .appending(path: "Library/Caches/flatd-dispatch.lock").path(percentEncoded: false))
+    /// A lock on this file (another process opening the same file shares it).
+    convenience init(path: String) { self.init(.file(path)) }
 
-    func withLock<T>(_ body: () throws -> T) rethrows -> T {
+    /// For the unit tests only: within this process.
+    static var processOnly: FlatdDispatchLock { FlatdDispatchLock(.processOnly) }
+
+    /// The lock file in Arestia's App Group (the app and the extension see the same one), in Application Support:
+    /// never in Caches, which iOS may empty while a lock is held (two processes would then lock two different files).
+    static let live: FlatdDispatchLock = {
+        guard let folder = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: ArestiaGroup.appGroup)?
+            .appending(path: "Library/Application Support/Arestia", directoryHint: .isDirectory) else {
+            log.error("no App Group folder: the dispatch lock is unavailable, nothing with the key is sent")
+            return FlatdDispatchLock(.unavailable)
+        }
+        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        return FlatdDispatchLock(.file(folder.appending(path: "flatd-dispatch.lock").path(percentEncoded: false)))
+    }()
+
+    /// Runs `body` holding the lock; throws `Unavailable` (and runs nothing) when the lock cannot be taken.
+    func withLock<T>(_ body: () throws -> T) throws -> T {
         local.lock()
         defer { local.unlock() }
-        guard let path else { return try body() }
-        try? FileManager.default.createDirectory(atPath: (path as NSString).deletingLastPathComponent,
-                                                 withIntermediateDirectories: true)
-        let descriptor = open(path, O_CREAT | O_RDWR | O_CLOEXEC, 0o600)
-        guard descriptor >= 0 else {
-            Self.log.error("the dispatch lock could not be opened (\(errno, privacy: .public))")
+        switch kind {
+        case .processOnly:
+            return try body()
+        case .unavailable:
+            throw Unavailable()
+        case let .file(path):
+            let descriptor = open(path, O_CREAT | O_RDWR | O_CLOEXEC, 0o600)
+            guard descriptor >= 0 else {
+                Self.log.error("the dispatch lock could not be opened (\(errno, privacy: .public))")
+                throw Unavailable()
+            }
+            defer { close(descriptor) }
+            var locked = flock(descriptor, LOCK_EX)
+            while locked != 0, errno == EINTR { locked = flock(descriptor, LOCK_EX) }
+            guard locked == 0 else {
+                Self.log.error("the dispatch lock could not be taken (\(errno, privacy: .public))")
+                throw Unavailable()
+            }
+            defer { flock(descriptor, LOCK_UN) }
             return try body()
         }
-        defer { close(descriptor) }
-        while flock(descriptor, LOCK_EX) != 0, errno == EINTR {}
-        defer { flock(descriptor, LOCK_UN) }
-        return try body()
     }
 }
 
@@ -169,8 +203,9 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
     /// Thread-safe (`UserDefaults` is), hence the unchecked Sendable.
     let defaults: UserDefaults?
     let keychain: any FlatdKeyStore
-    /// Shared by Forget and the start of every request with a pairing's key (`FlatdDispatchLock`).
-    var lock = FlatdDispatchLock(path: nil)
+    /// Shared by Forget and the start of every request with a pairing's key (`FlatdDispatchLock`): `.live` in the app
+    /// and the extension, `.processOnly` only in the unit tests.
+    let lock: FlatdDispatchLock
 
     /// The devices' ids, kinds and names as last seen, for Shortcuts' pickers while flatd is out of reach.
     static let devicesKey = "flatd.devices"
@@ -223,9 +258,13 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
     /// Runs `start` (starting a request with this pairing's key) only while this pairing is the saved one, under the
     /// lock Forget takes too: throws `.notPaired` once it is not, `.pairingUnreadable` while it cannot be read.
     func start(for pairing: UUID, _ start: () -> Void) throws {
-        try lock.withLock {
-            guard try current().id == pairing else { throw FlatdError.notPaired }
-            start()
+        do {
+            try lock.withLock {
+                guard try current().id == pairing else { throw FlatdError.notPaired }
+                start()
+            }
+        } catch is FlatdDispatchLock.Unavailable {
+            throw FlatdError.pairingUnreadable          // nothing was started: the lock could not be taken
         }
     }
 
@@ -328,12 +367,14 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
 
     /// Keeps the devices' names for Shortcuts' pickers, tagged with the pairing they came from, and only while that
     /// pairing is the saved one: a late answer never brings names back after Forget.
+    /// Under the lock Forget takes, so a late writer never puts a forgotten flat's names back (round 7).
     func remember(_ devices: [Device], for pairing: UUID) {
-        guard self.pairing?.id == pairing else { return }
         let known = devices.map { KnownDevice(id: $0.id, kind: $0.kind.raw, label: $0.label) }
-        guard known != knownDevices else { return }
-        defaults?.set(try? JSONEncoder().encode(KnownDevices(pairing: pairing, devices: known)),
-                      forKey: Self.devicesKey)
+        try? lock.withLock {
+            guard self.pairing?.id == pairing, known != knownDevices else { return }
+            defaults?.set(try? JSONEncoder().encode(KnownDevices(pairing: pairing, devices: known)),
+                          forKey: Self.devicesKey)
+        }
     }
 
     /// The same, for what a client of a pairing read (nothing for a client made for no pairing).
@@ -354,19 +395,22 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
     /// and the app says it once (`FlatStore`). Written only while its pairing is the saved one, under the lock Forget
     /// takes, so a late writer never puts one back after Forget.
     func note(_ trouble: ModeTrouble) {
-        let kept: Bool = lock.withLock {
+        let kept: Bool = (try? lock.withLock {
             guard pairing?.id == trouble.pairing, let data = try? JSONEncoder().encode(trouble) else { return false }
             defaults?.set(data, forKey: Self.troubleKey)
             return true
-        }
+        }) ?? false
         if kept { notify_post(Self.troubleNotification) }
     }
 
-    /// Clears the trouble kept for this mode, only when it is this pairing's (a late answer of a forgotten flat never
-    /// clears the next one's).
-    func clearTrouble(mode: String, pairing: UUID) {
-        lock.withLock {
-            guard let saved = savedTrouble, saved.mode == mode, saved.pairing == pairing else { return }
+    /// A change of the mode where every device followed: the trouble kept for it is cleared, only when it is this
+    /// pairing's (a late answer of a forgotten flat never clears the next one's), and only when the mode left the
+    /// state the trouble describes. Ending cooking that is already off sends nothing to any device (flatd's
+    /// contract), so it never clears a fan left running by the first end (round 7).
+    func clearTrouble(mode: String, pairing: UUID, now active: Bool) {
+        try? lock.withLock {
+            guard let saved = savedTrouble, saved.mode == mode, saved.pairing == pairing, saved.active != active
+            else { return }
             defaults?.removeObject(forKey: Self.troubleKey)
         }
     }

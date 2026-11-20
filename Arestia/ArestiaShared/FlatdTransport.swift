@@ -26,21 +26,22 @@ struct FlatdTransport: GatedTransport {
         do {
             return try await withTaskCancellationHandler {
                 try await withCheckedThrowingContinuation { (done: CheckedContinuation<(Data, HTTPURLResponse), Error>) in
+                    running.finish = { result in done.resume(with: result) }
                     do {
                         try starting {
                             let task = session.dataTask(with: request.withLanguage()) { data, response, error in
                                 if let error {
-                                    done.resume(throwing: error)
+                                    running.end(.failure(error))
                                 } else if let response = response as? HTTPURLResponse {
-                                    done.resume(returning: (data ?? Data(), response))
+                                    running.end(.success((data ?? Data(), response)))
                                 } else {
-                                    done.resume(throwing: HTTPError.invalidResponse)
+                                    running.end(.failure(HTTPError.invalidResponse))
                                 }
                             }
                             running.start(task)
                         }
                     } catch {
-                        done.resume(throwing: error)       // the gate refused: nothing was started
+                        running.end(.failure(error))      // the gate refused: nothing was started
                     }
                 }
             } onCancel: {
@@ -54,28 +55,41 @@ struct FlatdTransport: GatedTransport {
     }
 }
 
-/// A request's task, for cancelling it from whichever thread the caller's cancellation comes on (also before it was
-/// made: then it is cancelled as it starts).
+/// A request's task and its one ending. Cancelling and starting are decided under one lock: a request cancelled
+/// before its task started is never resumed (round 7), and the caller hears exactly one ending, whichever comes first.
 private nonisolated final class RunningTask: @unchecked Sendable {
     private let lock = NSLock()
     private var task: URLSessionDataTask?
     private var cancelled = false
+    private var ended = false
+    /// The caller's continuation; set before anything can end it.
+    var finish: (@Sendable (Result<(Data, HTTPURLResponse), Error>) -> Void)?
 
+    /// Resumes the task unless the request was cancelled first (then it ends as cancelled, never started).
     func start(_ task: URLSessionDataTask) {
-        let cancelled = lock.withLock {
+        let resume: Bool = lock.withLock {
+            guard !cancelled else { return false }
             self.task = task
-            return self.cancelled
+            return true
         }
-        task.resume()
-        if cancelled { task.cancel() }
+        if resume { task.resume() } else { end(.failure(CancellationError())) }
     }
 
     func cancel() {
-        let task = lock.withLock {
+        let task: URLSessionDataTask? = lock.withLock {
             cancelled = true
             return self.task
         }
         task?.cancel()
+    }
+
+    func end(_ result: Result<(Data, HTTPURLResponse), Error>) {
+        let first: Bool = lock.withLock {
+            guard !ended else { return false }
+            ended = true
+            return true
+        }
+        if first { finish?(result) }
     }
 }
 

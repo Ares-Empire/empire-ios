@@ -160,10 +160,11 @@ struct FlatWebView: UIViewRepresentable {
         private var requests: [UUID: Task<Void, Never>] = [:]
         /// The page's own fetch (with the key): cancelled by the next load, a timeout and the web view's end.
         private var fetch: Task<Void, Never>?
-        /// Loads WebKit asked for by itself after its page process ended, since the last load the app or the person
-        /// asked for: bounded, so a page that keeps ending WebKit ends in Try again instead of loading forever.
+        /// Loads WebKit asked for by itself after its page process ended, since the last load the person asked for
+        /// (Try again, a fresh code): bounded, also across `ready`, so a page that keeps ending WebKit ends in Try
+        /// again instead of fetching the private page for ever (round 7).
         private var automaticReloads = 0
-        static let maxAutomaticReloads = 2
+        static let maxAutomaticReloads = 3
         /// The page's address inside the web view: a name that never resolves (`.invalid`, RFC 2606), so the page has
         /// an ordinary origin of its own and nothing it does can reach a real server. Never flatd's address.
         static let pageURL = URL(string: "https://viewer.arestia.invalid/")!
@@ -290,7 +291,6 @@ struct FlatWebView: UIViewRepresentable {
             case .ready:
                 guard let snapshot = store.snapshot else { return }
                 readyDeadline?.cancel()
-                automaticReloads = 0
                 page.isReady = true
                 page.problem = nil
                 sendConfig()
