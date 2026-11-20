@@ -487,6 +487,44 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
         return remember(devices, for: id, readSince: version)
     }
 
+    /// flatd's list as a request of `client` read it, each device under the name to show: offered to the names kept
+    /// (`remember(_:for:readSince:)`), then named as kept after that, both in one hold of the lock Forget takes. Call it
+    /// inside `FlatdReach.run`, whose last check of the pairing then covers what this returns (Codex's review of the
+    /// renaming, round 3, finding 2: run it after and a Forget in between gave a forgotten flat's blind back).
+    ///
+    /// Throws `.notPaired` once the client's pairing is not the saved one (forgotten, or another flat paired): the
+    /// list is a retired pairing's and shows nothing. `.pairingUnreadable` while the Keychain cannot say. Only when no
+    /// names can be kept at all (no App Group folder, no lock file, a file that cannot be written) are the names flatd
+    /// just sent shown: the cache is unavailable, which is not the same as a retired pairing.
+    func named(_ devices: [Device], from client: FlatdClient, readSince version: UUID?) throws -> [Device] {
+        guard let id = client.pairingID else { throw FlatdError.notPaired }
+        func stillPaired() throws {
+            let saved = try current()
+            guard saved.id == id, saved.pin == client.pin else { throw FlatdError.notPaired }
+        }
+        guard let names else {
+            try stillPaired()
+            return devices
+        }
+        let kept: [KnownDevice]?
+        do {
+            kept = try lock.withLock { () throws -> [KnownDevice]? in
+                try stillPaired()
+                let known = Self.known(devices)
+                let now = names.read()
+                if now?.version == version, !(now?.pairing == id && now?.devices == known) {
+                    names.write(KnownDevices(pairing: id, devices: known, version: UUID()))
+                }
+                return names.read().flatMap { $0.pairing == id ? $0.devices : nil }
+            }
+        } catch is FlatdDispatchLock.Unavailable {
+            try stillPaired()                       // no lock, so no names: nothing could have been kept either
+            return devices
+        }
+        guard let kept else { return devices }      // none kept for this pairing: the file could not be written
+        return devices.map { device in kept.first { $0.id == device.id }.map { device.named($0.label) } ?? device }
+    }
+
     /// One change of the names kept: `change` gets what the file holds now and gives the list to keep (nil: nothing is
     /// written). Read, decided and written under the lock, only while `pairing` is the saved one, and always under a
     /// new version.
