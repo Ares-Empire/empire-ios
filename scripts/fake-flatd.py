@@ -178,7 +178,11 @@ class Flat:
                 return 400, {"error": "label must be at most 40 characters"}
             if any(unicodedata.category(c) in ("Cc", "Cs", "Zl", "Zp") for c in label):
                 return 400, {"error": "label must not contain control characters or line breaks"}
-            label = label or device["default_label"]
+            # The config's own name, compared as a rename keeps names (trimmed, NFC), is no own name: the config's
+            # spelling is shown, as flatd does (a config may spell an accent decomposed).
+            default = device["default_label"]
+            if not label or label == unicodedata.normalize("NFC", default.strip()):
+                label = default
             if label != device["label"]:
                 device["label"] = label
                 self.emit({"type": "device", "device": json.loads(json.dumps(device)), "source": "api"})
