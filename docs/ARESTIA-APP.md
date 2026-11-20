@@ -1,8 +1,11 @@
 # Arestia app — decision record
 
-**Decided 2026-11-19 (Patrik).** Status (2026-11-19): built and tested on the simulator against a fake flatd
-(`scripts/fake-flatd.py`, HTTPS with its own identity and pairing code); not yet run against the real flatd, not on
-TestFlight. The name: Arestia (Ares + Hestia,
+**Decided 2026-11-19 (Patrik).** Status (2026-11-20): built and tested on the simulator against a fake flatd
+(`scripts/fake-flatd.py`, HTTPS with its own identity and pairing code); one pairing identity on all work in the app
+(below); not yet run against the real flatd, not merged, not on TestFlight. The fifth review (Codex gpt-6.2-astra) found
+the re-pairing class once more outside the app's store: the Control Center toggles' value and action, `FlatdReach`'s
+results, the Blind control's display and the connect attempt's expected pairing do not yet carry the identity; that
+and its ordinary findings are open. The name: Arestia (Ares + Hestia,
 goddess of the hearth and home), confirmed by Patrik on 2026-11-19.
 
 Arestia is the flat on the iPhone: the fans, the blinds (Rollos), the modes and scenes and the flat in 3D, all through
