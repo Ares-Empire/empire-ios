@@ -266,14 +266,35 @@ Round 2 (NOT SAFE, five findings), answered by changing the two designs at their
 Tests: `NameFileTests` (two connections that share only the files, as the app and the extension do; a real second
 process holding the lock and replacing the file, started from the test on the simulator), flatd's `test_rename.py`.
 
+Round 3 (NOT SAFE, six findings), each fixed where it arises:
+- flatd 1.3.2: a mode's row and its history entry are one transaction that a failure undoes as a whole; a refused
+  history entry had left the row in the open transaction, and a later rename committed a Cooking that never ran (1).
+- A reading of flatd's list is reconciled with the names kept inside `FlatdReach.run` (`FlatdConnection.named`), so
+  the run's last check of the pairing covers it: the Blind control could show a forgotten flat's blind when Forget came
+  between that check and the names (2). A pairing retired meanwhile gives nothing; only where no names can be kept at
+  all (no App Group folder or lock, a file that cannot be written) are flatd's own names shown.
+- A rename's answer is kept for Shortcuts and the controls only over the names kept when its request left (their
+  version); names kept since (a picker's reading while the stream was down) may be newer, so they stay and flatd's
+  name of that device is read once more, and that answer is kept (3).
+- flatd 1.3.2: a storage error in a driver's poll or socket loop is logged and retried with a growing pause instead of
+  ending the loop, so the next reading arrives by itself once storage works again (4).
+- Forget removes the names file first, under the lock, and a removal that fails stops it with the pairing kept and
+  Settings saying so (5).
+- The phone viewer keeps a name flatd validated whole (up to 40 characters, counted as flatd counts them) and cuts a
+  longer one by characters, never inside an emoji (6).
+Tests: `ForgottenFlatReadingTests` (Forget after flatd's list arrived and at every step of a reading),
+`LateRenameAnswerTests` (a late answer for the same device), `ForgetNamesFirstTests` (a names file that cannot be
+removed), flatd's `test_modes.py` and `test_driver.py`, the viewer's
+`npm run phone`.
+
 ## Follow-ups
 
 From the renaming (2026-11-20):
 
-- [ ] The real 3D page shows its own translated names for the devices it knows, never flatd's, so a rename does
-  not show there yet. Suggested for the viewer (its bridge contract first): use the snapshot's `label` when it
-  differs from `default_label` (an own name), else its own translated name, and take `{"type": "device"}` messages,
-  which the app already forwards. The fake's stand-in page does this.
+- [x] The real 3D page shows a renamed device by its own name (2026-11-20, BRIDGE.md "Names"): the snapshot's
+  `label` where it differs from `default_label`, else the page's own translated name, and live from the `device`
+  messages the app forwards. A name is taken whole up to flatd's 40 characters. A `Device` without `default_label`
+  (flatd before 1.3) keeps the page's words.
 - [ ] The desktop viewer takes names from `GET /api/devices` and each snapshot, so it shows a rename after its next
   connect; handling the `device` event would make it live.
 - [ ] Claude reads names through the MCP tools' `list_devices`; there is no rename tool yet (Patrik renames in the
