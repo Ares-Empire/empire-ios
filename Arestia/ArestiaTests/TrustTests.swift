@@ -501,15 +501,25 @@ struct LiveFlatdTests {
     var code: PairingCode { LiveFlatd.code! }
     var base: URL { code.baseURL! }
 
+    /// A client for the fake with generous timeouts: these tests check TLS and the pin, not speed (a busy GitHub
+    /// runner once took longer than the app's 6 s to answer the suite's first health check).
+    func liveClient(_ pairing: FlatdPairing? = nil, pin: FlatdPin? = nil) -> FlatdClient {
+        var client = pairing.map { FlatdClient($0) }
+            ?? FlatdClient(baseURL: base, token: code.token, pin: pin ?? code.pin)
+        client.readTimeout = 30
+        client.commandTimeout = 30
+        return client
+    }
+
     @Test func thePinnedSessionReachesFlatd() async throws {
-        let client = FlatdClient(baseURL: base, token: code.token, pin: code.pin)
+        let client = liveClient()
         try await client.verify()
         #expect(try await client.devices().isEmpty == false)
         #expect(try await client.viewerPage().isEmpty == false)
     }
 
     @Test func theEventStreamArrivesOverThePinnedSocket() async throws {
-        let client = FlatdClient(baseURL: base, token: code.token, pin: code.pin)
+        let client = liveClient()
         var first: FlatEvent?
         for try await event in WebSocketEvents().events(from: client.eventsRequest, pin: client.pin) {
             first = event
@@ -534,10 +544,10 @@ struct LiveFlatdTests {
         // The same server, but the app expects another key: to the app it is not flatd. Counted at the server: not
         // one request arrives, neither before nor after the right pin connected to the same address.
         let wrong = MadeUpCertificates.pinB
-        let right = FlatdClient(baseURL: base, token: code.token, pin: code.pin)
+        let right = liveClient()
         try await right.verify()
         let before = try await requestsSeen()
-        let client = FlatdClient(baseURL: base, token: code.token, pin: wrong)
+        let client = liveClient(pin: wrong)
         await #expect(throws: FlatdError.unreachable) { try await client.verify() }
         await #expect(throws: FlatdError.unreachable) { _ = try await client.devices() }
         await #expect(throws: FlatdError.unreachable) { _ = try await client.send(.power(on: true), to: "fan:fan_1") }
@@ -557,7 +567,7 @@ struct LiveFlatdTests {
                                          lock: FlatdDispatchLock(path: lockFile.path(percentEncoded: false)))
         let pairing = FlatdPairing(baseURL: base, token: code.token, pin: code.pin)
         try connection.save(pairing)
-        let client = FlatdClient(pairing).gated(by: connection)
+        let client = liveClient(pairing).gated(by: connection)
         #expect(try await client.devices().isEmpty == false)          // through the gate while paired
         let before = try await requestsSeen()
         try connection.forget()
