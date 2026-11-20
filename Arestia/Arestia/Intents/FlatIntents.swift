@@ -104,7 +104,7 @@ nonisolated enum RolloDialog {
 struct FansOnIntent: AppIntent {
     static let title = LocalizedStringResource("Fans on", table: "ArestiaShared")
     static let description = IntentDescription(LocalizedStringResource(
-        "Turns the fans on, for a while or until you turn them off. The timer runs in the plug, so it ends even when the Mac sleeps.",
+        "Turns the fans on, for a while or until you turn them off. The timer runs in the plug, so it ends even when flatd is offline.",
         table: "ArestiaShared"))
 
     @Parameter(title: LocalizedStringResource("Minutes", table: "ArestiaShared"),

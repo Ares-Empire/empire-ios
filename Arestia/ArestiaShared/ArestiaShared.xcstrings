@@ -584,12 +584,12 @@
         }
       }
     },
-    "Turns the fans on, for a while or until you turn them off. The timer runs in the plug, so it ends even when the Mac sleeps." : {
+    "Turns the fans on, for a while or until you turn them off. The timer runs in the plug, so it ends even when flatd is offline." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Schaltet die Ventilatoren ein, für eine Weile oder bis du sie ausschaltest. Den Timer führt die Steckdose, er endet also auch, wenn der Mac schläft."
+            "value" : "Schaltet die Ventilatoren ein, für eine Weile oder bis du sie ausschaltest. Den Timer führt die Steckdose, er endet also auch, wenn flatd nicht erreichbar ist."
           }
         }
       }
