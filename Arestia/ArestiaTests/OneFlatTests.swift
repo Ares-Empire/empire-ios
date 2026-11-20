@@ -62,7 +62,15 @@ struct OneFlatTests {
         let pageRequest = old.pageRequest("fan:fan_1", body: on)
         let pageMode = old.pageMode("cooking", body: Data(#"{"active":false}"#.utf8))
         let reach = FlatdReach(connection: connection, transport: transport, rediscover: { [] })
-        let shortcut = Task.detached { try await FlatActions(reach: reach).setCooking(true) }
+        // The Shortcut has a transport of its own, so the test sees it started on A (it asked A's health) before
+        // Forget: a detached task can start late on a busy machine, and one that starts after Forget acts, by design,
+        // on the flat paired then (it failed on a GitHub runner that way, not in the app).
+        let shortcutTransport = FakeTransport()
+        shortcutTransport.answer("GET \(Flats.hostA)/api/health", body: Flats.health, delay: .seconds(2))
+        shortcutTransport.answer("POST /api/modes/cooking", body: Flat.cooking)
+        let shortcutReach = FlatdReach(connection: connection, transport: shortcutTransport, rediscover: { [] })
+        let shortcut = Task.detached { try await FlatActions(reach: shortcutReach).setCooking(true) }
+        #expect(await eventually { !shortcutTransport.requests(to: Flats.hostA).isEmpty })
         try await Task.sleep(for: .milliseconds(50))
 
         // Forget: the old store is retired at once and a new one without a pairing takes its place.
@@ -91,6 +99,7 @@ struct OneFlatTests {
 
         // No command went anywhere (the queued one, the page's, the Shortcut's), and no key of A's reached B.
         #expect(transport.sent.allSatisfy { $0.httpMethod == "GET" })
+        #expect(shortcutTransport.sent.allSatisfy { $0.httpMethod == "GET" && $0.url?.host() == Flats.hostA })
         #expect(transport.requests(to: Flats.hostB).allSatisfy {
             $0.value(forHTTPHeaderField: "Authorization").map { $0 == "Bearer \(Flat.otherKey)" } ?? true
         })
