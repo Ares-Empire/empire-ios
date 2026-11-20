@@ -12,3 +12,11 @@ fac22e16420b55aaeadb4d4c9b1ae48b478d6ac1:Arestia/ArestiaTests/ReviewFindingsTest
 f4c1599d4ad08b11269dcc5fc50cc227715cfb7e:Arestia/ArestiaTests/StoreTests.swift:generic-api-key:133
 f4c1599d4ad08b11269dcc5fc50cc227715cfb7e:Arestia/ArestiaTests/ReviewFindingsTests.swift:generic-api-key:58
 f4c1599d4ad08b11269dcc5fc50cc227715cfb7e:Arestia/ArestiaTests/TrustTests.swift:generic-api-key:148
+# Arestia's pairing-identity tests: made-up test keys ("other-key-…", "renewed-key-…"), confirmed false alarms (2026-11-20).
+20964f7ced11a66f9afc1ed2f8bfa7a3db2e1c3b:Arestia/ArestiaTests/PairingIdentityTests.swift:generic-api-key:15
+20964f7ced11a66f9afc1ed2f8bfa7a3db2e1c3b:Arestia/ArestiaTests/PairingIdentityTests.swift:generic-api-key:215
+20964f7ced11a66f9afc1ed2f8bfa7a3db2e1c3b:Arestia/ArestiaTests/PairingIdentityTests.swift:generic-api-key:250
+20964f7ced11a66f9afc1ed2f8bfa7a3db2e1c3b:Arestia/ArestiaTests/PairingIdentityTests.swift:generic-api-key:252
+20964f7ced11a66f9afc1ed2f8bfa7a3db2e1c3b:Arestia/ArestiaTests/PairingIdentityTests.swift:generic-api-key:276
+20964f7ced11a66f9afc1ed2f8bfa7a3db2e1c3b:Arestia/ArestiaTests/PairingIdentityTests.swift:generic-api-key:288
+20964f7ced11a66f9afc1ed2f8bfa7a3db2e1c3b:Arestia/ArestiaTests/PairingIdentityTests.swift:generic-api-key:291
