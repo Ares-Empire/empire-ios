@@ -116,12 +116,12 @@ loaded with the key and never bundled.
   - *Accepted.* Until Control Center reads a control again after Forget, its toggle may show the old flat's state.
     Losing flatd's identity key (a new machine without its identity folder) makes it another flat: Forget and pair
     anew.
-  - *Open, for the lead and Patrik (round 7):* "started before Forget" means the request's task was resumed before
-    the delete. Its connection and TLS handshake may still be under way when Forget completes, so its first bytes can
-    leave a few milliseconds after it (to the forgotten flat, which proved its key). Closing that too would take a
-    cross-process registry of requests in flight that Forget waits for and drains. The review asks for it; the
-    proposal here is to accept it as "already on the wire", since the command was given before Forget, by the owner,
-    to his own flat.
+  - *Accepted risk: a request already on the wire* (the lead, 2026-11-20, after the seventh review). "Started before
+    Forget" means the request's task was resumed before the delete. Its connection and TLS handshake may still be under
+    way when Forget completes, so its first bytes can leave a few milliseconds after it, to the forgotten flat, which
+    still has to prove its pinned key first. That counts as already on the wire: the command was given by Patrik,
+    before Forget, to his own flat. There is no cross-process registry of requests in flight that Forget waits for and
+    drains; nothing new starts after Forget.
   - *Out of scope by design*: consistency between two flats without Forget in between, since the app never does that.
 - **The Keychain may fail to answer** (before the iPhone's first unlock after a restart, or a hiccup): that is never
   taken as "no pairing" (`FlatdConnection.Saved.unreadable`). The live loop and the session read again with growing
