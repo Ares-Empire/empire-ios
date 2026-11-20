@@ -465,12 +465,19 @@ final class FlatStore {
     }
 
     /// A device's names as a rename's answer brought them, unless the stream brought newer news of its name meanwhile.
-    private func takeName(_ device: Device, since stamp: Stamp) {
+    /// Kept for Shortcuts and the controls only over the names kept when the request left (`namesSince`): names kept
+    /// since then (a picker or a control read flatd's list while the stream was down) may be newer than this answer, so
+    /// they stay and flatd is asked once more (`readNameAgain`), whose answer settles it (Codex's review of the
+    /// renaming, round 3, finding 3).
+    private func takeName(_ device: Device, since stamp: Stamp, namesSince version: UUID?, readsAgain: Bool = true) {
         guard stamp == self.stamp("label:" + device.id), let index = devices.firstIndex(where: { $0.id == device.id })
         else { return }
         let before = controlState
         devices[index] = devices[index].named(like: device)
-        if let pairingID { connection.rememberName(of: devices[index], for: pairingID) }
+        if let pairingID, !connection.rememberName(of: devices[index], for: pairingID, unchangedSince: version),
+           readsAgain {
+            readNameAgain(device.id)
+        }
         tell(.device(devices[index], source: "api"))
         if controlState != before { reloadControls() }
     }
@@ -696,15 +703,32 @@ final class FlatStore {
             return
         }
         renaming[id] = DeviceNames.shown(change, for: device)
+        let connection = connection
         let sent = send("label:" + id, affects: "label:" + id) { client in
-            try await client.rename(id, to: change.label)
-        } done: { device, stamp in
+            // The names kept as the request leaves: its answer is kept only over these (`takeName`).
+            let kept = connection.devicesVersion
+            return (try await client.rename(id, to: change.label), kept)
+        } done: { answer, stamp in
             self.renaming[id] = nil
-            self.takeName(device, since: stamp)
+            self.takeName(answer.0, since: stamp, namesSince: answer.1)
         } failed: {
             self.renaming[id] = nil
         }
         if !sent { renaming[id] = nil }
+    }
+
+    /// flatd's name of one device read again, after a rename's answer met names kept since it was sent (`takeName`):
+    /// in line behind that device's renames, taken as an answer is, quietly. A failure changes nothing: the names kept
+    /// stay, and the stream's next snapshot brings flatd's.
+    private func readNameAgain(_ id: String) {
+        let connection = connection
+        inLine("label:" + id) { [weak self] in
+            guard let self, !isRetired, !Task.isCancelled, let client = try? await readyClient() else { return }
+            let stamp = stamp("label:" + id)
+            let kept = connection.devicesVersion
+            guard let device = try? await client.device(id), !isRetired else { return }
+            takeName(device, since: stamp, namesSince: kept, readsAgain: false)
+        }
     }
 
     /// Whether a new name of this device is on its way: from sending until flatd answered, also once the stream

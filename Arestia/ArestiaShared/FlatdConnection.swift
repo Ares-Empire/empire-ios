@@ -451,16 +451,37 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
     /// name for one of them while the app's stream was down (finding 3). Nothing while no names are kept for this
     /// pairing: one name is no list, and the next snapshot brings them all.
     func rememberName(of device: Device, for pairing: UUID) {
-        let named = KnownDevice(id: device.id, kind: device.kind.raw, label: device.label)
+        keep(for: pairing) { kept in Self.laying(device, over: kept, for: pairing) }
+    }
+
+    /// The same for a command's answer (a rename's, or flatd's device read again), which may have been on its way
+    /// while names were kept: laid over its device only while the names kept are still the version taken just before
+    /// the request was sent (`devicesVersion`). False when names were kept since (a picker or a control read flatd's
+    /// list, in either process, while the app's stream was down): nothing is written then, as that list may be newer
+    /// than this answer, or older; the caller asks flatd again (Codex's review of the renaming, round 3, finding 3: a
+    /// late answer put "Desk" back over the "Kitchen" a picker had read since).
+    func rememberName(of device: Device, for pairing: UUID, unchangedSince version: UUID?) -> Bool {
+        var unchanged = true
         keep(for: pairing) { kept in
-            guard var devices = kept.flatMap({ $0.pairing == pairing ? $0.devices : nil }) else { return nil }
-            if let index = devices.firstIndex(where: { $0.id == named.id }) {
-                devices[index] = named
-            } else {
-                devices.append(named)
+            guard kept?.version == version else {
+                unchanged = false
+                return nil
             }
-            return devices
+            return Self.laying(device, over: kept, for: pairing)
         }
+        return unchanged
+    }
+
+    /// The names kept with this one device's laid over it (nil: no list is kept for this pairing).
+    private static func laying(_ device: Device, over kept: KnownDevices?, for pairing: UUID) -> [KnownDevice]? {
+        let named = KnownDevice(id: device.id, kind: device.kind.raw, label: device.label)
+        guard var devices = kept.flatMap({ $0.pairing == pairing ? $0.devices : nil }) else { return nil }
+        if let index = devices.firstIndex(where: { $0.id == named.id }) {
+            devices[index] = named
+        } else {
+            devices.append(named)
+        }
+        return devices
     }
 
     /// The names a reading of flatd's list brought (`GET /api/devices`), kept only while the names kept are still the

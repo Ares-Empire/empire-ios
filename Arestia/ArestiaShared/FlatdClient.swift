@@ -143,6 +143,11 @@ nonisolated struct FlatdClient: Sendable {
         return try decode(Answer.self, try await send(request("api/devices", timeout: readTimeout))).devices
     }
 
+    /// One device as flatd has it now (`GET /api/devices/{id}`).
+    func device(_ id: String) async throws -> Device {
+        try decode(Device.self, try await send(request("api/devices/" + Self.pathID(id), timeout: readTimeout)))
+    }
+
     func modes() async throws -> [FlatMode] {
         struct Answer: Decodable { let modes: [FlatMode] }
         return try decode(Answer.self, try await send(request("api/modes", timeout: readTimeout))).modes
