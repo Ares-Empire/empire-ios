@@ -12,6 +12,10 @@ import SwiftUI
 final class RenameEditor {
     private(set) var deviceID: String?
     var text = ""
+    /// The name the field opened with. Saving sends nothing unless what is typed differs from it: an untouched field
+    /// that loses the keyboard (a scroll) would otherwise send the name it opened with, undoing a rename made elsewhere
+    /// meanwhile, or cutting a config name longer than flatd takes (Codex's review of the renaming, finding 1).
+    private var opening = ""
 
     func isEditing(_ id: String) -> Bool { deviceID == id }
 
@@ -21,20 +25,23 @@ final class RenameEditor {
         save(in: store)
         deviceID = device.id
         text = device.label
+        opening = device.label
     }
 
-    /// Sends what is typed (nothing when the name is unchanged, `DeviceNames.change`) and closes the field.
+    /// Sends what is typed, only when it was edited (`opening`; and then nothing when it is the name the device has
+    /// now, `DeviceNames.change`), and closes the field.
     func save(in store: FlatStore) {
         guard let id = deviceID else { return }
-        let typed = text
+        let typed = text, edited = DeviceNames.cleaned(text) != DeviceNames.cleaned(opening)
         cancel()
-        store.rename(id, to: typed)
+        if edited { store.rename(id, to: typed) }
     }
 
     /// Closes the field; the name stays as it was.
     func cancel() {
         deviceID = nil
         text = ""
+        opening = ""
     }
 }
 

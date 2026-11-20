@@ -251,6 +251,52 @@ struct RenameStoreTests {
         store.stop()
     }
 
+    /// The field opened, a rename from elsewhere arriving, the field losing the keyboard untouched (a scroll): nothing
+    /// is sent, so the other rename stands (Codex's review of the renaming, finding 1).
+    @Test func anUntouchedFieldSendsNothing() async throws {
+        let (store, transport, events, _) = try await liveStore()
+        let editor = RenameEditor()
+        editor.begin(try #require(store.device("fan:fan_1")), in: store)
+        #expect(editor.isEditing("fan:fan_1"))
+        #expect(editor.text == "Fan 1")
+        events.send(.device(try Flat.decode(Device.self, named(Flat.fan(1), "Kitchen fan", default: "Fan 1")),
+                            source: "mcp"))
+        #expect(await eventually { store.device("fan:fan_1")?.label == "Kitchen fan" })
+        editor.save(in: store)                                              // what losing the keyboard does
+        #expect(!editor.isEditing("fan:fan_1"))
+        // A config name longer than an own name may be, opened and left: never cut to 40 and sent.
+        let long = String(repeating: "x", count: 45)
+        events.send(.device(try Flat.decode(Device.self, named(Flat.fan(2), long, default: long)), source: "api"))
+        #expect(await eventually { store.device("fan:fan_2")?.label == long })
+        editor.begin(try #require(store.device("fan:fan_2")), in: store)
+        editor.save(in: store)
+        // Edited back to the name it opened with (spaces at the ends do not count): nothing either.
+        editor.begin(try #require(store.device("fan:fan_1")), in: store)
+        editor.text = DeviceNames.typed("Desk")
+        editor.text = DeviceNames.typed(" Kitchen fan ")
+        editor.save(in: store)
+        try await Task.sleep(for: .milliseconds(100))
+        #expect(transport.sent.allSatisfy { $0.httpMethod != "PATCH" })
+        #expect(store.device("fan:fan_1")?.label == "Kitchen fan")
+        #expect(store.device("fan:fan_2")?.label == long)
+        // Edited, it is sent; emptied, the own name is cleared.
+        transport.answer("PATCH /api/devices/fan:fan_1", body: named(Flat.fan(1), "Desk fan", default: "Fan 1"))
+        editor.begin(try #require(store.device("fan:fan_1")), in: store)
+        editor.text = DeviceNames.typed("Desk fan")
+        editor.save(in: store)
+        #expect(await eventually { store.device("fan:fan_1")?.label == "Desk fan" })
+        #expect(label(transport, "fan:fan_1") as? String == "Desk fan")
+        transport.answer("PATCH /api/devices/fan:fan_1", body: named(Flat.fan(1), "Fan 1", default: "Fan 1"))
+        #expect(await eventually { !store.isRenaming("fan:fan_1") })
+        editor.begin(try #require(store.device("fan:fan_1")), in: store)
+        editor.text = ""
+        editor.save(in: store)
+        #expect(await eventually { store.device("fan:fan_1")?.label == "Fan 1" })
+        #expect(label(transport, "fan:fan_1") is NSNull)
+        #expect(transport.bodies(for: "PATCH /api/devices/fan:fan_1").count == 2)
+        store.stop()
+    }
+
     @Test func aRetiredStoreForgetsWhatWasOnItsWay() async throws {
         let (store, transport, _, _) = try await liveStore()
         transport.answer("PATCH /api/devices/fan:fan_1", body: named(Flat.fan(1), "Desk fan", default: "Fan 1"),
