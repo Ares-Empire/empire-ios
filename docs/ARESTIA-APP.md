@@ -1,6 +1,7 @@
 # Arestia app — decision record
 
-**Decided 2026-11-19 (Patrik).** Status (2026-11-20): built and tested on the simulator against a fake flatd
+**Decided 2026-11-19 (Patrik).** Since build 2 (2026-11-20): renaming devices in flatd, the Lighting section, no
+Automations card ("After build 2" below). Status (2026-11-20): built and tested on the simulator against a fake flatd
 (`scripts/fake-flatd.py`, HTTPS with its own identity and pairing code); one flat per install (below), which replaced
 the re-pairing in place after the fifth review; merged after the final review (round 9, SAFE); not yet run against the
 real flatd. The name: Arestia (Ares + Hestia,
@@ -139,8 +140,9 @@ loaded with the key and never bundled.
   they have what flatd or the phone has.
 - **Two tabs and the gear** ("not many buttons and big menu"): **Home** (what the flat is doing in one line; cooking
   while it runs, with Done cooking as the one big button; otherwise the modes and scenes as three tiles; the fans with
-  on/off and the timers 15 min / 30 min / 1 h / ∞ and the time left; the blinds with their window drawn at its position,
-  dragged to set it, up / favourite / down and stop while moving; then the automations, what runs by itself), and
+  on/off and the timers 15 min / 30 min / 1 h / ∞ and the time left; the lights under Lighting; the blinds with their
+  window drawn at its position, dragged to set it, up / favourite / down and stop while moving; then More, the plugs
+  and any kind a newer flatd brings), and
   **Flat**, the 3D model full-bleed. Settings: the flat service (state, its identity, Pair again for a new code of the
   same flat, Forget this flat), then the shared sections.
 - **Live state** from flatd's event stream (`wss://…/api/events`, the key in its header): the snapshot, then every change whoever made it (the
@@ -188,7 +190,54 @@ loaded with the key and never bundled.
   with a light-appearance variant whose core is gold instead of white and whose fringe is orange instead of pink, so it
   reads on the light wall. Generic fire, nothing of the flat.
 
+## After build 2 (2026-11-20, Patrik's first day with it)
+
+Patrik, after trying build 2 on his iPhone: he loved it, and asked for three changes.
+
+- **Renaming devices.** "can we make the names of things changable so I can name rename things?"
+  - *Where the name lives: in flatd*, not in the app (flatd contract v1.3, `PATCH /api/devices/{id}` with
+    `{"label": …}`; flatd 1.3 keeps the own name in its database over the config's). So the app, its Shortcuts and
+    Control Center controls, the 3D page, the desktop viewer and Claude all read one name. A name kept in the app
+    would have been a second truth that Shortcuts, the controls and Claude never see.
+  - *The rules are flatd's*: trimmed, 1 to 40 characters, no control characters or line breaks; an empty name (or
+    the config's own) brings the config's name back. Every device reports that config name as `default_label`.
+    The field applies the same rules while typing (`DeviceNames`), so flatd refuses nothing the field let through.
+  - *Every client hears it*: flatd sends `{"type": "device", "device": Device, "source": …}` and the next snapshot
+    carries the name. The app takes the name from it (`FlatStore.apply`, `Device.named(like:)`; the state stays the
+    state events'), keeps it for Shortcuts' choices (`FlatdConnection.remember`), asks Control Center to read again
+    when a blind's name changed (its control shows the name), and passes the event on to the 3D page as flatd sent
+    it (BRIDGE.md: a page ignores what it does not know).
+  - *The look* (Claude): a long press on a device's row (on a blind: on its words and buttons, not on the window,
+    which a slow drag would otherwise turn into a long press) offers **Rename** and, once renamed, **Original name**
+    with flatd's name under it. Rename turns the name into a field where it stands, as Arestemis's and Aresium's names
+    do: the name's own font, in a well reaching into the margin, the name selected, the clear button, **Cancel**
+    beside it; Return or scrolling away saves. An empty field shows flatd's name in grey. No autocorrection (names
+    are names). The new name shows in muted ink until flatd confirmed it, never as done before.
+  - *An older flatd* (before v1.3) answers 405: the line at the bottom says "This flat service can't rename yet.
+    Update flatd, then try again." and the name stays.
+- **No Automations card.** "why are there these text boxes for automations at the bottom? I dont think we need
+  them." The card at the end of Home is gone (`AutomationsCard`, `Model/Automations.swift`, its strings, its test and
+  `-scrollTo automations`). The modes and scenes stay as the three tiles at the top. His earlier wish for "an overview
+  of functions and automations" is met by those tiles and the sections; the card only explained, in sentences, what
+  the tiles, the NFC tag and Control Center do. He asked for it, so it needs no further sign-off.
+- **Lighting.** "put the lamp under 'Lighting' in Arestia" (relayed by the lead, 2026-11-20). Lights (`kind` light)
+  get their own section, **Lighting** / **Licht**, after Fans and before Blinds: a card with each light's name, its
+  state and on/off, renamed the same way. Plugs and kinds a newer flatd brings stay under More.
+
 ## Follow-ups
+
+From the renaming (2026-11-20):
+
+- [ ] The real 3D page shows its own translated names for the devices it knows, never flatd's, so a rename does
+  not show there yet. Suggested for the viewer (its bridge contract first): use the snapshot's `label` when it
+  differs from `default_label` (an own name), else its own translated name, and take `{"type": "device"}` messages,
+  which the app already forwards. The fake's stand-in page does this.
+- [ ] The desktop viewer takes names from `GET /api/devices` and each snapshot, so it shows a rename after its next
+  connect; handling the `device` event would make it live.
+- [ ] Claude reads names through the MCP tools' `list_devices`; there is no rename tool yet (Patrik renames in the
+  app). Add `rename_device(id, label)` if he wants Claude to rename too.
+- [ ] Deploy flatd 1.3 before an Arestia build with renaming reaches the phone (the build works with 1.2, but Rename
+  then only says flatd can't rename yet).
 
 Left from the final reviews (rounds 8 and 9, Codex gpt-6.2-astra, 2026-11-20; none blocking):
 
@@ -219,5 +268,5 @@ Left from the final reviews (rounds 8 and 9, Codex gpt-6.2-astra, 2026-11-20; no
 ## Not in this repo
 
 flatd (its code and contract), the flat's model and the viewer stay private, in Patrik's own folders. The fake flatd
-here has made-up devices only (Fan 1, Fan 2, Blind 1, Blind 2, Lamp 1) and a stand-in page at `/viewer` that speaks the
+here has made-up devices only (Fan 1, Fan 2, Desk lamp, Blind 1, Blind 2, Plug 1) and a stand-in page at `/viewer` that speaks the
 same bridge.
