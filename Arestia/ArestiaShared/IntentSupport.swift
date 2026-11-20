@@ -83,10 +83,11 @@ nonisolated enum DeviceChoices {
 
     static func load(kind: Device.Kind, connection: FlatdConnection = .live,
                      reach: FlatdReach? = nil) async -> [Choice] {
+        let version = connection.devicesVersion
         if let answer = try? await (reach ?? FlatdReach(connection: connection)).run({ client in
             (try await client.devices(), client)
         }) {
-            connection.remember(answer.0, from: answer.1)
+            connection.remember(answer.0, from: answer.1, readSince: version)
         }
         return choices(kind: kind, from: connection.known)
     }

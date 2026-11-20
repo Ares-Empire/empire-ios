@@ -337,17 +337,26 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
     nonisolated struct KnownDevices: Codable, Equatable, Sendable {
         let pairing: UUID
         let devices: [KnownDevice]
+        /// New with every write: a reading of flatd's list keeps its answer only while the names kept are still the
+        /// version it started from (`remember(_:from:readSince:)`). Nil in names kept by build 2.
+        var version: UUID?
     }
 
     /// The names with their pairing's identity, as one reading: the pairing read once, the names only when they were
     /// kept for it. A picker labels its choices with this identity (`DeviceChoices`), never with one read separately.
     var known: KnownDevices? {
-        guard let id = pairing?.id,
-              let known = defaults?.data(forKey: Self.devicesKey)
-                .flatMap({ try? JSONDecoder().decode(KnownDevices.self, from: $0) }),
-              known.pairing == id else { return nil }
+        guard let id = pairing?.id, let known = stored, known.pairing == id else { return nil }
         return known
     }
+
+    /// The names as saved, whichever pairing they were kept for.
+    private var stored: KnownDevices? {
+        defaults?.data(forKey: Self.devicesKey).flatMap { try? JSONDecoder().decode(KnownDevices.self, from: $0) }
+    }
+
+    /// The version of the names kept now (nil: none kept, or kept before versions), taken before reading flatd's list:
+    /// its answer is kept only while this is still the version (`remember(_:from:readSince:)`).
+    var devicesVersion: UUID? { stored?.version }
 
     var knownDevices: [KnownDevice] { known?.devices ?? [] }
 
@@ -365,22 +374,43 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
         return pairing.id == id && pairing.pin == client.pin
     }
 
-    /// Keeps the devices' names for Shortcuts' pickers, tagged with the pairing they came from, and only while that
-    /// pairing is the saved one: a late answer never brings names back after Forget.
-    /// Under the lock Forget takes, so a late writer never puts a forgotten flat's names back (round 7).
+    /// Keeps the devices' names for Shortcuts' pickers and the Blind control as the app's event stream has them (a
+    /// snapshot, a rename heard or answered), tagged with the pairing they came from, and only while that pairing is
+    /// the saved one: a late answer never brings names back after Forget. The stream brings flatd's changes in their
+    /// order, so its names are the newest: always kept, under a new version, so a list read before them is not kept
+    /// after them (`readSince`).
     func remember(_ devices: [Device], for pairing: UUID) {
-        let known = devices.map { KnownDevice(id: $0.id, kind: $0.kind.raw, label: $0.label) }
-        try? lock.withLock {
-            guard self.pairing?.id == pairing, known != knownDevices else { return }
-            defaults?.set(try? JSONEncoder().encode(KnownDevices(pairing: pairing, devices: known)),
-                          forKey: Self.devicesKey)
+        keep(devices, for: pairing) { _ in true }
+    }
+
+    /// The names a reading of flatd's list brought (`GET /api/devices`), kept only while the names kept are still the
+    /// version taken before the reading began (`devicesVersion`): a list answered after the stream brought newer names
+    /// (a rename heard meanwhile) changes nothing (Codex's review of the renaming, finding 3).
+    func remember(_ devices: [Device], for pairing: UUID, readSince version: UUID?) {
+        let known = Self.known(devices)
+        keep(devices, for: pairing) { kept in
+            kept?.version == version && !(kept?.pairing == pairing && kept?.devices == known)
         }
     }
 
     /// The same, for what a client of a pairing read (nothing for a client made for no pairing).
-    func remember(_ devices: [Device], from client: FlatdClient) {
+    func remember(_ devices: [Device], from client: FlatdClient, readSince version: UUID?) {
         guard let id = client.pairingID, isCurrent(client) else { return }
-        remember(devices, for: id)
+        remember(devices, for: id, readSince: version)
+    }
+
+    /// Writes the names under a new version when `allowed` says so of the names kept now. Under the lock Forget takes,
+    /// so a late writer never puts a forgotten flat's names back (round 7), and two writers never both pass `allowed`.
+    private func keep(_ devices: [Device], for pairing: UUID, when allowed: (KnownDevices?) -> Bool) {
+        let known = KnownDevices(pairing: pairing, devices: Self.known(devices), version: UUID())
+        try? lock.withLock {
+            guard self.pairing?.id == pairing, allowed(stored) else { return }
+            defaults?.set(try? JSONEncoder().encode(known), forKey: Self.devicesKey)
+        }
+    }
+
+    private static func known(_ devices: [Device]) -> [KnownDevice] {
+        devices.map { KnownDevice(id: $0.id, kind: $0.kind.raw, label: $0.label) }
     }
 
     // MARK: a mode whose devices did not all follow, outside the app

@@ -319,9 +319,10 @@ struct RediscoveryTests {
         await #expect(throws: FlatdError.notPaired) { try await switching.value }
         #expect(transport.bodies(for: "POST /api/devices/fan:fan_1").isEmpty)
         #expect(!connection.isCurrent(old))
-        connection.remember(try Flat.devices([Flat.fan(1)]), from: old)
+        connection.remember(try Flat.devices([Flat.fan(1)]), from: old, readSince: connection.devicesVersion)
         #expect(connection.knownDevices.isEmpty)
-        connection.remember(try Flat.devices([Flat.fan(2)]), from: FlatdClient(other, transport: transport))
+        connection.remember(try Flat.devices([Flat.fan(2)]), from: FlatdClient(other, transport: transport),
+                            readSince: connection.devicesVersion)
         #expect(connection.knownDevices.map(\.id) == ["fan:fan_2"])
     }
 

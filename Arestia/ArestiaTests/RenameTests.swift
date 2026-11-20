@@ -323,6 +323,50 @@ struct RenameStoreTests {
         store.stop()
     }
 
+    /// A picker or the Blind control reads flatd's list; a rename reaches the app before that list's answer: the older
+    /// list never replaces the newer name in what Shortcuts and the controls show offline (Codex's review, finding 3).
+    @Test func anOlderListNeverReplacesANameHeardSince() async throws {
+        let (store, transport, events, _) = try await liveStore()
+        let connection = store.connection
+        let kept = { connection.knownDevices.first { $0.id == "rollo:blind_1" }?.label }
+        transport.answer("GET /api/devices", body: ["devices": [Flat.fan(1), Flat.fan(2), Flat.rollo(1), Flat.rollo(2)]],
+                         delay: .milliseconds(300))
+        let reach = FlatdReach(connection: connection, transport: transport, rediscover: { [] })
+        let reading = Task { try await FlatActions(reach: reach).rollo(SavedDevice.id(for: "rollo:blind_1", of: Flat.id)) }
+        try await Task.sleep(for: .milliseconds(100))
+        events.send(.device(try Flat.decode(Device.self, named(Flat.rollo(1), "Kitchen blind", default: "Blind 1")),
+                            source: "mcp"))
+        #expect(await eventually { kept() == "Kitchen blind" })
+        #expect(try await reading.value?.label == "Blind 1")               // the late answer, as flatd gave it then
+        #expect(kept() == "Kitchen blind")
+        // A list read after it is kept, from a picker too.
+        transport.answer("GET /api/devices",
+                         body: ["devices": [named(Flat.rollo(1), "Bedroom blind", default: "Blind 1"), Flat.rollo(2)]])
+        let choices = await DeviceChoices.load(kind: .rollo, connection: connection, reach: reach)
+        #expect(choices.map(\.label) == ["Bedroom blind", "Blind 2"])
+        #expect(kept() == "Bedroom blind")
+        store.stop()
+    }
+
+    @Test func aReadingKeepsItsListOnlyWhileNothingNewerWasKept() throws {
+        let connection = Flat.connection()
+        let first = connection.devicesVersion
+        #expect(first == nil)                                               // nothing kept yet
+        connection.remember(try Flat.devices([Flat.fan(1)]), for: Flat.id, readSince: first)
+        #expect(connection.knownDevices.map(\.label) == ["Fan 1"])
+        let begun = connection.devicesVersion
+        #expect(begun != nil)
+        connection.remember(try Flat.devices([named(Flat.fan(1), "Desk fan", default: "Fan 1")]), for: Flat.id)
+        connection.remember(try Flat.devices([Flat.fan(1)]), for: Flat.id, readSince: begun)
+        #expect(connection.knownDevices.map(\.label) == ["Desk fan"])
+        // The stream's names are always the newest, even the same names again (a list read before them is older).
+        let again = connection.devicesVersion
+        connection.remember(try Flat.devices([named(Flat.fan(1), "Desk fan", default: "Fan 1")]), for: Flat.id)
+        #expect(connection.devicesVersion != again)
+        connection.remember(try Flat.devices([Flat.fan(1)]), for: Flat.id, readSince: again)
+        #expect(connection.knownDevices.map(\.label) == ["Desk fan"])
+    }
+
     @Test func aRetiredStoreForgetsWhatWasOnItsWay() async throws {
         let (store, transport, _, _) = try await liveStore()
         transport.answer("PATCH /api/devices/fan:fan_1", body: named(Flat.fan(1), "Desk fan", default: "Fan 1"),

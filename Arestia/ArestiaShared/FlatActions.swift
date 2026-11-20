@@ -52,8 +52,9 @@ nonisolated struct FlatActions: Sendable {
 
     /// flatd's devices, remembered for Shortcuts' pickers while their pairing is still the saved one.
     func devices() async throws -> [Device] {
+        let version = reach.connection.devicesVersion
         let (devices, client) = try await reach.run { client in (try await client.devices(), client) }
-        reach.connection.remember(devices, from: client)
+        reach.connection.remember(devices, from: client, readSince: version)
         return devices
     }
 
@@ -124,8 +125,9 @@ nonisolated struct FlatActions: Sendable {
     /// The blind a control remembers, as flatd has it now; nil when the paired flat has none with that id (or the
     /// choice was made before the flat was forgotten).
     func rollo(_ saved: String) async throws -> Device? {
+        let version = reach.connection.devicesVersion
         let (devices, client) = try await reach.run { client in (try await client.devices(), client) }
-        reach.connection.remember(devices, from: client)
+        reach.connection.remember(devices, from: client, readSince: version)
         guard let id = try? SavedDevice.device(saved, of: client) else { return nil }
         return devices.first { $0.kind == .rollo && $0.id == id }
     }

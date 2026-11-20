@@ -517,7 +517,8 @@ final class FlatStore {
             .gated(by: connection)
         do {
             try await candidate.verify()
-            let found = try await candidate.devices()
+            let version = connection.devicesVersion
+            let found = Found(devices: try await candidate.devices(), version: version)
             // The screen went away, or the store's part ended meanwhile: this attempt keeps nothing.
             guard !Task.isCancelled, !isRetired else { return .notPossible }
             if let pairingID {
@@ -533,9 +534,16 @@ final class FlatStore {
         }
     }
 
+    /// The devices a pairing code's check read, and the version of the names kept when it began: kept only while no
+    /// newer names were (`FlatdConnection.remember(_:for:readSince:)`).
+    private struct Found {
+        let devices: [Device]
+        let version: UUID?
+    }
+
     /// A fresh code of this store's flat: written over the version read (a control that only moved the address
     /// meanwhile is written over too, after reading again).
-    private func renew(_ id: UUID, baseURL: URL, token: String, pin: FlatdPin, found: [Device]) -> FlatdError? {
+    private func renew(_ id: UUID, baseURL: URL, token: String, pin: FlatdPin, found: Found) -> FlatdError? {
         let renewed = FlatdPairing(baseURL: baseURL, token: token, pin: pin, id: id)
         for _ in 0..<3 {
             let current: FlatdPairing
@@ -546,7 +554,7 @@ final class FlatStore {
             }
             guard current.pin == pin else { return .anotherFlat }
             if connection.renew(current, with: renewed) {
-                connection.remember(found, for: id)
+                connection.remember(found.devices, for: id, readSince: found.version)
                 credentials += 1
                 stop()                                  // the stream again, with the new key and address
                 if link == .refused || !hasSnapshot { link = .connecting }
@@ -560,7 +568,7 @@ final class FlatStore {
 
     /// The first pairing, from a store with none: saved only while nothing usable is saved (an item that is no pairing,
     /// from an old build, is replaced); then the session takes over with a store for it.
-    private func pairFirst(baseURL: URL, token: String, pin: FlatdPin, found: [Device]) throws -> FlatdError? {
+    private func pairFirst(baseURL: URL, token: String, pin: FlatdPin, found: Found) throws -> FlatdError? {
         switch connection.saved {
         case .none: break
         case .invalid: try connection.forget()
@@ -574,7 +582,7 @@ final class FlatStore {
             handOver()
             return .notPossible
         }
-        connection.remember(found, for: fresh.id)
+        connection.remember(found.devices, for: fresh.id, readSince: found.version)
         Self.log.notice("paired with a flat")
         handOver()
         reloadControls()
