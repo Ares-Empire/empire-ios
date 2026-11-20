@@ -134,10 +134,17 @@ enum Flat {
     static let renewedKey = "renewed-" + key
     static let otherKey = "other-" + key
 
-    /// A connection in a defaults suite of its own and an in-memory key.
+    /// A names file of its own (`DeviceNameFile`), in a new folder of the temporary directory.
+    static func nameFile() -> DeviceNameFile {
+        let folder = FileManager.default.temporaryDirectory.appending(path: "arestia-tests-" + UUID().uuidString)
+        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        return DeviceNameFile(url: folder.appending(path: "device-names.json"))
+    }
+
+    /// A connection in a defaults suite and a names file of its own, and an in-memory key.
     static func connection(linked: Bool = true) -> FlatdConnection {
         let defaults = UserDefaults(suiteName: "arestia-tests-" + UUID().uuidString)!
-        let connection = FlatdConnection(defaults: defaults, keychain: MemoryKeys(), lock: .processOnly)
+        let connection = FlatdConnection(defaults: defaults, names: nameFile(), keychain: MemoryKeys(), lock: .processOnly)
         if linked { try? connection.save(pairing()) }
         return connection
     }

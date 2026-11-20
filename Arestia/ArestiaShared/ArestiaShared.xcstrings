@@ -544,6 +544,16 @@
         }
       }
     },
+    "This flat service can't rename yet. Update flatd, then try again." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieser Wohnungsdienst kann noch nicht umbenennen. Aktualisiere flatd und versuch es dann noch mal."
+          }
+        }
+      }
+    },
     "This is a different flat. Forget the current one first: Settings → Forget this flat." : {
       "localizations" : {
         "de" : {

@@ -124,10 +124,11 @@ struct RolloControlValue {
 }
 
 struct RolloValueProvider: AppIntentControlValueProvider {
-    /// The gallery's preview: the name chosen, never a state.
+    /// The gallery's preview: the chosen blind's name as kept for the paired flat now, else the plain word Blind
+    /// (never the name kept in the configuration, which may be a forgotten flat's); never a state.
     func previewValue(configuration: RolloControlConfiguration) -> RolloControlValue {
-        RolloControlValue(rollo: configuration.rollo, name: configuration.rollo?.name ?? ControlWords.blind,
-                          isOpen: false, note: nil)
+        let name = DeviceChoices.name(of: configuration.rollo?.id, kind: .rollo, from: FlatdConnection.live.known)
+        return RolloControlValue(rollo: configuration.rollo, name: name ?? ControlWords.blind, isOpen: false, note: nil)
     }
 
     /// The blind as flatd has it now. A choice the flat does not know (a blind gone from flatd, or chosen before the

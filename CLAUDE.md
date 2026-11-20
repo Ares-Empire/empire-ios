@@ -948,7 +948,7 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   (2026-11-19; checked after the split: Spotlight's Lüften ran in the app and reached flatd, the Cooking control in
   Control Center toggled flatd's mode). The
   app: `FlatStore` (the event stream's snapshot and events, reconnecting with growing pauses and 20 s pings, commands
-  with their answers shown at once, listeners for the 3D page), `FlatWords` and `AutomationRow` (the words, pure),
+  with their answers shown at once, listeners for the 3D page), `FlatWords` and `DeviceNames` (the words and a name's rules, pure),
   `ViewerBridge` (the viewer's `BRIDGE.md` v1: handler `flat3d`, `flat3d.receive`, one `result` per request), screens
   Home, Flat (the WKWebView with one protected, ETag-checked copy per pairing), Connect, Settings' Flat service and 3D
   flat sections (Always daylight, the bridge's `lighting: "day"`, Patrik 2026-11-19; off: the real sun, `"real"`).
@@ -958,13 +958,13 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   mark real fire (Patrik, 2026-11-20: "lets go real fire"; busts were rejected): the icon an opaque flame on black,
   the `Mark` image with a light-appearance variant (`mark-light.png`: the same flame with a gold core and an orange
   fringe, which the plain one turned pink on the light wall). **The fake flatd** for the simulator:
-  `python3 scripts/fake-flatd.py` (HTTPS on port 8790 with its own identity in `build/fake-flatd/`, pairing code printed, also alone with `--pairing`; `--new-identity` = flatd lost its key; Bonjour "flatd (fake)", made-up Fan 1/2, Blind 1/2, `--extra`
-  Lamp 1, a stand-in `/viewer` that speaks the bridge, test hooks under `/fake/`; `--viewer <file>` and `--devices
+  `python3 scripts/fake-flatd.py` (HTTPS on port 8790 with its own identity in `build/fake-flatd/`, pairing code printed, also alone with `--pairing`; `--new-identity` = flatd lost its key; Bonjour "flatd (fake)", made-up Fan 1/2, Desk lamp, Blind 1/2, `--extra`
+  Plug 1, renaming as flatd 1.3 does (`--no-rename`: a flatd before it, PATCH answers 405), a stand-in `/viewer` that speaks the bridge, test hooks under `/fake/`; `--viewer <file>` and `--devices
   <file>` serve a local page and its device ids instead, never committed); never the real flatd (port 8787, its own
   key). Its key has letters and digits only: AXe types through the simulator's German keyboard, where "y", "z" and "-"
   land elsewhere. Test hooks: `curl -k https://127.0.0.1:8790/fake/…`. DEBUG launch arguments: `-flatdPairing '<the pairing code>'` (pair without the screen; AXe
   cannot tap the connect screen's system paste button), `-connectCode '<the pairing code>'` (the connect sheet with that code, as scanned: another flat's is refused, Forget first), `-forgetFlatd`, `-tab home|flat`, `-openSheet settings|connect`,
-  `-scrollToEnd`, `-scrollTo blinds|automations`, `-probeViewer` (logs WebGL2, frames and the page's text every 5 s,
+  `-scrollToEnd`, `-scrollTo lights|blinds`, `-renameDevice <id>` (its name's field open; `-renameText <text>`), `-probeViewer` (logs WebGL2, frames and the page's text every 5 s,
   category `viewer`). Screenshots: `axe screenshot` (`xcrun simctl io … screenshot` caught the launch screen at times). Tests: `ArestiaTests` (contract, client, actions, store, words,
   bridge; a fake transport and event stream; `TrustTests`: the pin against made-up certificates, the pairing code,
   rediscovery past a server without flatd's key; `OneFlatTests`: one flat per install, Forget ending every piece of the old
@@ -976,6 +976,17 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   Settings → Forget this flat retires it and builds a new one; a store never changes flat. **`scripts/strings.py fill` writes a key's German into every catalog
   that has it** (an "Up" meant for blinds overwrote Aresus's uptime "Laufzeit" once): give it only new keys, and read
   `git diff` of the other apps' catalogs after it.
+  **Renaming and Lighting** (2026-11-20, after build 2; `docs/ARESTIA-APP.md` → "After build 2"): a device's name lives in
+  flatd (contract v1.3, `PATCH /api/devices/{id}`, the `device` event, `default_label`), so every client shows one
+  name; on Home a long press on a device's row offers Rename (the name becomes a field where it stands, Cancel beside
+  it, Return or a scroll saves an edited name, an untouched field sends nothing, empty = flatd's name) and Original
+  name (`Screens/DeviceNameViews.swift`, `FlatStore.rename`, shown muted until flatd confirmed it, Rename again only
+  once flatd answered; a flatd before 1.3 gets a calm line). The names kept for Shortcuts and the controls are one
+  file in the App Group (`DeviceNameFile`, never `UserDefaults`: its values reach the other process late), read and
+  replaced under the lock the app and the extension share: a snapshot replaces the list, a confirmed rename changes its
+  device alone (`rememberName`), a list a request read is kept only if nothing was kept since it began
+  (`remember(_:for:readSince:)`), and every consumer shows the name kept (`FlatActions.read`; `NameFileTests`). Lights have their own
+  section, Lighting / Licht, after Fans; the Automations card is gone (Patrik: "I dont think we need them").
   **Build 2 uploaded 2026-11-20** (internal group "Arestia"). Build 1 was refused by Apple (ITMS-90626, Invalid Siri
   Support): App Intent titles, descriptions and phrases may not name Apple products ("Mac", "iPhone", "Siri" …);
   in-app texts may.

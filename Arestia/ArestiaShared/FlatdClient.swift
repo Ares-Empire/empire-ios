@@ -26,6 +26,8 @@ nonisolated enum FlatdError: Error, Equatable, Sendable {
     case pairingUnreadable
     /// A pairing code of another flat while one is paired: one flat per install, so Forget comes first.
     case anotherFlat
+    /// A flatd before contract v1.3 has no renaming (it answers 405).
+    case renameNotSupported
 
     /// One short line for the person, in the app's language.
     func message(language: AppLanguage = .current) -> String {
@@ -60,6 +62,9 @@ nonisolated enum FlatdError: Error, Equatable, Sendable {
                                                     table: "ArestiaShared"))
         case .anotherFlat:
             language.string(LocalizedStringResource("This is a different flat. Forget the current one first: Settings → Forget this flat.",
+                                                    table: "ArestiaShared"))
+        case .renameNotSupported:
+            language.string(LocalizedStringResource("This flat service can't rename yet. Update flatd, then try again.",
                                                     table: "ArestiaShared"))
         }
     }
@@ -138,6 +143,11 @@ nonisolated struct FlatdClient: Sendable {
         return try decode(Answer.self, try await send(request("api/devices", timeout: readTimeout))).devices
     }
 
+    /// One device as flatd has it now (`GET /api/devices/{id}`).
+    func device(_ id: String) async throws -> Device {
+        try decode(Device.self, try await send(request("api/devices/" + Self.pathID(id), timeout: readTimeout)))
+    }
+
     func modes() async throws -> [FlatMode] {
         struct Answer: Decodable { let modes: [FlatMode] }
         return try decode(Answer.self, try await send(request("api/modes", timeout: readTimeout))).modes
@@ -176,6 +186,19 @@ nonisolated struct FlatdClient: Sendable {
         let data = try await send(request("api/scenes/" + Self.pathID(id), method: "POST", body: Data("{}".utf8),
                                           timeout: commandTimeout))
         return (try? JSONDecoder().decode(CommandFailures.self, from: data))?.ids ?? []
+    }
+
+    /// Renames a device (contract v1.3, `PATCH /api/devices/{id}`): its own name, or nil for flatd's config name again.
+    /// Returns the device as flatd now names it; `.renameNotSupported` from a flatd before v1.3 (405).
+    func rename(_ id: String, to label: String?) async throws -> Device {
+        let body = try JSONEncoder().encode(["label": label.map(JSONValue.string) ?? .null])
+        do {
+            let data = try await send(request("api/devices/" + Self.pathID(id), method: "PATCH", body: body,
+                                              timeout: readTimeout))
+            return try decode(Device.self, data)
+        } catch FlatdError.failed(status: 405, _) {
+            throw FlatdError.renameNotSupported
+        }
     }
 
     /// A device command with a body as the 3D page sent it (BRIDGE.md: `request.body` is exactly flatd's body).

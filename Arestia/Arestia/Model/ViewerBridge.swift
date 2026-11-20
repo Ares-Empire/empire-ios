@@ -99,7 +99,7 @@ enum PageScript {
         case .unknown: "unknown"
         case .notPossible, .anotherFlat: "refused"
         case let .failed(status, _) where status == 400: "refused"
-        case .failed, .invalidAnswer, .pairingUnreadable: "failed"
+        case .failed, .invalidAnswer, .pairingUnreadable, .renameNotSupported: "failed"
         }
     }
 

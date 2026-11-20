@@ -1,6 +1,6 @@
 import Foundation
 
-// The flat service's data, as flatd sends it (contract: flatd's API.md, v1.1). Everything here is read leniently: a
+// The flat service's data, as flatd sends it (contract: flatd's API.md, v1.3). Everything here is read leniently: a
 // field the app does not know is kept and ignored, a missing optional field is nil, and an unknown device kind or event
 // type is carried along instead of failing the whole answer ("Unknown fields are ignored by clients, so new fields can
 // be added without breaking anything"). No device, room or flat name is ever written into the app: they all come from
@@ -136,23 +136,31 @@ nonisolated struct Device: Identifiable, Equatable, Sendable, Codable {
 
     let id: String
     let kind: Kind
-    let label: String
+    /// The name to show everywhere: the one given in a rename (flatd keeps it), else flatd's config name.
+    private(set) var label: String
+    /// flatd's config name, which `label` goes back to when the own name is cleared (contract v1.3); nil from a flatd
+    /// before v1.3, which cannot rename.
+    private(set) var defaultLabel: String?
     let room: String?
     /// What a POST may change: `on`, `for_s` for switches; `command`, `position` for Rollos.
     let controls: [String]
     var state: DeviceState
 
-    init(id: String, kind: Kind, label: String, room: String? = nil, controls: [String] = [],
-         state: DeviceState = DeviceState()) {
+    init(id: String, kind: Kind, label: String, defaultLabel: String? = nil, room: String? = nil,
+         controls: [String] = [], state: DeviceState = DeviceState()) {
         self.id = id
         self.kind = kind
         self.label = label
+        self.defaultLabel = defaultLabel
         self.room = room
         self.controls = controls
         self.state = state
     }
 
-    private enum CodingKeys: String, CodingKey { case id, kind, label, room, controls, state }
+    private enum CodingKeys: String, CodingKey {
+        case id, kind, label, room, controls, state
+        case defaultLabel = "default_label"
+    }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -160,6 +168,8 @@ nonisolated struct Device: Identifiable, Equatable, Sendable, Codable {
         kind = Kind(raw: (try? container.decodeIfPresent(String.self, forKey: .kind)) ?? "")
         let label = (try? container.decodeIfPresent(String.self, forKey: .label)) ?? nil
         self.label = label.flatMap { $0.isEmpty ? nil : $0 } ?? id
+        let defaultLabel = (try? container.decodeIfPresent(String.self, forKey: .defaultLabel)) ?? nil
+        self.defaultLabel = defaultLabel.flatMap { $0.isEmpty ? nil : $0 }
         room = try? container.decodeIfPresent(String.self, forKey: .room)
         controls = (try? container.decodeIfPresent([String].self, forKey: .controls)) ?? []
         state = (try? container.decodeIfPresent(DeviceState.self, forKey: .state)) ?? DeviceState()
@@ -170,6 +180,7 @@ nonisolated struct Device: Identifiable, Equatable, Sendable, Codable {
         try container.encode(id, forKey: .id)
         try container.encode(kind.raw, forKey: .kind)
         try container.encode(label, forKey: .label)
+        try container.encodeIfPresent(defaultLabel, forKey: .defaultLabel)
         try container.encodeIfPresent(room, forKey: .room)
         try container.encode(controls, forKey: .controls)
         try container.encode(state, forKey: .state)
@@ -177,6 +188,25 @@ nonisolated struct Device: Identifiable, Equatable, Sendable, Codable {
 
     /// A Rollo that can go to its stored favourite spot.
     var hasFavourite: Bool { kind == .rollo && state.favourite != nil }
+
+    /// Renamed: its name is not flatd's config name (false from a flatd that cannot rename).
+    var hasOwnName: Bool { defaultLabel.map { $0 != label } ?? false }
+
+    /// This device under another name (the latest one accepted for the paired flat, `FlatActions`).
+    func named(_ label: String) -> Device {
+        var device = self
+        device.label = label
+        return device
+    }
+
+    /// This device with the names `other` (the same device, as flatd sent it in a rename's answer or event) carries;
+    /// its state stays as it is (state events follow it).
+    func named(like other: Device) -> Device {
+        var device = self
+        device.label = other.label
+        device.defaultLabel = other.defaultLabel ?? defaultLabel
+        return device
+    }
 }
 
 /// A stateful mode (v1.1: `cooking`). Persisted by flatd, so it survives a restart of the service.
@@ -250,6 +280,9 @@ nonisolated enum FlatEvent: Equatable, Sendable {
     case snapshot(devices: [Device], modes: [FlatMode]?)
     case state(id: String, state: DeviceState, source: String?)
     case mode(FlatMode)
+    /// A device's own details changed (v1.3: it was renamed), whoever did it (`source`, "api" or "mcp"): its new
+    /// `label` and `default_label`.
+    case device(Device, source: String?)
     /// A message type this app does not know (newer flatd): ignored.
     case other
 
@@ -263,6 +296,8 @@ nonisolated enum FlatEvent: Equatable, Sendable {
             return try? encoder.encode(StateOut(id: id, state: state, source: source))
         case let .mode(mode):
             return try? encoder.encode(ModeOut(mode: mode))
+        case let .device(device, source):
+            return try? encoder.encode(DeviceOut(device: device, source: source))
         case .other:
             return nil
         }
@@ -271,6 +306,7 @@ nonisolated enum FlatEvent: Equatable, Sendable {
     private struct SnapshotOut: Encodable { var type = "snapshot"; let devices: [Device]; let modes: [FlatMode] }
     private struct StateOut: Encodable { var type = "state"; let id: String; let state: DeviceState; let source: String? }
     private struct ModeOut: Encodable { var type = "mode"; let mode: FlatMode }
+    private struct DeviceOut: Encodable { var type = "device"; let device: Device; let source: String? }
 
     static func decode(_ data: Data) -> FlatEvent? {
         guard let envelope = try? JSONDecoder().decode(Envelope.self, from: data) else { return nil }
@@ -283,6 +319,8 @@ nonisolated enum FlatEvent: Equatable, Sendable {
             return .state(id: id, state: state, source: envelope.source)
         case "mode":
             return envelope.mode.map(FlatEvent.mode)
+        case "device":
+            return envelope.device.map { .device($0, source: envelope.source) }
         default:
             return .other
         }
@@ -296,8 +334,9 @@ nonisolated enum FlatEvent: Equatable, Sendable {
         let state: DeviceState?
         let source: String?
         let mode: FlatMode?
+        let device: Device?
 
-        private enum CodingKeys: String, CodingKey { case type, devices, modes, id, state, source, mode }
+        private enum CodingKeys: String, CodingKey { case type, devices, modes, id, state, source, mode, device }
 
         init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -308,6 +347,7 @@ nonisolated enum FlatEvent: Equatable, Sendable {
             state = try? container.decodeIfPresent(DeviceState.self, forKey: .state)
             source = try? container.decodeIfPresent(String.self, forKey: .source)
             mode = try? container.decodeIfPresent(FlatMode.self, forKey: .mode)
+            device = try? container.decodeIfPresent(Device.self, forKey: .device)
         }
     }
 }

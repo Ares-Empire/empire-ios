@@ -36,6 +36,15 @@ nonisolated enum ArestiaGroup {
     /// Without the team prefix (entitlement: `$(AppIdentifierPrefix)` + this).
     static let keychainGroup = "de.ares-empire.arestia"
     static var defaults: UserDefaults? { UserDefaults(suiteName: appGroup) }
+    /// Arestia's own folder in the App Group, the same one for the app and the extension (nil when the App Group's
+    /// folder cannot be found). In Application Support: never in Caches, which iOS may empty at any time (two processes
+    /// would then lock two different lock files).
+    static let folder: URL? = {
+        guard let folder = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroup)?
+            .appending(path: "Library/Application Support/Arestia", directoryHint: .isDirectory) else { return nil }
+        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        return folder
+    }()
     /// "$(AppIdentifierPrefix)" from the bundle's Info.plist, plus the group (the prefix may be empty on the simulator).
     static var keychainAccessGroup: String {
         let prefix = Bundle.main.object(forInfoDictionaryKey: "AppIdentifierPrefix") as? String ?? ""
@@ -158,15 +167,12 @@ nonisolated final class FlatdDispatchLock: @unchecked Sendable {
     /// For the unit tests only: within this process.
     static var processOnly: FlatdDispatchLock { FlatdDispatchLock(.processOnly) }
 
-    /// The lock file in Arestia's App Group (the app and the extension see the same one), in Application Support:
-    /// never in Caches, which iOS may empty while a lock is held (two processes would then lock two different files).
+    /// The lock file in Arestia's App Group folder (`ArestiaGroup.folder`: the app and the extension see the same one).
     static let live: FlatdDispatchLock = {
-        guard let folder = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: ArestiaGroup.appGroup)?
-            .appending(path: "Library/Application Support/Arestia", directoryHint: .isDirectory) else {
+        guard let folder = ArestiaGroup.folder else {
             log.error("no App Group folder: the dispatch lock is unavailable, nothing with the key is sent")
             return FlatdDispatchLock(.unavailable)
         }
-        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         return FlatdDispatchLock(.file(folder.appending(path: "flatd-dispatch.lock").path(percentEncoded: false)))
     }()
 
@@ -198,20 +204,66 @@ nonisolated final class FlatdDispatchLock: @unchecked Sendable {
     }
 }
 
-/// The saved connection: the pairing (address and key) as one Keychain item, the devices' names in the App Group.
+/// The devices' names as last accepted, with their version: **one file** in the App Group, the one source of truth for
+/// the app and its Control Center extension. Every change replaces the whole file in one step (`rename(2)`), under the
+/// lock both processes share (`FlatdConnection.lock`), so a reader in either process sees one complete version or the
+/// next, and what a writer read under the lock is what the other process last wrote.
+///
+/// Never `UserDefaults`: a value set there reaches other processes some time later, so the extension could take the
+/// lock and still read the names from before the app's write, then write an older list over it (Codex's review of the
+/// renaming, round 2, finding 2). A file has no such copy per process.
+nonisolated struct DeviceNameFile: Sendable {
+    let url: URL
+    private static let log = Logger(subsystem: "de.ares-empire.arestia", category: "names")
+
+    /// The file in Arestia's App Group folder; nil when that folder cannot be found (then no names are kept).
+    static let live: DeviceNameFile? = ArestiaGroup.folder.map { DeviceNameFile(url: $0.appending(path: "device-names.json")) }
+
+    /// What the file holds now; nil when there is none or it cannot be read (no names kept).
+    func read() -> FlatdConnection.KnownDevices? {
+        guard let data = try? Data(contentsOf: url) else { return nil }
+        return try? JSONDecoder().decode(FlatdConnection.KnownDevices.self, from: data)
+    }
+
+    /// Replaces the file in one step. Readable after the first unlock, as the pairing is (a control on the lock screen
+    /// reads the names). Call under the shared lock.
+    func write(_ known: FlatdConnection.KnownDevices) {
+        do {
+            try JSONEncoder().encode(known)
+                .write(to: url, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+        } catch {
+            Self.log.error("the devices' names could not be kept: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    /// Removes the file (Forget); throws when a file that is there could not be removed. Call under the shared lock.
+    func remove() throws {
+        do {
+            try FileManager.default.removeItem(at: url)
+        } catch CocoaError.fileNoSuchFile {
+            return
+        }
+    }
+}
+
+/// The saved connection: the pairing (address and key) as one Keychain item, the devices' names as one file in the App
+/// Group (`DeviceNameFile`), a mode's trouble in the App Group's defaults.
 nonisolated struct FlatdConnection: @unchecked Sendable {
-    /// Thread-safe (`UserDefaults` is), hence the unchecked Sendable.
+    /// Thread-safe (`UserDefaults` is), hence the unchecked Sendable. A mode's trouble only; never the names.
     let defaults: UserDefaults?
+    /// The devices' names, for Shortcuts' pickers and the Blind control (nil: none are kept).
+    let names: DeviceNameFile?
     let keychain: any FlatdKeyStore
     /// Shared by Forget and the start of every request with a pairing's key (`FlatdDispatchLock`): `.live` in the app
     /// and the extension, `.processOnly` only in the unit tests.
     let lock: FlatdDispatchLock
 
-    /// The devices' ids, kinds and names as last seen, for Shortcuts' pickers while flatd is out of reach.
-    static let devicesKey = "flatd.devices"
+    /// Where build 2 kept the names (the App Group's defaults): nothing reads it any more, and it is removed with
+    /// the next snapshot or Forget.
+    static let namesKeyOfBuild2 = "flatd.devices"
 
     static var live: FlatdConnection {
-        FlatdConnection(defaults: ArestiaGroup.defaults,
+        FlatdConnection(defaults: ArestiaGroup.defaults, names: .live,
                         keychain: FlatdKeychain(service: "de.ares-empire.arestia.flatd", account: "flatd-pairing",
                                                 accessGroup: ArestiaGroup.keychainAccessGroup),
                         lock: .live)
@@ -314,11 +366,18 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
     }
 
     /// Forgets the flat (Settings → Forget this flat, `FlatSession.forget`): the pairing and everything kept for it here
-    /// (the devices' names, a mode's trouble). Throws when the Keychain kept the item; then nothing else is touched.
+    /// (the devices' names, a mode's trouble), under the lock every writer of the names takes.
+    ///
+    /// The names file goes first, and a file that could not be removed stops Forget with the pairing still saved
+    /// (thrown, so Settings says it and Forget can be tried again): the names never outlive their pairing, not even
+    /// when the process ends between the two steps (Codex's review of the renaming, round 3, finding 5: the Keychain
+    /// item went first and the removal's failure was swallowed). Throws when the Keychain kept the item too; the names
+    /// are gone then, which is harmless: the pairing's next snapshot keeps them again.
     func forget() throws {
         try lock.withLock {
+            try names?.remove()
             try keychain.delete()
-            defaults?.removeObject(forKey: Self.devicesKey)
+            defaults?.removeObject(forKey: Self.namesKeyOfBuild2)
             defaults?.removeObject(forKey: Self.troubleKey)
             defaults?.removeObject(forKey: Self.troubleSeenKey)
         }
@@ -332,22 +391,26 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
         let label: String
     }
 
-    /// The names as saved, with the pairing they came from: read only while that pairing is the saved one, so names
-    /// written late (after Forget) are never shown.
+    /// The names as kept (`DeviceNameFile`), with the pairing they came from: read only while that pairing is the saved
+    /// one, so names written late (after Forget) are never shown.
     nonisolated struct KnownDevices: Codable, Equatable, Sendable {
         let pairing: UUID
-        let devices: [KnownDevice]
+        var devices: [KnownDevice]
+        /// New with every write: a reading of flatd's list keeps its answer only while the names kept are still the
+        /// version it started from (`remember(_:for:readSince:)`).
+        var version: UUID
     }
 
     /// The names with their pairing's identity, as one reading: the pairing read once, the names only when they were
     /// kept for it. A picker labels its choices with this identity (`DeviceChoices`), never with one read separately.
     var known: KnownDevices? {
-        guard let id = pairing?.id,
-              let known = defaults?.data(forKey: Self.devicesKey)
-                .flatMap({ try? JSONDecoder().decode(KnownDevices.self, from: $0) }),
-              known.pairing == id else { return nil }
+        guard let id = pairing?.id, let known = names?.read(), known.pairing == id else { return nil }
         return known
     }
+
+    /// The version of the names kept now (nil: none kept), taken before reading flatd's list: its answer is kept only
+    /// while this is still the version (`remember(_:for:readSince:)`).
+    var devicesVersion: UUID? { names?.read()?.version }
 
     var knownDevices: [KnownDevice] { known?.devices ?? [] }
 
@@ -365,22 +428,137 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
         return pairing.id == id && pairing.pin == client.pin
     }
 
-    /// Keeps the devices' names for Shortcuts' pickers, tagged with the pairing they came from, and only while that
-    /// pairing is the saved one: a late answer never brings names back after Forget.
-    /// Under the lock Forget takes, so a late writer never puts a forgotten flat's names back (round 7).
+    // Three ways names come in, each with its own rule (Codex's review of the renaming, round 2):
+    // - a snapshot of the app's stream: flatd's whole list, in the stream's order. Replaces the list.
+    // - one device's name, confirmed (a `device` event, a rename's answer): laid over that one device. The app's list
+    //   of the other devices may be older than what a picker read meanwhile, so it is never written with it.
+    // - flatd's list as a request read it (a picker, a control): replaces the list only while nothing was kept since
+    //   the request began.
+    // Each is one read and one write under the lock Forget takes (in the app and the extension alike), and only while
+    // its pairing is the saved one: a late writer never puts a forgotten flat's names back (round 7).
+
+    /// A snapshot of the app's event stream: flatd's whole list. The stream brings flatd's changes in their order, so
+    /// its list is the newest: always kept, under a new version, so a list read before it is not kept after it.
     func remember(_ devices: [Device], for pairing: UUID) {
-        let known = devices.map { KnownDevice(id: $0.id, kind: $0.kind.raw, label: $0.label) }
-        try? lock.withLock {
-            guard self.pairing?.id == pairing, known != knownDevices else { return }
-            defaults?.set(try? JSONEncoder().encode(KnownDevices(pairing: pairing, devices: known)),
-                          forKey: Self.devicesKey)
+        keep(for: pairing) { _ in
+            defaults?.removeObject(forKey: Self.namesKeyOfBuild2)
+            return Self.known(devices)
         }
     }
 
+    /// One device's name as flatd confirmed it (a `device` event, a rename's answer): laid over that device alone in
+    /// the names kept, under a new version. The other devices' names stay as kept: a picker may have read a newer
+    /// name for one of them while the app's stream was down (finding 3). Nothing while no names are kept for this
+    /// pairing: one name is no list, and the next snapshot brings them all.
+    func rememberName(of device: Device, for pairing: UUID) {
+        keep(for: pairing) { kept in Self.laying(device, over: kept, for: pairing) }
+    }
+
+    /// The same for a command's answer (a rename's, or flatd's device read again), which may have been on its way
+    /// while names were kept: laid over its device only while the names kept are still the version taken just before
+    /// the request was sent (`devicesVersion`). False when names were kept since (a picker or a control read flatd's
+    /// list, in either process, while the app's stream was down): nothing is written then, as that list may be newer
+    /// than this answer, or older; the caller asks flatd again (Codex's review of the renaming, round 3, finding 3: a
+    /// late answer put "Desk" back over the "Kitchen" a picker had read since).
+    func rememberName(of device: Device, for pairing: UUID, unchangedSince version: UUID?) -> Bool {
+        var unchanged = true
+        keep(for: pairing) { kept in
+            guard kept?.version == version else {
+                unchanged = false
+                return nil
+            }
+            return Self.laying(device, over: kept, for: pairing)
+        }
+        return unchanged
+    }
+
+    /// The names kept with this one device's laid over it (nil: no list is kept for this pairing).
+    private static func laying(_ device: Device, over kept: KnownDevices?, for pairing: UUID) -> [KnownDevice]? {
+        let named = KnownDevice(id: device.id, kind: device.kind.raw, label: device.label)
+        guard var devices = kept.flatMap({ $0.pairing == pairing ? $0.devices : nil }) else { return nil }
+        if let index = devices.firstIndex(where: { $0.id == named.id }) {
+            devices[index] = named
+        } else {
+            devices.append(named)
+        }
+        return devices
+    }
+
+    /// The names a reading of flatd's list brought (`GET /api/devices`), kept only while the names kept are still the
+    /// version taken before the reading began (`devicesVersion`): a list answered after newer names were kept (a
+    /// rename heard meanwhile, in either process) changes nothing (round 1, finding 3). False when it was not taken;
+    /// the names to show are then the ones kept (`known`), never this list's.
+    @discardableResult
+    func remember(_ devices: [Device], for pairing: UUID, readSince version: UUID?) -> Bool {
+        let known = Self.known(devices)
+        var taken = false
+        keep(for: pairing) { kept in
+            guard kept?.version == version else { return nil }
+            taken = true
+            // The same names for the same pairing: taken, and nothing to write.
+            return kept?.pairing == pairing && kept?.devices == known ? nil : known
+        }
+        return taken
+    }
+
     /// The same, for what a client of a pairing read (nothing for a client made for no pairing).
-    func remember(_ devices: [Device], from client: FlatdClient) {
-        guard let id = client.pairingID, isCurrent(client) else { return }
-        remember(devices, for: id)
+    @discardableResult
+    func remember(_ devices: [Device], from client: FlatdClient, readSince version: UUID?) -> Bool {
+        guard let id = client.pairingID, isCurrent(client) else { return false }
+        return remember(devices, for: id, readSince: version)
+    }
+
+    /// flatd's list as a request of `client` read it, each device under the name to show: offered to the names kept
+    /// (`remember(_:for:readSince:)`), then named as kept after that, both in one hold of the lock Forget takes. Call it
+    /// inside `FlatdReach.run`, whose last check of the pairing then covers what this returns (Codex's review of the
+    /// renaming, round 3, finding 2: run it after and a Forget in between gave a forgotten flat's blind back).
+    ///
+    /// Throws `.notPaired` once the client's pairing is not the saved one (forgotten, or another flat paired): the
+    /// list is a retired pairing's and shows nothing. `.pairingUnreadable` while the Keychain cannot say. Only when no
+    /// names can be kept at all (no App Group folder, no lock file, a file that cannot be written) are the names flatd
+    /// just sent shown: the cache is unavailable, which is not the same as a retired pairing.
+    func named(_ devices: [Device], from client: FlatdClient, readSince version: UUID?) throws -> [Device] {
+        guard let id = client.pairingID else { throw FlatdError.notPaired }
+        func stillPaired() throws {
+            let saved = try current()
+            guard saved.id == id, saved.pin == client.pin else { throw FlatdError.notPaired }
+        }
+        guard let names else {
+            try stillPaired()
+            return devices
+        }
+        let kept: [KnownDevice]?
+        do {
+            kept = try lock.withLock { () throws -> [KnownDevice]? in
+                try stillPaired()
+                let known = Self.known(devices)
+                let now = names.read()
+                if now?.version == version, !(now?.pairing == id && now?.devices == known) {
+                    names.write(KnownDevices(pairing: id, devices: known, version: UUID()))
+                }
+                return names.read().flatMap { $0.pairing == id ? $0.devices : nil }
+            }
+        } catch is FlatdDispatchLock.Unavailable {
+            try stillPaired()                       // no lock, so no names: nothing could have been kept either
+            return devices
+        }
+        guard let kept else { return devices }      // none kept for this pairing: the file could not be written
+        return devices.map { device in kept.first { $0.id == device.id }.map { device.named($0.label) } ?? device }
+    }
+
+    /// One change of the names kept: `change` gets what the file holds now and gives the list to keep (nil: nothing is
+    /// written). Read, decided and written under the lock, only while `pairing` is the saved one, and always under a
+    /// new version.
+    private func keep(for pairing: UUID, _ change: (KnownDevices?) -> [KnownDevice]?) {
+        guard let names else { return }
+        try? lock.withLock {
+            guard self.pairing?.id == pairing, let devices = change(names.read()) else { return }
+            names.write(KnownDevices(pairing: pairing, devices: devices, version: UUID()))
+        }
+    }
+
+    private static func known(_ devices: [Device]) -> [KnownDevice] {
+        devices.map { KnownDevice(id: $0.id, kind: $0.kind.raw, label: $0.label) }
     }
 
     // MARK: a mode whose devices did not all follow, outside the app

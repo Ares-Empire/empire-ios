@@ -30,7 +30,7 @@ struct ForgetGateTests {
     /// The Keychain unreadable at the last check: nothing is sent either (and it says why).
     @Test func aRequestWhoseLastCheckCannotReadThePairingIsNotSent() async throws {
         let keys = MemoryKeys()
-        let connection = FlatdConnection(defaults: nil, keychain: keys, lock: .processOnly)
+        let connection = FlatdConnection(defaults: nil, names: nil, keychain: keys, lock: .processOnly)
         try connection.save(Flat.pairing())
         let client = FlatdClient(Flat.pairing(), transport: transport).gated(by: connection)
         keys.failsToRead = true
@@ -41,7 +41,7 @@ struct ForgetGateTests {
     /// The fans: Forget after the list was read and checked, before a fan's command starts: no fan is switched.
     @Test func noFanSwitchesAfterForgetEvenWhenTheListWasCheckedBefore() async throws {
         let keys = MemoryKeys()
-        let connection = FlatdConnection(defaults: nil, keychain: keys, lock: .processOnly)
+        let connection = FlatdConnection(defaults: nil, names: nil, keychain: keys, lock: .processOnly)
         try connection.save(Flat.pairing())
         transport.answer("GET /api/devices", body: ["devices": [Flat.fan(1), Flat.fan(2)]])
         transport.answer("POST /api/devices/fan:fan_1", body: Flat.fan(1, on: true))

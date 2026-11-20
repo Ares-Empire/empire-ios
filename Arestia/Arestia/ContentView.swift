@@ -8,8 +8,9 @@ import SwiftUI
 /// DEBUG launch arguments: `-flatdPairing <code>` (pair with a fake flatd without the screen: the JSON pairing code
 /// `scripts/fake-flatd.py` prints; never the real one),
 /// `-forgetFlatd` (start without a key), `-tab home|flat`, `-openSheet settings|connect`, `-connectCode <code>` (the
-/// connect sheet with a code, as scanned; another flat's is refused), `-scrollToEnd`,
-/// `-scrollTo blinds|automations`, plus the shared ones (`-appearance`, `-openLanguage`, …).
+/// connect sheet with a code, as scanned; another flat's is refused), `-scrollToEnd`, `-scrollTo lights|blinds`,
+/// `-renameDevice <id>` (a device's name open for editing on Home; `-renameText <text>` types into it), plus the shared
+/// ones (`-appearance`, `-openLanguage`, …).
 struct ContentView: View {
     /// The flat paired now and its store; Forget or a first pairing make a new store, and with it new screens.
     @State private var session: FlatSession
