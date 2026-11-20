@@ -83,8 +83,36 @@ struct ClientTests {
         let page = try #require(transport.sent.last)
         #expect(page.url?.absoluteString == "https://192.0.2.10:8788/viewer")
         #expect(page.value(forHTTPHeaderField: "Authorization") == "Bearer \(Flat.key)")
+        #expect(page.value(forHTTPHeaderField: "If-None-Match") == nil)
         transport.answer("GET /viewer", status: 404, body: ["error": "not configured"])
         await #expect(throws: FlatdError.unknown) { _ = try await client.viewerPage() }
+    }
+
+    @Test func theViewerETagIsKeptAndSentBackExactly() async throws {
+        let etag = #""abc-123""#
+        let pinnedClient = FlatdClient(Flat.pairing(), transport: ViewerTransport(base: transport, etag: etag))
+        transport.answer("GET /viewer", body: ["page": true])
+        let answer = try await pinnedClient.viewerPage(ifNoneMatch: nil)
+        #expect(answer == .page(Data(#"{"page":true}"#.utf8), etag: etag))
+
+        transport.answer("GET /viewer", status: 304)
+        #expect(try await pinnedClient.viewerPage(ifNoneMatch: etag) == .unchanged)
+        let request = try #require(transport.sent.last)
+        #expect(request.value(forHTTPHeaderField: "If-None-Match") == etag)
+        #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer \(Flat.key)")
+        #expect(request.timeoutInterval == 30)
+    }
+
+    private struct ViewerTransport: HTTPTransport, Sendable {
+        let base: FakeTransport
+        let etag: String
+
+        func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
+            let (data, response) = try await base.send(request)
+            let tagged = HTTPURLResponse(url: request.url!, statusCode: response.statusCode,
+                                         httpVersion: nil, headerFields: ["ETag": etag])!
+            return (response.statusCode == 304 ? Data() : data, tagged)
+        }
     }
 
     @Test func messagesInBothLanguages() {

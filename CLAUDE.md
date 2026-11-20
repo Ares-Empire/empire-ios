@@ -950,8 +950,9 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   app: `FlatStore` (the event stream's snapshot and events, reconnecting with growing pauses and 20 s pings, commands
   with their answers shown at once, listeners for the 3D page), `FlatWords` and `AutomationRow` (the words, pure),
   `ViewerBridge` (the viewer's `BRIDGE.md` v1: handler `flat3d`, `flat3d.receive`, one `result` per request), screens
-  Home, Flat (the WKWebView), Connect, Settings' Flat service and 3D flat sections (Always daylight, the bridge's
-  `lighting: "day"`, Patrik 2026-11-19; off: the real sun, `"real"`). The real phone viewer was checked in the
+  Home, Flat (the WKWebView with one protected, ETag-checked copy per pairing), Connect, Settings' Flat service and 3D
+  flat sections (Always daylight, the bridge's `lighting: "day"`, Patrik 2026-11-19; off: the real sun, `"real"`).
+  The real phone viewer was checked in the
   WKWebView on the simulator through the fake (`--viewer`, `--devices`, local files only): WebGL2 works, a blind tapped
   in 3D moved through the app. Accent: hearth ember (`AppAccent.arestia`), the
   mark real fire (Patrik, 2026-11-20: "lets go real fire"; busts were rejected): the icon an opaque flame on black,

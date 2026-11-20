@@ -965,6 +965,7 @@ final class FlatSession {
         }
         // Nothing runs between the delete and this on the main actor: no work of the old store starts after it.
         store?.retire()
+        ViewerPageCache.live.removeAll()
         load()
         reloadControls()
         return true

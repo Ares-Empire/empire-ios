@@ -1,8 +1,13 @@
+import CoreFoundation
 import Foundation
 
 // The bridge between the 3D page (flatd's `GET /viewer`, phone mode) and the app, as the viewer's BRIDGE.md v1 defines
 // it: the page posts messages to the handler `flat3d`; the app answers through `flat3d.receive(message)`. The page
 // never talks to the network itself: the app is flatd's only client here. Pure parts, so the tests pin them.
+
+enum PageLogLevel: String {
+    case error, warn, info
+}
 
 /// A message from the page (`window.webkit.messageHandlers.flat3d.postMessage(…)`). Unknown types are ignored.
 enum PageMessage: Equatable {
@@ -14,8 +19,8 @@ enum PageMessage: Equatable {
     case mode(reqId: String, id: String, body: Data)
     /// A tap the page would like felt: `light`, `medium`, `success`, `error`.
     case haptic(String)
-    /// An uncaught error in the page.
-    case log(String)
+    /// A diagnostic from the page, optionally with elapsed times in milliseconds.
+    case log(level: PageLogLevel, text: String, timing: [String: Int])
     /// A request or mode change that names its `reqId` but nothing usable: answered with one failed result.
     case invalid(reqId: String)
     case other
@@ -35,10 +40,32 @@ enum PageMessage: Equatable {
         case "haptic":
             return .haptic(message["style"] as? String ?? "light")
         case "log":
-            return .log(message["message"] as? String ?? "")
+            let level = (message["level"] as? String).flatMap(PageLogLevel.init(rawValue:)) ?? .error
+            return .log(level: level, text: message["message"] as? String ?? "", timing: parseTiming(message))
         default:
             return .other
         }
+    }
+
+    private static func parseTiming(_ message: [String: Any]) -> [String: Int] {
+        guard let values = message["timing"] as? [String: Any] else { return [:] }
+        var timing: [String: Int] = [:]
+        for name in values.keys.sorted() {
+            guard !name.isEmpty, name.utf8.count <= 24,
+                  name.utf8.allSatisfy({ (48...57).contains($0) || (65...90).contains($0)
+                      || (97...122).contains($0) || $0 == 95 }),
+                  let number = values[name] as? NSNumber, CFGetTypeID(number) != CFBooleanGetTypeID(),
+                  let ms = Int(exactly: number.doubleValue.rounded(.towardZero)) else { continue }
+            timing[name] = ms
+            if timing.count == 24 { break }
+        }
+        return timing
+    }
+
+    /// One line for the log: the steps in the order they happened (they are times since the page started; WebKit hands
+    /// the object over without its key order), a tie by name.
+    static func timingLine(_ timing: [String: Int]) -> String {
+        timing.sorted { ($0.value, $0.key) < ($1.value, $1.key) }.map { "\($0.key) \($0.value)" }.joined(separator: ", ")
     }
 }
 

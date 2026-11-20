@@ -138,6 +138,39 @@ struct BridgeTests {
         #expect(PageMessage.parse("ready") == nil)
     }
 
+    @Test func thePagesLogLevelsAndDefaults() {
+        for (level, expected) in [("error", PageLogLevel.error), ("warn", .warn), ("info", .info), ("debug", .error)] {
+            #expect(PageMessage.parse(["v": 1, "type": "log", "level": level, "message": "test"])
+                    == .log(level: expected, text: "test", timing: [:]))
+        }
+        #expect(PageMessage.parse(["type": "log", "message": "old page"])
+                == .log(level: .error, text: "old page", timing: [:]))
+        #expect(PageMessage.parse(["type": "log", "timing": [12, 34]])
+                == .log(level: .error, text: "", timing: [:]))
+    }
+
+    @Test func pageTimingKeepsOnlyValidNamesAndNumbersInTheOrderTheyHappened() {
+        let long = String(repeating: "x", count: 25)
+        let values: [String: Any] = [
+            "script": 905.5, "html": 412, "stage_3": 1, "bad name": 2, "ümlaut": 3, long: 4, "": 5,
+            "infinite": Double.infinity, "nan": Double.nan, "too_big": Double.greatestFiniteMagnitude,
+            "boolean": true, "text": "123", "null": NSNull(), "object": ["value": 6],
+        ]
+        let message: [String: Any] = ["type": "log", "timing": values]
+        let expected = ["html": 412, "script": 905, "stage_3": 1]
+        #expect(PageMessage.parse(message) == .log(level: .error, text: "", timing: expected))
+        #expect(PageMessage.timingLine(expected) == "stage_3 1, html 412, script 905")
+        #expect(PageMessage.timingLine(["shown": 900, "light": 900, "main": 80]) == "main 80, light 900, shown 900")
+    }
+
+    @Test func pageTimingKeepsAtMostTwentyFourEntries() {
+        let names = (0..<30).map { "stage_\($0)" }
+        let values = Dictionary(uniqueKeysWithValues: zip(names, 0..<30))
+        let message: [String: Any] = ["type": "log", "timing": values]
+        guard case let .log(_, _, timing) = PageMessage.parse(message) else { Issue.record("not a log"); return }
+        #expect(timing.count == 24)
+    }
+
     @Test func oneResultPerRequest() throws {
         let ok = try #require(try JSONSerialization.jsonObject(with: PageScript.result(reqId: "r1", error: nil)) as? [String: Any])
         #expect(ok["type"] as? String == "result" && ok["reqId"] as? String == "r1" && ok["ok"] as? Bool == true)

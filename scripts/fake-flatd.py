@@ -2,6 +2,7 @@
 """A fake flatd for Arestia on the simulator and in screenshots: the flat service's contract v1.2 as the app sees it
 (HTTPS only, with an identity the app pins through a pairing code; REST, the event stream over a WebSocket, Bonjour as
 `_flatd._tcp`) with made-up devices, and a stand-in 3D page at `/viewer` that speaks the viewer's bridge (BRIDGE.md v1).
+The viewer answers with a quoted ETag and Cache-Control: no-store, or an empty 304 for a matching If-None-Match.
 Standard library only; Bonjour through macOS's own `dns-sd`, the identity's key and certificate through `openssl`.
 
     python3 scripts/fake-flatd.py                      # port 8790, Bonjour name "flatd (fake)"
@@ -24,9 +25,9 @@ Made-up devices: Fan 1, Fan 2 (plugs with timers), Blind 1 (with a favourite spo
 Lamp 1. Mode `cooking` (both fans on and Blind 1 up; ended: fans off, Blind 1 to its favourite), scenes `air_out` (both
 fans for 30 min, Blind 1 up) and `all_down`. Blinds travel 100 % in `--travel` seconds and report every second.
 
-For a page that is not public (the real 3D viewer), `--viewer <file>` serves it at /viewer and `--devices <file>` gives
-the devices that page knows; both stay local files, never in this repo. With either, the fake listens on 127.0.0.1 only,
-without Bonjour, and makes up a fresh key (printed) unless --host and --key say otherwise.
+For a page that is not public (the real 3D viewer), `--viewer <file>` reads it at each /viewer request, and
+`--devices <file>` gives the devices that page knows. Both stay local files, never in this repo. With either, the fake
+listens on 127.0.0.1 only, without Bonjour, and makes up a fresh key (printed) unless --host and --key say otherwise.
 
 Test hooks (with the key, like everything else): POST /fake/press?id=<rollo>&command=up|down (a wall switch, source
 `device`), POST /fake/switch?id=<fan>&on=1|0 (the plug's own button), POST /fake/online?id=<id>&online=0|1,
@@ -353,7 +354,7 @@ class WebSocket:
         return data
 
 
-def make_handler(flat: Flat, key: str, latency: float, viewer: bytes):
+def make_handler(flat: Flat, key: str, latency: float, viewer_file: Path | None):
     sockets: list[WebSocket] = []
 
     def broadcast(event: dict) -> None:
@@ -436,7 +437,19 @@ def make_handler(flat: Flat, key: str, latency: float, viewer: bytes):
                 return self.answer(200, {"events": []})
             if url.path == "/viewer":
                 # Only the header carries the key here (contract v1.1), as for every other endpoint but the events.
-                return self.answer(200, viewer, "text/html; charset=utf-8")
+                try:
+                    viewer = viewer_file.read_bytes() if viewer_file is not None else VIEWER.encode()
+                except FileNotFoundError:
+                    return self.answer(404, {"error": "no viewer configured"})
+                etag = '"' + hashlib.sha256(viewer).hexdigest()[:16] + '"'
+                matches = [tag.strip().removeprefix("W/")
+                           for tag in self.headers.get("If-None-Match", "").split(",")]
+                if etag in matches or "*" in matches:
+                    self.send_response(304)
+                    self.send_header("ETag", etag)
+                    self.send_header("Cache-Control", "no-store")
+                    return self.end_headers()
+                return self.answer(200, viewer, "text/html; charset=utf-8", extra={"ETag": etag})
             if url.path == "/api/events":
                 return self.events()
             self.answer(404, {"error": "not found"})
@@ -672,9 +685,9 @@ def main() -> None:
     context.minimum_version = ssl.TLSVersion.TLSv1_2
     context.load_cert_chain(cert_file, key_file)
     devices = json.loads(open(args.devices).read()) if args.devices else None
-    viewer = open(args.viewer, "rb").read() if args.viewer else VIEWER.encode()
+    viewer_file = Path(args.viewer) if args.viewer else None
     flat = Flat(travel=args.travel, extra=args.extra, devices=devices)
-    server = TLSServer((args.host, args.port), make_handler(flat, args.key, args.latency, viewer), context)
+    server = TLSServer((args.host, args.port), make_handler(flat, args.key, args.latency, viewer_file), context)
 
     def ticking():
         while True:

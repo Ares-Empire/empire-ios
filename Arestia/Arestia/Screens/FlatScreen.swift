@@ -6,8 +6,8 @@ import WebKit
 /// The second tab: the flat in 3D, full-bleed, made for a thumb (Patrik: "the flat model but well made for easy
 /// navigation on an iphone … phone model actions should affect things too … live state yes, also displayed in model").
 /// The page is flatd's `GET /viewer` (private, never bundled): the app fetches it itself, over the connection pinned to
-/// flatd's identity, and hands it to the web view, which never talks to the network (so one place checks who flatd is,
-/// and the key never enters the web view). The page talks only to the app, through the bridge in the viewer's BRIDGE.md: taps come in as messages and go to flatd through the store, live state goes
+/// flatd's identity, keeps one copy for the pairing, and hands it to the web view, which never talks to the network.
+/// The key never enters the web view. Through the viewer's BRIDGE.md, taps go to flatd through the store, live state goes
 /// back with `flat3d.receive`. While the page loads or flatd is out of reach, a calm line over the app's wall.
 struct FlatScreen: View {
     let store: FlatStore
@@ -22,7 +22,7 @@ struct FlatScreen: View {
                     // The safe area's bottom here is the tab bar and the home indicator; the page sees only the latter.
                     // The screens are made anew with every store (one flat per install), so this web view and its
                     // bridge only ever belong to this store's flat. A fresh code of the flat loads the page again.
-                    FlatWebView(store: store, page: page, coveredBottom: proxy.safeAreaInsets.bottom,
+                    FlatWebView(store: store, page: page, isShown: isShown, coveredBottom: proxy.safeAreaInsets.bottom,
                                 load: page.wanted ? "\(page.loads)-\(store.credentials)" : nil)
                         .ignoresSafeArea()
                         .opacity(page.isReady ? 1 : 0)
@@ -77,19 +77,21 @@ final class FlatPage {
 struct FlatWebView: UIViewRepresentable {
     let store: FlatStore
     let page: FlatPage
+    let isShown: Bool
     /// How much of the screen's bottom the app's bars and the home indicator cover.
     let coveredBottom: CGFloat
     /// Which load the page should show (nil: not yet, the tab was never opened): a new value loads it again (Try
-    /// again, or a fresh code of the flat: a page fetched with the old key never stays).
+    /// again, or a fresh code of the flat: the check runs with the new key).
     let load: String?
     @Environment(\.colorScheme) private var scheme
+    @Environment(\.scenePhase) private var scenePhase
     @AppStorage(PageScript.alwaysDaylightKey) private var alwaysDaylight = false
 
     func makeCoordinator() -> Coordinator { Coordinator(store: store, page: page) }
 
     func makeUIView(context: Context) -> WKWebView {
         let configuration = WKWebViewConfiguration()
-        configuration.websiteDataStore = .nonPersistent()       // nothing of the flat stays on disk
+        configuration.websiteDataStore = .nonPersistent()       // WebKit keeps nothing on disk; the app keeps the copy.
         configuration.userContentController.add(WeakHandler(context.coordinator), name: "flat3d")
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.isOpaque = false
@@ -103,6 +105,7 @@ struct FlatWebView: UIViewRepresentable {
         webView.allowsLinkPreview = false
         #if DEBUG
         webView.isInspectable = true
+        Coordinator.log.notice("makeUIView")
         #endif
         context.coordinator.webView = webView
         context.coordinator.dark = scheme == .dark
@@ -112,6 +115,10 @@ struct FlatWebView: UIViewRepresentable {
 
     func updateUIView(_ webView: WKWebView, context: Context) {
         let coordinator = context.coordinator
+        guard !store.isRetired else {
+            coordinator.retire()
+            return
+        }
         if coordinator.dark != (scheme == .dark) || coordinator.coveredBottom != coveredBottom
             || coordinator.alwaysDaylight != alwaysDaylight {
             coordinator.dark = scheme == .dark
@@ -120,15 +127,15 @@ struct FlatWebView: UIViewRepresentable {
             coordinator.sendConfig()
         }
         coordinator.sendConnection(store.link)
-        if let load, coordinator.loadedCount != load {
-            coordinator.load(load)
-        }
+        coordinator.update(load: load, isShown: isShown, isActive: scenePhase == .active)
     }
 
     static func dismantleUIView(_ webView: WKWebView, coordinator: Coordinator) {
+        #if DEBUG
+        Coordinator.log.notice("dismantleUIView")
+        #endif
         webView.configuration.userContentController.removeScriptMessageHandler(forName: "flat3d")
         coordinator.retire()
-        webView.stopLoading()
     }
 
     @MainActor
@@ -140,11 +147,19 @@ struct FlatWebView: UIViewRepresentable {
         private var isCurrent: Bool { !retired && !store.isRetired }
         /// The web view is gone (or its pairing): nothing more is done for it.
         private var retired = false
+        private let cache = ViewerPageCache.live
         weak var webView: WKWebView?
         var dark = true
         var coveredBottom: CGFloat = 0
         var alwaysDaylight = false
-        private(set) var loadedCount: String?
+        private var loadedCount: String?
+        private var isShown = true
+        private var isActive = true
+        /// Nil until a process ends and waits for the tab. True if that page ended within a minute of loading.
+        private var pendingReload: Bool?
+        private var canReloadNow: Bool {
+            isShown && isActive && (webView?.window?.windowScene?.activationState ?? .foregroundActive) == .foregroundActive
+        }
         /// Ends a load whose page never says `ready` (it failed while starting, or never finished loading): the calm
         /// card with Try again.
         private var readyDeadline: Task<Void, Never>?
@@ -154,21 +169,22 @@ struct FlatWebView: UIViewRepresentable {
         private var document: Int { handover.document }
         private var listener: UUID?
         private var lastConnection: FlatStore.Link?
-        /// Whether the one navigation allowed, the page `load()` hands over, is due.
-        private var expectsPage = false
+        /// The app navigation whose policy callback WebKit still owes us. A superseded callback can arrive late.
+        private var pendingPolicy: (document: Int, navigation: WKNavigation?)?
+        private var waitingPage: PreparedPage?
         /// The waits for the page's requests' results (`answer`): ended with the web view.
         private var requests: [UUID: Task<Void, Never>] = [:]
-        /// The page's own fetch (with the key): cancelled by the next load, a timeout and the web view's end.
-        private var fetch: Task<Void, Never>?
-        /// Loads WebKit asked for by itself after its page process ended, since the last load the person asked for
-        /// (Try again, a fresh code): bounded, also across `ready`, so a page that keeps ending WebKit ends in Try
-        /// again instead of fetching the private page for ever (round 7).
+        /// The cache read and the page's fetch or check. One load can hand over both the copy and a new document.
+        private var loadTask: Task<Void, Never>?
+        private var activeLoad: Load?
+        private var timing: DocumentTiming?
+        /// Early process ends, bounded across `ready`. A long-lived page resets the count.
         private var automaticReloads = 0
         static let maxAutomaticReloads = 3
         /// The page's address inside the web view: a name that never resolves (`.invalid`, RFC 2606), so the page has
         /// an ordinary origin of its own and nothing it does can reach a real server. Never flatd's address.
         static let pageURL = URL(string: "https://viewer.arestia.invalid/")!
-        private static let log = Logger(subsystem: "de.ares-empire.arestia", category: "viewer")
+        fileprivate static let log = Logger(subsystem: "de.ares-empire.arestia", category: "viewer")
 
         init(store: FlatStore, page: FlatPage) {
             self.store = store
@@ -178,78 +194,215 @@ struct FlatWebView: UIViewRepresentable {
         /// How long the page has to say `ready` once its load began.
         static let readyWithin: Duration = .seconds(30)
 
-        /// Fetches flatd's viewer page (the pinned client, with the key) and hands it to the web view, which loads
-        /// nothing itself. The old page's subscription ends first. Every way this can end shows something: the page, or
-        /// the calm card with Try again and the reason in the log (Codex's review, round 5: a Keychain hiccup used to
-        /// leave "Loading the flat" for good); the page has half a minute to say `ready`.
+        private struct Load {
+            let id: Int
+            let credentials: Int
+            let started: ContinuousClock.Instant
+        }
+
+        private enum Source: String { case copy, flatd }
+
+        private struct PreparedPage {
+            let html: Data
+            let source: Source
+            let readOrDownload: Int64
+            let load: Load
+        }
+
+        private struct DocumentTiming {
+            let source: Source
+            let bytes: Int
+            let readOrDownload: Int64
+            let handedOver: ContinuousClock.Instant
+            var committed: ContinuousClock.Instant?
+        }
+
+        func update(load: String?, isShown: Bool, isActive: Bool) {
+            self.isShown = isShown
+            self.isActive = isActive
+            if let load, loadedCount != load, pendingReload == nil || canReloadNow {
+                self.load(load)
+            } else {
+                reloadIfVisible()
+            }
+        }
+
+        /// Displays the kept copy while the pinned client checks flatd, or fetches a page on the first visit.
         func load(_ count: String? = nil) {
+            let started = ContinuousClock.now
+            guard isCurrent else { return }
+            pendingReload = nil
             if let count {
                 loadedCount = count
                 automaticReloads = 0                    // asked for (Try again, a fresh code): WebKit may retry again
             }
-            stopListening()
-            readyDeadline?.cancel()
-            fetch?.cancel()
-            fetch = nil
-            let loading = handover.begin()
-            expectsPage = false
-            guard isCurrent else { return }
-            page.isReady = false
-            page.problem = nil
-            webView?.stopLoading()
+            cancelLoad()
+            let loading = Load(id: document, credentials: store.credentials, started: started)
+            activeLoad = loading
             let client: FlatdClient
             switch store.pageClient() {
             case let .success(found):
                 client = found
             case let .failure(error):
-                fail(loading, error.message(), log: "no client for the page (\(String(describing: error)))")
+                fail(error.message(), log: "no client for the page (\(String(describing: error)))")
                 return
             }
-            readyDeadline = Task { [weak self] in
-                try? await Task.sleep(for: Self.readyWithin)
-                guard let self, !Task.isCancelled, loading == document, !page.isReady, page.problem == nil else { return }
-                webView?.stopLoading()
-                fetch?.cancel()
-                fail(loading, String(localized: "The 3D flat didn't start."), log: "the page did not say ready in time")
+            guard let pairing = store.pairingID else {
+                fail(FlatdError.notPaired.message(), log: "no pairing for the page")
+                return
             }
-            fetch = Task { [weak self] in
-                let html: Data
-                do {
-                    html = try await client.viewerPage()
-                } catch {
-                    // A newer load (Try again, a fresh code of the flat) began meanwhile: this fetch's failure, a
-                    // refused old key included, is not shown.
-                    guard let self, loading == document else { return }
-                    let reason = error as? FlatdError ?? .unreachable
-                    fail(loading, reason == .unknown ? String(localized: "flatd has no 3D flat set up yet.")
-                         : reason.message(), log: "the page could not be fetched (\(String(describing: reason)))")
-                    return
+            startDeadline(loading)
+            loadTask = Task { [weak self, cache] in
+                guard self?.isLoading(loading) == true else { return }
+                let readStarted = ContinuousClock.now
+                let kept = await cache.page(pairing: pairing, pin: client.pin)
+                let readTime = Self.milliseconds(since: readStarted)
+                guard let self, isLoading(loading) else { return }
+                defer { if activeLoad?.id == loading.id { loadTask = nil } }
+                if let kept {
+                    guard await handOver(kept.html, from: .copy, took: readTime, loading: loading),
+                          isLoading(loading) else { return }
                 }
-                guard let self, loading == document, isCurrent else { return }
-                // No page without its fence: if the rules cannot be installed, nothing is loaded.
-                guard await blockTheNetwork() else {
-                    fail(loading, String(localized: "The 3D flat didn't start."), log: "the network rules did not install")
-                    return
-                }
-                guard loading == document, isCurrent else { return }
-                expectsPage = true
-                let navigation = webView?.load(html, mimeType: "text/html", characterEncodingName: "utf-8",
-                                               baseURL: Self.pageURL)
-                if !handover.loading(loading, as: navigation) {
-                    expectsPage = false
-                    fail(loading, String(localized: "The 3D flat didn't start."), log: "WebKit did not start the load")
-                }
+                await fetchPage(client, pairing: pairing, kept: kept, loading: loading)
             }
         }
 
-        /// The load `loading` ends without a page: the calm card with this reason and Try again, and why in the log.
-        /// Nothing for a load a newer one replaced.
-        private func fail(_ loading: Int, _ problem: String, log reason: String) {
-            guard loading == document, isCurrent else { return }
+        private func fetchPage(_ client: FlatdClient, pairing: UUID, kept: ViewerPageCache.Kept?, loading: Load) async {
+            let started = ContinuousClock.now
+            let answer: FlatdClient.ViewerPage
+            do {
+                answer = try await client.viewerPage(ifNoneMatch: kept?.etag)
+            } catch {
+                guard isLoading(loading) else { return }
+                if kept != nil {
+                    logCheck("failed", since: started, loading: loading)
+                } else {
+                    let reason = error as? FlatdError ?? .unreachable
+                    fail(reason == .unknown ? String(localized: "flatd has no 3D flat set up yet.") : reason.message(),
+                         log: "the page could not be fetched (\(String(describing: reason)))")
+                }
+                return
+            }
+            guard isLoading(loading) else { return }
+            switch answer {
+            case .unchanged:
+                if kept != nil {
+                    logCheck("unchanged", since: started, loading: loading)
+                } else {
+                    fail(FlatdError.invalidAnswer.message(), log: "flatd returned 304 without a kept page")
+                }
+            case let .page(html, etag):
+                let downloadTime = Self.milliseconds(since: started)
+                let hash = await cache.save(html, etag: etag, pairing: pairing, pin: client.pin)
+                guard isLoading(loading) else { return }
+                if let kept {
+                    let same = hash == kept.sha256
+                    logCheck(same ? "same bytes" : "changed", since: started, loading: loading)
+                    if same { return }
+                }
+                _ = await handOver(html, from: .flatd, took: downloadTime, loading: loading)
+            }
+        }
+
+        /// No document is loaded without its network fence. A replacement gets a new bridge and ready deadline.
+        private func handOver(_ html: Data, from source: Source, took elapsed: Int64, loading: Load) async -> Bool {
+            let blocked = await blockTheNetwork(loading)
+            guard isLoading(loading) else { return false }
+            guard blocked else {
+                fail(String(localized: "The 3D flat didn't start."), log: "the network rules did not install")
+                return false
+            }
+            return present(PreparedPage(html: html, source: source, readOrDownload: elapsed, load: loading))
+        }
+
+        private func present(_ next: PreparedPage) -> Bool {
+            guard isLoading(next.load) else { return false }
+            // The policy callback has no navigation identity on iOS 26. Let it answer before granting another
+            // permit, even when stopLoading would leave the old callback queued in WebKit.
+            if pendingPolicy != nil {
+                waitingPage = next
+                return true
+            }
+            if timing != nil {
+                resetDocument()
+                startDeadline(next.load)
+            }
+            let arriving = document
+            pendingPolicy = (arriving, nil)
+            timing = DocumentTiming(source: next.source, bytes: next.html.count, readOrDownload: next.readOrDownload,
+                                    handedOver: .now)
+            let navigation = webView?.load(next.html, mimeType: "text/html", characterEncodingName: "utf-8",
+                                           baseURL: Self.pageURL)
+            guard handover.loading(arriving, as: navigation) else {
+                pendingPolicy = nil
+                fail(String(localized: "The 3D flat didn't start."), log: "WebKit did not start the load")
+                return false
+            }
+            if pendingPolicy?.document == arriving { pendingPolicy?.navigation = navigation }
+            return true
+        }
+
+        @discardableResult
+        private func presentWaitingPage() -> Bool {
+            guard let waitingPage else { return false }
+            self.waitingPage = nil
+            return present(waitingPage)
+        }
+
+        private func isLoading(_ load: Load) -> Bool {
+            isCurrent && !Task.isCancelled && activeLoad?.id == load.id && store.credentials == load.credentials
+        }
+
+        private func startDeadline(_ loading: Load) {
+            let awaited = document
+            readyDeadline = Task { [weak self] in
+                try? await Task.sleep(for: Self.readyWithin)
+                guard let self, isLoading(loading), awaited == document, !page.isReady else { return }
+                fail(String(localized: "The 3D flat didn't start."), log: "the page did not say ready in time")
+            }
+        }
+
+        private func resetDocument() {
+            stopListening()
             readyDeadline?.cancel()
-            Self.log.error("3D page: \(reason, privacy: .public)")
+            readyDeadline = nil
+            _ = handover.begin()
+            timing = nil
             page.isReady = false
+            if pendingPolicy == nil { webView?.stopLoading() }
+        }
+
+        private func cancelLoad() {
+            activeLoad = nil
+            waitingPage = nil
+            loadTask?.cancel()
+            loadTask = nil
+            resetDocument()
+            page.problem = nil
+        }
+
+        private func fail(_ problem: String, log reason: String) {
+            cancelLoad()
+            Self.log.error("3D page: \(reason, privacy: .public)")
             page.problem = problem
+        }
+
+        private static func milliseconds(since start: ContinuousClock.Instant, until end: ContinuousClock.Instant = .now) -> Int64 {
+            let duration = start.duration(to: end).components
+            return duration.seconds * 1_000 + duration.attoseconds / 1_000_000_000_000_000
+        }
+
+        private func logCheck(_ outcome: String, since start: ContinuousClock.Instant, loading: Load) {
+            Self.log.notice("3D page check \(outcome, privacy: .public) \(Self.milliseconds(since: start), privacy: .public) ms, ended \(Self.milliseconds(since: loading.started), privacy: .public) ms after load")
+        }
+
+        private func logReady(_ loading: Load) {
+            guard let timing, let committed = timing.committed else { return }
+            let measure = timing.source == .copy ? "read" : "download"
+            let handed = Self.milliseconds(since: loading.started, until: timing.handedOver)
+            let commit = Self.milliseconds(since: loading.started, until: committed)
+            let ready = Self.milliseconds(since: loading.started)
+            Self.log.notice("3D page \(timing.source.rawValue, privacy: .public) \(timing.bytes, privacy: .public) bytes, \(measure, privacy: .public) \(timing.readOrDownload, privacy: .public) ms, handed over \(handed, privacy: .public) ms, committed \(commit, privacy: .public) ms, ready \(ready, privacy: .public) ms")
         }
 
         func stopListening() {
@@ -261,14 +414,13 @@ struct FlatWebView: UIViewRepresentable {
         /// The web view goes (its pairing ended, or the tab was rebuilt): its listener, its deadline, its fetch and the
         /// waits for its requests' results end, and nothing it still sends is heard.
         func retire() {
+            guard !retired else { return }
             retired = true
-            stopListening()
-            readyDeadline?.cancel()
-            fetch?.cancel()
-            fetch = nil
+            pendingReload = nil
+            pendingPolicy = nil
+            cancelLoad()
             requests.values.forEach { $0.cancel() }
             requests = [:]
-            _ = handover.begin()
         }
 
         /// A page request's one result, sent to the document that asked once the store's command ended. The wait ends
@@ -289,15 +441,17 @@ struct FlatWebView: UIViewRepresentable {
 
         func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
             // Only the page the app handed over, in the main frame, of a store that has not retired, may speak.
-            guard isCurrent, handover.maySpeak, message.frameInfo.isMainFrame,
+            guard let loading = activeLoad, isLoading(loading), handover.maySpeak, message.frameInfo.isMainFrame,
                   isThePage(message.frameInfo.securityOrigin),
                   let parsed = PageMessage.parse(message.body) else { return }
             switch parsed {
             case .ready:
-                guard let snapshot = store.snapshot else { return }
+                guard !page.isReady, let snapshot = store.snapshot else { return }
                 readyDeadline?.cancel()
+                readyDeadline = nil
                 page.isReady = true
                 page.problem = nil
+                logReady(loading)
                 sendConfig()
                 lastConnection = nil
                 sendConnection(store.link)
@@ -306,6 +460,7 @@ struct FlatWebView: UIViewRepresentable {
                     listener = store.listen { [weak self] event in self?.send(event.json) }
                 }
                 #if DEBUG
+                Self.log.notice("ready")
                 if LaunchArguments.current.contains("-probeViewer") { probe() }
                 #endif
             // The store takes each command's place in line right here, in the order the page sent them (round 8: two
@@ -323,12 +478,21 @@ struct FlatWebView: UIViewRepresentable {
                 case "medium": UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                 default: UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 }
-            case let .log(text):
+            case let .log(level, text, timing):
+                let type: OSLogType = switch level {
+                case .error: .error
+                case .warn: .default              // notice
+                case .info: .info
+                }
                 #if DEBUG
-                Self.log.error("page: \(text, privacy: .public)")
+                Self.log.log(level: type, "page: \(text, privacy: .public)")
                 #else
-                Self.log.error("page: \(text, privacy: .private)")
+                Self.log.log(level: type, "page: \(text, privacy: .private)")
                 #endif
+                if !timing.isEmpty {
+                    let line = PageMessage.timingLine(timing)
+                    Self.log.notice("page timing: \(line, privacy: .public)")
+                }
             case .other:
                 break
             }
@@ -349,9 +513,12 @@ struct FlatWebView: UIViewRepresentable {
                 loading: loading ? loading.className : null,
                 text: (document.body && document.body.innerText || '').slice(0, 120)}); })()
             """
-            Task {
+            let probing = document
+            Task { [weak self] in
                 for _ in 0..<6 {
+                    guard let self, isCurrent, probing == document else { return }
                     let answer = try? await webView?.evaluateJavaScript(script) as? String
+                    guard isCurrent, probing == document else { return }
                     Self.log.notice("probe: \(answer ?? "nil", privacy: .public)")
                     try? await Task.sleep(for: .seconds(5))
                 }
@@ -377,7 +544,7 @@ struct FlatWebView: UIViewRepresentable {
         }
 
         private func send(_ json: Data?) {
-            guard isCurrent, let json, let webView else { return }
+            guard let loading = activeLoad, isLoading(loading), handover.maySpeak, let json, let webView else { return }
             webView.evaluateJavaScript(PageScript.receive(json)) { _, error in
                 if let error { Self.log.notice("receive failed: \(error.localizedDescription, privacy: .public)") }
             }
@@ -386,7 +553,7 @@ struct FlatWebView: UIViewRepresentable {
         /// The page is self-contained and the app is its only way out: nothing may be loaded or reached from it (no
         /// remote script, fetch or socket), whatever the page does. A content rule list; false when it could not be
         /// installed (then the web view keeps the rules it had, and the caller loads nothing).
-        private func blockTheNetwork() async -> Bool {
+        private func blockTheNetwork(_ loading: Load) async -> Bool {
             guard let webView else { return false }
             let rules = """
             [{"trigger": {"url-filter": "^https?://"}, "action": {"type": "block"}},
@@ -394,10 +561,7 @@ struct FlatWebView: UIViewRepresentable {
             """
             let list = try? await WKContentRuleListStore.default().compileContentRuleList(
                 forIdentifier: "arestia-viewer-no-network", encodedContentRuleList: rules)
-            guard let list else {
-                Self.log.error("the page's network rules did not compile: nothing is loaded")
-                return false
-            }
+            guard isLoading(loading), let list else { return false }
             webView.configuration.userContentController.removeAllContentRuleLists()
             webView.configuration.userContentController.add(list)
             return true
@@ -413,20 +577,34 @@ struct FlatWebView: UIViewRepresentable {
         /// Only the one document `load()` hands over: the page itself never navigates or reloads (a new document would
         /// take the bridge without the app knowing; WebKit's own reload after its process ended goes through `load()`
         /// too). The web view never fetches a document from the network at all.
-        func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction) async -> WKNavigationActionPolicy {
-            guard let url = action.request.url else { return .cancel }
+        func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction,
+                     decisionHandler: @escaping @MainActor @Sendable (WKNavigationActionPolicy) -> Void) {
+            guard let url = action.request.url, isCurrent else {
+                decisionHandler(.cancel)
+                return
+            }
             // Frames inside the page may be blank ones; the main frame is only ever the page handed over.
-            if url.scheme == "about" { return action.targetFrame?.isMainFrame == false ? .allow : .cancel }
-            guard expectsPage, action.targetFrame?.isMainFrame == true, action.navigationType == .other,
-                  url == Self.pageURL else { return .cancel }
-            expectsPage = false
-            return .allow
+            if url.scheme == "about", action.targetFrame?.isMainFrame == false {
+                decisionHandler(.allow)
+                return
+            }
+            guard let pendingPolicy, action.targetFrame?.isMainFrame == true, action.navigationType == .other,
+                  url == Self.pageURL else {
+                decisionHandler(.cancel)
+                return
+            }
+            self.pendingPolicy = nil
+            let allowed = pendingPolicy.document == document && activeLoad.map(isLoading) == true
+            decisionHandler(allowed ? .allow : .cancel)
+            presentWaitingPage()
         }
 
         /// The page handed over is in place: from now on it is the one that may speak. Only the navigation `load()`
         /// started for the newest document counts (`PageHandover`).
         func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
+            guard let loading = activeLoad, isLoading(loading), handover.awaits(navigation) else { return }
             handover.committed(navigation)
+            timing?.committed = .now
         }
 
         /// Never trust a server from inside the web view: the page has no business with one, and flatd's identity is
@@ -437,28 +615,43 @@ struct FlatWebView: UIViewRepresentable {
         }
 
         func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-            guard handover.concerns(navigation), page.problem == nil,
+            if let navigation, pendingPolicy?.navigation === navigation {
+                pendingPolicy = nil
+                if presentWaitingPage() { return }
+            }
+            guard let loading = activeLoad, isLoading(loading), handover.concerns(navigation),
                   (error as NSError).code != NSURLErrorCancelled else { return }
-            fail(document, FlatdError.unreachable.message(), log: "WebKit failed the load (\((error as NSError).code))")
+            fail(FlatdError.unreachable.message(), log: "WebKit failed the load (\((error as NSError).code))")
         }
 
         func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
-            guard handover.concerns(navigation), page.problem == nil,
+            guard let loading = activeLoad, isLoading(loading), handover.concerns(navigation),
                   (error as NSError).code != NSURLErrorCancelled else { return }
-            fail(document, FlatdError.unreachable.message(), log: "WebKit failed the page (\((error as NSError).code))")
+            fail(FlatdError.unreachable.message(), log: "WebKit failed the page (\((error as NSError).code))")
         }
 
-        /// WebKit may end the page's process in the background: load it again (BRIDGE.md), a few times at most before
-        /// the page says so with Try again (a page that ends WebKit while starting would otherwise load for ever).
+        /// In the background WebKit may reclaim the page. Reload once the tab can show it again.
         func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
-            guard !retired else { return }
-            page.isReady = false
-            guard automaticReloads < Self.maxAutomaticReloads else {
-                let ended = handover.begin()
-                fail(ended, String(localized: "The 3D flat didn't start."), log: "WebKit's page process kept ending")
-                return
+            pendingPolicy = nil
+            guard let loading = activeLoad, isLoading(loading) else { return }
+            let age = (timing?.handedOver ?? loading.started).duration(to: .now)
+            cancelLoad()
+            pendingReload = age < .seconds(60)
+            reloadIfVisible()
+        }
+
+        private func reloadIfVisible() {
+            guard isCurrent, canReloadNow, let endedEarly = pendingReload else { return }
+            pendingReload = nil
+            if endedEarly {
+                guard automaticReloads < Self.maxAutomaticReloads else {
+                    fail(String(localized: "The 3D flat didn't start."), log: "WebKit's page process kept ending")
+                    return
+                }
+                automaticReloads += 1
+            } else {
+                automaticReloads = 0
             }
-            automaticReloads += 1
             load()
         }
     }
