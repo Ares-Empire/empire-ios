@@ -1,11 +1,8 @@
 # Arestia app — decision record
 
 **Decided 2026-11-19 (Patrik).** Status (2026-11-20): built and tested on the simulator against a fake flatd
-(`scripts/fake-flatd.py`, HTTPS with its own identity and pairing code); one pairing identity on all work in the app
-(below); not yet run against the real flatd, not merged, not on TestFlight. The fifth review (Codex gpt-6.2-astra) found
-the re-pairing class once more outside the app's store: the Control Center toggles' value and action, `FlatdReach`'s
-results, the Blind control's display and the connect attempt's expected pairing do not yet carry the identity; that
-and its ordinary findings are open. The name: Arestia (Ares + Hestia,
+(`scripts/fake-flatd.py`, HTTPS with its own identity and pairing code); one flat per install (below), which replaced
+the re-pairing in place after the fifth review; not yet run against the real flatd. The name: Arestia (Ares + Hestia,
 goddess of the hearth and home), confirmed by Patrik on 2026-11-19.
 
 Arestia is the flat on the iPhone: the fans, the blinds (Rollos), the modes and scenes and the flat in 3D, all through
@@ -51,7 +48,7 @@ loaded with the key and never bundled.
   - the pin is the **key, not the certificate**, and nothing else about the certificate is checked (no CA, no name, no
     dates). So flatd can renew its certificate, get a new address or machine name, or move to the always-on box with
     its identity folder, without pairing again. A new key or a new token on flatd's side means pairing again
-    (Settings → Pair again);
+    (a new token: Settings → Pair again, the same flat; a new key is another identity, so another flat: Forget first);
   - nothing in the app speaks plain HTTP: no App Transport Security exception, the transport and the event stream
     refuse a non-TLS address themselves, a pairing code with a plain address is refused, and a saved pairing without a
     pin (from a build before this) counts as no pairing;
@@ -72,36 +69,48 @@ loaded with the key and never bundled.
   extension and readable after the first unlock, so a control works from the lock screen (never synced, never
   restored to another device). Settings → Flat service shows the address flatd was last reached at and the identity's
   first 16 hex digits, the same ones `flatd pair` prints under its QR code and flatd logs at startup.
-- **Pairing again with another flatd** (a code whose identity differs from the paired one, or when the saved pairing
-  cannot be read) never happens by itself: the code is shown with its identity and waits for Connect, because the
-  code decides who the app trusts from then on. A first pairing, and a fresh code of the same flatd, connect at once
-  (a first scan is not confirmed against the identity on flatd's screen: whoever could put another code in front of
-  the camera would only pair the app with their own service, and learns nothing of the flat's). An attempt connects
-  exactly the code it was started with (scanning another cancels it), and the store checks again, when it keeps the
-  pairing, that what is saved is still what the decision was made against.
-- **One pairing identity for all work** (2026-11-20, after the trust review's rounds 1–4 each found work of one pairing
-  reaching the next one level deeper: the old 3D page, its queued task, saved Shortcut and control choices, then a
-  second window's counter, the picker's two readings, the connect task's late reading of the code). The class is
-  closed by design, not by another patch: the pairing's Keychain UUID (`FlatdPairing.id`) is the one value every piece
-  of work carries: the store (`pairingID`), its event stream, every command, the 3D page (its web view, listener and
-  requests), every client (`pairingID`), and a blind or fan chosen in a Shortcut or a control (`SavedDevice`: the
-  device id with the pairing's identity). Anything tagged with another identity is dropped, never acted on; a
-  command's client is built from the same Keychain reading whose identity was checked, so its key and pin are that
-  pairing's. Then:
-  - **another flatd is paired only through a full Disconnect**: the old pairing is forgotten with the names kept for
-    it, the store leaves it completely (its tasks cancelled, the stream and the 3D page gone, its state cleared), and
-    the new pairing is saved fresh, with an identity of its own, only while nothing is saved. Its flatd is checked
-    first, so an unreachable one leaves the old pairing as it was. Choices made in the old pairing do nothing in the
-    new one (flatd's device ids are only names inside one flatd): they are made again, as after any Disconnect;
-  - **a fresh code of the same flatd** (a new key or address) is a light update: the same identity, so its page,
-    choices and work go on; the stream starts again with the new key, and a refusal counts only for the key it was
-    sent with;
-  - **the Keychain item is versioned** (its label is a revision that every write renews): a new address or key is
-    written only over the version it was read as, so a late address update from a control never brings back an older
-    key, and a new pairing never overwrites one made meanwhile;
-  - **one window** (`UIApplicationSupportsMultipleScenes` false, the generated scene manifest off): one store. A
-    store would still notice a pairing made elsewhere and leave its own before following it;
-  - the 3D page speaks only once WebKit committed the very navigation the app started for it (`PageHandover`).
+- **One flat per install** (the lead's decision, 2026-11-20, after the fifth review). The app is paired with one flatd
+  identity at a time, and another flat is paired only after **Settings → Forget this flat**.
+  - *Why.* The trust boundary held in four reviews in a row (the key and every command reach only a server that proved
+    the pinned key). But five reviews in a row found a new variant of one other class: consistency when the phone is
+    re-paired from one flatd to a *different* one in the middle of use (the old 3D page, its queued task, saved Shortcut
+    and control choices, a second window's counter, the picker's two readings, the connect task's late reading of the
+    code, then the Control Center toggles' value and action and `FlatdReach`'s results). Patrik has one flat and one
+    flatd. Chasing multi-flat consistency through every surface costs more than it is worth, so the case is removed by
+    design instead of patched one level deeper again.
+  - *What Forget does* (`FlatSession.forget`): the pairing and everything kept for it go (the Keychain item; in the App
+    Group the devices' names and a mode's trouble note, `FlatdConnection.forget`); the store retires
+    (`FlatStore.retire`: its loop and every command cancelled, its event stream ended, its listeners and so the 3D
+    page's bridge dropped, its state cleared, and whatever of it is still on its way finds it retired and changes
+    nothing); a new store without a pairing takes its place, and the app's screens are built anew with it (the old web
+    view and its bridge are dismantled with them); the controls read again. If the Keychain keeps the item, nothing
+    changes and the app says so. A choice made in a Shortcut or a control carries the pairing it was made in
+    (`SavedDevice`; iOS keeps those parameters and the app cannot delete them), so after Forget it acts on nothing.
+  - *A store lives for one pairing.* `FlatStore.pairingID` is fixed for its life; a store never switches flat. A first
+    pairing also makes a new store (the one without a pairing retires). A store that finds another pairing saved, or
+    none (only Forget or a Debug launch argument can do that), retires and the session builds the right one.
+  - *Codes.* A first pairing connects as soon as a well-formed code is scanned (and replaces an item that is no
+    pairing, from a build before flatd had an identity). A fresh code of the same flat (the same pin) renews key and
+    address in place, written only over the version read (the Keychain item's label is a revision, so a late address
+    update from a control never brings back an older key); the stream starts again with the new key and the 3D page
+    loads again. A code of another flat while one is paired is refused at once, before anything is asked anywhere:
+    "This is a different flat. Forget the current one first." There is no switch in place, and no confirmation step.
+  - *Controls, Shortcuts and Siri act on the flat paired when they run*: a Control Center toggle is "my flat's
+    cooking", not one flat's. After Forget and a new pairing they act on the new flat by definition. A device chosen
+    in one (a blind, a fan) that the flat does not have (flatd answers 404 for it, or it was chosen before Forget)
+    fails cleanly ("This blind isn't in your flat anymore. Choose it again.") and nothing else moves; the Blind control
+    then shows "Not in your flat" under the plain word Blind, never its old name or a made-up state.
+  - *Accepted.* Until Control Center reads a control again after Forget, its toggle may show the old flat's state.
+    A Shortcut already running when Forget is tapped checks the pairing again before it sends, but a request already
+    on the wire cannot be called back. Losing flatd's identity key (a new machine without its identity folder) makes it
+    another flat: Forget and pair anew.
+  - *Out of scope by design*: consistency between two flats without Forget in between, since the app never does that.
+- **The Keychain may fail to answer** (before the iPhone's first unlock after a restart, or a hiccup): that is never
+  taken as "no pairing" (`FlatdConnection.Saved.unreadable`). The live loop and the session read again with growing
+  pauses; a command says "Arestia couldn't read its pairing just now", and the 3D tab shows it with Try again.
+- **One window** (`UIApplicationSupportsMultipleScenes` false, the generated scene manifest off): one session, one
+  store at a time. The 3D page speaks only once WebKit committed the very navigation the app started for it
+  (`PageHandover`).
 - **What the pin does not cover:** anything behind flatd (how flatd reaches its devices is flatd's own matter, in
   its private contract); what the 3D page does inside WebKit beyond HTTP and WebSocket loads, which are blocked (the
   page is flatd's own, fetched from the proven flatd, and is trusted as that); and someone who can read flatd's
@@ -111,17 +120,24 @@ loaded with the key and never bundled.
   while it runs, with Done cooking as the one big button; otherwise the modes and scenes as three tiles; the fans with
   on/off and the timers 15 min / 30 min / 1 h / ∞ and the time left; the blinds with their window drawn at its position,
   dragged to set it, up / favourite / down and stop while moving; then the automations, what runs by itself), and
-  **Flat**, the 3D model full-bleed. Settings: the flat service (state, connect again, disconnect), then the shared
-  sections.
+  **Flat**, the 3D model full-bleed. Settings: the flat service (state, its identity, Pair again for a new code of the
+  same flat, Forget this flat), then the shared sections.
 - **Live state** from flatd's event stream (`wss://…/api/events`, the key in its header): the snapshot, then every change whoever made it (the
   app, Claude, a wall switch, a timer). It reconnects by itself with growing pauses and pings every 20 s, so a sleeping
   Mac is noticed. Not reachable: the last state stays, marked "Last seen 18:40", and one calm card when there is no
-  state at all ("The Mac may be asleep, or you're not at home"); no alerts. Nothing is shown as done before flatd
-  confirmed it, except a blind's target while a finger drags it.
+  state at all ("The Mac may be asleep, or you're not at home"); no alerts. Back from the background, or when the
+  stream drops, the last state shows as "Reconnecting…" until flatd's next snapshot, never as "Live". Nothing is shown
+  as done before flatd confirmed it: a blind follows the finger while it drags, and once let go reads "Sending: 40 %
+  closed" until flatd's answer or state arrives (a failure puts flatd's position back, with the reason).
 - **Cooking** is flatd's mode `cooking` (which devices it moves and how is flatd's own config: on, the fans and one
   blind up; off, the fans off and that blind to its favourite spot). The app shows it while active with since when and
   what its devices do right now, and Done cooking ends it, with Undo for a few seconds. A device that did not follow is named
-  ("Didn't answer: …"); the mode stays as flatd recorded it.
+  ("Didn't answer: …"); the mode stays as flatd recorded it. Changed outside the app (the Cooking control, a Shortcut,
+  the NFC tag), the devices that did not follow are kept with the mode's state (`ModeTrouble`, in the App Group, for two
+  hours at most, while the mode is still in that state): the control reads "On · not all followed", and the app says
+  which ones, once, when it next hears flatd. flatd itself keeps no record of them. Siri and Shortcuts say only what
+  flatd confirmed ("Cooking is on.", "Cooking ended.", "Cooking wasn't on." when there was nothing to end), never what
+  the mode's devices are assumed to do.
 - **The 3D tab** shows flatd's phone viewer in a web view and speaks its bridge (the viewer's `BRIDGE.md` v1: the
   handler `flat3d`, `flat3d.receive`, one result per request): taps in 3D go to flatd through the app, live state goes
   back to the page. The app fetches `GET /viewer` itself, over the pinned connection, and hands the page to the web

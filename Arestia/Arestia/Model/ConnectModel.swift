@@ -103,23 +103,6 @@ final class ConnectModel {
 
     var canConnect: Bool { code != nil && !isConnecting }
 
-    /// Whether this code would replace who the app trusts now: it is for another flatd than the one paired, or what is
-    /// paired cannot be told (`saved` unusable). Then nothing connects by itself: a code decides who the app trusts
-    /// from then on, so swapping that takes a deliberate Connect for exactly this code, with its identity on screen to
-    /// compare with flatd's own. (A first pairing and a fresh code of the same flatd connect at once.)
-    static func needsConfirmation(_ code: PairingCode, saved: FlatdConnection.Saved) -> Bool {
-        switch saved {
-        case .none: false
-        case let .paired(pairing): code.pin != pairing.pin
-        case .unusable: true
-        }
-    }
-
-    /// The same for the code on screen (false while there is none).
-    func needsConfirmation(saved: FlatdConnection.Saved) -> Bool {
-        code.map { Self.needsConfirmation($0, saved: saved) } ?? false
-    }
-
     /// A scanned or pasted text: flatd's pairing code, or not. Returns the code it was (nil: none).
     @discardableResult
     func take(_ text: String) -> PairingCode? {
@@ -134,16 +117,20 @@ final class ConnectModel {
     }
 
     /// Looks for the flatd of exactly this code at its address, then at the ones Bonjour offers, and lets the store
-    /// keep the pairing at the first where flatd answered. `replacing`: the person tapped Connect for this code, so it
-    /// may replace who the app trusts (the store checks again against what is saved when it keeps the pairing). Every
-    /// attempt goes through the transport pinned to the code's identity, so an address is only somewhere to look: a
-    /// server without flatd's key gets nothing, and the next address is tried. The code is the one handed in from
-    /// start to end, whatever is scanned meanwhile (round 4).
-    func connect(_ code: PairingCode, replacing: Bool, store: FlatStore) async -> Bool {
+    /// keep the pairing at the first where flatd answered: a first pairing, or a fresh code of the flat paired now. A
+    /// code of another flat while one is paired is refused at once, nothing asked anywhere (one flat per install: Forget
+    /// first). Every attempt goes through the transport pinned to the code's identity, so an address is only somewhere
+    /// to look: a server without flatd's key gets nothing, and the next address is tried. The code is the one handed in
+    /// from start to end, whatever is scanned meanwhile, and the store is the one the attempt began with.
+    func connect(_ code: PairingCode, store: FlatStore) async -> Bool {
         attempts += 1
         let attempt = attempts
-        isConnecting = true
         problem = nil
+        if store.isAnotherFlat(code.pin) {
+            problem = FlatdError.anotherFlat.message()
+            return false
+        }
+        isConnecting = true
         defer { if attempt == attempts { isConnecting = false } }
         var tried: [URL] = []
         var failure = FlatdError.unreachable
@@ -151,8 +138,7 @@ final class ConnectModel {
         /// True: connected. False: flatd answered and said no (looking elsewhere is pointless). Nil: not there.
         func attemptAt(_ url: URL) async -> Bool? {
             tried.append(url)
-            guard let error = await store.connect(to: url, token: code.token, pin: code.pin, replacing: replacing)
-            else { return true }
+            guard let error = await store.connect(to: url, token: code.token, pin: code.pin) else { return true }
             failure = error
             return error == .unreachable || error == .noAnswer ? nil : false
         }

@@ -118,7 +118,8 @@ private struct StatusSummary: View {
     private var linkWord: String {
         switch store.link {
         case .live: String(localized: "Live")
-        case .connecting: String(localized: "Connecting")
+        // Back from the background or the stream cut: the last state stays, said honestly as not live yet.
+        case .connecting: store.isReconnecting ? String(localized: "Reconnecting…") : String(localized: "Connecting")
         case .offline: String(localized: "Not reachable")
         case .refused: String(localized: "Key refused")
         case .notSetUp: String(localized: "Not connected")
@@ -363,10 +364,10 @@ private struct BlindRow: View {
                         .lineLimit(1)
                     Spacer(minLength: 6)
                 }
-                Text(verbatim: FlatWords.rolloStatus(state, position: store.dragging[rollo.id]))
+                Text(verbatim: status)
                     .font(AppFont.text(13))
                     .foregroundStyle(state.moving != nil || store.dragging[rollo.id] != nil
-                                     ? AppAccent.arestia.color : Ink.muted)
+                                     || store.pending[rollo.id] != nil ? AppAccent.arestia.color : Ink.muted)
                     .contentTransition(.opacity)
                     .padding(.top, 3)
                 HStack(spacing: 8) {
@@ -394,6 +395,14 @@ private struct BlindRow: View {
         .padding(.horizontal, 16).padding(.vertical, 14)
         .opacity(state.online ? 1 : 0.6)
         .accessibilityElement(children: .contain)
+    }
+
+    /// The finger's position while it drags; once let go, the position asked for as "Sending: …" until flatd answers
+    /// (never as done); then flatd's own state.
+    private var status: String {
+        if let dragged = store.dragging[rollo.id] { return FlatWords.rolloStatus(rollo.state, position: dragged) }
+        if let asked = store.pending[rollo.id] { return FlatWords.rolloPending(asked) }
+        return FlatWords.rolloStatus(rollo.state)
     }
 }
 

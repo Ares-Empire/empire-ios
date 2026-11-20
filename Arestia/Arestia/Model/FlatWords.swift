@@ -54,6 +54,15 @@ enum FlatWords {
         }
     }
 
+    /// A blind's position sent when the finger let go, before flatd answered: "Sending: 40 % closed", never as done.
+    static func rolloPending(_ target: Int, language: AppLanguage = .current) -> String {
+        switch target {
+        case 0: language.string("Sending: open")
+        case 100: language.string("Sending: closed")
+        default: language.string("Sending: \(percent(target)) closed")
+        }
+    }
+
     /// "40 %" (both languages put a space before the sign; a narrow one, so it never breaks off).
     static func percent(_ value: Int) -> String {
         "\(value)\u{202F}%"
@@ -93,6 +102,14 @@ enum FlatWords {
 
     static func sceneDone(_ title: String, language: AppLanguage = .current) -> String {
         language.string("\(title): done.")
+    }
+
+    /// Cooking changed from a control or a Shortcut while devices did not follow (`ModeTrouble`), said once in the app.
+    static func troubleFromOutside(_ trouble: ModeTrouble, language: AppLanguage = .current) -> String {
+        let names = trouble.names.joined(separator: ", ")
+        return trouble.active
+            ? language.string("Cooking was started outside the app. Didn't answer: \(names).")
+            : language.string("Cooking was ended outside the app. Didn't answer: \(names).")
     }
 
     /// A mode's name: the app's own for the ones it knows, flatd's label for any other.

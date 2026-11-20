@@ -1,12 +1,14 @@
 import SwiftUI
 
 /// Arestia's own section at the top of Settings: the flat service it is paired with (its state, the address it was last
-/// reached at, and its identity to compare with what `flatd pair` shows), pairing again and disconnecting. There is no
-/// account section: Arestia has none.
+/// reached at, and its identity to compare with what `flatd pair` shows), a new code of the same flat, and Forget this
+/// flat, the one way to another flat (one flat per install, docs/ARESTIA-APP.md). There is no account section: Arestia
+/// has none.
 struct ConnectionSection: View {
     let store: FlatStore
+    let session: FlatSession
     @State private var connecting = false
-    @State private var confirmsDisconnect = false
+    @State private var confirmsForget = false
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -47,23 +49,26 @@ struct ConnectionSection: View {
                 SettingsDivider()
                 Button { connecting = true } label: {
                     SettingsRow(title: String(localized: "Pair again"),
-                                subtitle: String(localized: "Scan a new code from flatd"))
+                                subtitle: String(localized: "A new code from the same flatd"))
                 }
                 .buttonStyle(SettingsRowStyle())
                 SettingsDivider()
-                Button { confirmsDisconnect = true } label: {
-                    SettingsRow(title: String(localized: "Disconnect"), trailing: .none, tint: FormButtonStyle.dangerInk)
+                Button { confirmsForget = true } label: {
+                    SettingsRow(title: String(localized: "Forget this flat"), trailing: .none,
+                                tint: FormButtonStyle.dangerInk)
                 }
                 .buttonStyle(SettingsRowStyle())
-                .confirmationDialog(Text("Disconnect from the flat?"), isPresented: $confirmsDisconnect,
+                .confirmationDialog(Text("Forget this flat?"), isPresented: $confirmsForget,
                                     titleVisibility: .visible) {
                     Button(role: .destructive) {
                         dismiss()
-                        store.disconnect()
-                    } label: { Text("Disconnect") }
+                        if !session.forget() {
+                            store.offer = UndoOffer(message: String(localized: "Arestia couldn't forget the flat. Try again."))
+                        }
+                    } label: { Text("Forget") }
                     Button(role: .cancel) {} label: { Text("Cancel") }
                 } message: {
-                    Text("Arestia forgets the pairing. The Control Center controls and Shortcuts stop until you pair again. A blind or fan chosen in them is then chosen again.")
+                    Text("Arestia forgets the pairing and everything it knows of this flat. The Control Center controls and Shortcuts do nothing until you pair again, and a blind or fan chosen in them is chosen again. Another flat can be paired only after this.")
                 }
             }
             FormNote(text: String(localized: "Arestia talks only to the flatd with this identity, encrypted. The pairing stays on this iPhone, in the Keychain; Shortcuts and the Control Center controls use it too."))
@@ -79,7 +84,7 @@ struct ConnectionSection: View {
     private var status: String {
         switch store.link {
         case .live: String(localized: "Connected")
-        case .connecting: String(localized: "Connecting")
+        case .connecting: store.hasSnapshot ? String(localized: "Reconnecting…") : String(localized: "Connecting")
         case .offline: String(localized: "Not reachable")
         case .refused: String(localized: "Key refused")
         case .notSetUp: String(localized: "Not connected")

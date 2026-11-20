@@ -8,12 +8,10 @@ nonisolated struct FlatdPairing: Codable, Equatable, Sendable {
     var baseURL: URL
     let token: String
     let pin: FlatdPin
-    /// **The pairing's identity**, the one value everything done for a pairing carries: the store and its event stream,
-    /// the 3D page, a command, a Shortcut's or a control's device choice (`SavedDevice`). Work tagged with another
-    /// identity is dropped, never acted on (the trust reviews' rounds 1–4 each found work of one pairing that could
-    /// reach the next; one value checked everywhere ends that class). Made new for every pairing with a flatd; kept
-    /// only while the same flatd (the same pin) gets a new key or address. Another flatd is paired only after a full
-    /// Disconnect (`FlatStore.connect`), so it always gets a new identity.
+    /// **The pairing's identity**: made new for every pairing, kept while the same flatd (the same pin) gets a new key
+    /// or address. One flat per install (docs/ARESTIA-APP.md): the app's store lives for one identity (`FlatStore`), and
+    /// another flat is paired only after Forget, so it always gets a new identity. A blind or fan chosen in a Shortcut or
+    /// a control carries it (`SavedDevice`), so a choice made before Forget acts on nothing afterwards.
     let id: UUID
     /// This version of the saved item, also the Keychain item's label: every write makes a new one, and a change is
     /// written only over the version it was read from (`FlatdKeyStore.update`), in the app and in its extension alike.
@@ -141,55 +139,58 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
                                                 accessGroup: ArestiaGroup.keychainAccessGroup))
     }
 
-    /// What the Keychain holds: no pairing, a pairing, or something that cannot be used as one (the item could not be
-    /// read right now, or it is not a whole pairing: one without a pin or with a plain-HTTP address, from a build before
-    /// flatd had an identity). The last is not "nothing": a pairing may be there, so replacing it takes the same
-    /// deliberate Connect as replacing a known one (`ConnectModel.needsConfirmation`).
+    /// What the Keychain holds right now.
     nonisolated enum Saved: Equatable, Sendable {
         case none
         case paired(FlatdPairing)
-        case unusable
-
-        /// The same pairing (identity), whatever its address or key now; or both none, or both unusable.
-        func isSamePairing(as other: Saved) -> Bool {
-            switch (self, other) {
-            case (.none, .none), (.unusable, .unusable): true
-            case let (.paired(a), .paired(b)): a.id == b.id && a.pin == b.pin
-            default: false
-            }
-        }
+        /// The Keychain could not be read just now (before the iPhone's first unlock after a restart, a hiccup): a
+        /// pairing may well be there, so this is never taken as none. Whoever reads it tries again later.
+        case unreadable
+        /// An item that is no pairing (one without a pin or with a plain-HTTP address, from a build before flatd had an
+        /// identity, or a damaged one): it never becomes usable, so it counts as none and a first pairing replaces it.
+        case invalid
     }
 
     var saved: Saved {
         let text: String?
-        do { text = try keychain.read() } catch { return .unusable }
+        do { text = try keychain.read() } catch { return .unreadable }
         guard let text else { return .none }
         guard let pairing = try? JSONDecoder().decode(FlatdPairing.self, from: Data(text.utf8)),
-              pairing.baseURL.scheme == "https", !pairing.token.isEmpty else { return .unusable }
+              pairing.baseURL.scheme == "https", !pairing.token.isEmpty else { return .invalid }
         return .paired(pairing)
     }
 
-    /// The pairing to work with; nil without a usable one (then the app asks to pair).
+    /// The pairing to work with; nil without a usable one, or while it cannot be read (`saved` tells them apart).
     var pairing: FlatdPairing? {
         if case let .paired(pairing) = saved { pairing } else { nil }
+    }
+
+    /// The pairing to work with, or why there is none: `.notPaired` (none, or no usable one), `.pairingUnreadable`
+    /// (the Keychain could not be read just now; try again).
+    func current() throws -> FlatdPairing {
+        switch saved {
+        case let .paired(pairing): return pairing
+        case .unreadable: throw FlatdError.pairingUnreadable
+        case .none, .invalid: throw FlatdError.notPaired
+        }
     }
 
     var token: String? { pairing?.token }
 
     /// Saves this pairing over whatever is saved (Debug launch arguments and the tests; the app pairs with `pairNew`
-    /// and `renew`, which change only what they were decided against).
+    /// and `renew`, which change only what they were read as).
     func save(_ pairing: FlatdPairing) throws {
         try keychain.save(Self.text(pairing), label: pairing.revision.uuidString)
     }
 
-    /// A new pairing, saved only while nothing is saved: a pairing made meanwhile (in the app or anywhere) is never
-    /// overwritten. False when one was there.
+    /// A first pairing, saved only while nothing is saved: a pairing that is there is never overwritten. False when one
+    /// was there.
     func pairNew(_ pairing: FlatdPairing) throws -> Bool {
         try keychain.add(Self.text(pairing), label: pairing.revision.uuidString)
     }
 
     /// The same flatd (the same identity) with a new key or address, written only over the version `saved` was read
-    /// as: false when the pairing changed meanwhile. Keeps the pairing's identity, so its work and choices go on.
+    /// as: false when the pairing changed meanwhile. Keeps the pairing's identity, so its choices go on.
     func renew(_ saved: FlatdPairing, with renewed: FlatdPairing) -> Bool {
         guard renewed.id == saved.id, renewed.pin == saved.pin, renewed.revision != saved.revision,
               let text = try? Self.text(renewed) else { return false }
@@ -221,11 +222,12 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
         return FlatdClient(pairing, transport: transport)
     }
 
-    /// Forgets the connection (Settings → Disconnect, and before pairing with another flatd): the pairing and every
-    /// choice kept for it here. Throws when the Keychain kept the item.
+    /// Forgets the flat (Settings → Forget this flat, `FlatSession.forget`): the pairing and everything kept for it here
+    /// (the devices' names, a mode's trouble). Throws when the Keychain kept the item; then nothing else is touched.
     func forget() throws {
         try keychain.delete()
         defaults?.removeObject(forKey: Self.devicesKey)
+        defaults?.removeObject(forKey: Self.troubleKey)
     }
 
     // MARK: the devices as last seen (names only)
@@ -237,15 +239,14 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
     }
 
     /// The names as saved, with the pairing they came from: read only while that pairing is the saved one, so names
-    /// written late (after Disconnect, or after pairing with another flatd) are never shown.
+    /// written late (after Forget) are never shown.
     nonisolated struct KnownDevices: Codable, Equatable, Sendable {
         let pairing: UUID
         let devices: [KnownDevice]
     }
 
     /// The names with their pairing's identity, as one reading: the pairing read once, the names only when they were
-    /// kept for it. A picker labels its choices with this identity (`DeviceChoices`), never with one read separately,
-    /// so a pairing made between two readings cannot lend its identity to the other's names (round 4).
+    /// kept for it. A picker labels its choices with this identity (`DeviceChoices`), never with one read separately.
     var known: KnownDevices? {
         guard let id = pairing?.id,
               let known = defaults?.data(forKey: Self.devicesKey)
@@ -256,17 +257,22 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
 
     var knownDevices: [KnownDevice] { known?.devices ?? [] }
 
+    /// The devices' names for these ids, as kept for this pairing (the id itself where none is kept, or the names are
+    /// another pairing's).
+    func names(_ ids: [String], pairing: UUID?) -> [String] {
+        let known = self.known.flatMap { $0.pairing == pairing ? $0.devices : nil } ?? []
+        return ids.map { id in known.first { $0.id == id }?.label ?? id }
+    }
+
     /// Whether this client still speaks for the saved pairing: the same identity (and so the same flatd). False after
-    /// Disconnect or after pairing with another flatd, also one that happens to use the same key, and for a client made
-    /// for no pairing (a code being tried).
+    /// Forget, and for a client made for no pairing (a code being tried).
     func isCurrent(_ client: FlatdClient) -> Bool {
         guard let id = client.pairingID, let pairing else { return false }
         return pairing.id == id && pairing.pin == client.pin
     }
 
     /// Keeps the devices' names for Shortcuts' pickers, tagged with the pairing they came from, and only while that
-    /// pairing is the saved one: a late answer never brings names back after Disconnect, or another flat's names into
-    /// a new pairing.
+    /// pairing is the saved one: a late answer never brings names back after Forget.
     func remember(_ devices: [Device], for pairing: UUID) {
         guard self.pairing?.id == pairing else { return }
         let known = devices.map { KnownDevice(id: $0.id, kind: $0.kind.raw, label: $0.label) }
@@ -280,6 +286,48 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
         guard let id = client.pairingID, isCurrent(client) else { return }
         remember(devices, for: id)
     }
+
+    // MARK: a mode whose devices did not all follow, outside the app
+
+    static let troubleKey = "flatd.modeTrouble"
+
+    /// Keeps (or with nil clears) what the last change of a mode made outside the app left undone: the Cooking control
+    /// shows it next to its state, and the app says it once (`FlatStore`). Only for the saved pairing.
+    func note(_ trouble: ModeTrouble?, mode: String) {
+        if let trouble {
+            guard pairing?.id == trouble.pairing, trouble.mode == mode else { return }
+            defaults?.set(try? JSONEncoder().encode(trouble), forKey: Self.troubleKey)
+        } else if savedTrouble?.mode == mode {
+            defaults?.removeObject(forKey: Self.troubleKey)
+        }
+    }
+
+    /// The trouble kept for this mode while it still describes the mode as it is: the same pairing, the same state
+    /// (`active`), and recent (`ModeTrouble.lasts`). A mode changed since (anywhere) makes it moot.
+    func trouble(mode: String, active: Bool, pairing: UUID, now: Date = .now) -> ModeTrouble? {
+        guard let trouble = savedTrouble, trouble.pairing == pairing, trouble.mode == mode, trouble.active == active,
+              now.timeIntervalSince(trouble.at) < ModeTrouble.lasts else { return nil }
+        return trouble
+    }
+
+    private var savedTrouble: ModeTrouble? {
+        defaults?.data(forKey: Self.troubleKey).flatMap { try? JSONDecoder().decode(ModeTrouble.self, from: $0) }
+    }
+}
+
+/// A mode changed outside the app (a Control Center control, a Shortcut, Siri) while some of its devices did not
+/// follow (flatd changes the mode anyway and lists them in `failed`; it keeps no record of them itself).
+nonisolated struct ModeTrouble: Codable, Equatable, Sendable {
+    let pairing: UUID
+    let mode: String
+    /// The mode's state the change left.
+    let active: Bool
+    /// The devices that did not follow, by name.
+    let names: [String]
+    let at: Date
+
+    /// How long it is shown at most: after that the devices may long have been switched by hand.
+    static let lasts: TimeInterval = 2 * 60 * 60
 }
 
 extension Device.Kind {

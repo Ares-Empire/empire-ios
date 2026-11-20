@@ -7,7 +7,7 @@ import VisionKit
 /// The code holds flatd's key and its identity (`FlatdPin`); the app then talks only to the server that proves that
 /// identity, wherever Bonjour or the code's address say it is. No account (Patrik, 2026-11-19: "no account needed, just
 /// me"): the pairing is flatd's own and stays on this iPhone, in the Keychain. Full screen while the app has no
-/// pairing; a sheet from Settings to pair again.
+/// pairing; a sheet from Settings for a new code of the same flat (another flat's code is refused: Forget comes first).
 struct ConnectScreen: View {
     let store: FlatStore
     @State private var model: ConnectModel
@@ -51,7 +51,7 @@ struct ConnectScreen: View {
                         FormProblem(text: problem).padding(.top, 14)
                     }
                     Button {
-                        if let code = model.code { connect(code, replacing: true) }   // the code on screen, confirmed
+                        if let code = model.code { connect(code) }               // the code on screen, again
                     } label: {
                         BusyLabel(text: Text("Connect"), busy: model.isConnecting)
                     }
@@ -80,10 +80,8 @@ struct ConnectScreen: View {
         .interactiveDismissDisabled(model.isConnecting)
         .onAppear {
             model.browser.start()
-            // A code handed in: connect with it, unless it would replace who the app trusts.
-            if let code = model.code, !ConnectModel.needsConfirmation(code, saved: store.connection.saved) {
-                connect(code, replacing: false)
-            }
+            // A code handed in: connect with it (another flat's is refused with its line).
+            if let code = model.code { connect(code) }
         }
         .onDisappear {
             model.browser.stop()
@@ -97,26 +95,20 @@ struct ConnectScreen: View {
         }
     }
 
-    /// A scanned or pasted code connects at once (there is nothing else to enter), unless it would replace the flatd
-    /// paired now with another one (or with one that cannot be told): that waits for Connect. Whatever was under way
-    /// for an earlier code stops first: an attempt is for the code it was started with, and only that one.
+    /// A scanned or pasted code connects at once (there is nothing else to enter); another flat's is refused with its
+    /// line. Whatever was under way for an earlier code stops first: an attempt is for the code it was started with.
     private func take(_ text: String) {
         attempt?.cancel()
         attempt = nil
         guard let code = model.take(text) else { return }
-        if !ConnectModel.needsConfirmation(code, saved: store.connection.saved) { connect(code, replacing: false) }
+        connect(code)
     }
 
-    private var needsConfirmation: Bool {
-        model.needsConfirmation(saved: store.connection.saved)
-    }
-
-    /// Connects with exactly this code (captured here, never read again from the screen's state). `replacing`: the
-    /// person tapped Connect for it, so it may replace who the app trusts.
-    private func connect(_ code: PairingCode, replacing: Bool) {
+    /// Connects with exactly this code (captured here, never read again from the screen's state).
+    private func connect(_ code: PairingCode) {
         attempt?.cancel()
         attempt = Task {
-            if await model.connect(code, replacing: replacing, store: store), !Task.isCancelled {
+            if await model.connect(code, store: store), !Task.isCancelled {
                 onConnected()
                 if closable { dismiss() }
             }
@@ -164,11 +156,6 @@ struct ConnectScreen: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Code read").font(AppFont.text(15, weight: .medium)).foregroundStyle(Ink.primary)
                         Text(verbatim: code.pin.short).font(AppFont.number(12)).foregroundStyle(Ink.muted)
-                        if needsConfirmation {
-                            Text("This replaces the flatd paired until now. Connect only if “flatd pair” shows this identity under its code.")
-                                .font(AppFont.text(12)).foregroundStyle(FormProblem.ink)
-                                .fixedSize(horizontal: false, vertical: true).padding(.top, 2)
-                        }
                     }
                     Spacer()
                 }

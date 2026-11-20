@@ -274,8 +274,8 @@ struct RediscoveryTests {
         let connection = Flat.connection()
         let events = FakeEvents()
         let found = [impostor, moved]
-        let store = FlatStore(connection: connection, transport: transport, eventSource: events,
-                              rediscover: { found }, reloadControls: {})
+        let store = FlatStore(pairing: connection.pairing, connection: connection, transport: transport,
+                              eventSource: events, rediscover: { found }, reloadControls: {})
         store.start()
         #expect(await eventually({ events.requests.last?.url?.host() == "192.0.2.77" }, timeout: .seconds(8)))
         events.send(try Flat.snapshot())
@@ -303,66 +303,37 @@ struct RediscoveryTests {
         #expect(transport.sent.count - before == FlatdBonjour.maxCandidates)
     }
 
-    @Test func workForOneFlatdNeverContinuesUnderAnother() async throws {
-        // Paired anew with another flatd that uses the same key while the fans were being read: nothing is switched,
-        // and the old flat's device names are not kept for the new pairing.
+    @Test func aFlatForgottenWhileTheFansAreReadSwitchesNothing() async throws {
+        // The production path (`FlatActions.setFans`): the fans' list is on its way when the flat is forgotten and
+        // another one paired (with the same key, even). Nothing is switched, and the old list's names are not kept.
         let connection = Flat.connection()
-        let old = FlatdClient(Flat.pairing(), transport: transport)
-        #expect(connection.isCurrent(old))
-        let other = FlatdPairing(baseURL: Flat.base, token: Flat.key, pin: MadeUpCertificates.pinB)
-        transport.answer("GET /api/devices", body: ["devices": [Flat.fan(1)]])
+        transport.answer("GET /api/devices", body: ["devices": [Flat.fan(1)]], delay: .milliseconds(300))
         transport.answer("POST /api/devices/fan:fan_1", body: Flat.fan(1, on: true))
         let reach = FlatdReach(connection: connection, transport: transport, rediscover: { [] })
-        await #expect(throws: FlatdError.refused) {
-            try await reach.run { client in
-                _ = try await client.devices()
-                try connection.save(other)                         // the pairing changes under the running work
-                guard connection.isCurrent(client) else { throw FlatdError.refused }
-                return try await client.send(.power(on: true), to: "fan:fan_1")
-            }
-        }
+        let old = FlatdClient(Flat.pairing(), transport: transport)
+        let switching = Task { try await FlatActions(reach: reach).setFans(on: true) }
+        try await Task.sleep(for: .milliseconds(100))
+        try connection.forget()
+        let other = FlatdPairing(baseURL: Flat.base, token: Flat.key, pin: MadeUpCertificates.pinB)
+        #expect(try connection.pairNew(other))
+        await #expect(throws: FlatdError.notPaired) { try await switching.value }
         #expect(transport.bodies(for: "POST /api/devices/fan:fan_1").isEmpty)
         #expect(!connection.isCurrent(old))
         connection.remember(try Flat.devices([Flat.fan(1)]), from: old)
         #expect(connection.knownDevices.isEmpty)
         connection.remember(try Flat.devices([Flat.fan(2)]), from: FlatdClient(other, transport: transport))
         #expect(connection.knownDevices.map(\.id) == ["fan:fan_2"])
-        try connection.forget()
-        #expect(!connection.isCurrent(old))
-    }
-
-    @Test @MainActor func aPageOfAnEarlierPairingCommandsNothing() async throws {
-        // The 3D page's message was taken while one flatd was paired; its work gets its turn after another was.
-        let connection = Flat.connection()
-        let (store, transport, _, _) = Flat.store(connection: connection)
-        transport.answer("GET /api/devices", body: ["devices": [Flat.fan(1)]])
-        transport.answer("GET /api/scenes", body: ["scenes": []])
-        transport.answer("POST /api/devices/fan:fan_1", body: Flat.fan(1, on: true))
-        transport.answer("POST /api/modes/cooking", body: Flat.cooking)
-        let before = try #require(store.pairingID)
-        // Another flatd replaces who the app trusts only when confirmed.
-        #expect(await store.connect(to: moved, token: Flat.key, pin: MadeUpCertificates.pinB) == .notPossible)
-        #expect(store.pairingID == before && connection.pairing?.pin == Flat.pin)
-        #expect(await store.connect(to: moved, token: Flat.key, pin: MadeUpCertificates.pinB, replacing: true) == nil)
-        let after = try #require(store.pairingID)
-        #expect(after != before && connection.pairing?.id == after)
-        #expect(await store.pageRequest("fan:fan_1", body: Data(#"{"on":true}"#.utf8), pairing: before) == .notPossible)
-        #expect(await store.pageMode("cooking", body: Data(#"{"active":false}"#.utf8), pairing: before) == .notPossible)
-        #expect(transport.sent.allSatisfy { $0.httpMethod != "POST" })
-        // The new pairing's own page still works.
-        #expect(await store.pageRequest("fan:fan_1", body: Data(#"{"on":true}"#.utf8), pairing: after) == nil)
-        store.stop()
     }
 
     @Test func deviceNamesBelongToTheirPairing() throws {
         let connection = Flat.connection()
         connection.remember(try Flat.devices([Flat.fan(1)]), for: Flat.id)
         #expect(connection.knownDevices.map(\.id) == ["fan:fan_1"])
-        // Paired anew (even with the same flatd, after a Disconnect): the old pairing's names are not this pairing's.
+        // Paired anew (even with the same flatd, after Forget): the old pairing's names are not this pairing's.
         try connection.save(Flat.pairing(id: UUID()))
         #expect(connection.knownDevices.isEmpty)
         try connection.forget()
-        connection.remember(try Flat.devices([Flat.fan(1)]), for: Flat.id)   // a late write after Disconnect: nothing
+        connection.remember(try Flat.devices([Flat.fan(1)]), for: Flat.id)   // a late write after Forget: nothing
         #expect(connection.knownDevices.isEmpty)
     }
 
@@ -373,6 +344,7 @@ struct RediscoveryTests {
         try keys.save(#"{"link":{"baseURL":"http://192.0.2.10:8787","serviceName":"flatd"},"token":"\#(Flat.key)","id":"\#(UUID().uuidString)"}"#,
                       label: "old")
         #expect(connection.pairing == nil && connection.client == nil && connection.token == nil)
+        #expect(connection.saved == .invalid)
         // Nor one whose address is plain HTTP, or whose pin is not one.
         for (url, pin) in [("http://192.0.2.10:8787", Flat.pin.hex), ("https://192.0.2.10:8788", "abc")] {
             try keys.save(#"{"baseURL":"\#(url)","token":"\#(Flat.key)","pin":"\#(pin)","id":"\#(UUID().uuidString)"}"#,
@@ -390,10 +362,10 @@ struct ConnectModelTests {
     let hint = URL(string: "https://192.0.2.20:8788")!
     let moved = URL(string: "https://192.0.2.77:8788")!
 
-    /// Connects with the code on screen, as a scan does (no confirmation).
+    /// Connects with the code on screen, as a scan does.
     func connect(_ model: ConnectModel, _ store: FlatStore) async -> Bool {
         guard let code = model.code else { return false }
-        return await model.connect(code, replacing: false, store: store)
+        return await model.connect(code, store: store)
     }
 
     func text(url: String? = "https://192.0.2.20:8788", token: String = Flat.key) -> String {
@@ -458,16 +430,10 @@ struct ConnectModelTests {
         #expect(transport.sent.allSatisfy { $0.value(forHTTPHeaderField: "Authorization") == nil })
     }
 
-    @Test func aCodeThatReplacesWhoIsTrustedWaitsForADeliberateConnect() throws {
+    @Test func somethingElseScannedAfterACodeIsNotStaged() {
         let model = ConnectModel(candidates: { [] })
-        #expect(!model.needsConfirmation(saved: .paired(Flat.pairing())))      // nothing read yet
         model.take(text())
-        #expect(!model.needsConfirmation(saved: .none))                        // a first pairing connects at once
-        #expect(!model.needsConfirmation(saved: .paired(Flat.pairing())))      // a fresh code of the same flatd too
-        let other = FlatdPairing(baseURL: Flat.base, token: Flat.key, pin: MadeUpCertificates.pinB)
-        #expect(model.needsConfirmation(saved: .paired(other)))
-        #expect(model.needsConfirmation(saved: .unusable))                     // what is paired cannot be told
-        // Something else scanned afterwards: the earlier code is no longer staged.
+        #expect(model.canConnect)
         #expect(model.take("not a code") == nil)
         #expect(model.code == nil && !model.canConnect)
     }
@@ -482,10 +448,12 @@ struct ConnectModelTests {
             return
         }
         keys.failsToRead = true
-        #expect(connection.saved == .unusable && connection.pairing == nil)
+        #expect(connection.saved == .unreadable && connection.pairing == nil)
+        #expect(throws: FlatdError.pairingUnreadable) { try connection.current() }
         keys.failsToRead = false
         try keys.save("{}", label: "odd")
-        #expect(connection.saved == .unusable)
+        #expect(connection.saved == .invalid)
+        #expect(throws: FlatdError.notPaired) { try connection.current() }
     }
 
     @Test func bonjourAddressesAreAskedWithoutTheKeyAndTheKeyGoesOutOnce() async throws {
@@ -524,7 +492,8 @@ nonisolated enum LiveFlatd {
 }
 
 /// The real thing, against `scripts/fake-flatd.py` on this Mac (never the real flatd): the pinned URLSession and
-/// WebSocket over real TLS. Runs only when the fake's pairing code is handed in:
+/// WebSocket over real TLS. `scripts/test-unit.sh Arestia` starts a fake of its own for them (loopback, a free port),
+/// locally and on GitHub alike; another one's code can be handed in:
 ///
 ///     TEST_RUNNER_ARESTIA_LIVE_FLATD="$(python3 scripts/fake-flatd.py --pairing)" bash scripts/test-unit.sh Arestia
 @Suite(.enabled(if: LiveFlatd.code != nil), .serialized)

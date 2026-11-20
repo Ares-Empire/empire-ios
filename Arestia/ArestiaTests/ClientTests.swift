@@ -129,11 +129,11 @@ struct ActionsTests {
         transport.answer("POST /api/devices/rollo:blind_1", body: Flat.rollo(1))
         transport.answer("POST /api/devices/fan:fan_1", body: Flat.fan(1))
         let foreignBlind = SavedDevice.id(for: "rollo:blind_1", of: other)
-        await #expect(throws: FlatdError.unknown) { try await actions().move(rollo: foreignBlind, .up) }
-        await #expect(throws: FlatdError.unknown) {
+        await #expect(throws: ChosenDeviceGone.blind) { try await actions().move(rollo: foreignBlind, .up) }
+        await #expect(throws: ChosenDeviceGone.fan) {
             try await actions().setFans(on: true, only: [SavedDevice.id(for: "fan:fan_1", of: other)])
         }
-        await #expect(throws: FlatdError.unknown) { try await actions().move(rollo: "rollo:blind_1", .up) }   // no flatd named
+        await #expect(throws: ChosenDeviceGone.blind) { try await actions().move(rollo: "rollo:blind_1", .up) }   // no flatd named
         #expect(try await actions().rollo(foreignBlind) == nil)
         #expect(transport.sent.allSatisfy { $0.httpMethod != "POST" })
         // The same choice for the paired flatd works, whatever its address is now.
@@ -168,13 +168,14 @@ struct ActionsTests {
         var active = Flat.cooking
         active["active"] = true
         transport.answer("POST /api/modes/cooking", body: active.merging(["failed": [:]]) { $1 })
+        transport.answer("GET /api/modes", body: ["modes": [Flat.cooking]])
+        #expect(try await actions().setCooking(true) == CookingChange(wasActive: false, isActive: true, failed: []))
         transport.answer("GET /api/modes", body: ["modes": [active]])
-        #expect(try await actions().setCooking(true).isEmpty)
-        #expect(try await actions().isCooking())
+        #expect(try await actions().cookingState() == CookingState(active: true, notFollowed: []))
     }
 
     @Test func withoutAKeyNothingIsSent() async {
-        await #expect(throws: FlatdError.refused) { try await actions(Flat.connection(linked: false)).fansRunning() }
+        await #expect(throws: FlatdError.notPaired) { try await actions(Flat.connection(linked: false)).fansRunning() }
         #expect(transport.sent.isEmpty)
     }
 

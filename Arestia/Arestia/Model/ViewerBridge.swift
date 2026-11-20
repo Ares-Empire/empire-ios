@@ -68,11 +68,11 @@ enum PageScript {
         switch error {
         case .unreachable: "offline"
         case .deviceDidNotAnswer, .noAnswer: "timeout"
-        case .refused: "unauthorized"
+        case .refused, .notPaired: "unauthorized"
         case .unknown: "unknown"
-        case .notPossible: "refused"
+        case .notPossible, .anotherFlat: "refused"
         case let .failed(status, _) where status == 400: "refused"
-        case .failed, .invalidAnswer: "failed"
+        case .failed, .invalidAnswer, .pairingUnreadable: "failed"
         }
     }
 

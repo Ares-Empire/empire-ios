@@ -122,28 +122,31 @@ struct StoreTests {
         #expect(transport.bodies(for: "POST /api/devices/rollo:blind_1").first?["position"] as? Double == 85)
         events.send(.state(id: "rollo:blind_1", state: DeviceState(fields: ["moving": .string("down"),
                                                                             "target": .number(85)]), source: "device"))
-        #expect(await eventually { store.dragging["rollo:blind_1"] == nil })
+        #expect(await eventually { store.pending["rollo:blind_1"] == nil && store.dragging["rollo:blind_1"] == nil })
         store.stop()
     }
 
     @Test func connectingChecksTheKeyBeforeKeepingIt() async throws {
         let connection = Flat.connection(linked: false)
-        let (store, transport, events, _) = Flat.store(connection: connection)
+        let (session, transport, events, _) = Flat.session(connection: connection)
+        let unpaired = try #require(session.store)
         transport.answer("GET /api/devices", status: 401, body: ["error": "missing or wrong token"])
-        #expect(await store.connect(to: Flat.base, token: "wrong-key-0123456789", pin: Flat.pin) == .refused)
+        #expect(await unpaired.connect(to: Flat.base, token: Flat.otherKey, pin: Flat.pin) == .refused)
         #expect(connection.pairing == nil && connection.token == nil)
-        #expect(store.link == .notSetUp)
+        #expect(session.store === unpaired && unpaired.link == .notSetUp)
 
         transport.answer("GET /api/devices", body: ["devices": [Flat.fan(1)]])
         transport.answer("GET /api/scenes", body: ["scenes": []])
-        #expect(await store.connect(to: Flat.base, token: Flat.key, pin: Flat.pin) == nil)
+        #expect(await unpaired.connect(to: Flat.base, token: Flat.key, pin: Flat.pin) == nil)
         #expect(connection.pairing?.baseURL == Flat.base && connection.pairing?.pin == Flat.pin)
         #expect(connection.token == Flat.key)
+        let store = try #require(session.store)
+        store.start()
         #expect(await eventually { events.isOpen })
         #expect(events.pins == [Flat.pin])                 // the stream is opened for the pairing's identity
-        store.disconnect()
-        #expect(connection.pairing == nil && connection.token == nil && store.devices.isEmpty)
-        #expect(store.link == .notSetUp)
+        #expect(session.forget())
+        #expect(connection.pairing == nil && connection.token == nil && store.isRetired && store.devices.isEmpty)
+        #expect(session.store?.link == .notSetUp)
     }
 
     @Test func theStreamEndingIsNotLiveAnyMore() async throws {
@@ -169,13 +172,12 @@ struct StoreTests {
     @Test func listenersHearEveryChangeAsFlatdWroteIt() async throws {
         let (store, transport, events, _) = try await liveStore()
         var heard: [FlatEvent] = []
-        let pairing = try #require(store.pairingID)
-        let token = try #require(store.listen(for: pairing) { heard.append($0) })
+        let token = try #require(store.listen { heard.append($0) })
         events.send(.state(id: "fan:fan_1", state: DeviceState(fields: ["on": .bool(true)]), source: "device"))
         #expect(await eventually { heard.count == 1 })
         // A command's answer too, as a state event (the page shows it before the stream repeats it).
         transport.answer("POST /api/devices/rollo:blind_2", body: Flat.rollo(2, moving: "down", target: 100))
-        #expect(await store.pageRequest("rollo:blind_2", body: Data(#"{"command":"down"}"#.utf8), pairing: pairing) == nil)
+        #expect(await store.pageRequest("rollo:blind_2", body: Data(#"{"command":"down"}"#.utf8)) == nil)
         #expect(heard.count == 2)
         if case let .state(id, state, _) = heard[1] { #expect(id == "rollo:blind_2" && state.moving == .down) }
         #expect(transport.bodies(for: "POST /api/devices/rollo:blind_2").first?["command"] as? String == "down")
@@ -188,12 +190,10 @@ struct StoreTests {
 
     @Test func thePagesRequestsGetTheBridgesErrors() async throws {
         let (store, transport, _, _) = try await liveStore()
-        let pairing = try #require(store.pairingID)
         transport.answer("POST /api/devices/fan:fan_2", status: 504, body: ["error": "timeout"])
-        #expect(await store.pageRequest("fan:fan_2", body: Data(#"{"on":true}"#.utf8), pairing: pairing)
-                == .deviceDidNotAnswer)
+        #expect(await store.pageRequest("fan:fan_2", body: Data(#"{"on":true}"#.utf8)) == .deviceDidNotAnswer)
         transport.answer("POST /api/modes/cooking", body: Flat.cooking.merging(["failed": [:]]) { $1 })
-        #expect(await store.pageMode("cooking", body: Data(#"{"active":false}"#.utf8), pairing: pairing) == nil)
+        #expect(await store.pageMode("cooking", body: Data(#"{"active":false}"#.utf8)) == nil)
         store.stop()
     }
 }

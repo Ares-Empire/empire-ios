@@ -265,6 +265,16 @@
         }
       }
     },
+    "A new code from the same flatd" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein neuer Code vom selben flatd"
+          }
+        }
+      }
+    },
     "Air out" : {
       "localizations" : {
         "de" : {
@@ -315,22 +325,22 @@
         }
       }
     },
-    "Arestia couldn't forget the key. Try again." : {
+    "Arestia couldn't forget the flat. Try again." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Arestia konnte den Schlüssel nicht vergessen. Versuch es noch einmal."
+            "value" : "Arestia konnte die Wohnung nicht vergessen. Versuch es noch einmal."
           }
         }
       }
     },
-    "Arestia forgets the pairing. The Control Center controls and Shortcuts stop until you pair again. A blind or fan chosen in them is then chosen again." : {
+    "Arestia forgets the pairing and everything it knows of this flat. The Control Center controls and Shortcuts do nothing until you pair again, and a blind or fan chosen in them is chosen again. Another flat can be paired only after this." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Arestia vergisst die Kopplung. Die Steuerelemente im Kontrollzentrum und die Kurzbefehle ruhen, bis du neu koppelst. Ein darin gewähltes Rollo oder ein Ventilator wird dann neu gewählt."
+            "value" : "Arestia vergisst die Kopplung und alles, was es über diese Wohnung weiß. Die Steuerelemente im Kontrollzentrum und die Kurzbefehle tun nichts, bis du neu koppelst, und ein darin gewähltes Rollo oder ein Ventilator wird neu gewählt. Erst danach lässt sich eine andere Wohnung koppeln."
           }
         }
       }
@@ -515,6 +525,26 @@
         }
       }
     },
+    "Cooking was ended outside the app. Didn't answer: %@." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kochen wurde außerhalb der App beendet. Keine Antwort von: %@."
+          }
+        }
+      }
+    },
+    "Cooking was started outside the app. Didn't answer: %@." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kochen wurde außerhalb der App gestartet. Keine Antwort von: %@."
+          }
+        }
+      }
+    },
     "Cooking, Fans and a blind: open Control Center, hold, then + and Arestia." : {
       "localizations" : {
         "de" : {
@@ -531,26 +561,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Keine Antwort von: %@."
-          }
-        }
-      }
-    },
-    "Disconnect" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Trennen"
-          }
-        }
-      }
-    },
-    "Disconnect from the flat?" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Von der Wohnung trennen?"
           }
         }
       }
@@ -631,6 +641,36 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Wohnungsdienst"
+          }
+        }
+      }
+    },
+    "Forget" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vergessen"
+          }
+        }
+      }
+    },
+    "Forget this flat" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Wohnung vergessen"
+          }
+        }
+      }
+    },
+    "Forget this flat?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Wohnung vergessen?"
           }
         }
       }
@@ -945,6 +985,16 @@
         }
       }
     },
+    "Reconnecting…" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verbindet neu …"
+          }
+        }
+      }
+    },
     "Runs it once" : {
       "localizations" : {
         "de" : {
@@ -965,22 +1015,42 @@
         }
       }
     },
-    "Scan a new code from flatd" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Einen neuen Code von flatd scannen"
-          }
-        }
-      }
-    },
     "Scan flatd's QR code" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "QR-Code von flatd scannen"
+          }
+        }
+      }
+    },
+    "Sending: %@ closed" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wird gesendet: %@ zu"
+          }
+        }
+      }
+    },
+    "Sending: closed" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wird gesendet: zu"
+          }
+        }
+      }
+    },
+    "Sending: open" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wird gesendet: offen"
           }
         }
       }
@@ -1101,16 +1171,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dieselbe wie unter dem QR-Code von flatd"
-          }
-        }
-      }
-    },
-    "This replaces the flatd paired until now. Connect only if “flatd pair” shows this identity under its code." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Das ersetzt den bisher gekoppelten flatd. Verbinde nur, wenn „flatd pair“ unter seinem Code diese Kennung zeigt."
           }
         }
       }

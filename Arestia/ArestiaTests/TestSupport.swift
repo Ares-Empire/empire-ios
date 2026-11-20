@@ -130,6 +130,9 @@ enum Flat {
         FlatdPairing(baseURL: url, token: token, pin: pin, id: id)
     }
     static let key = "test-key-0123456789abcdef"
+    /// Other made-up keys, built from `key` (a literal would look like a real key to the secret scanner).
+    static let renewedKey = "renewed-" + key
+    static let otherKey = "other-" + key
 
     /// A connection in a defaults suite of its own and an in-memory key.
     static func connection(linked: Bool = true) -> FlatdConnection {
@@ -169,14 +172,27 @@ enum Flat {
         return .snapshot(devices: try devices(objects), modes: [try decode(FlatMode.self, mode)])
     }
 
-    /// A store on the fakes, with its controls' reloads counted.
+    /// A store on the fakes for the saved pairing (or none), with its controls' reloads counted.
     @MainActor
     static func store(transport: FakeTransport = FakeTransport(), events: FakeEvents = FakeEvents(),
-                      connection: FlatdConnection = connection()) -> (FlatStore, FakeTransport, FakeEvents, Counter) {
+                      connection: FlatdConnection = connection(),
+                      rediscover: @escaping @Sendable () async -> [URL] = { [] }) -> (FlatStore, FakeTransport, FakeEvents, Counter) {
         let reloads = Counter()
-        let store = FlatStore(connection: connection, transport: transport, eventSource: events,
-                              rediscover: { [] }, reloadControls: { reloads.count += 1 })
+        let store = FlatStore(pairing: connection.pairing, connection: connection, transport: transport,
+                              eventSource: events, rediscover: rediscover, reloadControls: { reloads.count += 1 })
         return (store, transport, events, reloads)
+    }
+
+    /// The app's session on the fakes: every store it makes uses them.
+    @MainActor
+    static func session(transport: FakeTransport = FakeTransport(), events: FakeEvents = FakeEvents(),
+                        connection: FlatdConnection = connection()) -> (FlatSession, FakeTransport, FakeEvents, Counter) {
+        let reloads = Counter()
+        let session = FlatSession(connection: connection, reloadControls: { reloads.count += 1 }) { pairing, changed in
+            FlatStore(pairing: pairing, connection: connection, transport: transport, eventSource: events,
+                      rediscover: { [] }, reloadControls: { reloads.count += 1 }, pairingChanged: changed)
+        }
+        return (session, transport, events, reloads)
     }
 }
 

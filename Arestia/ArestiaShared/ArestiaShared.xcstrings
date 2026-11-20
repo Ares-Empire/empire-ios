@@ -81,6 +81,26 @@
         }
       }
     },
+    "Arestia couldn't read its pairing just now. Unlock the iPhone and try again." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arestia konnte seine Kopplung gerade nicht lesen. Entsperre das iPhone und versuch es noch einmal."
+          }
+        }
+      }
+    },
+    "Arestia isn't paired with a flat. Open Arestia to pair it." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arestia ist mit keiner Wohnung gekoppelt. Öffne Arestia, um sie zu koppeln."
+          }
+        }
+      }
+    },
     "Blind" : {
       "localizations" : {
         "de" : {
@@ -111,6 +131,16 @@
         }
       }
     },
+    "Choose a blind" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rollo wählen"
+          }
+        }
+      }
+    },
     "Cooking" : {
       "localizations" : {
         "de" : {
@@ -121,12 +151,32 @@
         }
       }
     },
-    "Cooking. The fans are on and the blind is going up." : {
+    "Cooking ended." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kochen. Die Ventilatoren laufen, das Rollo fährt hoch."
+            "value" : "Kochen beendet."
+          }
+        }
+      }
+    },
+    "Cooking is on." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kochen läuft."
+          }
+        }
+      }
+    },
+    "Cooking wasn't on." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kochen lief nicht."
           }
         }
       }
@@ -137,16 +187,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Keine Antwort von: %@."
-          }
-        }
-      }
-    },
-    "Done cooking. Fans off, the blind goes to its favourite spot." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kochen beendet. Ventilatoren aus, das Rollo fährt auf seinen Favoriten."
           }
         }
       }
@@ -311,6 +351,16 @@
         }
       }
     },
+    "Not in your flat" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nicht in deiner Wohnung"
+          }
+        }
+      }
+    },
     "Off" : {
       "localizations" : {
         "de" : {
@@ -321,12 +371,32 @@
         }
       }
     },
+    "Off · not all followed" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aus · nicht alle gefolgt"
+          }
+        }
+      }
+    },
     "On" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "An"
+          }
+        }
+      }
+    },
+    "On · not all followed" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "An · nicht alle gefolgt"
           }
         }
       }
@@ -477,6 +547,36 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Der Wohnungsdienst hat eine Antwort geschickt, die diese App nicht lesen kann."
+          }
+        }
+      }
+    },
+    "This blind isn't in your flat anymore. Choose it again." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieses Rollo ist nicht mehr in deiner Wohnung. Wähl es neu."
+          }
+        }
+      }
+    },
+    "This fan isn't in your flat anymore. Choose it again." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieser Ventilator ist nicht mehr in deiner Wohnung. Wähl ihn neu."
+          }
+        }
+      }
+    },
+    "This is a different flat. Forget the current one first: Settings → Forget this flat." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das ist eine andere Wohnung. Vergiss zuerst die jetzige: Einstellungen → Diese Wohnung vergessen."
           }
         }
       }

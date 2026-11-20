@@ -18,15 +18,12 @@ struct FlatScreen: View {
         GeometryReader { proxy in
             ZStack {
                 ProvinceWall(accent: .arestia)
-                if store.link != .notSetUp, let pairing = store.pairingID {
+                if store.pairingID != nil {
                     // The safe area's bottom here is the tab bar and the home indicator; the page sees only the latter.
-                    FlatWebView(store: store, page: page, pairing: pairing,
-                                coveredBottom: proxy.safeAreaInsets.bottom,
-                                load: page.wanted ? "\(page.loads)-\(pairing)" : nil)
-                        // A web view of its own per pairing (its identity): another flat's page is gone, with its
-                        // bridge, the moment the pairing changes, and can neither read the new flat's state nor
-                        // command it.
-                        .id(pairing)
+                    // The screens are made anew with every store (one flat per install), so this web view and its
+                    // bridge only ever belong to this store's flat. A fresh code of the flat loads the page again.
+                    FlatWebView(store: store, page: page, coveredBottom: proxy.safeAreaInsets.bottom,
+                                load: page.wanted ? "\(page.loads)-\(store.credentials)" : nil)
                         .ignoresSafeArea()
                         .opacity(page.isReady ? 1 : 0)
                         .animation(.easeOut(duration: 0.3), value: page.isReady)
@@ -77,21 +74,18 @@ final class FlatPage {
 }
 
 /// The web view and its bridge (BRIDGE.md v1): the handler `flat3d`, `flat3d.receive(…)`, one result per request.
-private struct FlatWebView: UIViewRepresentable {
+struct FlatWebView: UIViewRepresentable {
     let store: FlatStore
     let page: FlatPage
-    /// The pairing's identity (the store's `pairingID`) this web view belongs to; also the view's identity, so each
-    /// pairing gets a web view and a coordinator of its own.
-    let pairing: UUID
     /// How much of the screen's bottom the app's bars and the home indicator cover.
     let coveredBottom: CGFloat
     /// Which load the page should show (nil: not yet, the tab was never opened): a new value loads it again (Try
-    /// again, or a new pairing: a page of the old flatd never stays).
+    /// again, or a fresh code of the flat: a page fetched with the old key never stays).
     let load: String?
     @Environment(\.colorScheme) private var scheme
     @AppStorage(PageScript.alwaysDaylightKey) private var alwaysDaylight = false
 
-    func makeCoordinator() -> Coordinator { Coordinator(store: store, page: page, pairing: pairing) }
+    func makeCoordinator() -> Coordinator { Coordinator(store: store, page: page) }
 
     func makeUIView(context: Context) -> WKWebView {
         let configuration = WKWebViewConfiguration()
@@ -141,12 +135,9 @@ private struct FlatWebView: UIViewRepresentable {
     final class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
         let store: FlatStore
         let page: FlatPage
-        /// The identity of the pairing this coordinator's pages come from. Everything between the page and the store
-        /// is tied to it: once the store or the Keychain has another pairing, this page is told nothing and commands
-        /// nothing, whenever its messages or their queued work get their turn.
-        let pairing: UUID
-        /// Cheap, for every event sent to the page: the store tells a page only its own pairing's events.
-        private var isCurrent: Bool { store.pairingID == pairing && !retired }
+        /// Whether this page may still be told and heard: its web view is in place and its store has not retired
+        /// (Forget retires it before anything else, so an old page's messages or queued work command nothing).
+        private var isCurrent: Bool { !retired && !store.isRetired }
         /// The web view is gone (or its pairing): nothing more is done for it.
         private var retired = false
         weak var webView: WKWebView?
@@ -172,62 +163,80 @@ private struct FlatWebView: UIViewRepresentable {
         static let pageURL = URL(string: "https://viewer.arestia.invalid/")!
         private static let log = Logger(subsystem: "de.ares-empire.arestia", category: "viewer")
 
-        init(store: FlatStore, page: FlatPage, pairing: UUID) {
+        init(store: FlatStore, page: FlatPage) {
             self.store = store
             self.page = page
-            self.pairing = pairing
         }
 
+        /// How long the page has to say `ready` once its load began.
+        static let readyWithin: Duration = .seconds(30)
+
         /// Fetches flatd's viewer page (the pinned client, with the key) and hands it to the web view, which loads
-        /// nothing itself. The old page's subscription ends first; the page has half a minute to say `ready`.
+        /// nothing itself. The old page's subscription ends first. Every way this can end shows something: the page, or
+        /// the calm card with Try again and the reason in the log (Codex's review, round 5: a Keychain hiccup used to
+        /// leave "Loading the flat" for good); the page has half a minute to say `ready`.
         func load(_ count: String? = nil) {
             if let count { loadedCount = count }
             stopListening()
             readyDeadline?.cancel()
             let loading = handover.begin()
             expectsPage = false
-            guard isCurrent, let client = store.client(for: pairing) else { return }
+            guard isCurrent else { return }
             page.isReady = false
             page.problem = nil
             webView?.stopLoading()
+            let client: FlatdClient
+            switch store.pageClient() {
+            case let .success(found):
+                client = found
+            case let .failure(error):
+                fail(loading, error.message(), log: "no client for the page (\(String(describing: error)))")
+                return
+            }
             readyDeadline = Task { [weak self] in
-                try? await Task.sleep(for: .seconds(30))
+                try? await Task.sleep(for: Self.readyWithin)
                 guard let self, !Task.isCancelled, loading == document, !page.isReady, page.problem == nil else { return }
                 webView?.stopLoading()
-                page.problem = String(localized: "The 3D flat didn't start.")
+                fail(loading, String(localized: "The 3D flat didn't start."), log: "the page did not say ready in time")
             }
             Task { [weak self] in
                 let html: Data
                 do {
                     html = try await client.viewerPage()
                 } catch {
+                    // A newer load (Try again, a fresh code of the flat) began meanwhile: this fetch's failure, a
+                    // refused old key included, is not shown.
                     guard let self, loading == document else { return }
-                    readyDeadline?.cancel()
-                    page.problem = switch error as? FlatdError ?? .unreachable {
-                    case .unknown: String(localized: "flatd has no 3D flat set up yet.")
-                    case let known: known.message()
-                    }
+                    let reason = error as? FlatdError ?? .unreachable
+                    fail(loading, reason == .unknown ? String(localized: "flatd has no 3D flat set up yet.")
+                         : reason.message(), log: "the page could not be fetched (\(String(describing: reason)))")
                     return
                 }
-                guard let self, loading == document else { return }
+                guard let self, loading == document, isCurrent else { return }
                 // No page without its fence: if the rules cannot be installed, nothing is loaded.
                 guard await blockTheNetwork() else {
-                    guard loading == document else { return }
-                    readyDeadline?.cancel()
-                    page.problem = String(localized: "The 3D flat didn't start.")
+                    fail(loading, String(localized: "The 3D flat didn't start."), log: "the network rules did not install")
                     return
                 }
-                guard loading == document, isCurrent, store.speaks(for: pairing), store.connection.isCurrent(client)
-                else { return }
+                guard loading == document, isCurrent else { return }
                 expectsPage = true
                 let navigation = webView?.load(html, mimeType: "text/html", characterEncodingName: "utf-8",
                                                baseURL: Self.pageURL)
                 if !handover.loading(loading, as: navigation) {
                     expectsPage = false
-                    readyDeadline?.cancel()
-                    page.problem = String(localized: "The 3D flat didn't start.")
+                    fail(loading, String(localized: "The 3D flat didn't start."), log: "WebKit did not start the load")
                 }
             }
+        }
+
+        /// The load `loading` ends without a page: the calm card with this reason and Try again, and why in the log.
+        /// Nothing for a load a newer one replaced.
+        private func fail(_ loading: Int, _ problem: String, log reason: String) {
+            guard loading == document, isCurrent else { return }
+            readyDeadline?.cancel()
+            Self.log.error("3D page: \(reason, privacy: .public)")
+            page.isReady = false
+            page.problem = problem
         }
 
         func stopListening() {
@@ -259,13 +268,13 @@ private struct FlatWebView: UIViewRepresentable {
         // MARK: page → app
 
         func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
-            // Only the page the app handed over, in the main frame, of the pairing still saved, may speak to the app.
-            guard isCurrent, store.speaks(for: pairing), handover.maySpeak, message.frameInfo.isMainFrame,
+            // Only the page the app handed over, in the main frame, of a store that has not retired, may speak.
+            guard isCurrent, handover.maySpeak, message.frameInfo.isMainFrame,
                   isThePage(message.frameInfo.securityOrigin),
                   let parsed = PageMessage.parse(message.body) else { return }
             switch parsed {
             case .ready:
-                guard let snapshot = store.snapshot(for: pairing) else { return }
+                guard let snapshot = store.snapshot else { return }
                 readyDeadline?.cancel()
                 page.isReady = true
                 page.problem = nil
@@ -274,23 +283,23 @@ private struct FlatWebView: UIViewRepresentable {
                 sendConnection(store.link)
                 send(snapshot.json)
                 if listener == nil {
-                    listener = store.listen(for: pairing) { [weak self] event in self?.send(event.json) }
+                    listener = store.listen { [weak self] event in self?.send(event.json) }
                 }
                 #if DEBUG
                 if LaunchArguments.current.contains("-probeViewer") { probe() }
                 #endif
             case let .request(reqId, id, body):
-                let asking = document, pairing = pairing
+                let asking = document
                 perform { [weak self] in
-                    guard let self else { return }
-                    let error = await store.pageRequest(id, body: body, pairing: pairing)
+                    guard let self, isCurrent else { return }
+                    let error = await store.pageRequest(id, body: body)
                     if asking == document { send(PageScript.result(reqId: reqId, error: error)) }
                 }
             case let .mode(reqId, id, body):
-                let asking = document, pairing = pairing
+                let asking = document
                 perform { [weak self] in
-                    guard let self else { return }
-                    let error = await store.pageMode(id, body: body, pairing: pairing)
+                    guard let self, isCurrent else { return }
+                    let error = await store.pageMode(id, body: body)
                     if asking == document { send(PageScript.result(reqId: reqId, error: error)) }
                 }
             case let .invalid(reqId):
@@ -352,7 +361,7 @@ private struct FlatWebView: UIViewRepresentable {
             guard page.isReady, link != lastConnection else { return }
             lastConnection = link
             send(PageScript.connection(link))
-            if link == .live { send(store.snapshot(for: pairing)?.json) }  // after every reconnect to flatd (BRIDGE.md)
+            if link == .live { send(store.snapshot?.json) }               // after every reconnect to flatd (BRIDGE.md)
         }
 
         private func send(_ json: Data?) {
@@ -418,13 +427,13 @@ private struct FlatWebView: UIViewRepresentable {
         func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
             guard handover.concerns(navigation), page.problem == nil,
                   (error as NSError).code != NSURLErrorCancelled else { return }
-            page.problem = FlatdError.unreachable.message()
+            fail(document, FlatdError.unreachable.message(), log: "WebKit failed the load (\((error as NSError).code))")
         }
 
         func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
             guard handover.concerns(navigation), page.problem == nil,
                   (error as NSError).code != NSURLErrorCancelled else { return }
-            page.problem = FlatdError.unreachable.message()
+            fail(document, FlatdError.unreachable.message(), log: "WebKit failed the page (\((error as NSError).code))")
         }
 
         /// WebKit may end the page's process in the background: load it again (BRIDGE.md).

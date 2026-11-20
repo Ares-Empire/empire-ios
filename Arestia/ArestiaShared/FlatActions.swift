@@ -2,8 +2,9 @@ import Foundation
 import WidgetKit
 
 /// What Siri, Shortcuts (and so NFC tags) and the Control Center controls can do, on flatd. One place for the app's
-/// intents and its controls, so both mean the same by "the fans" or "a blind open". The app's own screens go through
-/// `FlatStore`, which shows each step as it happens.
+/// intents and its controls, so both mean the same by "the fans" or "a blind open". They always act on the flat paired
+/// when they run (one flat per install, docs/ARESTIA-APP.md): a control is "my flat's cooking", not one flat's. The
+/// app's own screens go through `FlatStore`, which shows each step as it happens.
 nonisolated struct FlatActions: Sendable {
     let reach: FlatdReach
 
@@ -11,15 +12,34 @@ nonisolated struct FlatActions: Sendable {
 
     // MARK: cooking (a mode on flatd: fans on and its blind up; ended: fans off, that blind to its favourite spot)
 
-    /// Returns the devices that did not follow (flatd changes the mode anyway).
-    func setCooking(_ active: Bool) async throws -> [String] {
-        try await reach.run { try await $0.setMode(FlatMode.cookingID, active: active).failed }
+    /// Starts or ends cooking. What flatd confirmed comes back: whether cooking was on before, whether it is on now,
+    /// and the devices that did not follow, by name (flatd changes the mode anyway). Those are also kept for the Cooking
+    /// control and the app (`ModeTrouble`), since this runs outside the app; a change where all followed clears them.
+    func setCooking(_ active: Bool) async throws -> CookingChange {
+        let connection = reach.connection
+        let (change, pairing) = try await reach.run { client in
+            let before = try await client.modes().first { $0.id == FlatMode.cookingID }?.active ?? false
+            let (mode, failed) = try await client.setMode(FlatMode.cookingID, active: active)
+            let names = connection.names(failed, pairing: client.pairingID)
+            return (CookingChange(wasActive: before, isActive: mode.active, failed: names), client.pairingID)
+        }
+        if let pairing, !change.failed.isEmpty {
+            connection.note(ModeTrouble(pairing: pairing, mode: FlatMode.cookingID, active: change.isActive,
+                                        names: change.failed, at: .now), mode: FlatMode.cookingID)
+        } else {
+            connection.note(nil, mode: FlatMode.cookingID)
+        }
+        return change
     }
 
-    func isCooking() async throws -> Bool {
-        try await reach.run { client in
-            try await client.modes().first { $0.id == FlatMode.cookingID }?.active ?? false
+    /// The Cooking control's state: cooking as flatd has it now, and the devices that did not follow when it last
+    /// changed outside the app, while that still describes it.
+    func cookingState() async throws -> CookingState {
+        let (active, pairing) = try await reach.run { client in
+            (try await client.modes().first { $0.id == FlatMode.cookingID }?.active ?? false, client.pairingID)
         }
+        let trouble = pairing.flatMap { reach.connection.trouble(mode: FlatMode.cookingID, active: active, pairing: $0) }
+        return CookingState(active: active, notFollowed: trouble?.names ?? [])
     }
 
     // MARK: fans (every device of kind `fan`, or the ones named)
@@ -37,17 +57,21 @@ nonisolated struct FlatActions: Sendable {
 
     /// Switches the fans (all, or those in `only`) on (for `minutes`, nil: until switched off) or off, side by side.
     /// Returns the fans as flatd confirmed them; throws the first failure after every fan was tried. `only` holds
-    /// saved choices (`SavedDevice`): one made for another pairing is `.unknown`, and nothing is switched.
+    /// saved choices (`SavedDevice`): one the paired flat does not have (any more), or one chosen before the flat was
+    /// forgotten, throws `ChosenDeviceGone.fan`, and nothing is switched.
     @discardableResult
     func setFans(on: Bool, minutes: Int? = nil, only saved: [String]? = nil) async throws -> [Device] {
         let command = DeviceCommand.power(on: on, seconds: minutes.map { max(1, $0) * 60 })
         let connection = reach.connection
         return try await reach.run { client in
-            let ids = try saved?.map { try SavedDevice.device($0, of: client) }
+            let ids = try saved?.map { choice in
+                do { return try SavedDevice.device(choice, of: client) } catch { throw ChosenDeviceGone.fan }
+            }
             let fans = try await client.devices().filter { $0.kind == .fan && (ids?.contains($0.id) ?? true) }
+            if let ids, Set(fans.map(\.id)) != Set(ids) { throw ChosenDeviceGone.fan }
             guard !fans.isEmpty else { throw FlatdError.unknown }
-            // The pairing may have changed while the list was read: then nothing is switched.
-            guard connection.isCurrent(client) else { throw FlatdError.refused }
+            // Forgotten while the list was read: then nothing is switched.
+            guard connection.isCurrent(client) else { throw FlatdError.notPaired }
             return try await withThrowingTaskGroup(of: Result<Device, FlatdError>.self) { group in
                 for fan in fans {
                     group.addTask {
@@ -79,17 +103,24 @@ nonisolated struct FlatActions: Sendable {
         try await devices().filter { $0.kind == .rollo }
     }
 
-    /// `saved`: the blind as a Shortcut or a control remembers it (`SavedDevice`); one chosen for another pairing is
-    /// `.unknown`, and nothing moves.
+    /// `saved`: the blind as a Shortcut or a control remembers it (`SavedDevice`). One the paired flat does not have
+    /// (any more: flatd answers 404), or one chosen before the flat was forgotten, throws `ChosenDeviceGone.blind`, and
+    /// nothing moves.
     @discardableResult
     func move(rollo saved: String, _ command: RolloCommand) async throws -> Device {
         try await reach.run { client in
-            try await client.send(.rollo(command), to: try SavedDevice.device(saved, of: client))
+            let id: String
+            do { id = try SavedDevice.device(saved, of: client) } catch { throw ChosenDeviceGone.blind }
+            do {
+                return try await client.send(.rollo(command), to: id)
+            } catch FlatdError.unknown {
+                throw ChosenDeviceGone.blind
+            }
         }
     }
 
-    /// The blind a control remembers, as flatd has it now; nil when flatd has none with that id (or the choice was
-    /// made for another pairing).
+    /// The blind a control remembers, as flatd has it now; nil when the paired flat has none with that id (or the
+    /// choice was made before the flat was forgotten).
     func rollo(_ saved: String) async throws -> Device? {
         let (devices, client) = try await reach.run { client in (try await client.devices(), client) }
         reach.connection.remember(devices, from: client)
@@ -97,20 +128,71 @@ nonisolated struct FlatActions: Sendable {
         return devices.first { $0.kind == .rollo && $0.id == id }
     }
 
+    /// What the Blind control shows: nothing chosen yet, a blind the flat does not have (any more), or the blind as
+    /// flatd has it now. Never the preview's state as if it were live, and never a name kept for a gone choice.
+    func rolloControl(_ saved: String?) async throws -> RolloControlState {
+        guard let saved else { return .notChosen }
+        guard let device = try await rollo(saved) else { return .gone }
+        return .blind(name: device.label, isOpen: RolloOpenness.isOpen(device.state))
+    }
+
     // MARK: scenes
 
-    /// Returns the devices that did not follow.
+    /// Returns the devices that did not follow, by name.
     @discardableResult
     func runScene(_ id: String) async throws -> [String] {
-        try await reach.run { try await $0.runScene(id) }
+        let connection = reach.connection
+        return try await reach.run { client in
+            connection.names(try await client.runScene(id), pairing: client.pairingID)
+        }
+    }
+}
+
+/// What starting or ending cooking did, as flatd confirmed it.
+nonisolated struct CookingChange: Equatable, Sendable {
+    let wasActive: Bool
+    let isActive: Bool
+    /// The devices that did not follow, by name.
+    let failed: [String]
+}
+
+/// The Cooking control's state (`FlatActions.cookingState`).
+nonisolated struct CookingState: Equatable, Sendable {
+    let active: Bool
+    /// The devices that did not follow its last change outside the app, by name; empty when all did, or that change
+    /// no longer describes cooking.
+    let notFollowed: [String]
+}
+
+/// The Blind control's state (`FlatActions.rolloControl`).
+nonisolated enum RolloControlState: Equatable, Sendable {
+    case notChosen
+    case gone
+    case blind(name: String, isOpen: Bool)
+}
+
+/// A blind or fan chosen in a Shortcut or a control that the paired flat does not have (any more), or that was chosen
+/// before the flat was forgotten: nothing is sent; it is chosen again.
+nonisolated enum ChosenDeviceGone: Error, Equatable, Sendable {
+    case blind, fan
+
+    func message(language: AppLanguage = .current) -> String {
+        switch self {
+        case .blind:
+            language.string(LocalizedStringResource("This blind isn't in your flat anymore. Choose it again.",
+                                                    table: "ArestiaShared"))
+        case .fan:
+            language.string(LocalizedStringResource("This fan isn't in your flat anymore. Choose it again.",
+                                                    table: "ArestiaShared"))
+        }
     }
 }
 
 /// A device as a Shortcut or a Control Center control remembers it (an entity's id): flatd's device id together with
-/// the identity of the pairing it was chosen in (`FlatdPairing.id`). flatd's ids are only names inside one flatd: after
-/// pairing with another flatd the same id may be another device, so a choice is used only in the pairing it was made
-/// in, and has to be made again after pairing anew (with another flatd, or after Disconnect). It survives what the
-/// pairing survives: a new address, a renewed certificate, a fresh code (a new key) of the same flatd.
+/// the identity of the pairing it was chosen in (`FlatdPairing.id`). iOS keeps those choices itself and the app cannot
+/// delete them; tagging them is how Forget wipes them: flatd's ids are only names inside one flatd, so after Forget and
+/// a new pairing the same id may be another device, and a choice made before acts on nothing (`ChosenDeviceGone`). It
+/// survives what the pairing survives: a new address, a renewed certificate, a fresh code (a new key) of the same flatd.
 nonisolated enum SavedDevice {
     static func id(for device: String, of pairing: UUID) -> String {
         pairing.uuidString.lowercased() + "/" + device

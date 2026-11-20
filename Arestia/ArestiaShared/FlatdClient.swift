@@ -19,6 +19,12 @@ nonisolated enum FlatdError: Error, Equatable, Sendable {
     case failed(status: Int, message: String?)
     /// An answer this app cannot read.
     case invalidAnswer
+    /// Arestia is not paired with a flat (never, or the flat was forgotten).
+    case notPaired
+    /// The pairing could not be read just now (the iPhone not unlocked since it started, a Keychain hiccup).
+    case pairingUnreadable
+    /// A pairing code of another flat while one is paired: one flat per install, so Forget comes first.
+    case anotherFlat
 
     /// One short line for the person, in the app's language.
     func message(language: AppLanguage = .current) -> String {
@@ -43,6 +49,15 @@ nonisolated enum FlatdError: Error, Equatable, Sendable {
                                                                table: "ArestiaShared"))
         case .invalidAnswer:
             language.string(LocalizedStringResource("The flat service sent an answer this app can't read.",
+                                                    table: "ArestiaShared"))
+        case .notPaired:
+            language.string(LocalizedStringResource("Arestia isn't paired with a flat. Open Arestia to pair it.",
+                                                    table: "ArestiaShared"))
+        case .pairingUnreadable:
+            language.string(LocalizedStringResource("Arestia couldn't read its pairing just now. Unlock the iPhone and try again.",
+                                                    table: "ArestiaShared"))
+        case .anotherFlat:
+            language.string(LocalizedStringResource("This is a different flat. Forget the current one first: Settings → Forget this flat.",
                                                     table: "ArestiaShared"))
         }
     }

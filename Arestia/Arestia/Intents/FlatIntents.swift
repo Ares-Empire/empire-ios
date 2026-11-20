@@ -48,16 +48,17 @@ nonisolated enum RolloMove: String, AppEnum {
 
 // MARK: - cooking
 
+/// The dialogs say what flatd confirmed (the mode's state, and the devices that did not follow), never what the mode's
+/// devices are assumed to do (Codex's review, round 5).
 struct StartCookingIntent: AppIntent {
     static let title = LocalizedStringResource("Start cooking", table: "ArestiaShared")
     static let description = IntentDescription(LocalizedStringResource(
         "Turns on cooking: the fans run and its blind goes up, until you end it.", table: "ArestiaShared"))
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        let failed = try await performFlatIntent { try await FlatActions.live.setCooking(true) }
+        let change = try await performFlatIntent { try await FlatActions.live.setCooking(true) }
         return .result(dialog: IntentDialog(stringLiteral: AppLanguage.current.string(
-            LocalizedStringResource("Cooking. The fans are on and the blind is going up.", table: "ArestiaShared"))
-            + FailureLine.text(failed)))
+            LocalizedStringResource("Cooking is on.", table: "ArestiaShared")) + FailureLine.text(change.failed)))
     }
 }
 
@@ -67,10 +68,13 @@ struct EndCookingIntent: AppIntent {
         "Ends cooking: the fans go off and its blind goes to its favourite spot.", table: "ArestiaShared"))
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        let failed = try await performFlatIntent { try await FlatActions.live.setCooking(false) }
-        return .result(dialog: IntentDialog(stringLiteral: AppLanguage.current.string(
-            LocalizedStringResource("Done cooking. Fans off, the blind goes to its favourite spot.",
-                                    table: "ArestiaShared")) + FailureLine.text(failed)))
+        let change = try await performFlatIntent { try await FlatActions.live.setCooking(false) }
+        // Ending cooking that was not on sends nothing to any device (flatd's contract): say so, claim nothing.
+        let line = change.wasActive
+            ? LocalizedStringResource("Cooking ended.", table: "ArestiaShared")
+            : LocalizedStringResource("Cooking wasn't on.", table: "ArestiaShared")
+        return .result(dialog: IntentDialog(stringLiteral: AppLanguage.current.string(line)
+            + FailureLine.text(change.failed)))
     }
 }
 

@@ -114,20 +114,21 @@ nonisolated enum FlatdBonjour {
     }
 }
 
-/// The client to use, for the intents and the controls (which run without the app). The address is settled first:
-/// the saved one if flatd answers there, else (nothing answers, or what answers does not hold flatd's key) every
-/// address Bonjour offers is tried the same way, and only one where the server proved flatd's key counts. Then the
-/// work runs once, there: a command is never sent twice (a connection lost after flatd took it would otherwise repeat
-/// it). The new address is kept once the work succeeded.
+/// The client to use, for the intents and the controls (which run without the app), always for the flat paired when
+/// they run (one flat per install). The address is settled first: the saved one if flatd answers there, else (nothing
+/// answers, or what answers does not hold flatd's key) every address Bonjour offers is tried the same way, and only one
+/// where the server proved flatd's key counts. Then the work runs once, there: a command is never sent twice (a
+/// connection lost after flatd took it would otherwise repeat it). The new address is kept once the work succeeded.
 nonisolated struct FlatdReach: Sendable {
     let connection: FlatdConnection
     /// Nil: the real, pinned transport (the tests pass a fake).
     var transport: (any HTTPTransport & Sendable)?
     var rediscover: @Sendable () async -> [URL] = { await FlatdBonjour.candidates() }
 
-    /// Throws `FlatdError.refused` without a pairing, `.unreachable` when flatd cannot be found.
+    /// Throws `.notPaired` without a pairing, `.pairingUnreadable` while it cannot be read, `.unreachable` when flatd
+    /// cannot be found.
     func run<T: Sendable>(_ work: @Sendable (FlatdClient) async throws -> T) async throws -> T {
-        guard let pairing = connection.pairing else { throw FlatdError.refused }
+        let pairing = try connection.current()
         var client = FlatdClient(pairing, transport: transport)
         do {
             try await client.verify()
@@ -138,8 +139,8 @@ nonisolated struct FlatdReach: Sendable {
             }
             client = found
         }
-        // Disconnected or paired anew while the address was looked up: this run sends nothing.
-        guard connection.pairing?.id == pairing.id else { throw FlatdError.refused }
+        // Forgotten while the address was looked up: this run sends nothing.
+        guard try connection.current().id == pairing.id else { throw FlatdError.notPaired }
         let result = try await work(client)
         connection.move(pairing, to: client.baseURL)
         return result

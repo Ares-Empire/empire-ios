@@ -19,7 +19,11 @@ nonisolated struct FlatIntentError: Error, CustomLocalizedStringResourceConverti
     var localizedStringResource: LocalizedStringResource { LocalizedStringResource(stringLiteral: message) }
 
     init(_ error: Error) {
-        message = (error as? FlatdError ?? .unreachable).message()
+        if let gone = error as? ChosenDeviceGone {
+            message = gone.message()
+        } else {
+            message = (error as? FlatdError ?? .unreachable).message()
+        }
     }
 }
 
@@ -37,12 +41,11 @@ nonisolated func performFlatIntent<T: Sendable>(_ work: @Sendable () async throw
     }
 }
 
-/// "Didn't answer: Fan 2." after a mode or scene whose devices did not all follow (empty when all did).
+/// " Didn't answer: Fan 2." after a mode or scene whose devices did not all follow, by name (empty when all did).
 nonisolated enum FailureLine {
-    static func text(_ ids: [String], connection: FlatdConnection = .live, language: AppLanguage = .current) -> String {
-        guard !ids.isEmpty else { return "" }
-        let names = connection.knownDevices
-        let list = ids.map { id in names.first { $0.id == id }?.label ?? id }.joined(separator: ", ")
+    static func text(_ names: [String], language: AppLanguage = .current) -> String {
+        guard !names.isEmpty else { return "" }
+        let list = names.joined(separator: ", ")
         return " " + language.string(LocalizedStringResource("Didn't answer: \(list).", table: "ArestiaShared"))
     }
 }

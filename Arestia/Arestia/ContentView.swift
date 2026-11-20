@@ -8,15 +8,15 @@ import SwiftUI
 /// DEBUG launch arguments: `-flatdPairing <code>` (pair with a fake flatd without the screen: the JSON pairing code
 /// `scripts/fake-flatd.py` prints; never the real one),
 /// `-forgetFlatd` (start without a key), `-tab home|flat`, `-openSheet settings|connect`, `-connectCode <code>` (the
-/// connect sheet with a code, as scanned), `-scrollToEnd`,
+/// connect sheet with a code, as scanned; another flat's is refused), `-scrollToEnd`,
 /// `-scrollTo blinds|automations`, plus the shared ones (`-appearance`, `-openLanguage`, …).
 struct ContentView: View {
-    @State private var store: FlatStore
+    /// The flat paired now and its store; Forget or a first pairing make a new store, and with it new screens.
+    @State private var session: FlatSession
     @State private var navigation: ArestiaNavigation
     /// Settings needs a session for its contact form; Arestia never signs in (`EmpireAppIdentity.arestia`).
-    @State private var session = EmpireSession(app: .arestia, restoreOnLaunch: false)
+    @State private var account = EmpireSession(app: .arestia, restoreOnLaunch: false)
     private let follows: Bool
-    @Environment(\.scenePhase) private var scenePhase
 
     init(arguments: [String] = LaunchArguments.current) {
         let connection = FlatdConnection.live
@@ -29,13 +29,42 @@ struct ContentView: View {
         #else
         follows = true
         #endif
-        _store = State(initialValue: FlatStore(connection: connection))
+        _session = State(initialValue: FlatSession(connection: connection))
         _navigation = State(initialValue: ArestiaNavigation.launched(arguments: arguments))
     }
 
     var body: some View {
         Group {
-            if store.link == .notSetUp {
+            if let store = session.store {
+                // A new store (Forget, a first pairing) gets new screens: nothing of the old one's stays on screen.
+                FlatRoot(store: store, session: session, navigation: navigation, account: account, follows: follows)
+                    .id(session.generation)
+            } else {
+                // The Keychain could not be read yet (the session reads it again by itself).
+                ZStack {
+                    ProvinceWall(accent: .arestia)
+                    ProgressView().tint(Ink.secondary)
+                }
+            }
+        }
+        .onOpenURL { url in navigation.open(url) }
+        .onChange(of: session.generation) { navigation.reset() }
+    }
+}
+
+/// The screens for one store: the connect screen while it has no pairing, else the two tabs; Settings and the connect
+/// sheet over them. Made anew with every store (`ContentView`).
+private struct FlatRoot: View {
+    let store: FlatStore
+    let session: FlatSession
+    @Bindable var navigation: ArestiaNavigation
+    let account: EmpireSession
+    let follows: Bool
+    @Environment(\.scenePhase) private var scenePhase
+
+    var body: some View {
+        Group {
+            if store.pairingID == nil {
                 ConnectScreen(store: store)
             } else {
                 tabs
@@ -52,12 +81,11 @@ struct ContentView: View {
             default: break
             }
         }
-        .onOpenURL { url in navigation.open(url) }
         .sheet(item: $navigation.sheet) { sheet in
             switch sheet {
             case .settings:
-                SettingsScreen(app: SettingsApp(name: "Arestia", accent: .arestia), session: session, logOut: {}) {
-                    ConnectionSection(store: store)
+                SettingsScreen(app: SettingsApp(name: "Arestia", accent: .arestia), session: account, logOut: {}) {
+                    ConnectionSection(store: store, session: session)
                     FlatViewSection()
                 }
             case let .connect(code):
@@ -104,6 +132,12 @@ final class ArestiaNavigation {
 
     var tab: Tab = .home
     var sheet: Sheet?
+
+    /// Back to the start: a new store (Forget, a first pairing) begins at Home with nothing over it.
+    func reset() {
+        sheet = nil
+        tab = .home
+    }
 
     /// `arestia://home`, `arestia://flat`.
     func open(_ url: URL) {

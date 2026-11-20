@@ -55,7 +55,7 @@ ci_skips() {
 }
 
 mkdir -p build/test-unit
-udid='' child='' summary=''
+udid='' child='' summary='' fake=''
 locks=()
 cleanup() {
     cleanup_status=$?
@@ -63,6 +63,10 @@ cleanup() {
     if [[ -n "$child" ]]; then
         kill -TERM "$child" 2>/dev/null || true
         wait "$child" 2>/dev/null || true
+    fi
+    if [[ -n "$fake" ]]; then
+        kill -TERM "$fake" 2>/dev/null || true
+        wait "$fake" 2>/dev/null || true
     fi
     if [[ -n "$udid" ]]; then
         if (( keep )); then
@@ -129,6 +133,25 @@ for app in "${apps[@]}"; do
     case "$app" in
         Aresium|Empire) filters+=("-skip-testing:${app}Tests/SharedLoginProbe") ;;
     esac
+    # Arestia's pinned URLSession and WebSocket over real TLS (`LiveFlatdTests`): against a fake flatd of this run's
+    # own (loopback, a free port, no Bonjour; never the real flatd), unless a code was handed in.
+    if [[ "$app" == Arestia && -z "${TEST_RUNNER_ARESTIA_LIVE_FLATD:-}" ]] && (( ! timing )); then
+        port=$(python3 -c 'import socket; s = socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1])')
+        python3 scripts/fake-flatd.py --host 127.0.0.1 --port "$port" --no-bonjour \
+            >build/test-unit/fake-flatd.log 2>&1 &
+        fake=$!
+        for _ in $(seq 1 50); do
+            grep -q '^pairing code:' build/test-unit/fake-flatd.log 2>/dev/null && break
+            sleep 0.2
+        done
+        if ! grep -q '^pairing code:' build/test-unit/fake-flatd.log; then
+            echo "The fake flatd did not start:" >&2
+            cat build/test-unit/fake-flatd.log >&2
+            exit 1
+        fi
+        TEST_RUNNER_ARESTIA_LIVE_FLATD=$(python3 scripts/fake-flatd.py --host 127.0.0.1 --port "$port" --pairing)
+        export TEST_RUNNER_ARESTIA_LIVE_FLATD
+    fi
     result="build/test-unit/$app.xcresult"
     rm -rf "$result"
     started=$SECONDS

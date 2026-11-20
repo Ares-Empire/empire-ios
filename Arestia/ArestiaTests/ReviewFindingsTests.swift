@@ -63,7 +63,7 @@ struct KeySafetyTests {
         #expect(connection.pairing?.baseURL.host() == "192.0.2.77")
         #expect(connection.token == "newer-key-0123456789")
         try connection.forget()
-        connection.move(newer, to: Flat.base)                                     // after Disconnect: nothing comes back
+        connection.move(newer, to: Flat.base)                                     // after Forget: nothing comes back
         #expect(connection.pairing == nil)
     }
 
@@ -82,10 +82,10 @@ struct KeySafetyTests {
         transport.answer("GET 192.0.2.10/api/health", fails: true)
         transport.answer("POST /api/scenes/all_down", body: ["id": "all_down", "failed": [:]])
         let reach = FlatdReach(connection: connection, transport: transport, rediscover: {
-            try? connection.forget()                                  // Disconnect while flatd is looked up again
+            try? connection.forget()                                  // Forget while flatd is looked up again
             return [URL(string: "https://192.0.2.77:8788")!]
         })
-        await #expect(throws: FlatdError.refused) { try await FlatActions(reach: reach).runScene("all_down") }
+        await #expect(throws: FlatdError.notPaired) { try await FlatActions(reach: reach).runScene("all_down") }
         #expect(transport.bodies(for: "POST /api/scenes/all_down").isEmpty)
     }
 
@@ -120,8 +120,9 @@ struct StoreReviewTests {
         let gate = Gate()
         let transport = FakeTransport(), events = FakeEvents()
         transport.answer("GET /api/scenes", fails: true)
-        let store = FlatStore(connection: Flat.connection(), transport: transport, eventSource: events,
-                              rediscover: { await gate.wait() }, reloadControls: {})
+        let connection = Flat.connection()
+        let store = FlatStore(pairing: connection.pairing, connection: connection, transport: transport,
+                              eventSource: events, rediscover: { await gate.wait() }, reloadControls: {})
         store.start()
         #expect(await eventually({ gate.isWaiting }, timeout: .seconds(5)))
         store.retry()
@@ -136,8 +137,7 @@ struct StoreReviewTests {
     @Test func aModeEventIsToldOnce() async throws {
         let (store, _, events, _) = try await liveStore()
         var heard: [FlatEvent] = []
-        let pairing = try #require(store.pairingID)
-        let token = try #require(store.listen(for: pairing) { heard.append($0) })
+        let token = try #require(store.listen { heard.append($0) })
         events.send(.mode(FlatMode(id: "cooking", label: "Cooking", active: true)))
         #expect(await eventually { store.isCooking })
         try await Task.sleep(for: .milliseconds(50))
@@ -149,8 +149,7 @@ struct StoreReviewTests {
     @Test func aSnapshotWithoutModesKeepsThemForThePageToo() async throws {
         let (store, _, events, _) = try await liveStore()
         var heard: [FlatEvent] = []
-        let pairing = try #require(store.pairingID)
-        let token = try #require(store.listen(for: pairing) { heard.append($0) })
+        let token = try #require(store.listen { heard.append($0) })
         events.send(.snapshot(devices: try Flat.devices([Flat.fan(1)]), modes: nil))
         #expect(await eventually { store.devices.count == 1 })
         #expect(store.cooking != nil)
@@ -178,21 +177,29 @@ struct StoreReviewTests {
         store.stop()
     }
 
-    @Test func aLateAnswerAfterDisconnectingChangesNothing() async throws {
-        let (store, transport, _, _) = try await liveStore()
-        transport.answer("POST /api/devices/fan:fan_2", status: 401, body: ["error": "wrong token"])
+    @Test func aLateAnswerAfterForgetChangesNothing() async throws {
+        let (session, transport, events, _) = Flat.session()
+        let store = try #require(session.store)
+        transport.answer("GET /api/scenes", body: ["scenes": []])
+        store.start()
+        #expect(await eventually { events.isOpen })
+        events.send(try Flat.snapshot())
+        #expect(await eventually { store.link == .live })
+        transport.answer("POST /api/devices/fan:fan_2", status: 401, body: ["error": "wrong token"],
+                         delay: .milliseconds(100))
         store.setFan("fan:fan_2", on: true)
-        store.disconnect()
-        try await Task.sleep(for: .milliseconds(100))
-        #expect(store.link == .notSetUp)                  // not .refused from the old pairing's answer
-        #expect(store.working.isEmpty)
+        try await Task.sleep(for: .milliseconds(20))
+        #expect(session.forget())
+        try await Task.sleep(for: .milliseconds(200))
+        #expect(store.link == .notSetUp && store.isRetired)   // not .refused from the old pairing's answer
+        #expect(store.working.isEmpty && session.store?.link == .notSetUp)
     }
 
     @Test func aDraggedPositionClearsOnceFlatdAnswered() async throws {
         let (store, transport, _, _) = try await liveStore()
         transport.answer("POST /api/devices/rollo:blind_2", body: Flat.rollo(2, position: 0, moving: "down", target: 70))
         store.setRollo("rollo:blind_2", position: 70)
-        #expect(await eventually { store.dragging["rollo:blind_2"] == nil })
+        #expect(await eventually { store.pending["rollo:blind_2"] == nil })
         store.drag("rollo:blind_1", to: 30)
         store.endDrag("rollo:blind_1")
         #expect(store.dragging.isEmpty)
@@ -215,7 +222,7 @@ struct StoreReviewTests {
 
     @Test func aCommandInTheRetryPauseChecksTheAddressAgain() async throws {
         let (store, transport, events, _) = try await liveStore()
-        // The stream drops; the store still says live during its quick retry, but its address no longer counts.
+        // The stream drops; during its quick retry the address it was live at no longer counts.
         transport.answer("GET /api/health", status: 404, body: [:])
         events.end(FlatdError.unreachable)
         try await Task.sleep(for: .milliseconds(50))
@@ -241,7 +248,7 @@ struct StoreReviewTests {
         store.stop()
     }
 
-    @Test func aLateConnectKeepsNothingAfterADisconnect() async throws {
+    @Test func aCancelledConnectKeepsNothing() async throws {
         let connection = Flat.connection(linked: false)
         let (store, transport, _, _) = Flat.store(connection: connection)
         transport.answer("GET /api/devices", body: ["devices": [Flat.fan(1)]])
@@ -249,18 +256,6 @@ struct StoreReviewTests {
         attempt.cancel()
         #expect(await attempt.value == .notPossible)
         #expect(connection.pairing == nil && store.link == .notSetUp)
-    }
-
-    @Test func aDisconnectTheKeychainRefusesSaysSo() async throws {
-        let keys = MemoryKeys()
-        let connection = FlatdConnection(defaults: UserDefaults(suiteName: "arestia-tests-" + UUID().uuidString)!,
-                                         keychain: keys)
-        try connection.save(Flat.pairing())
-        let (store, _, _, _) = Flat.store(connection: connection)
-        keys.failsToDelete = true
-        store.disconnect()
-        #expect(store.offer != nil)
-        #expect(connection.pairing != nil)
     }
 
     @Test func aMalformedRequestStillGetsItsResult() {
