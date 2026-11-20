@@ -206,12 +206,29 @@ Patrik, after trying build 2 on his iPhone: he loved it, and asked for three cha
     carries the name. The app takes the name from it (`FlatStore.apply`, `Device.named(like:)`; the state stays the
     state events'), keeps it for Shortcuts' choices (`FlatdConnection.remember`), asks Control Center to read again
     when a blind's name changed (its control shows the name), and passes the event on to the 3D page as flatd sent
-    it, `source` included (BRIDGE.md: a page ignores what it does not know). The names kept for Shortcuts and the
-    controls carry a version: the stream's names always replace them, while a list a picker or a control read
-    (`GET /api/devices`) is kept only if nothing was kept since that reading began, so an older list never brings
-    back a name from before a rename. The Blind control's gallery preview shows the chosen blind's name as kept for
-    the paired flat now, else "Blind" (never the name stored in the control's configuration, which may be a
-    forgotten flat's).
+    it, `source` included (BRIDGE.md: a page ignores what it does not know).
+  - *One file for the names* kept for Shortcuts and the controls (`DeviceNameFile`, `device-names.json` in the App
+    Group's `Library/Application Support/Arestia`, beside the lock file): the pairing they belong to, a version (new
+    with every write) and each device's id, kind and name. It is the one source of truth for the app and the Control
+    Center extension. Every change is one read and one write under the lock both processes share (`flock`, the one
+    Forget takes), and the write replaces the whole file in one step, so a writer always decides on what the other
+    process last wrote. Build 2 kept the names in the App Group's `UserDefaults`; a value set there reaches the
+    other process some time later, so the extension could take the lock, still read the names from before the app's
+    write and put an older list over them. That path is gone (nothing reads the old key; the next snapshot or Forget
+    removes it). Names come in three ways, each with its rule (`FlatdConnection`):
+    - a **snapshot** of the app's stream is flatd's whole list, in the stream's order: it replaces the list;
+    - **one device's name, confirmed** (a `device` event, a rename's answer) is laid over that device alone
+      (`rememberName`). The app's list of the other devices can be older than what a picker read while the stream
+      was down, so it is never written along;
+    - **a list a request read** (`GET /api/devices`: a picker, a control, a pairing code's check) replaces the list
+      only if nothing was kept since that request began (the version read before it), so an older list never brings
+      back a name from before a rename.
+    What is shown is always the latest name accepted for the paired flat, read from the file after the request's
+    list was offered to it: Shortcuts' choices, the names in an intent's answer, and the Blind control, which shows
+    its own request's position under the name kept (`FlatActions.read`), never the name of a list the file refused.
+    The gallery preview shows the chosen blind's name as kept for the paired flat now, else "Blind" (never the name
+    stored in the control's configuration, which may be a forgotten flat's). Forget removes the file, and names are
+    read only while their pairing is the saved one.
   - *The look* (Claude): a long press on a device's row (on a blind: on its words and buttons, not on the window,
     which a slow drag would otherwise turn into a long press) offers **Rename** and, once renamed, **Original name**
     with flatd's name under it. Rename turns the name into a field where it stands, as Arestemis's and Aresium's names
@@ -239,6 +256,15 @@ in flatd 1.3, a rename cancelled during its database write never reached memory 
 control's preview named a forgotten flat's blind (5); a long paste was cut in quadratic time on the main thread (6);
 flatd compared a name in NFC with the config's raw spelling (7); the `source` of a `device` event was dropped on its
 way to the 3D page (8).
+
+Round 2 (NOT SAFE, five findings), answered by changing the two designs at their root rather than by one more guard:
+- flatd 1.3.1: the store owns each device's state and drivers read it there; a driver's own copy could fall behind
+  after a cancelled write and then report older values (1). Recorded in flatd's API.md.
+- The names kept for Shortcuts and the controls are one file, as above: no `UserDefaults` between the two processes
+  (2), a confirmed rename laid over its device alone (3), the Blind control showing the name kept (4).
+- The fake flatd restores a config name compared in NFC, as flatd does (5).
+Tests: `NameFileTests` (two connections that share only the files, as the app and the extension do; a real second
+process holding the lock and replacing the file, started from the test on the simulator), flatd's `test_rename.py`.
 
 ## Follow-ups
 
