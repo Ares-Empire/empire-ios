@@ -32,8 +32,32 @@ enum DeviceNames {
                 kept.append(character)
             }
         }
-        while cleaned(kept).unicodeScalars.count > maxLength { kept.removeLast() }
-        return kept
+        return cleaned(kept).unicodeScalars.count > maxLength ? fitting(kept) : kept
+    }
+
+    /// The longest start of `text` whose name as flatd keeps it (`cleaned`) is within `maxLength`, in one pass over
+    /// whole characters, each counted in NFC once (a long paste cost a normalization of the rest per character dropped,
+    /// on the main thread; Codex's review of the renaming, finding 6). Spaces at either end do not count, as flatd
+    /// trims them; spaces inside count once something follows them.
+    private static func fitting(_ text: String) -> String {
+        var counted = 0         // code points from the first character that is no space through the last one
+        var spaces = 0          // code points of the spaces after that, not counted until something follows
+        var end = text.startIndex
+        for index in text.indices {
+            let character = text[index]
+            let size = character.isASCII
+                ? character.unicodeScalars.count
+                : String(character).precomposedStringWithCanonicalMapping.unicodeScalars.count
+            if character.unicodeScalars.allSatisfy(CharacterSet.whitespacesAndNewlines.contains) {
+                if counted > 0 { spaces += size }
+            } else {
+                guard counted + spaces + size <= maxLength else { break }
+                counted += spaces + size
+                spaces = 0
+            }
+            end = text.index(after: index)
+        }
+        return String(text[..<end])
     }
 
     /// The name as flatd keeps it: trimmed, in NFC.

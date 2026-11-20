@@ -122,6 +122,21 @@ struct DeviceNamesTests {
         #expect(DeviceNames.typed(String(repeating: "x", count: 39) + thumb) == String(repeating: "x", count: 39))
     }
 
+    @Test func aLongPasteIsCutInOnePass() {
+        // Once each character dropped normalized the whole rest again, on the main thread (Codex's review, finding 6).
+        let pasted = String(repeating: "Desk fan ", count: 12_000)               // 108,000 characters
+        #expect(DeviceNames.typed(pasted) == String(pasted.prefix(41)))          // 40 that count, and a space
+        #expect(DeviceNames.typed("   " + String(repeating: "x", count: 50_000))
+                == "   " + String(repeating: "x", count: 40))
+        // Counted as flatd counts them, in NFC: an e with a combining accent is one, and stays whole.
+        let accented = DeviceNames.typed(String(repeating: "e\u{301}", count: 50_000))
+        #expect(accented.count == 40)
+        #expect(accented.unicodeScalars.count == 80)                             // as typed, not normalized
+        #expect(DeviceNames.cleaned(accented).unicodeScalars.count == 40)
+        let thumbs = DeviceNames.typed(String(repeating: "\u{1F44D}\u{1F3FD}", count: 30_000))
+        #expect(thumbs == String(repeating: "\u{1F44D}\u{1F3FD}", count: 20))
+    }
+
     @Test func theNameAsFlatdKeepsIt() {
         #expect(DeviceNames.cleaned("  Cafe\u{301} fan ") == "Caf\u{E9} fan")
         #expect(DeviceNames.cleaned(" \n ") == "")
