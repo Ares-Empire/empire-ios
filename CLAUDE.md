@@ -987,7 +987,8 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   device alone (`rememberName`), a list a request read is kept only if nothing was kept since it began
   (`remember(_:for:readSince:)`), and every consumer shows the name kept (`FlatActions.read`; `NameFileTests`). Lights have their own
   section, Lighting / Licht, after Fans; the Automations card is gone (Patrik: "I dont think we need them").
-  **Build 2 uploaded 2026-11-20** (internal group "Arestia"). Build 1 was refused by Apple (ITMS-90626, Invalid Siri
+  **Build 3 uploaded 2026-11-20 17:15** (renaming in flatd 1.3, Lighting, no Automations card, 3D walk mode, the page kept
+  on the phone; PRs #2 and #3). **Build 2 uploaded 2026-11-20** (internal group "Arestia"). Build 1 was refused by Apple (ITMS-90626, Invalid Siri
   Support): App Intent titles, descriptions and phrases may not name Apple products ("Mac", "iPhone", "Siri" …);
   in-app texts may.
 - **Aresium phone mode** (2026-10-27, briefs 15, 18 and 22; plan `ares-empire/docs/ARESIUM-FOR-OTHERS.md`): everyone

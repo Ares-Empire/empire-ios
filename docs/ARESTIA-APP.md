@@ -341,6 +341,30 @@ Left from the final reviews (rounds 8 and 9, Codex gpt-6.2-astra, 2026-11-20; no
   answer. A busy GitHub runner broke three of them on 2026-11-20 (the lock test, the live TLS suite's first request,
   the Forget test; each fixed since). Make the rest wait for a step they can see (a request seen, a latch) instead.
 
+From the renaming's last review (round 4, Codex gpt-6.2-astra, SAFE; rare, not blocking):
+
+- [ ] flatd: cancelling a Cooking commit can leave the database saying active while the live mode isn't (aiohttp keeps
+  a handler running after a disconnect, so unlikely). Finish publishing a committed mode change before passing the
+  cancellation on; a held-commit test through `Modes.set_mode`.
+- [ ] A late PATCH answer can show an older name on Home and the 3D page until the stream catches up, and restoring
+  the original name can slip past the names file's version (two clients renaming the same device while the stream is
+  down). Reconcile before showing; advance the version for an accepted list even when its labels are unchanged.
+- [ ] An unwritable but readable names file can hide a confirmed rename in the Blind control. Return the write's
+  outcome so an accepted list can supply its own label. The mode-trouble note still uses `UserDefaults` across the two
+  processes.
+
+From the 3D tap path's eleven reviews (Codex gpt-6.2-astra, 2026-11-20; Patrik: "Ship it" after round 11, build 3).
+Each round's cases are fixed in the private viewer with a phone test that fails on the code before (77 tests):
+
+- [x] A tap reaches only a device whose own drawn surface shows at the tap or on rings round it (up to 30 px, nearest
+  ring first, only inside the screen, never under a control or a label); walls, the cut walls' dark tops as drawn and
+  the camera's near plane all hide; fans count where drawn, not their click cylinder; nothing before the first frame;
+  a touch during a glide or with a second finger anywhere is no tap; labels take their own taps; a blind button acts
+  only as it read when the finger landed.
+- [ ] Further rare cases are follow-ups, not blockers: constructed extreme camera poses, sub-50 ms windows, multi-step
+  finger sequences. iPhone latency of the ring search (about 12 ms for 57 rays on the Mac) and native WebKit event order
+  are unmeasured; read the app's `viewer` log category on the phone.
+
 ## iPhone features (IPHONE-APPS.md checklist)
 
 - Control Center controls: yes (above). Siri and Shortcuts: yes, also the way to NFC tags.
