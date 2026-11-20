@@ -975,6 +975,9 @@ hold) → new apps. Next up (2026-10-26): the plan for Aresium for other people.
   Settings → Forget this flat retires it and builds a new one; a store never changes flat. **`scripts/strings.py fill` writes a key's German into every catalog
   that has it** (an "Up" meant for blinds overwrote Aresus's uptime "Laufzeit" once): give it only new keys, and read
   `git diff` of the other apps' catalogs after it.
+  **Build 2 uploaded 2026-11-20** (internal group "Arestia"). Build 1 was refused by Apple (ITMS-90626, Invalid Siri
+  Support): App Intent titles, descriptions and phrases may not name Apple products ("Mac", "iPhone", "Siri" …);
+  in-app texts may.
 - **Aresium phone mode** (2026-10-27, briefs 15, 18 and 22; plan `ares-empire/docs/ARESIUM-FOR-OTHERS.md`): everyone
   but Patrik keeps their Aresium data on their iPhone. **No account** (Patrik, 2026-10-27, brief 22): Aresium opens in
   phone mode on the phone's one store at once, without a login and without waiting for any server (`ModeStore.start`);
