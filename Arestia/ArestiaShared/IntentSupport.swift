@@ -63,7 +63,8 @@ nonisolated struct RolloEntity: AppEntity {
 
 nonisolated struct RolloQuery: EntityQuery {
     func entities(for identifiers: [String]) async throws -> [RolloEntity] {
-        try await suggestedEntities().filter { identifiers.contains($0.id) }
+        DeviceChoices.resolve(identifiers, among: await DeviceChoices.load(kind: .rollo))
+            .map { RolloEntity(id: $0.id, name: $0.label) }
     }
 
     func suggestedEntities() async throws -> [RolloEntity] {
@@ -88,6 +89,19 @@ nonisolated enum DeviceChoices {
             connection.remember(answer.0, from: answer.1)
         }
         return choices(kind: kind, from: connection.known)
+    }
+
+    /// The saved choices iOS asks for (a Shortcut's or a control's parameter), each one kept: one the paired flat does
+    /// not have (any more, or chosen before Forget) comes back as "Not in your flat", so the intent still gets it and
+    /// fails cleanly (`ChosenDeviceGone`) instead of iOS dropping it, which for the fans' optional choice would mean
+    /// every fan (round 8).
+    static func resolve(_ identifiers: [String], among choices: [Choice],
+                        language: AppLanguage = .current) -> [Choice] {
+        identifiers.map { id in
+            choices.first { $0.id == id }
+                ?? Choice(id: id, label: language.string(LocalizedStringResource("Not in your flat",
+                                                                                 table: "ArestiaShared")))
+        }
     }
 
     /// The choices of one reading of the names: each tagged with the pairing those names belong to.

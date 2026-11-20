@@ -55,9 +55,11 @@ final class FlatStore {
     /// Which request each pending position belongs to: an older request's answer never clears a newer one.
     private var pendingRequest: [String: Int] = [:]
     private var moveRequests = 0
-    /// Each blind's commands go to flatd one after another, in the order given (round 7: two at once could arrive the
-    /// other way round, an earlier movement after Stop): the last one given, and a command waits for it.
-    private var blindQueue: [String: Task<Void, Never>] = [:]
+    /// Every command for one thing (a device, "mode:<id>", "scene:<id>") goes to flatd after the ones given for it
+    /// before, from Home and the 3D page alike (round 7: two at once could arrive the other way round, an earlier
+    /// movement after Stop; round 8: the same for two taps in 3D, a fan left on after it was tapped off): the last one
+    /// given for each thing, which the next one waits for (`inLine`).
+    private var lines: [String: Task<Void, Never>] = [:]
     /// The newest command given for each blind: one still waiting when a newer one comes is not sent at all (a newer
     /// position or Stop supersedes it).
     private var blindNewest: [String: Int] = [:]
@@ -196,7 +198,7 @@ final class FlatStore {
         dragging = [:]
         pending = [:]
         pendingRequest = [:]
-        blindQueue = [:]
+        lines = [:]
         blindNewest = [:]
         offer = nil
         lastSeen = nil
@@ -578,19 +580,16 @@ final class FlatStore {
         } failed: {}
     }
 
-    /// A blind's command, queued behind the blind's earlier ones and skipped when a newer one came before its turn.
+    /// A blind's command, in line behind the blind's earlier ones and skipped when a newer one came before its turn.
     @discardableResult
     private func sendToBlind(_ id: String, request: Int,
                              _ work: @escaping @Sendable (FlatdClient) async throws -> Device,
                              done: @escaping @MainActor (Device, Stamp) -> Void,
                              failed: @escaping @MainActor () -> Void) -> Bool {
-        let previous = blindQueue[id]
         blindNewest[id] = request
-        guard let queued = send("rollo:" + id, affects: id, blocking: false, after: previous,
-                                stillWanted: { [weak self] in self?.blindNewest[id] == request },
-                                work, done: done, failed: failed) else { return false }
-        blindQueue[id] = queued
-        return true
+        return send("rollo:" + id, affects: id, blocking: false,
+                    stillWanted: { [weak self] in self?.blindNewest[id] == request },
+                    work, done: done, failed: failed)
     }
 
     /// While a finger drags a blind: shown at once, sent when it lets go (`setRollo(_:position:)`).
@@ -700,22 +699,35 @@ final class FlatStore {
         return task
     }
 
-    /// Runs a command: one at a time per thing (`blocking`), the failure as a calm line, a refused key back to the
-    /// connect card, a lost flatd as a reason to reconnect. Dropped, its answer too, once the store retired; `affects`
-    /// names what the answer shows (a device id, "mode:<id>"), for `stamp`. `after`: a command that must have ended
-    /// first; `stillWanted` is asked when its turn comes (false: not sent, `failed` runs). Nil when it was not started.
+    /// Runs `work` once every command given for `thing` before it has ended (`lines`), as a task the store cancels
+    /// when it retires. Its place in line is taken now, when the command is given, so commands for one thing reach
+    /// flatd in the order they were given, whoever gave them.
+    @discardableResult
+    private func inLine(_ thing: String, _ work: @escaping @MainActor () async -> Void) -> Task<Void, Never> {
+        let previous = lines[thing]
+        let task = perform {
+            await previous?.value
+            await work()
+        }
+        lines[thing] = task
+        return task
+    }
+
+    /// Runs a command: in line behind the earlier ones for what it `affects` (a device id, "mode:<id>", "scene:<id>",
+    /// also what the answer shows, for `stamp`), one at a time per `key` (`blocking`: a second tap while one is on its
+    /// way is not taken), the failure as a calm line, a refused key back to the connect card, a lost flatd as a reason
+    /// to reconnect. Dropped, its answer too, once the store retired. `stillWanted` is asked when its turn comes and
+    /// again just before it is sent (false: not sent, `failed` runs). False when it was not taken.
     @discardableResult
     private func send<Answer: Sendable>(_ key: String, affects: String, blocking: Bool = true,
-                                        after previous: Task<Void, Never>? = nil,
                                         stillWanted: @escaping @MainActor () -> Bool = { true },
                                         _ work: @escaping @Sendable (FlatdClient) async throws -> Answer,
                                         done: @escaping @MainActor (Answer, Stamp) -> Void,
-                                        failed: @escaping @MainActor () -> Void = {}) -> Task<Void, Never>? {
-        guard !isRetired, pairingID != nil else { return nil }
-        if blocking, working.contains(key) { return nil }
+                                        failed: @escaping @MainActor () -> Void = {}) -> Bool {
+        guard !isRetired, pairingID != nil else { return false }
+        if blocking, working.contains(key) { return false }
         working.insert(key)
-        return perform { [weak self] in
-            await previous?.value
+        inLine(affects) { [weak self] in
             guard let self else { return }
             defer { if !isRetired { working.remove(key) } }
             guard !isRetired, !Task.isCancelled else { return }
@@ -727,6 +739,11 @@ final class FlatStore {
             do {
                 let client = try await readyClient()
                 used = client
+                // Superseded while flatd was being found (reconnecting asks it first): never sent (round 8).
+                guard stillWanted() else {
+                    failed()
+                    return
+                }
                 let stamp = stamp(affects)
                 let answer = try await work(client)
                 guard !isRetired else { return }
@@ -743,6 +760,7 @@ final class FlatStore {
                 failed()
             }
         }
+        return true
     }
 
     /// What a failed command does to the store: a refused key stops it (only while that key is the saved one: a fresh
@@ -779,8 +797,43 @@ final class FlatStore {
         }
     }
 
-    /// A device command from the 3D page. The answer's state reaches the page through the listeners.
-    func pageRequest(_ id: String, body: Data) async -> FlatdError? {
+    /// A device command from the 3D page, in line behind that device's earlier commands (the page's and Home's alike):
+    /// its place is taken when the page sends it, so two taps reach flatd in the order they were made (round 8). Its
+    /// one result: nil once flatd took it (its state reaches the page through the listeners), else the bridge's error.
+    func pageRequest(_ id: String, body: Data) -> Task<FlatdError?, Never> {
+        pageCommand(id) { [weak self] in
+            guard let self else { return .notPossible }
+            return await sendPageRequest(id, body: body)
+        }
+    }
+
+    /// A mode change from the 3D page (it only ever ends cooking), in line behind the mode's earlier changes.
+    func pageMode(_ id: String, body: Data) -> Task<FlatdError?, Never> {
+        pageCommand("mode:" + id) { [weak self] in
+            guard let self else { return .notPossible }
+            return await sendPageMode(id, body: body)
+        }
+    }
+
+    /// One page command's result, written when its turn in line ran.
+    @MainActor private final class PageResult {
+        var error: FlatdError? = .notPossible
+    }
+
+    /// Runs a page's command in line for `thing` (`inLine`, its place taken now) and hands back its one result
+    /// (`.notPossible` once the store retired).
+    private func pageCommand(_ thing: String, _ work: @escaping @MainActor () async -> FlatdError?)
+        -> Task<FlatdError?, Never> {
+        guard !isRetired else { return Task { .notPossible } }
+        let result = PageResult()
+        let turn = inLine(thing) { result.error = await work() }
+        return Task {
+            await turn.value
+            return result.error
+        }
+    }
+
+    private func sendPageRequest(_ id: String, body: Data) async -> FlatdError? {
         var used: FlatdClient?
         do {
             let client = try await readyClient()
@@ -796,8 +849,7 @@ final class FlatStore {
         }
     }
 
-    /// A mode change from the 3D page (it only ever ends cooking).
-    func pageMode(_ id: String, body: Data) async -> FlatdError? {
+    private func sendPageMode(_ id: String, body: Data) async -> FlatdError? {
         var used: FlatdClient?
         do {
             let client = try await readyClient()

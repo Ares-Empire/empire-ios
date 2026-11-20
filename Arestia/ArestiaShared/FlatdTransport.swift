@@ -65,14 +65,18 @@ private nonisolated final class RunningTask: @unchecked Sendable {
     /// The caller's continuation; set before anything can end it.
     var finish: (@Sendable (Result<(Data, HTTPURLResponse), Error>) -> Void)?
 
-    /// Resumes the task unless the request was cancelled first (then it ends as cancelled, never started).
+    /// Resumes the task unless the request was cancelled first (then it ends as cancelled, never started). The check
+    /// and the resume are one step under the lock, so a cancellation either comes before (nothing starts) or finds the
+    /// task to cancel (round 8). `resume()` only hands the task to the session's own queue, which reports its ending on
+    /// another thread, so holding the lock across it never waits on `end`.
     func start(_ task: URLSessionDataTask) {
-        let resume: Bool = lock.withLock {
+        let started: Bool = lock.withLock {
             guard !cancelled else { return false }
             self.task = task
+            task.resume()
             return true
         }
-        if resume { task.resume() } else { end(.failure(CancellationError())) }
+        if !started { end(.failure(CancellationError())) }
     }
 
     func cancel() {

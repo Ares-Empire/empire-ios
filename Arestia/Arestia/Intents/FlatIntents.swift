@@ -16,7 +16,8 @@ nonisolated struct FanEntity: AppEntity {
 
 nonisolated struct FanQuery: EntityQuery {
     func entities(for identifiers: [String]) async throws -> [FanEntity] {
-        try await suggestedEntities().filter { identifiers.contains($0.id) }
+        DeviceChoices.resolve(identifiers, among: await DeviceChoices.load(kind: .fan))
+            .map { FanEntity(id: $0.id, name: $0.label) }
     }
 
     func suggestedEntities() async throws -> [FanEntity] {

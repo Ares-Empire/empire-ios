@@ -59,8 +59,8 @@ struct OneFlatTests {
         var heardByOldPage: [FlatEvent] = []
         _ = try #require(old.listen { heardByOldPage.append($0) })
         old.setFan("fan:fan_1", on: true)
-        let pageRequest = Task { await old.pageRequest("fan:fan_1", body: on) }
-        let pageMode = Task { await old.pageMode("cooking", body: Data(#"{"active":false}"#.utf8)) }
+        let pageRequest = old.pageRequest("fan:fan_1", body: on)
+        let pageMode = old.pageMode("cooking", body: Data(#"{"active":false}"#.utf8))
         let reach = FlatdReach(connection: connection, transport: transport, rediscover: { [] })
         let shortcut = Task.detached { try await FlatActions(reach: reach).setCooking(true) }
         try await Task.sleep(for: .milliseconds(50))

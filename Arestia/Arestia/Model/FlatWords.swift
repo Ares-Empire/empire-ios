@@ -77,19 +77,22 @@ enum FlatWords {
         return language.string("since \(time)")
     }
 
-    /// What the devices of a mode do now: "Fan 1 on · Fan 2 on · Blind 1 open".
+    /// What the devices of a mode do now: "Fan 1 on · Fan 2 on · Blind 1 open". A blind part-way says how far ("Blind 1
+    /// 60 % closed"), and a device flatd reports offline says so, never its last reading as its state (round 8).
     static func devicesNow(_ devices: [Device], language: AppLanguage = .current) -> String {
         devices.map { device in
+            let state = device.state
+            guard state.online else { return language.string("\(device.label) offline") }
             switch device.kind {
             case .rollo:
-                let state = device.state
                 if let moving = state.moving {
                     return moving == .up ? language.string("\(device.label) going up")
                         : language.string("\(device.label) going down")
                 }
-                switch RolloOpenness.isOpen(state) {
-                case true?: return language.string("\(device.label) open")
-                case false?: return language.string("\(device.label) closed")
+                switch state.position {
+                case 0?: return language.string("\(device.label) open")
+                case 100?: return language.string("\(device.label) closed")
+                case let position?: return language.string("\(device.label) \(percent(position)) closed")
                 case nil: return language.string("\(device.label): position unknown")
                 }
             default:

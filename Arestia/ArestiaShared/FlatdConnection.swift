@@ -404,12 +404,12 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
     }
 
     /// A change of the mode where every device followed: the trouble kept for it is cleared, only when it is this
-    /// pairing's (a late answer of a forgotten flat never clears the next one's), and only when the mode left the
-    /// state the trouble describes. Ending cooking that is already off sends nothing to any device (flatd's
-    /// contract), so it never clears a fan left running by the first end (round 7).
+    /// pairing's (a late answer of a forgotten flat never clears the next one's). A start sends every device its
+    /// command again (flatd's contract), so one where all followed clears any trouble (round 8); ending a mode that is
+    /// already off sends nothing to any device, so it never clears a fan left running by the first end (round 7).
     func clearTrouble(mode: String, pairing: UUID, now active: Bool) {
         try? lock.withLock {
-            guard let saved = savedTrouble, saved.mode == mode, saved.pairing == pairing, saved.active != active
+            guard let saved = savedTrouble, saved.mode == mode, saved.pairing == pairing, active || saved.active
             else { return }
             defaults?.removeObject(forKey: Self.troubleKey)
         }

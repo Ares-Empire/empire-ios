@@ -7,6 +7,16 @@
     "%@" : {
       "shouldTranslate" : false
     },
+    "%@ %@ closed" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ %@ zu"
+          }
+        }
+      }
+    },
     "%@ closed" : {
       "localizations" : {
         "de" : {
@@ -73,6 +83,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ aus"
+          }
+        }
+      }
+    },
+    "%@ offline" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ offline"
           }
         }
       }

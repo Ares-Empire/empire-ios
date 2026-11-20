@@ -98,7 +98,9 @@ loaded with the key and never bundled.
   - *Controls, Shortcuts and Siri act on the flat paired when they run*: a Control Center toggle is "my flat's
     cooking", not one flat's. After Forget and a new pairing they act on the new flat by definition. A device chosen
     in one (a blind, a fan) that the flat does not have (flatd answers 404 for it, or it was chosen before Forget)
-    fails cleanly ("This blind isn't in your flat anymore. Choose it again.") and nothing else moves; the Blind control
+    fails cleanly ("This blind isn't in your flat anymore. Choose it again.") and nothing else moves (iOS asks the
+    app for a saved choice, and one the flat does not have comes back as "Not in your flat" rather than none, which for
+    the fans' optional choice would mean every fan; round 8); the Blind control
     then shows "Not in your flat" under the plain word Blind, never its old name or a made-up state. A blind flatd
     has no position for (offline, or before the board's first reading) shows "Position unknown", never Up.
   - *Nothing starts after Forget, in any process* (round 6): every request with a pairing's key starts only while
@@ -147,16 +149,19 @@ loaded with the key and never bundled.
   stream drops, the last state shows as "Reconnecting…" until flatd's next snapshot, never as "Live". Nothing is shown
   as done before flatd confirmed it: a blind follows the finger while it drags, and once let go reads "Sending: 40 %
   closed" until flatd answered that very request or its state confirmed that target (an older drag's answer never
-  clears a newer one; a failure puts flatd's position back, with the reason). A blind's commands go to flatd one after
-  another in the order given; one still waiting when a newer one comes is not sent, so Stop never arrives before the
-  movement it stops, and positions dragged past while one is out are not sent at all.
+  clears a newer one; a failure puts flatd's position back, with the reason). The commands for one device (or one
+  mode) go to flatd one after another in the order given, from Home and the 3D page alike (round 8: two taps on a fan
+  in 3D could otherwise arrive the other way round); a blind's command still waiting when a newer one comes is not
+  sent (also when the newer one comes while flatd is still being found), so Stop never arrives before the movement it
+  stops, and positions dragged past while one is out are not sent at all.
 - **Cooking** is flatd's mode `cooking` (which devices it moves and how is flatd's own config: on, the fans and one
   blind up; off, the fans off and that blind to its favourite spot). The app shows it while active with since when and
   what its devices do right now, and Done cooking ends it, with Undo for a few seconds. A device that did not follow is named
   ("Didn't answer: …"); the mode stays as flatd recorded it. Changed outside the app (the Cooking control, a Shortcut,
   the NFC tag), the devices that did not follow are kept with the mode's state (`ModeTrouble`, in the App Group, for two
   hours at most, while the mode is still in that state, written and cleared only for the pairing it belongs to, and
-  cleared only by a change that left that state: a second End cooking, which sends no device commands, leaves it): the
+  cleared by a change where every device followed: a start, which sends every device its command again, or an end of
+  a mode that was on; a second End cooking, which sends no device commands, leaves it): the
   control reads "On · not all followed" for as long; the app says which ones, once (its own acknowledgement, which
   leaves the control's line alone), at once while it follows flatd (a Darwin notification, and again when flatd's mode
   event arrives after it) or with its next snapshot. A device that does not confirm in time (504) may still have

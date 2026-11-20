@@ -156,7 +156,7 @@ struct FlatWebView: UIViewRepresentable {
         private var lastConnection: FlatStore.Link?
         /// Whether the one navigation allowed, the page `load()` hands over, is due.
         private var expectsPage = false
-        /// The page's requests under way: cancelled with the web view.
+        /// The waits for the page's requests' results (`answer`): ended with the web view.
         private var requests: [UUID: Task<Void, Never>] = [:]
         /// The page's own fetch (with the key): cancelled by the next load, a timeout and the web view's end.
         private var fetch: Task<Void, Never>?
@@ -258,8 +258,8 @@ struct FlatWebView: UIViewRepresentable {
             lastConnection = nil
         }
 
-        /// The web view goes (its pairing ended, or the tab was rebuilt): its listener, its deadline and every request
-        /// it asked for end, and nothing it still sends is heard.
+        /// The web view goes (its pairing ended, or the tab was rebuilt): its listener, its deadline, its fetch and the
+        /// waits for its requests' results end, and nothing it still sends is heard.
         func retire() {
             retired = true
             stopListening()
@@ -271,12 +271,17 @@ struct FlatWebView: UIViewRepresentable {
             _ = handover.begin()
         }
 
-        /// A page request's work, cancelled with the web view.
-        private func perform(_ work: @escaping @MainActor () async -> Void) {
+        /// A page request's one result, sent to the document that asked once the store's command ended. The wait ends
+        /// with the web view; the command, given by a tap, goes on as one from Home would (the store cancels it only
+        /// when it retires).
+        private func answer(_ reqId: String, _ command: Task<FlatdError?, Never>) {
+            let asking = document
             let token = UUID()
             requests[token] = Task { [weak self] in
-                await work()
-                self?.requests[token] = nil
+                let error = await command.value
+                guard let self, !Task.isCancelled else { return }
+                requests[token] = nil
+                if asking == document { send(PageScript.result(reqId: reqId, error: error)) }
             }
         }
 
@@ -303,20 +308,12 @@ struct FlatWebView: UIViewRepresentable {
                 #if DEBUG
                 if LaunchArguments.current.contains("-probeViewer") { probe() }
                 #endif
+            // The store takes each command's place in line right here, in the order the page sent them (round 8: two
+            // taps on one fan could otherwise reach flatd the other way round); the result follows when it ended.
             case let .request(reqId, id, body):
-                let asking = document
-                perform { [weak self] in
-                    guard let self, isCurrent else { return }
-                    let error = await store.pageRequest(id, body: body)
-                    if asking == document { send(PageScript.result(reqId: reqId, error: error)) }
-                }
+                answer(reqId, store.pageRequest(id, body: body))
             case let .mode(reqId, id, body):
-                let asking = document
-                perform { [weak self] in
-                    guard let self, isCurrent else { return }
-                    let error = await store.pageMode(id, body: body)
-                    if asking == document { send(PageScript.result(reqId: reqId, error: error)) }
-                }
+                answer(reqId, store.pageMode(id, body: body))
             case let .invalid(reqId):
                 send(PageScript.result(reqId: reqId, error: .failed(status: 400, message: nil)))
             case let .haptic(style):
