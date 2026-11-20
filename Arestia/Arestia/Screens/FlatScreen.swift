@@ -1,3 +1,4 @@
+import CryptoKit
 import os
 import SwiftUI
 import UIKit
@@ -555,16 +556,33 @@ struct FlatWebView: UIViewRepresentable {
         /// installed (then the web view keeps the rules it had, and the caller loads nothing).
         private func blockTheNetwork(_ loading: Load) async -> Bool {
             guard let webView else { return false }
-            let rules = """
-            [{"trigger": {"url-filter": "^https?://"}, "action": {"type": "block"}},
-             {"trigger": {"url-filter": "^wss?://"}, "action": {"type": "block"}}]
-            """
-            let list = try? await WKContentRuleListStore.default().compileContentRuleList(
-                forIdentifier: "arestia-viewer-no-network", encodedContentRuleList: rules)
+            let list = await Self.noNetworkRules()
             guard isLoading(loading), let list else { return false }
             webView.configuration.userContentController.removeAllContentRuleLists()
             webView.configuration.userContentController.add(list)
             return true
+        }
+
+        /// The rule list that blocks every network load. Compiling it took about a quarter of a second of every load on
+        /// the simulator, so it is compiled once and kept by WebKit under a name that carries the rules' own hash (a
+        /// changed rule set is compiled anew, never an old one used), and held for the app's run.
+        private static var noNetwork: WKContentRuleList?
+        private static func noNetworkRules() async -> WKContentRuleList? {
+            if let noNetwork { return noNetwork }
+            let rules = """
+            [{"trigger": {"url-filter": "^https?://"}, "action": {"type": "block"}},
+             {"trigger": {"url-filter": "^wss?://"}, "action": {"type": "block"}}]
+            """
+            let digest = SHA256.hash(data: Data(rules.utf8)).prefix(6).map { String(format: "%02x", $0) }.joined()
+            let name = "arestia-viewer-no-network-" + digest, store = WKContentRuleListStore.default()
+            let list: WKContentRuleList?
+            if let kept = try? await store?.contentRuleList(forIdentifier: name) {
+                list = kept
+            } else {
+                list = try? await store?.compileContentRuleList(forIdentifier: name, encodedContentRuleList: rules)
+            }
+            if noNetwork == nil { noNetwork = list }
+            return noNetwork ?? list
         }
 
         /// The page's origin is the one the app gave it (WebKit reports a default port as 0).
