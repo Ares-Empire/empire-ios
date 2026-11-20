@@ -56,6 +56,9 @@ nonisolated struct FlatdClient: Sendable {
     let baseURL: URL
     let token: String
     let pin: FlatdPin
+    /// The pairing this client speaks for (`FlatdPairing.id`); nil for a pairing code being tried, which belongs to no
+    /// pairing yet. What it reads or does counts only while that pairing is the saved one (`FlatdConnection.isCurrent`).
+    let pairingID: UUID?
     let transport: any HTTPTransport & Sendable
     /// Reads answer quickly or not at all (the service is on the home network).
     var readTimeout: TimeInterval = 6
@@ -63,16 +66,19 @@ nonisolated struct FlatdClient: Sendable {
     var commandTimeout: TimeInterval = 12
 
     /// `transport` nil: the real one, which accepts only a server holding the pin's key (the tests pass a fake).
-    init(baseURL: URL, token: String, pin: FlatdPin, transport: (any HTTPTransport & Sendable)? = nil) {
+    init(baseURL: URL, token: String, pin: FlatdPin, pairingID: UUID? = nil,
+         transport: (any HTTPTransport & Sendable)? = nil) {
         self.baseURL = baseURL
         self.token = token
         self.pin = pin
+        self.pairingID = pairingID
         self.transport = transport ?? FlatdTransport(pin: pin)
     }
 
     /// The pairing's client, at its saved address or at another one where flatd may be now.
     init(_ pairing: FlatdPairing, at baseURL: URL? = nil, transport: (any HTTPTransport & Sendable)? = nil) {
-        self.init(baseURL: baseURL ?? pairing.baseURL, token: pairing.token, pin: pairing.pin, transport: transport)
+        self.init(baseURL: baseURL ?? pairing.baseURL, token: pairing.token, pin: pairing.pin, pairingID: pairing.id,
+                  transport: transport)
     }
 
     // MARK: reads

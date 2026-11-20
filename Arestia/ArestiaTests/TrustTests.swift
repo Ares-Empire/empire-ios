@@ -339,27 +339,30 @@ struct RediscoveryTests {
         transport.answer("GET /api/scenes", body: ["scenes": []])
         transport.answer("POST /api/devices/fan:fan_1", body: Flat.fan(1, on: true))
         transport.answer("POST /api/modes/cooking", body: Flat.cooking)
-        let before = store.pairingGeneration
-        #expect(await store.connect(to: moved, token: Flat.key, pin: MadeUpCertificates.pinB) == nil)
-        #expect(store.pairingGeneration != before)
+        let before = try #require(store.pairingID)
+        // Another flatd replaces who the app trusts only when confirmed.
+        #expect(await store.connect(to: moved, token: Flat.key, pin: MadeUpCertificates.pinB) == .notPossible)
+        #expect(store.pairingID == before && connection.pairing?.pin == Flat.pin)
+        #expect(await store.connect(to: moved, token: Flat.key, pin: MadeUpCertificates.pinB, replacing: true) == nil)
+        let after = try #require(store.pairingID)
+        #expect(after != before && connection.pairing?.id == after)
         #expect(await store.pageRequest("fan:fan_1", body: Data(#"{"on":true}"#.utf8), pairing: before) == .notPossible)
         #expect(await store.pageMode("cooking", body: Data(#"{"active":false}"#.utf8), pairing: before) == .notPossible)
         #expect(transport.sent.allSatisfy { $0.httpMethod != "POST" })
         // The new pairing's own page still works.
-        #expect(await store.pageRequest("fan:fan_1", body: Data(#"{"on":true}"#.utf8),
-                                        pairing: store.pairingGeneration) == nil)
+        #expect(await store.pageRequest("fan:fan_1", body: Data(#"{"on":true}"#.utf8), pairing: after) == nil)
         store.stop()
     }
 
     @Test func deviceNamesBelongToTheirPairing() throws {
         let connection = Flat.connection()
-        connection.remember(try Flat.devices([Flat.fan(1)]))
+        connection.remember(try Flat.devices([Flat.fan(1)]), for: Flat.id)
         #expect(connection.knownDevices.map(\.id) == ["fan:fan_1"])
-        // Paired anew (even with the same flatd): the old pairing's names are not this pairing's.
-        try connection.save(Flat.pairing())
+        // Paired anew (even with the same flatd, after a Disconnect): the old pairing's names are not this pairing's.
+        try connection.save(Flat.pairing(id: UUID()))
         #expect(connection.knownDevices.isEmpty)
         try connection.forget()
-        connection.remember(try Flat.devices([Flat.fan(1)]))            // a late write after Disconnect: nothing kept
+        connection.remember(try Flat.devices([Flat.fan(1)]), for: Flat.id)   // a late write after Disconnect: nothing
         #expect(connection.knownDevices.isEmpty)
     }
 
@@ -387,6 +390,12 @@ struct ConnectModelTests {
     let hint = URL(string: "https://192.0.2.20:8788")!
     let moved = URL(string: "https://192.0.2.77:8788")!
 
+    /// Connects with the code on screen, as a scan does (no confirmation).
+    func connect(_ model: ConnectModel, _ store: FlatStore) async -> Bool {
+        guard let code = model.code else { return false }
+        return await model.connect(code, replacing: false, store: store)
+    }
+
     func text(url: String? = "https://192.0.2.20:8788", token: String = Flat.key) -> String {
         var object: [String: Any] = ["token": token, "spki_sha256": pin.hex]
         if let url { object["url"] = url }
@@ -400,8 +409,8 @@ struct ConnectModelTests {
         transport.answer("GET /api/scenes", body: ["scenes": []])
         let model = ConnectModel(candidates: { [] })
         #expect(!model.canConnect)
-        #expect(model.take(text()) && model.canConnect)
-        #expect(await model.connect(store: store))
+        #expect(model.take(text()) != nil && model.canConnect)
+        #expect(await connect(model, store))
         #expect(connection.pairing?.baseURL == hint && connection.pairing?.pin == pin)
         #expect(model.code == nil && model.problem == nil)
         store.stop()
@@ -417,7 +426,7 @@ struct ConnectModelTests {
         let found = [URL(string: "https://192.0.2.66:8788")!, moved]
         let model = ConnectModel(candidates: { found })
         model.take(text())
-        #expect(await model.connect(store: store))
+        #expect(await connect(model, store))
         #expect(connection.pairing?.baseURL == moved)
         #expect(transport.requests(to: "192.0.2.66").allSatisfy { $0.value(forHTTPHeaderField: "Authorization") == nil })
         #expect(transport.requests(to: "192.0.2.20").allSatisfy { $0.value(forHTTPHeaderField: "Authorization") == nil })
@@ -431,7 +440,7 @@ struct ConnectModelTests {
         let found = [moved]
         let model = ConnectModel(candidates: { found })
         model.take(text())
-        #expect(await model.connect(store: store) == false)
+        #expect(await connect(model, store) == false)
         #expect(model.problem?.contains("flatd pair") == true)
         #expect(transport.requests(to: "192.0.2.77").isEmpty)          // flatd itself said no: nowhere else to ask
         #expect(connection.pairing == nil && model.code != nil)
@@ -444,7 +453,7 @@ struct ConnectModelTests {
         let found = [moved]
         let model = ConnectModel(candidates: { found })
         model.take(text(url: nil))
-        #expect(await model.connect(store: store) == false)
+        #expect(await connect(model, store) == false)
         #expect(model.problem != nil && connection.pairing == nil)
         #expect(transport.sent.allSatisfy { $0.value(forHTTPHeaderField: "Authorization") == nil })
     }
@@ -459,7 +468,7 @@ struct ConnectModelTests {
         #expect(model.needsConfirmation(saved: .paired(other)))
         #expect(model.needsConfirmation(saved: .unusable))                     // what is paired cannot be told
         // Something else scanned afterwards: the earlier code is no longer staged.
-        #expect(model.take("not a code") == false)
+        #expect(model.take("not a code") == nil)
         #expect(model.code == nil && !model.canConnect)
     }
 
@@ -492,7 +501,7 @@ struct ConnectModelTests {
         let model = ConnectModel(candidates: { found })
         model.take(text())
         let clock = ContinuousClock(), start = clock.now
-        #expect(await model.connect(store: store))
+        #expect(await connect(model, store))
         #expect(clock.now - start < .seconds(3))                       // the slow forged addresses were not waited for
         #expect(connection.pairing?.baseURL == moved)
         let withKey = transport.sent.filter { $0.value(forHTTPHeaderField: "Authorization") != nil }
@@ -502,8 +511,8 @@ struct ConnectModelTests {
 
     @Test func somethingElseScannedIsNotACode() {
         let model = ConnectModel(candidates: { [] })
-        #expect(model.take("https://example.com") == false)
-        #expect(model.take(Flat.key) == false)                         // a key alone no longer pairs
+        #expect(model.take("https://example.com") == nil)
+        #expect(model.take(Flat.key) == nil)                         // a key alone no longer pairs
         #expect(model.code == nil && model.problem != nil && !model.canConnect)
     }
 }

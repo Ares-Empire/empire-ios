@@ -18,14 +18,15 @@ struct FlatScreen: View {
         GeometryReader { proxy in
             ZStack {
                 ProvinceWall(accent: .arestia)
-                if store.link != .notSetUp {
+                if store.link != .notSetUp, let pairing = store.pairingID {
                     // The safe area's bottom here is the tab bar and the home indicator; the page sees only the latter.
-                    FlatWebView(store: store, page: page, pairing: store.pairingGeneration,
+                    FlatWebView(store: store, page: page, pairing: pairing,
                                 coveredBottom: proxy.safeAreaInsets.bottom,
-                                load: page.wanted ? "\(page.loads)-\(store.pairingGeneration)" : nil)
-                        // A web view of its own per pairing: another flat's page is gone, with its bridge, the moment
-                        // the pairing changes, and can neither read the new flat's state nor command it.
-                        .id(store.pairingGeneration)
+                                load: page.wanted ? "\(page.loads)-\(pairing)" : nil)
+                        // A web view of its own per pairing (its identity): another flat's page is gone, with its
+                        // bridge, the moment the pairing changes, and can neither read the new flat's state nor
+                        // command it.
+                        .id(pairing)
                         .ignoresSafeArea()
                         .opacity(page.isReady ? 1 : 0)
                         .animation(.easeOut(duration: 0.3), value: page.isReady)
@@ -79,9 +80,9 @@ final class FlatPage {
 private struct FlatWebView: UIViewRepresentable {
     let store: FlatStore
     let page: FlatPage
-    /// The pairing (the store's `pairingGeneration`) this web view belongs to; the view's identity, so each pairing
-    /// gets a web view and a coordinator of its own.
-    let pairing: Int
+    /// The pairing's identity (the store's `pairingID`) this web view belongs to; also the view's identity, so each
+    /// pairing gets a web view and a coordinator of its own.
+    let pairing: UUID
     /// How much of the screen's bottom the app's bars and the home indicator cover.
     let coveredBottom: CGFloat
     /// Which load the page should show (nil: not yet, the tab was never opened): a new value loads it again (Try
@@ -132,18 +133,22 @@ private struct FlatWebView: UIViewRepresentable {
 
     static func dismantleUIView(_ webView: WKWebView, coordinator: Coordinator) {
         webView.configuration.userContentController.removeScriptMessageHandler(forName: "flat3d")
-        coordinator.stopListening()
+        coordinator.retire()
+        webView.stopLoading()
     }
 
     @MainActor
     final class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
         let store: FlatStore
         let page: FlatPage
-        /// The pairing this coordinator's pages come from. Everything between the page and the store is tied to it:
-        /// once the store has another pairing, this page is told nothing and commands nothing, whenever its messages
-        /// or their queued work get their turn.
-        let pairing: Int
-        private var isCurrent: Bool { store.pairingGeneration == pairing }
+        /// The identity of the pairing this coordinator's pages come from. Everything between the page and the store
+        /// is tied to it: once the store or the Keychain has another pairing, this page is told nothing and commands
+        /// nothing, whenever its messages or their queued work get their turn.
+        let pairing: UUID
+        /// Cheap, for every event sent to the page: the store tells a page only its own pairing's events.
+        private var isCurrent: Bool { store.pairingID == pairing && !retired }
+        /// The web view is gone (or its pairing): nothing more is done for it.
+        private var retired = false
         weak var webView: WKWebView?
         var dark = true
         var coveredBottom: CGFloat = 0
@@ -152,25 +157,22 @@ private struct FlatWebView: UIViewRepresentable {
         /// Ends a load whose page never says `ready` (it failed while starting, or never finished loading): the calm
         /// card with Try again.
         private var readyDeadline: Task<Void, Never>?
-        /// Counts the documents loaded: a request's result goes only to the document that asked (a reloaded page may
-        /// reuse its request ids).
-        private var document = 0
+        /// Which document may speak (`PageHandover`): a request's result goes only to the document that asked (a
+        /// reloaded page may reuse its request ids), and only the load the app handed over, once in place, is heard.
+        private var handover = PageHandover()
+        private var document: Int { handover.document }
         private var listener: UUID?
         private var lastConnection: FlatStore.Link?
         /// Whether the one navigation allowed, the page `load()` hands over, is due.
         private var expectsPage = false
-        /// The document (`document`'s count) the app handed to the web view and WebKit has put in place: only it may
-        /// speak to the app. While the next page is fetched and until it is in place, no document is heard (the old
-        /// one is no longer the one, the new one is not there yet).
-        private var handedOver: Int?
-        /// The document handed to the web view that WebKit has not put in place yet.
-        private var arriving: Int?
+        /// The page's requests under way: cancelled with the web view.
+        private var requests: [UUID: Task<Void, Never>] = [:]
         /// The page's address inside the web view: a name that never resolves (`.invalid`, RFC 2606), so the page has
         /// an ordinary origin of its own and nothing it does can reach a real server. Never flatd's address.
         static let pageURL = URL(string: "https://viewer.arestia.invalid/")!
         private static let log = Logger(subsystem: "de.ares-empire.arestia", category: "viewer")
 
-        init(store: FlatStore, page: FlatPage, pairing: Int) {
+        init(store: FlatStore, page: FlatPage, pairing: UUID) {
             self.store = store
             self.page = page
             self.pairing = pairing
@@ -182,12 +184,9 @@ private struct FlatWebView: UIViewRepresentable {
             if let count { loadedCount = count }
             stopListening()
             readyDeadline?.cancel()
-            document += 1
-            let loading = document
-            handedOver = nil
-            arriving = nil
+            let loading = handover.begin()
             expectsPage = false
-            guard isCurrent, let client = store.connection.client else { return }
+            guard isCurrent, let client = store.client(for: pairing) else { return }
             page.isReady = false
             page.problem = nil
             webView?.stopLoading()
@@ -218,10 +217,16 @@ private struct FlatWebView: UIViewRepresentable {
                     page.problem = String(localized: "The 3D flat didn't start.")
                     return
                 }
-                guard loading == document, isCurrent, store.connection.isCurrent(client) else { return }
+                guard loading == document, isCurrent, store.speaks(for: pairing), store.connection.isCurrent(client)
+                else { return }
                 expectsPage = true
-                arriving = loading
-                webView?.load(html, mimeType: "text/html", characterEncodingName: "utf-8", baseURL: Self.pageURL)
+                let navigation = webView?.load(html, mimeType: "text/html", characterEncodingName: "utf-8",
+                                               baseURL: Self.pageURL)
+                if !handover.loading(loading, as: navigation) {
+                    expectsPage = false
+                    readyDeadline?.cancel()
+                    page.problem = String(localized: "The 3D flat didn't start.")
+                }
             }
         }
 
@@ -231,37 +236,60 @@ private struct FlatWebView: UIViewRepresentable {
             lastConnection = nil
         }
 
+        /// The web view goes (its pairing ended, or the tab was rebuilt): its listener, its deadline and every request
+        /// it asked for end, and nothing it still sends is heard.
+        func retire() {
+            retired = true
+            stopListening()
+            readyDeadline?.cancel()
+            requests.values.forEach { $0.cancel() }
+            requests = [:]
+            _ = handover.begin()
+        }
+
+        /// A page request's work, cancelled with the web view.
+        private func perform(_ work: @escaping @MainActor () async -> Void) {
+            let token = UUID()
+            requests[token] = Task { [weak self] in
+                await work()
+                self?.requests[token] = nil
+            }
+        }
+
         // MARK: page → app
 
         func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
-            // Only the page the app handed over, in the main frame, may speak to the app.
-            guard isCurrent, handedOver == document, message.frameInfo.isMainFrame,
+            // Only the page the app handed over, in the main frame, of the pairing still saved, may speak to the app.
+            guard isCurrent, store.speaks(for: pairing), handover.maySpeak, message.frameInfo.isMainFrame,
                   isThePage(message.frameInfo.securityOrigin),
                   let parsed = PageMessage.parse(message.body) else { return }
             switch parsed {
             case .ready:
+                guard let snapshot = store.snapshot(for: pairing) else { return }
                 readyDeadline?.cancel()
                 page.isReady = true
                 page.problem = nil
                 sendConfig()
                 lastConnection = nil
                 sendConnection(store.link)
-                send(store.snapshot.json)
+                send(snapshot.json)
                 if listener == nil {
-                    listener = store.listen { [weak self] event in self?.send(event.json) }
+                    listener = store.listen(for: pairing) { [weak self] event in self?.send(event.json) }
                 }
                 #if DEBUG
                 if LaunchArguments.current.contains("-probeViewer") { probe() }
                 #endif
             case let .request(reqId, id, body):
-                let asking = document
-                Task {
+                let asking = document, pairing = pairing
+                perform { [weak self] in
+                    guard let self else { return }
                     let error = await store.pageRequest(id, body: body, pairing: pairing)
                     if asking == document { send(PageScript.result(reqId: reqId, error: error)) }
                 }
             case let .mode(reqId, id, body):
-                let asking = document
-                Task {
+                let asking = document, pairing = pairing
+                perform { [weak self] in
+                    guard let self else { return }
                     let error = await store.pageMode(id, body: body, pairing: pairing)
                     if asking == document { send(PageScript.result(reqId: reqId, error: error)) }
                 }
@@ -324,7 +352,7 @@ private struct FlatWebView: UIViewRepresentable {
             guard page.isReady, link != lastConnection else { return }
             lastConnection = link
             send(PageScript.connection(link))
-            if link == .live { send(store.snapshot.json) }     // after every reconnect to flatd (BRIDGE.md)
+            if link == .live { send(store.snapshot(for: pairing)?.json) }  // after every reconnect to flatd (BRIDGE.md)
         }
 
         private func send(_ json: Data?) {
@@ -374,11 +402,10 @@ private struct FlatWebView: UIViewRepresentable {
             return .allow
         }
 
-        /// The page handed over is in place: from now on it is the one that may speak.
+        /// The page handed over is in place: from now on it is the one that may speak. Only the navigation `load()`
+        /// started for the newest document counts (`PageHandover`).
         func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
-            guard let arriving, arriving == document else { return }
-            handedOver = arriving
-            self.arriving = nil
+            handover.committed(navigation)
         }
 
         /// Never trust a server from inside the web view: the page has no business with one, and flatd's identity is
@@ -389,17 +416,20 @@ private struct FlatWebView: UIViewRepresentable {
         }
 
         func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-            guard page.problem == nil, (error as NSError).code != NSURLErrorCancelled else { return }
+            guard handover.concerns(navigation), page.problem == nil,
+                  (error as NSError).code != NSURLErrorCancelled else { return }
             page.problem = FlatdError.unreachable.message()
         }
 
         func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
-            guard page.problem == nil, (error as NSError).code != NSURLErrorCancelled else { return }
+            guard handover.concerns(navigation), page.problem == nil,
+                  (error as NSError).code != NSURLErrorCancelled else { return }
             page.problem = FlatdError.unreachable.message()
         }
 
         /// WebKit may end the page's process in the background: load it again (BRIDGE.md).
         func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+            guard !retired else { return }
             page.isReady = false
             load()
         }

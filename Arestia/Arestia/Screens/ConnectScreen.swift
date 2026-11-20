@@ -50,7 +50,9 @@ struct ConnectScreen: View {
                     if let problem = model.problem {
                         FormProblem(text: problem).padding(.top, 14)
                     }
-                    Button { connect() } label: {
+                    Button {
+                        if let code = model.code { connect(code, replacing: true) }   // the code on screen, confirmed
+                    } label: {
                         BusyLabel(text: Text("Connect"), busy: model.isConnecting)
                     }
                     .buttonStyle(FormButtonStyle(accent: .arestia, busy: model.isConnecting))
@@ -78,7 +80,10 @@ struct ConnectScreen: View {
         .interactiveDismissDisabled(model.isConnecting)
         .onAppear {
             model.browser.start()
-            if model.code != nil, !needsConfirmation { connect() }       // a code handed in: connect with it
+            // A code handed in: connect with it, unless it would replace who the app trusts.
+            if let code = model.code, !ConnectModel.needsConfirmation(code, saved: store.connection.saved) {
+                connect(code, replacing: false)
+            }
         }
         .onDisappear {
             model.browser.stop()
@@ -93,19 +98,25 @@ struct ConnectScreen: View {
     }
 
     /// A scanned or pasted code connects at once (there is nothing else to enter), unless it would replace the flatd
-    /// paired now with another one (or with one that cannot be told): that waits for Connect.
+    /// paired now with another one (or with one that cannot be told): that waits for Connect. Whatever was under way
+    /// for an earlier code stops first: an attempt is for the code it was started with, and only that one.
     private func take(_ text: String) {
-        if model.take(text), !needsConfirmation { connect() }
+        attempt?.cancel()
+        attempt = nil
+        guard let code = model.take(text) else { return }
+        if !ConnectModel.needsConfirmation(code, saved: store.connection.saved) { connect(code, replacing: false) }
     }
 
     private var needsConfirmation: Bool {
         model.needsConfirmation(saved: store.connection.saved)
     }
 
-    private func connect() {
+    /// Connects with exactly this code (captured here, never read again from the screen's state). `replacing`: the
+    /// person tapped Connect for it, so it may replace who the app trusts.
+    private func connect(_ code: PairingCode, replacing: Bool) {
         attempt?.cancel()
         attempt = Task {
-            if await model.connect(store: store), !Task.isCancelled {
+            if await model.connect(code, replacing: replacing, store: store), !Task.isCancelled {
                 onConnected()
                 if closable { dismiss() }
             }

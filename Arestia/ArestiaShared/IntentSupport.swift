@@ -69,7 +69,8 @@ nonisolated struct RolloQuery: EntityQuery {
 }
 
 /// The devices to choose from in Shortcuts: flatd's list, or the one seen last when flatd is out of reach (setting up
-/// an automation away from home still works). Each choice's id is tied to the paired flatd (`SavedDevice`).
+/// an automation away from home still works). Each choice's id carries the pairing its name was kept for
+/// (`SavedDevice`), taken from the same reading as the names (`FlatdConnection.known`).
 nonisolated enum DeviceChoices {
     nonisolated struct Choice: Equatable, Sendable {
         let id: String
@@ -78,18 +79,18 @@ nonisolated enum DeviceChoices {
 
     static func load(kind: Device.Kind, connection: FlatdConnection = .live,
                      reach: FlatdReach? = nil) async -> [Choice] {
-        let known = await names(kind: kind, connection: connection, reach: reach)
-        guard let pin = connection.pairing?.pin else { return [] }
-        return known.map { Choice(id: SavedDevice.id(for: $0.id, of: pin), label: $0.label) }
-    }
-
-    private static func names(kind: Device.Kind, connection: FlatdConnection,
-                              reach: FlatdReach?) async -> [FlatdConnection.KnownDevice] {
         if let answer = try? await (reach ?? FlatdReach(connection: connection)).run({ client in
             (try await client.devices(), client)
         }) {
             connection.remember(answer.0, from: answer.1)
         }
-        return connection.knownDevices.filter { $0.kind == kind.raw }
+        return choices(kind: kind, from: connection.known)
+    }
+
+    /// The choices of one reading of the names: each tagged with the pairing those names belong to.
+    static func choices(kind: Device.Kind, from known: FlatdConnection.KnownDevices?) -> [Choice] {
+        guard let known else { return [] }
+        return known.devices.filter { $0.kind == kind.raw }
+            .map { Choice(id: SavedDevice.id(for: $0.id, of: known.pairing), label: $0.label) }
     }
 }

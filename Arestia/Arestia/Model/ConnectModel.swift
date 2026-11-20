@@ -92,6 +92,9 @@ final class ConnectModel {
     let browser = FlatdBrowser()
     /// Where else flatd may be, when it is not at the code's address (Bonjour; candidates only, `FlatdBonjour`).
     private let candidates: @Sendable () async -> [URL]
+    /// Counts the attempts: only the newest one says how it went (an earlier one, cancelled when the code changed, may
+    /// still be on its way out).
+    private var attempts = 0
 
     init(code: PairingCode? = nil, candidates: @escaping @Sendable () async -> [URL] = { await FlatdBonjour.candidates() }) {
         self.code = code
@@ -100,65 +103,74 @@ final class ConnectModel {
 
     var canConnect: Bool { code != nil && !isConnecting }
 
-    /// Whether the code read would replace who the app trusts now: it is for another flatd than the one paired, or
-    /// what is paired cannot be told (`saved` unusable). Then nothing connects by itself: a code decides who the app
-    /// trusts from then on, so swapping that takes a deliberate Connect, with the new identity on screen to compare
-    /// with flatd's own. (A first pairing and a fresh code of the same flatd connect at once.)
-    func needsConfirmation(saved: FlatdConnection.Saved) -> Bool {
-        guard let code else { return false }
-        return switch saved {
+    /// Whether this code would replace who the app trusts now: it is for another flatd than the one paired, or what is
+    /// paired cannot be told (`saved` unusable). Then nothing connects by itself: a code decides who the app trusts
+    /// from then on, so swapping that takes a deliberate Connect for exactly this code, with its identity on screen to
+    /// compare with flatd's own. (A first pairing and a fresh code of the same flatd connect at once.)
+    static func needsConfirmation(_ code: PairingCode, saved: FlatdConnection.Saved) -> Bool {
+        switch saved {
         case .none: false
         case let .paired(pairing): code.pin != pairing.pin
         case .unusable: true
         }
     }
 
-    /// A scanned or pasted text: flatd's pairing code, or not. Returns whether it was one.
+    /// The same for the code on screen (false while there is none).
+    func needsConfirmation(saved: FlatdConnection.Saved) -> Bool {
+        code.map { Self.needsConfirmation($0, saved: saved) } ?? false
+    }
+
+    /// A scanned or pasted text: flatd's pairing code, or not. Returns the code it was (nil: none).
     @discardableResult
-    func take(_ text: String) -> Bool {
+    func take(_ text: String) -> PairingCode? {
         guard let code = PairingCode.parse(text) else {
             self.code = nil                    // whatever was read before is not what is on screen now
             problem = String(localized: "That isn't a pairing code from flatd.")
-            return false
+            return nil
         }
         problem = nil
         self.code = code
-        return true
+        return code
     }
 
-    /// Looks for flatd at the code's address, then at the ones Bonjour offers, and lets the store keep the pairing at
-    /// the first where flatd answered. Every attempt goes through the transport pinned to the code's identity, so an
-    /// address is only somewhere to look: a server without flatd's key gets nothing, and the next address is tried.
-    func connect(store: FlatStore) async -> Bool {
-        guard let code, !isConnecting else { return false }
+    /// Looks for the flatd of exactly this code at its address, then at the ones Bonjour offers, and lets the store
+    /// keep the pairing at the first where flatd answered. `replacing`: the person tapped Connect for this code, so it
+    /// may replace who the app trusts (the store checks again against what is saved when it keeps the pairing). Every
+    /// attempt goes through the transport pinned to the code's identity, so an address is only somewhere to look: a
+    /// server without flatd's key gets nothing, and the next address is tried. The code is the one handed in from
+    /// start to end, whatever is scanned meanwhile (round 4).
+    func connect(_ code: PairingCode, replacing: Bool, store: FlatStore) async -> Bool {
+        attempts += 1
+        let attempt = attempts
         isConnecting = true
         problem = nil
-        defer { isConnecting = false }
+        defer { if attempt == attempts { isConnecting = false } }
         var tried: [URL] = []
         var failure = FlatdError.unreachable
 
         /// True: connected. False: flatd answered and said no (looking elsewhere is pointless). Nil: not there.
-        func attempt(_ url: URL) async -> Bool? {
+        func attemptAt(_ url: URL) async -> Bool? {
             tried.append(url)
-            guard let error = await store.connect(to: url, token: code.token, pin: code.pin) else { return true }
+            guard let error = await store.connect(to: url, token: code.token, pin: code.pin, replacing: replacing)
+            else { return true }
             failure = error
             return error == .unreachable || error == .noAnswer ? nil : false
         }
 
         var outcome: Bool?
-        if let hint = code.baseURL { outcome = await attempt(hint) }
-        if outcome == nil {
+        if let hint = code.baseURL { outcome = await attemptAt(hint) }
+        if outcome == nil, !Task.isCancelled {
             // Bonjour's addresses are asked side by side, without the key (`FlatStore.locate`): forged ones cannot use
             // up the time, and the key goes out once, to the address where the code's identity answered.
             let others = await candidates().filter { !tried.contains($0) }
             guard !Task.isCancelled else { return false }
-            if let found = await store.locate(code, among: others) { outcome = await attempt(found) }
+            if let found = await store.locate(code, among: others) { outcome = await attemptAt(found) }
         }
         if outcome == true {
-            self.code = nil
+            if self.code == code { self.code = nil }
             return true
         }
-        guard !Task.isCancelled else { return false }
+        guard !Task.isCancelled, attempt == attempts else { return false }
         problem = switch failure {
         case .refused:
             String(localized: "flatd has a new key. Run “flatd pair” again and scan the new code.")

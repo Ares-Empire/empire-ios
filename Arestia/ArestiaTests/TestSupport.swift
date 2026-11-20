@@ -87,18 +87,31 @@ final class MemoryKeys: FlatdKeyStore, @unchecked Sendable {
     private var item: (value: String, label: String)?
     var failsToDelete = false
     var failsToRead = false
+    /// Runs after each read: another process changing the pairing between two readings of one caller.
+    var afterRead: (@Sendable () -> Void)?
     func read() throws -> String? {
         if failsToRead { throw FlatdKeychainError(status: -1) }
-        return lock.withLock { item?.value }
+        let value = lock.withLock { item?.value }
+        afterRead?()
+        return value
     }
     func save(_ value: String, label: String) throws { lock.withLock { item = (value, label) } }
-    func update(_ value: String, ifLabel label: String) -> Bool {
+    func add(_ value: String, label: String) throws -> Bool {
         lock.withLock {
-            guard item?.label == label else { return false }
+            guard item == nil else { return false }
             item = (value, label)
             return true
         }
     }
+    func update(_ value: String, ifLabel label: String, newLabel: String) -> Bool {
+        lock.withLock {
+            guard item?.label == label else { return false }
+            item = (value, newLabel)
+            return true
+        }
+    }
+    /// The saved item's label (its version), for the tests.
+    var label: String? { lock.withLock { item?.label } }
     func delete() throws {
         if failsToDelete { throw FlatdKeychainError(status: -1) }
         lock.withLock { item = nil }
@@ -110,8 +123,11 @@ enum Flat {
     /// A made-up identity (the fake transport checks no certificate; `TrustTests` do, with made-up certificates).
     static let pin = FlatdPin(String(repeating: "ab", count: 32))!
 
-    static func pairing(at url: URL = base, token: String = key) -> FlatdPairing {
-        FlatdPairing(baseURL: url, token: token, pin: pin)
+    /// The test pairing's identity (`FlatdPairing.id`), the same in every test's connection.
+    static let id = UUID(uuidString: "00000000-0000-4000-8000-00000000a1a1")!
+
+    static func pairing(at url: URL = base, token: String = key, id: UUID = id) -> FlatdPairing {
+        FlatdPairing(baseURL: url, token: token, pin: pin, id: id)
     }
     static let key = "test-key-0123456789abcdef"
 

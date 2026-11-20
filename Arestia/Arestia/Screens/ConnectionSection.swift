@@ -63,7 +63,7 @@ struct ConnectionSection: View {
                     } label: { Text("Disconnect") }
                     Button(role: .cancel) {} label: { Text("Cancel") }
                 } message: {
-                    Text("Arestia forgets the pairing. The Control Center controls and Shortcuts stop until you pair again.")
+                    Text("Arestia forgets the pairing. The Control Center controls and Shortcuts stop until you pair again. A blind or fan chosen in them is then chosen again.")
                 }
             }
             FormNote(text: String(localized: "Arestia talks only to the flatd with this identity, encrypted. The pairing stays on this iPhone, in the Keychain; Shortcuts and the Control Center controls use it too."))

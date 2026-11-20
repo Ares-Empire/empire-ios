@@ -109,3 +109,59 @@ enum PageScript {
     /// The accent as the page takes it ("#FF9A62": the bright one; the page deepens it on the light wall itself).
     static let accentHex = "#FF9A62"
 }
+
+/// Which document in the 3D tab's web view may speak to the app: only the page the app handed over, and only once
+/// WebKit put *that* load in place. Each load is a new document (`begin`); its navigation, as `WKWebView.load` returned
+/// it, is the one whose commit counts (`committed`), so a late commit of an earlier load (overlapping loads, round 4)
+/// never lets the next document speak while the previous one is still shown. Kept apart from WebKit, so the tests pin
+/// it with stand-in navigations.
+struct PageHandover {
+    /// Counts the documents loaded: a request's result goes only to the document that asked.
+    private(set) var document = 0
+    /// The load on its way: its document and the navigation WebKit gave for it (held, so its identity stays unique).
+    private var arriving: (document: Int, navigation: AnyObject)?
+    /// The document WebKit put in place, and its navigation; only it may speak.
+    private var handedOver: Int?
+    private var shown: AnyObject?
+
+    /// A new page is fetched for the web view: from now on no document speaks until it is in place (the old one is no
+    /// longer the one, the new one is not there yet). Returns the new document's count.
+    mutating func begin() -> Int {
+        document += 1
+        arriving = nil
+        handedOver = nil
+        shown = nil
+        return document
+    }
+
+    /// The web view started loading `document`'s page as `navigation`; false (nothing awaited) when it is not the newest
+    /// document or WebKit did not start a load.
+    mutating func loading(_ document: Int, as navigation: AnyObject?) -> Bool {
+        guard document == self.document, let navigation else { return false }
+        arriving = (document, navigation)
+        return true
+    }
+
+    /// Whether this navigation is the load awaited now (its failures count; others are an earlier load's).
+    func awaits(_ navigation: AnyObject?) -> Bool {
+        guard let arriving, let navigation else { return false }
+        return arriving.navigation === navigation && arriving.document == document
+    }
+
+    /// WebKit put a navigation in place: when it is the awaited load, its document may speak from now on.
+    mutating func committed(_ navigation: AnyObject?) {
+        guard awaits(navigation) else { return }
+        handedOver = document
+        shown = navigation
+        arriving = nil
+    }
+
+    /// Whether a navigation's failure concerns the page of now (the load awaited, or the one in place), not an
+    /// earlier load's.
+    func concerns(_ navigation: AnyObject?) -> Bool {
+        guard let navigation else { return false }
+        return awaits(navigation) || (maySpeak && shown === navigation)
+    }
+
+    var maySpeak: Bool { handedOver == document }
+}

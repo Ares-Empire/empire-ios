@@ -7,7 +7,8 @@ import SwiftUI
 ///
 /// DEBUG launch arguments: `-flatdPairing <code>` (pair with a fake flatd without the screen: the JSON pairing code
 /// `scripts/fake-flatd.py` prints; never the real one),
-/// `-forgetFlatd` (start without a key), `-tab home|flat`, `-openSheet settings|connect`, `-scrollToEnd`,
+/// `-forgetFlatd` (start without a key), `-tab home|flat`, `-openSheet settings|connect`, `-connectCode <code>` (the
+/// connect sheet with a code, as scanned), `-scrollToEnd`,
 /// `-scrollTo blinds|automations`, plus the shared ones (`-appearance`, `-openLanguage`, …).
 struct ContentView: View {
     @State private var store: FlatStore
@@ -126,6 +127,10 @@ final class ArestiaNavigation {
         case "connect": navigation.sheet = .connect(nil)
         default: break
         }
+        // A fake flatd's code handed to the connect sheet, as a scan would (another identity waits for Connect).
+        if let text = LaunchArguments.value("-connectCode"), let code = PairingCode.parse(text) {
+            navigation.sheet = .connect(code)
+        }
         #endif
         return navigation
     }
@@ -138,7 +143,9 @@ enum DebugConnection {
         if arguments.contains("-forgetFlatd") { try? connection.forget() }
         guard let index = arguments.firstIndex(of: "-flatdPairing"), arguments.indices.contains(index + 1),
               let code = PairingCode.parse(arguments[index + 1]), let url = code.baseURL else { return }
-        try? connection.save(FlatdPairing(baseURL: url, token: code.token, pin: code.pin))
+        // The same fake flatd keeps its pairing's identity from launch to launch (its choices in controls stay).
+        let same = connection.pairing.flatMap { $0.pin == code.pin ? $0.id : nil }
+        try? connection.save(FlatdPairing(baseURL: url, token: code.token, pin: code.pin, id: same ?? UUID()))
     }
 }
 #endif

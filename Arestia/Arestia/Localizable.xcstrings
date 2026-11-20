@@ -325,12 +325,12 @@
         }
       }
     },
-    "Arestia forgets the pairing. The Control Center controls and Shortcuts stop until you pair again." : {
+    "Arestia forgets the pairing. The Control Center controls and Shortcuts stop until you pair again. A blind or fan chosen in them is then chosen again." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Arestia vergisst die Kopplung. Die Steuerelemente im Kontrollzentrum und die Kurzbefehle ruhen, bis du neu koppelst."
+            "value" : "Arestia vergisst die Kopplung. Die Steuerelemente im Kontrollzentrum und die Kurzbefehle ruhen, bis du neu koppelst. Ein darin gewähltes Rollo oder ein Ventilator wird dann neu gewählt."
           }
         }
       }

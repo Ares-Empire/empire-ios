@@ -136,7 +136,8 @@ struct StoreReviewTests {
     @Test func aModeEventIsToldOnce() async throws {
         let (store, _, events, _) = try await liveStore()
         var heard: [FlatEvent] = []
-        let token = store.listen { heard.append($0) }
+        let pairing = try #require(store.pairingID)
+        let token = try #require(store.listen(for: pairing) { heard.append($0) })
         events.send(.mode(FlatMode(id: "cooking", label: "Cooking", active: true)))
         #expect(await eventually { store.isCooking })
         try await Task.sleep(for: .milliseconds(50))
@@ -148,7 +149,8 @@ struct StoreReviewTests {
     @Test func aSnapshotWithoutModesKeepsThemForThePageToo() async throws {
         let (store, _, events, _) = try await liveStore()
         var heard: [FlatEvent] = []
-        let token = store.listen { heard.append($0) }
+        let pairing = try #require(store.pairingID)
+        let token = try #require(store.listen(for: pairing) { heard.append($0) })
         events.send(.snapshot(devices: try Flat.devices([Flat.fan(1)]), modes: nil))
         #expect(await eventually { store.devices.count == 1 })
         #expect(store.cooking != nil)

@@ -17,8 +17,15 @@ import os
 ///
 /// One loop follows flatd at a time: each has its own generation and failure count, and after every wait it checks it
 /// is still the store's loop before it changes anything (Codex's review, 2026-11-19: a Try again during a Bonjour
-/// lookup used to leave the old loop running on a reset count). Every command remembers the pairing it was sent with,
-/// so a late answer after connecting again changes nothing.
+/// lookup used to leave the old loop running on a reset count).
+///
+/// **One pairing at a time** (`pairingID`, the pairing's identity in the Keychain): everything the store does or hears
+/// is tagged with it: the loop, every command, the 3D page and its listener. Whatever carries another identity is
+/// dropped, never acted on, however late it gets its turn. When the saved pairing is another one than the store's (a
+/// Disconnect, a pairing made elsewhere), the store leaves its pairing completely (`adopt`): its tasks cancelled, the
+/// stream and the page's listener gone, its state cleared; only then does it follow the saved one. Pairing with another
+/// flatd goes only that way (`connect`); a fresh code of the same flatd keeps the identity and only renews key and
+/// address.
 @MainActor @Observable
 final class FlatStore {
     enum Link: Equatable {
@@ -43,8 +50,13 @@ final class FlatStore {
     private(set) var working: Set<String> = []
     /// A blind's position while a finger drags it, until flatd has it.
     private(set) var dragging: [String: Int] = [:]
-    /// Counts up whenever the pairing changes (connect, disconnect): the 3D page loads again, late answers are dropped.
-    private(set) var pairingGeneration = 0
+    /// The pairing the store works for (`FlatdPairing.id`); nil without one. The 3D page has a web view of its own per
+    /// identity, and everything sent or heard for another is dropped.
+    private(set) var pairingID: UUID?
+    /// Counts the times the store left a pairing (`adopt`), so a connect that started before knows it is too late.
+    private var resets = 0
+    /// Work under way for `pairingID` (commands): cancelled when the store leaves that pairing.
+    private var tasks: [UUID: Task<Void, Never>] = [:]
     /// The line at the bottom: what could not be done, or "Cooking ended · Undo".
     var offer: UndoOffer?
 
@@ -64,8 +76,8 @@ final class FlatStore {
     /// only when nothing newer came from the stream meanwhile (Codex's review, round 2).
     private var revisions: [String: Int] = [:]
     private var snapshots = 0
-    /// Who hears every change as flatd describes it (the 3D page, `FlatScreen`'s bridge).
-    private var listeners: [UUID: @MainActor (FlatEvent) -> Void] = [:]
+    /// Who hears every change as flatd describes it (the 3D page, `FlatScreen`'s bridge), each for one pairing.
+    private var listeners: [UUID: (pairing: UUID, hear: @MainActor (FlatEvent) -> Void)] = [:]
     private static let log = Logger(subsystem: "de.ares-empire.arestia", category: "store")
     /// Pauses between attempts to reach flatd again (the last one repeats).
     static let backoff: [Duration] = [.seconds(1), .seconds(2), .seconds(4), .seconds(8), .seconds(15), .seconds(30)]
@@ -83,7 +95,9 @@ final class FlatStore {
         self.eventSource = eventSource
         self.rediscover = rediscover
         self.reloadControls = reloadControls
-        link = connection.client == nil ? .notSetUp : .connecting
+        let saved = connection.pairing?.id
+        pairingID = saved
+        link = saved == nil ? .notSetUp : .connecting
     }
 
     // MARK: what the screens read
@@ -103,10 +117,14 @@ final class FlatStore {
 
     // MARK: following flatd
 
-    /// Starts following flatd (at launch and back in the foreground). Does nothing while it already does or without a key.
+    /// Starts following flatd (at launch and back in the foreground). Does nothing while it already does or without a
+    /// pairing. A saved pairing other than the store's (Disconnect or pairing elsewhere) is taken on only after the
+    /// store left its own completely (`adopt`).
     func start() {
         guard loop == nil else { return }
-        guard let pairing = connection.pairing else {
+        let saved = connection.pairing
+        if saved?.id != pairingID { adopt(saved) }
+        guard let pairing = saved else {
             link = .notSetUp
             return
         }
@@ -114,6 +132,40 @@ final class FlatStore {
         loopGeneration += 1
         let generation = loopGeneration
         loop = Task { [weak self] in await self?.run(generation: generation, pairing: pairing) }
+    }
+
+    /// Leaves the store's pairing completely and takes on this one (nil: none): its loop and every command under way
+    /// are cancelled, the page's listener is dropped (the page goes with its web view, which belongs to the old
+    /// identity), and nothing of the old flat stays: devices, modes, scenes, the line at the bottom, the time last
+    /// seen. Whatever of the old pairing is still on its way finds `pairingID` changed and is dropped.
+    private func adopt(_ pairing: FlatdPairing?) {
+        stop()
+        tasks.values.forEach { $0.cancel() }
+        tasks = [:]
+        listeners = [:]
+        resets += 1
+        pairingID = pairing?.id
+        devices = []
+        modes = []
+        scenes = []
+        dragging = [:]
+        working = []
+        revisions = [:]
+        snapshots = 0
+        offer = nil
+        lastSeen = nil
+        link = pairing == nil ? .notSetUp : .connecting
+        reloadControls()
+    }
+
+    /// The saved pairing changed under the store (seen by a command or the loop): it leaves its own and, if it was
+    /// following flatd, follows the saved one.
+    private func followSaved() {
+        let following = loop != nil
+        let saved = connection.pairing
+        guard saved?.id != pairingID else { return }
+        adopt(saved)
+        if following { start() }
     }
 
     /// Stops following (the app went to the background, the screen went away, the pairing changed).
@@ -139,6 +191,11 @@ final class FlatStore {
         var client = FlatdClient(pairing, transport: transport)
         var movedSinceLive = false
         while owns(generation) {
+            // Paired anew or disconnected meanwhile (anywhere): this loop's pairing is over.
+            guard connection.pairing?.id == pairing.id else {
+                followSaved()
+                return
+            }
             do {
                 try await follow(client, generation: generation) {
                     failures = 0
@@ -146,10 +203,14 @@ final class FlatStore {
                 }
             } catch FlatdError.refused {
                 guard owns(generation) else { return }
-                Self.log.notice("flatd refused the key")
-                link = .refused
-                stop()
-                return
+                // A refusal counts only for the key it was sent with: a fresh code of the same flatd brought another
+                // one meanwhile, which the next round uses.
+                if connection.pairing?.id == pairing.id, connection.token == pairing.token {
+                    Self.log.notice("flatd refused the key")
+                    link = .refused
+                    stop()
+                    return
+                }
             } catch {}
             guard owns(generation) else { return }
             failures += 1
@@ -189,36 +250,46 @@ final class FlatStore {
         guard owns(generation) else { return }
         scenes = answered
         for try await event in eventSource.events(from: client.eventsRequest, pin: client.pin) {
-            guard owns(generation) else { return }
-            apply(event)
+            guard owns(generation), client.pairingID == pairingID else { return }
             if case .snapshot = event {
+                // Each connection's first word: still the saved pairing? Otherwise nothing of it is shown.
+                guard let saved = connection.pairing, saved.id == client.pairingID else {
+                    followSaved()
+                    return
+                }
+                apply(event)
                 live()
                 link = .live
                 liveBase = client.baseURL
-                if let pairing = connection.pairing, pairing.token == client.token, pairing.pin == client.pin {
-                    connection.move(pairing, to: client.baseURL)
-                }
+                if saved.token == client.token { connection.move(saved, to: client.baseURL) }
+            } else {
+                apply(event)
             }
         }
         throw FlatdError.unreachable            // the stream ended: reconnect
     }
 
-    /// Hears every change from now on, in flatd's own form: the stream's events, and the state a command's answer
-    /// brought. Keep the token; `unlisten` ends it.
-    func listen(_ listener: @escaping @MainActor (FlatEvent) -> Void) -> UUID {
+    /// Hears every change of this pairing's flat from now on, in flatd's own form: the stream's events, and the state a
+    /// command's answer brought. Nil (nothing is heard) when the store works for another pairing; the store drops the
+    /// listener when it leaves the pairing. Keep the token; `unlisten` ends it.
+    func listen(for pairing: UUID, _ listener: @escaping @MainActor (FlatEvent) -> Void) -> UUID? {
+        guard pairing == pairingID else { return nil }
         let token = UUID()
-        listeners[token] = listener
+        listeners[token] = (pairing, listener)
         return token
     }
 
     func unlisten(_ token: UUID) { listeners[token] = nil }
 
     private func tell(_ event: FlatEvent) {
-        for listener in listeners.values { listener(event) }
+        for listener in listeners.values where listener.pairing == pairingID { listener.hear(event) }
     }
 
     /// The whole state now, as a snapshot event (for a listener that starts, or the page after it loaded).
     var snapshot: FlatEvent { .snapshot(devices: devices, modes: modes) }
+
+    /// The same for a page of this pairing; nil for one of another.
+    func snapshot(for pairing: UUID) -> FlatEvent? { pairing == pairingID ? snapshot : nil }
 
     /// One event of the stream (also called by the tests). Listeners hear it once; a snapshot as the whole state (a
     /// snapshot without modes keeps the modes known).
@@ -230,7 +301,7 @@ final class FlatStore {
             self.devices = devices
             if let modes { self.modes = modes }
             dragging = [:]
-            connection.remember(devices)
+            if let pairingID { connection.remember(devices, for: pairingID) }
             lastSeen = now
             tell(snapshot)
         case let .state(id, patch, _):
@@ -311,39 +382,77 @@ final class FlatStore {
 
     /// Checks a pairing code's key with flatd at this address (`GET /api/devices`; the transport accepts only a server
     /// holding the code's pin) and keeps the pairing when flatd answers. Returns why not: `.unreachable` when flatd is
-    /// not there (nothing, or something without its key), `.refused` when flatd itself does not know the key.
-    func connect(to baseURL: URL, token: String, pin: FlatdPin) async -> FlatdError? {
+    /// not there (nothing, or something without its key), `.refused` when flatd itself does not know the key,
+    /// `.notPossible` when the pairing changed meanwhile, or the code would replace who the app trusts without
+    /// `replacing`.
+    ///
+    /// - A code of the flatd paired now (the same identity) renews key and address in place: the pairing keeps its
+    ///   identity, so its page, choices and work go on; the stream starts again with the new key.
+    /// - Any other code (another flatd, or when what is saved cannot be told) replaces who the app trusts, so only with
+    ///   `replacing` (the person tapped Connect for exactly this code), and only through a full Disconnect: the old
+    ///   pairing forgotten with its choices, the store's tasks, stream, page and state gone (`adopt`), then the new
+    ///   pairing saved fresh with an identity of its own. Its flatd is checked first, so an unreachable one leaves the old
+    ///   pairing as it was.
+    /// - A first pairing is saved only while nothing is saved (`pairNew`).
+    func connect(to baseURL: URL, token: String, pin: FlatdPin, replacing: Bool = false) async -> FlatdError? {
+        let decided = connection.saved
+        let sameFlatd: FlatdPairing? = if case let .paired(saved) = decided, saved.pin == pin { saved } else { nil }
+        let replaces = decided != .none && sameFlatd == nil
+        guard !replaces || replacing else { return .notPossible }
         let candidate = FlatdClient(baseURL: baseURL, token: token, pin: pin, transport: transport)
-        let started = pairingGeneration
+        let startedAt = resets
         do {
             try await candidate.verify()
             let found = try await candidate.devices()
-            // The screen went away, or another pairing or a disconnect came first: this attempt keeps nothing.
-            guard !Task.isCancelled, started == pairingGeneration else { return .notPossible }
-            try connection.save(FlatdPairing(baseURL: baseURL, token: token, pin: pin))
-            stop()
-            pairingGeneration += 1
+            // The screen went away, the store left its pairing, or the saved pairing is no longer what this attempt was
+            // decided against: this attempt keeps nothing.
+            guard !Task.isCancelled, startedAt == resets, connection.saved.isSamePairing(as: decided) else {
+                return .notPossible
+            }
+            if let sameFlatd {
+                let renewed = FlatdPairing(baseURL: baseURL, token: token, pin: pin, id: sameFlatd.id)
+                // Over the version read; a control that only moved the address meanwhile is written over too.
+                var current = sameFlatd, written = false
+                for _ in 0..<3 where !written {
+                    written = connection.renew(current, with: renewed)
+                    if !written {
+                        guard case let .paired(now) = connection.saved, now.id == sameFlatd.id, now.pin == pin,
+                              now.token == sameFlatd.token else { return .notPossible }
+                        current = now
+                    }
+                }
+                guard written else { return .notPossible }
+                if pairingID != renewed.id { adopt(renewed) }
+                stop()                                  // the stream again, with the new key and address
+                connection.remember(found, for: renewed.id)
+                if link == .refused || !hasSnapshot { link = .connecting }
+                start()
+                reloadControls()
+                return nil
+            }
+            if replaces { try connection.forget() }
+            adopt(nil)
+            let fresh = FlatdPairing(baseURL: baseURL, token: token, pin: pin)
+            guard try connection.pairNew(fresh) else {
+                start()                                 // someone paired meanwhile: follow that one
+                return .notPossible
+            }
+            adopt(fresh)
             devices = found
-            modes = []
-            scenes = []
-            dragging = [:]
-            working = []
-            revisions = [:]
-            offer = nil
-            lastSeen = nil
-            connection.remember(found)
-            link = .connecting
+            connection.remember(found, for: fresh.id)
             start()
-            reloadControls()
             return nil
         } catch let error as FlatdError {
             return error
+        } catch is CancellationError {
+            return .notPossible
         } catch {
-            return .invalidAnswer     // the Keychain refused to save
+            return .invalidAnswer     // the Keychain refused to save or to forget
         }
     }
 
-    /// Forgets the address and the key (Settings → Disconnect). If the Keychain keeps them, says so and stays.
+    /// Forgets the pairing and everything of it (Settings → Disconnect): the Keychain item and the device names, the
+    /// store's tasks, stream, page and state. If the Keychain keeps the item, says so and stays.
     func disconnect() {
         do {
             try connection.forget()
@@ -351,18 +460,7 @@ final class FlatStore {
             offer = UndoOffer(message: String(localized: "Arestia couldn't forget the key. Try again."))
             return
         }
-        stop()
-        pairingGeneration += 1
-        devices = []
-        modes = []
-        scenes = []
-        dragging = [:]
-        working = []
-        revisions = [:]
-        offer = nil
-        lastSeen = nil
-        link = .notSetUp
-        reloadControls()
+        adopt(nil)
     }
 
     // MARK: commands
@@ -419,9 +517,9 @@ final class FlatStore {
             if let line = self.failureLine(failed) {
                 self.offer = UndoOffer(message: line)
             } else if id == FlatMode.cookingID, !active {
-                let pairing = self.pairingGeneration
+                let pairing = self.pairingID
                 self.offer = UndoOffer(message: FlatWords.cookingEnded()) { [weak self] in
-                    guard let self, pairing == self.pairingGeneration else { return }
+                    guard let self, pairing == self.pairingID else { return }
                     self.setMode(id, active: true)
                 }
             }
@@ -439,54 +537,75 @@ final class FlatStore {
 
     func isWorking(_ key: String) -> Bool { working.contains(key) }
 
-    /// The client a command goes through: at the live loop's address, or at the saved one once flatd answered there.
-    private func readyClient() async throws -> FlatdClient {
-        guard let pairing = connection.pairing else { throw FlatdError.refused }
+    /// The pairing changed under a command: it is dropped (and the store follows the saved pairing).
+    private struct PairingChanged: Error {}
+
+    /// The client a command for this pairing goes through, built from one reading of the saved pairing (so the identity
+    /// checked and the key and pin used are the same pairing's): at the live loop's address, or at the saved one once
+    /// flatd answered there. Throws `PairingChanged` when the store or the Keychain has another pairing now.
+    private func readyClient(for id: UUID) async throws -> FlatdClient {
+        guard id == pairingID, let pairing = connection.pairing, pairing.id == id else { throw PairingChanged() }
         if link == .live, let liveBase {
             return FlatdClient(pairing, at: liveBase, transport: transport)
         }
         let client = FlatdClient(pairing, transport: transport)
         try await client.verify()
+        guard id == pairingID else { throw PairingChanged() }
         return client
     }
 
+    /// Runs work for the store's pairing as a task the store can cancel when it leaves that pairing.
+    private func perform(_ work: @escaping @MainActor () async -> Void) {
+        let token = UUID()
+        tasks[token] = Task { [weak self] in
+            await work()
+            self?.tasks[token] = nil
+        }
+    }
+
     /// Runs a command: one at a time per thing (`blocking`), the failure as a calm line, a refused key back to the
-    /// connect screen, a lost flatd as a reason to reconnect. An answer that comes after the pairing changed is dropped;
-    /// `affects` names what the answer shows (a device id, "mode:<id>"), for `stamp`.
+    /// connect screen, a lost flatd as a reason to reconnect. Tagged with the store's pairing: dropped, its answer too,
+    /// once the store works for another (or the Keychain holds another); `affects` names what the answer shows (a
+    /// device id, "mode:<id>"), for `stamp`.
     private func send<Answer: Sendable>(_ key: String, affects: String, blocking: Bool = true,
                                         _ work: @escaping @Sendable (FlatdClient) async throws -> Answer,
                                         done: @escaping @MainActor (Answer, Stamp) -> Void,
                                         failed: @escaping @MainActor () -> Void = {}) {
-        guard connection.pairing != nil else { return }
+        guard let pairing = pairingID else { return }
         if blocking, working.contains(key) { return }
-        let pairing = pairingGeneration
         working.insert(key)
-        Task {
-            defer { if pairing == pairingGeneration { working.remove(key) } }
+        perform { [weak self] in
+            guard let self else { return }
+            defer { if pairing == pairingID { working.remove(key) } }
+            var used: FlatdClient?
             do {
-                let client = try await readyClient()
-                guard pairing == pairingGeneration else { return }
+                let client = try await readyClient(for: pairing)
+                used = client
                 let stamp = stamp(affects)
                 let answer = try await work(client)
-                guard pairing == pairingGeneration else { return }
+                guard pairing == pairingID else { return }
                 done(answer, stamp)
                 reloadControls()
+            } catch is PairingChanged {
+                followSaved()
             } catch let error as FlatdError {
-                guard pairing == pairingGeneration else { return }
+                guard pairing == pairingID else { return }
                 failed()
-                handle(error)
+                handle(error, client: used)
             } catch {
-                guard pairing == pairingGeneration else { return }
+                guard pairing == pairingID else { return }
                 failed()
             }
         }
     }
 
-    /// What a failed command does to the store: a refused key stops it, a lost flatd reconnects (only while the store
-    /// follows flatd at all), the rest is a line.
-    private func handle(_ error: FlatdError) {
+    /// What a failed command does to the store: a refused key stops it (only while that key is the saved one: a fresh
+    /// code may have brought another meanwhile), a lost flatd reconnects (only while the store follows flatd at all),
+    /// the rest is a line.
+    private func handle(_ error: FlatdError, client: FlatdClient?) {
         switch error {
         case .refused:
+            guard client == nil || client?.token == connection.token else { return }
             link = .refused
             stop()
         case .unreachable:
@@ -499,52 +618,62 @@ final class FlatStore {
 
     // MARK: the 3D page's requests (BRIDGE.md: bodies forwarded unchanged, one result each)
 
+    /// Whether a page of this pairing may still speak: the store works for it and it is the saved one.
+    func speaks(for pairing: UUID) -> Bool { pairing == pairingID && connection.pairing?.id == pairing }
+
+    /// The client for fetching this pairing's page: nil once the store or the Keychain has another pairing.
+    func client(for pairing: UUID) -> FlatdClient? {
+        guard pairing == pairingID else { return nil }
+        return connection.client(for: pairing, transport: transport)
+    }
+
     /// A device command from the 3D page. The answer's state reaches the page through the listeners. `pairing` is the
-    /// pairing (`pairingGeneration`) whose flatd gave the page that asks: a page of an earlier pairing commands nothing,
-    /// however late its message is worked off.
-    func pageRequest(_ id: String, body: Data, pairing: Int? = nil) async -> FlatdError? {
-        let pairing = pairing ?? pairingGeneration
-        guard pairing == pairingGeneration else { return .notPossible }
+    /// identity of the pairing whose flatd gave the page that asks: a page of another pairing commands nothing, however
+    /// late its message is worked off, and its client is that pairing's own (`readyClient`).
+    func pageRequest(_ id: String, body: Data, pairing: UUID) async -> FlatdError? {
+        var used: FlatdClient?
         do {
-            let client = try await readyClient()
-            guard pairing == pairingGeneration else { return .notPossible }
+            let client = try await readyClient(for: pairing)
+            used = client
             let stamp = stamp(id)
             let device = try await client.send(body: body, to: id)
-            guard pairing == pairingGeneration else { return nil }
+            guard pairing == pairingID else { return nil }
             take(device, since: stamp)
             reloadControls()
             return nil
         } catch {
-            return pageFailure(error, pairing: pairing)
+            return pageFailure(error, pairing: pairing, client: used)
         }
     }
 
     /// A mode change from the 3D page (it only ever ends cooking); `pairing` as for `pageRequest`.
-    func pageMode(_ id: String, body: Data, pairing: Int? = nil) async -> FlatdError? {
-        let pairing = pairing ?? pairingGeneration
-        guard pairing == pairingGeneration else { return .notPossible }
+    func pageMode(_ id: String, body: Data, pairing: UUID) async -> FlatdError? {
+        var used: FlatdClient?
         do {
-            let client = try await readyClient()
-            guard pairing == pairingGeneration else { return .notPossible }
+            let client = try await readyClient(for: pairing)
+            used = client
             let stamp = stamp("mode:" + id)
             let (mode, failed) = try await client.setMode(id, body: body)
-            guard pairing == pairingGeneration else { return nil }
+            guard pairing == pairingID else { return nil }
             take(mode, since: stamp)
             if let line = failureLine(failed) { offer = UndoOffer(message: line) }
             reloadControls()
             return nil
         } catch {
-            return pageFailure(error, pairing: pairing)
+            return pageFailure(error, pairing: pairing, client: used)
         }
     }
 
     /// A page's failed command: the bridge's error, and the store's reaction while the pairing is still the same.
-    private func pageFailure(_ error: Error, pairing: Int) -> FlatdError {
+    private func pageFailure(_ error: Error, pairing: UUID, client: FlatdClient?) -> FlatdError {
+        if error is PairingChanged {
+            if pairing == pairingID { followSaved() }
+            return .notPossible
+        }
         let error = error as? FlatdError ?? .unreachable
-        guard pairing == pairingGeneration else { return error }
+        guard pairing == pairingID else { return error }
         if error == .refused {
-            link = .refused
-            stop()
+            handle(.refused, client: client)
         } else if error == .unreachable, link == .live, loop != nil {
             retry()
         }

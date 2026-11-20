@@ -169,12 +169,13 @@ struct StoreTests {
     @Test func listenersHearEveryChangeAsFlatdWroteIt() async throws {
         let (store, transport, events, _) = try await liveStore()
         var heard: [FlatEvent] = []
-        let token = store.listen { heard.append($0) }
+        let pairing = try #require(store.pairingID)
+        let token = try #require(store.listen(for: pairing) { heard.append($0) })
         events.send(.state(id: "fan:fan_1", state: DeviceState(fields: ["on": .bool(true)]), source: "device"))
         #expect(await eventually { heard.count == 1 })
         // A command's answer too, as a state event (the page shows it before the stream repeats it).
         transport.answer("POST /api/devices/rollo:blind_2", body: Flat.rollo(2, moving: "down", target: 100))
-        #expect(await store.pageRequest("rollo:blind_2", body: Data(#"{"command":"down"}"#.utf8)) == nil)
+        #expect(await store.pageRequest("rollo:blind_2", body: Data(#"{"command":"down"}"#.utf8), pairing: pairing) == nil)
         #expect(heard.count == 2)
         if case let .state(id, state, _) = heard[1] { #expect(id == "rollo:blind_2" && state.moving == .down) }
         #expect(transport.bodies(for: "POST /api/devices/rollo:blind_2").first?["command"] as? String == "down")
@@ -187,10 +188,12 @@ struct StoreTests {
 
     @Test func thePagesRequestsGetTheBridgesErrors() async throws {
         let (store, transport, _, _) = try await liveStore()
+        let pairing = try #require(store.pairingID)
         transport.answer("POST /api/devices/fan:fan_2", status: 504, body: ["error": "timeout"])
-        #expect(await store.pageRequest("fan:fan_2", body: Data(#"{"on":true}"#.utf8)) == .deviceDidNotAnswer)
+        #expect(await store.pageRequest("fan:fan_2", body: Data(#"{"on":true}"#.utf8), pairing: pairing)
+                == .deviceDidNotAnswer)
         transport.answer("POST /api/modes/cooking", body: Flat.cooking.merging(["failed": [:]]) { $1 })
-        #expect(await store.pageMode("cooking", body: Data(#"{"active":false}"#.utf8)) == nil)
+        #expect(await store.pageMode("cooking", body: Data(#"{"active":false}"#.utf8), pairing: pairing) == nil)
         store.stop()
     }
 }

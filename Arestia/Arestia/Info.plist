@@ -34,6 +34,14 @@
 			</array>
 		</dict>
 	</array>
+	<!-- One window only (the trust review, round 4): a second window would have a store of its own, and pairing in one
+	     must never leave the other's 3D page speaking for the new pairing. Every store and page also checks the
+	     pairing's identity (FlatStore.pairingID); this keeps there from being a second one at all. -->
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+	</dict>
 	<!-- Launch on the app's own background instead of a white flash. -->
 	<key>UILaunchScreen</key>
 	<dict>
