@@ -177,6 +177,26 @@ loaded with the key and never bundled.
   back to the page. The app fetches `GET /viewer` itself, over the pinned connection, and hands the page to the web
   view (under a made-up `.invalid` origin, with every network load blocked): the web view never talks to the network,
   the key never enters it, and flatd's identity is checked in one place instead of also in WebKit.
+- **The 3D page is kept on the phone** (2026-11-20, Patrik: "the flat model takes a while to load, can we improve
+  that?", "keeping it loaded when switching tabs is smart", and "copy on phone seems sensible too"). The app keeps
+  one copy in its own container under `Application Support/ArestiaViewer/`, excluded from backups and readable
+  after the first unlock (`completeUntilFirstUserAuthentication`). The copy must match the pairing's id and
+  flatd's pinned key and pass its SHA-256 check. Forget deletes it. The app shows the copy as soon as it can and
+  checks its ETag with flatd in the background. A 304 or identical bytes leave the document in place, a failed
+  check leaves the copy visible, and changed bytes replace the document at once. The web view keeps the document
+  across tab switches and uses a nonpersistent data store. If WebKit ends the page process, the app reloads
+  from the copy when the app is active and the tab is visible. The page reports how long its load took (BRIDGE.md `log` with `timing`), and
+  the app logs it with its own steps (copy read or download, handed over, committed, ready; category `viewer`,
+  numbers only, public), so real-phone numbers can be read from a sysdiagnose. Walking through the flat (2026-11-20)
+  is the page's own; the app only hears `view` with `walk`.
+  Codex's review (NOT SAFE, four findings) and the fixes: walking, a tap's nearby search (30 px) takes only a device
+  in sight, so a tap on a wall walks and never switches the lamp or fan behind it (the viewer, `phone/index.js`
+  `inSight`) (1); the renaming merged in, so the snapshot carries `default_label` and `device` events reach the page
+  (2); a copy that ended WebKit early twice in a row is not shown again while it stays the same bytes, and the next
+  load, an automatic one or Try again, fetches flatd's page whole (`EarlyEnds`) (3); whenever the Keychain says for
+  certain that no pairing is saved (every launch without one), the kept page's removal runs again, so one Forget
+  could not finish (the app ended first) leaves nothing behind (4). Tests: `ViewerNamesTests`, `CrashingCopyTests`,
+  `ForgottenPageCleanupTests`, the viewer's `npm run phone`.
 - **Shortcuts, Siri and NFC** (App Intents, `ArestiaShared/ArestiaIntents.swift`): Start cooking, End cooking, Fans on
   (minutes and fan optional), Fans off, Move a blind (which, and up / down / favourite / stop, from flatd's list), Air
   out, All blinds down. Patrik's NFC tag is a personal automation in Shortcuts that runs Start cooking. They run without

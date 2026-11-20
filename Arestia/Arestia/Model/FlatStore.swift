@@ -974,6 +974,8 @@ final class FlatSession {
     /// Counts the stores made: the screens' identity, so a new store gets new screens (and a new 3D page).
     private(set) var generation = 0
     let connection: FlatdConnection
+    /// The 3D page kept on the phone (`ViewerPageCache`): removed with Forget, and again whenever no pairing is saved.
+    private let viewerCache: ViewerPageCache
     private let makeStore: @MainActor (FlatdPairing?, @escaping @MainActor () -> Void) -> FlatStore
     private let reloadControls: @MainActor () -> Void
     private var reading: Task<Void, Never>?
@@ -981,10 +983,11 @@ final class FlatSession {
     private static let log = Logger(subsystem: "de.ares-empire.arestia", category: "session")
 
     /// `makeStore`: the store for a pairing (nil: none) and what it calls when the saved pairing is no longer its own.
-    init(connection: FlatdConnection,
+    init(connection: FlatdConnection, viewerCache: ViewerPageCache = .live,
          reloadControls: @escaping @MainActor () -> Void = { ArestiaControlKind.reloadAll() },
          makeStore: (@MainActor (FlatdPairing?, @escaping @MainActor () -> Void) -> FlatStore)? = nil) {
         self.connection = connection
+        self.viewerCache = viewerCache
         self.reloadControls = reloadControls
         self.makeStore = makeStore ?? { pairing, changed in
             FlatStore(pairing: pairing, connection: connection, pairingChanged: changed)
@@ -1015,6 +1018,10 @@ final class FlatSession {
             replace(with: pairing)
         case .none, .invalid:
             readFailures = 0
+            // No pairing for certain: a page kept for one is no one's. Forget queues its removal, which never runs
+            // when the app ends first, so it is tried again here, at every launch without a pairing (Codex's review of
+            // the 3D page, finding 4). Never while the Keychain cannot be read: the pairing may well be there.
+            viewerCache.removeAll()
             if let store, !store.isRetired, store.pairingID == nil { return }
             replace(with: nil)
         }
@@ -1048,6 +1055,7 @@ final class FlatSession {
         }
         // Nothing runs between the delete and this on the main actor: no work of the old store starts after it.
         store?.retire()
+        viewerCache.removeAll()
         load()
         reloadControls()
         return true

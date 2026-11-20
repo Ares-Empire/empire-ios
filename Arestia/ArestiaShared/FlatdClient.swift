@@ -221,12 +221,31 @@ nonisolated struct FlatdClient: Sendable {
         return request
     }
 
+    enum ViewerPage: Equatable, Sendable {
+        case unchanged
+        case page(Data, etag: String?)
+    }
+
     /// The phone viewer page (`GET /viewer`, private: flatd serves it only with the key; `.unknown` when flatd has none
     /// set up). The app fetches it here, through the pinned transport, and hands it to the web view, which itself
     /// never talks to the network: one place checks flatd's identity, and the key never enters the web view. The page
-    /// is never bundled or kept.
+    /// is never bundled. The app keeps one copy per pairing and checks its ETag here (see docs/ARESTIA-APP.md).
+    func viewerPage(ifNoneMatch: String?) async throws -> ViewerPage {
+        var request = request("viewer", timeout: 30)
+        if let ifNoneMatch { request.setValue(ifNoneMatch, forHTTPHeaderField: "If-None-Match") }
+        let (data, response) = try await response(to: request)
+        switch response.statusCode {
+        case 304: return .unchanged
+        case 200: return .page(data, etag: response.value(forHTTPHeaderField: "ETag"))
+        default: throw Self.rejection(response.statusCode, data: data)
+        }
+    }
+
     func viewerPage() async throws -> Data {
-        try await send(request("viewer", timeout: 30))
+        guard case let .page(data, _) = try await viewerPage(ifNoneMatch: nil) else {
+            throw FlatdError.failed(status: 304, message: nil)
+        }
+        return data
     }
 
     // MARK: plumbing
@@ -252,17 +271,22 @@ nonisolated struct FlatdClient: Sendable {
     }
 
     private func send(_ request: URLRequest) async throws -> Data {
-        let data: Data, response: HTTPURLResponse
+        let (data, response) = try await response(to: request)
+        guard (200..<300).contains(response.statusCode) else { throw Self.rejection(response.statusCode, data: data) }
+        return data
+    }
+
+    private func response(to request: URLRequest) async throws -> (Data, HTTPURLResponse) {
         do {
             if let gate, request.value(forHTTPHeaderField: "Authorization") != nil {
                 if let gated = transport as? any GatedTransport {
-                    (data, response) = try await gated.send(request, gate: gate)
+                    return try await gated.send(request, gate: gate)
                 } else {
                     try gate.start {}                       // a transport that cannot start inside the gate (the tests')
-                    (data, response) = try await transport.send(request)
+                    return try await transport.send(request)
                 }
             } else {
-                (data, response) = try await transport.send(request)
+                return try await transport.send(request)
             }
         } catch let error as FlatdError {
             throw error                                     // the gate: not paired (any more), or unreadable
@@ -275,15 +299,17 @@ nonisolated struct FlatdClient: Sendable {
         } catch {
             throw FlatdError.unreachable
         }
-        switch response.statusCode {
-        case 200..<300: return data
-        case 401: throw FlatdError.refused
-        case 404: throw FlatdError.unknown
-        case 409: throw FlatdError.notPossible
-        case 504: throw FlatdError.deviceDidNotAnswer
+    }
+
+    private static func rejection(_ status: Int, data: Data) -> FlatdError {
+        switch status {
+        case 401: return .refused
+        case 404: return .unknown
+        case 409: return .notPossible
+        case 504: return .deviceDidNotAnswer
         default:
             let sentence = (try? JSONDecoder().decode(ServerMessage.self, from: data))?.sentence
-            throw FlatdError.failed(status: response.statusCode, message: sentence)
+            return .failed(status: status, message: sentence)
         }
     }
 
