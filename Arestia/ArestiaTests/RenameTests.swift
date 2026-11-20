@@ -40,17 +40,20 @@ struct RenameContractTests {
     @Test func theDeviceEvent() throws {
         let data = try JSONSerialization.data(withJSONObject: [
             "type": "device", "source": "mcp", "device": named(Flat.rollo(1), "Kitchen blind", default: "Blind 1")])
-        guard case let .device(device)? = FlatEvent.decode(data) else {
+        guard case let .device(device, source)? = FlatEvent.decode(data) else {
             Issue.record("not read as a device event")
             return
         }
         #expect(device.id == "rollo:blind_1")
         #expect(device.label == "Kitchen blind")
-        // To the page as is (BRIDGE.md: unknown types are ignored there).
-        let out = try #require(FlatEvent.device(device).json)
+        #expect(source == "mcp")
+        // To the page as is (BRIDGE.md: unknown types are ignored there), who renamed it included.
+        let out = try #require(FlatEvent.device(device, source: source).json)
         let json = try JSONSerialization.jsonObject(with: out) as? [String: Any]
         #expect(json?["type"] as? String == "device")
+        #expect(json?["source"] as? String == "mcp")
         #expect((json?["device"] as? [String: Any])?["label"] as? String == "Kitchen blind")
+        #expect(FlatEvent.decode(out) == .device(device, source: "mcp"))       // the round trip keeps it all
         // A device event without its device is not taken.
         #expect(FlatEvent.decode(Data(#"{"type": "device"}"#.utf8)) == nil)
     }
@@ -197,18 +200,18 @@ struct RenameStoreTests {
         let (store, transport, events, reloads) = try await liveStore()
         var heard: [String] = []
         _ = store.listen { event in
-            if case let .device(device) = event { heard.append(device.label) }
+            if case let .device(device, source) = event { heard.append(device.label + " · " + (source ?? "none")) }
         }
         let before = reloads.count
         events.send(.device(try Flat.decode(Device.self, named(Flat.rollo(1, position: 0), "Kitchen blind",
-                                                               default: "Blind 1"))))
+                                                               default: "Blind 1")), source: "mcp"))
         #expect(await eventually { store.device("rollo:blind_1")?.label == "Kitchen blind" })
         #expect(store.device("rollo:blind_1")?.state.position == 60)
-        #expect(heard == ["Kitchen blind"])                                 // the 3D page hears it
+        #expect(heard == ["Kitchen blind · mcp"])                           // the 3D page hears it, and who did it
         #expect(store.connection.knownDevices.first { $0.id == "rollo:blind_1" }?.label == "Kitchen blind")
         #expect(reloads.count == before + 1)                                // the Blind control shows the name
         // A device flatd does not list here is no news.
-        events.send(.device(Device(id: "fan:elsewhere", kind: .fan, label: "Somewhere")))
+        events.send(.device(Device(id: "fan:elsewhere", kind: .fan, label: "Somewhere"), source: "api"))
         try await Task.sleep(for: .milliseconds(50))
         #expect(store.device("fan:elsewhere") == nil)
         // Clearing the own name asks flatd for its config name again ({"label": null}).

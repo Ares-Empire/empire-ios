@@ -411,7 +411,7 @@ final class FlatStore {
             tell(event)
             // A control's trouble may have been kept before this event arrived (round 7): said now, if it fits.
             if mode.id == FlatMode.cookingID { sayTroubleFromOutside() }
-        case let .device(renamed):
+        case let .device(renamed, source):
             // Renamed, whoever did it (this app, another phone, Claude): the new name everywhere, its state as it was.
             guard let index = devices.firstIndex(where: { $0.id == renamed.id }) else { return }
             revisions["label:" + renamed.id, default: 0] += 1
@@ -419,7 +419,7 @@ final class FlatStore {
             if renaming[renamed.id] == renamed.label { renaming[renamed.id] = nil }
             if let pairingID { connection.remember(devices, for: pairingID) }
             lastSeen = now
-            tell(.device(devices[index]))
+            tell(.device(devices[index], source: source))
         case .other:
             return
         }
@@ -470,7 +470,7 @@ final class FlatStore {
         let before = controlState
         devices[index] = devices[index].named(like: device)
         if let pairingID { connection.remember(devices, for: pairingID) }
-        tell(.device(devices[index]))
+        tell(.device(devices[index], source: "api"))
         if controlState != before { reloadControls() }
     }
 

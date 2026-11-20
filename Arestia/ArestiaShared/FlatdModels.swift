@@ -273,8 +273,9 @@ nonisolated enum FlatEvent: Equatable, Sendable {
     case snapshot(devices: [Device], modes: [FlatMode]?)
     case state(id: String, state: DeviceState, source: String?)
     case mode(FlatMode)
-    /// A device's own details changed (v1.3: it was renamed), whoever did it: its new `label` and `default_label`.
-    case device(Device)
+    /// A device's own details changed (v1.3: it was renamed), whoever did it (`source`, "api" or "mcp"): its new
+    /// `label` and `default_label`.
+    case device(Device, source: String?)
     /// A message type this app does not know (newer flatd): ignored.
     case other
 
@@ -288,8 +289,8 @@ nonisolated enum FlatEvent: Equatable, Sendable {
             return try? encoder.encode(StateOut(id: id, state: state, source: source))
         case let .mode(mode):
             return try? encoder.encode(ModeOut(mode: mode))
-        case let .device(device):
-            return try? encoder.encode(DeviceOut(device: device))
+        case let .device(device, source):
+            return try? encoder.encode(DeviceOut(device: device, source: source))
         case .other:
             return nil
         }
@@ -298,7 +299,7 @@ nonisolated enum FlatEvent: Equatable, Sendable {
     private struct SnapshotOut: Encodable { var type = "snapshot"; let devices: [Device]; let modes: [FlatMode] }
     private struct StateOut: Encodable { var type = "state"; let id: String; let state: DeviceState; let source: String? }
     private struct ModeOut: Encodable { var type = "mode"; let mode: FlatMode }
-    private struct DeviceOut: Encodable { var type = "device"; let device: Device }
+    private struct DeviceOut: Encodable { var type = "device"; let device: Device; let source: String? }
 
     static func decode(_ data: Data) -> FlatEvent? {
         guard let envelope = try? JSONDecoder().decode(Envelope.self, from: data) else { return nil }
@@ -312,7 +313,7 @@ nonisolated enum FlatEvent: Equatable, Sendable {
         case "mode":
             return envelope.mode.map(FlatEvent.mode)
         case "device":
-            return envelope.device.map(FlatEvent.device)
+            return envelope.device.map { .device($0, source: envelope.source) }
         default:
             return .other
         }
