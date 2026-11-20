@@ -49,7 +49,7 @@ struct AppearanceTests {
     @Test func lightAccentsReadOnTheLightWall() {
         let wall = Ink.background
         for color in [AppAccent.arestemis.color, AppAccent.aresus.color, AppAccent.arestoteles.color,
-                      StatusTone.activeColor, StatusTone.issueColor, Ink.primary, Ink.secondary] {
+                      AppAccent.arestia.color, StatusTone.activeColor, StatusTone.issueColor, Ink.primary, Ink.secondary] {
             #expect(contrast(color, wall, .light) >= 4.5)
         }
         #expect(contrast(Ink.muted, wall, .light) >= 3.8)        // small grey captions, as the dark wall's 4.2
@@ -59,7 +59,7 @@ struct AppearanceTests {
     /// a colour, where the off track is grey, and its white knob shows on it at least as on iOS's own green (#30D158,
     /// 1.97:1); in light it is deep. Every app: the ink-only ones (Aresium, Empire) and the accents.
     @Test func switchesThatAreOnStandApartFromTheKnobAndTheOffTrack() {
-        let accents: [AppAccent?] = [nil, .arestemis, .aresus, .arestoteles]
+        let accents: [AppAccent?] = [nil, .arestemis, .aresus, .arestoteles, .arestia]
         for accent in accents {
             let on = EmpireSwitchStyle.onColor(accent)
             for style in [UIUserInterfaceStyle.light, .dark] {

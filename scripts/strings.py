@@ -28,7 +28,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 PROJECTS = ["Aresium/Aresium.xcodeproj", "Empire/Empire.xcodeproj", "Arestemis/Arestemis.xcodeproj",
-            "Aresus/Aresus.xcodeproj", "Arestoteles/Arestoteles.xcodeproj"]
+            "Aresus/Aresus.xcodeproj", "Arestoteles/Arestoteles.xcodeproj", "Arestia/Arestia.xcodeproj"]
 LANGUAGE = "de"
 XLIFF = "{urn:oasis:names:tc:xliff:document:1.2}"
 PLACEHOLDER = re.compile(r"%(?:\d+\$)?(?:lld|ld|d|@|f|\.\d+f|%)")
@@ -78,6 +78,8 @@ def german(entry: dict) -> list[str] | None:
         return None
     if "stringUnit" in de:
         return [de["stringUnit"]["value"]]
+    if "stringSet" in de:                          # App Shortcuts' phrases: several per key
+        return de["stringSet"].get("values") or None
     forms = de.get("variations", {}).get("plural", {})
     return [form["stringUnit"]["value"] for form in forms.values()] or None
 

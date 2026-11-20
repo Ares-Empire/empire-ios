@@ -1,0 +1,1310 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "" : {
+      "shouldTranslate" : false
+    },
+    "%@" : {
+      "shouldTranslate" : false
+    },
+    "%@ %@ closed" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ %@ zu"
+          }
+        }
+      }
+    },
+    "%@ closed" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ zu"
+          }
+        }
+      }
+    },
+    "%@ down." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ runter."
+          }
+        }
+      }
+    },
+    "%@ going down" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ fährt runter"
+          }
+        }
+      }
+    },
+    "%@ going up" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ fährt hoch"
+          }
+        }
+      }
+    },
+    "%@ is moving" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ fährt"
+          }
+        }
+      }
+    },
+    "%@ is on" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ist an"
+          }
+        }
+      }
+    },
+    "%@ off" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ aus"
+          }
+        }
+      }
+    },
+    "%@ offline" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ offline"
+          }
+        }
+      }
+    },
+    "%@ on" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ an"
+          }
+        }
+      }
+    },
+    "%@ on for 30 min, %@ up." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 30 Min. an, %@ hoch."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ on for 30 min, %2$@ up."
+          }
+        }
+      }
+    },
+    "%@ on for 30 min." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 30 Min. an."
+          }
+        }
+      }
+    },
+    "%@ on, %@ up. Done cooking: fans off, the blind to its favourite spot." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ an, %@ hoch. Kochen beenden: Ventilatoren aus, das Rollo auf seinen Favoriten."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ on, %2$@ up. Done cooking: fans off, the blind to its favourite spot."
+          }
+        }
+      }
+    },
+    "%@ on. Done cooking: fans off." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ an. Kochen beenden: Ventilatoren aus."
+          }
+        }
+      }
+    },
+    "%@ open" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ offen"
+          }
+        }
+      }
+    },
+    "%@: done." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@: erledigt."
+          }
+        }
+      }
+    },
+    "%@: position unknown" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@: Position unbekannt"
+          }
+        }
+      }
+    },
+    "%lld fans on" : {
+      "localizations" : {
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Ventilator an"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Ventilatoren an"
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld fan on"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld fans on"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld h" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld Std."
+          }
+        }
+      }
+    },
+    "%lld h %lld min" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld Std. %lld Min."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld h %2$lld min"
+          }
+        }
+      }
+    },
+    "%lld min" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld Min."
+          }
+        }
+      }
+    },
+    "%lld on" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld an"
+          }
+        }
+      }
+    },
+    "1 h" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 Std."
+          }
+        }
+      }
+    },
+    "3D flat" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "3D-Wohnung"
+          }
+        }
+      }
+    },
+    "A new code from the same flatd" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein neuer Code vom selben flatd"
+          }
+        }
+      }
+    },
+    "Air out" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lüften"
+          }
+        }
+      }
+    },
+    "All down" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alle runter"
+          }
+        }
+      }
+    },
+    "All quiet" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alles ruhig"
+          }
+        }
+      }
+    },
+    "Allow the camera for Arestia in iOS Settings, or paste the code instead." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erlaube Arestia die Kamera in den iOS-Einstellungen, oder füge den Code stattdessen ein."
+          }
+        }
+      }
+    },
+    "Always daylight" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Immer Tageslicht"
+          }
+        }
+      }
+    },
+    "Arestia couldn't forget the flat. Try again." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arestia konnte die Wohnung nicht vergessen. Versuch es noch einmal."
+          }
+        }
+      }
+    },
+    "Arestia forgets the pairing and everything it knows of this flat. The Control Center controls and Shortcuts do nothing until you pair again, and a blind or fan chosen in them is chosen again. Another flat can be paired only after this." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arestia vergisst die Kopplung und alles, was es über diese Wohnung weiß. Die Steuerelemente im Kontrollzentrum und die Kurzbefehle tun nichts, bis du neu koppelst, und ein darin gewähltes Rollo oder ein Ventilator wird neu gewählt. Erst danach lässt sich eine andere Wohnung koppeln."
+          }
+        }
+      }
+    },
+    "Arestia may not use the local network. Allow it in iOS Settings → Privacy → Local Network." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arestia darf das lokale Netzwerk nicht nutzen. Erlaube es in den iOS-Einstellungen → Datenschutz → Lokales Netzwerk."
+          }
+        }
+      }
+    },
+    "Arestia talks only to the flatd with this identity, encrypted. The pairing stays on this iPhone, in the Keychain; Shortcuts and the Control Center controls use it too." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arestia spricht nur mit dem flatd mit dieser Kennung, verschlüsselt. Die Kopplung bleibt auf diesem iPhone, im Schlüsselbund; Kurzbefehle und die Steuerelemente im Kontrollzentrum nutzen sie auch."
+          }
+        }
+      }
+    },
+    "Arestia talks to flatd, the flat service on your home network. No account, only flatd's pairing code." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arestia spricht mit flatd, dem Wohnungsdienst in deinem Heimnetz. Kein Konto, nur der Kopplungscode von flatd."
+          }
+        }
+      }
+    },
+    "At its favourite spot · %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auf Favorit · %@"
+          }
+        }
+      }
+    },
+    "Automations" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automationen"
+          }
+        }
+      }
+    },
+    "Blinds" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rollos"
+          }
+        }
+      }
+    },
+    "Blinds moving" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rollos fahren"
+          }
+        }
+      }
+    },
+    "Can't reach the flat" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Wohnung ist nicht erreichbar"
+          }
+        }
+      }
+    },
+    "Cancel" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abbrechen"
+          }
+        }
+      }
+    },
+    "Closed" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zu"
+          }
+        }
+      }
+    },
+    "Code read" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Code gelesen"
+          }
+        }
+      }
+    },
+    "Connect" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verbinden"
+          }
+        }
+      }
+    },
+    "Connect to the flat" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mit der Wohnung verbinden"
+          }
+        }
+      }
+    },
+    "Connected" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verbunden"
+          }
+        }
+      }
+    },
+    "Connecting" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verbindet"
+          }
+        }
+      }
+    },
+    "Control Center" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kontrollzentrum"
+          }
+        }
+      }
+    },
+    "Cooking" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kochen"
+          }
+        }
+      }
+    },
+    "Cooking ended." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kochen beendet."
+          }
+        }
+      }
+    },
+    "Cooking was ended outside the app. Didn't answer: %@." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kochen wurde außerhalb der App beendet. Keine Antwort von: %@."
+          }
+        }
+      }
+    },
+    "Cooking was started outside the app. Didn't answer: %@." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kochen wurde außerhalb der App gestartet. Keine Antwort von: %@."
+          }
+        }
+      }
+    },
+    "Cooking, Fans and a blind: open Control Center, hold, then + and Arestia." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kochen, Ventilatoren und ein Rollo: Kontrollzentrum öffnen, gedrückt halten, dann + und Arestia."
+          }
+        }
+      }
+    },
+    "Didn't answer: %@." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keine Antwort von: %@."
+          }
+        }
+      }
+    },
+    "Done cooking" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kochen beenden"
+          }
+        }
+      }
+    },
+    "Down" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Runter"
+          }
+        }
+      }
+    },
+    "Fan timers" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ventilator-Timer"
+          }
+        }
+      }
+    },
+    "Fans" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ventilatoren"
+          }
+        }
+      }
+    },
+    "Fans off, the blind goes to its favourite spot." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ventilatoren aus, das Rollo fährt auf seinen Favoriten."
+          }
+        }
+      }
+    },
+    "Favourite spot, %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Favorit, %@"
+          }
+        }
+      }
+    },
+    "Flat" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wohnung"
+          }
+        }
+      }
+    },
+    "Flat service" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wohnungsdienst"
+          }
+        }
+      }
+    },
+    "Forget" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vergessen"
+          }
+        }
+      }
+    },
+    "Forget this flat" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Wohnung vergessen"
+          }
+        }
+      }
+    },
+    "Forget this flat?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Wohnung vergessen?"
+          }
+        }
+      }
+    },
+    "Going down" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fährt runter"
+          }
+        }
+      }
+    },
+    "Going down to %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fährt runter auf %@"
+          }
+        }
+      }
+    },
+    "Going up" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fährt hoch"
+          }
+        }
+      }
+    },
+    "Going up to %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fährt hoch auf %@"
+          }
+        }
+      }
+    },
+    "Home" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zuhause"
+          }
+        }
+      }
+    },
+    "Identity" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kennung"
+          }
+        }
+      }
+    },
+    "Key refused" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schlüssel abgelehnt"
+          }
+        }
+      }
+    },
+    "Last seen %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zuletzt gesehen %@"
+          }
+        }
+      }
+    },
+    "Live" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Live"
+          }
+        }
+      }
+    },
+    "Loading the flat" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Wohnung lädt"
+          }
+        }
+      }
+    },
+    "More" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mehr"
+          }
+        }
+      }
+    },
+    "Move ${rollo} ${move}" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "${rollo} ${move} fahren"
+          }
+        }
+      }
+    },
+    "NFC tag" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "NFC-Tag"
+          }
+        }
+      }
+    },
+    "No camera" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keine Kamera"
+          }
+        }
+      }
+    },
+    "Not connected" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nicht verbunden"
+          }
+        }
+      }
+    },
+    "Not reachable" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nicht erreichbar"
+          }
+        }
+      }
+    },
+    "Off" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aus"
+          }
+        }
+      }
+    },
+    "Offline" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Offline"
+          }
+        }
+      }
+    },
+    "On" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "An"
+          }
+        }
+      }
+    },
+    "On for %lld minutes" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld Minuten an"
+          }
+        }
+      }
+    },
+    "On the computer flatd runs on, run “flatd pair” in Terminal. It shows the code. Arestia then talks only to that flatd, encrypted." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Führe auf dem Computer, auf dem flatd läuft, im Terminal „flatd pair“ aus. Es zeigt den Code. Arestia spricht danach nur mit diesem flatd, verschlüsselt."
+          }
+        }
+      }
+    },
+    "On until switched off" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "An, bis du ausschaltest"
+          }
+        }
+      }
+    },
+    "On until you end it." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "An, bis du es beendest."
+          }
+        }
+      }
+    },
+    "On · %@ left" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "An · noch %@"
+          }
+        }
+      }
+    },
+    "Open" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Offen"
+          }
+        }
+      }
+    },
+    "Or paste the code" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Oder den Code einfügen"
+          }
+        }
+      }
+    },
+    "Otherwise the sun stands where it really is now." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sonst steht die Sonne, wo sie gerade wirklich steht."
+          }
+        }
+      }
+    },
+    "Pair again" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neu koppeln"
+          }
+        }
+      }
+    },
+    "Pairing code" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kopplungscode"
+          }
+        }
+      }
+    },
+    "Paste the code" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Den Code einfügen"
+          }
+        }
+      }
+    },
+    "Position unknown" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Position unbekannt"
+          }
+        }
+      }
+    },
+    "Reconnecting…" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verbindet neu …"
+          }
+        }
+      }
+    },
+    "Runs it once" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Läuft einmal"
+          }
+        }
+      }
+    },
+    "Runs once." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Läuft einmal."
+          }
+        }
+      }
+    },
+    "Scan flatd's QR code" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "QR-Code von flatd scannen"
+          }
+        }
+      }
+    },
+    "Sending: %@ closed" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wird gesendet: %@ zu"
+          }
+        }
+      }
+    },
+    "Sending: closed" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wird gesendet: zu"
+          }
+        }
+      }
+    },
+    "Sending: open" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wird gesendet: offen"
+          }
+        }
+      }
+    },
+    "Settings" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einstellungen"
+          }
+        }
+      }
+    },
+    "Shortcuts → Automation → NFC: hold the iPhone to the tag, then choose Arestia's Start cooking." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kurzbefehle → Automation → NFC: das iPhone an den Tag halten, dann „Kochen starten“ von Arestia wählen."
+          }
+        }
+      }
+    },
+    "Stop" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stopp"
+          }
+        }
+      }
+    },
+    "That isn't a pairing code from flatd." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das ist kein Kopplungscode von flatd."
+          }
+        }
+      }
+    },
+    "The 3D flat didn't start." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die 3D-Wohnung ist nicht gestartet."
+          }
+        }
+      }
+    },
+    "The 3D flat isn't here right now" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die 3D-Wohnung ist gerade nicht da"
+          }
+        }
+      }
+    },
+    "The Mac may be asleep, or you're not at home." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Mac schläft vielleicht, oder du bist nicht zu Hause."
+          }
+        }
+      }
+    },
+    "The Mac may be asleep, or you're not at home. Arestia keeps trying by itself." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Mac schläft vielleicht, oder du bist nicht zu Hause. Arestia versucht es von selbst weiter."
+          }
+        }
+      }
+    },
+    "The flat service isn't answering. Check that this iPhone is on the home Wi-Fi and flatd is running. If flatd was set up anew, scan a new code." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Wohnungsdienst antwortet nicht. Prüfe, ob dieses iPhone im Heim-WLAN ist und flatd läuft. Wurde flatd neu eingerichtet, scanne einen neuen Code."
+          }
+        }
+      }
+    },
+    "The flat service refused the key" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Wohnungsdienst lehnt den Schlüssel ab"
+          }
+        }
+      }
+    },
+    "The plug runs the timer: the fan goes off by itself, even when the Mac sleeps." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Den Timer führt die Steckdose: Der Ventilator geht von selbst aus, auch wenn der Mac schläft."
+          }
+        }
+      }
+    },
+    "The same as under flatd's QR code" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieselbe wie unter dem QR-Code von flatd"
+          }
+        }
+      }
+    },
+    "Try again" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erneut versuchen"
+          }
+        }
+      }
+    },
+    "Turn ${fan} on for ${minutes} minutes" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "${fan} für ${minutes} Minuten einschalten"
+          }
+        }
+      }
+    },
+    "Turns it on" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schaltet es ein"
+          }
+        }
+      }
+    },
+    "Up" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hoch"
+          }
+        }
+      }
+    },
+    "flatd has a new key. Pair again with a new code from flatd." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "flatd hat einen neuen Schlüssel. Kopple neu mit einem neuen Code von flatd."
+          }
+        }
+      }
+    },
+    "flatd has a new key. Run “flatd pair” again and scan the new code." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "flatd hat einen neuen Schlüssel. Führe „flatd pair“ noch einmal aus und scanne den neuen Code."
+          }
+        }
+      }
+    },
+    "flatd has no 3D flat set up yet." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "flatd hat noch keine 3D-Wohnung eingerichtet."
+          }
+        }
+      }
+    },
+    "flatd's QR code" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "QR-Code von flatd"
+          }
+        }
+      }
+    },
+    "since %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "seit %@"
+          }
+        }
+      }
+    },
+    "under 1 min" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "unter 1 Min."
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

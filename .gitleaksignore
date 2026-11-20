@@ -1,2 +1,22 @@
 # Confirmed gitleaks false alarms (made-up test data), one fingerprint per line.
 27b4c21d7d069acd1b5175b99e2007e42c514a9f:Shared/Auth/SampleAccount.swift:jwt:44
+# Arestia's unit tests: made-up flatd keys for a fake transport (2026-11-19), never a real key.
+592b268bee492f0af90d6d100b892eeaefcd1e35:Arestia/ArestiaTests/ContractTests.swift:generic-api-key:151
+592b268bee492f0af90d6d100b892eeaefcd1e35:Arestia/ArestiaTests/TestSupport.swift:generic-api-key:83
+592b268bee492f0af90d6d100b892eeaefcd1e35:Arestia/ArestiaTests/StoreTests.swift:generic-api-key:128
+fac22e16420b55aaeadb4d4c9b1ae48b478d6ac1:Arestia/ArestiaTests/ReviewFindingsTests.swift:generic-api-key:57
+fac22e16420b55aaeadb4d4c9b1ae48b478d6ac1:Arestia/ArestiaTests/ReviewFindingsTests.swift:generic-api-key:60
+fac22e16420b55aaeadb4d4c9b1ae48b478d6ac1:Arestia/ArestiaTests/ReviewFindingsTests.swift:generic-api-key:62
+58e818a388b4cf2070d25cfd6d14012c8e3e701f:Arestia/ArestiaTests/ReviewFindingsTests.swift:generic-api-key:58
+# Arestia's trust tests and the lines its pinning change touched: the same made-up test keys (2026-11-20).
+f4c1599d4ad08b11269dcc5fc50cc227715cfb7e:Arestia/ArestiaTests/StoreTests.swift:generic-api-key:133
+f4c1599d4ad08b11269dcc5fc50cc227715cfb7e:Arestia/ArestiaTests/ReviewFindingsTests.swift:generic-api-key:58
+f4c1599d4ad08b11269dcc5fc50cc227715cfb7e:Arestia/ArestiaTests/TrustTests.swift:generic-api-key:148
+# Arestia's pairing-identity tests: made-up test keys ("other-key-…", "renewed-key-…"), confirmed false alarms (2026-11-20).
+20964f7ced11a66f9afc1ed2f8bfa7a3db2e1c3b:Arestia/ArestiaTests/PairingIdentityTests.swift:generic-api-key:15
+20964f7ced11a66f9afc1ed2f8bfa7a3db2e1c3b:Arestia/ArestiaTests/PairingIdentityTests.swift:generic-api-key:215
+20964f7ced11a66f9afc1ed2f8bfa7a3db2e1c3b:Arestia/ArestiaTests/PairingIdentityTests.swift:generic-api-key:250
+20964f7ced11a66f9afc1ed2f8bfa7a3db2e1c3b:Arestia/ArestiaTests/PairingIdentityTests.swift:generic-api-key:252
+20964f7ced11a66f9afc1ed2f8bfa7a3db2e1c3b:Arestia/ArestiaTests/PairingIdentityTests.swift:generic-api-key:276
+20964f7ced11a66f9afc1ed2f8bfa7a3db2e1c3b:Arestia/ArestiaTests/PairingIdentityTests.swift:generic-api-key:288
+20964f7ced11a66f9afc1ed2f8bfa7a3db2e1c3b:Arestia/ArestiaTests/PairingIdentityTests.swift:generic-api-key:291

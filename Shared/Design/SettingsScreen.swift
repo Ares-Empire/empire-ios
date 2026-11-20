@@ -4,13 +4,16 @@ import UIKit
 /// Which section Settings ends with. Every app signed in: the account (in an app that works without one, named "Ares
 /// account"). Signed out (no Ares app on the iPhone logged in), only an app that works without an account opens
 /// Settings: "Ares account" with Sign in while it offers to sign in (`SettingsApp.offersSignIn`), else no section at
-/// all (`hidden`: Aresium, brief 215).
+/// all (`hidden`: Aresium, brief 215). An app without any account (`EmpireAppIdentity.hasAccount` false, Arestia)
+/// never shows one.
 enum SettingsAccountSection: Equatable {
     case account
     case signIn
     case hidden
 
-    static func shown(accountOptional: Bool, offersSignIn: Bool, signedIn: Bool) -> SettingsAccountSection {
+    static func shown(accountOptional: Bool, offersSignIn: Bool, signedIn: Bool,
+                      hasAccount: Bool = true) -> SettingsAccountSection {
+        guard hasAccount else { return .hidden }
         guard accountOptional, !signedIn else { return .account }
         return offersSignIn ? .signIn : .hidden
     }
@@ -164,7 +167,7 @@ struct SettingsScreen<AppSection: View, AppHelp: View>: View {
     /// The section Settings ends with: the account, Sign in, or none (`SettingsAccountSection`).
     private var accountSection: SettingsAccountSection {
         .shown(accountOptional: session.app.accountOptional, offersSignIn: app.offersSignIn,
-               signedIn: session.token != nil)
+               signedIn: session.token != nil, hasAccount: session.app.hasAccount)
     }
 
     private static var accountID: String { "settings-account" }

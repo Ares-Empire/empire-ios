@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Apple privacy manifest (Arestia app). What it declares and why: ares-empire/docs/PRIVACY.md and docs/APP-STORE.md.
+     Update it when the app sends something new or starts using another required-reason API
+     (https://developer.apple.com/documentation/bundleresources/privacy-manifest-files). -->
+<plist version="1.0">
+<dict>
+	<!-- No tracking: no analytics, ads or third-party SDKs. The flat's devices, modes and the 3D page come from flatd,
+	     the owner's own service on the home network; nothing about them leaves it for anyone else. -->
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<!-- CA92.1: this app's own defaults (Shared/Language/LanguageSetting.swift: the app's language; the
+				     appearance; Model/ConnectModel.swift: whether iOS asked about the local network yet). -->
+				<string>CA92.1</string>
+				<!-- 1C8F.1: Arestia's App Group, shared with its Control Center controls (ArestiaShared/FlatdConnection.swift:
+				     the devices' names as last seen; Shared/Language/WidgetLanguage.swift: the app's
+				     language for the controls). -->
+				<string>1C8F.1</string>
+			</array>
+		</dict>
+	</array>
+	<!-- Arestia has no account. Only Contact & support sends something to the Empire: without a login, the email and the
+	     optional name typed into the form (the account server's `contact` collection), used only to answer. -->
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array>
+		<!-- Email address: typed into Contact & support (Shared/Support, `ContactMessage`), so Patrik can answer. -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeEmailAddress</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<!-- Name: optional in Contact & support (Shared/Support). -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeName</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<!-- Customer support: the Contact & support form (Shared/Support): message, app and iOS version, language. -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeCustomerSupport</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>

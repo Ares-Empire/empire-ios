@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Apple privacy manifest (Arestia's Control Center controls). What it declares and why: ares-empire/docs/PRIVACY.md and docs/APP-STORE.md.
+     Update it when the app sends something new or starts using another required-reason API
+     (https://developer.apple.com/documentation/bundleresources/privacy-manifest-files). -->
+<plist version="1.0">
+<dict>
+	<!-- No tracking: no analytics, ads or third-party SDKs. The flat's devices, modes and the 3D page come from flatd,
+	     the owner's own service on the home network; nothing about them leaves it for anyone else. -->
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<!-- 1C8F.1: the App Group it shares with the app (ArestiaShared/FlatdConnection.swift: the devices' names; Shared/Language/WidgetLanguage.swift: the app's language). -->
+				<string>1C8F.1</string>
+			</array>
+		</dict>
+	</array>
+	<!-- The controls talk only to flatd on the home network, with its key from Arestia's Keychain group. -->
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array/>
+</dict>
+</plist>

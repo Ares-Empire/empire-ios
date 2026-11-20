@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Merged with the generated Info.plist (GENERATE_INFOPLIST_FILE). Only what build settings cannot express.
+     The usage lines are translated in InfoPlist.xcstrings. -->
+<plist version="1.0">
+<dict>
+	<!-- The team prefix of Arestia's Keychain group (ArestiaShared/FlatdConnection.swift). -->
+	<key>AppIdentifierPrefix</key>
+	<string>$(AppIdentifierPrefix)</string>
+	<!-- Only the system's own HTTPS (the contact form, and flatd on the home network, whose key the app pins:
+	     FlatdPin): exempt, so App Store Connect stops asking about encryption on every build. No App Transport
+	     Security exception: nothing in this app speaks plain HTTP, the home network included. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<!-- Finding flatd without an address: it advertises itself over Bonjour. -->
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_flatd._tcp</string>
+	</array>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Arestia talks to the flat service on your home network to switch the fans and move the blinds.</string>
+	<!-- Scanning the QR code flatd shows, once, to connect. -->
+	<key>NSCameraUsageDescription</key>
+	<string>Arestia reads the flat service's QR code to connect. Nothing is recorded.</string>
+	<!-- arestia://home and arestia://flat. Never a link with flatd's key: another app may claim the same scheme. -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>de.ares-empire.arestia</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>arestia</string>
+			</array>
+		</dict>
+	</array>
+	<!-- One window only (the trust review, round 4): a second window would have a store of its own, and pairing in one
+	     must never leave the other's 3D page speaking for the new pairing. Every store and page also checks the
+	     pairing's identity (FlatStore.pairingID); this keeps there from being a second one at all. -->
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+	</dict>
+	<!-- Launch on the app's own background instead of a white flash. -->
+	<key>UILaunchScreen</key>
+	<dict>
+		<key>UIColorName</key>
+		<string>LaunchBackground</string>
+	</dict>
+</dict>
+</plist>

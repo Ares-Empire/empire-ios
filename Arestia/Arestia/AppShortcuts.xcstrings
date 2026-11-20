@@ -1,0 +1,154 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "Air out with ${applicationName}" : {
+      "localizations" : {
+        "de" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Mit ${applicationName} lüften"
+            ]
+          }
+        },
+        "en" : {
+          "stringSet" : {
+            "state" : "new",
+            "values" : [
+              "Air out with ${applicationName}"
+            ]
+          }
+        }
+      }
+    },
+    "All blinds down with ${applicationName}" : {
+      "localizations" : {
+        "de" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Alle Rollos runter mit ${applicationName}"
+            ]
+          }
+        },
+        "en" : {
+          "stringSet" : {
+            "state" : "new",
+            "values" : [
+              "All blinds down with ${applicationName}"
+            ]
+          }
+        }
+      }
+    },
+    "End cooking in ${applicationName}" : {
+      "localizations" : {
+        "de" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Kochen beenden in ${applicationName}",
+              "Fertig gekocht in ${applicationName}"
+            ]
+          }
+        },
+        "en" : {
+          "stringSet" : {
+            "state" : "new",
+            "values" : [
+              "End cooking in ${applicationName}",
+              "Done cooking in ${applicationName}"
+            ]
+          }
+        }
+      }
+    },
+    "Fans off in ${applicationName}" : {
+      "localizations" : {
+        "de" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Ventilatoren aus in ${applicationName}",
+              "Schalte die Ventilatoren in ${applicationName} aus"
+            ]
+          }
+        },
+        "en" : {
+          "stringSet" : {
+            "state" : "new",
+            "values" : [
+              "Fans off in ${applicationName}",
+              "Turn off the fans in ${applicationName}"
+            ]
+          }
+        }
+      }
+    },
+    "Fans on in ${applicationName}" : {
+      "localizations" : {
+        "de" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Ventilatoren an in ${applicationName}",
+              "Schalte die Ventilatoren in ${applicationName} an"
+            ]
+          }
+        },
+        "en" : {
+          "stringSet" : {
+            "state" : "new",
+            "values" : [
+              "Fans on in ${applicationName}",
+              "Turn on the fans in ${applicationName}"
+            ]
+          }
+        }
+      }
+    },
+    "Move a blind with ${applicationName}" : {
+      "localizations" : {
+        "de" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Ein Rollo mit ${applicationName} fahren"
+            ]
+          }
+        },
+        "en" : {
+          "stringSet" : {
+            "state" : "new",
+            "values" : [
+              "Move a blind with ${applicationName}"
+            ]
+          }
+        }
+      }
+    },
+    "Start cooking in ${applicationName}" : {
+      "localizations" : {
+        "de" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Kochen starten in ${applicationName}",
+              "${applicationName} kochen"
+            ]
+          }
+        },
+        "en" : {
+          "stringSet" : {
+            "state" : "new",
+            "values" : [
+              "Start cooking in ${applicationName}",
+              "${applicationName} cooking"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}
