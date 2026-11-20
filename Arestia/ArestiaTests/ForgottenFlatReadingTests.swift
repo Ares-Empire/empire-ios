@@ -70,9 +70,10 @@ struct ForgottenFlatReadingTests {
     @Test func anotherFlatPairedMeanwhileGetsNothingOfTheOld() async throws {
         let connection = Flat.connection()
         connection.remember(try Flat.devices([Flat.fan(1), Flat.rollo(1)]), for: Flat.id)
+        let other = Flat.pairing(id: UUID())
         let transport = ForgetAfterAnswer(flatd(), after: "GET /api/devices") {
             try? connection.forget()
-            try? connection.save(Flat.pairing(id: UUID()))
+            try? connection.save(other)
         }
         let actions = FlatActions(reach: FlatdReach(connection: connection, transport: transport, rediscover: { [] }))
         await #expect(throws: FlatdError.notPaired) { _ = try await actions.rollo(chosen) }
