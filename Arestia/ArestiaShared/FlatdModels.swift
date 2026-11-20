@@ -192,6 +192,13 @@ nonisolated struct Device: Identifiable, Equatable, Sendable, Codable {
     /// Renamed: its name is not flatd's config name (false from a flatd that cannot rename).
     var hasOwnName: Bool { defaultLabel.map { $0 != label } ?? false }
 
+    /// This device under another name (the latest one accepted for the paired flat, `FlatActions`).
+    func named(_ label: String) -> Device {
+        var device = self
+        device.label = label
+        return device
+    }
+
     /// This device with the names `other` (the same device, as flatd sent it in a rename's answer or event) carries;
     /// its state stays as it is (state events follow it).
     func named(like other: Device) -> Device {

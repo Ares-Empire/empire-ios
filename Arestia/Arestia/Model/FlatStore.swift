@@ -417,7 +417,8 @@ final class FlatStore {
             revisions["label:" + renamed.id, default: 0] += 1
             devices[index] = devices[index].named(like: renamed)
             if renaming[renamed.id] == renamed.label { renaming[renamed.id] = nil }
-            if let pairingID { connection.remember(devices, for: pairingID) }
+            // Only this device's name is kept: the app's list of the others may be older than the names kept.
+            if let pairingID { connection.rememberName(of: devices[index], for: pairingID) }
             lastSeen = now
             tell(.device(devices[index], source: source))
         case .other:
@@ -469,7 +470,7 @@ final class FlatStore {
         else { return }
         let before = controlState
         devices[index] = devices[index].named(like: device)
-        if let pairingID { connection.remember(devices, for: pairingID) }
+        if let pairingID { connection.rememberName(of: devices[index], for: pairingID) }
         tell(.device(devices[index], source: "api"))
         if controlState != before { reloadControls() }
     }

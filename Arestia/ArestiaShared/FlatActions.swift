@@ -52,10 +52,25 @@ nonisolated struct FlatActions: Sendable {
 
     /// flatd's devices, remembered for Shortcuts' pickers while their pairing is still the saved one.
     func devices() async throws -> [Device] {
-        let version = reach.connection.devicesVersion
+        try await read().devices
+    }
+
+    /// flatd's devices as read now (their state), each under the latest name accepted for the paired flat. The list is
+    /// offered to the names kept (`FlatdConnection.remember(_:from:readSince:)`), which refuse it when newer names came
+    /// in while flatd answered (a rename heard meanwhile). Either way the names shown are the ones kept after that,
+    /// read once: a name this very list brought and the names refused are never shown (Codex's review of the renaming,
+    /// round 2, finding 4: the Blind control showed the older name its own request brought). A device no name is kept
+    /// for (no names can be kept at all, or the flat was forgotten meanwhile) keeps the name flatd just sent.
+    private func read() async throws -> (devices: [Device], client: FlatdClient) {
+        let connection = reach.connection
+        let version = connection.devicesVersion
         let (devices, client) = try await reach.run { client in (try await client.devices(), client) }
-        reach.connection.remember(devices, from: client, readSince: version)
-        return devices
+        connection.remember(devices, from: client, readSince: version)
+        let kept = connection.known.flatMap { $0.pairing == client.pairingID ? $0.devices : nil } ?? []
+        let named = devices.map { device in
+            kept.first { $0.id == device.id }.map { device.named($0.label) } ?? device
+        }
+        return (named, client)
     }
 
     /// Switches the fans (all, or those in `only`) on (for `minutes`, nil: until switched off) or off, side by side.
@@ -125,9 +140,7 @@ nonisolated struct FlatActions: Sendable {
     /// The blind a control remembers, as flatd has it now; nil when the paired flat has none with that id (or the
     /// choice was made before the flat was forgotten).
     func rollo(_ saved: String) async throws -> Device? {
-        let version = reach.connection.devicesVersion
-        let (devices, client) = try await reach.run { client in (try await client.devices(), client) }
-        reach.connection.remember(devices, from: client, readSince: version)
+        let (devices, client) = try await read()
         guard let id = try? SavedDevice.device(saved, of: client) else { return nil }
         return devices.first { $0.kind == .rollo && $0.id == id }
     }

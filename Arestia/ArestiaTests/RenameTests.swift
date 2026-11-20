@@ -337,7 +337,7 @@ struct RenameStoreTests {
         events.send(.device(try Flat.decode(Device.self, named(Flat.rollo(1), "Kitchen blind", default: "Blind 1")),
                             source: "mcp"))
         #expect(await eventually { kept() == "Kitchen blind" })
-        #expect(try await reading.value?.label == "Blind 1")               // the late answer, as flatd gave it then
+        #expect(try await reading.value?.label == "Kitchen blind")         // never the late answer's older name
         #expect(kept() == "Kitchen blind")
         // A list read after it is kept, from a picker too.
         transport.answer("GET /api/devices",

@@ -341,7 +341,7 @@ struct RediscoveryTests {
     @Test func aSavedPairingWithoutAnIdentityIsNoPairing() throws {
         // What a build before flatd had an identity saved: an address and a key. Never used again; pair anew.
         let keys = MemoryKeys()
-        let connection = FlatdConnection(defaults: nil, keychain: keys, lock: .processOnly)
+        let connection = FlatdConnection(defaults: nil, names: nil, keychain: keys, lock: .processOnly)
         try keys.save(#"{"link":{"baseURL":"http://192.0.2.10:8787","serviceName":"flatd"},"token":"\#(Flat.key)","id":"\#(UUID().uuidString)"}"#,
                       label: "old")
         #expect(connection.pairing == nil && connection.client == nil && connection.token == nil)
@@ -441,7 +441,7 @@ struct ConnectModelTests {
 
     @Test func aKeychainThatCannotBeReadIsNotAnEmptyOne() throws {
         let keys = MemoryKeys()
-        let connection = FlatdConnection(defaults: nil, keychain: keys, lock: .processOnly)
+        let connection = FlatdConnection(defaults: nil, names: nil, keychain: keys, lock: .processOnly)
         #expect(connection.saved == .none)
         try connection.save(Flat.pairing())
         guard case .paired = connection.saved else {
@@ -564,7 +564,7 @@ struct LiveFlatdTests {
     @Test func afterForgetNotOneRequestReachesFlatd() async throws {
         // The production kind of lock: a file, locked with flock, as the app and its extension share it.
         let lockFile = FileManager.default.temporaryDirectory.appending(path: "arestia-\(UUID().uuidString).lock")
-        let connection = FlatdConnection(defaults: nil, keychain: MemoryKeys(),
+        let connection = FlatdConnection(defaults: nil, names: nil, keychain: MemoryKeys(),
                                          lock: FlatdDispatchLock(path: lockFile.path(percentEncoded: false)))
         let pairing = FlatdPairing(baseURL: base, token: code.token, pin: code.pin)
         try connection.save(pairing)
