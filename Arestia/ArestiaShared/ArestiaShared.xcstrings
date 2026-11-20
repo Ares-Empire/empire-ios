@@ -1,45 +1,8 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "%@ is going down." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ fährt runter."
-          }
-        }
-      }
-    },
-    "%@ is going to its favourite spot." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ fährt auf seinen Favoriten."
-          }
-        }
-      }
-    },
-    "%@ is going up." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ fährt hoch."
-          }
-        }
-      }
-    },
-    "%@ stopped." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ hat angehalten."
-          }
-        }
-      }
+    "%@: %@." : {
+      "shouldTranslate" : false
     },
     "Air out" : {
       "localizations" : {
@@ -151,12 +114,12 @@
         }
       }
     },
-    "Cooking ended." : {
+    "Cooking is off." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kochen beendet."
+            "value" : "Kochen ist aus."
           }
         }
       }
@@ -167,16 +130,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kochen läuft."
-          }
-        }
-      }
-    },
-    "Cooking wasn't on." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kochen lief nicht."
           }
         }
       }
@@ -351,6 +304,16 @@
         }
       }
     },
+    "Not everything followed." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nicht alles ist gefolgt."
+          }
+        }
+      }
+    },
     "Not in your flat" : {
       "localizations" : {
         "de" : {
@@ -407,6 +370,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Offen"
+          }
+        }
+      }
+    },
+    "Position unknown" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Position unbekannt"
           }
         }
       }

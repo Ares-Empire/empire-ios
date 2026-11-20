@@ -49,6 +49,9 @@ struct ContentView: View {
         }
         .onOpenURL { url in navigation.open(url) }
         .onChange(of: session.generation) { navigation.reset() }
+        // A language switch builds the app anew with a session of its own: this one's store retires, so none of its
+        // work goes on next to the new one's (Codex's review, round 6).
+        .onDisappear { session.end() }
     }
 }
 

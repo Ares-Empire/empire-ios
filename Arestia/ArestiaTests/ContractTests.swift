@@ -139,9 +139,16 @@ struct ContractTests {
     }
 
     @Test func aBlindCountsAsOpenWhileMoreUpThanDown() throws {
-        #expect(RolloOpenness.isOpen(try Flat.decode(Device.self, Flat.rollo(1, position: 0)).state))
-        #expect(!RolloOpenness.isOpen(try Flat.decode(Device.self, Flat.rollo(1, position: 100)).state))
-        #expect(!RolloOpenness.isOpen(try Flat.decode(Device.self, Flat.rollo(1, position: 10, moving: "down",
-                                                                               target: 100)).state))
+        #expect(RolloOpenness.isOpen(try Flat.decode(Device.self, Flat.rollo(1, position: 0)).state) == true)
+        #expect(RolloOpenness.isOpen(try Flat.decode(Device.self, Flat.rollo(1, position: 100)).state) == false)
+        #expect(RolloOpenness.isOpen(try Flat.decode(Device.self, Flat.rollo(1, position: 10, moving: "down",
+                                                                               target: 100)).state) == false)
+        // No position read yet, or offline: unknown, never open.
+        var unread = Flat.rollo(1)
+        unread["state"] = ["position": NSNull(), "moving": NSNull(), "online": true]
+        #expect(RolloOpenness.isOpen(try Flat.decode(Device.self, unread).state) == nil)
+        var offline = Flat.rollo(1, position: 0)
+        offline["state"] = ["position": 0, "online": false]
+        #expect(RolloOpenness.isOpen(try Flat.decode(Device.self, offline).state) == nil)
     }
 }

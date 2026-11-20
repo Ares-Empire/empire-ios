@@ -549,6 +549,20 @@ struct LiveFlatdTests {
         #expect(try await right.health())
     }
 
+    /// The pinned transport starts a request inside the gate: after Forget, not one request reaches flatd.
+    @Test func afterForgetNotOneRequestReachesFlatd() async throws {
+        let connection = FlatdConnection(defaults: nil, keychain: MemoryKeys())
+        let pairing = FlatdPairing(baseURL: base, token: code.token, pin: code.pin)
+        try connection.save(pairing)
+        let client = FlatdClient(pairing).gated(by: connection)
+        #expect(try await client.devices().isEmpty == false)          // through the gate while paired
+        let before = try await requestsSeen()
+        try connection.forget()
+        await #expect(throws: FlatdError.notPaired) { _ = try await client.devices() }
+        await #expect(throws: FlatdError.notPaired) { _ = try await client.send(.power(on: true), to: "fan:fan_1") }
+        #expect(try await requestsSeen() == before + 1)                // only this count itself
+    }
+
     @Test func theUntrustedErrorIsNotACancellation() async {
         let request = URLRequest(url: base.appending(path: "api/health"))
         do {

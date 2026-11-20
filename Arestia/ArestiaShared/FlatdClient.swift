@@ -75,6 +75,9 @@ nonisolated struct FlatdClient: Sendable {
     /// pairing yet. What it reads or does counts only while that pairing is the saved one (`FlatdConnection.isCurrent`).
     let pairingID: UUID?
     let transport: any HTTPTransport & Sendable
+    /// Where a request with the key is started only while this client's pairing is still the saved one (`gated(by:)`);
+    /// nil for a pairing code being tried, which belongs to no pairing yet.
+    private(set) var gate: FlatdGate?
     /// Reads answer quickly or not at all (the service is on the home network).
     var readTimeout: TimeInterval = 6
     /// A command waits for the device to confirm (a Rollo's board, a plug), so it may take longer.
@@ -94,6 +97,15 @@ nonisolated struct FlatdClient: Sendable {
     init(_ pairing: FlatdPairing, at baseURL: URL? = nil, transport: (any HTTPTransport & Sendable)? = nil) {
         self.init(baseURL: baseURL ?? pairing.baseURL, token: pairing.token, pin: pairing.pin, pairingID: pairing.id,
                   transport: transport)
+    }
+
+    /// The same client, its every request with the key started only while its pairing is the saved one in this
+    /// connection, under the lock Forget takes (`FlatdConnection.start(for:_:)`): after Forget it sends nothing.
+    func gated(by connection: FlatdConnection) -> FlatdClient {
+        guard let pairingID else { return self }
+        var client = self
+        client.gate = FlatdGate(connection: connection, pairing: pairingID)
+        return client
     }
 
     // MARK: reads
@@ -217,7 +229,18 @@ nonisolated struct FlatdClient: Sendable {
     private func send(_ request: URLRequest) async throws -> Data {
         let data: Data, response: HTTPURLResponse
         do {
-            (data, response) = try await transport.send(request)
+            if let gate, request.value(forHTTPHeaderField: "Authorization") != nil {
+                if let gated = transport as? any GatedTransport {
+                    (data, response) = try await gated.send(request, gate: gate)
+                } else {
+                    try gate.start {}                       // a transport that cannot start inside the gate (the tests')
+                    (data, response) = try await transport.send(request)
+                }
+            } else {
+                (data, response) = try await transport.send(request)
+            }
+        } catch let error as FlatdError {
+            throw error                                     // the gate: not paired (any more), or unreadable
         } catch is CancellationError {
             throw CancellationError()
         } catch let error as URLError where error.code == .cancelled {
@@ -249,4 +272,20 @@ nonisolated struct FlatdClient: Sendable {
     }
 
     private static let log = Logger(subsystem: "de.ares-empire.arestia", category: "flatd")
+}
+
+/// Where requests with a pairing's key start: only while that pairing is the saved one (`FlatdClient.gated(by:)`).
+nonisolated struct FlatdGate: Sendable {
+    let connection: FlatdConnection
+    let pairing: UUID
+
+    /// Runs `start` under the lock Forget takes, only while the pairing is the saved one; throws otherwise.
+    func start(_ start: () -> Void) throws {
+        try connection.start(for: pairing, start)
+    }
+}
+
+/// A transport that starts a request inside a gate: the last check and the start are one step (`FlatdTransport`).
+nonisolated protocol GatedTransport: HTTPTransport, Sendable {
+    func send(_ request: URLRequest, gate: FlatdGate) async throws -> (Data, HTTPURLResponse)
 }

@@ -232,7 +232,7 @@ struct CookingFailureTests {
         transport.answer("GET /api/modes", body: ["modes": [Flat.cooking]])
         transport.answer("POST /api/modes/cooking", body: active.merging(["failed": ["fan:fan_2": "timeout"]]) { $1 })
         let change = try await actions(connection).setCooking(true)
-        #expect(change == CookingChange(wasActive: false, isActive: true, failed: ["Fan 2"]))
+        #expect(change == CookingChange(isActive: true, failed: ["Fan 2"]))
         transport.answer("GET /api/modes", body: ["modes": [active]])
         #expect(try await actions(connection).cookingState() == CookingState(active: true, notFollowed: ["Fan 2"]))
         // Ended elsewhere since (the state differs): the old trouble no longer describes cooking.
@@ -244,24 +244,24 @@ struct CookingFailureTests {
         #expect(connection.trouble(mode: "cooking", active: true, pairing: Flat.id) == nil)
     }
 
-    /// End cooking when it was not on claims nothing about the devices (flatd sends them nothing).
-    @Test func endingCookingThatWasNotOnSaysSo() async throws {
+    /// The dialogs say only what flatd's answer confirmed: no reading before, no claims about the devices.
+    @Test func cookingsDialogIsFlatdsAnswer() async throws {
         let connection = Flat.connection()
-        transport.answer("GET /api/modes", body: ["modes": [Flat.cooking]])
         transport.answer("POST /api/modes/cooking", body: Flat.cooking.merging(["failed": [:]]) { $1 })
         let change = try await actions(connection).setCooking(false)
-        #expect(change == CookingChange(wasActive: false, isActive: false, failed: []))
+        #expect(change == CookingChange(isActive: false, failed: []))
+        #expect(CookingDialog.text(change) == "Cooking is off.")
+        #expect(CookingDialog.text(CookingChange(isActive: true, failed: ["Fan 2"])) == "Cooking is on. Didn't answer: Fan 2.")
+        #expect(transport.sent.allSatisfy { $0.url?.path() != "/api/modes" })      // nothing read before the command
     }
 
     /// Kept only for the paired flat, for the state it describes, and for a while.
     @Test func aTroubleNoteBelongsToItsPairingAndState() throws {
         let connection = Flat.connection()
         let now = Date.now
-        connection.note(ModeTrouble(pairing: UUID(), mode: "cooking", active: true, names: ["Fan 2"], at: now),
-                        mode: "cooking")
+        connection.note(ModeTrouble(pairing: UUID(), mode: "cooking", active: true, names: ["Fan 2"], at: now))
         #expect(connection.trouble(mode: "cooking", active: true, pairing: Flat.id) == nil)   // another pairing's: not kept
-        connection.note(ModeTrouble(pairing: Flat.id, mode: "cooking", active: true, names: ["Fan 2"], at: now),
-                        mode: "cooking")
+        connection.note(ModeTrouble(pairing: Flat.id, mode: "cooking", active: true, names: ["Fan 2"], at: now))
         #expect(connection.trouble(mode: "cooking", active: true, pairing: Flat.id)?.names == ["Fan 2"])
         #expect(connection.trouble(mode: "cooking", active: false, pairing: Flat.id) == nil)
         #expect(connection.trouble(mode: "cooking", active: true, pairing: Flat.id,
@@ -271,11 +271,10 @@ struct CookingFailureTests {
         #expect(connection.trouble(mode: "cooking", active: true, pairing: Flat.id) == nil)    // Forget wiped it
     }
 
-    /// The app says it once, when it next hears flatd, then the note is gone.
+    /// The app says it once, when it next hears flatd; the control goes on showing it (the note stays, said).
     @Test @MainActor func theAppSaysOnceWhatDidNotFollowOutsideIt() async throws {
         let connection = Flat.connection()
-        connection.note(ModeTrouble(pairing: Flat.id, mode: "cooking", active: true, names: ["Fan 2"], at: .now),
-                        mode: "cooking")
+        connection.note(ModeTrouble(pairing: Flat.id, mode: "cooking", active: true, names: ["Fan 2"], at: .now))
         let (store, transport, events, _) = Flat.store(connection: connection)
         transport.answer("GET /api/scenes", body: ["scenes": []])
         store.start()
@@ -283,8 +282,45 @@ struct CookingFailureTests {
         events.send(try Flat.snapshot(cookingActive: true))
         #expect(await eventually { store.offer != nil })
         #expect(store.offer?.message == "Cooking was started outside the app. Didn't answer: Fan 2.")
-        #expect(connection.trouble(mode: "cooking", active: true, pairing: Flat.id) == nil)
+        let kept = try #require(connection.trouble(mode: "cooking", active: true, pairing: Flat.id))
+        #expect(connection.hasSaid(kept))
+        // Said once: the next snapshot says nothing again.
+        store.offer = nil
+        events.send(try Flat.snapshot(cookingActive: true))
+        try await Task.sleep(for: .milliseconds(100))
+        #expect(store.offer == nil)
         store.stop()
+    }
+
+    /// While the app follows flatd, a trouble a control keeps after flatd's mode event is said at once (the Darwin
+    /// notification), not only at the next reconnect.
+    @Test @MainActor func aTroubleKeptWhileLiveIsSaidAtOnce() async throws {
+        let connection = Flat.connection()
+        let (store, transport, events, _) = Flat.store(connection: connection)
+        transport.answer("GET /api/scenes", body: ["scenes": []])
+        store.start()
+        #expect(await eventually { events.isOpen })
+        events.send(try Flat.snapshot(cookingActive: false))
+        #expect(await eventually { store.link == .live })
+        events.send(.mode(FlatMode(id: "cooking", label: "Cooking", active: true, since: .now)))
+        #expect(await eventually { store.isCooking })
+        #expect(store.offer == nil)
+        connection.note(ModeTrouble(pairing: Flat.id, mode: "cooking", active: true, names: ["Fan 2"], at: .now))
+        #expect(await eventually { store.offer?.message == "Cooking was started outside the app. Didn't answer: Fan 2." })
+        store.stop()
+    }
+
+    /// A late answer of a forgotten flat never clears the next flat's trouble, nor keeps one of its own.
+    @Test func aForgottenFlatsLateAnswerLeavesTheNextFlatsTroubleAlone() throws {
+        let connection = Flat.connection()
+        let old = Flat.id
+        try connection.forget()
+        let next = Flat.pairing(id: UUID())
+        #expect(try connection.pairNew(next))
+        connection.note(ModeTrouble(pairing: next.id, mode: "cooking", active: true, names: ["Fan 1"], at: .now))
+        connection.clearTrouble(mode: "cooking", pairing: old)            // the old flat's answer, late
+        connection.note(ModeTrouble(pairing: old, mode: "cooking", active: true, names: ["Fan 9"], at: .now))
+        #expect(connection.trouble(mode: "cooking", active: true, pairing: next.id)?.names == ["Fan 1"])
     }
 }
 
@@ -303,6 +339,12 @@ struct GoneDeviceTests {
         #expect(try await actions().rolloControl(SavedDevice.id(for: "rollo:blind_1", of: UUID())) == .gone)
         #expect(try await actions().rolloControl(SavedDevice.id(for: "rollo:blind_1", of: Flat.id))
                 == .blind(name: "Blind 1", isOpen: false))
+        // There, but with no position read yet (or offline): unknown, never Up.
+        var unread = Flat.rollo(1)
+        unread["state"] = ["position": NSNull(), "moving": NSNull(), "online": true]
+        transport.answer("GET /api/devices", body: ["devices": [unread]])
+        #expect(try await actions().rolloControl(SavedDevice.id(for: "rollo:blind_1", of: Flat.id))
+                == .unknown(name: "Blind 1"))
     }
 
     /// A blind flatd no longer has (404) fails cleanly with the app's words, as one chosen before Forget does.

@@ -48,8 +48,16 @@ nonisolated enum RolloMove: String, AppEnum {
 
 // MARK: - cooking
 
-/// The dialogs say what flatd confirmed (the mode's state, and the devices that did not follow), never what the mode's
-/// devices are assumed to do (Codex's review, round 5).
+/// The dialogs say what flatd confirmed (the mode's state in its answer, the devices that did not follow), never what
+/// the mode's devices are assumed to do (Codex's review, rounds 5 and 6).
+nonisolated enum CookingDialog {
+    static func text(_ change: CookingChange, language: AppLanguage = .current) -> String {
+        language.string(change.isActive ? LocalizedStringResource("Cooking is on.", table: "ArestiaShared")
+                        : LocalizedStringResource("Cooking is off.", table: "ArestiaShared"))
+            + FailureLine.text(change.failed, language: language)
+    }
+}
+
 struct StartCookingIntent: AppIntent {
     static let title = LocalizedStringResource("Start cooking", table: "ArestiaShared")
     static let description = IntentDescription(LocalizedStringResource(
@@ -57,8 +65,7 @@ struct StartCookingIntent: AppIntent {
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
         let change = try await performFlatIntent { try await FlatActions.live.setCooking(true) }
-        return .result(dialog: IntentDialog(stringLiteral: AppLanguage.current.string(
-            LocalizedStringResource("Cooking is on.", table: "ArestiaShared")) + FailureLine.text(change.failed)))
+        return .result(dialog: IntentDialog(stringLiteral: CookingDialog.text(change)))
     }
 }
 
@@ -69,12 +76,25 @@ struct EndCookingIntent: AppIntent {
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
         let change = try await performFlatIntent { try await FlatActions.live.setCooking(false) }
-        // Ending cooking that was not on sends nothing to any device (flatd's contract): say so, claim nothing.
-        let line = change.wasActive
-            ? LocalizedStringResource("Cooking ended.", table: "ArestiaShared")
-            : LocalizedStringResource("Cooking wasn't on.", table: "ArestiaShared")
-        return .result(dialog: IntentDialog(stringLiteral: AppLanguage.current.string(line)
-            + FailureLine.text(change.failed)))
+        return .result(dialog: IntentDialog(stringLiteral: CookingDialog.text(change)))
+    }
+}
+
+/// A scene's dialog: what it does only when every device followed; otherwise which did not.
+nonisolated enum SceneDialog {
+    static func text(done: LocalizedStringResource, failed: [String], language: AppLanguage = .current) -> String {
+        failed.isEmpty ? language.string(done)
+            : language.string(LocalizedStringResource("Not everything followed.", table: "ArestiaShared"))
+                + FailureLine.text(failed, language: language)
+    }
+}
+
+/// A blind's dialog from flatd's answer: its name and its state as flatd confirmed it ("Blind 1: Going up."), so a
+/// Stop near an end that leaves it moving is never told as stopped.
+nonisolated enum RolloDialog {
+    static func text(_ device: Device, language: AppLanguage = .current) -> String {
+        let status = FlatWords.rolloStatus(device.state, language: language)
+        return language.string(LocalizedStringResource("\(device.label): \(status).", table: "ArestiaShared"))
     }
 }
 
@@ -143,16 +163,9 @@ struct MoveRolloIntent: AppIntent {
     }
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        let id = rollo.id, command = move.command, name = rollo.name
-        _ = try await performFlatIntent { try await FlatActions.live.move(rollo: id, command) }
-        let line: String = switch command {
-        case .up: AppLanguage.current.string(LocalizedStringResource("\(name) is going up.", table: "ArestiaShared"))
-        case .down: AppLanguage.current.string(LocalizedStringResource("\(name) is going down.", table: "ArestiaShared"))
-        case .favourite: AppLanguage.current.string(LocalizedStringResource("\(name) is going to its favourite spot.",
-                                                                            table: "ArestiaShared"))
-        case .stop: AppLanguage.current.string(LocalizedStringResource("\(name) stopped.", table: "ArestiaShared"))
-        }
-        return .result(dialog: IntentDialog(stringLiteral: line))
+        let id = rollo.id, command = move.command
+        let device = try await performFlatIntent { try await FlatActions.live.move(rollo: id, command) }
+        return .result(dialog: IntentDialog(stringLiteral: RolloDialog.text(device)))
     }
 }
 
@@ -165,8 +178,8 @@ struct AirOutIntent: AppIntent {
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
         let failed = try await performFlatIntent { try await FlatActions.live.runScene(FlatScene.airOutID) }
-        return .result(dialog: IntentDialog(stringLiteral: AppLanguage.current.string(
-            LocalizedStringResource("Airing out for 30 minutes.", table: "ArestiaShared")) + FailureLine.text(failed)))
+        return .result(dialog: IntentDialog(stringLiteral: SceneDialog.text(
+            done: LocalizedStringResource("Airing out for 30 minutes.", table: "ArestiaShared"), failed: failed)))
     }
 }
 
@@ -176,7 +189,7 @@ struct AllDownIntent: AppIntent {
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
         let failed = try await performFlatIntent { try await FlatActions.live.runScene(FlatScene.allDownID) }
-        return .result(dialog: IntentDialog(stringLiteral: AppLanguage.current.string(
-            LocalizedStringResource("All blinds are going down.", table: "ArestiaShared")) + FailureLine.text(failed)))
+        return .result(dialog: IntentDialog(stringLiteral: SceneDialog.text(
+            done: LocalizedStringResource("All blinds are going down.", table: "ArestiaShared"), failed: failed)))
     }
 }

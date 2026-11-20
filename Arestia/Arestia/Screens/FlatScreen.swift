@@ -158,6 +158,12 @@ struct FlatWebView: UIViewRepresentable {
         private var expectsPage = false
         /// The page's requests under way: cancelled with the web view.
         private var requests: [UUID: Task<Void, Never>] = [:]
+        /// The page's own fetch (with the key): cancelled by the next load, a timeout and the web view's end.
+        private var fetch: Task<Void, Never>?
+        /// Loads WebKit asked for by itself after its page process ended, since the last load the app or the person
+        /// asked for: bounded, so a page that keeps ending WebKit ends in Try again instead of loading forever.
+        private var automaticReloads = 0
+        static let maxAutomaticReloads = 2
         /// The page's address inside the web view: a name that never resolves (`.invalid`, RFC 2606), so the page has
         /// an ordinary origin of its own and nothing it does can reach a real server. Never flatd's address.
         static let pageURL = URL(string: "https://viewer.arestia.invalid/")!
@@ -176,9 +182,14 @@ struct FlatWebView: UIViewRepresentable {
         /// the calm card with Try again and the reason in the log (Codex's review, round 5: a Keychain hiccup used to
         /// leave "Loading the flat" for good); the page has half a minute to say `ready`.
         func load(_ count: String? = nil) {
-            if let count { loadedCount = count }
+            if let count {
+                loadedCount = count
+                automaticReloads = 0                    // asked for (Try again, a fresh code): WebKit may retry again
+            }
             stopListening()
             readyDeadline?.cancel()
+            fetch?.cancel()
+            fetch = nil
             let loading = handover.begin()
             expectsPage = false
             guard isCurrent else { return }
@@ -197,9 +208,10 @@ struct FlatWebView: UIViewRepresentable {
                 try? await Task.sleep(for: Self.readyWithin)
                 guard let self, !Task.isCancelled, loading == document, !page.isReady, page.problem == nil else { return }
                 webView?.stopLoading()
+                fetch?.cancel()
                 fail(loading, String(localized: "The 3D flat didn't start."), log: "the page did not say ready in time")
             }
-            Task { [weak self] in
+            fetch = Task { [weak self] in
                 let html: Data
                 do {
                     html = try await client.viewerPage()
@@ -251,6 +263,8 @@ struct FlatWebView: UIViewRepresentable {
             retired = true
             stopListening()
             readyDeadline?.cancel()
+            fetch?.cancel()
+            fetch = nil
             requests.values.forEach { $0.cancel() }
             requests = [:]
             _ = handover.begin()
@@ -276,6 +290,7 @@ struct FlatWebView: UIViewRepresentable {
             case .ready:
                 guard let snapshot = store.snapshot else { return }
                 readyDeadline?.cancel()
+                automaticReloads = 0
                 page.isReady = true
                 page.problem = nil
                 sendConfig()
@@ -436,10 +451,17 @@ struct FlatWebView: UIViewRepresentable {
             fail(document, FlatdError.unreachable.message(), log: "WebKit failed the page (\((error as NSError).code))")
         }
 
-        /// WebKit may end the page's process in the background: load it again (BRIDGE.md).
+        /// WebKit may end the page's process in the background: load it again (BRIDGE.md), a few times at most before
+        /// the page says so with Try again (a page that ends WebKit while starting would otherwise load for ever).
         func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
             guard !retired else { return }
             page.isReady = false
+            guard automaticReloads < Self.maxAutomaticReloads else {
+                let ended = handover.begin()
+                fail(ended, String(localized: "The 3D flat didn't start."), log: "WebKit's page process kept ending")
+                return
+            }
+            automaticReloads += 1
             load()
         }
     }

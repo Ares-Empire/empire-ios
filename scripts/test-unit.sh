@@ -174,6 +174,11 @@ for app in "${apps[@]}"; do
     if ! python3 scripts/test-unit-result.py "$app" "$result" "$status" "$((SECONDS-started))" "$summary"; then
         failed=1
     fi
+    # Arestia's live TLS suite must have run, not been skipped for a missing or unreadable pairing code.
+    if [[ "$app" == Arestia ]] && (( ! timing )) && ! grep -q 'Suite LiveFlatdTests passed' "build/test-unit/$app.log"; then
+        echo "Arestia: the live TLS suite (LiveFlatdTests) did not run and pass." >&2
+        failed=1
+    fi
 done
 python3 - "$summary" <<'PY'
 import json, sys

@@ -159,6 +159,16 @@
         }
       }
     },
+    "%@: position unknown" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@: Position unbekannt"
+          }
+        }
+      }
+    },
     "%lld fans on" : {
       "localizations" : {
         "de" : {

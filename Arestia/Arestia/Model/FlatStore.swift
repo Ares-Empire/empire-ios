@@ -1,4 +1,5 @@
 import Foundation
+import notify
 import Observation
 import os
 
@@ -48,9 +49,12 @@ final class FlatStore {
     private(set) var working: Set<String> = []
     /// A blind's position while a finger drags it.
     private(set) var dragging: [String: Int] = [:]
-    /// A blind's position sent when the finger let go, until flatd answered or the stream brought the blind's state:
-    /// shown as asked for, never as done (Codex's review, round 5).
+    /// A blind's position sent when the finger let go, until flatd answered that very request or its state confirmed
+    /// that target: shown as asked for, never as done (Codex's review, rounds 5 and 6).
     private(set) var pending: [String: Int] = [:]
+    /// Which request each pending position belongs to: an older request's answer never clears a newer one.
+    private var pendingRequest: [String: Int] = [:]
+    private var moveRequests = 0
     /// Counts the times a fresh code of this flat renewed its key or address: the 3D page loads again with it, so a
     /// page fetched with the old key never reports that key's refusal.
     private(set) var credentials = 0
@@ -79,6 +83,8 @@ final class FlatStore {
     private var loopGeneration = 0
     /// Commands under way, cancelled when the store retires.
     private var tasks: [UUID: Task<Void, Never>] = [:]
+    /// Hears when a control or Shortcut kept a trouble (`FlatdConnection.troubleNotification`) while the app follows.
+    private var troubleToken: Int32?
     /// The address the live loop reached flatd at: commands go there while live; otherwise they check the saved address
     /// first, as the loop does. (Who answers is settled on every connection by the pin, `FlatdTransport`.)
     private var liveBase: URL?
@@ -139,6 +145,13 @@ final class FlatStore {
         loopGeneration += 1
         let generation = loopGeneration
         loop = Task { [weak self] in await self?.run(generation: generation) }
+        if troubleToken == nil {
+            var token: Int32 = 0
+            let status = notify_register_dispatch(FlatdConnection.troubleNotification, &token, .main) { [weak self] _ in
+                Task { @MainActor in self?.sayTroubleFromOutside() }
+            }
+            if status == UInt32(NOTIFY_STATUS_OK) { troubleToken = token }
+        }
     }
 
     /// Stops following (the app went to the background, the screen went away). Whatever was live is only the last state
@@ -149,6 +162,8 @@ final class FlatStore {
         loop = nil
         liveBase = nil
         if link == .live { link = .connecting }
+        if let troubleToken { notify_cancel(troubleToken) }
+        troubleToken = nil
     }
 
     /// Try again now (pull to refresh, the offline card's button).
@@ -174,6 +189,7 @@ final class FlatStore {
         working = []
         dragging = [:]
         pending = [:]
+        pendingRequest = [:]
         offer = nil
         lastSeen = nil
         link = .notSetUp
@@ -229,7 +245,7 @@ final class FlatStore {
             case .gone:
                 return
             }
-            let client = FlatdClient(pairing, at: foundAt, transport: transport)
+            let client = FlatdClient(pairing, at: foundAt, transport: transport).gated(by: connection)
             do {
                 try await follow(client, generation: generation) {
                     failures = 0
@@ -313,13 +329,14 @@ final class FlatStore {
     }
 
     /// Cooking changed outside the app (a control, a Shortcut) while devices did not follow, and it still describes
-    /// cooking as it is: said once here, then forgotten (the control shows it until then).
-    private func sayTroubleFromOutside() {
-        guard let pairingID, let cooking,
-              let trouble = connection.trouble(mode: cooking.id, active: cooking.active, pairing: pairingID) else { return }
-        connection.note(nil, mode: cooking.id)
+    /// cooking as flatd has it: said once here (on each snapshot, and as soon as a control or Shortcut keeps one while
+    /// the app follows flatd). The control goes on showing it until cooking changes.
+    func sayTroubleFromOutside() {
+        guard !isRetired, hasSnapshot, let pairingID, let cooking,
+              let trouble = connection.trouble(mode: cooking.id, active: cooking.active, pairing: pairingID),
+              !connection.hasSaid(trouble) else { return }
+        connection.markSaid(trouble)
         offer = UndoOffer(message: FlatWords.troubleFromOutside(trouble))
-        reloadControls()
     }
 
     /// Hears every change of the flat from now on, in flatd's own form: the stream's events, and the state a command's
@@ -352,7 +369,6 @@ final class FlatStore {
             snapshots += 1
             self.devices = devices
             if let modes { self.modes = modes }
-            pending = [:]
             if let pairingID { connection.remember(devices, for: pairingID) }
             lastSeen = now
             tell(.snapshot(devices: self.devices, modes: self.modes))
@@ -360,9 +376,11 @@ final class FlatStore {
             guard let index = devices.firstIndex(where: { $0.id == id }) else { return }
             revisions[id, default: 0] += 1
             devices[index].state = devices[index].state.merging(patch)
-            // flatd's word on the blind: from now on its state is shown, not the position asked for.
-            if pending[id] != nil, patch.fields["target"] != nil || patch.fields["moving"] != nil
-                || patch.fields["position"] != nil { pending[id] = nil }
+            // flatd confirms the position asked for (as its target, or the blind is there): its state is shown now.
+            if let asked = pending[id], patch.target == asked || (patch.position == asked && patch.moving == nil) {
+                pending[id] = nil
+                pendingRequest[id] = nil
+            }
             lastSeen = now
             tell(event)
         case let .mode(mode):
@@ -379,7 +397,7 @@ final class FlatStore {
     /// What the Control Center controls show: when it changes here, they are asked to read again.
     private var controlState: [String] {
         [String(isCooking), String(fans.contains { $0.state.on == true })]
-            + rollos.map { $0.id + String(RolloOpenness.isOpen($0.state)) }
+            + rollos.map { $0.id + String(describing: RolloOpenness.isOpen($0.state)) }
     }
 
     /// Where the stream stood for a device or mode when a command was sent.
@@ -530,6 +548,7 @@ final class FlatStore {
     func moveRollo(_ id: String, _ command: RolloCommand) {
         dragging[id] = nil
         pending[id] = nil
+        pendingRequest[id] = nil
         send("rollo:" + id, affects: id, blocking: false) { client in
             try await client.send(.rollo(command), to: id)
         } done: { device, stamp in
@@ -552,15 +571,27 @@ final class FlatStore {
     func setRollo(_ id: String, position: Int) {
         let position = min(100, max(0, position))
         dragging[id] = nil
+        moveRequests += 1
+        let request = moveRequests
         let sent = send("rollo:" + id, affects: id, blocking: false) { client in
             try await client.send(.position(position), to: id)
         } done: { device, stamp in
             self.take(device, since: stamp)
-            if self.pending[id] == position { self.pending[id] = nil }   // flatd has it now (moving, target)
+            self.settle(id, request: request)                           // flatd has it now (moving, target)
         } failed: {
-            if self.pending[id] == position { self.pending[id] = nil }
+            self.settle(id, request: request)
         }
-        if sent { pending[id] = position }
+        if sent {
+            pending[id] = position
+            pendingRequest[id] = request
+        }
+    }
+
+    /// A blind's request was answered: its position asked for is no longer shown, unless a newer request replaced it.
+    private func settle(_ id: String, request: Int) {
+        guard pendingRequest[id] == request else { return }
+        pending[id] = nil
+        pendingRequest[id] = nil
     }
 
     /// Cooking on or off (any mode). Ending cooking offers Undo, which starts it again. Devices that did not follow are
@@ -571,7 +602,8 @@ final class FlatStore {
         } done: { answer, stamp in
             let (mode, failed) = answer
             self.take(mode, since: stamp)
-            self.connection.note(nil, mode: id)            // the app says its own failures; an older one is moot
+            // The app says its own failures; an older trouble kept outside the app is moot now.
+            if let pairing = self.pairingID { self.connection.clearTrouble(mode: id, pairing: pairing) }
             if let line = self.failureLine(failed) {
                 self.offer = UndoOffer(message: line)
             } else if id == FlatMode.cookingID, !active {
@@ -609,9 +641,9 @@ final class FlatStore {
         case .gone: throw Retired()
         }
         if link == .live, let liveBase {
-            return FlatdClient(pairing, at: liveBase, transport: transport)
+            return FlatdClient(pairing, at: liveBase, transport: transport).gated(by: connection)
         }
-        let client = FlatdClient(pairing, transport: transport)
+        let client = FlatdClient(pairing, transport: transport).gated(by: connection)
         try await client.verify()
         guard !isRetired else { throw Retired() }
         return client
@@ -688,7 +720,8 @@ final class FlatStore {
         guard !isRetired, pairingID != nil else { return .failure(.notPaired) }
         switch readPairing() {
         case let .here(pairing):
-            return .success(FlatdClient(pairing, at: link == .live ? liveBase : nil, transport: transport))
+            return .success(FlatdClient(pairing, at: link == .live ? liveBase : nil, transport: transport)
+                .gated(by: connection))
         case .unreadable:
             return .failure(.pairingUnreadable)
         case .gone:
@@ -723,7 +756,7 @@ final class FlatStore {
             let (mode, failed) = try await client.setMode(id, body: body)
             guard !isRetired else { return .notPossible }
             take(mode, since: stamp)
-            connection.note(nil, mode: id)
+            if let pairingID { connection.clearTrouble(mode: id, pairing: pairingID) }
             if let line = failureLine(failed) { offer = UndoOffer(message: line) }
             reloadControls()
             return nil
@@ -802,6 +835,14 @@ final class FlatSession {
         }
     }
 
+    /// This session is done (the app's root was built anew, as after a language switch): its store retires, so no
+    /// work of it goes on next to the new session's.
+    func end() {
+        reading?.cancel()
+        reading = nil
+        store?.retire()
+    }
+
     private func replace(with pairing: FlatdPairing?) {
         store?.retire()
         generation += 1
@@ -811,7 +852,8 @@ final class FlatSession {
     /// Settings → Forget this flat: the pairing and everything kept for it go (`FlatdConnection.forget`), the store
     /// retires (its work cancelled, its stream and 3D page gone) and a new one without a pairing takes its place; the
     /// controls read again. A choice made in a Shortcut or a control before acts on nothing afterwards (`SavedDevice`).
-    /// False, and nothing changed, when the Keychain kept the item.
+    /// False, and nothing changed, when the Keychain kept the item. A request with the old key starts only while the
+    /// pairing is saved, under the lock the delete takes (`FlatdConnection.start(for:_:)`): none starts after it.
     func forget() -> Bool {
         do {
             try connection.forget()

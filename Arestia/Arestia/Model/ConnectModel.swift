@@ -126,12 +126,12 @@ final class ConnectModel {
         attempts += 1
         let attempt = attempts
         problem = nil
+        isConnecting = true
+        defer { if attempt == attempts { isConnecting = false } }
         if store.isAnotherFlat(code.pin) {
             problem = FlatdError.anotherFlat.message()
             return false
         }
-        isConnecting = true
-        defer { if attempt == attempts { isConnecting = false } }
         var tried: [URL] = []
         var failure = FlatdError.unreachable
 

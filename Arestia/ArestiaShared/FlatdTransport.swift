@@ -4,21 +4,78 @@ import os
 /// flatd's HTTP transport: HTTPS only, to a server that proved it holds flatd's key (`FlatdPin`), in an ephemeral
 /// session that never follows a redirect. So the key and every request go only to flatd itself, encrypted: never in
 /// the clear, never to whatever answers at flatd's address, never on to another address.
-struct FlatdTransport: HTTPTransport {
+struct FlatdTransport: GatedTransport {
     let pin: FlatdPin
 
     func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
+        try await send(request, starting: { start in start() })
+    }
+
+    /// Starts the request inside the gate: the task is made and resumed in the same step that checked its pairing is
+    /// still the saved one, under the lock Forget takes (`FlatdDispatchLock`). A gate that refuses starts nothing.
+    func send(_ request: URLRequest, gate: FlatdGate) async throws -> (Data, HTTPURLResponse) {
+        try await send(request, starting: { start in try gate.start(start) })
+    }
+
+    private func send(_ request: URLRequest, starting: (() -> Void) throws -> Void) async throws
+        -> (Data, HTTPURLResponse) {
         // Checked here too, not only by iOS: nothing for flatd ever leaves without TLS.
         guard request.url?.scheme?.lowercased() == "https" else { throw URLError(.unsupportedURL) }
+        let session = FlatdSession.shared(pin: pin)
+        let running = RunningTask()
         do {
-            let (data, response) = try await FlatdSession.shared(pin: pin).data(for: request.withLanguage())
-            guard let response = response as? HTTPURLResponse else { throw HTTPError.invalidResponse }
-            return (data, response)
+            return try await withTaskCancellationHandler {
+                try await withCheckedThrowingContinuation { (done: CheckedContinuation<(Data, HTTPURLResponse), Error>) in
+                    do {
+                        try starting {
+                            let task = session.dataTask(with: request.withLanguage()) { data, response, error in
+                                if let error {
+                                    done.resume(throwing: error)
+                                } else if let response = response as? HTTPURLResponse {
+                                    done.resume(returning: (data ?? Data(), response))
+                                } else {
+                                    done.resume(throwing: HTTPError.invalidResponse)
+                                }
+                            }
+                            running.start(task)
+                        }
+                    } catch {
+                        done.resume(throwing: error)       // the gate refused: nothing was started
+                    }
+                }
+            } onCancel: {
+                running.cancel()
+            }
         } catch let error as URLError where error.code == .cancelled && !Task.isCancelled {
             // Nobody cancelled this request (and its session is never invalidated): the session's delegate did,
             // because the server is not flatd (`PinnedServer`).
             throw URLError(.serverCertificateUntrusted)
         }
+    }
+}
+
+/// A request's task, for cancelling it from whichever thread the caller's cancellation comes on (also before it was
+/// made: then it is cancelled as it starts).
+private nonisolated final class RunningTask: @unchecked Sendable {
+    private let lock = NSLock()
+    private var task: URLSessionDataTask?
+    private var cancelled = false
+
+    func start(_ task: URLSessionDataTask) {
+        let cancelled = lock.withLock {
+            self.task = task
+            return self.cancelled
+        }
+        task.resume()
+        if cancelled { task.cancel() }
+    }
+
+    func cancel() {
+        let task = lock.withLock {
+            cancelled = true
+            return self.task
+        }
+        task?.cancel()
     }
 }
 

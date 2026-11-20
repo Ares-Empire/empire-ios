@@ -1,4 +1,6 @@
 import Foundation
+import notify
+import os
 import Security
 
 /// One pairing: flatd's identity (the pin), its key, and the address it was last reached at, kept together as one
@@ -124,11 +126,51 @@ nonisolated struct FlatdKeychainError: Error {
     let status: OSStatus
 }
 
+/// The one lock that Forget and the start of every request with a pairing's key share, in the app and its Control
+/// Center extension alike (a file in the App Group, `flock`): Forget deletes the pairing under it, and a request checks
+/// under it that its pairing is still the saved one and starts there and then (`FlatdConnection.start(for:_:)`). So a
+/// request either started before Forget (on the wire, which nothing can call back) or never starts: no await, no other
+/// process, can slip between the last check and the start (Codex's review, round 6). Held only for that moment, never
+/// across a wait (a process suspended with a lock in the App Group is ended by iOS).
+nonisolated final class FlatdDispatchLock: @unchecked Sendable {
+    /// The lock file; nil: within this process only (the tests).
+    private let path: String?
+    /// The same within the process (a second `flock` there would wait for the first anyway; this keeps threads tidy).
+    private let local = NSLock()
+    private static let log = Logger(subsystem: "de.ares-empire.arestia", category: "pairing")
+
+    init(path: String?) { self.path = path }
+
+    /// The lock file in Arestia's App Group (the app and the extension see the same one).
+    static let live = FlatdDispatchLock(path: FileManager.default
+        .containerURL(forSecurityApplicationGroupIdentifier: ArestiaGroup.appGroup)?
+        .appending(path: "Library/Caches/flatd-dispatch.lock").path(percentEncoded: false))
+
+    func withLock<T>(_ body: () throws -> T) rethrows -> T {
+        local.lock()
+        defer { local.unlock() }
+        guard let path else { return try body() }
+        try? FileManager.default.createDirectory(atPath: (path as NSString).deletingLastPathComponent,
+                                                 withIntermediateDirectories: true)
+        let descriptor = open(path, O_CREAT | O_RDWR | O_CLOEXEC, 0o600)
+        guard descriptor >= 0 else {
+            Self.log.error("the dispatch lock could not be opened (\(errno, privacy: .public))")
+            return try body()
+        }
+        defer { close(descriptor) }
+        while flock(descriptor, LOCK_EX) != 0, errno == EINTR {}
+        defer { flock(descriptor, LOCK_UN) }
+        return try body()
+    }
+}
+
 /// The saved connection: the pairing (address and key) as one Keychain item, the devices' names in the App Group.
 nonisolated struct FlatdConnection: @unchecked Sendable {
     /// Thread-safe (`UserDefaults` is), hence the unchecked Sendable.
     let defaults: UserDefaults?
     let keychain: any FlatdKeyStore
+    /// Shared by Forget and the start of every request with a pairing's key (`FlatdDispatchLock`).
+    var lock = FlatdDispatchLock(path: nil)
 
     /// The devices' ids, kinds and names as last seen, for Shortcuts' pickers while flatd is out of reach.
     static let devicesKey = "flatd.devices"
@@ -136,7 +178,8 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
     static var live: FlatdConnection {
         FlatdConnection(defaults: ArestiaGroup.defaults,
                         keychain: FlatdKeychain(service: "de.ares-empire.arestia.flatd", account: "flatd-pairing",
-                                                accessGroup: ArestiaGroup.keychainAccessGroup))
+                                                accessGroup: ArestiaGroup.keychainAccessGroup),
+                        lock: .live)
     }
 
     /// What the Keychain holds right now.
@@ -176,6 +219,15 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
     }
 
     var token: String? { pairing?.token }
+
+    /// Runs `start` (starting a request with this pairing's key) only while this pairing is the saved one, under the
+    /// lock Forget takes too: throws `.notPaired` once it is not, `.pairingUnreadable` while it cannot be read.
+    func start(for pairing: UUID, _ start: () -> Void) throws {
+        try lock.withLock {
+            guard try current().id == pairing else { throw FlatdError.notPaired }
+            start()
+        }
+    }
 
     /// Saves this pairing over whatever is saved (Debug launch arguments and the tests; the app pairs with `pairNew`
     /// and `renew`, which change only what they were read as).
@@ -225,9 +277,12 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
     /// Forgets the flat (Settings → Forget this flat, `FlatSession.forget`): the pairing and everything kept for it here
     /// (the devices' names, a mode's trouble). Throws when the Keychain kept the item; then nothing else is touched.
     func forget() throws {
-        try keychain.delete()
-        defaults?.removeObject(forKey: Self.devicesKey)
-        defaults?.removeObject(forKey: Self.troubleKey)
+        try lock.withLock {
+            try keychain.delete()
+            defaults?.removeObject(forKey: Self.devicesKey)
+            defaults?.removeObject(forKey: Self.troubleKey)
+            defaults?.removeObject(forKey: Self.troubleSeenKey)
+        }
     }
 
     // MARK: the devices as last seen (names only)
@@ -290,14 +345,28 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
     // MARK: a mode whose devices did not all follow, outside the app
 
     static let troubleKey = "flatd.modeTrouble"
+    /// The trouble the app has said (its id): the app says each once, while the control keeps showing it.
+    static let troubleSeenKey = "flatd.modeTroubleSeen"
+    /// Posted (a Darwin notification) when a trouble is kept, so a running app says it at once.
+    static let troubleNotification = "de.ares-empire.arestia.modeTrouble"
 
-    /// Keeps (or with nil clears) what the last change of a mode made outside the app left undone: the Cooking control
-    /// shows it next to its state, and the app says it once (`FlatStore`). Only for the saved pairing.
-    func note(_ trouble: ModeTrouble?, mode: String) {
-        if let trouble {
-            guard pairing?.id == trouble.pairing, trouble.mode == mode else { return }
-            defaults?.set(try? JSONEncoder().encode(trouble), forKey: Self.troubleKey)
-        } else if savedTrouble?.mode == mode {
+    /// Keeps what a change of a mode made outside the app left undone: the Cooking control shows it next to its state,
+    /// and the app says it once (`FlatStore`). Written only while its pairing is the saved one, under the lock Forget
+    /// takes, so a late writer never puts one back after Forget.
+    func note(_ trouble: ModeTrouble) {
+        let kept: Bool = lock.withLock {
+            guard pairing?.id == trouble.pairing, let data = try? JSONEncoder().encode(trouble) else { return false }
+            defaults?.set(data, forKey: Self.troubleKey)
+            return true
+        }
+        if kept { notify_post(Self.troubleNotification) }
+    }
+
+    /// Clears the trouble kept for this mode, only when it is this pairing's (a late answer of a forgotten flat never
+    /// clears the next one's).
+    func clearTrouble(mode: String, pairing: UUID) {
+        lock.withLock {
+            guard let saved = savedTrouble, saved.mode == mode, saved.pairing == pairing else { return }
             defaults?.removeObject(forKey: Self.troubleKey)
         }
     }
@@ -310,6 +379,15 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
         return trouble
     }
 
+    /// Whether the app has said this trouble already.
+    func hasSaid(_ trouble: ModeTrouble) -> Bool {
+        defaults?.string(forKey: Self.troubleSeenKey) == trouble.id.uuidString
+    }
+
+    func markSaid(_ trouble: ModeTrouble) {
+        defaults?.set(trouble.id.uuidString, forKey: Self.troubleSeenKey)
+    }
+
     private var savedTrouble: ModeTrouble? {
         defaults?.data(forKey: Self.troubleKey).flatMap { try? JSONDecoder().decode(ModeTrouble.self, from: $0) }
     }
@@ -318,6 +396,8 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
 /// A mode changed outside the app (a Control Center control, a Shortcut, Siri) while some of its devices did not
 /// follow (flatd changes the mode anyway and lists them in `failed`; it keeps no record of them itself).
 nonisolated struct ModeTrouble: Codable, Equatable, Sendable {
+    /// This trouble (the app says each once).
+    var id = UUID()
     let pairing: UUID
     let mode: String
     /// The mode's state the change left.

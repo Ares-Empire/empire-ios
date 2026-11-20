@@ -99,11 +99,19 @@ loaded with the key and never bundled.
     cooking", not one flat's. After Forget and a new pairing they act on the new flat by definition. A device chosen
     in one (a blind, a fan) that the flat does not have (flatd answers 404 for it, or it was chosen before Forget)
     fails cleanly ("This blind isn't in your flat anymore. Choose it again.") and nothing else moves; the Blind control
-    then shows "Not in your flat" under the plain word Blind, never its old name or a made-up state.
-  - *Accepted.* Until Control Center reads a control again after Forget, its toggle may show the old flat's state.
-    A Shortcut already running when Forget is tapped checks the pairing again before it sends, but a request already
-    on the wire cannot be called back. Losing flatd's identity key (a new machine without its identity folder) makes it
-    another flat: Forget and pair anew.
+    then shows "Not in your flat" under the plain word Blind, never its old name or a made-up state. A blind flatd
+    has no position for (offline, or before the board's first reading) shows "Position unknown", never Up.
+  - *Nothing starts after Forget, in any process* (round 6): every request with a pairing's key starts only while
+    that pairing is the saved one, checked under one lock that Forget's delete takes too (`FlatdDispatchLock`, a file
+    in the App Group locked with `flock`, so the app and the Control Center extension share it). The pinned transport
+    makes and resumes the request's task inside that same step (`FlatdTransport`, `FlatdGate`), so no await and no
+    other process can come between the last check and the start: a request either started before Forget, or never.
+    The lock is held only for that moment, never across a wait (iOS ends a process suspended with a lock in the App
+    Group). A Shortcut's answer that arrives after Forget is dropped, not taken as the paired flat's. A root built anew
+    (a language switch) retires its session's store, so no old store's work goes on beside the new one.
+  - *Accepted.* Until Control Center reads a control again after Forget, its toggle may show the old flat's state. A
+    request that started before Forget is on the wire and cannot be called back. Losing flatd's identity key (a new
+    machine without its identity folder) makes it another flat: Forget and pair anew.
   - *Out of scope by design*: consistency between two flats without Forget in between, since the app never does that.
 - **The Keychain may fail to answer** (before the iPhone's first unlock after a restart, or a hiccup): that is never
   taken as "no pairing" (`FlatdConnection.Saved.unreadable`). The live loop and the session read again with growing
@@ -128,16 +136,19 @@ loaded with the key and never bundled.
   state at all ("The Mac may be asleep, or you're not at home"); no alerts. Back from the background, or when the
   stream drops, the last state shows as "Reconnecting…" until flatd's next snapshot, never as "Live". Nothing is shown
   as done before flatd confirmed it: a blind follows the finger while it drags, and once let go reads "Sending: 40 %
-  closed" until flatd's answer or state arrives (a failure puts flatd's position back, with the reason).
+  closed" until flatd answered that very request or its state confirmed that target (an older drag's answer never
+  clears a newer one; a failure puts flatd's position back, with the reason).
 - **Cooking** is flatd's mode `cooking` (which devices it moves and how is flatd's own config: on, the fans and one
   blind up; off, the fans off and that blind to its favourite spot). The app shows it while active with since when and
   what its devices do right now, and Done cooking ends it, with Undo for a few seconds. A device that did not follow is named
   ("Didn't answer: …"); the mode stays as flatd recorded it. Changed outside the app (the Cooking control, a Shortcut,
   the NFC tag), the devices that did not follow are kept with the mode's state (`ModeTrouble`, in the App Group, for two
-  hours at most, while the mode is still in that state): the control reads "On · not all followed", and the app says
-  which ones, once, when it next hears flatd. flatd itself keeps no record of them. Siri and Shortcuts say only what
-  flatd confirmed ("Cooking is on.", "Cooking ended.", "Cooking wasn't on." when there was nothing to end), never what
-  the mode's devices are assumed to do.
+  hours at most, while the mode is still in that state, written and cleared only for the pairing it belongs to): the
+  control reads "On · not all followed" for as long; the app says which ones, once (its own acknowledgement, which
+  leaves the control's line alone), at once while it follows flatd (a Darwin notification) or with its next snapshot.
+  flatd itself keeps no record of them. Siri and Shortcuts say only what flatd's answer confirmed ("Cooking is on.",
+  "Cooking is off.", a scene's "Not everything followed." with the names, a blind's state as flatd answered it), never
+  what the devices are assumed to do; nothing is read before a command to word it.
 - **The 3D tab** shows flatd's phone viewer in a web view and speaks its bridge (the viewer's `BRIDGE.md` v1: the
   handler `flat3d`, `flat3d.receive`, one result per request): taps in 3D go to flatd through the app, live state goes
   back to the page. The app fetches `GET /viewer` itself, over the pinned connection, and hands the page to the web

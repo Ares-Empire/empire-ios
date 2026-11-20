@@ -12,22 +12,24 @@ nonisolated struct FlatActions: Sendable {
 
     // MARK: cooking (a mode on flatd: fans on and its blind up; ended: fans off, that blind to its favourite spot)
 
-    /// Starts or ends cooking. What flatd confirmed comes back: whether cooking was on before, whether it is on now,
-    /// and the devices that did not follow, by name (flatd changes the mode anyway). Those are also kept for the Cooking
-    /// control and the app (`ModeTrouble`), since this runs outside the app; a change where all followed clears them.
+    /// Starts or ends cooking. What flatd confirmed comes back: whether cooking is on now, and the devices that did not
+    /// follow, by name (flatd changes the mode anyway). Those are also kept for the Cooking control and the app
+    /// (`ModeTrouble`), since this runs outside the app; a change where all followed clears them. Only flatd's answer
+    /// counts: nothing is read before (a reading could be stale by the time the command arrives).
     func setCooking(_ active: Bool) async throws -> CookingChange {
         let connection = reach.connection
         let (change, pairing) = try await reach.run { client in
-            let before = try await client.modes().first { $0.id == FlatMode.cookingID }?.active ?? false
             let (mode, failed) = try await client.setMode(FlatMode.cookingID, active: active)
             let names = connection.names(failed, pairing: client.pairingID)
-            return (CookingChange(wasActive: before, isActive: mode.active, failed: names), client.pairingID)
+            return (CookingChange(isActive: mode.active, failed: names), client.pairingID)
         }
-        if let pairing, !change.failed.isEmpty {
-            connection.note(ModeTrouble(pairing: pairing, mode: FlatMode.cookingID, active: change.isActive,
-                                        names: change.failed, at: .now), mode: FlatMode.cookingID)
-        } else {
-            connection.note(nil, mode: FlatMode.cookingID)
+        if let pairing {
+            if change.failed.isEmpty {
+                connection.clearTrouble(mode: FlatMode.cookingID, pairing: pairing)
+            } else {
+                connection.note(ModeTrouble(pairing: pairing, mode: FlatMode.cookingID, active: change.isActive,
+                                            names: change.failed, at: .now))
+            }
         }
         return change
     }
@@ -128,12 +130,14 @@ nonisolated struct FlatActions: Sendable {
         return devices.first { $0.kind == .rollo && $0.id == id }
     }
 
-    /// What the Blind control shows: nothing chosen yet, a blind the flat does not have (any more), or the blind as
-    /// flatd has it now. Never the preview's state as if it were live, and never a name kept for a gone choice.
+    /// What the Blind control shows: nothing chosen yet, a blind the flat does not have (any more), one flatd has no
+    /// position for (offline, or before the board's first reading), or the blind as flatd has it now. Never the
+    /// preview's state as if it were live, never a position nobody read, and never a name kept for a gone choice.
     func rolloControl(_ saved: String?) async throws -> RolloControlState {
         guard let saved else { return .notChosen }
         guard let device = try await rollo(saved) else { return .gone }
-        return .blind(name: device.label, isOpen: RolloOpenness.isOpen(device.state))
+        guard let isOpen = RolloOpenness.isOpen(device.state) else { return .unknown(name: device.label) }
+        return .blind(name: device.label, isOpen: isOpen)
     }
 
     // MARK: scenes
@@ -150,7 +154,6 @@ nonisolated struct FlatActions: Sendable {
 
 /// What starting or ending cooking did, as flatd confirmed it.
 nonisolated struct CookingChange: Equatable, Sendable {
-    let wasActive: Bool
     let isActive: Bool
     /// The devices that did not follow, by name.
     let failed: [String]
@@ -168,6 +171,8 @@ nonisolated struct CookingState: Equatable, Sendable {
 nonisolated enum RolloControlState: Equatable, Sendable {
     case notChosen
     case gone
+    /// The blind is there, but flatd has no position for it now (offline, or not read yet).
+    case unknown(name: String)
     case blind(name: String, isOpen: Bool)
 }
 
@@ -212,11 +217,13 @@ nonisolated enum SavedDevice {
     }
 }
 
-/// A blind counts as open while it is more up than down (the Control Center control's on state).
+/// A blind counts as open while it is more up than down (the Control Center control's on state); nil while flatd has
+/// no position for it (offline, or before the board's first reading): unknown, never taken as open.
 nonisolated enum RolloOpenness {
-    static func isOpen(_ state: DeviceState) -> Bool {
+    static func isOpen(_ state: DeviceState) -> Bool? {
+        guard state.online else { return nil }
         if let target = state.target, state.moving != nil { return target < 50 }
-        return (state.position ?? 0) < 50
+        return state.position.map { $0 < 50 }
     }
 }
 

@@ -169,7 +169,7 @@ struct ActionsTests {
         active["active"] = true
         transport.answer("POST /api/modes/cooking", body: active.merging(["failed": [:]]) { $1 })
         transport.answer("GET /api/modes", body: ["modes": [Flat.cooking]])
-        #expect(try await actions().setCooking(true) == CookingChange(wasActive: false, isActive: true, failed: []))
+        #expect(try await actions().setCooking(true) == CookingChange(isActive: true, failed: []))
         transport.answer("GET /api/modes", body: ["modes": [active]])
         #expect(try await actions().cookingState() == CookingState(active: true, notFollowed: []))
     }

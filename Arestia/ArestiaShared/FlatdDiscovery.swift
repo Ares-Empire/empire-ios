@@ -125,11 +125,12 @@ nonisolated struct FlatdReach: Sendable {
     var transport: (any HTTPTransport & Sendable)?
     var rediscover: @Sendable () async -> [URL] = { await FlatdBonjour.candidates() }
 
-    /// Throws `.notPaired` without a pairing, `.pairingUnreadable` while it cannot be read, `.unreachable` when flatd
-    /// cannot be found.
+    /// Throws `.notPaired` without a pairing (or once it was forgotten), `.pairingUnreadable` while it cannot be read,
+    /// `.unreachable` when flatd cannot be found. Every request of `work` with the key starts only while the pairing is
+    /// still the saved one (`FlatdClient.gated(by:)`): after Forget nothing more is sent, whatever `work` awaited.
     func run<T: Sendable>(_ work: @Sendable (FlatdClient) async throws -> T) async throws -> T {
         let pairing = try connection.current()
-        var client = FlatdClient(pairing, transport: transport)
+        var client = FlatdClient(pairing, transport: transport).gated(by: connection)
         do {
             try await client.verify()
         } catch let error as FlatdError where error == .unreachable || error == .noAnswer {
@@ -137,11 +138,17 @@ nonisolated struct FlatdReach: Sendable {
             guard let found = await Self.find(pairing, among: candidates, transport: transport) else {
                 throw FlatdError.unreachable
             }
-            client = found
+            client = found.gated(by: connection)
         }
         // Forgotten while the address was looked up: this run sends nothing.
         guard try connection.current().id == pairing.id else { throw FlatdError.notPaired }
         let result = try await work(client)
+        // Forgotten while the work ran (a request started before): its answer is the forgotten flat's, never this one's.
+        switch connection.saved {
+        case let .paired(saved) where saved.id != pairing.id: throw FlatdError.notPaired
+        case .none, .invalid: throw FlatdError.notPaired
+        default: break
+        }
         connection.move(pairing, to: client.baseURL)
         return result
     }

@@ -38,6 +38,7 @@ nonisolated enum ControlWords {
     }
     static var chooseBlind: String { text(LocalizedStringResource("Choose a blind", table: "ArestiaShared")) }
     static var notInFlat: String { text(LocalizedStringResource("Not in your flat", table: "ArestiaShared")) }
+    static var positionUnknown: String { text(LocalizedStringResource("Position unknown", table: "ArestiaShared")) }
 }
 
 // MARK: - Cooking
@@ -130,7 +131,8 @@ struct RolloValueProvider: AppIntentControlValueProvider {
     }
 
     /// The blind as flatd has it now. A choice the flat does not know (a blind gone from flatd, or chosen before the
-    /// flat was forgotten) shows "Not in your flat" under the plain word Blind, never its old name or a made-up state.
+    /// flat was forgotten) shows "Not in your flat" under the plain word Blind, never its old name or a made-up state;
+    /// a blind flatd has no position for shows "Position unknown", never Up.
     func currentValue(configuration: RolloControlConfiguration) async throws -> RolloControlValue {
         switch try await FlatActions.live.rolloControl(configuration.rollo?.id) {
         case .notChosen:
@@ -138,6 +140,8 @@ struct RolloValueProvider: AppIntentControlValueProvider {
         case .gone:
             RolloControlValue(rollo: configuration.rollo, name: ControlWords.blind, isOpen: false,
                               note: ControlWords.notInFlat)
+        case let .unknown(name):
+            RolloControlValue(rollo: configuration.rollo, name: name, isOpen: false, note: ControlWords.positionUnknown)
         case let .blind(name, isOpen):
             RolloControlValue(rollo: configuration.rollo, name: name, isOpen: isOpen, note: nil)
         }

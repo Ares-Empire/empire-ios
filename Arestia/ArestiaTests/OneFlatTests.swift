@@ -127,6 +127,24 @@ struct OneFlatTests {
         #expect(!store.isRetired && store.pairingID == Flat.id)
     }
 
+    /// Another flat's code refused while an attempt for the paired flat is still out: Connect is usable afterwards.
+    @Test func aRefusalDuringASlowAttemptLeavesConnectUsable() async throws {
+        let connection = Flat.connection()
+        let (store, transport, _, _) = Flat.store(connection: connection)
+        transport.answer("GET /api/health", body: Flats.health, delay: .milliseconds(300))
+        let model = ConnectModel(candidates: { [] })
+        let fresh = try #require(model.take(#"{"url":"\#(Flat.base)","token":"\#(Flat.renewedKey)","spki_sha256":"\#(Flat.pin.hex)"}"#))
+        let slow = Task { await model.connect(fresh, store: store) }
+        try await Task.sleep(for: .milliseconds(50))
+        slow.cancel()                                                   // what scanning another code does
+        let foreign = try #require(model.take(Flats.codeB))
+        #expect(await model.connect(foreign, store: store) == false)
+        _ = await slow.value
+        #expect(!model.isConnecting && model.canConnect)
+        #expect(model.problem == FlatdError.anotherFlat.message())
+        store.stop()
+    }
+
     /// An attempt connects exactly the code it was started with: another flat's code scanned meanwhile is refused and
     /// never connected by it.
     @Test func anAttemptConnectsOnlyTheCodeItWasStartedWith() async throws {

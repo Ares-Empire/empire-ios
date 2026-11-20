@@ -34,7 +34,8 @@ enum FlatWords {
     // MARK: blinds
 
     /// "Open", "Closed", "40 % closed", "Going up", "Going down to 60 %", "At its favourite spot", "Offline".
-    static func rolloStatus(_ state: DeviceState, position shown: Int? = nil, language: AppLanguage = .current) -> String {
+    nonisolated static func rolloStatus(_ state: DeviceState, position shown: Int? = nil,
+                                        language: AppLanguage = .current) -> String {
         guard state.online else { return language.string("Offline") }
         if let moving = state.moving {
             if let target = state.target, target != 0, target != 100 {
@@ -64,7 +65,7 @@ enum FlatWords {
     }
 
     /// "40 %" (both languages put a space before the sign; a narrow one, so it never breaks off).
-    static func percent(_ value: Int) -> String {
+    nonisolated static func percent(_ value: Int) -> String {
         "\(value)\u{202F}%"
     }
 
@@ -86,8 +87,11 @@ enum FlatWords {
                     return moving == .up ? language.string("\(device.label) going up")
                         : language.string("\(device.label) going down")
                 }
-                return RolloOpenness.isOpen(state) ? language.string("\(device.label) open")
-                    : language.string("\(device.label) closed")
+                switch RolloOpenness.isOpen(state) {
+                case true?: return language.string("\(device.label) open")
+                case false?: return language.string("\(device.label) closed")
+                case nil: return language.string("\(device.label): position unknown")
+                }
             default:
                 return device.state.on == true ? language.string("\(device.label) on")
                     : language.string("\(device.label) off")
