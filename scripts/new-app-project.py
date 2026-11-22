@@ -3,7 +3,7 @@
 
     python3 scripts/new-app-project.py Empire de.ares-empire.empire "Ares Empire"
 
-What every Empire app gets (see CLAUDE.md → Setup state):
+What every Empire app gets (see docs/SHARED.md):
 - folder-synchronized groups: <Name>/ (app), <Name>Tests/ (tests), ../Shared/ (the shared login, network layer,
   fonts), so new Swift files need no project edits;
 - iOS 26+, Swift 6 with MainActor default isolation, iPhone only, portrait;

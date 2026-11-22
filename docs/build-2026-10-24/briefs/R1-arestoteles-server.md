@@ -6,13 +6,13 @@ no SSH, no secrets, no installs outside a `.venv` in the worktree. Worktree: `~/
 
 ## Why
 
-Patrik retires the trading bot. Arestoteles becomes the iPhone app for his Weltbild: an Obsidian vault of topics,
+The owner retires the trading bot. Arestoteles becomes the iPhone app for his Weltbild: an Obsidian vault of topics,
 positions, mechanisms, events and questions. Read, in this order:
 1. `~/ares-empire/docs/ARESTOTELES-APP.md` (the decisions; do not re-open them),
 2. `docs/API.md` and `docs/samples/*.json` in your worktree (the contract; build exactly this),
-3. the vault's own rules: `~/Documents/Patrik Breeck/Weltbild/CLAUDE.md` (the note types, frontmatter, positions,
-   callouts, voice rules, "How my view changed") and its check `~/Documents/Patrik Breeck/Weltbild/.tools/check.rb`.
-   **That folder is Patrik's real vault: read only, never write, never copy its content into the repo or a test.**
+3. the vault's own rules: `~/Documents/<owner>/Weltbild/CLAUDE.md` (the note types, frontmatter, positions,
+   callouts, voice rules, "How my view changed") and its check `~/Documents/<owner>/Weltbild/.tools/check.rb`.
+   **That folder is the owner's real vault: read only, never write, never copy its content into the repo or a test.**
 4. `~/ares-empire/docs/LANGUAGES.md` and `~/empire-ios/docs/build-2026-10-24/briefs/L-COMMON.md` → "The language
    contract" (error texts in English and German, `Accept-Language`).
 5. The Aresus server as the pattern for an Empire service: `~/aresus/src/aresus/auth.py` (the login check: service
@@ -52,7 +52,7 @@ positions, mechanisms, events and questions. Read, in this order:
    - every edit op, including 409 (version changed, position gone), 422 (check error), rebase over a concurrent push
      (a temporary bare remote), a real conflict undoing the edit, push failure keeping the commit.
    - auth, languages, ETag/304, health.
-   - **the real vault, read-only:** a test that runs only where `~/Documents/Patrik Breeck/Weltbild` exists, copies it
+   - **the real vault, read-only:** a test that runs only where `~/Documents/<owner>/Weltbild` exists, copies it
      to a temp dir and builds the index: no exceptions, every position found, every link either resolved or reported.
      It must print and assert only counts, never content.
 4. **Deploy files** (the lead deploys): `deploy/arestoteles.service` (systemd, runs as root like Aresus, from the

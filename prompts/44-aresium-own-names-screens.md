@@ -5,10 +5,10 @@ Branch: `claude/44-names-screens` · Worktree: `../empire-ios-44-names-screens` 
 
 ## Goal
 
-Patrik (2026-10-30): people rename payments to names they remember; the bank's name stays small under the own name on
+The owner (2026-10-30): people rename payments to names they remember; the bank's name stays small under the own name on
 the payment's page; a setting switches between own and bank names; payments of the same name can be added up, reached
 by swiping a row (like Mail). He chose: **swipe left only, no direction setting** (a right swipe would take the back
-swipe from the middle of the screen). Claude added, and Patrik read it: since a swipe cannot be seen, the payment's page
+swipe from the middle of the screen). Claude added, and the owner read it: since a swipe cannot be seen, the payment's page
 also gets a visible "All from <name>" line, and the long press gets the same entry.
 
 Brief 43 (merged) built the data: read its API in `CLAUDE.md` → "Aresium phone mode" → "Payment names and groups" and
@@ -29,7 +29,7 @@ Brief 43 (merged) built the data: read its API in `CLAUDE.md` → "Aresium phone
 ## Build
 
 1. **The payment's page.** The shown name stays the title; when it is an own name, the bank's name small under it
-   (Patrik). A clear way to rename (your design: a pencil next to the name, a Rename button, or a row; Apple-like and
+   (owner). A clear way to rename (your design: a pencil next to the name, a Rename button, or a row; Apple-like and
    found without help).
 2. **Renaming.** A small sheet: one field with the own name (empty with the bank's name as placeholder when there is
    none), Cancel and Save at the top (the iOS standard), Save off while nothing changed; "Use the bank's name" when an

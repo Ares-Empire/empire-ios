@@ -1,6 +1,6 @@
-# Arestemis on Patrik's iPhone (build 0.1 (1), 2026-10-31)
+# Arestemis on the owner's iPhone (build 0.1 (1), 2026-10-31)
 
-Patrik installed Arestemis from TestFlight on 2026-10-31 ("very nice work") and started fine-tuning. Push works: the phone
+The owner installed Arestemis from TestFlight on 2026-10-31 ("very nice work") and started fine-tuning. Push works: the phone
 registered a production device on 2026-10-30 23:34, and Claude's test notification went through APNs on 2026-10-31.
 
 ## Round 1 (2026-10-31)
@@ -11,7 +11,7 @@ registered a production device on 2026-10-30 23:34, and Claude's test notificati
    and Aresium's Sign in note still say it (not asked).
 2. **"Jagd starten" → "Suche starten"** (the Hunt card's button; English stays "Start hunting").
 3. **No "Die KI …".** Small things do not name the AI at all; the autofill says it in a few words; the important places
-   name it without "die" (Patrik: "Die KI" sounds weird).
+   name it without "die" (owner: "Die KI" sounds weird).
 
    | Where | Before | Now (German · English) |
    |---|---|---|
@@ -31,16 +31,16 @@ registered a production device on 2026-10-30 23:34, and Claude's test notificati
 
 1. **The test notification arrived**, so Arestemis's **Telegram copy is off** (the `TELEGRAM_*` lines in
    `/root/Arestemis/.env` commented out, the service restarted; its start line says `telegram_fallback: off`).
-2. **No sentence names the AI** (Patrik: "Let's cut KI from all sentences, I think it sounds better. Like automatic fill
+2. **No sentence names the AI** (owner: "Let's cut KI from all sentences, I think it sounds better. Like automatic fill
    in"). Describe it: "Die Felder werden automatisch ausgefüllt. Prüf sie, dann speichern." · "The fields are filled in
    automatically. Check them, then save." Server: "Only checked against the fields" (German unchanged) and "Not available
    right now, try again in a minute." · "Gerade nicht verfügbar, versuch es in einer Minute noch einmal." The two short
-   labels went too (Patrik: "Yes let's remove them too"): the switch in Settings → Application is "Dein Text | Pro
+   labels went too (owner: "Yes let's remove them too"): the switch in Settings → Application is "Dein Text | Pro
    Angebot" · "Your text | Per listing", and above an application "Automatisch geschrieben" · "Written automatically".
    Arestemis now shows no "KI"/"AI" anywhere.
 
 **Build 0.1 (2)** (uploaded 2026-10-31 19:46 with `scripts/testflight.sh Arestemis`, commit e7cccc7) carries both
-rounds. Patrik's further notes go into build 3.
+rounds. The owner's further notes go into build 3.
 
 ## Round 3 (build 2, 2026-10-31 evening)
 
@@ -62,15 +62,15 @@ opens complete (the brief-61 agent could not reproduce the black corner on iOS 2
 visible jump it found), and ImmoScout24 known to the app. A server listing-reader fix went live at 21:32
 (the Arestemis repo, `docs/briefs/66-arestemis-kleinanzeigen-cards.md`).
 **More portals** (the Arestemis repo, `docs/briefs/63-arestemis-more-portals.md`) waits on branch `codex/63-more-portals` until build 3 is on
-the phone; then merge, deploy, tell the Aresus session (it adds an ImmoScout24 check), and Patrik turns ImmoScout24 on in
+the phone; then merge, deploy, tell the Aresus session (it adds an ImmoScout24 check), and the owner turns ImmoScout24 on in
 Suche → Portale.
 
 ## Round 4 (build 3, 2026-11-01 night)
 
 Build 3 installed. **Server portal support live** (the Arestemis repo, `docs/briefs/63-arestemis-more-portals.md`,
-Arestemis 3c20edd, 00:36); the Aresus session was told. ImmoScout24 scans once Patrik turns it on in the search's portals.
+Arestemis 3c20edd, 00:36); the Aresus session was told. ImmoScout24 scans once the owner turns it on in the search's portals.
 
-1. **The black corner is still there**, now "very frequently", in the "Suche läuft" card on the Hunt tab (Patrik: "The
+1. **The black corner is still there**, now "very frequently", in the "Suche läuft" card on the Hunt tab (owner: "The
    black field goes black in the corner. It needs fixing."). His hunt is active all the time since build 3, so the
    card's status dot pulses all the time; the card is a glass card (material, shadow) inside a scroll view faded by a
    mask. Brief 67 (Claude agent) finds the cause and fixes it without changing the look; build 4 carries it.
@@ -84,11 +84,11 @@ test) and the German tabs Suche / Angebote / Filter. Server since build 3: porta
 `docs/briefs/63-arestemis-more-portals.md`) and site access improved (Arestemis 5f3ead4; found by the Aresus session).
 Evidence and before/after shots:
 `build/67/` (local, not in git).
-Patrik on build 4 (2026-11-01): "very nice, much better". The search's portals are enabled and working.
+The owner on build 4 (2026-11-01): "very nice, much better". The search's portals are enabled and working.
 
 ## Round 5 (build 4, 2026-11-01 evening)
 
-Patrik: "I still get the black corner on my phone. I can even force it by reloading the screen." His screenshot (Hunt
+The owner: "I still get the black corner on my phone. I can even force it by reloading the screen." His screenshot (Hunt
 tab, dark, hunt running) shows a sharp greenish-black rectangle over the card's top left, reaching past the card to the
 screen's edge. Its edges are the pulse ring's shadow to the point, and it is drawn after the card's fill and before the
 dot and the edge line: `GlassCard`'s `.shadow` gave every piece of the card's content a pathless shadow, and the pulsing

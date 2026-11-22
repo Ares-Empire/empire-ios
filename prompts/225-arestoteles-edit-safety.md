@@ -1,6 +1,6 @@
 # 225: Arestoteles: can an edit get lost?
 
-Status: deployed 2026-11-06 (Arestoteles 5b803d1; 345 tests on Claude's run; vault backup before it in /root/backups) with ARESTOTELES_REQUIRE_VERSIONS=0. Last step: set it to 1 once Patrik's iPhone runs Arestoteles build 3 (brief 228; board item for arestoteles).
+Status: deployed 2026-11-06 (Arestoteles 5b803d1; 345 tests on Claude's run; vault backup before it in /root/backups) with ARESTOTELES_REQUIRE_VERSIONS=0. Last step: set it to 1 once the owner's iPhone runs Arestoteles build 3 (brief 228; board item for arestoteles).
 Branch: `codex/225-edit-safety` (repo `Arestoteles`) · Worktree: `~/Arestoteles-225-edit-safety` · Model:
 `gpt-6-astra`, effort `high`
 
@@ -15,7 +15,7 @@ reported as saved when it was not, or leaves the vault broken; prove each with a
 
 `CLAUDE.md`, `README.md`, `docs/`, `deploy/README.md`, `src/arestoteles/` (the vault clone, sync, edits and their
 API), the tests. For how the vault reaches the computers: `~/aresync` (read only). From the vault itself read only its
-`CLAUDE.md` (`~/Documents/Patrik Breeck/Weltbild/CLAUDE.md`), never the notes.
+`CLAUDE.md` (`~/Documents/<owner>/Weltbild/CLAUDE.md`), never the notes.
 
 ## Look for
 

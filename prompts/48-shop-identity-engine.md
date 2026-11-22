@@ -1,12 +1,12 @@
 # 48: One shop under changing names: the engine's shop identity
 
-Status: merged to aresium main 2026-10-30 (01ebd85; on Patrik's files on the Mac: 1,246 payments, sorting unchanged, 3 card keys cleaned, 19 follow a same-shop rule, 0 lost; the server does not use sortPayments, so nothing to deploy). The app gets it with brief 54
+Status: merged to aresium main 2026-10-30 (01ebd85; on the owner's files on the Mac: 1,246 payments, sorting unchanged, 3 card keys cleaned, 19 follow a same-shop rule, 0 lost; the server does not use sortPayments, so nothing to deploy). The app gets it with brief 54
 Repo: **aresium** · Worktree: `../aresium-48-shop-identity` (branch `codex/48-shop-identity`) · Model: `gpt-6.1-sol`,
 effort `high` · The app's side follows in a later brief (Claude wires it into empire-ios).
 
 ## Goal
 
-Patrik (2026-10-30): his Vinted purchases from February are not recognised as the same shop as October's: the
+The owner (2026-10-30): his Vinted purchases from February are not recognised as the same shop as October's: the
 counterparty was "MGP Vinted - Kleiderkreisel" then and is "Vinted, UAB" now (Vinted's former German company and its
 Lithuanian one), so they sort, group ("all payments of one name") and rename separately. Claude scanned his real files
 on the Mac (they never leave it) and found the same in many forms. After this brief the engine can say which merchant

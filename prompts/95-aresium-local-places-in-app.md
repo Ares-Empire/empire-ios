@@ -9,7 +9,7 @@ Branch: `codex/95-local-places-app` · Worktree: `../empire-ios-95-local-places-
 Aresium brief 86 built a list of Germany's local places from OpenStreetMap (`~/aresium/data/local-places/de.json.gz`,
 264,744 places, 3.4 MB compressed, 10.5 MB as JSON) and an optional engine input for it (`sortPayments(payments, {
 categories, learned, localPlaces })`). For places in the list it sorts 437 of 500 right instead of 187, with no more
-wrong answers; on Patrik's own data 5 more payments sort, all as he has them. Patrik (2026-11-01): "yes lets do that"
+wrong answers; on the owner's own data 5 more payments sort, all as he has them. The owner (2026-11-01): "yes lets do that"
 (measure what it costs on the phone, then decide).
 
 What is not known: **how much memory the list takes on the iPhone** once it is unpacked and parsed inside the

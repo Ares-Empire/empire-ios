@@ -1,11 +1,11 @@
-# 52: Empire's approvals can be refreshed (Patrik's list no. 12); Create account keeps what was typed (Shared 2, no. 11)
+# 52: Empire's approvals can be refreshed (the owner's list no. 12); Create account keeps what was typed (Shared 2, no. 11)
 
 Status: merged 2026-10-30 (Empire 207 tests; Aresium and Aresus build; approvals, the discard question and the email hand-off checked on the simulator)
 Branch: `codex/52-empire-comfort` · Worktree: `../empire-ios-52-empire-comfort` · Model: `gpt-6.1-sol`, effort `high`
 
 ## Goal
 
-Patrik approved both items (2026-10-30). After this brief the Empire app's approvals list can be pulled to refresh and
+The owner approved both items (2026-10-30). After this brief the Empire app's approvals list can be pulled to refresh and
 offers Try again when it failed to load, and in every app that has a login screen, Create account no longer loses what
 was typed on a swipe down, and the email carries over into the login field after "Confirm your email".
 

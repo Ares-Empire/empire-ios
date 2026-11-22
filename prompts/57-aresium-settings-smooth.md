@@ -6,7 +6,7 @@ Branch: `codex/57-settings-smooth` · Worktree: `../empire-ios-57-settings-smoot
 
 ## Goal
 
-Patrik (2026-10-31, build 5 on his iPhone 17, his own data: about 1,250 payments, 9 months): "At times settings felt
+The owner (2026-10-31, build 5 on his iPhone 17, his own data: about 1,250 payments, 9 months): "At times settings felt
 laggy, could be my phone or me but check please." Find what makes Aresium's Settings sheet stutter (opening it,
 scrolling it, flipping its switches, opening and closing its pages, closing it) and fix the causes, with numbers before
 and after. The same standard as brief 39 (the category picker: a settled burst held the main thread 404 ms at 5,000
@@ -25,7 +25,7 @@ payments, then 0.2 ms; `CLAUDE.md` → "Off the main thread").
 
 ## Build
 
-1. **Measure first, on the simulator with a store the size of Patrik's and five times it** (1,250 and 5,000 made-up
+1. **Measure first, on the simulator with a store the size of the owner's and five times it** (1,250 and 5,000 made-up
    payments over a year; add a DEBUG launch argument that fills the phone sample's store to a given size, e.g.
    `-sampleSize 5000`, if none exists; made-up names and amounts only). For each step: open Settings, scroll to the end
    and back, open and close each page (Categories, Receipts, Messages, Own code, Language, Appearance, Fonts &

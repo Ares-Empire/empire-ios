@@ -1,20 +1,20 @@
 # Arestia app — decision record
 
-**Decided 2026-11-19 (Patrik).** Since build 2 (2026-11-20): renaming devices in flatd, the Lighting section, no
+**Decided 2026-11-19 (owner).** Since build 2 (2026-11-20): renaming devices in flatd, the Lighting section, no
 Automations card ("After build 2" below). Status (2026-11-20): built and tested on the simulator against a fake flatd
 (`scripts/fake-flatd.py`, HTTPS with its own identity and pairing code); one flat per install (below), which replaced
 the re-pairing in place after the fifth review; merged after the final review (round 9, SAFE); not yet run against the
 real flatd. The name: Arestia (Ares + Hestia,
-goddess of the hearth and home), confirmed by Patrik on 2026-11-19.
+goddess of the hearth and home), confirmed by the owner on 2026-11-19.
 
 Arestia is the flat on the iPhone: the fans, the blinds (Rollos), the modes and scenes and the flat in 3D, all through
-Patrik's own flat service **flatd** on the home network. The app talks only to flatd, never to a device; flatd is the
+the owner's own flat service **flatd** on the home network. The app talks only to flatd, never to a device; flatd is the
 one place for drivers, modes, timers and history, and Claude, the desktop viewer, NFC tags and the app all use it.
 flatd's contract and the flat itself are private (they are not in any Ares Empire repo); this repo holds no flat data:
 devices, their names, rooms, modes and scenes come from flatd at runtime, and the 3D page is flatd's `GET /viewer`,
 loaded with the key and never bundled.
 
-## What Patrik asked for (2026-11-19, his words)
+## What the owner asked for (2026-11-19, his words)
 
 - "Now I want proper phone control. I say we start with our own app so it can be better than apple home."
 - "yes ares app. name? no account needed, just me."
@@ -28,7 +28,7 @@ loaded with the key and never bundled.
 
 ## The decisions
 
-- **No Ares account** (Patrik: "no account needed, just me"), a deliberate deviation from the Empire standard, where
+- **No Ares account** (owner: "no account needed, just me"), a deliberate deviation from the Empire standard, where
   every app logs in with the one Ares account. Arestia authenticates to flatd with flatd's own key, entered once. So:
   no login screen, not in the shared login's Keychain group or App Group, no account section in Settings
   (`EmpireAppIdentity.arestia.hasAccount` false, `SettingsAccountSection.hidden`), not in `EmpireAppIdentity.all` (the
@@ -39,7 +39,7 @@ loaded with the key and never bundled.
   that answers like flatd"). On the home network flatd speaks **HTTPS only**, with a self-signed certificate for one
   private key it made itself. `flatd pair`, run on flatd's own machine, shows a QR code with JSON
   `{"url", "token", "spki_sha256"}`: where flatd is right now, its key (the bearer token), and its **identity**, the
-  SHA-256 of its public key. Patrik scans it with Arestia's own scanner (or pastes the same text); that is all there is
+  SHA-256 of its public key. The owner scans it with Arestia's own scanner (or pastes the same text); that is all there is
   to enter. From then on the app talks only to a server that proves in the TLS handshake that it holds that key
   (`FlatdPin`, checked by `FlatdTransport`'s session delegate on every connection). Before that proof nothing is
   sent: no key, no request. So:
@@ -77,7 +77,7 @@ loaded with the key and never bundled.
     the pinned key). But five reviews in a row found a new variant of one other class: consistency when the phone is
     re-paired from one flatd to a *different* one in the middle of use (the old 3D page, its queued task, saved Shortcut
     and control choices, a second window's counter, the picker's two readings, the connect task's late reading of the
-    code, then the Control Center toggles' value and action and `FlatdReach`'s results). Patrik has one flat and one
+    code, then the Control Center toggles' value and action and `FlatdReach`'s results). The owner has one flat and one
     flatd. Chasing multi-flat consistency through every surface costs more than it is worth, so the case is removed by
     design instead of patched one level deeper again.
   - *What Forget does* (`FlatSession.forget`): the pairing and everything kept for it go (the Keychain item; in the App
@@ -123,7 +123,7 @@ loaded with the key and never bundled.
   - *Accepted risk: a request already on the wire* (the lead, 2026-11-20, after the seventh review). "Started before
     Forget" means the request's task was resumed before the delete. Its connection and TLS handshake may still be under
     way when Forget completes, so its first bytes can leave a few milliseconds after it, to the forgotten flat, which
-    still has to prove its pinned key first. That counts as already on the wire: the command was given by Patrik,
+    still has to prove its pinned key first. That counts as already on the wire: the command was given by the owner,
     before Forget, to his own flat. There is no cross-process registry of requests in flight that Forget waits for and
     drains; nothing new starts after Forget.
   - *Out of scope by design*: consistency between two flats without Forget in between, since the app never does that.
@@ -177,7 +177,7 @@ loaded with the key and never bundled.
   back to the page. The app fetches `GET /viewer` itself, over the pinned connection, and hands the page to the web
   view (under a made-up `.invalid` origin, with every network load blocked): the web view never talks to the network,
   the key never enters it, and flatd's identity is checked in one place instead of also in WebKit.
-- **The 3D page is kept on the phone** (2026-11-20, Patrik: "the flat model takes a while to load, can we improve
+- **The 3D page is kept on the phone** (2026-11-20, the owner: "the flat model takes a while to load, can we improve
   that?", "keeping it loaded when switching tabs is smart", and "copy on phone seems sensible too"). The app keeps
   one copy in its own container under `Application Support/ArestiaViewer/`, excluded from backups and readable
   after the first unlock (`completeUntilFirstUserAuthentication`). The copy must match the pairing's id and
@@ -199,20 +199,20 @@ loaded with the key and never bundled.
   `ForgottenPageCleanupTests`, the viewer's `npm run phone`.
 - **Shortcuts, Siri and NFC** (App Intents, `ArestiaShared/ArestiaIntents.swift`): Start cooking, End cooking, Fans on
   (minutes and fan optional), Fans off, Move a blind (which, and up / down / favourite / stop, from flatd's list), Air
-  out, All blinds down. Patrik's NFC tag is a personal automation in Shortcuts that runs Start cooking. They run without
+  out, All blinds down. The owner's NFC tag is a personal automation in Shortcuts that runs Start cooking. They run without
   opening the app.
 - **Control Center** (`ArestiaControls`, iOS 18 `ControlWidget`): Cooking and Fans as toggles, and a Blind control per
-  blind (chosen when it is added; up when on, down when off). Home-screen widgets: not yet (Patrik).
+  blind (chosen when it is added; up when on, down when off). Home-screen widgets: not yet (owner).
 - **Look:** the province apps' wall and glass cards, with **hearth ember** as the one accent (`AppAccent.arestia`:
   `#FF9A62` dark, `#A8481A` light, 4.98:1 on the light wall), used only for what is on or the one thing to press. The
-  mark is real fire (Patrik, 2026-11-20: "lets go real fire", after five rounds of drawn flames and Hestia busts,
+  mark is real fire (owner, 2026-11-20: "lets go real fire", after five rounds of drawn flames and Hestia busts,
   which he found ugly or too close to Artemis): the icon a flame on black, the header's mark the same flame on clear,
   with a light-appearance variant whose core is gold instead of white and whose fringe is orange instead of pink, so it
   reads on the light wall. Generic fire, nothing of the flat.
 
-## After build 2 (2026-11-20, Patrik's first day with it)
+## After build 2 (2026-11-20, the owner's first day with it)
 
-Patrik, after trying build 2 on his iPhone: he loved it, and asked for three changes.
+The owner, after trying build 2 on his iPhone: he loved it, and asked for three changes.
 
 - **Renaming devices.** "can we make the names of things changable so I can name rename things?"
   - *Where the name lives: in flatd*, not in the app (flatd contract v1.3, `PATCH /api/devices/{id}` with
@@ -317,14 +317,14 @@ From the renaming (2026-11-20):
   (flatd before 1.3) keeps the page's words.
 - [ ] The desktop viewer takes names from `GET /api/devices` and each snapshot, so it shows a rename after its next
   connect; handling the `device` event would make it live.
-- [ ] Claude reads names through the MCP tools' `list_devices`; there is no rename tool yet (Patrik renames in the
+- [ ] Claude reads names through the MCP tools' `list_devices`; there is no rename tool yet (the owner renames in the
   app). Add `rename_device(id, label)` if he wants Claude to rename too.
 - [ ] Deploy flatd 1.3 before an Arestia build with renaming reaches the phone (the build works with 1.2, but Rename
   then only says flatd can't rename yet).
 
 Left from the final reviews (rounds 8 and 9, Codex gpt-6.2-astra, 2026-11-20; none blocking):
 
-- [ ] On Patrik's iPhone, the first run against the real flatd: pairing with `flatd pair`'s code, Cooking on and off
+- [ ] On the owner's iPhone, the first run against the real flatd: pairing with `flatd pair`'s code, Cooking on and off
   (the NFC tag's Shortcut too), the fans with a timer, a blind dragged and stopped, the 3D tab, the Cooking, Fans and
   Blind controls in Control Center, Forget this flat and pairing again.
 - [ ] A blind sent down from the 3D page while flatd is being found (reconnecting), then stopped on Home: the
@@ -353,7 +353,7 @@ From the renaming's last review (round 4, Codex gpt-6.2-astra, SAFE; rare, not b
   outcome so an accepted list can supply its own label. The mode-trouble note still uses `UserDefaults` across the two
   processes.
 
-From the 3D tap path's eleven reviews (Codex gpt-6.2-astra, 2026-11-20; Patrik: "Ship it" after round 11, build 3).
+From the 3D tap path's eleven reviews (Codex gpt-6.2-astra, 2026-11-20; the owner: "Ship it" after round 11, build 3).
 Each round's cases are fixed in the private viewer with a phone test that fails on the code before (77 tests):
 
 - [x] A tap reaches only a device whose own drawn surface shows at the tap or on rings round it (up to 30 px, nearest
@@ -368,12 +368,12 @@ Each round's cases are fixed in the private viewer with a phone test that fails 
 ## iPhone features (IPHONE-APPS.md checklist)
 
 - Control Center controls: yes (above). Siri and Shortcuts: yes, also the way to NFC tags.
-- Home and lock screen widgets: not yet (Patrik, 2026-11-19).
+- Home and lock screen widgets: not yet (owner, 2026-11-19).
 - Live Activities: a good fit later (cooking on the lock screen with Done cooking); not built.
 - Share sheet, Spotlight, Maps, Calendar, Face ID, on-device AI: none fit. The camera only reads flatd's QR code.
 
 ## Not in this repo
 
-flatd (its code and contract), the flat's model and the viewer stay private, in Patrik's own folders. The fake flatd
+flatd (its code and contract), the flat's model and the viewer stay private, in the owner's own folders. The fake flatd
 here has made-up devices only (Fan 1, Fan 2, Desk lamp, Blind 1, Blind 2, Plug 1) and a stand-in page at `/viewer` that speaks the
 same bridge.

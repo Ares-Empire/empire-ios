@@ -6,8 +6,8 @@ Repo: aresium · Worktree: `~/aresium-13-shop-list` (branch `claude/13-shop-list
 ## Goal
 
 The app sorts a payment with no AI and no manual step when the shop is on its built-in list (REWE → Groceries, ZARA
-→ Clothes). Measured on Patrik's payments, today's 288 patterns sort 64% on day one with 95% right, and they cut a new
-user's corrections by two thirds. Patrik (2026-10-27): expand the list as much as possible. More known shops means
+→ Clothes). Measured on the owner's payments, today's 288 patterns sort 64% on day one with 95% right, and they cut a new
+user's corrections by two thirds. The owner (2026-10-27): expand the list as much as possible. More known shops means
 fewer corrections for every friend who uses the app; a wrong match costs a correction and confuses, so **precision
 comes first**.
 
@@ -54,7 +54,7 @@ comes first**.
 
 ## Settled: do not re-open
 
-- Precision before size. Patrik's payments decide (Claude runs the bench afterwards: the share sorted must rise and
+- Precision before size. The owner's payments decide (Claude runs the bench afterwards: the share sorted must rise and
   the share right must stay at least 95%).
 - Starter rules apply only when their category is on the person's list (unchanged).
 - No AI and no network at runtime.

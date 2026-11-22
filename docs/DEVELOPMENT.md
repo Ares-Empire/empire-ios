@@ -1,7 +1,8 @@
 # Developing the Ares iPhone apps
 
 How the repository is laid out, how push is wired and how a build reaches TestFlight. The overview is in the
-[README](../README.md); the full working notes are in [CLAUDE.md](../CLAUDE.md), the rules for coding agents in
+[README](../README.md); the rules in [CLAUDE.md](../CLAUDE.md), the notes per app in [docs/apps/](apps/) and on the shared pieces in
+[SHARED.md](SHARED.md), the rules for coding agents in
 [AGENTS.md](../AGENTS.md).
 
 ## Layout
@@ -13,7 +14,7 @@ empire-ios/
   Aresus/         Aresus.xcodeproj: the watchtower (every province, the server) and Aresync's sync runs, its
                   status widget (home and lock screen), tests
   Arestemis/      Arestemis.xcodeproj: the flat hunter (search, hunt, matches, applications), tests
-  Arestoteles/    Arestoteles.xcodeproj: Patrik's Weltbild vault (positions, topics, library, search, edits,
+  Arestoteles/    Arestoteles.xcodeproj: the owner's Weltbild vault (positions, topics, library, search, edits,
                   quick notes, Discuss with Claude, Spotlight), tests
   Shared/         compiled into every app: the Empire login (one login for all apps) and the account's own
                   actions (create, password, ask for access, leave an app, delete; Auth/), the network
@@ -65,7 +66,8 @@ and device rendering remain manual.
 
 The timing inventory is explicit in `scripts/test-unit.sh`. `--timing` runs only that inventory, including enabling
 the previously opt-in measurement suites. Local-places measurements use the shipped engine and packed list; these
-Debug simulator measurements do not replace the Release/device memory gates recorded in `CLAUDE.md`.
+Debug simulator measurements do not replace the Release/device memory gates in `docs/apps/Aresium.md` (budget) and
+`docs/reviews/2026-11-01-local-places-memory-gates.md`.
 
 The wall-clock audit (brief 242):
 

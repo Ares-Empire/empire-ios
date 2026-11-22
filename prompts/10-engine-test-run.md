@@ -9,7 +9,7 @@ Branches: `codex/10-engine-test-run` in both repos · Worktrees: `../empire-ios-
 Decide by measurement whether the iPhone app can run Aresium's own TypeScript logic (the dashboard and the bank-file
 readers) in JavaScriptCore, Apple's built-in JavaScript engine, and get exactly the server's results, fast enough.
 This is measurement M5 of `~/ares-empire/docs/ARESIUM-FOR-OTHERS.md` (read "1. One app, two modes" and "D1"): if it
-works, one engine serves both the server (Patrik) and phone mode (everyone else). Nothing in the app's screens changes.
+works, one engine serves both the server (owner) and phone mode (everyone else). Nothing in the app's screens changes.
 
 ## Read first
 

@@ -5,7 +5,7 @@ Repo: aresium · Worktree: `~/aresium-17-direction` (branch `claude/17-direction
 
 ## Goal
 
-Measured on Patrik's real payments after brief 13 (2026-10-27), two weaknesses of the shop list remain (the other wrong
+Measured on the owner's real payments after brief 13 (2026-10-27), two weaknesses of the shop list remain (the other wrong
 matches come from his PayPal double import, which the structural rule handles):
 
 1. **Keywords ignore the direction of the money.** "Miete" in money coming **in** (parents' "Miete und Unterhalt", a
@@ -36,7 +36,7 @@ matches come from his PayPal double import, which the structural rule handles):
 
 ## Settled: do not re-open
 
-- Precision first; the share right on Patrik's payments must reach at least 95% again (Claude measures).
+- Precision first; the share right on the owner's payments must reach at least 95% again (Claude measures).
 - No change to the list's sources or the deny list beyond what these two rules need.
 
 ## Done when

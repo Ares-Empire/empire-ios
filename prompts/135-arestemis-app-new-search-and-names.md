@@ -6,14 +6,14 @@ Branch: `claude/135-arestemis-new-search` · Worktree: `../empire-ios-135-areste
 
 ## Goal
 
-Patrik (2026-11-02), on the sketch at https://claude.ai/artifact/X2rxw1Vj9JotohSQaw2g8E (sections 1 and 2; open it):
+The owner (2026-11-02), on the sketch at https://claude.ai/artifact/X2rxw1Vj9JotohSQaw2g8E (sections 1 and 2; open it):
 
 - "The new search type selection menu is not pretty": "+" opens iOS's plain action sheet. After this brief it opens a
   **screen of its own**, "Neue Suche": one card per kind with what it does in one sentence and two or three examples
   that open the form already filled.
 - "Make searches nameable and renameable": today only the watch form has a name field, and renaming hides in the "…"
   menu. After this brief **every form has one Name field** (its grey placeholder is the automatic name; nothing else
-  explains it: Patrik found the sketch's first version showed "the same field 3 times"), and **renaming happens in
+  explains it: the owner found the sketch's first version showed "the same field 3 times"), and **renaming happens in
   place**: tap the name at the top of a search's page and it becomes that field, as Aresium renames a payment. A long
   press on a search's card offers Umbenennen (the same in-place field), Pausieren, Löschen.
 

@@ -6,7 +6,7 @@ Branch: `claude/133-arestemis-angebote` · Worktree: `../empire-ios-133-arestemi
 
 ## Goal
 
-Patrik (2026-11-02): with several searches, the Listings tab (German: "Angebote") gets unorganized: today it is one
+The owner (2026-11-02): with several searches, the Listings tab (German: "Angebote") gets unorganized: today it is one
 list with a row of chips per search and the New · Saved · Applied · All switch on top of it. He chose this structure
 from three drawn options:
 
@@ -59,7 +59,7 @@ The chip row goes away.
 
 ## Settled: do not re-open
 
-- "New | Searches" with the search icon (Patrik's choice, 2026-11-02). The server ranks; the app shows its order.
+- "New | Searches" with the search icon (the owner's choice, 2026-11-02). The server ranks; the app shows its order.
 
 ## Out of scope
 

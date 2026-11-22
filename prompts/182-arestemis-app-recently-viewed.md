@@ -6,7 +6,7 @@ Branch: `claude/182-recently-viewed` · Worktree: `../empire-ios-182-recent` · 
 ## Goal
 
 Build 20 (brief 180) marks a listing read when its page opens, and read listings stayed in Angebote → Neu without
-their dot. Patrik, 2026-11-05: "It should leave neu. Not sure to where. Like a past / history sort of thing but limited
+their dot. The owner, 2026-11-05: "It should leave neu. Not sure to where. Like a past / history sort of thing but limited
 time maybe? Because if you want to look at it again just favor it". Decided (Claude):
 
 - **Neu shows only unread listings.** Opening a listing takes it out of Neu (when the person comes back from its page,

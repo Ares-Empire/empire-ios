@@ -4,7 +4,7 @@ Status: merged 2026-11-19 (fresh Claude reviewer SAFE). Builder: Codex `gpt-6-lu
 Branch: `codex/313-more-filter-words` · Worktree: `../empire-ios-313-filter-words`
 
 The Arestemis server now accepts 60 excluded words per search instead of 20 (server brief 313). Each word stays at most
-40 characters. Patrik agreed to more filter words on 2026-11-13.
+40 characters. The owner agreed to more filter words on 2026-11-13.
 
 Change only this:
 

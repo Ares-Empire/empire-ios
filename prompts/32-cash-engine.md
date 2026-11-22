@@ -6,7 +6,7 @@ Rules: `~/aresium/AGENTS.md`
 
 ## Goal
 
-Patrik tried receipts (2026-10-28) and found the gap: **cash that never came from the bank** (a cash gift, money from
+The owner tried receipts (2026-10-28) and found the gap: **cash that never came from the bank** (a cash gift, money from
 selling something). A cash receipt paid with it is today taken out of a bank withdrawal, which is wrong. He wants (D9 in
 `~/ares-empire/docs/ARESIUM-FOR-OTHERS.md`, read it first, with D8 and part 6):
 

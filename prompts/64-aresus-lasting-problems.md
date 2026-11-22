@@ -6,7 +6,7 @@ server repo, not of empire-ios) · Model: `gpt-6.1-sol`, effort `high`
 
 ## Goal
 
-Arestemis's Telegram bot is retired, and Arestemis never tells its users about outages. Patrik (2026-10-31) wants
+Arestemis's Telegram bot is retired, and Arestemis never tells its users about outages. The owner (2026-10-31) wants
 those alerts in **Aresus**, for him only: when a search portal blocks the server or fails for a long time, when the AI
 check fails. **They must not overdo it.** The old bot sent "we're blocked" and ten minutes later "we're not blocked
 anymore", over and over; that is exactly what this brief prevents.
@@ -108,10 +108,10 @@ and replaces the alert on the lock screen.
 
 ## Settled: do not re-open
 
-- **Aresus decides, Arestemis reports.** The thresholds live in `checks.yaml` (Patrik can change a number without a
+- **Aresus decides, Arestemis reports.** The thresholds live in `checks.yaml` (the owner can change a number without a
   deploy of Arestemis); Arestemis's `/health` stays as it is in this brief.
 - 60 minutes before a portal problem counts, 30 minutes fine before it is over, normal (not time-sensitive) delivery,
-  quiet repeats within 6 hours: Claude's defaults from Patrik's "shouldn't be overdoing it"; he can change the numbers.
+  quiet repeats within 6 hours: Claude's defaults from the owner's "shouldn't be overdoing it"; he can change the numbers.
 - The province stays the unit of incidents and pushes (one Arestemis incident even when two portals fail; the line names
   the first counted check), as for every province today.
 - No app change: the new checks are ordinary rows on Arestemis's page in the Aresus app.

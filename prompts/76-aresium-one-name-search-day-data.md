@@ -1,12 +1,12 @@
 # 76: One name per shop, the search's ranking, a day's payments: the data
 
-Status: merged 2026-11-01 (696 Aresium tests; checked on Patrik's files: 101 of 167 shops get one name, none a PayPal or card line; Vinted "Vinted, UAB", Apple "Apple Services"; search 7.6 ms at 1,000 names)
+Status: merged 2026-11-01 (696 Aresium tests; checked on the owner's files: 101 of 167 shops get one name, none a PayPal or card line; Vinted "Vinted, UAB", Apple "Apple Services"; search 7.6 ms at 1,000 names)
 Branch: `codex/76-names-search-day` · Worktree: `../empire-ios-76-names-search-day` · Model: `gpt-6.1-sol`, effort
 `high` · The screens follow in brief 77 (a Claude agent), on this brief's API.
 
 ## Goal
 
-Patrik (2026-11-01, after build 9), three things:
+The owner (2026-11-01, after build 9), three things:
 
 1. "sometimes the issue still happens that the same vendor has different names". Claude checked his real files on the
    Mac (they never leave it): Vinted is one shop to Aresium (brief 48's shop identity groups all of its payments, so
@@ -45,7 +45,7 @@ Patrik (2026-11-01, after build 9), three things:
 2. **The search's ranking** (pure, tested; `Model/NameSearch.swift`): `NameSearch.results(for query: String, in
    groups: …) -> [NameSearchResult]` over the dashboard's name groups (`Dashboard.nameGroups`, phone mode only). A
    group matches through any of its names: the shown name, each own name in it, and every bank line of its payments
-   (Patrik: "own given and also original names"). Folding: case and diacritics ignored, "ß" = "ss", punctuation as a
+   (owner: "own given and also original names"). Folding: case and diacritics ignored, "ß" = "ss", punctuation as a
    space. Every word of the query must match. Best match first, by tier:
    1. a name equal to the query;
    2. a name that starts with the query;

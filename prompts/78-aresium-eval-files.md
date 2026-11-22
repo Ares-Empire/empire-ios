@@ -6,7 +6,7 @@ effort `high` · Runs beside brief 79 (the sorting test set, `eval/sorting/`); y
 
 ## Goal
 
-Patrik (2026-11-01) wants Aresium approved for more testers, and before that, the reading of bank files and the
+The owner (2026-11-01) wants Aresium approved for more testers, and before that, the reading of bank files and the
 sorting made as good as we can, measured rather than guessed: "I think we generate different csvs and also some
 custom difficult ones to test if the reading fails and if we can improve it."
 

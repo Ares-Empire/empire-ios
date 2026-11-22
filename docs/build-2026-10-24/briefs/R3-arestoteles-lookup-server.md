@@ -1,7 +1,7 @@
 # R3: Arestoteles server additions for quick lookups, notes and "discuss later"
 
 Read `COMMON.md` (same folder) first; its rules hold (only your worktree, commit but never push or merge, no SSH, no
-secrets; Patrik's real vault `~/Documents/Patrik Breeck/Weltbild` is read only for you, never copy its content).
+secrets; the owner's real vault `~/Documents/<owner>/Weltbild` is read only for you, never copy its content).
 Worktree: `~/wt/Arestoteles-lookup` (branch `lookup`; the service is live from `main`). Venv:
 `/opt/homebrew/bin/python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'`; tests `.venv/bin/python -m pytest -q`.
 Read `CLAUDE.md`, `docs/API.md` (the contract, version 1 with its additions), `src/arestoteles/` (reader, edits,
@@ -9,7 +9,7 @@ index, models), and the vault's own `CLAUDE.md` (Inbox notes: raw input, verbati
 
 ## Why
 
-Patrik uses the app mostly to look up a fact, a figure or a source, and wants to leave notes and "discuss this later"
+The owner uses the app mostly to look up a fact, a figure or a source, and wants to leave notes and "discuss this later"
 marks from the phone instead of changing his considered positions there. The app gets a compact note view, sentence
 search, editing of a single paragraph, notes attached to a position or note, and a "to discuss" list. The server needs
 three additions to the contract (mark each `CONTRACT ADDITION (2026-10-24, lookup)` in `docs/API.md`, update the

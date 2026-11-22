@@ -5,7 +5,7 @@ Branch: `claude/40-sheets` · Worktree: `../empire-ios-40-sheets` · Built by: a
 
 ## Goal
 
-Patrik approved the comfort list of brief 38 (2026-10-30, all items). This brief builds the items in Aresium's windows
+The owner approved the comfort list of brief 38 (2026-10-30, all items). This brief builds the items in Aresium's windows
 (receipts, cash, the file check); brief 41 runs in parallel on the dashboard and the shared Settings. After this brief a
 person can put a question off without saying no, undo a No in the file check, close the number pad, never loses typed
 text without being asked, and sees that a tapped button is working.

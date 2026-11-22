@@ -5,12 +5,12 @@ Read `COMMON.md` (same folder) first, then `~/empire-ios/CLAUDE.md` (Languages, 
 and `SettingsScreen.swift`, and each app's root (`<App>App.swift`, `ContentView.swift`). Worktree:
 `~/wt/empire-ios-langrestart` (branch `language-restart`). Simulator: create `agent-langrestart` yourself
 (`xcrun simctl create agent-langrestart "iPhone 17" com.apple.CoreSimulator.SimRuntime.iOS-27-0`); never use the
-booted "iPhone 17" (Patrik's). You may edit `Shared/`. Brief F2 (accounts) edits `Shared/Auth`, the login screens and
+booted "iPhone 17" (the owner's). You may edit `Shared/`. Brief F2 (accounts) edits `Shared/Auth`, the login screens and
 Settings → Account at the same time: stay out of those parts.
 
 ## Why
 
-Patrik (2026-10-25), after switching Aresus to English and seeing nothing change: "can we make them automatically
+The owner (2026-10-25), after switching Aresus to English and seeing nothing change: "can we make them automatically
 restart? and can we make it like most apps do so that you press 'English', a small window opens that basically tells
 you youre about to switch and the app will restart, you either hit cancel or apply ... and the app restarts. ... lets do
 that for all apps we have so far".

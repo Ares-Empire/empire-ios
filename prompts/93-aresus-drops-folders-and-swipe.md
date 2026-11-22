@@ -6,7 +6,7 @@ agent** (design work, `CLAUDE.md` → Workflow) · Simulator: `claude-93` (creat
 
 ## Goal
 
-Patrik sent his first file from the phone to the MacBook (build 2, briefs 88–91) and it worked. His notes from that
+The owner sent his first file from the phone to the MacBook (build 2, briefs 88–91) and it worked. His notes from that
 first try, 2026-11-02:
 
 1. "Is it possible to allow me to create and navigate inside folders from the phone?" Today the picker opens only
@@ -26,7 +26,7 @@ first try, 2026-11-02:
   + German in the String Catalogs, `scripts/strings.py sync`/`check`).
 - **Design language:** `~/ares-empire/EMPIRE.md` → "The crown language" and "How we build apps"; brief 91's screens
   are the reference (`Aresus/Aresus/Screens/SendSheet.swift`, `FolderPicker.swift`, `DropsSection.swift`) and
-  `Shared/Design/`. Patrik's taste: classy, calm, quiet; the lightning-blue accent only on the key control; plain small
+  `Shared/Design/`. The owner's taste: classy, calm, quiet; the lightning-blue accent only on the key control; plain small
   labels, no slogans.
 - No real personal data anywhere (samples are made up).
 

@@ -5,7 +5,7 @@ Branch: `codex/05-aresium-widgets` · Worktree: `../empire-ios-05-aresium-widget
 
 ## Goal
 
-Two home-screen widgets, decided with Patrik on 2026-10-23:
+Two home-screen widgets, decided with the owner on 2026-10-23:
 
 - **Medium** (the horizontal rectangle): the current month's spending as a line that climbs through the month
   (`byMonth[current].dayExpenseRunning`), with the month and its total (`byMonth[current].expense`).

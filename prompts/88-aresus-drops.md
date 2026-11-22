@@ -6,9 +6,9 @@ empire-ios) · Model: `gpt-6.1-sol`, effort `high`
 
 ## Goal
 
-Patrik sends a file or photo from the Aresus app; it lands in a chosen folder on his MacBook, from anywhere. This
+The owner sends a file or photo from the Aresus app; it lands in a chosen folder on his MacBook, from anywhere. This
 brief builds the server half: the app uploads, the server **encrypts the file on arrival with `age`** and keeps it
-only until the MacBook has fetched it, and it tells Patrik by push where it landed. The Mac half is brief 89 (built at
+only until the MacBook has fetched it, and it tells the owner by push where it landed. The Mac half is brief 89 (built at
 the same time, against the same contract), the app comes later.
 
 ## Rules for you (this repo has no AGENTS.md)

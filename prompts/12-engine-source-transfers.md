@@ -6,7 +6,7 @@ Repo: aresium · Worktree: `~/aresium-12-engine-source` (branch `claude/12-engin
 ## Goal
 
 Phone mode (other people's data on their iPhone) needs every step from stored payments to the finished dashboard in
-the shared engine, and the app must learn from the server whether an account uses server mode (Patrik) or phone
+the shared engine, and the app must learn from the server whether an account uses server mode (owner) or phone
 mode (everyone else). Today the step "payments in the database → dashboard source" lives in the database code
 (`src/data/queries.ts` → `getDashboardSource`), and the PayPal handling sits next to it. Move it into the engine
 without changing a single number on aresium.de, add the two transfer rules the measurements asked for, and add the
@@ -45,7 +45,7 @@ Measurements results ("Main error source in all layers": the PayPal lines). Code
    absolute amount, opposite signs, on different accounts, within 3 days, is an own transfer on both sides (also
    `structural`). Each payment pairs at most once; ties go to the closest dates. Tests, including two equal
    transfers on the same day and a near-match that must not pair.
-5. **Mode route:** `GET /api/mode` → `{"mode":"server"}` for an account in `EMPIRE_ALLOWED_USERS` (Patrik),
+5. **Mode route:** `GET /api/mode` → `{"mode":"server"}` for an account in `EMPIRE_ALLOWED_USERS` (owner),
    `{"mode":"phone"}` for any other approved account with the `aresium` service, 401 without a valid login, 403
    (`no_access`) without the service. This is the only route that does not require the owner list; every other route
    keeps its check. It stores and logs nothing about the account. Document it in `docs/API-DATA.md`.

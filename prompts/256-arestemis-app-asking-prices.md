@@ -1,11 +1,11 @@
 # 256: Arestemis app: asking prices on searches and listings
 
-Status: built (2026-11-07), on `claude/256-asking-prices`, waiting for Claude's review and merge. Arestemis server brief 254 is live (schema 26); board #47 (Patrik: "yes").
+Status: built (2026-11-07), on `claude/256-asking-prices`, waiting for Claude's review and merge. Arestemis server brief 254 is live (schema 26); board #47 (owner: "yes").
 Branch: `claude/256-asking-prices` · Worktree: `../empire-ios-256-prices` · Builder: Claude agent (design)
 
 ## Goal
 
-Patrik's idea (2026-11-05): record the prices of listings the server already reads, per thing search, and tell him
+The owner's idea (2026-11-05): record the prices of listings the server already reads, per thing search, and tell him
 what a fitting thing usually costs and whether a listing is cheap. The server now does it (Arestemis brief 254):
 for each Dinge search it keeps the **asking prices of the listings that fit** (within the search's own limits) for
 30 days, and every match can carry a verdict. No extra site reads, no extra checks. These are asking prices, not
@@ -75,7 +75,7 @@ The server is built and deployed: build from the contract.
 
 ## Not in this brief
 
-- A "doesn't fit" button using `POST /matches/{id}/reject` (the server has it): later, if Patrik wants it.
+- A "doesn't fit" button using `POST /matches/{id}/reject` (the server has it): later, if the owner wants it.
 - The web demo at arestemis.de follows in a separate brief once the screens are settled.
 
 ## Verification

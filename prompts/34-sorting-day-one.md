@@ -1,17 +1,17 @@
 # 34: Sorting on day one: card lines, branch towns, Vinted, PayPal conversions
 
-Status: merged 2026-10-30 (aresium e76fadd; engine tests 364; server /api/data identical on real data, deployed; Not sorted on Patrik's files 400 → 280)
+Status: merged 2026-10-30 (aresium e76fadd; engine tests 364; server /api/data identical on real data, deployed; Not sorted on the owner's files 400 → 280)
 Repo: **aresium** · Worktree: `../aresium-34-sorting` (branch `codex/34-sorting`) · Built by: Codex (`gpt-6.1-sol`,
 effort `high`) · Rules: `~/aresium/AGENTS.md`
 
 ## Goal
 
-Patrik's first test of phone mode with his real files (2026-10-30, `~/empire-ios/docs/reviews/2026-10-30-aresium-phone-test.md`,
+The owner's first test of phone mode with his real files (2026-10-30, `~/empire-ios/docs/reviews/2026-10-30-aresium-phone-test.md`,
 finding 2): with every default category ticked, 43% of his payments (own transfers not counted) stay Not sorted, and a
 correction often does not carry over to the next payment of the same shop. After this brief the engine sorts the
 common cases on day one and one correction covers a shop. No AI, no network, no noticeable growth of the bundle.
 
-Claude measures the result on Patrik's real files afterwards (they never leave his Mac: **you get no real data**;
+Claude measures the result on the owner's real files afterwards (they never leave his Mac: **you get no real data**;
 build made-up fixtures that follow the patterns below exactly).
 
 ## Read first
@@ -25,7 +25,7 @@ build made-up fixtures that follow the patterns below exactly).
 ## Build
 
 1. **VR Bank card lines get a stable merchant key.** A VR Bank card payment has no counterparty; the whole line is in
-   Verwendungszweck, with runs of spaces between parts. Made-up example of the exact shape (all 392 of Patrik's card
+   Verwendungszweck, with runs of spaces between parts. Made-up example of the exact shape (all 392 of the owner's card
    lines look like this, the tail is always "MC Hauptkarte"):
    `Penny Musterstadt          DEU Musterstadt            EUR   9,47 Umsatz vom 08.10.2026 MC Hauptkarte`
    Shapes seen: `<merchant>  <3-letter country> <town>  <currency> <amount> Umsatz vom <dd.mm.yyyy> <card words>`;
@@ -44,7 +44,7 @@ build made-up fixtures that follow the patterns below exactly).
    for any payee text: a hand-list merchant followed by exactly one more word that is the town of the same line, or
    one of `citySuffix`'s cities, matches. Never match the exceptions the list already has (`penny reisen`, `penny
    mobil`, `pennyblack`; add tests that they stay unmatched). Do not add a list of all German towns (size).
-3. **Vinted sorts to Clothes.** Vinted is in `MARKETPLACES` (left out as "can be anything"). Patrik (2026-10-30): Vinted
+3. **Vinted sorts to Clothes.** Vinted is in `MARKETPLACES` (left out as "can be anything"). The owner (2026-10-30): Vinted
    is clothes for him, and that is what most people buy there. Take `vinted` out of `MARKETPLACES` and add a
    hand-written rule Clothes, money out, for `vinted` and `kleiderkreisel` (its old name). It must match both spellings
    PayPal writes: `MGP Vinted - Kleiderkreisel` and `Vinted, UAB`. Money in from Vinted (a sale) stays unsorted.

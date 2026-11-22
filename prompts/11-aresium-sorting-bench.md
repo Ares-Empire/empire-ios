@@ -6,7 +6,7 @@ Branch: `codex/11-sorting-bench` in aresium · Worktree: `~/aresium-11-sorting-b
 ## Goal
 
 Build the sorting layers of Aresium for other people as part of the shared engine (they ship in the app later), and a
-bench that measures them on Patrik's real payments **on the server**, printing only totals. Plan:
+bench that measures them on the owner's real payments **on the server**, printing only totals. Plan:
 `~/ares-empire/docs/ARESIUM-FOR-OTHERS.md` → part 4 (categories), part 5 (sorting), Decisions D6, Measurements M1–M3.
 
 ## Rules (aresium has no AGENTS.md; these apply)
@@ -54,7 +54,7 @@ bench that measures them on Patrik's real payments **on the server**, printing o
 5. `src/sort/groq.ts`: the auto-sort call the future server route will use: given category names and payments (date,
    amount, booking text, counterparty, a reference), asks Groq in batches of 25 (temperature 0, JSON answer), returns a
    category name from the list or null per reference; unknown names count as null. A generic prompt (a person's bank
-   payments, their own category list; nothing about Patrik). Model as a parameter, default `llama-3.3-70b-versatile`.
+   payments, their own category list; nothing about the owner). Model as a parameter, default `llama-3.3-70b-versatile`.
    Reports tokens and time per batch. Never logs payment content.
 
 **The bench (`bench/`, run with `npx tsx bench/run.ts`):**
@@ -62,7 +62,7 @@ bench that measures them on Patrik's real payments **on the server**, printing o
 6. `bench/export.ts`: reads from the database **read only** (Prisma `findMany` only): every transaction whose
    `categorySource` is `rule` or `manual` (the answer key, D6), with date, amount, description, counterparty, true
    category name; writes `bench/out/data.json` (`bench/out/` git-ignored).
-7. `bench/category-map.json`: Patrik's category → acceptable default ids, exactly:
+7. `bench/category-map.json`: the owner's category → acceptable default ids, exactly:
    ```json
    {"Groceries":["groceries"],"Drogerie":["drugstore"],"Restaurants":["eating-out","coffee-snacks"],
     "Drinking":["going-out"],"Clothes":["clothes"],"Non-essentials":["shopping","household"],
@@ -75,7 +75,7 @@ bench that measures them on Patrik's real payments **on the server**, printing o
    ```
    `null`: a category of his own with no default (in the default scenario it stays a custom category by that name).
 8. `bench/run.ts`: reads `bench/out/data.json`, runs, writes `bench/out/results.md` and prints it. Two scenarios:
-   - **A, his own list:** the category list is Patrik's names as custom categories. Starter rules count when their
+   - **A, his own list:** the category list is the owner's names as custom categories. Starter rules count when their
      default id maps to exactly one of his categories.
    - **B, the default list:** he ticks every default id that appears in the map, plus `Development` and `Trash` as
      custom ones and the built-in `own-transfers`; a prediction is right when it is in the payment's acceptable set.
@@ -96,7 +96,7 @@ bench that measures them on Patrik's real payments **on the server**, printing o
    shares, category names and month labels. Test this: generate made-up data with marked texts and assert none appears
    in `results.md`.
 9. `bench/fake-data.ts`: writes made-up `bench/out/data.json` in the export's shape (a few hundred payments over 12
-   months, realistic German merchants and Patrik's category names) for testing.
+   months, realistic German merchants and the owner's category names) for testing.
 
 ## Settled: do not re-open
 

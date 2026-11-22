@@ -7,7 +7,7 @@ first (`scripts/aresium-engine.sh`) · The screens follow in brief 203 (a Claude
 
 ## Goal
 
-Patrik (2026-11-02) named expenses that were paid back to him (one in full, two by half) and expected them to show only
+The owner (2026-11-02) named expenses that were paid back to him (one in full, two by half) and expected them to show only
 his share. He chose a link made by hand: a payment that came in **pays back** a payment that went out, all of it
 or a part; those euros then come off the expense and are not income. Brief 201 taught the engine to count such links
 (`~/empire-ios/prompts/201-aresium-paid-back-engine.md`: the rules, limits and output fields). This brief stores the

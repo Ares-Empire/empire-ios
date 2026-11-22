@@ -1,11 +1,11 @@
-# 51: Arestoteles comfort before its first TestFlight build (Patrik's list nos. 23–26)
+# 51: Arestoteles comfort before its first TestFlight build (the owner's list nos. 23–26)
 
 Status: merged 2026-10-30 (130 tests; Positions, the discard questions, note pages and the undo bar checked on the simulator)
 Branch: `codex/51-arestoteles-comfort` · Worktree: `../empire-ios-51-arestoteles-comfort` · Model: `gpt-6.1-sol`, effort `high`
 
 ## Goal
 
-Patrik approved the comfort list for Arestoteles (2026-10-30, all items). After this brief no sheet throws away typed
+The owner approved the comfort list for Arestoteles (2026-10-30, all items). After this brief no sheet throws away typed
 text without asking, note pages keep the tab bar, a position can be added from the top of Positions, and To discuss →
 Done can be undone.
 

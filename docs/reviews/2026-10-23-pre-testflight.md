@@ -18,9 +18,9 @@ and 2 overlapped on most of the rest, so the findings below are merged (seat num
 
 No finding changes what is built or why: server-side calculation, the token-free widget, the Keychain handling and
 the project structure held up under all four seats. Seats disagreed on what blocks the first build (seat 1: nothing;
-seat 2: only signing; seats 3 and 4 each named two items). Claude's call: for an internal build on Patrik's own phone
+seat 2: only signing; seats 3 and 4 each named two items). Claude's call: for an internal build on the owner's own phone
 only signing blocks, but everything accepted below is done before that build, since we are waiting for Apple anyway.
-Two findings are about what the numbers mean and go to Patrik (D1, D2).
+Two findings are about what the numbers mean and go to the owner (D1, D2).
 
 ## Done (2026-10-23)
 
@@ -66,16 +66,16 @@ Two findings are about what the numbers mean and go to Patrik (D1, D2).
 - Before upload: a Release build for a generic device; put both widgets on the simulator's home screen once (Edit
   Widget, row taps: the small widget's per-row `Link` may not work, seat 2) .
 
-## For Patrik
+## For the owner
 
-- **D1 → done 2026-10-24** (aresium 88bd6ac, Patrik: leave dollars out): purchases count at their euro cost, both
+- **D1 → done 2026-10-24** (aresium 88bd6ac, the owner: leave dollars out): purchases count at their euro cost, both
   conversion rows drop out; real data all time: spending −€15.49, income −€262.42. Original finding:
   **Payments in US dollars** (seat 3; confirmed on real data: 18 USD rows). Each PayPal dollar purchase is
   counted as the same number of euros, and its "Allgemeine Währungsumrechnung" partner row counts as income
   (4 of them uncategorised, under "Other"). The website has always shown it this way. Proposal: count the euro leg of
   each PayPal conversion as the purchase and drop the dollar rows from the totals (server-side, like bank funding).
-- **D2 → done 2026-10-24** (Patrik: yes, add the note): brief 07, merged. Original finding: **"This month" on the widget** (seat 3). It shows the latest month that has transactions, so on 1 November,
-  before the first November import, it still shows October (correctly labelled). Patrik asked for "the month that I'm
+- **D2 → done 2026-10-24** (owner: yes, add the note): brief 07, merged. Original finding: **"This month" on the widget** (seat 3). It shows the latest month that has transactions, so on 1 November,
+  before the first November import, it still shows October (correctly labelled). The owner asked for "the month that I'm
   in". Proposal: show the calendar month with "nothing imported yet for November · last data 30 Oct".
 
 ## Noted, not now

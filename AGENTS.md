@@ -6,7 +6,8 @@ a personal finance dashboard). Claude plans the work, writes your brief and chec
 ## Read first
 
 1. **`CLAUDE.md`**, **`README.md`** and **`docs/DEVELOPMENT.md`**: what this repo is and its rules. They apply to you in full. The
-   section "Workflow" in `CLAUDE.md` is about how Claude runs you; you can skip it.
+   section "Workflow" in `CLAUDE.md` is about how Claude runs you; you can skip it. Then the notes for what your brief
+   touches, as `CLAUDE.md`'s table says: `docs/apps/<App>.md` and, for shared code, `docs/SHARED.md`.
 2. **Your brief** (`prompts/NN-*.md`). It says what to build, what to read, what "done" means, and which
    questions are settled. Do not re-open settled questions; if you think one is wrong, say so in your
    final message and build what the brief says.
@@ -31,13 +32,13 @@ a personal finance dashboard). Claude plans the work, writes your brief and chec
 - Do not edit `*.xcodeproj/project.pbxproj` unless the brief says so. The project uses folder-synchronized
   groups: a new Swift file in the right folder is picked up without it.
 - Keep logic (models, API client, decoding, formatting) out of the views and give it unit tests.
-- Every screen works in light and dark (`CLAUDE.md` → Light mode): colours come from the shared pairs (`Ink`,
+- Every screen works in light and dark (`CLAUDE.md` → The look; details in `docs/SHARED.md` → Light mode): colours come from the shared pairs (`Ink`,
   `AppAccent`, `StatusTone`, the app's own style), never `.white`, `.black` or a fixed `Color(hex:)` for text or
   surfaces; never call `preferredColorScheme`.
 - No secrets, API keys, passwords, personal data or real transaction data in files, fixtures or tests. Use
   made-up sample data. Server URLs are fine.
 - Code, comments and docs in plain English. UI text is written in English in the code and translated to German in
-  the String Catalogs: every app speaks both (`CLAUDE.md` → Languages; `String(localized:)` for text built as a
+  the String Catalogs: every app speaks both (`CLAUDE.md` → Languages, details in `docs/SHARED.md` → Languages; `String(localized:)` for text built as a
   `String`, the folder's table in `Shared/`, `AresiumShared/`, `AresusShared/`). Leave the German to Claude unless the
   brief asks for it, and say in your final message which strings you added.
 

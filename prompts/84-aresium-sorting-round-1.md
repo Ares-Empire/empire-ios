@@ -7,7 +7,7 @@ Repo: **aresium** · Worktree: `../aresium-84-sorting-round-1` (branch `codex/84
 
 ## Goal
 
-Patrik (2026-11-01): "Once we have first numbers on the test set we can investigate failures and try to improve
+The owner (2026-11-01): "Once we have first numbers on the test set we can investigate failures and try to improve
 autosort." Brief 79's test set has its first numbers (`eval/history.csv`, `npm run eval:sorting`):
 
 | Part | Cases | Sorted | Right | Wrong | Missed | Unsorted right |
@@ -16,8 +16,8 @@ autosort." Brief 79's test set has its first numbers (`eval/history.csv`, `npm r
 | Held back | 622 | 333 | 322 | 11 | 138 | 151 |
 
 When Aresium sorts it is right 97% of the time; it leaves too much unsorted that has a clear answer (304 "missed").
-Patrik's own data (checked by Claude, counts only) agrees: a new person's day one sorts 77.5%, 98.9% of those as he
-has them. This round makes the built-in sorting find more, **without more wrong answers** (Patrik: a wrong category
+The owner's own data (checked by Claude, counts only) agrees: a new person's day one sorts 77.5%, 98.9% of those as he
+has them. This round makes the built-in sorting find more, **without more wrong answers** (owner: a wrong category
 is worse than a gap).
 
 ## Read first
@@ -64,7 +64,7 @@ find the rest, and say for each what you changed:
    export imported, `transfers.ts` treats every bank-side PayPal line as the funding of a PayPal purchase (an own
    transfer). A person whose PayPal export covers fewer months than the bank file loses the bank's PayPal purchases
    of the other months. Treat a bank PayPal line as an own transfer only within the dates the person's PayPal rows
-   cover (with a few days' margin), and add a test for a bank file longer than the PayPal export. Patrik's own
+   cover (with a few days' margin), and add a test for a bank file longer than the PayPal export. The owner's own
    payments must not change by this (Claude checks; his exports cover the same months).
 
 After each group run `npm run eval:sorting` and keep the change only when the worked-on part finds more and wrong does
@@ -86,7 +86,7 @@ not rise. Report the held-back totals before and after (totals only).
   `src/engine/` (each new word or rule with a positive and a negative case).
 - The final message has the score before and after for both parts (`npm run eval:sorting`), per group above what
   changed and its effect, and anything you chose not to do and why.
-- Claude then runs `eval/sorting/own-data.ts` on Patrik's export (counts only) and records the scores.
+- Claude then runs `eval/sorting/own-data.ts` on the owner's export (counts only) and records the scores.
 
 ## Final message
 

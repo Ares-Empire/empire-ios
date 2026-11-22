@@ -6,7 +6,7 @@ Branch: `codex/69-category-sides` · Worktree: `../empire-ios-69-category-sides`
 
 ## Goal
 
-Patrik (2026-11-01): "own categories for income. but not all default categories should show up there … not sure if
+The owner (2026-11-01): "own categories for income. but not all default categories should show up there … not sure if
 custom categories should be automatically shared between income and expenses because it could unnecessarily bloat the
 menu", and then: "if category A is on expenses but also has incomes then it should be addable not just switchable."
 
@@ -111,7 +111,7 @@ gives every place that offers categories one rule. No screen changes here beyond
 
 - Every screen's look (brief 70): the tiles, Settings' side choice and its rows.
 - The engine (brief 68), server mode, the server sample.
-- Whether paid-back money also counts as income (Patrik decides separately).
+- Whether paid-back money also counts as income (the owner decides separately).
 
 ## Done when
 

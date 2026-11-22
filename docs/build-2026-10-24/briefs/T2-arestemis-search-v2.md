@@ -6,7 +6,7 @@ secrets). Worktree: `~/wt/Arestemis-search` (branch `search-v2`). Make a venv th
 
 ## Why
 
-Patrik found the search too fiddly: three kind buttons (own flat / room in a WG / empty 2-person WG), rent tiers,
+The owner found the search too fiddly: three kind buttons (own flat / room in a WG / empty 2-person WG), rent tiers,
 separate furnished and size fields. He wants: WG or not or both (optional), how many people move in, max flatmates,
 m² min and max, city, cold and warm rent ranges, dates, portals, extras. **Every filter is optional on its own**
 (it only changes how many listings pass); only places and portals are required.

@@ -7,7 +7,7 @@ merge. No network except installing your brief's packages into the worktree's `.
 
 ## Why
 
-Patrik decided (2026-10-24) that every Empire app speaks English and German: `~/ares-empire/docs/LANGUAGES.md`. Read it
+The owner decided (2026-10-24) that every Empire app speaks English and German: `~/ares-empire/docs/LANGUAGES.md`. Read it
 first; it is the rule you build. The iPhone apps are being translated by the lead. Your part: the sentences the
 servers write for the apps and their notifications.
 

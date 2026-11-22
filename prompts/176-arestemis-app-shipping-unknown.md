@@ -6,7 +6,7 @@ Branch: `codex/176-shipping-unknown` · Worktree: `../empire-ios-176-shipping-un
 ## Goal
 
 Today an offer whose shipping is unknown can never be the cheapest of a Preismonitor "Überall": the app shows "Total
-unknown" in its row and never shows it on the card. Patrik decided (2026-11-05) that it is not counted as 0 € (furniture
+unknown" in its row and never shows it on the card. The owner decided (2026-11-05) that it is not counted as 0 € (furniture
 delivery can be 50–150 €). Instead, an offer whose price alone is below the cheapest known total shows at the top
 with **"+ Versand unbekannt"**, its alarm says so, and the chart keeps known totals only. The server (Arestemis brief
 175) now sends what is needed; this brief shows it.
@@ -64,7 +64,7 @@ with **"+ Versand unbekannt"**, its alarm says so, and the chart keeps known tot
 
 ## Settled: do not re-open
 
-- The words are "+ Versand unbekannt" / "+ shipping unknown", Patrik's (2026-11-05). Not "ab", not an icon, not a
+- The words are "+ Versand unbekannt" / "+ shipping unknown", the owner's (2026-11-05). Not "ab", not an icon, not a
   colour: the existing quiet text style. One purple accent, nothing new.
 - Unknown shipping is never shown as 0 € and never summed in the app.
 - The chart stays on known totals.

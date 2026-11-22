@@ -1,13 +1,13 @@
 # Swipe back, ways out and comfort (2026-10-30)
 
-Patrik's phone test of build 2 (`2026-10-30-aresium-phone-test.md`, second round, findings 9 and 10): on the dashboard a
+The owner's phone test of build 2 (`2026-10-30-aresium-phone-test.md`, second round, findings 9 and 10): on the dashboard a
 swipe to the right did not go back, only the arrow did, and he asked which other screens should get the usual gesture,
 plus other comfort gaps, to choose from. Brief 38 built the swipe on Aresium's dashboard; the rest of this page is a
 list to choose from. Nothing in the lists is built yet. Sizes: S = under an hour, M = a few hours, L = a day or more.
 
 ## Aresium
 
-**Decided (Patrik, 2026-10-30): all items approved, built for build 3:** ways out 1 and 3 and comfort 2, 4 and 5 in
+**Decided (owner, 2026-10-30): all items approved, built for build 3:** ways out 1 and 3 and comfort 2, 4 and 5 in
 brief 40 (the windows); ways out 2 and 4 and comfort 1 and 3 in brief 41 (the dashboard, the shared Settings).
 
 ### Built: the back swipe on the dashboard (brief 38)
@@ -84,10 +84,10 @@ bar (the bar is hidden only on the tab roots, which have nothing to go back to),
 checked on the simulator with a scratch UI test in Aresus. The shared back-swipe piece is not needed there today.
 The shared account pages, Contact & support and Create account behave right on swipe down, except item 2 below.
 
-**Decided (Patrik, 2026-10-30): all items approved; build each app's items before that app's first TestFlight upload**
-(those apps are not on a phone yet; Aresium's items came first, briefs 40 and 41). "List no." is the number Patrik
+**Decided (owner, 2026-10-30): all items approved; build each app's items before that app's first TestFlight upload**
+(those apps are not on a phone yet; Aresium's items came first, briefs 40 and 41). "List no." is the number the owner
 chose from in chat (Aresium was 1–9). Shared 1 (Log out) is built with Aresium in brief 41; Shared 2 waits for the first
-of the other apps. **List no. 18 (Arestemis 6): Patrik did not follow it from the description**: before building it,
+of the other apps. **List no. 18 (Arestemis 6): the owner did not follow it from the description**: before building it,
 explain it to him and let him choose (see the item).
 
 ### Shared (every app)
@@ -121,7 +121,7 @@ explain it to him and let him choose (see the item).
    `SearchScreen.swift:183–186`). *Fix:* 44 pt tap areas. S
 5. **Listings stop at "Show older".** (List no. 17.) The list ends at a button instead of loading on as you scroll
    (`ListingsScreen.swift:96–101`). *Fix:* load the next page when the end comes into view. S
-6. **Add place: the keyboard's Search does nothing useful.** (List no. 18. **Patrik did not follow this one: explain
+6. **Add place: the keyboard's Search does nothing useful.** (List no. 18. **The owner did not follow this one: explain
    it to him before building, and let him choose.**) Where: Search tab → the places (towns) of the search → Add place,
    a sheet with one field, "Town or city" (`PlaceSearchSheet`, `SearchScreen.swift:452–490`). Today: as you type,
    matching towns appear below the field; you add one by tapping it. The keyboard's blue bottom-right key is labelled

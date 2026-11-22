@@ -14,7 +14,7 @@ sent through the app. Screenshots: `build/207-*.png` in the worktree.
 nothing in it overlaps or points at the wrong thing, and Import data reads CSV, CAMT and MT940 files (one or several
 at once). Two things the reviewer will see this week are worth fixing first if a build goes out before the review
 ends: the tour's "this month" is squeezed into 1–2 days at the start of a month, and Settings shows an Ares account
-sign-in that nobody but Patrik can use.
+sign-in that nobody but the owner can use.
 
 **I would hand it to a friend after three small fixes.** The main path (import, tick categories, quick sort, look
 around) works and reads well. What can go wrong for a friend: (1) tapping Done on the category list without ticking
@@ -87,7 +87,7 @@ them.**
 - *Screenshots:* `207-tour-01-de-light.png`, `207-tour-07-de-light.png`, `207-tour-02done-en-dark.png` (income: falls
   from €2,600 to €0).
 
-**5. Settings → Ares account: a sign-in nobody but Patrik can use.**
+**5. Settings → Ares account: a sign-in nobody but the owner can use.**
 - *Where:* Settings, last section "Ares account" → Sign in.
 - *What happens:* the section says "Only for an Aresium server of your own. Your data here stays on this iPhone."; the
   sheet has Email, Password, "One Ares account for all Ares apps", Log in and Forgot password, and no way to make an
@@ -107,7 +107,7 @@ not the screens; the guide's own notes flag all three.)
 - *PayPal* (`Guide/bank-steps.json`, website confidence "low"): the steps say "choose 'Benutzerdefiniert' and the
   report with your payments". The notes say PayPal has two CSV reports with different columns, the reader needs
   "Transaktionscode" and "Netto"/"Brutto", and drops hold rows by "Auswirkung auf Guthaben", which PayPal does not
-  include by default. A friend who picks the other report gets a file the app reads differently. Patrik's own PayPal
+  include by default. A friend who picks the other report gets a file the app reads differently. The owner's own PayPal
   file worked in build 1, so he knows which report: name it and its settings in the steps.
 - *N26:* the notes say it is unchecked whether app.n26.com works in Safari on the iPhone or sends you to the app.
   Many N26 users have only a phone. One look (no login needed to see where the page goes) settles whether the page

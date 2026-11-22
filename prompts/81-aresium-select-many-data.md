@@ -7,7 +7,7 @@ this brief's API.
 
 ## Goal
 
-Patrik (2026-11-01, on build 10): "lets make expenses / incomes selectable and then moveable / changable at the same
+The owner (2026-11-01, on build 10): "lets make expenses / incomes selectable and then moveable / changable at the same
 time. so e.g. Im in not sorted and select 10 expenses to move them into a different category at the same time or give
 all expenses the same name or smth like that. I think we add a small icon when inside a category that shifts
 statements slightly to the right and shows circles to tick like in Mail when selecting mails".

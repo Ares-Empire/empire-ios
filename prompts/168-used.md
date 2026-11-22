@@ -5,7 +5,7 @@ Branch: `codex/168-used` · Worktree: `../empire-ios-168-used` · Model: `gpt-6.
 
 ## Goal and read first
 
-Patrik wants “Auch gebraucht”: an Everywhere form switch and a separate “Gebraucht” list on the monitor page. The
+The owner wants “Auch gebraucht”: an Everywhere form switch and a separate “Gebraucht” list on the monitor page. The
 server finds used listings for the same product and handover; a price alarm may notify below its limit. The app
 presents those ordinary listings without mixing them into the new-goods shop prices or curve.
 

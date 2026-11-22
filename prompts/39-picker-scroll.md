@@ -5,7 +5,7 @@ Branch: `codex/39-picker-scroll` Â· Worktree: `../empire-ios-39-picker-scroll` Â
 
 ## Goal
 
-Patrik tested build 2 on his iPhone 17 (120 Hz: a frame is 8.3 ms; `docs/reviews/2026-10-30-aresium-phone-test.md`,
+The owner tested build 2 on his iPhone 17 (120 Hz: a frame is 8.3 ms; `docs/reviews/2026-10-30-aresium-phone-test.md`,
 "Second round", finding 8): scrolling the category picker is sometimes jerky, most of all after ticking some. After
 this brief nothing that runs after a tap or after the taps settle blocks the main thread long enough to drop frames
 while the person scrolls, and the numbers prove it. **Measure first:** if a suspect below turns out cheap, leave it.

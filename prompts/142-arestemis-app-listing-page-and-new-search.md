@@ -6,7 +6,7 @@ Branch: `claude/142-listing-page-new-search` · Worktree: `../empire-ios-142-lis
 
 ## Goal
 
-Patrik (2026-11-03), after using builds 12 and 13, on three screens:
+The owner (2026-11-03), after using builds 12 and 13, on three screens:
 
 1. **A new listing's page** "gives a kinda long reasoning why it fits. I'd argue that's not really needed. Because the
    idea is it fits because of the filter. If anything short notes on what couldn't be confirmed / wasn't included and
@@ -27,7 +27,7 @@ glance.
 - `AGENTS.md`, `CLAUDE.md` (design rules: no `.shadow` around content and nothing moving over a pathless shadow, brief
   87; no material under shadow/mask/group, brief 67; colours only from the shared pairs; light and dark; Languages;
   the Arestemis app entry: listings, New search, the tour), and `~/ares-empire/EMPIRE.md` → the design language.
-- The Empire's restraint (Patrik): gold only as an accent and never decoration, no slogans; a province app is classy
+- The Empire's restraint (owner): gold only as an accent and never decoration, no slogans; a province app is classy
   with **one accent colour** (Arestemis: purple), used for what matters, not spread over the whole screen.
 - `Arestemis/Arestemis/Screens/MatchDetailScreen.swift` (the listing page: the facts grid, "Why it fits", warnings,
   the description with its "more", the bottom buttons), `ApplicationSheet.swift`, `ListingRows.swift`/`MatchRow.swift`

@@ -6,11 +6,11 @@ Branch: `codex/54-shop-identity-app` · Worktree: `../empire-ios-54-shop-identit
 
 ## Goal
 
-Patrik (2026-10-30): his Vinted purchases from February ("MGP Vinted - Kleiderkreisel", Vinted's former company) and
+The owner (2026-10-30): his Vinted purchases from February ("MGP Vinted - Kleiderkreisel", Vinted's former company) and
 from October ("Vinted, UAB") are two shops in Aresium: they group, rename and learn separately. Brief 48 (aresium,
 merged as 01ebd85) taught the engine which merchant keys are one shop: `shopIdentities(keys)`, learning across one shop
 inside `sortPayments`, and foreign card lines no longer keep the exchange text in their key. Claude checked it on
-Patrik's real files on the Mac (counts only): 1,246 payments, sorting unchanged on the built-in list, 3 card keys
+the owner's real files on the Mac (counts only): 1,246 payments, sorting unchanged on the built-in list, 3 card keys
 cleaned, 19 payments follow a learned rule of the same shop, nothing lost. The bundle is already in this branch
 (Claude ran `scripts/aresium-engine.sh`; `Engine/engine-version.txt` says 01ebd85). This brief makes the app use it.
 

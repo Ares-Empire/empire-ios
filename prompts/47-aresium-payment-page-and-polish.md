@@ -1,11 +1,11 @@
-# 47: The payment's page made simpler (tap the name or the pen), build 4's gaps, and polish from Patrik's phone
+# 47: The payment's page made simpler (tap the name or the pen), build 4's gaps, and polish from the owner's phone
 
 Status: merged 2026-10-30 (Aresium 534 tests and Empire tests pass, the other apps build; switches green or the accent; back swipe equals Apple's)
 Branch: `claude/47-page-polish` · Worktree: `../empire-ios-47-page-polish` · Built by: a Claude agent (the look and the feel)
 
 ## Goal
 
-Patrik tested build 4 on his iPhone 17 (2026-10-30 evening): "very nice work", and:
+The owner tested build 4 on his iPhone 17 (2026-10-30 evening): "very nice work", and:
 
 - **C. Renaming is hard to find.** He wants the payment's page cleared up: the name editable where it stands, with a
   small pen next to it (a button too), the Name row and its Rename button gone; the category the same way (the
@@ -19,7 +19,7 @@ Patrik tested build 4 on his iPhone 17 (2026-10-30 evening): "very nice work", a
   system prompt (the notification permission, Face ID when turning the lock on, maybe others).
 - **E. The back swipe needs the finger to travel about half the screen** on a category's payments (back to the start
   screen) and on the name's page (back to the payments). Both screens have brief 44's row swipe.
-- **The gaps Claude listed after build 4** (Patrik: fix them): the Cash page's movement rows have no swipe (and no long
+- **The gaps Claude listed after build 4** (owner: fix them): the Cash page's movement rows have no swipe (and no long
   press, open since brief 41); receipt rows have no "All from" in their long press (the receipt's page has no such
   line); "Use the bank's name" on a payment named through its shop removes the shop's name for all of them.
 
@@ -43,10 +43,10 @@ Patrik tested build 4 on his iPhone 17 (2026-10-30 evening): "very nice work", a
      logic in `PaymentRename.swift` stays). A way to cancel that does not lose the old name, and "Use the bank's name"
      while an own name shows (your design: under the field while editing is fine). The bank's name stays small under
      the title. Server mode and Own names off: no pen, no editing.
-   - Patrik asked for a **double tap**; Claude chose a single tap on the page (nothing else on the title takes taps, a
+   - The owner asked for a **double tap**; Claude chose a single tap on the page (nothing else on the title takes taps, a
      single tap is found without being told, and a double tap still works since its first tap opens the field). On the
      **payment rows** there is no double tap (it would delay every row's tap while iOS waits for a second one): the
-     long press keeps Rename. Say so in your final message so Claude can tell Patrik.
+     long press keeps Rename. Say so in your final message so Claude can tell the owner.
    - Remove the Name row and its Rename button (and `RenameSheet` if nothing else needs it; the long press's Rename
      then opens the page with the field ready, or keeps a small sheet: your choice, say which).
    - **Category:** the chip(s) (and a small pen next to them) open the change window; the big Change button goes, and
@@ -88,8 +88,8 @@ Patrik tested build 4 on his iPhone 17 (2026-10-30 evening): "very nice work", a
 
 ## Out of scope
 
-- Summing payments of one name inside a list (Patrik's D): waits for his answer on Claude's design.
-- Recognising one shop under changing names (Patrik's È): brief 48 changes the engine in parallel (`~/aresium`); do not
+- Summing payments of one name inside a list (the owner's D): waits for his answer on Claude's design.
+- Recognising one shop under changing names (the owner's È): brief 48 changes the engine in parallel (`~/aresium`); do not
   change `merchantKey`, `nameKey` or the grouping.
 
 ## Done when

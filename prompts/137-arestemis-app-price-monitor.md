@@ -6,7 +6,7 @@ Branch: `claude/137-arestemis-price-monitor` · Worktree: `../empire-ios-137-are
 
 ## Goal
 
-Patrik (2026-11-02), on the sketch at https://claude.ai/artifact/X2rxw1Vj9JotohSQaw2g8E (section 3; its HTML is
+The owner (2026-11-02), on the sketch at https://claude.ai/artifact/X2rxw1Vj9JotohSQaw2g8E (section 3; its HTML is
 `/private/tmp/claude-501/-Users-pab/b05f4a4e-2a00-4096-a226-f11e802b21a2/scratchpad/arestemis-next-round.html`):
 the commonest page watch, "this product in this shop", becomes its own kind, the **Preismonitor**, and it "should have
 the time change graph / data … like a toggle when creating the search if data should be collected and if it should
@@ -44,7 +44,7 @@ monitors; the watch form gets its example chips.
    Kurve") and Alarm ("Push, wenn es so weit ist"); Alarm opens its two conditions (Preis unter [ ] €, prefilled a little
    under the found price; wieder lieferbar); Save is off while both are off, with one quiet line "Mindestens eins von
    beiden." Wie oft (as the watch form; default 1 h). Name (placeholder: the found product's name).
-4. **Changeable any time** (Patrik): on the monitor's page the two switches and the alarm's conditions are right there,
+4. **Changeable any time** (owner): on the monitor's page the two switches and the alarm's conditions are right there,
    saved as they change (`PUT` with the whole search; turning both off is refused with the line above), not only
    through Edit.
 5. **The card** (Suche and Angebote → Suchen): the product, the host, the price large (the app's numbers face), the

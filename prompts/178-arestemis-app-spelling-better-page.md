@@ -5,7 +5,7 @@ Branch: `claude/178-spelling-better-page` · Worktree: `../empire-ios-178-spelli
 
 ## Goal
 
-Patrik's first test searches (2026-11-05) showed two gaps:
+The owner's first test searches (2026-11-05) showed two gaps:
 
 - He searched Dinge for "Zenga Krawatte"; the brand is **Zegna**, and the word found nothing useful. He asked for a
   correction to be suggested ("a false suggestion isn't that bad"). After this brief, saving a Dinge search with a
@@ -51,7 +51,7 @@ The server (Arestemis brief 177) is built at the same time; build from the contr
 - Decode `PageState.suggested` (`{url, title}` or null; missing = null) and encode it back.
 - When present, the watch's page (and, if it fits calmly, its card in the Hunts list) shows one quiet line under the
   page's state: **„Adventskalender 2026“ hat eine eigene Seite** (en: **"Adventskalender 2026" has its own page**)
-  with an accent action **„Diese Seite beobachten“** (en: **"Watch this page"**). Patrik's words for the idea:
+  with an accent action **„Diese Seite beobachten“** (en: **"Watch this page"**). The owner's words for the idea:
   "Diese Seite beobachten?". You may word the line better; keep it short, plain and without "KI"/"AI".
 - The action opens the watch's own edit form with the address replaced by the suggested one (nothing is saved until
   the user saves; saving starts a new first read as any address change does).

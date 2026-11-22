@@ -7,8 +7,8 @@ Branch: `claude/187-wishes` · Worktree: `../empire-ios-187-wishes` · Builder: 
 
 Two server changes of 2026-11-06 reach the app.
 
-1. **Must and nice wishes.** A Dinge search had one "What fits" text. The AI read "Rot" in Patrik's tie search as a soft
-   wish and passed ties of every colour; it also passed wrong sizes. Patrik, asked whether a wish like "Rot" is a must
+1. **Must and nice wishes.** A Dinge search had one "What fits" text. The AI read "Rot" in the owner's tie search as a soft
+   wish and passed ties of every colour; it also passed wrong sizes. The owner, asked whether a wish like "Rot" is a must
    or a nice-to-have: the app should ask the person ("asking is good"). The server (brief 185) now has two fields:
    `extra` = **Muss sein / Must have** (a listing that clearly breaks one is sorted out, and the server's rules can now
    check sizes, colours and materials against the sites' own fields) and `nice` = **Wäre schön / Nice to have** (never

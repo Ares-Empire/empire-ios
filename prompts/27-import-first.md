@@ -6,7 +6,7 @@ agent (flow and the picker's wording)
 
 ## Goal
 
-Patrik pressed "Daten importieren" on the first screen (2026-10-27) and the category picker opened, not the file. He
+The owner pressed "Daten importieren" on the first screen (2026-10-27) and the category picker opened, not the file. He
 wants it the other way round: **Import data always opens the file picker first. When an import has added payments and
 no category is chosen yet, the category picker opens right after it**, with the payments already in. Ticking a
 category sorts the waiting payments into it at once (`PhoneBackend.choose` already sorts again), so people see their
@@ -38,7 +38,7 @@ dashboard's import button (`chooseCategoriesFirst` in `ContentView`) and the gui
    from Settings → Categories stays as it is.
 2. **The picker after an import** shows one short line at the top saying the payments are in and to tick the
    categories used, sorting happens right away (English in the code, German "du", plain; no slogan). Nothing is
-   preselected (Patrik, 2026-10-26: stays). Closing it with nothing ticked is allowed: the payments stay as Not sorted
+   preselected (owner, 2026-10-26: stays). Closing it with nothing ticked is allowed: the payments stay as Not sorted
    and the next import asks again.
 3. **The result line stays true.** The import's line says e.g. "120 new · 0 sorted · 120 not sorted" before any
    category exists. After the picker closes, what the person reads must match the store (recount the sorted / not
@@ -52,7 +52,7 @@ dashboard's import button (`chooseCategoriesFirst` in `ContentView`) and the gui
 
 - Nothing preselected; the list, its groups and the untick question stay as they are.
 - The look of the first screen, the tour and the picker stays (only the new line in the picker).
-- Server mode (Patrik's) is unchanged: its import has no category picker.
+- Server mode (the owner's) is unchanged: its import has no category picker.
 
 ## Out of scope
 
@@ -61,7 +61,7 @@ The payment detail page, the engine, the server, other apps.
 ## Done when
 
 - `xcodebuild test` for Aresium passes (`-parallel-testing-enabled NO`) on **your own simulator** (create one, delete
-  it at the end; never the booted "iPhone 17" 56D5D752…, Patrik uses it), with tests for: Import data opens the file
+  it at the end; never the booted "iPhone 17" 56D5D752…, the owner uses it), with tests for: Import data opens the file
   picker first; the picker opens after an import that added payments with no category chosen; not after a cancelled /
   failed / all-duplicate import, a restore or with categories chosen; once for several files; ticking after the
   import sorts the waiting payments; the result line after the picker. Empire builds if `Shared/` changed.
@@ -72,7 +72,7 @@ The payment detail page, the engine, the server, other apps.
   Never commit, push, merge or deploy; never touch the server, any database or other repos. No real data: there are no
   real payments on this Mac and you must not look for any; use the made-up tour/sample files.
 
-## Added (Patrik, 2026-10-27, sent to the running agent)
+## Added (owner, 2026-10-27, sent to the running agent)
 
 **Counts in the picker:** each row shows how many of the person's payments the category has (ticked; own categories)
 or would get if ticked (default categories not ticked: one `sortPayments` dry run over the payments waiting as Not

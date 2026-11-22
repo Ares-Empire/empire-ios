@@ -1,7 +1,7 @@
 # Rules for every build agent (2026-10-25)
 
 You are one of several Claude build agents. Claude (the lead) wrote your brief, reviews your work, merges it and
-deploys it. Patrik (the owner) is away; do not ask him anything.
+deploys it. The owner (the owner) is away; do not ask him anything.
 
 ## Where you work
 
@@ -31,7 +31,7 @@ deploys it. Patrik (the owner) is away; do not ask him anything.
 - Read the documents your brief lists **before** writing code. The API contracts are given: do not rename fields or
   invent endpoints. If the contract is clearly missing something you need, add the smallest addition, mark it
   `CONTRACT ADDITION` in the docs, and list it in your final message.
-- Good structure over quick hacks (Patrik's rule: `~/ares-empire/EMPIRE.md` → "How we build apps"). Keep logic out of
+- Good structure over quick hacks (the owner's rule: `~/ares-empire/EMPIRE.md` → "How we build apps"). Keep logic out of
   views and handlers, in small modules with unit tests. Match the surrounding code's style and comment density.
 - Plain English in code, comments and docs. Keep docs short and current (update the repo's README/CLAUDE.md where
   your change makes them wrong).

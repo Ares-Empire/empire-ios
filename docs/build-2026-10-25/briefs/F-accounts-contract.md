@@ -1,6 +1,6 @@
 # One Ares account, run from every app (contract for F1 and F2, final)
 
-Patrik (2026-10-25): "a central ares account makes sense. However that needs to be creatable in every app because the
+The owner (2026-10-25): "a central ares account makes sense. However that needs to be creatable in every app because the
 first app someone gets might not be the empire app. In general, the empire app is the least useful one for normal
 people. so one central account but controllable from every app but also every app independently controllable meaning
 I guess in each apps settings you can delete that apps data and access as well as your entire ares account."
@@ -27,7 +27,7 @@ Empire app is optional; every app can do everything below by itself.
 - **Approval** grants what was requested: `approved = true`, `services = services ∪ requested`, `requested = []`.
   Signing up on the website requests `empire` (the hub). Declining an unapproved account deletes it (as today);
   declining an approved account's request only clears `requested`.
-- Patrik is told by email of every sign-up and every new access request (which apps, which language), with the link
+- The owner is told by email of every sign-up and every new access request (which apps, which language), with the link
   that approves it; the person gets an email once approved (in their language: the sign-up sends `language`, a new
   `select` field `en`/`de`, also user-editable).
 - Login still needs `verified && approved` (unchanged `authRule`). An app cannot tell "wrong password" from "not
@@ -39,11 +39,11 @@ Empire app is optional; every app can do everything below by itself.
 - PocketBase hook after a `users` record is deleted: one job per service that keeps data per account, in a collection
   **`deletions`** (`account`, `service`, `attempts`, `done`, `last_error`; superusers only). A cron (every 5 min) calls
   each open job: `DELETE http://127.0.0.1:<port>/internal/accounts/<id>` on the service (localhost only, never routed
-  by Caddy, like the push service's `/send`), marks it done on 2xx/404, retries otherwise, and emails Patrik once if a
+  by Caddy, like the push service's `/send`), marks it done on 2xx/404, retries otherwise, and emails the owner once if a
   job still fails after a day. Today's services with per-account data: **Arestemis** (settings, hunts, matches,
   applications) and the **push service** (devices). The account server's own rows (`feedback`) go by cascade.
 - `DELETE /api/<service>/me` (public, with the token): the same deletion for the logged-in account, used by "leave
-  this app". Today: Arestemis. Single-owner services (Aresium, Aresus, Arestoteles: only Patrik's data) get none;
+  this app". Today: Arestemis. Single-owner services (Aresium, Aresus, Arestoteles: only the owner's data) get none;
   leaving them removes access and the data on the phone only.
 
 ## The hub's approvals (website and Empire app)

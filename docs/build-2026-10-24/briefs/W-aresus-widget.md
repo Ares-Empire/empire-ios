@@ -7,7 +7,7 @@ never touch the device named "iPhone 17").
 
 ## Goal
 
-The Aresus app (`Aresus/`, merged today) gets widgets so Patrik sees the empire's state without opening the app:
+The Aresus app (`Aresus/`, merged today) gets widgets so the owner sees the empire's state without opening the app:
 "All running" in green, or "1 issue · Arestemis" in red, always with how fresh the check is.
 
 ## Read first

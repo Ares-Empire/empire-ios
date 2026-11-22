@@ -2,7 +2,7 @@
 
 **Written 2026-10-24** (brief E6). The facts behind every answer: `ares-empire/docs/PRIVACY.md` (what each service
 stores, where, how long, who else gets it). The pages: `https://www.ares-empire.de/privacy` (English),
-`/datenschutz` (German), `/imprint`, `/impressum`; they answer 404 until Patrik approved the text and the lead
+`/datenschutz` (German), `/imprint`, `/impressum`; they answer 404 until the owner approved the text and the lead
 filled the placeholders.
 
 ## In the projects (done)
@@ -56,11 +56,11 @@ Why these and not others:
 - **Search History (Arestemis):** the hunt's search is stored on the server. **Other User Content:** Arestemis's
   "About you", own application text and match states; Arestoteles's edits and quick notes.
 - **Name:** optional when an account is created in an app (Create account on the login screen, 2026-10-25); the
-  account server keeps it, Patrik sees it when approving.
+  account server keeps it, the owner sees it when approving.
 - **Not collected:** location
   (Arestemis's places are where to search, not where the phone is; IP addresses are not used for location),
   diagnostics (no crash or analytics SDK), contacts, photos, purchases, browsing history.
-- **Aresium needs no account** (Patrik, 2026-10-27, brief 22): it opens without a login; Email Address, Name and User
+- **Aresium needs no account** (owner, 2026-10-27, brief 22): it opens without a login; Email Address, Name and User
   ID come only from someone who signs in (Settings → Ares account, only for an Aresium server of one's own) or, Email
   and Name, from Contact & support without a login (the account server's `contact` collection). The data types stay
   ticked, since the app can send them; they are still linked (an email address identifies its owner).
@@ -70,15 +70,15 @@ Why these and not others:
   The receipt is read on the iPhone (Vision), only the read lines are kept in the phone's store, never the image, and
   nothing is sent. So Photos or Videos stays unticked, and the privacy manifest is unchanged (no new required-reason
   API).
-- **Aresium and Financial Info: not collected** (changed 2026-10-27). Everyone but Patrik uses phone mode: their bank
+- **Aresium and Financial Info: not collected** (changed 2026-10-27). Everyone but the owner uses phone mode: their bank
   files, payments and categories stay on their iPhone and are never sent (Apple: data processed only on the device
-  is not "collected"). Server mode is only Patrik's own account (the owner list), his own data on his own server, so
+  is not "collected"). Server mode is only the owner's own account (the owner list), his own data on his own server, so
   no user's financial info is collected. If server mode is ever given to someone else, tick Financial Info → Other
   Financial Info again (and the manifest).
 - **Groq** (Arestemis's AI check) is a processor working for the app's function; its data is already covered by the
   types above.
-- **[Patrik to decide] Arestoteles and "Sensitive Info":** the vault holds political views, which Apple counts as
-  sensitive. While only Patrik uses the app (internal TestFlight), the form is not needed; before anyone else gets it,
+- **[the owner to decide] Arestoteles and "Sensitive Info":** the vault holds political views, which Apple counts as
+  sensitive. While only the owner uses the app (internal TestFlight), the form is not needed; before anyone else gets it,
   tick *Sensitive Info* as well, or keep the app private.
 
 ## TestFlight → Test Information
@@ -91,7 +91,7 @@ internal testers (App Store Connect users, up to 100) need no Beta App Review.
 | Feedback Email | the owner's email (the owner file, see ares-empire `docs/PRIVACY.md`) |
 | Privacy Policy URL | `https://www.ares-empire.de/privacy` |
 | Marketing URL | empty (the hub needs a login), or `https://www.ares-empire.de` |
-| Contact (Beta App Review) | Patrik Breeck, the owner's email (the owner file, see ares-empire `docs/PRIVACY.md`), phone: **[Patrik]** (entered in App Store Connect only, never here) |
+| Contact (Beta App Review) | The owner, the owner's email (the owner file, see ares-empire `docs/PRIVACY.md`), phone: **[the owner]** (entered in App Store Connect only, never here) |
 | Sign-in required | **Yes**: the demo login below |
 | Review notes | "Every Ares Empire app needs an approved Ares account; accounts are created in any of the apps (Create account on the login screen) or on www.ares-empire.de and approved by the developer; Settings → Account deletes the account. The demo account is approved and has access to this app. Push notifications go through the developer's own push service." (+ the app's line below) |
 
@@ -132,16 +132,16 @@ Contact & support; an unreadable bank file sends only the bank's name and header
 - **Arestia:** "The owner's flat: fans with timers, blinds, cooking and the flat in 3D, through his own service on the
   home network; Siri, Shortcuts and Control Center." (*Die eigene Wohnung: Ventilatoren mit Timer, Rollos, Kochen und
   die Wohnung in 3D, über den eigenen Dienst im WLAN; Siri, Kurzbefehle und Kontrollzentrum.*) It works only with the
-  owner's flatd on his home network, so no reviewer could use it: internal TestFlight only (Patrik, 2026-11-19: "just
+  owner's flatd on his home network, so no reviewer could use it: internal TestFlight only (owner, 2026-11-19: "just
   me").
 
 ### The demo login (the lead makes it)
 
-Only needed once an app goes to other people (App Store or external testers): builds for Patrik alone use internal
-testing, which Apple does not review (Patrik, 2026-10-25). Never the existing test account (Claude's own).
+Only needed once an app goes to other people (App Store or external testers): builds for the owner alone use internal
+testing, which Apple does not review (owner, 2026-10-25). Never the existing test account (Claude's own).
 
-1. Sign up at `https://www.ares-empire.de/signup` with an extra address on Patrik's domain that forwards to him
-   (Patrik, 2026-10-25: e.g. `review@example.com`; his own address is his own account).
+1. Sign up at `https://www.ares-empire.de/signup` with an extra address on the owner's domain that forwards to him
+   (owner, 2026-10-25: e.g. `review@example.com`; his own address is his own account).
    Password from a generator, kept only in the Keychain item `empire-review-account` and in App Store Connect.
 2. Confirm the email, then approve the account (Empire app → Approvals, or the PocketBase admin UI). In the admin UI
    set `services` to `empire` plus the app under review (`arestemis`, `aresus`); nothing else.
@@ -150,10 +150,10 @@ testing, which Apple does not review (Patrik, 2026-10-25). Never the existing te
 4. Enter user name and password under *Sign-in required*. Keep the account while builds are reviewed; remove its
    services when no review is pending.
 
-**Arestoteles and Aresus** hold only Patrik's own data and let in only their owner (`EMPIRE_ALLOWED_USERS` in each
-server, 2026-10-25), so a demo account gets 403 there. **Aresus** (and Aresync) stay Patrik's own tools and never go to
-others (Patrik, 2026-10-25): internal TestFlight only. Arestoteles likewise for now. **Aresium** needs no demo account
-any more (above): everyone but Patrik uses it without one, on their iPhone; its server mode stays the owner's.
+**Arestoteles and Aresus** hold only the owner's own data and let in only their owner (`EMPIRE_ALLOWED_USERS` in each
+server, 2026-10-25), so a demo account gets 403 there. **Aresus** (and Aresync) stay the owner's own tools and never go to
+others (owner, 2026-10-25): internal TestFlight only. Arestoteles likewise for now. **Aresium** needs no demo account
+any more (above): everyone but the owner uses it without one, on their iPhone; its server mode stays the owner's.
 
 ## Missing before the App Store
 
@@ -167,15 +167,15 @@ any more (above): everyone but Patrik uses it without one, on their iPhone; its 
 2. **Arestemis and the portals' terms** (Guideline 5.2.2: an app may show a third-party service's content only when
    that service's terms allow it). Arestemis reads WG-Gesucht, Kleinanzeigen and Immowelt without permission
    (`Arestemis/CLAUDE.md`: "scraping is against their terms") and shows their text and photos. Fine for private
-   TestFlight use; a public App Store release needs permission or a different source. **[Patrik]**
+   TestFlight use; a public App Store release needs permission or a different source. **[the owner]**
 3. **Support URL** (required on the App Store page): each app's own contact page (2026-11-01), German for the German
    store page, English `/contact` otherwise: Aresium `https://aresium.de/kontakt`, Arestemis
    `https://www.ares-empire.de/arestemis/kontakt`, Ares Empire `https://www.ares-empire.de/kontakt` (also the Empire's
    general contact, so Aresus and Arestoteles, which have no page of their own, use it too).
 4. **EU trader status** (App Store Connect → Business, required for EU distribution under the Digital Services Act):
-   **[Patrik]** declares himself a non-trader (private, non-commercial), or a trader, whose address and phone number
+   **[the owner]** declares himself a non-trader (private, non-commercial), or a trader, whose address and phone number
    Apple then shows on the App Store.
 5. **The pages online:** done 2026-10-25 (`/datenschutz`, `/privacy`, `/impressum`, `/imprint`; Settings opens them).
-   When an app opens to people besides Patrik, its section goes into the policy first (`ares-empire/docs/PRIVACY.md`).
+   When an app opens to people besides the owner, its section goes into the policy first (`ares-empire/docs/PRIVACY.md`).
 6. Per app on the App Store page: age rating questionnaire, category, screenshots, copyright line; for Arestemis and
    Aresus the time-sensitive notification entitlement is justified by "a new flat listing / a service is down".

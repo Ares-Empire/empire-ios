@@ -5,7 +5,7 @@ Branch: `claude/46-messages-screens` · Worktree: `../empire-ios-46-messages-scr
 
 ## Goal
 
-Patrik (2026-10-30): Aresium's messages come from the app (the Telegram bot is stopped). He wants a setting for whether
+The owner (2026-10-30): Aresium's messages come from the app (the Telegram bot is stopped). He wants a setting for whether
 they come at all, which ones and how often. He chose two: an **import reminder** that names no bank or service, and a
 **month review**. Brief 45 (merged) built the logic as local notifications: read its API in `CLAUDE.md` → "Aresium
 phone mode" → "Local messages" and "Brief 46's API". This brief builds the Settings page, the one-time offer after an

@@ -1,14 +1,14 @@
-# 49: Arestemis comfort before its first TestFlight build (Patrik's list nos. 13–19)
+# 49: Arestemis comfort before its first TestFlight build (the owner's list nos. 13–19)
 
 Status: merged 2026-10-30 (91 tests; every changed screen checked in both languages and looks; Claude: undo bar before the counts reload, the header Save in the accent)
 Branch: `codex/49-arestemis-comfort` · Worktree: `../empire-ios-49-arestemis-comfort` · Model: `gpt-6.1-sol`, effort `high`
 
 ## Goal
 
-Patrik approved the comfort list for Arestemis (2026-10-30, all items). After this brief a dismissed listing can be
+The owner approved the comfort list for Arestemis (2026-10-30, all items). After this brief a dismissed listing can be
 brought back, the Hunt tab's latest listings can be saved or dismissed without opening them, Search's changes are hard
 to lose, small buttons are easy to hit, Listings loads on as you scroll, Add place's keyboard key says what it does,
-and "More" on a match page is a proper button. Arestemis goes to Patrik's iPhone right after this.
+and "More" on a match page is a proper button. Arestemis goes to the owner's iPhone right after this.
 
 Three other briefs run at the same time: 50 (Aresus), 51 (Arestoteles), 52 (Empire and the shared Create account).
 
@@ -57,7 +57,7 @@ Three other briefs run at the same time: 50 (Aresus), 51 (Arestoteles), 52 (Empi
    into view (`loadMatches(filter, more: true)`, once at a time). While it loads, a small spinner row at the end; if it
    fails, that row says the store's error with Try again (the existing `CalmMessage` with its action). Pull to refresh
    unchanged.
-6. **Add place's keyboard key** (list no. 18; Patrik chose option (b) on 2026-10-30, do not re-open). In
+6. **Add place's keyboard key** (list no. 18; the owner chose option (b) on 2026-10-30, do not re-open). In
    `PlaceSearchSheet` the key's label changes from Search to **Done** (`.submitLabel(.done)`); pressing it closes the
    keyboard, as today. Nothing else changes: towns are still added by tapping them.
 7. **"More" on a match page is a regular button** (list no. 19, `MatchDetailScreen.swift` around line 221): the

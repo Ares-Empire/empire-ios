@@ -5,11 +5,11 @@ Branch: `claude/180-save-favorites-read` · Worktree: `../empire-ios-180-save` �
 
 ## Goal
 
-Patrik's test of builds 18–19 on 2026-11-05:
+The owner's test of builds 18–19 on 2026-11-05:
 
 1. **Überall saves at once.** He typed "AirPods Max 2" with the details "Mitternacht oder Navy"; the preview searched,
    then failed, and the form would not let him save ("Erst muss das Produkt gefunden werden."), holding him on the
-   screen. Patrik: "allow the user to save it asap and then send a msg if not found". The server (Arestemis brief 179,
+   screen. The owner: "allow the user to save it asap and then send a msg if not found". The server (Arestemis brief 179,
    deployed) now finds the product in the background and notifies only when nothing fits.
 2. **Favoriten.** "Let's change 'Gespeichert' → Favoriten and add a little star to each findings page so it's easy to
    favorite them."
@@ -77,7 +77,7 @@ Patrik's test of builds 18–19 on 2026-11-05:
 - The "● N NEU" counts come from the server's `counts.new` (now unread new listings); after opening a listing, the
   card's and the group heading's count drop at once (adjust locally, then the next overview confirms).
 - **The New part keeps a read listing until it is favourited, applied or dismissed, without its dot** (like read mail
-  in an inbox; Claude's recommendation, Patrik may still choose that read listings leave "Neu": keep the list's query
+  in an inbox; Claude's recommendation, the owner may still choose that read listings leave "Neu": keep the list's query
   in one place, so that is a one-line change to `seen=false`).
 
 ## Settled: do not re-open
@@ -89,7 +89,7 @@ Patrik's test of builds 18–19 on 2026-11-05:
 
 ## Out of scope
 
-- The server; the notification-tap crash Patrik reported (not found yet; separate); Dinge and flat forms.
+- The server; the notification-tap crash the owner reported (not found yet; separate); Dinge and flat forms.
 
 ## Done when
 

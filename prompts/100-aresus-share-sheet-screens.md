@@ -6,7 +6,7 @@ work, `CLAUDE.md` → Workflow) · Simulator: `claude-100` (create it: iPhone 17
 
 ## Goal
 
-Patrik (2026-11-02, approved): **Aresus in the iPhone's share sheet**, opening the drop menu right there; **drag and
+The owner (2026-11-02, approved): **Aresus in the iPhone's share sheet**, opening the drop menu right there; **drag and
 drop** onto Aresus; **sending several things at once**, a second pick adding to the first. Brief 94 (Codex) built the
 data and wired everything as plain structure: the drop code now lives in `Aresus/AresusDrops/` (compiled into the app
 and the share extension), uploads run in a background session, `ShareViewController` shows `SendSheet(sharing:
@@ -22,7 +22,7 @@ screens, which are the reference.
   `scripts/strings.py sync`/`check`).
 - **Design language:** `~/ares-empire/EMPIRE.md` → "The crown language" and "How we build apps"; the Aresus screens
   (`Aresus/AresusDrops/SendSheet.swift`, `FolderPicker.swift`, `DropComponents.swift`, `Aresus/Aresus/Screens/`) and
-  `Shared/Design/`. Patrik's taste: classy, calm, quiet; the lightning-blue accent only on the key control; plain small
+  `Shared/Design/`. The owner's taste: classy, calm, quiet; the lightning-blue accent only on the key control; plain small
   labels, no slogans.
 - No real personal data anywhere.
 

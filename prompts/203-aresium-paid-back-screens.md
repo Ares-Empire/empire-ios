@@ -6,7 +6,7 @@ flow) · Simulator: `claude-203` (create it: iPhone 17, iOS 27.0)
 
 ## Goal
 
-Patrik (2026-11-02), looking at what Aresium counts as spent over 14 months, named expenses that were paid back to him
+The owner (2026-11-02), looking at what Aresium counts as spent over 14 months, named expenses that were paid back to him
 (one in full, two by half) and expected them to show only his share. He chose a link made by hand: a payment that
 came in **pays back** a payment that went out, all of it or a part; those euros come off the expense (in its month and
 categories) and are not income. And: "It would need to be added to the tour but it remains a completely optional thing

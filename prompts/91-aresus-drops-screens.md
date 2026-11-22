@@ -6,7 +6,7 @@ Branch: `claude/91-drops-screens` · Worktree: `../empire-ios-91-drops-screens` 
 
 ## Goal
 
-Patrik sends files and photos from the Aresus app to his MacBook (plan: `~/ares-empire/docs/ARESYNC-DROP.md`; server,
+The owner sends files and photos from the Aresus app to his MacBook (plan: `~/ares-empire/docs/ARESYNC-DROP.md`; server,
 Mac program and the app's data side are built and live: briefs 88–90). This brief builds **the screens**: a send
 button on the Aresync tab, the send sheet (pick photos or files, pick the folder, the name, send), the folder picker,
 and the drops on the Aresync tab with their state. They must look like the rest of Aresus: classy, calm, quiet; the
@@ -21,7 +21,7 @@ lightning-blue accent only as an accent.
   screens are the reference (`Aresus/Aresus/Screens/`: `SyncScreen`, `WatchtowerScreen`, `RunSheet`,
   `ProvinceDetailScreen`, `AresusComponents`), plus `Shared/Design/`. Reuse their components (`AresusHeader`,
   `GlassIconButton`, `SectionTitle`, `CardRows`, `CalmMessage`, `StatusLabel`, `ProvinceWall`, `AppFont`, `Ink`,
-  `PressedRow`, the glass cards) before making new ones. **Patrik's taste (2026-10-24):** gold belongs to the Empire,
+  `PressedRow`, the glass cards) before making new ones. **The owner's taste (2026-10-24):** gold belongs to the Empire,
   not here; no slogans or "empire voice" labels; plain small labels; the app's accent (`.aresus`, lightning blue) only
   on the key control and highlights; red means a special mode, so a failure uses the existing warning/issue tones as
   the other screens do. Classy, clean, not busy.
@@ -80,7 +80,7 @@ lightning-blue accent only as an accent.
 
 ## Settled: do not re-open
 
-- Entry point and layout as above (Patrik sketched: a button on the Aresync tab, then pick what to send, the folder,
+- Entry point and layout as above (the owner sketched: a button on the Aresync tab, then pick what to send, the folder,
   a new folder or the name).
 - Receipts (scanner, reader, the receipt form) and the share extension are **not** in this brief (later briefs).
 - No AI suggestions.

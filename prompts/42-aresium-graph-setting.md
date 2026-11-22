@@ -5,7 +5,7 @@ Branch: `claude/42-graph-setting` · Worktree: `../empire-ios-42-graph-setting` 
 
 ## Goal
 
-Patrik, testing build 3 (2026-10-30): "if I activate the graph, close the app, open it, the Graph isn't activated
+The owner, testing build 3 (2026-10-30): "if I activate the graph, close the app, open it, the Graph isn't activated
 anymore. I actually think the app looks better with the Graph on so I think we make it default on and move the light /
 dark mode Button into settings (toggle) as well as the Graph Button (toggle). That makes room on the normal screen."
 

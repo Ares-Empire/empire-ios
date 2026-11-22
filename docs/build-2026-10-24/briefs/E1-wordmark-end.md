@@ -5,7 +5,7 @@ You may edit `Shared/Design/` for this brief.
 
 ## Why
 
-Patrik (2026-10-24): "Lets make it general app design that when scrolling down, the bottom has the app name there
+The owner (2026-10-24): "Lets make it general app design that when scrolling down, the bottom has the app name there
 like in Aresus, Arestemis and Aresium. Although: in Aresium the word is always seen but it should only be there when
 scrolling down (like in Aresus and Arestemis)."
 

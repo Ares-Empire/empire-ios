@@ -26,7 +26,7 @@ tests; `src/engine/readers/` (types, profiles, `read.ts`, `camt.ts`, `mt940.ts`)
    Tests: the unrelated 20.00 purchase and a friend's 20.00 do not pair; a Girokonto → Tagesgeld move with the IBAN
    does; two equal moves on one day pair one-to-one.
 3. **English PayPal exports** (follow-up 4): their funding rows ("Bank Deposit to PP Account", "General Card Deposit",
-   and the other English funding types PayPal uses; name your source) are left out like the German ones. Patrik's
+   and the other English funding types PayPal uses; name your source) are left out like the German ones. The owner's
    exports are German, so aresium.de's numbers do not change: prove it with a test on the German fixtures (unchanged
    output).
 4. **The bench sees the whole list** (follow-up 3): `bench/run.ts` sorts with one `sortPayments` call over all payments

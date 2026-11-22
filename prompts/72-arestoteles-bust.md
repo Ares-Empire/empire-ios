@@ -8,7 +8,7 @@ Branch: `claude/72-arestoteles-bust` in three repos · Worktrees: `~/empire-ios-
 
 The Aristotle bust carries a "Magnific" watermark: an AI upscaler stamped its name diagonally across the face, and it
 is plainly visible on the Arestoteles app icon, in the app (login, loading screen, the small mark), on arestoteles.de,
-and on the ring of the hub and of the Empire iPhone app. Both apps go to Patrik's iPhone through TestFlight right after
+and on the ring of the hub and of the Empire iPhone app. Both apps go to the owner's iPhone through TestFlight right after
 this brief. After it, no picture of Aristotle anywhere in the empire carries the watermark, and the Arestoteles icon
 sits on the home screen as a sibling of the other Empire app icons.
 
@@ -60,7 +60,7 @@ chronicle marker (`panels.jsx`, `mobile.jsx`), with `.webp`. Same marble style, 
 - Other busts, other apps, `showcase/` (Claude regenerates it later), `Arestoteles/assets/` (the retired Telegram
   bot's avatar and the source download), `scripts/make_bust.py`.
 - Pushing, merging, or touching the main checkouts `~/empire-ios`, `~/Arestoteles`, `~/ares-empire` (aresync
-  auto-commits and pushes them). Patrik's Weltbild vault.
+  auto-commits and pushes them). The owner's Weltbild vault.
 
 ## Done when
 

@@ -14,7 +14,7 @@ compiles and a screen that looks right can still store the token in the wrong pl
 | A milestone | before the first TestFlight build, before adding external testers, before a second app starts |
 | The same kind of bug shows up twice | two fixes in one area that each caused the next |
 | An agent has built a lot since the last look | every 2–3 weeks, over everything merged since |
-| Patrik asks | any time |
+| The owner asks | any time |
 
 Not for: a single screen's layout, mechanical changes with tests, or a question a decision record
 (`ares-empire/docs/IPHONE-APPS.md`, `ACCOUNTS.md`) already answers.

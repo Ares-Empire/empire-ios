@@ -5,7 +5,7 @@ Branch: `claude/53-sums` · Worktree: `../empire-ios-53-sums` · Built by: a Cla
 
 ## Goal
 
-Patrik (2026-10-30, after build 4, his D): "10 Vinted purchases in Clothes in October" are ten rows; he wants them as
+The owner (2026-10-30, after build 4, his D): "10 Vinted purchases in Clothes in October" are ten rows; he wants them as
 one row with the sum and a sign that it is several, and a way back. Claude's design with his additions is agreed
 (`docs/reviews/2026-10-30-aresium-phone-test.md` → "Fourth round" → D). His words: "once summed up, zusammenfassen
 becomes separate or smth so a user can make it normal again"; "summing up all things autom. can be a settings toggle
@@ -28,7 +28,7 @@ shows if its summed up or not and they can press it to do it"; "cleanly".
 ## Build
 
 1. **The choices (a model, tested).** Four levels, the more specific wins:
-   - **everywhere:** Settings → Dashboard → a switch, "Add up same names" / German your call (short; Patrik's word is
+   - **everywhere:** Settings → Dashboard → a switch, "Add up same names" / German your call (short; the owner's word is
      "zusammenfassen"), with a line saying what it does. Off by default.
    - **a category:** all names in one category (the icon below), overriding everywhere;
    - **a name:** one name in every category (a switch on the name's page), overriding a category's choice;
@@ -50,7 +50,7 @@ shows if its summed up or not and they can press it to do it"; "cleanly".
    never per row or per `body`.
 3. **The swipe.** On a single payment with a name that has two or more payments in this list: two actions, **sum**
    (the name in this category, every month, remembered) and **All** (the name's page, as today). On a summed row:
-   **separate** (Patrik's "make it normal again"; German your call, Patrik said "Auflösen") and All. Words and icons
+   **separate** (the owner's "make it normal again"; German your call, the owner said "Auflösen") and All. Words and icons
    your design, short enough for one line in both languages; the full swipe stays All (as in build 4). The rule's
    distances in `RowSwipeRule` for two actions, tested. One row open at a time as today. VoiceOver actions with the
    same names.

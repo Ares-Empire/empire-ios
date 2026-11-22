@@ -6,7 +6,7 @@ screens; the small data part goes with it)
 
 ## Goal
 
-Arestemis's server now offers eBay for thing hunts (the Arestemis repo, `docs/briefs/118-arestemis-ebay.md`; switched on once Patrik's eBay keys are in), and more sites
+Arestemis's server now offers eBay for thing hunts (the Arestemis repo, `docs/briefs/118-arestemis-ebay.md`; switched on once the owner's eBay keys are in), and more sites
 will follow (`~/Arestemis/docs/ARESTEMIS-SITES.md`). Today the app knows its sites as a closed list (`Source` in
 `ArestemisModels.swift`): a site it does not know is dropped from every list, so eBay could never be chosen. After this
 brief **the app takes its sites from the server** (`GET /kinds`), shows any site the server names, offers the **auction

@@ -66,7 +66,7 @@ Findings A1–A11 in `docs/reviews/2026-10-23-pre-testflight.md` (read their row
 
 ## Out of scope
 
-- What "this month" means for the widget and the PayPal currency question (wait for Patrik).
+- What "this month" means for the widget and the PayPal currency question (wait for the owner).
 - Signing, team, TestFlight upload; Associated Domains; app lock.
 
 ## Done when

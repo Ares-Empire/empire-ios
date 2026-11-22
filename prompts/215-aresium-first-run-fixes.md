@@ -37,12 +37,12 @@ guide's content (finding 6, missing banks) is a later brief.
    two ("Rent" and a two-point graph after "74 new"). In the first days of a month let Current show last month, so the
    first look is a full month, and keep this month one tap away; look at the existing review month (`reviewMonth`,
    Aresium's messages) first and reuse it rather than adding a second rule. Say which month is shown where it is not
-   obvious. This changes the start screen for everyone in those days, Patrik too: keep it calm and predictable (no
+   obvious. This changes the start screen for everyone in those days, the owner too: keep it calm and predictable (no
    jump while the app is open, the same rule every time).
 3. **German "Entfernen" on the import result** (finding 3): the button only closes the notice; give it a key of its own
    with "Schließen" (English stays "Dismiss" or "Close", your call). Arestemis's "Dismiss" keeps "Entfernen".
 4. **Settings → Ares account for testers** (finding 5): show the "Ares account" section only while an Ares login exists
-   on the iPhone (Patrik is signed in through his other Ares apps); nobody else sees a sign-in they cannot use. Drop
+   on the iPhone (the owner is signed in through his other Ares apps); nobody else sees a sign-in they cannot use. Drop
    "One Ares account for all Ares apps" from Aresium's Sign in sheet (it went from the logins on 2026-10-31). Shared
    code is involved (`Shared/Design/SettingsScreen.swift`, `SignInSheet.swift`): change it only through Aresium's own
    settings (`SettingsApp`, `EmpireAppIdentity`), and check the other apps' Settings look as before.

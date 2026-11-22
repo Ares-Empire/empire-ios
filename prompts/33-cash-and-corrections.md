@@ -6,7 +6,7 @@ and the look)
 
 ## Goal
 
-Patrik tried receipts (2026-10-28) and asked for two things (D9 in `~/ares-empire/docs/ARESIUM-FOR-OTHERS.md`; read it,
+The owner tried receipts (2026-10-28) and asked for two things (D9 in `~/ares-empire/docs/ARESIUM-FOR-OTHERS.md`; read it,
 with part 6 and D8):
 
 1. **The check window must be correctable.** It asks "Does this look right?" but, to him, offers nothing to do when it
@@ -106,7 +106,7 @@ page, the dashboard row. DEBUG arguments to reach each with made-up data.
 ## Done when (part A)
 
 - `xcodebuild test` for Aresium passes (`-parallel-testing-enabled NO`) on **your own simulator** (create one, delete it
-  at the end; never the booted "iPhone 17" 56D5D752…, Patrik uses it), with tests for: every field editable and saved;
+  at the end; never the booted "iPhone 17" 56D5D752…, the owner uses it), with tests for: every field editable and saved;
   editing after saving (unjoin and match again on an amount change; no re-match on a shop change); a corrected shop name
   applied to the next receipt read the same way; schema 3 opening a version 2 store; export 3 and restore of 2 and 1.
 - `scripts/strings.py check` 0 problems; the window looked at in German and English, light and dark, and at the largest

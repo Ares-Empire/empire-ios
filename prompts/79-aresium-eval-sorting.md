@@ -6,12 +6,12 @@ effort `high` · Runs beside brief 78 (bank files, `eval/files/`); you own `eval
 
 ## Goal
 
-Patrik (2026-11-01), before Aresium goes to more testers: "What we should definetly test is autosort with different
+The owner (2026-11-01), before Aresium goes to more testers: "What we should definetly test is autosort with different
 kinds of real and made up data meaning real and fictional shops to cover general and also edge cases. Like that we can
 track how good the sorting is and improve it. I say we make a test set of lots of cases so we have a baseline for
 evaluation." A new person has taught Aresium nothing yet, so the built-in sorting is their first impression.
 
-Today sorting was measured once, on Patrik's own payments (day one: 76% sorted, 98.4% of those right;
+Today sorting was measured once, on the owner's own payments (day one: 76% sorted, 98.4% of those right;
 `~/ares-empire/docs/ARESIUM-FOR-OTHERS.md`, the measurements), which covers his shops only. `bench/` holds 480
 made-up payments for the learning replay. Nobody has measured the sorting on the shops other people pay at.
 
@@ -19,7 +19,7 @@ This brief builds **a test set of single payments as banks print them, with righ
 engine**, a way for **two independent judges** to check those answers, and **a score**. It measures only: no change to
 the sorting, the shop list or the starter rules. Improvements come in later briefs, measured against this set.
 
-Two points from Patrik that shape it:
+Two points from the owner that shape it:
 
 - **What is right is partly personal.** "each user will have personal preferences etc so my data in some aspects isnt
   ground truth." A bakery can be Groceries or Coffee & snacks; money from a person can be anything. So a case has **a
@@ -53,7 +53,7 @@ All under `eval/sorting/`, TypeScript run with `npx tsx`, no new packages (Node'
    kiosk, pharmacy vs drugstore, Amazon, Deutschlandticket, gym membership, streaming, a takeaway, a hotel abroad,
    PayPal to a person, money from a person, a refund from a shop, a cash withdrawal…). Money in and money out are
    separate questions (a refund from a clothes shop, a sale on Vinted, a salary). This guide is what the judges read.
-   Claude reviews it before judging starts; Patrik may read it.
+   Claude reviews it before judging starts; the owner may read it.
 2. **Where cases come from** (target about 2,000 cases; each case one payment):
    - **Local places from OpenStreetMap** (about 800): shops, cafés, restaurants, bakeries, pharmacies, doctors' and
      dentists' practices, hairdressers, petrol stations, hotels, cinemas, gyms, clubs, kiosks and the like, from about
@@ -103,7 +103,7 @@ All under `eval/sorting/`, TypeScript run with `npx tsx`, no new packages (Node'
 7. **The merge** (`eval/sorting/labels.jsonl`, `--merge`): from the first answer and the two judges. A category is
    accepted when at least two of the three name it (as `best` or `alsoRight`); unsorted is right when at least two say
    `unclear` or `personal`; a case with no majority is `disputed`: kept out of the score and listed (count and a file)
-   for Claude and Patrik to look at. Record the agreement rates (all three, two of three) per kind: a weak kind of case
+   for Claude and the owner to look at. Record the agreement rates (all three, two of three) per kind: a weak kind of case
    shows up there.
 8. **Held back** (30% of cases, chosen by a stable hash of the case id, kept in `cases.heldback.jsonl` with their own
    labels file): later briefs that improve sorting must not open them. The score prints only totals for them, never a
@@ -115,14 +115,14 @@ All under `eval/sorting/`, TypeScript run with `npx tsx`, no new packages (Node'
    - **sorted**: how many cases got a category;
    - **right**: of those, how many got an accepted one;
    - **wrong**: sorted into a category not accepted, including sorted where unsorted is right (the number to push
-     down: Patrik said errors are worse than gaps);
+     down: the owner said errors are worse than gaps);
    - **missed**: left unsorted where a clear category exists;
    - by kind (`osm`, `brand` known and unknown, `madeup`, `nonshop`, `scenario`, money in and out, each payment
      service), by category (worked-on part only), and every wrong and missed case of the worked-on part with its line,
      the engine's answer and the accepted ones.
    `--record` appends one line to `eval/history.csv` (date, git commit, `sorting`, the headline numbers of both parts),
    creating it with a header when missing (brief 78 writes `files` lines to the same file).
-10. **Patrik's own data** (`eval/sorting/own-data.ts <path to an Aresium export>`): Claude runs it on Patrik's export,
+10. **The owner's own data** (`eval/sorting/own-data.ts <path to an Aresium export>`): Claude runs it on the owner's export,
     which never enters the repo and which you never see; test it with a made-up export. It refuses a path inside the
     repo; it reads an Aresium export (`LedgerExport`, schema 1–5: payments with their fields, `category`,
     `categorySource`, chosen categories), sorts the payments as a new person with his chosen categories (no learned
@@ -139,7 +139,7 @@ All under `eval/sorting/`, TypeScript run with `npx tsx`, no new packages (Node'
 - An answer never comes from the engine; the guide is written without the shop list.
 - Answers are sets; `personal` and `unclear` exist; disputed cases are kept out of the score.
 - A wrong category counts worse than a gap: wrong is its own headline number.
-- No real people's names, IBANs or amounts anywhere; Patrik's data never enters the repo or your worktree.
+- No real people's names, IBANs or amounts anywhere; the owner's data never enters the repo or your worktree.
 
 ## Out of scope
 

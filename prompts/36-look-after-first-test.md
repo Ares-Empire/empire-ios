@@ -5,7 +5,7 @@ Branch: `claude/36-look` · Worktree: `../empire-ios-36-look` · Built by: a Cla
 
 ## Goal
 
-Patrik's first test of Aresium's phone mode (2026-10-30, `docs/reviews/2026-10-30-aresium-phone-test.md`, findings 4–7;
+The owner's first test of Aresium's phone mode (2026-10-30, `docs/reviews/2026-10-30-aresium-phone-test.md`, findings 4–7;
 read it) found three things about the look. After this brief, each category of one's own gets an icon of its own
 (fitting its name where possible), the category change sheet saves from the top like every iOS edit sheet, and the bank
 guide's "only on the website" line is easy to read in light and dark.
@@ -34,7 +34,7 @@ guide's "only on the website" line is easy to read in light and dark.
    today's main). Own categories that exist already get theirs in their creation order when the store is opened. The
    picker, the dashboard and every list show the stored look. Keep the word list and the choice in a model with unit
    tests, out of the views.
-2. **Save at the top of the category change sheet** (`RecategoriseSheet`). Patrik: Save at the bottom is far from a
+2. **Save at the top of the category change sheet** (`RecategoriseSheet`). The owner: Save at the bottom is far from a
    category at the top, and iOS edit sheets keep Cancel top left and Save top right. Move Save into the toolbar
    (`.confirmationAction`, disabled as today, "Saving…" state kept); keep "Save & remove from current" in Add mode where
    it reads well (your call); the follow-up question after a Switch works as before.

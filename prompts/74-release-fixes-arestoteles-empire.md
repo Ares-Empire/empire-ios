@@ -6,7 +6,7 @@ Branch: `codex/74-release-fixes` Â· Worktree: `../empire-ios-74-release-fixes` Â
 ## Goal
 
 Brief 73's check (`codex-runs/73-release-check.md`, confirmed by Claude in the code) found three things to fix before
-these apps settle on Patrik's iPhone. After this brief: a vault the app throws away also leaves iPhone search; the
+these apps settle on the owner's iPhone. After this brief: a vault the app throws away also leaves iPhone search; the
 downloaded vault stays out of the iPhone's backups; and a notification's tap in the Empire app is never hidden behind
 Settings.
 

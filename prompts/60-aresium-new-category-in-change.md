@@ -6,7 +6,7 @@ look and flow) · Simulator: `claude-60`
 
 ## Goal
 
-Patrik (2026-10-31, after build 7): "In the category change screen there should be a way to add a new category because
+The owner (2026-10-31, after build 7): "In the category change screen there should be a way to add a new category because
 otherwise you have to leave, create it, come back." After this brief, the change window (a payment's category chip or
 pen, or a row's long press → Change category) offers **New category**. The person types a name and the new category is
 made, shows among the choices and is picked. Save then moves (or adds) the payment as with any other category.
@@ -52,7 +52,7 @@ made, shows among the choices and is picked. Save then moves (or adds) the payme
 8. **The tour:** its switch step uses this window on the tour's own store. The tile may stay there; a category made in
    the tour goes with the tour's store and never reaches the person's. The step still goes on when the payment is moved.
 9. **German** for every new text (`scripts/strings.py`).
-10. **The receipt window and Add cash too** (Patrik, 2026-10-31, added while the build ran: "yes lets do that too, seems
+10. **The receipt window and Add cash too** (owner, 2026-10-31, added while the build ran: "yes lets do that too, seems
     sensible"). The receipt check window (new reading and Edit receipt, `ReceiptCheckView`) and the cash entry window
     (Add cash and Edit entry, `CashEntryView`) pick their category from a `MenuChip` menu. That menu ends with **New
     category…** / **Neue Kategorie …** (a `plus` symbol, after a divider). It opens the same alert, makes the category

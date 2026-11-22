@@ -20,13 +20,13 @@ and the bundle.
 1. **"Not sorted" is money out only.** Today a payment without a category is in `Uncategorised`, kind "spend", so
    money coming in that is not sorted yet (a salary from an unknown employer, a friend paying back) lowers spending,
    counts as income ("Other") at the same time, and when money in exceeds money out in a month, that month's
-   "Uncategorised" spend is ≤ 0 and the app's category screen shows "No activity recorded" (Patrik hit this,
+   "Uncategorised" spend is ≤ 0 and the app's category screen shows "No activity recorded" (the owner hit this,
    2026-10-27). Change: an `Uncategorised` payment with amount > 0 is not spending (not in `total.expense`, the month's
    expense and day values, the `Uncategorised` spend series, or its `categoriesIn`), only income in "Other" as now.
    Money out without a category stays spending. Refunds inside real spend categories keep today's behaviour (they
    lower that category; settled). Tests: a month with +150 unsorted in and −20 unsorted out shows 20 spent in Not
    sorted and 150 income in Other; the expense total is not lowered by the 150. This changes aresium.de's numbers a
-   little (Patrik's own unsorted money in): say so in your final message; Claude measures it on the server.
+   little (the owner's own unsorted money in): say so in your final message; Claude measures it on the server.
 2. **Several readings of an unknown file.** For a CSV whose layout is not known, the app will show the first few
    payments as they would appear and ask "Does this look right?"; on "No" it shows the next reading. Add
    `readingsOfUnknownFile(bytes, savedLayouts?)` (exported from `index.ts`): up to 4 complete `CsvLayout`s, best

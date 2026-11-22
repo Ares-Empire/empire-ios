@@ -9,7 +9,7 @@ Read `COMMON.md` (same folder) and `F-accounts-contract.md` (final) first, then 
 ## Build
 
 1. **Account server** (migration + hooks): the `requested` and `language` fields and their rules; approval granting
-   `requested` (both through the admin UI and through the hub); the emails to Patrik for sign-ups and access requests
+   `requested` (both through the admin UI and through the hub); the emails to the owner for sign-ups and access requests
    (which apps, which language) and to the person once approved (German or English by `language`); PocketBase's
    verification and password-reset emails in German and English in one message; the route `POST /api/empire/leave`
    (auth required; removes one service from the account's `services` and `requested`; 400 for an unknown service);

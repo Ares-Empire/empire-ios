@@ -105,7 +105,7 @@ rules, not walls:
 ## Out of scope
 
 - iPhone apps (brief 242), AresOS, Arestemis/aresus code, security fixes (another session does those).
-- Branch protection and required checks (Patrik's call).
+- Branch protection and required checks (the owner's call).
 
 ## API
 

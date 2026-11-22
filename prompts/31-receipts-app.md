@@ -6,7 +6,7 @@ Repo: empire-ios · Worktree: `../empire-ios-31-receipts` (branch `claude/31-rec
 
 ## Goal
 
-Patrik wants receipts in Aresium (2026-10-27, D8 in `~/ares-empire/docs/ARESIUM-FOR-OTHERS.md` → part 6 "Version 1";
+The owner wants receipts in Aresium (2026-10-27, D8 in `~/ares-empire/docs/ARESIUM-FOR-OTHERS.md` → part 6 "Version 1";
 read it first). In phone mode the import button becomes Apple's usual menu: **Choose file**, **Scan receipt**,
 **Choose photo**. The iPhone reads the receipt on the phone; the engine (brief 30, running in parallel in the aresium
 repo) turns it into shop, date, total, currency and card or cash, matches it to the bank payment so nothing counts
@@ -29,7 +29,7 @@ questions and the dashboard (part B, once the engine is merged; Claude sends you
    dashboard's import button) opens a SwiftUI `Menu` with Choose file (as today), Scan receipt and Choose photo, with
    SF Symbols (`doc`, `doc.viewfinder`, `photo`), in the app's language. Scan receipt only where the document camera is
    supported (`VNDocumentCameraViewController.isSupported`; the simulator has no camera, so it is hidden there). The
-   guide's Choose file stays files only. Server mode (Patrik's) keeps today's button: no receipts there yet. The tour's
+   guide's Choose file stays files only. Server mode (the owner's) keeps today's button: no receipts there yet. The tour's
    import step keeps pointing at the button and still only answers its step (no menu action runs in the tour).
 2. **Scan receipt:** Apple's document scanner (VisionKit, `VNDocumentCameraViewController` in a representable), which
    straightens the receipt; a long receipt can be several pages. **Choose photo:** `PhotosPicker` (one image; no
@@ -123,7 +123,7 @@ receipt's page, a joined payment's page, Settings → Receipts. DEBUG arguments 
 ## Done when (part A)
 
 - `xcodebuild test` for Aresium passes (`-parallel-testing-enabled NO`) on **your own simulator** (create one, delete
-  it at the end; never the booted "iPhone 17" 56D5D752…, Patrik uses it); new tests as in A5.
+  it at the end; never the booted "iPhone 17" 56D5D752…, the owner uses it); new tests as in A5.
 - `scripts/strings.py check` 0 problems; the menu looked at in German and English, light and dark.
 - Screenshots `build/31-*.png`: the menu on the first screen and on the dashboard, the photo picker, the DEBUG list
   after `-sampleReceipt`.

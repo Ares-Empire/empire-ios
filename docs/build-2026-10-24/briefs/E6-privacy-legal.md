@@ -7,11 +7,11 @@ they handle; change only your two worktrees. No SSH.
 
 ## Why
 
-Patrik (2026-10-24) wants the apps to "feel legit" for other users and asked: "should we do things like Impressum,
-privacy page etc?" The lead's answer: yes, before anyone besides Patrik uses an app. A privacy policy is needed under
+The owner (2026-10-24) wants the apps to "feel legit" for other users and asked: "should we do things like Impressum,
+privacy page etc?" The lead's answer: yes, before anyone besides the owner uses an app. A privacy policy is needed under
 the GDPR as soon as the apps handle other people's data, and Apple asks for its link in App Store Connect (TestFlight for
 outside testers, and the App Store). An imprint (Impressum) is the safe choice in Germany for apps offered to the
-public. You draft; Patrik approves the text before anything goes online; the lead deploys.
+public. You draft; the owner approves the text before anything goes online; the lead deploys.
 
 ## 1. The inventory (`ares-empire/docs/PRIVACY.md`)
 
@@ -29,7 +29,7 @@ from the code with **[lead to confirm]**.
 - **Datenschutzerklärung / Privacy policy** from the inventory: plain language ("du" in German, like the apps), every
   item GDPR Art. 13 needs (controller, data, purposes, legal bases, recipients, transfers outside the EU and their
   safeguards, retention, rights incl. the complaint to the supervisory authority for Bavaria, BayLDA), no tracking.
-- **Impressum / Imprint** (§ 5 DDG): Patrik Breeck, the address as the placeholder `[ADDRESS]` (Patrik decides which
+- **Impressum / Imprint** (§ 5 DDG): the owner, the address as the placeholder `[ADDRESS]` (the owner decides which
   address), contact: the owner's email (the owner file, see ares-empire `docs/PRIVACY.md`).
 - Served by the hub **without login** at `https://www.ares-empire.de/datenschutz`, `/privacy`, `/impressum`,
   `/imprint` (find how the hub serves pages: `webauth/server.py` and its open paths, `web/`), in the hub's look,
@@ -52,5 +52,5 @@ from the code with **[lead to confirm]**.
 ## Done when
 
 - The builds of all five apps pass with the manifests (each `.app` contains them); the hub's tests pass.
-- Final message: the open **[lead to confirm]** points, the questions only Patrik can answer, the deploy steps for the
+- Final message: the open **[lead to confirm]** points, the questions only the owner can answer, the deploy steps for the
   pages. Never put a real address or other personal data into the files; the placeholder stays.

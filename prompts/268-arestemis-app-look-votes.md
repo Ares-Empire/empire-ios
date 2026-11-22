@@ -7,7 +7,7 @@ last until 11-17). The look of the new controls is Claude's (a Claude Opus desig
 
 ## Goal
 
-Patrik's men's fur coat hunt is judged by Claude from the photos (server brief 267, "look"). He teaches it with
+The owner's men's fur coat hunt is judged by Claude from the photos (server brief 267, "look"). He teaches it with
 👍/👎. After this, the app keeps a search's look when it is edited, shows the look score and reason on a finding,
 and sends his votes on findings and on filtered-out listings of a look hunt.
 

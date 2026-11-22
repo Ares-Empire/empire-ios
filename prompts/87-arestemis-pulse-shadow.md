@@ -3,7 +3,7 @@
 Status: merged 2026-11-01 (the pulse redrew pathless shadows offscreen every frame; GlassCard now draws none, look kept; Arestemis build 5 is the test on the phone)
 Branch: `claude/arestemis-pulse-shadow` · Worktree: `../empire-ios-pulse-shadow` · Done by Claude (small fix, no agent)
 
-## What Patrik saw
+## What the owner saw
 
 Build 4, 2026-11-01 evening, iPhone 17, iOS 27.0.1, dark: "I still get the black corner on my phone. I can even force
 it by reloading the screen." His screenshot (20:16, Hunt tab, hunt active): a sharp greenish-black rectangle from the
@@ -58,4 +58,4 @@ blur). Tools: `scripts/offscreens/` (from brief 67's), the rule in `CLAUDE.md`.
 - Before/after screenshots of every app (Arestemis Hunt, Listings, Filter, Settings; Aresium, Aresus, Arestoteles,
   Empire), light and dark: dark unchanged, light only without the content's halos (`build/shots/`, local).
 - Arestemis's tests pass; all five apps build.
-- Build 5 goes to Patrik's phone; he checks the Hunt tab with the hunt running and a pull to refresh.
+- Build 5 goes to the owner's phone; he checks the Hunt tab with the hunt running and a pull to refresh.

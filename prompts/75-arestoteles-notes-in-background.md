@@ -5,7 +5,7 @@ Branch: `codex/75-arestoteles-background` · Worktree: `../empire-ios-75-arestot
 
 ## Goal
 
-Patrik's first day with Arestoteles on his iPhone (build 1, 2026-11-01): "Notes lock me in the note creation screen
+The owner's first day with Arestoteles on his iPhone (build 1, 2026-11-01): "Notes lock me in the note creation screen
 while waiting to be sent. Let's close the screen once Speichern is clicked and the sending happens in the background."
 And: "I noticed slight lags initially." After this brief, Save in a note sheet (and Later in Discuss) closes the sheet
 at once while the note goes to the server by itself, and the app's own work when a vault arrives or loads no longer
@@ -28,7 +28,7 @@ holds the main thread.
 ### Part A: Save closes the sheet; sending happens in the background
 
 Today `addQuickNote` appends the note to the phone's queue, saves the queue to disk, then **awaits** the server
-(commit, rebuild, push to GitHub) before the sheet may close; the sheet stays open with its text, so Patrik waits.
+(commit, rebuild, push to GitHub) before the sheet may close; the sheet stays open with its text, so the owner waits.
 
 1. **The store queues and returns.** `VaultStore` gets a synchronous way to add a note (for example
    `queueQuickNote(_:about:kind:now:) -> QuickNoteOutcome` with `.empty` / `.queued`): validate as today, append, save
@@ -42,7 +42,7 @@ Today `addQuickNote` appends the note to the phone's queue, saves the queue to d
    .beginBackgroundTask(withName:expirationHandler:)`, ended when the flush ends or iOS expires it), so a note saved
    right before leaving the app still goes. Whatever is not sent goes when the app next refreshes (today's
    `refresh` → `flushQuickNotes`).
-4. **What Patrik sees afterwards:**
+4. **What the owner sees afterwards:**
    - Sent: nothing (as every other successful edit).
    - The tabs' `StatusLine` "N quick notes waiting to be sent" counts only notes that **already failed** to send at
      least once (offline or a server error), not one on its first try, so it does not flash up after every Save.

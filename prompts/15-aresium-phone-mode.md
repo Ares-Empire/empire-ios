@@ -5,9 +5,9 @@ Repo: empire-ios · Worktree: `../empire-ios-15-phone-mode` (branch `claude/15-p
 
 ## Goal
 
-Everyone but Patrik uses Aresium in **phone mode**: their bank files are read, stored, sorted and added up on their
+Everyone but the owner uses Aresium in **phone mode**: their bank files are read, stored, sorted and added up on their
 iPhone by the shared engine (the server's own TypeScript, bundled, run in JavaScriptCore); nothing about their money
-reaches a server. Patrik keeps **server mode**. The existing screens stay as they are and show the same `Dashboard`
+reaches a server. The owner keeps **server mode**. The existing screens stay as they are and show the same `Dashboard`
 in both modes. This brief builds the whole data side of phone mode with plain structural screens where new screens are
 needed; Claude does the look of those screens afterwards.
 
@@ -57,7 +57,7 @@ needed; Claude does the look of those screens afterwards.
    `sortPayments` (structural, learned, starter; only the person's chosen categories) → stored → dashboard rebuilt.
    The result line says how many were new, already there, sorted, and waiting for a category. Files shared into the
    app keep working as today.
-7. **Categories.** Nothing is preselected (Patrik, 2026-10-26). Before the first import, and from a "Categories" row in
+7. **Categories.** Nothing is preselected (owner, 2026-10-26). Before the first import, and from a "Categories" row in
    Aresium's settings section: a structural picker with the default list by group (names in the app's language,
    from the engine), a toggle each, and a field to add one's own names; the two built-ins are always there and not
    listed. Unticking a category with payments asks where they go (another category or Not sorted). Icons and colours

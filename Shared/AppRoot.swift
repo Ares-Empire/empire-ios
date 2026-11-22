@@ -277,7 +277,7 @@ nonisolated enum LaunchArguments {
 
     private static let arguments = Mutex(ProcessInfo.processInfo.arguments)
 
-    /// Screens, tabs, sheets, scroll positions and one-off notices of the apps' screenshot arguments (CLAUDE.md).
+    /// Screens, tabs, sheets, scroll positions and one-off notices of the apps' screenshot arguments (docs/apps/, docs/SHARED.md).
     private static let opensWithValue: Set<String> = [
         "-openSheet", "-openProvince", "-openRun", "-openMatch", "-openNote", "-openPosition", "-openBestMatch",
         "-tab", "-filter", "-library", "-search", "-tabSearch", "-scrollTo", "-sampleCategory", "-sampleMonth",

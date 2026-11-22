@@ -5,7 +5,7 @@ Branch: `claude/41-dashboard` · Worktree: `../empire-ios-41-dashboard` · Built
 
 ## Goal
 
-Patrik approved the comfort list of brief 38 (2026-10-30, all items). This brief builds the items on Aresium's
+The owner approved the comfort list of brief 38 (2026-10-30, all items). This brief builds the items on Aresium's
 dashboard and in the shared Settings; brief 40 runs in parallel in the receipt, cash and file check windows. After this
 brief the most common correction (a payment's category) takes one long press, the import banner goes with a swipe,
 small controls are easy to hit, Privacy and Imprint open inside the app, and Log out asks first.
@@ -58,7 +58,7 @@ small controls are easy to hit, Privacy and Imprint open inside the app, and Log
 - The receipt, cash and file check windows and the receipt page (`ReceiptCheckView`, `ReceiptCaptureScreens`,
   `CashScreens`, `FileCheck*`, `ReceiptPageView`): brief 40 runs in parallel there.
 - The category picker and its model (brief 39 just changed them).
-- Create account's swipe-away (item 11 of Patrik's list): later, with the other apps.
+- Create account's swipe-away (item 11 of the owner's list): later, with the other apps.
 
 ## Done when
 

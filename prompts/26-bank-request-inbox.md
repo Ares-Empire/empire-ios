@@ -6,7 +6,7 @@ agent
 
 ## Goal
 
-In Aresium's bank guide, someone whose bank is not listed can send its name to Patrik in two taps, so we know which
+In Aresium's bank guide, someone whose bank is not listed can send its name to the owner in two taps, so we know which
 banks to add. No account. This brief builds the receiving end on the account server, next to the bank formats inbox
 of brief 21 (merged, not deployed yet; same patterns).
 
@@ -24,7 +24,7 @@ of brief 21 (merged, not deployed yet; same patterns).
 2. A hook before create refuses a bank name that looks like personal data, reusing `lib/bank-formats.js`'s check (do
    not copy it): 400 with a sentence in the request's language (`Accept-Language`) and `data.bank.code`
    `personal_data`.
-3. A hook after create mails Patrik through `lib/mail.js`: subject "[Aresium] Bank wish: <bank>", the bank, app
+3. A hook after create mails the owner through `lib/mail.js`: subject "[Aresium] Bank wish: <bank>", the bank, app
    version, language, and a line on what to do (find the bank's export steps and format; add it to the guide and, once
    a file's format is known, the engine). A failed mail is logged and the record stays.
 4. Tests in `accounts/test-rules.sh` (anonymous create ok and mailed; read refused; personal-looking names refused;

@@ -6,7 +6,7 @@ look, and the small model behind it) · Simulator: `claude-99` (create it: iPhon
 
 ## Goal
 
-Patrik (2026-11-01), after seeing that most of what stays unsorted on day one is personal (money from his parents 77
+The owner (2026-11-01), after seeing that most of what stays unsorted on day one is personal (money from his parents 77
 payments, his own categories 50, friends and gifts, a few payees with many payments each) and that no rule or list can
 know it: "yes a more efficient not sorted sorting is smart. Like a way to see the top not sorted factors and going
 through them".

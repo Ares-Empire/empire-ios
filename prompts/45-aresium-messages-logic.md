@@ -5,7 +5,7 @@ Branch: `codex/45-messages` · Worktree: `../empire-ios-45-messages` · Model: `
 
 ## Goal
 
-Patrik (2026-10-30): Aresium's messages come from the app from now on; the Telegram bot is stopped (done). They need
+The owner (2026-10-30): Aresium's messages come from the app from now on; the Telegram bot is stopped (done). They need
 settings: whether they come at all, which ones, and how often. He chose two messages: an **import reminder** that names
 no bank or service, and a **month review**.
 
@@ -28,7 +28,7 @@ the API down in `CLAUDE.md` (the "Aresium phone mode" entry) so that brief can u
   `UNUserNotificationCenter` delegate; a local notification's tap must reach Aresium's routing without registering any
   device), `Model/WidgetSnapshotPublisher.swift` (how the widgets get numbers, and none while locked).
 
-## Behaviour (settled with Patrik; build exactly this)
+## Behaviour (settled with the owner; build exactly this)
 
 1. **Settings** (UserDefaults, keys under `aresium.messages.`): *Messages* on/off (off until the person turns it on);
    *Import reminder* on/off and its interval (every week, every 2 weeks, every month; default 2 weeks); *Month review*
@@ -38,7 +38,7 @@ the API down in `CLAUDE.md` (the "Aresium phone mode" entry) so that brief can u
 2. **Import reminder.** Fires `interval` after the *last import* at the chosen time (the last import: when an import
    added payments; before any, when the reminder was turned on). Every import moves it. If nothing is imported, it
    comes again after another interval, at most three times in a row, then stops until the next import. **No bank,
-   service or account name in it** (Patrik). Text, English in the code, German by Claude: title "Time for new
+   service or account name in it** (owner). Text, English in the code, German by Claude: title "Time for new
    statements" / body "Your last import was 14 days ago." (the real number of days at the time it fires; say if you
    word it differently).
 3. **Month review.** On the 3rd of a month at the chosen time: last month's money out, money in, and the category with
@@ -54,7 +54,7 @@ the API down in `CLAUDE.md` (the "Aresium phone mode" entry) so that brief can u
    the file picker in phone mode); the review → that month on the dashboard. Through the existing URL routing
    (`AresiumURL`), so a tour ends first, as with a widget link.
 6. **Language:** texts in the app's language when scheduled; scheduled again after the in-app language switch.
-7. **Never** in the samples, the tour, tests, or server mode (Patrik's own server view: no messages); "Delete all data"
+7. **Never** in the samples, the tour, tests, or server mode (the owner's own server view: no messages); "Delete all data"
    and turning Messages off remove everything pending and delivered of Aresium's. Only Aresium's own identifiers
    (`aresium.reminder…`, `aresium.review…`) are touched, never another app's.
 8. **Off the main thread:** computing the review from the dashboard and the scheduling calls run off the main actor.

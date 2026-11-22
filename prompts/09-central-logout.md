@@ -8,7 +8,7 @@ Branch: `codex/09-central-logout` · Worktree: `../empire-ios-09-central-logout`
 Logging out in one Empire app must end everything the login showed on this iPhone, also in the apps that are not
 running: their saved data, their widgets and their push notifications. Today "log out everywhere" relies on every other
 app running again (council 2026-10-25, `docs/reviews/2026-10-25-empire-app.md` → General case (b); `CLAUDE.md` → Open
-12). This must hold before anyone but Patrik gets an app.
+12). This must hold before anyone but the owner gets an app.
 
 What is wrong today, concretely:
 - **Widgets:** the Aresium widget shows its snapshot (`Aresium/AresiumShared/WidgetSnapshotStore.swift`) until its next

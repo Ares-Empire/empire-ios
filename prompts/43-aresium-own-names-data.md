@@ -5,7 +5,7 @@ Branch: `codex/43-own-names` · Worktree: `../empire-ios-43-own-names` · Model:
 
 ## Goal
 
-Patrik (2026-10-30): people should be able to rename their payments to names they remember more easily. Aresium keeps
+The owner (2026-10-30): people should be able to rename their payments to names they remember more easily. Aresium keeps
 each name with the bank's original name, so new imports are still sorted as before and get the name automatically.
 Payments of the same name can be added up (in a later brief: from a swipe on the row and from the payment's page). A
 setting switches between the person's names and the bank's. The payment's page shows the bank's name small under the
@@ -28,7 +28,7 @@ on what you make, and brief 42 runs in parallel in `Screens/`. Write the API you
   `Model/DashboardStore.swift`, `Model/TransactionDetail*.swift`, `Model/PaymentPage.swift`, `Model/PaymentRows.swift`,
   `AresiumShared/Dashboard.swift` (`Transaction`: shared with the widget and the server's JSON).
 
-## Behaviour (settled with Patrik's request; build exactly this)
+## Behaviour (settled with the owner's request; build exactly this)
 
 1. **Two names.** Every bank payment has its *bank name*: today's `place` (the counterparty, else the text). It never
    changes, and sorting, learning, `merchantKey` and the receipt matching keep reading only it. The person can add an

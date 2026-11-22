@@ -1,13 +1,13 @@
-# 38: Swipe back on Aresium's dashboard; every screen's way out and the comfort gaps, for Patrik to choose
+# 38: Swipe back on Aresium's dashboard; every screen's way out and the comfort gaps, for the owner to choose
 
 Status: merged 2026-10-30 (Aresium 380 tests + 2 opt-in timing; the other four apps build; swipe checked on the iOS 27 simulator, to check on the phone in build 3)
 Branch: `claude/38-swipe` · Worktree: `../empire-ios-38-swipe` · Built by: a Claude agent (flow and the feel)
 
 ## Goal
 
-Patrik tested build 2 on his iPhone 17 (`docs/reviews/2026-10-30-aresium-phone-test.md`, "Second round", finding 9):
+The owner tested build 2 on his iPhone 17 (`docs/reviews/2026-10-30-aresium-phone-test.md`, "Second round", finding 9):
 on the dashboard, Expenses → Groceries, a swipe to the right does not go back; only the header's arrow does. After this
-brief the usual back swipe works on every dashboard screen that has a back arrow, and Patrik has a short list of the
+brief the usual back swipe works on every dashboard screen that has a back arrow, and the owner has a short list of the
 other places in Aresium where the usual gesture or a common iPhone comfort is missing, to choose from.
 
 ## Read first
@@ -43,9 +43,9 @@ other places in Aresium where the usual gesture or a common iPhone comfort is mi
 4. **Check it on the simulator** (your own: `claude-38`, commands in `AGENTS.md`), server mode's sample (`-sample`) and
    phone mode's (`-samplePhone`): Expenses → a category → a month, swipe back twice; a half swipe let go returns to the
    same screen; the graph still scrubs. If you find no way to drive a swipe on the simulator without installing anything
-   and without editing `project.pbxproj`, unit-test the gesture's decision (begins / does not begin) and say so; Patrik
+   and without editing `project.pbxproj`, unit-test the gesture's decision (begins / does not begin) and say so; the owner
    checks on the phone. Save a screenshot mid-swipe if you can (`build/38-swipe.png`).
-5. **The list for Patrik (do not build it): Aresium only** (another agent checks the other four apps). Write
+5. **The list for the owner (do not build it): Aresium only** (another agent checks the other four apps). Write
    `docs/reviews/2026-10-30-swipe-and-comfort.md` with a section "Aresium":
    - **Ways out:** every screen and sheet a person can reach (server mode and phone mode: the dashboard and its
      screens, a payment's detail, Settings and its pages, the import flow, the file check, the bank guide, the category
@@ -70,7 +70,7 @@ other places in Aresium where the usual gesture or a common iPhone comfort is mi
 
 - The category picker and its model (`CategoryPickerScreen`, `CategoryPickerModel`, `PhoneBackend`): brief 39 runs in
   parallel there (its scroll lag); leave those files alone.
-- The other four apps' screens (the shared piece may be used there later, once Patrik chooses).
+- The other four apps' screens (the shared piece may be used there later, once the owner chooses).
 - Building anything from the list in item 5.
 
 ## Done when

@@ -5,7 +5,7 @@ Branch: `codex/35-counting` · Worktree: `../empire-ios-35-counting` · Model: `
 
 ## Goal
 
-Patrik's first test of Aresium's phone mode (2026-10-30, `docs/reviews/2026-10-30-aresium-phone-test.md`, findings 1
+The owner's first test of Aresium's phone mode (2026-10-30, `docs/reviews/2026-10-30-aresium-phone-test.md`, findings 1
 and 3; read it) found a payment counted twice and a slow category picker. After this brief: no path in phone mode
 counts a payment twice (each path has a test), several categories can be ticked in quick succession, and the person's
 corrections keep working after the engine changes how it names merchants (brief 34 changes it in parallel).

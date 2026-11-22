@@ -1,7 +1,7 @@
 # Design brief: the Arestemis and Aresus apps
 
 The lead (Claude) designs; you implement this design faithfully and with care. **The look is the point of these
-apps** (Patrik: "UI and design is key. It needs to be classy, it needs to look clean and very good."). When this brief
+apps** (owner: "UI and design is key. It needs to be classy, it needs to look clean and very good."). When this brief
 does not decide something, choose the quieter, cleaner option and say so in your final message.
 
 ## The family look (study before you start)
@@ -44,7 +44,7 @@ it in your final message (the lead moves it).
 - The app's bust (`Image("Bust")`) is its identity: 38 pt in the header's left slot (like Aresium's Hermes), bigger on
   login/loading. The app's name ends the main screen (the first tab's root) in every app: build that screen's scroll
   view with `WordmarkScrollView(word:)` (`Shared/Design`), never a fixed band. The band scrolls with the content and
-  stays just below the screen's edge until you scroll down (Patrik, 2026-10-24).
+  stays just below the screen's edge until you scroll down (owner, 2026-10-24).
 
 ## Screenshots
 

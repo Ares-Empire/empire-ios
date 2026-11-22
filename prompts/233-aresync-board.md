@@ -7,16 +7,16 @@ Model: `gpt-6.1-sol`, effort `high`
 ## Goal
 
 The board (brief 232 builds its server half in Aresus, at the same time, against the same contract) keeps open work
-and Patrik's decisions in one list. **Asks** (a decision or action only Patrik can take) reach his Aresus app; **work**
-belongs to a topic and goes to the Claude session working on that topic, never to Patrik. This brief builds what
+and the owner's decisions in one list. **Asks** (a decision or action only the owner can take) reach his Aresus app; **work**
+belongs to a topic and goes to the Claude session working on that topic, never to the owner. This brief builds what
 runs on the machines:
 
-1. **`board`**, a command Claude sessions run in their shell: see their topic's open items, ask Patrik, leave work for
+1. **`board`**, a command Claude sessions run in their shell: see their topic's open items, ask the owner, leave work for
    a topic, find work to send to another session, mark items sent, done or dropped, take the next brief number.
 2. **The scan**: every aresync run on the MacBook and the server reports the machine's repos' branches that are not
    merged and worktrees with uncommitted changes, so finished work that never shipped shows up by itself.
 3. **Two hooks** for Claude Code: at session start, two lines of counts; on each prompt of a session that asked
-   something, Patrik's answers once they arrive.
+   something, the owner's answers once they arrive.
 
 **How sessions are named** (already live, read it): `claude/name-me` and the README's "Session names". A session runs
 `name-me aresium` and is called `mac-aresium` from its next prompt on; the hook records the applied name in
@@ -40,7 +40,7 @@ id) and, while Remote Control is on, `CLAUDE_CODE_BRIDGE_SESSION_ID` (`session_0
 - **The contract, settled:** `~/aresus/docs/API.md` → "Board (version 1, 2026-11-06)" (read only). Build the machine
   side exactly to it, with `Authorization: Bearer <ARESUS_TOKEN>`. If it cannot work, leave `TODO(contract)` and say
   so in your final message.
-- Why: `~/ares-empire/docs/reviews/2026-11-05-work-board.md`, "Patrik's decisions" and "The design that follows".
+- Why: `~/ares-empire/docs/reviews/2026-11-05-work-board.md`, "the owner's decisions" and "The design that follows".
 - This repo: `README.md` (Reports to Aresus, Drops, Session names), `aresync.sh` (how a run walks the repos, `log`,
   `send_report`, how `config` is read), `config.example`, `drop.py` (the pattern for a Python helper that reads the
   config and talks to Aresus with the token), `claude/name-me`, `tests/` (how tests run; `fake-aresus.py`).
@@ -86,13 +86,13 @@ id) and, while Remote Control is on, `CLAUDE_CODE_BRIDGE_SESSION_ID` (`session_0
      (`windows/` stays as it is).
 3. **The hooks** (`board hook-start`, `board hook-prompt`; both read Claude Code's JSON on stdin, both print nothing
    and exit 0 on any error or timeout):
-   - `hook-start` (SessionStart): `GET /board/summary` → plain text, at most three lines: asks waiting on Patrik (and
+   - `hook-start` (SessionStart): `GET /board/summary` → plain text, at most three lines: asks waiting on the owner (and
      the oldest's age), open work per topic (the five with most), and "Name this session when its topic is clear
      (`name-me <topic>`), then run `board`."
    - `hook-prompt` (UserPromptSubmit): only when this session's `.asks` file exists (no network otherwise). Asks the
      server for those asks (by `session` when the bridge id is known, else by each ask's topic and id); for each newly
      answered one prints JSON `{"hookSpecificOutput": {"hookEventName": "UserPromptSubmit", "additionalContext":
-     "…"}}` with "Patrik answered #12 (“<question>”): “<answer>”. Act on it, then run `board done 12`." Records what
+     "…"}}` with "the owner answered #12 (“<question>”): “<answer>”. Act on it, then run `board done 12`." Records what
      it delivered so it is said once. Removes the file when none of its asks is open or answered any more.
 4. **README:** a section "Board" after "Session names": what it is (two sentences), the commands, the scan, and the
    install (link `~/.local/bin/board`, the two hooks' JSON for `~/.claude/settings.json`, merged with the name-me

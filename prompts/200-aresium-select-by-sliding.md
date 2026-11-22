@@ -7,7 +7,7 @@ iPhone 17, iOS 27.0)
 
 ## Goal
 
-Patrik (2026-11-02, build 14 on his iPhone), about selecting payments in a category's month list (brief 82): "selecting
+The owner (2026-11-02, build 14 on his iPhone), about selecting payments in a category's month list (brief 82): "selecting
 statements is quite bouncy. I think it should be less bouncy. And can we build it like mail so you can basically just
 slide your finger up and down and it keeps selecting statements or when going up deselecting them".
 
@@ -30,7 +30,7 @@ Two things, one feel:
 
 ## Build
 
-1. **Find the bounce first, then remove it.** Patrik could not say which part bounces, so look before changing:
+1. **Find the bounce first, then remove it.** The owner could not say which part bounces, so look before changing:
    record the simulator (`xcrun simctl io <udid> recordVideo`, then frames; or a burst of screenshots) while selecting
    starts (the header's circle), while rows are ticked one after the other and with All, and at Done. Measure what
    moves and how far: the rows' slide (today `SumMotion`, a spring without bounce, 0.38 s), the header swapping from the
@@ -40,7 +40,7 @@ Two things, one feel:
    **The aim:** Mail's calm. The rows and circles slide in one short ease-out without overshoot (about 0.25 s; your
    call), nothing else moves: the header keeps its height and place, the list keeps its scroll position and nothing in
    it shifts when the bar comes or goes, a tick changes at once (or with a very short fade), no scale or spring on a
-   tick. Reduce Motion: no movement, as today. Leave `SumMotion` itself alone for adding up (Patrik has not asked about
+   tick. Reduce Motion: no movement, as today. Leave `SumMotion` itself alone for adding up (the owner has not asked about
    that); give selecting its own motion if it needs one.
 2. **Select by sliding** (only while the list selects; phone mode, as selecting is):
    - **Where a slide starts:** on a row's circle column (the strip at the rows' left the slide made room for; give it

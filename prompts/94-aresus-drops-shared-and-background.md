@@ -6,8 +6,8 @@ Simulator: `codex-94` (create it: iPhone 17, iOS 27.0)
 
 ## Goal
 
-Patrik sends files and photos from Aresus to his MacBook (briefs 88–93; plan `~/ares-empire/docs/ARESYNC-DROP.md`).
-Next (Patrik, 2026-11-02, approved): **Aresus in the iPhone's share sheet** (Photos, Files, Safari, Mail, …) showing
+The owner sends files and photos from Aresus to his MacBook (briefs 88–93; plan `~/ares-empire/docs/ARESYNC-DROP.md`).
+Next (owner, 2026-11-02, approved): **Aresus in the iPhone's share sheet** (Photos, Files, Safari, Mail, …) showing
 the same send screen right there, **dropping files onto the Aresync tab**, and **a second pick adding** to what is
 already picked. Uploads must go on after the share sheet closes.
 
@@ -66,7 +66,7 @@ its items and Send works), never their look.
    moved code compiles in the extension and the app keeps today's behaviour.
 3. **One store of drops on the phone, in the App Group.** The outbox's folder and records move from the app's
    Application Support (`Drops/`) to `DropContainer.url` (e.g. `Drops/` inside it), so the app and the extension see
-   the same queue. Move what is already there on Patrik's phone at the app's first launch (records and files), once,
+   the same queue. Move what is already there on the owner's phone at the app's first launch (records and files), once,
    never losing an item; test it. Recent folders (`DropRecentFolders`) go to the group's `UserDefaults(suiteName:)`
    (move the old value once). Keep the Mac's last folder list in the group too (a small cache: the extension's picker
    opens with it at once and refreshes from the server). The app re-reads the queue when it comes to the foreground,

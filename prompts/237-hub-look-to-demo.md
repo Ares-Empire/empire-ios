@@ -7,7 +7,7 @@ Repos: `ares-empire` (branch `codex/237-look`, worktree `../ares-empire-237-look
 ## Goal
 
 A visitor moving between the Ares Empire hub and the Arestemis demo (arestemis.de) keeps the look they had (light or
-dark), as they already do coming from patrikbreeck.com (Patrik, 2026-11-07: "hub light / dark mode should also just
+dark), as they already do coming from patrikbreeck.com (owner, 2026-11-07: "hub light / dark mode should also just
 transfer"). The convention exists: a link passes `?look=light` or `?look=dark`, and the page it opens starts in that
 look for the visit without remembering it. Today the hub's links pass nothing, so the demo follows the device (a light
 phone shows it light under the dark hub), and the demo's "Ask for access" opens the request form in whatever look
@@ -53,7 +53,7 @@ that form remembered.
 ## Settled: do not re-open
 
 - The convention stays as it is: `?look=light|dark`, read for the visit, never remembered by the page it opens
-  (Patrik, 2026-11-01, patrikbreeck.com and Aresium).
+  (owner, 2026-11-01, patrikbreeck.com and Aresium).
 - No hand-off through `/sso?to=aresium`: the logged-in Aresium dashboard keeps its own remembered look. Only the
   pages listed above get the parameter.
 - `arestoteles.de` and other provinces' sites do not read a look: their links stay unchanged.

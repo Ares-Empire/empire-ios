@@ -5,7 +5,7 @@ Branch: `codex/90-drops-data` · Worktree: `../empire-ios-90-drops-data` · Mode
 
 ## Goal
 
-Patrik sends files and photos from the Aresus app's Aresync tab to his MacBook (plan:
+The owner sends files and photos from the Aresus app's Aresync tab to his MacBook (plan:
 `~/ares-empire/docs/ARESYNC-DROP.md`). The server (brief 88) and the Mac program (brief 89) are being built against
 the contract in `~/aresus/docs/API.md` → "Drops". This brief builds **everything in the app except the look**: the
 models, the API calls, an outbox on the phone that keeps a file until the server has it (also without a connection),
@@ -46,7 +46,7 @@ with Claude).
    (`UIApplication.beginBackgroundTask`) to finish the current upload. Errors: no connection or `5xx` → keep and retry
    later (growing pause, at most 10 minutes); `400` on upload (size or checksum) → recompute and retry once, then
    stop with the error; `413`/`507`/other `4xx` → stop with the server's sentence (the item stays, shown as failed,
-   until Patrik removes it). Removing an item that has a server id also sends `cancel`. On logout
+   until the owner removes it). Removing an item that has a server id also sends `cancel`. On logout
    (`session.onAppDataReset`) the outbox and its files are deleted.
 5. **`DropsStore`** (`@MainActor @Observable`), owned next to `AresusStore` and loaded like it (refresh with the
    tab, keep the last good answer, errors per part): the folder list (also saved to `Caches` so the picker works

@@ -6,7 +6,7 @@ and flow of the change window and Settings → Categories) · Simulator: `claude
 
 ## Goal
 
-Patrik (2026-11-01), on the change window and Settings → Categories: one's own categories for income too, the menus
+The owner (2026-11-01), on the change window and Settings → Categories: one's own categories for income too, the menus
 not bloated with categories that cannot fit, and "if category A is on expenses but also has incomes then it should be
 addable not just switchable." Briefs 68 (engine) and 69 (data) gave every category a home side and let any category be
 offered on the other side too (`otherSide`). This brief draws it:
@@ -33,7 +33,7 @@ offered on the other side too (`otherSide`). This brief draws it:
 2. **Other category…** / **Andere Kategorie …**: a tile in the grid's quiet action style (brief 60's tile: the tiles'
    size, the second ink, the line's thin outline, no category colour), only while `otherSideChoices` is not empty,
    in Switch and Add, phone mode only. A tap shows the other side's categories with their icons and colours. How the
-   money counts needs no explaining: since brief 71 (Patrik, 2026-11-01: "booking everything as it happens") every
+   money counts needs no explaining: since brief 71 (owner, 2026-11-01: "booking everything as it happens") every
    payment counts in the direction it went, so money in put in Friends is income under Friends, money out put in an
    income category is spending under it; nothing is subtracted. If a line helps the person know what the list is,
    keep it short and plain (the app's terms Ausgaben/Einnahmen). Apple's menu is the first thing to try; if the list is long enough to be awkward
@@ -68,7 +68,7 @@ offered on the other side too (`otherSide`). This brief draws it:
 ## Out of scope
 
 - The data and its rules (brief 69), the engine (brief 68), server mode.
-- Whether paid-back money also counts as income (Patrik decides separately).
+- Whether paid-back money also counts as income (the owner decides separately).
 
 ## Done when
 

@@ -1,12 +1,12 @@
 # Build 2026-10-24: Arestemis app, Aresus app (+ Aresync), Empire push
 
-Patrik is away; Claude runs this with Claude subagents (no Codex this time: Patrik's Codex runs elsewhere). The
+The owner is away; Claude runs this with Claude subagents (no Codex this time: the owner's Codex runs elsewhere). The
 heartbeat (cron, :07 and :32) reads this file and continues from the first open step. Keep it current.
 
 **Decisions:** `ares-empire/docs/ARESTEMIS-APP.md`, `ARESUS-APP.md`, `PUSH.md`. **Contracts:** `Arestemis/docs/API.md`,
 `aresus/docs/API.md`, `ares-empire/docs/PUSH.md`. **Briefs:** `briefs/` next to this file.
 
-**Patrik's rules for this build (2026-10-24):** UI and design are the point: classy, clean, in the style of the
+**The owner's rules for this build (2026-10-24):** UI and design are the point: classy, clean, in the style of the
 existing sites and apps without copying them. One accent colour per app, truly only as an accent (Arestemis moonlight
 violet, Aresus lightning blue); red is the special mode, not needed now. Existing apps may change but must not look
 worse. Good code structure. No websites for these apps (SwiftUI only). Old flat search deleted, no backups now, auto
@@ -43,7 +43,7 @@ Stop only for a genuine problem.
       to `push/` (the ares-empire Aresync hook must do this). PushCenter wiring into the apps: step 10.
 - [x] 8. Review + merge T (266 tests pass; ownership checks reviewed). Server move `/root/flatsniper` → `/root/Arestemis`, `arestemis.service`, Caddy route,
       Groq model, delete old config/db, live test with the test account. Done 05:08: `arestemis.service` from
-      `/root/Arestemis` (fresh clone), `.env` from the old one + gpt-oss-120b + TELEGRAM_FALLBACK_USER=Patrik, Caddy
+      `/root/Arestemis` (fresh clone), `.env` from the old one + gpt-oss-120b + TELEGRAM_FALLBACK_USER=the owner, Caddy
       `/api/arestemis/*` (backup `Caddyfile.bak-20261024-arestemis`), server Aresync REPOS + `hooks/Arestemis`,
       flatsniper.service removed. Live: places Germany-wide OK; TEST hunt id 1 on the test account started 05:08
       (München, broad) — **pause + delete it after checking matches**. `/root/flatsniper` still there: delete after.
@@ -52,13 +52,13 @@ Stop only for a genuine problem.
       `Caddyfile.bak-20261024-aresus`), machine tokens Server + Aresium (token files `/root/.config/aresus-*-token.out`,
       600), server REPOS="ares-empire aresus aresync" + hooks ares-empire, aresus; both machines report. My fix:
       `hide: [arescope]` + Arestudy/AresOS/Aresify as Inactive. **Left:** add `Arestemis` to server REPOS + its hook
-      after the move (step 8); Windows token when Patrik sets up the laptop; retire Aresync Telegram once push works.
+      after the move (step 8); Windows token when the owner sets up the laptop; retire Aresync Telegram once push works.
 - [x] 10. Review A1, A2 on the simulator (screenshots), design polish, wire Shared/Push, live login with the test
       account, `simctl push` tests.
 - [x] 11. Hub: ~~app schemes~~ (done 04:30: `APP_SCHEMES` in webauth/server.py, live; Empire Info.plist queries), chronicle lines, EMPIRE.md connections,
       empire-ios README/CLAUDE.md, IPHONE-APPS.md.
-- [x] 12. Report for Patrik (what works, screenshots in `~/empire-ios/build/screens-2026-10-24/`, what waits for Apple).
-- [x] 13. Extra (Patrik: 'if done quickly, scope another project'; Arescribe vetoed, other provinces not sensible to
+- [x] 12. Report for the owner (what works, screenshots in `~/empire-ios/build/screens-2026-10-24/`, what waits for Apple).
+- [x] 13. Extra (owner: 'if done quickly, scope another project'; Arescribe vetoed, other provinces not sensible to
       build alone): (a) Aresus widget (brief W): merged 06:20, 75 tests pass, Release builds without warnings;
       (b) hub live lines from Aresus (935d534, deployed 05:41 by Aresync, hub answers 200).
 
@@ -73,7 +73,7 @@ Stop only for a genuine problem.
   `handle /api/push/* {reverse_proxy 127.0.0.1:8095}`, `/api/arestemis/*` → 8097, `/api/aresus/*` → 8098, and wrap the hub
   proxy in a final `handle { reverse_proxy 172.18.0.1:5185 }`.
 - 04:33 heartbeat: no agent finished yet; P and S have uncommitted work in progress. (Times above corrected to git times.)
-- 04:36 Patrik's real account (admin, id o3hbhzk8bo1352x) given services arestemis + aresus (his own apps); TELEGRAM_FALLBACK_USER candidate.
+- 04:36 the owner's real account (admin, id o3hbhzk8bo1352x) given services arestemis + aresus (his own apps); TELEGRAM_FALLBACK_USER candidate.
 - push merged + deployed; merged-main build/test of the apps running in the background.
 - merged main (push): Empire tests pass, Aresium (+widget), Arestemis, Aresus build.
 - 04:56 S merged and deployed; Aresus overview live (1 issue = Arestemis not deployed yet, correct). Careful: a
@@ -96,7 +96,7 @@ Stop only for a genuine problem.
 - 05:30 A1 merged (77 tests pass), push wired into Arestemis, 'About you' asks for gender + age; live with the test
   account (28 real matches). /root/flatsniper deleted, worktrees + agent simulators removed. EMPIRE.md chronicle,
   connections, decision records, IPHONE-APPS, PUSH status, empire-ios CLAUDE.md 'Open' updated. Final regression run
-  (Aresium + Empire tests) and hub data refresh running. Next: step 12, the report for Patrik.
+  (Aresium + Empire tests) and hub data refresh running. Next: step 12, the report for the owner.
 - 05:35 hub chronicle gap fixed: EMPIRE.md entries since 10-23 were never in the live state.json (backup
   `state.json.bak-20261024-chronicle`) nor in empire-data.js; both in step now. Final regression: Aresium 102, Empire 60
   tests pass. Screenshot set + overview.png in `~/empire-ios/build/screens-2026-10-24/`.
@@ -104,7 +104,7 @@ Stop only for a genuine problem.
   state.json, empire-data.js) updated. All worktrees and agent simulators removed. Next: the report (step 12).
 - 06:30 done. Heartbeat cron and caffeinate stopped. Report given in the session.
 
-## Evening: languages (Patrik: "english and german in all current but also future apps")
+## Evening: languages (owner: "english and german in all current but also future apps")
 
 - Rule: `ares-empire/docs/LANGUAGES.md` (linked from EMPIRE.md → How we build apps, IPHONE-APPS.md, the forge's seed
   CLAUDE.md). How-to: `CLAUDE.md` → Languages.
@@ -123,9 +123,9 @@ Stop only for a genuine problem.
   (briefs `R1`, `R2`), design and German by Claude. Trading code deleted (the website stays).
 - Live: `arestoteles.service` on `127.0.0.1:8099`, Caddy `/api/arestoteles/*`, Aresync deploy hook, Aresus checks it.
   Vault clone `/var/lib/arestoteles/vault` (deploy key, read + write), Ruby for the vault check. Service `arestoteles`
-  for Patrik and the test account (gives access to Patrik's vault: never to anyone else).
+  for the owner and the test account (gives access to the owner's vault: never to anyone else).
 - Checked live: 78 notes, 29 positions, ETag 304, a stale edit refused (409, German); the vault untouched. App on
-  Patrik's simulator shows his real positions.
+  the owner's simulator shows his real positions.
 
 ## Late evening: lookups, Settings, contact, legal (briefs E1–E6)
 
@@ -133,19 +133,19 @@ Stop only for a genuine problem.
   server's search by meaning (EmbeddingGemma-300m q4, live: 538 passages, ~0.15 s, ~280 MB), E4/E4b Settings in every
   app (language chosen in the app: iOS hides its own entry with one phone language), E5 contact & support (`feedback`
   collection + mail hook, live, tested with the test account), E6 privacy manifests + `docs/APP-STORE.md` (merged) and
-  the privacy/imprint pages (ares-empire branch `legal`, worktree `~/wt/ares-empire-legal`: waits for Patrik's answers
+  the privacy/imprint pages (ares-empire branch `legal`, worktree `~/wt/ares-empire-legal`: waits for the owner's answers
   on the netcup agreement and a second contact route, then journald 14 days, the address, publish).
-- All merged and on Patrik's simulator except the legal pages. Follow-ups: self-host the websites' fonts and scripts,
+- All merged and on the owner's simulator except the legal pages. Follow-ups: self-host the websites' fonts and scripts,
   account deletion in the apps reaching every service, drop search terms from the services' logs, light mode before
   the next app.
 
 
 ## 2026-10-25: accounts in every app, legal pages live, language restart (briefs F1, F2, G1 in `../build-2026-10-25/`)
 
-- Legal pages published (Patrik approved the text and the address; AVV with netcup concluded; journald 14 days).
+- Legal pages published (the owner approved the text and the address; AVV with netcup concluded; journald 14 days).
 - F1 (server) + F2 (apps): one Ares account run from every app: sign up, reset, ask for access, change password, leave
   an app (its data goes), delete the account (the server's `deletions` jobs reach Arestemis and push). Live and on
-  Patrik's simulator; the privacy policy's account section updated.
+  the owner's simulator; the privacy policy's account section updated.
 - G1: switching the language asks (in the new language, Cancel in the current one), then the app rebuilds itself in
   it (`LanguageRoot`, no `exit()`); lookups go through `LocalizedStringResource` with `.appLanguage`
   (`scripts/strings.py check` flags the others, `fix-lookups` rewrites them). iOS's own menus inside the app (Cut/Copy)

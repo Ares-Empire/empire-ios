@@ -5,7 +5,7 @@ Branch: `codex/07-widget-month` · Worktree: `../empire-ios-07-widget-month` · 
 
 ## Goal
 
-Patrik asked for "the month that I'm in". Today the widgets show the newest month that has transactions, so on
+The owner asked for "the month that I'm in". Today the widgets show the newest month that has transactions, so on
 1 November, before the first November import, they still show October. Decided 2026-10-24 (council finding D2,
 `docs/reviews/2026-10-23-pre-testflight.md`): the widgets always show the **calendar month**; when the data has no
 transactions in it yet, they say so.

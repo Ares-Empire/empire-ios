@@ -8,7 +8,7 @@ Repo: **aresium** · Worktree: `../aresium-85-reading-round-1` (branch `codex/85
 
 Brief 78's test set of hard bank files has its first numbers (`npm run eval:files`): 179 of 228 files read right, 37
 read wrong, **40 payments silently wrong** in files read without an error, 5 refused that should have been read, and
-re-imported files keep their payment ids in 123 of 159. Patrik (2026-11-01) wants the reading made as good as we can
+re-imported files keep their payment ids in 123 of 159. The owner (2026-11-01) wants the reading made as good as we can
 before more testers get Aresium. A clear "Aresium can't read this file" is acceptable; a file read wrong without a
 word is the worst outcome, because the person's numbers are then wrong and they do not know it.
 

@@ -7,7 +7,7 @@ reasoning that needs Astra's 3× allowance)
 
 ## Goal
 
-Patrik decided (2026-11-07, board #26, "Off for code"): the sync stops committing uncommitted edits in code repos and
+The owner decided (2026-11-07, board #26, "Off for code"): the sync stops committing uncommitted edits in code repos and
 keeps doing it for the Weltbild notes (repo `opinions`). Today `aresync.sh` (Mac, server) and `windows/aresync.ps1`
 (the Windows laptop) commit every repo's uncommitted files at login and 09:00 and push them; a Claude session's
 half-done edit in a website repo can go live that way. The board scan already lists checkouts with uncommitted files,

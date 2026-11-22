@@ -7,7 +7,7 @@ and confirmation as the app already uses them); Claude checks the screenshots.
 
 ## Goal
 
-Patrik (2026-11-01, on build 10): "In expenses I have the category friends but not in income and I cant add it there
+The owner (2026-11-01, on build 10): "In expenses I have the category friends but not in income and I cant add it there
 because it tells me it already exists. can we fix that? Also: Lets make categories renamable and deletable. on delete
 items that can be resorted get resorted and otherwise not sorted".
 
@@ -20,7 +20,7 @@ Three things:
    person can have **is that category**: offered on this side if needed, ticked if needed, and picked where a window
    was choosing one.
 2. **Rename** every category in the person's list, the defaults too.
-3. **Delete** one's own categories, and **remove** a default from the list, with Patrik's rule: its payments are sorted
+3. **Delete** one's own categories, and **remove** a default from the list, with the owner's rule: its payments are sorted
    again, and those Aresium cannot sort go to Not sorted.
 
 ## Read first
@@ -46,7 +46,7 @@ Three things:
    - **made**: no category has the name: made as today.
    - **existing**: a chosen category with the name is already offered for this side (its home, its other-side offer,
      or a transfer): nothing changes.
-   - **offered**: a chosen category whose home is the other side, not offered here yet (Patrik's Freunde): its
+   - **offered**: a chosen category whose home is the other side, not offered here yet (the owner's Freunde): its
      other-side offer is turned on (`setOtherSide`), as "Andere Kategorie …" saves it.
    - **ticked**: a default not in the list: ticked as a tap in Settings → Categories ticks it (its waiting payments
      sorted), and offered on this side too when its home is the other one.
@@ -72,7 +72,7 @@ Three things:
      old name opens the dashboard, not an error). Say in the final message what you found.
    - Export and restore carry a renamed default (raise the export's schema if its meaning changes, keep 1–5
      restorable).
-4. **Delete and remove** (Patrik's rule): one's own category is **deleted**; a default is **removed** from the list
+4. **Delete and remove** (the owner's rule): one's own category is **deleted**; a default is **removed** from the list
    (unticked; it can be ticked again). Both: its payments become Not sorted and are sorted again with the rest of the
    list (learned rules, then the built-in sorting), so those Aresium can sort land in a category and the rest stay Not
    sorted; it leaves every payment's extra categories; receipts and cash entries in it go to Not sorted. Learned rules
@@ -118,7 +118,7 @@ Three things:
 
 - `xcodebuild test -project Aresium/Aresium.xcodeproj -scheme Aresium -destination 'platform=iOS Simulator,name=codex-80'
   -derivedDataPath build/DerivedData` passes, with new tests: each outcome of item 1 in both languages (case and
-  accents ignored; Patrik's case: Friends a spending category, "Freunde" typed for money in in the change window ends
+  accents ignored; the owner's case: Friends a spending category, "Freunde" typed for money in in the change window ends
   offered and picked; in Settings the line), refused built-ins, Friends ticked is offered both ways, rename of one's
   own and of a default (both languages, the check against others but not itself, the original name back, everything
   keyed by id kept, the dashboard showing the new name, a language switch keeping it, export and restore), delete and

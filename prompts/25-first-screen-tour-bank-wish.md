@@ -6,7 +6,7 @@ agent (flow, data and the look)
 
 ## Goal
 
-Patrik tried the tour and the guide (2026-10-27) and asked for:
+The owner tried the tour and the guide (2026-10-27) and asked for:
 1. **The tour's background is far too dark**: the dimmed app must stay clearly visible so people understand what they
    are looking at. Today `TourScreens.swift` lays `Ink.background.opacity(0.74)`. Make the app readable under the veil
    (about a third of that darkness, tuned by eye in light and dark), keep the highlighted control clearly set apart (the
@@ -24,7 +24,7 @@ Patrik tried the tour and the guide (2026-10-27) and asked for:
    payment, switch, categories, lock, contact, import, done (12).
 4. **"My bank is missing"** in the bank guide: when the search finds no bank, show the "Another bank" steps with a
    note at the top: "We don't know this bank yet. The general steps below may help." and a button **Tell us about
-   your bank** that sends the typed name (editable, prefilled with the search text) to Patrik, in two taps: the name
+   your bank** that sends the typed name (editable, prefilled with the search text) to the owner, in two taps: the name
    is already there, Send. The "Another bank" page itself has the same button at its end ("Your bank is missing? Tell
    us which one."). Sent → "Thank you. We'll look at adding it." Offline or a server error: kept and sent by itself
    later, through the **same outbox** as the bank formats (`BankFormatShare`/`BankFormatOutbox`, brief 23): generalise
@@ -48,12 +48,12 @@ format; Languages; Light mode; the design rules). The code: `Screens/PhoneScreen
 
 - No account; no data leaves the phone except what the person sends on purpose (a format, a bank's name, a contact
   message). The tour never touches the person's store, lock or contact.
-- Contact & support without a login stays as brief 22 built it (email required so Patrik can answer, name optional).
+- Contact & support without a login stays as brief 22 built it (email required so the owner can answer, name optional).
 
 ## Done when
 
 - `xcodebuild test` for Aresium passes (`-parallel-testing-enabled NO`) on **your own simulator** (create one, delete
-  it at the end; never the booted "iPhone 17" 56D5D752…, Patrik uses it), with tests for: the first screen without
+  it at the end; never the booted "iPhone 17" 56D5D752…, the owner uses it), with tests for: the first screen without
   data and its return after the tour, Import data opening the picker first, the 12 tour steps (the lock and contact
   steps change nothing real), the guide's no-match state, the bank request (body, outbox kinds, offline, 400, 429,
   a personal-looking name refused), deleting Aresium's data removing waiting requests.

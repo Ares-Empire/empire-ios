@@ -2,7 +2,7 @@
 
 **Subject:** `empire-ios` at 241e15c (the Empire app, `Shared/Auth`, `Shared/API`, `Shared/Push`) and the servers it
 talks to, `ares-empire` at 0039ebd (hub API, account server). **Why a council:** milestone before the first TestFlight
-build; login and tokens (`docs/REVIEW.md`: 3–4 seats). All seats Claude agents (Patrik, 2026-10-25: Claude agents, not
+build; login and tokens (`docs/REVIEW.md`: 3–4 seats). All seats Claude agents (owner, 2026-10-25: Claude agents, not
 Codex), read-only, blind to each other, about 8–9 minutes each.
 
 | Seat | Focus | Model |
@@ -15,7 +15,7 @@ Codex), read-only, blind to each other, about 8–9 minutes each.
 
 All three seats: nothing blocks the first internal build except setting the paid team. All three found the same bug
 independently (the Arestoteles card opened the website). No finding changes what the Empire app is for; two questions
-about what it should become go to Patrik (13 in `CLAUDE.md` → Open).
+about what it should become go to the owner (13 in `CLAUDE.md` → Open).
 
 **General case (two seats):** (a) facts copied by hand across repos with nothing checking that they agree: the list of
 apps (about nine places) and the province shape vs the app's fixtures; (b) protections placed away from where the data
@@ -45,12 +45,12 @@ App and shared code (`empire-ios` d257d2b, b61b770):
 Servers (deployed 2026-10-25, checked live):
 
 - **Private apps check their owner** [1]: Arestoteles and Aresus let in any account with their service, and an account
-  fills its own `requested`, so one tap on Approve could open Patrik's vault. Both now have `EMPIRE_ALLOWED_USERS`
+  fills its own `requested`, so one tap on Approve could open the owner's vault. Both now have `EMPIRE_ALLOWED_USERS`
   like Aresium (empty = nobody); Aresus pushes go to the owner only. Live: the test account (which has both services)
-  gets 403 from all three; Patrik's id is the admin account.
+  gets 403 from all three; the owner's id is the admin account.
 - **Hub** [2]: every error `{"error", "code"}` with a catch-all 500; `state.json` brought to the contract's shape in one
   place (a bad hand edit no longer breaks the app or drops the connection); `pending: null` when the count fails;
-  approvals carry `verified`, decisions return the list and honour the services Patrik saw.
+  approvals carry `verified`, decisions return the list and honour the services the owner saw.
 - **Admin cannot leave or delete himself** [1]: the account server answers 403 with a sentence; Arestemis's
   `DELETE /me` keeps the admin's data (found by the fix agent: leaving deleted the data before the refused leave).
 - **Docs** [1, 3]: `PRIVACY.md` (accounts row, logs), `APP-STORE.md` (demo account, internal only), `EMPIRE-APP.md`
@@ -58,9 +58,9 @@ Servers (deployed 2026-10-25, checked live):
 
 ## Left open
 
-- **Before anyone but Patrik gets an app** (Open 12): central logout cleanup across apps, widgets and push devices
+- **Before anyone but the owner gets an app** (Open 12): central logout cleanup across apps, widgets and push devices
   [1]; a privacy cover in the app switcher [1, from 2026-10-23]; installing a missing province app from the Empire app [3].
-- **For Patrik** (Open 13): whether a member's ring shows every province the account has access to [3]; what makes the
+- **For the owner** (Open 13): whether a member's ring shows every province the account has access to [3]; what makes the
   Empire app worth having over the mobile website (e.g. approve sign-ups from the lock screen, open offline) [3].
 - Small: sample JSONs ship in the Release bundle; the home-screen name "Empire" vs "Ares Empire" [3]; a shared
   `.xcconfig` for the team when Apple approves [3].

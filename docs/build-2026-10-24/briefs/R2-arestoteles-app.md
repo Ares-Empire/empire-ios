@@ -8,7 +8,7 @@ com.apple.CoreSimulator.SimDeviceType.iPhone-17 com.apple.CoreSimulator.SimRunti
 
 ## Why
 
-Arestoteles becomes the iPhone app for Patrik's Weltbild vault (topics, positions, mechanisms, events, questions).
+Arestoteles becomes the iPhone app for the owner's Weltbild vault (topics, positions, mechanisms, events, questions).
 Read, in this order:
 1. `~/ares-empire/docs/ARESTOTELES-APP.md` (the decisions; do not re-open them),
 2. the API contract `~/wt/Arestoteles-app/docs/API.md` and its samples `~/wt/Arestoteles-app/docs/samples/*.json`
@@ -18,7 +18,7 @@ Read, in this order:
 4. the Arestemis app as the pattern to follow for structure: `Arestemis/Arestemis/` (`API/`, `Model/`, `Screens/`,
    `Samples/`, `ContentView.swift`, DEBUG launch arguments, sample mode, tests in `ArestemisTests/`).
 
-**The look is not your job** (Patrik's rule: design stays with the lead). Build every screen as clean structure on
+**The look is not your job** (the owner's rule: design stays with the lead). Build every screen as clean structure on
 `Shared/Design` components (`ProvinceWall`, glass cards, `AppFont`, `Ink`), with the data, states and actions right;
 the lead styles it afterwards. Spend your effort on the data layer, the flows and the tests.
 
@@ -52,7 +52,7 @@ the lead styles it afterwards. Spend your effort on the data layer, the flows an
    Confirm (drafts), Reword, Change my view (asks why), Drop (asks why), Add a position (on a topic overview and on
    Positions, with evidence picked from the notes). A **+ button** for quick notes, reachable from every tab.
 5. **Discuss:** builds a prompt for Claude Code on the vault ("Weltbild vault, repo carlsenares/opinions: read
-   CLAUDE.md first. Let's discuss <the position or note, with its path> …" plus an optional question Patrik types),
+   CLAUDE.md first. Let's discuss <the position or note, with its path> …" plus an optional question the owner types),
    copies it and opens `https://claude.ai/code` (the lead checks on the phone whether the Claude app opens and how
    to start a session there; keep the target URL in one constant).
 6. **Spotlight:** index every note (title, summary, type) with Core Spotlight after each refresh; tapping a result

@@ -24,7 +24,7 @@ Worktree: `~/wt/ares-empire-lang` (branch `languages`, already at `main`). Read 
    (`This account has no access to Ares Empire.` → `Dieses Konto hat keinen Zugang zu Ares Empire.`;
    `Login service unavailable, try again in a minute.` → `Anmeldedienst nicht erreichbar, versuch es in einer
    Minute noch einmal.`). Not translated: province names and texts, the chronicle, ideas (content written in English;
-   Patrik decides later). The login, sign-up and reset web pages stay English (the websites are not part of this yet).
+   the owner decides later). The login, sign-up and reset web pages stay English (the websites are not part of this yet).
 6. **The website stays English:** the hub website's API calls (`web/app/empire-api.js`) send `Accept-Language: en`
    explicitly, so a German browser still gets English live lines on the English site.
 7. `docs/API-EMPIRE.md`: a short "Language" note (live lines and errors follow `Accept-Language`).

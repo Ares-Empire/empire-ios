@@ -10,9 +10,9 @@ Tapping a payment opens its page (`Screens/TransactionDetailSheet.swift`, data `
 still shows values straight from storage: "via starter" / "über starter", "Source: bank", dates as `2026-10-04`, a
 long "External ID", a disclosure "Original bank record". Friends see this page in the tour (the payment step) and on
 every payment they tap. Make it read like the rest of Aresium: plain words in the app's language, readable dates,
-nothing internal. Patrik agreed 2026-10-27.
+nothing internal. The owner agreed 2026-10-27.
 
-The same page serves both modes: phone mode (everyone) and server mode (Patrik's own data from aresium.de). Change
+The same page serves both modes: phone mode (everyone) and server mode (the owner's own data from aresium.de). Change
 the presentation for both through one place; the data and the backends stay as they are.
 
 ## Read first
@@ -66,7 +66,7 @@ merged by Claude afterwards; edit them normally.
 ## Done when
 
 - `xcodebuild test` for Aresium passes (`-parallel-testing-enabled NO`) on **your own simulator** (create one, delete
-  it at the end; never the booted "iPhone 17" 56D5D752…, Patrik uses it), with tests for: every category source in
+  it at the end; never the booted "iPhone 17" 56D5D752…, the owner uses it), with tests for: every category source in
   both languages (phone and server values, an unknown one gives nothing), the date written out in both languages, the
   value date hidden when equal, the direction label, the IBAN grouping, External ID absent, the source line.
 - `scripts/strings.py check` 0 problems; German "du", plain.

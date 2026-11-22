@@ -1,5 +1,5 @@
 A made-up notification for the Empire app on the simulator, in the shape the account server sends through the push
-service when Patrik approves a member's request (ares-empire docs/EMPIRE-APP.md → Notifications):
+service when the owner approves a member's request (ares-empire docs/EMPIRE-APP.md → Notifications):
 
     xcrun simctl push <udid> de.ares-empire.empire app-ready.apns   # tap → the ring, refreshed, no sheet over it
 

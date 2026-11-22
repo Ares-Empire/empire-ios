@@ -6,7 +6,7 @@ feel) · Simulator: `claude-59`
 
 ## Goal
 
-Patrik (2026-10-31, fifth round, item 8; `docs/reviews/2026-10-30-aresium-phone-test.md`): "for the new features and
+The owner (2026-10-31, fifth round, item 8; `docs/reviews/2026-10-30-aresium-phone-test.md`): "for the new features and
 toggles we should update the tour so it explains everything and is coherent." The tour (brief 24, lightened in brief
 25, the graph step in brief 42) was written before most of what Aresium does now. After this brief a new person who
 taps Start tour learns, on the made-up data, every everyday feature and where its switches are, in a walk that feels
@@ -22,7 +22,7 @@ like one story, not a list of features.
 - `Aresium/Aresium/Model/TourModel.swift` (`TourStep`, its texts, `target`, `update`, `prepare`, `holdsTheScreen`,
   `TourWorld` and its `PaymentSums(offered: false)`), `Model/TourData.swift` (the made-up bank file), `Screens/TourScreens.swift`
   (anchors, veil, card, the tour's own Settings), `AresiumTests/TourTests.swift`.
-- `docs/reviews/2026-10-30-aresium-phone-test.md` and `docs/reviews/2026-10-30-swipe-and-comfort.md`: what Patrik asked
+- `docs/reviews/2026-10-30-aresium-phone-test.md` and `docs/reviews/2026-10-30-swipe-and-comfort.md`: what the owner asked
   for and why, so the tour's sentences match how he thinks about each feature.
 
 ## What the tour should cover
@@ -50,7 +50,7 @@ import, done. Missing, in rough order of everyday use:
 1. **A new step list** that covers the above in an order that flows (the dashboard, a category, a payment and what can
    be done with it, a list's swipe and adding up, the name's page, then Settings' places, import, done). Keep it as
    short as the content allows: aim for 15 to 17 steps, one short sentence per card (two only where a step really needs
-   it), in the app's plain "du" German and plain English (no "AI", no marketing words; Patrik's terms: Buchung, Ausgaben,
+   it), in the app's plain "du" German and plain English (no "AI", no marketing words; the owner's terms: Buchung, Ausgaben,
    Einnahmen, Summieren, Auflösen, Alle). Combine where one screen naturally shows two things (e.g. the payment's page:
    rename and change category in one or two steps; Settings → Dashboard's switches in one step).
 2. **Each step points at a real control** (`.tourAnchor`) and goes on when the person does the thing or taps Next, as

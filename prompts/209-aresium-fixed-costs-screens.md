@@ -6,7 +6,7 @@ Branch: `claude/209-fixed-costs-screens` · Worktree: `../empire-ios-209-fixed-c
 
 ## Goal
 
-Patrik (2026-11-02, after build 18), on Claude's two ideas: "lets do monthly and fixcost screen feature first because
+The owner (2026-11-02, after build 18), on Claude's two ideas: "lets do monthly and fixcost screen feature first because
 thats actually a great idea and wont take that long", and on the plan: "Good plan, lets go". The plan: under the
 Overview's total a quiet line with the average of the finished months ("Ø €1,940 a month") and, next to it, what of that
 is fixed ("€860 fixed"); a tap opens the fixed costs: the monthly total on top, each one with its amount, how often, the

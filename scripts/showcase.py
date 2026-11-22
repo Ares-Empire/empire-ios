@@ -75,7 +75,7 @@ class Shot:
 
 
 # Every shot runs in the app's sample mode (-sampleData): made-up data bundled in the app, no login, no server.
-# The arguments are listed in CLAUDE.md (Setup state) and read in each app's ContentView / LaunchArguments.
+# The arguments are listed in docs/apps/<App>.md and read in each app's ContentView / LaunchArguments.
 SHOTS = [
     Shot("aresium", "01-overview-dark", "Three months of spending by category, with the monthly chart",
          "dark", 6, ("-sampleData", "-sampleOverview")),

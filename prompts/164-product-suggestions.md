@@ -5,11 +5,11 @@ Branch: `codex/164-product-suggestions` · Worktree: `../empire-ios-164-product-
 
 ## Authorization
 
-Patrik explicitly assigns the screens to Codex for this round; this overrides the usual Claude-only design workflow. Use the existing components carefully and capture every changed state for Claude’s review.
+The owner explicitly assigns the screens to Codex for this round; this overrides the usual Claude-only design workflow. Use the existing components carefully and capture every changed state for Claude’s review.
 
 ## Goal
 
-When the Everywhere words name a family or kind, show at most four concrete choices and a short route to all offers in Things. Patrik: “good but let's not make it too long.” Where it looks gains one small “Preisvergleich” label under the comparison sites.
+When the Everywhere words name a family or kind, show at most four concrete choices and a short route to all offers in Things. The owner: “good but let's not make it too long.” Where it looks gains one small “Preisvergleich” label under the comparison sites.
 
 ## Read first
 

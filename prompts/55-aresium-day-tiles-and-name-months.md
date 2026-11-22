@@ -6,7 +6,7 @@ feel) · Simulator: `claude-55`
 
 ## Goal
 
-Patrik's fifth round (2026-10-31, build 5 on his iPhone; `docs/reviews/2026-10-30-aresium-phone-test.md` → "Fifth
+The owner's fifth round (2026-10-31, build 5 on his iPhone; `docs/reviews/2026-10-30-aresium-phone-test.md` → "Fifth
 round", items 1 and 2):
 
 1. "Currently summed up says 44× and normal is 44, which looks slightly confusing next to each other. I'd say we make
@@ -31,7 +31,7 @@ round", items 1 and 2):
 
 1. **The day's number** in every day tile that shows a date (a payment row, the Cash page's movements, the receipt
    check's payments, the file check's payments, and any other you find): written as the app's language writes a day
-   alone: German "4." (Patrik's ask), English "4" (English puts no dot after a day; the summed tile stays apart by its
+   alone: German "4." (the owner's ask), English "4" (English puts no dot after a day; the summed tile stays apart by its
    stack and its ×). One function for all of them (a model function with `language: AppLanguage = .current`, tested in
    both languages), not a format per screen. Check that "31." fits the tile at every text size (brief 53 made the day
    shrink inside its tile at the largest sizes, never "…").

@@ -5,10 +5,10 @@ Branch: `claude/67-arestemis-black-corner` · Worktree: `../empire-ios-67-areste
 
 ## Goal
 
-On Patrik's iPhone a small black corner flashes on the hunt's card, and since build 3 it happens very often. After this
+On the owner's iPhone a small black corner flashes on the hunt's card, and since build 3 it happens very often. After this
 brief it never appears, and the card looks exactly as it does now. Arestemis build 4 goes to his phone right after.
 
-## What Patrik sees (his words)
+## What the owner sees (his words)
 
 - Build 3, 2026-11-01, iPhone 17 (iPhone18,3), **iOS 27.0.1**: "I see it appearing in the 'Suche läuft' field on the
   'Jagd' screen. Rn very frequently. The black field goes black in the corner. It needs fixing." (That is the
@@ -46,7 +46,7 @@ brief it never appears, and the card looks exactly as it does now. Arestemis bui
 - Work only in your worktree; build output in its `build/`. **Do not commit** (Claude reviews and commits). Your own
   simulator: `xcrun simctl create claude-67 "iPhone 17" com.apple.CoreSimulator.SimRuntime.iOS-27-0`, delete it at the
   end. `-derivedDataPath build/DerivedData`.
-- **Do not install anything on the physical iPhone** ("X", paired with this Mac). It is Patrik's phone with the
+- **Do not install anything on the physical iPhone** ("X", paired with this Mac). It is the owner's phone with the
   TestFlight build and working push; a development build would replace it.
 - If the fix is in `Shared/` (`GlassCard` is used by every app): first `git merge main` in your worktree, keep the change
   small, and check that Aresium, Aresus, Arestoteles and Empire still build and that one card screen per app looks
@@ -65,7 +65,7 @@ brief it never appears, and the card looks exactly as it does now. Arestemis bui
    pass: a top fade that is not a mask over content holding materials, or a shadow taken from the card's shape instead
    of its animated content. Pick what the evidence supports. Check the other Arestemis screens for the same pattern
    (Listings, Search, Match detail use `edgeFade` and glass cards too) and fix them the same way.
-3. **We cannot see Patrik's screen before build 4**, so the reasoning must hold on its own. In the final message, say
+3. **We cannot see the owner's screen before build 4**, so the reasoning must hold on its own. In the final message, say
    why the change removes the cause, with evidence: offscreen colouring before/after, frames, or documented platform
    behaviour.
 

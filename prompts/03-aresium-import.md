@@ -5,7 +5,7 @@ Branch: `codex/03-aresium-import` · Worktree: `../empire-ios-03-aresium-import`
 
 ## Goal
 
-Patrik imports his VR Bank and PayPal exports on the phone, two ways: the import button on the start screen
+The owner imports his VR Bank and PayPal exports on the phone, two ways: the import button on the start screen
 (as on the website), and sharing the export file from another app (Files, Mail, the bank app) to Aresium.
 Afterwards every screen shows the new numbers.
 

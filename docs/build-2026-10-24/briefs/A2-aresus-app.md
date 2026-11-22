@@ -15,7 +15,7 @@ being built in parallel; build against the contract and the samples. Why and wha
 - `~/aresus/docs/API.md` (every type and route), the samples, `~/ares-empire/docs/ARESUS-APP.md`
 - The Empire app as the **structure** reference: `Empire/Empire/API/EmpireAPI.swift`, `Model/EmpireStore.swift`,
   `Model/EmpireSamples.swift`, `ContentView.swift`, its tests; and its **look**: `Screens/EmpireRing.swift` (`RingTab`:
-  the province box Patrik likes), `Screens/EmpireSheets.swift` (province page)
+  the province box the owner likes), `Screens/EmpireSheets.swift` (province page)
 - `Shared/Auth/EmpireSession.swift` (`EmpireAppIdentity.aresus` exists), `Shared/API/HTTP.swift`, `Shared/Design/`
   (`ProvinceMarks` loads a province's bust from the hub with the token: use it for the marks; in sample mode it returns
   nil, so marks show monograms)

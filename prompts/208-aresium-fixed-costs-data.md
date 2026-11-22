@@ -7,9 +7,9 @@ this brief's API.
 
 ## Goal
 
-Patrik (2026-11-02, after build 18) asked for feature ideas; Claude offered two: the monthly average under the
+The owner (2026-11-02, after build 18) asked for feature ideas; Claude offered two: the monthly average under the
 Overview's total, and a page of fixed costs, what repeats every month (rent, subscriptions, insurance) and what it adds
-up to. Patrik: "lets do monthly and fixcost screen feature first because thats actually a great idea and wont take that
+up to. The owner: "lets do monthly and fixcost screen feature first because thats actually a great idea and wont take that
 long", and agreed to this plan: the Overview says "Ø €1,940 a month" over finished months only, and "of which fixed
 €860 a month"; a tap opens the fixed costs: the monthly total on top, each one with its amount, how often, the last
 payment and the next one due (a yearly payment counts as a twelfth a month); one that stopped (a cancelled

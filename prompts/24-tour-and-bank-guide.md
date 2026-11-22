@@ -6,7 +6,7 @@ data and the look)
 
 ## Goal
 
-Patrik tried the first run (2026-10-27) and asked for two things:
+The owner tried the first run (2026-10-27) and asked for two things:
 - **How to get the file:** he didn't know how to get a file of his payments out of his bank the first time. Aresium
   shows, per bank, the exact steps. The research is done: `docs/bank-export-guide/steps.json` and its `README.md`
   (brief 19; 16 banks, PayPal and "another bank", German and English, with confidence per bank).
@@ -72,7 +72,7 @@ will be merged by Claude.
 ## Done when
 
 - `xcodebuild test` for Aresium passes (`-parallel-testing-enabled NO`) on **your own simulator** (create one, delete
-  it at the end; never the booted "iPhone 17" 56D5D752…, Patrik uses it), with tests for: the steps data, the bank
+  it at the end; never the booted "iPhone 17" 56D5D752…, the owner uses it), with tests for: the steps data, the bank
   search, the tour's steps advancing on the action and on Weiter, ending at any step leaves the person's store
   untouched and deletes the temporary one.
 - DEBUG launch arguments for screenshots: the guide's list, a bank (one high, one low confidence, one with app steps),

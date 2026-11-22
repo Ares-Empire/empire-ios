@@ -7,7 +7,7 @@ widget compiles it).
 
 ## Why
 
-Patrik (2026-10-24): "how do I switch languages? We build english and german for each app but at least in arestoteles
+The owner (2026-10-24): "how do I switch languages? We build english and german for each app but at least in arestoteles
 I dont see how to switch." The decision so far: no switch inside the apps, because iOS has one per app (Settings →
 Apps → the app → Language). It holds (one setting that the app, its widget and its server texts all follow), but
 nobody finds it. So every app gets a visible entry that leads to it.

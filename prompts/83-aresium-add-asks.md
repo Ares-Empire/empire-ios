@@ -7,7 +7,7 @@ Branch: `codex/83-add-asks` · Worktree: `../empire-ios-83-add-asks` · Model: `
 
 ## Goal
 
-Patrik (2026-11-01, on build 10):
+The owner (2026-11-01, on build 10):
 
 - "When changing an expenses category via the 'add to' menu it doesnt suggest to move the other payments too. If I
   change the category just via change it suggests it but not if I change it via the multiple selection. it should
@@ -19,7 +19,7 @@ Patrik (2026-11-01, on build 10):
 In the change window (`RecategoriseSheet`), **Switch** saves and then asks "Also the other payments from <shop>?"
 (`MerchantFollowUp`, `TransactionDetailStore.followUp`). **Add** (extra categories; several can be ticked) saves with
 `setTags` and asks nothing; taking the payment out of its current category is a separate quiet button at the very end
-of the window, "Save & remove from current" / "Speichern & aus aktueller entfernen", which Patrik missed. After this
+of the window, "Save & remove from current" / "Speichern & aus aktueller entfernen", which the owner missed. After this
 brief **Save in Add asks both**, and that button goes.
 
 ## Read first

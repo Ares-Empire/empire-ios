@@ -60,7 +60,7 @@ slowed clock).
    - Per app: `xcodebuild test -project "$app/$app.xcodeproj" -scheme "$app" -configuration Debug -destination
      "platform=iOS Simulator,id=$udid" -derivedDataPath "build/test-unit/$app" -resultBundlePath
      "build/test-unit/$app.xcresult" -parallel-testing-enabled NO -only-testing:"${app}Tests"`, plus the signing
-     settings that work on a machine without Patrik's Apple account (find out which; e.g. `CODE_SIGNING_ALLOWED=NO`
+     settings that work on a machine without the owner's Apple account (find out which; e.g. `CODE_SIGNING_ALLOWED=NO`
      or ad-hoc `CODE_SIGN_IDENTITY=-`; Keychain and App Group tests must still pass, so check them). UI tests
      (`AresusUITests`), `scripts/check-shared-login.sh` and other opt-in probes are not part of it.
    - Without `--timing` the speed tests are skipped (an explicit `-skip-testing` list kept in the script, or a

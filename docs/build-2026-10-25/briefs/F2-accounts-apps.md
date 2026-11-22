@@ -5,7 +5,7 @@ Settings, the shared login), `~/empire-ios/docs/build-2026-10-24/briefs/DESIGN.m
 `Shared/Auth/`, `Shared/Design/ProvinceLogin.swift`, `Shared/Design/SettingsScreen.swift`, `Shared/Support/` (the
 pattern for a form with logic outside the view). Worktree: `~/wt/empire-ios-accounts` (branch `accounts`).
 Simulator: create `agent-accounts` yourself (`xcrun simctl create agent-accounts "iPhone 17"
-com.apple.CoreSimulator.SimRuntime.iOS-27-0`); never use the booted "iPhone 17" (Patrik's). You may edit `Shared/`.
+com.apple.CoreSimulator.SimRuntime.iOS-27-0`); never use the booted "iPhone 17" (the owner's). You may edit `Shared/`.
 Brief F1 builds the server side at the same time; the contract is final, so build against it with fakes.
 
 ## Build (shared, in every app)
@@ -14,7 +14,7 @@ Brief F1 builds the server side at the same time; the contract is final, so buil
    apps" / "Ein Ares-Konto für alle Ares-Apps"; "Create account" and "Forgot password?" under the login button.
    - **Create account** sheet: email, password, password again, name (optional); it requests this app's service and
      sends the app's language. After it: one calm screen saying to confirm the email by the link just sent, that
-     Patrik then approves the account, and that an email follows; back to login.
+     the owner then approves the account, and that an email follows; back to login.
    - **Forgot password** sheet: email → "If there is an account for this address, an email is on its way."
    - The login error says it may also be an account not confirmed or not approved yet.
 2. **No access to this app** (`access = .denied` today): add "Ask for access" / "Zugang anfragen" (adds this service to

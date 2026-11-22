@@ -1,6 +1,6 @@
 # 114: Arestemis app: the Hunts list, the thing search and the thing cards (screens)
 
-Status: merged 2026-11-02 (empire-ios 03d4503, 149 tests; designed by a Claude agent, Claude fixed the auction and shipping texts and kept Patrik's Settings wording under "Flat applications"). Uploaded as Arestemis build 6.
+Status: merged 2026-11-02 (empire-ios 03d4503, 149 tests; designed by a Claude agent, Claude fixed the auction and shipping texts and kept the owner's Settings wording under "Flat applications"). Uploaded as Arestemis build 6.
 Branch: `claude/114-arestemis-screens` · Worktree: `../empire-ios-114-arestemis-screens` · **For a Claude agent**
 (design work stays with Claude: `CLAUDE.md` → Workflow)
 
@@ -8,9 +8,9 @@ Branch: `claude/114-arestemis-screens` · Worktree: `../empire-ios-114-arestemis
 
 Arestemis now holds several hunts of two kinds, flats and things for sale (plan:
 `~/Arestemis/docs/ARESTEMIS-ANYTHING.md`; the data side is merged, brief 113). Its screens still show one flat hunt.
-After this brief the app shows **every hunt**, lets Patrik **add a thing hunt** with its own form, and shows **a thing's
+After this brief the app shows **every hunt**, lets the owner **add a thing hunt** with its own form, and shows **a thing's
 matches** with the facts that matter for buying (price and VB, condition, shipping or pickup with distance, seller).
-Flats look and work as today wherever they appear. This build goes to Patrik's iPhone through TestFlight.
+Flats look and work as today wherever they appear. This build goes to the owner's iPhone through TestFlight.
 
 ## Read first
 
@@ -19,7 +19,7 @@ Flats look and work as today wherever they appear. This build goes to Patrik's i
   shared colour pairs, **no pathless shadows over anything that moves** (brief 87) and **no material under shadow,
   mask or group** (brief 67), Languages (English in code, German in the catalog, `scripts/strings.py`), Settings, the
   Arestemis app entry under Setup state, `WordmarkScrollView` ending the first tab)
-- `~/ares-empire/EMPIRE.md` → "The crown language"; memory of Patrik's taste: gold only as an accent, no slogans, one
+- `~/ares-empire/EMPIRE.md` → "The crown language"; memory of the owner's taste: gold only as an accent, no slogans, one
   accent colour per app (Arestemis: moonlight violet), plain and classy; the existing Arestemis screens are the bar
 - The data you build on: `Arestemis/Arestemis/Model/` (`ArestemisModels.swift`, `ItemModels.swift`,
   `ArestemisStore.swift` (its `// brief 114 replaces` parts are yours to replace), `SearchDraft.swift`,

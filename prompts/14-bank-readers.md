@@ -5,7 +5,7 @@ Repo: aresium · Worktree: `~/aresium-14-bank-readers` (branch `claude/14-bank-r
 
 ## Goal
 
-Friends will import files from banks we do not know yet. Patrik (2026-10-26): "be flexible". Today the engine reads
+Friends will import files from banks we do not know yet. The owner (2026-10-26): "be flexible". Today the engine reads
 VR Bank CSV, CAMT (written for VR Bank) and PayPal CSV. Make the engine read the common German banks' exports, find
 its way through an unknown CSV by itself, and hand the app a preview the person confirms once. All in the engine (pure),
 so the app runs it on the phone; nothing about payments goes to a server.

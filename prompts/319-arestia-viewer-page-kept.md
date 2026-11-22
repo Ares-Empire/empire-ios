@@ -8,7 +8,7 @@ xhigh for the concurrency, sol because the design is settled here and a fresh re
 
 ## Goal
 
-Patrik, 2026-11-20, after trying the 3D tab on his iPhone: "the flat model takes a while to load, can we improve
+The owner, 2026-11-20, after trying the 3D tab on his iPhone: "the flat model takes a while to load, can we improve
 that?", and on the lead's suggestions: "keeping it loaded when switching tabs is smart. and copy on phone seems
 sensible too". Today every load of the 3D tab downloads flatd's `GET /viewer` (8.2 MB) before anything shows. After
 this brief the app keeps one copy of the page per pairing, shows it at once, checks flatd for a newer one in the
@@ -100,7 +100,7 @@ tab was switched, and reloads it cleanly (from the copy) when iOS ended WebKit's
    writing options through a seam instead and say so). Client: `If-None-Match` is sent, 304 → `.unchanged`,
    200 → `.page` with the ETag (with the tests' fake transport). Log: levels, defaults, timing filtering.
 10. **Docs**: in `docs/ARESTIA-APP.md`, a new decision bullet "**The 3D page is kept on the phone**" (2026-11-20,
-    Patrik's words above) next to "The 3D tab": where, the protection, excluded from backups, tied to the pairing
+    the owner's words above) next to "The 3D tab": where, the protection, excluded from backups, tied to the pairing
     (id and pin), deleted by Forget and never shown for another pairing, the ETag check and the swap, and the web view
     kept across tab switches with the clean reload after WebKit ended the page. Fix the sentences that say the page
     is never kept (also in `FlatScreen.swift`'s comments: `websiteDataStore = .nonPersistent()` stays, and its comment
@@ -110,7 +110,7 @@ tab was switched, and reloads it cleanly (from the copy) when iOS ended WebKit's
 ## Settled: do not re-open
 
 - One copy per pairing, in Application Support, excluded from backups, protection
-  `completeUntilFirstUserAuthentication` (Patrik's lead asked for "at least complete-until-first-unlock").
+  `completeUntilFirstUserAuthentication` (the owner's lead asked for "at least complete-until-first-unlock").
 - A copy is shown only for the same pairing id and the same pin; Forget deletes it; nothing of it reaches the App Group.
 - A changed page is swapped in at once (rare); the copy stays when the check fails.
 - The web view still never talks to the network and keeps nothing itself (`nonPersistent`).

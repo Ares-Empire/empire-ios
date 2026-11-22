@@ -1,6 +1,6 @@
 # 216: Fixed costs: fewer false finds
 
-Status: merged 2026-11-02 (908 Aresium tests with briefs 209 and 215; checked on Patrik's export locally; the tour's sample shops visited on other days each month)
+Status: merged 2026-11-02 (908 Aresium tests with briefs 209 and 215; checked on the owner's export locally; the tour's sample shops visited on other days each month)
 Branch: `codex/216-fixed-costs-sharper` (from `claude/209-fixed-costs-screens`, which holds briefs 208 and 209) ·
 Worktree: `../empire-ios-216-fixed-costs-sharper` · Model: `gpt-6.1-sol`, effort `high` · Simulator: `codex-216`
 (create it: iPhone 17, iOS 27.0)
@@ -9,7 +9,7 @@ Worktree: `../empire-ios-216-fixed-costs-sharper` · Model: `gpt-6.1-sol`, effor
 
 Brief 208's detection (`Model/FixedCosts.swift`) finds the real fixed costs, but also things that are not. On the
 screens' made-up sample (brief 209) a supermarket and a bouldering hall visited about once a month show as monthly fixed
-costs, and two restaurant visits about six months apart show as a half-yearly one. Claude ran the detection on Patrik's
+costs, and two restaurant visits about six months apart show as a half-yearly one. Claude ran the detection on the owner's
 own export, locally (nothing of it in this brief): the subscriptions, the transit ticket, a membership and the ended
 rent were right, but a supermarket came out as a **yearly** fixed cost (two similar purchases a year apart among dozens
 of others), and a gym as half-yearly from two payments. Testers will judge the page by its first rows: make the finds

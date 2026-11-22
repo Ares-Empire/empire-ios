@@ -1,11 +1,11 @@
-# 234: Aresus app: the "Waiting on you" tab (the board's asks on Patrik's phone)
+# 234: Aresus app: the "Waiting on you" tab (the board's asks on the owner's phone)
 
 Status: merged 2026-11-06 (empire-ios 6b9382c + 2b81cbf, Aresus tests green on Claude's run; Claude: the card's look, FormButtonStyle secondary, the German), Aresus build 9 uploaded
 Branch: `codex/234-waiting-tab` · Worktree: `../empire-ios-234-waiting-tab` · Model: `gpt-6.1-sol`, effort `high`
 
 ## Goal
 
-Claude sessions on Patrik's machines ask him things (merge this fix now? turn this on?), and the questions got buried at
+Claude sessions on the owner's machines ask him things (merge this fix now? turn this on?), and the questions got buried at
 the end of long replies. The board (aresus server, brief 232, live) keeps every question in one list; this brief puts
 that list in the Aresus app as a third tab: every open question with its answers as buttons, one tap answers; an
 action is marked Done; anything can be set aside as not needed; and the session that asked can be opened in Claude.
@@ -67,9 +67,9 @@ the data, the flows and the screen's structure; Claude styles the screen afterwa
 
 ## Settled: do not re-open
 
-- A third tab, "For you", not a section in the Aresus tab: the watchtower tab is about the server; this is Patrik's
+- A third tab, "For you", not a section in the Aresus tab: the watchtower tab is about the server; this is the owner's
   own list, and the badge must be visible from anywhere in the app.
-- Only asks and the unowned count show; work items never do (Patrik, 2026-11-06: work goes to sessions, not to him).
+- Only asks and the unowned count show; work items never do (owner, 2026-11-06: work goes to sessions, not to him).
 - Answers wait for the undo bar before they are sent: the server has no way to take an answer back.
 - Ask in Claude opens outside the app (iOS's `openURL`), not the in-app browser: the Claude app should take the link.
 - The screen's look is Claude's: build it as plain structure on the shared pieces (`GlassCard`, `Ink`, the app's

@@ -6,7 +6,7 @@ repo) · Model: `gpt-6.1-sol`, effort `high`
 
 ## Goal
 
-Patrik sent his first file from the phone (it worked) and asked for two things on the server side:
+The owner sent his first file from the phone (it worked) and asked for two things on the server side:
 
 1. **Every drop can be deleted from the list** (the app gets Mail-like swipe to delete). Today `DELETE /drops/{id}`
    only cancels drops that have not landed and answers `409` for landed ones; cancelled ones stay in the list.

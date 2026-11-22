@@ -1,5 +1,5 @@
 // Uses aresium's existing packer and tsx loader. No network, private inputs or changes to the source repository.
-// node --import /Users/pab/aresium/node_modules/tsx/dist/loader.mjs scripts/98-local-places-fixture.mjs [aresium]
+// node --import ~/aresium/node_modules/tsx/dist/loader.mjs scripts/98-local-places-fixture.mjs [aresium]
 import { writeFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';

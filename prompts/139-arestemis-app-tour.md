@@ -5,7 +5,7 @@ Branch: `claude/139-arestemis-tour` · Worktree: `../empire-ios-139-arestemis-to
 
 ## Goal
 
-Patrik (2026-11-02): "it's not actually clear what Seite beobachten is for, it's quite generic. We should add a tour to
+The owner (2026-11-02): "it's not actually clear what Seite beobachten is for, it's quite generic. We should add a tour to
 Arestemis (like Aresium has) that explains it." He approved eight steps (the sketch at
 https://claude.ai/artifact/X2rxw1Vj9JotohSQaw2g8E, section 6; its HTML is
 `/private/tmp/claude-501/-Users-pab/b05f4a4e-2a00-4096-a226-f11e802b21a2/scratchpad/arestemis-next-round.html`). After
@@ -23,7 +23,7 @@ never touches real searches, and rings the part of the screen each step is about
   behave exactly as before (its tests pass, its screenshots unchanged).
 - The sketch's section 6 (the eight steps and the mockup of step 3)
 
-## The steps (German as on Patrik's phone; English in code)
+## The steps (German as on the owner's phone; English in code)
 
 1. **Arestemis sucht für dich.** It reads the sites every few minutes, checks each new listing against your search and
    sends a push.

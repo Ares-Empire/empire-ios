@@ -5,9 +5,9 @@ Branch: `codex/166-fulfillment` · Worktree: `../empire-ios-166-fulfillment` · 
 
 ## Goal
 
-Patrik wants the same plain handover choice for Everywhere as Things: “Übergabe”, “Versand” / “Abholung” / “Beides”. The form gains places/radius for pickup. The monitor compares known delivered/pickup totals and clearly shows where a pickup offer is available.
+The owner wants the same plain handover choice for Everywhere as Things: “Übergabe”, “Versand” / “Abholung” / “Beides”. The form gains places/radius for pickup. The monitor compares known delivered/pickup totals and clearly shows where a pickup offer is available.
 
-Patrik explicitly assigns screens to Codex for this round, overriding the usual design delegation. Build from existing components; Claude reviews screenshots and owns TestFlight.
+The owner explicitly assigns screens to Codex for this round, overriding the usual design delegation. Build from existing components; Claude reviews screenshots and owns TestFlight.
 
 ## Read first
 
@@ -37,4 +37,4 @@ Own iPhone17 simulator iOS27.0 only. `xcodebuild test -project Arestemis/Arestem
 
 Built the handover/place/radius form, selection-aware paced previews and compatible site switches. Cards, monitor, offers and curve label total prices; unknown costs stay visible. Preserved the compact comparison label and Things route from164 and Claude’s polish. Root review corrected same-store pickup-method grouping, shipping totals with unknown stock, and safe handling of future delivery values.
 
-Builder and two independent simulator runs passed: 342 unique tests /507 parameterized runs /0 failures. Root reviewed all60 screenshots: 15 states × German/English × light/dark; copies in `/Users/pab/Arestemis-orchestra/screens/166-*.png`, manifest `/Users/pab/Arestemis-orchestra/runs/166-screenshots.md`. Strings synchronized/filled and checked:0 problems; older-listings string retained, other apps untouched. Own iOS27.0 simulators shut down/deleted. No TestFlight upload or build-number change. Server165 live fulfillment validation remains part of step4 and is recorded in that private brief.
+Builder and two independent simulator runs passed: 342 unique tests /507 parameterized runs /0 failures. Root reviewed all60 screenshots: 15 states × German/English × light/dark; copies in `~/Arestemis-orchestra/screens/166-*.png`, manifest `~/Arestemis-orchestra/runs/166-screenshots.md`. Strings synchronized/filled and checked:0 problems; older-listings string retained, other apps untouched. Own iOS27.0 simulators shut down/deleted. No TestFlight upload or build-number change. Server165 live fulfillment validation remains part of step4 and is recorded in that private brief.

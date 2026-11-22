@@ -6,7 +6,7 @@ effort `high` · Claude copies the engine into the app and adjusts the app's tes
 
 ## Goal
 
-Patrik (2026-11-01), asked how money paid back should count: "booking everything as it happens is clearer and more
+The owner (2026-11-01), asked how money paid back should count: "booking everything as it happens is clearer and more
 truthful. Plus in the other way errors are worse. So while returns and refunds are kinda weird with the expense 100
 income 100 I do think doing it that way is best overall and easier because we dont rely on matching."
 
@@ -56,7 +56,7 @@ money counts.
 
 ## Settled: do not re-open
 
-- No netting of money in against spending, except the covered cash rows. Patrik chose this knowing returns show as
+- No netting of money in against spending, except the covered cash rows. The owner chose this knowing returns show as
   spent and received.
 - Income rows are named by the payment's own category (one rule), not grouped under `Refunds`.
 - Sides decide menus only.

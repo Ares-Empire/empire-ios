@@ -6,7 +6,7 @@ effort `high` · The app's side follows in brief 69 (a Claude agent wires it int
 
 ## Goal
 
-Patrik (2026-11-01): his own categories must work for money in too, and a category that is mainly spending but also
+The owner (2026-11-01): his own categories must work for money in too, and a category that is mainly spending but also
 gets money back (Freunde: a friend pays back their share) must be offered for money in without becoming income.
 
 Today a category's side is decided by its money (`buildDashboardSource`, `src/engine/source.ts`: `kind` is `income`
@@ -54,7 +54,7 @@ back. Without a side the engine keeps today's rule, so the server's dashboards s
    - Transfers in `pick.spend` are new for everyone, the server too: money moved to one's savings could not be moved
      into "Savings & investing" or "Own transfers" by hand. Update the test that pins `pick.spend` to `spend` only.
 4. **Money in a spending category** stays as today: it lowers that category's spending, and its money is listed
-   under the `Refunds` income bucket. Do not change this here (Patrik decides separately whether paid-back money
+   under the `Refunds` income bucket. Do not change this here (the owner decides separately whether paid-back money
    should also count as income).
 5. **Money out in an income category** is money given back (a salary paid back, a refund to a buyer). It lowers that
    category's income, mirroring item 4:

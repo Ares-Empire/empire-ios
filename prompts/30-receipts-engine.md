@@ -6,7 +6,7 @@ Rules: `~/aresium/AGENTS.md`
 
 ## Goal
 
-Patrik wants receipts in Aresium (2026-10-27, decision D8 in `~/ares-empire/docs/ARESIUM-FOR-OTHERS.md` → part 6,
+The owner wants receipts in Aresium (2026-10-27, decision D8 in `~/ares-empire/docs/ARESIUM-FOR-OTHERS.md` → part 6,
 "Version 1"; read it first). The iPhone app photographs a receipt and reads its text with Apple's Vision (brief 31);
 the **engine** (this brief, pure TypeScript in `src/engine/`, bundled into the app) turns what Vision saw into a
 receipt (shop, date, total, currency, card or cash), finds the bank payment it belongs to so nothing counts twice, and
@@ -67,7 +67,7 @@ tested with made-up receipts; the app only captures and shows.
    not in the payment's currency: matched on day and shop only), `severalSame` (two or more exact ones). Nothing → empty.
    Pure; the app asks the person about every candidate, never joins one by itself.
 3. **Receipts in the dashboard: `buildDashboardSource(input)` takes `receipts?: SourceReceipt[]`.** Without receipts
-   nothing changes (Patrik's server never sends them: its numbers must stay identical; a test proves it on the existing
+   nothing changes (the owner's server never sends them: its numbers must stay identical; a test proves it on the existing
    fixtures). `SourceReceipt`: `{ id, date, total, currency, method: "card" | "cash", category: string | null,
    shop, paymentId: string | null }`.
    - `paymentId` set (joined): the bank payment counts as it is; the receipt adds nothing.
@@ -102,7 +102,7 @@ tested with made-up receipts; the app only captures and shows.
 
 ## Out of scope
 
-The app (brief 31), the server and its database, the website, deploying. Patrik's server mode gets receipts later.
+The app (brief 31), the server and its database, the website, deploying. The owner's server mode gets receipts later.
 
 ## Done when
 

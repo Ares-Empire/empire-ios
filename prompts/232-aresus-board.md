@@ -1,4 +1,4 @@
-# 232: Aresus server: the board (asks for Patrik, work for a topic's session, scans, brief numbers)
+# 232: Aresus server: the board (asks for the owner, work for a topic's session, scans, brief numbers)
 
 Status: merged 2026-11-06 (aresus 5a5e4ff, 816 tests; Claude: the scan text cut to 400 written into the contract)
 Branch: `codex/232-board` · Worktree: `../aresus-232-board` (a worktree of **`~/aresus`**, the server repo, not of
@@ -6,10 +6,10 @@ empire-ios) · Model: `gpt-6.1-sol`, effort `high`
 
 ## Goal
 
-Claude sessions on three machines build things and ask Patrik questions; when a session's attention moves on, finished
+Claude sessions on three machines build things and ask the owner questions; when a session's attention moves on, finished
 work sits unmerged and questions get buried (on 2026-11-05 five questions had waited two days, and two finished fixes
-sat unmerged). The board is one list on the server: **asks** (a decision or action only Patrik can take) go to the
-Aresus app; **work** (open work in a repo or area) goes to the session working on that topic, never to Patrik. Machines
+sat unmerged). The board is one list on the server: **asks** (a decision or action only the owner can take) go to the
+Aresus app; **work** (open work in a repo or area) goes to the session working on that topic, never to the owner. Machines
 send a scan of their repos (branches not merged, uncommitted worktrees), and sessions take brief numbers from one
 counter so two sessions never pick the same number again. This brief builds the server half. The machine half
 (aresync's `board` command, the scan, the session hooks) is brief 233, built at the same time against the same
@@ -28,7 +28,7 @@ contract; the app tab comes later.
 
 - **The contract, settled:** `docs/API.md` → "Board (version 1, 2026-11-06)". Build exactly that. If something in it
   cannot work, do not change it: leave a `TODO(contract)` and say so in your final message.
-- Why: `~/ares-empire/docs/reviews/2026-11-05-work-board.md`, the sections "Patrik's decisions" and "The design that
+- Why: `~/ares-empire/docs/reviews/2026-11-05-work-board.md`, the sections "the owner's decisions" and "The design that
   follows" (read only).
 - `CLAUDE.md`, `src/aresus/api.py` (auth helpers, `_read_body`, the run-report and drop routes as the pattern for
   machine routes), `machines.py` (`MachineRegistry.verify`), `auth.py`, `config.py`, `store.py` (SQLite style and how

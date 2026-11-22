@@ -7,7 +7,7 @@ worktree `CLAUDE.md`, `README.md`, `docs/API.md`, `deploy/README.md`, `src/arest
 
 ## Why
 
-Patrik asked for search "kinda like Google": find the passage that answers a question even when it uses other words,
+The owner asked for search "kinda like Google": find the passage that answers a question even when it uses other words,
 or when the question is German and the note English (his notes are English with German terms). **No generated
 answers** (the lead's call: for a figure or a source the exact passage is the answer, and a small model could get a
 figure wrong); every result is a passage as it stands.
@@ -39,7 +39,7 @@ questions in other words than the note, a figure, a source, a term. Each with th
 or three multilingual candidates (for example `intfloat/multilingual-e5-small`,
 `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`, and one more you think fits) by hits@1 / hits@3, memory
 and query time, and keep the script and queries in the repo (`scripts/` or `tests/`). You may also run the same script
-read-only against Patrik's real vault (`~/Documents/Patrik Breeck/Weltbild`) with queries you invent; report only the
+read-only against the owner's real vault (`~/Documents/<owner>/Weltbild`) with queries you invent; report only the
 numbers, never its text. If the local Python 3.14 has no wheels for the runtime, say so, keep the fake-embedder tests
 green, and write the exact commands for the lead to run the comparison on the server.
 

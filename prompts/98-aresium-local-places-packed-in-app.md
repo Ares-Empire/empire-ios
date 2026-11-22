@@ -10,7 +10,7 @@ later (brief 97).
 Brief 95 measured the local places list (OpenStreetMap, aresium brief 86) in the app as JSON: about 103 MB more memory,
 over the 60 MB budget, so nothing was adopted. Aresium brief 97 made a **packed format** (`~/aresium/data/local-places/
 de.places.bin.gz`, 3.3 MB; 9.8 MB unpacked) that the engine searches in place: in Node it costs about 76 KB of heap plus
-the buffer itself, with exactly the JSON list's answers (also on Patrik's data). This brief brings the packed list into
+the buffer itself, with exactly the JSON list's answers (also on the owner's data). This brief brings the packed list into
 phone mode's sorting **if the app's own measurement stays within budget**.
 
 ## Read first

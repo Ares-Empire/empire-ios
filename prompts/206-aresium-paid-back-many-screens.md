@@ -6,7 +6,7 @@ and the flow) · Simulator: `claude-206` (create it: iPhone 17, iOS 27.0)
 
 ## Goal
 
-Patrik (2026-11-02, on build 17): "I love it the connecting is great! Let's add that for multiple payments at once. So
+The owner (2026-11-02, on build 17): "I love it the connecting is great! Let's add that for multiple payments at once. So
 if I select many statements I can then select income that payed them back and it just goes expense by expense until
 it's empty. Then let's also add the other direction that it's possible to do it from income to expenses if you know
 what I mean. It was great that it worked that I can't over use income, good catch."
@@ -38,7 +38,7 @@ expense in date order, one undo. This brief puts it on screen in the two places 
    saves (`setPaybacks`), closes the window, ends selecting, and the undo bar says it with Undo (one undo for all).
    **One payment on each side** keeps brief 203's amount step (the typed amount); with several on either side the
    amounts are poured, and each link's amount can still be changed afterwards on a payment's page (brief 203's pen).
-   Make clear before Link when money stays income or an expense stays open (Patrik liked that income cannot be used
+   Make clear before Link when money stays income or an expense stays open (the owner liked that income cannot be used
    twice; let him see it).
 3. **One payment's page:** its action opens the same window, so one payment in can be poured over several expenses
    (and one expense can take several payments in) by ticking them.

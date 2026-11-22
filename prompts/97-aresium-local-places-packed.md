@@ -35,7 +35,7 @@ typed arrays, with no JavaScript object per place or name, giving **exactly the 
    (the bundle runs in JavaScriptCore). The JSON path may stay for the evaluation tools.
 3. **The same answers:** for every name and every town match in the list, the packed lookup equals the JSON lookup
    (a test over the whole list, run by `npm test` if it is fast enough, otherwise a script Claude runs; say which); the
-   test set with the left-out list, the known-places sample (`npm run eval:local-places`) and Patrik's data (Claude)
+   test set with the left-out list, the known-places sample (`npm run eval:local-places`) and the owner's data (Claude)
    give identical numbers.
 4. **Measured** (Node, as the scripts do, and say how): the packed file's size raw and gzip, the time to load it into
    the index, and memory: `process.memoryUsage()` (heap and `arrayBuffers`) with the JSON list against the packed one,

@@ -7,7 +7,7 @@
 |---|---|---|
 | A | The evidence: real coordination failures and decision bottlenecks in the briefs, reviews and run outputs | Codex `gpt-6-astra` |
 | B | The system: where it lives, its data, automatic reporting, claims, outages, security | Codex `gpt-6-astra` |
-| C | Patrik's side: the Empire app tab, evidence on a phone, decisions, notifications | Codex `gpt-6-astra` |
+| C | The owner's side: the Empire app tab, evidence on a phone, decisions, notifications | Codex `gpt-6-astra` |
 | D | Claude Code facts: which features the plan may rely on | Claude (`claude-code-guide`) |
 
 Seat answers (local, not committed): `codex-runs/council-seat-{A,B,C,D}.md`.
@@ -27,7 +27,7 @@ Seat answers (local, not committed): `codex-runs/council-seat-{A,B,C,D}.md`.
    warn and ask the lead to split or sequence; merge and deploy take a short exclusive claim. Claims include files a
    brief will create: briefs 145 and 146 each created `Arestemis/core/facts.py` for different things (renamed at merge).
    Claims are coordination, not a sandbox (a shell `sed` bypasses an Edit hook).
-5. **Only what needs Patrik reaches the tab:** a change of scope or direction, seats that disagree, an owner action
+5. **Only what needs the owner reaches the tab:** a change of scope or direction, seats that disagree, an owner action
    ("install build 22, then the server can require versions"). Corrections a brief already allows stay Claude's
    (`docs/REVIEW.md`). No idea lists, no progress feed, no productivity numbers.
 6. **A decision outlives the session that asked.** One tap approves an exact, frozen proposal ("Approve the fixes",
@@ -53,7 +53,7 @@ PocketBase only for the login, the push service for notifications, the Aresus ma
 PocketBase collections (the lead's first idea): atomic claims, frozen proposals and delivery receipts are logic, and
 account-server hooks would tie a busy workflow to everyone's login. Claude agrees.
 
-## For Patrik to decide
+## For the owner to decide
 
 1. **The name:** Empire Work, Workboard or Desk (tab: Decisions).
 2. **The first version.** Seat B's smallest worthwhile release (both computers, the Codex wrapper, claims,
@@ -67,5 +67,5 @@ account-server hooks would tie a busy workflow to everyone's login. Claude agree
 ## Outcome
 
 A plan, not a review: nothing built yet. Accepted corrections to the sketch: the name, the separate service, decisions
-only for what needs Patrik, nothing sensitive on the board. Next: Patrik's two choices above; then the plan goes into
+only for what needs the owner, nothing sensitive on the board. Next: the owner's two choices above; then the plan goes into
 `ares-empire/docs/` under the chosen name and the EXPAND entry is renamed.

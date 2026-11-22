@@ -70,7 +70,7 @@ application texts, place search Germany-wide, push via the Empire push service. 
 - **Push** for each match as in the contract (title/subtitle/body/url/category/thread/collapse/interruption), via
   `PUSH_URL`; a failed push never loses the match. Telegram fallback for `TELEGRAM_FALLBACK_USER` only (plain text with
   the portal link), if configured.
-- **Old data:** nothing is migrated (Patrik: delete the old search). The new DB file is `data/arestemis.db`; the
+- **Old data:** nothing is migrated (owner: delete the old search). The new DB file is `data/arestemis.db`; the
   lead deletes the old `config.yaml` and `flatsniper.db` on the server.
 - **Tests** (pytest): stage 1 table tests; auth with a fake PocketBase (200 with/without service, 401, 503, cache);
   every route with FastAPI's `TestClient` (ownership: another account's ids → 404; validation → 400 with `field`);

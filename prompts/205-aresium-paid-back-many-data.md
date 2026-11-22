@@ -7,7 +7,7 @@ brief's API.
 
 ## Goal
 
-Patrik (2026-11-02, on build 17, after linking his first paybacks): "I love it the connecting is great! Let's add that
+The owner (2026-11-02, on build 17, after linking his first paybacks): "I love it the connecting is great! Let's add that
 for multiple payments at once. So if I select many statements I can then select income that payed them back and it just
 goes expense by expense until it's empty. Then let's also add the other direction that it's possible to do it from
 income to expenses if you know what I mean. It was great that it worked that I can't over use income, good catch."

@@ -1,6 +1,6 @@
 # E4b: a Settings screen in every app (replaces E4's placement; part 1 of E4 stays)
 
-Patrik (2026-10-24, after E4 started): "I think each app should get a setting icon that opens settings plus the
+The owner (2026-10-24, after E4 started): "I think each app should get a setting icon that opens settings plus the
 necessary things an app needs ... making some for other users to read or so it feels legit might be good. So the
 language switch in app thats being built rn will go into settings then. ... And each settings thing should get a
 'support' or 'contact' entry so that a user could easily contact me."
@@ -36,7 +36,7 @@ app gets one shared Settings screen, and the language entry is one row in it.
   them. Open them with the system's `openURL` (Shared must not use `UIApplication.shared`).
 - **The login screen** (`Shared/Design/ProvinceLogin.swift`) gets one quiet footer line: "Privacy · Imprint" /
   "Datenschutz · Impressum", opening the same pages.
-- No light/dark switch (the apps stay dark; Patrik decides later).
+- No light/dark switch (the apps stay dark; the owner decides later).
 
 ## Done when
 

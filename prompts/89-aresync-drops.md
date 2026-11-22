@@ -6,7 +6,7 @@ Model: `gpt-6.1-sol`, effort `high`
 
 ## Goal
 
-Patrik sends a file or photo from the Aresus app; it lands in a chosen folder on his MacBook, from anywhere. The
+The owner sends a file or photo from the Aresus app; it lands in a chosen folder on his MacBook, from anywhere. The
 server half is brief 88 (built at the same time). This brief builds the Mac half: a small program that runs every
 minute while the Mac is awake, fetches waiting drops from Aresus, decrypts them, writes each into its folder under its
 name (never overwriting anything), adds a receipt's row to the receipts folder's `INVENTORY.md`, reports where it
@@ -113,7 +113,7 @@ landed, and sends the Mac's folder list so the phone can offer it.
    `.musiclibrary`, `.imovielibrary`, `.fcpbundle`, `.pages`, `.numbers`, `.key`, `.rtfd`, `.playground`, `.xcassets`,
    `.lproj`, `.plugin`, `.kext`). Plus `fallback`, `fallback_count` (visible files directly in the fallback folder)
    and `receipts`. Unreadable folders are skipped, never an error.
-7. **`com.aresync.drop.plist`:** label `com.aresync.drop`, `/usr/bin/python3 -I /Users/pab/aresync/drop.py run`
+7. **`com.aresync.drop.plist`:** label `com.aresync.drop`, `/usr/bin/python3 -I ~/aresync/drop.py run`
    (a fixed interpreter path, so the macOS permission for Documents and Downloads, granted once, stays),
    `StartInterval` 60, `RunAtLoad`, the same PATH and HOME as `com.aresync.sync.plist`, logs to `drop.out.log` /
    `drop.err.log` (git-ignored like the others). One log line per drop: id, size, where it landed; never contents or
@@ -129,7 +129,7 @@ landed, and sends the Mac's folder list so the phone can offer it.
 ## Settled: do not re-open
 
 - The contract (Claude's, 2026-11-01). The rules above for where files go, never overwriting, never touching existing
-  files, and the inventory rules (Patrik, 2026-11-01).
+  files, and the inventory rules (owner, 2026-11-01).
 - Its own launchd agent, separate from the daily sync run; `/usr/bin/python3`.
 - A separate Keychain item from the backup key.
 - No AI anywhere in this program.

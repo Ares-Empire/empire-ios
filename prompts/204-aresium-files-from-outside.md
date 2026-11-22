@@ -6,7 +6,7 @@ Branch: `claude/204-files-from-outside` · Worktree: `../empire-ios-204-files-fr
 
 ## Goal
 
-Patrik (2026-11-02): "is it possible to have Aresium show up as an export option? Like if I export the csv data apps
+The owner (2026-11-02): "is it possible to have Aresium show up as an export option? Like if I export the csv data apps
 show up like messengers, airdrop, downloads etc. could Aresium show up there so the import is easier? And could we
 build drag and drop for Aresium? So you can drag a file, drop it in the main screen and it gets processed?"
 

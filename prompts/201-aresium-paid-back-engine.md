@@ -1,13 +1,13 @@
 # 201: Money paid back: the engine
 
-Status: merged 2026-11-02 (aresium 66c7725; 551 engine tests; tried on Patrik's export: two links count as expected)
+Status: merged 2026-11-02 (aresium 66c7725; 551 engine tests; tried on the owner's export: two links count as expected)
 Repo: **aresium** · Worktree: `../aresium-201-paid-back` (branch `codex/201-paid-back`) · Model: `gpt-6.1-sol`, effort
 `high` · Claude copies the engine into the app afterwards; the app's data follows in brief 202 (Codex), the screens in
 brief 203 (a Claude agent).
 
 ## Goal
 
-Patrik (2026-11-02), looking at what Aresium counts as spent over 14 months, named expenses that were paid back to him
+The owner (2026-11-02), looking at what Aresium counts as spent over 14 months, named expenses that were paid back to him
 (one in full, two by half) and expected them to show only his share. Since brief 71 every payment counts in the
 direction it went, so money someone pays back counts as income and the expense keeps counting in full. Offered a
 "pays back" link made by hand, he chose it: "Yes A actually makes sense, let's do it."

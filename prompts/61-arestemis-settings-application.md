@@ -5,7 +5,7 @@ Branch: `claude/61-arestemis-settings` · Worktree: `../empire-ios-61-arestemis-
 
 ## Goal
 
-Patrik tested Arestemis build 2 on his iPhone (2026-10-31) and asked, in his words:
+The owner tested Arestemis build 2 on his iPhone (2026-10-31) and asked, in his words:
 
 - "In settings lets move the Bewerbung down and make it smaller like the other settings. Lets give it a toggle between
   automatic generation and own text. Then you can click on it and it opens a screen with either a field for your own
@@ -14,7 +14,7 @@ Patrik tested Arestemis build 2 on his iPhone (2026-10-31) and asked, in his wor
 
 Two server briefs run at the same time: **62** (the server stores `application_notes` and the automatic text uses
 them instead of the own text) and **63** (the server gains the portal `immoscout24`). This brief is the app's side of
-both, plus the flicker. Arestemis build 3 goes to Patrik's phone right after it.
+both, plus the flicker. Arestemis build 3 goes to the owner's phone right after it.
 
 ## Rules
 
@@ -30,7 +30,7 @@ both, plus the flicker. Arestemis build 3 goes to Patrik's phone right after it.
   build.
 - German: you write it (String Catalogs; edit single keys with `scripts/strings.py`'s own `load`/`save` via
   `sys.path.insert(0, 'scripts')`, then `python3 scripts/strings.py check` must say 0 problems; do not run a full
-  `sync`). German uses "du". No "KI"/"AI" anywhere in Arestemis's text (Patrik, 2026-10-31).
+  `sync`). German uses "du". No "KI"/"AI" anywhere in Arestemis's text (owner, 2026-10-31).
 
 ## Read first
 
@@ -41,12 +41,12 @@ both, plus the flicker. Arestemis build 3 goes to Patrik's phone right after it.
 - `Arestemis/Arestemis/Model/ArestemisModels.swift` (`Settings`, `Source`, `Place`, `Search`, `SourceStatus`,
   `Listing`), `Model/ArestemisStore.swift` (load/save settings), `Model/AppNavigation.swift` (launch arguments for
   screenshots), `ContentView.swift` (the sheet with `.presentationBackground(Ink.background)`)
-- `docs/reviews/2026-10-31-arestemis-phone-test.md` (rounds 1–2: Patrik's earlier notes on the same app)
+- `docs/reviews/2026-10-31-arestemis-phone-test.md` (rounds 1–2: the owner's earlier notes on the same app)
 - The server contract: `~/Arestemis/docs/API.md` (Settings, Source). Read only.
 
 ## Build
 
-### 1. The Application section, compact (Patrik's first note)
+### 1. The Application section, compact (the owner's first note)
 
 - **Order** of Arestemis's own sections: Notifications first, then **Application** ("Bewerbung"), then the shared
   sections as now. The app's own sections stay in the `appSection` slot (no `Shared/` change needed for this).
@@ -85,7 +85,7 @@ both, plus the flicker. Arestemis build 3 goes to Patrik's phone right after it.
   `Overview.sources`) skips values the app does not know, and a listing from an unknown portal still decodes (show
   the server's `source_name`). The portal list in Search shows only known portals. Tests for each case.
 
-### 4. The flicker (Patrik's second note)
+### 4. The flicker (the owner's second note)
 
 Opening and closing Settings (the gear on the Hunt tab) sometimes flickers the background and shows **a small black
 corner** for a moment. Reproduce it on your simulator (record with `xcrun simctl io claude-61 recordVideo` while

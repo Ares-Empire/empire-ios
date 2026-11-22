@@ -7,10 +7,10 @@ needs Astra's 3× allowance)
 
 ## Goal
 
-When Patrik answers a board ask in the Aresus app ("For you" tab), the Claude session that asked learns it within
-seconds, even when it is idle, with the same line it gets today: `Patrik answered #N (text: …): answer: …. Act on it,
+When the owner answers a board ask in the Aresus app ("For you" tab), the Claude session that asked learns it within
+seconds, even when it is idle, with the same line it gets today: `the owner answered #N (text: …): answer: …. Act on it,
 then run `board done N`.` Today the answer only arrives through the UserPromptSubmit hook (`board hook-prompt`), so an
-idle session misses it until someone types (board #86, Patrik 2026-11-07). The prompt hook stays as the backup.
+idle session misses it until someone types (board #86, the owner 2026-11-07). The prompt hook stays as the backup.
 Sessions run on the MacBook, the server (Linux) and the Windows laptop (Git Bash, native Windows Python 3.13).
 
 ## How the wake works (settled, checked on Claude Code 2.1.316–2.1.319)
@@ -19,17 +19,17 @@ Claude Code runs a command hook with `"asyncRewake": true` in the background; wh
 Claude Code wakes the session at once, even when idle, and shows it the hook's stderr (stdout if stderr is empty) after
 the prefix `rewakeMessage` ("Board:"); the terminal shows `rewakeSummary`. Claude Code enforces the hook's `timeout`
 on such a hook, so it gets a long one (10 days). Docs: https://code.claude.com/docs/en/hooks.md → "Run hooks in the
-background", "Limitations". The hooks Patrik's machines will get (Claude installs them, not you):
+background", "Limitations". The hooks the owner's machines will get (Claude installs them, not you):
 
 ```json
 "Stop": [
   {"hooks": [{"type": "command", "command": "\"$HOME/.local/bin/board\" hook-watch", "asyncRewake": true,
-              "timeout": 864000, "rewakeMessage": "Board:", "rewakeSummary": "Patrik answered a board ask"}]}
+              "timeout": 864000, "rewakeMessage": "Board:", "rewakeSummary": "the owner answered a board ask"}]}
 ],
 "SessionStart": [ … existing entries …,
   {"matcher": "resume",
    "hooks": [{"type": "command", "command": "\"$HOME/.local/bin/board\" hook-watch", "asyncRewake": true,
-              "timeout": 864000, "rewakeMessage": "Board:", "rewakeSummary": "Patrik answered a board ask"}]}
+              "timeout": 864000, "rewakeMessage": "Board:", "rewakeSummary": "the owner answered a board ask"}]}
 ]
 ```
 

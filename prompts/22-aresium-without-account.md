@@ -6,10 +6,10 @@ Repo: empire-ios · Worktree: `../empire-ios-22-no-account` (branch `claude/22-n
 
 ## Goal
 
-Patrik decided (2026-10-27): **Aresium needs no account.** In phone mode the account did nothing for a friend (their
+The owner decided (2026-10-27): **Aresium needs no account.** In phone mode the account did nothing for a friend (their
 data never leaves the phone) and only cost them a sign-up, an email confirmation and waiting for approval; Apple's
 review guideline 5.1.1(v) also says an app without account-based features must work without a login. Instead,
-Aresium gets an **optional lock: Face ID and/or a code of its own**. Patrik keeps server mode through the shared
+Aresium gets an **optional lock: Face ID and/or a code of its own**. The owner keeps server mode through the shared
 Ares login. A friend installs Aresium, opens it, and is on the first-run screen.
 
 ## Read first
@@ -59,12 +59,12 @@ cover", Languages, Light mode, the design rules), `~/ares-empire/docs/ARESIUM-FO
    - The lock screen in Aresium's look (the app switcher cover's wordmark band is the start), one Face ID button,
      a code pad; calm, no slogans. `NSFaceIDUsageDescription` in English and German.
 6. **Contact & support without a login** posts to the account server's `contact` collection (no account needed:
-   email required so Patrik can answer, optional name, the message with a short footer "Aresium <version> · iOS …",
+   email required so the owner can answer, optional name, the message with a short footer "Aresium <version> · iOS …",
    language, the empty honeypot `website`) instead of `feedback`. Signed in, it stays `feedback`. Keep this in
    `Shared/Support` as a second path the other apps never use (they always have a login).
 7. **Push:** no device registration without a login.
 8. **"Current" view: a category opens this month's payments directly** (the route with the current month), in both
-   modes; Overview keeps the month list first. (Patrik expected payments, not months, when he tapped a category.)
+   modes; Overview keeps the month list first. (the owner expected payments, not months, when he tapped a category.)
 9. **German** for every new string (`scripts/strings.py sync`, `fill`, "du", plain); `check` says 0 problems.
 10. **Notes:** `CLAUDE.md` (the phone mode entry, "One login for all apps": Aresium works without it, the lock, the
     files), `docs/APP-STORE.md` (Aresium: login optional; the review needs no demo account any more, say how to test

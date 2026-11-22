@@ -1,6 +1,6 @@
 # 86: Sorting round 2: an experiment with a list of local places from OpenStreetMap
 
-Status: merged 2026-11-01 as an experiment, off by default (aresium b04ff9b; known places right 187 -> 437 of 500, wrong unchanged; Patrik +5 right; memory on the phone not measured yet)
+Status: merged 2026-11-01 as an experiment, off by default (aresium b04ff9b; known places right 187 -> 437 of 500, wrong unchanged; the owner +5 right; memory on the phone not measured yet)
 Repo: **aresium** · Worktree: `../aresium-86-local-places` (branch `codex/86-local-places`) · Model: `gpt-6.1-sol`,
 effort `high` · An experiment: Claude decides from your numbers whether it goes into the app.
 
@@ -8,7 +8,7 @@ effort `high` · An experiment: Claude decides from your numbers whether it goes
 
 After sorting round 1 (brief 84) Aresium is right on 99% of what it sorts, and what it misses is mostly **local
 places**: one-off names without a word that says what they are ("Zur Mühle", "Lieblingsstück", "Il Buongustaio").
-Patrik asked whether a list of vendors would help (2026-11-01: "Could it be smart to just build a list of vendors
+The owner asked whether a list of vendors would help (2026-11-01: "Could it be smart to just build a list of vendors
 with sorting"; Claude's answer: for chains we have it, for local places the one source is OpenStreetMap; he said "yes
 trying it cant hurt").
 
@@ -56,7 +56,7 @@ engine start. Nothing is switched on by default; the app does not change in this
      OpenStreetMap gets.
    - **Wrong answers elsewhere:** the brands, made-up shops and non-shop payments of the test set must not get worse
      with the list (false matches of list names).
-   - Claude runs Patrik's data (counts only) with and without the list.
+   - Claude runs the owner's data (counts only) with and without the list.
 5. **Licence:** OpenStreetMap data is ODbL: the list's file carries "© OpenStreetMap contributors, ODbL" and the
    source, and the repo's licence notes say where the derived list comes from. Say in the final message what the app
    would need to show (its Fonts & licences page lists such notices).

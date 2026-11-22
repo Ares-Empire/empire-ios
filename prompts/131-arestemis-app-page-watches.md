@@ -16,7 +16,7 @@ be read, and shows a found change as a match with a push. Today a watch would sh
 - `AGENTS.md`, `CLAUDE.md` (design rules, Languages, the Arestemis app entry, how strings and screenshots work)
 - The plan: `~/Arestemis/docs/ARESTEMIS-ANYTHING.md` → "Page watches" (what a watch is and its supported pages)
 - **The contract:** the Arestemis repo, `docs/briefs/130-arestemis-page-watches.md` → "Contract", section 5. Codex is writing it
-  into `/Users/pab/Arestemis-130-page-watch/docs/API.md` and `docs/samples/` while you work: read them there (never
+  into `~/Arestemis-130-page-watch/docs/API.md` and `docs/samples/` while you work: read them there (never
   write there). If its final words differ from the brief, the server's `docs/API.md` wins; Claude reconciles at merge.
 - The app: `Model/ArestemisModels.swift` (`HuntKind` with `.unknown`, `Hunt`, `HuntCard`, `Listing`),
   `Model/ItemModels.swift`, `Model/ItemSearchDraft.swift`, `Model/HuntsPresentation.swift`, `Model/Notifications.swift`

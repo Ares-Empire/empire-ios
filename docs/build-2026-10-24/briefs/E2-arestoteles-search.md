@@ -4,13 +4,13 @@ Read `E-COMMON.md` first, then `E-search-contract.md`, `ares-empire/docs/ARESTOT
 Arestoteles section of `~/empire-ios/CLAUDE.md`. Worktree: `~/wt/empire-ios-arest-search` (branch
 `arestoteles-search`). Simulator: `agent-arest-search`. Do not edit `Shared/`. Run the app with `-sampleData`.
 
-Patrik uses the app for quick lookups ("usually I just want to quickly look up a fact or a little aspect I cant fully
+The owner uses the app for quick lookups ("usually I just want to quickly look up a fact or a little aspect I cant fully
 remember or a figure or a source"). Study the current screens first (`Screens/`, especially `SearchScreen.swift`,
 `Style.swift`, `PositionsScreen.swift`, `TopicsScreen.swift`, `LibraryScreen.swift`) and stay in their look.
 
 ## 1. A search field in Positionen, Themen and Bibliothek
 
-Patrik: "can we add search bars to the individual tabs that search within the individual tabs for quicker and better
+The owner: "can we add search bars to the individual tabs that search within the individual tabs for quicker and better
 access?"
 
 - Each of the three tabs gets a search field at the top of its content, under the header, scrolling with the content

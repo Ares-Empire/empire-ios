@@ -6,7 +6,7 @@ Repo: empire-ios · Worktree: `../empire-ios-23-file-check` (branch `claude/23-f
 
 ## Goal
 
-Patrik tried the first run (2026-10-27): most people don't know what a CSV is, and today's column check (each column's
+The owner tried the first run (2026-10-27): most people don't know what a CSV is, and today's column check (each column's
 meaning as a menu) asks them to. Replace it with a window that shows the first payments the way they will look in
 the app and asks "Sieht das richtig aus?" / "Does this look right?". Yes imports; No shows the next way of reading the
 file; only when every reading is wrong does the detailed column check appear (as a last resort, simplified). After a
@@ -68,7 +68,7 @@ beyond the import result. Put your screens in new files (`Screens/FileCheck*.swi
 ## Done when
 
 - `xcodebuild test` for Aresium passes (`-parallel-testing-enabled NO`) on **your own simulator** (create one, delete
-  it at the end; never the booted "iPhone 17" 56D5D752…, Patrik uses it), with tests for: the readings flow (yes on
+  it at the end; never the booted "iPhone 17" 56D5D752…, the owner uses it), with tests for: the readings flow (yes on
   the first, no → second, all no → column check), the sentences per reason, the send card only for a confirmed
   unknown layout that `shareableLayout` accepts, the request body, the queue (offline, retry, 400 final, 429 waits),
   "not now" never asks again.

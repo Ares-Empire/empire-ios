@@ -1,4 +1,4 @@
-# 50: Aresus comfort before its first TestFlight build (Patrik's list nos. 20–22)
+# 50: Aresus comfort before its first TestFlight build (the owner's list nos. 20–22)
 
 Status: merged 2026-10-30 (Aresus 98 tests, Empire 203; aresus server 83bd461, 240 tests; the three screens checked in both languages and looks)
 Branch: `codex/50-aresus-comfort` · Worktrees: `../empire-ios-50-aresus-comfort` (this repo) and
@@ -6,7 +6,7 @@ Branch: `codex/50-aresus-comfort` · Worktrees: `../empire-ios-50-aresus-comfort
 
 ## Goal
 
-Patrik approved the comfort list for Aresus (2026-10-30, all items). After this brief the run report has a close
+The owner approved the comfort list for Aresus (2026-10-30, all items). After this brief the run report has a close
 button, a province's page opens that province (its app when installed, else its website), and the Aresync tab has the
 same Settings gear as the Aresus tab.
 

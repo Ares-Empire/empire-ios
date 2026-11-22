@@ -1,6 +1,6 @@
 # 96: Sorting, improvement round 3
 
-Status: merged 2026-11-01 (aresium; worked-on missed 135 -> 100, wrong 4 -> 2; held back missed 82 -> 73; Patrik replay 113 -> 108)
+Status: merged 2026-11-01 (aresium; worked-on missed 135 -> 100, wrong 4 -> 2; held back missed 82 -> 73; the owner replay 113 -> 108)
 Repo: **aresium** · Worktree: `../aresium-96-sorting-round-3` (branch `codex/96-sorting-round-3`) · Model:
 `gpt-6.1-sol`, effort `high` · Runs beside brief 95 (the local places list in the app, in empire-ios); you own
 `src/engine/sorting/`, `scripts/shop-list.de.ts` and the shop list build.
@@ -9,7 +9,7 @@ Repo: **aresium** · Worktree: `../aresium-96-sorting-round-3` (branch `codex/96
 
 Round 1 (brief 84) took the test set's worked-on misses from 304 to 135 and wrong from 21 to 4; round 2 (brief 86)
 added an optional list of local places from OpenStreetMap, which Claude is bringing into the app separately. This
-round fixes the next general causes, found in the test set's worked-on failures and in Patrik's own payments (Claude
+round fixes the next general causes, found in the test set's worked-on failures and in the owner's own payments (Claude
 looked at them on his Mac; you never see them: the patterns below are described with made-up examples).
 
 ## Read first
@@ -27,13 +27,13 @@ from a test case; **wrong must not rise** in either part; no change to the test 
 
 ## Build
 
-1. **Chains written differently on card statements** (from Patrik's payments): a known chain is missed when the card
+1. **Chains written differently on card statements** (from the owner's payments): a known chain is missed when the card
    line spells it its own way: spaces or apostrophes ("MC DONALDS 2345 DEU KÖLN" for McDonald's), two brands run
    together ("MEDIAMARKTSATURN" for MediaMarkt/Saturn), the company's long legal name ("Bauhaus E-Business
    Gesellschaft für Bau- und …"), an operator's long official name instead of its short one (a motorway toll
    operator). Make matching of the shop list's names robust to spacing, apostrophes, run-together forms and long legal
    names, with tests that it does not match unrelated names.
-2. **Compound and cut-off words** (from Patrik's payments): business words inside German compounds and words cut by
+2. **Compound and cut-off words** (from the owner's payments): business words inside German compounds and words cut by
    the bank's field length are missed: "Grillhütte", "Kaffeekontor", "Haarwerkstatt"/"Hairdesign"/"HAIRST." (a
    hairdresser cut short), "Lebensmit." (Lebensmittel cut short), "Praxis fur Podo…" (a podiatry practice cut short).
    Recognise a business word at the start of a compound and a clear word cut at the end of the field (only where the
@@ -53,7 +53,7 @@ from a test case; **wrong must not rise** in either part; no change to the test 
 ## Settled: do not re-open
 
 - No AI and no server; wrong is worse than missed; the held-back part stays unopened.
-- Patrik's payments never reach you; the examples here are made up.
+- The owner's payments never reach you; the examples here are made up.
 
 ## Out of scope
 
@@ -63,7 +63,7 @@ from a test case; **wrong must not rise** in either part; no change to the test 
 
 - `npm run typecheck`, `npm test` and `npm run engine` pass; each new rule has positive and negative tests.
 - The final message: the score before and after (both parts; held back as totals), per group what changed and its
-  effect, and what you chose not to do. Claude then checks Patrik's data and records.
+  effect, and what you chose not to do. Claude then checks the owner's data and records.
 
 ## Final message
 

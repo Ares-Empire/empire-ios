@@ -5,7 +5,7 @@ Branch: `claude/149-several-words` · Worktree: `../empire-ios-149-several-words
 
 ## Goal
 
-Patrik (2026-11-03): "if I want to search for multiple similar items at once, does that need multiple searches? My
+The owner (2026-11-03): "if I want to search for multiple similar items at once, does that need multiple searches? My
 usecase: ties from different manufacturers, maybe even with diff colors depending on manufacturer." He approved up to
 five search words in one thing search (plan https://claude.ai/artifact/FBXeut5PmPNm3JqTeu38F1, section 2, and its phone
 sketch). The server side is the Arestemis repo's brief 148, running now; the contract is already in

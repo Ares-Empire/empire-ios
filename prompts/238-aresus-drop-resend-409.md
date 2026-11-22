@@ -6,7 +6,7 @@ Branch: `codex/238-drop-resend-409` · Worktree: `../empire-ios-238-drop-resend-
 ## Goal
 
 A file sent from the phone that reached the Mac must never show as "Not sent" in the Aresync tab, and the phone must
-never upload a file's bytes a second time without first asking the server whether it already has them. Patrik saw a
+never upload a file's bytes a second time without first asking the server whether it already has them. The owner saw a
 delivered file marked as failed (below); after this brief, the app cleans such a record up by itself on the next launch.
 
 ## What happened (2026-11-05/06, from the server log and database)
@@ -22,7 +22,7 @@ delivered file marked as failed (below); after this brief, the app cleans such a
   failure; see "Find out" below). At the next launch `DropOutbox.drain()` → `attempt()` saw a record with a `serverID`
   and `uploadSession == nil` and sent the bytes again blind. `fail()` treats the 409 as permanent, so the record is now
   `.failed` with that sentence and stays forever.
-- **What Patrik sees:** the server row for drop 4 is drawn from the phone's hidden copy (`DropRow.hidden(for:in:)` →
+- **What the owner sees:** the server row for drop 4 is drawn from the phone's hidden copy (`DropRow.hidden(for:in:)` →
   `DropRow.init(_:local:)` → `phone(_:)`), so the row reads "Not sent: This drop cannot be changed in its current
   state." with Retry, instead of "In Rechnungen · …". Retry sends the bytes again and gets 409 again. After 30 days the
   server drops landed rows from `GET /drops`, and the stale record would show as a phone row "Not sent" for good.
@@ -63,7 +63,7 @@ delivered file marked as failed (below); after this brief, the app cleans such a
    retryable error (`.onPhone` with `retryAt`), never `.failed`.
 4. **Old stale records clean themselves up.** Extend what the app runs at launch and on coming to the foreground
    (`reconnect()`, called from `ContentView`) so that it also reconciles records with a `serverID` that are `.failed`,
-   or `.onPhone` without an `uploadSession`, in the same single `GET /drops`. Patrik's phone holds exactly such a record
+   or `.onPhone` without an `uploadSession`, in the same single `GET /drops`. The owner's phone holds exactly such a record
    (drop 4, `.failed`, `lastError` "This drop cannot be changed in its current state."): with this build it must be
    gone after the first launch, and its row show the server's "In Rechnungen · …" line.
 5. **The row shows the server's word once the server has the file.** `DropRow.hidden(for:in:)` returns the phone's

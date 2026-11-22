@@ -6,7 +6,7 @@ Repo: empire-ios · Worktree: `../empire-ios-19-bank-guide` (branch `claude/19-b
 
 ## Goal
 
-A friend opening Aresium does not know how to get a file of their payments out of their bank (Patrik didn't either,
+A friend opening Aresium does not know how to get a file of their payments out of their bank (the owner didn't either,
 the first time). Aresium will show, per bank, the exact steps: where to click on the bank's website and, when it can,
 in the bank's iPhone app, which file type to pick, and how the file then reaches Aresium on the iPhone. This brief
 collects those steps from public sources; a later brief builds the screen.

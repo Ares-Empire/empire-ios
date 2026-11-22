@@ -5,7 +5,7 @@ Worktree: `~/empire-ios-73-review` (detached at `main`, read-only) · Model: `gp
 
 ## Goal
 
-Arestoteles and the Empire app go to Patrik's iPhone for the first time: a Release build, App Store signing, internal
+Arestoteles and the Empire app go to the owner's iPhone for the first time: a Release build, App Store signing, internal
 TestFlight, a real device. Until now they ran only on the simulator in Debug. Find what works there but would break,
 or behave differently, on the phone. **Report only: change no file.**
 

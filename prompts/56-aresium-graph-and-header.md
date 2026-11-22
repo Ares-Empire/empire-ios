@@ -6,7 +6,7 @@ the feel) · Simulator: `claude-56`
 
 ## Goal
 
-Patrik's fifth round (2026-10-31, build 5 on his iPhone; `docs/reviews/2026-10-30-aresium-phone-test.md` → "Fifth
+The owner's fifth round (2026-10-31, build 5 on his iPhone; `docs/reviews/2026-10-30-aresium-phone-test.md` → "Fifth
 round", items 5, 6 and 7), in his words:
 
 - "Can we add that with slowly sliding over the graph it shows each month's number and clicking on a month opens it?
@@ -23,7 +23,7 @@ round", items 5, 6 and 7), in his words:
   distance", the tour)
 - `~/ares-empire/EMPIRE.md` → design language; memory of the owner's taste: gold only as an accent, classy, no
   decoration for its own sake.
-- The website's graph, which Patrik means: `~/aresium/web/public/app/chart.jsx` (the hover guide line, the dot on the
+- The website's graph, which the owner means: `~/aresium/web/public/app/chart.jsx` (the hover guide line, the dot on the
   line, the chip with the month and the amount, `clickable` hit areas) and `app.jsx` (`onIndexClick`: Overview's
   graph opens that month's screen, a category's graph that category's month; the day graphs only show, they open
   nothing).

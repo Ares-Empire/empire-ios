@@ -1,7 +1,7 @@
-# Aresium on the phone: Patrik's first test (2026-10-30)
+# Aresium on the phone: the owner's first test (2026-10-30)
 
-Build 0.1 (1), internal TestFlight, phone mode (signed out), with Patrik's real VR Bank and PayPal files (rebuilt from
-his server rows on 2026-10-29). Patrik keeps testing; new findings go here. Causes checked in the code and, for sorting,
+Build 0.1 (1), internal TestFlight, phone mode (signed out), with the owner's real VR Bank and PayPal files (rebuilt from
+his server rows on 2026-10-29). The owner keeps testing; new findings go here. Causes checked in the code and, for sorting,
 on his files with the engine (numbers below are from that run, every default category ticked).
 
 **Good:** the demo; the import explanation.
@@ -39,7 +39,7 @@ on his files with the engine (numbers below are from that run, every default cat
 4. **Own categories all get the same icon** (`CUSTOM_CATEGORY_LOOK`). *Fix:* an icon from the name (a word list in
    English and German: fitness → dumbbell, Haustier → pawprint, …), otherwise the next one of a set, so two own
    categories never look alike. Look: Claude.
-5. **Save at the bottom of the category change screen** (`RecategoriseSheet`): far from a category at the top. Patrik's
+5. **Save at the bottom of the category change screen** (`RecategoriseSheet`): far from a category at the top. The owner's
    feeling matches iOS: an edit sheet has Save at the top right and Cancel at the top left. *Fix:* Save into the toolbar.
 6. **"In der App der Bank geht das nicht, nur auf der Website." small and faint in dark mode** (bank guide,
    `FormNote`: 12.5 pt in `Ink.muted`). *Fix:* show this line as part of the guide, larger and brighter.
@@ -52,8 +52,8 @@ on his files with the engine (numbers below are from that run, every default cat
 
 - 1 and every other way of counting twice: brief 35 (the follow-up never moves own transfers; a test per path), brief 37
   (the same bank payment from two file formats), brief 34 (PayPal's withdrawals to the bank were counted as spending:
-  found in Patrik's data, now own transfers; currency conversions too).
-- 2: brief 34 (aresium e76fadd): on Patrik's files Not sorted 400 → 280; Vinted 91 → 3 (the 3 are sales); every Penny
+  found in the owner's data, now own transfers; currency conversions too).
+- 2: brief 34 (aresium e76fadd): on the owner's files Not sorted 400 → 280; Vinted 91 → 3 (the 3 are sales); every Penny
   (card and PayPal) Groceries under one key; PayPal's own entries no longer keyed by the person's email. What stays
   is mostly people and services only the person can name: one correction each now.
 - 3: brief 35. 4–6: brief 36. 7: brief 36 found a real bug (an open app stayed one light/dark switch behind) and fixed
@@ -61,7 +61,7 @@ on his files with the engine (numbers below are from that run, every default cat
 
 ## Second round: build 2 (2026-10-30)
 
-Patrik: every finding above is fixed on the phone. New, about comfort (his phone is an iPhone 17, 120 Hz, so a
+The owner: every finding above is fixed on the phone. New, about comfort (his phone is an iPhone 17, 120 Hz, so a
 main-thread pause of more than about 8 ms shows while scrolling):
 
 8. **Scrolling the category picker is sometimes jerky, most of all after ticking some.** Likely cause, from the code:
@@ -73,7 +73,7 @@ main-thread pause of more than about 8 ms shows while scrolling):
    dashboard draws its own header (`ScreenHeader` with its back arrow) and hides the system navigation bar on every
    screen (`DashboardStack`), and iOS turns its back swipe off when the bar is hidden. Arestemis, Aresus and Arestoteles
    hide the bar on their tab roots too. *Fix:* brief 38 (the swipe, doing what the arrow does).
-10. **Patrik's request:** find every other screen in the five apps that cannot be left with the usual gesture but
+10. **The owner's request:** find every other screen in the five apps that cannot be left with the usual gesture but
     should be, and other comfort gaps; he chooses which get fixed. Brief 38 (Aresium) and a read-only check of the other
     four apps.
 
@@ -85,7 +85,7 @@ main-thread pause of more than about 8 ms shows while scrolling):
 - 9: brief 38 (`Shared/Design/BackSwipe.swift`): the system's own back swipe, from the edge and from the middle, on
   every dashboard screen with a back arrow; it does what the arrow does. Checked on the iOS 27 simulator; to check on
   the phone.
-- 10: the list (`docs/reviews/2026-10-30-swipe-and-comfort.md`); Patrik approved every item. Aresium's are in build 3
+- 10: the list (`docs/reviews/2026-10-30-swipe-and-comfort.md`); the owner approved every item. Aresium's are in build 3
   (briefs 40 and 41: Later, Back in the file check, Done on the number pad, Cancel that asks, the busy sign, a long
   press on a payment to change its category, the import result swiped away, 44 pt tap areas, Privacy and Imprint
   inside the app, Log out asks first); the other four apps' wait for their first TestFlight (CLAUDE.md → Open 15).
@@ -93,7 +93,7 @@ main-thread pause of more than about 8 ms shows while scrolling):
 
 ## Third round: wishes after build 3 (2026-10-30 evening), built for build 4
 
-Patrik, after testing build 3 ("fantastic work"), asked for:
+The owner, after testing build 3 ("fantastic work"), asked for:
 
 11. **Rename payments** to names one remembers; Aresium keeps the name with the bank's, so new imports are still
     sorted by the bank's name and get the name automatically; the payment's page shows the bank's name small under the
@@ -101,7 +101,7 @@ Patrik, after testing build 3 ("fantastic work"), asked for:
     Renaming asks, as the category change does, "Also the other N payments from <bank name>?" (All: the shop, also
     future imports; Only this one). Without renaming, "the same name" is Aresium's shop recognition, so the spellings
     of one shop count together.
-12. **Add up all payments of one name**, reached by swiping a row (like Mail). *Decided (Patrik):* swipe left only, no
+12. **Add up all payments of one name**, reached by swiping a row (like Mail). *Decided (owner):* swipe left only, no
     direction setting (a right swipe would take the back swipe from the middle). Claude added, since a swipe cannot be
     seen: a visible "All from <name>" card on the payment's page and the same entry in the long press. *Built:* brief
     44 (the name's page: totals, graph, months, payments).
@@ -109,24 +109,24 @@ Patrik, after testing build 3 ("fantastic work"), asked for:
     (Settings → Dashboard → Graph, on by default, kept); the header's sun and graph buttons are gone (light and dark:
     Settings → General → Appearance). A category's page shows the graph above its months.
 14. **Aresium's messages from the app, not Telegram,** with settings for whether, which and how often. *Done:* the
-    Telegram bot (`aresium-bot.service`) stopped and disabled on the server. *Decided (Patrik):* two messages, an import
+    Telegram bot (`aresium-bot.service`) stopped and disabled on the server. *Decided (owner):* two messages, an import
     reminder that names no bank or service, and a month review. *Built:* briefs 45 (local notifications, Codex) and 46
     (Settings → Messages, a one-time offer after the first import). Also: red mode's expense graph line was nearly
     black on the red; now light.
 
 ## Fourth round: after build 4 (2026-10-30 night)
 
-Patrik: "very nice work"; new findings. **A** Settings' switches unreadable in dark (white track under a white knob)
+The owner: "very nice work"; new findings. **A** Settings' switches unreadable in dark (white track under a white knob)
 → brief 47. **B** the "Aresium" cover flashes when changing settings → brief 47. **C** renaming hard to find → brief 47:
-tap the page's name or a pen (Patrik asked for a double tap; Claude chose a single tap on the page and no double tap on
-rows, which would delay every tap: Patrik agreed), the category's chip or pen opens the change window, the Name row,
+tap the page's name or a pen (the owner asked for a double tap; Claude chose a single tap on the page and no double tap on
+rows, which would delay every tap: the owner agreed), the category's chip or pen opens the change window, the Name row,
 the big Change button and the reason sentence go (the sentence moves into the change window). The long press's last
 entry ("All from <long bank name>") is too long to read → brief 47. **E** the back swipe needs half the screen on lists
 with the row swipe → brief 47 measures against Apple's Settings. **È** one shop under changing names (Vinted MGP →
 Vinted UAB, dm, Apple, cut-off names, names in another order, card fee text) → brief 48 (engine), then the app's wiring.
-**Gaps after build 4** (Patrik: fix) → brief 47.
+**Gaps after build 4** (owner: fix) → brief 47.
 
-**D, summing payments of one name inside a list** (Claude's design with Patrik's additions, agreed 2026-10-30):
+**D, summing payments of one name inside a list** (Claude's design with the owner's additions, agreed 2026-10-30):
 - Swipe left on a payment: **Zusammenfassen** (this name in this category, every month, remembered) and **Alle** (the
   name's page). A summed row: the name, a small stack mark with the count ("10×"), the total; a tap opens it in place
   (the payments below), a tap closes it; its swipe offers **Auflösen** (back to single payments) instead.
@@ -146,10 +146,10 @@ its own: each brief kept work off the main thread and measured where it could.
 ## Fifth round: build 5 on the phone (2026-10-31)
 
 First, build 5 looked like an old app (no Mitteilungen in Settings, English categories, no swipe, no new features):
-logging in to Arestemis had switched Aresium to server mode, Patrik's old website data. The server now answers `phone`
+logging in to Arestemis had switched Aresium to server mode, the owner's old website data. The server now answers `phone`
 for him too (aresium 7c87e02, `APP_SERVER_MODE_USERS` empty); after reopening the app, all was there. Then:
 
-1. **A date's tile reads like a count:** a summed row says "44×", a single row "44". Patrik: write the day "44." so it
+1. **A date's tile reads like a count:** a summed row says "44×", a single row "44". The owner: write the day "44." so it
    reads as a date. → brief 55 (the day's number as the language writes a day alone: "4." in German, "4" in English,
    where the summed tile keeps its stack and ×).
 2. **The name's page lists the payments under its months,** "very weird". Each month should be a row like a category's
@@ -181,7 +181,7 @@ adding up (Summieren, the icon, Alle and the name's page), then Settings in its 
 Namen, Mitteilungen, Sperre, Dashboard's switches, Kontakt & Support), import (files, receipts and cash), done. With
 the graph off it has 17 steps and no card mentions the graph. Adding up in the tour never touches the real choices.
 
-**After build 7** (2026-10-31 evening), Patrik: "its very clean. Ive only noticed one more thing we should add: In the
+**After build 7** (2026-10-31 evening), the owner: "its very clean. Ive only noticed one more thing we should add: In the
 category change screen there should be a way to add a new category because otherwise you have to leave, create it,
 come back." Then, for the receipt window and Add cash: "yes lets do that too, seems sensible".
 
@@ -189,9 +189,9 @@ come back." Then, for the receipt window and Add cash: "yes lets do that too, se
 and Bargeld eintragen's category menus end with "Neue Kategorie …". A name, Anlegen, and the new category is made (its
 own icon and colour) and already picked; a taken or reserved name makes nothing and says why. On a payment of money in
 the tile is not offered: a new category counts as spending until money in lands in it, so it could not take one (an
-older limit, also in Settings; open for Patrik to decide).
+older limit, also in Settings; open for the owner to decide).
 
-**After build 8** (2026-11-01), Patrik on the money-in limit: "yes definetly, good call. own categories for income. but
+**After build 8** (2026-11-01), the owner on the money-in limit: "yes definetly, good call. own categories for income. but
 not all default categories should show up there Id argue since not all of them can be income right? And not sure if
 custom categories should be automatically shared between income and expenses because it could unnecessarily bloat the
 menu." Claude proposed one home side per category (defaults by the engine's list, one's own by where it is made,
@@ -201,7 +201,7 @@ change window by using it there ("Andere Kategorie …"), removable again; money
 spending, money out on an income category lowers that income. Transfers are offered both ways. Briefs 68 (engine,
 Codex), 69 (data, Codex), 70 (screens, a Claude agent). Asked separately: should paid-back money still also count
 under Einnahmen as Rückerstattungen (today it lowers the spending and counts as income too)?
-Patrik's answer (2026-11-01): "booking everything as it happens is clearer and more truthful. Plus in the other way
+The owner's answer (2026-11-01): "booking everything as it happens is clearer and more truthful. Plus in the other way
 errors are worse. So while returns and refunds are kinda weird with the expense 100 income 100 I do think doing it
 that way is best overall and easier because we dont rely on matching." So every payment counts once, in the direction
 it went, under its own category; nothing is subtracted (only a withdrawal's cash covered by receipts still moves to the
@@ -219,7 +219,7 @@ category; "Rückerstattungen" gone; a Zalando return shows as spent and received
 own categories got the side their money gave them, and a spending category that counted as income (Freunde) stays
 offered for money in.
 
-**After build 9** (2026-11-01), Patrik: "sometimes the issue still happens that the same vendor has different names: I
+**After build 9** (2026-11-01), the owner: "sometimes the issue still happens that the same vendor has different names: I
 found it in resales (check data)". Claude checked his files on the Mac: Vinted is one shop to Aresium (all 157 payments
 in one shop identity), but each row showed its own bank line ("MGP Vinted - Kleiderkreisel" before, "Vinted, UAB"
 after the change). Fix: a shop shows the bank name of its newest payment unless it has an own name (brief 76). New
@@ -230,7 +230,7 @@ sheet so its sides can be swiped; search finds names and opens the name's page. 
 on his Mac ("this is my device").
 
 **In build 10** (2026-11-01): briefs 76 and 77. A shop shows one name: the bank line of its newest payment that names
-it by itself (checked on Patrik's files: 101 of 167 shops get one name, Vinted "Vinted, UAB", Apple "Apple Services";
+it by itself (checked on the owner's files: 101 of 167 shops get one name, Vinted "Vinted, UAB", Apple "Apple Services";
 never a PayPal or a card statement line, which would show another payment's amount and date); the payment's page keeps
 its own line under the title. A tap on a day of the day graph (Aktuell, a month's page) opens that day as a sheet:
 Ausgaben and Einnahmen swipe, each with the day's total and rows (category in the day's place; rows have no swipe
@@ -239,7 +239,7 @@ banks') best match first, a typo forgiven, "Bei der Bank: …" when found by ano
 typing; a result opens the name's page. The tour has 19 steps (the search). Unsorted money in now shows as "Nicht
 sortiert" on the income side too (it showed the engine's untranslated "Other").
 
-**After build 10** (Patrik, 2026-11-01): Freunde was a spending category and could not be added for money in ("already
+**After build 10** (owner, 2026-11-01): Freunde was a spending category and could not be added for money in ("already
 exists"); categories should be renamable and deletable ("on delete items that can be resorted get resorted and
 otherwise not sorted"); several payments should be selectable like in Mail and moved or renamed at once; Add in the
 change window should ask about the shop's other payments and whether to leave the current category (its button at the
@@ -266,7 +266,7 @@ file read wrong any more; spreadsheet-rewritten dates, cut-off files refused, re
 **In build 13** (2026-11-01): the engine's sorting round 3 (chains as card statements spell them, "MC DONALDS",
 "MEDIAMARKTSATURN", long company names; business words in compounds and cut off at the field's end; the SPC* prefix;
 towns without their umlauts; regional utilities, car dealers and charging operators; memberships) and a list of
-Germany's local places from OpenStreetMap (264,744 places, packed, kept loaded: about 13 MB). On Patrik's data a new
+Germany's local places from OpenStreetMap (264,744 places, packed, kept loaded: about 13 MB). On the owner's data a new
 person's day one sorts 984 payments (was 966 before round 1), 969 as he has them, and needs 103 fixes over 14 months
 (was 111). Settings → Über → Schriften & Lizenzen lists "© OpenStreetMap-Mitwirkende" with the ODbL and the list's
 download (aresium.de/osm/).
@@ -281,7 +281,7 @@ Aresium learns the name for the next import; Überspringen, Widerrufen (the last
 Nicht sortiert payments are touched. The tour has 21 steps. To try: does it feel quicker than the lists for his
 parents, friends and own categories, and is the order (most payments first) the right one?
 
-**After build 14** (Patrik, 2026-11-02): "selecting statements is quite bouncy. I think it should be less bouncy. And
+**After build 14** (owner, 2026-11-02): "selecting statements is quite bouncy. I think it should be less bouncy. And
 can we build it like mail so you can basically just slide your finger up and down and it keeps selecting statements or
 when going up deselecting them".
 
@@ -293,7 +293,7 @@ leaves; starting on a ticked row unticks; a sideways start on a row then up or d
 edge the list scrolls by itself and keeps ticking. A plain up-down drag on a row still scrolls, a tap still ticks one.
 To try: the slide's feel on the phone, the light haptic per row, and the edge scrolling's speed (both first guesses).
 
-**After build 15** (Patrik, 2026-11-02): "Selection is super clean now, great work." Then: the Overview's spending
+**After build 15** (owner, 2026-11-02): "Selection is super clean now, great work." Then: the Overview's spending
 looked far too high. It was right for all 14 months, but money paid back to him (one expense in full, two by half)
 counted as income while the expenses counted in full (brief 71). He chose a link made by hand: "Yes A actually makes
 sense, let's do it. It would need to be added to the tour but it remains a completely optional thing to do." Also asked:
@@ -315,7 +315,7 @@ reading, and a `.sta` shared while Aresium was closed was refused. **Drop:** hol
 switch to Aresium with another finger and let go on the first screen or the dashboard ("Zum Importieren loslassen");
 other files are refused. To try: share a statement from Files or Safari's downloads into Aresium; the drop once.
 
-**After build 17** (Patrik, 2026-11-02): "I love it the connecting is great!" Then: link several payments at once,
+**After build 17** (owner, 2026-11-02): "I love it the connecting is great!" Then: link several payments at once,
 selected expenses and the payments in that paid them back, "it just goes expense by expense until it's empty", and the
 other way round (several payments in paying back one expense). He liked that money in cannot be used twice.
 
@@ -328,7 +328,7 @@ one payment on each side still asks the amount ("Weiter"). Suggestions are the 8
 search. To try: select expenses a friend paid back and tick the payment(s) in; select several transfers that paid back
 one expense and pick it; the summary before linking.
 
-**After build 18** (Patrik, 2026-11-02): "the app is genuinely very good and useful." Asked whether links can be undone
+**After build 18** (owner, 2026-11-02): "the app is genuinely very good and useful." Asked whether links can be undone
 (they can: Undo right away, or the pen or a long press on a link's card, "Verknüpfung entfernen"), and for more testers:
 external TestFlight set up through the App Store Connect API (group "Tester"), build 18 sent to Beta App Review. Then
 two features he liked from Claude's ideas: the monthly average and the fixed costs. A Claude agent walked a fresh install
@@ -339,14 +339,14 @@ friends.
 on average and how much of it is fixed ("Ø … im Monat · davon … fix"); a tap opens **Fixkosten**: rent, subscriptions,
 insurance, each with how often, the next one due and its share a month, then Beendet (stopped ones) and Nicht gezählt
 (the ones taken out with a long press, "Nicht fix"). On the income side the same for regular money in. Detection was
-checked on Patrik's own export locally (nothing of it in the repo): the subscriptions, the ticket and a membership found,
+checked on the owner's own export locally (nothing of it in the repo): the subscriptions, the ticket and a membership found,
 the old rent ended, a supermarket no longer taken for a yearly cost. **The first run**: Done on the category list with
 nothing ticked asks to use the categories that fit (or a card leads back), the first days of a month open on last month
 (this month one tap away), the import notice's button says Schließen, Settings shows no Ares sign-in to testers, the
 running month on Overview's graph is dashed, cash "ohne Belege". To try: Overview → the line under the total → the
 fixed costs; take one out and put it back; open the app on the 1st–7th of a month.
 
-**After build 19** (Patrik, 2026-11-02): his gym charges monthly and takes a service fee every six months; Claude saw
+**After build 19** (owner, 2026-11-02): his gym charges monthly and takes a service fee every six months; Claude saw
 locally that the fee comes inside that month's membership booking, so build 19 showed the membership as ended and missed
 the fee.
 

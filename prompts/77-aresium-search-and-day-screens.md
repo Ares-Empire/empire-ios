@@ -6,7 +6,7 @@ Branch: `claude/77-search-day` · Worktree: `../empire-ios-77-search-day` · Bui
 
 ## Goal
 
-Patrik (2026-11-01, after build 9): "Search expenses and filter by day. The graph already allows to see day by day
+The owner (2026-11-01, after build 9): "Search expenses and filter by day. The graph already allows to see day by day
 expenses / income and months are clickable. Lets make days clickable too and lead to a screen with that days expenses
 and income (in two tabs with swipe). For search: A small search icon. Im thinking search by names which uses own given
 and also original names organized by best match."
@@ -29,7 +29,7 @@ shop. This brief draws the search and the day's page, and adds both to the tour.
 
 1. **A day's page.** On every day graph (the start screen's Current page and a month's page) a short tap on a day
    opens that day; holding and sliding still reads the graph as now. The page:
-   - **A sheet**, not a pushed page: Patrik wants the two sides "in two tabs with swipe", and on a pushed page a swipe
+   - **A sheet**, not a pushed page: the owner wants the two sides "in two tabs with swipe", and on a pushed page a swipe
      right is the back swipe (brief 56 gave the month's page dots only for that reason). In a sheet a sideways swipe
      turns the side and a swipe down closes it.
    - Its title is the day written out ("Mittwoch, 14. Oktober 2026" / "Wednesday, 14 October 2026"); the two sides
